@@ -65,26 +65,21 @@ const overrides = fieldOverrides(slowOpsList, {
     ),
     width: "minmax(0,1fr)",
   },
-  count: { align: "end", width: "4rem" },
+  count: { width: "4rem" },
   totalMs: {
-    align: "end",
     width: "5.5rem",
   },
   waitMs: {
-    align: "end",
     width: "5.5rem",
   },
   maxMs: {
-    align: "end",
     width: "5rem",
   },
   lastMs: {
-    align: "end",
     width: "5rem",
   },
   lastSeenAt: {
     cell: (r) => <RelativeTime date={r.lastSeenAt} />,
-    align: "end",
     width: "7rem",
   },
 });

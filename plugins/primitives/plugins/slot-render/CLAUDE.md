@@ -369,7 +369,7 @@ the outcome too, with no separate code path.
     - `useSlotOrder`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/density --control-height-sm`
-  - Imported by: 89 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 88 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×28
     - `primitives` ×14
     - `conversations` ×13
@@ -389,7 +389,6 @@ the outcome too, with no separate code path.
     - `reorder/slot-middleware`
     - `reports`
     - `review/plugin-changes`
-    - `runs`
     - `stats`
     - `wish`
 

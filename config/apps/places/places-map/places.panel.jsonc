@@ -16,6 +16,7 @@
         // fields the list derives, then its own yes / no flags — the list's
         // computed fields would otherwise follow every derived one.
         "properties": [
+          { "id": "glyph" },
           { "id": "name" },
           { "id": "address" },
           { "id": "tags" },
@@ -39,6 +40,7 @@
         // fields the list derives, then its own yes / no flags — the list's
         // computed fields would otherwise follow every derived one.
         "properties": [
+          { "id": "glyph" },
           { "id": "name" },
           { "id": "address" },
           { "id": "tags" },

@@ -35,6 +35,7 @@ export const reorderTreeFieldType =
 
 export const reorderTreeIdentity = defineFieldIdentity<ReorderTree>({
   type: reorderTreeFieldType,
+  kind: "label",
   label: "Reorder Tree",
   icon: reorderIcon,
   // no coerce — not a sortable/filterable scalar (like string-list).

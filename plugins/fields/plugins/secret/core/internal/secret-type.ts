@@ -7,6 +7,7 @@ export const secretFieldType = defineFieldType<string>("secret");
 
 export const secretIdentity = defineFieldIdentity<string>({
   type: secretFieldType,
+  kind: "label",
   label: "Secret",
   icon: keyIcon,
 });

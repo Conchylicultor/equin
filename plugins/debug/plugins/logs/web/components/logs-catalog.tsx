@@ -6,10 +6,9 @@ import {
   DataView,
   defineDataView,
   type FieldDef,
+  type FieldOption,
 } from "@plugins/primitives/plugins/data-view/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import {
   RelativeTime,
   useNow,
@@ -22,6 +21,14 @@ import { SizeMeter } from "./size-meter";
 const LOGS_CATALOG = defineDataView("debug.logs.catalog");
 
 const NO_ENTRIES: LogEntry[] = [];
+
+/** A log never written says so after its name; a written one says nothing. */
+const WRITTEN_OPTIONS: FieldOption[] = [
+  { value: "false", label: "never written", variant: "muted" },
+  { value: "true", label: "Written", quiet: true },
+];
+
+const CATALOG_PLACE = { written: "afterTitle" } as const;
 
 /**
  * Every log of one worktree — what each records, its size against its rotation
@@ -54,30 +61,30 @@ export function LogsCatalog({
       {
         id: "id",
         label: "Log",
-        type: "text",
+        type: "identifier",
         primary: true,
         value: (e) => e.id,
-        cell: (e) => (
-          <Stack gap="none">
-            <Stack direction="row" gap="xs" align="center">
-              <Text variant="code" tone="strong" className="truncate">
-                {e.id}
-              </Text>
-              {e.files.length === 0 && (
-                <Badge variant="muted">never written</Badge>
-              )}
-            </Stack>
-            <Text
-              variant="caption"
-              tone="muted"
-              className="truncate"
-              title={e.description ?? e.path}
-            >
-              {e.description ?? "No sink declares this file."}
-            </Text>
-          </Stack>
-        ),
         width: "minmax(0,1fr)",
+      },
+      {
+        id: "written",
+        label: "Written",
+        type: "enum",
+        valueDomain: "boolean",
+        value: (e) => e.files.length > 0,
+        options: WRITTEN_OPTIONS,
+        filterable: true,
+      },
+      {
+        id: "description",
+        label: "Description",
+        type: "multiline-text",
+        value: (e) => e.description ?? null,
+        cell: (e) => (
+          <span title={e.description ?? e.path}>
+            {e.description ?? "No sink declares this file."}
+          </span>
+        ),
       },
       {
         id: "scope",
@@ -118,7 +125,6 @@ export function LogsCatalog({
           );
         },
         sortable: true,
-        align: "end",
         width: "6rem",
       },
     ],
@@ -133,6 +139,8 @@ export function LogsCatalog({
       storageKey={LOGS_CATALOG}
       views={["table", "list"]}
       defaultView="table"
+      // "Never written" is a mark after the log's name, not the row's state.
+      place={CATALOG_PLACE}
       readiness={result}
       selectedRowId={selectedId}
       rowActivation={(e) => linkTo(e.id)}

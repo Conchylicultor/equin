@@ -7,6 +7,7 @@ export const dateFieldType = defineFieldType<Date>("date");
 
 export const dateIdentity = defineFieldIdentity<Date>({
   type: dateFieldType,
+  kind: "instant",
   label: "Date",
   icon: calendarTodayIcon,
   customColumn: true,

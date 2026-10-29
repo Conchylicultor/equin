@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { defineFieldIdentity, defineFieldType } from "@plugins/fields/core";
+import { jsonFieldType } from "@plugins/fields/plugins/json/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import {
   enumTextField,
@@ -14,6 +16,20 @@ const AppIconSchema: z.ZodType<AppIcon> = z.custom<AppIcon>(
 );
 
 /**
+ * The app's icon descriptor as a field type: a json blob (its table / filter
+ * contributions are json's) of the `visual` kind, so every list of apps places
+ * it as the row's lead — the tile's face — without naming it.
+ */
+export const appIconFieldType = defineFieldType<AppIcon>("app-icon");
+
+export const appIconIdentity = defineFieldIdentity<AppIcon>({
+  type: appIconFieldType,
+  extends: jsonFieldType,
+  kind: "visual",
+  label: "App icon",
+});
+
+/**
  * An installed app as a row: what every list of apps (the launcher's grid, the
  * Home gallery) shows of it — its name and its icon. Apps are no database
  * data (they are the `Apps.App` registry's contributions), so this is a row
@@ -24,10 +40,13 @@ const AppIconSchema: z.ZodType<AppIcon> = z.custom<AppIcon>(
 export const installedApp = rowKind("apps.installed-app", {
   fields: {
     name: textField({ label: "Name" }),
-    icon: jsonField({
-      label: "Icon",
-      schema: AppIconSchema,
-      default: { kind: "symbol", symbol: symbol("apps") },
+    icon: Object.freeze({
+      ...jsonField({
+        label: "Icon",
+        schema: AppIconSchema,
+        default: { kind: "symbol", symbol: symbol("apps") },
+      }),
+      type: appIconFieldType,
     }),
     // Who the app is for (`defineApp({ audience })`): a developer app is
     // listed only in Developer mode, and wears the developer mark there.

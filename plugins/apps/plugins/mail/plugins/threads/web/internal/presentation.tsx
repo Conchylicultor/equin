@@ -9,11 +9,12 @@ import {
   mailLabels,
   type MailLabel,
 } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import { mailThreads } from "../../core";
 
 // How the threads list's fields present — registered once against its
-// collection. The list body itself is `renderRow` (`ThreadRow`); these are
-// what the Sort / Filter pills, Properties and any field-driven view read.
+// collection. The rows are the inbox recipe over these fields (`./thread-surface`).
 
 // The Gmail-issued system label ids the authored mailbox tabs are written
 // against (`config/apps/mail/threads/mail-threads.jsonc`), paired with their
@@ -71,13 +72,50 @@ export function useMailLabelOptions(): readonly LiveFieldOption[] {
   );
 }
 
+const starIcon = symbol("star");
+const attachFileIcon = symbol("attach-file");
+const labelImportantIcon = symbol("label-important");
+
 export const mailThreadsPresentation = FieldPresentation.Register({
   owner: mailThreads,
   fields: {
-    lastMessageAt: { align: "end" },
-    labels: { useOptions: useMailLabelOptions },
-    // Searched (the source's `searchable`), never a column of its own.
+    subject: { cell: (subject) => subject || "(no subject)" },
+    // The star leads the row (`THREAD_PLACE`); the marks are flags, so they
+    // follow the subject. An unset mark draws nothing.
+    starred: {
+      cell: (starred) => (
+        <Icon
+          icon={starIcon}
+          active={starred}
+          className={
+            starred
+              ? "icon-auto text-warning"
+              : "icon-auto text-muted-foreground"
+          }
+        />
+      ),
+    },
+    important: {
+      cell: (important) =>
+        important ? (
+          <Icon icon={labelImportantIcon} className="icon-auto text-warning" />
+        ) : null,
+    },
+    hasAttachments: {
+      cell: (has) =>
+        has ? (
+          <Icon
+            icon={attachFileIcon}
+            className="icon-auto text-muted-foreground"
+          />
+        ) : null,
+    },
+    // Unread is the row's weight (`threadRowTone`), not a mark of its own.
+    unread: { visible: false },
+    // Searched (the source's `searchable`); the row draws it as `preview`.
     snippet: { visible: false },
+    messageCount: { visible: false },
+    labels: { useOptions: useMailLabelOptions, visible: false },
     // The pane's scope: never a column, never offered to Filter.
     accountId: { visible: false },
   },

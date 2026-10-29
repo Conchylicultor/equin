@@ -62,7 +62,6 @@ export const playbackPresentation = FieldPresentation.Register({
       ),
       token: (n) => `${n}×`,
       width: "5.75rem",
-      align: "end",
     },
     lastPlayedAt: {
       icon: lastPlayedIcon,

@@ -17,6 +17,7 @@ export const avatarFieldType = defineFieldType<AvatarSpec>("avatar");
 
 export const avatarIdentity = defineFieldIdentity<AvatarSpec>({
   type: avatarFieldType,
+  kind: "visual",
   label: "Avatar",
   icon: faceIcon,
   coerce: (v) => v?.icon ?? "",

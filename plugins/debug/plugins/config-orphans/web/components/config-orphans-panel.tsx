@@ -9,7 +9,6 @@ import {
 import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { formatByteSize } from "@plugins/fields/plugins/byte-size/core";
-import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { configOrphansReport } from "../../shared/report";
@@ -48,15 +47,13 @@ export function ConfigOrphansPanel() {
         type: "enum",
         value: (r) => r.riskClass,
         options: [
-          { value: "noise", label: "Noise (no user data)" },
-          { value: "stranded-data", label: "Stranded user data" },
+          { value: "noise", label: "Noise (no user data)", variant: "muted" },
+          {
+            value: "stranded-data",
+            label: "Stranded user data",
+            variant: "warning",
+          },
         ],
-        cell: (r) =>
-          r.riskClass === "stranded-data" ? (
-            <Badge variant="warning">Stranded user data</Badge>
-          ) : (
-            <Badge variant="muted">Noise</Badge>
-          ),
         sortable: true,
         filterable: true,
         width: "12rem",
@@ -110,7 +107,6 @@ export function ConfigOrphansPanel() {
           </span>
         ),
         sortable: true,
-        align: "end",
         width: "5rem",
       },
       {
@@ -124,7 +120,6 @@ export function ConfigOrphansPanel() {
           </span>
         ),
         sortable: true,
-        align: "end",
         width: "6rem",
       },
       {

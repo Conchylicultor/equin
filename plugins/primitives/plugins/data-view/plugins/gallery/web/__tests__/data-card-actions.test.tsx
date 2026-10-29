@@ -167,6 +167,7 @@ function renderGallery(
   } as unknown as LoadedPlugin;
   const props: DataViewRenderProps<Row> = {
     revealSelection: true,
+    placement: {},
     rows: [row],
     fields,
     rowKey: (r) => r.id,

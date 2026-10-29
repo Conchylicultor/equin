@@ -50,6 +50,7 @@ const FIELDS: FieldDef<Row>[] = [
 function renderTable(options: TableViewOptions<Row>, nested = false) {
   const props: DataViewRenderProps<Row> = {
     revealSelection: true,
+    placement: {},
     rows: ROWS,
     fields: FIELDS,
     rowKey: (r) => r.id,

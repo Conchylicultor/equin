@@ -7,13 +7,10 @@ import {
   defineItemActions,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import type {
   HostedToolbar,
   HostedToolbarParts,
@@ -26,8 +23,7 @@ import {
   type BackgroundRecentRuns,
   type BackgroundRun,
 } from "../../core";
-import { ENTRY_STATUS_LABEL, runResultText } from "../internal/present";
-import { EntryStatusDot } from "./entry-status-dot";
+import { entryStatusOptions, runResultText } from "../internal/present";
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
 const RECENT_RUNS_VIEW = defineDataView("infra.background.recent-runs");
@@ -46,13 +42,6 @@ export interface EntryRun {
  * Investigate filing a task) is contributed by the app that mounts the list.
  */
 export const RecentRunActions = defineItemActions<EntryRun>();
-
-const WHEN = new Intl.DateTimeFormat(undefined, {
-  month: "short",
-  day: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-});
 
 /**
  * An entry's recent runs, newest first, pushed live — read from the process
@@ -150,11 +139,37 @@ function RecentRunsList({
         label: "Outcome",
         type: "enum",
         value: (r) => r.run.outcome,
-        options: (["running", "succeeded", "failed", "suspended"] as const).map(
-          (value) => ({ value, label: ENTRY_STATUS_LABEL[value] }),
-        ),
+        options: entryStatusOptions([
+          "running",
+          "succeeded",
+          "failed",
+          "suspended",
+        ]),
         filterable: true,
-        visible: false,
+      },
+      {
+        id: "result",
+        label: "Result",
+        type: "text",
+        value: (r) =>
+          r.run.outcome === "suspended" ? "handed off" : runResultText(r.run),
+        cell: (r) => (
+          <Text
+            variant="caption"
+            tone={r.run.outcome === "failed" ? "destructive" : "muted"}
+            className="tabular-nums"
+          >
+            {r.run.outcome === "suspended"
+              ? "handed off"
+              : runResultText(r.run)}
+          </Text>
+        ),
+      },
+      {
+        id: "error",
+        label: "Error",
+        type: "multiline-text",
+        value: (r) => r.run.error ?? "",
       },
     ],
     [],
@@ -183,12 +198,7 @@ function RecentRunsList({
       readiness={result}
       density="compact"
       toolbar={RECENT_RUNS_TOOLBAR}
-      viewOptions={{
-        list: {
-          leading: (r: EntryRun) => <EntryStatusDot status={r.run.outcome} />,
-          renderRow: (r: EntryRun) => <RunRowBody run={r.run} />,
-        },
-      }}
+      recipe="timeline"
       emptyState={
         entry.runsHere ? (
           <>No run recorded yet.</>
@@ -197,36 +207,5 @@ function RecentRunsList({
         )
       }
     />
-  );
-}
-
-function RunRowBody({ run }: { run: BackgroundRun }): ReactElement {
-  const started = new Date(run.startedAt);
-  return (
-    <>
-      <Fill>
-        <Stack gap="none">
-          <Line>
-            <Text variant="caption">
-              {WHEN.format(started)} · <RelativeTime date={started} />
-            </Text>
-          </Line>
-          {run.error !== null ? (
-            <Line>
-              <Text variant="caption" tone="destructive">
-                {run.error}
-              </Text>
-            </Line>
-          ) : null}
-        </Stack>
-      </Fill>
-      <Text
-        variant="caption"
-        tone={run.outcome === "failed" ? "destructive" : "muted"}
-        className={`tabular-nums ${rigidClass()}`}
-      >
-        {run.outcome === "suspended" ? "handed off" : runResultText(run)}
-      </Text>
-    </>
   );
 }

@@ -7,6 +7,7 @@ export const boolFieldType = defineFieldType<boolean>("bool");
 
 export const boolIdentity = defineFieldIdentity<boolean>({
   type: boolFieldType,
+  kind: "flag",
   label: "Boolean",
   icon: toggleOnIcon,
   customColumn: true,

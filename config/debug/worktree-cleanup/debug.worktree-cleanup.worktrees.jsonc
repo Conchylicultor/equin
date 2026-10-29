@@ -13,6 +13,7 @@
         "type": "table",
         "properties": [
           { "id": "task" },
+          { "id": "worktree" },
           { "id": "createdAt" },
           { "id": "remains" },
           { "id": "isSafe" },

@@ -49,6 +49,10 @@ function renderProps(
 ): DataViewRenderProps<Row> {
   return {
     revealSelection: true,
+    // The status is a subtitle term (a sentence, not a trailing cell).
+    placement: fields.some((f) => f.id === "status")
+      ? { place: { status: "line2" } }
+      : {},
     rows,
     fields,
     rowKey: (r) => r.id,

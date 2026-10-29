@@ -49,7 +49,7 @@ fields read.
     - `actions` "detach" → `DetachAction`
     - `sources` "Dependencies" → `DepsSource`
     - `sources` "Created" → `CreatedSource`
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×7
     - `tasks/task-list` ×4
     - `primitives/css/ui-kit` ×2
@@ -61,7 +61,6 @@ fields read.
     - `primitives/css/inline.Inline`
     - `primitives/icon-button.IconButton`
     - `primitives/pane.useOpenPane`
-    - `tasks/task-status.StatusIcon`
     - `ui/icons.Icon`
 - Cross-plugin:
   - Uses tokens:

@@ -20,6 +20,7 @@ import {
 
 /** The surface id — and `allConversations`' column scope (asserted at mount). */
 const ALL_CONVERSATIONS_VIEW = defineDataView("all-conversations");
+const CONVERSATION_PLACE = { updatedAt: "edge" } as const;
 
 /**
  * The live source: the `conversations.all` collection, kept fresh by the routed
@@ -50,6 +51,8 @@ function AllConversationsView(): ReactElement {
         storageKey={ALL_CONVERSATIONS_VIEW}
         views={["table", "list"]}
         source={allConversationsSource}
+        // Of its three instants, the last activity is the row's time.
+        place={CONVERSATION_PLACE}
         rowActivation={(c) =>
           openPane.to(conversationPane, { convId: c.id }, { mode: "push" })
         }

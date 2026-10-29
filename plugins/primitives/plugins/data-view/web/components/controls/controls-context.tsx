@@ -4,6 +4,8 @@ import type {
   FieldDef,
   FieldGrouping,
   ViewState,
+  PlacementSpec,
+  ViewSlots,
 } from "../../../core";
 import type { ReadyViewModel } from "../../internal/use-data-view-model";
 import type { FilterController } from "../../internal/use-filter-controller";
@@ -52,6 +54,11 @@ export interface DataViewControlsContextValue {
   activeSupportsGroupBy: boolean;
   /** Whether the active view draws fold lines (false → the fold setting hides). */
   activeSupportsFold: boolean;
+  /** The surface's placement say (recipe / place / emphasis). */
+  placement: PlacementSpec;
+  /** The slots the active view draws (`DataViewContribution.slots`);
+   *  `undefined` when it places no fields by slot. */
+  activeSlots: ViewSlots | undefined;
   /**
    * Can the view be grouped by this field — its type buckets it
    * (`isGroupableField` over the `Grouping` slot) AND at least one of its
@@ -122,6 +129,8 @@ export function DataViewControlsProvider({
   viewModel,
   activeSupportsGroupBy,
   activeSupportsFold,
+  placement,
+  activeSlots,
   groupableField,
   offersGrouping,
   activeSupportsSort,
@@ -141,6 +150,8 @@ export function DataViewControlsProvider({
       viewModel,
       activeSupportsGroupBy,
       activeSupportsFold,
+      placement,
+      activeSlots,
       groupableField,
       offersGrouping,
       activeSupportsSort,
@@ -159,6 +170,8 @@ export function DataViewControlsProvider({
       viewModel,
       activeSupportsGroupBy,
       activeSupportsFold,
+      placement,
+      activeSlots,
       groupableField,
       offersGrouping,
       activeSupportsSort,

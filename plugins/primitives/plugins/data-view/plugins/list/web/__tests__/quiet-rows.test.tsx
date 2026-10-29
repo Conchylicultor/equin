@@ -77,6 +77,8 @@ const ROWS: Row[] = [
 function renderList(options?: unknown) {
   const props: DataViewRenderProps<Row> = {
     revealSelection: true,
+    // The kind is a subtitle term; the time-typed field is the row's edge.
+    placement: { place: { kind: "line2", when: "edge" } },
     rows: ROWS,
     fields: FIELDS,
     rowKey: (r) => r.id,

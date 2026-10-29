@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { DataViewSlots } from "@plugins/primitives/plugins/data-view/web";
-import { ListView } from "./components/list-view";
+import { LIST_SLOTS, ListView } from "./components/list-view";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export type { ListViewOptions } from "../core";
@@ -17,6 +17,7 @@ export default {
       icon: symbol("view-list"),
       loadingVariant: "rows",
       component: ListView,
+      slots: LIST_SLOTS,
       // Opts into flat manual-order (rank-based drag reorder); active only when
       // the consumer supplies `manualOrder`.
       supportsManualOrder: true,

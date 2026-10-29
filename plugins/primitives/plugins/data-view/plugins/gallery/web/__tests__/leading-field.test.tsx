@@ -13,7 +13,7 @@ import {
 import { GalleryView } from "../components/gallery-view";
 
 /**
- * A field declaring `leading: true` is the row's avatar: on a card with no
+ * A field declaring a field placed in `lead` is the row's avatar: on a card with no
  * cover it fills the cover frame; it is never the title nor a text line. Local
  * fixture cell for a synthetic type (no `fields/*` import: that is a cycle).
  */
@@ -56,10 +56,14 @@ const ROW: Row = { id: "1", name: "alpha", glyph: "★", note: "memo" };
 
 function renderGallery(
   fields: FieldDef<Row>[],
-  opts: { properties?: string[]; cover?: boolean } = {},
+  opts: { properties?: string[]; cover?: boolean; lead?: boolean } = {},
 ) {
   const props: DataViewRenderProps<Row> = {
     revealSelection: true,
+    placement:
+      opts.lead !== false && fields.some((f) => f.id === "avatar")
+        ? { place: { avatar: "lead" } }
+        : {},
     rows: [ROW],
     fields,
     rowKey: (r) => r.id,
@@ -95,11 +99,7 @@ afterEach(cleanup);
 
 describe("data-view gallery leading field", () => {
   it("fills the cover frame of a card with no cover, once", () => {
-    const { getAllByTestId, getByText } = renderGallery([
-      { ...avatar, leading: true },
-      name,
-      note,
-    ]);
+    const { getAllByTestId, getByText } = renderGallery([avatar, name, note]);
     const cells = getAllByTestId("spec-cell");
     // Exactly once: in the frame, not also as a text line.
     expect(cells).toHaveLength(1);
@@ -110,11 +110,7 @@ describe("data-view gallery leading field", () => {
   });
 
   it("never becomes the title", () => {
-    const { getByText } = renderGallery([
-      { ...avatar, leading: true },
-      name,
-      note,
-    ]);
+    const { getByText } = renderGallery([avatar, name, note]);
     // The title line is the next field; memo is a line below it.
     const title = getByText("alpha");
     expect(
@@ -124,17 +120,20 @@ describe("data-view gallery leading field", () => {
     expect(title.textContent).toBe("alpha");
   });
 
-  it("a row's own cover wins over the leading field", () => {
-    const { queryByTestId, getByTestId } = renderGallery(
-      [{ ...avatar, leading: true }, name, note],
+  it("a row's own cover is the picture; a non-visual lead is a glyph over it", () => {
+    const { getByTestId, getAllByTestId } = renderGallery(
+      [avatar, name, note],
       { cover: true },
     );
     expect(getByTestId("own-cover")).toBeTruthy();
-    expect(queryByTestId("spec-cell")).toBeNull();
+    // Once, as the corner glyph — never a second picture.
+    expect(getAllByTestId("spec-cell")).toHaveLength(1);
   });
 
   it("without a leading flag the field stays an ordinary line", () => {
-    const { getByTestId, getByText } = renderGallery([name, avatar, note]);
+    const { getByTestId, getByText } = renderGallery([name, avatar, note], {
+      lead: false,
+    });
     const cell = getByTestId("spec-cell");
     expect(
       getByText("alpha").compareDocumentPosition(cell) &
@@ -143,10 +142,9 @@ describe("data-view gallery leading field", () => {
   });
 
   it("disappears when hidden through properties", () => {
-    const { queryByTestId, getByText } = renderGallery(
-      [{ ...avatar, leading: true }, name, note],
-      { properties: ["name", "note"] },
-    );
+    const { queryByTestId, getByText } = renderGallery([avatar, name, note], {
+      properties: ["name", "note"],
+    });
     expect(queryByTestId("spec-cell")).toBeNull();
     expect(getByText("alpha")).toBeTruthy();
   });

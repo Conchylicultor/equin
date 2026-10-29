@@ -174,15 +174,25 @@ Background:
   is half the chevron box, so a level's guide runs under its parent's chevron.
   A theme that sets its own `treeIndent` owns its own rhythm.
 
-### Leading field
+### Placement
 
-- **Why composition, not replacement.** Most views' own leading option is a
-  status glyph, not an identity, and a surface can want both (avatar, then
-  status dot). One shared `leadingSlot` renders the pair so the order cannot
-  drift between views. It returns `undefined` when empty, so a host slot still
-  sees "no icon".
-- **Why there is no type-based fallback.** data-view names no field type, so
-  only the flag can qualify a field.
+- **Why the kind is the type's, not the field's.** A field says what its value
+  IS; where it goes is a question about the surface. The v1 audit (75
+  surfaces) showed one per-field `role` collides (several instants, several
+  states) and cannot say that a log leads with its time while a record puts
+  it at the edge. Kinds from types, recipes per surface, pins per field.
+- **Why each view declares its slots.** A gallery draws three tokens, an icon
+  tile only a face and a name, a table draws everything as columns. As global
+  constants, each of those became a resolver exception and a silent skip in
+  the view; as the view's data, a fourth token falls through to its next rule
+  like any full slot, and the slot editor offers exactly what is drawn.
+- **Why priority is the slot's rank, not the rule order.** Reordering rules to
+  change who wins a slot must not change what a narrow view drops first.
+- **Why no list overflow into line 2.** Placement would then depend on
+  measuring the row; it is decided from data alone.
+- **Why `state` is decided from the options.** `BadgeVariant` already is the
+  tone vocabulary on options; a field whose values have tints is a state by
+  what it declares, and data-view still names no type.
 
 ## Manual order
 

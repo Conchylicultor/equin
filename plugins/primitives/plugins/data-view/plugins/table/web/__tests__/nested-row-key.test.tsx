@@ -44,6 +44,7 @@ const ROWS: Row[] = [
 function renderTable() {
   const props: DataViewRenderProps<Row> = {
     revealSelection: true,
+    placement: {},
     rows: ROWS,
     fields: [name],
     rowKey: (r) => r.key,

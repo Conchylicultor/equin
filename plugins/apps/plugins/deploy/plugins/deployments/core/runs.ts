@@ -274,10 +274,10 @@ export const deployRunFields = {
     label: "Outcome",
     primary: true,
     options: {
-      running: { label: "Running" },
-      succeeded: { label: "Succeeded" },
-      failed: { label: "Failed" },
-      "needs-approval": { label: "Needs approval" },
+      running: { label: "Running", variant: "warning" },
+      succeeded: { label: "Succeeded", variant: "success" },
+      failed: { label: "Failed", variant: "destructive" },
+      "needs-approval": { label: "Needs approval", variant: "warning" },
     },
   }),
   /** Which leg of an `update` died. Null on a success, and on a single-verb run. */

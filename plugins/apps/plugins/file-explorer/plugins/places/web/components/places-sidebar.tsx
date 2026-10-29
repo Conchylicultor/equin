@@ -51,49 +51,70 @@ const GROUP_OPTIONS = [
   { value: "locations", label: "Locations" },
 ];
 
-const fields: FieldDef<PlaceRow>[] = [
-  { id: "label", label: "Name", primary: true, value: (r) => r.label },
-  {
-    id: "group",
-    label: "Group",
-    type: "enum",
-    options: GROUP_OPTIONS,
-    value: (r) => r.group,
-  },
-];
+/** A place's tone: the sidebar's muted text, full on hover; the active place is full. */
+function tone(r: PlaceRow, activeId: string | undefined): string {
+  return r.id === activeId
+    ? "text-sidebar-accent-foreground"
+    : // The row's own hover group (`Row`'s action anchor), never a bare
+      // `group` an outer surface may also carry.
+      "text-sidebar-foreground group-hover/row-actions:text-sidebar-accent-foreground";
+}
 
 /**
- * The list's options for the place showing now (`activeId`). A place reads in
- * the sidebar's muted text at the regular weight, its icon in the same tone,
- * and comes up to full text on hover; the active place is full text at medium
- * weight with its icon in the accent. A failed source's row says why on hover
- * (its muted tone says it is not a place to go).
+ * The list's fields for the place showing now (`activeId`). A place's icon is
+ * the row's lead (in the same tone as its label; the accent when active); a
+ * failed source's row says why on hover (its muted tone says it is not a place
+ * to go).
  */
-function listOptions(activeId: string | undefined) {
-  const tone = (r: PlaceRow) =>
-    r.id === activeId
-      ? "text-sidebar-accent-foreground"
-      : // The row's own hover group (`Row`'s action anchor), never a bare
-        // `group` an outer surface may also carry.
-        "text-sidebar-foreground group-hover/row-actions:text-sidebar-accent-foreground";
-  return {
-    list: {
-      leading: (r: PlaceRow) => (
+function placeFields(activeId: string | undefined): FieldDef<PlaceRow>[] {
+  return [
+    {
+      id: "icon",
+      label: "Icon",
+      type: "icon",
+      header: false,
+      filterable: false,
+      sortable: false,
+      groupable: false,
+      value: (r) => r.id,
+      cell: (r) => (
         <span
           title={r.message ?? undefined}
-          className={cn(r.id === activeId ? "text-sidebar-primary" : tone(r))}
+          className={cn(
+            r.id === activeId ? "text-sidebar-primary" : tone(r, activeId),
+          )}
           style={NAV_ICON_GAP}
         >
           <Icon icon={r.icon} className="size-4" />
         </span>
       ),
+    },
+    { id: "label", label: "Name", primary: true, value: (r) => r.label },
+    {
+      id: "group",
+      label: "Group",
+      type: "enum",
+      options: GROUP_OPTIONS,
+      value: (r) => r.group,
+    },
+  ];
+}
+
+/**
+ * The list's options for the place showing now (`activeId`). A place reads in
+ * the sidebar's muted text at the regular weight and comes up to full text on
+ * hover; the active place is full text at medium weight.
+ */
+function listOptions(activeId: string | undefined) {
+  return {
+    list: {
       // The label role at its full size (the list is compact, which would
       // step it down to the caption rung).
       labelClassName: (r: PlaceRow) =>
         cn(
           "text-label",
           r.id === activeId ? "font-medium" : "font-normal",
-          tone(r),
+          tone(r, activeId),
         ),
     },
   };
@@ -261,6 +282,8 @@ function PlacesList({
       inHere.find((r) => r.open === null)
     )?.id;
   }, [rows, location.dir, location.open, home]);
+
+  const fields = useMemo(() => placeFields(activeId), [activeId]);
 
   // Host paths dropped on Favorites go in the gap the line shows — between
   // any two favorites, built-in or pinned, or after the last for the

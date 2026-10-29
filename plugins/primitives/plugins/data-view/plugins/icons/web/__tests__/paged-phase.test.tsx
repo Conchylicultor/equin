@@ -56,6 +56,7 @@ const releasedAbove = (rows: number): DataViewPagePlaceholders => ({
 function view(rows: Row[], placeholders: DataViewPagePlaceholders | undefined) {
   const p: DataViewRenderProps<Row> = {
     revealSelection: true,
+    placement: {},
     rows,
     fields: [name],
     rowKey: (r) => r.id,

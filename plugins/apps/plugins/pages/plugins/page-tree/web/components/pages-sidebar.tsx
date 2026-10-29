@@ -105,11 +105,27 @@ function titleField(fetchEndpoint: FetchEndpoint): FieldDef<PagesTreeRow> {
   };
 }
 
+/** The page's icon: the row's lead (the tree's icon box, the list's glyph). */
+const ICON_FIELD: FieldDef<PagesTreeRow> = {
+  id: "icon",
+  label: "Icon",
+  type: "icon",
+  header: false,
+  filterable: false,
+  sortable: false,
+  groupable: false,
+  value: (b) => b.id,
+  cell: (b) => <PageIcon icon={pageData(b).icon} className="size-4" />,
+};
+
 /** The sidebar's own fields, bound to the subtree's transport; stable per it. */
 function useSidebarExtraFields(
   fetchEndpoint: FetchEndpoint,
 ): FieldDef<PagesTreeRow>[] {
-  return useMemo(() => [titleField(fetchEndpoint)], [fetchEndpoint]);
+  return useMemo(
+    () => [ICON_FIELD, titleField(fetchEndpoint)],
+    [fetchEndpoint],
+  );
 }
 
 export function PagesSidebar() {
@@ -179,9 +195,6 @@ export function PagesSidebar() {
       b.id === selectedId ? ACTIVE_LABEL : undefined;
     return {
       table: {
-        leadingIcon: (b: PageRow) => (
-          <PageIcon icon={pageData(b).icon} className="size-4" />
-        ),
         labelClassName: activeLabel,
         // No `rowMenu`: "Add page below" is an ordinary item action
         // (`AddPageBelowAction`) contributed to `PageTree.RowActions`, so the row
@@ -217,9 +230,6 @@ export function PagesSidebar() {
       // one row by construction — height, indent, icon box, hover, selection.
       list: {
         rowChrome: "tree" as const,
-        leading: (b: PageRow) => (
-          <PageIcon icon={pageData(b).icon} className="size-4" />
-        ),
         labelClassName: activeLabel,
       },
     };

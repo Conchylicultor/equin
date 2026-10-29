@@ -45,6 +45,7 @@ const BACKUP: Row = { id: "k1", name: "backup row", kind: "backup" };
 function renderList(over: Partial<DataViewRenderProps<Row>>) {
   const props: DataViewRenderProps<Row> = {
     revealSelection: true,
+    placement: {},
     rows: [BUILD, BACKUP],
     fields: FIELDS,
     rowKey: (r) => r.id,

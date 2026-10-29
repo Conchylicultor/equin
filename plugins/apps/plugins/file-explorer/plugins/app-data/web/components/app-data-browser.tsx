@@ -225,6 +225,23 @@ function Folder({
     pages.status === "ready" ? { status: "ready" } : pages;
   const fields = useMemo(
     (): FieldDef<DataEntryRow>[] => [
+      {
+        id: "fileType",
+        label: "Type",
+        type: "icon",
+        header: false,
+        filterable: false,
+        sortable: false,
+        groupable: false,
+        value: (r) => r.name,
+        cell: (r) => (
+          <FileTypeIcon
+            name={r.name}
+            isDir={r.kind === "dir"}
+            className="size-4"
+          />
+        ),
+      },
       { id: "name", label: "Name", primary: true, value: (r) => r.name },
       {
         id: "kind",
@@ -239,12 +256,16 @@ function Folder({
       {
         id: "size",
         label: "Size",
-        value: (r) => (r.kind === "dir" ? "" : formatSize(r.size)),
+        type: "byte-size",
+        value: (r) => (r.kind === "dir" ? null : r.size),
+        cell: (r) => (r.kind === "dir" ? null : formatSize(r.size)),
       },
       {
         id: "modified",
         label: "Modified",
-        value: (r) => formatModified(r.mtimeMs, now),
+        type: "date",
+        value: (r) => new Date(r.mtimeMs),
+        cell: (r) => formatModified(r.mtimeMs, now),
       },
     ],
     [now],
@@ -263,17 +284,6 @@ function Folder({
       rowActivation={(r) =>
         openPane.to(filesDataAtPane, { root, at: r.id }, { mode: "root" })
       }
-      viewOptions={{
-        list: {
-          leading: (r: DataEntryRow) => (
-            <FileTypeIcon
-              name={r.name}
-              isDir={r.kind === "dir"}
-              className="size-4"
-            />
-          ),
-        },
-      }}
     />
   );
 }

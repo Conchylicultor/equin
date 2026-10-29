@@ -1,13 +1,10 @@
-import { useMemo, type ReactElement, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import {
   DataView,
   defineDataView,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
-import {
-  Badge,
-  type BadgeVariant,
-} from "@plugins/primitives/plugins/css/plugins/badge/web";
+import type { BadgeVariant } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   useEventSourceRun,
@@ -19,10 +16,7 @@ import {
   type RunEvent,
   type RunEventAction,
 } from "@plugins/apps/plugins/events/plugins/events-core/core";
-import {
-  EventRow,
-  useOpenEvent,
-} from "@plugins/apps/plugins/events/plugins/event-list/web";
+import { useOpenEvent } from "@plugins/apps/plugins/events/plugins/event-list/web";
 import { EVENT_CATEGORY_OPTIONS } from "@plugins/apps/plugins/events/plugins/event-list/core";
 
 /**
@@ -56,19 +50,13 @@ const ACTION_VARIANT: Record<RunEventAction, BadgeVariant> = {
   disappeared: "warning",
 };
 
+// Each option carries its variant, so the action is a state: the list draws it
+// as the row's leading glyph.
 const ACTION_OPTIONS = RUN_EVENT_ACTIONS.map((a) => ({
   value: a,
   label: ACTION_LABEL[a],
+  variant: ACTION_VARIANT[a],
 }));
-
-/**
- * What this run did to the event, as the row's LEADING slot. It sits beside the
- * row body rather than inside it, so the body stays byte-identical to the main
- * events list's — one rendering of "an event", with a marker in front.
- */
-function ActionChip({ action }: { action: RunEventAction }): ReactElement {
-  return <Badge variant={ACTION_VARIANT[action]}>{ACTION_LABEL[action]}</Badge>;
-}
 
 /**
  * The section exists for every run, including the ones that touched nothing:
@@ -177,13 +165,7 @@ export function ExtractedEventsSection({
       // The same destination the main events list opens: the event's own page,
       // else the page it was extracted from.
       onRowActivate={openEvent}
-      viewOptions={{
-        list: {
-          size: "md",
-          leading: (e: RunEvent) => <ActionChip action={e.action} />,
-          renderRow: (e: RunEvent) => <EventRow event={e} />,
-        },
-      }}
+      viewOptions={{ list: { size: "md" } }}
       emptyState={emptyStateFor(run)}
     />
   );

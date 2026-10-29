@@ -264,6 +264,7 @@ function PersistedLogs({
         fields={lineFields}
         rowKey={(l) => l.n}
         storageKey={BUILD_RUN_LOG_LINES}
+        recipe="log"
         views={["table", "list"]}
         defaultView="table"
         readiness={readiness}

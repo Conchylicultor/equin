@@ -16,6 +16,7 @@ export const listFieldType = defineFieldType<ListItem<FieldsRecord>[]>("list");
 
 export const listIdentity = defineFieldIdentity<ListItem<FieldsRecord>[]>({
   type: listFieldType,
+  kind: "label",
   label: "List",
   icon: listIcon,
 });

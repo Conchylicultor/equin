@@ -8,6 +8,7 @@ export const uuidFieldType = defineFieldType<string>("uuid");
 
 export const uuidIdentity = defineFieldIdentity<string>({
   type: uuidFieldType,
+  kind: "identifier",
   label: "UUID",
   icon: fingerprintIcon,
   extends: textFieldType,

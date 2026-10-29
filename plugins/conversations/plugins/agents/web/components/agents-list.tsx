@@ -63,21 +63,30 @@ function useAgentOverrides(fetchEndpoint: FetchEndpoint) {
   );
 }
 
-// The agent's avatar is a field, not a tree option: every view that has a
-// leading slot draws it there, ahead of `leadingIcon`'s status dot. It is
-// drawn from two columns, so the list computes it itself.
+// The agent's avatar is a field (a visual, so it leads) drawn from two
+// columns, so the list computes it itself; its status dot is a field too,
+// placed after the title.
 const extraFields: FieldDef<Agent>[] = [
   avatarFieldDef<Agent>({
     id: "avatar",
     label: "Avatar",
-    leading: true,
     avatar: (a) => ({
       icon: a.icon ?? DEFAULT_AGENT_AVATAR.icon,
       color: a.iconColor ?? DEFAULT_AGENT_AVATAR.color,
       fallbackKey: a.id,
     }),
   }),
+  {
+    id: "status",
+    label: "Status",
+    type: "text",
+    value: (a) => a.id,
+    cell: (a) => <AgentStatus agentId={a.id} />,
+    filterable: false,
+  },
 ];
+
+const AGENT_PLACE = { status: "afterTitle" } as const;
 
 function randomFrom<T>(arr: readonly T[]): T {
   return arr[Math.floor(Math.random() * arr.length)] as T;
@@ -163,6 +172,7 @@ export function AgentsList({
         extraFields={extraFields}
         rowKey={(a) => a.id}
         views={["table"]}
+        place={AGENT_PLACE}
         storageKey={AGENTS_LIST_VIEW}
         selectedRowId={selectedId}
         rowActivation={(a) =>
@@ -186,9 +196,6 @@ export function AgentsList({
         itemActions={AgentsSlots.AgentActions}
         viewOptions={{
           table: {
-            // The status dot follows the avatar field in the leading slot; both
-            // inherit the DataView body's compact density.
-            leadingIcon: (a: Agent) => <AgentStatus agentId={a.id} />,
             rowMenu: ({ addBelow }: RowMenuHelpers): RowMenuItem[] => [
               {
                 icon: addIcon,

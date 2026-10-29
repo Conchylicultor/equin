@@ -40,6 +40,7 @@ export function DeadView({
     <DataView<DeadJobListRow>
       storageKey={DEAD_VIEW}
       overrides={overrides}
+      recipe="ledger"
       views={["table", "list"]}
       defaultView="table"
       source={deadSource}
@@ -64,7 +65,6 @@ const overrides = fieldOverrides(deadJobs, {
         {r.attempts}/{r.maxAttempts}
       </Text>
     ),
-    align: "end",
     width: "5rem",
   },
   diedAt: {
@@ -75,7 +75,6 @@ const overrides = fieldOverrides(deadJobs, {
       ) : (
         <WhenText date={r.archivedAt} prefix="Archived" />
       ),
-    align: "end",
     width: "6rem",
   },
   lastError: {
@@ -89,7 +88,6 @@ const overrides = fieldOverrides(deadJobs, {
   },
   archivedAt: {
     cell: (r) => <WhenText date={r.archivedAt} prefix="Archived" />,
-    align: "end",
     width: "6rem",
     visible: false,
   },

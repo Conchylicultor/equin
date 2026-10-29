@@ -13,11 +13,8 @@ import {
   Inset,
   Stack,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
-import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {
@@ -37,6 +34,12 @@ import {
 const MCP_TOOLS_VIEW = defineDataView("debug.mcp-tools");
 
 const NO_TOOLS: McpCatalogTool[] = [];
+const VISIBILITY_VARIANT = {
+  everywhere: "muted",
+  gated: "warning",
+  profile: "info",
+} as const satisfies Record<ToolVisibility, string>;
+
 const VISIBILITIES: ToolVisibility[] = ["everywhere", "gated", "profile"];
 
 /** A plugin id as its folder path, the spelling a reader greps for. */
@@ -87,6 +90,14 @@ export function ToolsView({
         sortable: true,
       },
       {
+        id: "description",
+        label: "Description",
+        type: "multiline-text",
+        value: (t) => firstLine(t.description),
+        sortable: false,
+        filterable: false,
+      },
+      {
         id: "plugin",
         label: "Declared in",
         type: "enum",
@@ -104,10 +115,10 @@ export function ToolsView({
         options: VISIBILITIES.map((value) => ({
           value,
           label: VISIBILITY_LABEL[value],
+          variant: VISIBILITY_VARIANT[value],
         })),
         filterable: true,
         groupable: true,
-        visible: false,
       },
       {
         id: "live",
@@ -127,7 +138,6 @@ export function ToolsView({
         type: "number",
         value: (t) => toolParams(t).length,
         sortable: true,
-        visible: false,
       },
     ],
     [pluginOptions],
@@ -154,11 +164,6 @@ export function ToolsView({
           `${t.name} ${pluginPath(t.declaredIn)} ${t.description}`
         }
         searchPlaceholder="Search tools, plugins, descriptions…"
-        viewOptions={{
-          list: {
-            renderRow: (t: McpCatalogTool) => <ToolRowBody tool={t} />,
-          },
-        }}
         emptyState={<>Nothing matches.</>}
       />
     </Stack>
@@ -188,33 +193,6 @@ function Summary({ catalog }: { catalog: McpCatalog }): ReactElement {
         </Text>
       </Stack>
     </Inset>
-  );
-}
-
-/** One tool: its name and declaring plugin over what it does, badges right. */
-function ToolRowBody({ tool }: { tool: McpCatalogTool }): ReactElement {
-  const params = toolParams(tool).length;
-  return (
-    <>
-      <Fill>
-        <Stack gap="none">
-          <Line>
-            <Text variant="code" tone="strong">
-              {tool.name}
-            </Text>
-          </Line>
-          <Line>
-            <Text variant="caption" tone="muted">
-              {firstLine(tool.description)}
-            </Text>
-          </Line>
-        </Stack>
-      </Fill>
-      <Stack direction="row" gap="xs" align="center" className={rigidClass()}>
-        <ToolBadges tool={tool} />
-        <Badge>{params === 1 ? "1 arg" : `${params} args`}</Badge>
-      </Stack>
-    </>
   );
 }
 

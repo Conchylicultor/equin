@@ -51,17 +51,17 @@ same paint through `statusDotPaintClass(paint)`.
     - `ui/tokens/density --status-dot-md`
     - `ui/tokens/density --status-dot-sm`
     - `ui/tokens/density --status-dot-xs`
-  - Imported by: 44 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×11
-    - `conversations` ×9
+  - Imported by: 40 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×9
+    - `conversations` ×8
     - `debug` ×8
     - `active-data` ×3
     - `build` ×2
-    - `infra` ×2
     - `shell` ×2
     - `tasks` ×2
     - `config_v2/settings`
     - `hints/ask`
+    - `infra/claude-cli`
     - `menu-bar`
     - `primitives/data-view/view-core`
     - `runs/run-outcome`

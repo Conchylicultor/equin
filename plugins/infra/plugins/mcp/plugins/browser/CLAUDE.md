@@ -186,9 +186,6 @@ nor closed under it. Bounded, because the host cannot see the script end.
   - Uses:
     - `conversations.useConversationById`
     - `network/live.useLive`
-    - `primitives/css/fill.Fill`
-    - `primitives/css/line.Line`
-    - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
@@ -260,7 +257,6 @@ nor closed under it. Bounded, because the host cannot see the script end.
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --warning`
-    - `ui/tokens/density --space-md`
 - Exemptions:
   - Exempts itself from:
     - `boundaries/no-platform-api` — `server/internal/host-client.ts`, `shared/code-id.ts` (debt)

@@ -34,7 +34,11 @@ import {
   mailThreads,
   type MailThreadRow,
 } from "@plugins/apps/plugins/mail/plugins/threads/core";
-import { ThreadRow } from "@plugins/apps/plugins/mail/plugins/threads/web";
+import {
+  THREAD_EXTRA_FIELDS,
+  THREAD_PLACE,
+  threadRowTone,
+} from "@plugins/apps/plugins/mail/plugins/threads/web";
 import {
   mailSearch,
   MAIL_SEARCH_MAX_CHARS,
@@ -43,10 +47,6 @@ import {
   type MailSearchRefusal,
 } from "@plugins/apps/plugins/mail/plugins/sync/core";
 import { mailMessagePane, mailSearchPane } from "../panes";
-import { symbol } from "@plugins/ui/plugins/icons/core";
-import { Icon } from "@plugins/ui/plugins/icons/web";
-
-const starIcon = symbol("star");
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
 const MAIL_SEARCH_VIEW = defineDataView("mail-search");
@@ -243,21 +243,11 @@ function SearchResults({
       views={["list"]}
       selectedRowId={selectedRowId}
       emptyState="No matches."
-      viewOptions={{
-        list: {
-          size: "md",
-          leading: (t: MailThreadRow) =>
-            t.starred ? (
-              <Icon icon={starIcon} active className="icon-auto text-warning" />
-            ) : (
-              <Icon
-                icon={starIcon}
-                className="icon-auto text-muted-foreground"
-              />
-            ),
-          renderRow: (t: MailThreadRow): ReactNode => <ThreadRow thread={t} />,
-        },
-      }}
+      recipe="inbox"
+      place={THREAD_PLACE}
+      extraFields={THREAD_EXTRA_FIELDS}
+      rowTone={threadRowTone}
+      viewOptions={{ list: { size: "md" } }}
       rowActivation={(t) => {
         const messageId = messageOf.get(t.id);
         if (messageId === undefined) return undefined;

@@ -32,25 +32,24 @@ attribute type carries.
   - Exports (types): `LineProps`
   - Exports (values): `Line`
 - Cross-plugin:
-  - Imported by: 125 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×37
-    - `primitives` ×18
+  - Imported by: 121 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×35
+    - `primitives` ×20
     - `conversations` ×17
-    - `debug` ×8
+    - `debug` ×7
     - `page` ×6
     - `ui` ×6
     - `tasks` ×5
     - `plugin-meta` ×4
     - `review` ×4
     - `build` ×3
-    - `infra` ×3
     - `apps-core` ×2
     - `fields` ×2
     - `reorder` ×2
     - `shell` ×2
-    - `auth`
     - `code-explorer/commit-detail`
     - `hints/ask`
+    - `infra/claude-cli`
     - `integrations/youtube`
     - `map`
     - `tag-tree/picker`

@@ -68,9 +68,9 @@ without a DB append to, and screens read its `op_log_ops` fold.
     - `Pane.Register` "logs"
     - `Pane.Register` "logs-channel"
     - `DebugApp.Sidebar` "Logs"
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×7
-    - `primitives/data-view` ×4
+    - `primitives/data-view` ×5
     - `primitives/pane` ×4
     - `primitives/css/spacing` ×3
     - `primitives/relative-time` ×2

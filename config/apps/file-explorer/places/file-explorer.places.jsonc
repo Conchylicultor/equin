@@ -12,7 +12,7 @@
       "icon": "star",
       "view": {
         "type": "list",
-        "properties": [{ "id": "label" }],
+        "properties": [{ "id": "icon" }, { "id": "label" }],
         "filter": {
           "kind": "group",
           "id": "favorites",
@@ -35,7 +35,7 @@
       "icon": "hard-drive",
       "view": {
         "type": "list",
-        "properties": [{ "id": "label" }],
+        "properties": [{ "id": "icon" }, { "id": "label" }],
         "filter": {
           "kind": "group",
           "id": "locations",

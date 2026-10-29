@@ -9,6 +9,7 @@ export const jsonFieldType = defineFieldType<unknown>("json");
 // projection (mirrors the `object` field identity, which omits it too).
 export const jsonIdentity = defineFieldIdentity<unknown>({
   type: jsonFieldType,
+  kind: "prose",
   label: "JSON",
   icon: dataObjectIcon,
 });

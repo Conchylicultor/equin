@@ -94,6 +94,8 @@ const queueRank = (r: QueueRow) => r.rank;
 
 const QUEUE_VIEW_OPTIONS = {
   list: {
+    // Kept: the row is the shared ConversationItem (optimistic status, title
+    // mode, hint anchor, close control) — not values of fields.
     // A blocked task's row is muted: it is waiting on another task, not on
     // the user.
     renderRow: (c: QueueRow) => (

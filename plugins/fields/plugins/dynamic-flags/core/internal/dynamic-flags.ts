@@ -18,6 +18,7 @@ export const dynamicFlagsIdentity = defineFieldIdentity<
   Record<string, boolean>
 >({
   type: dynamicFlagsFieldType,
+  kind: "label",
   label: "Dynamic Toggles",
   icon: checklistIcon,
 });

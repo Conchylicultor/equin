@@ -117,10 +117,8 @@ describe("avatarFieldDef", () => {
       id: "avatar",
       label: "Avatar",
       avatar,
-      leading: true,
     });
     expect(def.type).toBe("avatar");
-    expect(def.leading).toBe(true);
     expect(def.data?.({ name: "x" })).toEqual(avatar({ name: "x" }));
     expect("visible" in def).toBe(false);
   });

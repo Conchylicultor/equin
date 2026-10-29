@@ -11,9 +11,9 @@ export default {
       owner: conversationUsageShape.exposure,
       fields: {
         // The money type draws the amount; only the column's place is set here.
-        costUsd: { width: "6rem", align: "end" },
-        tokens: { cell: formatTokensCompact, width: "6rem", align: "end" },
-        agentCount: { width: "5rem", align: "end" },
+        costUsd: { width: "6rem" },
+        tokens: { cell: formatTokensCompact, width: "6rem" },
+        agentCount: { width: "5rem" },
       },
     }),
   ],

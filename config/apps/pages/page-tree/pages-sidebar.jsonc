@@ -38,7 +38,7 @@
       "icon": "star",
       "view": {
         "type": "list",
-        "properties": [{ "id": "title" }],
+        "properties": [{ "id": "icon" }, { "id": "title" }],
         "hideWhenEmpty": true,
         "filter": {
           "kind": "group",
@@ -63,7 +63,7 @@
       "view": {
         "type": "table",
         "presentation": "outline",
-        "properties": [{ "id": "title" }],
+        "properties": [{ "id": "icon" }, { "id": "title" }],
         "filterScope": "roots",
         "filter": {
           "kind": "group",
@@ -96,7 +96,7 @@
       "name": "Recent",
       "view": {
         "type": "list",
-        "properties": [{ "id": "title" }],
+        "properties": [{ "id": "icon" }, { "id": "title" }],
         "hideWhenEmpty": true,
         "sort": [{ "fieldId": "editedAt", "direction": "desc" }],
         "fold": { "limit": 10 },
@@ -123,7 +123,7 @@
       "view": {
         "type": "table",
         "presentation": "outline",
-        "properties": [{ "id": "title" }],
+        "properties": [{ "id": "icon" }, { "id": "title" }],
         "filterScope": "roots",
         "hideWhenEmpty": true,
         "description": "Pages created by agent runs — moved to trash after 24h.",

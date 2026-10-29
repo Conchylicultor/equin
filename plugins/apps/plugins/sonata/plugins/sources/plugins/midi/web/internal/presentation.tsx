@@ -23,7 +23,6 @@ export const midiPresentation = FieldPresentation.Register({
       // The card token's compact form (`2 tr`).
       token: (n) => (n === null ? null : `${n} tr`),
       width: "5rem",
-      align: "end",
     },
   },
 });

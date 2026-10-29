@@ -132,7 +132,6 @@ export function DependenciesView() {
           );
         },
         sortable: true,
-        align: "end",
         width: "6rem",
       },
       {

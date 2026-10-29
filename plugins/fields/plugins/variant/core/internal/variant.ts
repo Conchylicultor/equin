@@ -21,6 +21,7 @@ export const variantFieldType = defineFieldType<VariantValue>("variant");
 
 export const variantIdentity = defineFieldIdentity<VariantValue>({
   type: variantFieldType,
+  kind: "label",
   label: "Variant",
   icon: callSplitIcon,
   // no coerce — not a sortable/filterable scalar (like reorder-tree/object).

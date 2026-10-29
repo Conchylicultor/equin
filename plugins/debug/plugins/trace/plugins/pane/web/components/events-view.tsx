@@ -77,7 +77,6 @@ export function EventsView(): ReactElement {
               ×{(r.durationMs / r.thresholdMs).toFixed(1)}
             </span>
           ) : null,
-        align: "end",
         sortable: true,
         width: "6rem",
       },
@@ -138,7 +137,6 @@ const overrides = fieldOverrides(traceEvents, {
     width: "minmax(0,1fr)",
   },
   durationMs: {
-    align: "end",
     width: "6rem",
   },
 });

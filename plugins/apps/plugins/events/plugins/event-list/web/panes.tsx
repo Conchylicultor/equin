@@ -12,13 +12,9 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { eventsApp } from "@plugins/apps/plugins/events/plugins/shell/core";
-import {
-  externalUrl,
-  type ListedEvent,
-} from "@plugins/apps/plugins/events/plugins/events-core/core";
+import { externalUrl } from "@plugins/apps/plugins/events/plugins/events-core/core";
 import { EVENT_LIST_SEARCHABLE, eventsList, type EventListRow } from "../core";
 import { useOpenEvent } from "./internal/use-open-event";
-import { EventRow } from "./components/event-row";
 
 /**
  * The Events surface id. Config-backed like every DataView: the view instances
@@ -84,12 +80,7 @@ function EventListPaneView(): ReactElement {
           const src = externalUrl(e.imageUrl);
           return src === null ? null : { kind: "image", src };
         }}
-        viewOptions={{
-          list: {
-            size: "md",
-            renderRow: (e: ListedEvent) => <EventRow event={e} />,
-          },
-        }}
+        viewOptions={{ list: { size: "md" } }}
         source={eventsListSource}
       />
     </PaneChrome>

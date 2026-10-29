@@ -8,6 +8,7 @@ export const ordinalFieldType = defineFieldType<number>("ordinal");
 
 export const ordinalIdentity = defineFieldIdentity<number>({
   type: ordinalFieldType,
+  kind: "ordinal",
   label: "Ordinal",
   icon: ordinalIcon,
   extends: intFieldType,

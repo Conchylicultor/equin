@@ -84,6 +84,7 @@ describe("data-view list manual-order drag", () => {
     };
     const props = {
       revealSelection: true,
+      placement: {},
       rows: ROWS,
       fields: FIELDS,
       rowKey: (r: Row) => r.id,

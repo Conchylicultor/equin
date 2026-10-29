@@ -14,7 +14,6 @@ export const serverStatusPresentation = FieldPresentation.Register({
   fields: {
     ok: {
       cell: (ok) => <ServerStatusBadge status={statusOfOk(ok)} />,
-      align: "end",
     },
   },
 });

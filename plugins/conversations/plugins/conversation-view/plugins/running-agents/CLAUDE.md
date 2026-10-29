@@ -165,7 +165,7 @@ value (`band-view.ts`: `showAll` + `open`).
   - Contributes:
     - `Conversation.AbovePromptInput` → `RunningAgentsBand`
     - `TranscriptStats.Item` "agents" → `AgentsStat`
-  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/conversation-view/jsonl-viewer/background-shells` ×4
     - `conversations/conversation-view/jsonl-viewer/transcript-stats` ×4
     - `primitives/collapsible` ×4
@@ -181,7 +181,6 @@ value (`band-view.ts`: `showAll` + `open`).
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
-    - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/dom/web-storage.defineStore`

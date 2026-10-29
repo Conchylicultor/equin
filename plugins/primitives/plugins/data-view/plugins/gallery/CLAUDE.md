@@ -12,16 +12,18 @@ One card shape, everywhere — `DataCard`, built at ONE site in `GalleryView`:
   16/10 frame, `rounded-cover`, `shadow-cover`) with nothing padded around it.
   Its content is `resolveCover(visibleFields, DataViewProps.cover)` — the
   surface's accessor, else the `FieldDef.cover` field, else the first `media`
-  field. A row with no cover of its own shows the schema's leading field
-  (`FieldDef.leading`, the avatar) centred in the frame, else a monogram of
+  field. A row with no cover of its own shows its `visual` lead (the avatar)
+  centred in the frame, else a monogram of
   its title (an `Avatar` tile at the bottom-left, the title's first letter on
   its auto-colour; `coverMonogram: hide` drops it), else the blank tint — so
   every card of a view is the same size. Hovering anywhere on the card lifts
   the cover (`coverHoverGroup` on the card root).
-- **Its text is `<CardMeta>`**: `partitionCardFields(resolveBodyFields(…))`,
-  computed once per view — title (+ indicators), the subtitle (text fields
-  joined with ·), one line of icon + value tokens. Fixed line heights; an empty
-  value is omitted, never "Empty". The fields follow the view's Properties.
+- **Its text is `<CardMeta>`**: `cardFieldsOf(placement)` (`GALLERY_SLOTS`;
+  data-view CLAUDE.md, "Placement"), computed once per view — the title (+ its
+  `afterTitle` marks), the `line2` subtitle joined with ·, one line of up to
+  three `trail` tokens (icon + value) ending in the `edge` field. Fixed line
+  heights; an empty value is omitted, never "Empty". The fields follow the
+  view's Properties.
 - **Actions sit on the cover** (`useItemActionZones(desc, { hasPersistentSlot:
   true, hasPrimarySlot: true })`):
   - top-right, ONE pin holding `[revealed][at rest]`, each arm its own float
@@ -31,7 +33,8 @@ One card shape, everywhere — `DataCard`, built at ONE site in `GalleryView`:
   - bottom-right, the **primary** action (`zone: "primary"`, drawn by the
     action itself as a round button for `placement: "primary"`): on hover, or
     at rest while active (playing).
-- **Badge**: an aggregate representative's `×N`, pinned top-left of the cover.
+- **Badge**: a lead that is no visual (a state's glyph), then an aggregate
+  representative's `×N`, pinned top-left of the cover.
 - **Row hover**: a card reports pointer enter/leave to `onRowHoverChange`
   (`DataCard onHoverChange`), and the `hoveredRowId` card holds the card's
   own hover paint (`DataCard hovered`) while another surface hovers it (its
@@ -64,8 +67,8 @@ One card shape, everywhere — `DataCard`, built at ONE site in `GalleryView`:
   `dv.card-token-icon`.
 
 There are no gallery options. A surface changes what a card shows through its
-schema (fields, `FieldDef.cover` / `leading` / `indicator` / `icon`), the
-cover accessor, its item actions and the theme's tokens — never by replacing
+schema (fields and their types, `FieldDef.cover` / `icon`), its placement
+(`recipe` / `place`), the cover accessor, its item actions and the theme's tokens — never by replacing
 the card or its body, so a card can never drop an affordance the surface
 declared.
 
@@ -142,14 +145,15 @@ taking `{song, onOpen}` never trips it.
 - Description: Gallery view child for the data-view primitive: a responsive grid of cover cards — the cover is the card, its fields three fixed lines under it, its actions on the cover.
 - Web:
   - Contributes: `DataViewSlots.View` "Gallery" → `GalleryView`
-  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×25
+  - Uses: 43 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×26
     - `primitives/css/ui-kit` ×3
     - `primitives/row-actions` ×2
     - `primitives/avatar.Avatar`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/grid.Grid`
+    - `primitives/css/inline.Inline`
     - `primitives/css/layer.Layer`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`

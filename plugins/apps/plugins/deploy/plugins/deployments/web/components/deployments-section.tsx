@@ -191,8 +191,6 @@ function DeploymentsBody({
         options: RUN_STATE_OPTIONS,
         value: (d) => runStateOf(runs[d.id]),
         cell: (d) => <RunCell run={runs[d.id]} />,
-        // Trailing, so the list row keeps it out of the truncating subtitle line.
-        align: "end",
       },
       // The `release` column is NOT here: it is a client field of the
       // `deployments` collection (`releaseFields`), declared and resolved by

@@ -52,8 +52,6 @@ its shape (task-track, task-category, automations).
     - `primitives/live-state.ResourceView`
     - `primitives/loading.Loading`
     - `tasks.patchTask`
-    - `tasks/task-status.StatusBadge`
-    - `tasks/task-status.StatusIcon`
   - Exports (values):
     - `buildTreeOptions`
     - `clusterTaskHierarchy`

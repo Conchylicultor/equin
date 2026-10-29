@@ -36,9 +36,7 @@ import {
   GroupedSections,
   SectionBody,
   leadingSlot,
-  pickLeadingField,
-  pickPrimaryField,
-  resolveBodyFields,
+  usePlacement,
   useDataViewSections,
   useResolveCell,
   useResolveCellEditor,
@@ -54,13 +52,22 @@ import {
   type ItemActionsDescriptor,
   type ManualOrderConfig,
 } from "@plugins/primitives/plugins/data-view/web";
-import type { DataViewPagePlaceholders } from "@plugins/primitives/plugins/data-view/core";
+import type {
+  DataViewPagePlaceholders,
+  ViewSlots,
+} from "@plugins/primitives/plugins/data-view/core";
 import type { IconsViewOptions } from "../../core";
 import { useIconColumns } from "./use-icon-columns";
 
 /** Above this tile count a section windows its grid, one measured lane per
  *  windowed row. Smaller launchers keep the plain grid. */
 const VIRTUALIZE_THRESHOLD = 120;
+
+/** A tile is its face — a visual lead, filling the squircle — and its name. */
+export const ICONS_SLOTS: ViewSlots = {
+  lead: { capacity: 1, kinds: ["visual"] },
+  title: { capacity: 1 },
+};
 
 /**
  * The grid's geometry per density, on every grid (and the probe) rather than
@@ -262,7 +269,13 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
   // The roving tab stop: the tile the keyboard user last focused. Absent (or no
   // longer an activating tile) → the selected row's tile, else the first.
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
-  const vis = resolveBodyFields(props.fields, props.state.properties);
+  // A tile draws its face (the lead) and its name (the title) — nothing else.
+  const placement = usePlacement(
+    props.fields,
+    props.state.properties,
+    props.placement,
+    ICONS_SLOTS,
+  );
   // Documented cast boundary: `options` is `viewOptions.icons`, opaque to the host.
   const { useTileRef, menu, addTile } = (props.options ??
     {}) as IconsViewOptions<unknown>;
@@ -304,8 +317,8 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
       (k) => k != null && activatingKeys.includes(k),
     ) ?? activatingKeys[0];
 
-  const leadingField = pickLeadingField(vis);
-  const titleField = pickPrimaryField(vis.filter((f) => f !== leadingField));
+  const leadingField = placement.slots.lead[0];
+  const titleField = placement.slots.title[0];
 
   const renderName = (row: unknown): ReactNode =>
     titleField ? (
@@ -382,7 +395,7 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
               row,
               resolveCell,
               resolveEditor,
-              // A launcher tile has no per-view leading option to add.
+              form: placement.formOf("lead"),
               own: undefined,
             }) ?? (
               <Avatar

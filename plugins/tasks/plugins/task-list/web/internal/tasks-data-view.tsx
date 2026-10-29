@@ -15,10 +15,6 @@ import {
   type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { patchTask } from "@plugins/tasks/web";
-import {
-  StatusIcon,
-  StatusBadge,
-} from "@plugins/tasks/plugins/task-status/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const addIcon = symbol("add");
@@ -48,8 +44,10 @@ async function createTaskRow(
  * the collection (`taskRows`, declared by fields over the `tasks` entity):
  * the title, status and last update, and every field a task extension
  * exposes — its track, category and automation (`origin`) — so a new
- * exposure joins every task list with no code here. The list says only how
- * three of them present (`fieldOverrides`, by id).
+ * exposure joins every task list with no code here. Where each is drawn is
+ * the record recipe's: the status (its options declare their tint and glyph)
+ * leads, the title is the title, the last update sits at the edge. The list
+ * says only how the title writes back (`fieldOverrides`, by id).
  *
  * A hook: the title edit writes through the enclosing subtree's transport (a
  * demo scope's worker, else the page's server). Stable per transport.
@@ -66,11 +64,6 @@ export function useTaskFieldSchema() {
               title: String(next ?? "").trim() || "Untitled",
             }),
         },
-        status: {
-          align: "end",
-          cell: (t) => <StatusBadge status={t.status} />,
-        },
-        updatedAt: { align: "end" },
       }),
     }),
     [fetchEndpoint],
@@ -130,7 +123,6 @@ export function buildTreeOptions({
 }) {
   // The nested table's options (`viewOptions.table`).
   return {
-    leadingIcon: (t: TaskListItem) => <StatusIcon status={t.status} />,
     labelClassName: (t: TaskListItem) =>
       cn(
         t.status === "dropped" &&

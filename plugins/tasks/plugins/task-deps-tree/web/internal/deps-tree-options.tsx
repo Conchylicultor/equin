@@ -1,13 +1,12 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { StatusIcon } from "@plugins/tasks/plugins/task-status/web";
 import type { DepsTreeRow } from "@plugins/tasks/plugins/task-deps-tree/core";
 import { AlsoAfterChips } from "./deps-actions";
 
 // Fields are NOT defined here: both sources spread task-list's `useTaskFieldSchema()`,
 // so this tree carries exactly the columns of every other task view (track,
-// category, … included). Only the tree chrome is deps-specific.
+// category, … included) — the status glyph leading each row is that schema's
+// placement. Only the tree chrome is deps-specific.
 export const depsTreeOptions = {
-  leadingIcon: (t: DepsTreeRow) => <StatusIcon status={t.status} />,
   labelClassName: (t: DepsTreeRow) =>
     cn(
       t.status === "dropped" && "text-muted-foreground/70 line-through italic",

@@ -123,6 +123,10 @@ function LegacyRun({ titleSeam }: { titleSeam: boolean }): ReactNode {
 function listSubtitleHtml(options?: unknown): string {
   const props: DataViewRenderProps<Row> = {
     revealSelection: true,
+    // Every non-title field is a subtitle term.
+    placement: {
+      place: { a: "line2", empty: "line2", kind: "line2", b: "line2" },
+    },
     rows: [ROW],
     fields: FIELDS,
     rowKey: (r) => r.id,
@@ -172,7 +176,7 @@ afterEach(cleanup);
 
 describe("data-view list subtitle after the SubtitleRun extraction", () => {
   it("draws the one-line run (title seam) exactly as before", () => {
-    const html = listSubtitleHtml();
+    const html = listSubtitleHtml({ lines: 1 });
     expect(html).toBe(legacyHtml(true));
     expect(html).toContain(" · ");
   });

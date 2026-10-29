@@ -33,6 +33,17 @@ export {
   UNGROUPED_FOLD_KEY,
   isFoldLimit,
 } from "./internal/types";
+export { RECIPES, SLOTS, SLOT_RANK } from "./internal/placement";
+export type {
+  PlacementMatch,
+  PlacementSpec,
+  Recipe,
+  RecipeRule,
+  Slot,
+  SlotForm,
+  SlotSpec,
+  ViewSlots,
+} from "./internal/placement";
 
 export { compareValues } from "./internal/grouping";
 export { optionDescendants } from "./internal/option-tree";

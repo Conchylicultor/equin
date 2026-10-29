@@ -77,8 +77,7 @@ label — `RunsDataView` passes no fields.
 
 Every row is one field-driven line, in every view, for every kind — so the
 Properties panel means something. An arm declares **fields** (its `liveArm`,
-presented by `FieldPresentation.Register({ owner: arm })`) and contributes a
-**leading glyph** (`Runs.Leading`); it does not contribute a row body.
+presented by `FieldPresentation.Register({ owner: arm })`) ; the outcome is a state, so the `ledger` recipe leads each row with its glyph. It does not contribute a row body.
 
 There used to be a `Runs.Row`. Do not reintroduce one: the list installs a
 `renderRow` override the moment *any* arm contributes, and that override replaces
@@ -127,7 +126,7 @@ group-by band, beside the "Common" band of base fields (data-view's CLAUDE.md,
 for its cells, widths and default visibility (required, even empty — the
 `live:arms-registered` check), `runLinks(arm, (run, { openPane }) =>
 openPane.to(…))` where its rows go (data-view's per-arm
-`CollectionRowActivation`), `investigateRuns`, and `Runs.Leading` as wanted.
+`CollectionRowActivation`), and `investigateRuns` as wanted.
 
 A `runLinks` link can only use identifiers the row already carries. When a
 pane wants one the row does not have, **fix the pane** — do not grow this API
@@ -149,10 +148,8 @@ row, or on a failed re-read the row as last seen).
 
 ## Plugin reference
 
-- Description: The merged run surface: <RunsDataView> over the `runs` union window (a live scroll: base fields derived from the collection and presented once, plus every arm's own fields, derived from its liveArm, each bound to its column), and the seams an arm reaches it through: runLinks (where its rows go — data-view's CollectionRowActivation over the arm), investigateRuns, and Runs.Leading for the list row's status glyph; the kind filter's options are the registered arms, derived by every list; an arm presents its fields' cells with FieldPresentation.Register({ owner: arm }). Every row is a single field-driven line; a domain's detail lives in the pane its rows open. Also exports useRun (a live point read of one run by its (kind, id) pair) and <RunDuration> (finished duration, or a running run's ticking elapsed time). The merged run space as ONE routed union window (a Meta-DataView): runsServed serves the `runs` collection's window, its `:rows` point read (useRun) and `:groups` from every arm bound through runsServed.arm — a domain's own ledger typed against the base row and its liveArm, the ledger id and the duration derived by the union — so a write to one ledger refills only the rows it changed. Names no run kind.
+- Description: The merged run surface: <RunsDataView> over the `runs` union window (a live scroll: base fields derived from the collection and presented once, plus every arm's own fields, derived from its liveArm, each bound to its column), and the seams an arm reaches it through: runLinks (where its rows go — data-view's CollectionRowActivation over the arm), investigateRuns; the kind filter's options are the registered arms, derived by every list; an arm presents its fields' cells with FieldPresentation.Register({ owner: arm }). Every row is a single field-driven line; a domain's detail lives in the pane its rows open. Also exports useRun (a live point read of one run by its (kind, id) pair) and <RunDuration> (finished duration, or a running run's ticking elapsed time). The merged run space as ONE routed union window (a Meta-DataView): runsServed serves the `runs` collection's window, its `:rows` point read (useRun) and `:groups` from every arm bound through runsServed.arm — a domain's own ledger typed against the base row and its liveArm, the ledger id and the duration derived by the union — so a write to one ledger refills only the rows it changed. Names no run kind.
 - Web:
-  - Slots: `Runs.Leading`
-  - Slot contributors: `Runs.Leading` ← `build.runs-arm`
   - Contributes: `FieldPresentation.Register` "collection:runs"
   - Uses:
     - `network/live.FieldPresentation`
@@ -169,9 +166,6 @@ row, or on a failed re-read the row as last seen).
     - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
     - `primitives/relative-time.useNow`
-    - `primitives/slot-render.defineDispatchSlot`
-    - `runs/run-outcome.RunOutcomeChip`
-    - `runs/run-outcome.RunOutcomeDot`
   - Exports (types):
     - `RunInvestigation`
     - `RunRowProps`
@@ -180,7 +174,6 @@ row, or on a failed re-read the row as last seen).
     - `investigateRuns`
     - `RunDuration`
     - `runLinks`
-    - `Runs`
     - `RUNS_VIEW`
     - `RunsDataView`
     - `useRun`

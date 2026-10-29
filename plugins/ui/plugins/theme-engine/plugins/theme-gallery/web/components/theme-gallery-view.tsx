@@ -113,6 +113,7 @@ export function ThemeGalleryView({
             // Each swatch is ALREADY one line (dots + name), so a row is its
             // natural shape.
             size: "sm",
+            // Kept: the row IS the theme's colour swatch (a drawing, no field).
             renderRow: (row: ThemeRow) => (
               <ThemeSwatch row={row} isPending={adoptingKey === row.key} />
             ),

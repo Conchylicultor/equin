@@ -1,9 +1,8 @@
-import type { ReactElement } from "react";
-import { InvestigateAction } from "@plugins/primitives/plugins/launch/plugins/investigate/web";
-import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
+import { Investigate } from "@plugins/primitives/plugins/launch/plugins/investigate/web";
 import { DEPLOY_CATEGORY_ID } from "@plugins/apps/plugins/deploy/core";
 import {
   DEPLOY_LOG_CHANNEL,
+  deployRunHistory,
   type DeployRunRecord,
 } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
 import { DEPLOY_RUN_KIND } from "@plugins/apps/plugins/deploy/plugins/deployments/plugins/runs-arm/core";
@@ -75,7 +74,8 @@ function brief(run: DeployRunRecord, userText: string): string {
 }
 
 /**
- * One row action on the History list, rendered only on a run that failed.
+ * The Investigate action on every failed run of the deployment History
+ * (`deployRunHistory`), declared once beside its collection's failure tint.
  *
  * A succeeded run has nothing to investigate and a `running` one has not
  * finished having its outcome — so the gate is `status === "failed"` and not
@@ -84,21 +84,15 @@ function brief(run: DeployRunRecord, userText: string): string {
  * briefing an agent that one happened would be inventing the outcome the row
  * itself refuses to invent.
  */
-export function InvestigateFailureAction({
-  row,
-}: ItemActionProps<DeployRunRecord>): ReactElement | null {
-  if (row.status !== "failed") return null;
-
+export const investigateDeployFailures = Investigate.Register<DeployRunRecord>({
+  owner: deployRunHistory,
+  failed: (row) => row.status === "failed",
+  noun: "deploy",
+  categoryId: DEPLOY_CATEGORY_ID,
   // The same subject the merged runs list files a failed deploy under, so the
   // two reach one task.
-  return (
-    <InvestigateAction
-      presentation="row-action"
-      noun={row.verb}
-      subject={runSubject({ kind: DEPLOY_RUN_KIND, id: row.id })}
-      categoryId={DEPLOY_CATEGORY_ID}
-      description={`Launch an agent briefed on this failed ${row.verb} of ${row.compositionId} — the CLI's own message, the run's identity, and where the transcript is.`}
-      brief={(userText) => brief(row, userText)}
-    />
-  );
-}
+  subject: (row) => runSubject({ kind: DEPLOY_RUN_KIND, id: row.id }),
+  description: (row) =>
+    `Launch an agent briefed on this failed ${row.verb} of ${row.compositionId} — the CLI's own message, the run's identity, and where the transcript is.`,
+  brief,
+});

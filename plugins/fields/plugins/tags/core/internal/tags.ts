@@ -7,6 +7,7 @@ export const tagsFieldType = defineFieldType<string[]>("tags");
 
 export const tagsIdentity = defineFieldIdentity<string[]>({
   type: tagsFieldType,
+  kind: "label",
   label: "Tags",
   icon: labelIcon,
 });

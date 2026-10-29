@@ -62,6 +62,7 @@ function renderIcons(
   } as unknown as LoadedPlugin;
   const props: DataViewRenderProps<Row> = {
     revealSelection: true,
+    placement: {},
     rows: [row],
     fields: [name],
     rowKey: (r) => r.id,

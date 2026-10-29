@@ -9,6 +9,7 @@ export const bytesFieldType = defineFieldType<string>("bytes");
 
 export const bytesIdentity = defineFieldIdentity<string>({
   type: bytesFieldType,
+  kind: "label",
   label: "Bytes",
   icon: memoryIcon,
 });

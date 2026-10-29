@@ -195,7 +195,6 @@ function CompositionsDataView({
             {it.entryPoints.length} entry
           </span>
         ),
-        align: "end",
         sortable: true,
       },
       {
@@ -208,7 +207,6 @@ function CompositionsDataView({
             {it.selectedContributors.length} sel
           </span>
         ),
-        align: "end",
         sortable: true,
       },
       {
@@ -222,7 +220,6 @@ function CompositionsDataView({
               {it.extends.length} ext
             </span>
           ) : null,
-        align: "end",
         sortable: true,
       },
       {
@@ -237,7 +234,6 @@ function CompositionsDataView({
         type: "enum",
         value: (it) => it.serve,
         options: [...SERVE_MODE_OPTIONS],
-        align: "end",
         cell: (it) => {
           // Main's row carries the mode like every other row and can never act
           // on it: no serve build may provision main's namespace, so the switch
@@ -304,7 +300,6 @@ function CompositionsDataView({
             </LinkChip>
           ) : null;
         },
-        align: "end",
       },
     ],
     [onSetMode],

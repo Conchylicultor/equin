@@ -55,7 +55,8 @@ never draw their own header (the shell places it; see
     - `AppShell.Brand` "Brand" → `AppBrand`
     - `Apps.Overlay` "Overlay" → `FloatingAppLauncher`
     - `FieldPresentation.Register` "collection:apps.installed-app"
-  - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Fields.Identity` "app-icon"
+  - Uses: 43 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps-core/tabs` ×5
     - `apps-core` ×5
     - `primitives/live-state` ×4
@@ -68,6 +69,7 @@ never draw their own header (the shell places it; see
     - `primitives/css/ui-kit` ×2
     - `reorder` ×2
     - `apps-core/chrome-theme.chromeThemeScope`
+    - `fields.Fields`
     - `network/live.FieldPresentation`
     - `primitives/avatar.useAvatarPresentation`
     - `primitives/css/line.Line`
@@ -86,12 +88,17 @@ never draw their own header (the shell places it; see
 - Core:
   - Uses:
     - `audience.AUDIENCES`
+    - `fields.defineFieldIdentity`
+    - `fields.defineFieldType`
+    - `fields/json.jsonFieldType`
     - `fields/json/config.jsonField`
     - `fields/text/config.enumTextField`
     - `fields/text/config.textField`
     - `network/live.rowKind`
     - `ui/icons.symbol`
-  - Exports (values): `installedApp`
+  - Exports (values):
+    - `appIconIdentity`
+    - `installedApp`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --background`

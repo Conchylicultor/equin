@@ -10,11 +10,10 @@ where the chunky gallery cards and the wide multi-column table don't fit.
 Each item is one `Row` (the `row` primitive), so the active-row affordance,
 hover-revealed trailing actions, and leading icon slot all come for free:
 
-- **leading slot** — the schema's leading field (`FieldDef.leading`), then
-  `options.leading?.(row)` → `Row`'s `icon` slot (icon / avatar / status-dot).
-  The leading field is out of the title pick, the subtitle and the trailing
-  cell. See the data-view CLAUDE.md ("Leading field"). Neither present → the
-  row's **cover thumbnail** (below).
+- **leading slot** — the field placed in `lead` (data-view CLAUDE.md,
+  "Placement"), drawn as a glyph → `Row`'s `icon` slot (a state's option
+  glyph, an avatar, a log's time). None → the row's **cover thumbnail**
+  (below).
 - **selection** — `selected = rowKey(row) === selectedRowId` → `Row` maps it to
   `bg-accent` (the same highlight a tree row uses). Baked in from the start.
 - **click** — `onRowActivate`.
@@ -38,9 +37,8 @@ every row keeps one height (`--cover-thumb-h` + the row padding; the row grows
 past a plain text row). The cover field is then the picture, never also a body
 term. The precedence is per surface, decided once (`resolveListLeading`):
 
-1. a `FieldDef.leading` field, or a `viewOptions.list.leading` option — the
-   explicit visual always wins (Places keeps its glyph), and the cover field
-   stays an ordinary body term;
+1. a field placed in `lead` — it always wins, and the cover field stays an
+   ordinary body term;
 2. else the cover thumbnail;
 3. the tree chrome (`rowChrome: "tree"`) never draws one — its icon box is a
    tree row's glyph.
@@ -72,36 +70,30 @@ table's outline row draws its secondary fields); `lines` does not apply. Manual 
 and item actions work as in the default chrome. `labelClassName` (both
 chromes) is the per-row title class, the nested table's option of the same name.
 
-### Field-driven body
+### Placement-driven body
 
-The row body maps the `FieldDef` schema (shared `pickPrimaryField` heuristic):
+The row draws the view's placement (`usePlacement(…, LIST_SLOTS)`; data-view
+CLAUDE.md, "Placement"):
 
-- **primary field** → the title (`Text variant="label"`, truncating).
-- fields with **`align: "end"`** → an always-visible trailing region inside the
-  row body, right of the title/subtitle and **before** the hover actions
-  (`field.cell(row) ?? String(field.value(row))`). This is where a status badge
-  lands. Each trailing field sits in an **aligned slot** (`use-slot-widths.ts`:
-  the widest that slot has been on any row, as a CSS variable on the list root,
-  grow-only, reset when the trailing field set changes), spaced by
-  `listSlotGap`; a time-typed field goes last, in `listTimeInk`. See the
-  data-view CLAUDE.md ("Single-line list rows are the default").
+- **`title`** → the title (`Text variant="label"`, truncating), then the
+  **`afterTitle`** marks as rigid cells right after it.
+- **`line2`** → the muted subtitle run (`Text variant="caption"`, truncating),
+  joined with `·` — but see "Chips are not middot-ed" below. A term whose value
+  is empty (`isFieldValueEmpty`) is **left out of the run**, separator and all.
+  The row is two lines when `line2` holds anything (`lines`, below).
+- **`trail`** then **`edge`** → an always-visible trailing region, right of the
+  title/subtitle and **before** the hover actions. Each field sits in an
+  **aligned slot** (`use-slot-widths.ts`: the widest that slot has been on any
+  row, as a CSS variable on the list root, grow-only, reset when the trailing
+  field set changes), spaced by `listSlotGap`; the edge field is last, in
+  `listTimeInk`.
 - **quiet terms, elided common values** — the body is wrapped in data-view's
   `FieldPresentationProvider` over the subtitle + trailing fields: chip-typed
   values draw `● label`, and a value ≥ 60% of the rows hold is left out (a
   subtitle term dropped with its separator, a slot left empty at its width).
   See the data-view CLAUDE.md ("Quiet rows and common-value elision").
-- **remaining non-primary fields** → the muted subtitle (`Text
-  variant="caption"`, truncating), joined with `·` — but see "Chips are not
-  middot-ed" below: a term that renders as a chip is parted by spacing instead.
-  A term whose value is empty (`isFieldValueEmpty`) is **left out of the run**,
-  separator and all — never drawn as the italic "Empty" placeholder (a term in
-  a sentence, not a cell standing alone). The cost: an empty editable subtitle
-  field offers no pencil in the list; edit it where it is a cell (table,
-  detail).
 - **row tone** — `DataViewRenderProps.rowTone` tones the **title** in both row
-  shapes, through the shared `rowToneClass`. The subtitle and the trailing cell
-  are already muted, so the title carries the whole difference between an active
-  row and an inactive one.
+  shapes, through the shared `rowToneClass`.
 
 ### Chips are not middot-ed
 
@@ -126,46 +118,21 @@ whole run is inline content inside one truncating `<Text>` leaf — that is what
 lets the subtitle ellipsize as a single leaf of the row's line — and a flex
 container here would make each chip its own leaf and take the truncation with it.
 
-### One line by default (`options.lines`)
+### One or two lines (`options.lines`)
 
-`lines: 1` (the default) puts the title and the subtitle **on the row's own
-line**:
+`lines` defaults to **2 when the placement puts a field on `line2`**, else 1;
+a surface may pin either.
 
-```
-[icon]  Title · subtitle · fields                      trailing   [actions]
-```
-
-`Row` composes `Line`, so the row body is already a `region-line` +
-`SingleLineProvider` context — the title and the subtitle are sibling truncating
-leaves in it (each `<Text>` ellipsizes without asking), an empty `<Fill>` absorbs
-the slack, and the trailing cell is a rigid leaf in its own track. The `·` join
-extends to the seam with the title, which on one line is just the run's first
-term.
-
-When the line is tight both leaves shrink at CSS's default factor, weighted by
-content width, so the longer one yields more — and the `·`-joined metadata run
-normally is the longer one. That is the intent (the title identifies the row),
-reached without a shrink-priority primitive invented for one call site.
-
-`lines: 2` restores the stacked shape — subtitle under title inside a `Stack`,
-which resets the single-line context so each `<Text>` asks for its own
-`truncate`, with the trailing cell pushed by `ml-auto`. Reach for it when the
-subtitle is **prose**, where the second line is genuinely a second thought,
-rather than a run of short values.
-
-Either way this is the list analog of the gallery's "title + muted properties":
-primary = title, others = subtitle, `align: "end"` floats to the trailing edge.
+`lines: 1` puts the title, its marks and any `line2` run on the row's own line
+(`Row` composes `Line`: each `<Text>` ellipsizes on its own, an empty `<Fill>`
+absorbs the slack, the trailing cell is a rigid leaf). `lines: 2` stacks the
+`line2` run under the title inside a `Stack` (each `<Text>` asks for its own
+`truncate`), the trailing cell pushed by `ml-auto`.
 
 **Which fields appear (and their order)** follows the view's per-instance
-`properties` (`resolveBodyFields` over the schema; **default `null` = the
-schema's own default set** — every field in schema order except those declaring
-`FieldDef.visible: false`) — the same Properties dimension every view honors. The
-title/subtitle/trailing split is unchanged: the primary (picked via
-`pickPrimaryField` over the *visible* subset) is the label, `align: "end"` fields
-trail, and the remaining visible fields form the subtitle. Hiding or reordering
-fields via the toolbar "Properties" pill reshapes the subtitle/trailing accordingly;
-filter and sort still use the full schema. See the data-view CLAUDE.md "Per-view
-visible fields (Properties)" section.
+`properties` — the placement hides what the list hides, and the user's order
+is the drawing order inside each slot; filter and sort still use the full
+schema. See the data-view CLAUDE.md "Per-view visible fields (Properties)".
 
 When `options.renderRow` is set it owns the whole body instead, but is still
 wrapped in the selectable/clickable `Row`.
@@ -216,12 +183,9 @@ conditional hook.
 
 `options` (= `viewOptions.list`) is a `ListViewOptions<TRow>`:
 
-- `leading?(row)` — leading slot per row (icon / avatar / status-dot),
-  rendered after the schema's leading field, if any. Setting it takes the slot
-  from the cover thumbnail.
 - `renderRow?(row)` — full row-body override (escape hatch); still wrapped in
   the selectable `Row`.
-- `lines?` — rows per item, `1 | 2` (default `1`, one line — see above).
+- `lines?` — rows per item, `1 | 2` (default: 2 when `line2` holds a field — see above).
 - `columnCaptions?` — a caption row over the list (title label, each trailing
   label over its slot). Default off; also the view type's `configSchema`
   option (a switch in the view's settings).
@@ -244,7 +208,7 @@ conditional hook.
 - Web:
   - Contributes: `DataViewSlots.View` "List" → `ListView`
   - Uses: 65 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×44
+    - `primitives/data-view` ×43
     - `primitives/rank-reorder` ×3
     - `primitives/css/spacing` ×2
     - `primitives/collapsible.FoldMotion`
@@ -253,6 +217,7 @@ conditional hook.
     - `primitives/css/clip.clipClasses`
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
+    - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/text.Text`
@@ -275,6 +240,7 @@ conditional hook.
     - `ui/tokens/density --section-body-pad-top`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xl`
+    - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --radius`
 - Core:
   - Exports (types): `ListViewOptions`

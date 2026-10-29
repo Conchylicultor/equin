@@ -132,6 +132,7 @@ function optionsOf(
     ...(o.variant !== undefined ? { variant: o.variant } : {}),
     ...(o.hint !== undefined ? { hint: o.hint } : {}),
     ...(o.quiet === true ? { quiet: true as const } : {}),
+    ...(o.icon !== undefined ? { icon: o.icon } : {}),
   }));
 }
 
@@ -140,7 +141,7 @@ function presented(
   spec: FieldPresentationSpec<unknown, unknown> | undefined,
 ): Pick<
   FieldDef<unknown>,
-  "width" | "align" | "visible" | "groupable" | "header" | "icon" | "indicator"
+  "width" | "align" | "visible" | "groupable" | "header" | "icon"
 > {
   return {
     ...(spec?.header !== undefined ? { header: spec.header } : {}),
@@ -149,7 +150,6 @@ function presented(
     ...(spec?.visible !== undefined ? { visible: spec.visible } : {}),
     ...(spec?.groupable !== undefined ? { groupable: spec.groupable } : {}),
     ...(spec?.icon !== undefined ? { icon: spec.icon } : {}),
-    ...(spec?.indicator !== undefined ? { indicator: spec.indicator } : {}),
   };
 }
 

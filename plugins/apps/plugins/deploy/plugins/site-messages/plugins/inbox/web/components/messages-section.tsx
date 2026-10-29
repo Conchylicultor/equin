@@ -1,7 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
-import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -9,7 +7,6 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
@@ -67,14 +64,14 @@ const FIELDS: FieldDef<SiteMessageRecord>[] = [
   {
     id: "message",
     label: "Message",
-    type: "text",
-    primary: true,
+    type: "multiline-text",
     value: (m) => m.message,
   },
   {
     id: "replyTo",
     label: "From",
     type: "text",
+    primary: true,
     value: (m) => m.replyTo,
     cell: (m) => <ReplyLink replyTo={m.replyTo} />,
     sortable: true,
@@ -85,11 +82,6 @@ const FIELDS: FieldDef<SiteMessageRecord>[] = [
     label: "Received",
     type: "date",
     value: (m) => new Date(m.createdAt),
-    cell: (m) => (
-      <Text variant="caption" tone="muted">
-        <RelativeTime date={new Date(m.createdAt)} />
-      </Text>
-    ),
     sortable: true,
     filterable: true,
     width: "7rem",
@@ -102,12 +94,8 @@ const FIELDS: FieldDef<SiteMessageRecord>[] = [
     options: SITE_MESSAGE_VERDICTS.map((value) => ({
       value,
       label: VERDICT_LABEL[value],
+      variant: VERDICT_VARIANT[value],
     })),
-    cell: (m) => (
-      <Badge variant={VERDICT_VARIANT[m.verdict]}>
-        {VERDICT_LABEL[m.verdict]}
-      </Badge>
-    ),
     filterable: true,
     groupable: true,
     width: "7rem",
@@ -120,12 +108,8 @@ const FIELDS: FieldDef<SiteMessageRecord>[] = [
     options: NOTIFY_STATES.map((value) => ({
       value,
       label: NOTIFY_LABEL[value],
+      variant: NOTIFY_VARIANT[value],
     })),
-    cell: (m) => (
-      <Badge variant={NOTIFY_VARIANT[m.notifyState]}>
-        {NOTIFY_LABEL[m.notifyState]}
-      </Badge>
-    ),
     filterable: true,
     groupable: true,
     width: "9rem",
@@ -222,11 +206,7 @@ function MessageList({ page }: { page: SiteMessagesPage }): ReactNode {
         selectedRowId={openId ?? undefined}
         onRowActivate={(m) => setOpenId((id) => (id === m.id ? null : m.id))}
         searchAccessor={(m) => `${m.replyTo} ${m.message}`}
-        viewOptions={{
-          list: {
-            renderRow: (m: SiteMessageRecord) => <MessageRow message={m} />,
-          },
-        }}
+        recipe="inbox"
         emptyState={<>No one has written yet.</>}
       />
       {page.hasMore && (
@@ -236,35 +216,6 @@ function MessageList({ page }: { page: SiteMessagesPage }): ReactNode {
       )}
       {open && <MessageDetail message={open} onClose={() => setOpenId(null)} />}
     </Stack>
-  );
-}
-
-/** One message in the list: who and when over the first line of what they wrote. */
-function MessageRow({ message }: { message: SiteMessageRecord }): ReactNode {
-  return (
-    <Fill>
-      <Stack gap="2xs">
-        <Cluster gap="xs">
-          <Text variant="label">
-            <ReplyLink replyTo={message.replyTo} />
-          </Text>
-          <Badge variant={VERDICT_VARIANT[message.verdict]}>
-            {VERDICT_LABEL[message.verdict]}
-          </Badge>
-          <Badge variant={NOTIFY_VARIANT[message.notifyState]}>
-            {NOTIFY_LABEL[message.notifyState]}
-          </Badge>
-          <Text as="span" variant="caption" tone="muted">
-            <RelativeTime date={new Date(message.createdAt)} />
-          </Text>
-        </Cluster>
-        <Line>
-          <Text variant="caption" tone="muted">
-            {message.message}
-          </Text>
-        </Line>
-      </Stack>
-    </Fill>
   );
 }
 

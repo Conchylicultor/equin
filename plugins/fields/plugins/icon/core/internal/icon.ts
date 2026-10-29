@@ -12,6 +12,7 @@ export const iconFieldType = defineFieldType<SavedSymbolName | null>("icon");
 
 export const iconIdentity = defineFieldIdentity<SavedSymbolName | null>({
   type: iconFieldType,
+  kind: "visual",
   label: "Icon",
   icon: imageIcon,
   coerce: (v) => v ?? "",

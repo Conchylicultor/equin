@@ -86,6 +86,7 @@ function renderTable(
   const { lazy, ...rest } = over;
   const props: DataViewRenderProps<Row> = {
     revealSelection: true,
+    placement: {},
     rows: [DIR, FILE],
     fields: [nameField, modifiedField, sizeField],
     rowKey: (r) => r.id,

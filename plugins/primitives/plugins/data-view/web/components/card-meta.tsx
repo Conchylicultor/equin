@@ -23,8 +23,8 @@ import { FieldCell } from "./field-cell";
 import { isFieldValueEmpty } from "./editable-cell";
 
 export interface CardMetaProps {
-  /** The card's text partition (`partitionCardFields` over the view's
-   *  visible fields) — computed once per view, not per card. */
+  /** The card's slots (`cardFieldsOf` over the view's placement) —
+   *  computed once per view, not per card. */
   fields: CardFields<unknown>;
   row: unknown;
   resolveCell: ReturnType<typeof useResolveCell>;
@@ -70,12 +70,13 @@ const SUBTITLE_CLAMP =
  * fields for it — even when this row's values are all empty — so every card of
  * a view is the same height.
  *
- * 1. **Title** — the primary field, truncated, then the indicators.
- * 2. **Subtitle** — the text fields, joined with "·" (clamped to
+ * 1. **Title** — the title slot, truncated, then the `afterTitle` marks.
+ * 2. **Subtitle** — the `line2` slot, joined with "·" (clamped to
  *    `cardSubtitleLines`, its box that many lines tall).
- * 3. **Tokens** — every other field as icon + value (numbers in their own
- *    pick), on ONE line that never wraps and fades out at its end. Each value
- *    is drawn in the `token` context (`FieldDef.token` first).
+ * 3. **Tokens** — the `trail` slot as icon + value (numbers in their own
+ *    pick), on ONE line that never wraps and fades out at its end, then the
+ *    `edge` field at its far end. Each value is drawn in the `token` context
+ *    (`FieldDef.token` first).
  *
  * Every size is a `tokens/data-view` token (type picks, line boxes, gaps,
  * token gap, icon size and inks) whose default is the look before the group
@@ -102,9 +103,11 @@ export function CardMeta({
   );
   const present = (list: readonly FieldDef<unknown>[]) =>
     list.filter((f) => !isFieldValueEmpty(f, row));
-  const indicators = present(fields.indicators);
-  const subtitle = present(fields.subtitle);
-  const tokens = present(fields.tokens);
+  const indicators = present(fields.afterTitle);
+  const subtitle = present(fields.line2);
+  const tokens = present(fields.trail);
+  const edge =
+    fields.edge && !isFieldValueEmpty(fields.edge, row) ? fields.edge : null;
   const P = DATA_VIEW_PICKS;
 
   return (
@@ -134,7 +137,7 @@ export function CardMeta({
           ))}
         </Line>
       </PickedLine>
-      {fields.subtitle.length > 0 ? (
+      {fields.line2.length > 0 ? (
         <PickedLine part={P.cardSubtitle} className="pt-card-subtitle">
           <Line
             className={cn(
@@ -157,7 +160,7 @@ export function CardMeta({
           </Line>
         </PickedLine>
       ) : null}
-      {fields.tokens.length > 0 ? (
+      {fields.trail.length > 0 || fields.edge ? (
         <PickedLine part={P.cardToken} className="pt-card-tokens">
           <Clip axis="x" className="clip-fade-end">
             <Line
@@ -192,6 +195,18 @@ export function CardMeta({
                   </Line>
                 );
               })}
+              {edge ? (
+                <>
+                  <Fill />
+                  <Text
+                    pick={P.cardToken}
+                    className={cn("text-card-token-ink", rigidClass())}
+                    {...dataPart("dv.card-edge")}
+                  >
+                    {cell(edge, "token")}
+                  </Text>
+                </>
+              ) : null}
             </Line>
           </Clip>
         </PickedLine>

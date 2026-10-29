@@ -398,6 +398,9 @@ function DataViewBodyInner<TRow>(
     collectionActivation,
     searchAccessor,
     rowTone,
+    recipe,
+    place,
+    emphasis,
     cover,
     onRowActivate,
     rowActivation,
@@ -428,6 +431,19 @@ function DataViewBodyInner<TRow>(
     chrome,
     sectionActivation,
   } = props;
+  // The surface's placement say, one stable object per change of its CONTENT:
+  // a surface may spell `place` / `emphasis` inline, and a fresh literal per
+  // render must not rebuild every view's placement (and every memoized row).
+  const placeKey = JSON.stringify(place ?? null);
+  const emphasisKey = JSON.stringify(emphasis ?? null);
+  const placement = useMemo(
+    () => ({
+      recipe,
+      place: JSON.parse(placeKey) as typeof place,
+      emphasis: JSON.parse(emphasisKey) as typeof emphasis,
+    }),
+    [recipe, placeKey, emphasisKey],
+  );
 
   // The backdrop's view type (`DataViewProps.backdrop`): resolved from the
   // same registry the instances resolve from, so the host names no view type.
@@ -1359,6 +1375,7 @@ function DataViewBodyInner<TRow>(
           searchAccessor:
             searchAccessor as DataViewRenderProps<unknown>["searchAccessor"],
           rowTone: rowTone as DataViewRenderProps<unknown>["rowTone"],
+          placement,
           cover: cover as DataViewRenderProps<unknown>["cover"],
           // Only while the view nests: drawn flat, it is a view of rows.
           hierarchy: (activeNests
@@ -1437,6 +1454,8 @@ function DataViewBodyInner<TRow>(
           viewModel,
           activeSupportsGroupBy,
           activeSupportsFold,
+          placement,
+          activeSlots: activeInstance.viewType.slots,
           groupableField,
           offersGrouping,
           activeSupportsSort,

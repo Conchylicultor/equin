@@ -3,11 +3,14 @@ import {
   orderFieldsBySection,
   type FieldDef,
   type PropertyEntry,
+  type Slot,
 } from "../../core";
 
 export interface PropertyItem<TRow> {
   field: FieldDef<TRow>;
   visible: boolean;
+  /** The slot the user moved the field to (`PropertyEntry.slot`), if any. */
+  slot?: Slot;
 }
 
 export interface PropertiesController<TRow> {
@@ -21,8 +24,15 @@ export interface PropertiesController<TRow> {
   move: (id: string, toIndex: number) => void;
   /** Reset to the schema default (null) — later-added fields shown again. */
   showAll: () => void;
+  /** Move a field to a slot (showing it), or `null`: back to where the surface
+   *  puts it. */
+  moveToSlot: (id: string, slot: Slot | null) => void;
+  /** Every field back to the surface's placement; order and visibility kept. */
+  resetSlots: () => void;
   /** True once an explicit list is stored (i.e. customized away from the default). */
   isCustomized: boolean;
+  /** True when the user moved any field to a slot of their own. */
+  slotsCustomized: boolean;
 }
 
 /** Reorder the display items so each section's fields are contiguous, reusing the
@@ -92,7 +102,11 @@ export function usePropertiesController<TRow>(
       const field = byId.get(entry.id);
       if (!field || listed.has(entry.id)) continue;
       listed.add(entry.id);
-      ordered.push({ field, visible: !entry.hidden });
+      ordered.push({
+        field,
+        visible: !entry.hidden,
+        ...(entry.slot ? { slot: entry.slot } : {}),
+      });
     }
     for (const field of fields) {
       if (!listed.has(field.id)) ordered.push({ field, visible: false });
@@ -110,9 +124,11 @@ export function usePropertiesController<TRow>(
     // Commit every field in `next` list order — the single write path.
     const commit = (next: PropertyItem<TRow>[]) =>
       setProperties(
-        next.map((i) =>
-          i.visible ? { id: i.field.id } : { id: i.field.id, hidden: true },
-        ),
+        next.map((i) => ({
+          id: i.field.id,
+          ...(i.visible ? {} : { hidden: true as const }),
+          ...(i.slot ? { slot: i.slot } : {}),
+        })),
       );
 
     const toggle = (id: string) => {
@@ -128,7 +144,31 @@ export function usePropertiesController<TRow>(
       commit(arrayMove(items, from, toIndex));
     };
     const showAll = () => setProperties(null);
+    const moveToSlot = (id: string, slot: Slot | null) => {
+      commit(
+        items.map((i) =>
+          i.field.id !== id
+            ? i
+            : slot === null
+              ? { field: i.field, visible: true }
+              : { field: i.field, visible: true, slot },
+        ),
+      );
+    };
+    const resetSlots = () => {
+      commit(items.map((i) => ({ field: i.field, visible: i.visible })));
+    };
+    const slotsCustomized = items.some((i) => i.slot !== undefined);
 
-    return { items, toggle, move, showAll, isCustomized };
+    return {
+      items,
+      toggle,
+      move,
+      showAll,
+      moveToSlot,
+      resetSlots,
+      isCustomized,
+      slotsCustomized,
+    };
   }, [items, setProperties, isCustomized]);
 }

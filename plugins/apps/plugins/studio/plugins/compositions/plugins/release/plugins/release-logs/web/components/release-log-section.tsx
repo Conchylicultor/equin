@@ -166,6 +166,7 @@ function PersistedLogs({ runId }: { runId: string }): ReactElement {
       <DataView<ReleaseLogLine>
         rows={rows}
         fields={fields}
+        recipe="log"
         rowKey={(l) => l.n}
         storageKey={RELEASE_RUN_LOGS}
         views={["table", "list"]}

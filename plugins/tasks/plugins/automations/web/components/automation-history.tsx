@@ -17,21 +17,14 @@ import type {
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
-import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import {
+  TASK_STATUS_OPTIONS,
   TaskStatusSchema,
   type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { useTasksById } from "@plugins/tasks/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
-import {
-  STATUS_META,
-  StatusIcon,
-  StatusSignal,
-} from "@plugins/tasks/plugins/task-status/web";
 import { automationTasks, type AutomationTaskRow } from "../../core";
 import { Automations } from "../internal/slots";
 
@@ -48,7 +41,7 @@ const NO_TASKS: ReadonlyMap<string, TaskListItem> = new Map();
 
 const STATUS_OPTIONS = TaskStatusSchema.options.map((status) => ({
   value: status,
-  label: STATUS_META[status].label,
+  ...TASK_STATUS_OPTIONS[status],
 }));
 
 // The rows are the origin collection's (`automationTasks`: one per task the
@@ -151,7 +144,6 @@ export function AutomationHistory({
         options: STATUS_OPTIONS,
         filterable: true,
         groupable: true,
-        visible: false,
       },
       {
         id: "filedAt",
@@ -159,30 +151,21 @@ export function AutomationHistory({
         type: "date",
         value: (r) => new Date(r.filedAt),
         sortable: true,
-        visible: false,
       },
     ],
     [taskById],
   );
 
+  // Expanding a row shows what the contributing plugins say about its task.
   const viewOptions = useMemo(
     () => ({
       list: {
-        leading: (r: AutomationTaskRow) => {
-          const task = taskById.get(r.taskId);
-          return task === undefined ? null : (
-            <StatusIcon status={task.status} />
-          );
-        },
-        renderRow: (r: AutomationTaskRow) => (
-          <HistoryRowBody row={r} task={taskById.get(r.taskId) ?? null} />
-        ),
         detail: (r: AutomationTaskRow) => (
           <TaskDetail taskId={r.taskId} automationId={automationId} />
         ),
       },
     }),
-    [taskById, automationId],
+    [automationId],
   );
 
   return (
@@ -202,6 +185,7 @@ export function AutomationHistory({
         }
         searchAccessor={(r) => taskById.get(r.taskId)?.title ?? ""}
         searchPlaceholder="Search its tasks…"
+        recipe="timeline"
         viewOptions={viewOptions}
         emptyState={<>It has not filed or started a task yet.</>}
       />
@@ -211,33 +195,6 @@ export function AutomationHistory({
         </Text>
       ) : null}
     </Stack>
-  );
-}
-
-function HistoryRowBody({
-  row,
-  task,
-}: {
-  row: AutomationTaskRow;
-  task: TaskListItem | null;
-}): ReactElement {
-  return (
-    <>
-      <Fill>
-        <Line>
-          <Text variant="label" tone={task === null ? "muted" : "default"}>
-            {task?.title ?? "Deleted task"}
-          </Text>
-        </Line>
-      </Fill>
-      <Stack direction="row" gap="sm" align="center" className={rigidClass()}>
-        {task !== null ? <StatusSignal status={task.status} /> : null}
-        <Text variant="caption" tone="muted">
-          {row.role === "launched" ? "Started " : null}
-          <RelativeTime date={new Date(row.filedAt)} />
-        </Text>
-      </Stack>
-    </>
   );
 }
 

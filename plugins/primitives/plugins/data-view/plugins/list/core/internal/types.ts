@@ -7,25 +7,15 @@ import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/c
  * `DataViewRenderProps.options`.
  */
 export interface ListViewOptions<TRow> {
-  /** Leading slot per row (icon / avatar / status-dot), rendered after the
-   *  schema's leading field (`FieldDef.leading`), if any. Setting it (or
-   *  declaring a leading field) takes the leading slot from the cover
-   *  thumbnail: the surface's rows draw this instead of their cover. */
-  leading?: (row: TRow) => ReactNode;
   /**
    * Full row-body override (escape hatch). Owns its own content; still wrapped
    * in the selectable/clickable <Row>.
    */
   renderRow?: (row: TRow) => ReactNode;
   /**
-   * Rows per item: 1 (default) puts title and subtitle on one line; 2 stacks the
-   * subtitle under the title — for surfaces whose subtitle is prose, not chips.
-   *
-   * One line is the default because the field-driven subtitle is a `·`-joined
-   * run of short values (a status, a trigger, a relative time), and stacking it
-   * makes a row read as twice the content it carries. A surface whose subtitle
-   * is a sentence — where the second line is genuinely a second thought — opts
-   * back in with `2`.
+   * Rows per item: 2 stacks the `line2` slot under the title, 1 puts it on the
+   * title's line. Default: 2 when the placement puts anything on line 2 (the
+   * record recipe sends prose and identifiers there), else 1.
    */
   lines?: 1 | 2;
   /**
@@ -67,8 +57,8 @@ export interface ListViewOptions<TRow> {
   detail?: (row: TRow) => ReactNode;
   /**
    * A caption row over the list: the title field's label on the left, each
-   * trailing field's label over its aligned slot. Default off. Also the view
-   * type's `configSchema` option, so a user turns it on from the view's
+   * trailing (trail / edge) field's label over its aligned slot. Default off.
+   * Also the view type's `configSchema` option, so a user turns it on from the view's
    * settings (the instance's config-row value arrives merged into `options`).
    */
   columnCaptions?: boolean;

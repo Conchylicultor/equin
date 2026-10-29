@@ -197,14 +197,27 @@ const HOSTED: HostedToolbar = {
   forms: { switcher: "chip", options: "visible" },
 };
 
+/** The row's lead: the file-type glyph in the tree head's icon box. */
+const TYPE_GLYPH_FIELD: FieldDef<EntryRow> = {
+  id: "fileType",
+  label: "Type",
+  type: "icon",
+  header: false,
+  filterable: false,
+  sortable: false,
+  groupable: false,
+  value: (r) => r.name,
+  cell: (r) => (
+    <FileTypeIcon name={r.name} isDir={r.kind === "dir"} className="size-4" />
+  ),
+};
+
 /** The Kind column: what the entry is, in words ("PDF document", "Folder"). */
 const KIND_FIELD: FieldDef<EntryRow> = {
   id: "kind",
   label: "Kind",
   width: "140px",
   align: "start",
-  // The first column to give way to the names when the listing is narrow.
-  dropOrder: 1,
   value: (r) => entryKindLabel(r),
 };
 
@@ -233,7 +246,7 @@ function timeField(
   label: string,
   get: (r: EntryRow) => number | undefined,
   now: number,
-  { visible, dropOrder }: { visible?: boolean; dropOrder?: number } = {},
+  { visible }: { visible?: boolean } = {},
 ): FieldDef<EntryRow> {
   return {
     id,
@@ -242,7 +255,6 @@ function timeField(
     width: "96px",
     align: "start",
     ...(visible === undefined ? {} : { visible }),
-    ...(dropOrder === undefined ? {} : { dropOrder }),
     value: (r) => {
       const ms = get(r);
       return ms === undefined ? null : new Date(ms);
@@ -454,22 +466,20 @@ export function FileTree({
     [listings, root, onDropInto],
   );
 
-  // When the listing is narrow Kind, then Modified, give their room to the
-  // names (`dropOrder`); Size stays longest.
+  // When the listing is narrow the trailing columns (Kind) give their room to
+  // the names first, then Modified (the edge); Size is emphasised.
   // `name` and `path` are the `fileEntry` kind's own fields; these are the
   // columns computed from the row and this tree's context.
   const extraFields = useMemo<FieldDef<EntryRow>[]>(
     () => [
+      TYPE_GLYPH_FIELD,
       KIND_FIELD,
-      timeField("modified", "Modified", (r) => r.mtimeMs, now, {
-        dropOrder: 2,
-      }),
+      timeField("modified", "Modified", (r) => r.mtimeMs, now),
       {
         id: "size",
         label: "Size",
         type: "byte-size",
         width: "80px",
-        align: "end",
         value: (r) => (r.kind === "dir" ? null : r.size),
         cell: (r) =>
           r.kind === "dir" ? (
@@ -514,20 +524,12 @@ export function FileTree({
   );
 
   // A nested outline table (its config row) with its column labels: the
-  // header row of sortable titles, and in a narrow pane Kind, then Modified,
-  // give their room to the names (`dropOrder`).
+  // header row of sortable titles.
   const tableOptions = useMemo(
     () => ({
       header: true,
       guides: true,
       addLabel: null,
-      leadingIcon: (r: EntryRow) => (
-        <FileTypeIcon
-          name={r.name}
-          isDir={r.kind === "dir"}
-          className="size-4"
-        />
-      ),
       openOnActivate: (r: EntryRow) => r.browsable,
       labelClassName: (r: EntryRow) =>
         r.path === openPath ? cn("font-semibold") : undefined,
@@ -555,6 +557,7 @@ export function FileTree({
       rowDrop={rowDrop}
       rowActivation={rowActivation}
       onRowOpen={onOpen}
+      emphasis={["size"]}
       viewOptions={{ table: tableOptions }}
       emptyState={emptyState}
     />

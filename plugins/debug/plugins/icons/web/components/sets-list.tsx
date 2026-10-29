@@ -16,6 +16,9 @@ import type { SetRow } from "../internal/model";
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
 const ICON_SETS_VIEW = defineDataView("debug.icons.sets");
 
+// The checkbox is no typed value, so it is pinned to the lead.
+const SETS_PLACE = { shown: "lead" } as const;
+
 const GROUP_OPTIONS = [
   { value: "app", label: "App sets" },
   { value: "library", label: "Libraries" },
@@ -64,7 +67,6 @@ export function SetsList({
       {
         id: "shown",
         label: "Shown",
-        leading: true,
         cell: (r) => <CheckboxIndicator checked={!hidden.has(r.family.id)} />,
       },
       {
@@ -94,7 +96,6 @@ export function SetsList({
         label: "Own glyphs",
         type: "number",
         value: (r) => r.counts.own,
-        align: "end",
         cell: (r) => (
           <Badge mono>
             {r.counts.own}/{r.counts.total}
@@ -109,6 +110,7 @@ export function SetsList({
       rows={rows}
       fields={fields}
       rowKey={(r) => r.key}
+      place={SETS_PLACE}
       views={["list"]}
       storageKey={ICON_SETS_VIEW}
       readiness={readiness}

@@ -19,14 +19,9 @@ import {
   Inset,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
-import {
-  SectionLabel,
-  Text,
-} from "@plugins/primitives/plugins/css/plugins/text/web";
-import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
+import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
@@ -66,37 +61,14 @@ const VERSIONS_VIEW = defineDataView("history.versions");
 const versionsSource = liveDataSource(historyVersions, { searchable: [] });
 
 // The timeline's fields are the collection's (sort / Properties dimensions);
-// `createdAt` is the one that sorts. The row body is drawn by
-// `TimelineRowBody`, so a version with no author and no checkpoint reads as a
-// label and a time rather than a run of empty separators. The scope's two
+// `createdAt` is the one that sorts. The `timeline` recipe draws the row: the
+// label, then the time and author on line 2 (only when set). The scope's two
 // columns are not the timeline's to show.
 const overrides = fieldOverrides(historyVersions, {
   label: { cell: (v) => v.label || "Version", primary: true },
-  createdAt: { cell: (v) => <RelativeTime date={v.createdAt} /> },
   sourceId: { visible: false },
   entityId: { visible: false },
 });
-
-// One timeline row: the label, then when — and whether it is a checkpoint and
-// who made it, only when it says so.
-function TimelineRowBody({ version }: { version: VersionRow }) {
-  return (
-    <Stack gap="2xs" className={yieldClass("x")}>
-      <Text as="span" variant="body" className="truncate">
-        {version.label || "Version"}
-      </Text>
-      <Text as="span" variant="caption" tone="muted" className="truncate">
-        <RelativeTime date={version.createdAt} />
-        {version.pinned ? " · checkpoint" : ""}
-        {version.author ? ` · ${version.author}` : ""}
-      </Text>
-    </Stack>
-  );
-}
-
-const timelineViewOptions = {
-  list: { renderRow: (v: VersionRow) => <TimelineRowBody version={v} /> },
-};
 
 export function VersionHistoryDialog({
   open,
@@ -219,11 +191,11 @@ function VersionHistoryBody({
             source={source}
             overrides={overrides}
             views={["list"]}
+            recipe="timeline"
             density="compact"
             itemActions={VersionItemActions}
             selectedRowId={active?.id}
             onRowActivate={setPicked}
-            viewOptions={timelineViewOptions}
             emptyState="No versions yet."
           />
         </RestoreVersionContext.Provider>

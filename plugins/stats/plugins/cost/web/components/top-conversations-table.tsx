@@ -79,7 +79,6 @@ const FIELDS: FieldDef<TopRow>[] = [
     cell: (r) => (
       <span className="font-mono tabular-nums">{formatUsd(r.cost)}</span>
     ),
-    align: "end",
     width: "6rem",
   },
   {
@@ -92,7 +91,6 @@ const FIELDS: FieldDef<TopRow>[] = [
         {formatTokensCompact(r.tokens)}
       </span>
     ),
-    align: "end",
     width: "5rem",
   },
   {

@@ -1,10 +1,12 @@
 export { defineFieldType, defineFieldIdentity } from "./internal/define";
-export { resolveTypeChain } from "./internal/resolve";
+export { resolveTypeChain, resolveFieldKind } from "./internal/resolve";
+export { FIELD_KINDS } from "./internal/types";
 export type {
   FieldType,
   FieldMeta,
   FieldOptionMeta,
   FieldIdentity,
+  FieldKind,
 } from "./internal/types";
 export { declaredDefault } from "./internal/field-spec";
 export { defineDefaultlessField, defineField } from "./internal/define-field";

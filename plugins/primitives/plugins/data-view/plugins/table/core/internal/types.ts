@@ -44,18 +44,11 @@ export interface TableViewOptions<TRow = unknown> {
    */
   cover?: boolean;
   /**
-   * The title column's shape. `"plain"` (default) — the primary field alone.
-   * `"stacked"` — two lines, as a card's text: the title and its indicators,
-   * then the subtitle run of text fields (`partitionCardFields` over the
-   * visible fields); the remaining token fields are the value columns. Flat
-   * table only.
-   */
-  titleCell?: "plain" | "stacked";
-  /**
    * Draw the column-header row. Default: `grid` yes, `outline` no. An outline
    * that keeps its column labels over tree rows (a file listing's Name /
    * Modified / Size — the tree view's `columns: "aligned"`) passes `true`; its
-   * columns then give way by `FieldDef.dropOrder` in a narrow box. See
+   * columns then give way in a narrow box, least important first (the
+   * placement's priority). See
    * `data-table`'s `DataTableProps.header`. A view's own `columnCaptions`
    * wins over it.
    */
@@ -94,12 +87,6 @@ export interface TableViewOptions<TRow = unknown> {
    * browser's folder. Arrow keys still only activate; Enter still opens.
    */
   openOnActivate?: (row: TRow) => boolean;
-  /**
-   * An icon in the first cell's disclosure slot (Notion style: the icon at
-   * rest, the chevron on hover), after the schema's leading field — which,
-   * nested, renders there too instead of as a column.
-   */
-  leadingIcon?: (row: TRow) => ReactNode;
   /** The floating chip's content while a row is dragged. Default: its label. */
   dragOverlay?: (row: TRow) => ReactNode;
   /**

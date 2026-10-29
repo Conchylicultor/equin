@@ -185,18 +185,15 @@ const callerOverrides = fieldOverrides(slowOpCallers, {
     ),
     width: "minmax(0,1fr)",
   },
-  count: { align: "end", width: "4rem" },
+  count: { width: "4rem" },
   totalMs: {
-    align: "end",
     width: "5.5rem",
   },
   maxMs: {
-    align: "end",
     width: "5rem",
   },
   lastSeenAt: {
     cell: (r) => <RelativeTime date={r.lastSeenAt} />,
-    align: "end",
     width: "6rem",
   },
 });
@@ -244,7 +241,6 @@ const sampleFields: FieldDef<SampleRow>[] = [
     label: "Duration",
     type: "duration",
     value: (r) => r.durationMs,
-    align: "end",
     width: "5.5rem",
   },
   {
@@ -306,6 +302,7 @@ function SamplesView({ samples }: { samples: SlowOpSample[] }): ReactElement {
       fields={sampleFields}
       rowKey={(r) => r.key}
       storageKey={SLOW_OP_SAMPLES}
+      recipe="log"
       views={["table"]}
       defaultView="table"
       emptyState="No samples."

@@ -1,13 +1,7 @@
 import { ApprovalLinks } from "@plugins/apps/plugins/deploy/plugins/deployments/web";
 import { useMemo, type ReactNode } from "react";
-import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
-import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { formatDuration } from "@plugins/fields/plugins/duration/core";
 import {
   DataView,
   defineDataView,
@@ -35,43 +29,6 @@ const deployHistorySource = liveDataSource(deployRunHistory, {
   searchable: ["releaseRunId", "commitSha", "message"],
 });
 
-function outcomeBadge(run: DeployRunRecord): ReactNode {
-  if (run.status === "running") {
-    return (
-      <Badge
-        variant="warning"
-        icon={<StatusDot colorClass="bg-warning animate-pulse" />}
-      >
-        Running
-      </Badge>
-    );
-  }
-  if (run.status === "succeeded") {
-    return (
-      <Badge variant="success" icon={<StatusDot colorClass="bg-success" />}>
-        Succeeded
-      </Badge>
-    );
-  }
-  if (run.status === "needs-approval") {
-    return (
-      <Badge variant="warning" icon={<StatusDot colorClass="bg-warning" />}>
-        Needs approval
-      </Badge>
-    );
-  }
-  return (
-    <Badge
-      variant="destructive"
-      icon={<StatusDot colorClass="bg-destructive" />}
-    >
-      {/* The leg names the failure when there is one: "failed on build" is a
-          different fact from "failed on ship", and it is free to say. */}
-      {run.phaseFailed ? `Failed on ${run.phaseFailed}` : "Failed"}
-    </Badge>
-  );
-}
-
 /**
  * Wall-clock milliseconds a run took, or how long the one in flight has been
  * going (read off this render's clock).
@@ -81,65 +38,66 @@ function runMs(run: DeployRunRecord): number {
   return Math.max(0, end.getTime() - run.startedAt.getTime());
 }
 
-/** The first 7 chars of a sha — what git itself abbreviates to. */
-function shortSha(sha: string): string {
-  return sha.slice(0, 7);
-}
-
 // What the list says of the fields it DERIVES from `deployRunHistory` (the
 // run record's own: label, type, options, filter domain — a live window, so
 // nothing here may be derived from what happens to be loaded): how each cell
 // reads and how wide it is. `deploymentId` is the scope every window states,
 // `finishedAt` only sorts and filters — neither is a column.
 const overrides = fieldOverrides(deployRunHistory, {
-  status: { cell: (r) => outcomeBadge(r), width: "12rem" },
-  verb: {
-    cell: (r) => <Badge variant="muted">{r.verb}</Badge>,
-    width: "8rem",
-  },
-  commitSha: {
-    cell: (r) =>
-      r.commitSha ? (
-        <span className="font-mono text-muted-foreground" title={r.commitSha}>
-          {shortSha(r.commitSha)}
-        </span>
-      ) : null,
-    width: "8rem",
-  },
-  releaseRunId: {
-    cell: (r) =>
-      r.releaseRunId ? (
-        <span className="font-mono text-muted-foreground">
-          {r.releaseRunId}
-        </span>
-      ) : null,
-    width: "16rem",
-  },
-  startedAt: {
-    cell: (r) => (
-      <span className="text-muted-foreground">
-        <RelativeTime date={r.startedAt} />
-      </span>
-    ),
-    width: "8rem",
-  },
-  message: {
-    cell: (r) =>
-      r.message ? (
-        <span className="whitespace-pre-wrap" title={r.message}>
-          {r.message}
-        </span>
-      ) : null,
-    width: "24rem",
-  },
+  status: { width: "12rem" },
+  verb: { width: "8rem" },
+  commitSha: { width: "8rem" },
+  releaseRunId: { width: "16rem" },
+  startedAt: { width: "8rem" },
+  // Filterable and searchable; the row draws it as `detail`.
+  message: { visible: false },
   deploymentId: { visible: false, filterable: false, groupable: false },
   finishedAt: { visible: false },
 });
 
-// The one field the list computes itself: `duration` has no column for the
+// The fields the list computes itself: `duration` has no column for the
 // server to sort or filter, so it is neither (a live source offers a field
-// only where its id or `column` names one).
+// only where its id or `column` names one); `phaseFailed` is the leg a failed
+// `update` died on, carried on the row.
 const extraFields: FieldDef<DeployRunRecord>[] = [
+  // The CLI's own refusal, wrapped in full (this ledger exists partly so those
+  // words survive the restart that used to eat them); a held run also gets the
+  // links to where it is approved — an interactive control, not a value.
+  {
+    id: "detail",
+    label: "Detail",
+    type: "multiline-text",
+    value: (r) => r.message,
+    cell: (r) =>
+      r.message || r.status === "needs-approval" ? (
+        <Stack gap="2xs">
+          {r.message && (
+            <Text
+              as="p"
+              variant="caption"
+              tone={r.status === "failed" ? "destructive" : "default"}
+              className="whitespace-pre-wrap"
+              title={r.message}
+            >
+              {r.message}
+            </Text>
+          )}
+          {r.status === "needs-approval" && <ApprovalLinks run={r} />}
+        </Stack>
+      ) : null,
+    width: "24rem",
+  },
+  {
+    id: "phaseFailed",
+    label: "Failed on",
+    type: "enum",
+    options: [
+      { value: "converge", label: "Converge" },
+      { value: "build", label: "Build" },
+      { value: "ship", label: "Ship" },
+    ],
+    value: (r) => r.phaseFailed,
+  },
   {
     id: "duration",
     label: "Took",
@@ -182,65 +140,10 @@ export function DeployHistorySection({
       extraFields={extraFields}
       views={["list", "table"]}
       defaultView="list"
-      viewOptions={{
-        list: { renderRow: (r: DeployRunRecord) => <HistoryRow run={r} /> },
-      }}
+      recipe="ledger"
       itemActions={DeployRunItemActions}
       emptyState={<>Nothing has been deployed from here yet.</>}
       source={source}
     />
-  );
-}
-
-/**
- * One ledger row.
- *
- * The list view's field-driven row joins every non-primary field into ONE
- * truncated subtitle line, which is the right default and the wrong one for a
- * failure: the `message` is the CLI's own refusal, and this section exists partly
- * so those words survive the restart that used to eat them. So the row is
- * rendered through the list view's `renderRow` escape hatch — identity on the
- * first line, the message wrapped in full underneath — while the field schema
- * above still drives sort / filter / search and the table view.
- */
-function HistoryRow({ run }: { run: DeployRunRecord }): ReactNode {
-  return (
-    <Fill>
-      <Stack gap="2xs">
-        <Cluster gap="xs">
-          {outcomeBadge(run)}
-          <Badge variant="muted">{run.verb}</Badge>
-          {run.commitSha && (
-            <Badge variant="muted" mono tooltip={run.commitSha}>
-              {shortSha(run.commitSha)}
-            </Badge>
-          )}
-          {run.releaseRunId && (
-            <Badge
-              variant="muted"
-              mono
-              tooltip={`Release run ${run.releaseRunId}`}
-            >
-              {run.releaseRunId}
-            </Badge>
-          )}
-          <Text as="span" variant="caption" tone="muted">
-            {formatDuration(runMs(run))} · <RelativeTime date={run.startedAt} />
-          </Text>
-        </Cluster>
-        {(run.status === "failed" || run.status === "needs-approval") &&
-          run.message && (
-          <Text
-            as="p"
-            variant="caption"
-              tone={run.status === "failed" ? "destructive" : "default"}
-            className="whitespace-pre-wrap"
-          >
-            {run.message}
-          </Text>
-        )}
-        {run.status === "needs-approval" && <ApprovalLinks run={run} />}
-      </Stack>
-    </Fill>
   );
 }

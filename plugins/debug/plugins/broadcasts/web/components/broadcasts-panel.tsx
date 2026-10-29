@@ -4,7 +4,6 @@ import {
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, useCallback, useMemo } from "react";
-import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
@@ -99,20 +98,11 @@ const fields: FieldDef<BroadcastRow>[] = [
     label: "Severity",
     type: "enum",
     options: [
-      { value: "error", label: "error" },
-      { value: "warning", label: "warning" },
-      { value: "info", label: "info" },
+      { value: "error", label: "error", variant: "destructive" },
+      { value: "warning", label: "warning", variant: "warning" },
+      { value: "info", label: "info", variant: "info" },
     ],
     value: (r) => r.entry.severity,
-    cell: (r) => (
-      <Badge
-        colorClass={SEVERITY_STYLES[r.entry.severity]}
-        className={rigidClass()}
-      >
-        {r.entry.severity}
-      </Badge>
-    ),
-    align: "end",
     sortable: false,
     filterable: true,
   },

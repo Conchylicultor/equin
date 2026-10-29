@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import {
   rolePickClass,
   rolePickScope,
@@ -56,24 +58,26 @@ export function StackedTitleCell({
   return (
     <Stack gap="none" {...dataPart("dv.title-cell")}>
       <span className="contents" style={rolePickScope(P.titleCell)}>
-        <Text
-          as="div"
+        {/* One line: the title truncates, its marks keep their size after it
+            (a block-level cell — an identifier's — cannot push them down). */}
+        <Line
           className={cn(
             rolePickClass(P.titleCell.fallback, false),
-            "truncate text-foreground",
+            "gap-xs text-foreground",
           )}
           {...dataPart("dv.title-cell-title")}
         >
-          <FieldCell
-            field={spec.title}
-            row={row}
-            resolveCell={spec.resolveCell}
-            resolveEditor={spec.resolveEditor}
-            display="inline"
-          />
+          <Text>
+            <FieldCell
+              field={spec.title}
+              row={row}
+              resolveCell={spec.resolveCell}
+              resolveEditor={spec.resolveEditor}
+              display="inline"
+            />
+          </Text>
           {spec.indicators.map((field) => (
-            <span key={field.id}>
-              {" "}
+            <span key={field.id} className={rigidClass()}>
               <FieldCell
                 field={field}
                 row={row}
@@ -83,7 +87,7 @@ export function StackedTitleCell({
               />
             </span>
           ))}
-        </Text>
+        </Line>
       </span>
       {terms.length > 0 ? (
         <span className="contents" style={rolePickScope(P.titleCellSubtitle)}>

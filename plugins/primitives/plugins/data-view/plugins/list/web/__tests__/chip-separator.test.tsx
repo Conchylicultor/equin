@@ -64,6 +64,8 @@ const ROW: Row = {
 function renderList(options?: unknown) {
   const props: DataViewRenderProps<Row> = {
     revealSelection: true,
+    // Every non-title field is the subtitle run.
+    placement: { place: { a: "line2", kind: "line2", b: "line2" } },
     rows: [ROW],
     fields: FIELDS,
     rowKey: (r) => r.id,
@@ -91,7 +93,7 @@ afterEach(cleanup);
 
 describe("data-view list subtitle separators", () => {
   it("middots two adjacent text terms and never a chip", () => {
-    const { container } = renderList();
+    const { container } = renderList({ lines: 1 });
     const text = container.textContent ?? "";
 
     // Two adjacent NON-chip terms — the title and `a` — keep the middot.

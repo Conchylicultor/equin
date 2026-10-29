@@ -17,8 +17,8 @@ import { ListView } from "../components/list-view";
 
 /**
  * The list's leading thumbnail: a covered surface draws each row's cover in the
- * leading slot, and the primary action sits over it; an explicit leading visual
- * (a `FieldDef.leading` field, the view's own `leading`) takes the slot instead.
+ * leading slot, and the primary action sits over it; a field placed in `lead`
+ * takes the slot instead.
  */
 
 type Row = { id: string; name: string; art: string; note: string };
@@ -48,7 +48,6 @@ const glyph: FieldDef<Row> = {
   label: "Glyph",
   type: "plain",
   value: () => "★",
-  leading: true,
 };
 
 const ROWS: Row[] = [
@@ -81,6 +80,12 @@ function renderList(
   } as unknown as LoadedPlugin;
   const props: DataViewRenderProps<Row> = {
     revealSelection: true,
+    placement: {
+      place: {
+        ...(fields.some((f) => f.id === "glyph") ? { glyph: "lead" } : {}),
+        ...(fields.some((f) => f.id === "note") ? { note: "line2" } : {}),
+      },
+    },
     rows: ROWS,
     fields,
     rowKey: (r) => r.id,
@@ -112,7 +117,9 @@ afterEach(cleanup);
 
 describe("data-view list thumbnail", () => {
   it("draws the cover field as a thumbnail, out of the body", () => {
-    const { container } = renderList([name, art, note]);
+    const { container } = renderList([name, art, note], {
+      options: { lines: 1 },
+    });
     const img = rowEl(container, "1").querySelector("img");
     expect(img?.getAttribute("src")).toBe("https://img/a.png");
     // The URL is the picture, never also a subtitle term.
@@ -133,19 +140,11 @@ describe("data-view list thumbnail", () => {
     ).toBe("https://acc/2.png");
   });
 
-  it("an explicit leading field takes the slot: no thumbnail", () => {
+  it("a lead field takes the slot: no thumbnail", () => {
     const { container } = renderList([glyph, name, art, note]);
     expect(container.querySelector(".size-cover-thumb")).toBeNull();
     expect(container.querySelector("img")).toBeNull();
     expect(rowEl(container, "1").textContent?.startsWith("★alpha")).toBe(true);
-  });
-
-  it("the view's own leading option takes the slot: no thumbnail", () => {
-    const { container, getAllByTestId } = renderList([name, art, note], {
-      options: { leading: () => <i data-testid="own" /> },
-    });
-    expect(getAllByTestId("own")).toHaveLength(2);
-    expect(container.querySelector(".size-cover-thumb")).toBeNull();
   });
 
   it("the tree chrome never draws a thumbnail", () => {
@@ -191,7 +190,9 @@ describe("data-view list thumbnail", () => {
 
 describe("data-view list subtitle", () => {
   it("skips an empty value — no 'Empty', no dangling separator", () => {
-    const { container } = renderList([name, note]);
+    const { container } = renderList([name, note], {
+      options: { lines: 1 },
+    });
     expect(rowEl(container, "1").textContent).toBe("alpha · memo");
     expect(rowEl(container, "2").textContent).toBe("beta");
   });

@@ -7,6 +7,7 @@ export const enumFieldType = defineFieldType<string>("enum");
 
 export const enumIdentity = defineFieldIdentity<string>({
   type: enumFieldType,
+  kind: "label",
   label: "Select",
   icon: listIcon,
   customColumn: true,

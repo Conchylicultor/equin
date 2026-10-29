@@ -1,6 +1,5 @@
 import { useMemo, type ReactElement, type ReactNode } from "react";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
@@ -27,36 +26,8 @@ const releaseHistorySource = liveDataSource(releaseHistory, {
   searchable: ["composition", "target", "platform"],
 });
 
-function statusBadge(run: ReleaseHistoryRow): ReactNode {
-  if (run.status === "running") {
-    return (
-      <Badge
-        variant="warning"
-        icon={<StatusDot colorClass="bg-warning animate-pulse" />}
-      >
-        Running
-      </Badge>
-    );
-  }
-  if (run.status === "succeeded") {
-    return (
-      <Badge variant="success" icon={<StatusDot colorClass="bg-success" />}>
-        Succeeded
-      </Badge>
-    );
-  }
-  return (
-    <Badge
-      variant="destructive"
-      icon={<StatusDot colorClass="bg-destructive" />}
-    >
-      Failed
-    </Badge>
-  );
-}
-
 // How the derived fields present here (the collection declares their labels,
-// types and filters; the status and target chips come from their options).
+// types and filters; the status chip comes from its options).
 // `platform` is a free string set whose full enumeration lives server-side, so
 // it stays a sortable text column rather than a client-derived (and thus
 // partial) enum filter.
@@ -65,7 +36,7 @@ const overrides = fieldOverrides(releaseHistory, {
     cell: (r) => <Badge variant="muted">{r.target}</Badge>,
     width: "9rem",
   },
-  status: { cell: (r) => statusBadge(r), width: "8rem" },
+  status: { width: "8rem" },
   platform: {
     cell: (r) =>
       r.platform ? (
@@ -135,6 +106,7 @@ function ReleaseHistory({
     <DataView<ReleaseHistoryRow>
       storageKey={RELEASE_HISTORY_VIEW}
       overrides={overrides}
+      recipe="ledger"
       views={["list", "table"]}
       defaultView="list"
       selectedRowId={selectedRunId}

@@ -85,6 +85,8 @@ export function HistorySource({
         rowActivation: (c) => linkTo(c.id),
         viewOptions: {
           list: {
+            // Kept: the shared ConversationItem (optimistic status, title mode,
+            // hint anchor, close control) — not values of fields.
             renderRow: (c: ConversationListLiveRow) => (
               <SidebarConversationItem conv={c} />
             ),

@@ -55,6 +55,5 @@ const overrides = fieldOverrides(bootTraces, {
         <RelativeTime date={r.createdAt} />
       </span>
     ),
-    align: "end",
   },
 });

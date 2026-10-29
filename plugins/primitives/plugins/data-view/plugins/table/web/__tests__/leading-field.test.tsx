@@ -13,8 +13,8 @@ import {
 import { TableView } from "../components/table-view";
 
 /**
- * The table has no leading slot: a `leading: true` field is an ordinary column,
- * its `data` drawn by its type's cell like any other. Local fixture cell for a
+ * A field placed in `lead` is the table's first column, its `data` drawn by its
+ * type's cell. Local fixture cell for a
  * synthetic type (no `fields/*` import: that is a cycle).
  */
 function SpecCell(props: TableCellProps) {
@@ -37,16 +37,16 @@ const FIELDS: FieldDef<Row>[] = [
     label: "Avatar",
     type: "spec",
     data: (r) => r.glyph,
-    leading: true,
   },
 ];
 
 afterEach(cleanup);
 
-describe("data-view table leading field", () => {
-  it("renders the leading field as an ordinary column", () => {
+describe("data-view table lead field", () => {
+  it("renders the lead field as the first column", () => {
     const props: DataViewRenderProps<Row> = {
       revealSelection: true,
+      placement: { place: { avatar: "lead" } },
       rows: [{ id: "1", name: "alpha", glyph: "★" }],
       fields: FIELDS,
       rowKey: (r) => r.id,
@@ -71,13 +71,13 @@ describe("data-view table leading field", () => {
     const header = getByText("Avatar");
     const cell = getByTestId("spec-cell");
     expect(cell.textContent).toBe("★");
-    // Column order follows the schema: Name's header, then Avatar's, then cells.
+    // The lead is the first column: its header and cell come before Name's.
     expect(
-      getByText("Name").compareDocumentPosition(header) &
+      header.compareDocumentPosition(getByText("Name")) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(
-      getByText("alpha").compareDocumentPosition(cell) &
+      cell.compareDocumentPosition(getByText("alpha")) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });

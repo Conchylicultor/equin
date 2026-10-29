@@ -295,30 +295,65 @@ a live `source` refuses `hierarchy` — a tree over a paged prefix orphans child
   `--tree-guide-x`): a child's chevron sits under its parent's icon. Disclosure
   variant: `ui/tree-disclosure` (default `column`; Pages and file explorer pin
   `merged`). Pinned by `ui/tokens/density/core/tree-geometry.test.ts`.
-- `FieldDef.primary` picks the row label (`pickPrimaryField`); inline rename is
+- The placement's `title` is the row label; inline rename is
   `FieldDef.onEdit` on that field (`EditableTreeLabel`).
 - **Aliases** (`getAliasParents`): the row also appears as a read-only leaf under each
   returned parent — navigation only; a `child` drop or add-child resolves to the
   real row.
 
-### Leading field
+### Placement: where each field is drawn
 
-`FieldDef.leading: true` marks the row's **leading visual** (avatar), left out of
-the body everywhere and drawn in the view's leading slot:
+No view decides where a field goes, and no field says where it goes. **One
+engine places every field into a view's slots**, from three layers, the most
+specific winning (design: `research/2026-10-28-global-data-view-placement-engine.md`):
 
-- list: `Row.icon`;
-- gallery: the cover frame (only when the row has no cover — **cover wins**);
-- nested table: the tree-head icon;
-- icons: the tile.
+```text
+field type (kind)  →  recipe rules  →  surface `place`  →  user's PropertyEntry.slot
+```
 
-The **flat table** has no leading slot: there it is an ordinary column.
+- **Kind** — what a value IS, declared by its type (`FieldIdentity.kind`,
+  `fields/core`, inherited through `extends`; a root type must declare one —
+  tsc): `label`, `prose`, `instant`, `duration`, `quantity`, `ordinal`,
+  `identifier`, `person`, `path`, `visual`, `flag`. A closed-set field whose
+  options declare a `variant` / `tint` / `icon` is a **`state`** — the one rule
+  data-view decides (`useResolveFieldKind`), naming no type. `primary: true` is
+  the row's **identity**.
+- **Slots** (`core/internal/placement.ts`): `lead`, `title`, `afterTitle`,
+  `line2`, `trail`, `edge`, `hidden`. **Each view declares the slots it draws**
+  as data (`ViewSlots`: capacity, form, kinds it takes), passes it to
+  `usePlacement(fields, properties, props.placement, SLOTS)` and publishes the
+  same table on its contribution (`DataViewContribution.slots`) for the slot
+  editor. A slot a view leaves out is one it does not draw.
+- **Recipes** (`RECIPES`, plain data): `record` (default), `log`, `timeline`,
+  `inbox`, `ledger` — ordered `[kind | "identity", slot]` rules. The engine
+  (`resolvePlacement`, `web/internal/placement.ts`) walks rule by rule, then
+  field by field: a field takes the first matching rule whose slot the view
+  draws and has room in, so a second instant falls through to its next rule.
+  Unplaced fields trail. No title → the first label / prose / identifier is
+  promoted.
+- **A surface says one word plus sparse overrides**: `recipe`, `place` (pin a
+  field to a slot — `{ updatedAt: "edge" }`; an unknown id throws, two pins on a
+  one-field slot throw) and `emphasis` (never gives way first). All three are
+  `DataViewBaseProps`, so a `DataViewSwitcher` source carries its own.
+- **Priority** (what gives way first when narrow, from last): `emphasis`, then
+  the slot's rank (`SLOT_RANK`: title > lead > edge > afterTitle > line2 >
+  trail), then drawing order in the slot — never the recipe's rule order.
+  Tables give `trail` / `edge` columns a drop order from it (`dropOrderOf`);
+  `lead` and `title` never drop.
+- **Form follows the slot** (`ViewSlots[slot].form` → `FieldCell context`):
+  `glyph` in a lead draws a state's option as its icon / dot alone
+  (`OptionGlyph`); `token` on a card's line; `cell` elsewhere.
+- **Alignment** defaults from the kind (`fieldAlign`: quantity / duration /
+  ordinal / instant end). `align` is text alignment only.
 
-- **Composition**: the field renders first, then the view's own option (list
-  `leading`, nested-table `leadingIcon`), via the shared `leadingSlot(...)`
-  (`undefined` when neither).
-- Resolved from the **visible** set (`pickLeadingField` over `resolveBodyFields`),
-  so hiding it in Properties hides the avatar.
-- **At most one per schema** (throws). No type-based fallback.
+| Slot | List / tree row | Table | Gallery card | Icons tile |
+|---|---|---|---|---|
+| `lead` | `Row.icon` / tree-head icon (glyph) | first column | cover (a visual) or corner glyph | the face (visual only) |
+| `title` | label | title column | title | name |
+| `afterTitle` | marks after the label | stacked in the title cell | after the title | — |
+| `line2` | subtitle run (2 lines when present) | stacked under the title | subtitle | — |
+| `trail` | aligned trailing slots | columns | ≤ 3 tokens | — |
+| `edge` | far right, faint | last column | token line end | — |
 
 ## Manual order
 
@@ -1345,8 +1380,9 @@ DataViewProps.density (and switcher's)
   `"row"` when ungrouped or the first column is labelled.
 - **`FieldDef.header?: string | false`** — column header text (default `label`);
   `false` leaves it empty but keeps `label` in pickers.
-- **`presentation: "soft"`, `cover: true`, `titleCell: "stacked"`** — the soft table
-  (table child's CLAUDE.md).
+- **`presentation: "soft"`, `cover: true`** — the soft table (table child's
+  CLAUDE.md). The title column stacks its `afterTitle` and `line2` fields
+  whenever the placement gives it any.
 - **Column captions** —
   `configSchema: { columnCaptions: "auto" | "shown" | "hidden" }` in every table
   view's settings.
@@ -1393,7 +1429,8 @@ don't re-add either.)
 
 ### Single-line list rows are the default
 
-`ListViewOptions.lines`: `1` (default) | `2`.
+`ListViewOptions.lines`: `1` | `2` — default `2` when the placement puts a
+field on `line2`, else `1`.
 
 - At `1` the title and subtitle are sibling truncating leaves of the row's
   `Line`, an empty `<Fill>` before the rigid trailing cell.
@@ -1407,7 +1444,7 @@ don't re-add either.)
   root — no row re-renders; no subgrid because `VirtualRows` positions
   absolutely.
 - Widths only grow; reset when the trailing set changes. Gap: `listSlotGap`.
-- A **time-typed** field (chain reaches `date`) goes last, in `listTimeInk`.
+- The **`edge`** field goes last, in `listTimeInk`.
 
 **Column captions** (list `configSchema`, default off): a caption row aligned to the
 same slots.
@@ -1801,35 +1838,33 @@ It is a **default, not enforcement**: under an explicit list it reads hidden;
 
 `properties` governs **body rendering only** — filter/sort/search use the full
 schema (views run `useDataViewSections` on full `fields`, then
-`resolveBodyFields(fields, properties)`). The title is `pickPrimaryField` over the
-**visible** subset.
+`usePlacement(fields, properties, …)`), which hides what the list hides.
 
 UI: **"Properties"** in View settings (`MdTune`) "Current view" — a `view`-scope
 `Setting` (`PropertiesControl`):
 
 - sortable rows with an eye toggle, "Show all fields";
+- over a view that declares slots: one band per slot (Lead, Title, …,
+  Hidden), each row's "Show in…" page moving the field to a slot
+  (`PropertyEntry.slot`, `moveToSlot`), and "Reset to the view's layout"
+  (`resetSlots`);
 - applicable with >1 field;
 - writes `updateView(id, { properties }, { merge: true })`.
 
-### The card partition
+### The card's slots
 
-`partitionCardFields(visibleFields)` (web barrel), the ONE partition:
+`cardFieldsOf(placement)` (web barrel) reads a card's lines off the placement:
+`lead`, `title`, `afterTitle`, `line2`, `trail` (the gallery declares at most
+3), `edge`.
 
-| Part | Fields |
-| --- | --- |
-| `title` | `pickPrimaryField` |
-| `leading` | the leading field |
-| `indicators` | `FieldDef.indicator` |
-| `subtitle` | `text` fields joined "·" |
-| `tokens` | the rest, icon + value |
-
-- **Cover**: `resolveCover(fields, DataViewProps.cover)` — accessor →
-  `FieldDef.cover` → first `media` field — drawn by
-  `<CoverFrame size="card" | "thumb">`.
+- **Cover**: `resolveCover(drawnFields(placement), DataViewProps.cover)` —
+  accessor → `FieldDef.cover` → first `media` field — drawn by
+  `<CoverFrame size="card" | "thumb">`; the cover field is in no line.
 - `<CardMeta>` draws a line whenever the VIEW has fields for it (every card the
   same height); empty values are omitted.
-- A coverless gallery card shows `leading`, else a title **monogram**
-  (`coverMonogram: hide` disables), else blank.
+- A coverless gallery card shows a `visual` lead, else a title **monogram**
+  (`coverMonogram: hide` disables), else blank. A lead that is no visual is a
+  glyph in the cover's corner.
 - Sizes/inks are `ui/tokens/data-view` tokens (gallery CLAUDE.md).
 
 ## The rail (the inverted topology)
@@ -1902,10 +1937,10 @@ list, table and `primitives/tree` share it.
     - `DataViewSlots.ValueCodec`
     - `DataViewSlots.Grouping`
     - `DataViewSlots.ColumnConfig`
-  - Slot contributors: 60 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 61 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `DataViewSlots.Cell` ×16
     - `DataViewSlots.Filter` ×9
-    - `DataViewSlots.CollectionItemAction` ×7
+    - `DataViewSlots.CollectionItemAction` ×8
     - `DataViewSlots.CellEditor` ×6
     - `DataViewSlots.View` ×5
     - `DataViewSlots.CollectionRowActivation` ×4
@@ -2060,6 +2095,8 @@ list, table and `primitives/tree` share it.
     - `LoweredFilter`
     - `ManualOrderConfig`
     - `PartitionOptions`
+    - `PlacedSlots`
+    - `Placement`
     - `ProjectedRow`
     - `ResolvedCover`
     - `RowDnd`
@@ -2086,6 +2123,7 @@ list, table and `primitives/tree` share it.
     - `ViewState`
   - Exports (values):
     - `applyFilter`
+    - `cardFieldsOf`
     - `CardMeta`
     - `ChipSelectFilterInput`
     - `coverDetailClass`
@@ -2103,13 +2141,16 @@ list, table and `primitives/tree` share it.
     - `defineDataView`
     - `defineDataViewSources`
     - `defineItemActions`
+    - `drawnFields`
     - `drawnSubtitleTerms`
     - `DROP_TARGET_RING`
     - `DROP_TARGET_WASH`
     - `DropBackground`
     - `DropInsertLine`
+    - `dropOrderOf`
     - `EditableCell`
     - `EditableTreeLabel`
+    - `fieldAlign`
     - `FieldCell`
     - `fieldOverrides`
     - `FieldPresentationProvider`
@@ -2127,10 +2168,8 @@ list, table and `primitives/tree` share it.
     - `makeSortComparator`
     - `MissingDataCellError`
     - `NestedSectionIndent`
-    - `partitionCardFields`
     - `partitionIntoSections`
     - `pickCoverField`
-    - `pickLeadingField`
     - `pickPrimaryField`
     - `PillsToolbar`
     - `PrimaryActionSlot`
@@ -2160,10 +2199,12 @@ list, table and `primitives/tree` share it.
     - `useItemActionZones`
     - `useLivePagedValuePaging`
     - `useLivePagesPaging`
+    - `usePlacement`
     - `useResolveCell`
     - `useResolveCellEditor`
     - `useResolveColumnConfig`
     - `useResolveColumnDerive`
+    - `useResolveFieldKind`
     - `useResolveGroupings`
     - `useResolveOperatorSet`
     - `useResolveValueCodec`
@@ -2277,8 +2318,12 @@ list, table and `primitives/tree` share it.
     - `LiveSourceScope`
     - `ManualOrderConfig`
     - `Nesting`
+    - `PlacementMatch`
+    - `PlacementSpec`
     - `PresetId`
     - `PropertyEntry`
+    - `Recipe`
+    - `RecipeRule`
     - `RowDragConfig`
     - `RowDropConfig`
     - `RowDropContext`
@@ -2290,6 +2335,9 @@ list, table and `primitives/tree` share it.
     - `SectionsToolbar`
     - `SectionsToolbarForms`
     - `SelectionConfig`
+    - `Slot`
+    - `SlotForm`
+    - `SlotSpec`
     - `SortPreset`
     - `SortRule`
     - `TableCellProps`
@@ -2299,6 +2347,7 @@ list, table and `primitives/tree` share it.
     - `ValueCodec`
     - `ViewExpandAll`
     - `ViewRowDropConfig`
+    - `ViewSlots`
     - `ViewState`
   - Exports (values):
     - `atLeastCount`
@@ -2322,18 +2371,21 @@ list, table and `primitives/tree` share it.
     - `orderFieldsBySection`
     - `PARENT_FIELD_ID`
     - `presetIdKind`
+    - `RECIPES`
     - `scopeFilterRows`
     - `SHARED_FIELD_SECTION`
+    - `SLOT_RANK`
+    - `SLOTS`
     - `splitFieldSections`
     - `sumSectionCounts`
     - `UNGROUPED_FOLD_KEY`
     - `visibleSections`
 - Cross-plugin:
-  - Uses tokens: 91 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 92 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/data-view` ×46
     - `ui/tokens/density` ×16
     - `ui/tokens/color-palette` ×15
-    - `ui/tokens/type-scale` ×8
+    - `ui/tokens/type-scale` ×9
     - `ui/tokens/shadow` ×3
     - `ui/tokens/shape` ×3
   - Imported by: 122 plugins — full list in [REFERENCE.md](./REFERENCE.md)

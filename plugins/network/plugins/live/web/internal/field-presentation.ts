@@ -115,11 +115,6 @@ export interface FieldPresentationSpec<V, Row> {
   /** The icon a card's token line draws before the value; absent ⇒ its type's identity icon. */
   icon?: IconRef;
   /**
-   * `true`: a row-state mark (a problem, a missing file) rather than a
-   * property — a card draws it on the title line, not as a token.
-   */
-  indicator?: true;
-  /**
    * The field's options, read live (a model catalog, a tag vocabulary, a
    * contribution registry) — in place of its declared ones. Filtering stays on
    * the raw values.

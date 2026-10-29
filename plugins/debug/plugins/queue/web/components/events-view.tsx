@@ -38,6 +38,7 @@ export function EventsView({
       storageKey={EVENTS_VIEW}
       overrides={overrides}
       extraFields={extraFields}
+      recipe="log"
       views={["table", "list"]}
       defaultView="table"
       source={emissionsSource}

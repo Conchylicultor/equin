@@ -23,6 +23,7 @@ const plugin = {
   contributions: [],
 } as unknown as LoadedPlugin;
 const PLUGINS = [plugin];
+const PLACEMENT = {};
 
 type Row = { id: string; name: string; rank: Rank | null };
 
@@ -57,6 +58,8 @@ function setup(opts: { manualOrder?: ManualOrderConfig<Row> } = {}) {
   ): DataViewRenderProps<unknown> =>
     ({
       revealSelection: true,
+      // The host hands one stable object (memoized on the surface's parts).
+      placement: PLACEMENT,
       rows,
       fields: FIELDS,
       rowKey,

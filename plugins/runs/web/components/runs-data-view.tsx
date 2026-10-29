@@ -1,11 +1,10 @@
-import { useMemo, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import {
   DataView,
   liveDataSource,
   type DataViewDensity,
 } from "@plugins/primitives/plugins/data-view/web";
 import { runRowKey, runs, type RunRow } from "../../core";
-import { Runs } from "../internal/slots";
 import { RUNS_VIEW } from "../internal/view-id";
 
 /**
@@ -86,19 +85,8 @@ export function RunsDataView({
   pinnedView,
 }: RunsDataViewProps): ReactNode {
   // No `renderRow`: the row body is the list's own, built from the field schema,
-  // so it obeys the view's visible fields. An arm decorates the line with a
-  // leading glyph and declares fields (derived from its `liveArm`) — it does
-  // not replace the line. See
-  // `Runs` in `internal/slots.ts` for why that seam no longer exists.
-  const viewOptions = useMemo(
-    () => ({
-      list: {
-        leading: (run: RunRow) => <Runs.Leading.Dispatch run={run} />,
-      },
-    }),
-    [],
-  );
-
+  // so it obeys the view's visible fields. The outcome is a state, so the
+  // `ledger` recipe leads with its glyph.
   // Where a row goes is its arm's (`runLinks`, applied by every list of runs);
   // a row whose arm registers none stays a plain container. The host's
   // own `onRowActivate` runs after the arm's navigation, on every row.
@@ -110,7 +98,7 @@ export function RunsDataView({
       defaultView={defaultView}
       pinnedView={pinnedView}
       density={density}
-      viewOptions={viewOptions}
+      recipe="ledger"
       emptyState={emptyState}
       selectedRowId={selectedRun ? runRowKey(selectedRun) : undefined}
       onRowActivate={onRowActivate}

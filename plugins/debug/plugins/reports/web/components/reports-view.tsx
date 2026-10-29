@@ -88,7 +88,6 @@ const overrides = fieldOverrides(reportsList, {
       r.count > 1 ? (
         <span className="tabular-nums text-muted-foreground">×{r.count}</span>
       ) : null,
-    align: "end",
     width: "4rem",
   },
   lastSeenAt: {

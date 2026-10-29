@@ -5,10 +5,7 @@ import {
   Text,
 } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import {
-  Badge,
-  formatStatusLabel,
-} from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { formatStatusLabel } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -33,15 +30,6 @@ import {
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
 const MEMORY_FILES_VIEW = defineDataView("debug.memory");
 
-const TYPE_BADGE_CLASSES: Record<MemoryFile["type"], string> = {
-  index: "bg-muted text-muted-foreground",
-  feedback: "bg-warning/10 text-warning",
-  project: "bg-info/10 text-info",
-  user: "bg-success/10 text-success",
-  reference: "bg-categorical-5/15 text-categorical-5",
-  other: "bg-muted text-muted-foreground",
-};
-
 function displayName(name: string): string {
   return formatStatusLabel(name.replace(/\.md$/, ""));
 }
@@ -64,21 +52,14 @@ const fields: FieldDef<MemoryFile>[] = [
     label: "Type",
     type: "enum",
     options: [
-      { value: "index", label: "Index" },
-      { value: "feedback", label: "Feedback" },
-      { value: "project", label: "Project" },
-      { value: "user", label: "User" },
-      { value: "reference", label: "Reference" },
-      { value: "other", label: "Other" },
+      { value: "index", label: "Index", variant: "muted" },
+      { value: "feedback", label: "Feedback", variant: "warning" },
+      { value: "project", label: "Project", variant: "info" },
+      { value: "user", label: "User", variant: "success" },
+      { value: "reference", label: "Reference", variant: "primary" },
+      { value: "other", label: "Other", variant: "muted" },
     ],
     value: (f) => f.type,
-    cell: (f) =>
-      f.type === "index" || f.type === "other" ? null : (
-        <Badge colorClass={TYPE_BADGE_CLASSES[f.type]} className={rigidClass()}>
-          {formatStatusLabel(f.type)}
-        </Badge>
-      ),
-    align: "end",
     sortable: true,
     filterable: true,
   },

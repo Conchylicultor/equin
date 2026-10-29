@@ -51,7 +51,7 @@ function SourceTypeCell({ type }: { type: string }) {
  * How a source's stored fields present in every list of sources: the type from
  * the registry (options and the not-installed cell), the status and the enabled
  * switch left out of the body by default (`state` is derived from them; each
- * stays a filter / sort / group-by dimension), and the last run right-aligned.
+ * stays a filter / sort / group-by dimension), and the last run (a date, so it ends the row).
  */
 export const sourcePresentation = FieldPresentation.Register({
   owner: eventSourcesEntityRef,
@@ -62,6 +62,5 @@ export const sourcePresentation = FieldPresentation.Register({
     },
     status: { visible: false },
     enabled: { visible: false },
-    lastRunAt: { align: "end" },
   },
 });

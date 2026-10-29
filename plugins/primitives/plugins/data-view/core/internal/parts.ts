@@ -29,6 +29,7 @@ export const DATA_VIEW_PARTS = [
   "dv.card-tokens",
   "dv.card-token",
   "dv.card-token-icon",
+  "dv.card-edge",
   // Group headers
   "dv.group",
   "dv.group-header",

@@ -31,14 +31,17 @@ source a derived or unsortable column's header would otherwise persist a rule
 the source refuses, replacing the list with its error. The host's `setSort`
 throws for a field outside the set. Pinned by `web/__tests__/header-sort.test.tsx`.
 
-Flat, the table has no leading slot: a field declaring `FieldDef.leading` is an
-ordinary column here (see `data-view/CLAUDE.md`, "Leading field"). Nested, it
-has one (below).
-
-`FieldDef.dropOrder` maps to `ColumnDef.dropOrder`: in a narrow pane the
-numbered columns give way (lowest first) before the table scrolls sideways with
-its first column pinned — `data-table`'s CLAUDE.md ("Wide tables"). Both the
-flat and the nested table do this; `presentation: "outline"` does neither.
+**Columns are the placement** (`TABLE_SLOTS`; data-view CLAUDE.md,
+"Placement"): the `lead` field first (its whole cell), the `title` column
+(taking the slack, `minmax(0,1fr)` unless its field sets a width; its
+`afterTitle` and `line2` fields stacked in it — `StackedTitleCell`), then the
+`trail` columns and the `edge` column last. Alignment is `fieldAlign` (number-
+like kinds end). Every `trail` / `edge` column gets a `ColumnDef.dropOrder`
+from the placement's priority (`dropOrderOf`): in a narrow pane trailing
+columns give way least important first, the edge after them, before the table
+scrolls sideways with its first column pinned — `data-table`'s CLAUDE.md
+("Wide tables"). Both the flat and the nested table do this; `presentation:
+"outline"` does neither.
 
 Surface options reach `DataTable` straight through: `viewOptions.table`
 (`TableViewOptions.columnHeader`), `FieldDef.header` (mapped as
@@ -105,8 +108,9 @@ drag.
   `tree.fullSpan` draws a lazy listing's placeholder (`TreeChildPlaceholder`) as
   one full-span line; `useTreeKeyboard` runs on the grid (`role="treegrid"`),
   rows focusable exactly when the view has an open gesture.
-- **The leading field** (`FieldDef.leading`) renders in the tree head's icon
-  slot, ahead of `options.leadingIcon`, and is no column.
+- **The lead** (the placement's `lead` field, as a glyph) renders in the tree
+  head's icon slot and is no column; the title's `afterTitle` and `line2`
+  fields draw inline after the label (a tree row is one line).
 - **Row controls**: the decoration's `provide` wraps the whole row in the tree
   primitive's `RowControlsProvider`, so a cell or an item action reads
   `useOptionalRowControls()` inside a table row.
@@ -133,13 +137,13 @@ drag.
   lines; the drag source and the selected row stay mounted
   (`keepMountedRowKeys`), the droppables re-measured every frame.
 - **Options** (`TableViewOptions`, read only when nested): `defaultExpanded`,
-  `guides`, `rootId`, `expandOnActivate`, `openOnActivate`, `leadingIcon`,
+  `guides`, `rootId`, `expandOnActivate`, `openOnActivate`,
   `dragOverlay`, `trailing` (at rest, at the row's end),
   `rowAccent` (a wash in the row's overlay layer), `rowMenu`, `labelClassName`
   (on the first column's cell, after the host's `rowTone`), `addLabel`,
   `expandAll`; `presentation` and `header` apply to both modes.
   Column labels over tree rows are an outline table with `header: true`
-  (columns dropping by `dropOrder` — the file explorer).
+  (columns dropping by priority — the file explorer).
 
 **`presentation: "grid" | "outline" | "soft"`** is `DataTable.presentation`: `grid` is
 the header row and ruled rows; `outline` (a sidebar's look) drops the header and
@@ -161,15 +165,12 @@ CLAUDE.md, "Presentation").
   (Play) sits centred over the thumbnail inside the frame
   (`PrimaryActionSlot`, data-view web), revealed by the row's hover, at rest
   while active. Uncovered, it demotes into the trailing track as before.
-- **`titleCell: "stacked"`** — `partitionCardFields` over the visible fields:
-  the title column draws the title + its indicators on line 1 and the
-  subtitle run of text fields on line 2 (data-view's shared `SubtitleRun`, the
-  list's own run) — `StackedTitleCell`, each line a DataView pick
+- **The stacked title cell** — when the placement gives the title
+  `afterTitle` or `line2` fields, the title column draws the title + its marks
+  on line 1 and the `line2` run on line 2 (data-view's shared `SubtitleRun`,
+  the list's own run) — `StackedTitleCell`, each line a DataView pick
   (`titleCell` / `titleCellSubtitle`) at the full rung, stamped
-  `dv.title-cell(-title|-subtitle)`. The remaining token fields (and a leading
-  field) are the value columns, each with its field's width / align /
-  `dropOrder`; the title takes the slack (`minmax(0,1fr)`) unless its field
-  sets a width.
+  `dv.title-cell(-title|-subtitle)`.
 - Rows, cells, the header and its labels carry `data-part`s
   (`dv.table`, `dv.column-header-row`, `dv.column-header`, `dv.row`, `dv.cell`,
   `dv.thumb`).
@@ -199,7 +200,7 @@ see `data-view/CLAUDE.md` ("The rail") and `data-table/CLAUDE.md`.
 - Description: Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort, and nests its rows (a tree is a table with no columns) when the source has a hierarchy.
 - Web:
   - Contributes: `DataViewSlots.View` "Table" → `TableView`
-  - Uses: 81 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 83 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×44
     - `primitives/tree` ×17
     - `primitives/data-table` ×7
@@ -209,6 +210,8 @@ see `data-view/CLAUDE.md` ("The rail") and `data-table/CLAUDE.md`.
     - `primitives/css/clip.Clip`
     - `primitives/css/inline.Inline`
     - `primitives/css/layer.Layer`
+    - `primitives/css/line.Line`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.cn`
     - `ui/icons.Icon`
@@ -224,6 +227,7 @@ see `data-view/CLAUDE.md` ("The rail") and `data-table/CLAUDE.md`.
     - `ui/tokens/data-view --soft-thumb-w`
     - `ui/tokens/data-view --title-cell-line-gap`
     - `ui/tokens/density --chrome-pad-x`
+    - `ui/tokens/density --space-xs`
     - `ui/tokens/density --tree-pill-indent`
     - `ui/tokens/density --tree-root-gap`
     - `ui/tokens/density --tree-row-gap`

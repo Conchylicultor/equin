@@ -7,9 +7,6 @@ import type {
 import { SECRETS_DIR_DISPLAY } from "@plugins/infra/plugins/paths/plugins/display/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
-import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import {
   DataView,
   defineDataView,
@@ -38,6 +35,12 @@ import { IntegrationStatusBadge } from "./integration-presentation";
 const ACCOUNTS_VIEW = defineDataView("auth.accounts");
 
 /** The main app — where the shared token store lives. */
+const ACCOUNT_PLACE = {
+  icon: "lead",
+  summary: "line2",
+  status: "edge",
+} as const;
+
 const MAIN_URL = namespaceUrl(asNamespace(MAIN_COMPOSITION_ID));
 
 /**
@@ -102,6 +105,31 @@ export function AccountsPane(): ReactElement {
         primary: true,
         value: (r) => r.name,
         sortable: true,
+      },
+      {
+        id: "icon",
+        label: "Icon",
+        type: "text",
+        value: (r) => r.id,
+        cell: (r) => <Icon icon={r.icon} />,
+        filterable: false,
+      },
+      {
+        id: "summary",
+        label: "Account",
+        type: "multiline-text",
+        // Who is signed in (or what it unlocks): the row's live status line.
+        value: (r) => r.description,
+        cell: (r) => <AccountSummary row={r} />,
+        filterable: false,
+      },
+      {
+        id: "status",
+        label: "Status",
+        type: "text",
+        value: (r) => r.id,
+        cell: (r) => <AccountStatus row={r} />,
+        filterable: false,
       },
       {
         id: "service",
@@ -175,12 +203,7 @@ export function AccountsPane(): ReactElement {
           }
           searchAccessor={(r) => `${r.name} ${r.service} ${r.description}`}
           searchPlaceholder="Search accounts…"
-          viewOptions={{
-            list: {
-              leading: (r: AccountRow) => <Icon icon={r.icon} />,
-              renderRow: (r: AccountRow) => <AccountRowBody row={r} />,
-            },
-          }}
+          place={ACCOUNT_PLACE}
           emptyState={<>No account or integration plugin is installed.</>}
         />
       </Stack>
@@ -188,36 +211,21 @@ export function AccountsPane(): ReactElement {
   );
 }
 
-/**
- * A row: its name over who is signed in (or what it unlocks), then its status.
- * Each line is its own line container, so a long subtitle ellipsizes instead of
- * pushing the badge out.
- */
-function AccountRowBody({ row }: { row: AccountRow }): ReactElement {
+/** Who is signed in (or what it unlocks) — the row's second line. */
+function AccountSummary({ row }: { row: AccountRow }): ReactElement {
   const status = row.useStatus();
   const summary =
     status.status === "ready" && status.data.summary
       ? status.data.summary
       : row.description;
   return (
-    <>
-      <Fill>
-        <Stack gap="none">
-          <Line>
-            <Text variant="label">{row.name}</Text>
-          </Line>
-          {summary ? (
-            <Line>
-              <Text variant="caption" tone="muted">
-                {summary}
-              </Text>
-            </Line>
-          ) : null}
-        </Stack>
-      </Fill>
-      <div className={rigidClass()}>
-        <IntegrationStatusBadge result={status} />
-      </div>
-    </>
+    <Text variant="caption" tone="muted" className="truncate">
+      {summary}
+    </Text>
   );
+}
+
+/** The row's connection status badge. */
+function AccountStatus({ row }: { row: AccountRow }): ReactElement {
+  return <IntegrationStatusBadge result={row.useStatus()} />;
 }

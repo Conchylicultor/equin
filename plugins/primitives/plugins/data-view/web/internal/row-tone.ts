@@ -12,5 +12,7 @@ import type { RowTone } from "../../core";
  * then wins over the base by tailwind-merge's own conflict resolution.
  */
 export function rowToneClass(tone: RowTone | undefined): string | undefined {
-  return tone === "muted" ? "text-muted-foreground" : undefined;
+  if (tone === "muted") return "text-muted-foreground";
+  if (tone === "strong") return "font-semibold";
+  return undefined;
 }

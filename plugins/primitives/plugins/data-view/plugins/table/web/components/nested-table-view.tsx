@@ -15,12 +15,12 @@ import {
   EditableTreeLabel,
   FieldCell,
   FieldPresentationProvider,
+  dropOrderOf,
+  fieldAlign,
   leadingSlot,
-  pickLeadingField,
-  pickPrimaryField,
   readFallback,
-  resolveBodyFields,
   rowToneClass,
+  usePlacement,
   useHierarchyTree,
   useRowDropState,
   useItemActionZones,
@@ -62,12 +62,29 @@ import {
 import { RankReorderDndContext } from "@plugins/primitives/plugins/rank-reorder/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
+import type { ViewSlots } from "@plugins/primitives/plugins/data-view/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { TableViewOptions } from "../../core";
 import { mapPrimary } from "../internal/map-primary";
 import { tableHeaderOption } from "../internal/column-captions";
+
+/**
+ * The slots a nested table draws: the lead in the tree head's icon box (a
+ * glyph), the title as the label column with its marks and line 2 inline after
+ * it (a tree row is one line), then the trailing columns and the edge.
+ */
+const NESTED_SLOTS: ViewSlots = {
+  lead: { capacity: 1, form: "glyph" },
+  title: { capacity: 1 },
+  afterTitle: {},
+  line2: {},
+  trail: {},
+  edge: { capacity: 1 },
+};
 
 const linkIcon = symbol("link");
 
@@ -195,39 +212,44 @@ export function NestedTableView(
     hasPrimarySlot: false,
   });
 
-  // Columns follow the view's Properties policy. The leading field (the row's
-  // avatar) renders in the tree head's icon slot, so it is no column here.
-  const vis = useMemo(
-    () => resolveBodyFields(fields, props.state.properties),
-    [fields, props.state.properties],
+  // Columns are the view's placement. The lead renders in the tree head's
+  // icon slot; the title is the label column, its marks and line 2 drawn
+  // inline after it (a tree row is one line); trail and edge are the columns.
+  const placement = usePlacement(
+    fields,
+    props.state.properties,
+    props.placement,
+    NESTED_SLOTS,
   );
-  const leadingField = useMemo(() => pickLeadingField(vis), [vis]);
+  const { slots } = placement;
+  const leadingField = slots.lead[0];
+  const primaryField = slots.title[0];
+  const inlineFields = useMemo(
+    () => [...slots.afterTitle, ...slots.line2],
+    [slots],
+  );
   const columnFields = useMemo(
-    () => vis.filter((f) => f !== leadingField),
-    [vis, leadingField],
-  );
-  const primaryField = useMemo(
-    () => pickPrimaryField(columnFields),
-    [columnFields],
+    () => [...slots.title, ...slots.trail, ...slots.edge],
+    [slots],
   );
   // An alias (reference) row is read-only: its cells draw without editors.
   const readOnlyFields = useMemo(
     () =>
       new Map(
-        columnFields.map((f) => [
+        [...columnFields, ...inlineFields].map((f) => [
           f.id,
           { ...f, onEdit: undefined, onEditValues: undefined },
         ]),
       ),
-    [columnFields],
+    [columnFields, inlineFields],
   );
 
   // An outline is a row view (a tree's look), so its terms present as one:
   // quiet chips, and the value most rows share left out. Its label is the
   // row's identity, never a candidate.
   const termFields = useMemo(
-    () => columnFields.filter((f) => f !== primaryField),
-    [columnFields, primaryField],
+    () => [...inlineFields, ...slots.trail, ...slots.edge],
+    [inlineFields, slots],
   );
 
   const hierarchy = useHierarchyTree({ props, primaryField, options });
@@ -397,6 +419,25 @@ export function NestedTableView(
   // own class (which wins), on the first cell — as the tree's label.
   const labelClass = (row: unknown) =>
     cn(rowToneClass(props.rowTone?.(row)), options.labelClassName?.(row));
+  // The title's marks and line 2, inline after the label (rigid, faint).
+  const inlineCells = (row: unknown): ReactNode =>
+    inlineFields.length === 0 ? null : (
+      <>
+        {" "}
+        <Inline gap="xs" className={cn("text-muted-foreground", rigidClass())}>
+          {inlineFields.map((field) => (
+            <FieldCell
+              key={field.id}
+              field={readOnlyFields.get(field.id) ?? field}
+              row={row}
+              resolveCell={resolveCell}
+              resolveEditor={resolveEditor}
+              display="inline"
+            />
+          ))}
+        </Inline>
+      </>
+    );
   const columns: ColumnDef<Line>[] = columnFields.map((f, i) => ({
     id: f.id,
     header: f.header === false ? "" : (f.header ?? f.label),
@@ -404,8 +445,16 @@ export function NestedTableView(
     // label does, floored at the tree's label floor (10rem) so the other
     // columns cannot squeeze it away; the others are as wide as their content.
     width: f.width ?? (i === 0 ? "minmax(10rem, 1fr)" : undefined),
-    align: f.align,
-    dropOrder: f.dropOrder,
+    align: fieldAlign(f, placement),
+    dropOrder: dropOrderOf(
+      f,
+      slots.edge.includes(f)
+        ? "edge"
+        : slots.trail.includes(f)
+          ? "trail"
+          : "title",
+      placement,
+    ),
     // The host's sortable set: a header click sorts every sibling group.
     sortable: props.sortHeader.sortable.has(f.id),
     cell: (line: Line) => {
@@ -433,13 +482,16 @@ export function NestedTableView(
           ? f.cell(row)
           : (resolveCell(f, value ?? null, row) ?? readFallback(f, value));
         return (
-          <EditableTreeLabel
-            node={node}
-            row={row}
-            field={f}
-            read={read}
-            className={tone || undefined}
-          />
+          <>
+            <EditableTreeLabel
+              node={node}
+              row={row}
+              field={f}
+              read={read}
+              className={tone || undefined}
+            />
+            {inlineCells(row)}
+          </>
         );
       }
       const cell = (
@@ -450,7 +502,12 @@ export function NestedTableView(
           resolveEditor={resolveEditor}
         />
       );
-      return tone ? <span className={tone}>{cell}</span> : cell;
+      return (
+        <>
+          {tone ? <span className={tone}>{cell}</span> : cell}
+          {inlineCells(row)}
+        </>
+      );
     },
   }));
 
@@ -465,7 +522,8 @@ export function NestedTableView(
             row: line.node.__row,
             resolveCell,
             resolveEditor,
-            own: options.leadingIcon?.(line.node.__row),
+            form: placement.formOf("lead"),
+            own: undefined,
           })}
         >
           {cell}

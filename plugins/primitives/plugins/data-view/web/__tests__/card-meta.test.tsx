@@ -9,7 +9,7 @@ import { DataViewSlots } from "../slots";
 import { useResolveCell } from "../cell-slot";
 import { useResolveCellEditor } from "../cell-editor-slot";
 import { CardMeta } from "../components/card-meta";
-import { partitionCardFields } from "../internal/card-fields";
+import type { CardFields } from "../internal/card-fields";
 
 /**
  * `CardMeta`: each line is its part (`data-part`), wears its theme-picked type
@@ -41,12 +41,22 @@ const plugin = {
   slots: DataViewSlots,
 } as unknown as LoadedPlugin;
 
+/** The card's slots as the placement engine gives them: title, a subtitle, a token. */
+const CARD: CardFields<Row> = {
+  lead: undefined,
+  title: FIELDS[0],
+  afterTitle: [],
+  line2: [FIELDS[1]!],
+  trail: [FIELDS[2]!],
+  edge: undefined,
+};
+
 function Meta() {
   const resolveCell = useResolveCell();
   const resolveEditor = useResolveCellEditor();
   return (
     <CardMeta
-      fields={partitionCardFields(FIELDS) as never}
+      fields={CARD as unknown as CardFields<unknown>}
       row={ROW}
       resolveCell={resolveCell}
       resolveEditor={resolveEditor}

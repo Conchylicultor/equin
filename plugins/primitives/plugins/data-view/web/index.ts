@@ -95,8 +95,11 @@ export { CreateButton } from "./components/creators-control";
 export type { CardMetaProps } from "./components/card-meta";
 export { resolveCover, pickCoverField } from "./internal/cover";
 export type { ResolvedCover } from "./internal/cover";
-export { partitionCardFields } from "./internal/card-fields";
+export { cardFieldsOf, drawnFields } from "./internal/card-fields";
 export type { CardFields } from "./internal/card-fields";
+export { usePlacement, useResolveFieldKind } from "./internal/use-placement";
+export { dropOrderOf, fieldAlign } from "./internal/placement";
+export type { Placement, PlacedSlots } from "./internal/placement";
 export { SubtitleRun, drawnSubtitleTerms } from "./components/subtitle-run";
 export {
   PrimaryActionSlot,
@@ -167,7 +170,6 @@ export type { FilterController } from "./internal/use-filter-controller";
 export { useSortController } from "./internal/use-sort-controller";
 export type { SortController } from "./internal/use-sort-controller";
 export { pickPrimaryField } from "./internal/pick-primary-field";
-export { pickLeadingField } from "./internal/pick-leading-field";
 export { resolveBodyFields } from "./internal/resolve-body-fields";
 export { rowToneClass } from "./internal/row-tone";
 export {

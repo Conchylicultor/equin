@@ -1,4 +1,4 @@
-import type { FieldIdentity } from "./types";
+import type { FieldIdentity, FieldKind } from "./types";
 
 /** [typeId, ...ancestors] following `extends`; cycle-guarded; unknown ids resolve to [typeId]. */
 export function resolveTypeChain(
@@ -14,4 +14,20 @@ export function resolveTypeChain(
     cur = identities.get(cur)?.extends?.id;
   }
   return chain;
+}
+
+/**
+ * A type's declared {@link FieldKind}: its own, else the nearest ancestor's
+ * along `extends`. A type no identity registers (a list-local type id) is a
+ * `label`.
+ */
+export function resolveFieldKind(
+  typeId: string,
+  identities: ReadonlyMap<string, FieldIdentity>,
+): FieldKind {
+  for (const id of resolveTypeChain(typeId, identities)) {
+    const kind = identities.get(id)?.kind;
+    if (kind) return kind;
+  }
+  return "label";
 }

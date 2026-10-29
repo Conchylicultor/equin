@@ -217,7 +217,6 @@ const RUNTIME_FIELDS: FieldDef<RuntimeRow>[] = [
     label: "Count",
     type: "number",
     value: (r) => r.count,
-    align: "end",
     width: "3.5rem",
   },
   {
@@ -225,7 +224,6 @@ const RUNTIME_FIELDS: FieldDef<RuntimeRow>[] = [
     label: "Avg",
     type: "duration",
     value: (r) => r.avgMs,
-    align: "end",
     width: "5rem",
   },
   {
@@ -233,7 +231,6 @@ const RUNTIME_FIELDS: FieldDef<RuntimeRow>[] = [
     label: "Self",
     type: "duration",
     value: (r) => r.selfMs,
-    align: "end",
     width: "5rem",
   },
   {
@@ -241,7 +238,6 @@ const RUNTIME_FIELDS: FieldDef<RuntimeRow>[] = [
     label: "Child",
     type: "duration",
     value: (r) => r.childMs,
-    align: "end",
     width: "5rem",
   },
   {
@@ -249,7 +245,6 @@ const RUNTIME_FIELDS: FieldDef<RuntimeRow>[] = [
     label: "Recent max",
     type: "duration",
     value: (r) => r.recentMaxMs,
-    align: "end",
     width: "6.5rem",
   },
   {
@@ -257,7 +252,6 @@ const RUNTIME_FIELDS: FieldDef<RuntimeRow>[] = [
     label: "Max",
     type: "duration",
     value: (r) => r.maxMs,
-    align: "end",
     width: "9rem",
     // Since-boot peak with its age alongside, so a stale spike reads as stale.
     cell: (row) => (
@@ -271,7 +265,6 @@ const RUNTIME_FIELDS: FieldDef<RuntimeRow>[] = [
     label: "Last",
     type: "duration",
     value: (r) => r.lastMs,
-    align: "end",
     width: "5rem",
   },
 ];

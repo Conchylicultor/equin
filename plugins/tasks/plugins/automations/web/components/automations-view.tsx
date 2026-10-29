@@ -7,11 +7,7 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
-import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { AutomationEntry } from "../../core";
 import { useAutomations } from "../internal/use-automations";
@@ -19,6 +15,13 @@ import { NextRunWords, useAutomationJob } from "./schedule";
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
 const AUTOMATIONS_VIEW = defineDataView("tasks.automations");
+
+const AUTOMATION_PLACE = {
+  icon: "lead",
+  state: "afterTitle",
+  schedule: "line2",
+  open: "trail",
+} as const;
 
 const NO_ROWS: AutomationEntry[] = [];
 
@@ -83,7 +86,6 @@ export function AutomationsView({
         ],
         filterable: true,
         groupable: true,
-        visible: false,
       },
       {
         id: "open",
@@ -95,7 +97,24 @@ export function AutomationsView({
           { value: "none", label: "Nothing under way" },
         ],
         filterable: true,
-        visible: false,
+        // What it has under way, as the badge (a count for a launch kind).
+        cell: (r) => <BusyBadge entry={r} />,
+      },
+      {
+        id: "schedule",
+        label: "Runs",
+        type: "multiline-text",
+        value: (r) => r.trigger.words,
+        cell: (r) => <ScheduleWords entry={r} />,
+        filterable: false,
+      },
+      {
+        id: "icon",
+        label: "Icon",
+        type: "text",
+        value: (r) => r.id,
+        cell: (r) => <Icon icon={r.icon} />,
+        filterable: false,
       },
       {
         id: "description",
@@ -120,56 +139,22 @@ export function AutomationsView({
       rowActivation={(r) => linkTo(r.id)}
       searchAccessor={(r) => `${r.label} ${r.description}`}
       searchPlaceholder="Search automations…"
-      viewOptions={{
-        list: {
-          leading: (r: AutomationEntry) => <Icon icon={r.icon} />,
-          renderRow: (r: AutomationEntry) => <AutomationRowBody entry={r} />,
-        },
-      }}
+      place={AUTOMATION_PLACE}
       emptyState={<>No automation is installed.</>}
     />
   );
 }
 
-/**
- * One automation: its name over when it runs, then its open task and its
- * state. Each line is its own line container, so a long schedule ellipsizes
- * instead of pushing the chips out.
- */
-function AutomationRowBody({
-  entry,
-}: {
-  entry: AutomationEntry;
-}): ReactElement {
+/** When it runs, and the next run while it is on and scheduled. */
+function ScheduleWords({ entry }: { entry: AutomationEntry }): ReactElement {
   const job = useAutomationJob(entry.trigger);
   return (
-    <>
-      <Fill>
-        <Stack gap="none">
-          <Line>
-            <Text variant="label" tone={entry.enabled ? "default" : "muted"}>
-              {entry.label}
-            </Text>
-          </Line>
-          <Line>
-            <Text variant="caption" tone="muted">
-              {entry.trigger.words}
-              {entry.enabled && entry.trigger.current === "schedule" ? (
-                <NextRunWords job={job} prefix=" · " />
-              ) : null}
-            </Text>
-          </Line>
-        </Stack>
-      </Fill>
-      <Stack direction="row" gap="xs" align="center" className={rigidClass()}>
-        <BusyBadge entry={entry} />
-        {entry.enabled ? (
-          <Badge variant="success">On</Badge>
-        ) : (
-          <Badge variant="muted">Off</Badge>
-        )}
-      </Stack>
-    </>
+    <Text variant="caption" tone="muted" className="truncate">
+      {entry.trigger.words}
+      {entry.enabled && entry.trigger.current === "schedule" ? (
+        <NextRunWords job={job} prefix=" · " />
+      ) : null}
+    </Text>
   );
 }
 

@@ -58,7 +58,6 @@ const overrides = fieldOverrides(trashEntries, {
   },
   deletedAt: {
     cell: (e) => <RelativeTime date={e.deletedAt} />,
-    align: "end",
   },
 });
 

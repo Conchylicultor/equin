@@ -1,3 +1,6 @@
+import type { FieldOptionMeta } from "@plugins/fields/core";
+import type { BadgeVariant } from "@plugins/primitives/plugins/css/plugins/badge/core";
+import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 import type {
   BackgroundEntry,
   BackgroundRun,
@@ -22,17 +25,43 @@ export function entryStatus(entry: BackgroundEntry): EntryStatus {
   return entry.lastRun.outcome;
 }
 
-export const ENTRY_STATUS_LABEL: Record<EntryStatus, string> = {
-  running: "Running",
-  failed: "Failed",
-  succeeded: "Succeeded",
-  suspended: "Handed off",
-  never: "Not run yet",
-  elsewhere: "Runs on main",
-  disabled: "Disabled",
-};
+// Each status declares its colour and glyph; the run outcomes share the one run
+// vocabulary's colours, so a failed job here is the same red as a failed build.
+export const ENTRY_STATUS_OPTIONS = {
+  running: { label: "Running", variant: "info", icon: symbol("timelapse") },
+  failed: { label: "Failed", variant: "destructive", icon: symbol("error") },
+  succeeded: {
+    label: "Succeeded",
+    variant: "success",
+    icon: symbol("check-circle"),
+  },
+  suspended: {
+    label: "Handed off",
+    variant: "muted",
+    icon: symbol("pause-circle"),
+  },
+  never: {
+    label: "Not run yet",
+    variant: "muted",
+    icon: symbol("radio-button-unchecked"),
+  },
+  elsewhere: {
+    label: "Runs on main",
+    variant: "muted",
+    icon: symbol("radio-button-unchecked"),
+  },
+  disabled: { label: "Disabled", variant: "muted", icon: symbol("cancel") },
+} as const satisfies Record<EntryStatus, FieldOptionMeta>;
 
-export const ENTRY_STATUSES = Object.keys(ENTRY_STATUS_LABEL) as EntryStatus[];
+/** The given statuses as a field's options (label, colour, glyph). */
+export function entryStatusOptions(values: readonly EntryStatus[]): {
+  value: EntryStatus;
+  label: string;
+  variant: BadgeVariant;
+  icon: IconRef;
+}[] {
+  return values.map((value) => ({ value, ...ENTRY_STATUS_OPTIONS[value] }));
+}
 
 export const SCOPE_LABEL: Record<BackgroundScope, string> = {
   main: "Main only",

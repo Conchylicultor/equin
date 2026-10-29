@@ -12,14 +12,12 @@ import { songMidiShape } from "@plugins/apps/plugins/sonata/plugins/sources/plug
  * the server rather than a visual scan); its meaning is this plugin's, so the
  * cell is registered here, on the MIDI exposure. It overrides the inherited
  * checkbox: a present file renders nothing, so an ordinary song's card is
- * unchanged. A row-state mark, not a property (`indicator`): a card draws it
- * on its title line.
+ * unchanged. A flag, so the record recipe draws it after the title.
  */
 export const sourceMissingPresentation = FieldPresentation.Register({
   owner: songMidiShape.exposure,
   fields: {
     sourceMissing: {
-      indicator: true,
       cell: (missing) =>
         missing ? <Badge variant="destructive">File missing</Badge> : null,
     },

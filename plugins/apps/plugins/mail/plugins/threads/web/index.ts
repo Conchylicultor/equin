@@ -4,7 +4,11 @@ import { mailThreadsPane } from "./panes";
 import { mailThreadsPresentation } from "./internal/presentation";
 
 export { mailThreadsPane } from "./panes";
-export { ThreadRow } from "./components/thread-row";
+export {
+  THREAD_EXTRA_FIELDS,
+  THREAD_PLACE,
+  threadRowTone,
+} from "./internal/thread-surface";
 
 export default {
   description:

@@ -11,9 +11,6 @@ import type {
 } from "@plugins/primitives/plugins/data-view/core";
 import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import { useNow } from "@plugins/primitives/plugins/relative-time/web";
-import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
-import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -60,40 +57,6 @@ function SessionName({ conversationId }: { conversationId: string }) {
   );
 }
 
-function SessionLine({
-  session,
-  now,
-}: {
-  session: AgentBrowserSession;
-  now: number;
-}) {
-  const tabs = session.tabs.length;
-  const soon = closesSoon(session.idleDeadline, now);
-  // The list row is itself a flex line: this one fills it, and gives.
-  return (
-    <Fill>
-      <Line className="gap-md">
-        <Fill>
-          <SessionName conversationId={session.conversationId} />
-        </Fill>
-        <Text
-          variant="caption"
-          tone={soon ? "default" : "faint"}
-          className={cn(
-            rigidClass(),
-            "tabular-nums",
-            soon ? "text-warning" : undefined,
-          )}
-          title="Closes when left idle this long"
-        >
-          {tabs} {tabs === 1 ? "tab" : "tabs"} ·{" "}
-          {durationText(session.idleDeadline, now)}
-        </Text>
-      </Line>
-    </Fill>
-  );
-}
-
 /**
  * The expanded row: one line per conversation's session — what it is for,
  * its tabs, and how long until it closes if left idle — and the latest
@@ -130,16 +93,42 @@ export function AgentBrowserDetail(): ReactElement {
         type: "text",
         primary: true,
         value: (s) => s.conversationId,
+        cell: (s) => <SessionName conversationId={s.conversationId} />,
+      },
+      {
+        id: "tabs",
+        label: "Tabs",
+        type: "number",
+        value: (s) => s.tabs.length,
+        cell: (s) => (
+          <Text variant="caption" tone="faint" className="tabular-nums">
+            {s.tabs.length} {s.tabs.length === 1 ? "tab" : "tabs"}
+          </Text>
+        ),
       },
       {
         id: "idleDeadline",
         label: "Closes",
         type: "date",
         value: (s) => new Date(s.idleDeadline),
+        // The countdown, flagged in its last minutes — ticks with `now`.
+        cell: (s) => (
+          <Text
+            variant="caption"
+            tone={closesSoon(s.idleDeadline, now) ? "default" : "faint"}
+            className={cn(
+              "tabular-nums",
+              closesSoon(s.idleDeadline, now) ? "text-warning" : undefined,
+            )}
+            title="Closes when left idle this long"
+          >
+            {durationText(s.idleDeadline, now)}
+          </Text>
+        ),
         sortable: true,
       },
     ],
-    [],
+    [now],
   );
 
   return (
@@ -152,13 +141,6 @@ export function AgentBrowserDetail(): ReactElement {
         views={["list"]}
         toolbar={SESSIONS_TOOLBAR}
         readiness={result}
-        viewOptions={{
-          list: {
-            renderRow: (s: AgentBrowserSession) => (
-              <SessionLine session={s} now={now} />
-            ),
-          },
-        }}
         emptyState="No open sessions."
       />
       {recentError !== undefined && (

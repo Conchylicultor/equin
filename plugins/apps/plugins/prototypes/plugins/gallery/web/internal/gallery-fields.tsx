@@ -47,12 +47,19 @@ export function joinGalleryRows(
 }
 
 /**
+ * Where the gallery pins its fields, over the record recipe's: the problems
+ * count is a row-state mark on the title line, not a property (the problems
+ * themselves are listed in the detail pane, where there is room to read them).
+ */
+export const GALLERY_PLACE = { problems: "afterTitle" } as const;
+
+/**
  * The gallery's fields, over the prototypes' tag tree (the Tag field's
  * options). `title` is what the author named the prototype (its
  * `<title>`), so it is the display field; `name` is the minted id the URL and
  * the row key use — opaque, so it is searchable and never shown. A card reads
- * them as its three lines (`partitionCardFields`): the title with the problems
- * mark after it, the blurb (the one visible text field) as the subtitle, then
+ * them as its three lines (the record recipe + `GALLERY_PLACE`): the title with
+ * the problems mark after it, the blurb (prose) as the subtitle, then
  * when it was last edited and its version count as tokens.
  */
 export function galleryFields(
@@ -66,7 +73,12 @@ export function galleryFields(
       primary: true,
       value: (p) => p.title,
     },
-    { id: "blurb", label: "Blurb", type: "text", value: (p) => p.blurb },
+    {
+      id: "blurb",
+      label: "Blurb",
+      type: "multiline-text",
+      value: (p) => p.blurb,
+    },
     {
       id: "name",
       label: "Folder",
@@ -81,7 +93,6 @@ export function galleryFields(
       id: "problems",
       label: "Problems",
       type: "number",
-      indicator: true,
       value: (p) => (p.problems.length === 0 ? undefined : p.problems.length),
       cell: (p) => (
         <Badge variant="warning" icon={<Icon icon={warningIcon} />}>
@@ -102,8 +113,6 @@ export function galleryFields(
       value: (p) => new Date(p.modifiedAt),
       cell: (p) => <RelativeTime date={new Date(p.modifiedAt)} />,
       width: "4.5rem",
-      align: "end",
-      dropOrder: 2,
     },
     // Absent when no count is known — the token is omitted, never "v0".
     {
@@ -114,8 +123,6 @@ export function galleryFields(
       value: (p) => p.versions,
       cell: (p) => (p.versions === undefined ? null : `v${p.versions}`),
       width: "4rem",
-      align: "end",
-      dropOrder: 1,
     },
     // Sort key: hidden on the card, offered in the sort and filter menus.
     {

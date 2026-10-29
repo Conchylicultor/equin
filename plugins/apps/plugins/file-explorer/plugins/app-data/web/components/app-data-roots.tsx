@@ -23,6 +23,17 @@ const rootIcon = symbol("database");
 const NO_ROOTS: readonly BrowsableRoot[] = [];
 
 const fields: FieldDef<BrowsableRoot>[] = [
+  {
+    id: "icon",
+    label: "Icon",
+    type: "icon",
+    header: false,
+    filterable: false,
+    sortable: false,
+    groupable: false,
+    value: (r) => r.id,
+    cell: () => <Icon icon={rootIcon} className="size-4" />,
+  },
   { id: "label", label: "Name", primary: true, value: (r) => r.label },
   { id: "dir", label: "Data folder", value: (r) => r.dir },
 ];
@@ -52,11 +63,6 @@ export function AppDataRoots(): ReactNode {
       rowActivation={(r) =>
         openPane.to(filesDataAtPane, { root: r.id }, { mode: "root" })
       }
-      viewOptions={{
-        list: {
-          leading: () => <Icon icon={rootIcon} className="size-4" />,
-        },
-      }}
     />
   );
 }

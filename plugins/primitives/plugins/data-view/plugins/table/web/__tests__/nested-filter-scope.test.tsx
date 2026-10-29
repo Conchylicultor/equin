@@ -90,6 +90,7 @@ const AGENT: FilterGroup = {
 function renderedIds(filterScope: FilterScope | undefined): string[] {
   const props: DataViewRenderProps<Row> = {
     revealSelection: true,
+    placement: {},
     rows: ROWS,
     fields,
     rowKey: (r) => r.id,

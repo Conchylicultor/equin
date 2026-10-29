@@ -102,11 +102,11 @@ tokens, so anything that imports the barrels back would cycle.
 - Description: Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
 - Web:
   - Slots: `Fields.Identity`
-  - Slot contributors: 34 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Fields.Identity` ×34
+  - Slot contributors: 35 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Fields.Identity` ×35
   - Exports (values): `Fields`
 - Cross-plugin:
-  - Imported by: 118 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 119 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×63
     - `apps` ×13
     - `conversations` ×8
@@ -117,6 +117,7 @@ tokens, so anything that imports the barrels back would cycle.
     - `backup` ×2
     - `build` ×2
     - `primitives` ×2
+    - `apps-core/app-launcher`
     - `config_v2`
     - `hints`
     - `history/engine`
@@ -136,6 +137,7 @@ tokens, so anything that imports the barrels back would cycle.
     - `ExactOptions`
     - `FieldDef`
     - `FieldIdentity`
+    - `FieldKind`
     - `FieldMarks`
     - `FieldMeta`
     - `FieldOptionMeta`
@@ -156,6 +158,7 @@ tokens, so anything that imports the barrels back would cycle.
     - `defineField`
     - `defineFieldIdentity`
     - `defineFieldType`
+    - `FIELD_KINDS`
     - `fieldDefaults`
     - `fieldSchemaWithDefault`
     - `fieldsToPatchSchema`
@@ -164,6 +167,7 @@ tokens, so anything that imports the barrels back would cycle.
     - `nullable`
     - `optionKey`
     - `pickMeta`
+    - `resolveFieldKind`
     - `resolveTypeChain`
 - Sub-plugins:
   - **`avatar`** [2 sub-plugins] — Avatar field type: identity only. The config-render capability and the avatarField factory live in the plugins/config sub-plugin.

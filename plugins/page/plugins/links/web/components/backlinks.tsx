@@ -123,6 +123,8 @@ export function Backlinks({ documentId }: BacklinksProps) {
       rowActivation={nav && ((row) => nav.open(row.id))}
       viewOptions={{
         list: {
+          // Kept: the excerpt marks the link inside its text (a marked run, not a
+          // plain value) beside the page's own icon.
           renderRow: (row: BacklinkRow) => <BacklinkBody row={row} />,
         },
       }}

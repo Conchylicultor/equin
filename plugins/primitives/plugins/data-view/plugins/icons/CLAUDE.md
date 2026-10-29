@@ -11,14 +11,14 @@ phone home screen. Contributes one `DataViewSlots.View("icons")` entry.
   classes sit on each grid, not the root, because a container query styles the
   container's descendants only. The grid starts flush: space above the first
   row is the toolbar arrangement's `spaceBelow`, never the view's own padding.
-- **The tile** is the schema's leading field (`FieldDef.leading`) rendered
-  through `leadingSlot` inside `<AvatarPresentationProvider value="tile">`, so an
-  avatar cell fills the tile box with a flat colour. A schema with **no** leading
-  field gets a derived-colour squircle letter tile (the name's first character),
-  so switching any DataView to icons still draws something.
-- **The name** is the primary field (`pickPrimaryField`, the leading field
-  excluded), one truncating caption line, muted until the tile is hovered or
-  keyboard-focused.
+- **The tile** is the placement's `lead` (`ICONS_SLOTS`: the lead takes only a
+  `visual` kind — data-view CLAUDE.md, "Placement") rendered through
+  `leadingSlot` inside `<AvatarPresentationProvider value="tile">`, so an
+  avatar cell fills the tile box with a flat colour. A schema with **no**
+  visual gets a derived-colour squircle letter tile (the name's first
+  character), so switching any DataView to icons still draws something.
+- **The name** is the placement's `title`, one truncating caption line, muted
+  until the tile is hovered or keyboard-focused. A tile draws no other slot.
 - **Density**: `density="compact"` (a popover — the app launcher) swaps in a
   fixed small geometry at any width: 72px cells, 36px tiles, `2xs` column / `xs`
   row gaps, tighter tile padding. Both geometries live in one `GEOMETRY` record
@@ -102,8 +102,8 @@ through the real body, `web/__tests__/paged-conformance.test.tsx` (data-view's
 - Description: Icons view child for the data-view primitive: a centred launcher grid of fixed-size tiles (the row's leading avatar filling a squircle) with the name underneath, drag-to-reorder in manual order.
 - Web:
   - Contributes: `DataViewSlots.View` "Icons" → `IconsView`
-  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×22
+  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×20
     - `primitives/avatar` ×2
     - `primitives/css/ui-kit` ×2
     - `primitives/rank-reorder` ×2

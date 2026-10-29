@@ -8,6 +8,7 @@ export const durationFieldType = defineFieldType<number>("duration");
 
 export const durationIdentity = defineFieldIdentity<number>({
   type: durationFieldType,
+  kind: "duration",
   label: "Duration",
   icon: durationIcon,
   extends: numberFieldType,

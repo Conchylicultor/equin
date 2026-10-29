@@ -7,7 +7,6 @@ import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useMemo, useState, type ReactElement } from "react";
-import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import {
   getEndpointErrorMessage,
@@ -25,6 +24,7 @@ import {
   defineDataView,
   useLivePagedValuePaging,
   type FieldDef,
+  type FieldOption,
 } from "@plugins/primitives/plugins/data-view/web";
 import { confirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
@@ -81,24 +81,17 @@ function relativeAge(iso: string): string {
   return `${Math.floor(days / 30)}mo`;
 }
 
-const STATUS_COLOR: Record<string, string> = {
-  done: "bg-success/10 text-success",
-  dropped: "bg-muted text-muted-foreground",
-  in_progress: "bg-info/10 text-info",
-  need_action: "bg-warning/10 text-warning",
-  attempted: "bg-muted text-muted-foreground",
+const TASK_STATUS_OPTIONS: FieldOption[] = [
+  { value: "done", label: "done", variant: "success" },
+  { value: "dropped", label: "dropped", variant: "muted" },
+  { value: "in_progress", label: "in_progress", variant: "info" },
+  { value: "need_action", label: "need_action", variant: "warning" },
+  { value: "attempted", label: "attempted", variant: "muted" },
   // A worktree dir on disk with no attempt row behind it — nothing but the
   // checkout itself is left to describe it.
-  orphan: "bg-warning/10 text-warning",
-};
-
-function StatusBadge({ status }: { status: string }) {
-  return (
-    <Badge colorClass={STATUS_COLOR[status]} className="inline-block">
-      {status}
-    </Badge>
-  );
-}
+  { value: "orphan", label: "orphan", variant: "warning" },
+  { value: "unknown", label: "unknown", variant: "muted" },
+];
 
 /** What is left of a worktree on disk and in the cluster, in one word. */
 type Remains = "fully-clean" | "no-dir" | "clean" | "uncommitted";
@@ -107,42 +100,6 @@ function remainsOf(entry: WorktreeEntry): Remains {
   if (!entry.dirExists && !entry.dbExists) return "fully-clean";
   if (!entry.dirExists) return "no-dir";
   return entry.isDirty ? "uncommitted" : "clean";
-}
-
-function DirtyIndicator({ entry }: { entry: WorktreeEntry }) {
-  switch (remainsOf(entry)) {
-    case "fully-clean":
-      return (
-        <Text as="span" variant="caption" className="text-success">
-          fully clean
-        </Text>
-      );
-    case "no-dir":
-      return (
-        <Text
-          as="span"
-          variant="caption"
-          className="text-muted-foreground italic"
-        >
-          no dir
-        </Text>
-      );
-    case "clean":
-      return (
-        <Text as="span" variant="caption" className="text-muted-foreground">
-          clean
-        </Text>
-      );
-    case "uncommitted":
-      return (
-        <Text as="div" variant="caption" className="text-warning">
-          <Stack direction="row" gap="xs" align="center">
-            <Icon icon={warningIcon} className="size-3.5" />
-            uncommitted
-          </Stack>
-        </Text>
-      );
-  }
 }
 
 /** The scan's progress, or once it is complete what it found. */
@@ -199,36 +156,21 @@ export function WorktreeCleanupPanel() {
         width: "minmax(0,1fr)",
         ...ONLY_SHOWN,
         value: (e) => e.taskTitle,
-        cell: (e) => (
-          <Stack gap="2xs">
-            <Text
-              as="span"
-              variant="caption"
-              className="truncate font-medium"
-              title={e.taskTitle}
-            >
-              {e.taskTitle}
-            </Text>
-            <Stack direction="row" gap="xs" align="center">
-              <StatusBadge status={e.taskStatus} />
-              <span className="text-3xs text-muted-foreground font-mono truncate">
-                {e.worktreePath.split("/").pop() ?? e.attemptId}
-              </span>
-            </Stack>
-          </Stack>
-        ),
+      },
+      {
+        id: "worktree",
+        label: "Worktree",
+        type: "identifier",
+        ...ONLY_SHOWN,
+        value: (e) => e.worktreePath.split("/").pop() ?? e.attemptId,
       },
       {
         id: "taskStatus",
         label: "Status",
         type: "enum",
-        visible: false,
         ...ONLY_SHOWN,
         value: (e) => e.taskStatus,
-        options: [...Object.keys(STATUS_COLOR), "unknown"].map((s) => ({
-          value: s,
-          label: s,
-        })),
+        options: TASK_STATUS_OPTIONS,
       },
       {
         id: "createdAt",
@@ -255,12 +197,16 @@ export function WorktreeCleanupPanel() {
         ...ONLY_SHOWN,
         value: remainsOf,
         options: [
-          { value: "uncommitted", label: "uncommitted", variant: "warning" },
-          { value: "clean", label: "clean" },
-          { value: "no-dir", label: "no dir" },
+          {
+            value: "uncommitted",
+            label: "uncommitted",
+            variant: "warning",
+            icon: warningIcon,
+          },
+          { value: "clean", label: "clean", variant: "muted" },
+          { value: "no-dir", label: "no dir", variant: "muted" },
           { value: "fully-clean", label: "fully clean", variant: "success" },
         ],
-        cell: (e) => <DirtyIndicator entry={e} />,
       },
       {
         id: "isSafe",

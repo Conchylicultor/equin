@@ -6,16 +6,15 @@ import {
   liveDataSource,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
+import { describeRun } from "@plugins/apps/plugins/events/plugins/sources/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   eventRunIdKind,
   eventSourceRuns,
-  type EventSourceRun,
   type EventSourceRunRow,
 } from "@plugins/apps/plugins/events/plugins/events-core/core";
 import { eventSourceRunPane } from "../panes";
 import { RunActions } from "../slots";
-import { RunRow } from "./run-row";
 
 /**
  * The run ledger, config-backed like every DataView: the view instances live
@@ -45,18 +44,25 @@ const RUN_OVERRIDES = fieldOverrides(eventSourceRuns, {
 });
 
 /**
- * The one field the ledger computes itself: the caveats COUNT, not the text.
- * Display-only: `flags` is a jsonb list with no column the server could sort
+ * The fields the ledger computes itself: the run's sentence, and the caveats
+ * COUNT, not the text. Display-only: `flags` is a jsonb list with no column the server could sort
  * or filter on, and no saved view asks for it. An `unchanged` or `failed` run
  * never extracted anything, so it reads 0 — truthfully.
  */
 const RUN_EXTRA_FIELDS: FieldDef<EventSourceRunRow>[] = [
+  // The human sentence of what the run did (line 2 of the row). An `unchanged`
+  // run reads exactly like the others: it answers "why did nothing happen".
+  {
+    id: "summary",
+    label: "Summary",
+    type: "multiline-text",
+    value: (r) => describeRun(r),
+  },
   {
     id: "flags",
     label: "Caveats",
     type: "number",
     value: (r) => r.flags.length,
-    align: "end",
   },
 ];
 
@@ -110,12 +116,8 @@ export function SourceRunsSection({
         )
       }
       views={["list", "table"]}
-      viewOptions={{
-        list: {
-          size: "sm",
-          renderRow: (r: EventSourceRun) => <RunRow run={r} />,
-        },
-      }}
+      recipe="ledger"
+      viewOptions={{ list: { size: "sm" } }}
       emptyState="No runs yet — use Refresh now, or wait for the cadence to come round."
     />
   );

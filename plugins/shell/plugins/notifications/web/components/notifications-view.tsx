@@ -11,6 +11,7 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
@@ -96,12 +97,15 @@ export function NotificationsView(): ReactElement {
       searchPlaceholder="Search notifications…"
       viewOptions={{
         list: {
-          // The variant as a dot — the popover's accent border, in the list's
-          // own leading slot (the title wears the variant's colour too).
-          leading: (n: Notification) => (
-            <StatusDot colorClass={VARIANT_FILL[n.variant]} />
+          // Kept as a custom row: the body is the bell popover's own (developer
+          // mark, "this tab" from metadata, recurrence) — not values of fields.
+          // The variant dot leads it, in the row's own box.
+          renderRow: (n: Notification) => (
+            <Line className="gap-sm">
+              <StatusDot colorClass={VARIANT_FILL[n.variant]} />
+              <NotificationBody n={n} />
+            </Line>
           ),
-          renderRow: (n: Notification) => <NotificationBody n={n} />,
         },
       }}
       rowActivation={(n) => {

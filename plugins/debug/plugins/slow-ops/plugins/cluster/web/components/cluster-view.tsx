@@ -11,7 +11,6 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -183,25 +182,14 @@ function ClusterScanView({
         width: "minmax(0,1fr)",
         value: (r) => r.operation,
         cell: (r) => (
-          <Stack gap="2xs" className={yieldClass("x")}>
-            <Text
-              as="span"
-              variant="caption"
-              className="truncate font-mono"
-              title={r.operation}
-            >
-              {r.operation}
-            </Text>
-            <Text
-              as="span"
-              variant="caption"
-              className="pl-md text-3xs text-muted-foreground"
-              title={r.worktrees.join(", ")}
-            >
-              slow across {r.worktrees.length} worktree
-              {r.worktrees.length === 1 ? "" : "s"}
-            </Text>
-          </Stack>
+          <Text
+            as="span"
+            variant="caption"
+            className="truncate font-mono"
+            title={r.operation}
+          >
+            {r.operation}
+          </Text>
         ),
       },
       {
@@ -209,7 +197,6 @@ function ClusterScanView({
         label: "Worktrees",
         type: "number",
         width: "5.5rem",
-        align: "end",
         value: (r) => r.worktrees.length,
       },
       {
@@ -217,7 +204,6 @@ function ClusterScanView({
         label: "Count",
         type: "number",
         width: "5.5rem",
-        align: "end",
         value: (r) => r.count,
         cell: (r) => <AtLeast row={r} value={r.count} />,
       },
@@ -226,7 +212,6 @@ function ClusterScanView({
         label: "Total",
         type: "duration",
         width: "7.5rem",
-        align: "end",
         value: (r) => r.totalMs,
         cell: (r) => <AtLeast row={r} value={formatDuration(r.totalMs)} />,
       },
@@ -235,7 +220,6 @@ function ClusterScanView({
         label: "Max",
         type: "duration",
         width: "5rem",
-        align: "end",
         value: (r) => r.maxMs,
       },
       {
@@ -243,7 +227,6 @@ function ClusterScanView({
         label: "Last seen",
         type: "date",
         width: "7rem",
-        align: "end",
         value: (r) => r.lastSeenAt,
         cell: (r) => (
           <Text as="span" variant="caption" className="text-muted-foreground">
@@ -262,7 +245,6 @@ function ClusterScanView({
         label: "When",
         type: "date",
         width: "6rem",
-        align: "end",
         value: (r) => r.atTime,
         cell: (r) => (
           <Text as="span" variant="caption" className="text-muted-foreground">
@@ -319,7 +301,6 @@ function ClusterScanView({
         label: "Duration",
         type: "duration",
         width: "5rem",
-        align: "end",
         value: (r) => r.durationMs,
       },
       {
@@ -327,7 +308,6 @@ function ClusterScanView({
         label: "load1 / cpu",
         type: "number",
         width: "6rem",
-        align: "end",
         value: (r) => r.loadAvg1,
         cell: (r) => (
           <Badge
@@ -343,7 +323,6 @@ function ClusterScanView({
         label: "pg active",
         type: "number",
         width: "5rem",
-        align: "end",
         value: (r) => r.pgActiveBackends,
       },
     ],
@@ -402,6 +381,7 @@ function ClusterScanView({
           fields={timelineFields}
           rowKey={(r) => r.key}
           storageKey={CLUSTER_TIMELINE}
+        recipe="log"
           title="Contention Timeline"
           defaultView="table"
           emptyState="No contention samples captured yet"

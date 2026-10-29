@@ -9,19 +9,17 @@
   - Slots: `item-actions`
   - Slot contributors: `item-actions` ← `history.dialog`
   - Contributes: `item-actions` "restore" → `RestoreVersionAction`
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×6
     - `primitives/data-view` ×6
     - `network/live` ×2
     - `primitives/css/spacing` ×2
-    - `primitives/css/text` ×2
     - `infra/endpoints.useEndpointMutation`
     - `primitives/css/column.Column`
     - `primitives/css/placeholder.Placeholder`
-    - `primitives/css/yield.yieldClass`
+    - `primitives/css/text.SectionLabel`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
-    - `primitives/relative-time.RelativeTime`
     - `shell/notifications.useToast`
   - Exports (types): `VersionHistoryDialogProps`
   - Exports (values): `VersionHistoryDialog`

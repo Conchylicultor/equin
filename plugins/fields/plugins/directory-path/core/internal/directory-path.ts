@@ -7,6 +7,7 @@ export const directoryPathFieldType = defineFieldType<string>("directory-path");
 
 export const directoryPathIdentity = defineFieldIdentity<string>({
   type: directoryPathFieldType,
+  kind: "path",
   label: "Folder",
   icon: folderIcon,
   // A directory path is just a string; coerce stays pure/total like text's.

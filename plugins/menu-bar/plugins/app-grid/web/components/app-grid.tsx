@@ -45,7 +45,6 @@ const MENU_BAR_APPS_VIEW = defineDataView("menu-bar.apps");
  */
 const appGridOverrides = fieldOverrides(installedApp, {
   icon: {
-    leading: true,
     cell: (row: AppRow) => {
       const Badge = row.entry.badge;
       return (

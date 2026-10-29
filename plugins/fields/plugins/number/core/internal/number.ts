@@ -7,6 +7,7 @@ export const numberFieldType = defineFieldType<number>("number");
 
 export const numberIdentity = defineFieldIdentity<number>({
   type: numberFieldType,
+  kind: "quantity",
   label: "Number",
   icon: numbersIcon,
   customColumn: true,

@@ -76,7 +76,6 @@ export interface AvatarFieldDefOptions<TRow> {
   label: string;
   /** The row's avatar — becomes the field's `data` projection. */
   avatar: (row: TRow) => AvatarFieldData;
-  leading?: boolean;
   visible?: boolean;
 }
 
@@ -94,7 +93,6 @@ export function avatarFieldDef<TRow>(
     label: def.label,
     type: "avatar",
     data: def.avatar,
-    ...(def.leading !== undefined && { leading: def.leading }),
     ...(def.visible !== undefined && { visible: def.visible }),
   };
 }

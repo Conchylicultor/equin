@@ -76,7 +76,6 @@ interface FakeDataViewProps {
   rowKey: (row: never, index: number) => string;
   rowActivation?: (row: never) => (() => void) | undefined;
   toolbar?: { kind?: string; frame?: ComponentType<HostedToolbarParts> };
-  viewOptions?: { list?: { leading?: (row: never) => ReactNode } };
 }
 
 // Partial: the rest of the barrel stays real, so a module this band reaches
@@ -92,7 +91,6 @@ vi.mock("@plugins/primitives/plugins/data-view/web", async (importOriginal) => {
       if (props.toolbar?.kind !== "hosted" || frame === undefined) {
         throw new Error("the band must draw its rows through a hosted frame");
       }
-      const leading = props.viewOptions?.list?.leading;
       const body = createElement(
         "ul",
         { "data-testid": "rows" },
@@ -107,7 +105,6 @@ vi.mock("@plugins/primitives/plugins/data-view/web", async (importOriginal) => {
                 props.rowActivation?.(row as never) !== undefined,
               ),
             },
-            leading?.(row as never),
             ...props.fields.map((field) =>
               createElement(
                 "span",

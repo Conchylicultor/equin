@@ -12,6 +12,7 @@ import type {
   DataViewRenderProps,
   ItemActionProps,
   ManualOrderConfig,
+  ViewSlots,
 } from "../core";
 import type { FieldsRecord } from "@plugins/fields/core";
 import type {
@@ -37,6 +38,12 @@ import { ColumnConfig } from "./column-config-slot";
  */
 export interface DataViewContribution extends ViewTypeMeta {
   component: ComponentType<DataViewRenderProps<unknown>>;
+  /**
+   * The slots this view draws fields in — the same table its component hands
+   * `usePlacement`, so the Properties slot editor offers exactly the slots
+   * the view draws. Absent: the view places no fields by slot (a map).
+   */
+  slots?: ViewSlots;
   /** Whether this view honors `ViewState.sort` (flat field sort). Default true;
    *  a view sets false when it has no meaningful field-sort axis, and the host
    *  hides the Sort pill for it. A nesting view honors sort by ordering each

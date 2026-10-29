@@ -11,10 +11,10 @@ import {
 // `owner`), carrying each entity's field record. Each name is its table's:
 // `server/internal/tables.ts` builds the table from the ref
 // (`defineEntity(ref, meta)`).
-// Its presentation's `startsAt` cell (events/event-list) reads `allDay`
-// beside it — every list of events carries it.
+// Its presentation's `startsAt` and `recurring` cells (events/event-list) read
+// `allDay` and `recurrenceLabel` beside them — every list of events carries it.
 export const eventsEntityRef = entityRef("events", eventFields, {
-  presentationReads: ["allDay"],
+  presentationReads: ["allDay", "recurrenceLabel"],
 });
 export const eventSourcesEntityRef = entityRef(
   "event_sources",

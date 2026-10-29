@@ -10,18 +10,20 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
 import {
   CardMeta,
   GroupedSections,
   SectionBody,
+  cardFieldsOf,
+  drawnFields,
   leadingSlot,
-  partitionCardFields,
-  resolveBodyFields,
   resolveCover,
   rowToneClass,
   useDataViewSections,
   useItemActionZones,
+  usePlacement,
   useResolveCell,
   useResolveCellEditor,
   useResolveOperatorSet,
@@ -37,6 +39,7 @@ import {
 import type {
   CoverContent,
   DataViewPagePlaceholders,
+  ViewSlots,
 } from "@plugins/primitives/plugins/data-view/core";
 import { DataCard } from "./data-card";
 import { useGridColumns } from "./use-grid-columns";
@@ -59,6 +62,20 @@ const CARD_MIN = {
   compact: "var(--gallery-card-min-compact)",
 } as const;
 
+/**
+ * The slots a card draws: its lead (a visual is the picture of a coverless
+ * card, anything else a glyph on the cover), the title line with its marks,
+ * the subtitle line, three tokens and the token line's far end.
+ */
+export const GALLERY_SLOTS: ViewSlots = {
+  lead: { capacity: 1, form: "glyph" },
+  title: { capacity: 1 },
+  afterTitle: {},
+  line2: {},
+  trail: { capacity: 3, form: "token" },
+  edge: { capacity: 1, form: "token" },
+};
+
 /** The gallery's own gaps (density `galleryGapX/Y`), over the Grid's ramp gap. */
 const GRID_GAP = "gap-x-gallery gap-y-gallery";
 
@@ -76,10 +93,11 @@ interface GalleryCell {
  *
  * Every card is the one shape `DataCard` draws: the cover
  * (`resolveCover` — the surface's accessor, else the cover field), then the
- * card's three text lines (`partitionCardFields`, computed once per view, drawn
- * by `CardMeta`). A row with no cover of its own shows its leading field (the
+ * card's three text lines (`cardFieldsOf` over the view's placement, drawn
+ * by `CardMeta`). A row with no cover of its own shows its visual lead (the
  * avatar) in the frame, else a monogram of its title (`coverMonogram`), else a
- * blank tint — every card stays the same size.
+ * blank tint — every card stays the same size. A lead that is no visual (a
+ * state) is a glyph on the cover's corner.
  *
  * `rows`/`fields` arrive type-erased as `unknown`; this is the documented
  * re-cast boundary for the view child.
@@ -118,6 +136,14 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
     hasPersistentSlot: true,
     hasPrimarySlot: true,
   });
+  // Where every field goes (the surface's recipe and pins, the user's
+  // Properties); sort / filter / search above keep using the full fields.
+  const placement = usePlacement(
+    props.fields,
+    props.state.properties,
+    props.placement,
+    GALLERY_SLOTS,
+  );
 
   // Documented cast boundary: creators arrives type-erased via render props.
   const creators = props.creators as CreateOption[] | undefined;
@@ -144,12 +170,13 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
     );
   }
 
-  // Body fields follow the view's Properties (visible-fields) policy; sort /
-  // filter / search above keep using the full `props.fields`. Hiding the cover
-  // field hides the covers; hiding a text field drops its line.
-  const vis = resolveBodyFields(props.fields, props.state.properties);
-  const covers = resolveCover(vis, props.cover);
-  const cardFields: CardFields<unknown> = partitionCardFields(vis);
+  // Hiding the cover field hides the covers; hiding a text field drops its
+  // line.
+  const covers = resolveCover(drawnFields(placement), props.cover);
+  const cardFields: CardFields<unknown> = cardFieldsOf(placement);
+  const visualLead =
+    cardFields.lead !== undefined &&
+    placement.kinds.get(cardFields.lead.id) === "visual";
   const cardMin = CARD_MIN[props.density ?? "comfortable"];
 
   // Single source of cell markup — shared by the plain and windowed branches.
@@ -170,24 +197,33 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
         onActivate={props.rowActivation?.(row)}
         cover={coverOf(
           covers.coverOf(row),
-          cardFields,
-          (field) =>
-            leadingSlot({
-              field,
-              row,
-              resolveCell,
-              resolveEditor,
-              own: undefined,
-            }),
+          visualLead
+            ? leadingSlot({
+                field: cardFields.lead,
+                row,
+                resolveCell,
+                resolveEditor,
+                form: "cell",
+                own: undefined,
+              })
+            : undefined,
           titleText(cardFields, row),
         )}
-        // Aggregate representative → a `×N` corner mark, top-left, clear of
-        // the action chip at top-right.
-        badge={
-          aggregateCount && aggregateCount > 1 ? (
-            <Badge variant="muted">{`×${aggregateCount}`}</Badge>
-          ) : undefined
-        }
+        // A non-visual lead (a state's glyph) and an aggregate representative's
+        // `×N`: corner marks, top-left, clear of the action chip at top-right.
+        badge={cornerBadge(
+          visualLead
+            ? undefined
+            : leadingSlot({
+                field: cardFields.lead,
+                row,
+                resolveCell,
+                resolveEditor,
+                form: placement.formOf("lead"),
+                own: undefined,
+              }),
+          aggregateCount,
+        )}
         actions={{
           atRest: zones.cluster.atRest?.(target),
           revealed: zones.cluster.revealed?.(target),
@@ -276,26 +312,41 @@ function titleText(
   return typeof value === "string" && value.trim() !== "" ? value.trim() : null;
 }
 
+/** The cover's top-left corner marks: the lead's glyph, then `×N`. */
+function cornerBadge(
+  lead: ReactNode | undefined,
+  aggregateCount: number | undefined,
+): ReactNode | undefined {
+  const count =
+    aggregateCount && aggregateCount > 1 ? (
+      <Badge variant="muted">{`×${aggregateCount}`}</Badge>
+    ) : undefined;
+  if (lead === undefined) return count;
+  return (
+    <Inline gap="xs" align="center">
+      {lead}
+      {count}
+    </Inline>
+  );
+}
+
 /**
- * What a card's frame shows: the row's cover, else — when the schema has a
- * leading field (the avatar) — that field's cell centred on the tint, else a
- * monogram of the row's title (its first letter on a tile tinted by the
- * title's own colour, the `Avatar` auto-colour, at the frame's bottom-left),
- * else nothing (the blank tinted frame). The leading field is never text.
+ * What a card's frame shows: the row's cover, else — when the lead is a
+ * visual (the avatar) — its cell centred on the tint, else a monogram of the
+ * row's title (its first letter on a tile tinted by the title's own colour,
+ * the `Avatar` auto-colour, at the frame's bottom-left), else nothing (the
+ * blank tinted frame).
  */
 function coverOf(
   cover: CoverContent | null,
-  cardFields: CardFields<unknown>,
-  leading: (field: CardFields<unknown>["leading"]) => ReactNode | undefined,
+  lead: ReactNode | undefined,
   title: string | null,
 ): CoverContent | null {
   if (cover !== null) return cover;
-  if (cardFields.leading) {
+  if (lead !== undefined) {
     return {
       kind: "node",
-      node: (
-        <Center className="size-full">{leading(cardFields.leading)}</Center>
-      ),
+      node: <Center className="size-full">{lead}</Center>,
     };
   }
   if (title === null) return null;

@@ -10,7 +10,11 @@ import {
   NewTabGlyph,
   newTabAnchorProps,
 } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import { formatEventWhen, urlHost } from "./format";
+
+const repeatIcon = symbol("repeat");
 
 // How the events entity's fields present in every list of events: registered
 // once against the entity (`FieldPresentation.Register({ owner:
@@ -59,6 +63,18 @@ export const eventPresentation = FieldPresentation.Register({
           {formatEventWhen(startsAt, e.allDay)}
         </Text>
       ),
+    },
+    // A flag, so the record recipe draws it after the title: the repeat mark
+    // for a recurring event, nothing for a one-off.
+    recurring: {
+      cell: (recurring, e) =>
+        recurring ? (
+          <Icon
+            icon={repeatIcon}
+            className="icon-auto text-muted-foreground"
+            title={e.recurrenceLabel ?? "Recurring"}
+          />
+        ) : null,
     },
     url: { cell: (url) => <UrlCell url={url} /> },
     // Search-only: a filter on it is offered, a column is not.

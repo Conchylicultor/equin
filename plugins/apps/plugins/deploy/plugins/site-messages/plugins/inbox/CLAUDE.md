@@ -36,9 +36,7 @@ box. It stores nothing.
     - `apps/deploy/host-query.HostQuerySubject`
     - `apps/deploy/host-query.useDeploymentShips`
     - `network/live.useLive`
-    - `primitives/css/badge.Badge`
     - `primitives/css/card.Card`
-    - `primitives/css/cluster.Cluster`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/spacing.Stack`
@@ -50,7 +48,6 @@ box. It stores nothing.
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
-    - `primitives/relative-time.RelativeTime`
 - Server:
   - Contributes: `resource.declare` "deploy-site-messages.list"
   - Uses:

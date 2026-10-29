@@ -10,11 +10,8 @@ import {
   defineDataView,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useExhibits } from "../use-exhibits";
 import {
-  ExhibitBadges,
   homeLabelOf,
   isMeasured,
   RUNTIME_BADGE,
@@ -38,6 +35,8 @@ interface ExhibitRow {
 }
 
 const NO_ROWS: ExhibitRow[] = [];
+
+const EXHIBITS_PLACE = { runtime: "afterTitle" } as const;
 
 /**
  * Debug → Exhibits: the catalog as a list — one row per exhibit, searchable
@@ -71,21 +70,14 @@ export function ExhibitsList({
         label: "Exhibit",
         type: "text",
         primary: true,
-        value: (r) => `${r.exhibit.label} ${r.exhibit.id}`,
-        cell: (r) => (
-          <Stack gap="none">
-            <Stack direction="row" gap="xs" align="center">
-              <Text variant="label" className="truncate">
-                {r.exhibit.label}
-              </Text>
-              <ExhibitBadges exhibit={r.exhibit} />
-            </Stack>
-            <Text variant="code" tone="muted" className="truncate">
-              {r.exhibit.id}
-            </Text>
-          </Stack>
-        ),
+        value: (r) => r.exhibit.label,
         width: "minmax(0,1fr)",
+      },
+      {
+        id: "id",
+        label: "Id",
+        type: "identifier",
+        value: (r) => r.exhibit.id,
       },
       {
         id: "group",
@@ -104,6 +96,7 @@ export function ExhibitsList({
         options: RUNTIMES.map((v) => ({
           value: v,
           label: RUNTIME_BADGE[v].label,
+          variant: RUNTIME_BADGE[v].variant,
         })),
         filterable: true,
         width: "6rem",
@@ -134,9 +127,8 @@ export function ExhibitsList({
       {
         id: "description",
         label: "Description",
-        type: "text",
+        type: "multiline-text",
         value: (r) => r.exhibit.description ?? "",
-        width: "minmax(0,1fr)",
       },
     ],
     [],
@@ -150,6 +142,8 @@ export function ExhibitsList({
       storageKey={EXHIBITS_CATALOG}
       views={["table", "list"]}
       defaultView="table"
+      // The runtime is a mark beside the exhibit's name, as on its viewer.
+      place={EXHIBITS_PLACE}
       readiness={
         catalog.kind === "loading" ? { status: "loading" } : { status: "ready" }
       }

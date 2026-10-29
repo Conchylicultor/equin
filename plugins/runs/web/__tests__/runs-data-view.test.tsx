@@ -154,7 +154,7 @@ describe("the base field schema over the runs source", () => {
     );
     expect(plan.sortFields.map((f) => f.id)).toContain("duration");
     expect(plan.filterFields.map((f) => f.id)).toContain("kind");
-    expect(fields.find((f) => f.id === "outcome")?.options?.[0]).toEqual({
+    expect(fields.find((f) => f.id === "outcome")?.options?.[0]).toMatchObject({
       value: "running",
       label: "Running",
       variant: "warning",

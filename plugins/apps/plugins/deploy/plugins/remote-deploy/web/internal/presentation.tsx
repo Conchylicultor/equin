@@ -3,13 +3,12 @@ import { releaseFields } from "../../core";
 import { ReleaseCell } from "../components/release-field";
 
 // How the deployments list's `release` client field presents: the chip of the
-// row's probed release info, trailing.
+// row's probed release info (a label, so it trails).
 export const releasePresentation = FieldPresentation.Register({
   owner: releaseFields,
   fields: {
     release: {
       cell: (_state, row) => <ReleaseCell row={row} />,
-      align: "end",
     },
   },
 });

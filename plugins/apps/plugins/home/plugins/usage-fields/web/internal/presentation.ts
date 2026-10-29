@@ -15,9 +15,9 @@ function count(n: number | null): string | null {
 export const usagePresentation = FieldPresentation.Register({
   owner: appUsageFields,
   fields: {
-    focusedMs7d: { align: "end", cell: duration },
-    launches7d: { align: "end", cell: count },
-    focusedMsTotal: { align: "end", cell: duration },
-    launchesTotal: { align: "end", cell: count },
+    focusedMs7d: { cell: duration },
+    launches7d: { cell: count },
+    focusedMsTotal: { cell: duration },
+    launchesTotal: { cell: count },
   },
 });

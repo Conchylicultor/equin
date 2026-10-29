@@ -10,23 +10,34 @@ import {
   type FieldDef,
   type TableCellProps,
 } from "@plugins/primitives/plugins/data-view/web";
+import { defineFieldType, defineFieldIdentity } from "@plugins/fields/core";
+import { Fields } from "@plugins/fields/web";
 import { GalleryView } from "../components/gallery-view";
 
 /**
  * A card with no cover and no leading field is never a blank frame: its frame
  * holds a monogram of the title (the first letter on the `Avatar` tile, tinted
- * by the title), which `coverMonogram: hide` drops. A cover or a leading field
+ * by the title), which `coverMonogram: hide` drops. A cover or a visual lead
  * wins over it.
  */
 function SpecCell(props: TableCellProps) {
   return <span data-testid="spec-cell">{String(props.data)}</span>;
 }
 
+/** The synthetic type is a `visual` — the lead a coverless card draws as its picture. */
+const specIdentity = defineFieldIdentity<string>({
+  type: defineFieldType<string>("spec"),
+  kind: "visual",
+});
+
 const plugin = {
   id: "data-view-gallery-cover-monogram-test",
   description: "gallery cover-monogram fixture",
-  contributions: [DataViewSlots.Cell({ match: "spec", component: SpecCell })],
-  slots: DataViewSlots,
+  contributions: [
+    DataViewSlots.Cell({ match: "spec", component: SpecCell }),
+    Fields.Identity({ identity: specIdentity }),
+  ],
+  slots: { ...DataViewSlots, Identity: Fields.Identity },
 } as unknown as LoadedPlugin;
 
 type Row = { id: string; name: string; glyph: string };
@@ -42,12 +53,11 @@ const avatar: FieldDef<Row> = {
   label: "Avatar",
   type: "spec",
   data: (r) => r.glyph,
-  leading: true,
 };
 
 function renderGallery(
   fields: FieldDef<Row>[],
-  opts: { cover?: boolean; rowName?: string } = {},
+  opts: { cover?: boolean; rowName?: string; lead?: boolean } = {},
 ) {
   const row: Row = {
     id: "1",
@@ -56,6 +66,10 @@ function renderGallery(
   };
   const props: DataViewRenderProps<Row> = {
     revealSelection: true,
+    placement:
+      opts.lead !== false && fields.some((f) => f.id === "avatar")
+        ? { place: { avatar: "lead" } }
+        : {},
     rows: [row],
     fields,
     rowKey: (r) => r.id,

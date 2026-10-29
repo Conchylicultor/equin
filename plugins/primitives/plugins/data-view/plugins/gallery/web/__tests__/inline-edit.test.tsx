@@ -49,6 +49,7 @@ function renderProps(
 ): DataViewRenderProps<Row> {
   return {
     revealSelection: true,
+    placement: {},
     rows,
     fields,
     rowKey: (r) => r.id,

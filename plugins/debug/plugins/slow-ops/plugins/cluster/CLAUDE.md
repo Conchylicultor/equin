@@ -62,7 +62,6 @@ so the pane never imports this component directly.
     - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
-    - `primitives/css/yield.yieldClass`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.FieldDef`
@@ -86,9 +85,6 @@ so the pane never imports this component directly.
     - `ui/tokens/density --space-md`
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shape --spacing`
-    - `ui/tokens/type-scale --font-scale`
-    - `ui/tokens/type-scale --font-size-3xs`
-    - `ui/tokens/type-scale --line-height-3xs`
   - Imported by: `debug/timeline`
 - Exemptions:
   - Exempts itself from: `no-db-backed-notify` — `server/internal/scan-served.ts` (sanctioned)

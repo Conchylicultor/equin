@@ -469,7 +469,7 @@ serves them.
     - `tasks` (keyed)
     - `tasks:rows` (keyed, point)
 - Core:
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/model-provider` ×3
     - `conversations/workspace` ×3
     - `fields/text/config` ×3
@@ -486,6 +486,7 @@ serves them.
     - `primitives/pane.defineRoute`
     - `primitives/rank.RankSchema`
     - `tasks/orchestration/mandate/policy.defineCapability`
+    - `ui/icons.symbol`
   - Exports (types):
     - `Attempt`
     - `AttemptStatus`

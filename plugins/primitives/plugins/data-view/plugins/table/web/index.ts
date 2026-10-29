@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { enumField } from "@plugins/fields/plugins/enum/plugins/config/core";
 import { DataViewSlots } from "@plugins/primitives/plugins/data-view/web";
-import { TableView } from "./components/table-view";
+import { TABLE_SLOTS, TableView } from "./components/table-view";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export type { TableViewOptions } from "../core";
@@ -18,6 +18,7 @@ export default {
       loadingVariant: "rows",
       loadingCount: 6,
       component: TableView,
+      slots: TABLE_SLOTS,
       // Opts into flat manual-order (rank-based drag reorder); active only when
       // the consumer supplies `manualOrder`.
       supportsManualOrder: true,

@@ -8,6 +8,7 @@ export const objectFieldType =
 
 export const objectIdentity = defineFieldIdentity<Record<string, unknown>>({
   type: objectFieldType,
+  kind: "label",
   label: "Object",
   icon: dataObjectIcon,
 });

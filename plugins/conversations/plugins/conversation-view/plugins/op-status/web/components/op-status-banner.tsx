@@ -338,7 +338,6 @@ export const opQueueRowPresentation = FieldPresentation.Register({
     pos: {
       header: false,
       width: "1rem",
-      align: "end",
       cell: (pos) => (
         <span className="font-mono tabular-nums text-muted-foreground">
           {pos}
@@ -362,12 +361,10 @@ export const opQueueRowPresentation = FieldPresentation.Register({
       // Content-sized: one grid, so every section's clock lines up with the
       // widest cell or the label (+ its sort icon) on the first header.
       width: "auto",
-      align: "end",
       cell: (waited) => <TimeCell ms={waited} dim />,
     },
     worked: {
       width: "auto",
-      align: "end",
       cell: (worked, row) => (
         <TimeCell ms={worked} dim={row.phase === "queued"} />
       ),
@@ -376,7 +373,6 @@ export const opQueueRowPresentation = FieldPresentation.Register({
       // Hidden until a user turns it on from the list's Properties.
       visible: false,
       width: "auto",
-      align: "end",
       cell: (asleep) => <TimeCell ms={asleep} dim />,
     },
   },
@@ -529,6 +525,7 @@ export function OpStatusBanner({
           rowKey={(r) => r.row.opId}
           views={["table"]}
           storageKey={QUEUE_VIEW}
+          recipe="ledger"
           readiness={result}
           density="compact"
           toolbar={CARD_TOOLBAR}

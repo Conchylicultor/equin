@@ -144,9 +144,10 @@ try {
     r.eq("the rest keep their order", left.value, [c.id, a.id]);
 
     // ---- 5. marking A read un-bolds its row --------------------------------
+    // An unread row's title wears the "strong" row tone, around the sender cell.
     const boldOf = async (id: string): Promise<boolean> =>
       page
-        .locator(`[data-thread-id="${id}"] .font-semibold`)
+        .locator(`.font-semibold [data-thread-id="${id}"]`)
         .count()
         .then((n) => n > 0);
     r.ok("A starts unread (bold)", await boldOf(a.id));

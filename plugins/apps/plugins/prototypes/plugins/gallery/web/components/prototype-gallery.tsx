@@ -43,6 +43,7 @@ import {
   type PrototypeGalleryRow,
 } from "../slots";
 import {
+  GALLERY_PLACE,
   galleryFields,
   joinGalleryRows,
   trashFields,
@@ -213,6 +214,7 @@ function PrototypeShelf({
     render<PrototypeGalleryRow>({
       rows,
       fields: fields(tags),
+      place: GALLERY_PLACE,
       rowKey: (p) => p.name,
       // The card's cover is the prototype as it actually renders (and the list
       // row's thumbnail). The id-tinted swatch stays as what a prototype looks

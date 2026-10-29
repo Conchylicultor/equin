@@ -7,6 +7,7 @@ export const textFieldType = defineFieldType<string>("text");
 
 export const textIdentity = defineFieldIdentity<string>({
   type: textFieldType,
+  kind: "label",
   label: "Text",
   icon: textFieldsIcon,
   customColumn: true,

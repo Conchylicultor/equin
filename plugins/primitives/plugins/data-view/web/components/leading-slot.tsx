@@ -1,18 +1,20 @@
 import type { ReactNode } from "react";
-import type { FieldDef } from "../../core";
+import type { FieldDef, SlotForm } from "../../core";
 import type { useResolveCell } from "../cell-slot";
 import type { useResolveCellEditor } from "../cell-editor-slot";
 import { FieldCell } from "./field-cell";
 
 export interface LeadingSlotProps {
-  /** The schema's leading field (`pickLeadingField` over the view's visible
-   *  set), or `undefined` when the schema declares none / it is hidden. */
+  /** The field placed in the row's `lead` slot (`usePlacement`), or
+   *  `undefined` when none is. */
   field: FieldDef<unknown> | undefined;
   row: unknown;
   resolveCell: ReturnType<typeof useResolveCell>;
   resolveEditor: ReturnType<typeof useResolveCellEditor>;
-  /** The view's own per-view leading node (list/gallery `leading`, tree
-   *  `leadingIcon`), rendered AFTER the leading field. */
+  /** The form the view draws its lead in (`Placement.formOf("lead")`). */
+  form: SlotForm;
+  /** A view's own leading node (a selection or disclosure affordance),
+   *  rendered AFTER the lead field. */
   own: ReactNode;
 }
 
@@ -31,6 +33,7 @@ export function leadingSlot({
   row,
   resolveCell,
   resolveEditor,
+  form,
   own,
 }: LeadingSlotProps): ReactNode | undefined {
   if (!field) return own ?? undefined;
@@ -41,6 +44,7 @@ export function leadingSlot({
         row={row}
         resolveCell={resolveCell}
         resolveEditor={resolveEditor}
+        context={form}
       />
       {own}
     </>

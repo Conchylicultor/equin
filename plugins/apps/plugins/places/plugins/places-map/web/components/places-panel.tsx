@@ -64,6 +64,9 @@ function PanelFrame({ body }: HostedToolbarParts): ReactNode {
 
 const PANEL_TOOLBAR: HostedToolbar = { kind: "hosted", frame: PanelFrame };
 
+// The panel is narrow: the name on its own line, the address and tags under it.
+const PANEL_VIEW_OPTIONS = { list: { lines: 2 as const } };
+
 // Icon-only segments, named for assistive tech (and scripts) by hidden text.
 const LAYOUT_OPTIONS = [
   {
@@ -309,9 +312,26 @@ function PanelRows(
     hoveredId,
     onHoverChange,
   } = props;
-  const extraFields = useMemo(() => placeExtraFields(tags), [tags]);
-  // A place's picture, as its gallery card's cover. The list keeps its glyph
-  // (`list.leading` wins over the cover thumbnail).
+  // The place's glyph is a field of the panel (a visual: the list's lead,
+  // which wins over the cover thumbnail the gallery draws).
+  const extraFields = useMemo(
+    (): FieldDef<Place>[] => [
+      {
+        id: "glyph",
+        label: "Glyph",
+        type: "icon",
+        header: false,
+        filterable: false,
+        sortable: false,
+        groupable: false,
+        value: (p) => p.id,
+        cell: (p) => <PlaceGlyph visual={placeVisual(p, tags)} />,
+      },
+      ...placeExtraFields(tags),
+    ],
+    [tags],
+  );
+  // A place's picture, as its gallery card's cover.
   const placeCover = useCallback(
     (p: Place): CoverContent => ({
       kind: "node",
@@ -321,17 +341,6 @@ function PanelRows(
           googlePlaceId={p.googlePlaceId}
         />
       ),
-    }),
-    [tags],
-  );
-  const viewOptions = useMemo(
-    () => ({
-      list: {
-        leading: (p: Place) => <PlaceGlyph visual={placeVisual(p, tags)} />,
-        // The panel is narrow: the name on its own line, the address and
-        // tags under it.
-        lines: 2 as const,
-      },
     }),
     [tags],
   );
@@ -346,7 +355,7 @@ function PanelRows(
       views={["list", "gallery"]}
       pinnedView={layout}
       toolbar={PANEL_TOOLBAR}
-      viewOptions={viewOptions}
+      viewOptions={PANEL_VIEW_OPTIONS}
       cover={placeCover}
       onRowActivate={onSelect}
       selectedRowId={selectedId ?? undefined}

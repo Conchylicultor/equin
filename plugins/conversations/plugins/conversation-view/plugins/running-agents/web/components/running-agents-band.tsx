@@ -26,7 +26,6 @@ import {
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
-import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { ElapsedTime } from "@plugins/primitives/plugins/relative-time/web";
@@ -229,6 +228,28 @@ const FIELDS: FieldDef<RunningAgentRow>[] = [
     value: (row) => row.description,
     cell: (row) => <TaskLabel row={row} />,
   },
+  {
+    id: "state",
+    label: "State",
+    type: "enum",
+    // Greys only (see the plugin doc): running is the stronger glyph.
+    value: (row) => (row.state.kind === "running" ? "running" : "stopped"),
+    options: [
+      {
+        value: "running",
+        label: "Running",
+        variant: "muted",
+        icon: symbol("timelapse"),
+      },
+      {
+        value: "stopped",
+        label: "Stopped",
+        variant: "muted",
+        icon: symbol("check-circle"),
+      },
+    ],
+    filterable: false,
+  },
   { id: "type", label: "Agent", type: "text", value: (row) => row.type },
   {
     id: "model",
@@ -254,7 +275,6 @@ const FIELDS: FieldDef<RunningAgentRow>[] = [
     id: "tokens",
     label: "Output tokens",
     type: "number",
-    align: "end",
     // A workflow run writes no transcript of its own, and a shell spends none.
     value: (row) => (row.kind === "agent" ? row.usage.output : null),
     cell: (row) =>
@@ -271,7 +291,6 @@ const FIELDS: FieldDef<RunningAgentRow>[] = [
     id: "started",
     label: "Started",
     type: "date",
-    align: "end",
     value: (row) => row.startedAt,
     cell: (row) => <ElapsedCell row={row} />,
   },
@@ -521,15 +540,6 @@ export function RunningAgentsBand({
           table: {
             // The band exists to show the whole set; a user fold still wins.
             defaultExpanded: true,
-            leadingIcon: (row: RunningAgentRow) => (
-              <StatusDot
-                colorClass={
-                  row.state.kind === "running"
-                    ? "bg-muted-foreground"
-                    : "bg-muted-foreground/40"
-                }
-              />
-            ),
           },
         }}
       />

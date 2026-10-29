@@ -12,7 +12,13 @@
       "view": {
         "type": "table",
         "groupBy": "scope",
-        "properties": [{ "id": "id" }, { "id": "size" }, { "id": "lastWrite" }],
+        "properties": [
+          { "id": "id" },
+          { "id": "written" },
+          { "id": "description" },
+          { "id": "size" },
+          { "id": "lastWrite" }
+        ],
         "sort": [{ "fieldId": "lastWrite", "direction": "desc" }]
       }
     },
@@ -23,7 +29,13 @@
       // Which logs take the most disk, whatever their scope.
       "view": {
         "type": "table",
-        "properties": [{ "id": "id" }, { "id": "size" }, { "id": "lastWrite" }],
+        "properties": [
+          { "id": "id" },
+          { "id": "written" },
+          { "id": "description" },
+          { "id": "size" },
+          { "id": "lastWrite" }
+        ],
         "sort": [{ "fieldId": "size", "direction": "desc" }]
       }
     },

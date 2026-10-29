@@ -30,11 +30,11 @@
   - Exports (values): `fontFamilyGroup`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Tokens used by: 153 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Tokens used by: 151 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×36
     - `plugin-meta` ×23
-    - `apps` ×21
-    - `debug` ×20
+    - `apps` ×20
+    - `debug` ×19
     - `primitives` ×16
     - `reports` ×7
     - `ui` ×5

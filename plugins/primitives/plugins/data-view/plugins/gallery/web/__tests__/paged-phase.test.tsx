@@ -58,6 +58,7 @@ function props(
 ): DataViewRenderProps<unknown> {
   const p: DataViewRenderProps<Row> = {
     revealSelection: true,
+    placement: {},
     rows,
     fields: [name],
     rowKey: (r) => r.id,

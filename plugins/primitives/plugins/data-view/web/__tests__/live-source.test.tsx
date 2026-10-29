@@ -32,12 +32,15 @@ import {
   waitFor,
 } from "@testing-library/react";
 import type { QueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { stringListField } from "@plugins/fields/plugins/string-list/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
-import { markDeferredLoadComplete } from "@plugins/framework/plugins/web-sdk/core";
+import {
+  markDeferredLoadComplete,
+  PluginProvider,
+} from "@plugins/framework/plugins/web-sdk/core";
 import { resetDeferredLoadStateForTests } from "@plugins/framework/plugins/web-sdk/core/testing";
 import {
   ResourceError,
@@ -187,6 +190,23 @@ function flat<T>(view: SourceView<T> | null): FlatSourceView<T> {
   return view;
 }
 
+/**
+ * The harness's wrapper under an empty plugin registry: the body reads slot
+ * contributions (field presentations) on every live source.
+ */
+function Provided(props: { live: LiveStateHarness; children: ReactNode }) {
+  return (
+    <PluginProvider plugins={[]}>
+      <props.live.Wrapper>{props.children}</props.live.Wrapper>
+    </PluginProvider>
+  );
+}
+function providedBy(live: LiveStateHarness) {
+  return function Wrap({ children }: { children: ReactNode }) {
+    return <Provided live={live}>{children}</Provided>;
+  };
+}
+
 function mount(
   live: LiveStateHarness,
   c: C,
@@ -217,7 +237,7 @@ function mount(
         now: 0,
         collapsedSections: NO_COLLAPSED,
       }),
-    { wrapper: live.Wrapper, initialProps: { state: initial.state } },
+    { wrapper: providedBy(live), initialProps: { state: initial.state } },
   );
   return rendered;
 }
@@ -497,9 +517,9 @@ describe("useLiveSource — a failed head read", () => {
     const notifications = live.notifications;
     vi.spyOn(notifications, "hasEverBeenReady").mockReturnValue(true);
     render(
-      <live.Wrapper>
+      <Provided live={live}>
         <LiveBody source={source} fields={fieldsOf(c)} />
-      </live.Wrapper>,
+      </Provided>,
     );
     expect(screen.getByText("loading")).toBeTruthy();
 
@@ -600,7 +620,7 @@ describe("useLiveSource — server sections", () => {
     };
     vi.spyOn(live.notifications, "hasEverBeenReady").mockReturnValue(true);
     const tree = (state: ViewState, collapsed: ReadonlySet<string>) => (
-      <live.Wrapper>
+      <Provided live={live}>
         <Sectioned
           source={source}
           fields={fields}
@@ -608,7 +628,7 @@ describe("useLiveSource — server sections", () => {
           collapsed={collapsed}
           onView={onView}
         />
-      </live.Wrapper>
+      </Provided>
     );
     const rendered = render(tree(initial.state, NO_COLLAPSED));
     return {

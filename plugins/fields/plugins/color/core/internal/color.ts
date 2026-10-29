@@ -7,6 +7,7 @@ export const colorFieldType = defineFieldType<string>("color");
 
 export const colorIdentity = defineFieldIdentity<string>({
   type: colorFieldType,
+  kind: "label",
   label: "Color",
   icon: paletteIcon,
   coerce: (v) => String(v ?? ""),

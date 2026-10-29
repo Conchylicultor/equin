@@ -202,7 +202,6 @@ function buildFields(rows: readonly TriggerRow[]): FieldDef<TriggerRow>[] {
       cell: (r) => <WhenText date={new Date(r.createdAt)} prefix="Created" />,
       sortable: true,
       filterable: true,
-      align: "end",
       width: "5.5rem",
     },
     {

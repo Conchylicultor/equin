@@ -8,6 +8,7 @@ export const multilineTextFieldType = defineFieldType<string>("multiline-text");
 
 export const multilineTextIdentity = defineFieldIdentity<string>({
   type: multilineTextFieldType,
+  kind: "prose",
   label: "Long text",
   icon: notesIcon,
   extends: textFieldType,

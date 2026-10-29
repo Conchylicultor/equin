@@ -31,6 +31,7 @@ export function locationLabel(location: Location): string {
 
 export const locationIdentity = defineFieldIdentity<Location>({
   type: locationFieldType,
+  kind: "label",
   label: "Location",
   icon: symbol("location-on"),
   coerce: locationLabel,

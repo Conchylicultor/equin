@@ -110,15 +110,12 @@ export function LogReader({
         label: "Stream",
         type: "enum",
         value: (l) => l.stream ?? "none",
+        // Only stderr is worth a mark: the others label the filter, quietly.
         options: [
-          { value: "stdout", label: "stdout" },
-          { value: "stderr", label: "stderr" },
-          { value: "none", label: "—" },
+          { value: "stdout", label: "stdout", quiet: true },
+          { value: "stderr", label: "stderr", variant: "destructive" },
+          { value: "none", label: "—", quiet: true },
         ],
-        cell: (l) =>
-          l.stream === "stderr" ? (
-            <Badge variant="destructive">stderr</Badge>
-          ) : null,
         filterable: true,
         width: "5rem",
       },
@@ -187,6 +184,7 @@ export function LogReader({
           storageKey={LOG_LINES}
           views={["table", "list"]}
           defaultView="table"
+          recipe="log"
           readiness={readiness}
           paging={paging ?? undefined}
           selectedRowId={at !== null ? rows[0]?.position : undefined}

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { FieldOptionMeta } from "@plugins/fields/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 /**
  * The shared outcome vocabulary every run kind maps its own status into.
@@ -64,12 +65,24 @@ export const RunOutcomeSchema = z.enum(RUN_OUTCOMES);
  * but nothing is broken.
  */
 export const RUN_OUTCOME_OPTIONS_META = {
-  running: { label: "Running", variant: "warning" },
-  succeeded: { label: "Succeeded", variant: "success" },
-  partial: { label: "Partial", variant: "warning" },
-  failed: { label: "Failed", variant: "destructive" },
-  canceled: { label: "Canceled", variant: "muted" },
-  "needs-approval": { label: "Needs approval", variant: "warning" },
+  running: { label: "Running", variant: "warning", icon: symbol("timelapse") },
+  succeeded: {
+    label: "Succeeded",
+    variant: "success",
+    icon: symbol("check-circle"),
+  },
+  partial: {
+    label: "Partial",
+    variant: "warning",
+    icon: symbol("incomplete-circle"),
+  },
+  failed: { label: "Failed", variant: "destructive", icon: symbol("error") },
+  canceled: { label: "Canceled", variant: "muted", icon: symbol("cancel") },
+  "needs-approval": {
+    label: "Needs approval",
+    variant: "warning",
+    icon: symbol("input"),
+  },
 } as const satisfies { readonly [O in RunOutcome]: FieldOptionMeta };
 
 /** Is this run still in flight? The one predicate several surfaces need. */

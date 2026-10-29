@@ -22,7 +22,6 @@ import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import {
   Button,
   ControlSizeProvider,
@@ -76,40 +75,57 @@ const KIND_LABELS: Record<PrototypeVersion["kind"], FieldOption> = {
   manual: { value: "manual", label: "Checkpoint", variant: "primary" },
 };
 
-// The fields search, filter and sort read. Each row draws itself
-// (`VersionRow`: number · request · when), so their order here is only the
-// order the view's settings list them in.
-const FIELDS: FieldDef<PrototypeVersion>[] = [
-  {
-    id: "subject",
-    label: "Request",
-    type: "text",
-    primary: true,
-    value: (v) => v.subject,
-  },
-  {
-    id: "n",
-    label: "Version",
-    type: "ordinal",
-    value: (v) => v.n,
-    cell: (v) => `v${v.n}`,
-  },
-  {
-    id: "kind",
-    label: "Kind",
-    type: "enum",
-    value: (v) => v.kind,
-    options: Object.values(KIND_LABELS),
-  },
-  {
-    id: "at",
-    label: "When",
-    type: "date",
-    value: (v) => new Date(v.at),
-    cell: (v) => <RelativeTime date={new Date(v.at)} />,
-    align: "end",
-  },
-];
+/**
+ * The version fields: the request is the title, the kind leads as a state, the
+ * version number trails and the time sits under the title (the `timeline`
+ * recipe). The newest version reads "latest" in place of its age; the current
+ * one scrolls itself into view when the list opens.
+ */
+function versionFields(
+  newestSha: string | undefined,
+  current: string | undefined,
+): FieldDef<PrototypeVersion>[] {
+  return [
+    {
+      id: "subject",
+      label: "Request",
+      type: "text",
+      primary: true,
+      value: (v) => v.subject,
+    },
+    {
+      id: "n",
+      label: "Version",
+      type: "ordinal",
+      value: (v) => v.n,
+      cell: (v) => (
+        <>
+          {`v${String(v.n)}`}
+          {v.sha === current ? <RevealOnMount /> : null}
+        </>
+      ),
+    },
+    {
+      id: "kind",
+      label: "Kind",
+      type: "enum",
+      value: (v) => v.kind,
+      options: Object.values(KIND_LABELS),
+    },
+    {
+      id: "at",
+      label: "When",
+      type: "date",
+      value: (v) => new Date(v.at),
+      cell: (v) =>
+        v.sha === newestSha ? (
+          "latest"
+        ) : (
+          <RelativeTime date={new Date(v.at)} format="short" />
+        ),
+    },
+  ];
+}
 
 /**
  * What the list's header shows and toggles — read by the hosted frame, which is
@@ -171,6 +187,10 @@ export function VersionList({
     [count, filterable, variantOnly],
   );
   const newestSha = history.versions.at(-1)?.sha;
+  const fields = useMemo(
+    () => versionFields(newestSha, selected),
+    [newestSha, selected],
+  );
   return (
     <VersionListHeaderContext value={header}>
       <Theme name={subThemeScope(versionRowsTheme)} surface="none">
@@ -178,7 +198,8 @@ export function VersionList({
           storageKey={VERSIONS_VIEW}
           toolbar={VERSIONS_TOOLBAR}
           rows={rows}
-          fields={FIELDS}
+          fields={fields}
+          recipe="timeline"
           rowKey={(v) => v.sha}
           views={["list"]}
           defaultView="all"
@@ -188,18 +209,7 @@ export function VersionList({
           itemActions={PrototypeVersionActions}
           searchAccessor={(v) => `v${v.n} ${v.subject}`}
           emptyState="No version matches."
-          viewOptions={{
-            list: {
-              size: "md",
-              renderRow: (v: PrototypeVersion) => (
-                <VersionRow
-                  version={v}
-                  current={v.sha === selected}
-                  newest={v.sha === newestSha}
-                />
-              ),
-            },
-          }}
+          viewOptions={{ list: { size: "md" } }}
         />
       </Theme>
     </VersionListHeaderContext>
@@ -268,59 +278,6 @@ function VariantFilterChip({
         </Button>
       </ControlSizeProvider>
     </Theme>
-  );
-}
-
-/**
- * One version: `v12` (the accent on the one on screen), the request that made
- * it (muted unless it is the one on screen), and when — `latest` for the
- * newest. A kind other than a turn tags the request (Baseline, Restore,
- * Checkpoint).
- */
-function VersionRow({
-  version,
-  current,
-  newest,
-}: {
-  version: PrototypeVersion;
-  current: boolean;
-  newest: boolean;
-}): ReactElement {
-  return (
-    <>
-      <Text
-        variant="code"
-        tone={current ? "primary" : "faint"}
-        className={cn(rigidClass(), "w-9 font-medium")}
-      >
-        {`v${String(version.n)}`}
-      </Text>
-      <Fill>
-        <Text variant="body" tone={current ? "default" : "muted"}>
-          {version.subject}
-        </Text>
-      </Fill>
-      {version.kind === "turn" ? null : (
-        <span
-          className={cn(
-            rigidClass(),
-            "rounded-sm border border-border/64 px-xs text-3xs text-faint-foreground",
-          )}
-        >
-          {KIND_LABELS[version.kind].label}
-        </span>
-      )}
-      <span
-        className={cn(rigidClass(), "font-mono text-2xs text-faint-foreground")}
-      >
-        {newest ? (
-          "latest"
-        ) : (
-          <RelativeTime date={new Date(version.at)} format="short" />
-        )}
-      </span>
-      {current ? <RevealOnMount /> : null}
-    </>
   );
 }
 

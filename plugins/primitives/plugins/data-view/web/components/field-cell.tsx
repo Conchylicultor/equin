@@ -7,7 +7,9 @@ import type {
 } from "../index";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { optionKey } from "@plugins/fields/core";
 import { EditableCell } from "./editable-cell";
+import { OptionGlyph } from "./quiet-option";
 import { useFieldCellContext } from "../internal/field-extents";
 import {
   isElidedRead,
@@ -50,11 +52,14 @@ export interface FieldCellProps {
   resolveEditor: ReturnType<typeof useResolveCellEditor>;
   display?: "block" | "inline";
   /**
-   * Where the value is drawn: `"cell"` (default — a table cell, a list term)
-   * or `"token"` (a card's token line, a compact meta run), where the field's
-   * short form (`FieldDef.token`) wins over its cell.
+   * The form the value takes, picked by the slot it is drawn in: `"cell"`
+   * (default — a table cell, a list term), `"token"` (a card's token line, a
+   * compact meta run), where the field's short form (`FieldDef.token`) wins
+   * over its cell, or `"glyph"` (a row's lead), where a value whose option
+   * declares a tint draws as that option's glyph alone (`OptionGlyph`) — a
+   * value without one draws its cell.
    */
-  context?: "cell" | "token";
+  context?: "cell" | "token" | "glyph";
 }
 
 export function FieldCell({
@@ -91,6 +96,10 @@ export function FieldCell({
   // (its slot keeps its width — the list's slots are sized by the view).
   if (isElidedRead(presentation, field, row)) return null;
   const value = field.value?.(row);
+  if (context === "glyph") {
+    const option = optionOf(field, value);
+    if (option) return <OptionGlyph option={option} label={option.label} />;
+  }
   const values = visibleValues(presentation, field, field.values?.(row));
   const own = context === "token" ? (field.token ?? field.cell) : field.cell;
   const read = own
@@ -138,4 +147,23 @@ export function readFallback(
 ): string {
   if (field.data != null) throw new MissingDataCellError(field);
   return String(value ?? "");
+}
+
+/** The declared option a scalar value spells, if the field declares one. */
+function optionOf(field: FieldDef<unknown>, value: FieldValue) {
+  if (
+    value !== null &&
+    typeof value !== "string" &&
+    typeof value !== "number" &&
+    typeof value !== "boolean"
+  ) {
+    return undefined;
+  }
+  const options =
+    field.options ??
+    (field.optionsResult?.status === "ready"
+      ? field.optionsResult.options
+      : undefined);
+  const key = optionKey(value);
+  return options?.find((o) => o.value === key);
 }

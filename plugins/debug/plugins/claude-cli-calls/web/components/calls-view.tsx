@@ -45,6 +45,7 @@ export function CallsView({
     <DataView<ClaudeCliCallRow>
       overrides={overrides}
       extraFields={extraFields}
+      recipe="ledger"
       views={["table", "list"]}
       defaultView="table"
       storageKey={CALLS_VIEW}
@@ -124,7 +125,6 @@ const overrides = fieldOverrides(claudeCliCalls, {
           {formatDuration(r.durationMs)}
         </Text>
       ),
-    align: "end",
     width: "6rem",
   },
   prompt: { visible: false },

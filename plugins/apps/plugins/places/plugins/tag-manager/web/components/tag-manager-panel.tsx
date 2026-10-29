@@ -136,7 +136,6 @@ export function TagManagerPanel({
         label: "Places",
         type: "number",
         value: (t) => counts.get(t.id) ?? 0,
-        align: "end",
         width: "5rem",
       },
       {

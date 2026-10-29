@@ -27,6 +27,7 @@ import type { DataViewId } from "./define-data-view";
 import type { GroupByRule } from "./grouping";
 import type { FilterScope } from "./filter-scope";
 import type { Nesting } from "./nesting";
+import type { PlacementSpec, Slot } from "./placement";
 import type {
   HostedToolbar,
   SectionsToolbar,
@@ -557,13 +558,14 @@ export interface FieldOption {
 
 /**
  * Per-row emphasis. `"muted"` dims the row's own text, so a switched-off /
- * archived / finished row reads inactive without spending a chip on saying so.
+ * archived / finished row reads inactive without spending a chip on saying so;
+ * `"strong"` weights it, so an unread row stands out from the read ones.
  *
  * Declared here rather than reusing `css/text`'s `TextTone`: that lives in a
  * plugin with no `core` barrel, and only two of its four tones mean anything
  * for a row.
  */
-export type RowTone = "default" | "muted";
+export type RowTone = "default" | "muted" | "strong";
 
 /**
  * A field's option set as a READ STATE — for a field whose closed value set is
@@ -724,19 +726,13 @@ interface FieldDefBase<TRow> {
    * e.g. `"12rem"` (fixed), `"minmax(0,1fr)"` (absorbs leftover space + truncates).
    */
   width?: string;
-  /** Text alignment within the table column (header + cells). Default `"start"`. */
-  align?: "start" | "end" | "center";
   /**
-   * When a view runs out of room for its columns, the order they give way in:
-   * lower drops first.
-   *
-   * - The **table** (grid presentation) drops numbered fields until its first
-   *   column keeps its minimum; a field without one never drops — what still
-   *   does not fit scrolls sideways, the first column pinned.
-   * - The **tree's aligned columns** drop to keep the row label 160px; there a
-   *   field without one drops after every numbered field, rightmost first.
+   * Text alignment within the table column (header + cells). Default: `"end"`
+   * for a field whose kind reads as a number (quantity, duration, ordinal,
+   * instant), `"start"` otherwise. Alignment only — where the field is drawn
+   * is its placement (`PlacementSpec`), never this.
    */
-  dropOrder?: number;
+  align?: "start" | "end" | "center";
   /** Opaque per-type config for custom columns; understood only by the field
    *  type's own code (e.g. enum options). Passed through untouched by the host. */
   config?: unknown;
@@ -749,19 +745,10 @@ interface FieldDefBase<TRow> {
    */
   icon?: IconRef;
   /**
-   * A row-state mark (a problem count, an unsaved dot) rather than a property:
-   * card meta draws it on the TITLE line, after the title, instead of as a token.
+   * The row's identity: the field that names it — every view's title. Without
+   * one, the placement promotes the first label / prose / identifier field.
    */
-  indicator?: boolean;
-  /** The field rendered as the tree row label. Fallback heuristic: first text field, else fields[0]. */
   primary?: boolean;
-  /**
-   * This field is the row's leading visual (its avatar): list, gallery and tree
-   * render its cell in the row's leading slot, ahead of any per-view
-   * `leading`/`leadingIcon` content, and leave it out of the body. At most one
-   * per schema. The table keeps it as an ordinary column.
-   */
-  leading?: boolean;
   /**
    * Which titled section of the schema this field belongs to — the heading it
    * is listed under in every "choose a field" surface (filter, sort, group-by,
@@ -828,6 +815,9 @@ export interface FilterPreset {
 export interface PropertyEntry {
   id: string;
   hidden?: true;
+  /** The slot the user moved the field to (View settings → Properties), over
+   *  the surface's placement. Absent = where the surface puts it. */
+  slot?: Slot;
 }
 
 export interface ViewState {
@@ -1269,6 +1259,9 @@ export interface DataViewRenderProps<TRow> {
   options: unknown;
   /** Custom search accessor; each view passes it into its own `useFlatRows`. */
   searchAccessor?: (row: TRow) => string;
+  /** The surface's placement say (`DataViewProps.recipe` / `place` /
+   *  `emphasis`) — a view reads it only through `usePlacement`. */
+  placement: PlacementSpec;
   /** Per-row emphasis, threaded from `DataViewProps.rowTone`. Absent ⇒ every
    *  row is `"default"`. list / gallery / tree apply it to the row title; the
    *  table deliberately ignores it (see `DataViewProps.rowTone`). */
@@ -1776,11 +1769,8 @@ export type FieldOverride<TRow> = Partial<
     | "sortable"
     | "filterable"
     | "primary"
-    | "leading"
-    | "dropOrder"
     | "section"
     | "icon"
-    | "indicator"
     | "extent"
   >
 > & {
@@ -2007,7 +1997,7 @@ export interface DataViewSearchSuggestions {
   onOpenChange: (open: boolean) => void;
 }
 
-export interface DataViewBaseProps<TRow> {
+export interface DataViewBaseProps<TRow> extends PlacementSpec {
   /** Changes to derived fields, by id (`fieldOverrides(collection, { … })`). */
   overrides?: FieldOverrides<TRow>;
   /**

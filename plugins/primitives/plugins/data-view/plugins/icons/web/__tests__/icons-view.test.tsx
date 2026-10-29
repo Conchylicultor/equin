@@ -10,6 +10,8 @@ import {
   type FieldDef,
   type TableCellProps,
 } from "@plugins/primitives/plugins/data-view/web";
+import { defineFieldType, defineFieldIdentity } from "@plugins/fields/core";
+import { Fields } from "@plugins/fields/web";
 import { useAvatarPresentation } from "@plugins/primitives/plugins/avatar/web/testing";
 import { IconsView } from "../components/icons-view";
 
@@ -28,11 +30,20 @@ function SpecCell(props: TableCellProps) {
   );
 }
 
+/** The synthetic type is a `visual` — the one kind the icons lead takes. */
+const specIdentity = defineFieldIdentity<string>({
+  type: defineFieldType<string>("spec"),
+  kind: "visual",
+});
+
 const plugin = {
   id: "data-view-icons-test",
   description: "icons view fixture",
-  contributions: [DataViewSlots.Cell({ match: "spec", component: SpecCell })],
-  slots: DataViewSlots,
+  contributions: [
+    DataViewSlots.Cell({ match: "spec", component: SpecCell }),
+    Fields.Identity({ identity: specIdentity }),
+  ],
+  slots: { ...DataViewSlots, Identity: Fields.Identity },
 } as unknown as LoadedPlugin;
 
 type Row = { id: string; name: string; glyph: string };
@@ -42,7 +53,6 @@ const avatar: FieldDef<Row> = {
   label: "Avatar",
   type: "spec",
   data: (r) => r.glyph,
-  leading: true,
 };
 const name: FieldDef<Row> = {
   id: "name",
@@ -63,6 +73,7 @@ function renderIcons(
 ) {
   const props: DataViewRenderProps<Row> = {
     revealSelection: true,
+    placement: {},
     rows: ROWS,
     fields,
     rowKey: (r) => r.id,

@@ -12,15 +12,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
-import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
-
-const cancelIcon = symbol("cancel");
-const checkCircleIcon = symbol("check-circle");
-const incompleteCircleIcon = symbol("incomplete-circle");
-const inputIcon = symbol("input");
-const pauseCircleIcon = symbol("pause-circle");
-const radioButtonUncheckedIcon = symbol("radio-button-unchecked");
-const timelapseIcon = symbol("timelapse");
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 
 /**
  * States that warrant a colored filled badge (they need the user's attention).
@@ -41,56 +33,56 @@ export const STATUS_META: Record<
   }
 > = {
   new: {
-    icon: radioButtonUncheckedIcon,
+    icon: TASK_STATUS_OPTIONS.new.icon,
     iconClassName: cn("text-muted-foreground/60"),
     label: TASK_STATUS_OPTIONS.new.label,
     badgeClassName: cn("bg-muted"),
     dotClass: "bg-muted-foreground/40",
   },
   in_progress: {
-    icon: timelapseIcon,
+    icon: TASK_STATUS_OPTIONS.in_progress.icon,
     iconClassName: cn("text-info"),
     label: TASK_STATUS_OPTIONS.in_progress.label,
     badgeClassName: cn("bg-muted"),
     dotClass: "bg-info",
   },
   need_action: {
-    icon: inputIcon,
+    icon: TASK_STATUS_OPTIONS.need_action.icon,
     iconClassName: cn("text-warning"),
     label: TASK_STATUS_OPTIONS.need_action.label,
     badgeClassName: cn("bg-warning/15 text-warning"),
     dotClass: "bg-warning",
   },
   attempted: {
-    icon: incompleteCircleIcon,
+    icon: TASK_STATUS_OPTIONS.attempted.icon,
     iconClassName: cn("text-muted-foreground"),
     label: TASK_STATUS_OPTIONS.attempted.label,
     badgeClassName: cn("bg-muted"),
     dotClass: "bg-muted-foreground/60",
   },
   done: {
-    icon: checkCircleIcon,
+    icon: TASK_STATUS_OPTIONS.done.icon,
     iconClassName: cn("text-success"),
     label: TASK_STATUS_OPTIONS.done.label,
     badgeClassName: cn("bg-muted"),
     dotClass: "bg-success",
   },
   held: {
-    icon: pauseCircleIcon,
+    icon: TASK_STATUS_OPTIONS.held.icon,
     iconClassName: cn("text-warning"),
     label: TASK_STATUS_OPTIONS.held.label,
     badgeClassName: cn("bg-warning/15 text-warning"),
     dotClass: "bg-warning",
   },
   dropped: {
-    icon: cancelIcon,
+    icon: TASK_STATUS_OPTIONS.dropped.icon,
     iconClassName: cn("text-muted-foreground/50"),
     label: TASK_STATUS_OPTIONS.dropped.label,
     badgeClassName: cn("bg-muted text-muted-foreground/60 italic"),
     dotClass: "bg-muted-foreground/40",
   },
   blocked: {
-    icon: pauseCircleIcon,
+    icon: TASK_STATUS_OPTIONS.blocked.icon,
     iconClassName: cn("text-muted-foreground"),
     label: TASK_STATUS_OPTIONS.blocked.label,
     badgeClassName: cn("bg-muted text-muted-foreground"),
@@ -100,7 +92,7 @@ export const STATUS_META: Record<
   // (info) so the live attempt is visible at a glance, and says so in the label
   // rather than reading as a plain `Blocked` row nothing is happening on.
   in_progress_blocked: {
-    icon: timelapseIcon,
+    icon: TASK_STATUS_OPTIONS.in_progress_blocked.icon,
     iconClassName: cn("text-info"),
     label: TASK_STATUS_OPTIONS.in_progress_blocked.label,
     badgeClassName: cn("bg-muted"),

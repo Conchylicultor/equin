@@ -48,22 +48,19 @@ own. Plan: `research/2026-09-30-infra-background-activity-catalog.md`.
 - Web:
   - Slots: `RecentRunActions`
   - Slot contributors: `RecentRunActions` ← `debug.background.investigate`
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/live-state` ×6
     - `primitives/data-view` ×4
     - `infra/endpoints` ×2
-    - `primitives/css/status-dot` ×2
-    - `primitives/css/ui-kit` ×2
     - `primitives/relative-time` ×2
     - `network/live.useLive`
     - `primitives/css/fill.Fill`
-    - `primitives/css/line.Line`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.Button`
     - `primitives/loading.Loading`
-    - `runs/run-outcome.RUN_OUTCOME_META`
   - Exports (types): `EntryRun`
   - Exports (values):
     - `BackgroundView`
@@ -134,7 +131,6 @@ own. Plan: `research/2026-09-30-infra-background-activity-catalog.md`.
     - `runBackgroundNowEndpoint`
 - Cross-plugin:
   - Uses tokens:
-    - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/density --space-lg`
     - `ui/tokens/shape --spacing`
   - Imported by:

@@ -44,6 +44,7 @@ const ROW: Row = { id: "1", name: "alpha", status: "todo", when: "5m" };
 function renderList(options?: unknown, row: Row = ROW) {
   const props: DataViewRenderProps<Row> = {
     revealSelection: true,
+    placement: { place: { status: "line2", when: "edge" } },
     rows: [row],
     fields: FIELDS,
     rowKey: (r) => r.id,
@@ -71,7 +72,7 @@ afterEach(cleanup);
 
 describe("data-view list row shape", () => {
   it("puts title, subtitle and trailing on ONE line by default", () => {
-    const { getByText } = renderList();
+    const { getByText } = renderList({ lines: 1 });
 
     // `getByText` matches on an element's DIRECT text children, so this is the
     // title's own `<Text>` leaf, not an ancestor that merely contains it.
@@ -95,7 +96,8 @@ describe("data-view list row shape", () => {
     const trailing = getByText("5m");
 
     // The stacked column holds both the title and the subtitle…
-    const column = title.parentElement;
+    // The title sits in its own line (with its marks), inside the column.
+    const column = title.parentElement?.parentElement;
     expect(column?.contains(subtitle)).toBe(true);
     // …and the trailing cell sits OUTSIDE it, pushed right of the whole two-line
     // block, exactly as this shape has always rendered.

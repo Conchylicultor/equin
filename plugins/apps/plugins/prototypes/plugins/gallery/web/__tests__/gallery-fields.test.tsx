@@ -1,12 +1,13 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render } from "@testing-library/react";
-import {
-  partitionCardFields,
-  type FieldDef,
-} from "@plugins/primitives/plugins/data-view/web";
+import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
 import { isFieldValueEmpty } from "@plugins/primitives/plugins/data-view/web/testing";
 import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
-import { galleryFields, joinGalleryRows } from "../internal/gallery-fields";
+import {
+  GALLERY_PLACE,
+  galleryFields,
+  joinGalleryRows,
+} from "../internal/gallery-fields";
 import type { PrototypeGalleryRow } from "../slots";
 
 afterEach(cleanup);
@@ -74,13 +75,17 @@ describe("joinGalleryRows", () => {
 
 describe("galleryFields — the card's lines", () => {
   const visible = galleryFields([]).filter((f) => f.visible !== false);
-  const card = partitionCardFields(visible);
 
   it("title, the problems mark, the blurb subtitle, edited + versions tokens", () => {
-    expect(card.title?.id).toBe("title");
-    expect(card.indicators.map((f) => f.id)).toEqual(["problems"]);
-    expect(card.subtitle.map((f) => f.id)).toEqual(["blurb"]);
-    expect(card.tokens.map((f) => f.id)).toEqual(["modifiedAt", "versions"]);
+    // The record recipe places by kind: the primary is the title, prose is
+    // line 2, an instant the edge, a quantity trails; the problems count is
+    // pinned after the title.
+    expect(visible.find((f) => f.primary)?.id).toBe("title");
+    expect(GALLERY_PLACE).toEqual({ problems: "afterTitle" });
+    expect(field("problems").type).toBe("number");
+    expect(field("blurb").type).toBe("multiline-text");
+    expect(field("modifiedAt").type).toBe("date");
+    expect(field("versions").type).toBe("number");
   });
 
   it("the folder id, created date and status are not shown", () => {

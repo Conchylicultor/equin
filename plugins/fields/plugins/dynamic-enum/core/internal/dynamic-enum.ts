@@ -7,6 +7,7 @@ export const dynamicEnumFieldType = defineFieldType<string>("dynamic-enum");
 
 export const dynamicEnumIdentity = defineFieldIdentity<string>({
   type: dynamicEnumFieldType,
+  kind: "label",
   label: "Dynamic Select",
   icon: arrowDropDownCircleIcon,
   coerce: (v) => String(v ?? ""),

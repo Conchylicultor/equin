@@ -10,7 +10,6 @@ import { DataViewSlots } from "../slots";
 import { useResolveCell } from "../cell-slot";
 import { useResolveCellEditor } from "../cell-editor-slot";
 import { FieldCell } from "../components/field-cell";
-import { pickLeadingField } from "../internal/pick-leading-field";
 
 /**
  * `FieldDef.data` — the structured, display-only projection — end to end
@@ -134,34 +133,6 @@ describe("FieldDef.data", () => {
       </PluginProvider>,
     );
     expect(container.textContent).toBe("1");
-  });
-});
-
-describe("pickLeadingField", () => {
-  const plain: FieldDef<Row> = { id: "name", label: "Name" };
-  const avatar: FieldDef<Row> = {
-    id: "avatar",
-    label: "Avatar",
-    leading: true,
-  };
-
-  it("returns the field flagged leading", () => {
-    expect(pickLeadingField([plain, avatar])).toBe(avatar);
-  });
-
-  it("returns undefined when no field is flagged", () => {
-    expect(pickLeadingField([plain])).toBeUndefined();
-  });
-
-  it("throws when more than one field is flagged", () => {
-    const second: FieldDef<Row> = {
-      id: "badge",
-      label: "Badge",
-      leading: true,
-    };
-    expect(() => pickLeadingField([avatar, plain, second])).toThrow(
-      /"avatar", "badge"/,
-    );
   });
 });
 

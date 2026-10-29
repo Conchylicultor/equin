@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { FieldPresentation } from "@plugins/network/plugins/live/web";
-import { RunOutcomeChip } from "@plugins/runs/plugins/run-outcome/web";
 import { runs } from "../../core";
 import { RunDuration } from "../components/run-duration";
 
@@ -24,10 +23,7 @@ export const runsPresentation = FieldPresentation.Register({
     // The source field: its options (and so its chip) are the registered
     // arms, derived by every list of the union (data-view).
     kind: { width: "8rem" },
-    outcome: {
-      cell: (outcome) => <RunOutcomeChip outcome={outcome} />,
-      width: "10rem",
-    },
+    outcome: { width: "10rem" },
     trigger: { cell: (trigger) => muted(trigger), width: "8rem" },
     namespace: {
       cell: (namespace) =>

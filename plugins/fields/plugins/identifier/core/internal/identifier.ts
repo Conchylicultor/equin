@@ -12,6 +12,7 @@ export const identifierFieldType = defineFieldType<string>("identifier");
 
 export const identifierIdentity = defineFieldIdentity<string>({
   type: identifierFieldType,
+  kind: "identifier",
   label: "Identifier",
   icon: codeIcon,
   extends: textFieldType,

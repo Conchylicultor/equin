@@ -114,6 +114,7 @@ export function QueueView({
     <DataView<JobRow>
       storageKey={QUEUE_VIEW}
       overrides={queueOverrides}
+      recipe="ledger"
       views={["table", "list"]}
       defaultView="table"
       source={queueSource}
@@ -144,6 +145,7 @@ export function HistoryView({
     <DataView<JobRunRow>
       storageKey={HISTORY_VIEW}
       overrides={historyOverrides}
+      recipe="ledger"
       views={["table", "list"]}
       defaultView="table"
       source={historySource}
@@ -248,7 +250,6 @@ const queueOverrides = fieldOverrides(jobs, {
         {attemptsText(r)}
       </Text>
     ),
-    align: "end",
     width: "4rem",
   },
   runAt: {
@@ -267,7 +268,6 @@ const queueOverrides = fieldOverrides(jobs, {
       ) : (
         <WhenText date={r.runAt} prefix="Run at" due={r.state === "pending"} />
       ),
-    align: "end",
     width: "max-content",
   },
   lastError: {
@@ -295,17 +295,14 @@ const historyOverrides = fieldOverrides(jobRuns, {
         {attemptText(r)}
       </Text>
     ),
-    align: "end",
     width: "3rem",
   },
   finishedAt: {
     cell: (r) => <WhenText date={r.finishedAt} prefix="Finished" />,
-    align: "end",
     width: "5.5rem",
   },
   durationMs: {
     cell: (r) => <DurationText ms={r.durationMs} hold={r.hold} />,
-    align: "end",
     width: "5.5rem",
   },
   waitMs: {
@@ -315,7 +312,6 @@ const historyOverrides = fieldOverrides(jobRuns, {
           {formatDuration(r.waitMs)}
         </Text>
       ),
-    align: "end",
     width: "5.5rem",
   },
   error: {

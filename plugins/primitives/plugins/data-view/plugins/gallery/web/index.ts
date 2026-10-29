@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { DataViewSlots } from "@plugins/primitives/plugins/data-view/web";
-import { GalleryView } from "./components/gallery-view";
+import { GALLERY_SLOTS, GalleryView } from "./components/gallery-view";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { DataCard } from "./components/data-card";
@@ -18,6 +18,7 @@ export default {
       loadingVariant: "cards",
       loadingCount: 8,
       component: GalleryView,
+      slots: GALLERY_SLOTS,
     }),
   ],
 } satisfies PluginDefinition;

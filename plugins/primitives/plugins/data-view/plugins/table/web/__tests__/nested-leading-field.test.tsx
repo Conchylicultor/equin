@@ -15,8 +15,7 @@ import { TableView } from "../components/table-view";
 
 /**
  * Nested, the table HAS a leading slot — the tree head's icon slot — so a
- * field declaring `leading: true` renders there, ahead of the view's own
- * `leadingIcon` option, and is no column. (The tree view's
+ * field placed in `lead` renders there, and is no column. (The tree view's
  * `leading-field.test.tsx`, ported; flat, it stays an ordinary column — see
  * `leading-field.test.tsx`.) Local fixture cell for a synthetic type (no
  * `fields/*` import: that is a cycle).
@@ -57,10 +56,14 @@ const ROW: Row = { id: "1", name: "alpha", glyph: "★", note: "memo" };
 
 function renderTable(
   fields: FieldDef<Row>[],
-  opts: { properties?: string[]; own?: boolean } = {},
+  opts: { properties?: string[]; lead?: boolean } = {},
 ) {
   const props: DataViewRenderProps<Row> = {
     revealSelection: true,
+    placement:
+      opts.lead !== false && fields.some((f) => f.id === "avatar")
+        ? { place: { avatar: "lead" } }
+        : {},
     rows: [ROW],
     fields,
     rowKey: (r) => r.id,
@@ -82,10 +85,7 @@ function renderTable(
       getParentId: () => null,
       getRank: () => Rank.from("a0"),
     },
-    options:
-      opts.own === false
-        ? undefined
-        : { leadingIcon: () => <i data-testid="own-leading" /> },
+    options: undefined,
   };
   return render(
     <PluginProvider plugins={[plugin]}>
@@ -99,39 +99,37 @@ const precedes = (a: Element, b: Element) =>
 
 afterEach(cleanup);
 
-describe("data-view nested table leading field", () => {
-  it("renders the leading field's cell before the view's own leadingIcon", () => {
-    const { getAllByTestId, getByTestId, getByText, queryByText } = renderTable(
-      [{ ...avatar, leading: true }, name, note],
-    );
+describe("data-view nested table lead field", () => {
+  it("renders the lead field's cell once, in the icon slot ahead of the label", () => {
+    const { getAllByTestId, getByText, queryByText } = renderTable([
+      avatar,
+      name,
+      note,
+    ]);
     const cells = getAllByTestId("spec-cell");
     // Exactly once: in the icon slot, not also as a column.
     expect(cells).toHaveLength(1);
     expect(queryByText("Avatar")).toBeNull();
-    const own = getByTestId("own-leading");
-    expect(precedes(cells[0]!, own)).toBe(true);
-    expect(precedes(own, getByText("alpha"))).toBe(true);
+    expect(precedes(cells[0]!, getByText("alpha"))).toBe(true);
   });
 
   it("never becomes the label column", () => {
-    const { getByText } = renderTable(
-      [{ ...avatar, leading: true }, name, note],
-      { own: false },
-    );
-    // The first column is the name; the note is the next one.
+    const { getByText } = renderTable([avatar, name, note]);
+    // The label is the name; the note is the next column.
     expect(precedes(getByText("Name"), getByText("Note"))).toBe(true);
     expect(precedes(getByText("alpha"), getByText("memo"))).toBe(true);
   });
 
-  it("without a leading flag the field stays an ordinary column", () => {
-    const { getByTestId, getByText } = renderTable([name, avatar, note]);
+  it("without a pin the field stays an ordinary column", () => {
+    const { getByTestId, getByText } = renderTable([name, avatar, note], {
+      lead: false,
+    });
     const cell = getByTestId("spec-cell");
     expect(getByText("Avatar")).toBeTruthy();
-    expect(precedes(getByTestId("own-leading"), cell)).toBe(true);
     expect(precedes(getByText("alpha"), cell)).toBe(true);
   });
 
-  it("with no leading field visible, markup matches a schema without one", () => {
+  it("with no lead field visible, markup matches a schema without one", () => {
     // dnd-kit numbers its accessibility regions per mount; that counter is the
     // only difference two mounts of identical tables may have.
     const markup = (el: HTMLElement) =>
@@ -141,18 +139,16 @@ describe("data-view nested table leading field", () => {
         .replace(/data-row-fold-host="[^"]*"/g, "data-row-fold-host");
     const html = markup(renderTable([name, note]).container);
     cleanup();
-    const hidden = renderTable([{ ...avatar, leading: true }, name, note], {
+    const hidden = renderTable([avatar, name, note], {
       properties: ["name", "note"],
     });
     expect(markup(hidden.container)).toBe(html);
   });
 
   it("disappears when hidden through properties", () => {
-    const { queryByTestId, getByTestId } = renderTable(
-      [{ ...avatar, leading: true }, name, note],
-      { properties: ["name", "note"] },
-    );
+    const { queryByTestId } = renderTable([avatar, name, note], {
+      properties: ["name", "note"],
+    });
     expect(queryByTestId("spec-cell")).toBeNull();
-    expect(getByTestId("own-leading")).toBeTruthy();
   });
 });

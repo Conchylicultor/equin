@@ -18,6 +18,9 @@ export interface FieldOptionMeta {
    *  for a value that is the unremarkable default ("By hand"), where a chip on
    *  every such row would be noise. */
   readonly quiet?: true;
+  /** The value's glyph — what a row draws for it where a glyph stands for
+   *  the words (a state in a row's lead), tinted by its `variant`. */
+  readonly icon?: IconRef;
 }
 
 export interface FieldMeta {
@@ -38,12 +41,34 @@ export interface FieldMeta {
   optionMeta?: Readonly<Record<string, FieldOptionMeta>>;
 }
 
-export interface FieldIdentity<T = unknown> {
+/**
+ * What a field's value IS for a row — the vocabulary a DataView places fields
+ * by (a `quantity` trails right-aligned, an `instant` sits at the row's edge…).
+ * A closed list: every field type declares one on its identity, and a type
+ * that `extends` another inherits it unless it declares its own. A `state`
+ * is never declared — a list decides it from the options (a closed-set field
+ * whose options declare a tint).
+ */
+export const FIELD_KINDS = [
+  "label",
+  "prose",
+  "state",
+  "instant",
+  "duration",
+  "quantity",
+  "ordinal",
+  "identifier",
+  "person",
+  "path",
+  "visual",
+  "flag",
+] as const;
+export type FieldKind = (typeof FIELD_KINDS)[number];
+
+interface FieldIdentityBase<T> {
   readonly type: FieldType<T>;
   readonly label?: string;
   readonly icon?: IconRef;
-  /** Base type whose table/filter contributions this type inherits (one hop in practice). */
-  readonly extends?: FieldType;
   /** Opt-in: this type may be chosen when adding a custom DataView column. */
   readonly customColumn?: boolean;
   /** Projection to a sortable/comparable scalar (Date→ms, bool→0/1, …). */
@@ -57,3 +82,21 @@ export interface FieldIdentity<T = unknown> {
    */
   readonly directionLabels?: { readonly asc: string; readonly desc: string };
 }
+
+/**
+ * A field type's identity. A root type (no `extends`) must declare its
+ * {@link FieldKind}; a derived type inherits its base's unless it declares
+ * its own — so no type falls into a kind by accident.
+ */
+export type FieldIdentity<T = unknown> = FieldIdentityBase<T> &
+  (
+    | {
+        /** Base type whose table/filter contributions this type inherits (one hop in practice). */
+        readonly extends: FieldType;
+        readonly kind?: Exclude<FieldKind, "state">;
+      }
+    | {
+        readonly extends?: undefined;
+        readonly kind: Exclude<FieldKind, "state">;
+      }
+  );

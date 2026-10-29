@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { DataViewSlots } from "@plugins/primitives/plugins/data-view/web";
-import { IconsView } from "./components/icons-view";
+import { ICONS_SLOTS, IconsView } from "./components/icons-view";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
@@ -14,6 +14,7 @@ export default {
       icon: symbol("apps"),
       loadingVariant: "cards",
       component: IconsView,
+      slots: ICONS_SLOTS,
       // Opts into flat manual-order: a grid renders one linear rank, so a tile's
       // left half drops before it and its right half after it.
       supportsManualOrder: true,

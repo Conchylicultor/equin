@@ -13,14 +13,15 @@ import {
   DataViewGroupHeader,
   FieldCell,
   NestedSectionIndent,
-  partitionCardFields,
-  pickPrimaryField,
-  resolveBodyFields,
+  drawnFields,
+  dropOrderOf,
+  fieldAlign,
   resolveCover,
   SectionBody,
   useDataViewSections,
   useIsChipField,
   useItemActionZones,
+  usePlacement,
   useResolveCell,
   useResolveCellEditor,
   useResolveOperatorSet,
@@ -37,7 +38,11 @@ import {
   RankReorderProvider,
   useRankSortableItem,
 } from "@plugins/primitives/plugins/rank-reorder/web";
-import { visibleSections } from "@plugins/primitives/plugins/data-view/core";
+import {
+  visibleSections,
+  type Slot,
+  type ViewSlots,
+} from "@plugins/primitives/plugins/data-view/core";
 import type { TableViewOptions } from "../../core";
 import { mapPrimary } from "../internal/map-primary";
 import { tableHeaderOption } from "../internal/column-captions";
@@ -55,6 +60,20 @@ function coerce(value: FieldValue): string | number | undefined {
   if (value === null) return undefined;
   return value;
 }
+
+/**
+ * The slots a table draws: the lead as the first column (its value whole, a
+ * state's glyph and label), the title column with its marks inline and line 2
+ * stacked under it, then the trailing columns and the edge column last.
+ */
+export const TABLE_SLOTS: ViewSlots = {
+  lead: { capacity: 1 },
+  title: { capacity: 1 },
+  afterTitle: {},
+  line2: {},
+  trail: {},
+  edge: { capacity: 1 },
+};
 
 /** The leading cover column's id: NUL-prefixed, never a field id. */
 const COVER_COLUMN_ID = "\u0000cover";
@@ -103,14 +122,20 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
   const itemActions = props.itemActions as
     ItemActionsDescriptor<unknown> | undefined;
   const isChipField = useIsChipField();
-  // Body columns follow the view's Properties (visible-fields) policy: which
-  // fields and in what order. `null` → identity (`props.fields`), so a view with
-  // no Properties configured renders every column unchanged. Sort/filter/search
-  // run over the FULL `props.fields`.
-  const vis = resolveBodyFields(props.fields, props.state.properties);
+  // Columns are the view's placement (the surface's recipe and pins, the
+  // user's Properties). Sort/filter/search run over the FULL `props.fields`.
+  const placement = usePlacement(
+    props.fields,
+    props.state.properties,
+    props.placement,
+    TABLE_SLOTS,
+  );
   // `cover: true` — a leading thumbnail column, when the surface is covered
   // (the cover field it is drawn from is then no column of its own).
-  const covers = options.cover === true ? resolveCover(vis, props.cover) : null;
+  const covers =
+    options.cover === true
+      ? resolveCover(drawnFields(placement), props.cover)
+      : null;
   const thumb = covers?.hasCovers ? covers : null;
   // A table row HAS a permanent per-row region — the reserved trailing track —
   // so persistent-zone actions stay painted at rest there, ahead of the
@@ -188,28 +213,33 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
     return <>{props.emptyState}</>;
   }
 
-  const bodyFields = thumb?.field ? vis.filter((f) => f !== thumb.field) : vis;
-  // `titleCell: "stacked"` — the card partition over the visible fields: the
-  // title column draws the title, its indicators and the subtitle run; the
-  // remaining token fields (and a leading field, an ordinary column flat) are
-  // the value columns.
-  const card =
-    options.titleCell === "stacked" ? partitionCardFields(bodyFields) : null;
+  const drawn = (list: readonly FieldDef<unknown>[]) =>
+    thumb?.field ? list.filter((f) => f !== thumb.field) : [...list];
+  const { slots } = placement;
+  const titleField = drawn(slots.title)[0];
+  const afterTitle = drawn(slots.afterTitle);
+  const line2 = drawn(slots.line2);
+  // The title column stacks its marks and line 2 with it (a card's text in one
+  // column) when the placement gives it any.
   const stacked: StackedTitle | null =
-    card?.title !== undefined
+    titleField !== undefined && (afterTitle.length > 0 || line2.length > 0)
       ? {
-          title: card.title,
-          indicators: card.indicators,
-          subtitle: card.subtitle,
-          subtitleIsChip: card.subtitle.map((f) => isChipField(f)),
+          title: titleField,
+          indicators: afterTitle,
+          subtitle: line2,
+          subtitleIsChip: line2.map((f) => isChipField(f)),
           resolveCell,
           resolveEditor,
         }
       : null;
-  const columnFields: FieldDef<unknown>[] =
-    stacked && card
-      ? [stacked.title, ...(card.leading ? [card.leading] : []), ...card.tokens]
-      : bodyFields;
+  const slotOf = new Map<string, Slot>();
+  const columnFields: FieldDef<unknown>[] = [];
+  for (const slot of ["lead", "title", "trail", "edge"] as const) {
+    for (const f of drawn(slots[slot])) {
+      slotOf.set(f.id, slot);
+      columnFields.push(f);
+    }
+  }
   // Aggregate representatives carry a `×N` badge in the primary cell. Key the
   // count by row OBJECT identity (the cell renderer gets the row, not its index),
   // which is stable since the representative row object flows through unchanged.
@@ -221,11 +251,8 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
       }
     }
   }
-  // Primary picked over the VISIBLE subset so the badge lands on a rendered
-  // column (matches the list/gallery `pickPrimaryField(vis)` semantics).
-  const primaryFieldId = stacked
-    ? stacked.title.id
-    : (pickPrimaryField(columnFields)?.id ?? columnFields[0]?.id);
+  // The badge lands on the title column (else the first one drawn).
+  const primaryFieldId = titleField?.id ?? columnFields[0]?.id;
 
   const fieldColumns: ColumnDef<unknown>[] = columnFields.map((f) => ({
     id: f.id,
@@ -233,8 +260,10 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
     // keeps its `label` everywhere a field is picked.
     header: f.header === false ? "" : (f.header ?? f.label),
     width: f.width,
-    align: f.align,
-    dropOrder: f.dropOrder,
+    align: fieldAlign(f, placement),
+    // What gives way in a narrow table: the trailing columns, least important
+    // first, then the edge; the lead and the title never drop.
+    dropOrder: dropOrderOf(f, slotOf.get(f.id)!, placement),
     value: f.value ? (row: unknown) => coerce(f.value!(row)) : undefined,
     // The host's sortable set, never `value`'s presence: a field showing a
     // value its list cannot order by (a live source's derived or unsortable
@@ -264,10 +293,8 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
         </Inline>
       );
     },
-    // The stacked title takes the slack unless its field sets a width.
-    ...(stacked && f === stacked.title
-      ? { width: f.width ?? "minmax(0,1fr)" }
-      : undefined),
+    // The title takes the slack unless its field sets a width.
+    ...(f === titleField ? { width: f.width ?? "minmax(0,1fr)" } : undefined),
   }));
   const hasChildrenOf = (row: unknown): boolean =>
     props.hasChildren?.(props.rowKey(row, 0)) ?? false;

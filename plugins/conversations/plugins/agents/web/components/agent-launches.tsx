@@ -2,14 +2,16 @@ import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web"
 import { useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
-import { convStatusOnlyDot } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import {
   DataView,
   defineDataView,
 } from "@plugins/primitives/plugins/data-view/web";
-import type { FieldDef } from "@plugins/primitives/plugins/data-view/core";
+import type {
+  FieldDef,
+  FieldOption,
+} from "@plugins/primitives/plugins/data-view/core";
 import {
   SectionLabel,
   Text,
@@ -31,12 +33,32 @@ function formatDate(value: Date | string): string {
 
 // Conversation statuses, in lifecycle order — drives the enum field's chip
 // label + the filter/group-by option list. Mirrors ConversationStatusSchema.
-const STATUS_OPTIONS = [
-  { value: "starting", label: "Starting" },
-  { value: "working", label: "Working" },
-  { value: "waiting", label: "Waiting" },
-  { value: "gone", label: "Gone" },
-  { value: "done", label: "Done" },
+const STATUS_OPTIONS: FieldOption[] = [
+  {
+    value: "starting",
+    label: "Starting",
+    variant: "info",
+    icon: symbol("timelapse"),
+  },
+  {
+    value: "working",
+    label: "Working",
+    variant: "info",
+    icon: symbol("timelapse"),
+  },
+  {
+    value: "waiting",
+    label: "Waiting",
+    variant: "warning",
+    icon: symbol("input"),
+  },
+  { value: "gone", label: "Gone", variant: "muted", icon: symbol("cancel") },
+  {
+    value: "done",
+    label: "Done",
+    variant: "success",
+    icon: symbol("check-circle"),
+  },
 ];
 
 function launchTitle(launch: AgentLaunchWithStatus): string {
@@ -59,7 +81,6 @@ const EXTRA_FIELDS: FieldDef<AgentLaunchWithStatus>[] = [
     id: "status",
     label: "Status",
     type: "enum",
-    align: "end",
     options: STATUS_OPTIONS,
     value: (l) => l.latestConversation?.status ?? null,
   },
@@ -67,7 +88,6 @@ const EXTRA_FIELDS: FieldDef<AgentLaunchWithStatus>[] = [
     id: "started",
     label: "Started",
     type: "date",
-    align: "end",
     value: (l) => l.createdAt,
   },
 ];
@@ -122,17 +142,6 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
               { mode: "push" },
             );
           }
-        }}
-        viewOptions={{
-          list: {
-            leading: (l: AgentLaunchWithStatus) => (
-              <StatusDot
-                {...(l.latestConversation
-                  ? convStatusOnlyDot(l.latestConversation.status)
-                  : { colorClass: "bg-muted-foreground/40" })}
-              />
-            ),
-          },
         }}
       />
     </Stack>

@@ -135,7 +135,6 @@ export function SongLibrary() {
           ),
           token: (s) => formatDuration(s.duration),
           width: "5rem",
-          align: "end",
         },
         added: {
           icon: addedIcon,

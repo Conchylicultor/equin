@@ -150,6 +150,9 @@ export function MatrixSource({
   );
 }
 
+// The glyph is a drawn cell, not a typed value, so it is pinned to the lead.
+const TILE_PLACE = { glyph: "lead" } as const;
+
 /** By set: one tile grid per family shown, its app-only glyphs in a group right after. */
 export function BySetSource({
   hostProps,
@@ -176,7 +179,6 @@ export function BySetSource({
       {
         id: "glyph",
         label: "Glyph",
-        leading: true,
         cell: (t) => (
           <IconCell
             icon={t.drawn.kind === "glyph" ? t.drawn.icon : refOf(t.drawn.name)}
@@ -227,6 +229,7 @@ export function BySetSource({
         rows,
         fields,
         rowKey: (t) => t.key,
+        place: TILE_PLACE,
         readiness,
         searchAccessor: (t) => `${t.name} ${labelOf(t.family)}`,
         selectedRowId: selected,

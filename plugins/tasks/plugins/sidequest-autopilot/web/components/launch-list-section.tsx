@@ -232,10 +232,18 @@ export function LaunchListSection(): ReactElement {
         searchPlaceholder="Search the sidequests…"
         viewOptions={{
           list: {
-            leading: (r: LaunchListRow) => (
-              <RowLead row={r} ticked={ticked(r)} onToggle={() => toggle(r)} />
+            // Kept as a custom row: its tick box, per-row action buttons and
+            // triage badges are interactive controls, not values of fields.
+            renderRow: (r: LaunchListRow) => (
+              <>
+                <RowLead
+                  row={r}
+                  ticked={ticked(r)}
+                  onToggle={() => toggle(r)}
+                />
+                <RowBody row={r} />
+              </>
             ),
-            renderRow: (r: LaunchListRow) => <RowBody row={r} />,
             detail: (r: LaunchListRow) => <RowDetail row={r} />,
           },
         }}

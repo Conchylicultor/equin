@@ -1,57 +1,57 @@
 import type { FieldDef } from "../../core";
 import { pickCoverField } from "./cover";
-import { pickLeadingField } from "./pick-leading-field";
-import { pickPrimaryField } from "./pick-primary-field";
+import type { Placement } from "./placement";
 
-/** The text lines of a card (gallery card, list row meta), each a field list. */
+/** A card's slots (gallery card, icons tile), each a field list in drawing order. */
 export interface CardFields<TRow> {
-  /** The title line's field (`pickPrimaryField`). */
+  /** The row's lead: a visual is the card's picture when it has no cover;
+   *  anything else is a glyph on the cover. */
+  lead: FieldDef<TRow> | undefined;
+  /** The title line's field. */
   title: FieldDef<TRow> | undefined;
-  /** The row's leading visual (`FieldDef.leading`) — drawn in the leading
-   *  slot, never as text. */
-  leading: FieldDef<TRow> | undefined;
-  /** Row-state marks (`FieldDef.indicator`), drawn after the title. */
-  indicators: FieldDef<TRow>[];
-  /** Text fields, joined with "·" on the subtitle line. */
-  subtitle: FieldDef<TRow>[];
-  /** Every other field, as icon + value tokens on one line. */
-  tokens: FieldDef<TRow>[];
+  /** Marks drawn after the title. */
+  afterTitle: FieldDef<TRow>[];
+  /** The subtitle line, joined with "·". */
+  line2: FieldDef<TRow>[];
+  /** The token line: icon + value each. */
+  trail: FieldDef<TRow>[];
+  /** The token line's far end. */
+  edge: FieldDef<TRow> | undefined;
 }
 
 /**
- * THE card text partition, in body order. Takes the view's VISIBLE fields
- * (`resolveBodyFields`), so a card follows the view's Properties like every
- * other body.
- *
- * - `leading` — the `leading: true` field (at most one; throws otherwise).
- * - The cover field (`FieldDef.cover`, else the first `media` field) and any
- *   `media` field are the picture, never text: in no line.
- * - `title` — `pickPrimaryField` over the rest, indicators aside.
- * - `indicators` — `indicator: true` fields.
- * - `subtitle` — fields of type `text` (the default type).
- * - `tokens` — everything else.
+ * A card's text, read off the view's placement (`usePlacement`) — never a
+ * partition of its own. The cover field (`FieldDef.cover`, else the first
+ * `media` field) and every `media` field are the picture, so in no line.
  */
-export function partitionCardFields<TRow>(
-  fields: readonly FieldDef<TRow>[],
+export function cardFieldsOf<TRow>(
+  placement: Placement<TRow>,
 ): CardFields<TRow> {
-  const leading = pickLeadingField([...fields]);
-  const cover = pickCoverField(fields);
-  const rest = fields.filter(
-    (f) => f !== leading && f !== cover && f.type !== "media",
-  );
-  const title = pickPrimaryField(rest.filter((f) => f.indicator !== true));
-  const out: CardFields<TRow> = {
-    title,
-    leading,
-    indicators: [],
-    subtitle: [],
-    tokens: [],
+  const { slots } = placement;
+  const cover = pickCoverField(drawnFields(placement));
+  const text = (list: readonly FieldDef<TRow>[]) =>
+    list.filter((f) => f !== cover && f.type !== "media");
+  return {
+    lead: text(slots.lead)[0],
+    title: text(slots.title)[0],
+    afterTitle: text(slots.afterTitle),
+    line2: text(slots.line2),
+    trail: text(slots.trail),
+    edge: text(slots.edge)[0],
   };
-  for (const f of rest) {
-    if (f === title) continue;
-    if (f.indicator === true) out.indicators.push(f);
-    else if ((f.type ?? "text") === "text") out.subtitle.push(f);
-    else out.tokens.push(f);
-  }
-  return out;
+}
+
+/** The fields a view's cover is read from: every field it draws. */
+export function drawnFields<TRow>(
+  placement: Placement<TRow>,
+): FieldDef<TRow>[] {
+  const { slots } = placement;
+  return [
+    ...slots.lead,
+    ...slots.title,
+    ...slots.afterTitle,
+    ...slots.line2,
+    ...slots.trail,
+    ...slots.edge,
+  ];
 }

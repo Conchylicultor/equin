@@ -20,11 +20,11 @@ import {
 } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 import type { MailThreadRow } from "../core";
 import { mailThreadsSource } from "./internal/source";
-import { ThreadRow } from "./components/thread-row";
-import { symbol } from "@plugins/ui/plugins/icons/core";
-import { Icon } from "@plugins/ui/plugins/icons/web";
-
-const starIcon = symbol("star");
+import {
+  THREAD_EXTRA_FIELDS,
+  THREAD_PLACE,
+  threadRowTone,
+} from "./internal/thread-surface";
 
 const MAIL_THREADS_VIEW = defineDataView("mail-threads");
 
@@ -103,21 +103,11 @@ function MailThreadsList({
       selectedRowId={selectedRowId}
       // Said once the window settled on no thread — never while it loads.
       emptyState="No conversations"
-      viewOptions={{
-        list: {
-          size: "md",
-          leading: (t: MailThreadRow) =>
-            t.starred ? (
-              <Icon icon={starIcon} active className="icon-auto text-warning" />
-            ) : (
-              <Icon
-                icon={starIcon}
-                className="icon-auto text-muted-foreground"
-              />
-            ),
-          renderRow: (t: MailThreadRow) => <ThreadRow thread={t} />,
-        },
-      }}
+      recipe="inbox"
+      place={THREAD_PLACE}
+      extraFields={THREAD_EXTRA_FIELDS}
+      rowTone={threadRowTone}
+      viewOptions={{ list: { size: "md" } }}
       source={source}
       rowActivation={(t) =>
         openPane.to(threadPane, { threadId: t.id }, { mode: "push" })

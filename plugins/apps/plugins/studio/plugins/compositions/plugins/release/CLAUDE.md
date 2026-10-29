@@ -78,7 +78,7 @@ top-level and untouched by this; only the Studio UI lives here.
     - `CompositionDetail.Section` "Build & serve" → `ReleaseSection`
     - `CompositionDetail.Section` "Release history" → `ReleaseHistorySection`
     - `DataViewSlots.CollectionItemAction` "release.history:investigate" → `CollectionInvestigate`
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×4
     - `primitives/pane` ×3
     - `build/serve-composition` ×2
@@ -90,7 +90,6 @@ top-level and untouched by this; only the Studio UI lives here.
     - `primitives/css/cluster.Cluster`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Stack`
-    - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/ui-kit.Button`
@@ -109,10 +108,7 @@ top-level and untouched by this; only the Studio UI lives here.
   - Exports (values): `releaseDetailRoute`
 - Cross-plugin:
   - Uses tokens:
-    - `ui/tokens/color-palette --destructive`
     - `ui/tokens/color-palette --muted-foreground`
-    - `ui/tokens/color-palette --success`
-    - `ui/tokens/color-palette --warning`
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shape --spacing`
   - Imported by:

@@ -13,8 +13,8 @@ import {
 import { ListView } from "../components/list-view";
 
 /**
- * A field declaring `leading: true` renders in the row's leading slot — ahead
- * of the view's own `leading` option — and nowhere in the body. The cell is a
+ * A field placed in `lead` (`placement.place`) renders in the row's leading
+ * slot and nowhere in the body. The cell is a
  * local fixture for a synthetic type (no `fields/*` import: that is a cycle).
  */
 function SpecCell(props: TableCellProps) {
@@ -30,9 +30,8 @@ const plugin = {
 
 type Row = { id: string; name: string; glyph: string; note: string };
 
-// The avatar comes FIRST and nothing is `primary`/`text`, so without the
-// leading exclusion `pickPrimaryField`'s `fields[0]` fallback would title the
-// row with it.
+// The avatar comes FIRST and nothing is `primary`, so were it not placed in
+// `lead` the title promotion would take it.
 const avatar: FieldDef<Row> = {
   id: "avatar",
   label: "Avatar",
@@ -56,10 +55,14 @@ const ROW: Row = { id: "1", name: "alpha", glyph: "★", note: "memo" };
 
 function renderList(
   fields: FieldDef<Row>[],
-  opts: { properties?: string[]; own?: boolean } = {},
+  opts: { properties?: string[]; lead?: boolean } = {},
 ) {
   const props: DataViewRenderProps<Row> = {
     revealSelection: true,
+    placement:
+      opts.lead !== false && fields.some((f) => f.id === "avatar")
+        ? { place: { avatar: "lead" } }
+        : {},
     rows: [ROW],
     fields,
     rowKey: (r) => r.id,
@@ -79,10 +82,7 @@ function renderList(
     groupOrder: "asc",
     rowsComplete: true,
     sectioning: { kind: "bucket" },
-    options:
-      opts.own === false
-        ? undefined
-        : { leading: () => <i data-testid="own-leading" /> },
+    options: undefined,
   };
   return render(
     <PluginProvider plugins={[plugin]}>
@@ -96,46 +96,35 @@ const precedes = (a: Element, b: Element) =>
 
 afterEach(cleanup);
 
-describe("data-view list leading field", () => {
-  it("renders the leading field's cell before the view's own leading node", () => {
-    const { getAllByTestId, getByTestId, getByText } = renderList([
-      { ...avatar, leading: true },
-      name,
-      note,
-    ]);
+describe("data-view list lead field", () => {
+  it("renders the lead field's cell once, in the icon slot ahead of the title", () => {
+    const { getAllByTestId, getByText } = renderList([avatar, name, note]);
     const cells = getAllByTestId("spec-cell");
-    // Exactly once: in the leading slot, not also in the subtitle.
+    // Exactly once: in the lead slot, not also in the subtitle.
     expect(cells).toHaveLength(1);
     expect(cells[0]!.textContent).toBe("★");
-    const own = getByTestId("own-leading");
-    expect(precedes(cells[0]!, own)).toBe(true);
-    // Both sit in the icon slot, ahead of the body's title.
-    expect(precedes(own, getByText("alpha"))).toBe(true);
+    expect(precedes(cells[0]!, getByText("alpha"))).toBe(true);
   });
 
   it("never becomes the title", () => {
-    const { container, getByText } = renderList(
-      [{ ...avatar, leading: true }, name, note],
-      { own: false },
-    );
-    // The title is the next field; the subtitle holds the rest.
+    const { container, getByText } = renderList([avatar, name, note]);
+    // The title is the next field; the rest trail.
     expect(getByText("alpha").className).toContain("text-foreground");
-    expect(container.textContent).toBe("★alpha · memo");
+    expect(container.textContent).toContain("★alpha");
+    expect(container.textContent).toContain("memo");
   });
 
-  it("without a leading flag the field stays an ordinary body term", () => {
-    const { getByTestId, container } = renderList([name, avatar, note]);
-    // The icon slot holds only the view's own node; the cell is in the run.
-    expect(precedes(getByTestId("own-leading"), getByTestId("spec-cell"))).toBe(
-      true,
-    );
-    expect(container.textContent).toBe("alpha · ★ · memo");
+  it("without a pin the field is an ordinary trailing term, after the title", () => {
+    const { getByTestId, getByText } = renderList([name, avatar, note], {
+      lead: false,
+    });
+    expect(precedes(getByText("alpha"), getByTestId("spec-cell"))).toBe(true);
   });
 
-  it("with no leading field visible, markup matches a schema without one", () => {
+  it("with no lead field visible, markup matches a schema without one", () => {
     const html = renderList([name, note]).container.innerHTML;
     cleanup();
-    const hidden = renderList([{ ...avatar, leading: true }, name, note], {
+    const hidden = renderList([avatar, name, note], {
       properties: ["name", "note"],
     });
     expect(hidden.container.innerHTML).toBe(html);
@@ -149,22 +138,17 @@ describe("data-view list leading field", () => {
       value: () => "https://img/a.png",
       cover: true,
     };
-    const { container, getAllByTestId } = renderList(
-      [{ ...avatar, leading: true }, name, art],
-      { own: false },
-    );
+    const { container, getAllByTestId } = renderList([avatar, name, art]);
     expect(getAllByTestId("spec-cell")).toHaveLength(1);
     expect(container.querySelector(".size-cover-thumb")).toBeNull();
     // Not drawn as a thumbnail, the cover field stays an ordinary body term.
-    expect(container.textContent).toBe("★alpha · https://img/a.png");
+    expect(container.textContent).toContain("https://img/a.png");
   });
 
   it("disappears when hidden through properties", () => {
-    const { queryByTestId, getByTestId } = renderList(
-      [{ ...avatar, leading: true }, name, note],
-      { properties: ["name", "note"] },
-    );
+    const { queryByTestId } = renderList([avatar, name, note], {
+      properties: ["name", "note"],
+    });
     expect(queryByTestId("spec-cell")).toBeNull();
-    expect(getByTestId("own-leading")).toBeTruthy();
   });
 });

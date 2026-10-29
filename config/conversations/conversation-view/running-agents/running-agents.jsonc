@@ -12,7 +12,7 @@
         "type": "table",
         "presentation": "outline",
         "sort": [],
-        "properties": [{ "id": "description" }, { "id": "type" }, { "id": "tokens" }, { "id": "started" }]
+        "properties": [{ "id": "state" }, { "id": "description" }, { "id": "type" }, { "id": "tokens" }, { "id": "started" }]
       }
     }
   ]

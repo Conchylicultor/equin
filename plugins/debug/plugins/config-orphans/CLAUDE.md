@@ -17,7 +17,6 @@
     - `apps/debug/shell.DebugApp`
     - `config_v2/settings.ConfigNavSlots`
     - `network/live.useLive`
-    - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`

@@ -13,21 +13,27 @@ Browse Claude Code auto-memory files for the current project. Lists all `.md` fi
   - Contributes:
     - `Pane.Register` "debug-memory"
     - `DebugApp.Sidebar` "Memory"
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×3
-    - `primitives/pane` ×3
-    - `primitives/css/badge` ×2
-    - `primitives/css/text` ×2
-    - `primitives/live-state` ×2
+  - Uses:
     - `apps/debug/shell.DebugApp`
     - `network/live.useLive`
+    - `primitives/css/badge.formatStatusLabel`
     - `primitives/css/center.Center`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
+    - `primitives/css/text.SectionLabel`
+    - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
+    - `primitives/data-view.DataView`
+    - `primitives/data-view.defineDataView`
+    - `primitives/data-view.FieldDef`
+    - `primitives/live-state.foldResource`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/markdown.Markdown`
+    - `primitives/pane.defineRoute`
+    - `primitives/pane.Pane`
+    - `primitives/pane.PaneChrome`
   - Exports (values): `memoryPane`
 - Server:
   - Contributes:
@@ -43,12 +49,7 @@ Browse Claude Code auto-memory files for the current project. Lists all `.md` fi
     - `memory.files` (push, notified, whole: the .md files of one project's memory directory — notes written by hand or by agents, a few dozen)
 - Cross-plugin:
   - Uses tokens:
-    - `ui/tokens/categorical --categorical-5`
-    - `ui/tokens/color-palette --info`
-    - `ui/tokens/color-palette --muted`
     - `ui/tokens/color-palette --muted-foreground`
-    - `ui/tokens/color-palette --success`
-    - `ui/tokens/color-palette --warning`
     - `ui/tokens/density --space-lg`
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`

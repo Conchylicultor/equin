@@ -9,6 +9,7 @@ export const personFieldType = defineFieldType<string>("person");
 
 export const personIdentity = defineFieldIdentity<string>({
   type: personFieldType,
+  kind: "person",
   label: "Person",
   icon: personIcon,
   extends: textFieldType,
