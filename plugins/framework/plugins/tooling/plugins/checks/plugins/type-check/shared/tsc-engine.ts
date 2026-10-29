@@ -167,8 +167,13 @@ const NOT_ENGINE = new Set([
  * path the program had resolved it by — a barrel in one program, the file
  * behind it in another (measured: `import("../../server").JobFactory` in one
  * whole program, `import("../../server/internal/registry").JobFactory` in a
- * batch served the barrel's `.d.ts`; 12 of 12.8k files). `declaringOf`
- * returns the spec to spell it by, or undefined to keep `s`.
+ * batch served the barrel's `.d.ts`; 12 of 12.8k files). And a type declared
+ * outside the repo through its shortest export path from `s`: emit names it
+ * through whichever namespaces the checker reached it by (measured: zod's
+ * `z.core.$brand` in one whole program, `$brand` in a program served the
+ * declaring file's `.d.ts`; type-check-divergence on
+ * stats/cost/shared/values.ts). `declaringOf` returns the spelling, or
+ * undefined to keep it.
  *
  * And with no comments (triple-slash directives stay: they load
  * declarations). A comment means nothing to a type, and emit does not keep
@@ -182,9 +187,18 @@ const NOT_ENGINE = new Set([
  * report-1793151601-6dwk28; backstop signature divergence
  * report-1792989194-debinz on the same file).
  */
+/** How `canonicalDeclarations` spells an import type: `import(spec).<path>`. */
+export interface DeclaringSpelling {
+  spec: string;
+  path: readonly string[];
+}
+
 export function canonicalDeclarations(
   dts: string,
-  declaringOf?: (spec: string, name: string) => string | undefined,
+  declaringOf?: (
+    spec: string,
+    path: readonly string[],
+  ) => DeclaringSpelling | undefined,
 ): string {
   const sf = ts.createSourceFile(
     "contract.d.ts",
@@ -384,18 +398,31 @@ export function canonicalDeclarations(
       ) {
         return visited;
       }
-      let first: ts.EntityName = visited.qualifier;
-      while (ts.isQualifiedName(first)) first = first.left;
-      const spec = declaringOf(visited.argument.literal.text, first.text);
-      if (spec === undefined || spec === visited.argument.literal.text) {
+      const path: string[] = [];
+      let q: ts.EntityName = visited.qualifier;
+      while (ts.isQualifiedName(q)) {
+        path.unshift(q.right.text);
+        q = q.left;
+      }
+      path.unshift(q.text);
+      const spec = visited.argument.literal.text;
+      const to = declaringOf(spec, path);
+      if (
+        to === undefined ||
+        (to.spec === spec && to.path.join(".") === path.join("."))
+      ) {
         return visited;
       }
       const f = context.factory;
+      let qualifier: ts.EntityName = f.createIdentifier(to.path[0]!);
+      for (const part of to.path.slice(1)) {
+        qualifier = f.createQualifiedName(qualifier, part);
+      }
       return f.updateImportTypeNode(
         visited,
-        f.createLiteralTypeNode(f.createStringLiteral(spec)),
+        f.createLiteralTypeNode(f.createStringLiteral(to.spec)),
         visited.attributes,
-        visited.qualifier,
+        qualifier,
         visited.typeArguments,
         visited.isTypeOf,
       );

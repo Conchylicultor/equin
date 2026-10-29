@@ -1027,6 +1027,37 @@ test("a type reached through a barrel is spelled by its declaring file, whicheve
   expect(out.results.get("use/job.ts")!.diagnostics).toEqual([]);
 });
 
+test("a dependency's type reached through its namespaces is spelled by its shortest export path, whichever route the program printed", async () => {
+  // zod's shape: `$brand` is exported at the top and again under `z.core`.
+  // `reg.ts` binds no `z`, so its .d.ts spells the brand `import("pkg").$brand`;
+  // a whole program prints `use.ts`'s inferred type through `use.ts`'s own
+  // `z` (`z.core.$brand`), a batch served `reg.ts`'s .d.ts copies its
+  // spelling. Same type: same signature (the type-check-divergence on
+  // stats/cost/shared/values.ts).
+  const files = {
+    "node_modules/pkg/package.json":
+      '{ "name": "pkg", "version": "1.0.0", "types": "index.d.ts" }\n',
+    "node_modules/pkg/index.d.ts":
+      'export * from "./core";\nexport * from "./schemas";\nexport * as z from "./ns";\n',
+    "node_modules/pkg/ns.d.ts":
+      'export * as core from "./core";\nexport * from "./schemas";\n',
+    "node_modules/pkg/core.d.ts":
+      "export type $brand<T extends string> = { readonly __brand: T };\n",
+    "node_modules/pkg/schemas.d.ts":
+      'import type { $brand } from "./core";\nexport interface Schema<T> { out: T; brand<B extends string>(): Schema<T & $brand<B>> }\nexport declare function string(): Schema<string>;\n',
+    "sch.ts":
+      'import { z } from "pkg";\nexport const Model = z.string().brand<"Model">();\n',
+    "reg.ts":
+      'import { Model } from "./sch";\nexport const field = <T>(v: T) => ({ v });\nexport const ref = field(Model.out);\n',
+    "use.ts":
+      'import { z } from "pkg";\nimport { ref } from "./reg";\nexport const s = z.string();\nexport const box = { ref };\n',
+  };
+  const root = freshRoot();
+  writeTree(root, files);
+  const out = await run(root, files, memoryNameStore());
+  expect(out.results.get("use.ts")!.diagnostics).toEqual([]);
+});
+
 test("a batch importing a file outside the set waits for what that file's .d.ts imports from the set", async () => {
   // `a` and `y` change, `z` (a barrel over `y`) does not: the set is {a, y},
   // `z` is served its stored .d.ts — which imports `y`. So `a` needs `y`'s

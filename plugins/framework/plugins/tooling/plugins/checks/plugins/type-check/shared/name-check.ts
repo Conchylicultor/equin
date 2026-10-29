@@ -19,7 +19,11 @@
 import { createHash } from "crypto";
 import { dirname, join, relative } from "path";
 import ts from "typescript";
-import { canonicalDeclarations, formatDiagnostic } from "./tsc-engine";
+import {
+  canonicalDeclarations,
+  formatDiagnostic,
+  type DeclaringSpelling,
+} from "./tsc-engine";
 import { createNameHost, type SourceFileCache } from "./name-host";
 import { contractNames, nameKey, WHOLE, type NameRec } from "./name-records";
 import type { RecordingResolver, ResolutionRecord } from "./name-resolve";
@@ -559,56 +563,131 @@ export interface FileCheck {
 }
 
 /**
- * For `canonicalDeclarations`: the spec, relative to `sf`, of the repo file
- * that DECLARES `name` as the module `spec` exports it — following re-exports
- * through the checker, so a barrel and the file behind it spell one type one
- * way whichever this program resolved it by. Undefined (keep the spec) when it
- * does not resolve, or is declared outside the repo. A served contract
- * (`x.d.ts` beside `x.ts`) and its source spell the same, extension dropped.
- * Declarations merged across files are named by the first by path.
+ * For `canonicalDeclarations`: how to spell the type `import(spec).<path>`
+ * names, as `sf` sees it — following re-exports through the checker, so two
+ * programs that printed one type by two routes spell it one way. Undefined
+ * (keep the spelling) when it does not resolve.
+ *
+ * - Declared in the repo: by the spec, relative to `sf`, of the repo file that
+ *   DECLARES `path[0]` as the module `spec` exports it — so a barrel and the
+ *   file behind it spell one type one way whichever this program resolved it
+ *   by. A served contract (`x.d.ts` beside `x.ts`) and its source spell the
+ *   same, extension dropped. Declarations merged across files are named by the
+ *   first by path.
+ * - Declared outside the repo, spelled through a namespace: through `spec`
+ *   still, by the SHORTEST export path that reaches the symbol (ties by
+ *   text) — so zod's `$brand`, printed `z.core.$brand` through the
+ *   namespaces in one program and `$brand` in another, is `$brand` in both.
  */
 function declaringSpecOf(
   root: string,
   program: ts.Program,
   sf: ts.SourceFile,
-): (spec: string, name: string) => string | undefined {
+): (spec: string, path: readonly string[]) => DeclaringSpelling | undefined {
   const checker = program.getTypeChecker();
   const options = program.getCompilerOptions();
-  // Candidates are the PROGRAM's files: a module served as its contract
-  // (`x.d.ts`) resolves to that, not to the `x.ts` on disk beside it.
+  // Repo candidates are the PROGRAM's files: a module served as its contract
+  // (`x.d.ts`) resolves to that, not to the `x.ts` on disk beside it. A
+  // dependency is found as tsc found it, on disk through its symlinks.
   const host: ts.ModuleResolutionHost = {
     fileExists: (f) =>
       program.getSourceFile(f) !== undefined ||
-      (f.endsWith("/package.json") && ts.sys.fileExists(f)),
+      ((f.endsWith("/package.json") || !isRepoPath(rel(root, f))) &&
+        ts.sys.fileExists(f)),
     readFile: (f) => ts.sys.readFile(f),
+    realpath: (f) => (isRepoPath(rel(root, f)) ? f : ts.sys.realpath!(f)),
   };
-  const memo = new Map<string, string | undefined>();
-  return (spec, name) => {
-    const key = `${spec}\0${name}`;
-    if (memo.has(key)) return memo.get(key);
-    let out: string | undefined;
+  const resolveAlias = (s: ts.Symbol): ts.Symbol =>
+    s.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(s) : s;
+  const moduleOf = new Map<string, ts.Symbol | undefined>();
+  const moduleSymbol = (spec: string): ts.Symbol | undefined => {
+    if (moduleOf.has(spec)) return moduleOf.get(spec);
     const resolved = ts.resolveModuleName(spec, sf.fileName, options, host)
       .resolvedModule?.resolvedFileName;
     const target =
       resolved === undefined ? undefined : program.getSourceFile(resolved);
     const mod =
       target === undefined ? undefined : checker.getSymbolAtLocation(target);
-    let sym =
-      mod === undefined
-        ? undefined
-        : checker.tryGetMemberInModuleExports(name, mod);
-    if (sym !== undefined && sym.flags & ts.SymbolFlags.Alias) {
-      sym = checker.getAliasedSymbol(sym);
+    moduleOf.set(spec, mod);
+    return mod;
+  };
+  /** A module's or namespace's member `name`, aliases followed. */
+  const member = (of: ts.Symbol, name: string): ts.Symbol | undefined => {
+    const m = checker.getExportsOfModule(of).find((e) => e.name === name);
+    return m === undefined ? undefined : resolveAlias(m);
+  };
+  /** Every symbol reachable from `mod` through its exports, by its shortest path. */
+  const shortest = new Map<ts.Symbol, Map<ts.Symbol, string[]>>();
+  const pathsFrom = (mod: ts.Symbol): Map<ts.Symbol, string[]> => {
+    let out = shortest.get(mod);
+    if (out !== undefined) return out;
+    out = new Map();
+    // Breadth first, each level's names in text order: the first path to
+    // reach a symbol is a shortest one, and the least by text among them.
+    let level: [ts.Symbol, string[]][] = [[mod, []]];
+    const seen = new Set<ts.Symbol>([mod]);
+    while (level.length > 0) {
+      const next: [ts.Symbol, string[]][] = [];
+      for (const [of, at] of level) {
+        const names = checker
+          .getExportsOfModule(of)
+          .map((e) => e.name)
+          .sort();
+        for (const name of names) {
+          const s = member(of, name);
+          if (s === undefined || seen.has(s)) continue;
+          seen.add(s);
+          const p = [...at, name];
+          out.set(s, p);
+          if (
+            s.flags &
+            (ts.SymbolFlags.ValueModule | ts.SymbolFlags.NamespaceModule)
+          ) {
+            next.push([s, p]);
+          }
+        }
+      }
+      next.sort(([, x], [, y]) =>
+        x.join(".") < y.join(".") ? -1 : x.join(".") > y.join(".") ? 1 : 0,
+      );
+      level = next;
     }
-    const files = (sym?.declarations ?? [])
-      .map((d) => rel(root, d.getSourceFile().fileName))
-      .filter(isRepoPath)
-      .sort();
+    shortest.set(mod, out);
+    return out;
+  };
+  const memo = new Map<string, DeclaringSpelling | undefined>();
+  return (spec, path) => {
+    const key = `${spec}\0${path.join(".")}`;
+    if (memo.has(key)) return memo.get(key);
+    let out: DeclaringSpelling | undefined;
+    const mod = moduleSymbol(spec);
+    let sym = mod;
+    for (const name of path) {
+      if (sym === undefined) break;
+      sym = member(sym, name);
+    }
+    const head = mod === undefined ? undefined : member(mod, path[0]!);
+    const repoFiles = (s: ts.Symbol | undefined): string[] =>
+      (s?.declarations ?? [])
+        .map((d) => rel(root, d.getSourceFile().fileName))
+        .filter(isRepoPath)
+        .sort();
+    const files = repoFiles(head);
     if (files.length > 0) {
       const bare = files[0]!.replace(/(\.d)?\.[mc]?tsx?$/, "");
       const from = dirname(rel(root, sf.fileName));
       const r = relative(from, bare).split("\\").join("/");
-      out = r.startsWith(".") ? r : `./${r}`;
+      out = { spec: r.startsWith(".") ? r : `./${r}`, path };
+    } else if (
+      // One name is as short as a path gets: no walk.
+      path.length > 1 &&
+      mod !== undefined &&
+      sym !== undefined &&
+      (sym.declarations ?? []).length > 0 &&
+      repoFiles(sym).length === 0
+    ) {
+      const p = pathsFrom(mod).get(sym);
+      if (p !== undefined) out = { spec, path: p };
     }
     memo.set(key, out);
     return out;
