@@ -41925,6 +41925,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useRowFilter`
           - `useSortController`
           - `useViewRowCounts`
+          - `wearsTimeInk`
       - Server:
         - Contributes: 95 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `ConfigV2.Register` ×93
@@ -42344,8 +42345,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`list`** — List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
           - Web:
             - Contributes: `DataViewSlots.View` "List" → `ListView`
-            - Uses: 65 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md)
-              - `primitives/data-view` ×43
+            - Uses: 66 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md)
+              - `primitives/data-view` ×44
               - `primitives/rank-reorder` ×3
               - `primitives/css/spacing` ×2
               - `primitives/collapsible.FoldMotion`
@@ -42405,8 +42406,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort, and nests its rows (a tree is a table with no columns) when the source has a hierarchy.
           - Web:
             - Contributes: `DataViewSlots.View` "Table" → `TableView`
-            - Uses: 83 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md)
-              - `primitives/data-view` ×44
+            - Uses: 84 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md)
+              - `primitives/data-view` ×45
               - `primitives/tree` ×17
               - `primitives/data-table` ×7
               - `primitives/css/text` ×3
@@ -42426,6 +42427,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --foreground`
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/color-palette --ring`
+              - `ui/tokens/data-view --list-time-ink`
               - `ui/tokens/data-view --soft-thumb-h`
               - `ui/tokens/data-view --soft-thumb-narrow-w`
               - `ui/tokens/data-view --soft-thumb-radius`

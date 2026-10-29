@@ -5,10 +5,10 @@
       "id": "tree",
       "name": "Tree",
       "icon": "account-tree",
-      "icon": "account-tree",
       "view": {
         "type": "table",
         "presentation": "outline",
+        "columnCaptions": "shown",
         "groupBy": "category",
         "properties": [{ "id": "status" }, { "id": "title" }, { "id": "updatedAt" }],
         "filter": {
@@ -27,15 +27,37 @@
         }
       }
     },
-    { "id": "recent", "name": "Recent", "icon": "history", "icon": "history", "view": { "type": "list", "sort": { "fieldId": "updatedAt", "direction": "desc" } } },
+    {
+      "id": "recent",
+      "name": "Recent",
+      "icon": "history",
+      "view": {
+        "type": "list",
+        "columnCaptions": true,
+        "sort": { "fieldId": "updatedAt", "direction": "desc" },
+        "properties": [
+          { "id": "status" },
+          { "id": "title" },
+          { "id": "track" },
+          { "id": "triage" },
+          { "id": "priority" },
+          { "id": "taskType" },
+          { "id": "category" },
+          { "id": "origin" },
+          { "id": "approval" },
+          { "id": "updatedAt" },
+          { "id": "triagedAt", "hidden": true }
+        ]
+      }
+    },
     {
       "id": "attempted",
       "name": "Attempted",
       "icon": "play-circle",
-      "icon": "play-circle",
       "view": {
         "type": "table",
         "presentation": "outline",
+        "columnCaptions": "shown",
         "filter": {
           "kind": "group",
           "id": "attempted",

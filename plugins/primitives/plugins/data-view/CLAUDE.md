@@ -325,7 +325,11 @@ field type (kind)  →  recipe rules  →  surface `place`  →  user's Property
   same table on its contribution (`DataViewContribution.slots`) for the slot
   editor. A slot a view leaves out is one it does not draw.
 - **Recipes** (`RECIPES`, plain data): `record` (default), `log`, `timeline`,
-  `inbox`, `ledger` — ordered `[kind | "identity", slot]` rules. The engine
+  `inbox`, `ledger` — ordered `[kind | "identity", slot]` rules. Only the
+  first state leads; the others trail (outside `log`) — a coloured enum (a
+  priority, a category) is a state too, and after a title of varying length
+  it would sit at a different x on every row. `afterTitle` is for a surface's
+  own pins. The engine
   (`resolvePlacement`, `web/internal/placement.ts`) walks rule by rule, then
   field by field: a field takes the first matching rule whose slot the view
   draws and has room in, so a second instant falls through to its next rule.
@@ -345,15 +349,18 @@ field type (kind)  →  recipe rules  →  surface `place`  →  user's Property
   (`OptionGlyph`); `token` on a card's line; `cell` elsewhere.
 - **Alignment** defaults from the kind (`fieldAlign`: quantity / duration /
   ordinal / instant end). `align` is text alignment only.
+- **Time ink** (`wearsTimeInk`): the `edge` and every `instant`, wherever it
+  lands (a second instant trails), wear the faint `listTimeInk` — in the list,
+  the table and the tree alike, so a row's times never read in two inks.
 
 | Slot | List / tree row | Table | Gallery card | Icons tile |
 |---|---|---|---|---|
 | `lead` | `Row.icon` / tree-head icon (glyph) | first column | cover (a visual) or corner glyph | the face (visual only) |
 | `title` | label | title column | title | name |
-| `afterTitle` | marks after the label | stacked in the title cell | after the title | — |
-| `line2` | subtitle run (2 lines when present) | stacked under the title | subtitle | — |
+| `afterTitle` | marks after the label (not the tree: trails) | stacked in the title cell | after the title | — |
+| `line2` | subtitle run (2 lines when present; not the tree: trails) | stacked under the title | subtitle | — |
 | `trail` | aligned trailing slots | columns | ≤ 3 tokens | — |
-| `edge` | far right, faint | last column | token line end | — |
+| `edge` | far right, faint | last column, faint | token line end | — |
 
 ## Manual order
 
@@ -2214,6 +2221,7 @@ list, table and `primitives/tree` share it.
     - `useRowFilter`
     - `useSortController`
     - `useViewRowCounts`
+    - `wearsTimeInk`
 - Server:
   - Contributes: 95 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `ConfigV2.Register` ×93

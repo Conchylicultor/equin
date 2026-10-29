@@ -109,8 +109,10 @@ drag.
   one full-span line; `useTreeKeyboard` runs on the grid (`role="treegrid"`),
   rows focusable exactly when the view has an open gesture.
 - **The lead** (the placement's `lead` field, as a glyph) renders in the tree
-  head's icon slot and is no column; the title's `afterTitle` and `line2`
-  fields draw inline after the label (a tree row is one line).
+  head's icon slot and is no column. The nested table draws no `afterTitle` /
+  `line2`: a tree row is one line, and a mark drawn after a label of varying
+  length sits at a different x on every row — so those fields fall through
+  the recipe to aligned `trail` columns.
 - **Row controls**: the decoration's `provide` wraps the whole row in the tree
   primitive's `RowControlsProvider`, so a cell or an item action reads
   `useOptionalRowControls()` inside a table row.
@@ -200,8 +202,8 @@ see `data-view/CLAUDE.md` ("The rail") and `data-table/CLAUDE.md`.
 - Description: Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort, and nests its rows (a tree is a table with no columns) when the source has a hierarchy.
 - Web:
   - Contributes: `DataViewSlots.View` "Table" → `TableView`
-  - Uses: 83 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×44
+  - Uses: 84 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×45
     - `primitives/tree` ×17
     - `primitives/data-table` ×7
     - `primitives/css/text` ×3
@@ -221,6 +223,7 @@ see `data-view/CLAUDE.md` ("The rail") and `data-table/CLAUDE.md`.
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --ring`
+    - `ui/tokens/data-view --list-time-ink`
     - `ui/tokens/data-view --soft-thumb-h`
     - `ui/tokens/data-view --soft-thumb-narrow-w`
     - `ui/tokens/data-view --soft-thumb-radius`

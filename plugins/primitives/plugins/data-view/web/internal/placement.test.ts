@@ -6,7 +6,12 @@ import type {
   PropertyEntry,
   ViewSlots,
 } from "../../core";
-import { dropOrderOf, fieldAlign, resolvePlacement } from "./placement";
+import {
+  dropOrderOf,
+  fieldAlign,
+  resolvePlacement,
+  wearsTimeInk,
+} from "./placement";
 
 type Row = Record<string, unknown>;
 type F = FieldDef<Row> & { kind: FieldKind };
@@ -78,14 +83,15 @@ describe("resolvePlacement", () => {
     expect(p.notes).toContain("created: edge taken → trail");
   });
 
-  it("a second and third state fall to afterTitle", () => {
+  it("a second state trails, never after the title", () => {
     const { ids } = place([
       f("name", "label", { primary: true }),
       f("lane", "state"),
       f("verdict", "state"),
     ]);
     expect(ids.lead).toEqual(["lane"]);
-    expect(ids.afterTitle).toEqual(["verdict"]);
+    expect(ids.trail).toEqual(["verdict"]);
+    expect(ids.afterTitle).toEqual([]);
   });
 
   it("log: the time leads", () => {
@@ -262,5 +268,29 @@ describe("resolvePlacement", () => {
     expect(fieldAlign(fields[0]!, p)).toBe("end");
     expect(fieldAlign(fields[1]!, p)).toBe("start");
     expect(fieldAlign(fields[2]!, p)).toBe("center");
+  });
+});
+
+describe("wearsTimeInk", () => {
+  it("every instant wears the time ink wherever it lands, as does the edge", () => {
+    const fields = [
+      f("name", "label", { primary: true }),
+      f("updated", "instant"),
+      f("triaged", "instant"),
+      f("model", "label"),
+    ];
+    const { p, ids } = place(fields);
+    expect(ids.edge).toEqual(["updated"]);
+    expect(ids.trail).toEqual(["triaged", "model"]);
+    const ink = (id: string, slot: "edge" | "trail" | "title") =>
+      wearsTimeInk(
+        fields.find((x) => x.id === id)!,
+        slot,
+        p,
+      );
+    expect(ink("updated", "edge")).toBe(true);
+    expect(ink("triaged", "trail")).toBe(true);
+    expect(ink("model", "trail")).toBe(false);
+    expect(ink("name", "title")).toBe(false);
   });
 });

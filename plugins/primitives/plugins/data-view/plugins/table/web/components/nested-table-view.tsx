@@ -17,6 +17,7 @@ import {
   FieldPresentationProvider,
   dropOrderOf,
   fieldAlign,
+  wearsTimeInk,
   leadingSlot,
   readFallback,
   rowToneClass,
@@ -62,8 +63,6 @@ import {
 import { RankReorderDndContext } from "@plugins/primitives/plugins/rank-reorder/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
-import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
-import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import type { ViewSlots } from "@plugins/primitives/plugins/data-view/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -74,14 +73,14 @@ import { tableHeaderOption } from "../internal/column-captions";
 
 /**
  * The slots a nested table draws: the lead in the tree head's icon box (a
- * glyph), the title as the label column with its marks and line 2 inline after
- * it (a tree row is one line), then the trailing columns and the edge.
+ * glyph), the title as the label column, then the trailing columns and the
+ * edge. No `afterTitle` / `line2`: a tree row is one line, and anything drawn
+ * after a label of varying length lands at a different x on every row — so a
+ * mark or a subtitle falls through the recipe to an aligned `trail` column.
  */
 const NESTED_SLOTS: ViewSlots = {
   lead: { capacity: 1, form: "glyph" },
   title: { capacity: 1 },
-  afterTitle: {},
-  line2: {},
   trail: {},
   edge: { capacity: 1 },
 };
@@ -213,8 +212,7 @@ export function NestedTableView(
   });
 
   // Columns are the view's placement. The lead renders in the tree head's
-  // icon slot; the title is the label column, its marks and line 2 drawn
-  // inline after it (a tree row is one line); trail and edge are the columns.
+  // icon slot; the title is the label column; trail and edge are the columns.
   const placement = usePlacement(
     fields,
     props.state.properties,
@@ -224,10 +222,6 @@ export function NestedTableView(
   const { slots } = placement;
   const leadingField = slots.lead[0];
   const primaryField = slots.title[0];
-  const inlineFields = useMemo(
-    () => [...slots.afterTitle, ...slots.line2],
-    [slots],
-  );
   const columnFields = useMemo(
     () => [...slots.title, ...slots.trail, ...slots.edge],
     [slots],
@@ -236,21 +230,18 @@ export function NestedTableView(
   const readOnlyFields = useMemo(
     () =>
       new Map(
-        [...columnFields, ...inlineFields].map((f) => [
+        columnFields.map((f) => [
           f.id,
           { ...f, onEdit: undefined, onEditValues: undefined },
         ]),
       ),
-    [columnFields, inlineFields],
+    [columnFields],
   );
 
   // An outline is a row view (a tree's look), so its terms present as one:
   // quiet chips, and the value most rows share left out. Its label is the
   // row's identity, never a candidate.
-  const termFields = useMemo(
-    () => [...inlineFields, ...slots.trail, ...slots.edge],
-    [inlineFields, slots],
-  );
+  const termFields = useMemo(() => [...slots.trail, ...slots.edge], [slots]);
 
   const hierarchy = useHierarchyTree({ props, primaryField, options });
   const { treeArgs } = hierarchy;
@@ -419,25 +410,6 @@ export function NestedTableView(
   // own class (which wins), on the first cell — as the tree's label.
   const labelClass = (row: unknown) =>
     cn(rowToneClass(props.rowTone?.(row)), options.labelClassName?.(row));
-  // The title's marks and line 2, inline after the label (rigid, faint).
-  const inlineCells = (row: unknown): ReactNode =>
-    inlineFields.length === 0 ? null : (
-      <>
-        {" "}
-        <Inline gap="xs" className={cn("text-muted-foreground", rigidClass())}>
-          {inlineFields.map((field) => (
-            <FieldCell
-              key={field.id}
-              field={readOnlyFields.get(field.id) ?? field}
-              row={row}
-              resolveCell={resolveCell}
-              resolveEditor={resolveEditor}
-              display="inline"
-            />
-          ))}
-        </Inline>
-      </>
-    );
   const columns: ColumnDef<Line>[] = columnFields.map((f, i) => ({
     id: f.id,
     header: f.header === false ? "" : (f.header ?? f.label),
@@ -462,13 +434,23 @@ export function NestedTableView(
       const { node } = line;
       const row = node.__row;
       if (f !== primaryField) {
-        return (
+        const cell = (
           <FieldCell
             field={node.alias ? readOnlyFields.get(f.id)! : f}
             row={row}
             resolveCell={resolveCell}
             resolveEditor={resolveEditor}
           />
+        );
+        // The edge and every time wear the time ink, as in a list row.
+        return wearsTimeInk(
+          f,
+          slots.edge.includes(f) ? "edge" : "trail",
+          placement,
+        ) ? (
+          <span className="text-list-time-ink">{cell}</span>
+        ) : (
+          cell
         );
       }
       // The label: the tree row's own — select-then-edit when the field
@@ -482,16 +464,13 @@ export function NestedTableView(
           ? f.cell(row)
           : (resolveCell(f, value ?? null, row) ?? readFallback(f, value));
         return (
-          <>
-            <EditableTreeLabel
-              node={node}
-              row={row}
-              field={f}
-              read={read}
-              className={tone || undefined}
-            />
-            {inlineCells(row)}
-          </>
+          <EditableTreeLabel
+            node={node}
+            row={row}
+            field={f}
+            read={read}
+            className={tone || undefined}
+          />
         );
       }
       const cell = (
@@ -502,12 +481,7 @@ export function NestedTableView(
           resolveEditor={resolveEditor}
         />
       );
-      return (
-        <>
-          {tone ? <span className={tone}>{cell}</span> : cell}
-          {inlineCells(row)}
-        </>
-      );
+      return tone ? <span className={tone}>{cell}</span> : cell;
     },
   }));
 

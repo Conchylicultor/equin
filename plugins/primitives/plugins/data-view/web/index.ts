@@ -98,7 +98,7 @@ export type { ResolvedCover } from "./internal/cover";
 export { cardFieldsOf, drawnFields } from "./internal/card-fields";
 export type { CardFields } from "./internal/card-fields";
 export { usePlacement, useResolveFieldKind } from "./internal/use-placement";
-export { dropOrderOf, fieldAlign } from "./internal/placement";
+export { dropOrderOf, fieldAlign, wearsTimeInk } from "./internal/placement";
 export type { Placement, PlacedSlots } from "./internal/placement";
 export { SubtitleRun, drawnSubtitleTerms } from "./components/subtitle-run";
 export {

@@ -16,6 +16,7 @@ import {
   drawnFields,
   dropOrderOf,
   fieldAlign,
+  wearsTimeInk,
   resolveCover,
   SectionBody,
   useDataViewSections,
@@ -283,6 +284,13 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
             resolveEditor={resolveEditor}
           />
         );
+      // The edge and every time wear the time ink, as in a list row.
+      if (
+        f.id !== primaryFieldId &&
+        wearsTimeInk(f, slotOf.get(f.id)!, placement)
+      ) {
+        return <span className="text-list-time-ink">{cell}</span>;
+      }
       const count =
         f.id === primaryFieldId ? aggregateCountByRow.get(row) : undefined;
       if (!count) return cell;

@@ -253,6 +253,21 @@ export function fieldAlign<TRow>(
 }
 
 /**
+ * Whether a drawn value wears the faint time ink (`listTimeInk`): the row's
+ * `edge`, and every `instant` wherever it lands — so a row's times read alike
+ * however many it has (a second instant falls to `trail`), in a list row and a
+ * table column alike. The title is never faint.
+ */
+export function wearsTimeInk<TRow>(
+  field: FieldDef<TRow>,
+  slot: Slot,
+  placement: Placement<TRow>,
+): boolean {
+  if (slot === "title") return false;
+  return slot === "edge" || placement.kinds.get(field.id) === "instant";
+}
+
+/**
  * A field's drop order (lower drops first) — the reverse of its priority, for
  * the fields a view lets give way (`trail` and `edge`); `undefined` for the
  * rest (`lead`, `title` and the title cell's own lines never drop).

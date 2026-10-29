@@ -638,7 +638,8 @@ export const dataViewGroup = defineTokenGroup("data-view", {
   },
   // ── List rows ──────────────────────────────────────────────────────────
   // The gap between a list row's aligned trailing slots, and the ink of a
-  // time-typed trailing value.
+  // row's times — its `edge` and every instant (data-view's `wearsTimeInk`),
+  // in a list row and a table column alike.
   listSlotGap: { default: "var(--space-md)", label: "List slot gap" },
   listTimeInk: {
     default: "var(--faint-foreground)",

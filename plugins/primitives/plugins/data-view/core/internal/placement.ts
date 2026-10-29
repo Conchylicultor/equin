@@ -88,6 +88,11 @@ const TRAIL_REST = [
  *
  * - `record` (the default) — identity → title, state → lead, instant → edge,
  *   prose / identifier → line 2, the rest trailing.
+ *
+ * Only the first state leads; every other one TRAILS (never `afterTitle`,
+ * outside `log`): a coloured enum — a priority, a category — is a state too,
+ * and drawn after a title of varying length it lands at a different x on
+ * every row. `afterTitle` is for a surface's own pins (a problem badge).
  * - `log` — the time leads, the identity is the title, no line 2.
  * - `timeline` — state leads; time, person and prose on line 2.
  * - `inbox` — a person is the title, the identity drops to line 2.
@@ -98,7 +103,6 @@ export const RECIPES = {
     ["identity", "title"],
     ["state", "lead"],
     ["visual", "lead"],
-    ["state", "afterTitle"],
     ["flag", "afterTitle"],
     ["instant", "edge"],
     ["prose", "line2"],
@@ -140,7 +144,7 @@ export const RECIPES = {
     ["duration", "trail"],
     ["path", "trail"],
     ["instant", "hidden"],
-    ["state", "afterTitle"],
+    ["state", "trail"],
   ],
   inbox: [
     ["person", "title"],
@@ -159,7 +163,7 @@ export const RECIPES = {
     ["path", "trail"],
     ["person", "trail"],
     ["instant", "hidden"],
-    ["state", "afterTitle"],
+    ["state", "trail"],
   ],
   ledger: [
     ["state", "lead"],
@@ -175,7 +179,7 @@ export const RECIPES = {
     ["duration", "trail"],
     ["path", "trail"],
     ["visual", "lead"],
-    ["state", "afterTitle"],
+    ["state", "trail"],
     ["instant", "hidden"],
   ],
 } as const satisfies Record<string, readonly RecipeRule[]>;

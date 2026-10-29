@@ -56,14 +56,22 @@ const ROW: Row = { id: "1", name: "alpha", glyph: "★", note: "memo" };
 
 function renderTable(
   fields: FieldDef<Row>[],
-  opts: { properties?: string[]; lead?: boolean } = {},
+  opts: {
+    properties?: string[];
+    lead?: boolean;
+    place?: Record<string, "afterTitle" | "line2">;
+  } = {},
 ) {
   const props: DataViewRenderProps<Row> = {
     revealSelection: true,
-    placement:
-      opts.lead !== false && fields.some((f) => f.id === "avatar")
-        ? { place: { avatar: "lead" } }
-        : {},
+    placement: {
+      place: {
+        ...(opts.lead !== false && fields.some((f) => f.id === "avatar")
+          ? { avatar: "lead" as const }
+          : {}),
+        ...opts.place,
+      },
+    },
     rows: [ROW],
     fields,
     rowKey: (r) => r.id,
@@ -151,4 +159,19 @@ describe("data-view nested table lead field", () => {
     });
     expect(queryByTestId("spec-cell")).toBeNull();
   });
+
+  it.each(["afterTitle", "line2"] as const)(
+    "a field placed in %s is its own aligned column, never inline after the label",
+    (slot) => {
+      // A tree row is one line: a mark drawn after a label of varying length
+      // would sit at a different x on every row.
+      const { getByText } = renderTable([name, note], {
+        place: { note: slot },
+      });
+      const cellOf = (text: string) =>
+        getByText(text).closest('[role="gridcell"]');
+      expect(cellOf("memo")).not.toBeNull();
+      expect(cellOf("memo")).not.toBe(cellOf("alpha"));
+    },
+  );
 });

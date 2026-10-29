@@ -40,6 +40,7 @@ import {
   useIsChipField,
   useItemActionZones,
   usePlacement,
+  wearsTimeInk,
   useResolveCell,
   useResolveCellEditor,
   useResolveOperatorSet,
@@ -184,8 +185,8 @@ interface ListRowConfig {
   trailingFields: FieldDef<unknown>[];
   /** Per trailing field: its slot's ref (measuring it for the column width),
    *  whether it presents as a chip (a chip starts its slot, anything else ends
-   *  it), and whether it is the edge (drawn in the faint `listTimeInk`). */
-  trailingSlots: { ref: SlotRef; chip: boolean; edge: boolean }[];
+   *  it), and whether it wears the faint time ink (`wearsTimeInk`). */
+  trailingSlots: { ref: SlotRef; chip: boolean; timeInk: boolean }[];
   /** Which terms of the row's run are chips (resolved once, per schema). */
   titleIsChip: boolean;
   subtitleIsChip: boolean[];
@@ -428,12 +429,14 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       afterTitleFields: [...slots.afterTitle],
       subtitleFields,
       trailingFields,
-      trailingEdge: trailingFields.map((f) => slots.edge.includes(f)),
+      trailingTimeInk: trailingFields.map((f) =>
+        wearsTimeInk(f, slots.edge.includes(f) ? "edge" : "trail", placement),
+      ),
       // What the view's presentation may elide: the row's terms, never its
       // title, its marks or its lead (the row's identity).
       elisionFields: [...subtitleFields, ...trailingFields],
     };
-  }, [layout]);
+  }, [layout, placement]);
   // A row is two lines when its placement puts anything on line 2 (prose, an
   // identifier under a record's title), one otherwise; a surface may pin
   // either (`ListViewOptions.lines`).
@@ -448,7 +451,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       terms.trailingFields.map((f, i) => ({
         ref: slotRef(i),
         chip: isChipField(f),
-        edge: terms.trailingEdge[i]!,
+        timeInk: terms.trailingTimeInk[i]!,
       })),
     [terms, slotRef, isChipField],
   );
@@ -784,7 +787,8 @@ function ListCaptions({
  * that slot has been on any row (`useSlotWidths`, a CSS variable on the list
  * root), so the columns line up down the list though a list has no columns. A
  * chip starts its slot, any other value ends it; the edge field (the row's
- * far right, always last) wears the `listTimeInk`. An elided value draws
+ * far right, always last) and every time wear the `listTimeInk`
+ * (`wearsTimeInk`). An elided value draws
  * nothing and its slot keeps its width.
  */
 function TrailingSlots({
@@ -806,7 +810,7 @@ function TrailingSlots({
         align="center"
         justify={slot.chip ? "start" : "end"}
         data-list-slot={field.id}
-        className={cn(rigidClass(), slot.edge && "text-list-time-ink")}
+        className={cn(rigidClass(), slot.timeInk && "text-list-time-ink")}
         style={{ minWidth: `var(${slotWidthVar(i)})` }}
       >
         {children(field)}
