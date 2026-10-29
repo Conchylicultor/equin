@@ -222,16 +222,17 @@ await withBrowser(async (h) => {
   await dismiss(page);
   // The document is on the content host (another origin): read through
   // Playwright's frame, never the parent's `contentDocument`.
-  const whole = await waitFor(async () => {
-    const iframe = screen(page, "A").locator("iframe:not([aria-hidden])");
-    const frame = Number(await iframe.getAttribute("height"));
-    const content = await (await iframe.elementHandle())?.contentFrame();
-    const doc =
-      (await content?.evaluate(
-        () => document.documentElement.scrollHeight,
-      )) ?? -1;
-    return { frame, doc };
-  },
+  const whole = await waitFor(
+    async () => {
+      const iframe = screen(page, "A").locator("iframe:not([aria-hidden])");
+      const frame = Number(await iframe.getAttribute("height"));
+      const content = await (await iframe.elementHandle())?.contentFrame();
+      const doc =
+        (await content?.evaluate(
+          () => document.documentElement.scrollHeight,
+        )) ?? -1;
+      return { frame, doc };
+    },
     (v) => v.frame >= 844 && v.doc > 0 && v.doc <= v.frame,
     { timeoutMs: 10_000 },
   );
