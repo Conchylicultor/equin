@@ -10,9 +10,10 @@ import { pickHostEnv } from "@plugins/infra/plugins/launcher/core";
 
 // Every Claude Code session a backend opens — an agent, a one-shot generation,
 // a probe — is opened here, through the Agent SDK, on an account chosen by its
-// caller. Nothing drives the `claude` binary by hand (argv flags, stdout
+// caller, running the Claude Code build the SDK ships (never the computer's
+// own install). Nothing drives the `claude` binary by hand (argv flags, stdout
 // scraping): the `claude-sdk` lint rules reject a direct `query()` and a spawn
-// of the resolved binary anywhere else.
+// of the bundled binary anywhere else.
 
 declare const sessionEnvBrand: unique symbol;
 
@@ -41,14 +42,22 @@ export async function claudeSessionEnv(
 ): Promise<ClaudeSessionEnv> {
   const credential = await claudeAccountCredential(account);
   const env = credential ? claudeCredentialEnv(base, credential) : { ...base };
+  // The build is the one bun.lock pins (the SDK's bundled Claude Code): it
+  // changes only when an SDK upgrade lands through build, never on its own.
+  env.DISABLE_AUTOUPDATER = "1";
   return env as ClaudeSessionEnv;
 }
 
 export interface ClaudeQueryInput {
   /** From {@link claudeSessionEnv}: which account, under which environment. */
   env: ClaudeSessionEnv;
-  /** The Claude Code executable (`requireClaudeBin()`, or a named hardlink to it). */
-  bin: string;
+  /**
+   * The Claude Code executable. Left out — every caller but one — the SDK runs
+   * its own bundled build, the one bun.lock pins. Named only by the sdk
+   * runtime's agent: `bundledClaudeBin()` (`claude-cli/sdk/machine`) or a
+   * hardlink to it, so its macOS prompts name the conversation.
+   */
+  bin?: string;
   prompt: string | AsyncIterable<SDKUserMessage>;
   options: Omit<Options, "env" | "pathToClaudeCodeExecutable">;
 }
@@ -62,6 +71,10 @@ export function claudeQuery({
 }: ClaudeQueryInput): Query {
   return query({
     prompt,
-    options: { ...options, env, pathToClaudeCodeExecutable: bin },
+    options: {
+      ...options,
+      env,
+      ...(bin === undefined ? {} : { pathToClaudeCodeExecutable: bin }),
+    },
   });
 }

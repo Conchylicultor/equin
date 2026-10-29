@@ -283,7 +283,7 @@ to reconcile them; they never needed reconciling.
     - `ui/tokens/type-scale` ×37
     - `ui/tokens/color-palette` ×6
     - `ui/tokens/font-family` ×2
-  - Imported by: 407 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 408 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×112
     - `conversations` ×74
     - `primitives` ×45
@@ -293,7 +293,7 @@ to reconcile them; they never needed reconciling.
     - `plugin-meta` ×15
     - `tasks` ×14
     - `fields` ×11
-    - `infra` ×6
+    - `infra` ×7
     - `stats` ×6
     - `build` ×5
     - `auth` ×4

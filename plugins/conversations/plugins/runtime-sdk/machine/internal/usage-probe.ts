@@ -3,10 +3,7 @@ import {
   claudeQuery,
   claudeSessionEnv,
 } from "@plugins/infra/plugins/claude-cli/plugins/sdk/server";
-import {
-  onClaudeCodeProbed,
-  requireClaudeBin,
-} from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
+import { onClaudeCodeProbed } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
 import { activeClaudeAccountId } from "@plugins/infra/plugins/claude-cli/plugins/accounts/server";
 import { implementMachine } from "@plugins/infra/plugins/endpoints/machine";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
@@ -46,7 +43,6 @@ async function readUsageReply(accountId: string): Promise<unknown> {
   // system account is Claude Code's own sign-in).
   const session = claudeQuery({
     env: await claudeSessionEnv(accountId),
-    bin: requireClaudeBin(),
     prompt: noPrompt(),
     options: {
       cwd: tmpdir(),
@@ -96,8 +92,8 @@ export const handleRefreshClaudeUsage = implementMachine(
 
 /**
  * Every fresh Claude Code probe — Check again, a launch's re-check, a sign-in
- * noticed — also re-reads the active account's limits: a `claude auth login`
- * as someone else changes whose limits the computer's own account has, and
+ * noticed — also re-reads the active account's limits: signing in as someone
+ * else changes whose limits the computer's own account has, and
  * announces nothing else. Push-based: it rides the probes the app already makes.
  */
 let unsubscribe: (() => void) | null = null;

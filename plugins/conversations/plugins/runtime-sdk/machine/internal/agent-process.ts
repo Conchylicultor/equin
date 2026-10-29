@@ -30,9 +30,11 @@ import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
 import { PGREP, PS } from "@plugins/infra/plugins/paths/server";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { backgroundPrefix } from "@plugins/packages/plugins/spawn-priority/server";
+import { bundledClaudeBin } from "@plugins/infra/plugins/claude-cli/plugins/sdk/machine";
 import {
   AgentLaunchOptionsSchema,
   launchAccount,
+  type AgentLaunchIntent,
   type AgentLaunchOptions,
 } from "../../core";
 import { liveAgentIds } from "./agent-processes";
@@ -142,14 +144,15 @@ export function readAgentOptions(id: string): AgentLaunchOptions {
 
 /**
  * Start the agent process for `id` with `options`, written here as its
- * options file — with this start's own `disclaimExec` (whatever `options`
- * carried from a previous launch is replaced). Its stdout and stderr (the
+ * options file — with this start's own `claudeBin` (the Agent SDK's bundled
+ * build), `disclaimExec` and named hardlink (whatever `options` carried from a
+ * previous launch is replaced). Its stdout and stderr (the
  * human log, the SDK's and the CLI's warnings, a crash before the first event)
  * append to `agent.log`.
  */
 export async function startAgentProcess(
   id: string,
-  options: AgentLaunchOptions,
+  intent: AgentLaunchIntent,
 ): Promise<StartedAgent> {
   // At most one agent per conversation. A caller launches only when no agent
   // answers its socket, so a live predecessor here is one whose exit stalled
@@ -164,21 +167,21 @@ export async function startAgentProcess(
     });
   }
   mkdirSync(agentDir(id), { recursive: true });
+  const claudeBin = bundledClaudeBin();
   const disclaimExec = await resolveDisclaimExec(id);
   const namedClaude = await namedClaudeBin({
     conversationId: id,
-    claudeBin: options.claudeBin,
+    claudeBin,
     disclaimExec,
     previous: previousNamedClaudeBin(id),
   });
-  writeFileSync(
-    agentOptionsPath(id),
-    JSON.stringify(
-      { ...options, disclaimExec, namedClaudeBin: namedClaude },
-      null,
-      2,
-    ),
-  );
+  const options: AgentLaunchOptions = {
+    ...intent,
+    claudeBin,
+    disclaimExec,
+    namedClaudeBin: namedClaude,
+  };
+  writeFileSync(agentOptionsPath(id), JSON.stringify(options, null, 2));
   const account = chooseLaunchAccount();
   const command =
     backgroundPrefix() +

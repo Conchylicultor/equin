@@ -188,7 +188,7 @@ the scroll plugin's CLAUDE.md and the `css:no-unanchored-has` check).
     - `ui/tokens/type-scale --font-size-caption`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-caption`
-  - Imported by: 57 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 58 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×14
     - `ui` ×12
     - `apps` ×11
@@ -198,6 +198,7 @@ the scroll plugin's CLAUDE.md and the `css:no-unanchored-has` check).
     - `auth`
     - `code-explorer/commit-detail`
     - `debug/read-set`
+    - `infra/claude-cli/sign-in`
     - `reorder/node-types/header`
     - `shell/health-report`
 - Core:

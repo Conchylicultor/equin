@@ -14,9 +14,10 @@ import {
   selectClaudeAccount,
   setClaudeAccountAutoSwitch,
   SYSTEM_ACCOUNT_ID,
+  CLAUDE_CREDENTIALS,
   type ClaudeAccounts,
-  type ClaudeCredentialKind,
 } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
+import { AddClaudeAccountSignIn } from "@plugins/infra/plugins/claude-cli/plugins/sign-in/web";
 import type { ClaudeCodeStatus } from "@plugins/infra/plugins/claude-cli/plugins/availability/core";
 import { useConfigResult, useSetConfig } from "@plugins/config_v2/web";
 import { Avatar } from "@plugins/primitives/plugins/avatar/web";
@@ -33,13 +34,16 @@ import {
   Button,
   cn,
   ControlSizeProvider,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
   Input,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import {
   StepAction,
   StepActions,
-  StepCommand,
   StepLink,
   StepNote,
 } from "@plugins/primitives/plugins/setup-steps/web";
@@ -69,6 +73,8 @@ import { ErrorStoppedBanner } from "./error-stopped";
 // the plan's monthly API credit), and auto-switch uses it only as overflow.
 
 const addIcon = symbol("add");
+const personIcon = symbol("person");
+const keyIcon = symbol("key");
 const removeIcon = symbol("close");
 
 const percent = (fraction: number) => `${Math.round(fraction * 100)}%`;
@@ -100,7 +106,7 @@ function accountViews(
     ...accounts.accounts.map((a) => ({
       id: a.id,
       name: a.name,
-      detail: a.kind === "api-key" ? "API key" : "Token",
+      detail: a.kind === "api-key" ? "API key" : "Plan sign-in",
       metered: a.kind === "api-key",
     })),
   ];
@@ -233,62 +239,45 @@ function LimitBanner({
 const PLAN_BILLING_URL = "https://claude.ai/settings/billing";
 const CONSOLE_KEYS_URL = "https://platform.claude.com/settings/keys";
 
-/** The steps that produce a credential of `kind`, ending at its paste box. */
-function CredentialSteps({
-  kind,
-  input,
-}: {
-  kind: ClaudeCredentialKind;
-  input: ReactNode;
-}) {
-  switch (kind) {
-    case "token":
-      return (
-        <StepActions>
-          <StepAction
-            detail={
-              <StepCommand text="claude setup-token" title="Copy command" />
-            }
-          >
-            Sign in to the other account in a terminal
-          </StepAction>
-          <StepAction detail={input}>Paste the token it prints</StepAction>
-        </StepActions>
-      );
-    case "api-key":
-      return (
-        <StepActions>
-          <StepAction
-            detail={<StepLink href={PLAN_BILLING_URL} label="Open billing" />}
-          >
-            On a Max or Team plan, claim its monthly API credit: link a Console
-            organization under API credits
-          </StepAction>
-          <StepAction
-            detail={<StepLink href={CONSOLE_KEYS_URL} label="Open API keys" />}
-          >
-            Create an API key in that organization
-          </StepAction>
-          <StepAction detail={input}>Paste the key</StepAction>
-        </StepActions>
-      );
-  }
+/** The steps that produce an API key, ending at its paste box. */
+function ApiKeySteps({ input }: { input: ReactNode }) {
+  return (
+    <StepActions>
+      <StepAction
+        detail={<StepLink href={PLAN_BILLING_URL} label="Open billing" />}
+      >
+        On a Max or Team plan, claim its monthly API credit: link a Console
+        organization under API credits
+      </StepAction>
+      <StepAction
+        detail={<StepLink href={CONSOLE_KEYS_URL} label="Open API keys" />}
+      >
+        Create an API key in that organization
+      </StepAction>
+      <StepAction detail={input}>Paste the key</StepAction>
+    </StepActions>
+  );
 }
 
-/** Add an account of `kind`: get its credential, then paste it with a name. */
-function AddAccountForm({
-  kind,
+const API_KEY_PREFIX = CLAUDE_CREDENTIALS["api-key"].prefix;
+
+/**
+ * Add an API key: get one from the Console, then paste it with a name. A plan
+ * account is signed in to instead (`AddClaudeAccountSignIn`), never pasted.
+ */
+function AddApiKeyForm({
   onAdded,
   onCancel,
 }: {
-  kind: ClaudeCredentialKind;
-  onAdded: (id: string, metered: boolean) => void;
+  onAdded: (id: string) => void;
   onCancel: () => void;
 }) {
   const [credential, setCredential] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const fetchEndpoint = useFetchEndpoint();
+  const key = credential.trim();
+  const notAKey = key !== "" && !key.startsWith(API_KEY_PREFIX);
   const add = async () => {
     setError(null);
     let added;
@@ -296,7 +285,7 @@ function AddAccountForm({
       added = await fetchEndpoint(
         addClaudeAccount,
         {},
-        { body: { name: name.trim(), credential: credential.trim() } },
+        { body: { name: name.trim(), credential: key } },
       );
     } catch (err) {
       // A refused credential or name is the user's to fix: shown under the form.
@@ -306,39 +295,33 @@ function AddAccountForm({
     }
     // The form renders only where the account endpoints are available.
     if (added.kind !== "ok") throw new Error(added.message);
-    onAdded(added.value.id, added.value.kind === "api-key");
+    onAdded(added.value.id);
   };
   return (
     <Stack gap="sm" className="rounded-md border p-sm">
-      <CredentialSteps
-        kind={kind}
+      <ApiKeySteps
         input={
           <Stack gap="xs">
             <Input
+              autoFocus
+              placeholder="Name — e.g. API credit"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <Input
               type="password"
               autoComplete="off"
-              placeholder={
-                kind === "api-key" ? "sk-ant-api03-…" : "sk-ant-oat01-…"
-              }
+              placeholder={`${API_KEY_PREFIX}03-…`}
               value={credential}
               onChange={(e) => setCredential(e.target.value)}
               className="font-mono"
             />
-            <Input
-              placeholder={
-                kind === "api-key"
-                  ? "Name — e.g. API credit"
-                  : "Name — e.g. Work"
-              }
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
           </Stack>
         }
       />
-      {error ? (
+      {error || notAKey ? (
         <Text variant="caption" tone="destructive">
-          {error}
+          {error ?? `Not an API key (${API_KEY_PREFIX}…)`}
         </Text>
       ) : null}
       <Line className="gap-xs">
@@ -346,11 +329,52 @@ function AddAccountForm({
         <Button variant="ghost" onClick={onCancel}>
           Cancel
         </Button>
-        <Button disabled={!credential.trim() || !name.trim()} onClick={add}>
-          {kind === "api-key" ? "Add API key" : "Add account"}
+        <Button disabled={!key || notAKey || !name.trim()} onClick={add}>
+          Add API key
         </Button>
       </Line>
     </Stack>
+  );
+}
+
+/** How an account is being added, if one is. */
+type Adding = "sign-in" | "api-key" | null;
+
+/** Add account: sign in to another Claude account, or use an API key. */
+function AddAccountMenu({
+  onPick,
+}: {
+  onPick: (how: "sign-in" | "api-key") => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={<Button variant="outline" aria-label="Add account" />}
+      >
+        <Icon icon={addIcon} />
+        Add account
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => onPick("sign-in")}>
+          <Icon icon={personIcon} />
+          <Stack gap="none">
+            <Text>Sign in to another account</Text>
+            <Text variant="caption" tone="muted">
+              Claude subscription
+            </Text>
+          </Stack>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onPick("api-key")}>
+          <Icon icon={keyIcon} />
+          <Stack gap="none">
+            <Text>Use an API key</Text>
+            <Text variant="caption" tone="muted">
+              Billed per use, no plan limits
+            </Text>
+          </Stack>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -373,7 +397,7 @@ export function ClaudeAccountsSection({
   stopped: readonly ErrorStoppedConversation[];
   now: number;
 }) {
-  const [adding, setAdding] = useState<ClaudeCredentialKind | null>(null);
+  const [adding, setAdding] = useState<Adding>(null);
   // The account this tab switched to: running agents stay where they were.
   const [switchedTo, setSwitchedTo] = useState<string | null>(null);
   // The switch shows at once; what depends on it landing (the usage read of
@@ -435,6 +459,12 @@ export function ClaudeAccountsSection({
     now,
   });
   const launchView = views.find((v) => v.id === launchId) ?? active;
+  const closeAdding = () => setAdding(null);
+  // A plan account signed in: read its limits at once.
+  const onSignedIn = (id: string) => {
+    setAdding(null);
+    readUsage(id);
+  };
   const switchTo = (id: string) =>
     selectAccount.mutate(
       { body: { id } },
@@ -464,9 +494,14 @@ export function ClaudeAccountsSection({
           now={now}
         />
         <Stack gap="2xs">
-          <Text variant="eyebrow" tone="muted">
-            Accounts
-          </Text>
+          <Line className="gap-xs">
+            <Fill>
+              <Text variant="eyebrow" tone="muted">
+                Accounts
+              </Text>
+            </Fill>
+            {adding ? null : <AddAccountMenu onPick={setAdding} />}
+          </Line>
           {/* eslint-disable-next-line data-view/no-adhoc-row-list -- a picker: the rows choose the one account new agents launch on, not a browsable collection */}
           {views.map((v) => (
             <Row
@@ -510,38 +545,17 @@ export function ClaudeAccountsSection({
               </Rigid>
             </Row>
           ))}
-          {adding ? (
-            <AddAccountForm
-              kind={adding}
-              onAdded={(id, metered) => {
-                setAdding(null);
-                if (!metered) readUsage(id);
-              }}
-              onCancel={() => setAdding(null)}
+          {adding === "sign-in" ? (
+            <AddClaudeAccountSignIn
+              onAdded={onSignedIn}
+              onClose={closeAdding}
             />
-          ) : (
-            <>
-              <Row
-                size="sm"
-                onClick={() => setAdding("token")}
-                icon={<Icon icon={addIcon} />}
-              >
-                <Text variant="caption" tone="muted">
-                  Add plan account
-                </Text>
-              </Row>
-              <Row
-                size="sm"
-                onClick={() => setAdding("api-key")}
-                icon={<Icon icon={addIcon} />}
-                title="Run agents on an API key — e.g. the monthly API credit a Max or Team plan includes"
-              >
-                <Text variant="caption" tone="muted">
-                  Add API key
-                </Text>
-              </Row>
-            </>
-          )}
+          ) : adding === "api-key" ? (
+            <AddApiKeyForm
+              onAdded={() => setAdding(null)}
+              onCancel={closeAdding}
+            />
+          ) : null}
         </Stack>
         <Line className="gap-sm">
           <Fill>

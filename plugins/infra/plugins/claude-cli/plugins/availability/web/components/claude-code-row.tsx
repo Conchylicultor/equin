@@ -9,17 +9,8 @@ import {
   foldResource,
   ResourceErrorInline,
 } from "@plugins/primitives/plugins/live-state/web";
-import {
-  Steps,
-  Step,
-  StepCommand,
-  StepNote,
-} from "@plugins/primitives/plugins/setup-steps/web";
-import {
-  CLAUDE_CODE_FIX,
-  claudeCodeProblem,
-  recheckClaudeCode,
-} from "../../core";
+import { StepNote } from "@plugins/primitives/plugins/setup-steps/web";
+import { claudeCodeProblem, recheckClaudeCode } from "../../core";
 import { useClaudeCodeStatus } from "../internal/use-claude-code";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
@@ -52,7 +43,7 @@ export function ClaudeCodeActions() {
   );
 }
 
-/** The expanded row: what is wrong, and the commands that fix it. */
+/** The expanded row: Claude Code's own note — the fix is the row's Sign in. */
 export function ClaudeCodeDetail() {
   const result = useClaudeCodeStatus();
   if (result.status === "loading") return null;
@@ -80,46 +71,23 @@ export function ClaudeCodeDetail() {
       );
     case "unreadable":
       return <StepNote>{claudeCodeProblem(s)}</StepNote>;
-    case "missing":
-      return (
-        <Steps>
-          <Step title="Install Claude Code" state="active">
-            <StepNote>Looked in {s.searched.join(", ")}.</StepNote>
-            <StepCommand
-              text={CLAUDE_CODE_FIX.install}
-              title="Copy install command"
-            />
-          </Step>
-          <Step title="Sign in" state="active">
-            <StepCommand
-              text={CLAUDE_CODE_FIX.signIn}
-              title="Copy sign-in command"
-            />
-            <StepNote>Then come back here; the app checks again.</StepNote>
-          </Step>
-        </Steps>
-      );
     case "signed-out":
+      // The fix is the row's own Sign in (`claude-cli/sign-in`): no command.
       return (
-        <Steps>
-          <Step title="Sign in to Claude Code" state="active">
-            <StepCommand
-              text={CLAUDE_CODE_FIX.signIn}
-              title="Copy sign-in command"
-            />
-            <StepNote>Then come back here; the app checks again.</StepNote>
-          </Step>
-        </Steps>
+        <StepNote>
+          Agents can't start until this computer is signed in to Claude.
+        </StepNote>
       );
   }
 }
 
 /**
  * Checks again when the user comes back to the app while Claude Code is known
- * blocked. Installing or signing in happens in a terminal, which announces
- * nothing to this machine's watchers — returning to the window is the moment
- * the user expects the app to have noticed. An event, not polling: nothing
- * runs while the window stays focused or while Claude Code is fine.
+ * blocked. A sign-in can change outside the app (a token that expired, a
+ * sign-in finished in another program), which announces nothing to this
+ * machine's watchers — returning to the window is the moment the user expects
+ * the app to have noticed. An event, not polling: nothing runs while the
+ * window stays focused or while Claude Code is fine.
  */
 export function RecheckOnReturn() {
   const result = useClaudeCodeStatus();
@@ -131,10 +99,7 @@ export function RecheckOnReturn() {
     loading: () => false,
     error: () => false,
     unavailable: () => false,
-    ready: (s) =>
-      s.kind === "missing" ||
-      s.kind === "signed-out" ||
-      s.kind === "unreadable",
+    ready: (s) => s.kind !== "ready",
   });
   useEffect(() => {
     if (!blocked) return;

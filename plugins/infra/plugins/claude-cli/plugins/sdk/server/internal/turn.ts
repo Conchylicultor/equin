@@ -46,7 +46,7 @@ async function readResult(session: Query): Promise<SDKResultMessage> {
  * result to read.
  */
 export async function runClaudeTurn(
-  input: Omit<ClaudeQueryInput, "prompt" | "options"> & {
+  input: Omit<ClaudeQueryInput, "bin" | "prompt" | "options"> & {
     prompt: string;
     options: Omit<ClaudeQueryInput["options"], "abortController">;
     timeoutMs: number;
@@ -55,7 +55,6 @@ export async function runClaudeTurn(
   const abortController = new AbortController();
   const session = claudeQuery({
     env: input.env,
-    bin: input.bin,
     prompt: input.prompt,
     options: { ...input.options, abortController },
   });

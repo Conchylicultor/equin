@@ -15,7 +15,11 @@ import { claudeAccountsServed } from "./internal/served";
 import { activeAccountFromFile } from "./internal/store";
 import { ActiveClaudeAccount } from "../server";
 
-export { readClaudeAccounts, selectClaudeAccountById } from "./internal/store";
+export {
+  addClaudeAccountWithCredential,
+  readClaudeAccounts,
+  selectClaudeAccountById,
+} from "./internal/store";
 
 export default {
   description:

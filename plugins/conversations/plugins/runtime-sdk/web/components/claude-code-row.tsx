@@ -1,5 +1,6 @@
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import { ClaudeCodeDetail } from "@plugins/infra/plugins/claude-cli/plugins/availability/web";
+import { ClaudeCodeSignInDetail } from "@plugins/infra/plugins/claude-cli/plugins/sign-in/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
@@ -40,17 +41,13 @@ function agentsLine(agents: AgentProcesses): string {
     : `${here} · ${elsewhere} in ${plural(agents.elsewhere.length, "other worktree")}`;
 }
 
-/** Claude Code, the Agent SDK and the agents, one line each. */
-function VersionLines({ claude, sdk, agents }: ClaudeCodeRowInputs) {
+/** Claude Code (the Agent SDK's bundled build) and the agents, one line each. */
+function VersionLines({ claude, agents }: ClaudeCodeRowInputs) {
   return (
     <Stack gap="none">
       {claude.kind === "ready" ? (
         <GlanceLine label="Claude Code" value={`v${claude.version}`} />
       ) : null}
-      <GlanceLine
-        label="Agent SDK"
-        value={`${sdk.sdkVersion} · built for v${sdk.cliVersion}`}
-      />
       <GlanceLine label="Agents" value={agentsLine(agents)} />
     </Stack>
   );
@@ -97,8 +94,9 @@ function AgentsElsewhere({ agents }: { agents: AgentProcesses }) {
 }
 
 /**
- * The expanded row: the Claude accounts, the versions and the agents, Claude
- * Code's own detail, then where the other agents run.
+ * The expanded row: the computer's sign-in while it runs, the Claude accounts,
+ * the versions and the agents, Claude Code's own detail, then where the other
+ * agents run.
  */
 export function ClaudeCodeRowDetail() {
   const result = useClaudeCodeRowInputs();
@@ -106,6 +104,7 @@ export function ClaudeCodeRowDetail() {
   const now = useNow(60_000);
   return (
     <Stack gap="sm">
+      <ClaudeCodeSignInDetail />
       {result.status === "ready" ? (
         <ClaudeAccountsSection
           accounts={result.data.accounts}

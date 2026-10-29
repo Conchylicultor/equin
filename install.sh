@@ -82,8 +82,7 @@ main() {
     2. install mise, and add one line to $RC so new terminals find its tools
     3. $( [ -n "$SELF_DIR" ] && echo "use the checkout at $INSTALL_DIR" || echo "clone $REPO_URL into $INSTALL_DIR" )
     4. install the exact Bun, Go and Rust releases mise.lock records
-    5. install Claude Code — agents run on it and need a Claude account to sign in
-    6. start the app (gateway + its own Postgres) and build it: ~10-15 minutes
+    5. start the app (gateway + its own Postgres) and build it: ~10-15 minutes
 EOF
   if [ "$OS" = "Darwin" ]; then
     echo "  The app then comes back by itself at every login, after a reboot too."
@@ -177,16 +176,9 @@ EOF
   "$MISE" trust
   "$MISE" install
 
-  # ── 5. Claude Code ─────────────────────────────────────────────────────────
-  claude_bin="$(command -v claude 2>/dev/null || true)"
-  [ -z "$claude_bin" ] && [ -x "$HOME/.local/bin/claude" ] && claude_bin="$HOME/.local/bin/claude"
-  if [ -z "$claude_bin" ]; then
-    say "Installing Claude Code"
-    curl -fsSL https://claude.ai/install.sh | bash
-    claude_bin="$HOME/.local/bin/claude"
-  fi
-
-  # ── 6. Start, 7. build ─────────────────────────────────────────────────────
+  # ── 5. Start, 6. build ─────────────────────────────────────────────────────
+  # No Claude Code install: the app runs the build the Agent SDK ships (with
+  # the toolchain's dependencies), and the user signs in from the app.
   say "Starting the gateway and its Postgres"
   ./equin start
 
@@ -206,22 +198,10 @@ EOF
     die "the build did not record a deploy ($STATUS). Re-run ./install.sh from $INSTALL_DIR to retry."
   fi
 
-  # ── 8. Done ────────────────────────────────────────────────────────────────
-  signed_in=0
-  case "$("$claude_bin" auth status --json 2>/dev/null || true)" in
-    *'"loggedIn": true'* | *'"loggedIn":true'*) signed_in=1 ;;
-  esac
-  if [ "$signed_in" = "0" ] && [ -r /dev/tty ] && { : </dev/tty; } 2>/dev/null; then
-    say "Sign in to Claude Code, so the app can run agents"
-    if "$claude_bin" auth login </dev/tty; then signed_in=1; fi
-  fi
-
+  # ── 7. Done ────────────────────────────────────────────────────────────────
   say "equin is running: http://equin.localhost:9000"
   echo "  Checkout: $INSTALL_DIR"
   [ "$EDIT_RC" = "1" ] && echo "  Open a new terminal to use ./equin (mise is active there)."
-  if [ "$signed_in" = "0" ]; then
-    echo "  One step left, for agents: $claude_bin auth login"
-  fi
 }
 
 say() { printf '\n\033[1m==> %s\033[0m\n' "$*"; }

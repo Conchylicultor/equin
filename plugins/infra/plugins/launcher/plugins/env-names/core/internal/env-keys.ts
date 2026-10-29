@@ -50,8 +50,6 @@ export const RUNTIME_FORWARDED_ENV = {
     "the vendored git-layer config tree for a compiled backend (paths/core repoConfigDir())",
   WEB_DIST:
     "the release's vendored web bundle, which the backend reads its build pins from (paths/core webDistDir())",
-  CLAUDE_BIN:
-    "where the backend finds the claude CLI (infra/paths/server bins.ts)",
   PROFILING:
     "operator kill-switch for the runtime profiler (infra/runtime-profiler/core recorder.ts)",
   NO_SPAWN_PRIORITY:

@@ -20,26 +20,16 @@ shim resolving (a symlink loop or a missing target is named with
 `mise reshim --force`); shims NOT installing tools on first use
 (`not_found_auto_install` off — `mise run setup` sets it); the
 locked toolchain installed (`mise install --dry-run-code`, tools named by
-`mise ls --missing`); Claude Code installed (same lookup as `resolveClaudeBin()` in
-`infra/paths/server/internal/bins.ts`, kept in step by `doctor.test.ts`) and
-signed in (`claude auth status --json`).
+`mise ls --missing`). Every one is a `miss` and fails the run.
 
-Claude Code is **recommended, not required**: `advise` names it with its fix,
-but the doctor still exits 0. Nothing that stands the app up (`start`, `build`)
-uses it, and the app gates each real use itself (below) — so gating on it here
-would only stop a new user from seeing the app before they have an account,
-and make the one-command installer (`install.sh`) wait on a browser sign-in.
-Everything else is a `miss` and fails the run.
+Claude Code is **not** checked: the app runs the build the Agent SDK ships
+(installed with the dependencies, after the doctor runs), and the user signs in
+from the app (`infra/claude-cli/plugins/sign-in`).
 
 It asks only "is it there". Which release — floors, holds, something shadowing
 mise — is `toolchain:resolved`'s job (`plugins/toolchain`). The tool list is
 mise's, read from `mise.toml` + `mise.lock`, so adding a tool there needs no
 change here.
-
-The running app asks the Claude Code half again on its own — sign-outs and
-uninstalls happen between builds — through `infra/claude-cli/plugins/availability`
-(the health report's Claude Code row, and a refusal with the fix before any
-launch).
 
 The two shim checks come from one incident (2026-09-27): an agent ran `bun` in
 a cloned third-party repo pinning another Bun, the shim installed it, and the

@@ -128,13 +128,17 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   Design: [`research/2026-10-20-conversations-token-streaming.md`](../../../../research/2026-10-20-conversations-token-streaming.md);
   every block (thinking, text, tool input) since
   [`research/2026-10-21-conversations-stream-every-block.md`](../../../../research/2026-10-21-conversations-stream-every-block.md).
-- `web/` — the health report's Claude Code row: Claude Code (its own verdict),
-  the Agent SDK's version drift, and the agents running here and elsewhere
+- `web/` — the health report's Claude Code row: Claude Code (its own verdict,
+  with the in-app sign-in from `infra/claude-cli/sign-in` — the row's Sign in
+  remedy, the run's panel heading the detail, "Signing in…" while it runs),
+  and the agents running here and elsewhere
   (each other worktree as its task's chip, in the expanded detail), the
   active Claude account's usage limits as meters (glance: the week collapsed,
   the session too expanded; the row is `attention` while its limit is
   reached), and the account picker (`components/claude-accounts.tsx`: every
-  account with its weekly room, add / remove / switch, auto-switch, a
+  account with its weekly room, Add account — sign in to another account in
+  the app (`AddClaudeAccountSignIn`) or use an API key —, remove / switch,
+  auto-switch, a
   "Continue on …" banner when the active account is limited).
 - Claude accounts (`infra/claude-cli/accounts` owns the list and the tokens):
   `machine/internal/agent-process.ts` picks the launch account at every agent
@@ -159,13 +163,18 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   the same file (`writeClaudeUsageFile`, beside the reader).
   Triggered by `POST /api/claude-usage/refresh` (the account picker, after
   adding or picking an account) and by every fresh Claude Code probe (Check
-  again, a launch's re-check) for the active account — a `claude auth login`
-  as someone else changes the system account's limits and announces nothing
+  again, a launch's re-check) for the active account — signing in as someone
+  else changes the system account's limits and announces nothing
   else. A reply without plan limits (an API key, a token without the profile
   scope) is `unavailable`, shown as such, never written. The SDK method is
   experimental (`usage_EXPERIMENTAL_…`): an SDK bump that renames it fails
   tsc. Design: [`research/2026-10-22-conversations-claude-usage-on-demand.md`](../../../../research/2026-10-22-conversations-claude-usage-on-demand.md).
 
+- Which Claude Code: the build the Agent SDK ships (`bundledClaudeBin()`,
+  `infra/claude-cli/sdk`), resolved by `startAgentProcess` at every start —
+  `claudeBin` in launch.json is never carried over, so a relaunch from an
+  options file written for the computer's own `claude` moves onto it. The
+  computer's install is never run.
 - macOS permission prompts (`machine/internal/named-claude.ts`): with
   disclaim-exec (packages/spawn-disclaim) claude is its own responsible
   process, and a prompt names its executable file. Each start hardlinks
@@ -175,7 +184,7 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   own; the name is chosen at its first start and kept across relaunches
   (read back from the previous launch.json), relinked to the current binary
   each start, and removed by the agent on exit (a kept link would pin a
-  deleted Claude version).
+  replaced binary).
 
 Gotchas the spike hit:
 
@@ -191,16 +200,17 @@ Gotchas the spike hit:
 
 ## Plugin reference
 
-- Description: The health report's Claude Code row: Claude Code itself (critical while missing or signed out, with the install / sign-in commands and Check again), attention when it differs in major.minor from the CLI version the pinned Agent SDK was built for, the agent processes running — here, and in every other worktree (each as its task's chip) — the active Claude account's usage limits as meters (the week collapsed, the session too expanded; attention while its limit is reached), and the Claude account picker (each account's weekly room, add / remove / switch, auto-switch, auto-resume when a limit resets, Continue on another account when the active one is limited). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and its rewind anchor), the pure event reducer, and the mapping of a launch onto the agent's options file; the runtime-sdk.error-stopped collection (active conversations whose agent's turn an API error stopped — a usage limit, a server error, a lost connection — with the CLI's kind of failure); the auto-resume setting (Resume agents when their usage limit resets).
+- Description: The health report's Claude Code row: Claude Code itself (critical while the computer is signed out, with the in-app Sign in — claude-cli/sign-in, 'Signing in…' while it runs — and Check again), the agent processes running — here, and in every other worktree (each as its task's chip) — the active Claude account's usage limits as meters (the week collapsed, the session too expanded; attention while its limit is reached), and the Claude account picker (each account's weekly room, add — signing in to another account in the app, or an API key — / remove / switch, auto-switch, auto-resume when a limit resets, Continue on another account when the active one is limited). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and its rewind anchor), the pure event reducer, and the mapping of a launch onto the agent's options file; the runtime-sdk.error-stopped collection (active conversations whose agent's turn an API error stopped — a usage limit, a server error, a lost connection — with the CLI's kind of failure); the auto-resume setting (Resume agents when their usage limit resets).
 - Web:
   - Contributes:
     - `HealthReport.Row` "Claude Code" → `ClaudeCodeRowDetail`
     - `ConfigV2.WebRegister` "runtime-sdk-auto-resume"
-  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/setup-steps` ×5
+  - Uses: 51 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×8
     - `infra/claude-cli/availability` ×4
+    - `infra/claude-cli/sign-in` ×4
     - `infra/endpoints` ×4
-    - `primitives/css/ui-kit` ×4
+    - `primitives/setup-steps` ×4
     - `config_v2` ×3
     - `primitives/data-view` ×3
     - `network/live` ×2
@@ -225,7 +235,6 @@ Gotchas the spike hit:
 - Server:
   - Contributes:
     - `resource.declare` "runtime-sdk.agent-processes"
-    - `resource.declare` "runtime-sdk.bundled-cli"
     - `resource.declare` "runtime-sdk.claude-usage"
     - `resource.declare` "runtime-sdk.error-stopped"
     - `resource.declare` "runtime-sdk.error-stopped:groups"
@@ -251,7 +260,6 @@ Gotchas the spike hit:
   - Entity extension of: `tasks/tasks-core` (table `conversations_ext_sdk_agent`)
   - Resources:
     - `runtime-sdk.agent-processes` (push, notified, whole: one entry per namespace on this machine with a live agent — at most its worktrees)
-    - `runtime-sdk.bundled-cli` (push, fixed)
     - `runtime-sdk.claude-usage` (push, notified, whole: one entry per Claude account signed in on this machine — a handful)
     - `runtime-sdk.error-stopped` (keyed, window)
     - `runtime-sdk.error-stopped:groups` (push)
@@ -264,6 +272,7 @@ Gotchas the spike hit:
     - `conversations/stop-gate.stopGateHookEntry`
     - `infra/claude-cli/accounts.readClaudeAccounts`
     - `infra/claude-cli/accounts.selectClaudeAccountById`
+    - `infra/claude-cli/sdk.bundledClaudeBin`
     - `infra/endpoints.implementMachine`
     - `network/live.serveValue`
   - Register:
@@ -292,6 +301,7 @@ Gotchas the spike hit:
     - `AgentAnswer`
     - `AgentCommand`
     - `AgentEvent`
+    - `AgentLaunchIntent`
     - `AgentLaunchOptions`
     - `AgentLaunchPrompt`
     - `AgentLifecycle`
@@ -351,9 +361,7 @@ Gotchas the spike hit:
     - `resumeStoppedConversations`
     - `ResumeStoppedResultSchema`
     - `roomiestAccount`
-    - `sameMajorMinor`
     - `sdkAgentProcesses`
-    - `sdkBundledCli`
     - `stopErrorLabel`
     - `SubscribeReplySchema`
     - `TurnReplySchema`

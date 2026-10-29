@@ -1,9 +1,9 @@
 #!/bin/sh
 # equin's prerequisite check: names EVERY missing prerequisite in one run,
-# each with the command that fixes it, then exits 1 if anything REQUIRED was
-# missing. A recommended one (Claude Code) is named with its fix too, but does
-# not fail the run: nothing that stands the app up uses it, and the running app
-# refuses each use of it with the same fix (infra/claude-cli/availability).
+# each with the command that fixes it, then exits 1 if anything was missing.
+# Claude Code is not one: the app runs the build the Agent SDK ships (installed
+# with its dependencies) and the user signs in from the app
+# (infra/claude-cli/sign-in).
 #
 # POSIX sh on purpose: its most important case is Bun itself missing, where no
 # TypeScript can run. Run it from the checkout it checks (the cwd is the
@@ -17,12 +17,10 @@
 # mise.lock through mise, so adding a tool there needs no change here.
 #
 # Probes are builtins plus the tools being checked (id, uname, xcode-select,
-# git, mise, claude), so the test can stub every one of them on PATH.
+# git, mise), so the test can stub every one of them on PATH.
 
 missing=0
 report=""
-advised=0
-advice=""
 
 # miss <what> <why> <fix...>
 miss() {
@@ -33,19 +31,6 @@ miss() {
   shift 2
   for fix in "$@"; do
     report="$report
-      \$ $fix"
-  done
-}
-
-# advise <what> <why> <fix...> — named with its fix, but not counted as missing.
-advise() {
-  advised=$((advised + 1))
-  advice="$advice
-  ! $1
-      $2"
-  shift 2
-  for fix in "$@"; do
-    advice="$advice
       \$ $fix"
   done
 }
@@ -142,42 +127,11 @@ else
   fi
 fi
 
-# ── Claude Code, signed in (recommended) ────────────────────────────────────
-# Advice, not a requirement: the app builds and runs without it, and agents
-# are the one thing that needs it — the app says so where they are launched.
-# The same lookup order as resolveClaudeBin() in plugins/infra/plugins/paths/server/internal/bins.ts
-# (doctor.test.ts keeps the candidate paths in step).
-claude_bin="${EQUIN_CLAUDE_BIN:-$(command -v claude 2>/dev/null)}"
-if [ -z "$claude_bin" ]; then
-  for candidate in "$HOME/.local/bin/claude" "/opt/homebrew/bin/claude" "/usr/local/bin/claude"; do
-    if [ -x "$candidate" ]; then claude_bin="$candidate"; break; fi
-  done
-fi
-
-if [ -z "$claude_bin" ]; then
-  advise "Claude Code" "Every agent the app launches runs on it; until then the app runs without agents." \
-    "curl -fsSL https://claude.ai/install.sh | bash" "claude auth login"
-else
-  case "$("$claude_bin" auth status --json 2>/dev/null)" in
-    *'"loggedIn": true'* | *'"loggedIn":true'*) ;;
-    *) advise "Claude Code is not signed in" "Agents cannot start without an account; the app runs without them." \
-      "claude auth login" ;;
-  esac
-fi
-
-if [ "$advised" -gt 0 ]; then
-  recommended="
-
-$advised recommended:$advice"
-else
-  recommended=""
-fi
-
 if [ "$missing" -eq 0 ]; then
-  echo "equin prerequisites: all required present.$recommended"
+  echo "equin prerequisites: all present."
   exit 0
 fi
-echo "equin prerequisites: $missing missing.$report$recommended
+echo "equin prerequisites: $missing missing.$report
 
 Setup, in order: docs/setup.md"
 exit 1

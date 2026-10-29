@@ -3,13 +3,11 @@ import {
   chmodSync,
   mkdirSync,
   mkdtempSync,
-  readFileSync,
   rmSync,
   symlinkSync,
   writeFileSync,
 } from "fs";
 import { tmpdir } from "os";
-import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { join } from "path";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
@@ -51,7 +49,6 @@ function healthy(m: Machine): void {
   stub(m.bin, "xcode-select", "echo /Library/Developer/CommandLineTools");
   stub(m.bin, "git", "echo 'git version 2.50.0'");
   stub(m.bin, "mise", "exit 0");
-  stub(m.bin, "claude", `echo '{ "loggedIn": true }'`);
 }
 
 async function doctor(m: Machine, path: string[] = [m.bin, m.shims]) {
@@ -73,8 +70,7 @@ describe("doctor.sh", () => {
     const m = machine();
     healthy(m);
     const { code, out } = await doctor(m);
-    expect(out).toContain("all required present");
-    expect(out).not.toContain("recommended");
+    expect(out).toContain("all present");
     expect(code).toBe(0);
   });
 
@@ -82,15 +78,14 @@ describe("doctor.sh", () => {
     const m = machine();
     stub(m.bin, "id", "echo 501");
     stub(m.bin, "uname", "echo Darwin");
-    // No xcode-select success, no mise, no claude.
+    // No xcode-select success, no mise.
     stub(m.bin, "xcode-select", "exit 2");
     const { code, out } = await doctor(m, [m.bin]);
     expect(code).toBe(1);
     expect(out).toContain("2 missing");
     expect(out).toContain("xcode-select --install");
     expect(out).toContain("curl https://mise.run | sh");
-    expect(out).toContain("1 recommended");
-    expect(out).toContain("https://claude.ai/install.sh");
+    expect(out).not.toContain("claude");
   });
 
   test("root is refused", async () => {
@@ -116,7 +111,7 @@ describe("doctor.sh", () => {
     expect(out).toContain("mise activate zsh");
   });
 
-  test("names the missing locked tools, and advises on a signed-out Claude Code", async () => {
+  test("names the missing locked tools", async () => {
     const m = machine();
     healthy(m);
     stub(
@@ -129,13 +124,10 @@ describe("doctor.sh", () => {
         "esac",
       ].join("\n"),
     );
-    stub(m.bin, "claude", `echo '{ "loggedIn": false }'; exit 1`);
     const { code, out } = await doctor(m);
     expect(code).toBe(1);
     expect(out).toContain("1 missing");
     expect(out).toContain("go@1.27.1 rust@1.95.0");
-    expect(out).toContain("1 recommended");
-    expect(out).toContain("claude auth login");
   });
 
   test("shims that do not resolve are named, with the reshim fix", async () => {
@@ -159,7 +151,7 @@ describe("doctor.sh", () => {
     symlinkSync(join(m.bin, "mise"), join(m.shims, "bun"));
     symlinkSync(join(m.bin, "mise"), join(m.shims, "go"));
     const { code, out } = await doctor(m);
-    expect(out).toContain("all required present");
+    expect(out).toContain("all present");
     expect(code).toBe(0);
   });
 
@@ -180,46 +172,7 @@ describe("doctor.sh", () => {
 
     stub(m.bin, "mise", settings("false"));
     const off = await doctor(m);
-    expect(off.out).toContain("all required present");
+    expect(off.out).toContain("all present");
     expect(off.code).toBe(0);
-  });
-
-  test("Claude Code absent or signed out is advice, not a failure", async () => {
-    const m = machine();
-    healthy(m);
-    stub(m.bin, "claude", `echo '{ "loggedIn": false }'; exit 1`);
-    const signedOut = await doctor(m);
-    expect(signedOut.code).toBe(0);
-    expect(signedOut.out).toContain("all required present");
-    expect(signedOut.out).toContain("Claude Code is not signed in");
-    expect(signedOut.out).toContain("claude auth login");
-
-    rmSync(join(m.bin, "claude"));
-    const absent = await doctor(m);
-    expect(absent.code).toBe(0);
-    expect(absent.out).toContain("1 recommended");
-    expect(absent.out).toContain("https://claude.ai/install.sh");
-  });
-
-  test("looks for claude where the server does (paths/server bins.ts)", () => {
-    const bins = readFileSync(
-      join(
-        import.meta.dir,
-        "../../../../../../infra/plugins/paths/server/internal/bins.ts",
-      ),
-      "utf8",
-    );
-    const claudeBlock = bins.slice(
-      bins.indexOf("export const CLAUDE_CANDIDATES"),
-    );
-    const candidates = [
-      ...claudeBlock
-        .slice(0, claudeBlock.indexOf("];"))
-        .matchAll(/[`"]([^`"]*\/claude)[`"]/g),
-    ].map(([, p]) => p!.replace(/^\$\{[^}]*\}/, "$HOME"));
-    expect(candidates.length).toBeGreaterThan(0);
-    const script = readFileSync(DOCTOR, "utf8");
-    expect(script).toContain(envName("CLAUDE_BIN"));
-    for (const p of candidates) expect(script).toContain(`"${p}"`);
   });
 });

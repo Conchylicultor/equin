@@ -21,13 +21,11 @@ export class ClaudeInitializeTimeoutError extends Error {
  */
 export async function readClaudeInitialize({
   env,
-  bin,
   cwd,
   timeoutMs,
   signal,
 }: {
   env: ClaudeSessionEnv;
-  bin: string;
   /** Where the session runs — a scratch directory (nothing there is read). */
   cwd: string;
   timeoutMs: number;
@@ -45,7 +43,6 @@ export async function readClaudeInitialize({
   }
   const session = claudeQuery({
     env,
-    bin,
     prompt: noPrompt(),
     options: {
       cwd,

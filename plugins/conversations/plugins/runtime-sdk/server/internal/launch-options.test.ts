@@ -3,7 +3,6 @@ import { rewindRelaunchOptions, sdkLaunchOptions } from "./launch-options";
 
 const base = {
   cwd: "/w",
-  claudeBin: "/bin/claude",
   policy: {
     hooks: { SessionStart: [{ matcher: "compact", hooks: [] }] },
     permissions: { deny: ["EnterWorktree"] },
@@ -19,7 +18,6 @@ describe("sdkLaunchOptions", () => {
     });
     expect(o).toMatchObject({
       cwd: "/w",
-      claudeBin: "/bin/claude",
       settingSources: ["user", "project", "local"],
       mcpServers: null,
       strictMcpConfig: false,

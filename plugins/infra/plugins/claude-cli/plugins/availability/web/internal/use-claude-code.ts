@@ -42,7 +42,5 @@ export function useClaudeCodeLaunchBlock(): string | null {
 }
 
 function launchBlock(s: ClaudeCodeStatus): string | null {
-  return s.kind === "missing" || s.kind === "signed-out"
-    ? claudeCodeBlockMessage(s)
-    : null;
+  return s.kind === "signed-out" ? claudeCodeBlockMessage(s) : null;
 }

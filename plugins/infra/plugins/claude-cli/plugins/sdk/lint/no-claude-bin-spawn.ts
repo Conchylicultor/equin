@@ -6,21 +6,22 @@ const createRule = lintRuleCreator(import.meta.url);
 /**
  * no-claude-bin-spawn
  *
- * The Claude Code executable is only ever handed to the Agent SDK (`claudeQuery`'s
- * `bin`). Spawning it by hand — `claude --print`, `claude auth status` — means
+ * The Claude Code executable (`bundledClaudeBin()`, the build the Agent SDK
+ * ships) is only ever handed to the Agent SDK (`claudeQuery`'s `bin`). Spawning it by hand — `claude --print`, `claude auth status` — means
  * flags spelled as strings, stdout scraped for an answer, and a session on no
  * chosen account. Every one of those reads has an SDK form: a turn
  * (`runClaudeTurn`), the version / account / model menu (`readClaudeInitialize`),
  * the usage limits (a no-prompt session's control request).
  *
  * Flags a spawn-like call (`spawn`, `spawnSync`, `spawnCaptured`, `execFile`,
- * `Bun.spawn`, …) whose argv is an array starting with `requireClaudeBin()` /
- * `resolveClaudeBin()…`, or whose first argument is that call.
+ * `Bun.spawn`, …) whose argv is an array starting with `bundledClaudeBin()…`,
+ * or whose first argument is that call. A read with no SDK form (signing in)
+ * is a sanctioned exemption of the plugin that owns it.
  */
 
 const SPAWNERS =
   /^(spawn|spawnSync|spawnCaptured|execFile|execFileSync|exec|execSync)$/;
-const BIN_LOOKUPS = new Set(["requireClaudeBin", "resolveClaudeBin"]);
+const BIN_LOOKUPS = new Set(["bundledClaudeBin"]);
 
 function calleeName(callee: TSESTree.Expression): string | null {
   if (callee.type === "Identifier") return callee.name;
@@ -32,7 +33,7 @@ function calleeName(callee: TSESTree.Expression): string | null {
   return null;
 }
 
-/** `requireClaudeBin()`, `resolveClaudeBin().path`. */
+/** `bundledClaudeBin()` (and a member read off it). */
 function isBinLookup(node: TSESTree.Node | null | undefined): boolean {
   if (!node) return false;
   if (node.type === "MemberExpression") return isBinLookup(node.object);

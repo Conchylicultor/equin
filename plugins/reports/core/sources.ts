@@ -32,7 +32,7 @@ export const SERVER_REPORT_SOURCES = [
   "server-cost-monitor",
   // Model discovery (conversations/model-provider/catalog): the Claude CLI's
   // model menu named something outside the model id grammar, or left out a
-  // family. An observation of the installed CLI, not an error anyone caught.
+  // family. An observation of the bundled Claude Code, not an error anyone caught.
   "server-model-discovery",
   // The boot-time audit of this namespace's saved settings: some of the user's
   // own config overrides sit where no live config reads them any more (a plugin

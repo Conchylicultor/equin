@@ -80,7 +80,7 @@ primitive exists to name.
     - `Fill`
     - `fillClasses`
 - Cross-plugin:
-  - Imported by: 173 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 174 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×51
     - `primitives` ×30
     - `conversations` ×24
@@ -88,7 +88,7 @@ primitive exists to name.
     - `page` ×10
     - `ui` ×9
     - `tasks` ×8
-    - `infra` ×3
+    - `infra` ×4
     - `plugin-meta` ×3
     - `review` ×3
     - `shell` ×3

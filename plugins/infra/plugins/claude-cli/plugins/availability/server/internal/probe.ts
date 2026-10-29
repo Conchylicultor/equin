@@ -1,6 +1,5 @@
 import type { SDKControlInitializeResponse } from "@anthropic-ai/claude-agent-sdk";
 import { SYSTEM_ACCOUNT_ID } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
-import { resolveClaudeBin } from "@plugins/infra/plugins/paths/server";
 import {
   claudeSessionEnv,
   readClaudeInitialize,
@@ -49,7 +48,7 @@ export function statusOfInitialize(
 }
 
 /**
- * Ask the machine, now: is Claude Code installed, and is it signed in?
+ * Ask the machine, now: is Claude Code signed in?
  *
  * One Agent SDK session on the computer's own login (the system account),
  * under the host facts alone — the account the status is about — that reads
@@ -57,20 +56,17 @@ export function statusOfInitialize(
  * every way the answer can come out is an arm of {@link ClaudeCodeStatus}.
  */
 export async function probeClaudeCode(): Promise<ClaudeCodeStatus> {
-  const bin = resolveClaudeBin();
-  if (bin.kind === "missing")
-    return { kind: "missing", searched: bin.searched };
   try {
     return statusOfInitialize(
       await readClaudeInitialize({
         env: await claudeSessionEnv(SYSTEM_ACCOUNT_ID),
-        bin: bin.path,
         cwd: "/tmp",
         timeoutMs: PROBE_TIMEOUT_MS,
       }),
     );
   } catch (err) {
-    // The check itself failed (timed out, the CLI crashed): not a verdict.
+    // The check itself failed (timed out, the CLI crashed, the SDK's bundled
+    // build is not installed): not a verdict.
     if (!(err instanceof Error)) throw err;
     return {
       kind: "unreadable",

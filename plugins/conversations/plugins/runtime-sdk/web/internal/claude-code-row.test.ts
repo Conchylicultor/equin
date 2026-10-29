@@ -11,7 +11,6 @@ import {
 } from "./claude-code-row";
 
 const refetch = () => Promise.resolve();
-const sdk = { sdkVersion: "0.3.303", cliVersion: "2.1.303" };
 const none = { here: 0, elsewhere: [] };
 const NOW = 1_800_000_000_000;
 const noUsage: ClaudeCodeRowInputs["usage"] = { byAccount: {} };
@@ -23,7 +22,7 @@ const loaded = (
   stopped: ClaudeCodeRowInputs["stopped"] = [],
 ): ResourceResult<ClaudeCodeRowInputs> => ({
   status: "ready",
-  data: { claude, sdk, agents, usage, accounts: NO_CLAUDE_ACCOUNTS, stopped },
+  data: { claude, agents, usage, accounts: NO_CLAUDE_ACCOUNTS, stopped },
   refetch,
 });
 const ready = (
@@ -38,7 +37,7 @@ const ready = (
   );
 
 describe("claudeCodeRowVerdict", () => {
-  test("same major.minor is ok, whatever the patch, with the agents", () => {
+  test("ready is ok, with the version and the agents", () => {
     expect(
       claudeCodeRowVerdict(
         OK,
@@ -48,16 +47,14 @@ describe("claudeCodeRowVerdict", () => {
     ).toEqual({ state: "ok", summary: "v2.1.999 · 3 agents here" });
   });
 
-  test("another minor is attention", () => {
-    expect(claudeCodeRowVerdict(OK, ready("2.2.0"), NOW)).toEqual({
-      state: "attention",
-      summary: "v2.2.0 · the Agent SDK expects v2.1.303",
-    });
-  });
-
   test("Claude Code's own verdict wins when it is not ok", () => {
-    const missing: HealthStatus = { state: "critical", summary: "missing" };
-    expect(claudeCodeRowVerdict(missing, ready("2.2.0"), NOW)).toBe(missing);
+    const signedOut: HealthStatus = {
+      state: "critical",
+      summary: "signed out",
+    };
+    expect(claudeCodeRowVerdict(signedOut, ready("2.2.0"), NOW)).toBe(
+      signedOut,
+    );
     const checking: HealthStatus = { state: "unknown" };
     expect(claudeCodeRowVerdict(checking, ready("2.1.1"), NOW)).toBe(checking);
   });

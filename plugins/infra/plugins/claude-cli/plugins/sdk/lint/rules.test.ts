@@ -57,22 +57,22 @@ ruleTester.run("no-direct-sdk-query", noDirectSdkQuery as unknown as Rule, {
 
 ruleTester.run("no-claude-bin-spawn", noClaudeBinSpawn as unknown as Rule, {
   valid: [
-    { code: `claudeQuery({ env, bin: requireClaudeBin(), prompt, options });` },
+    { code: `claudeQuery({ env, bin: bundledClaudeBin(), prompt, options });` },
     { code: `spawnCaptured(["git", "log"], opts);` },
-    { code: `const bin = requireClaudeBin();` },
-    { code: `linkSync(realpathSync(requireClaudeBin()), staging);` },
+    { code: `const bin = bundledClaudeBin();` },
+    { code: `linkSync(realpathSync(bundledClaudeBin()), staging);` },
   ],
   invalid: [
     {
-      code: `spawnCaptured([requireClaudeBin(), "--print"], opts);`,
+      code: `spawnCaptured([bundledClaudeBin(), "--print"], opts);`,
       errors: [{ messageId: "spawn" }],
     },
     {
-      code: `Bun.spawn([resolveClaudeBin().path, "--version"]);`,
+      code: `Bun.spawn([bundledClaudeBin(), "--version"]);`,
       errors: [{ messageId: "spawn" }],
     },
     {
-      code: `spawn(requireClaudeBin(), ["auth", "status"]);`,
+      code: `spawn(bundledClaudeBin(), ["auth", "status"]);`,
       errors: [{ messageId: "spawn" }],
     },
   ],

@@ -1,10 +1,7 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { isHostSingleton } from "@plugins/infra/plugins/paths/core";
-import {
-  checkClaudeCode,
-  requireClaudeBin,
-} from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
+import { checkClaudeCode } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
 import { catalogLog as log } from "./log";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
@@ -18,7 +15,7 @@ import { updateModelCatalog } from "./store";
 import { applyMenu, type CurrentMove, type MenuChanges } from "./transitions";
 
 /**
- * Read the installed Claude CLI's model menu and make it the catalog: each
+ * Read Claude Code's model menu (the Agent SDK's bundled build) and make it the catalog: each
  * family runs what its alias resolves to, every version the menu offers is
  * known, and a known version the menu no longer offers is retired.
  *
@@ -60,7 +57,7 @@ async function discoverModels(signal: AbortSignal): Promise<void> {
     log.publish(`skipped: Claude Code is ${status.kind}`);
     return;
   }
-  const menu = readMenu(await readCliModels(requireClaudeBin(), signal));
+  const menu = readMenu(await readCliModels(signal));
   for (const problem of menu.problems) await reportProblem(problem);
   if (Object.keys(menu.current).length === 0)
     // A menu naming no family is not one to retire every version against.

@@ -8,8 +8,8 @@ import { agentClaudeLinkDir } from "./paths";
 // The claude an agent spawns, named for its conversation. Run through
 // disclaim-exec, claude is its own responsible process, and macOS names a
 // bundle-less executable by its FILE NAME in a permission prompt — which for
-// the native installer is the version (`versions/2.1.308`), so every agent
-// asked as "2.1.308". A hardlink is the same signed file under another name:
+// the Agent SDK's bundled build is a bare `claude` (for the native installer
+// it was the version, `versions/2.1.308`), so every agent asked alike. A hardlink is the same signed file under another name:
 // the prompt reads "equin · conv-… · Fix login bug".
 //
 // TCC also keys a bundle-less client's decisions by that path (measured
@@ -19,10 +19,10 @@ import { agentClaudeLinkDir } from "./paths";
 // ONCE, at the conversation's first start, and kept across its relaunches
 // (read back from the previous launch's options), so a grant lasts the whole
 // conversation even when its title changes. Each start relinks it to the
-// current binary, so a Claude update reaches it.
+// current binary, so an SDK upgrade reaches it.
 //
 // The agent removes the link when it exits (`bin/agent.ts`): a link left in
-// place would pin a binary Claude's updater has since deleted.
+// place would pin a binary a reinstall has since replaced.
 
 /**
  * The hardlink this start of `conversationId` spawns, or null to spawn

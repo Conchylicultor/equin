@@ -1,13 +1,5 @@
-import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import {
-  readEnv,
-  setEnv,
-  unsetEnv,
-} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
-import { probeClaudeCode, statusOfInitialize } from "./probe";
+import { describe, expect, test } from "bun:test";
+import { statusOfInitialize } from "./probe";
 
 const VERSION = "2.1.308";
 
@@ -70,22 +62,5 @@ describe("statusOfInitialize", () => {
     expect(statusOfInitialize({ account: { email: "a@b.c" } }).kind).toBe(
       "unreadable",
     );
-  });
-});
-
-describe("probeClaudeCode", () => {
-  const saved = readEnv("CLAUDE_BIN");
-  afterEach(() => {
-    if (saved === undefined) unsetEnv("CLAUDE_BIN");
-    else setEnv("CLAUDE_BIN", saved);
-  });
-
-  test("no executable → missing, naming where it looked", async () => {
-    const nowhere = join(mkdtempSync(join(tmpdir(), "sg-claude-probe-")), "x");
-    setEnv("CLAUDE_BIN", nowhere);
-    expect(await probeClaudeCode()).toEqual({
-      kind: "missing",
-      searched: [nowhere],
-    });
   });
 });

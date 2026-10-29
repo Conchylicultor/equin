@@ -35,13 +35,13 @@ describe("claudeCodeVerdict", () => {
     ).toEqual({ state: "ok", summary: "Signed in as a@b.c · v2.1.282" });
   });
 
-  test("is critical when missing or signed out", () => {
+  test("is critical when signed out", () => {
     expect(
-      claudeCodeVerdict(loaded({ kind: "missing", searched: [] })).state,
-    ).toBe("critical");
-    expect(
-      claudeCodeVerdict(loaded({ kind: "signed-out", version: "1" })).state,
-    ).toBe("critical");
+      claudeCodeVerdict(loaded({ kind: "signed-out", version: "1" })),
+    ).toEqual({
+      state: "critical",
+      summary: "Claude Code is not signed in — agents cannot start",
+    });
   });
 
   test("is unknown, with why, when the check itself failed", () => {

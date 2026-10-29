@@ -13,10 +13,9 @@ import type { EffortLevel } from "@plugins/conversations/plugins/effort-provider
 import { agentLaunchPolicy } from "@plugins/conversations/plugins/agent-launch/server";
 import { compactionHookEntry } from "@plugins/conversations/plugins/compaction-context/machine";
 import { stopGateHookEntry } from "@plugins/conversations/plugins/stop-gate/machine";
-import { requireClaudeBin } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
 import {
-  type AgentLaunchOptions,
+  type AgentLaunchIntent,
   DismissReplySchema,
   type HelloReply,
   TurnReplySchema,
@@ -370,7 +369,7 @@ function lastErrorLine(output: string): string {
  */
 async function launchAgent(
   id: string,
-  options: AgentLaunchOptions,
+  options: AgentLaunchIntent,
 ): Promise<void> {
   const launchedAt = new Date();
   const started = await startAgentProcess(id, options);
@@ -455,12 +454,8 @@ export const sdkRuntime: ConversationRuntime = {
   ): Promise<void> {
     // Idempotent under durable-job retry: a live agent already took the launch.
     if (await this.isRunning(id)) return;
-    // A missing CLI throws HERE (ClaudeCodeUnavailableError) rather than
-    // starting an agent that dies on spawn.
-    const claudeBin = requireClaudeBin();
     const options = sdkLaunchOptions({
       cwd,
-      claudeBin,
       launch,
       policy: agentLaunchPolicy({
         compaction: compactionHookEntry(),

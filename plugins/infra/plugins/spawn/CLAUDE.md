@@ -267,6 +267,7 @@ presence only — **no re-exports**; import from `core/`.
   - Exempted by:
     - `framework/cli/migrations` (0 debt)
     - `framework/tooling/checks/bun-runtime` (0 debt)
+    - `infra/claude-cli/sign-in` (0 debt)
     - `infra/jobs/supervised-job` (0 debt)
     - `infra/launcher` (0 debt)
     - `infra/spawn` (0 debt)

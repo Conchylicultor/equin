@@ -4,9 +4,10 @@ import { modelsDiscoverJob } from "./discover-job";
 import { readFileCatalog } from "./store";
 
 /**
- * Re-discover whenever the availability probe reports a Claude CLI version the
- * catalog was not read with. A CLI auto-update is exactly when the model menu moves,
- * so a new model usually appears within minutes of the CLI knowing it. A
+ * Re-discover whenever the availability probe reports a Claude Code version the
+ * catalog was not read with. A new version — an Agent SDK upgrade landing
+ * through build, the only way the bundled build moves — is exactly when the
+ * model menu moves, so a new model appears on the first probe after it. A
  * catalog never probed (`cliVersion: null`) differs from every version, so a
  * fresh machine discovers on its first probe.
  *

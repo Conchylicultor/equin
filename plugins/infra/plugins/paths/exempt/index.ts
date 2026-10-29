@@ -3,14 +3,9 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 export default [
   {
     rule: "paths:no-hardcoded-paths",
-    paths: [
-      "check/index.ts",
-      "core/internal/paths.ts",
-      "server/internal/bins.ts",
-    ],
+    paths: ["check/index.ts", "core/internal/paths.ts"],
     kind: "sanctioned",
-    reason:
-      "The check itself and the owner of the path family: paths.ts, and bins.ts, which resolves the toolchain locations on this machine.",
+    reason: "The check itself and the owner of the path family: paths.ts.",
   },
   {
     rule: "paths:no-inlined-worktree-artifacts",
@@ -39,7 +34,6 @@ export default [
       "core/internal/prune-artifacts.ts",
       "core/internal/toolchain-pin.ts",
       "core/internal/worktree-dirs.ts",
-      "server/internal/bins.ts",
     ],
     kind: "debt",
     task: "task-1792338443-riwqev",

@@ -1,10 +1,6 @@
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { activeClaudeAccountId } from "@plugins/infra/plugins/claude-cli/plugins/accounts/server";
-import {
-  ClaudeCodeUnavailableError,
-  noteClaudeCodeFailure,
-  requireClaudeBin,
-} from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
+import { noteClaudeCodeFailure } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
 import {
   ClaudeTurnError,
   claudeSessionEnv,
@@ -111,7 +107,6 @@ export async function invokeClaude<T>({
     try {
       result = await runClaudeTurn({
         env: await claudeSessionEnv(activeClaudeAccountId()),
-        bin: requireClaudeBin(),
         prompt: input.prompt,
         options: {
           // What `claude --print` loaded: the user's own settings and env
@@ -132,7 +127,6 @@ export async function invokeClaude<T>({
         if (!err.timedOut) noteClaudeCodeFailure();
         throw new ClaudeCliError(err.message);
       }
-      if (err instanceof ClaudeCodeUnavailableError) throw err;
       // The SDK's own failures — "Claude Code process exited with code N" —
       // may be Claude Code itself (signed out since the last check), so the
       // status the app shows is re-checked against this evidence.
@@ -157,10 +151,7 @@ export async function invokeClaude<T>({
     throw err;
   } finally {
     const durationMs = Math.round(performance.now() - startedAt);
-    // A missing CLI is not a crash of this caller: it is the machine's state,
-    // and the Claude Code health row already shows it with the fix. Reporting
-    // it here would file one report per background title/summary call.
-    if (caughtError && !(caughtError instanceof ClaudeCodeUnavailableError)) {
+    if (caughtError) {
       reportServerError({
         message: `[claude-cli] ${input.source.name}: ${caughtError.message}`,
         stack: caughtError.stack,

@@ -54,20 +54,16 @@ export function parseInitializeModels(models: unknown): CliModel[] {
 const INITIALIZE_TIMEOUT_MS = 60_000;
 
 /**
- * Ask the installed Claude CLI which models it offers: every family alias with
+ * Ask Claude Code (the Agent SDK's bundled build) which models it offers: every family alias with
  * the version it resolves to, and every older version it still runs. On the
  * computer's own login (a token account's menu is narrower — it carries no
  * claude.ai sign-in), under the user's own settings and env overrides.
  */
-export async function readCliModels(
-  bin: string,
-  signal: AbortSignal,
-): Promise<CliModel[]> {
+export async function readCliModels(signal: AbortSignal): Promise<CliModel[]> {
   let init;
   try {
     init = await readClaudeInitialize({
       env: await claudeSessionEnv(SYSTEM_ACCOUNT_ID),
-      bin,
       cwd: tmpdir(),
       timeoutMs: INITIALIZE_TIMEOUT_MS,
       signal,

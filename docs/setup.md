@@ -11,8 +11,7 @@ curl -fsSL https://raw.githubusercontent.com/Conchylicultor/equin/main/install.s
 Or `./install.sh` from inside a clone or fork you already have. Options:
 `--dir <path>` (default `~/equin`), `--repo <url>` (your fork),
 `--no-shell-rc`; piped, pass them after `bash -s --`. It runs the steps
-below (the Claude Code sign-in last, offered once the app is up), skipping
-whatever is already done, so re-running it resumes
+below, skipping whatever is already done, so re-running it resumes
 where it stopped. It lists what it will change before changing anything.
 
 ## Install, step by step
@@ -31,15 +30,11 @@ curl https://mise.run | sh
 echo 'eval "$(~/.local/bin/mise activate zsh)"' >> ~/.zshrc
 exec zsh    # a new shell, with mise active
 
-# 3. Claude Code, signed in: every agent the app launches runs on it.
-curl -fsSL https://claude.ai/install.sh | bash
-claude auth login
-
-# 4. The repo, and its toolchain.
+# 3. The repo, and its toolchain.
 git clone <repo url> <dir> && cd <dir>
 mise trust && mise install   # trust this checkout's mise.toml, then install
 
-# 5. The app.
+# 4. The app.
 ./equin start               # compiles and starts the gateway, and brings up Postgres
 ./equin build --allow-main --skip-checks  # builds the app and deploys it
 ```
@@ -47,10 +42,10 @@ mise trust && mise install   # trust this checkout's mise.toml, then install
 `mise install` also runs the repo's `setup` task (trusts every worktree's
 `mise.toml`, points git at the repo's hooks) and ends with the **doctor**, which
 names every missing prerequisite at once, each with the command that fixes it.
-Continue only once it says `all required present`. Claude Code is the one
-*recommended* item: the doctor names it with its fix but does not stop on it,
-since the app builds and runs without it — only agents need it, and the app
-says so where they are launched (the health report's Claude Code row). Re-run it any time with
+Continue only once it says `all present`. Claude Code is not a prerequisite:
+the app runs the build the Agent SDK ships (installed with the dependencies),
+and you sign in to Claude from the app — the health report's Claude Code row
+shows **Sign in** until you do. Re-run it any time with
 `mise run doctor`. `./equin start` and `build` also run it first, so a
 missing tool is reported before any long step rather than minutes into one.
 

@@ -7,7 +7,6 @@ import type { ClaudeCodeStatus } from "@plugins/infra/plugins/claude-cli/plugins
 import type { ClaudeAccounts } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
 import {
   limitReached,
-  sameMajorMinor,
   type AgentProcesses,
   type ClaudeUsageRead,
   type ErrorStoppedConversation,
@@ -15,10 +14,8 @@ import {
 import { formatResets, USAGE_WINDOWS } from "./claude-usage";
 
 export interface ClaudeCodeRowInputs {
-  /** The system `claude` the sdk runtime runs. */
+  /** The Claude Code the sdk runtime runs (the Agent SDK's bundled build). */
   claude: ClaudeCodeStatus;
-  /** The installed Agent SDK and the CLI it was built for. */
-  sdk: { sdkVersion: string; cliVersion: string };
   /** The agent processes running here and in every other namespace. */
   agents: AgentProcesses;
   /** Each Claude account's usage limits, as the agents last reported them. */
@@ -48,14 +45,11 @@ export function agentsPhrase(agents: AgentProcesses): string {
 }
 
 /**
- * The health report's Claude Code row: Claude Code itself, the Agent SDK that
- * runs it, and the agent processes running.
+ * The health report's Claude Code row: Claude Code itself (the build the
+ * Agent SDK ships) and the agent processes running.
  *
- * - Claude Code missing, signed out, unreadable or still loading → its own
- *   verdict (`cli`), unchanged: nothing below it can be vouched for.
- * - The system `claude` in another major.minor than the CLI the installed Agent
- *   SDK was built for → `attention`: the SDK's control protocol may have moved
- *   under it.
+ * - Claude Code signed out, unreadable or still loading → its own verdict
+ *   (`cli`), unchanged: nothing below it can be vouched for.
  * - The active account's usage limit reached → `attention`: its agents wait
  *   until it resets (or run on another account).
  * - Conversations an API error stopped (a usage limit, a server error, a
@@ -63,7 +57,7 @@ export function agentsPhrase(agents: AgentProcesses): string {
  *   resume (the row's detail offers one).
  * - Otherwise `ok`, with the version and the agents running.
  *
- * The versions and the count not known yet → `unknown`, never `ok`; under a
+ * The counts not known yet → `unknown`, never `ok`; under a
  * host without the computer → `not-applicable` with the sentence saying so:
  * nothing is wrong, there is just no computer to read.
  */
@@ -81,17 +75,11 @@ export function claudeCodeRowVerdict(
     return {
       state: "unknown",
       summary:
-        "Couldn't load the Agent SDK version, the running agents, the Claude accounts or their usage limits",
+        "Couldn't load the running agents, the Claude accounts or their usage limits",
     };
   }
-  const { claude, sdk, agents, usage, accounts, stopped } = result.data;
+  const { claude, agents, usage, accounts, stopped } = result.data;
   if (claude.kind !== "ready") return cli;
-  if (!sameMajorMinor(claude.version, sdk.cliVersion)) {
-    return {
-      state: "attention",
-      summary: `v${claude.version} · the Agent SDK expects v${sdk.cliVersion}`,
-    };
-  }
   const reached = limitReached(usage.byAccount[accounts.active], now);
   if (reached) {
     const { label } = USAGE_WINDOWS[reached.id];

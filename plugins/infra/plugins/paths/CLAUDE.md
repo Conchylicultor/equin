@@ -355,9 +355,9 @@ run everywhere.
     - `worktreeDataDir`
     - `worktreesDir`
 - Cross-plugin:
-  - Imported by: 41 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 40 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×8
-    - `infra` ×7
+    - `infra` ×6
     - `framework` ×5
     - `backup` ×4
     - `release` ×3
@@ -373,14 +373,13 @@ run everywhere.
     - `toolchain`
 - Exemptions:
   - Exempts itself from:
-    - `paths:no-hardcoded-paths` — `check/index.ts`, `core/internal/paths.ts`, `server/internal/bins.ts` (sanctioned)
+    - `paths:no-hardcoded-paths` — `check/index.ts`, `core/internal/paths.ts` (sanctioned)
     - `paths:no-inlined-worktree-artifacts` — `.` (sanctioned)
     - `paths:data-root-not-joined` — `.` (sanctioned)
-    - `boundaries/no-platform-api` — `core/internal/checkout-deploys.ts`, `core/internal/checkout-owner.ts`, `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/data-root-layout.ts`, `core/internal/data-dirs-manifest.ts`, `core/internal/paths.ts`, `core/internal/prune-artifacts.ts`, `core/internal/toolchain-pin.ts`, `core/internal/worktree-dirs.ts`, `server/internal/bins.ts` (debt)
+    - `boundaries/no-platform-api` — `core/internal/checkout-deploys.ts`, `core/internal/checkout-owner.ts`, `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/data-root-layout.ts`, `core/internal/data-dirs-manifest.ts`, `core/internal/paths.ts`, `core/internal/prune-artifacts.ts`, `core/internal/toolchain-pin.ts`, `core/internal/worktree-dirs.ts` (debt)
 - Server:
   - Exports (types):
     - `AppIdentity`
-    - `ClaudeBinLookup`
     - `DataDir`
     - `DataDirArea`
     - `DataDirInput`
@@ -398,7 +397,6 @@ run everywhere.
     - `checkoutNamespace`
     - `checkoutRef`
     - `checkoutWorktreeName`
-    - `CLAUDE_CANDIDATES`
     - `CLAUDE_DIR`
     - `CLAUDE_PROJECTS_DIR`
     - `CLAUDE_SESSIONS_DIR`
@@ -425,7 +423,6 @@ run everywhere.
     - `releaseIdentity`
     - `REPO_ROOT`
     - `repoConfigDir`
-    - `resolveClaudeBin`
     - `RUN_ARTIFACTS_RETENTION`
     - `RUN_TERMINAL_SUFFIX`
     - `RUN_TRANSCRIPT_SUFFIX`

@@ -1,7 +1,5 @@
 export {
   ClaudeCodeStatusSchema,
-  CLAUDE_CODE_FIX,
-  claudeCodeFixCommands,
   claudeCodeProblem,
   claudeCodeBlockMessage,
 } from "./internal/status";

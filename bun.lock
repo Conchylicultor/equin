@@ -3985,6 +3985,10 @@
         "@anthropic-ai/claude-agent-sdk": "^0.3.310",
       },
     },
+    "plugins/infra/plugins/claude-cli/plugins/sign-in": {
+      "name": "@equin/plugin-infra-claude-cli-sign-in",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/codesign": {
       "name": "@equin/plugin-infra-codesign",
       "version": "0.0.1",
@@ -8915,6 +8919,8 @@
     "@equin/plugin-infra-claude-cli-availability": ["@equin/plugin-infra-claude-cli-availability@workspace:plugins/infra/plugins/claude-cli/plugins/availability"],
 
     "@equin/plugin-infra-claude-cli-sdk": ["@equin/plugin-infra-claude-cli-sdk@workspace:plugins/infra/plugins/claude-cli/plugins/sdk"],
+
+    "@equin/plugin-infra-claude-cli-sign-in": ["@equin/plugin-infra-claude-cli-sign-in@workspace:plugins/infra/plugins/claude-cli/plugins/sign-in"],
 
     "@equin/plugin-infra-codesign": ["@equin/plugin-infra-codesign@workspace:plugins/infra/plugins/codesign"],
 

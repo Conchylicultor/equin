@@ -27,6 +27,7 @@
     - `conversations/conversation-view/op-status`
     - `debug/worktree-cleanup`
     - `hints/ask`
+    - `infra/claude-cli/sign-in`
     - `page/place`
     - `primitives/folder-picker`
     - `primitives/loading`

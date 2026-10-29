@@ -1,5 +1,4 @@
 import { HttpError } from "@plugins/infra/plugins/endpoints/core";
-import { resolveClaudeBin } from "@plugins/infra/plugins/paths/server";
 import {
   claudeCodeBlockMessage,
   type ClaudeCodeBlock,
@@ -9,8 +8,8 @@ import { probeClaudeCode } from "./probe";
 
 /**
  * How long a `ready` answer is trusted by the launch gate before it asks again.
- * A signed-in CLI can sign out on its own (a token expires, the user runs
- * `claude auth logout` elsewhere) and nothing announces it, so a launch that
+ * A signed-in Claude Code can sign out on its own (a token expires, the user
+ * signs out elsewhere) and nothing announces it, so a launch that
  * finds an old `ready` re-probes: one Node process per launch at most every
  * five minutes. A NOT-ready answer is never trusted — see {@link checkClaudeCode}.
  */
@@ -84,7 +83,7 @@ export function onClaudeCodeStatusChanged(fn: () => void): () => void {
 /**
  * Claude Code's status, fresh enough to act on: a `ready` answer younger than
  * {@link READY_MAX_AGE_MS} is reused; anything else is probed again. So a user
- * who just signed in from a terminal is never refused by a stale `signed-out`,
+ * who just signed in is never refused by a stale `signed-out`,
  * and a normal launch costs nothing extra.
  */
 export async function checkClaudeCode(): Promise<ClaudeCodeStatus> {
@@ -124,8 +123,8 @@ export function onClaudeCodeReady(fn: () => void): () => void {
 
 /**
  * Run `fn` with every fresh probe's answer — each time the machine was asked
- * again, changed or not. The seam for whoever keys work off the installed CLI
- * itself (a version this code has not seen yet) without this plugin knowing
+ * again, changed or not. The seam for whoever keys work off the Claude Code
+ * build itself (a version this code has not seen yet) without this plugin knowing
  * them. Returns the unsubscribe.
  */
 export function onClaudeCodeProbed(
@@ -155,21 +154,4 @@ export class ClaudeCodeUnavailableError extends HttpError {
 export async function assertClaudeCodeReady(): Promise<void> {
   const status = await checkClaudeCode();
   if (status.kind !== "ready") throw new ClaudeCodeUnavailableError(status);
-}
-
-/**
- * The Claude Code executable to start, looked up now. The ONLY way to get it:
- * a missing CLI throws {@link ClaudeCodeUnavailableError} here, at the spawn
- * site, instead of being handed on as a bare `claude` that fails as `command
- * not found` inside a pane nobody reads. Also re-probes, since the status the
- * app shows is now known to be out of date.
- */
-export function requireClaudeBin(): string {
-  const bin = resolveClaudeBin();
-  if (bin.kind === "found") return bin.path;
-  noteClaudeCodeFailure();
-  throw new ClaudeCodeUnavailableError({
-    kind: "missing",
-    searched: bin.searched,
-  });
 }

@@ -392,7 +392,8 @@ let cli: ChildProcessByStdio<Writable, Readable, null> | null = null;
 const session = claudeQuery({
   env: sessionEnv,
   // The conversation-named hardlink when the backend made one (so macOS
-  // names this agent in a permission prompt), else the CLI itself.
+  // names this agent in a permission prompt), else the Agent SDK's bundled
+  // Claude Code the backend resolved.
   bin: options.namedClaudeBin ?? options.claudeBin,
   prompt: inputStream(),
   options: {

@@ -274,7 +274,13 @@ export const AgentLaunchOptionsSchema = z.preprocess(
      * cwd — the workspace itself — is that.
    */
   guardsRoot: z.string(),
-  /** The system `claude` the SDK runs (`pathToClaudeCodeExecutable`). */
+    /**
+     * The Claude Code the SDK runs (`pathToClaudeCodeExecutable`): the Agent
+     * SDK's bundled build (`bundledClaudeBin()`). Resolved by the backend at
+     * every process start, like `disclaimExec` — never carried over, so an agent
+     * relaunched from an options file written for the computer's own `claude`
+     * (before Oct 2026) moves onto the bundled build.
+     */
   claudeBin: z.string(),
   /**
    * The `disclaim-exec` helper (packages/spawn-disclaim) the agent runs
@@ -332,6 +338,12 @@ export const AgentLaunchOptionsSchema = z.preprocess(
   }),
 );
 export type AgentLaunchOptions = z.infer<typeof AgentLaunchOptionsSchema>;
+
+/** The fields the backend resolves at each process start, never carried over. */
+export type AgentStartFields = "claudeBin" | "disclaimExec" | "namedClaudeBin";
+
+/** What a launch asks for — everything but the per-start fields. */
+export type AgentLaunchIntent = Omit<AgentLaunchOptions, AgentStartFields>;
 
 function defaultLegacyFields(raw: unknown): unknown {
   if (typeof raw !== "object" || raw === null) return raw;

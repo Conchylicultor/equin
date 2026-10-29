@@ -58,7 +58,7 @@ export const modelUnrecognizedKind = ReportKind({
     return {
       title: `[models] Claude CLI model menu: ${d.value} unrecognized (${d.problem})`,
       description: [
-        `Model discovery read the installed Claude CLI's model menu (the ` +
+        `Model discovery read Claude Code's model menu (the ` +
           `\`initialize\` control request) and the entry ${entry} ` +
           `${EXPLAIN[d.problem]}.`,
         "",

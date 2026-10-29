@@ -53,15 +53,7 @@ export type {
   ReclaimPolicy,
 } from "../core/internal/data-dir";
 
-export {
-  GIT,
-  PGREP,
-  PS,
-  SAMPLE,
-  CLAUDE_CANDIDATES,
-  resolveClaudeBin,
-} from "./internal/bins";
-export type { ClaudeBinLookup } from "./internal/bins";
+export { GIT, PGREP, PS, SAMPLE } from "./internal/bins";
 
 export {
   listWorktreeDirs,

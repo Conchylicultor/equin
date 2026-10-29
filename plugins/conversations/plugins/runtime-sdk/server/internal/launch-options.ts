@@ -16,14 +16,13 @@ import {
   resolveEffortSettings,
   type EffortLevel,
 } from "@plugins/conversations/plugins/effort-provider/core";
-import type { AgentLaunchOptions, AgentLaunchPrompt } from "../../core";
+import type { AgentLaunchIntent, AgentLaunchPrompt } from "../../core";
 
 /** The CLI's own default when a workspace names no sources: all of them. */
 const DEFAULT_SETTING_SOURCES = ["user", "project", "local"] as const;
 
 export interface SdkLaunchInput {
   cwd: string;
-  claudeBin: string;
   launch: LaunchFragment;
   /** What every runtime launches with (`agentLaunchPolicy()`). */
   policy: LaunchPolicy;
@@ -46,15 +45,11 @@ export interface SdkLaunchInput {
  * this runtime's own: turns are confirmed by the agent's `turn_started` event
  * and questions held in `canUseTool`.
  */
-export function sdkLaunchOptions(input: SdkLaunchInput): AgentLaunchOptions {
+export function sdkLaunchOptions(input: SdkLaunchInput): AgentLaunchIntent {
   const { launch } = input;
   return {
     cwd: input.cwd,
     guardsRoot: launch.guardsRoot,
-    claudeBin: input.claudeBin,
-    // Both resolved at the process start (machine/internal/agent-process.ts).
-    disclaimExec: null,
-    namedClaudeBin: null,
     model: input.model ? cliFlagFor(input.model) : null,
     effort: (input.effort && resolveEffortFlag(input.effort)) ?? null,
     settings: mergeLaunchSettings(
@@ -110,9 +105,9 @@ function launchSessionId(
  * a live CLI. No anchor (the turn was the session's first): a fresh session.
  */
 export function rewindRelaunchOptions(
-  previous: AgentLaunchOptions,
+  previous: AgentLaunchIntent,
   rewind: { sessionId: string; anchorUuid: string | null; promptUuid: string },
-): AgentLaunchOptions {
+): AgentLaunchIntent {
   const base = { ...previous, fork: false, prompt: null };
   if (rewind.anchorUuid === null) {
     return {
@@ -138,9 +133,9 @@ export function rewindRelaunchOptions(
  * account's usage limit.
  */
 export function continueRelaunchOptions(
-  previous: AgentLaunchOptions,
+  previous: AgentLaunchIntent,
   sessionId: string,
-): AgentLaunchOptions {
+): AgentLaunchIntent {
   return {
     ...previous,
     fork: false,

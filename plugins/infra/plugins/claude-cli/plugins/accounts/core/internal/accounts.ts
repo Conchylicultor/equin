@@ -4,9 +4,10 @@ import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 
 // The Claude accounts agents can run on. One is always there: the account the
-// computer's Claude Code is signed into (`claude auth login`, its keychain).
+// computer's Claude Code is signed into (its keychain; signed in from the app,
+// `claude-cli/sign-in`).
 // The others are added with a credential — a long-lived plan token from
-// `claude setup-token`, or an API key (billed to the Console org, e.g. the
+// the in-app sign-in (`setup-token`), or an API key (billed to the Console org, e.g. the
 // plan's monthly API credit); the credential lives in the encrypted secrets
 // store, never in this list. The choice is the machine's — every worktree's
 // agents launch on the active account.
@@ -21,7 +22,7 @@ export const SYSTEM_ACCOUNT_ID = "system";
  * an agent signs in through cannot disagree with what was pasted.
  */
 export const CLAUDE_CREDENTIALS = {
-  /** A plan sign-in from `claude setup-token`: draws on the plan's limits. */
+  /** A plan sign-in (the in-app sign-in's `setup-token`): draws on the plan's limits. */
   token: { prefix: "sk-ant-oat", env: "CLAUDE_CODE_OAUTH_TOKEN" },
   /** A Console API key: billed per use to its organization, no plan limits. */
   "api-key": { prefix: "sk-ant-api", env: "ANTHROPIC_API_KEY" },
@@ -57,7 +58,7 @@ export const ClaudeCredentialSchema = z
   .regex(/^sk-ant-[A-Za-z0-9_-]{20,}$/, "Not a Claude credential (sk-ant-…)")
   .refine(
     (s) => credentialKindOf(s) !== null,
-    "Neither a token from `claude setup-token` (sk-ant-oat…) nor an API key (sk-ant-api…)",
+    "Neither a Claude sign-in token (sk-ant-oat…) nor an API key (sk-ant-api…)",
   );
 
 /** The kind of a credential that passed {@link ClaudeCredentialSchema}; throws on any other string. */
