@@ -490,6 +490,7 @@
  * between groups, the chevron, and the identity chip (size, corners, glyph). */
 @utility gap-group-header { gap: var(--group-header-gap); } /* twmerge: extend gap */
 @utility py-group-header { padding-block: var(--group-header-pad-y); } /* twmerge: extend py */
+@utility px-group-header { padding-inline: var(--group-header-pad-x); } /* twmerge: extend px */
 @utility mb-group-header { margin-bottom: var(--group-header-space-below); } /* twmerge: standalone -- the room under a group header; no margin class is ever set beside it. */
 @utility gap-group { gap: var(--group-gap); } /* twmerge: extend gap */
 @utility size-group-chevron { width: var(--group-chevron-size); height: var(--group-chevron-size); } /* twmerge: sg-dv-size */

@@ -108,7 +108,7 @@ export type SectionHeaderMetrics = "row" | "group-header";
  * row's control (`[data-focus-ring]`, the split path's run beside the actions).
  */
 const GROUP_HEADER_METRICS =
-  "py-group-header mb-group-header gap-group-header [&>[data-focus-ring]]:gap-group-header";
+  "py-group-header px-group-header mb-group-header gap-group-header [&>[data-focus-ring]]:gap-group-header";
 
 /**
  * Part names stamped on the pieces the header draws itself, so a caller can
@@ -167,6 +167,12 @@ export interface SectionHeaderRowProps extends Passthrough {
    * chevron sits right after the label run again.
    */
   ruleClassName?: ClassName;
+  /**
+   * Classes on a `trailing` chevron — for a caller that decides in CSS whether
+   * it shows at rest (a theme token read by a style query), over the
+   * hover-reveal's own rest state.
+   */
+  chevronClassName?: ClassName;
   /** Token family — see {@link SectionHeaderMetrics}. Default `"row"`. */
   metrics?: SectionHeaderMetrics;
   /** `data-part`s for the rule and the chevron — see {@link SectionHeaderParts}. */
@@ -196,6 +202,7 @@ export function SectionHeaderRow({
   disclosure = "lead",
   rule = false,
   ruleClassName,
+  chevronClassName,
   metrics = "row",
   parts,
   className: callerClassName,
@@ -311,7 +318,13 @@ export function SectionHeaderRow({
         onClick={onClick}
         actionsAlwaysVisible
         actions={actions}
-        className={cn(VARIANT_CLASS[variant], className)}
+        // Named, so a `chevronClassName` can brighten the chevron on hover
+        // without an enclosing `group` lighting it.
+        className={cn(
+          VARIANT_CLASS[variant],
+          "group/section-header",
+          className,
+        )}
         {...rest}
         onPointerEnter={(e: React.PointerEvent<HTMLElement>) => {
           groupProps.onPointerEnter();
@@ -337,6 +350,7 @@ export function SectionHeaderRow({
           className={cn(
             hoverRevealClass(reveal.revealed || !open),
             chevronSize,
+            chevronClassName,
           )}
           data-part={parts?.chevron}
         />

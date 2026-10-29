@@ -52,6 +52,7 @@ export const CUSTOM_UTILITY_REGISTRY = [
   { classes: ["shadow-cover-primary"], extend: "shadow" },
   { classes: ["gap-group-header"], extend: "gap" },
   { classes: ["py-group-header"], extend: "py" },
+  { classes: ["px-group-header"], extend: "px" },
   { classes: ["mb-group-header"], standalone: true, reason: "the room under a group header; no margin class is ever set beside it." },
   { classes: ["gap-group"], extend: "gap" },
   { classes: ["size-group-chevron"], group: "sg-dv-size", excludes: ["size", "h", "w"], under: [] },

@@ -99,6 +99,15 @@ function identityMark(section: DataViewSection<unknown>): ReactNode {
 const RULE_SHOWN = cn(
   "hidden [@container_style(--group-header-style:rule)]:block",
 );
+/**
+ * The `groupChevronReveal` token, read the same way: under `always` an open
+ * group's chevron shows at rest — faint, brightening while its header is
+ * hovered or focused — not only on hover / focus.
+ */
+const CHEVRON_AT_REST = cn(
+  "[@container_style(--group-chevron-reveal:always)]:pointer-events-auto [@container_style(--group-chevron-reveal:always)]:opacity-100",
+  "[@container_style(--group-chevron-reveal:always)]:text-faint-foreground [@container_style(--group-chevron-reveal:always)]:group-hover/section-header:text-foreground [@container_style(--group-chevron-reveal:always)]:group-focus-within/section-header:text-foreground",
+);
 const PILL_LABEL =
   "[@container_style(--group-header-style:pill)]:bg-group-pill-fill [@container_style(--group-header-style:pill)]:px-group-pill [@container_style(--group-header-style:pill)]:rounded-full";
 
@@ -204,6 +213,7 @@ export function DataViewGroupHeader({
       disclosure="trailing"
       rule
       ruleClassName={RULE_SHOWN}
+      chevronClassName={CHEVRON_AT_REST}
       metrics="group-header"
       parts={HEADER_PARTS}
       open={openProp}

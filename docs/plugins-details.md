@@ -40480,10 +40480,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Row`
               - `SectionHeaderRow`
           - Cross-plugin:
-            - Uses tokens: 32 vars — full list in [`plugins/primitives/plugins/css/plugins/row/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/row/REFERENCE.md)
+            - Uses tokens: 33 vars — full list in [`plugins/primitives/plugins/css/plugins/row/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/row/REFERENCE.md)
               - `ui/tokens/type-scale` ×11
               - `ui/tokens/color-palette` ×8
-              - `ui/tokens/data-view` ×6
+              - `ui/tokens/data-view` ×7
               - `ui/tokens/density` ×4
               - `ui/tokens/shape` ×3
             - Imported by: 70 plugins — full list in [`plugins/primitives/plugins/css/plugins/row/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/row/REFERENCE.md)
@@ -41144,8 +41144,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSingleLine`
               - `WithTooltip`
           - Cross-plugin:
-            - Uses tokens: 370 vars — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
-              - `ui/tokens/data-view` ×97
+            - Uses tokens: 371 vars — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+              - `ui/tokens/data-view` ×98
               - `ui/tokens/density` ×82
               - `ui/tokens/color-palette` ×61
               - `ui/tokens/type-scale` ×42
@@ -53239,8 +53239,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tokenVarName`
           - `transformValues`
       - Cross-plugin:
-        - Uses tokens: 67 vars — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
-          - `ui/tokens/density` ×27
+        - Uses tokens: 68 vars — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+          - `ui/tokens/density` ×28
           - `ui/tokens/color-palette` ×25
           - `ui/tokens/shadow` ×5
           - `ui/tokens/shape` ×4

@@ -535,12 +535,26 @@ export const dataViewGroup = defineTokenGroup("data-view", {
     default: "var(--pad-row-y)",
     label: "Group header block padding",
   },
+  // Its inline padding: the row's own (`p-row`), so the label lands on a
+  // list row's text column; 0 puts it on the rail, over a gallery's card edge.
+  groupHeaderPadX: {
+    default: "var(--pad-row-x)",
+    label: "Group header inline padding",
+  },
   groupHeaderSpaceBelow: {
     default: "0px",
     label: "Space below group header",
   },
   groupGap: { default: "0px", label: "Group gap" },
   groupChevronSize: { default: "1.15em", label: "Group chevron size" },
+  // Whether an open group's chevron shows at rest (`always`, faint, brightening
+  // while its header is hovered or focused) or only while its header is
+  // hovered or focused (`hover`; a shut group's always shows).
+  groupChevronReveal: {
+    default: "hover",
+    label: "Group chevron reveal",
+    values: ["always", "hover"] as const,
+  },
   // The rule's own room on either side, beyond the header's gap (none).
   groupRuleStart: { default: "0px", label: "Group rule start margin" },
   groupRuleEnd: { default: "0px", label: "Group rule end margin" },

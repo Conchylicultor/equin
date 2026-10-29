@@ -295,7 +295,13 @@ const dataView = dataViewGroup.fragment(
     // A group header's label (the library's "MIDI File") reads in full ink.
     groupLabelInk: TEXT,
     coverRing: "var(--border)",
+    // Every song draws its own cover; no monogram stands in for one.
+    coverMonogram: "hide",
     // ── Toolbar ──
+    // `.views` / `.tools` are boxed glass pills, not the flat strip.
+    toolbarPillSurface: "float",
+    // The mock's search draws no `/` hint.
+    searchShortcutHint: "hide",
     toolbarPadY: "0.75rem",
     toolbarGap: "0.625rem",
     toolbarSpaceBelow: "1rem",
@@ -325,6 +331,8 @@ const dataView = dataViewGroup.fragment(
     viewChipSpacing: "0.125rem", // `.views { gap: 2px }`
     viewSwitcherGap: "0.125rem",
     viewAddSeparator: "show",
+    viewAddReveal: "always", // `.view.add` sits in `.views` at rest
+    viewChipRadius: "999px", // `.view { border-radius: 999px }`
     narrowCreateLabel: "hide",
     // ── Gallery card ──
     // The grid starts right under its header (`.ghead`'s 14px is the room).
@@ -354,6 +362,10 @@ const dataView = dataViewGroup.fragment(
     coverPrimaryInset: "0.6875rem",
     coverChipInset: "0.5625rem",
     // ── Group headers ──
+    // `.ghead`: a hairline (`.line`) to a chevron shown at rest.
+    groupHeaderStyle: "rule",
+    groupChevronReveal: "always",
+    groupHeaderPadX: "0px", // `.ghead`'s chip sits on the cards' edge
     groupHeaderGap: "0.625rem",
     groupHeaderPadY: "0.25rem",
     groupHeaderSpaceBelow: "0.875rem",
@@ -378,6 +390,7 @@ const dataView = dataViewGroup.fragment(
     softThumbW: "3.25rem",
     softThumbH: "2.125rem",
     softThumbRadius: "0.5625rem",
+    columnHeaderCase: "upper", // `.lhead > div { text-transform: uppercase }`
     columnHeaderTracking: "0.12em",
     sortIcon: "sorted",
   }),

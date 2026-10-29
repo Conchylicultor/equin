@@ -381,8 +381,8 @@ exactly.
     - `tokenVarName`
     - `transformValues`
 - Cross-plugin:
-  - Uses tokens: 67 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/density` ×27
+  - Uses tokens: 68 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/density` ×28
     - `ui/tokens/color-palette` ×25
     - `ui/tokens/shadow` ×5
     - `ui/tokens/shape` ×4

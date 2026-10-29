@@ -162,7 +162,10 @@ the row's `<button>`), so it fills from the label to the trailing cluster —
 `ruleClassName` lands on the rule's box, for a caller that decides in CSS
 whether it shows (`hidden` gives its slack back): the DataView group header is
 `variant="group" disclosure="trailing" rule`, its rule shown only under the
-theme's `groupHeaderStyle: rule`.
+theme's `groupHeaderStyle: rule`. `chevronClassName` does the same for a
+`trailing` chevron (the row is the named group `group/section-header`, so it
+can brighten on hover): the DataView shows an open group's chevron at rest,
+faint, under the theme's `groupChevronReveal: always`.
 
 The trailing reveal is `hover-reveal`'s `useHoverReveal` (per-instance state;
 pointer enter/leave on the row box, keyboard-only focus on the control, each
@@ -212,10 +215,10 @@ genuine transient-chrome list escapes with
     - `Row`
     - `SectionHeaderRow`
 - Cross-plugin:
-  - Uses tokens: 32 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 33 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/type-scale` ×11
     - `ui/tokens/color-palette` ×8
-    - `ui/tokens/data-view` ×6
+    - `ui/tokens/data-view` ×7
     - `ui/tokens/density` ×4
     - `ui/tokens/shape` ×3
   - Imported by: 70 plugins — full list in [REFERENCE.md](./REFERENCE.md)
