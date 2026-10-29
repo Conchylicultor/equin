@@ -10,7 +10,7 @@ import { agentClaudeLinkDir } from "./paths";
 // bundle-less executable by its FILE NAME in a permission prompt — which for
 // the native installer is the version (`versions/2.1.308`), so every agent
 // asked as "2.1.308". A hardlink is the same signed file under another name:
-// the prompt reads "Fix login bug · conv-…".
+// the prompt reads "equin · conv-… · Fix login bug".
 //
 // TCC also keys a bundle-less client's decisions by that path (measured
 // 2026-10-24: an Allow given to a renamed hardlink did not reach the original
