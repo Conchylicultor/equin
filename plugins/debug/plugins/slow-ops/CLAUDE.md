@@ -115,7 +115,9 @@ The browser does not POST once per slow element. `web/internal/slow-op-queue.ts`
 queues each signal, waits ~250 ms (one trailing debounce, never a poll), and
 sends the accumulated items as ONE request, chunked to
 `MAX_CLIENT_SLOW_OP_ITEMS`, `keepalive`, with a `pagehide` flush so a queued
-signal is not lost when the tab goes away. On the server, one batch is one
+signal is not lost when the tab goes away. Each batch retries a network error or
+502/503/504 for ~31 s (the reports beacon's budget), so a backend restart — main
+restarts on every push — no longer surfaces as a `Failed to fetch` crash. On the server, one batch is one
 contention snapshot and one upsert per table (`recordSlowOpBatch`) — never a
 transaction per item.
 

@@ -18,9 +18,9 @@ const fetchEndpoint = fetchEndpointOver(pageTransport);
 // Shaped after `plugins/primitives/plugins/log-channels/web/client-log.ts`: a
 // module-level buffer, ONE trailing debounce timer, a hard cap that drops the
 // oldest while carrying the drop count forward, and chunked `keepalive` POSTs
-// bounded by the server-side max. It carries none of clientLog's retry/backoff
-// machinery on purpose — this is a `report: false` fire-and-forget beacon, and
-// a failed batch is dropped exactly as a failed single POST was before.
+// bounded by the server-side max. It is a `report: false` beacon: a batch is
+// retried across a backend restart (SLOW_OP_RETRY), and a batch that still
+// fails after that is dropped, loudly.
 //
 // This queue is TRANSPORT ONLY. It never filters, thresholds or suppresses a
 // signal: every slow settle the collector observes still reaches recordSlowOp
@@ -44,6 +44,16 @@ const MAX_QUEUED = 1_000;
  * being silent — the counter half of clientLog's drop marker line.
  */
 let dropped = 0;
+
+/**
+ * Retry budget for one batch — the reports beacon's (`reports/web/report.ts`):
+ * 6 retries sleeping 0.5 … 16 s, about 31.5 s, enough to outlast a backend hot
+ * restart (main restarts on every push). Only a network error or a 502/503/504
+ * is retried. A response lost after the server recorded the batch would count
+ * it twice; for slow-op counters that is an accepted overcount, unlike a
+ * `Failed to fetch` crash report on every restart.
+ */
+const SLOW_OP_RETRY = { retries: 6, backoffMs: 500 };
 
 export function enqueueSlowOp(item: SlowOpClientItem): void {
   queue.push(item);
@@ -83,9 +93,10 @@ async function flush(): Promise<void> {
       {
         body: { items, ...(carried > 0 ? { dropped: carried } : {}) },
         keepalive: true,
+        retry: SLOW_OP_RETRY,
         // Passive telemetry: a failed beacon must never toast or recurse into
-        // the report path. It still rejects — the failure is loud as an
-        // unhandled rejection, exactly as the per-element POST it replaces.
+        // the report path. Once the retries run out it still rejects — a
+        // backend down past the budget is loud as an unhandled rejection.
         report: false,
       },
     );
