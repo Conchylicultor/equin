@@ -47,7 +47,7 @@ const equinIcon = symbol("all-inclusive");
 
 /**
  * Home's tour (the primary one: "Replay the tour" starts it). The welcome
- * card, then the gallery, the toolbar, Improve — where the user can send a
+ * card, then the gallery, the toolbar, Wish — where the user can send a
  * first request for real — the Agent Manager tile, and, inside the Agent
  * Manager, the row of the conversation that request started.
  */
@@ -85,8 +85,8 @@ export const homeTour = defineTour<HomeTourData>({
       // nothing to unfold, so only Next moves on.
       body: (d) =>
         d.barFloating
-          ? "This toolbar is how you interact with the app: ask for changes, get notified, get help. It's on every app, folded into this dot to stay out of your way."
-          : "This toolbar is how you interact with the app: ask for changes, get notified, get help. It's on every app, up here in the tab bar.",
+          ? "This toolbar is your entry point to talk with equin. It's on every screen, folded into this dot to stay out of your way."
+          : "This toolbar is your entry point to talk with equin. It's on every screen, up here in the tab bar.",
       footnote: (d) =>
         d.barFloating ? (
           <>
@@ -99,15 +99,15 @@ export const homeTour = defineTour<HomeTourData>({
     {
       id: "wish",
       anchor: wishButtonAnchor,
-      title: "Wish for anything you see",
+      title: "Ask equin for anything",
       body: (
         <>
-          Spot a bug, a rough edge, an idea? Click <b>Wish</b> and say it —{" "}
-          <Icon icon={pickIcon} /> points at the exact element. An agent works
-          on it in the background while you carry on.
+          One place to ask for anything. Build an app, change this one, get
+          help: just ask. Use <Icon icon={pickIcon} /> to point at the screen
+          and add context.
         </>
       ),
-      // Clicking Improve itself is "Try it" done by hand: the popover the
+      // Clicking Wish itself is "Try it" done by hand: the popover the
       // click opened gets the first request too (a seed fills only an empty
       // draft), and the tour moves on to it.
       next: {
@@ -121,13 +121,13 @@ export const homeTour = defineTour<HomeTourData>({
       alt: { label: "Skip", to: "agents" },
     },
     {
-      // Improve is open: the card stays beside it, Send ringed. Sending moves
+      // Wish is open: the card stays beside it, Send ringed. Sending moves
       // on; closing it unsent goes back a step.
       id: "ask",
       anchor: wishPanelAnchor,
       cue: wishSendAnchor,
       title: "See what an agent can do",
-      body: "Here's a first request — a real change to this screen, built while you carry on. Send it as is, or make it yours.",
+      body: "Here's a first request: a real change to this screen. Send it as is, or make it yours. Nothing lands by default, until you review it.",
       next: "none",
       alt: { label: "Skip", to: "agents" },
       onAnchorLost: "wish",

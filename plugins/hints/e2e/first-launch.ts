@@ -167,7 +167,7 @@ async function wishRoundTrips(
   mode: string,
   floating: boolean,
 ): Promise<void> {
-  const wishCard = page.getByText("Wish for anything you see", {
+  const wishCard = page.getByText("Ask equin for anything", {
     exact: true,
   });
   const askCard = page.getByText("See what an agent can do", { exact: true });
@@ -265,9 +265,7 @@ const passed = await withBrowser(async (h) => {
   await button("Next").click();
   await visible("docked: bar step", card("Your way to talk to equin"));
   await button("Next").click();
-  if (
-    !(await visible("docked: improve step", card("Wish for anything you see")))
-  )
+  if (!(await visible("docked: improve step", card("Ask equin for anything"))))
     return false;
   await wishRoundTrips(page, "docked", false);
   await page.keyboard.press("Escape");
@@ -302,7 +300,7 @@ const passed = await withBrowser(async (h) => {
   await hoverActionBar(page);
   await visible(
     "improve step (hover advanced)",
-    card("Wish for anything you see"),
+    card("Ask equin for anything"),
   );
   // The step holds the bar unfolded with the pointer gone.
   await page.mouse.move(700, 850);
