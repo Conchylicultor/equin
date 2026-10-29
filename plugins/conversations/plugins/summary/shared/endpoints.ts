@@ -8,4 +8,8 @@ export const generateConversationSummary = defineEndpoint({
     turnCount: z.number(),
   }),
   needsMachine: { feature: "Summarising a conversation" },
+  unpredicted: {
+    reason: "server-decided",
+    why: "It spawns a system conversation that runs an LLM, and the returned spawned conversation id and turn count are what the pane uses.",
+  },
 });

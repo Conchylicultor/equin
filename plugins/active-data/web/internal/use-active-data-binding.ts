@@ -1,14 +1,10 @@
 import type { z } from "zod";
 import { useCallback, useMemo } from "react";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useLive, useLiveMutation } from "@plugins/network/plugins/live/web";
 import {
   mapResource,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
-import {
-  useFetchEndpoint,
-  EndpointError,
-} from "@plugins/infra/plugins/endpoints/web";
 import {
   activeDataBindings,
   putBinding,
@@ -42,16 +38,20 @@ export interface ActiveDataBindingHandle<T> {
    * binding, so nothing is read.
    */
   value: ResourceResult<T | null>;
-  /** Upsert the payload. No-op when `enabled` is false. */
-  set: (next: T) => Promise<void>;
-  /** Delete the binding. No-op when `enabled` is false. */
-  clear: () => Promise<void>;
+  /**
+   * Upsert the payload. A predicted write: the binding reads `next` at once.
+   * No-op when `enabled` is false.
+   */
+  set: (next: T) => void;
+  /** Delete the binding (predicted likewise). No-op when `enabled` is false. */
+  clear: () => void;
 }
 
 export function useActiveDataBinding<T>(
   schema: z.ZodType<T>,
 ): ActiveDataBindingHandle<T> {
-  const fetchEndpoint = useFetchEndpoint();
+  const put = useLiveMutation(putBinding, { label: "Widget" });
+  const remove = useLiveMutation(deleteBinding, { label: "Widget" });
   const identity = useActiveDataIdentity();
   // Without an identity there is no conversation to read: the read is skipped
   // (nothing subscribed), and the handle below reports `loading` with
@@ -79,39 +79,17 @@ export function useActiveDataBinding<T>(
   );
 
   const set = useCallback(
-    async (next: T) => {
+    (next: T) => {
       if (!identity) return;
-      try {
-        await fetchEndpoint(putBinding, bindingParams(identity), {
-          body: { payload: next },
-        });
-      } catch (err) {
-        if (err instanceof EndpointError) {
-          const detail = typeof err.body === "string" ? err.body : "";
-          throw new Error(
-            `Save binding failed (${err.status})${detail ? `: ${detail.slice(0, 200)}` : ""}`,
-          );
-        }
-        throw err;
-      }
+      put.mutate({ params: bindingParams(identity), body: { payload: next } });
     },
-    [fetchEndpoint, identity],
+    [put, identity],
   );
 
-  const clear = useCallback(async () => {
+  const clear = useCallback(() => {
     if (!identity) return;
-    try {
-      await fetchEndpoint(deleteBinding, bindingParams(identity));
-    } catch (err) {
-      if (err instanceof EndpointError) {
-        const detail = typeof err.body === "string" ? err.body : "";
-        throw new Error(
-          `Clear binding failed (${err.status})${detail ? `: ${detail.slice(0, 200)}` : ""}`,
-        );
-      }
-      throw err;
-    }
-  }, [fetchEndpoint, identity]);
+    remove.mutate({ params: bindingParams(identity) });
+  }, [remove, identity]);
 
   return { enabled: identity !== null, value, set, clear };
 }

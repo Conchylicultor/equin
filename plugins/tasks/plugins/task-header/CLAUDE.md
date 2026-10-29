@@ -9,7 +9,6 @@
   - Contributes: `TaskDetailSlots.Section` "Task" → `TaskHeader`
   - Uses:
     - `conversations.useConversationById`
-    - `infra/endpoints.useFetchEndpoint`
     - `primitives/css/fill.Fill`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.SectionLabel`
@@ -20,7 +19,7 @@
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
-    - `tasks.patchTask`
+    - `tasks.usePatchTask`
     - `tasks.useTask`
     - `tasks/task-detail.taskDetailPane`
     - `tasks/task-detail.TaskDetailSlots`

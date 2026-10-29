@@ -27,17 +27,29 @@ export type DeleteTargetingBody = z.infer<typeof DeleteTargetingBodySchema>;
 
 export const subscribeEventsTest = defineEndpoint({
   route: "POST /api/events-test/subscribe",
+  unpredicted: {
+    reason: "server-decided",
+    why: "test fixture view: the event queue decides what the subscription delivers",
+  },
   body: SubscribeBodySchema,
   response: z.object({ id: z.string() }),
 });
 
 export const emitEventsTest = defineEndpoint({
   route: "POST /api/events-test/emit",
+  unpredicted: {
+    reason: "server-decided",
+    why: "test fixture view: the event queue decides what the emit delivers",
+  },
   body: EmitBodySchema,
 });
 
 export const directEnqueueEventsTest = defineEndpoint({
   route: "POST /api/events-test/direct-enqueue",
+  unpredicted: {
+    reason: "server-decided",
+    why: "test fixture view: the job queue decides what the enqueue runs",
+  },
   body: DirectEnqueueBodySchema,
   response: z.object({ jobId: z.string() }),
 });
@@ -51,14 +63,26 @@ export const getEventsTestLog = defineEndpoint({
 
 export const resetEventsTest = defineEndpoint({
   route: "POST /api/events-test/reset",
+  unpredicted: {
+    reason: "server-decided",
+    why: "test fixture view: resets queue state the server owns",
+  },
 });
 
 export const deleteEventsTestTrigger = defineEndpoint({
   route: "DELETE /api/events-test/trigger/:id",
+  unpredicted: {
+    reason: "server-decided",
+    why: "test fixture view: the trigger registry the server owns decides the result",
+  },
 });
 
 export const deleteEventsTestTargeting = defineEndpoint({
   route: "POST /api/events-test/delete-targeting",
+  unpredicted: {
+    reason: "server-decided",
+    why: "test fixture view: the trigger registry the server owns decides the result",
+  },
   body: DeleteTargetingBodySchema,
 });
 
@@ -75,6 +99,7 @@ export const waitEventsTestIdle = defineEndpoint({
 
 export const crashRecoveryEventsTest = defineEndpoint({
   route: "POST /api/events-test/crash-recovery",
+  internal: { why: "test fixture: driven by e2e, no browser client" },
 });
 
 // The three queue-level regression harnesses. Like crash-recovery they declare
@@ -83,14 +108,17 @@ export const crashRecoveryEventsTest = defineEndpoint({
 // assertion that failed rather than throwing.
 export const serialQueueEventsTest = defineEndpoint({
   route: "POST /api/events-test/serial-queue",
+  internal: { why: "test fixture: driven by e2e, no browser client" },
 });
 
 export const queueLockNoStealEventsTest = defineEndpoint({
   route: "POST /api/events-test/queue-lock-no-steal",
+  internal: { why: "test fixture: driven by e2e, no browser client" },
 });
 
 export const cronDedupEventsTest = defineEndpoint({
   route: "POST /api/events-test/cron-dedup",
+  internal: { why: "test fixture: driven by e2e, no browser client" },
 });
 
 // A row graphile retired mid-run (a newer copy of its key was queued) is
@@ -98,6 +126,7 @@ export const cronDedupEventsTest = defineEndpoint({
 // the dead-job set. Same verdict shape as the three above.
 export const supersededEventsTest = defineEndpoint({
   route: "POST /api/events-test/superseded",
+  internal: { why: "test fixture: driven by e2e, no browser client" },
 });
 
 // Drives the job queue into a saturated, dead-lettered state on a dev deploy,
@@ -140,6 +169,7 @@ export type QueueSaturateBody = z.infer<typeof QueueSaturateBodySchema>;
 
 export const queueSaturateEventsTest = defineEndpoint({
   route: "POST /api/events-test/queue-saturate",
+  internal: { why: "test fixture: driven by e2e, no browser client" },
   body: QueueSaturateBodySchema,
   response: z.object({
     /** Graphile job ids of the sleepers, in enqueue order. */
@@ -165,6 +195,7 @@ export type DetachedSleepBody = z.infer<typeof DetachedSleepBodySchema>;
 
 export const detachedSleepEventsTest = defineEndpoint({
   route: "POST /api/events-test/detached-sleep",
+  internal: { why: "test fixture: driven by e2e, no browser client" },
   body: DetachedSleepBodySchema,
   response: z.object({ ok: z.literal(true) }),
 });

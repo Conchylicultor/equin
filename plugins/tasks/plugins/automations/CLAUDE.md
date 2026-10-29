@@ -300,15 +300,15 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `FieldPresentation.Register` "exposure:tasks_ext_origin"
     - `Notifications.Action` "review-automation"
   - Uses: 58 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live` ×7
     - `primitives/css/ui-kit` ×7
-    - `network/live` ×6
     - `primitives/live-state` ×6
     - `primitives/pane` ×5
     - `primitives/data-view` ×4
     - `config_v2` ×3
-    - `infra/endpoints` ×3
     - `conversations/model-provider` ×2
     - `infra/background/catalog` ×2
+    - `infra/endpoints` ×2
     - `primitives/css/control-panel` ×2
     - `apps-core/tabs.useAppLink`
     - `fields/dynamic-enum/config.DynamicEnum`
@@ -387,19 +387,19 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `automations.tasks:groups` (push)
     - `automations.tasks:rows` (keyed, point)
   - Routes:
-    - `POST /api/automations/:automationId/launch-decisions`
-    - `PUT /api/tasks/:taskId/approval`
+    - `POST /api/automations/:automationId/launch-decisions` — predicted
+    - `PUT /api/tasks/:taskId/approval` — predicted
 - Machine:
   - Uses:
     - `network/live.serveCollection`
     - `network/live.serveValue`
 - Core:
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live` ×6
     - `config_v2` ×3
     - `conversations/conversation-view/push-and-exit/capabilities` ×3
     - `conversations/model-provider` ×3
     - `fields/text/config` ×2
-    - `network/live` ×2
     - `packages/list-bound` ×2
     - `fields/bool/config.boolField`
     - `fields/date/config.dateField`

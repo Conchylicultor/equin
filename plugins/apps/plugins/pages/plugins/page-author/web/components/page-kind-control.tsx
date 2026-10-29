@@ -1,7 +1,6 @@
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLiveMutation, useLiveRow } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
   ControlPanel,
   ControlPanelPopover,
@@ -112,9 +111,9 @@ function kindFor(k: PageKind["kind"]): PageKind {
  * visible line (the kind IS a policy, so it is read before it is picked) and a
  * trailing tick — plus the switch. A
  * choice asks the server to change the page's kind (`setPageKind`, the one way a
- * kind changes after a page is born). It is deliberately not optimistic: the
- * trigger changes when the live `pagesTree` push of this page's row lands — the
- * same row that re-tints the parent page's row and the sidebar.
+ * kind changes after a page is born). It is a predicted write: the trigger
+ * changes from the call, on the same `pagesTree` row that re-tints the parent
+ * page's row and the sidebar.
  *
  * While the page row is still loading it renders a placeholder the size of the
  * pill, never the pill: that would claim a kind before anything is known.
@@ -123,7 +122,7 @@ export function PageKindControl() {
   const { pageId } = pageDetailPane.useParams();
   const size = useControlSize();
   const result = useLiveRow(pagesTree, pageId);
-  const { mutateAsync } = useEndpointMutation(setPageKind);
+  const setKind = useLiveMutation(setPageKind, { label: "Page kind" });
 
   if (result.status === "loading") {
     return <Loading variant="block" className={PILL_BOX[size]} />;
@@ -143,8 +142,8 @@ export function PageKindControl() {
   const kind = pageKindOf(pageData(result.row));
   const look = KIND_LOOK[kind.kind];
 
-  const choose = async (next: PageKind) => {
-    await mutateAsync({ params: { id: pageId }, body: { kind: next } });
+  const choose = (next: PageKind) => {
+    setKind.mutate({ params: { id: pageId }, body: { kind: next } });
   };
 
   return (
@@ -194,7 +193,7 @@ export function PageKindControl() {
             }
             description={KIND_LOOK[k].hint}
             onSelect={() => {
-              if (kind.kind !== k) void choose(kindFor(k));
+              if (kind.kind !== k) choose(kindFor(k));
             }}
           >
             {KIND_LOOK[k].label}
@@ -208,7 +207,7 @@ export function PageKindControl() {
             checked={kind.global}
             description="Point every conversation at this page"
             onSelect={() => {
-              void choose({ kind: "instructions", global: !kind.global });
+              choose({ kind: "instructions", global: !kind.global });
             }}
           >
             Global

@@ -1,7 +1,4 @@
-import {
-  useEndpointMutation,
-  EndpointError,
-} from "@plugins/infra/plugins/endpoints/web";
+import { useLiveMutation } from "@plugins/network/plugins/live/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import type { Server } from "../../shared";
@@ -14,28 +11,21 @@ import { DeleteServerDialog } from "./delete-server-dialog";
  * and the body is only the fields.
  */
 export function ServerDeleteAction({ server }: { server: Server }) {
-  const remove = useEndpointMutation(deleteServer);
+  const remove = useLiveMutation(deleteServer);
 
   function handleDelete() {
     // Fire-and-forget: don't return the openDialog promise, or the button would
-    // auto-pend for the dialog's whole open lifetime. `loading={…isPending}`
-    // reflects the actual delete instead.
+    // auto-pend for the dialog's whole open lifetime. The delete is predicted:
+    // the server leaves every read and the dialog closes at once.
     void openDialog(
       (close) => (
         <DeleteServerDialog
           server={server}
           onCancel={close}
-          onConfirm={() =>
-            remove
-              .mutateAsync({ params: { id: server.id } })
-              .then(() => close())
-              .catch((err: unknown) => {
-                // Expected delete failure — the global toast already reported it;
-                // keep the dialog open so the user can retry or cancel.
-                if (err instanceof EndpointError) return;
-                throw err;
-              })
-          }
+          onConfirm={() => {
+            remove.mutate({ params: { id: server.id } });
+            close();
+          }}
         />
       ),
       { size: "sm" },
@@ -45,7 +35,6 @@ export function ServerDeleteAction({ server }: { server: Server }) {
   return (
     <Button
       variant="link"
-      loading={remove.isPending}
       onClick={handleDelete}
       className="text-destructive hover:text-destructive"
     >

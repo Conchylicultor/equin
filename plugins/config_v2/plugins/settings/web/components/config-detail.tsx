@@ -11,7 +11,7 @@ import {
   ResourceErrorInline,
   useCombinedResources,
 } from "@plugins/primitives/plugins/live-state/web";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useLive, useLiveMutation } from "@plugins/network/plugins/live/web";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
 import {
   configRawFile,
@@ -324,7 +324,8 @@ function ConfigDetailBody({
   // works is indistinguishable from a dead button.
   const acknowledgeM = useEndpointMutation(acknowledgeConflict);
   const resetOverrideM = useEndpointMutation(deleteOverride);
-  const removeScopeM = useEndpointMutation(removeDescriptorScope);
+  // Predicted: the tab leaves the scope tabs at once, nothing pends.
+  const removeScopeM = useLiveMutation(removeDescriptorScope);
   // Merge is the one resolution whose success can leave the banner standing: when
   // fields conflict on both sides it keeps the stale hash on purpose so the
   // conflict stays surfaced. A spinner alone would read as "nothing happened", so
@@ -429,11 +430,7 @@ function ConfigDetailBody({
         className="mb-1"
       >
         {scopeId && !showRaw && (
-          <Button
-            variant="ghost"
-            loading={removeScopeM.isPending}
-            onClick={handleStopCustomizing}
-          >
+          <Button variant="ghost" onClick={handleStopCustomizing}>
             <Icon icon={layersClearIcon} className="size-3.5" />
             Stop customizing
           </Button>

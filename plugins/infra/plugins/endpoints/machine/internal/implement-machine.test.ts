@@ -10,19 +10,36 @@ import { implementMachine, machineHandler } from "./implement-machine";
 
 const launch = defineEndpoint({
   route: "POST /api/launch",
+  unpredicted: { reason: "response", why: "test fixture" },
   response: z.object({ ok: z.boolean() }),
   needsMachine: { feature: "Launching an agent" },
 });
 
 const ping = defineEndpoint({
   route: "POST /api/ping",
+  unpredicted: { reason: "response", why: "test fixture" },
   response: z.object({ ok: z.boolean() }),
 });
 
 const req = () =>
   new Request("http://localhost/api/launch", { method: "POST" });
 
+const hostHook = defineEndpoint({
+  route: "POST /api/host-hook",
+  response: z.object({ ok: z.boolean() }),
+  needsMachine: { feature: "A host hook" },
+  internal: { why: "called by the CLI only" },
+});
+
 describe("implementMachine", () => {
+  test("serves an internal desktop-only endpoint too", async () => {
+    const res = await implementMachine(hostHook, () => ({ ok: true }))(
+      req(),
+      {},
+    );
+    expect(res.status).toBe(200);
+  });
+
   test("serves a desktop-only endpoint like implement does", async () => {
     const res = await implementMachine(launch, () => ({ ok: true }))(req(), {});
     expect(res.status).toBe(200);

@@ -3,8 +3,7 @@ import {
   useCombinedResources,
 } from "@plugins/primitives/plugins/live-state/web";
 import { useRef, useState } from "react";
-import { useLive } from "@plugins/network/plugins/live/web";
-import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useLive, useLiveMutation } from "@plugins/network/plugins/live/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import {
@@ -24,7 +23,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 const notificationsIcon = symbol("notifications");
 
 export function BellButton() {
-  const fetchEndpoint = useFetchEndpoint();
+  const markAllRead = useLiveMutation(markAllNotificationsRead);
   const [open, setOpen] = useState(false);
   // The newest 200 undismissed notifications that reach the user's audience
   // (a developer's is the boot-preloaded default window). It drives the toasts
@@ -95,7 +94,7 @@ export function BellButton() {
     if (next) {
       hadUnreadRef.current = unreadCount > 0;
     } else if (hadUnreadRef.current) {
-      void fetchEndpoint(markAllNotificationsRead, {});
+      markAllRead.mutate({});
       hadUnreadRef.current = false;
     }
     setOpen(next);

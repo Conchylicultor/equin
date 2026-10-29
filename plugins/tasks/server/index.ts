@@ -21,12 +21,14 @@ import {
   getTask,
   updateTask,
   moveTask,
-  setTaskAutoStart,
-  clearTaskAutoStart,
   addTaskDependency,
   removeTaskDependency,
   moveTaskInDepsTree,
 } from "../core/endpoints";
+import {
+  setTaskAutoStart,
+  clearTaskAutoStart,
+} from "@plugins/tasks/plugins/auto-start/core";
 
 export { armTaskAutoStart } from "./internal/arm-auto-start";
 

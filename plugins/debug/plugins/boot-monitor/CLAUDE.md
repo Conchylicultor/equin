@@ -53,7 +53,7 @@ Key mechanics:
     - `infra/jobs.defineJob`
   - Exports (values): `getGatewayBootReport`
   - Register: `defineJob('debug.boot-monitor')`
-  - Routes: `POST /api/boot/gateway-report`
+  - Routes: `POST /api/boot/gateway-report` — internal
 - Core:
   - Uses:
     - `config_v2.defineConfig`

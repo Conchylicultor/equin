@@ -62,16 +62,16 @@ plus `sshKey`.
     - `Pane.Register` "deploy-servers"
     - `ServerDetail.Section` "Server" → `ServerEditForm`
     - `item-actions` "open-console" → `OpenConsoleAction`
-  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×5
-    - `infra/endpoints` ×4
     - `primitives/data-view` ×4
     - `primitives/css/ui-kit` ×3
     - `primitives/live-state` ×3
+    - `infra/endpoints` ×2
+    - `network/live` ×2
     - `primitives/css/fill` ×2
     - `primitives/editable-field` ×2
     - `ids.IdKinds`
-    - `network/live.useLive`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
@@ -123,12 +123,12 @@ plus `sshKey`.
     - `deploy.servers.all:rows` (keyed, point)
   - Routes:
     - `GET /api/deploy/servers`
-    - `POST /api/deploy/servers`
+    - `POST /api/deploy/servers` — unpredicted (server-minted-id)
     - `GET /api/deploy/servers/:id`
-    - `PATCH /api/deploy/servers/:id`
-    - `DELETE /api/deploy/servers/:id`
-    - `POST /api/deploy/servers/:id/ssh-keypair`
-    - `POST /api/deploy/servers/:id/ssh-keypair/import`
+    - `PATCH /api/deploy/servers/:id` — predicted
+    - `DELETE /api/deploy/servers/:id` — predicted
+    - `POST /api/deploy/servers/:id/ssh-keypair` — unpredicted (server-decided)
+    - `POST /api/deploy/servers/:id/ssh-keypair/import` — unpredicted (precondition)
 - Core:
   - Uses:
     - `fields.nullable`

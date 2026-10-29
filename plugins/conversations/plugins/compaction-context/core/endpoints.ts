@@ -20,4 +20,7 @@ export type CompactionContextResponse = z.infer<
 export const compactionContext = defineEndpoint({
   route: "POST /api/conversations/:id/compaction-context",
   response: CompactionContextResponseSchema,
+  internal: {
+    why: "Called only by the compaction hook of the agent process, through the shared client; no browser code calls it.",
+  },
 });

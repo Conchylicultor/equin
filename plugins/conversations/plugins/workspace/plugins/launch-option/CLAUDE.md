@@ -21,9 +21,9 @@ default, stored as no row) or one registered scratch profile. Design:
 - Web:
   - Contributes: `TaskLaunch.Option` "Workspace" → `WorkspaceLaunchControl`
   - Uses:
-    - `infra/endpoints.useFetchEndpoint`
     - `network/live.mapRow`
     - `network/live.useLive`
+    - `network/live.useLiveMutation`
     - `network/live.useLiveRow`
     - `primitives/css/ui-kit.Select`
     - `primitives/css/ui-kit.SelectContent`
@@ -34,7 +34,6 @@ default, stored as no row) or one registered scratch profile. Design:
     - `primitives/live-state.mapResource`
     - `primitives/loading.Loading`
     - `primitives/text-editor/composer/picker-pill.PickerPill`
-    - `shell/notifications.useToast`
     - `tasks/launch-options.TaskLaunch`
     - `tasks/tasks-core.useTaskAttempts`
     - `ui/icons.Icon`
@@ -57,8 +56,8 @@ default, stored as no row) or one registered scratch profile. Design:
     - `tasksWorkspace`
   - Resources: `task-workspaces:rows` (keyed, point)
   - Routes:
-    - `PUT /api/task-workspaces/:taskId`
-    - `DELETE /api/task-workspaces/:taskId`
+    - `PUT /api/task-workspaces/:taskId` — predicted
+    - `DELETE /api/task-workspaces/:taskId` — predicted
 - Core:
   - Uses:
     - `conversations/workspace.WorkspaceSpec`

@@ -143,7 +143,7 @@ that are real.
     - `network/live.serveValue`
   - DB schema: `plugins/apps/plugins/chord/plugins/progress/server/internal/tables.ts`
   - Resources: `chord.progress` (push, whole: one entry per requested token — the params bound it)
-  - Routes: `POST /api/chord/rounds`
+  - Routes: `POST /api/chord/rounds` — unpredicted (server-decided)
 - Core:
   - Uses:
     - `apps/chord/curriculum.BlanksSchema`

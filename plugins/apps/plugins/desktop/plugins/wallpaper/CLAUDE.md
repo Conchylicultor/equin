@@ -80,8 +80,8 @@ entry carries the move — `server/internal/store.ts` spells neither path.
     - `getWallpaperProvider`
   - Resources: `wallpaper.search` (invalidate, fixed, capped: WALLPAPER_SEARCH_MAX_RESULTS)
   - Routes:
-    - `POST /api/wallpaper/import-url`
-    - `POST /api/wallpaper/upload`
+    - `POST /api/wallpaper/import-url` — unpredicted (response)
+    - `POST /api/wallpaper/upload` — unpredicted (response)
     - `GET /api/wallpaper/image`
 - Core:
   - Uses:

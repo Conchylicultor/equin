@@ -95,13 +95,16 @@ export function RowOrderContribution({
         );
       }
       if (writes.length === 0) return; // legitimate no-op (onto itself / adjacent)
-      // Returned so a failed write releases the DataView's pending-move overlay.
-      return setRowOrder({ dataViewId: storageKey, viewId, writes });
+      // Predicted: the order already reads the new ranks, so nothing is
+      // returned for the DataView's pending-move overlay to hold.
+      setRowOrder({ dataViewId: storageKey, viewId, writes });
     };
 
     // A drop from elsewhere (`rowDrop` under `placement: "between"`): the keys
     // may name rows the consumer has not created yet — they take their ranks
     // now, so the rows render in the gap they were dropped in once they land.
+    // The contract is a promise (a bad anchor rejects it); the write is
+    // predicted, so there is nothing to await.
     const onInsert = async (
       keys: readonly string[],
       dest: { targetId: string; zone: "before" | "after" },
@@ -119,7 +122,9 @@ export function RowOrderContribution({
         );
       }
       if (writes.length === 0) return; // legitimate no-op
-      await setRowOrder({ dataViewId: storageKey, viewId, writes });
+      // Predicted (the keys read in their gap at once): `insert`'s promise
+      // settles with the call, not with the server.
+      setRowOrder({ dataViewId: storageKey, viewId, writes });
     };
 
     return { getRank, onMove, onInsert };

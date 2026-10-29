@@ -63,7 +63,7 @@
     - `defineJob('push_and_exit.exit_clean_finalize')`
     - `mcpTool('exit_clean')`
     - `mcpTool('flag_raise')`
-  - Routes: `POST /api/conversations/:id/push-and-exit`
+  - Routes: `POST /api/conversations/:id/push-and-exit` — unpredicted (response)
 - Machine:
   - Uses: `tasks/orchestration/watch.watchSource`
 - Core:

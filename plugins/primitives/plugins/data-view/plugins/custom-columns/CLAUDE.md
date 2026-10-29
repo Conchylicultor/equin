@@ -102,10 +102,9 @@ how the caller obtained it.
     - `primitives/data-view` ×9
     - `primitives/live-state` ×3
     - `config_v2` ×2
+    - `network/live` ×2
     - `primitives/css/control-panel` ×2
     - `ids.IdKinds`
-    - `infra/endpoints.useEndpointMutation`
-    - `network/live.useLive`
     - `primitives/css/ui-kit.Input`
     - `primitives/latest-ref.useLatestRef`
     - `ui/icons.Icon`

@@ -57,9 +57,9 @@ function _serverTakesIt() {
 }
 
 function _readsDeclareNone() {
+  // @ts-expect-error — a read declares no effect
   defineEndpoint({
     route: "GET /api/x/:id",
-    // @ts-expect-error — a read declares no effect
     effect: (_on) => brandEndpointEffect({}),
   });
 }

@@ -1,7 +1,7 @@
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
-import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { useLiveMutation } from "@plugins/network/plugins/live/web";
 import { restorePrototype } from "@plugins/apps/plugins/prototypes/plugins/state/core";
 import type { PrototypeGalleryRow } from "../slots";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -13,16 +13,15 @@ const restoreIcon = symbol("restore-from-trash");
 // history and picks untouched — so restoring it is clearing that one field.
 
 /**
- * Restore prototype `name` from the Trash. A failed write surfaces through the
- * endpoint layer's global error toast.
+ * Restore prototype `name` from the Trash. A refused write is the rejection
+ * toast.
  */
 export function useRestorePrototype(): {
-  pending: boolean;
   restore: (name: string) => void;
 } {
-  const mutation = useEndpointMutation(restorePrototype);
+  // Predicted: the card leaves the Trash at once, so there is no pending state.
+  const mutation = useLiveMutation(restorePrototype);
   return {
-    pending: mutation.isPending,
     restore: (name) => mutation.mutate({ params: { name } }),
   };
 }
@@ -31,14 +30,13 @@ export function useRestorePrototype(): {
 export function RestoreCardAction({
   row,
 }: ItemActionProps<PrototypeGalleryRow>) {
-  const { pending, restore } = useRestorePrototype();
+  const { restore } = useRestorePrototype();
   return (
     <ControlSizeProvider size="sm">
       <IconButton
         icon={restoreIcon}
         label="Restore prototype"
         variant="ghost"
-        loading={pending}
         onClick={(e) => {
           // The card's own click opens the prototype; restoring it must not.
           e.stopPropagation();

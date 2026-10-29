@@ -106,7 +106,7 @@ and without it no tool set can be computed.
   - Resources:
     - `mcp.catalog` (push, fixed, whole: every Mcp.tool the code registers — fixed for the process, a hundred or so, whole: every Mcp.instructions section the code registers — fixed for the process, a handful, whole: the scratch profiles a tool is reserved for — one or two, whole: one JSON Schema object's top-level keywords (type, properties, required, …) — a handful)
     - `mcp.health` (push, notified, capped: MCP_HEALTH_MAX_DEGRADED)
-  - Routes: `POST /api/mcp/:conversationId`
+  - Routes: `POST /api/mcp/:conversationId` — internal
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`

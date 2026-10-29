@@ -14,6 +14,10 @@ export type BulkDeleteWorktreesBody = z.infer<
 
 export const bulkDeleteWorktrees = defineEndpoint({
   route: "POST /api/debug/worktrees/bulk-delete",
+  unpredicted: {
+    reason: "server-decided",
+    why: "git and the filesystem reap each worktree; the panel shows the succeeded/failed tally",
+  },
   body: BulkDeleteWorktreesBodySchema,
   response: z.object({
     succeeded: z.number(),
@@ -23,6 +27,10 @@ export const bulkDeleteWorktrees = defineEndpoint({
 
 export const deleteWorktree = defineEndpoint({
   route: "DELETE /api/debug/worktrees/:id",
+  unpredicted: {
+    reason: "server-decided",
+    why: "git and the filesystem reap the worktree; the panel shows step progress",
+  },
 });
 
 // The reap sequence's steps, in the order they run, as ONE declaration both

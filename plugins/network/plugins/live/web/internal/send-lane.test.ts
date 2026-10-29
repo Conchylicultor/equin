@@ -2,8 +2,11 @@ import { describe, expect, test } from "bun:test";
 import {
   activeSendLaneCount,
   enqueueOnSendLane,
+  enqueueOnSendLanes,
   entitySendLaneKey,
+  namedSendLaneKey,
   resourceSendLaneKey,
+  subjectSendLaneKey,
 } from "./send-lane";
 
 function deferred<T>() {
@@ -33,6 +36,63 @@ describe("send lane keys", () => {
       resourceSendLaneKey("conversations", { id: "c1" }),
     );
     expect(entitySendLaneKey("a", "b")).not.toBe(entitySendLaneKey("a", "c"));
+  });
+
+  test("a subject's and a named lane never collide with a row's", () => {
+    const keys = new Set<string>([
+      entitySendLaneKey("a", "b"),
+      subjectSendLaneKey("a"),
+      namedSendLaneKey("a"),
+      resourceSendLaneKey("a", {}),
+    ]);
+    expect(keys.size).toBe(4);
+  });
+});
+
+describe("enqueueOnSendLanes — one send on several lanes", () => {
+  test("it waits for every lane's predecessor, and every lane's successor waits for it", async () => {
+    const a = entitySendLaneKey("e", "a");
+    const b = entitySendLaneKey("e", "b");
+    const order: string[] = [];
+    const first = deferred<void>();
+    const onA = enqueueOnSendLane(a, () => {
+      order.push("a1");
+      return first.promise;
+    });
+    const both = enqueueOnSendLanes([b, a], async () => {
+      order.push("ab");
+    });
+    const onB = enqueueOnSendLane(b, async () => {
+      order.push("b2");
+    });
+    await settle();
+    // `ab` waits for a1 (lane a); b2 waits for ab (lane b).
+    expect(order).toEqual(["a1"]);
+    first.resolve();
+    await Promise.all([onA, both, onB]);
+    expect(order).toEqual(["a1", "ab", "b2"]);
+    await settle();
+    expect(activeSendLaneCount()).toBe(0);
+  });
+
+  test("idle lanes send synchronously; a rejected predecessor still advances", async () => {
+    const a = entitySendLaneKey("f", "a");
+    const b = entitySendLaneKey("f", "b");
+    let sent = false;
+    const run = enqueueOnSendLanes([a, b], async () => {
+      sent = true;
+    });
+    expect(sent).toBe(true);
+    await run;
+    const failing = enqueueOnSendLane(a, () => Promise.reject(new Error("x")));
+    const after = enqueueOnSendLanes([a, b], async () => "ok");
+    const outcome = await failing.then(
+      () => "resolved",
+      (err: unknown) => (err instanceof Error ? err.message : "?"),
+    );
+    expect(outcome).toBe("x");
+    expect(await after).toBe("ok");
+    expect(() => enqueueOnSendLanes([], async () => {})).toThrow(/no lane/);
   });
 });
 

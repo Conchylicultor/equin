@@ -21,7 +21,7 @@
   - Exports (values): `useResumeConversation`
 - Machine:
   - Uses: `infra/endpoints.implementMachine`
-  - Routes: `POST /api/conversations/:id/resume`
+  - Routes: `POST /api/conversations/:id/resume` — unpredicted (precondition)
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`
   - Exports (values): `resumeConversationEndpoint`

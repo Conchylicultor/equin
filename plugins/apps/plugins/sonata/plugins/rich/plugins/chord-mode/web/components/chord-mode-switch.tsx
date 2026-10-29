@@ -1,5 +1,4 @@
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
-import { useState } from "react";
 import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import {
   chordModeSetting,
@@ -11,11 +10,10 @@ import {
   CHORD_BASS_TRACK,
   CHORD_TRACK,
 } from "@plugins/apps/plugins/sonata/plugins/voicing/core";
-import { setTracksActive } from "@plugins/apps/plugins/sonata/plugins/track-mixer/web";
+import { useTrackViewWrites } from "@plugins/apps/plugins/sonata/plugins/track-mixer/web";
 import { Switch } from "@plugins/primitives/plugins/css/plugins/switch/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { WithTooltip } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useSaveChordMode } from "../actions";
 
 const LABEL = "Accompaniment — play the song's chords";
@@ -27,12 +25,11 @@ const LABEL = "Accompaniment — play the song's chords";
  * song's chord mode. A chord-only song (a chord grid, a chord sheet) always
  * plays its accompaniment and has no switch.
  *
- * One flip does two things, deliberately in an order that never doubles the
- * sound. The setting flips synchronously (the pipeline re-voices at once),
- * while the track-mixer write lands a live-state round-trip later:
- *  - **On:** turn the original tracks off FIRST (await the mixer write), then
- *    flip the mode so the chord tracks appear — a beat of silence, never both
- *    layers at once.
+ * One flip does two things, in an order that never doubles the sound: both
+ * writes are predicted, so the song's track views and its chord mode show
+ * together, and the order issued is the order they depart in.
+ *  - **On:** turn the original tracks off FIRST, then flip the mode so the
+ *    chord tracks appear.
  *  - **Off:** flip the mode first (chord tracks vanish), then bring the original
  *    tracks back.
  * "Original tracks" are every score track that is not one of the two synthesized
@@ -50,10 +47,7 @@ export function ChordModeSwitch() {
   const mode = useSongSetting(chordModeSetting);
   const setChordMode = useWriteSongSetting(chordModeSetting);
   const saveChordMode = useSaveChordMode();
-  const fetchEndpoint = useFetchEndpoint();
-  // Held while the awaited mixer write is in flight, so a second flip cannot
-  // interleave the two directions.
-  const [busy, setBusy] = useState(false);
+  const trackWrites = useTrackViewWrites();
 
   // Only a library song's chord mode persists; a file document has none to flip.
   if (song.kind === "none") return null;
@@ -72,24 +66,21 @@ export function ChordModeSwitch() {
     .filter((t) => t.id !== CHORD_TRACK && t.id !== CHORD_BASS_TRACK)
     .map((t) => t.id);
 
-  const toggle = async (next: boolean) => {
-    setBusy(true);
-    try {
-      if (next) {
-        if (originals.length > 0) {
-          await setTracksActive(fetchEndpoint, songId, originals, false);
-        }
-        setChordMode(songId, true); // optimistic: the chord tracks appear at once
-        saveChordMode(songId, true);
-      } else {
-        setChordMode(songId, false); // optimistic: the chord tracks vanish at once
-        saveChordMode(songId, false);
-        if (originals.length > 0) {
-          await setTracksActive(fetchEndpoint, songId, originals, true);
-        }
+  // Each write is predicted, so the song's track views show the flip at once;
+  // the order the writes are issued in is the order they show and depart in.
+  const toggle = (next: boolean) => {
+    if (next) {
+      if (originals.length > 0) {
+        trackWrites.setActive(songId, originals, false);
       }
-    } finally {
-      setBusy(false);
+      setChordMode(songId, true); // optimistic: the chord tracks appear at once
+      saveChordMode(songId, true);
+    } else {
+      setChordMode(songId, false); // optimistic: the chord tracks vanish at once
+      saveChordMode(songId, false);
+      if (originals.length > 0) {
+        trackWrites.setActive(songId, originals, true);
+      }
     }
   };
 
@@ -104,8 +95,7 @@ export function ChordModeSwitch() {
     >
       <Switch
         checked={mode.value}
-        disabled={busy}
-        onCheckedChange={(next) => void toggle(next)}
+        onCheckedChange={toggle}
         aria-label={LABEL}
       />
     </WithTooltip>

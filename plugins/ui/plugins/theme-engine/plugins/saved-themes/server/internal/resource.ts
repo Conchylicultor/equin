@@ -1,5 +1,5 @@
 import { serveValue } from "@plugins/network/plugins/live/server";
-import { savedThemesList } from "../../shared/resources";
+import { savedThemesList } from "../../core";
 import { _savedThemes } from "./tables";
 import { listSavedThemes } from "./store";
 

@@ -89,11 +89,21 @@ const missingCollection = liveCollection(key("missing-collection"), {
 
 const echo = defineEndpoint({
   route: "POST /api/test-echo/:id",
+  unpredicted: {
+    reason: "response",
+    why: "a test fixture: the answer is the point",
+  },
   body: z.object({ n: z.number() }),
   response: z.object({ id: z.string(), doubled: z.number() }),
 });
 // Declared, never implemented here.
-const notHere = defineEndpoint({ route: "POST /api/x" });
+const notHere = defineEndpoint({
+  route: "POST /api/x",
+  unpredicted: {
+    reason: "unobserved",
+    why: "a test fixture never implemented",
+  },
+});
 
 /** The `EndpointError` a request rejected with. */
 async function endpointError(p: Promise<unknown>): Promise<EndpointError> {

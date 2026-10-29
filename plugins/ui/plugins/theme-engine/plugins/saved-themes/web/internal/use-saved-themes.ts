@@ -4,7 +4,7 @@ import {
 } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import type { Theme } from "@plugins/ui/plugins/theme-engine/core";
-import { savedThemesList } from "../../shared/resources";
+import { savedThemesList } from "../../core";
 
 // The resident source's read: the saved rows are already `Theme`s on the wire.
 // Hydrated by the boot snapshot (`preload: "boot-and-keep"`), so it is settled

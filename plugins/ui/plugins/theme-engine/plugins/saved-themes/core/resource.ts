@@ -1,6 +1,6 @@
 import { liveValue } from "@plugins/network/plugins/live/core";
 import { wholeList } from "@plugins/packages/plugins/list-bound/core";
-import { SavedThemeSchema } from "../core";
+import { SavedThemeSchema } from "./saved-theme";
 
 /**
  * Every saved theme (tweakcn imports and custom themes), oldest first — the

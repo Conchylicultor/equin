@@ -254,7 +254,7 @@ function TriageQuestion({
           <ToggleChip
             key={a}
             active={answer === a}
-            onClick={() => void pick(answer === a ? null : a)}
+            onClick={() => pick(answer === a ? null : a)}
           >
             {a}
           </ToggleChip>

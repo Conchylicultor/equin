@@ -22,6 +22,10 @@ const INSTALL_MACHINE = { feature: "Installing apps" } as const;
  */
 export const pinApp = defineEndpoint({
   route: "POST /api/menu-bar/pin/:appId",
+  unpredicted: {
+    reason: "server-decided",
+    why: "triggers a build and installs an OS shim; the action branches on the resulting status",
+  },
   response: z.object({ status: z.enum(["pinned", "waiting-for-helper"]) }),
   needsMachine: INSTALL_MACHINE,
 });

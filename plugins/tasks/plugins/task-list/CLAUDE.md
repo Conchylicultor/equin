@@ -51,7 +51,7 @@ its shape (task-track, task-category, automations).
     - `primitives/live-state.foldResource`
     - `primitives/live-state.ResourceView`
     - `primitives/loading.Loading`
-    - `tasks.patchTask`
+    - `tasks.usePatchTask`
   - Exports (values):
     - `buildTreeOptions`
     - `clusterTaskHierarchy`

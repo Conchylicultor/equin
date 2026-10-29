@@ -92,10 +92,17 @@ const missing = liveValue(key("missing"), {
 
 const echo = defineEndpoint({
   route: "POST /api/test-demo-scope/echo/:id",
+  unpredicted: {
+    reason: "response",
+    why: "a test fixture: the answer is the point",
+  },
   body: z.object({ n: z.number() }),
   response: z.object({ id: z.string(), doubled: z.number() }),
 });
-const notHere = defineEndpoint({ route: "POST /api/test-demo-scope/nope" });
+const notHere = defineEndpoint({
+  route: "POST /api/test-demo-scope/nope",
+  unpredicted: { reason: "unobserved", why: "a test fixture nothing serves" },
+});
 
 // In the collection's order (`rank`): an external `all` loader answers the
 // whole ordered set.

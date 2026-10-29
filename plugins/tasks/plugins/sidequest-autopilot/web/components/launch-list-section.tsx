@@ -3,7 +3,7 @@ import {
   EndpointError,
   useEndpointMutation,
 } from "@plugins/infra/plugins/endpoints/web";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useLive, useLiveMutation } from "@plugins/network/plugins/live/web";
 import {
   combineResources,
   foldResource,
@@ -33,8 +33,7 @@ import type { FieldOptionMeta } from "@plugins/fields/core";
 import { taskRows } from "@plugins/tasks/plugins/tasks-core/core";
 import { useStoredTracks } from "@plugins/tasks/plugins/task-track/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
-import { patchTask } from "@plugins/tasks/web";
-import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { usePatchTask } from "@plugins/tasks/web";
 import {
   automationsCatalog,
   decideLaunchEndpoint,
@@ -268,7 +267,11 @@ function LaunchListHeader({
   selected: readonly LaunchListRow[];
   onApproved: () => void;
 }): ReactElement {
-  const decide = useEndpointMutation(decideLaunchEndpoint);
+  // Clearing the selection is what the answer is for: it runs once the
+  // server has accepted the approval.
+  const decide = useLiveMutation(decideLaunchEndpoint, {
+    onSuccess: onApproved,
+  });
   const left = Math.max(0, entry.maxLaunches - entry.launchedInBatch);
   const next = Math.min(left, approved);
   const words =
@@ -276,15 +279,13 @@ function LaunchListHeader({
       ? "Nothing approved — turned on, it launches nothing. Tick sidequests below and press Approve."
       : `${approved} approved. ${entry.enabled ? `${entry.launchedInBatch} of ${entry.maxLaunches} launched; it` : "Turned on, it"} launches the next ${next} best first, ${entry.concurrency} at a time${next < approved ? `; the other ${approved - next} wait for the next batch` : ""} — then it turns itself off.`;
   const approve = () =>
-    decide
-      .mutateAsync({
-        params: { automationId: SIDEQUEST_AUTOPILOT_ID },
-        body: {
-          taskIds: selected.slice(0, MAX_DECIDED_TASKS).map((r) => r.task.id),
-          decision: "approved",
-        },
-      })
-      .then(onApproved, swallowShown);
+    decide.mutate({
+      params: { automationId: SIDEQUEST_AUTOPILOT_ID },
+      body: {
+        taskIds: selected.slice(0, MAX_DECIDED_TASKS).map((r) => r.task.id),
+        decision: "approved",
+      },
+    });
   return (
     <Stack direction="row" gap="md" align="center">
       <Fill>
@@ -344,14 +345,12 @@ function RowLead({
 }
 
 function RowBody({ row }: { row: LaunchListRow }): ReactElement {
-  const decide = useEndpointMutation(decideLaunchEndpoint);
+  const decide = useLiveMutation(decideLaunchEndpoint);
   const setDecision = (decision: LaunchDecision | null) =>
-    decide
-      .mutateAsync({
-        params: { automationId: SIDEQUEST_AUTOPILOT_ID },
-        body: { taskIds: [row.task.id], decision },
-      })
-      .then(() => undefined, swallowShown);
+    decide.mutate({
+      params: { automationId: SIDEQUEST_AUTOPILOT_ID },
+      body: { taskIds: [row.task.id], decision },
+    });
   const r = row.result;
   const triage = row.triage;
   return (
@@ -409,14 +408,13 @@ function RowAction({
   setDecision,
 }: {
   row: LaunchListRow;
-  setDecision: (decision: LaunchDecision | null) => Promise<void>;
+  setDecision: (decision: LaunchDecision | null) => void;
 }): ReactElement | null {
-  const fetchEndpoint = useFetchEndpoint();
-  const stop =
-    (run: () => Promise<void>) => (e: { stopPropagation(): void }) => {
-      e.stopPropagation();
-      return run();
-    };
+  const patchTask = usePatchTask();
+  const stop = (run: () => void) => (e: { stopPropagation(): void }) => {
+    e.stopPropagation();
+    run();
+  };
   switch (row.lane) {
     case "approved":
       return (
@@ -434,9 +432,7 @@ function RowAction({
       return (
         <Button
           variant="ghost"
-          onClick={stop(() =>
-            patchTask(fetchEndpoint, row.task.id, { drop: true }),
-          )}
+          onClick={stop(() => patchTask(row.task.id, { drop: true }))}
         >
           Drop task
         </Button>
@@ -460,7 +456,7 @@ function RowAction({
  */
 function RowDetail({ row }: { row: LaunchListRow }): ReactElement {
   const run = useEndpointMutation(runTriageEndpoint);
-  const answer = useEndpointMutation(answerTriageEndpoint);
+  const answer = useLiveMutation(answerTriageEndpoint);
   const triage = row.triage;
   const r = row.result;
   const rerun = () =>
@@ -525,12 +521,10 @@ function RowDetail({ row }: { row: LaunchListRow }): ReactElement {
                 key={label}
                 variant={r.answer === label ? "default" : "outline"}
                 onClick={() =>
-                  answer
-                    .mutateAsync({
-                      params: { taskId: row.task.id },
-                      body: { answer: r.answer === label ? null : label },
-                    })
-                    .then(() => undefined, swallowShown)
+                  answer.mutate({
+                    params: { taskId: row.task.id },
+                    body: { answer: r.answer === label ? null : label },
+                  })
                 }
               >
                 {label}

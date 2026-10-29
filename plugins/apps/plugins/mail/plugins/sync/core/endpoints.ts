@@ -7,6 +7,10 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 export const mailSyncEndpoint = defineEndpoint({
   route: "POST /api/mail/sync",
   response: z.object({ accountId: z.string(), status: z.string() }),
+  unpredicted: {
+    reason: "server-decided",
+    why: "kicks the sync engine against Google; 409 with remediation text, and the banner's Retry now pends",
+  },
 });
 
 // Ask again for one message's body — the Retry of a failed fetch. A write, not
@@ -19,4 +23,8 @@ export const mailHydrateMessageEndpoint = defineEndpoint({
   route: "POST /api/mail/hydrate",
   body: z.object({ messageId: z.string() }),
   response: z.object({ queued: z.boolean() }),
+  unpredicted: {
+    reason: "server-decided",
+    why: "enqueues the hydrate job whose result reaches the reader through mail.message-body; the Retry button pends",
+  },
 });

@@ -1,6 +1,6 @@
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useState } from "react";
-import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { useLiveMutation } from "@plugins/network/plugins/live/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { useAppLink } from "@plugins/apps-core/plugins/tabs/web";
 import { afterOpen } from "@plugins/primitives/plugins/link-gesture/core";
@@ -329,7 +329,7 @@ export function NotificationsPanel({
 }) {
   const inAppLink = useAppLink();
   const [filter, setFilter] = useState<Filter>({ kind: "all" });
-  const markAllRead = useEndpointMutation(markAllNotificationsRead);
+  const markAllRead = useLiveMutation(markAllNotificationsRead);
 
   return (
     <>

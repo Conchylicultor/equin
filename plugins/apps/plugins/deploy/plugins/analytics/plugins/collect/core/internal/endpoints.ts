@@ -20,6 +20,10 @@ export const collectEndpoint = defineEndpoint({
     public:
       "a deployed site's visitors send its beacons — anonymous by design, bounded by the body cap and schema",
   },
+  unpredicted: {
+    reason: "server-decided",
+    why: "anonymous analytics beacon sent with keepalive; the ingest decides what is stored and no browser data reflects it",
+  },
 });
 
 /**

@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useConfigResult, useSetConfig } from "@plugins/config_v2/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { useLiveMutation } from "@plugins/network/plugins/live/web";
 import {
   DEFAULT_THEME_ID,
   resolveTheme,
@@ -71,8 +72,12 @@ export function useEditTheme(scopeId: string | undefined): ThemeEdits {
   const groups = ThemeEngine.TokenGroup.useContributions();
   const selectTheme = useSetConfig(themeSelectionConfig, { scopeId });
   const create = useEndpointMutation(createSavedTheme);
-  const patchFragment = useEndpointMutation(patchSavedThemeFragment);
-  const patchColorAdjust = useEndpointMutation(patchSavedThemeColorAdjust);
+  const patchFragment = useLiveMutation(patchSavedThemeFragment, {
+    label: "Theme",
+  });
+  const patchColorAdjust = useLiveMutation(patchSavedThemeColorAdjust, {
+    label: "Theme",
+  });
   const awaitSavedThemesWrite = useAwaitSavedThemesWrite();
 
   // The scope now selects the copy its first edit made: later edits see a
@@ -118,20 +123,17 @@ export function useEditTheme(scopeId: string | undefined): ThemeEdits {
     return { theme, themesById };
   }
 
-  // Resolves once the live theme list has the edit (its ack), so an edit's
-  // promise settles on what the painter shows.
-  async function patch(id: ThemeId, edit: Edit): Promise<void> {
-    const { watermark } =
-      "fragment" in edit
-        ? await patchFragment.mutateAsync({
-            params: { id },
-            body: edit.fragment,
-          })
-        : await patchColorAdjust.mutateAsync({
-            params: { id },
-            body: { colorAdjust: edit.colorAdjust },
-          });
-    await awaitSavedThemesWrite(watermark);
+  // A predicted write: the live theme list (and so the painter) shows the edit
+  // from the call; the server's answer carries nothing the caller needs.
+  function patch(id: ThemeId, edit: Edit): void {
+    if ("fragment" in edit) {
+      patchFragment.mutate({ params: { id }, body: edit.fragment });
+    } else {
+      patchColorAdjust.mutate({
+        params: { id },
+        body: { colorAdjust: edit.colorAdjust },
+      });
+    }
   }
 
   async function createCopy(theme: Theme, edit: Edit): Promise<ThemeId> {
@@ -154,14 +156,14 @@ export function useEditTheme(scopeId: string | undefined): ThemeEdits {
 
   async function applyEdit(theme: Theme, edit: Edit): Promise<void> {
     if (theme.source === "custom") {
-      await patch(theme.id, edit);
+      patch(theme.id, edit);
       return;
     }
 
     const key = scopeId ?? "";
     const inFlight = copiesInFlight.get(key);
     if (inFlight && inFlight.baseId === theme.id) {
-      await patch(await inFlight.copyId, edit);
+      patch(await inFlight.copyId, edit);
       return;
     }
 

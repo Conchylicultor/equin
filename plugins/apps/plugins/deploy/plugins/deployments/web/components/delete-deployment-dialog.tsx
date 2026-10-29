@@ -25,7 +25,7 @@ export function DeleteDeploymentDialog({
 }: {
   deployment: Deployment;
   onCancel: () => void;
-  onConfirm: () => Promise<void>;
+  onConfirm: () => void;
 }): ReactElement {
   const install = deriveInstall(deployment.compositionId);
 

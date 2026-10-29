@@ -87,4 +87,8 @@ export const resumeStoppedConversations = defineEndpoint({
   body: z.object({ ids: z.array(z.string().min(1)).min(1) }),
   response: z.object({ results: z.array(ResumeStoppedResultSchema) }),
   needsMachine: { feature: "Resuming agents" },
+  unpredicted: {
+    reason: "response",
+    why: "The per-conversation resume results are shown to the user.",
+  },
 });

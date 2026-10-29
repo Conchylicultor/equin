@@ -36,7 +36,7 @@
     - `infra/paths.worktreeDataDir`
     - `network/live.serveValue`
   - Resources: `heap.stats` (invalidate, snapshot, capped: HEAP_TYPES_MAX)
-  - Routes: `POST /api/debug/heap-snapshot`
+  - Routes: `POST /api/debug/heap-snapshot` — unpredicted (server-decided)
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/handle-capture-snapshot.ts`, `server/internal/heap-stats.ts` (debt)
 

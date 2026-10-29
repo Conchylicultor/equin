@@ -7,13 +7,14 @@ import {
 } from "@plugins/config_v2/plugins/fields/web";
 import type { FieldDef } from "@plugins/fields/core";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { useLiveMutation } from "@plugins/network/plugins/live/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 
 import { resetConfigField } from "../../core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -50,7 +51,7 @@ const TIER_BADGE = {
 export function ConfigField({
   fieldKey,
   field,
-  value: serverValue,
+  value,
   storePath,
   scopeId,
   originValue,
@@ -81,60 +82,21 @@ export function ConfigField({
     trueConflictKeys !== undefined
       ? trueConflictKeys.includes(fieldKey)
       : originValue !== undefined &&
-        JSON.stringify(serverValue) !== JSON.stringify(originValue);
+        JSON.stringify(value) !== JSON.stringify(originValue);
 
   // useEndpointMutation (not void fetchEndpoint) so a failed save/reset surfaces
   // via the global error toast instead of escaping as an unhandled rejection.
-  const { mutate: setField } = useEndpointMutation(setConfigField);
+  const { mutate: setField } = useLiveMutation(setConfigField);
   const { mutate: resetField } = useEndpointMutation(resetConfigField);
 
-  // THE LAST WRITE, SHOWN UNTIL THE SERVER SAYS SOMETHING NEWER. A field writes
-  // its WHOLE value — a list writes every item — and each write is built from
-  // the value it was rendered with. Rendering only the server's echo meant two
-  // writes close together (a list item's title, then its prompt, each saved by
-  // a debounce) were both built from the value before either landed, and the
-  // second silently erased the first. With the pending write rendered, the
-  // second is built on top of it.
-  //
-  // It yields to the server once the server has caught up — the server value
-  // equals it (our echo), or changes after the write was acknowledged (a newer
-  // write from elsewhere) — and at once on a failed write, whose error toast is
-  // the global one. A server change BEFORE the ack is not ours yet (another
-  // field of the same config moved), so it does not drop the write.
-  const [pending, setPending] = useState<{
-    value: unknown;
-    acked: boolean;
-  } | null>(null);
-  // Adjusted while rendering, on the render that sees a new server value — not
-  // in an effect, which would paint the stale pending value for a frame first.
-  const [seenServerValue, setSeenServerValue] = useState(serverValue);
-  if (!Object.is(seenServerValue, serverValue)) {
-    setSeenServerValue(serverValue);
-    if (
-      pending &&
-      (pending.acked ||
-        JSON.stringify(pending.value) === JSON.stringify(serverValue))
-    ) {
-      setPending(null);
-    }
-  }
-  const value = pending ? pending.value : serverValue;
-
+  // The write is predicted (`setConfigField`'s effect), so `value` already
+  // carries it: a second write built from the rendered value builds on the
+  // first, and nothing here overlays the server's echo.
   const handleChange = useCallback(
     (newValue: unknown) => {
-      const write = { value: newValue, acked: false };
-      setPending(write);
-      setField(
-        { body: { storePath, key: fieldKey, value: newValue, scopeId } },
-        {
-          onSuccess: () =>
-            setPending((current) =>
-              current === write ? { ...write, acked: true } : current,
-            ),
-          onError: () =>
-            setPending((current) => (current === write ? null : current)),
-        },
-      );
+      setField({
+        body: { storePath, key: fieldKey, value: newValue, scopeId },
+      });
     },
     [setField, storePath, fieldKey, scopeId],
   );

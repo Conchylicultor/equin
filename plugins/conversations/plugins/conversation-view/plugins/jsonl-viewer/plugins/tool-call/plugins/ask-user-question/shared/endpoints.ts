@@ -13,4 +13,8 @@ export const answerAskUserQuestion = defineEndpoint({
   body: AnswerAskUserQuestionBodySchema,
   response: z.object({ turnId: z.string() }),
   needsMachine: { feature: "Answering an agent's question" },
+  unpredicted: {
+    reason: "response",
+    why: "The answer is submitted as a turn whose id comes back, and the pending-turn answer delivery tracks it.",
+  },
 });

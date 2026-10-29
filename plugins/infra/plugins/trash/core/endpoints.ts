@@ -14,6 +14,10 @@ export const listTrash = defineEndpoint({
 // a silent no-op), calls the source's `restore`, then deletes the entry row.
 export const restoreTrash = defineEndpoint({
   route: "POST /api/trash/:sourceId/:entryId/restore",
+  unpredicted: {
+    reason: "server-decided",
+    why: "the source decides which cascade roots come back, across several collections",
+  },
   response: z.object({ ok: z.literal(true) }),
 });
 
@@ -22,5 +26,9 @@ export const restoreTrash = defineEndpoint({
 // FK cascades) fire here — this is the one place they are intended.
 export const purgeTrash = defineEndpoint({
   route: "POST /api/trash/:sourceId/:entryId/purge",
+  unpredicted: {
+    reason: "server-decided",
+    why: "destroy hooks run before the hard delete, so gone is a claim only the server can make",
+  },
   response: z.object({ ok: z.literal(true) }),
 });

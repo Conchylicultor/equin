@@ -140,6 +140,10 @@ export const getRuntimeProfile = defineEndpoint({
 
 export const resetRuntimeProfile = defineEndpoint({
   route: "POST /api/debug/profiling/runtime/reset",
+  unpredicted: {
+    reason: "server-decided",
+    why: "clears in-process profiler state the server owns; the section re-reads it afterwards",
+  },
 });
 
 // --- Flight window ----------------------------------------------------------

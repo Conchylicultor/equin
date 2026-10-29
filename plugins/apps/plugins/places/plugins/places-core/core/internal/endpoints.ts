@@ -1,7 +1,9 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { SavedSymbolNameSchema } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
+import { applyRows, removeRow } from "@plugins/network/plugins/live/core";
 import { PlaceSchema } from "./schema";
+import { placesEntityRef } from "./entity-refs";
 import { MapsNotConfiguredSchema } from "./maps";
 
 // Place CRUD and the icon re-pick. Every read is live (`./resources.ts`): the
@@ -36,6 +38,10 @@ export const savePlace = defineEndpoint({
   response: SavePlaceResultSchema,
   // One Places details call.
   slowThresholdMs: 10_000,
+  unpredicted: {
+    reason: "response",
+    why: "resolves Google place details and the surface branches on the saved / already-saved / maps-not-configured result",
+  },
 });
 
 /** A point on the map: where a custom place's pin goes. */
@@ -60,6 +66,10 @@ export const createCustomPlace = defineEndpoint({
   route: "POST /api/places/custom-places",
   body: CreateCustomPlaceBodySchema,
   response: PlaceSchema,
+  unpredicted: {
+    reason: "server-minted-id",
+    why: "the screen selects the custom place by the id the server mints",
+  },
 });
 
 export const UpdatePlaceBodySchema = z.object({
@@ -85,10 +95,59 @@ export const updatePlace = defineEndpoint({
   route: "PATCH /api/places/places/:id",
   body: UpdatePlaceBodySchema,
   response: PlaceSchema,
+  // Predicted from the row the reader holds (a custom place's rename IS its
+  // name, a Google place's is the title over Google's; a removed tag leaves
+  // `autoTags` too) — the server's rules, minus its refusals (a blank custom
+  // name, a Google place's pin: the row then stays as it was). Unconfirmed
+  // until the ack: no compared fields.
+  effect: (on) =>
+    applyRows(
+      on,
+      placesEntityRef,
+      ({ params }) => [params.id],
+      (rows, { body }) =>
+        rows.map((row) => {
+          const custom = row.googlePlaceId === null;
+          const given =
+            body.title === undefined ? undefined : trimmedOrNull(body.title);
+          return {
+            ...row,
+            ...(body.note === undefined ? {} : { note: body.note }),
+            ...(body.tags === undefined
+              ? {}
+              : {
+                  tags: body.tags,
+                  autoTags: row.autoTags.filter((t) => body.tags!.includes(t)),
+                }),
+            ...(given === undefined
+              ? {}
+              : custom
+                ? given === null
+                  ? {}
+                  : { name: given }
+                : { title: given === row.name ? null : given }),
+            ...(body.location === undefined || !custom
+              ? {}
+              : {
+                  location: {
+                    ...row.location,
+                    lat: body.location.lat,
+                    lng: body.location.lng,
+                  },
+                }),
+          };
+        }),
+    ),
 });
+
+function trimmedOrNull(text: string | null): string | null {
+  const trimmed = text?.trim() ?? "";
+  return trimmed === "" ? null : trimmed;
+}
 
 export const deletePlace = defineEndpoint({
   route: "DELETE /api/places/places/:id",
+  effect: (on) => removeRow(on, placesEntityRef, ({ params }) => params.id),
 });
 
 export const RegeneratePlaceIconResultSchema = z.discriminatedUnion("kind", [
@@ -110,4 +169,8 @@ export const regeneratePlaceIcon = defineEndpoint({
   response: RegeneratePlaceIconResultSchema,
   // One Haiku call: seconds by design.
   slowThresholdMs: 45_000,
+  unpredicted: {
+    reason: "server-decided",
+    why: "a Haiku call picks the icon and may reject it, leaving the icon unchanged",
+  },
 });

@@ -13,6 +13,10 @@ const CreatePromptBlockTaskBodySchema = z.object({
 
 export const createPromptBlockTask = defineEndpoint({
   route: "POST /api/prompt-blocks/tasks",
+  unpredicted: {
+    reason: "server-minted-id",
+    why: "the server mints the task and the caller navigates to its id",
+  },
   body: CreatePromptBlockTaskBodySchema,
   response: z.object({ taskId: z.string() }),
 });

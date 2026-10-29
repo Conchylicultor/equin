@@ -7,11 +7,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import {
-  useOptimisticResource,
-  type OptimisticSettled,
-} from "@plugins/primitives/plugins/optimistic-mutation/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   legacyDraftKeys,
@@ -21,7 +16,7 @@ import {
 import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { isEmbeddedDocument } from "@plugins/primitives/plugins/embed/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useLive, useLiveMutation } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { useTransport } from "@plugins/primitives/plugins/networking/web";
@@ -35,7 +30,6 @@ import {
   prototypesApp,
 } from "@plugins/apps/plugins/prototypes/plugins/shell/core";
 import {
-  applyPicksChange,
   DEFAULT_PROTOTYPE_VIEWPORT,
   prototypesList,
   prototypePicks,
@@ -258,7 +252,6 @@ export function PrototypeDetailProvider(
 
 function DetailGate(props: PrototypeDetailProviderProps): ReactNode {
   const { name } = props;
-  const fetchEndpoint = useFetchEndpoint();
   // The whole list, and this prototype's declared size looked up in it once it
   // has loaded. A list change re-renders this gate and `DetailProvider`, but
   // not the canvas: `size` only SEEDS a canvas (the `useState` initializer, and
@@ -271,21 +264,15 @@ function DetailGate(props: PrototypeDetailProviderProps): ReactNode {
 
   // ONE shared record per prototype (`_picks/<id>.json` on the server), so the
   // variant frame A shows is the variant main, every worktree deploy, every
-  // browser and the agents' CLI see — live. Optimistic, so a chip answers the
-  // click at once; a failed write keeps the pick on screen and shows in the
-  // sync-status cloud (never-revert). Pending until the record loads: a pick
-  // can only be made on top of the picks the user can see.
-  const stored = useOptimisticResource(
-    prototypePicks,
-    { name },
-    {
-      apply: applyPicksChange,
-      mutate: (change: PicksChange) =>
-        fetchEndpoint(setPrototypePicks, { name }, { body: change }),
-      label: "prototype options",
-      describeOp: (change: PicksChange) =>
-        change.kind === "reset" ? "reset" : `${change.option}=${change.value}`,
-    },
+  // browser and the agents' CLI see — live. The write is predicted, so a chip
+  // answers the click at once; a refused write is the rejection toast. Pending
+  // until the record loads: a pick can only be made on top of the picks the
+  // user can see.
+  const stored = useLive(prototypePicks, { name });
+  const { mutate: writePicks } = useLiveMutation(setPrototypePicks);
+  const writeShared = useCallback(
+    (change: PicksChange) => writePicks({ params: { name }, body: change }),
+    [writePicks, name],
   );
 
   if (list.status === "loading") return <Loading variant="block" />;
@@ -314,13 +301,21 @@ function DetailGate(props: PrototypeDetailProviderProps): ReactNode {
   const size =
     list.data.find((p) => p.name === name)?.viewport ??
     DEFAULT_PROTOTYPE_VIEWPORT;
-  return <DetailProvider {...props} size={size} stored={stored} />;
+  return (
+    <DetailProvider
+      {...props}
+      size={size}
+      stored={stored.data}
+      writeShared={writeShared}
+    />
+  );
 }
 
 function DetailProvider({
   name,
   size,
   stored,
+  writeShared,
   remember,
   initialVersion = null,
   initialPicks,
@@ -328,7 +323,8 @@ function DetailProvider({
   children,
 }: PrototypeDetailProviderProps & {
   size: PrototypeViewport;
-  stored: OptimisticSettled<StoredPicks, PicksChange>;
+  stored: StoredPicks;
+  writeShared: (change: PicksChange) => void;
 }) {
   const contributed = FrameSource.useContributions();
   const sources = useMemo<CanvasSourceEntry[]>(
@@ -341,7 +337,7 @@ function DetailProvider({
     [contributed],
   );
 
-  const shared = stored.data;
+  const shared = stored;
 
   // The canvas belongs to ONE prototype in ONE pane instance: held with both,
   // so opening another opens its own canvas without an effect resetting
@@ -381,7 +377,6 @@ function DetailProvider({
   // and the rendered state is the truth again.
   const latest = useRef<{ from: object; state: CanvasState } | null>(null);
 
-  const writeShared = stored.dispatch;
   const runEffect = useCallback(
     (effect: CanvasEffect) => {
       switch (effect.kind) {

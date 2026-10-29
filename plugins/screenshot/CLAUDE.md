@@ -43,10 +43,10 @@
     - `infra/endpoints.implement`
     - `network/live.serveValue`
   - Resources: `screenshot.image` (invalidate, notified)
-  - Routes: `POST /api/screenshots/:id`
+  - Routes: `POST /api/screenshots/:id` — unpredicted (unobserved)
 - Machine:
   - Uses: `infra/endpoints.implementMachine`
-  - Routes: `POST /api/screenshots/:id/file`
+  - Routes: `POST /api/screenshots/:id/file` — unpredicted (response)
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --background`

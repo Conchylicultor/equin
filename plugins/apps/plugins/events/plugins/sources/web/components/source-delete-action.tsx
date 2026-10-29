@@ -39,7 +39,8 @@ export function SourceDeleteAction({
             source={row}
             onCancel={close}
             onConfirm={() => {
-              remove.mutate({ params: { id: row.id } }, { onSuccess: close });
+              remove.mutate({ params: { id: row.id } });
+              close();
             }}
           />
         ));

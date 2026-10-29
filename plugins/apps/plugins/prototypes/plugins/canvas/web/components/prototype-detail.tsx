@@ -3,7 +3,7 @@ import {
   matchResource,
   ResourceErrorInline,
 } from "@plugins/primitives/plugins/live-state/web";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useLive, useLiveMutation } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
@@ -21,7 +21,6 @@ import {
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { restorePrototype } from "@plugins/apps/plugins/prototypes/plugins/state/core";
 import { usePrototypeState } from "@plugins/apps/plugins/prototypes/plugins/state/web";
-import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
   Button,
   cn,
@@ -144,7 +143,7 @@ function PrototypeCanvas(): ReactNode {
  */
 function DeletedBanner({ name }: { name: string }): ReactNode {
   const state = usePrototypeState(name);
-  const mutation = useEndpointMutation(restorePrototype);
+  const mutation = useLiveMutation(restorePrototype);
   return matchResource(state, {
     loading: () => null,
     error: (error) => (

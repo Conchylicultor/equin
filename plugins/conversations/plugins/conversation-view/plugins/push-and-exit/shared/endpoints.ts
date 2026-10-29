@@ -8,4 +8,8 @@ export const startPushAndExit = defineEndpoint({
   // is a no-op); minted by the server when absent.
   body: z.object({ turnId: turnIdKind.schema.optional() }),
   response: z.object({ turnId: z.string() }),
+  unpredicted: {
+    reason: "response",
+    why: "It submits the wrap-up prompt as a turn; the returned turn id is tracked by the pending-turn echo, and the close happens later by the agent.",
+  },
 });

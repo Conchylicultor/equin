@@ -1,5 +1,5 @@
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { useLiveMutation } from "@plugins/network/plugins/live/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { deleteSong } from "../../core";
 import type { Song } from "../../core";
@@ -19,7 +19,7 @@ const deleteIcon = symbol("delete");
  * now-playing bar disappears with its row, and nothing else could pause it.
  */
 export function DeleteSongAction({ row }: ItemActionProps<Song>) {
-  const { mutate: deleteSongMutation } = useEndpointMutation(deleteSong);
+  const { mutate: deleteSongMutation } = useLiveMutation(deleteSong);
   const { currentSongId } = useSonataApp();
   const { stop } = useSession();
   return (

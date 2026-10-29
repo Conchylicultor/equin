@@ -7,8 +7,7 @@ import {
   useSongSetting,
   useWriteSongSetting,
 } from "@plugins/apps/plugins/sonata/plugins/document/web";
-import { saveKeyAutoDetect } from "@plugins/apps/plugins/sonata/plugins/rich/plugins/key-mode/web";
-import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useSaveKeyAutoDetect } from "@plugins/apps/plugins/sonata/plugins/rich/plugins/key-mode/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { collectKeyEntries } from "@plugins/apps/plugins/sonata/plugins/score/core";
@@ -26,7 +25,7 @@ export function KeyReadoutActions() {
   const song = useLibrarySong();
   const keyAutoDetect = useSongSetting(keyAutoDetectSetting);
   const setKeyAutoDetect = useWriteSongSetting(keyAutoDetectSetting);
-  const fetchEndpoint = useFetchEndpoint();
+  const saveKeyAutoDetect = useSaveKeyAutoDetect();
 
   const entries = useMemo(() => collectKeyEntries(score), [score]);
 
@@ -53,7 +52,7 @@ export function KeyReadoutActions() {
   const toggleAutoDetect = () => {
     const next = !autoDetect;
     setKeyAutoDetect(songId, next); // optimistic: re-spell/readout update instantly
-    saveKeyAutoDetect(fetchEndpoint, songId, next); // persist per song
+    saveKeyAutoDetect(songId, next); // persist per song
   };
 
   return (

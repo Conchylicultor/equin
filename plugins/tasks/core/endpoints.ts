@@ -2,7 +2,11 @@ import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { ModelChoiceSchema } from "@plugins/conversations/plugins/model-provider/core";
 import { dateString } from "@plugins/infra/plugins/endpoints/core";
-import { ConversationSchema } from "@plugins/tasks/plugins/tasks-core/core";
+import { patchRow } from "@plugins/network/plugins/live/core";
+import {
+  ConversationSchema,
+  tasksEntityRef,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import { TaskSubjectSchema } from "@plugins/tasks/plugins/task-subject/core";
 import {
   TaskChainSubmitBodySchema,
@@ -44,6 +48,56 @@ export const UpdateTaskBodySchema = z.object({
 export type UpdateTaskBody = z.infer<typeof UpdateTaskBodySchema>;
 
 /**
+ * What an `updateTask` request decides, as the server applies it
+ * (`updateTaskOn`): `set` is compared, `approx` (the clock's `now`) is only
+ * shown. The derived `status` of the task and its dependents arrives by push;
+ * `folderId` is not predicted (the server refuses a cycle, a self-filing and a
+ * root with no mandate with a 400, and no caller re-files through here).
+ */
+function updateTaskPatch(body: UpdateTaskBody): {
+  set: {
+    title?: string;
+    titleAuto?: boolean;
+    description?: string | null;
+    droppedAt?: null;
+    heldAt?: null;
+  };
+  approx: { droppedAt?: Date; heldAt?: Date };
+} {
+  const set: {
+    title?: string;
+    titleAuto?: boolean;
+    description?: string | null;
+    droppedAt?: null;
+    heldAt?: null;
+  } = {};
+  const approx: { droppedAt?: Date; heldAt?: Date } = {};
+  if (body.title !== undefined) {
+    set.title = body.title;
+    // A written title is human-authored.
+    set.titleAuto = false;
+  }
+  if (body.description !== undefined) set.description = body.description;
+  // Drop then hold, in the server's order: each one stamps its own time and
+  // clears the other (`drop: false` / `hold: false` only clear their own).
+  let dropped: "now" | "cleared" | undefined;
+  let held: "now" | "cleared" | undefined;
+  if (body.drop !== undefined) {
+    dropped = body.drop ? "now" : "cleared";
+    if (body.drop) held = "cleared";
+  }
+  if (body.hold !== undefined) {
+    held = body.hold ? "now" : "cleared";
+    if (body.hold) dropped = "cleared";
+  }
+  if (dropped === "cleared") set.droppedAt = null;
+  if (dropped === "now") approx.droppedAt = new Date();
+  if (held === "cleared") set.heldAt = null;
+  if (held === "now") approx.heldAt = new Date();
+  return { set, approx };
+}
+
+/**
  * Positional intent, never a rank (see `CreateTaskBodySchema.afterId`). The
  * task lands among `folderId`'s children, immediately `zone` of `targetId`.
  *
@@ -64,11 +118,6 @@ export const InsertBetweenBodySchema = z.object({
   targetFolderId: z.string().nullable().optional(),
 });
 export type InsertBetweenBody = z.infer<typeof InsertBetweenBodySchema>;
-
-export const SetAutoStartBodySchema = z.object({
-  model: ModelChoiceSchema,
-});
-export type SetAutoStartBody = z.infer<typeof SetAutoStartBodySchema>;
 
 export const AddDependencyBodySchema = z.object({
   dependsOnTaskId: z.string().min(1),
@@ -149,12 +198,20 @@ export const createTask = defineEndpoint({
   route: "POST /api/tasks",
   body: CreateTaskBodySchema,
   response: TaskResponseSchema,
+  unpredicted: {
+    reason: "server-minted-id",
+    why: "The server mints the task id and rank, and the caller selects or navigates to the returned task.",
+  },
 });
 
 export const createTaskChain = defineEndpoint({
   route: "POST /api/tasks/chain",
   body: TaskChainSubmitBodySchema,
   response: TaskChainSubmitResponseSchema,
+  unpredicted: {
+    reason: "server-minted-id",
+    why: "The server mints the ids of the chained tasks and the draft form reads the result to report success or an error.",
+  },
 });
 
 // Desktop-only: a launch spawns Claude Code in a checkout of this repo, so it
@@ -164,12 +221,20 @@ export const launchTask = defineEndpoint({
   body: LaunchTaskBodySchema,
   response: LaunchTaskResponseSchema,
   needsMachine: { feature: "Launching an agent" },
+  unpredicted: {
+    reason: "server-decided",
+    why: "Launching spawns a Claude Code conversation in a checkout and may file the task; the returned conversation is what the caller opens.",
+  },
 });
 
 export const insertTaskBetween = defineEndpoint({
   route: "POST /api/tasks/insert-between",
   body: InsertBetweenBodySchema,
   response: TaskResponseSchema,
+  unpredicted: {
+    reason: "server-minted-id",
+    why: "The server mints the new task and rewires the edge it splices into, and the caller reads the returned task.",
+  },
 });
 
 export const getTask = defineEndpoint({
@@ -181,6 +246,13 @@ export const updateTask = defineEndpoint({
   route: "PATCH /api/tasks/:id",
   body: UpdateTaskBodySchema,
   response: TaskResponseSchema,
+  effect: (on) =>
+    patchRow(
+      on,
+      tasksEntityRef,
+      ({ params }) => params.id,
+      ({ body }) => updateTaskPatch(body),
+    ),
 });
 
 // Reposition a task in the FOLDER tree (the display hierarchy). The rank is
@@ -190,27 +262,34 @@ export const updateTask = defineEndpoint({
 export const moveTask = defineEndpoint({
   route: "POST /api/tasks/:id/move",
   body: MoveTaskBodySchema,
-});
-
-export const setTaskAutoStart = defineEndpoint({
-  route: "POST /api/tasks/:id/auto-start",
-  body: SetAutoStartBodySchema,
-});
-
-export const clearTaskAutoStart = defineEndpoint({
-  route: "DELETE /api/tasks/:id/auto-start",
+  unpredicted: {
+    reason: "server-decided",
+    why: "The rank is minted against the complete sibling set of the target folder inside the write's transaction; the request names only a neighbour and a side, and the tree that emits it holds a projection, so no client can place the row in order.",
+  },
 });
 
 export const addTaskDependency = defineEndpoint({
   route: "POST /api/tasks/:id/dependencies",
   body: AddDependencyBodySchema,
+  unpredicted: {
+    reason: "precondition",
+    why: "The server rejects a cycle with a 400 that needs its dependency closure, and the dependency editors show that error.",
+  },
 });
 
 export const removeTaskDependency = defineEndpoint({
   route: "DELETE /api/tasks/:id/dependencies/:depId",
+  unpredicted: {
+    reason: "server-decided",
+    why: "The surfaces read the edge as the task row's derived dependencies field and the dependents' derived status, neither a field of the task_dependencies entity, so no entity row shows the removal.",
+  },
 });
 
 export const moveTaskInDepsTree = defineEndpoint({
   route: "POST /api/tasks/:id/deps-move",
   body: DepsMoveBodySchema,
+  unpredicted: {
+    reason: "server-decided",
+    why: "The server rewires several dependency edges from the dependency closure (splice heals the chain, branch hangs a parallel child), and the task rows' derived dependencies and statuses follow; none of it is a function of the request.",
+  },
 });

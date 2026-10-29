@@ -33,11 +33,11 @@ Idle conversations are hibernated (their agent session killed, the row kept
     - `config_v2.ConfigV2`
     - `infra/endpoints.implement`
     - `tasks/tasks-core.touchConversationViewed`
-  - Routes: `POST /api/conversations/:id/viewed`
+  - Routes: `POST /api/conversations/:id/viewed` — unpredicted (unobserved)
 - Machine:
   - Uses: `infra/endpoints.implementMachine`
   - Register: `defineJob('conversations.hibernate-idle')`
-  - Routes: `POST /api/conversations/:id/resume-hibernated`
+  - Routes: `POST /api/conversations/:id/resume-hibernated` — unpredicted (response)
 - Cross-plugin:
   - Imported by:
     - `conversations/agent-thread`

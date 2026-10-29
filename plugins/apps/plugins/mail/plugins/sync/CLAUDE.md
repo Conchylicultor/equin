@@ -266,8 +266,8 @@ the total request/byte volume versus the old full-mailbox, full-body crawl.
     - `mail.message-body` (push, whole: one message's attachments — Gmail bounds a message at 25 MB)
     - `mail.search` (keyed, window, fixed)
   - Routes:
-    - `POST /api/mail/sync`
-    - `POST /api/mail/hydrate`
+    - `POST /api/mail/sync` — unpredicted (server-decided)
+    - `POST /api/mail/hydrate` — unpredicted (server-decided)
 - Web:
   - Uses:
     - `infra/endpoints.useEndpointMutation`

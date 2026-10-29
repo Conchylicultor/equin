@@ -344,8 +344,8 @@ torch.
     - `defineFileWatcher('deps.cache')`
   - Resources: `deps.states` (push, notified, whole: one row per optional dependency the code declares — a closed handful (browsers, python envs, toolchains))
   - Routes:
-    - `POST /api/deps/install`
-    - `POST /api/deps/remove`
+    - `POST /api/deps/install` — unpredicted (server-decided)
+    - `POST /api/deps/remove` — unpredicted (response)
 - Core:
   - Uses:
     - `framework/tooling/collected-dir.defineCollectedDir`

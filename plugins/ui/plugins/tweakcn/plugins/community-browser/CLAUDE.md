@@ -38,7 +38,7 @@
     - `network/live.serveValue`
     - `ui/theme-engine/saved-themes.saveTheme`
   - Resources: `tweakcn.community-catalog` (push, fixed, whole: a snapshot bundled with the code (522 themes today), never grown by user data — and the gallery searches and filters every entry, whole: one theme's tags — a handful, whole: one tweakcn theme's CSS variables — tens of tokens)
-  - Routes: `POST /api/tweakcn/community/apply`
+  - Routes: `POST /api/tweakcn/community/apply` — unpredicted (server-decided)
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`

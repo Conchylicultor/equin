@@ -126,7 +126,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `Auth.ScopeRequirement` ← `integrations.gmail`
     - `accountsPane.Actions` ← `primitives.pane`
     - `accountPane.Actions` ← `primitives.pane`
-  - Uses: 43 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×6
     - `primitives/setup-steps` ×6
     - `infra/endpoints` ×5
@@ -134,8 +134,8 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `primitives/collapsible` ×4
     - `primitives/css/ui-kit` ×3
     - `primitives/data-view` ×3
+    - `network/live` ×2
     - `config_v2.useConfigRegistrations`
-    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
     - `primitives/css/rigid.rigidClass`
@@ -218,11 +218,11 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
   - Routes:
     - `GET /api/auth/start/:provider`
     - `GET /api/auth/callback/:provider`
-    - `POST /api/auth/disconnect/:provider`
-    - `POST /api/auth/api-key/:provider`
-    - `POST /api/auth/sign-in/:provider`
+    - `POST /api/auth/disconnect/:provider` — unpredicted (server-decided)
+    - `POST /api/auth/api-key/:provider` — unpredicted (server-decided)
+    - `POST /api/auth/sign-in/:provider` — unpredicted (precondition)
     - `GET /api/auth/state`
-    - `POST /api/auth/token`
+    - `POST /api/auth/token` — internal
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`

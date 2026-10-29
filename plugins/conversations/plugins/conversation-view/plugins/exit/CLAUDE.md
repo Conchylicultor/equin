@@ -15,7 +15,7 @@
     - `ui/icons.Icon`
 - Machine:
   - Uses: `infra/endpoints.implementMachine`
-  - Routes: `POST /api/conversations/:id/exit`
+  - Routes: `POST /api/conversations/:id/exit` — predicted
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`

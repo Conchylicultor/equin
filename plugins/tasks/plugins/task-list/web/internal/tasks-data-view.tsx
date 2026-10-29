@@ -14,7 +14,7 @@ import {
   taskRows,
   type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
-import { patchTask } from "@plugins/tasks/web";
+import { usePatchTask } from "@plugins/tasks/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const addIcon = symbol("add");
@@ -53,20 +53,20 @@ async function createTaskRow(
  * demo scope's worker, else the page's server). Stable per transport.
  */
 export function useTaskFieldSchema() {
-  const fetchEndpoint = useFetchEndpoint();
+  const patchTask = usePatchTask();
   return useMemo(
     () => ({
       collection: taskRows,
       overrides: fieldOverrides(taskRows, {
         title: {
           onEdit: (t, next) =>
-            patchTask(fetchEndpoint, t.id, {
+            patchTask(t.id, {
               title: String(next ?? "").trim() || "Untitled",
             }),
         },
       }),
     }),
-    [fetchEndpoint],
+    [patchTask],
   );
 }
 

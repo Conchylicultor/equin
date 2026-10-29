@@ -171,7 +171,7 @@ count accumulates across drops.
     - `Log`
     - `LogPersistence`
   - Routes:
-    - `POST /api/logs/emit`
+    - `POST /api/logs/emit` — telemetry
     - `/ws/logs (WS)`
 - Web:
   - Uses:

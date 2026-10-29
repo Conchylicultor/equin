@@ -3,10 +3,12 @@ import {
   combineResources,
   mapResource,
 } from "@plugins/primitives/plugins/live-state/web";
-import { mapRow } from "@plugins/network/plugins/live/web";
+import { mapRow, useLiveMutation } from "@plugins/network/plugins/live/web";
 import type { ModelChoice } from "@plugins/conversations/plugins/model-provider/core";
-import { setAutoStart } from "@plugins/tasks/web";
-import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import {
+  clearTaskAutoStart,
+  setTaskAutoStart,
+} from "@plugins/tasks/plugins/auto-start/core";
 import { useTaskAttempts } from "@plugins/tasks/plugins/tasks-core/web";
 import { useTaskAutoStart } from "@plugins/tasks/plugins/auto-start/web";
 import type { LaunchBinding } from "@plugins/tasks/plugins/launch-options/web";
@@ -26,12 +28,15 @@ export function useTaskAutoStartBinding(
     row ? row.autoStartModel : null,
   );
   const attempts = useTaskAttempts(taskId);
-  const fetchEndpoint = useFetchEndpoint();
+  const arm = useLiveMutation(setTaskAutoStart);
+  const disarm = useLiveMutation(clearTaskAutoStart);
 
   const onChange = useCallback(
-    (next: ModelChoice | null) =>
-      void setAutoStart(fetchEndpoint, taskId, next ?? "none"),
-    [taskId, fetchEndpoint],
+    (next: ModelChoice | null) => {
+      if (next) arm.mutate({ params: { id: taskId }, body: { model: next } });
+      else disarm.mutate({ params: { id: taskId } });
+    },
+    [taskId, arm, disarm],
   );
 
   return mapResource(

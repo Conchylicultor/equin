@@ -133,6 +133,9 @@ export type BootBenchRunBody = z.infer<typeof bootBenchRunBodySchema>;
 
 export const bootBenchRun = defineEndpoint({
   route: "POST /api/debug/boot-bench/run",
+  internal: {
+    why: "called only by the boot-bench MCP tool; no browser client",
+  },
   body: bootBenchRunBodySchema,
   response: bootBenchRunResponseSchema,
 });

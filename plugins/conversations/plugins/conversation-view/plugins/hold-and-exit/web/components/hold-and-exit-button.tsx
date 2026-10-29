@@ -1,11 +1,7 @@
 import { DropdownMenuItem } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import {
-  conversationName,
-  type Conversation as ConversationRecord,
-} from "@plugins/tasks/plugins/tasks-core/core";
+import { useLiveMutation } from "@plugins/network/plugins/live/web";
+import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { useLiveConversation } from "@plugins/conversations/web";
-import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { holdAndExit } from "../../shared";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -18,28 +14,15 @@ export function HoldAndExitItem({
   conversation: ConversationRecord;
 }) {
   const live = useLiveConversation(conversation);
-  const toast = useToast();
-  // No success notification: the user saw it held and closed.
-  const close = useEndpointMutation(holdAndExit, {
-    onError: (err) =>
-      toast({
-        type: "conversation",
-        category: "conversations",
-        title: "Hold & Close failed",
-        description: "",
-        subjectId: conversation.id,
-        subjectName: conversationName(conversation),
-        detail: err.message,
-        variant: "error",
-      }),
-  });
+  // A predicted write: the conversation reads closed at once, so there is no
+  // "Holding…" state and no success notification. A refusal is the rejection
+  // toast; a transient failure the sync cloud's Retry.
+  const close = useLiveMutation(holdAndExit, { label: "Hold & Close" });
 
   // Closing stops the agent, which needs the computer: on a host without
   // it (the demo) the entry is disabled and says why.
-  const isPending = close.kind === "available" && close.isPending;
   const disabled =
     close.kind === "unavailable" ||
-    isPending ||
     live.status === "gone" ||
     live.status === "done" ||
     live.status === "starting";
@@ -54,7 +37,7 @@ export function HoldAndExitItem({
       }}
     >
       <Icon icon={pauseCircleIcon} className="size-4" />
-      {isPending ? "Holding…" : "Hold & Close"}
+      Hold & Close
     </DropdownMenuItem>
   );
 }

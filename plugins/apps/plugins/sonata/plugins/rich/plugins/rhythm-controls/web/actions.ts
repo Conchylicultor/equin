@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { useLiveMutation } from "@plugins/network/plugins/live/web";
 import type { RhythmPattern } from "@plugins/apps/plugins/sonata/plugins/rhythm/core";
 import type { HandVoicing } from "@plugins/apps/plugins/sonata/plugins/voicing/core";
 import { setRhythmEndpoint } from "../shared/endpoints";
@@ -37,23 +37,18 @@ function wirePattern(p: RhythmPattern) {
 /**
  * Persist a song's groove.
  *
- * A rhythm edit (bead toggle, preset, rotation, subdivision) is a **user-triggered
- * mutation**, so this goes through `useEndpointMutation` rather than a discarded
- * `void fetchEndpoint(...)`: a failed write must not vanish into a contextless
- * browser-rejection crash. Passing no `onError` opts into the global error toast,
- * so the user learns their groove did not save instead of silently losing it on
- * the next reload.
- *
- * The write is still *optimistic*: the panel writes the loaded song's
- * `grooveSetting` first (instant playback + circle), and the `rhythms` row push
- * re-affirms server truth. Named `save*` (not `set*`) to stay distinct from
- * that in-memory write (`useWriteSongSetting`).
+ * A rhythm edit (bead toggle, preset, rotation, subdivision) is a predicted
+ * write: the `rhythms` row shows the groove at once and the server's row
+ * confirms it; a rejection is toasted by the transport. The panel also writes
+ * the loaded song's `grooveSetting` (instant playback + circle). Named `save*`
+ * (not `set*`) to stay distinct from that in-memory write
+ * (`useWriteSongSetting`).
  */
 export function useSaveRhythm(): (
   songId: string,
   groove: RhythmGroove,
 ) => void {
-  const { mutate } = useEndpointMutation(setRhythmEndpoint);
+  const { mutate } = useLiveMutation(setRhythmEndpoint);
   return useCallback(
     (songId, groove) =>
       mutate({

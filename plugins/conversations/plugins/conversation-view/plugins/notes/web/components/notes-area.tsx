@@ -3,10 +3,10 @@ import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
-import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useLiveMutation } from "@plugins/network/plugins/live/web";
 import { useConversationNote } from "../internal/use-conversation-note";
 import { setDraft, setOpen, useNoteUi } from "../internal/notes-ui-store";
-import { upsertNote, deleteNote } from "../internal/api";
+import { deleteNote, upsertNote } from "../../shared/endpoints";
 
 /**
  * The note's one editor. It owns the draft and publishes it, so the toggle's
@@ -18,20 +18,21 @@ export function NotesArea({
   conversation: ConversationRecord;
 }) {
   const conversationId = conversation.id;
-  const fetchEndpoint = useFetchEndpoint();
+  const upsert = useLiveMutation(upsertNote);
+  const clear = useLiveMutation(deleteNote);
   const { read, serverNote } = useConversationNote(conversationId);
   const { open } = useNoteUi(conversationId);
   const [isFocused, setIsFocused] = useState(false);
 
   const handleSave = useCallback(
-    async (next: string) => {
+    (next: string) => {
       if (next.trim() === "") {
-        await deleteNote(fetchEndpoint, conversationId);
+        clear.mutate({ params: { conversationId } });
       } else {
-        await upsertNote(fetchEndpoint, conversationId, next);
+        upsert.mutate({ params: { conversationId }, body: { notes: next } });
       }
     },
-    [conversationId, fetchEndpoint],
+    [conversationId, upsert, clear],
   );
 
   const { value, onChange, onFocus, onBlur, isSaving } =

@@ -594,8 +594,8 @@ for the `checkpoints` plugin's end-of-turn job, and the history contract
     - `prototypes.versionCounts` (push, notified, whole: one count per prototype — bounded by the prototype list it annotates, which the gallery holds whole)
   - Routes:
     - `GET /api/prototypes`
-    - `POST /api/prototypes/:name/versions/:sha/restore`
-    - `PUT /api/prototypes/:name/picks`
+    - `POST /api/prototypes/:name/versions/:sha/restore` — unpredicted (server-decided)
+    - `PUT /api/prototypes/:name/picks` — predicted
     - `GET /api/prototypes/:name`
     - `GET /api/prototypes/:name/:file`
     - `GET /api/prototypes/:name/versions/:sha/:file`
@@ -603,7 +603,7 @@ for the `checkpoints` plugin's end-of-turn job, and the history contract
   - Uses:
     - `infra/endpoints.implementMachine`
     - `infra/paths/data-files.diskDirMount`
-  - Routes: `POST /api/prototypes`
+  - Routes: `POST /api/prototypes` — unpredicted (server-minted-id)
 - Core:
   - Uses:
     - `ids.defineIdKind`
@@ -614,6 +614,7 @@ for the `checkpoints` plugin's end-of-turn job, and the history contract
     - `infra/html-decode.rewriteStartTag`
     - `infra/html-decode.scanHtml`
     - `network/live.liveValue`
+    - `network/live.patchValue`
     - `packages/list-bound.wholeKeyedRecord`
     - `packages/list-bound.wholeList`
     - `packages/list-bound.wholeRecord`

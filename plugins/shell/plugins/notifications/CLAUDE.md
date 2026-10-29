@@ -194,9 +194,10 @@ DataView (`web/components/notifications-view.tsx`):
   - Uses: 56 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×5
     - `apps-core/tab-origin` ×4
-    - `infra/endpoints` ×3
     - `primitives/css/ui-kit` ×3
     - `ids` ×2
+    - `infra/endpoints` ×2
+    - `network/live` ×2
     - `primitives/css/coords` ×2
     - `primitives/css/fill` ×2
     - `primitives/css/spacing` ×2
@@ -207,7 +208,6 @@ DataView (`web/components/notifications-view.tsx`):
     - `apps/debug/shell.DebugApp`
     - `audience/developer-mark.DeveloperMark`
     - `audience.useAudience`
-    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/inline.Inline`
@@ -272,12 +272,12 @@ DataView (`web/components/notifications-view.tsx`):
     - `notifications:rows` (keyed, point)
     - `notifications.unread` (push)
   - Routes:
-    - `POST /api/notifications/dismiss-all`
-    - `POST /api/notifications/mark-all-read`
-    - `POST /api/notifications/:id/dismiss`
+    - `POST /api/notifications/dismiss-all` — predicted
+    - `POST /api/notifications/mark-all-read` — predicted
+    - `POST /api/notifications/:id/dismiss` — predicted
 - Machine:
   - Uses: `infra/endpoints.implementMachine`
-  - Routes: `POST /api/notifications`
+  - Routes: `POST /api/notifications` — unpredicted (server-decided)
 - Core:
   - Uses:
     - `audience.AUDIENCES`
@@ -317,13 +317,13 @@ DataView (`web/components/notifications-view.tsx`):
     - `ui/tokens/type-scale` ×10
     - `ui/tokens/density` ×5
     - `ui/tokens/shape` ×2
-  - Imported by: 32 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×12
-    - `tasks` ×5
+  - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×10
     - `build` ×3
     - `apps` ×2
     - `reports` ×2
     - `screenshot` ×2
+    - `tasks` ×2
     - `auth`
     - `debug/boot-profile`
     - `history/dialog`
@@ -331,9 +331,7 @@ DataView (`web/components/notifications-view.tsx`):
     - `page/inline-date`
     - `shell/notifications/native`
 - Exemptions:
-  - Exempts itself from:
-    - `endpoints/no-void-fetch-endpoint` — `web/components/bell-button.tsx` (sanctioned)
-    - `endpoints/no-void-fetch-endpoint` — `web/internal/toast.ts` (sanctioned)
+  - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/internal/toast.ts` (sanctioned)
 - Shared:
   - Exports (values):
     - `createNotification`

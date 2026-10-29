@@ -9,6 +9,7 @@ import { fetchEndpointOver } from "./fetch-endpoint";
 
 const ping = defineEndpoint({
   route: "POST /api/ping",
+  unpredicted: { reason: "response", why: "test fixture" },
   body: z.object({ n: z.number() }),
   response: z.object({ ok: z.boolean() }),
 });
@@ -163,6 +164,7 @@ describe("fetchEndpoint unsupported refusal", () => {
 describe("fetchEndpoint needsMachine", () => {
   const launch = defineEndpoint({
     route: "POST /api/launch",
+    unpredicted: { reason: "response", why: "test fixture" },
     body: z.object({ n: z.number() }),
     response: z.object({ ok: z.boolean() }),
     needsMachine: { feature: "Launching an agent" },
@@ -217,12 +219,15 @@ describe("fetchEndpoint of a read", () => {
   test("defineEndpoint derives the marker from the route's method", () => {
     expect(ping.read).toBeUndefined();
     expect(health.read).toContain("GET is a read");
-    for (const method of ["PUT", "PATCH", "DELETE"]) {
+    for (const method of ["PUT", "PATCH", "DELETE"] as const) {
       expect(
-        defineEndpoint({ route: `${method} /api/x` }).read,
+        defineEndpoint({
+          route: `${method} /api/x`,
+          unpredicted: { reason: "response", why: "test fixture" },
+        }).read,
       ).toBeUndefined();
     }
-    for (const method of ["HEAD", "OPTIONS"]) {
+    for (const method of ["HEAD", "OPTIONS"] as const) {
       expect(defineEndpoint({ route: `${method} /api/x` }).read).toBeDefined();
     }
   });

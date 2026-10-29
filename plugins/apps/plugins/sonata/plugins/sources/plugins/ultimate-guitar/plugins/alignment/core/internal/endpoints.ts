@@ -11,6 +11,10 @@ export const setUgAlignmentVideo = defineEndpoint({
   route: "PUT /api/sonata/songs/:id/ultimate-guitar/alignment/video",
   body: z.object({ url: z.string() }),
   response: z.object({ videoId: z.string() }),
+  unpredicted: {
+    reason: "precondition",
+    why: "400 for a link that is not a usable video, shown inline under the field",
+  },
 });
 
 /**
@@ -22,6 +26,10 @@ export const setUgAlignmentVideo = defineEndpoint({
 export const realignUg = defineEndpoint({
   route: "POST /api/sonata/songs/:id/ultimate-guitar/alignment/realign",
   response: z.object({ ok: z.literal(true) }),
+  unpredicted: {
+    reason: "precondition",
+    why: "409 when there is nothing to align to; the error shows in the alignment status",
+  },
 });
 
 /**
@@ -34,6 +42,10 @@ export const realignUg = defineEndpoint({
 export const cancelUgAlignment = defineEndpoint({
   route: "POST /api/sonata/songs/:id/ultimate-guitar/alignment/cancel",
   response: z.object({ ok: z.literal(true) }),
+  unpredicted: {
+    reason: "precondition",
+    why: "409 when nothing is in progress (the row is read server-side), reported inline by the alignment status; it also stops the running job",
+  },
 });
 
 /**
@@ -44,6 +56,10 @@ export const cancelUgAlignment = defineEndpoint({
 export const resolveUgAlignment = defineEndpoint({
   route: "POST /api/sonata/songs/:id/ultimate-guitar/alignment/resolve",
   response: z.object({ ok: z.literal(true) }),
+  unpredicted: {
+    reason: "server-decided",
+    why: "searches externally and aligns candidates in turn; the server picks the video",
+  },
 });
 
 /**
@@ -60,4 +76,8 @@ export const refuseUgAlignmentVideo = defineEndpoint({
     status: z.enum(["gone", "not-embeddable"]),
   }),
   response: z.object({ resolving: z.boolean() }),
+  unpredicted: {
+    reason: "server-decided",
+    why: "marks the candidate and the resolver may pick the next one; that follow-on pick is the server's",
+  },
 });

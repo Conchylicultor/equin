@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { useLiveMutation } from "@plugins/network/plugins/live/web";
 import {
   updateUltimateGuitarSong,
   type CreateUltimateGuitarSongBody,
@@ -10,7 +10,7 @@ import {
  * metrics).
  *
  * Loading a different tab in-player is a **user-triggered mutation**, so this
- * goes through `useEndpointMutation` rather than a discarded
+ * goes through `useLiveMutation` rather than a discarded
  * `void fetchEndpoint(...)`: a failed write must not vanish into a contextless
  * browser-rejection crash. Passing no `onError` opts into the global error toast,
  * so the user learns the tab did not save instead of silently losing it on the
@@ -23,7 +23,7 @@ export function useSaveUltimateGuitar(): (
   songId: string,
   body: CreateUltimateGuitarSongBody,
 ) => void {
-  const { mutate } = useEndpointMutation(updateUltimateGuitarSong);
+  const { mutate } = useLiveMutation(updateUltimateGuitarSong);
   return useCallback(
     (songId, body) => mutate({ params: { id: songId }, body }),
     [mutate],

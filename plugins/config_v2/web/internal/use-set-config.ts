@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { useRawContributions } from "@plugins/framework/plugins/web-sdk/core";
-import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { useLiveMutation } from "@plugins/network/plugins/live/web";
 import { setConfigField } from "../../core";
 import type { ConfigDescriptor } from "../../core";
 import type { FieldsRecord } from "@plugins/fields/core";
@@ -13,10 +13,10 @@ export function useSetConfig<F extends FieldsRecord>(
   opts?: { scopeId?: string },
 ): (key: keyof F & string, value: unknown) => void {
   const registrations = useRawContributions(ConfigV2.WebRegister);
-  // useEndpointMutation (not void fetchEndpoint) so a failed save surfaces via
-  // the global error toast instead of escaping as an unhandled rejection.
+  // Predicted (`setConfigField`'s effect): every read of the document shows the
+  // write at once, and a refused write unwinds with the rejection toast.
   // Called before the throw below to keep hook order unconditional.
-  const { mutate } = useEndpointMutation(setConfigField);
+  const { mutate } = useLiveMutation(setConfigField);
   const preview = useConfigPreview();
   const reg = registrations.find((c) => c.descriptor === descriptor);
   const storePath = reg ? storePathOf(reg) : null;

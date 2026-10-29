@@ -126,8 +126,8 @@ insert and the ring's inline prune reach it through the change feed. The
   - Routes:
     - `GET /api/events/emissions`
     - `GET /api/events/triggers`
-    - `DELETE /api/events/triggers/:id`
-    - `PATCH /api/events/triggers/:id`
+    - `DELETE /api/events/triggers/:id` — predicted
+    - `PATCH /api/events/triggers/:id` — predicted
 - Core:
   - Uses:
     - `fields.FieldsRecord`
@@ -143,6 +143,7 @@ insert and the ring's inline prune reach it through the change feed. The
     - `network/live.liveCollection`
     - `network/live.LiveRowsCollection`
     - `network/live.liveValue`
+    - `network/live.patchValue`
     - `packages/list-bound.wholeList`
     - `packages/list-bound.wholeRecord`
   - Exports (types):

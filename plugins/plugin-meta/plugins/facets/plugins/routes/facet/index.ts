@@ -11,13 +11,19 @@ import type {
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
   endpointExports,
+  type EndpointExport,
   readIfExists,
   stripTypes,
   matchBracket,
   maskSource,
   walkFiles,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
-import { type RouteDef, type RoutesData, routesFacetDef } from "../core";
+import {
+  type RouteDef,
+  type RoutesData,
+  renderRoute,
+  routesFacetDef,
+} from "../core";
 
 export default createFacet<RoutesData>({
   def: routesFacetDef,
@@ -35,7 +41,7 @@ export default createFacet<RoutesData>({
     walkFiles(join(ctx.dir, "core"), endpointFiles);
     walkFiles(join(ctx.dir, "shared"), endpointFiles);
 
-    const endpointRoutes = new Map<string, string>(); // exportName → routeString
+    const endpointRoutes = new Map<string, EndpointExport>(); // exportName → declaration
     for (const file of endpointFiles) {
       if (!file.endsWith(".ts")) continue;
       const raw = readIfExists(file);
@@ -43,7 +49,7 @@ export default createFacet<RoutesData>({
       // The one reading of an endpoint declaration (parse-utils), shared with
       // the browser-host coverage guard.
       for (const e of endpointExports(file, raw)) {
-        endpointRoutes.set(e.name, e.route);
+        endpointRoutes.set(e.name, e);
       }
     }
 
@@ -65,13 +71,16 @@ export default createFacet<RoutesData>({
           const computedRe = /\[\s*(\w+)\s*\.\s*\w+\s*\]/g;
           let km: RegExpExecArray | null;
           while ((km = computedRe.exec(block))) {
-            const routeStr = endpointRoutes.get(km[1]!);
-            if (routeStr)
+            const e = endpointRoutes.get(km[1]!);
+            if (e)
               routes.push({
-                route: routeStr,
+                route: e.route,
                 type: "http",
                 runtime,
                 name: km[1]!,
+                ...(e.prediction === undefined
+                  ? {}
+                  : { prediction: e.prediction }),
               });
           }
 
@@ -158,7 +167,7 @@ export default createFacet<RoutesData>({
           folder: runtime,
           key: "Routes",
           values: [
-            ...httpRoutes.map((r) => `\`${r.route}\``),
+            ...httpRoutes.map(renderRoute),
             ...wsRoutes.map((r) => `\`${r.route} (WS)\``),
           ],
         });

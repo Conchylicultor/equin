@@ -45,7 +45,7 @@
 - Machine:
   - Uses: `infra/endpoints.implementMachine`
   - Register: `mcpTool('submit_conversation_summary')`
-  - Routes: `POST /api/conversation-summary/:conversationId/generate`
+  - Routes: `POST /api/conversation-summary/:conversationId/generate` — unpredicted (server-decided)
 - Core:
   - Uses:
     - `fields.FieldsRecord`

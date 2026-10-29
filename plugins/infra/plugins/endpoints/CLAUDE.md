@@ -298,7 +298,8 @@ export const exitConversation = defineEndpoint({
 
 - **Opaque here.** `EndpointEffect<TParams, TBody>` is declared in this core
   (this plugin sits below `network/live`), its payload unread; the builders
-  (`patchRow` / `removeRow` / `applyRows` / `effects`) and the one client
+  (`patchRow` / `removeRow` / `upsertRow(s)` / `applyRows` / `patchWhere` /
+  `removeWhere` / `patchValue` / `choose` / `effects`) and the one client
   (`useLiveMutation`) are `network/live`'s — its CLAUDE.md *Predicted writes*
   has the overlay, per-tuple retirement, failure and timing rules, and when
   not to declare an effect.
@@ -313,12 +314,65 @@ export const exitConversation = defineEndpoint({
   `effect?: undefined`, so `useEndpointMutation` and `FetchEndpoint` refuse a
   predicted def (tsc): it cannot be awaited behind a spinner.
   `implement` / `implementMachine` / `callEndpoint` take it (the server ignores
-  the effect).
+  the effect). Declaring the effect is one of the decision's arms (next
+  section).
+- **The commit ack.** `implement` / `implementMachine` run a predicted
+  def's handler under the host's commit capture (`core/commit-capture.ts`,
+  installed by `database/server`; the default captures nothing) and stamp the
+  transactions it committed on the response (`COMMITS_HEADER`,
+  `x-equin-commits`) — read off the definition, so no handler opts in. The
+  fetcher hands them to `FetchOpts.onCommits`; `useLiveMutation` confirms a
+  prediction with nothing to compare against them (`network/live`).
 - **`endpointContractOf(def)`** is the def without its effect (one frozen
   object per def) — how `useLiveMutation` sends the write through the normal
   `FetchEndpoint`. It, `brandEndpointEffect` and `endpointEffectPayload` are
   banned outside `network/live` by `endpoints/no-endpoint-effect-internals`
   (`noDebt`; live's `exempt/index.ts` holds the sanctioned entry).
+
+## Every write decides its prediction — `effect` | `unpredicted` | `internal` | telemetry
+
+A write endpoint cannot be declared without saying how its effect reaches the
+user (design: `research/2026-10-28-global-endpoint-prediction-decision.md`).
+Its options take **exactly one** arm (`core/prediction.ts` holds the vocabulary):
+
+```typescript
+effect: (on) => patchRow(on, …)                                  // predicted → useLiveMutation only
+unpredicted: { reason: "precondition", why: "409 shown inline" } // not predicted, for good
+unpredicted: { gap: "web-context" }                              // should be predicted; blocked (debt)
+internal: { why: "server → central RPC" }                        // no browser client → InternalEndpointDef
+agentWrite: "telemetry"                                           // alone: the decision is derived
+```
+
+- **One options union (tsc).** Each arm types the others' keys `?: never`, so
+  none or two is a tsc error; a read takes none (all four are `never` on a
+  GET). A failed declaration's error is one sentence naming the arms (a
+  never-matching overload whose required key is that sentence — first and
+  last, so tsc reports it and types the call as `UndecidedEndpointDef`, which
+  fits every consumer: no cascade into `implement` / clients).
+- **`UnpredictedReason`** (closed): `server-minted-id` (the caller needs an id
+  the server mints), `response` (the surface renders the answer — a toast is
+  `onSuccess`, not this), `precondition` (a server-checked 409 / 400 shown
+  inline), `server-decided` (an LLM, an external API, a job, the filesystem or
+  git decides the outcome). `why` is required and non-empty.
+- **`PredictionGap`** = `keyof PREDICTION_GAPS` — debt: `gap → { task, what }`,
+  one task per gap; the endpoint names only the gap. **Closing a gap deletes
+  its entry**, so every endpoint still declaring it becomes a tsc error. One
+  gap remains: `web-context` — an effect that needs web-only context a core
+  effect cannot see (the page editor's `applyBlockOpEndpoint` / `patchBlocks`,
+  whose reducer needs the block-handle registry), predicted meanwhile by
+  `useOptimisticResource`. The first migration's gaps (`call-sites`, `upsert`,
+  `conditional`, `increment`, `live-value`, `lanes`, `where`, `ranks`) are
+  closed and deleted.
+- **`internal`** → `InternalEndpointDef` / `InternalMachineEndpointDef`
+  (`internal: { why }`). `EndpointDef` / `MachineEndpointDef` say `internal?:
+  undefined`, so `FetchEndpoint`, `useEndpointMutation`, `readNdjson` and
+  `useLiveMutation` refuse it; `implement` / `implementMachine`,
+  `callEndpoint`, central handlers and e2e take it (`AnyEndpointDef`).
+- **The def carries the decision** (`unpredicted` / `internal`), for the
+  routes facet; a telemetry write and a read carry neither.
+- **Runtime backstop.** `defineEndpoint` throws, naming the route and what to
+  declare, on a write with no arm or two, an empty `why`, an unknown reason or
+  gap, and a read with any arm.
 
 ## Writes an agent session's close undoes — `agentReverted`
 
@@ -509,6 +563,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `AssetBase`
     - `AssetPath`
     - `Codec`
+    - `CommitCapture`
     - `EffectOn`
     - `EffectRequest`
     - `EndpointAnswer`
@@ -516,6 +571,9 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `EndpointEffect`
     - `EndpointRequestOpts`
     - `ExtractParams`
+    - `InternalDecl`
+    - `InternalEndpointDef`
+    - `InternalMachineEndpointDef`
     - `MachineAvailability`
     - `MachineEndpointDef`
     - `MachineFeature`
@@ -523,8 +581,11 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `MachineUnavailable`
     - `PredictedEndpointDef`
     - `PredictedMachineEndpointDef`
+    - `PredictionGap`
     - `ReadMarker`
     - `ReadOf`
+    - `Unpredicted`
+    - `UnpredictedReason`
     - `WriteEndpoint`
   - Exports (values):
     - `agentWriteRefusedMessage`
@@ -546,27 +607,30 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `getRouteSlowThresholdMs`
     - `HttpError`
     - `implement`
+    - `installCommitCapture`
     - `interpolatePath`
     - `isAgentWriteRefusal`
     - `isCodec`
     - `multipart`
+    - `PREDICTION_GAPS`
     - `rawEndpointHandler`
+    - `readCommitsHeader`
     - `readEndpointResponse`
     - `unavailableMessage`
     - `unmatchedApiResponse`
     - `unsupportedEndpointResponse`
 - Cross-plugin:
-  - Imported by: 230 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×63
+  - Imported by: 223 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×61
     - `conversations` ×32
     - `infra` ×21
     - `page` ×20
-    - `tasks` ×19
     - `debug` ×16
-    - `primitives` ×15
+    - `tasks` ×16
+    - `primitives` ×14
     - `reports` ×6
     - `ui` ×6
-    - `auth` ×5
+    - `auth` ×4
     - `active-data` ×2
     - `apps-core` ×2
     - `build` ×2
@@ -590,10 +654,6 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `networking/no-request-guard-capability` — `web/internal/asset-url.ts`, `web/internal/asset-src.ts` (sanctioned)
   - Exempted by:
     - `apps/pages/page-tree` (0 debt)
-    - `apps/sonata/playback-history` (0 debt)
-    - `apps/sonata/rich/key-mode` (0 debt)
-    - `apps/sonata/rich/swing` (0 debt)
-    - `apps/sonata/transpose` (0 debt)
     - `conversations/compaction-context` (0 debt)
     - `conversations/stop-gate` (0 debt)
     - `infra/boot-snapshot` (0 debt)

@@ -11,7 +11,6 @@ import {
   LIVE_ROW_KEY,
   type LivePagedValue,
   type LiveCollection,
-  type LiveRowsCollection,
   type LiveQuery,
   type LiveValueOrigin,
 } from "@plugins/network/plugins/live/core";
@@ -27,12 +26,22 @@ import {
   type PageSource,
 } from "./page-source";
 import type { VisibleRange } from "./visible-range";
-import { predictRows, type PredictRow } from "./predict-overlay";
+import {
+  predictRows,
+  type PredictRow,
+  type PredictTuple,
+} from "./predict-overlay";
 import {
   usePredictedOps,
   usePredictHolder,
   usePredictStore,
+  type HeldTuples,
 } from "./use-predicted";
+import { predictOrderOf } from "./predict-reads";
+import {
+  readSubject,
+  type LiveMembership,
+} from "@plugins/network/plugins/live/core";
 import {
   assemble,
   loadMore as loadMorePages,
@@ -231,11 +240,11 @@ export function useViewportPages<Row, F, S extends string, Meta, Q, QIn>(
   // Either kind: `pageSourceOf` dispatches on the declaration itself, and
   // the overloads have already paired each with its own query type.
   const pageSource = pageSourceOf(source as LiveCollection<Row, F, S> | null);
-  const pages = usePages(pageSource, query, {
+  const { pages, held } = usePages(pageSource, query, {
     viewport: options.viewport,
     resetKey: options.resetKey,
     step: undefined,
-  }).pages;
+  });
   // The predict overlay applies to a collection's rows (a paged value's
   // items are no entity's).
   const collection =
@@ -248,6 +257,8 @@ export function useViewportPages<Row, F, S extends string, Meta, Q, QIn>(
       ? null
       : `${pageSource.key}|${pageSource.base(query)}`,
     pages.status === "ready" ? pages.rows : undefined,
+    held,
+    pages.status === "ready" && !pages.exhausted,
   );
   return useMemo(() => {
     if (fold === null || pages.status !== "ready") return pages;
@@ -265,39 +276,82 @@ export function useViewportPages<Row, F, S extends string, Meta, Q, QIn>(
  * identity kept). The window's own `where` is not re-checked: it may name
  * exposed and scoped columns the rows carry under `$columns` / `$scoped`, so
  * a row a prediction moves out of it alone leaves with the server's frame.
+ *
+ * A window never gains an upserted entrant (its row key and counts are the
+ * server's). Ordered by row fields, a row whose order field a prediction
+ * rewrote moves among the rows the read holds, and leaves when it sorts past
+ * the last of them while the read has `more` (the server's frame brings it
+ * where it lands). `held` is the live pages' tuples — where a commit is seen.
  */
 function usePredictedFold<Row>(
-  collection: Pick<
-    LiveRowsCollection<Row>,
-    "from" | "id" | "membership"
-  > | null,
+  collection: {
+    readonly key: string;
+    readonly from: LiveCollection<Row, unknown, string>["from"];
+    readonly id: string;
+    readonly membership?: LiveMembership | undefined;
+    readonly rowKeys: readonly string[];
+    readonly window: {
+      readonly window: {
+        decode(params: Record<string, string>): {
+          readonly orderBy: readonly (readonly [string, string])[];
+        };
+      };
+    };
+  } | null,
   tupleKey: string | null,
   serverRows: readonly Row[] | undefined,
+  held: HeldTuples,
+  more: boolean,
 ): ((rows: readonly Row[]) => readonly Row[]) | null {
   const store = usePredictStore();
-  const entity = collection?.from?.name ?? null;
-  const ops = usePredictedOps(store, entity);
-  usePredictHolder(
-    store,
-    entity,
-    tupleKey,
-    collection?.id ?? "id",
-    serverRows as readonly PredictRow[] | undefined,
-  );
+  const subject = collection === null ? null : readSubject(collection);
+  const ops = usePredictedOps(store, subject);
   const idField = collection?.id ?? "id";
   const membership = collection?.membership;
+  // The read's order: every page of it shares one (`familyOf`), so the
+  // first live page's decoded params name it.
+  const firstPage = held.params[0];
+  const firstJson = firstPage === undefined ? null : JSON.stringify(firstPage);
+  const order = useMemo(() => {
+    if (collection === null || firstJson === null) return undefined;
+    const decoded = collection.window.window.decode(
+      JSON.parse(firstJson) as Record<string, string>,
+    );
+    return predictOrderOf(
+      collection.rowKeys,
+      decoded.orderBy as readonly (readonly [string, "asc" | "desc"])[],
+    );
+  }, [collection, firstJson]);
+  const tuple = useMemo(
+    (): PredictTuple | null =>
+      subject === null || tupleKey === null
+        ? null
+        : {
+            tupleKey,
+            subject,
+            idField,
+            ...(membership === undefined ? {} : { membership }),
+            ...(order === undefined ? {} : { order }),
+            more,
+          },
+    [subject, tupleKey, idField, membership, order, more],
+  );
+  usePredictHolder(
+    store,
+    ops,
+    tuple,
+    serverRows as readonly PredictRow[] | undefined,
+    subject === null ? null : held,
+  );
   return useMemo(() => {
-    if (entity === null || tupleKey === null || ops.length === 0) return null;
+    if (tuple === null || ops.length === 0) return null;
     return (rows: readonly Row[]) =>
       predictRows(
         ops,
-        tupleKey,
-        entity,
-        idField,
+        tuple,
         rows as unknown as readonly PredictRow[],
-        membership,
       ) as unknown as readonly Row[];
-  }, [entity, tupleKey, ops, idField, membership]);
+  }, [tuple, ops]);
 }
 
 /**
@@ -332,6 +386,10 @@ export function useAllPages<Row, F, S extends string>(
       : list.status === "error"
         ? list.stale
         : undefined,
+    read.held,
+    // A plain read holds every page from the head: more rows exist past
+    // the last while it can grow.
+    list.status === "ready" ? list.canGrow : true,
   );
   return useMemo((): PagedResourceResult<Row> => {
     if (fold === null) return list;
@@ -423,6 +481,8 @@ function listResultOf<Row>(read: PagesRead<Row>): PagedResourceResult<Row> {
 interface PagesRead<Row> {
   pages: LivePagesResult<Row>;
   refetch: () => Promise<void>;
+  /** The live pages' tuples — where the predict overlay sees a write's commit. */
+  held: HeldTuples;
 }
 
 /** How `usePages` reads: by a viewport or by none, from which first page. */
@@ -873,7 +933,21 @@ function usePages<Row, Q, P extends Record<string, string>>(
   const refetch = useCallback(async () => {
     await Promise.all(results.map((r) => r.refetch()));
   }, [results]);
-  return useMemo(() => ({ pages: result, refetch }), [result, refetch]);
+  const { key: heldKey, origin: heldOrigin } = source.descriptor;
+  const held = useMemo(
+    (): HeldTuples => ({
+      resource: {
+        key: heldKey,
+        ...(heldOrigin === undefined ? {} : { origin: heldOrigin }),
+      },
+      params: reads.params,
+    }),
+    [heldKey, heldOrigin, reads.params],
+  );
+  return useMemo(
+    () => ({ pages: result, refetch, held }),
+    [result, refetch, held],
+  );
 }
 
 /** A capped read may page once more: the new page's step still fits under `maxLimit`. */

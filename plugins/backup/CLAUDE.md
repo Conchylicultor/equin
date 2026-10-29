@@ -170,7 +170,7 @@ row with a rising count and a new source starting to fail mints its own.
     - `BackupSource`
     - `BackupTarget`
   - Register: `defineSupervisedJob('backup.run.supervised')`
-  - Routes: `POST /api/backup/run`
+  - Routes: `POST /api/backup/run` — unpredicted (server-decided)
 - Core:
   - Uses:
     - `fields.FieldsRecord`

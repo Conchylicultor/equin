@@ -126,7 +126,7 @@ rename throws before anything has changed.
     - `infra/endpoints.implementMachine`
     - `network/live.serveValue`
   - Register: `defineJob('conversations.rewind-backup-sweep')`
-  - Routes: `POST /api/conversations/:id/rewind`
+  - Routes: `POST /api/conversations/:id/rewind` — unpredicted (server-decided)
 - Core:
   - Uses:
     - `conversations.RewindOutcomeSchema`

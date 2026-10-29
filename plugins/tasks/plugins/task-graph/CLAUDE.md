@@ -35,7 +35,7 @@ disagreeing is the design, not drift.
     - `primitives/live-state.foldResource`
     - `primitives/loading.Loading`
     - `primitives/pane.useOpenPane`
-    - `tasks.patchTask`
+    - `tasks.usePatchTask`
     - `tasks/task-detail.taskDetailPane`
     - `tasks/task-detail.TaskDetailSlots`
     - `tasks/task-status.STATUS_META`

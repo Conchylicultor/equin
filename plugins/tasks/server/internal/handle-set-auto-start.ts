@@ -5,7 +5,7 @@ import {
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { assertChoiceLaunchable } from "@plugins/conversations/plugins/model-provider/core";
 import { getModelCatalog } from "@plugins/conversations/plugins/model-provider/plugins/catalog/server";
-import { setTaskAutoStart } from "../../core/endpoints";
+import { setTaskAutoStart } from "@plugins/tasks/plugins/auto-start/core";
 import { armTaskAutoStart } from "./arm-auto-start";
 
 export const handleSetAutoStart = implement(

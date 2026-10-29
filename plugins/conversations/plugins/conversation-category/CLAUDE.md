@@ -155,13 +155,13 @@ on a host without the computer gets the unavailable arm instead of a 404.
     - `getItemMap`
     - `itemOrder`
   - Resources: `conversation-categories:rows` (keyed, point)
-  - Routes: `DELETE /api/conversation-category/:conversationId/:categoryId`
+  - Routes: `DELETE /api/conversation-category/:conversationId/:categoryId` — internal
 - Machine:
   - Uses: `infra/endpoints.implementMachine`
   - Register: `defineJob('conversation-category.classify')`
   - Routes:
-    - `POST /api/conversation-category/:conversationId/classify`
-    - `POST /api/conversation-category/:conversationId`
+    - `POST /api/conversation-category/:conversationId/classify` — internal
+    - `POST /api/conversation-category/:conversationId` — internal
 - Core:
   - Uses:
     - `fields.FieldsRecord`

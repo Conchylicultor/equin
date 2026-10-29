@@ -1,7 +1,7 @@
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
@@ -18,7 +18,7 @@ import {
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { patchTask } from "@plugins/tasks/web";
+import { usePatchTask } from "@plugins/tasks/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { STATUS_META } from "@plugins/tasks/plugins/task-status/web";
 import { EdgeActions } from "./edge-actions";
@@ -62,26 +62,20 @@ const GROUP_PALETTE = [
 
 /** Hover-revealed soft-drop button rendered as a node `actions` overlay. */
 function DeleteTaskButton({ taskId }: { taskId: string }) {
-  const [deleting, setDeleting] = useState(false);
-  const fetchEndpoint = useFetchEndpoint();
+  const patchTask = usePatchTask();
   // "Delete" is a soft drop — marks the task dropped (reversible), never removing
   // the row. Tasks are never hard-deleted.
   const handleDelete = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      if (deleting) return;
-      setDeleting(true);
-      void patchTask(fetchEndpoint, taskId, { drop: true }).finally(() =>
-        setDeleting(false),
-      );
+      patchTask(taskId, { drop: true });
     },
-    [taskId, deleting, fetchEndpoint],
+    [taskId, patchTask],
   );
   return (
     <button
       type="button"
-      className="bg-background text-foreground hover:bg-destructive hover:text-destructive-foreground size-5 rounded-full border shadow-sm disabled:opacity-50"
-      disabled={deleting}
+      className="bg-background text-foreground hover:bg-destructive hover:text-destructive-foreground size-5 rounded-full border shadow-sm"
       onClick={handleDelete}
       aria-label="Delete task"
     >

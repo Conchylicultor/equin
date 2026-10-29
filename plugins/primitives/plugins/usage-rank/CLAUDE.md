@@ -82,7 +82,7 @@ browser host.
     - `usage-stats` (keyed, window)
     - `usage-stats:groups` (push)
     - `usage-stats:rows` (keyed, point)
-  - Routes: `POST /api/usage-rank/record`
+  - Routes: `POST /api/usage-rank/record` — unpredicted (server-decided)
 - Web:
   - Uses:
     - `infra/endpoints.useFetchEndpoint`

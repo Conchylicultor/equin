@@ -19,12 +19,12 @@ The pages sidebar filters and groups by it with no tags code of its own.
     - `IdKinds.Kind` "tag"
     - `PageReference.Trailing` → `PageTagChips`
     - `FieldPresentation.Register` "exposure:page_blocks_ext_tags"
-  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `network/live` ×6
+  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live` ×7
     - `primitives/css/ui-kit` ×4
     - `primitives/live-state` ×4
-    - `infra/endpoints` ×2
     - `ids.IdKinds`
+    - `infra/endpoints.useEndpointMutation`
     - `page/page-reference.PageReference`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
@@ -36,7 +36,6 @@ The pages sidebar filters and groups by it with no tags code of its own.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
-    - `primitives/optimistic-mutation.useOptimisticResource`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/search.SearchInput`
     - `primitives/undo-redo.localUndoProps`
@@ -90,10 +89,10 @@ The pages sidebar filters and groups by it with no tags code of its own.
     - `page-tags.vocabulary` (keyed)
     - `page-tags.vocabulary:rows` (keyed, point)
   - Routes:
-    - `PUT /api/pages/:pageId/tags`
-    - `POST /api/page-tags`
-    - `PATCH /api/page-tags/:tagId`
-    - `DELETE /api/page-tags/:tagId`
+    - `PUT /api/pages/:pageId/tags` — predicted
+    - `POST /api/page-tags` — unpredicted (server-minted-id)
+    - `PATCH /api/page-tags/:tagId` — predicted
+    - `DELETE /api/page-tags/:tagId` — predicted
 - Core:
   - Uses:
     - `fields.FieldsRecord`

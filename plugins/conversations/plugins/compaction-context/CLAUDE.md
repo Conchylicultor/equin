@@ -52,7 +52,7 @@ adds itself.
   - Uses: `infra/endpoints.implement`
   - Exports (types): `CompactionContextSource`
   - Exports (values): `CompactionContext`
-  - Routes: `POST /api/conversations/:id/compaction-context`
+  - Routes: `POST /api/conversations/:id/compaction-context` — internal
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`
   - Exports (types):

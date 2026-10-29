@@ -55,9 +55,9 @@ Favorites/starred pages, as a **presence-only marker** — not a bespoke sidebar
   - Uses:
     - `apps/pages/page-tree.pageDetailPane`
     - `apps/pages/page-tree.PageTree`
-    - `infra/endpoints.useEndpointMutation`
     - `network/live.FieldPresentation`
     - `network/live.useLive`
+    - `network/live.useLiveMutation`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.mapResource`
     - `primitives/live-state.ResourceErrorInline`
@@ -83,7 +83,7 @@ Favorites/starred pages, as a **presence-only marker** — not a bespoke sidebar
   - Resources:
     - `pages-starred.all` (keyed)
     - `pages-starred.all:rows` (keyed, point)
-  - Routes: `PUT /api/pages/:pageId/starred`
+  - Routes: `PUT /api/pages/:pageId/starred` — predicted
 - Cross-plugin:
   - Imported by: `apps/pages/fixtures`
 

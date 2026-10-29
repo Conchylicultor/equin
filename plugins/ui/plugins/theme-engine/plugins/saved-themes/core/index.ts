@@ -22,5 +22,6 @@ export type {
   SavedThemeInUse,
   ThemeScopeRef,
 } from "./saved-theme";
+export { savedThemesList } from "./resource";
 export { FragmentEditSchema, applyFragmentEdit } from "./fragment-edit";
 export type { FragmentEdit } from "./fragment-edit";

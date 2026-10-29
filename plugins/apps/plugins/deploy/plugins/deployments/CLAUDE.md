@@ -422,8 +422,8 @@ any consumer; extra columns of the row are client fields of the `deployments` co
     - `primitives/css/ui-kit` ×9
     - `primitives/data-view` ×7
     - `primitives/pane` ×5
-    - `infra/endpoints` ×4
-    - `network/live` ×3
+    - `network/live` ×4
+    - `infra/endpoints` ×3
     - `primitives/live-state` ×3
     - `apps/deploy/health` ×2
     - `apps/deploy/servers.ServerDetail`
@@ -499,11 +499,11 @@ any consumer; extra columns of the row are client fields of the `deployments` co
     - `deploy.runs` (push, notified, whole: one entry per deployment row — its most recent run, whole: one section id per refusing deploy gate — bounded by the installed DeployGates.Gate contributions)
   - Routes:
     - `GET /api/deploy/deployments`
-    - `POST /api/deploy/deployments`
+    - `POST /api/deploy/deployments` — unpredicted (precondition)
     - `GET /api/deploy/deployments/:id`
-    - `PATCH /api/deploy/deployments/:id`
-    - `DELETE /api/deploy/deployments/:id`
-    - `POST /api/deploy/deployments/:id/run`
+    - `PATCH /api/deploy/deployments/:id` — unpredicted (precondition)
+    - `DELETE /api/deploy/deployments/:id` — predicted
+    - `POST /api/deploy/deployments/:id/run` — unpredicted (server-decided)
 - Core:
   - Uses:
     - `apps/deploy/servers.serverDetailRoute`
@@ -522,6 +522,7 @@ any consumer; extra columns of the row are client fields of the `deployments` co
     - `network/live.liveCollection`
     - `network/live.LiveRowsCollection`
     - `network/live.liveValue`
+    - `network/live.removeRow`
     - `packages/list-bound.wholeList`
     - `packages/list-bound.wholeRecord`
     - `primitives/pane.defineRoute`

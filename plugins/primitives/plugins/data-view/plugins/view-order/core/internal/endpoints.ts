@@ -1,5 +1,8 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import { patchValue } from "@plugins/network/plugins/live/core";
+import { Rank } from "@plugins/primitives/plugins/rank/core";
+import { rowOrder } from "./resource";
 import { RowOrderRowSchema } from "./types";
 
 export const SetRowOrderBodySchema = z.object({
@@ -21,4 +24,19 @@ export type SetRowOrderBody = z.infer<typeof SetRowOrderBodySchema>;
 export const setRowOrder = defineEndpoint({
   route: "POST /api/data-view/row-order",
   body: SetRowOrderBodySchema,
+  // The write set carries the ranks (client-minted), so the view instance's
+  // list is the old one with those rows replaced or added, rank-ascending.
+  effect: (on) =>
+    patchValue(
+      on,
+      rowOrder,
+      ({ body }) => ({ dataViewId: body.dataViewId, viewId: body.viewId }),
+      (rows, { body }) => {
+        const written = new Set(body.writes.map((w) => w.rowKey));
+        return [
+          ...rows.filter((r) => !written.has(r.rowKey)),
+          ...body.writes,
+        ].sort((a, b) => Rank.compare(a.rank, b.rank));
+      },
+    ),
 });

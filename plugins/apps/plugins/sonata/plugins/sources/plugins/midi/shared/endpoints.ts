@@ -26,6 +26,10 @@ export const createMidiSong = defineEndpoint({
   route: "POST /api/sonata/songs/midi",
   body: CreateMidiSongBodySchema,
   response: z.object({ id: z.string(), title: z.string() }),
+  unpredicted: {
+    reason: "server-minted-id",
+    why: "the import opens the new song by the id the server mints",
+  },
 });
 
 /**

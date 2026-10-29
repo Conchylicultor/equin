@@ -21,7 +21,7 @@
     - `infra/secrets.getSecret`
     - `release.Release`
   - Exports (values): `getAppleSigningEnv`
-  - Routes: `POST /api/apple-signing/certificate`
+  - Routes: `POST /api/apple-signing/certificate` — unpredicted (response)
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`
   - Exports (values): `setAppleCertificateEndpoint`

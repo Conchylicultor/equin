@@ -54,12 +54,12 @@
     - `queue-ranks:groups` (push)
     - `queue-ranks:rows` (keyed, point)
   - Routes:
-    - `POST /api/conversations-queue/reorder`
-    - `POST /api/conversations-queue/promote`
-    - `POST /api/conversations-queue/demote`
-    - `POST /api/conversations-queue/step-down`
-    - `POST /api/conversations-queue/rerank`
-    - `POST /api/conversations-queue/pin`
+    - `POST /api/conversations-queue/reorder` — unpredicted (response)
+    - `POST /api/conversations-queue/promote` — unpredicted (server-decided)
+    - `POST /api/conversations-queue/demote` — unpredicted (server-decided)
+    - `POST /api/conversations-queue/step-down` — unpredicted (server-decided)
+    - `POST /api/conversations-queue/rerank` — unpredicted (server-decided)
+    - `POST /api/conversations-queue/pin` — unpredicted (server-decided)
 - Web:
   - Uses: `primitives/optimistic-mutation.OpNoLongerApplies`
   - Exports (types):

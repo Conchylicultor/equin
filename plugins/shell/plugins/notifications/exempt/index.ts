@@ -3,13 +3,6 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 export default [
   {
     rule: "endpoints/no-void-fetch-endpoint",
-    paths: ["web/components/bell-button.tsx"],
-    kind: "sanctioned",
-    reason:
-      "Notification dismiss / mark-read — the CLAUDE.md canonical example; reappears on next load if the write fails.",
-  },
-  {
-    rule: "endpoints/no-void-fetch-endpoint",
     paths: ["web/internal/toast.ts"],
     kind: "sanctioned",
     reason:

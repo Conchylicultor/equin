@@ -139,7 +139,7 @@ Design: [`research/2026-09-16-global-shared-prototype-option-picks.md`](../../..
   - Exports (values): `defineAgentWriteLedger`
   - Routes:
     - `GET /api/agent-writes`
-    - `POST /api/agent-writes/revert`
+    - `POST /api/agent-writes/revert` — internal
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`
   - Exports (types):

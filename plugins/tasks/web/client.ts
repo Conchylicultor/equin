@@ -3,15 +3,13 @@ import {
   mapResource,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
-import { useLive } from "@plugins/network/plugins/live/web";
-import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useLive, useLiveMutation } from "@plugins/network/plugins/live/web";
 import {
   taskRows,
   TaskGraph,
   type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
-import { updateTask, setTaskAutoStart, clearTaskAutoStart } from "../core";
-import type { ModelChoice } from "@plugins/conversations/plugins/model-provider/core";
+import { updateTask } from "../core";
 
 // No `rank`: repositioning goes through the `moveTask` endpoint, which carries
 // positional intent and mints the rank server-side against the complete sibling
@@ -24,26 +22,17 @@ export type TaskPatch = Partial<{
   folderId: string | null;
 }>;
 
-export type AutoStartModel = ModelChoice | "none";
-
-export async function patchTask(
-  fetchEndpoint: FetchEndpoint,
-  id: string,
-  patch: TaskPatch,
-): Promise<void> {
-  await fetchEndpoint(updateTask, { id }, { body: patch });
-}
-
-export async function setAutoStart(
-  fetchEndpoint: FetchEndpoint,
-  id: string,
-  model: AutoStartModel,
-): Promise<void> {
-  if (model === "none") {
-    await fetchEndpoint(clearTaskAutoStart, { id });
-    return;
-  }
-  await fetchEndpoint(setTaskAutoStart, { id }, { body: { model } });
+/**
+ * Edit a task (title, description, drop, hold): the change shows at once
+ * (`updateTask` is a predicted write), so there is nothing to await. The
+ * returned function is stable.
+ */
+export function usePatchTask(): (id: string, patch: TaskPatch) => void {
+  const update = useLiveMutation(updateTask);
+  return useCallback(
+    (id, patch) => update.mutate({ params: { id }, body: patch }),
+    [update],
+  );
 }
 
 /**

@@ -3,6 +3,7 @@ import type {
   MachineEndpointHttpHandler,
 } from "@plugins/framework/plugins/server-core/core";
 import type {
+  InternalMachineEndpointDef,
   MachineEndpointDef,
   PredictedMachineEndpointDef,
 } from "../../core/define-endpoint";
@@ -31,7 +32,9 @@ export function implementMachine<
   endpoint:
     | MachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>
     // The server ignores a predicted effect: it is the browser's.
-    | PredictedMachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>,
+    | PredictedMachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>
+    // No browser calls it; the machine half serves it like any other.
+    | InternalMachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>,
   handler: EndpointHandler<TParams, TBody, TResponse, TQuery>,
 ): MachineEndpointHttpHandler {
   // The brand is type-only: a machine handler IS a handler.

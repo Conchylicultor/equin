@@ -1,14 +1,18 @@
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import {
   ResourceView,
   useCombinedResources,
 } from "@plugins/primitives/plugins/live-state/web";
-import { mapRow, useLiveRow } from "@plugins/network/plugins/live/web";
+import {
+  mapRow,
+  useLiveMutation,
+  useLiveRow,
+} from "@plugins/network/plugins/live/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
-import { patchTask, useTask } from "@plugins/tasks/web";
+import { updateTask } from "@plugins/tasks/core";
+import { useTask } from "@plugins/tasks/web";
 import {
   taskDescriptions,
   type TaskListItem,
@@ -30,11 +34,35 @@ function TaskDescriptionInner({
   description: string | null;
 }) {
   const flushAll = useFlushAll();
-  const fetchEndpoint = useFetchEndpoint();
+
+  // The description shows at once (a predicted write), but Launch builds the
+  // agent's prompt from the task AS SAVED on the server, and `flushAll` below
+  // must not return before that: a save settles on the server's answer, so
+  // the launch request cannot overtake it.
+  const settles = useRef(
+    new Map<object, { ok: () => void; fail: (err: unknown) => void }>(),
+  );
+  const update = useLiveMutation(updateTask, {
+    onSuccess: (_response, req) => {
+      settles.current.get(req)?.ok();
+      settles.current.delete(req);
+    },
+    onError: (err, req, { rejected }) => {
+      // A transient failure is retried: the save stays pending until it lands.
+      if (!rejected) return;
+      settles.current.get(req)?.fail(err);
+      settles.current.delete(req);
+    },
+  });
 
   const descField = useEditableField({
     value: description ?? "",
-    onSave: (v) => patchTask(fetchEndpoint, taskId, { description: v }),
+    onSave: (v) =>
+      new Promise<void>((ok, fail) => {
+        const req = { params: { id: taskId }, body: { description: v } };
+        settles.current.set(req, { ok, fail });
+        update.mutate(req);
+      }),
   });
   useRegisterFlush(descField.flush);
 

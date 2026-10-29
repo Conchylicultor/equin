@@ -1,34 +1,26 @@
 import { useCallback } from "react";
-import { mapRow } from "@plugins/network/plugins/live/web";
-import { useToast } from "@plugins/shell/plugins/notifications/web";
-import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { mapRow, useLiveMutation } from "@plugins/network/plugins/live/web";
 import type { LaunchBinding } from "@plugins/tasks/plugins/launch-options/web";
+import { deleteTaskPreprompt, putTaskPreprompt } from "../../shared/endpoints";
 import { useTaskPreprompt } from "../hooks";
-import { setTaskPrepromptRemote } from "./api";
 
 /** Binds the control to an existing task's `tasks_ext_preprompt` row. */
 export function useTaskPrepromptBinding(
   taskId: string,
 ): LaunchBinding<string | null> {
   const result = useTaskPreprompt(taskId);
-  const fetchEndpoint = useFetchEndpoint();
-  const toast = useToast();
+  const put = useLiveMutation(putTaskPreprompt);
+  const clear = useLiveMutation(deleteTaskPreprompt);
 
   const onChange = useCallback(
     (prepromptId: string | null) => {
-      setTaskPrepromptRemote(fetchEndpoint, taskId, prepromptId).catch(
-        (err: unknown) => {
-          toast({
-            type: "task",
-            category: "other",
-            title: "Failed to set preprompt",
-            description: err instanceof Error ? err.message : String(err),
-            variant: "error",
-          });
-        },
-      );
+      if (prepromptId) {
+        put.mutate({ params: { taskId }, body: { prepromptId } });
+      } else {
+        clear.mutate({ params: { taskId } });
+      }
     },
-    [taskId, fetchEndpoint, toast],
+    [taskId, put, clear],
   );
 
   // An absent row is "no preprompt"; loading / error pass through.

@@ -82,7 +82,7 @@ export function BookmarksBar() {
                   icon={closeIcon}
                   label="Remove bookmark"
                   tooltip="Remove bookmark"
-                  onClick={() => void remove(b.id)}
+                  onClick={() => remove(b.id)}
                 />
               </ControlSizeProvider>
             }

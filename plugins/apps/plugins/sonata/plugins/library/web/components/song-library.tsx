@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useLive, useLiveMutation } from "@plugins/network/plugins/live/web";
 import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   DataView,
@@ -10,7 +10,6 @@ import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/we
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useSonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { songLibrary, updateSong } from "../../core";
 import type { Song } from "../../core";
@@ -75,10 +74,9 @@ export function SongLibrary() {
   // the now-playing footer below.
   const { currentSongId } = useSonataApp();
   // Write-back for inline cell editing (title / composer) in the table view.
-  // Fire-and-forget: the server's `updateSongMeta` write refills that song in
-  // the live collection, so the edited cell settles from server truth; a failed
-  // write surfaces via the global mutation toast (no local onError).
-  const { mutate: saveSong } = useEndpointMutation(updateSong);
+  // Predicted: the edited cell shows (and the window re-sorts) at once; a
+  // refusal is the rejection toast.
+  const { mutate: saveSong } = useLiveMutation(updateSong);
   const creators = useSourceCreators();
   // Every source's cover answer, folded per song (the library names none).
   const coverSources = Library.Cover.useContributions();

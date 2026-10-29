@@ -10,6 +10,8 @@ export type { AssetBase, AssetPath } from "./asset-path";
 export type {
   AnyEndpointDef,
   EndpointDef,
+  InternalEndpointDef,
+  InternalMachineEndpointDef,
   MachineEndpointDef,
   PredictedEndpointDef,
   PredictedMachineEndpointDef,
@@ -17,6 +19,13 @@ export type {
   ReadOf,
   WriteEndpoint,
 } from "./define-endpoint";
+export { PREDICTION_GAPS } from "./prediction";
+export type {
+  InternalDecl,
+  PredictionGap,
+  Unpredicted,
+  UnpredictedReason,
+} from "./prediction";
 export { unavailableMessage } from "./needs-machine";
 export type {
   MachineAvailability,
@@ -27,6 +36,10 @@ export type {
 export type { ExtractParams } from "./route-params";
 export { extractMethod, extractPath, interpolatePath } from "./route-params";
 export { implement, rawEndpointHandler, HttpError } from "./implement";
+// The commit ack of a predicted write: the host's database installs the
+// capture `implement` runs a predicted handler under.
+export { installCommitCapture, readCommitsHeader } from "./commit-capture";
+export type { CommitCapture } from "./commit-capture";
 export { endpointPath, endpointRequest, readEndpointResponse } from "./request";
 export type { EndpointAnswer, EndpointRequestOpts } from "./request";
 export {

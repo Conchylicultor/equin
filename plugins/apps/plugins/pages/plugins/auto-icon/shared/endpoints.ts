@@ -14,4 +14,8 @@ export const regeneratePageIcon = defineEndpoint({
   // The pick is a Haiku call through the computer's Claude CLI: on a host
   // without the computer (the demo) the Regenerate row renders disabled.
   needsMachine: { feature: "Picking a page icon" },
+  unpredicted: {
+    reason: "server-decided",
+    why: "a Haiku call picks the emoji; the Regenerate row spins until it answers",
+  },
 });

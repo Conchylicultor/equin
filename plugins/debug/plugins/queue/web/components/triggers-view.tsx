@@ -42,7 +42,7 @@ export function TriggerEnabledAction({ row }: ItemActionProps<TriggerRow>) {
       checked={row.enabled}
       aria-label={row.enabled ? "Disable trigger" : "Enable trigger"}
       onCheckedChange={(next) => {
-        void actions.setTriggerEnabled(row.id, next);
+        actions.setTriggerEnabled(row.id, next);
       }}
     />
   );

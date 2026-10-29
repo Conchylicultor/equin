@@ -1,4 +1,7 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { drizzle } from "drizzle-orm/node-postgres";
+import { z } from "zod";
+import { queryOne } from "@plugins/database/plugins/sql-rows/core";
 import type { Pool, PoolClient } from "pg";
 import {
   retryUntil,
@@ -34,6 +37,13 @@ import {
   type Db,
 } from "../../server/internal/driver";
 import { dbLog } from "../../server/internal/db-log";
+import {
+  ASSIGNED_XID_SQL,
+  inCommitScope,
+  installCommitScopeRuntime,
+  noteCommit,
+  type CommitScopeRuntime,
+} from "../../server/internal/commit-capture";
 import {
   extractReadTablesFromSql,
   readTagOf,
@@ -223,6 +233,10 @@ export function installQueryWrapper(pool: Pool): void {
     if (typeof last === "function") return origQuery(...a); // callback form, untimed + ungated
 
     const text = queryText(a[0]);
+    // An autocommit WRITE a predicted handler makes (`commit-capture.ts`) runs
+    // in a transaction of its own, so its xid can be read before it commits —
+    // read synchronously, like the lane, while the caller's context is active.
+    const captured = inCommitScope() && WRITE_STATEMENT.test(text);
 
     const runOnce = async () => {
       const acq0 = performance.now();
@@ -241,9 +255,17 @@ export function installQueryWrapper(pool: Pool): void {
       try {
         const exec0 = performance.now();
         // The statement's deadline is the client's own (armed at this call).
-        // biome-ignore lint/suspicious/noExplicitAny: proxy pg's overloaded query.
-        const res = await (client.query as any)(...a);
+        const run = () =>
+          // biome-ignore lint/suspicious/noExplicitAny: proxy pg's overloaded query.
+          (client.query as any)(...a) as Promise<unknown>;
+        if (!captured) {
+          const res = await run();
+          recordSpan("db", text, performance.now() - exec0);
+          return res;
+        }
+        const { res, xid } = await inOwnTransaction(client, run);
         recordSpan("db", text, performance.now() - exec0);
+        noteCommit(xid);
         return res;
       } finally {
         // Success or error, the connection goes back — unless the deadline lost
@@ -445,6 +467,46 @@ function armLease(client: PoolClient, releaseSlot: () => void): PoolClient {
   return client;
 }
 
+// The statements a captured handler's autocommit call may write with: drizzle's
+// insert / update / delete builders, and a `WITH` that may hold one. A read
+// matched by `WITH` pays the wrapping and attributes nothing (its transaction
+// is assigned no xid).
+const WRITE_STATEMENT = /^\s*(insert|update|delete|merge|with)\b/i;
+
+/**
+ * Run one autocommit statement as its own transaction on `client`, reading
+ * the xid it was assigned before the commit (`null`: it wrote nothing). A
+ * failure rolls back and rethrows the statement's own error — so the deadlock
+ * retry above still sees its SQLSTATE.
+ */
+async function inOwnTransaction(
+  client: PoolClient,
+  run: () => Promise<unknown>,
+): Promise<{ res: unknown; xid: string | null }> {
+  await client.query("BEGIN");
+  try {
+    const res = await run();
+    const { xid } = await queryOne(client, {
+      sql: ASSIGNED_XID_SQL,
+      row: z.object({ xid: z.string().nullable() }),
+    });
+    await client.query("COMMIT");
+    return { res, xid };
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  }
+}
+
+/** The desktop's async context for the commit capture (`commit-capture.ts`). */
+function alsCommitScopeRuntime(): CommitScopeRuntime {
+  const als = new AsyncLocalStorage<Parameters<CommitScopeRuntime["run"]>[0]>();
+  return {
+    run: (scope, fn) => als.run(scope, fn),
+    current: () => als.getStore(),
+  };
+}
+
 // Lazily-constructed singleton pool. Importing this module never builds a pool or
 // asks for this process's namespace; the worktree name is required only when the
 // first real query/connection is issued (`pool()` → `runtimeNamespace()`). node-postgres
@@ -461,6 +523,9 @@ function pool(): Pool {
     idleTimeoutMillis: 20_000,
   });
   installQueryWrapper(p);
+  // Built with the pool — at boot (`ready()` warms it) — so it is in place
+  // before any request is served.
+  installCommitScopeRuntime(alsCommitScopeRuntime());
   poolSingleton = p;
   return p;
 }

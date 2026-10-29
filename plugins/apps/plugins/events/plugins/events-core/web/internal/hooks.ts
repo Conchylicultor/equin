@@ -3,6 +3,7 @@ import { type ResourceResult } from "@plugins/primitives/plugins/live-state/web"
 import {
   useLive,
   useLiveRow,
+  useLiveMutation,
   type LiveRowResult,
 } from "@plugins/network/plugins/live/web";
 import {
@@ -70,8 +71,9 @@ export function useUpdateEventSource() {
   return useEndpointMutation(updateEventSource);
 }
 
+/** Predicted: the source leaves every read at once (see the endpoint's effect). */
 export function useDeleteEventSource() {
-  return useEndpointMutation(deleteEventSource);
+  return useLiveMutation(deleteEventSource);
 }
 
 /**

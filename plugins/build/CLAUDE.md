@@ -346,8 +346,8 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `defineSupervisedJob('build.run.supervised')`
     - `defineFileWatcher('build.run-terminal')`
   - Routes:
-    - `POST /api/build`
-    - `POST /api/build/serve`
+    - `POST /api/build` — unpredicted (server-decided)
+    - `POST /api/build/serve` — unpredicted (server-decided)
 - Core:
   - Uses:
     - `build/run-ledger.buildRunFields`

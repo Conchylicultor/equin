@@ -17,7 +17,10 @@ describe("implement", () => {
   });
 
   test("an undefined result is a 204", async () => {
-    const ep = defineEndpoint({ route: "POST /api/thing" });
+    const ep = defineEndpoint({
+      route: "POST /api/thing",
+      unpredicted: { reason: "response", why: "test fixture" },
+    });
     const res = await implement(ep, () => undefined)(req(), {});
     expect(res.status).toBe(204);
   });
@@ -25,7 +28,10 @@ describe("implement", () => {
 
 describe("access", () => {
   test("a declaration without access is owner, and the handler carries it", () => {
-    const ep = defineEndpoint({ route: "POST /api/thing" });
+    const ep = defineEndpoint({
+      route: "POST /api/thing",
+      unpredicted: { reason: "response", why: "test fixture" },
+    });
     expect(ep.access).toBe("owner");
     expect(implement(ep, () => undefined).access).toBe("owner");
   });

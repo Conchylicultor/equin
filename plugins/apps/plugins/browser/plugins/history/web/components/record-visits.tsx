@@ -11,7 +11,7 @@ export function RecordVisits(): null {
   const record = useRecordVisit();
 
   useEffect(() => {
-    if (current) void record(current);
+    if (current) record(current);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- record only on URL change; the mutation fn identity is incidental
   }, [current]);
 

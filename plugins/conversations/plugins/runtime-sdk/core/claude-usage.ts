@@ -173,4 +173,8 @@ export const refreshClaudeUsage = defineEndpoint({
   body: z.object({ accountId: z.string().min(1) }),
   response: ClaudeUsageRefreshSchema,
   needsMachine: { feature: "Reading the Claude usage limits" },
+  unpredicted: {
+    reason: "server-decided",
+    why: "The usage is read from an external Anthropic API and the refreshed result is what the surface renders.",
+  },
 });

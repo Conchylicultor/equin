@@ -693,8 +693,8 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `jobs:rows` (keyed, point)
   - Routes:
     - `GET /api/jobs/dead`
-    - `POST /api/jobs/:id/retry`
-    - `DELETE /api/jobs/:id`
+    - `POST /api/jobs/:id/retry` — unpredicted (server-decided)
+    - `DELETE /api/jobs/:id` — unpredicted (server-decided)
 - Core:
   - Uses:
     - `fields.fieldsToZodObject`

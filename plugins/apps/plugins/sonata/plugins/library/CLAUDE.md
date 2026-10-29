@@ -291,16 +291,15 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `Pane.Register` "sonata-player"
   - Uses: 93 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×13
+    - `network/live` ×7
     - `primitives/data-view` ×7
     - `apps/sonata/shell` ×6
-    - `network/live` ×6
     - `primitives/css/ui-kit` ×6
     - `primitives/live-state` ×6
     - `apps/sonata/player` ×5
     - `apps/sonata/document` ×4
     - `primitives/persistent-draft` ×3
     - `apps/sonata/view-options` ×2
-    - `infra/endpoints` ×2
     - `primitives/css/layer` ×2
     - `primitives/css/spacing` ×2
     - `primitives/latest-ref` ×2
@@ -308,6 +307,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `apps/sonata/session.useSession`
     - `fullscreen.FullscreenButton`
     - `ids.IdKinds`
+    - `infra/endpoints.useFetchEndpoint`
     - `primitives/css/badge.Badge`
     - `primitives/css/card.Card`
     - `primitives/css/center.Center`
@@ -375,8 +375,8 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `sonata.songs:groups` (push)
     - `sonata.songs:rows` (keyed, point)
   - Routes:
-    - `DELETE /api/sonata/songs/:id`
-    - `PATCH /api/sonata/songs/:id`
+    - `DELETE /api/sonata/songs/:id` — predicted
+    - `PATCH /api/sonata/songs/:id` — predicted
 - Core:
   - Uses:
     - `fields.FieldsRecord`
@@ -394,6 +394,8 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `infra/entities.entityRef`
     - `network/live.liveCollection`
     - `network/live.LiveRowsCollection`
+    - `network/live.patchRow`
+    - `network/live.removeRow`
     - `primitives/pane.defineRoute`
   - Exports (types):
     - `Song`

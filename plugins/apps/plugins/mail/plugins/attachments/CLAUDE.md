@@ -72,7 +72,7 @@ Consumes only barrel APIs: `mail-core` (`_mailAttachments`, `requireGmailToken`)
     - `database.db`
     - `infra/attachments.createAttachment`
     - `infra/endpoints.implement`
-  - Routes: `POST /api/mail/attachment`
+  - Routes: `POST /api/mail/attachment` — unpredicted (response)
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`
   - Exports (values):

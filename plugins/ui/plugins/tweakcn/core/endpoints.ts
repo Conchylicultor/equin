@@ -10,6 +10,10 @@ import { SavedThemeWriteSchema } from "@plugins/ui/plugins/theme-engine/plugins/
  */
 export const importTweakcnTheme = defineEndpoint({
   route: "POST /api/tweakcn/themes",
+  unpredicted: {
+    reason: "server-decided",
+    why: "the server fetches tweakcn.com and converts the theme; the result is unknowable client-side",
+  },
   body: z.object({ themeId: z.string() }),
   response: SavedThemeWriteSchema,
 });

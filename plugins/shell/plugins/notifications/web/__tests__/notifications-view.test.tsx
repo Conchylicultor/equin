@@ -61,6 +61,16 @@ vi.mock("@plugins/infra/plugins/endpoints/web", async (importOriginal) => ({
   }),
 }));
 
+vi.mock("@plugins/network/plugins/live/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  useLiveMutation: (endpoint: { route: string }) => ({
+    kind: "available",
+    mutate: (vars: unknown) => {
+      stub.mutations.push({ route: endpoint.route, vars });
+    },
+  }),
+}));
+
 vi.mock("@plugins/apps-core/plugins/tabs/web", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   useAppLink: () => (url: string) => ({ open: () => {}, href: () => url }),
@@ -246,7 +256,7 @@ describe("<NotificationsView>", () => {
 });
 
 describe("item actions", () => {
-  it("Dismiss posts the row's dismiss", () => {
+  it("Dismiss is a predicted write of the row's dismiss", () => {
     render(
       <DismissNotificationAction
         row={note({ id: notificationIdKind.key("notif-7") })}

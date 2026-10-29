@@ -225,8 +225,8 @@ set). Identical posture to `data_view_custom_values`.
 - Web:
   - Contributes: `DataViewSlots.RowOrder` "view-order" → `RowOrderContribution`
   - Uses:
-    - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
+    - `network/live.useLiveMutation`
     - `primitives/data-view.DataViewSlots`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/live-state.foldResource`
@@ -249,11 +249,12 @@ set). Identical posture to `data_view_custom_values`.
     - `_dataViewRowOrder`
     - `applyRowOrder`
   - Resources: `data-view-row-order` (push, whole: one view instance's manual order — the rows a user dragged plus the seeds ahead of them; the key is the composite (dataViewId, viewId, rowKey), so no single-id :rows read fits)
-  - Routes: `POST /api/data-view/row-order`
+  - Routes: `POST /api/data-view/row-order` — predicted
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
+    - `network/live.patchValue`
     - `packages/list-bound.wholeList`
     - `primitives/rank.Rank`
     - `primitives/rank.RankSchema`

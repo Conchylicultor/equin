@@ -2323,22 +2323,22 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `GET /api/pages`
     - `GET /api/pages/:pageId/blocks`
     - `GET /api/blocks/:id/page`
-    - `POST /api/blocks`
-    - `PATCH /api/blocks/:id`
-    - `DELETE /api/blocks/:id`
-    - `POST /api/blocks/:id/move`
-    - `POST /api/blocks/move-many`
-    - `POST /api/blocks/:id/turn-into-page`
-    - `POST /api/blocks/:id/page-kind`
-    - `POST /api/pages/:pageId/blocks/op`
-    - `POST /api/pages/:pageId/blocks/patch`
+    - `POST /api/blocks` — unpredicted (server-minted-id)
+    - `PATCH /api/blocks/:id` — predicted
+    - `DELETE /api/blocks/:id` — unpredicted (response)
+    - `POST /api/blocks/:id/move` — unpredicted (server-decided)
+    - `POST /api/blocks/move-many` — unpredicted (server-decided)
+    - `POST /api/blocks/:id/turn-into-page` — unpredicted (server-minted-id)
+    - `POST /api/blocks/:id/page-kind` — predicted
+    - `POST /api/pages/:pageId/blocks/op` — debt: web-context
+    - `POST /api/pages/:pageId/blocks/patch` — debt: web-context
 - Core:
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live` ×3
+    - `page/block-entity` ×3
     - `primitives/collab-doc` ×3
     - `primitives/text-editor/token-extension` ×3
     - `primitives/tree` ×3
-    - `network/live` ×2
-    - `page/block-entity` ×2
     - `primitives/rank` ×2
     - `fields/date/config.dateField`
     - `fields/json/config.jsonField`

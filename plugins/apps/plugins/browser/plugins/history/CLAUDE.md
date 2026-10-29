@@ -26,7 +26,7 @@ page's "Recent" list.
     - `apps/browser/shell.Browser`
     - `apps/browser/shell.useBrowserNav`
     - `ids.IdKinds`
-    - `infra/endpoints.useEndpointMutation`
+    - `network/live.useLiveMutation`
   - Exports (types): `BrowserRecent`
   - Exports (values):
     - `browserRecents`
@@ -47,7 +47,7 @@ page's "Recent" list.
     - `browserHistory`
     - `recordVisit`
   - Resources: `browser-recents` (push, capped: BROWSER_RECENTS_LIMIT)
-  - Routes: `POST /api/browser/history`
+  - Routes: `POST /api/browser/history` — predicted
 - Core:
   - Uses:
     - `ids.defineIdKind`

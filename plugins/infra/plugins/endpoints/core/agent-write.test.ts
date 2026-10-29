@@ -35,6 +35,7 @@ afterEach(() => {
 
 const write = defineEndpoint({
   route: "POST /api/thing",
+  unpredicted: { reason: "response", why: "test fixture" },
   body: z.object({ a: z.string() }),
   response: z.object({ ran: z.boolean() }),
 });
@@ -122,9 +123,9 @@ describe("main's agent-write gate", () => {
   });
 
   test("agentWrite on a GET is a boot-time error", () => {
+    // @ts-expect-error — a read cannot declare agentWrite (tsc)
     defineEndpoint({
       route: "GET /api/bogus",
-      // @ts-expect-error — a read cannot declare agentWrite (tsc)
       agentWrite: "telemetry",
     });
     // …and a contract assembled around the type still fails at registration.

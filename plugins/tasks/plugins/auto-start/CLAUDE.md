@@ -9,12 +9,11 @@
   - Contributes: `Tasks.TaskActions` "queued-chip" → `QueuedChipAction`
   - Uses:
     - `conversations/model-provider.useModelCatalog`
-    - `infra/endpoints.useFetchEndpoint`
     - `network/live.LiveRowResult`
+    - `network/live.useLiveMutation`
     - `network/live.useLiveRow`
     - `primitives/css/badge.Badge`
     - `primitives/live-state.ResourceErrorInline`
-    - `tasks.setAutoStart`
     - `tasks/task-list.Tasks`
   - Exports (types): `TaskAutoStartRow`
   - Exports (values): `useTaskAutoStart`
@@ -53,15 +52,24 @@
 - Core:
   - Uses:
     - `conversations/model-provider.DEFAULT_MODEL_CHOICE`
+    - `conversations/model-provider.ModelChoiceSchema`
     - `conversations/model-provider.StoredModelChoiceSchema`
     - `fields.nullable`
     - `fields/date/config.dateField`
     - `fields/text/config.parsedTextField`
     - `fields/text/config.textField`
+    - `infra/endpoints.defineEndpoint`
     - `infra/entity-extensions.defineExtensionShape`
     - `network/live.liveCollection`
-  - Exports (types): `TaskAutoStartRow`
+    - `network/live.removeRow`
+    - `network/live.upsertRow`
+  - Exports (types):
+    - `SetAutoStartBody`
+    - `TaskAutoStartRow`
   - Exports (values):
+    - `clearTaskAutoStart`
+    - `SetAutoStartBodySchema`
+    - `setTaskAutoStart`
     - `taskAutoStart`
     - `taskAutoStartShape`
 - Cross-plugin:

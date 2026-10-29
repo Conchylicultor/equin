@@ -1,11 +1,9 @@
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
-import { useToast } from "@plugins/shell/plugins/notifications/web";
-import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { TRACK_META, type TaskTrack } from "../../core";
+import { useLiveMutation } from "@plugins/network/plugins/live/web";
+import { putTaskTrack, TRACK_META, type TaskTrack } from "../../core";
 import { useTaskTrack } from "../hooks";
-import { setTaskTrackRemote } from "../internal/api";
 
 const OTHER_TRACK: Record<TaskTrack, TaskTrack> = {
   main: "sidequest",
@@ -20,8 +18,7 @@ const OTHER_TRACK: Record<TaskTrack, TaskTrack> = {
  */
 export function TaskTrackControl({ taskId }: { taskId: string }) {
   const result = useTaskTrack(taskId);
-  const fetchEndpoint = useFetchEndpoint();
-  const toast = useToast();
+  const setTrack = useLiveMutation(putTaskTrack);
   if (result.status === "loading") {
     return <Loading variant="block" className="h-5 w-16" />;
   }
@@ -38,15 +35,7 @@ export function TaskTrackControl({ taskId }: { taskId: string }) {
   const meta = TRACK_META[result.data];
   const next = OTHER_TRACK[result.data];
   const onClick = () => {
-    setTaskTrackRemote(fetchEndpoint, taskId, next).catch((err: unknown) => {
-      toast({
-        type: "task",
-        category: "other",
-        title: "Failed to change the task's track",
-        description: err instanceof Error ? err.message : String(err),
-        variant: "error",
-      });
-    });
+    setTrack.mutate({ params: { taskId }, body: { track: next } });
   };
   return (
     <Badge

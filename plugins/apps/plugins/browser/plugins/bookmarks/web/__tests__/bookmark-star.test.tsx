@@ -26,6 +26,13 @@ vi.mock("@plugins/network/plugins/live/web", () => ({
     state.queries.push(query);
     return state.result;
   },
+  // Predicted delete: `mutate` is fire-and-forget, recorded like the rest.
+  useLiveMutation: (endpoint: { route: string }) => ({
+    kind: "available",
+    mutate: (args: unknown) => {
+      state.calls.push({ route: endpoint.route, args });
+    },
+  }),
 }));
 
 vi.mock("@plugins/infra/plugins/endpoints/web", () => ({

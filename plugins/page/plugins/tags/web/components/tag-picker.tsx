@@ -17,6 +17,7 @@ import {
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { localUndoProps } from "@plugins/primitives/plugins/undo-redo/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { useLiveMutation } from "@plugins/network/plugins/live/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
@@ -247,8 +248,8 @@ function TagSettings({
 }) {
   const [name, setName] = useState(tag.name);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const update = useEndpointMutation(updatePageTag);
-  const remove = useEndpointMutation(deletePageTag);
+  const update = useLiveMutation(updatePageTag, { label: "Tag" });
+  const remove = useLiveMutation(deletePageTag, { label: "Tag" });
 
   const parsed = TagNameSchema.safeParse(name);
   const taken =
@@ -262,12 +263,9 @@ function TagSettings({
       ? "another tag already has this name"
       : undefined;
 
-  const saveName = async () => {
+  const saveName = () => {
     if (!parsed.success || taken || parsed.data === tag.name) return;
-    await update.mutateAsync({
-      params: { tagId: tag.id },
-      body: { name: parsed.data },
-    });
+    update.mutate({ params: { tagId: tag.id }, body: { name: parsed.data } });
   };
 
   const setColor = (color: TagColor) => {
@@ -285,11 +283,12 @@ function TagSettings({
         title={nameError}
         value={name}
         onChange={(e) => setName(e.target.value)}
-        onBlur={() => void saveName()}
+        onBlur={saveName}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             e.preventDefault();
-            void saveName().then(onDone);
+            saveName();
+            onDone();
           } else if (e.key === "Escape") {
             e.preventDefault();
             e.stopPropagation();
@@ -325,15 +324,13 @@ function TagSettings({
               "text-caption font-normal",
               confirmDelete ? "text-destructive" : "text-muted-foreground",
             )}
-            disabled={remove.isPending}
             onClick={() => {
               if (!confirmDelete) {
                 setConfirmDelete(true);
                 return;
               }
-              void remove
-                .mutateAsync({ params: { tagId: tag.id } })
-                .then(onDone);
+              remove.mutate({ params: { tagId: tag.id } });
+              onDone();
             }}
           >
             {confirmDelete ? "Delete from every page?" : "Delete"}
@@ -342,7 +339,10 @@ function TagSettings({
           <Button
             variant="ghost"
             className="text-caption font-normal text-muted-foreground"
-            onClick={() => void saveName().then(onDone)}
+            onClick={() => {
+              saveName();
+              onDone();
+            }}
           >
             Done
           </Button>

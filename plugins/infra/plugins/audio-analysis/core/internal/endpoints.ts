@@ -15,6 +15,9 @@ export const getBeatFeaturesEndpoint = defineEndpoint({
  */
 export const requestBeatFeaturesEndpoint = defineEndpoint({
   route: "POST /api/audio-analysis/beat-features/:videoId",
+  internal: {
+    why: "no browser client: server-side callers kick off the background analysis",
+  },
   body: z.object({ force: z.boolean().optional() }),
   response: BeatFeaturesStateSchema,
 });

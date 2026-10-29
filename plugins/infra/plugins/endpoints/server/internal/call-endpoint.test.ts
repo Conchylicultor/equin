@@ -17,7 +17,15 @@ const getItem = defineEndpoint({
 
 const setItem = defineEndpoint({
   route: "POST /api/items/set",
+  unpredicted: { reason: "response", why: "test fixture" },
   body: z.object({ id: z.string() }),
+});
+
+const secretsGet = defineEndpoint({
+  route: "POST /api/secrets/get",
+  body: z.object({ name: z.string() }),
+  response: z.object({ value: z.string() }),
+  internal: { why: "server → central RPC" },
 });
 
 /** A JSON reply, as a server would send it (built by hand: this is a client test). */
@@ -54,6 +62,16 @@ describe("callEndpoint", () => {
     expect(got).toEqual({ id: "a", n: 1 });
     expect(calls[0]!.url).toBe(`${ORIGIN}/api/items/a%20b?full=true`);
     expect(calls[0]!.init.method).toBe("GET");
+  });
+
+  test("calls an internal endpoint (no browser client, but off the page)", async () => {
+    answer(() => jsonReply({ value: "v" }));
+    const { value } = await callEndpoint(
+      secretsGet,
+      {},
+      { origin: ORIGIN, body: { name: "k" } },
+    );
+    expect(value).toBe("v");
   });
 
   test("a reply the response schema rejects throws", async () => {

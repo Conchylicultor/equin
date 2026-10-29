@@ -33,5 +33,9 @@ export type FlushAppUsageBody = z.infer<typeof FlushAppUsageBodySchema>;
  */
 export const flushAppUsageEndpoint = defineEndpoint({
   route: "POST /api/app-usage/flush",
+  unpredicted: {
+    reason: "server-decided",
+    why: "fire-and-forget additive usage deltas; the sender renders nothing from the answer",
+  },
   body: FlushAppUsageBodySchema,
 });

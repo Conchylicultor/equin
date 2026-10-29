@@ -34,13 +34,7 @@ import {
   useTextFilter,
 } from "@plugins/primitives/plugins/search/web";
 import { SwatchGrid } from "@plugins/primitives/plugins/css/plugins/color-picker/web";
-import {
-  setTrackColor,
-  setTrackHidden,
-  setTrackInstrument,
-  setTrackMuted,
-} from "../actions";
-import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useTrackViewWrites } from "../actions";
 import { useTrackMixerEntries, type TrackMixerEntry } from "../hooks";
 import { useTrackFader } from "../use-track-fader";
 import { useTrackColorLook } from "../palette";
@@ -88,7 +82,7 @@ function ColorSwatch({
   // or — under a look that shades accidentals — the darker partner the mixer
   // has always shown.
   const { palette, accidental } = useTrackColorLook();
-  const fetchEndpoint = useFetchEndpoint();
+  const writes = useTrackViewWrites();
   return (
     <InlinePopover
       tooltip="Track color"
@@ -114,7 +108,7 @@ function ColorSwatch({
         colors={[...palette]}
         value={color}
         renderColor={accidental}
-        onChange={(c) => setTrackColor(fetchEndpoint, songId, trackId, c)}
+        onChange={(c) => writes.setColor(songId, trackId, c)}
       />
     </InlinePopover>
   );
@@ -150,7 +144,7 @@ function InstrumentPicker({
   instrumentCustomized: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const fetchEndpoint = useFetchEndpoint();
+  const writes = useTrackViewWrites();
   const { query, setQuery, filtered } = useTextFilter({
     items: options,
     accessor: (o) => `${o.label} ${o.group ?? ""}`,
@@ -175,7 +169,7 @@ function InstrumentPicker({
   const ResolvedIcon = options.find((o) => o.id === resolvedId)?.icon;
 
   const select = (id: string | null) => {
-    setTrackInstrument(fetchEndpoint, songId, trackId, id);
+    writes.setInstrument(songId, trackId, id);
     setOpen(false);
   };
 
@@ -321,7 +315,7 @@ function TrackLevel({
   volume: number;
 }) {
   const fader = useTrackFader(songId, trackId, volume);
-  const fetchEndpoint = useFetchEndpoint();
+  const writes = useTrackViewWrites();
   const percent = Math.round(fader.value * 100);
 
   return (
@@ -354,7 +348,7 @@ function TrackLevel({
           label={muted ? "Unmute track" : "Mute track"}
           aria-pressed={muted}
           className={cn(muted && "text-destructive")}
-          onClick={() => setTrackMuted(fetchEndpoint, songId, trackId, !muted)}
+          onClick={() => writes.setMuted(songId, trackId, !muted)}
         />
       }
     >
@@ -417,7 +411,7 @@ function TrackRow({
     instrumentLabel,
     instrumentCustomized,
   } = entry;
-  const fetchEndpoint = useFetchEndpoint();
+  const writes = useTrackViewWrites();
   return (
     <Stack direction="row" gap="sm" align="center" className="py-sm">
       <ColorSwatch
@@ -475,9 +469,7 @@ function TrackRow({
             label={hidden ? "Show track" : "Hide track"}
             aria-pressed={hidden}
             className={cn(hidden && "text-muted-foreground")}
-            onClick={() =>
-              setTrackHidden(fetchEndpoint, songId, trackId, !hidden)
-            }
+            onClick={() => writes.setHidden(songId, trackId, !hidden)}
           />
         </Stack>
       </ControlSizeProvider>

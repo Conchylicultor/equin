@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { liveValue } from "@plugins/network/plugins/live/core";
+import { liveValue, patchValue } from "@plugins/network/plugins/live/core";
 
 /**
  * The shape of every Google API key: `AIza` plus 35 URL-safe characters. Checked
@@ -96,6 +96,18 @@ export const mapsBrowserConfig = liveValue("google-maps.browser-config", {
 export const setMapsBrowserConfig = defineEndpoint({
   route: "POST /api/google-maps/browser-config",
   body: MapsBrowserConfigInputSchema,
+  // The key is the request's; a stored Map ID is kept.
+  effect: (on) =>
+    patchValue(
+      on,
+      mapsBrowserConfig,
+      () => ({}),
+      (value, { body }): MapsBrowserConfigValue => ({
+        kind: "set",
+        browserKey: body.browserKey,
+        mapId: value.kind === "set" ? value.mapId : null,
+      }),
+    ),
 });
 
 /**
@@ -114,15 +126,34 @@ export type MapsMapIdInput = z.infer<typeof MapsMapIdInputSchema>;
 
 export const setMapsMapId = defineEndpoint({
   route: "POST /api/google-maps/map-id",
+  unpredicted: {
+    reason: "precondition",
+    why: "409 while no browser key is stored; the setup form shows it inline",
+  },
   body: MapsMapIdInputSchema,
 });
 
 /** Remove the Map ID: every map goes back to the raster map. */
 export const clearMapsMapId = defineEndpoint({
   route: "DELETE /api/google-maps/map-id",
+  effect: (on) =>
+    patchValue(
+      on,
+      mapsBrowserConfig,
+      () => ({}),
+      (value): MapsBrowserConfigValue =>
+        value.kind === "set" ? { ...value, mapId: null } : value,
+    ),
 });
 
 /** Remove the browser config (key and Map ID), turning every live map back into its setup prompt. */
 export const clearMapsBrowserConfig = defineEndpoint({
   route: "DELETE /api/google-maps/browser-config",
+  effect: (on) =>
+    patchValue(
+      on,
+      mapsBrowserConfig,
+      () => ({}),
+      (): MapsBrowserConfigValue => ({ kind: "unset" }),
+    ),
 });

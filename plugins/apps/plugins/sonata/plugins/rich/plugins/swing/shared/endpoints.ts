@@ -1,5 +1,11 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import {
+  choose,
+  removeRow,
+  upsertRow,
+} from "@plugins/network/plugins/live/core";
+import { swings } from "./resources";
 import { MAX_SWING_RATIO, MIN_SWING_RATIO } from "../core";
 
 const SwingSchema = z.object({
@@ -21,4 +27,30 @@ export const SwingOverrideBodySchema = z.discriminatedUnion("kind", [
 export const setSwingEndpoint = defineEndpoint({
   route: "POST /api/sonata/songs/:id/swing",
   body: SwingOverrideBodySchema,
+  // `score` deletes the song's row; the others upsert it whole. The row is an
+  // extension shape's (`from: null`): the collection is the target.
+  effect: (on) =>
+    choose(on, ({ body }) => body.kind, {
+      score: removeRow(on, swings, ({ params }) => params.id),
+      straight: upsertRow(
+        on,
+        swings,
+        ({ params }) => params.id,
+        (_row, { params, body }) => ({
+          songId: params.id,
+          swung: false,
+          ...(body.kind === "straight" ? body.feel : { unit: 8, ratio: 2 }),
+        }),
+      ),
+      swing: upsertRow(
+        on,
+        swings,
+        ({ params }) => params.id,
+        (_row, { params, body }) => ({
+          songId: params.id,
+          swung: true,
+          ...(body.kind === "swing" ? body.swing : { unit: 8, ratio: 2 }),
+        }),
+      ),
+    }),
 });

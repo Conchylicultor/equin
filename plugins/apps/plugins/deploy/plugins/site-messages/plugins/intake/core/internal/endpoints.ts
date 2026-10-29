@@ -16,6 +16,10 @@ export const sendSiteMessageEndpoint = defineEndpoint({
     public:
       "a deployed site's visitors send it from the contact form — anonymous by design, limited by the body cap, rate limit and spam rules",
   },
+  unpredicted: {
+    reason: "response",
+    why: "the form renders the sent versus rate-limited result inline",
+  },
 });
 
 /**

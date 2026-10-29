@@ -1,6 +1,21 @@
 import { lineAt, markerCallSpans } from "./find-marker-calls";
-import { hasField, parseStringField } from "./helpers";
+import { hasField, matchBracket, parseStringField } from "./helpers";
 import { maskSource } from "./mask-source";
+
+/**
+ * How a write route decides its effect reaches the user — the arm
+ * `defineEndpoint` requires (infra/endpoints `core/prediction.ts`), read from
+ * source. `unpredicted` carries the stated reason, `debt` the prediction gap.
+ * `undecided` is a write declaring no arm at all (the runtime refuses it; the
+ * docs show it rather than hiding it).
+ */
+export type RoutePrediction =
+  | "predicted"
+  | "internal"
+  | "telemetry"
+  | "undecided"
+  | { unpredicted: string }
+  | { debt: string };
 
 /** One `export const <name> = defineEndpoint({ route: "…", … })` of a file. */
 export interface EndpointExport {
@@ -15,6 +30,8 @@ export interface EndpointExport {
   needsMachine: boolean;
   /** 1-based line of the `defineEndpoint` call. */
   line: number;
+  /** The write's prediction decision; absent for a read (GET). */
+  prediction?: RoutePrediction;
 }
 
 /**
@@ -62,12 +79,47 @@ export function endpointExports(
           'guard); write it as one literal: `route: "POST /api/…"`.',
       );
     }
+    const prediction = predictionOf(route.value, body);
     out.push({
       name: decl[1]!,
       route: route.value,
       needsMachine: hasField(body, "needsMachine", { depth0: true }),
       line,
+      ...(prediction === undefined ? {} : { prediction }),
     });
   }
   return out;
+}
+
+/**
+ * The decision arm of a spec-object `body`: `effect` → predicted, `internal`
+ * → internal, `unpredicted: { reason }` / `{ gap }` → unpredicted / debt,
+ * `agentWrite: "telemetry"` → telemetry. A read has none (`undefined`).
+ */
+function predictionOf(
+  route: string,
+  body: string,
+): RoutePrediction | undefined {
+  if (route.startsWith("GET ")) return undefined;
+  const opts = { depth0: true };
+  if (hasField(body, "effect", opts)) return "predicted";
+  if (hasField(body, "internal", opts)) return "internal";
+  if (hasField(body, "unpredicted", opts)) {
+    const masked = maskSource(body);
+    const at = /\bunpredicted\s*:\s*\{/.exec(masked);
+    if (at) {
+      const open = masked.indexOf("{", at.index);
+      const close = matchBracket(masked, open, "{", "}");
+      const inner = body.slice(open + 1, close < 0 ? undefined : close);
+      const gap = parseStringField(inner, "gap", opts);
+      if (gap.kind === "value") return { debt: gap.value };
+      const reason = parseStringField(inner, "reason", opts);
+      if (reason.kind === "value") return { unpredicted: reason.value };
+    }
+    return "undecided";
+  }
+  const agentWrite = parseStringField(body, "agentWrite", opts);
+  if (agentWrite.kind === "value" && agentWrite.value === "telemetry")
+    return "telemetry";
+  return "undecided";
 }

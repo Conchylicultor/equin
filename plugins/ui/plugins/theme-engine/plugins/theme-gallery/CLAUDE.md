@@ -55,15 +55,16 @@ its lines are the schema's: name, source, tags), `list` draws `ThemeSwatch`.
     - `QuickTheme.Section` "Theme" → `QuickThemePicker`
     - `item-actions` "rename" → `RenameThemeAction`
     - `item-actions` "delete" → `DeleteThemeAction`
-  - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×7
     - `ui/theme-engine` ×7
     - `primitives/css/ui-kit` ×4
-    - `infra/endpoints` ×3
     - `primitives/live-state` ×3
-    - `ui/theme-engine/saved-themes` ×3
     - `config_v2` ×2
+    - `ui/theme-engine/saved-themes` ×2
     - `apps-core.Apps`
+    - `infra/endpoints.EndpointError`
+    - `network/live.useLiveMutation`
     - `primitives/css/fill.Fill`
     - `primitives/css/grid.Grid`
     - `primitives/css/line.Line`

@@ -329,7 +329,8 @@ state or limit change.
 
 ## Predicted writes — `effect`, `useLiveMutation`, no pending state
 
-Design: `research/2026-10-27-global-predicted-endpoint-effects.md`. A write
+Design: `research/2026-10-27-global-predicted-endpoint-effects.md`, gaps closed
+in `research/2026-10-28-global-endpoint-prediction-decision.md` §3. A write
 endpoint declares what it does to live data, so every surface reading it shows
 the change at once; it has exactly one browser client, which cannot be awaited.
 
@@ -342,31 +343,97 @@ effect: (on) => patchRow(on, conversationsEntityRef, ({ params }) => params.id, 
 // web/
 const close = useLiveMutation(exitConversation, { onSuccess?, onError?, label? });
 if (close.kind === "available") close.mutate({ params: { id } });   // void
+close.mutate(req, { onSuccess: () => onDone() });                   // this call's own callbacks
 ```
 
-- **Builders** (`core/internal/predict.ts`): `patchRow`, `removeRow`,
-  `applyRows` (free-form reducer, confirmed by the ack), `effects(...)`; each
-  takes `on` first so its callbacks are typed by the route. The target is an
-  ENTITY row (`entityRef` name + id), never a collection.
-- **One overlay per transport, keyed by entity row** (`web/internal/
-  predict-overlay.ts`, `use-predicted.ts`): `useLiveRow`, `{ ids }`, `all` and
-  window reads of any collection `from` the entity fold the ops over their own
-  server rows; a row leaving the collection's `membership` is dropped. Never an
-  insert, a grouping or a count; the window's own `where` is not re-checked. A
-  read no op touches keeps its server data's identity.
-- **Retirement is per tuple.** Each mounted read holds its tuple's rows; on
-  each data change, ack and holder leaving, an op is `confirmed` (row matches
-  `set`, or a removed row is absent — retired there for good), `needs` (held,
-  unconfirmed) or `irrelevant`. DONE once acked and no holder needs it, so a
-  stale list never re-shows a closed row. Push-based, never a timer.
+- **Builders** (`core/internal/predict.ts`), each taking `on` first so its
+  callbacks are typed by the route:
+
+  | Builder | Targets | Confirmed by |
+  |---|---|---|
+  | `patchRow(on, target, idOf, (req) => ({ set, approx? }))` | one row, in place | a row holding `set` |
+  | `removeRow(on, target, idOf)` | one row, gone from every read | the row's absence |
+  | `upsertRow(on, target, idOf, (row \| undefined, req) => row, { set? })` | one row that may be absent: it ENTERS a by-id read of its id and an `all` set it belongs to (its `by` scope; its `membership` when declared) | `set` when given, else commit |
+  | `upsertRows(on, target, idsOf, (row \| undefined, req, id) => row, { set?: (req, id) => … })` | `upsertRow` per id (a decision for every task of a list) | per row, as `upsertRow` |
+  | `applyRows(on, target, idsOf, (rows, req) => rows)` | held rows by id (an increment, ranks); a held row the reducer OMITS is removed (`() => []` removes them all) | commit |
+  | `patchWhere(on, target, (req) => Filter, (row, req) => patch)` / `removeWhere(on, target, (req) => Filter)` | every HELD row matching the filter (over the target's filterable fields) | commit |
+  | `patchValue(on, value, (req) => params, (value, req) => value)` | one value tuple (canonical params) | commit |
+  | `choose(on, (req) => key, { [key]: effect })` | the branch the request picks (each built on `on`; a key with no branch throws) | the branch's |
+  | `effects(...)` | several, in order (tightest `confirmWithinMs`) | each its own |
+
+  `upsertRow(…, { set: (req) => fields })`; every builder takes
+  `{ confirmWithinMs?, lane? }`. A `patchWhere` / `removeWhere` filter names
+  the target's filterable fields — an entity's with a domain, or a `from:
+  null` collection's listed ones plus its KEY columns (its id and `all.by`).
+- **The target** (`PredictTarget`) is an ENTITY ref (every collection `from`
+  it shows the prediction) or, for rows no entity names (an extension shape's
+  side table, a collection of its own fields), ONE collection declared `from:
+  null` — its own reads alone show it. Patches are typed by `TargetRow`: the
+  entity's fields, or the collection's row. A collection `from` an entity is
+  refused (tsc, and throws): target the entity.
+- **Exposed fields** (an extension's `exposes`, riding the entity's rows under
+  `$columns[<slice>]`) cannot be typed by the entity (it names none of its
+  extensions), so the EXPOSURE is the target (`PredictPatchTarget`):
+  `patchRow` / `applyRows` over `shape.exposure` patch the slice of every held
+  row of the parent entity, typed by the slice (`TargetRow`); a row without
+  the slice is left as it is, and an exposure reducer returns one slice per
+  slice, in order (it cannot remove the entity's row). Reference:
+  `playback-history`'s `recordPlay`.
+- **One overlay per transport, keyed by SUBJECT** (`predictSubject`: an
+  entity name, `collection:<key>`, `value:<key>`) and row id —
+  `web/internal/predict-overlay.ts`, `use-predicted.ts`. `useLiveRow`,
+  `{ ids }`, `all` and window reads of the subject fold the ops over their own
+  server rows; `useLive(value, params)` folds `patchValue` (and
+  `useLiveReader` answering an OBSERVED tuple does too). A row leaving the
+  collection's `membership` is dropped.
+  - **Entrants** — only an upsert, only into a read that admits it (a by-id
+    read of its id: `found: false` → `found: true`; an `all` set, in its order,
+    when the row's `by` fields spell the tuple's scope and it matches the
+    collection's `membership` if one is declared — a collection with none
+    holds every row of its `from`), shaped as its
+    rows (`$columns` defaulted). A window never gains one (row key and counts
+    are the server's), nor a read whose rows carry a field the prediction
+    lacks.
+  - **Ranks** — a read ordered by row fields re-sorts the rows a prediction
+    moved in the order (`all` sets by `all.orderBy`, windows by their query's);
+    one sorted past the last held row of a window with more rows leaves until
+    the server's frame brings it where it lands. An order naming an exposed /
+    scoped column moves nothing.
+  - A `where` target skips a read whose rows lack a column the filter names.
+  - Never a grouping or a count; the window's own `where` is not re-checked. A
+    read no op touches keeps its server data's identity.
+- **Retirement is per tuple.** Each mounted read holds its tuple's data; on
+  each data change, ack, ack frame and holder leaving, an op is `confirmed`
+  (retired there for good), `needs` or `irrelevant`. DONE once acked and no
+  holder needs it, so a stale list never re-shows a closed row. Push-based,
+  never a timer.
+- **Commit confirmation** — a target with nothing to compare. The server's
+  `implement` runs every predicted handler under the database's commit
+  capture (`infra/endpoints` `commit-capture.ts`, `database/server`
+  `commit-capture.ts`) and names the transactions it committed in the ack
+  (`x-equin-commits`) — the handler remembers nothing. A tuple confirms once
+  its own frames have SEEN them: an `ackTx` naming one (Rule A — scoped deltas
+  and standalone ack frames carry it), or a full frame's watermark past all
+  of them (Rule B′). While such an op applies, the read asks for its tuples'
+  ack frames (`requestAcks`), so a recompute that changed nothing visible
+  still confirms. So an increment's +1 holds through an ack that lands before
+  its frame. An ack naming no commit (a host with no async context — PGlite —
+  or a write outside `db`) confirms at the ack, as before.
 - **`useLiveMutation`** is the only client (`useEndpointMutation` /
   `FetchEndpoint` refuse a predicted def — tsc): `{ kind: "available",
   mutate(req): void } | { kind: "unavailable", message }`. No `isPending`, no
   promise, so no spinner. `onSuccess(response, req)` for what depends on the
-  answer. The op's lifecycle belongs to the transport's writer: a control
-  that unmounts on click still has its write sent, confirmed and timed. Sent
-  through `endpointContractOf(def)` on `entitySendLaneKey` (one lane registry
-  with `optimistic-mutation`).
+  answer; `mutate(req, { onSuccess?, onError? })` adds callbacks of THIS
+  call (run after the hook's), so nothing keys side state on the request
+  object. A discriminated-union body is one request (`LiveMutationRequest` is
+  non-distributive). The op's lifecycle belongs to the transport's writer: a control
+  that unmounts on click still has its write sent, confirmed and timed.
+- **Lanes.** Sent through `endpointContractOf(def)` on the send lane of EVERY
+  target (`enqueueOnSendLanes` — each row, a filter part's subject lane, a
+  value's tuple lane, which `useOptimisticResource` shares) so a later write
+  to any of them departs after it; `lane: (req) => name` replaces a part's
+  lanes with one named lane (per-parent order: every fader of a song). One
+  lane registry with `optimistic-mutation`.
 - **Failure — never-revert.** A permanent 4xx removes the op and emits
   `optimisticRejectionSink` (its collector toasts and reports — `onError` must
   not toast again); a transient failure keeps it (sync cloud: error + Retry);
@@ -378,9 +445,11 @@ if (close.kind === "available") close.mutate({ params: { id } });   // void
 - **Don't declare an effect** when the server mints an id the caller needs,
   the flow is driven by the response, or the server checks a precondition that
   can fail (409/400). Predict only what the REQUEST decides.
-- Tests: `web/internal/predict-overlay.test.ts`, `web/__tests__/predicted-
-  writes.test.tsx`. Adopters: `exitConversation`, `dropAndExit`,
-  `closeConversation`.
+- Tests: `core/internal/predict.test.ts`, `web/internal/predict-overlay.test.ts`,
+  `web/internal/send-lane.test.ts`, `web/__tests__/predicted-writes.test.tsx`,
+  `web/__tests__/predicted-gaps.test.tsx`; server: `infra/endpoints`
+  `core/commit-capture.test.ts`, `database/server/internal/commit-capture.test.ts`.
+  Adopters: `exitConversation`, `dropAndExit`, `closeConversation`.
 
 ## Paged reads — key-range pages through `useLive`
 
@@ -1037,8 +1106,8 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
   - Slot contributors: 40 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `FieldPresentation.Register` ×37
     - `ClientFields.Resolve` ×3
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/live-state` ×10
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/live-state` ×12
     - `primitives/networking` ×4
     - `infra/endpoints` ×3
     - `primitives/latest-ref.useLatestRef`
@@ -1060,6 +1129,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LiveIdsQuery`
     - `LiveListResult`
     - `LiveMutation`
+    - `LiveMutationCallbacks`
     - `LiveMutationOptions`
     - `LiveMutationRequest`
     - `LivePageError`
@@ -1157,16 +1227,16 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `serveValue`
     - `sliceRange`
 - Core:
-  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `network/live/filter` ×7
+  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live/filter` ×8
     - `fields` ×6
     - `packages/zod-introspect` ×6
     - `primitives/live-state` ×6
     - `infra/endpoints` ×5
     - `packages/list-bound` ×3
+    - `packages/canonical-params` ×2
     - `packages/resource-protocol` ×2
     - `infra/query-resource.KIND_RE`
-    - `packages/canonical-params.canonicalJson`
   - Exports (types):
     - `ClientFields`
     - `ClientFieldsOwner`
@@ -1246,6 +1316,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LiveKeyCut`
     - `LiveKeyDirection`
     - `LiveKeyRange`
+    - `LiveLane`
     - `LiveLookupCollection`
     - `LiveMachineDecl`
     - `LiveMembership`
@@ -1297,6 +1368,8 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LiveWindowParams`
     - `NotCollectionRow`
     - `PredictOptions`
+    - `PredictPatchTarget`
+    - `PredictTarget`
     - `RequireLabel`
     - `ResolvedLiveEffect`
     - `ResolvedLiveTarget`
@@ -1313,9 +1386,12 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `ServeExternalLookupOptions`
     - `ServeExternalWindowOptions`
     - `ServeValueOnOptions`
+    - `TargetRow`
+    - `UpsertOptions`
     - `WithContributedColumns`
   - Exports (values):
     - `applyRows`
+    - `choose`
     - `clientFields`
     - `effects`
     - `exposedColumns`
@@ -1330,16 +1406,23 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `liveCollection`
     - `liveValue`
     - `patchRow`
+    - `patchValue`
+    - `patchWhere`
     - `readLiveEffect`
+    - `readSubject`
     - `removeRow`
+    - `removeWhere`
     - `rowKind`
     - `scopedLiveColumns`
     - `serveCollectionOn`
     - `serveValueOn`
+    - `upsertRow`
+    - `upsertRows`
+    - `valueSubject`
 - Cross-plugin:
-  - Imported by: 310 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 312 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×81
-    - `conversations` ×53
+    - `conversations` ×54
     - `debug` ×32
     - `tasks` ×29
     - `infra` ×20
@@ -1350,10 +1433,10 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `stats` ×5
     - `code-explorer` ×4
     - `plugin-meta` ×4
+    - `ui` ×4
     - `auth` ×3
     - `reports` ×3
     - `review` ×3
-    - `ui` ×3
     - `apps-core` ×2
     - `config_v2` ×2
     - `hints` ×2

@@ -76,6 +76,10 @@ export const createAgent = defineEndpoint({
   route: "POST /api/agents",
   body: CreateAgentBodySchema,
   response: AgentSchema,
+  unpredicted: {
+    reason: "server-minted-id",
+    why: "The server mints the agent id and rank, and the list selects the returned row.",
+  },
 });
 
 export const getAgent = defineEndpoint({
@@ -87,6 +91,10 @@ export const updateAgent = defineEndpoint({
   route: "PATCH /api/agents/:id",
   body: UpdateAgentBodySchema,
   response: AgentSchema,
+  unpredicted: {
+    reason: "precondition",
+    why: "The server answers 400 for a model that is not launchable and for a parent that is the agent itself or its descendant, and the editors show the refusal.",
+  },
 });
 
 // Reposition an agent in the tree. The rank is minted server-side against the
@@ -96,10 +104,18 @@ export const updateAgent = defineEndpoint({
 export const moveAgent = defineEndpoint({
   route: "POST /api/agents/:id/move",
   body: MoveAgentBodySchema,
+  unpredicted: {
+    reason: "server-decided",
+    why: "The rank is minted against the complete sibling set of the target parent inside the write's transaction; the request names only a neighbour and a side, and the tree that emits it holds a projection.",
+  },
 });
 
 export const deleteAgent = defineEndpoint({
   route: "DELETE /api/agents/:id",
+  unpredicted: {
+    reason: "precondition",
+    why: "The server answers 409 when the agent has children, and the list shows that refusal instead of removing the row.",
+  },
 });
 
 // Desktop-only: a launch spawns Claude Code, so it is served by
@@ -109,6 +125,10 @@ export const launchAgent = defineEndpoint({
   body: LaunchAgentBodySchema,
   response: LaunchAgentResponseSchema,
   needsMachine: { feature: "Launching an agent" },
+  unpredicted: {
+    reason: "server-decided",
+    why: "Launching spawns a Claude Code session and creates the task and conversation server-side; the returned ids are what the caller uses.",
+  },
 });
 
 export const listAgentLaunches = defineEndpoint({

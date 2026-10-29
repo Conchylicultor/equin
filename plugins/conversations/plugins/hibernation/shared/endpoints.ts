@@ -7,6 +7,10 @@ import { ResumeOutcomeSchema } from "@plugins/conversations/core";
 export const markViewed = defineEndpoint({
   route: "POST /api/conversations/:id/viewed",
   response: z.object({ ok: z.literal(true) }),
+  unpredicted: {
+    reason: "unobserved",
+    why: "It only stamps lastViewedAt for the idle-hibernation timer; no surface renders it, so there is nothing to predict.",
+  },
 });
 
 // Transparently resume a HIBERNATED conversation the user opened, before they
@@ -21,4 +25,8 @@ export const resumeHibernated = defineEndpoint({
   route: "POST /api/conversations/:id/resume-hibernated",
   response: ResumeOutcomeSchema,
   needsMachine: { feature: "Resuming a hibernated conversation" },
+  unpredicted: {
+    reason: "response",
+    why: "The response is the resume outcome, and a blocked outcome is shown as a toast.",
+  },
 });

@@ -82,9 +82,8 @@ remove the overwrite trade-off.
     - `apps/sonata/document.useSongSetting`
     - `apps/sonata/document.useWriteSongSetting`
     - `apps/sonata/session.useSession`
-    - `apps/sonata/track-mixer.setTracksActive`
-    - `infra/endpoints.useEndpointMutation`
-    - `infra/endpoints.useFetchEndpoint`
+    - `apps/sonata/track-mixer.useTrackViewWrites`
+    - `network/live.useLiveMutation`
     - `network/live.useLiveRow`
     - `primitives/css/switch.Switch`
     - `primitives/css/ui-kit.WithTooltip`
@@ -105,7 +104,7 @@ remove the overwrite trade-off.
   - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_chord_mode`)
   - Exports (values): `songChordMode`
   - Resources: `sonata-chord-mode:rows` (keyed, point)
-  - Routes: `POST /api/sonata/songs/:id/chord-mode`
+  - Routes: `POST /api/sonata/songs/:id/chord-mode` — predicted
 - Cross-plugin:
   - Imported by: `apps/sonata/rich/accompaniment`
 

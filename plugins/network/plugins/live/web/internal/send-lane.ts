@@ -24,7 +24,7 @@ declare const sendLaneKeyBrand: unique symbol;
 
 /**
  * A send lane's identity. Branded, so a lane is only ever named through one of
- * the two derivations below — a hand-built string cannot alias (or miss) a lane
+ * the derivations below — a hand-built string cannot alias (or miss) a lane
  * another writer derives.
  */
 export type SendLaneKey = string & { readonly [sendLaneKeyBrand]: true };
@@ -70,6 +70,24 @@ export function entitySendLaneKey(
 }
 
 /**
+ * The lane of a whole predicted SUBJECT (an entity, a `from: null`
+ * collection) — a write targeting its rows by a filter rather than by id.
+ * Namespaced apart from the row lanes.
+ */
+export function subjectSendLaneKey(subject: string): SendLaneKey {
+  return `s|${subject}` as SendLaneKey;
+}
+
+/**
+ * A NAMED lane — a predicted effect's `lane: (req) => name` override, for
+ * writes ordered per parent (every fader of one song) rather than per row.
+ * Namespaced apart from every derived lane.
+ */
+export function namedSendLaneKey(name: string): SendLaneKey {
+  return `n|${name}` as SendLaneKey;
+}
+
+/**
  * Run `send` after every send already queued on this lane, and return its own
  * outcome verbatim — so the caller's classification, retry and never-revert
  * handling are untouched by the queuing.
@@ -100,6 +118,49 @@ export function enqueueOnSendLane<T>(
   const run = existing.tail.then(send, send);
   existing.tail = run;
   trackSettle(laneKey, existing, run);
+  return run;
+}
+
+/**
+ * Run `send` on EVERY lane of `laneKeys` at once: after every send already
+ * queued on any of them, and before any send queued on any of them later —
+ * for a write whose order matters across several targets (a predicted write
+ * naming several rows). Same outcome, failure-proofing and idle fast path as
+ * {@link enqueueOnSendLane}.
+ *
+ * It cannot deadlock: nothing is LOCKED — the send chains onto each lane's
+ * current tail synchronously, in one step, and becomes each lane's new tail,
+ * so the waits-for graph only ever points at earlier sends (a DAG). Keys are
+ * still taken in sorted order (duplicates dropped), so the same set of lanes
+ * is always entered the same way.
+ */
+export function enqueueOnSendLanes<T>(
+  laneKeys: readonly SendLaneKey[],
+  send: () => Promise<T>,
+): Promise<T> {
+  const keys = [...new Set(laneKeys)].sort();
+  if (keys.length === 0) {
+    throw new Error(
+      "enqueueOnSendLanes: no lane — a send departs on at least one.",
+    );
+  }
+  if (keys.length === 1) return enqueueOnSendLane(keys[0]!, send);
+  const tails = keys
+    .map((k) => lanes.get(k)?.tail)
+    .filter((t): t is Promise<unknown> => t !== undefined);
+  // Every predecessor settled — resolve or reject alike (failure-proof).
+  const run =
+    tails.length === 0 ? send() : Promise.allSettled(tails).then(() => send());
+  for (const k of keys) {
+    let lane = lanes.get(k);
+    if (lane === undefined) {
+      lane = { tail: run, depth: 0 };
+      lanes.set(k, lane);
+    }
+    lane.depth += 1;
+    lane.tail = run;
+    trackSettle(k, lane, run);
+  }
   return run;
 }
 

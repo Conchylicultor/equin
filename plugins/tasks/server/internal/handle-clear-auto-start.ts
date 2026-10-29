@@ -1,6 +1,6 @@
 import { setTaskAutoStart } from "@plugins/tasks/plugins/auto-start/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { clearTaskAutoStart } from "../../core/endpoints";
+import { clearTaskAutoStart } from "@plugins/tasks/plugins/auto-start/core";
 
 // Clear the autoStart marker on a single task — the whole disarm. Nothing else
 // needs undoing: there are no per-task trigger rows to reverse-walk, only the

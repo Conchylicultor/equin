@@ -10,13 +10,12 @@
   - Uses:
     - `conversations.useLiveConversation`
     - `conversations/conversation-view/exit-menu.ExitMenu`
-    - `infra/endpoints.useEndpointMutation`
+    - `network/live.useLiveMutation`
     - `primitives/css/ui-kit.DropdownMenuItem`
-    - `shell/notifications.useToast`
     - `ui/icons.Icon`
 - Machine:
   - Uses: `infra/endpoints.implementMachine`
-  - Routes: `POST /api/conversations/:id/hold-and-exit`
+  - Routes: `POST /api/conversations/:id/hold-and-exit` — predicted
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
 - Shared:

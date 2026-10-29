@@ -256,15 +256,15 @@ reported) — the kind worth surfacing as crash tasks, not just toasts.
     - `FieldPresentation.Register` "exposure:sonata_songs_ext_ultimate_guitar"
     - `Library.Cover` "ultimate-guitar"
   - Uses: 46 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live` ×6
     - `primitives/css/ui-kit` ×6
-    - `network/live` ×5
     - `primitives/live-state` ×5
     - `apps/sonata/document` ×2
     - `apps/sonata/library` ×2
     - `apps/sonata/shell` ×2
-    - `infra/endpoints` ×2
     - `primitives/css/layer` ×2
     - `apps/sonata/primitives/source-line.SourceLine`
+    - `infra/endpoints.useFetchEndpoint`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`
@@ -317,8 +317,8 @@ reported) — the kind worth surfacing as crash tasks, not just toasts.
     - `sonata.ultimate-guitar.songs:rows` (keyed, point)
     - `sonata.ultimate-guitar.tab` (invalidate, fixed)
   - Routes:
-    - `POST /api/sonata/songs/ultimate-guitar`
-    - `PUT /api/sonata/songs/:id/ultimate-guitar`
+    - `POST /api/sonata/songs/ultimate-guitar` — unpredicted (server-minted-id)
+    - `PUT /api/sonata/songs/:id/ultimate-guitar` — predicted
 - Core:
   - Uses:
     - `apps/sonata/library.songsEntityRef`

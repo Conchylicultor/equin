@@ -33,8 +33,8 @@
     - `network/live.serveValue`
   - Resources: `live-state-emit.status` (push, notified)
   - Routes:
-    - `POST /api/debug/live-state-emit/start`
-    - `POST /api/debug/live-state-emit/stop`
+    - `POST /api/debug/live-state-emit/start` — unpredicted (response)
+    - `POST /api/debug/live-state-emit/stop` — unpredicted (response)
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`

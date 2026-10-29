@@ -37,6 +37,12 @@ vi.mock("@plugins/network/plugins/live/web", () => ({
       status: "loading",
       refetch: () => Promise.resolve(),
     },
+  useLiveMutation: (endpoint: { route: string }) => ({
+    kind: "available",
+    mutate: (args: unknown) => {
+      state.calls.push({ route: endpoint.route, args });
+    },
+  }),
   useLive: () => ({
     status: "ready",
     data: state.queued,

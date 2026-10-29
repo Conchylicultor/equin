@@ -159,10 +159,9 @@ already-effective onsets (`effectiveOnsets(pattern)`, rotation applied) and maps
     - `primitives/sortable-list` ×3
     - `apps/sonata/session` ×2
     - `apps/sonata/track-mixer` ×2
+    - `network/live` ×2
     - `primitives/css/control-panel` ×2
     - `primitives/css/spacing` ×2
-    - `infra/endpoints.useEndpointMutation`
-    - `network/live.useLiveRow`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`
@@ -204,7 +203,7 @@ already-effective onsets (`effectiveOnsets(pattern)`, rotation applied) and maps
   - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_rhythm`)
   - Exports (values): `songRhythm`
   - Resources: `sonata-rhythm:rows` (keyed, point)
-  - Routes: `POST /api/sonata/songs/:id/rhythm`
+  - Routes: `POST /api/sonata/songs/:id/rhythm` — predicted
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`

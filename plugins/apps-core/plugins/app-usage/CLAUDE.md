@@ -60,7 +60,7 @@ every flush.
   - DB schema: `plugins/apps-core/plugins/app-usage/server/internal/tables.ts`
   - Exports (values): `_appUsageDaily`
   - Resources: `app-usage.summary` (push, whole: one row per app id ever used — bounded by the installed app registry (tens of apps), never by time: the GROUP BY folds every day into its app)
-  - Routes: `POST /api/app-usage/flush`
+  - Routes: `POST /api/app-usage/flush` — unpredicted (server-decided)
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`

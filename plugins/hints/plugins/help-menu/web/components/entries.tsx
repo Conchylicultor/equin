@@ -43,21 +43,21 @@ export function ReplayTourEntry() {
 export function ShowTipsAgainEntry() {
   const close = useCloseHelpMenu();
   const hints = useHints();
-  const resetHints = useResetHints();
+  // Predicted: the seen rows read gone at once; the toast follows the server
+  // accepting the reset.
+  const resetHints = useResetHints(() =>
+    showToast({
+      title: "Tips are back on",
+      description: "They'll show again as you go.",
+    }),
+  );
   return (
     <ControlPanel.Row
       icon={<Icon icon={lightbulbIcon} />}
       disabled={hints.length === 0}
       onSelect={() => {
         close();
-        // A failed reset rejects unhandled, which the reports plugin files;
-        // the toast only follows a reset that landed.
-        void resetHints(hints.map((h) => h.id)).then(() =>
-          showToast({
-            title: "Tips are back on",
-            description: "They'll show again as you go.",
-          }),
-        );
+        resetHints(hints.map((h) => h.id));
       }}
     >
       Show tips again

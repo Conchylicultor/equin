@@ -121,7 +121,7 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
   - Routes:
     - `GET /api/conversations`
     - `GET /api/conversations/:id`
-    - `DELETE /api/conversations`
+    - `DELETE /api/conversations` — internal
     - `GET /api/conversations/:id/turns`
 - Web:
   - Uses:
@@ -148,12 +148,12 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `infra/endpoints.implementMachine`
     - `network/live.serveValue`
   - Routes:
-    - `POST /api/conversations`
-    - `POST /api/conversations/:id/turn`
-    - `POST /api/conversations/:id/turns/:turnId/retry`
-    - `POST /api/conversations/:id/turns/:turnId/withdraw`
-    - `POST /api/conversations/:id/interrupt`
-    - `POST /api/conversations/:id/stop`
+    - `POST /api/conversations` — unpredicted (server-minted-id)
+    - `POST /api/conversations/:id/turn` — unpredicted (response)
+    - `POST /api/conversations/:id/turns/:turnId/retry` — unpredicted (response)
+    - `POST /api/conversations/:id/turns/:turnId/withdraw` — unpredicted (response)
+    - `POST /api/conversations/:id/interrupt` — unpredicted (server-decided)
+    - `POST /api/conversations/:id/stop` — unpredicted (response)
 - Core:
   - Uses:
     - `config_v2.defineConfig`

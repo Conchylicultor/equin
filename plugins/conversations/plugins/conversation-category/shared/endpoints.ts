@@ -28,14 +28,23 @@ export const classifyConversation = defineEndpoint({
   route: "POST /api/conversation-category/:conversationId/classify",
   body: ClassifyBodySchema,
   needsMachine: { feature: "Classifying conversations" },
+  internal: {
+    why: "No browser client: it is called only by the server and machine side to enqueue the classify job.",
+  },
 });
 
 export const setConversationCategory = defineEndpoint({
   route: "POST /api/conversation-category/:conversationId",
   body: SetCategoryItemBodySchema,
   needsMachine: { feature: "Setting a conversation's category" },
+  internal: {
+    why: "No browser client calls it; categories are set by the classifier and server code.",
+  },
 });
 
 export const clearConversationCategory = defineEndpoint({
   route: "DELETE /api/conversation-category/:conversationId/:categoryId",
+  internal: {
+    why: "No browser client calls it; categories are cleared by server code only.",
+  },
 });

@@ -7,27 +7,18 @@
 - Description: Apple code-signing UI: the Accounts 'Apple Developer' integration row and its guided certificate + App Store Connect API key setup, rendered inline in the row's Accounts pane.
 - Web:
   - Contributes: `Auth.Integration` "Apple Developer"
-  - Uses:
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/live-state` ×5
+    - `primitives/setup-steps` ×5
+    - `network/live` ×2
+    - `primitives/css/ui-kit` ×2
     - `auth.Auth`
     - `config_v2.useConfigRegistrations`
     - `infra/endpoints.useFetchEndpoint`
-    - `network/live.useLive`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.Input`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.ResourceUnavailable`
-    - `primitives/live-state.useCombinedResources`
     - `primitives/loading.Loading`
-    - `primitives/setup-steps.Step`
-    - `primitives/setup-steps.StepDone`
-    - `primitives/setup-steps.StepLink`
-    - `primitives/setup-steps.StepNote`
-    - `primitives/setup-steps.Steps`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`

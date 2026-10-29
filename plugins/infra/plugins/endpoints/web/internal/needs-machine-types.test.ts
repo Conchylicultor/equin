@@ -10,6 +10,7 @@ import type { FetchEndpoint } from "./fetch-endpoint";
 
 const launch = defineEndpoint({
   route: "POST /api/launch",
+  unpredicted: { reason: "response", why: "test fixture" },
   body: z.object({ n: z.number() }),
   response: z.object({ ok: z.boolean() }),
   needsMachine: { feature: "Launching an agent" },

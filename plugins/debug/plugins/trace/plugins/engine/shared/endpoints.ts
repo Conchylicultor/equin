@@ -7,6 +7,9 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 // POST. Returns the minted trace id (null when admission rejected it).
 export const testTrigger = defineEndpoint({
   route: "POST /api/debug/trace/test-trigger",
+  internal: {
+    why: "debug trigger for the trace engine, hit by hand or script; no browser client",
+  },
   body: z.object({ ms: z.number(), label: z.string().optional() }),
   response: z.object({ ok: z.boolean(), id: z.string().nullable() }),
 });

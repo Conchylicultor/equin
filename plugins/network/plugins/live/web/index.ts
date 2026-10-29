@@ -23,6 +23,7 @@ export { hiddenSince } from "./internal/tab-hidden";
 export { useLiveMutation } from "./internal/use-live-mutation";
 export type {
   LiveMutation,
+  LiveMutationCallbacks,
   LiveMutationOptions,
   LiveMutationRequest,
 } from "./internal/use-live-mutation";

@@ -17,10 +17,18 @@ export const prepareTranscription = defineEndpoint({
     taskId: z.string(),
     prompt: z.string(),
   }),
+  unpredicted: {
+    reason: "response",
+    why: "creates the song, its transcription row and a task, and the dialog launches the task from the returned prompt",
+  },
 });
 
 /** Relaunch a failed transcription on the same song, from the same input. */
 export const retryTranscription = defineEndpoint({
   route: "POST /api/sonata/songs/:id/transcription/retry",
   response: z.object({ conversationId: z.string() }),
+  unpredicted: {
+    reason: "server-decided",
+    why: "relaunches an agent conversation on the server and returns its id",
+  },
 });

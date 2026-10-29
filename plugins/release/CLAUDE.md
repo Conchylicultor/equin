@@ -475,9 +475,9 @@ remote is built here.
     - `release.run-logs` (keyed, window, notified)
     - `release.runs:rows` (keyed, point)
   - Routes:
-    - `POST /api/release`
-    - `POST /api/release/runs/:id/preview`
-    - `POST /api/release/runs/:id/preview/stop`
+    - `POST /api/release` — unpredicted (server-decided)
+    - `POST /api/release/runs/:id/preview` — unpredicted (server-decided)
+    - `POST /api/release/runs/:id/preview/stop` — unpredicted (server-decided)
 - Core:
   - Uses:
     - `fields.FieldOptionMeta`

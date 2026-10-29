@@ -1,5 +1,6 @@
 import {
   useLive,
+  useLiveMutation,
   type LiveListResult,
 } from "@plugins/network/plugins/live/web";
 import {
@@ -19,13 +20,14 @@ import { browserBookmarks, type BookmarkRow } from "../../core";
  */
 export function useBookmarks(): {
   result: LiveListResult<BookmarkRow>;
-  remove: (id: string) => Promise<void>;
+  remove: (id: string) => void;
 } {
   const result = useLive(browserBookmarks);
-  const { mutateAsync: del } = useEndpointMutation(deleteBookmark);
+  // Predicted: the bookmark leaves every read at once.
+  const { mutate: del } = useLiveMutation(deleteBookmark);
 
-  const remove = async (id: string) => {
-    await del({ params: { id } });
+  const remove = (id: string) => {
+    del({ params: { id } });
   };
 
   return { result, remove };
@@ -46,13 +48,13 @@ export function useBookmarkToggle(url: string): ResourceResult<{
 }> {
   const result = useLive(browserBookmarks, { where: { url }, limit: 1 });
   const { mutateAsync: add } = useEndpointMutation(addBookmark);
-  const { mutateAsync: del } = useEndpointMutation(deleteBookmark);
+  const { mutate: del } = useLiveMutation(deleteBookmark);
 
   return mapResource(result, (rows) => {
     const existing = rows[0];
     const toggle = async (title: string) => {
       if (existing) {
-        await del({ params: { id: existing.id } });
+        del({ params: { id: existing.id } });
       } else {
         await add({ body: { url, title } });
       }

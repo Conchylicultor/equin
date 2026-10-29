@@ -14,6 +14,13 @@ export const reorderQueue = defineEndpoint({
   // transaction) — the optimistic overlay uses it for causal confirmation. A
   // self-target no-op reorder returns no watermark (nothing was written).
   response: z.object({ watermark: z.string().optional() }),
+  // Its one client (`use-queue-rows`) already shows the move at once through
+  // `useOptimisticResource`, computing the deck's new order with
+  // `applyReorder`, and confirms it by this `watermark`.
+  unpredicted: {
+    reason: "response",
+    why: "The sidebar predicts the move itself over the whole deck (useOptimisticResource + applyReorder) and confirms it with the watermark this answers. The rank is a function of the whole current deck and its task groups (a group's members are reseated together, blocked dependents cascade), none of which the request carries.",
+  },
 });
 
 const ConversationIdBodySchema = z.object({
@@ -23,11 +30,19 @@ const ConversationIdBodySchema = z.object({
 export const promoteQueue = defineEndpoint({
   route: "POST /api/conversations-queue/promote",
   body: ConversationIdBodySchema,
+  unpredicted: {
+    reason: "server-decided",
+    why: "The rank is a function of the whole current deck and its task groups (a group's members are reseated together, blocked dependents cascade), none of which the request carries.",
+  },
 });
 
 export const demoteQueue = defineEndpoint({
   route: "POST /api/conversations-queue/demote",
   body: ConversationIdBodySchema,
+  unpredicted: {
+    reason: "server-decided",
+    why: "The rank is a function of the whole current deck and its task groups (a group's members are reseated together, blocked dependents cascade), none of which the request carries.",
+  },
 });
 
 const StepDownBodySchema = z.object({
@@ -38,11 +53,19 @@ const StepDownBodySchema = z.object({
 export const stepDownQueue = defineEndpoint({
   route: "POST /api/conversations-queue/step-down",
   body: StepDownBodySchema,
+  unpredicted: {
+    reason: "server-decided",
+    why: "The rank is a function of the whole current deck and its task groups (a group's members are reseated together, blocked dependents cascade), none of which the request carries.",
+  },
 });
 
 export const rerankQueue = defineEndpoint({
   route: "POST /api/conversations-queue/rerank",
   body: ConversationIdBodySchema,
+  unpredicted: {
+    reason: "server-decided",
+    why: "The rank is a function of the whole current deck and its task groups (a group's members are reseated together, blocked dependents cascade), none of which the request carries.",
+  },
 });
 
 // Pin / unpin the conversation's whole task group. Group-level like the rank
@@ -54,4 +77,8 @@ export const pinQueue = defineEndpoint({
     conversationId: z.string().min(1),
     pinned: z.boolean(),
   }),
+  unpredicted: {
+    reason: "server-decided",
+    why: "The pin covers the conversation's whole task group (every member, not named by the request) and seeds a rank row when the conversation has none, joining the group's seat or the top of the deck.",
+  },
 });

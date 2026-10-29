@@ -61,7 +61,7 @@ Uses (hand-written, beyond the autogen list below): `infra/host/host-read-pool`
     - `infra/mcp.Mcp`
     - `tasks/tasks-core.getConversation`
   - Register: `mcpTool('benchmark_boot')`
-  - Routes: `POST /api/debug/boot-bench/run`
+  - Routes: `POST /api/debug/boot-bench/run` — internal
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/eld-probe.ts`, `server/internal/mcp-tools.ts`, `server/internal/snapshot-bytes.ts` (debt)
 

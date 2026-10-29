@@ -343,6 +343,10 @@ export type HostFsOpenResult = z.infer<typeof HostFsOpenResultSchema>;
  */
 export const hostFsOpen = defineEndpoint({
   route: "POST /api/host-fs/open",
+  unpredicted: {
+    reason: "server-decided",
+    why: "asks the OS on the machine to open the file; nothing in live data changes",
+  },
   body: z.object({ path: z.string(), reveal: z.boolean().optional() }),
   response: HostFsOpenResultSchema,
   needsMachine: HOST_FS_MACHINE,
@@ -385,6 +389,10 @@ export type HostFsExtractResult = z.infer<typeof HostFsExtractResultSchema>;
  */
 export const hostFsExtract = defineEndpoint({
   route: "POST /api/host-fs/extract",
+  unpredicted: {
+    reason: "server-decided",
+    why: "unzips on disk on the machine; the filesystem decides the result",
+  },
   body: z.object({ path: z.string() }),
   response: HostFsExtractResultSchema,
   needsMachine: HOST_FS_MACHINE,
@@ -467,6 +475,10 @@ export type HostFsMoveResult = z.infer<typeof HostFsMoveResultSchema>;
  */
 export const hostFsMove = defineEndpoint({
   route: "POST /api/host-fs/move",
+  unpredicted: {
+    reason: "response",
+    why: "the per-name conflict result drives the follow-up dialogs",
+  },
   body: z.object({
     sources: z.array(z.string()).min(1).max(HOST_FS_MOVE_MAX_SOURCES),
     destDir: z.string(),

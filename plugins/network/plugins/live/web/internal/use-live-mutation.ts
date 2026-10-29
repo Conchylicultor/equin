@@ -31,6 +31,7 @@ import { useReportSync } from "@plugins/primitives/plugins/sync-status/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   readLiveEffect,
+  type LiveLane,
   type ResolvedLiveTarget,
 } from "@plugins/network/plugins/live/core";
 import type {
@@ -40,8 +41,11 @@ import type {
 } from "./predict-overlay";
 import { predictStores } from "./use-predicted";
 import {
-  enqueueOnSendLane,
+  enqueueOnSendLanes,
   entitySendLaneKey,
+  namedSendLaneKey,
+  resourceSendLaneKey,
+  subjectSendLaneKey,
   type SendLaneKey,
 } from "./send-lane";
 import {
@@ -62,7 +66,11 @@ import { hiddenSince } from "./tab-hidden";
 //
 // `mutate(req)` applies the effect to the predict overlay at once (every live
 // read of the target rows shows it on the next render), then sends the write
-// on the first target's send lane. There is no pending state and no promise —
+// on the send lane of EVERY target (each row it names, the subject of a
+// filter-targeted part, a value's tuple — or the part's named `lane`), so a
+// later write to any of them departs after it. The ack names the
+// transactions the write committed (`COMMITS_HEADER`): what a target with
+// nothing to compare is confirmed against. There is no pending state and no promise —
 // so no spinner, no "Closing…" label and no `Button` auto-pend can be written
 // over a predicted write. What the user is told instead:
 //
@@ -81,15 +89,33 @@ import { hiddenSince } from "./tab-hidden";
 // that unmounts on click (a menu item, a thread's End) still has its write
 // sent, retried on reconnect, confirmed and timed.
 
-/** A write's request, shaped like `useEndpointMutation`'s variables. */
-export type LiveMutationRequest<TParams, TBody> =
-  TParams extends Record<string, never>
-    ? TBody extends void
-      ? { params?: TParams; body?: never }
-      : { params?: TParams; body: TBody }
-    : TBody extends void
-      ? { params: TParams; body?: never }
-      : { params: TParams; body: TBody };
+/**
+ * A write's request, shaped like `useEndpointMutation`'s variables. Never
+ * distributive (`[T] extends [U]`): a discriminated-union body is ONE body
+ * (`{ body: A | B }`), not a union of requests a variable of the union cannot
+ * be assigned to.
+ */
+export type LiveMutationRequest<TParams, TBody> = [TParams] extends [
+  Record<string, never>,
+]
+  ? [TBody] extends [void]
+    ? { params?: TParams; body?: never }
+    : { params?: TParams; body: TBody }
+  : [TBody] extends [void]
+    ? { params: TParams; body?: never }
+    : { params: TParams; body: TBody };
+
+/**
+ * One call's own callbacks (`mutate(req, callbacks)`), run AFTER the hook's
+ * — for what belongs to this request (an `onDone` the caller handed in), so a
+ * caller never keys side state on the request object.
+ */
+export interface LiveMutationCallbacks<TResponse> {
+  /** This write was accepted (2xx); runs even when the caller has unmounted. */
+  onSuccess?: (response: TResponse) => void;
+  /** This write's send failed (see {@link LiveMutationOptions.onError}). */
+  onError?: (error: unknown, outcome: { rejected: boolean }) => void;
+}
 
 export interface LiveMutationOptions<TParams, TBody, TResponse> {
   /**
@@ -123,9 +149,12 @@ export interface LiveMutationOptions<TParams, TBody, TResponse> {
  * transport with no computer behind it; a portable one is always
  * `available` (one shape either way).
  */
-export interface LiveMutation<TParams, TBody> {
+export interface LiveMutation<TParams, TBody, TResponse = unknown> {
   readonly kind: "available";
-  readonly mutate: (req: LiveMutationRequest<TParams, TBody>) => void;
+  readonly mutate: (
+    req: LiveMutationRequest<TParams, TBody>,
+    callbacks?: LiveMutationCallbacks<TResponse>,
+  ) => void;
 }
 
 /** What a dispatched write needs from its caller, past the effect. */
@@ -133,10 +162,15 @@ interface DispatchSpec {
   readonly route: string;
   readonly params: Readonly<Record<string, string>>;
   readonly targets: readonly ResolvedLiveTarget[];
+  /** The lanes the write departs on (the resolved effect's). */
+  readonly lanes: readonly LiveLane[];
   readonly confirmWithinMs: number | undefined;
   readonly label: string | null;
-  /** One attempt at the wire; resolves with the response. */
-  readonly send: () => Promise<unknown>;
+  /** One attempt at the wire; resolves with the response and the commits its ack named. */
+  readonly send: () => Promise<{
+    response: unknown;
+    commits: readonly string[];
+  }>;
   readonly onAcked: (response: unknown) => void;
   readonly onFailed: (error: unknown, rejected: boolean) => void;
   /** The op left the overlay (done or rejected). */
@@ -145,7 +179,7 @@ interface DispatchSpec {
 
 interface Entry {
   readonly spec: DispatchSpec;
-  readonly lane: SendLaneKey;
+  readonly lanes: readonly SendLaneKey[];
   readonly deadline: UnconfirmedDeadline | null;
 }
 
@@ -184,9 +218,9 @@ function createPredictWriter(
       lastSentAt: sentAt,
     }));
     return entry.spec.send().then(
-      (response) => {
+      ({ response, commits }) => {
         const ackedAt = performance.now();
-        store.update(opId, (op) => ({ ...op, ackedAt }));
+        store.update(opId, (op) => ({ ...op, ackedAt, commits }));
         // The confirming push routinely lands before the response: the ack
         // may complete the op right here.
         store.sweep();
@@ -232,7 +266,7 @@ function createPredictWriter(
       const entry = entries.get(opId);
       if (entry === undefined || store.op(opId)?.failure === undefined)
         continue;
-      void enqueueOnSendLane(entry.lane, () => attempt(opId));
+      void enqueueOnSendLanes(entry.lanes, () => attempt(opId));
     }
   };
 
@@ -269,16 +303,9 @@ function createPredictWriter(
   return {
     store,
     dispatch(spec) {
-      const first = spec.targets[0];
-      if (first === undefined) {
+      if (spec.targets.length === 0 || spec.lanes.length === 0) {
         throw new Error(
           `useLiveMutation(${spec.route}): the effect resolved to no target — a predicted write names the rows it changes.`,
-        );
-      }
-      const firstId = first.kind === "row" ? first.id : first.ids[0];
-      if (firstId === undefined) {
-        throw new Error(
-          `useLiveMutation(${spec.route}): an applyRows target names no row id.`,
         );
       }
       const opId = crypto.randomUUID();
@@ -287,7 +314,7 @@ function createPredictWriter(
         route: spec.route,
         params: spec.params,
         targets: spec.targets,
-        entities: new Set(spec.targets.map((t) => t.entity)),
+        subjects: new Set(spec.targets.map((t) => t.subject)),
         dispatchedAt: performance.now(),
         retired: new Set(),
       };
@@ -310,7 +337,7 @@ function createPredictWriter(
         : null;
       entries.set(opId, {
         spec,
-        lane: entitySendLaneKey(first.entity, firstId),
+        lanes: spec.lanes.map(sendLaneKeyOf),
         deadline,
       });
       store.add(op, (done, doneAt) => {
@@ -319,11 +346,25 @@ function createPredictWriter(
           clientLatencySink.emit(confirmSample(done, doneAt));
         }
       });
-      void enqueueOnSendLane(entries.get(opId)!.lane, () => attempt(opId));
+      void enqueueOnSendLanes(entries.get(opId)!.lanes, () => attempt(opId));
       return opId;
     },
     retry,
   };
+}
+
+/** The send lane a resolved effect's lane names (`send-lane.ts`'s derivations). */
+function sendLaneKeyOf(lane: LiveLane): SendLaneKey {
+  switch (lane.kind) {
+    case "row":
+      return entitySendLaneKey(lane.subject, lane.id);
+    case "subject":
+      return subjectSendLaneKey(lane.subject);
+    case "value":
+      return resourceSendLaneKey(lane.key, lane.params);
+    case "named":
+      return namedSendLaneKey(lane.name);
+  }
 }
 
 /**
@@ -425,7 +466,7 @@ export function useLiveMutation<
     TQuery
   >,
   opts?: LiveMutationOptions<TParams, TBody, TResponse>,
-): LiveMutation<TParams, TBody> | MachineUnavailable;
+): LiveMutation<TParams, TBody, TResponse> | MachineUnavailable;
 export function useLiveMutation<
   Route extends string,
   TParams,
@@ -435,7 +476,7 @@ export function useLiveMutation<
 >(
   endpoint: PredictedEndpointDef<Route, TParams, TBody, TResponse, TQuery>,
   opts?: LiveMutationOptions<TParams, TBody, TResponse>,
-): LiveMutation<TParams, TBody>;
+): LiveMutation<TParams, TBody, TResponse>;
 export function useLiveMutation(
   endpoint: AnyPredicted,
   opts?: LiveMutationOptions<unknown, unknown, unknown>,
@@ -452,7 +493,10 @@ export function useLiveMutation(
   const ops = useSyncExternalStore(store.subscribe, store.ops);
 
   const mutate = useCallback(
-    (req: LiveMutationRequest<unknown, unknown>): void => {
+    (
+      req: LiveMutationRequest<unknown, unknown>,
+      callbacks?: LiveMutationCallbacks<unknown>,
+    ): void => {
       const r = req as { params?: unknown; body?: unknown };
       const params = (r.params ?? {}) as Record<string, string>;
       const resolved = readLiveEffect(
@@ -462,15 +506,18 @@ export function useLiveMutation(
         route: endpoint.route,
         params,
         targets: resolved.targets,
+        lanes: resolved.lanes,
         confirmWithinMs: resolved.confirmWithinMs,
         label: optsRef.current?.label ?? null,
         send: () => sendOnce(fetchEndpoint, endpoint, params, r.body),
         onAcked: (response) => {
           setSavedAt(Date.now());
           optsRef.current?.onSuccess?.(response, req);
+          callbacks?.onSuccess?.(response);
         },
         onFailed: (error, rejected) => {
           optsRef.current?.onError?.(error, req, { rejected });
+          callbacks?.onError?.(error, { rejected });
         },
         onLeft: () => setMine((m) => m.filter((id) => id !== opId)),
       });
@@ -510,22 +557,29 @@ export function useLiveMutation(
   );
 }
 
-/** One wire attempt through the subtree's `FetchEndpoint`, the effect stripped. */
+/**
+ * One wire attempt through the subtree's `FetchEndpoint`, the effect
+ * stripped: the response, and the commits its ack named.
+ */
 async function sendOnce(
   fetchEndpoint: FetchEndpoint,
   endpoint: AnyPredicted,
   params: Record<string, string>,
   body: unknown,
-): Promise<unknown> {
+): Promise<{ response: unknown; commits: readonly string[] }> {
+  let commits: readonly string[] = [];
+  const onCommits = (named: readonly string[]): void => {
+    commits = named;
+  };
   // Erased like the def: the overloads typed `body` against the route's.
   const opts = (
-    body === undefined ? {} : { body }
+    body === undefined ? { onCommits } : { body, onCommits }
   ) as Parameters<FetchEndpoint>[2];
   // Internal dispatch over an erased def (a predicted def is a write by
   // construction: `effect` is `never` on a read); callers are typed by the
   // overloads.
   if (endpoint.needsMachine === undefined) {
-    return fetchEndpoint(
+    const response = await fetchEndpoint(
       endpointContractOf(endpoint) as EndpointDef<
         string,
         unknown,
@@ -537,6 +591,7 @@ async function sendOnce(
       params,
       opts,
     );
+    return { response, commits };
   }
   const result = await fetchEndpoint(
     endpointContractOf(endpoint) as MachineEndpointDef<
@@ -553,5 +608,5 @@ async function sendOnce(
   // Unreachable: `mutate` is handed out only under a transport with the
   // computer behind it, and a subtree's transport is fixed.
   if (result.kind === "unavailable") throw new Error(result.message);
-  return result.value;
+  return { response: result.value, commits };
 }

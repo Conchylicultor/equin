@@ -11,6 +11,9 @@ import { BootGatewaySchema } from "@plugins/debug/plugins/trace/plugins/boot/cor
 // never fail the report or the section.
 export const gatewayReport = defineEndpoint({
   route: "POST /api/boot/gateway-report",
+  internal: {
+    why: "the gateway process posts its boot report; no browser client",
+  },
   body: BootGatewaySchema,
   response: z.object({ ok: z.literal(true) }),
 });

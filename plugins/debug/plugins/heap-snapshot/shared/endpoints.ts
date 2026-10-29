@@ -37,5 +37,9 @@ export type HeapSnapshotResponse = z.infer<typeof HeapSnapshotResponseSchema>;
 // Heavy on-demand dump. POST so it never runs from a cache/prefetch.
 export const captureHeapSnapshot = defineEndpoint({
   route: "POST /api/debug/heap-snapshot",
+  unpredicted: {
+    reason: "server-decided",
+    why: "the server dumps its heap to disk; the panel waits for the file result",
+  },
   response: HeapSnapshotResponseSchema,
 });

@@ -10,6 +10,10 @@ import { SshCheckResultSchema } from "./schemas";
 export const checkServerSsh = defineEndpoint({
   route: "POST /api/deploy/servers/:id/ssh-check",
   response: SshCheckResultSchema,
+  unpredicted: {
+    reason: "response",
+    why: "the SSH probe's raw stderr is only in the response and the verify panel renders it",
+  },
 });
 
 /**
@@ -19,4 +23,8 @@ export const checkServerSsh = defineEndpoint({
  */
 export const forgetServerHostKey = defineEndpoint({
   route: "POST /api/deploy/servers/:id/forget-host-key",
+  unpredicted: {
+    reason: "precondition",
+    why: "404 when the server was never checked (no pinned host key); the explicit security action reports it",
+  },
 });

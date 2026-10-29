@@ -303,11 +303,10 @@ Exhibits: `hints/card`, `hints/caption`, `hints/spotlight`, `hints/welcome`.
   - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/live-state` ×3
     - `apps-core/tabs` ×2
+    - `network/live` ×2
     - `primitives/css/ui-kit` ×2
     - `primitives/dom/in-view` ×2
     - `apps-core.useFocusedAppId`
-    - `infra/endpoints.useFetchEndpoint`
-    - `network/live.useLive`
     - `primitives/css/coords.Placed`
     - `primitives/css/fill.Fill`
     - `primitives/css/text.Text`
@@ -358,8 +357,8 @@ Exhibits: `hints/card`, `hints/caption`, `hints/spotlight`, `hints/welcome`.
     - `hints.seen:groups` (push)
     - `hints.seen:rows` (keyed, point)
   - Routes:
-    - `POST /api/hints/seen`
-    - `POST /api/hints/reset`
+    - `POST /api/hints/seen` — predicted
+    - `POST /api/hints/reset` — predicted
 - Core:
   - Uses:
     - `fields.FieldsRecord`
@@ -370,7 +369,9 @@ Exhibits: `hints/card`, `hints/caption`, `hints/spotlight`, `hints/welcome`.
     - `fields/text/config.textField`
     - `infra/endpoints.defineEndpoint`
     - `infra/entities.entityRef`
+    - `network/live.applyRows`
     - `network/live.liveCollection`
+    - `network/live.upsertRow`
   - Exports (types):
     - `BoundHintAnchor`
     - `GestureAdvance`

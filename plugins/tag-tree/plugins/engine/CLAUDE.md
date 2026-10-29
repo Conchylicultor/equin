@@ -39,11 +39,11 @@
     - `singleTagCarrier`
     - `TagTrees`
   - Routes:
-    - `POST /api/tag-trees/:tree/tags`
-    - `POST /api/tag-trees/:tree/paths`
-    - `PATCH /api/tag-trees/:tree/tags/:id`
-    - `POST /api/tag-trees/:tree/tags/:id/move`
-    - `DELETE /api/tag-trees/:tree/tags/:id`
+    - `POST /api/tag-trees/:tree/tags` — unpredicted (server-minted-id)
+    - `POST /api/tag-trees/:tree/paths` — unpredicted (response)
+    - `PATCH /api/tag-trees/:tree/tags/:id` — unpredicted (precondition)
+    - `POST /api/tag-trees/:tree/tags/:id/move` — unpredicted (server-decided)
+    - `DELETE /api/tag-trees/:tree/tags/:id` — unpredicted (server-decided)
 - Core:
   - Uses:
     - `fields.FieldDef`

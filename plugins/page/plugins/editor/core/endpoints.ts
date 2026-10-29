@@ -1,7 +1,17 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import { applyRows } from "@plugins/network/plugins/live/core";
+import {
+  asBlockData,
+  pagesEntityRef,
+} from "@plugins/page/plugins/block-entity/core";
 import { TrashOutcomeSchema } from "@plugins/infra/plugins/trash/core";
-import { BlockSchema, PageKindSchema, PageRowSchema } from "./schemas";
+import {
+  BlockSchema,
+  PageKindSchema,
+  PageRowSchema,
+  withPageKind,
+} from "./schemas";
 import { BlockOpSchema } from "./block-ops";
 import { BlockPatchSchema } from "./block-diff";
 
@@ -102,12 +112,37 @@ export const getBlockPage = defineEndpoint({
 // { title, icon } }`. The server computes `pageId` from the parent.
 export const createBlock = defineEndpoint({
   route: "POST /api/blocks",
+  unpredicted: {
+    reason: "server-minted-id",
+    why: "the server mints the block id, pageId and rank, and callers navigate to the new block",
+  },
   body: CreateBlockBodySchema,
   response: BlockSchema,
 });
 
+// Predicted: the block reads the given type / data / expanded at once (a page
+// header's title, icon or cover edit, a fold toggle). `updatedAt` and every
+// projection of `data` (a list's title) follow the row; the server's answer
+// is the block itself, which the push already carries.
 export const updateBlock = defineEndpoint({
   route: "PATCH /api/blocks/:id",
+  effect: (on) =>
+    applyRows(
+      on,
+      pagesEntityRef,
+      ({ params }) => [params.id],
+      (rows, { body }) =>
+        rows.map((row) => ({
+          ...row,
+          ...(typeof body.type === "string" ? { type: body.type } : {}),
+          ...(body.data === undefined
+            ? {}
+            : { data: asBlockData(body.data as Record<string, unknown>) }),
+          ...(typeof body.expanded === "boolean"
+            ? { expanded: body.expanded }
+            : {}),
+        })),
+    ),
   body: UpdateBlockBodySchema,
   response: BlockSchema,
 });
@@ -119,11 +154,19 @@ export const updateBlock = defineEndpoint({
 // restore it, which is what makes the sidebar's delete undoable.
 export const deleteBlock = defineEndpoint({
   route: "DELETE /api/blocks/:id",
+  unpredicted: {
+    reason: "response",
+    why: "the server decides trash vs hard delete and returns the undo handle the caller needs",
+  },
   response: TrashOutcomeSchema,
 });
 
 export const moveBlock = defineEndpoint({
   route: "POST /api/blocks/:id/move",
+  unpredicted: {
+    reason: "server-decided",
+    why: "the body is positional intent: the server mints the rank over the parent's complete sibling set (and the docRank / pageId of the whole subtree), which no reader holds",
+  },
   body: MoveBlockBodySchema,
   response: BlockSchema,
 });
@@ -149,6 +192,10 @@ export type MoveBlocksBody = z.infer<typeof MoveBlocksBodySchema>;
 
 export const moveBlocks = defineEndpoint({
   route: "POST /api/blocks/move-many",
+  unpredicted: {
+    reason: "server-decided",
+    why: "the body is positional intent: the server plans the bulk move against the destination's complete live sibling set and recomputes the pageId of two pages' forests",
+  },
   body: MoveBlocksBodySchema,
   response: z.array(BlockSchema),
 });
@@ -196,6 +243,10 @@ export type TurnIntoPageBody = z.infer<typeof TurnIntoPageBodySchema>;
 // page row *is* the inline link — no separate `page-link` row is created.
 export const turnIntoPage = defineEndpoint({
   route: "POST /api/blocks/:id/turn-into-page",
+  unpredicted: {
+    reason: "server-minted-id",
+    why: "the server mints the seed block id and trashes the consumed child",
+  },
   body: TurnIntoPageBodySchema,
   response: BlockSchema,
 });
@@ -216,6 +267,20 @@ export type SetPageKindBody = z.infer<typeof SetPageKindBodySchema>;
 // page already has is a no-op that returns the row.
 export const setPageKind = defineEndpoint({
   route: "POST /api/blocks/:id/page-kind",
+  // The stored data with the kind keys replaced and every other key copied —
+  // the server's own `withPageKind` over the row the reader holds.
+  effect: (on) =>
+    applyRows(
+      on,
+      pagesEntityRef,
+      ({ params }) => [params.id],
+      (rows, { body }) =>
+        rows.map((row) =>
+          row.type === "page"
+            ? { ...row, data: asBlockData(withPageKind(row.data, body.kind)) }
+            : row,
+        ),
+    ),
   body: SetPageKindBodySchema,
   response: BlockSchema,
 });
@@ -225,6 +290,7 @@ export const setPageKind = defineEndpoint({
 // block list. Replaces the per-keystroke split/merge/indent/outdent endpoints.
 export const applyBlockOpEndpoint = defineEndpoint({
   route: "POST /api/pages/:pageId/blocks/op",
+  unpredicted: { gap: "web-context" },
   body: BlockOpSchema,
   // `watermark` is the commit's ack token (`currentTxId` read inside the write
   // transaction) — the optimistic overlay uses it for causal confirmation.
@@ -238,6 +304,7 @@ export const applyBlockOpEndpoint = defineEndpoint({
 // unrelated edits. The forward user actions keep their own specific endpoints.
 export const patchBlocks = defineEndpoint({
   route: "POST /api/pages/:pageId/blocks/patch",
+  unpredicted: { gap: "web-context" },
   body: BlockPatchSchema,
   response: z.object({ blocks: z.array(BlockSchema), watermark: z.string() }),
 });

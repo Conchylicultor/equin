@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { useLiveMutation } from "@plugins/network/plugins/live/web";
 import {
   updateChordGridSong,
   type UpdateChordGridSongBody,
@@ -10,7 +10,7 @@ import {
  * metrics).
  *
  * A grid edit is a **user-triggered mutation** — the user typed those bars — so
- * this goes through `useEndpointMutation` rather than a discarded
+ * this goes through `useLiveMutation` rather than a discarded
  * `void fetchEndpoint(...)`: a failed write must not vanish into a contextless
  * browser-rejection crash. Passing no `onError` opts into the global error toast,
  * so the user learns their grid did not save instead of silently losing it on the
@@ -24,7 +24,7 @@ export function useSaveChordGrid(): (
   songId: string,
   body: UpdateChordGridSongBody,
 ) => void {
-  const { mutate } = useEndpointMutation(updateChordGridSong);
+  const { mutate } = useLiveMutation(updateChordGridSong);
   return useCallback(
     (songId, body) => mutate({ params: { id: songId }, body }),
     [mutate],

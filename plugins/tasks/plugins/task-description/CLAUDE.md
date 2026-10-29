@@ -7,16 +7,14 @@
 - Description: Prompt section of the task detail pane: the description editor, the contributed launch options (tasks/launch-options), and the Launch button — everything that feeds the agent's first turn, in one card. Inline file-link parsing routes clicks to the active file-peek context.
 - Web:
   - Contributes: `TaskDetailSlots.Section` "Prompt" → `TaskDescription`
-  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/live-state` ×4
+    - `network/live` ×3
     - `primitives/css/ui-kit` ×3
     - `tasks/task-detail` ×3
-    - `network/live` ×2
     - `primitives/css/text` ×2
     - `primitives/hover-reveal` ×2
     - `tasks/launch-options` ×2
-    - `tasks` ×2
-    - `infra/endpoints.useFetchEndpoint`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`
     - `primitives/editable-field.useEditableField`
@@ -26,6 +24,7 @@
     - `primitives/overlay/tooltip.TooltipDoc`
     - `primitives/text-editor/paste-images.AttachmentText`
     - `primitives/text-editor.TextEditor`
+    - `tasks.useTask`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`

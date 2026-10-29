@@ -121,4 +121,8 @@ export const prototypeVersionCounts = liveValue("prototypes.versionCounts", {
 export const restorePrototypeVersion = defineEndpoint({
   route: "POST /api/prototypes/:name/versions/:sha/restore",
   response: PrototypeVersionSchema,
+  unpredicted: {
+    reason: "server-decided",
+    why: "git and the filesystem restore the version, saving unsaved changes first; the stepper uses the restored version it returns",
+  },
 });

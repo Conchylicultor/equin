@@ -73,17 +73,29 @@ export const oauthCallback = defineEndpoint({
 
 export const disconnect = defineEndpoint({
   route: "POST /api/auth/disconnect/:provider",
+  unpredicted: {
+    reason: "server-decided",
+    why: "central revokes the connection with the provider before dropping it, so the outcome is not known from the request",
+  },
   body: DisconnectBodySchema,
 });
 
 export const setApiKey = defineEndpoint({
   route: "POST /api/auth/api-key/:provider",
+  unpredicted: {
+    reason: "server-decided",
+    why: "the provider's API verifies the key before the identity is stored",
+  },
   body: SetApiKeyBodySchema,
   response: z.object({ ok: z.literal(true), identity: AuthIdentitySchema }),
 });
 
 export const signIn = defineEndpoint({
   route: "POST /api/auth/sign-in/:provider",
+  unpredicted: {
+    reason: "precondition",
+    why: "credentials are judged server-side and a rejection shows inline in the sign-in form",
+  },
   body: SignInBodySchema,
   response: z.object({ ok: z.literal(true), identity: AuthIdentitySchema }),
 });
@@ -95,6 +107,9 @@ export const getAuthState = defineEndpoint({
 
 export const getToken = defineEndpoint({
   route: "POST /api/auth/token",
+  internal: {
+    why: "server to central token fetch, never called from the browser",
+  },
   body: GetTokenBodySchema,
   response: TokenResponseSchema,
 });

@@ -2,7 +2,9 @@ import {
   setWatermarkSource,
   type ServerPluginDefinition,
 } from "@plugins/framework/plugins/server-core/core";
+import { installCommitCapture } from "@plugins/infra/plugins/endpoints/core";
 import { db, DatabaseDriver } from "./internal/driver";
+import { dbCommitCapture } from "./internal/commit-capture";
 import { snapshotWatermark } from "./internal/snapshot-watermark";
 import { loadKnownRelations } from "./internal/read-set-capture";
 import {
@@ -54,6 +56,12 @@ export default {
     // every frame that fully reconciles a client carries one — whether or not
     // the host boots L2 (which only consumes it, as its persist floor).
     setWatermarkSource(() => snapshotWatermark(db));
+    // A predicted write's response names the transactions its handler
+    // committed (`internal/commit-capture.ts`) — the ack its prediction is
+    // confirmed against, beside the watermark above. Installed on every host
+    // with a database; a host whose driver installs no async context
+    // captures nothing.
+    installCommitCapture(dbCommitCapture);
     // This process's code, visible to every later deploy's deferred contract
     // for as long as it lives — taken before the schema layer, so no window
     // exists in which it is migrating yet unseen. Its generation is its latest

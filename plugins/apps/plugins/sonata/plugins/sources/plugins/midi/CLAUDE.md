@@ -87,7 +87,7 @@ MIDI for playback is its row in the lookup-only live collection `sonata.midi`
     - `songMidi`
   - Resources: `sonata.midi:rows` (keyed, point)
   - Routes:
-    - `POST /api/sonata/songs/midi`
+    - `POST /api/sonata/songs/midi` — unpredicted (server-minted-id)
     - `GET /api/sonata/songs/:id/midi/cover/:file`
 - Core:
   - Uses:

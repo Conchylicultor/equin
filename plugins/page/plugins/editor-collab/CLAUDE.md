@@ -79,8 +79,8 @@ bun test plugins/page/plugins/editor-collab/server/internal
     - `mergeBlockDocUpdate`
   - Resources: `page-block-doc:rows` (keyed, point)
   - Routes:
-    - `POST /api/blocks/:id/doc-init`
-    - `POST /api/blocks/:id/doc-update`
+    - `POST /api/blocks/:id/doc-init` — unpredicted (response)
+    - `POST /api/blocks/:id/doc-update` — unpredicted (server-decided)
 - Core:
   - Uses:
     - `fields.FieldsRecord`

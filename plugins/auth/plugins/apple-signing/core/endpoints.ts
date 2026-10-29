@@ -7,6 +7,10 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 // could not be parsed — the UI then offers manual entry.
 export const setAppleCertificateEndpoint = defineEndpoint({
   route: "POST /api/apple-signing/certificate",
+  unpredicted: {
+    reason: "response",
+    why: "the wizard step renders the parsed certificate (or the manual-entry fallback) from the answer",
+  },
   agentReverted: true,
   body: z.object({
     p12Base64: z.string(),

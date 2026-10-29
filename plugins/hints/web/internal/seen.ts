@@ -1,6 +1,5 @@
 import { useCallback, useMemo } from "react";
-import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useLive, useLiveMutation } from "@plugins/network/plugins/live/web";
 import {
   mapResource,
   type ResourceResult,
@@ -28,32 +27,40 @@ export function useHintSeen(): ResourceResult<ReadonlyMap<string, HintSeen>> {
   );
 }
 
-/** Records a hint or tour as seen (null outcome: a tour that just started). */
+/**
+ * Records a hint or tour as seen (null outcome: a tour that just started). A
+ * predicted write: the row reads seen from the call.
+ */
 export function useMarkHintSeen(): (
   id: string,
   outcome: HintOutcome | null,
 ) => void {
-  const fetchEndpoint = useFetchEndpoint();
+  const mark = useLiveMutation(markHintSeenEndpoint);
   return useCallback(
     (id, outcome) => {
-      // eslint-disable-next-line endpoints/no-void-fetch-endpoint -- fire-and-forget from a click or a tour transition: the UI never waits on it (the session's answered set already hides the hint), and a failure surfaces as an unhandled rejection the reports plugin files — the only cost is the tip showing again on a later load.
-      void fetchEndpoint(markHintSeenEndpoint, {}, { body: { id, outcome } });
+      mark.mutate({ body: { id, outcome } });
     },
-    [fetchEndpoint],
+    [mark],
   );
 }
 
 /**
  * Forgets the seen rows of `ids` (the help menu's "Show tips again" passes
- * every declared hint's id), so each shows again at its next moment.
+ * every declared hint's id), so each shows again at its next moment. A
+ * predicted write: the rows read gone at once; `onReset` runs once the server
+ * has accepted it.
  */
-export function useResetHints(): (ids: readonly string[]) => Promise<void> {
-  const fetchEndpoint = useFetchEndpoint();
+export function useResetHints(
+  onReset?: () => void,
+): (ids: readonly string[]) => void {
+  const reset = useLiveMutation(resetHintsEndpoint, {
+    onSuccess: () => onReset?.(),
+  });
   return useCallback(
-    async (ids) => {
-      await fetchEndpoint(resetHintsEndpoint, {}, { body: { ids: [...ids] } });
+    (ids) => {
       forgetAnswered(ids);
+      reset.mutate({ body: { ids: [...ids] } });
     },
-    [fetchEndpoint],
+    [reset],
   );
 }

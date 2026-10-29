@@ -6,7 +6,11 @@ import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { liveCollection } from "@plugins/network/plugins/live/core";
+import {
+  liveCollection,
+  patchRow,
+  upsertRow,
+} from "@plugins/network/plugins/live/core";
 import { protoIdKind } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 
 // A prototype's state — what the user said about it, as opposed to what it is:
@@ -81,6 +85,17 @@ export const NO_PROTOTYPE_STATE: PrototypeState = Object.freeze({
   deletedAt: null,
 });
 
+/** A prototype's state as the server's first write to it creates it: the column defaults. */
+function newStateRow(name: string) {
+  const now = new Date();
+  return {
+    id: protoIdKind.parse(name),
+    ...NO_PROTOTYPE_STATE,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
 /**
  * One change to a prototype's state: the fields it sets, never the whole
  * record, so ticking Done cannot clobber a pin or a tag set elsewhere.
@@ -108,6 +123,21 @@ export type PrototypeStateChange = z.infer<typeof PrototypeStateChangeSchema>;
 export const setPrototypeState = defineEndpoint({
   route: "PATCH /api/prototypes/:name/state",
   body: PrototypeStateChangeSchema,
+  // Sets only the fields the request carries; a prototype with no row yet
+  // enters the by-id read with the column defaults (the server creates the row
+  // the same way). `updatedAt` is derived and follows by push.
+  effect: (on) =>
+    upsertRow(
+      on,
+      prototypeStateEntityRef,
+      ({ params }) => params.name,
+      (row, { params, body }) => ({
+        ...(row ?? newStateRow(params.name)),
+        ...(body.done === undefined ? {} : { done: body.done }),
+        ...(body.pinned === undefined ? {} : { pinned: body.pinned }),
+        ...(body.tagId === undefined ? {} : { tagId: body.tagId }),
+      }),
+    ),
 });
 
 /**
@@ -120,9 +150,31 @@ export const setPrototypeState = defineEndpoint({
  */
 export const deletePrototype = defineEndpoint({
   route: "DELETE /api/prototypes/:name",
+  // The FIRST `deletedAt` wins (the server's COALESCE). The instant is the
+  // server's own clock, so it is shown, never compared; the write confirms by
+  // commit.
+  effect: (on) =>
+    upsertRow(
+      on,
+      prototypeStateEntityRef,
+      ({ params }) => params.name,
+      (row, { params }) => {
+        const base = row ?? newStateRow(params.name);
+        return { ...base, deletedAt: base.deletedAt ?? new Date() };
+      },
+    ),
 });
 
 /** Restore a deleted prototype (clear its `deletedAt`). 404 for an unknown prototype. */
 export const restorePrototype = defineEndpoint({
   route: "POST /api/prototypes/:name/restore",
+  // Predicted: the prototype leaves the Trash at once (its state row's
+  // `deletedAt` clears); `updatedAt` follows by push.
+  effect: (on) =>
+    patchRow(
+      on,
+      prototypeStateEntityRef,
+      ({ params }) => params.name,
+      () => ({ set: { deletedAt: null }, approx: { updatedAt: new Date() } }),
+    ),
 });

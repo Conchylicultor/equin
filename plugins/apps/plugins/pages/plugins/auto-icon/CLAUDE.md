@@ -91,7 +91,7 @@ without the computer (the demo) boots it and runs none of this.
     - `defineJob('pages.auto-icon.schedule')`
     - `defineJob('pages.auto-icon.backfill')`
     - `defineWarmup('pages.auto-icon.backfill')`
-  - Routes: `POST /api/pages/:pageId/auto-icon/regenerate`
+  - Routes: `POST /api/pages/:pageId/auto-icon/regenerate` — unpredicted (server-decided)
 - Cross-plugin:
   - Imported by: `apps/pages/page-tree`
 

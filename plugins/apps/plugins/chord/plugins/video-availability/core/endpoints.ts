@@ -24,6 +24,10 @@ export const reportPlaybackEndpoint = defineEndpoint({
   route: "POST /api/chord/videos/:videoId/playback",
   body: PlaybackReportSchema,
   response: z.object({ status: VideoStatusSchema }),
+  unpredicted: {
+    reason: "server-decided",
+    why: "the player's evidence is folded into the video's status by the server; fire-and-forget, nothing in the trainer shows an effect",
+  },
 });
 
 /** A count per status. Every key present, zero included. */

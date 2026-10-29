@@ -169,6 +169,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `infra/endpoints.useEndpointMutation`
     - `network/live.LiveRowResult`
     - `network/live.useLive`
+    - `network/live.useLiveMutation`
     - `network/live.useLiveRow`
     - `primitives/live-state.ResourceResult`
   - Exports (values):
@@ -244,17 +245,17 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `events.sources.all:rows` (keyed, point)
   - Routes:
     - `GET /api/events/sources`
-    - `POST /api/events/sources`
+    - `POST /api/events/sources` — unpredicted (precondition)
     - `GET /api/events/sources/:id`
-    - `PATCH /api/events/sources/:id`
-    - `DELETE /api/events/sources/:id`
-    - `POST /api/events/sources/:id/refresh`
-    - `POST /api/events/sources/refresh-all`
+    - `PATCH /api/events/sources/:id` — unpredicted (precondition)
+    - `DELETE /api/events/sources/:id` — predicted
+    - `POST /api/events/sources/:id/refresh` — unpredicted (response)
+    - `POST /api/events/sources/refresh-all` — unpredicted (response)
 - Core:
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live` ×4
     - `fields` ×3
     - `ids` ×3
-    - `network/live` ×3
     - `packages/list-bound` ×3
     - `apps/events/event-date` ×2
     - `fields/text/config` ×2

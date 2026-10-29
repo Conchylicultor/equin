@@ -1,11 +1,14 @@
-import { mapRow, useLive, useLiveRow } from "@plugins/network/plugins/live/web";
+import {
+  mapRow,
+  useLive,
+  useLiveMutation,
+  useLiveRow,
+} from "@plugins/network/plugins/live/web";
 import {
   combineResources,
   mapResource,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
-import { useOptimisticResource } from "@plugins/primitives/plugins/optimistic-mutation/web";
-import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   pageTagAssignments,
   pageTagVocabulary,
@@ -108,57 +111,29 @@ export interface PageTagsEditor {
   setTagIds: (tagIds: string[]) => void;
 }
 
-type SetTags = { tagIds: string[] };
-
 /**
- * The page's tags with optimistic edits: a toggle repaints the chips at once,
- * and the PUT confirms when the assignment row the server pushes back carries
- * the same list (or, for `[]`, when the row is gone). Writes to one page go out
- * in order on the optimistic send lane, so two quick toggles cannot land
- * swapped.
+ * The page's tags with the pending edits applied: `putPageTags` is a predicted
+ * write, so a toggle repaints the chips at once and the PUT confirms when the
+ * assignment row the server pushes back carries the same list (or, for `[]`,
+ * when the row is gone). Writes to one page go out in order on that row's send
+ * lane, so two quick toggles cannot land swapped.
  */
 export function usePageTagsEditor(
   pageId: string,
 ): ResourceResult<PageTagsEditor> {
-  const fetchEndpoint = useFetchEndpoint();
-  const assignment = useOptimisticResource(
-    pageTagAssignments,
-    { ids: [pageId] },
-    {
-      label: "Page tags",
-      apply: (_rows: PageTagAssignmentRow[], vars: SetTags) =>
-        vars.tagIds.length === 0 ? [] : [{ pageId, tagIds: vars.tagIds }],
-      mutate: async (vars: SetTags) => {
-        await fetchEndpoint(putPageTags, { pageId }, { body: vars });
-      },
-      isConfirmedBy: (rows: PageTagAssignmentRow[], vars: SetTags) =>
-        sameIds(rows[0]?.tagIds ?? [], vars.tagIds),
-      // Every op on this tuple targets the one page's whole list.
-      sameTarget: () => true,
-      describeOp: (vars: SetTags) => `set ${vars.tagIds.length} tag(s)`,
-    },
+  const tagIds = mapRow(
+    useLiveRow(pageTagAssignments, pageId),
+    (row): readonly string[] => row?.tagIds ?? [],
   );
+  const put = useLiveMutation(putPageTags, { label: "Page tags" });
   const vocabulary = useTagVocabulary();
   return mapResource(
-    combineResources({ assignment, vocabulary }),
-    ({ assignment: rows, vocabulary: vocab }): PageTagsEditor => ({
-      assigned: resolveTags(rows[0]?.tagIds ?? [], vocab),
+    combineResources({ tagIds, vocabulary }),
+    ({ tagIds: ids, vocabulary: vocab }): PageTagsEditor => ({
+      assigned: resolveTags(ids, vocab),
       vocabulary: vocab,
-      setTagIds: (tagIds) => {
-        // This arm is reached only once `assignment` is ready — the combined
-        // read is all-or-nothing — so its `dispatch` (on the ready arm alone)
-        // is there.
-        if (assignment.status === "loading" || assignment.status === "error") {
-          throw new Error(
-            "page tags: an edit dispatched before the tags loaded",
-          );
-        }
-        assignment.dispatch({ tagIds });
-      },
+      setTagIds: (tagIds) =>
+        put.mutate({ params: { pageId }, body: { tagIds } }),
     }),
   );
-}
-
-function sameIds(a: readonly string[], b: readonly string[]): boolean {
-  return a.length === b.length && a.every((id, i) => id === b[i]);
 }

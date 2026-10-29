@@ -3,7 +3,11 @@ import {
   EndpointError,
   useEndpointMutation,
 } from "@plugins/infra/plugins/endpoints/web";
-import { mapRow, useLiveRow } from "@plugins/network/plugins/live/web";
+import {
+  mapRow,
+  useLiveMutation,
+  useLiveRow,
+} from "@plugins/network/plugins/live/web";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import {
   answerTriageEndpoint,
@@ -49,13 +53,14 @@ export function useRunTriage(taskId: string): () => Promise<void> {
     run.mutateAsync({ params: { taskId } }).then(() => undefined, swallowShown);
 }
 
-/** Pick (or, with `null`, clear) the person's answer to triage's question. */
+/**
+ * Pick (or, with `null`, clear) the person's answer to triage's question: the
+ * chip flips at once (a predicted write), nothing to await.
+ */
 export function useAnswerTriage(
   taskId: string,
-): (answer: string | null) => Promise<void> {
-  const answer = useEndpointMutation(answerTriageEndpoint);
+): (answer: string | null) => void {
+  const answer = useLiveMutation(answerTriageEndpoint);
   return (value) =>
-    answer
-      .mutateAsync({ params: { taskId }, body: { answer: value } })
-      .then(() => undefined, swallowShown);
+    answer.mutate({ params: { taskId }, body: { answer: value } });
 }

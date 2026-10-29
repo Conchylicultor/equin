@@ -11,7 +11,11 @@ import {
 } from "@plugins/fields/plugins/text/plugins/config/core";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
-import { liveCollection } from "@plugins/network/plugins/live/core";
+import {
+  applyRows,
+  liveCollection,
+  upsertRow,
+} from "@plugins/network/plugins/live/core";
 
 /**
  * How the user left a hint or a tour: acted on the tip's target, dismissed it
@@ -82,6 +86,20 @@ export type MarkHintSeenBody = z.infer<typeof MarkHintSeenBodySchema>;
 export const markHintSeenEndpoint = defineEndpoint({
   route: "POST /api/hints/seen",
   body: MarkHintSeenBodySchema,
+  // The row is the request's: its outcome is compared, `seenAt` is the
+  // server's clock (shown as now, never compared).
+  effect: (on) =>
+    upsertRow(
+      on,
+      hintSeenEntityRef,
+      ({ body }) => body.id,
+      (_row, { body }) => ({
+        hintId: body.id,
+        outcome: body.outcome,
+        seenAt: new Date(),
+      }),
+      { set: ({ body }) => ({ outcome: body.outcome }) },
+    ),
 });
 
 export const ResetHintsBodySchema = z.object({
@@ -96,4 +114,12 @@ export type ResetHintsBody = z.infer<typeof ResetHintsBodySchema>;
 export const resetHintsEndpoint = defineEndpoint({
   route: "POST /api/hints/reset",
   body: ResetHintsBodySchema,
+  // Every named row leaves `hint_seen` at once (an omitted row is removed).
+  effect: (on) =>
+    applyRows(
+      on,
+      hintSeenEntityRef,
+      ({ body }) => body.ids,
+      () => [],
+    ),
 });

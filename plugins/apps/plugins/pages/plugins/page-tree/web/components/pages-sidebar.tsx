@@ -1,9 +1,6 @@
 import { useMemo } from "react";
-import { useLive } from "@plugins/network/plugins/live/web";
-import {
-  useFetchEndpoint,
-  type FetchEndpoint,
-} from "@plugins/infra/plugins/endpoints/web";
+import { useLive, useLiveMutation } from "@plugins/network/plugins/live/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
@@ -24,6 +21,7 @@ import {
   updateBlock,
   moveBlock,
   pageData,
+  type PageData,
   type PageRow,
   type PagesTreeRow,
 } from "@plugins/page/plugins/editor/core";
@@ -79,28 +77,21 @@ function inDocOrder(pages: readonly PagesTreeRow[]): PagesTreeRow[] {
  * `tags`), each presented by its owner; the sidebar names none of them.
  *
  * The title, the one field the sidebar computes itself: the page payload's
- * `title`, renamed in place (the tree's inline editor) through the subtree's
- * `fetchEndpoint`.
+ * `title`, renamed in place (the tree's inline editor) by a predicted `updateBlock`.
  */
-function titleField(fetchEndpoint: FetchEndpoint): FieldDef<PagesTreeRow> {
+function titleField(
+  update: (id: string, data: PageData) => void,
+): FieldDef<PagesTreeRow> {
   return {
     id: "title",
     label: "Title",
     primary: true,
     value: (b) => pageData(b).title,
-    onEdit: async (b, next) => {
-      await fetchEndpoint(
-        updateBlock,
-        { id: b.id },
-        {
-          body: {
-            data: {
-              ...pageData(b),
-              title: String(next ?? "").trim() || "Untitled",
-            },
-          },
-        },
-      );
+    onEdit: (b, next) => {
+      update(b.id, {
+        ...pageData(b),
+        title: String(next ?? "").trim() || "Untitled",
+      });
     },
   };
 }
@@ -119,18 +110,22 @@ const ICON_FIELD: FieldDef<PagesTreeRow> = {
 };
 
 /** The sidebar's own fields, bound to the subtree's transport; stable per it. */
-function useSidebarExtraFields(
-  fetchEndpoint: FetchEndpoint,
-): FieldDef<PagesTreeRow>[] {
+function useSidebarExtraFields(): FieldDef<PagesTreeRow>[] {
+  const updateBlockData = useLiveMutation(updateBlock, { label: "Title" });
   return useMemo(
-    () => [ICON_FIELD, titleField(fetchEndpoint)],
-    [fetchEndpoint],
+    () => [
+      ICON_FIELD,
+      titleField((id, data) =>
+        updateBlockData.mutate({ params: { id }, body: { data } }),
+      ),
+    ],
+    [updateBlockData],
   );
 }
 
 export function PagesSidebar() {
   const fetchEndpoint = useFetchEndpoint();
-  const sidebarExtraFields = useSidebarExtraFields(fetchEndpoint);
+  const sidebarExtraFields = useSidebarExtraFields();
   const result = useLive(pagesTree, { select: inDocOrder });
   const links = useLive(pageLinkSources);
   const openPane = useOpenPane();

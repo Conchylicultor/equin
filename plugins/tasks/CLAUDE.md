@@ -33,29 +33,25 @@
   - Resources: `tasks.repo-info` (invalidate, snapshot)
   - Routes:
     - `GET /api/tasks`
-    - `POST /api/tasks`
-    - `POST /api/tasks/chain`
-    - `POST /api/tasks/insert-between`
+    - `POST /api/tasks` — unpredicted (server-minted-id)
+    - `POST /api/tasks/chain` — unpredicted (server-minted-id)
+    - `POST /api/tasks/insert-between` — unpredicted (server-minted-id)
     - `GET /api/tasks/:id`
-    - `PATCH /api/tasks/:id`
-    - `POST /api/tasks/:id/move`
-    - `POST /api/tasks/:id/auto-start`
-    - `DELETE /api/tasks/:id/auto-start`
-    - `POST /api/tasks/:id/dependencies`
-    - `DELETE /api/tasks/:id/dependencies/:depId`
-    - `POST /api/tasks/:id/deps-move`
+    - `PATCH /api/tasks/:id` — predicted
+    - `POST /api/tasks/:id/move` — unpredicted (server-decided)
+    - `POST /api/tasks/:id/dependencies` — unpredicted (precondition)
+    - `DELETE /api/tasks/:id/dependencies/:depId` — unpredicted (server-decided)
+    - `POST /api/tasks/:id/deps-move` — unpredicted (server-decided)
 - Web:
   - Uses:
     - `network/live.useLive`
+    - `network/live.useLiveMutation`
     - `primitives/live-state.mapResource`
     - `primitives/live-state.ResourceResult`
-  - Exports (types):
-    - `AutoStartModel`
-    - `TaskPatch`
+  - Exports (types): `TaskPatch`
   - Exports (values):
-    - `patchTask`
-    - `setAutoStart`
     - `useActiveDependentCount`
+    - `usePatchTask`
     - `useTask`
     - `useTasksById`
 - Machine:
@@ -68,15 +64,17 @@
     - `mcpTool('task_tree')`
     - `mcpInstructions('tree-digest')`
     - `defineWarmup('tasks.auto-start-reconcile')`
-  - Routes: `POST /api/tasks/launch`
+  - Routes: `POST /api/tasks/launch` — unpredicted (server-decided)
 - Core:
   - Uses:
     - `conversations/model-provider.ModelChoiceSchema`
     - `infra/endpoints.dateString`
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
+    - `network/live.patchRow`
     - `tasks/task-subject.TaskSubjectSchema`
     - `tasks/tasks-core.ConversationSchema`
+    - `tasks/tasks-core.tasksEntityRef`
   - Exports (types):
     - `AddDependencyBody`
     - `CreateTaskBody`
@@ -85,7 +83,6 @@
     - `LaunchTaskBody`
     - `LaunchTaskResponse`
     - `MoveTaskBody`
-    - `SetAutoStartBody`
     - `TaskChainCard`
     - `TaskChainRelate`
     - `TaskChainRelateMode`
@@ -96,7 +93,6 @@
   - Exports (values):
     - `AddDependencyBodySchema`
     - `addTaskDependency`
-    - `clearTaskAutoStart`
     - `createTask`
     - `CreateTaskBodySchema`
     - `createTaskChain`
@@ -113,8 +109,6 @@
     - `moveTaskInDepsTree`
     - `removeTaskDependency`
     - `repoInfo`
-    - `SetAutoStartBodySchema`
-    - `setTaskAutoStart`
     - `TaskChainCardSchema`
     - `TaskChainRelateModeSchema`
     - `TaskChainRelateSchema`
@@ -129,7 +123,6 @@
     - `conversations/conversation-view/drop-dependents`
     - `conversations/conversation-view/tasks-panel`
     - `hints/ask`
-    - `tasks/auto-start`
     - `tasks/auto-start/launch-option`
     - `tasks/automations`
     - `tasks/sidequest-autopilot`

@@ -12,8 +12,7 @@ import {
   startConnectFlow,
   currentWorktreeName,
 } from "@plugins/auth/web";
-import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useLive, useLiveMutation } from "@plugins/network/plugins/live/web";
 import { setConfigField } from "@plugins/config_v2/core";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
 import { configSecretMeta } from "@plugins/fields/plugins/secret/plugins/config/core";
@@ -39,11 +38,11 @@ function extractProjectId(raw: string): string {
 
 /** Google's setup, rendered inline in the Google Accounts pane (`setup: { kind: "steps" }`). */
 export function GoogleSetup() {
-  const fetchEndpoint = useFetchEndpoint();
   const [projectId, setProjectId] = useState("");
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
-  const [saving, setSaving] = useState(false);
+  // Predicted: the write shows at once; nothing pends.
+  const setField = useLiveMutation(setConfigField);
   const [connecting, setConnecting] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
   const registrations = useConfigRegistrations();
@@ -91,26 +90,18 @@ export function GoogleSetup() {
     setProjectId(extractProjectId(raw));
   }
 
-  async function handleSaveCredentials() {
-    setSaving(true);
-    try {
-      if (clientId)
-        await fetchEndpoint(
-          setConfigField,
-          {},
-          { body: { storePath, key: "clientId", value: clientId } },
-        );
-      if (clientSecret)
-        await fetchEndpoint(
-          setConfigField,
-          {},
-          { body: { storePath, key: "clientSecret", value: clientSecret } },
-        );
-      setClientId("");
-      setClientSecret("");
-    } finally {
-      setSaving(false);
-    }
+  function handleSaveCredentials() {
+    if (setField.kind !== "available") return;
+    if (clientId)
+      setField.mutate({
+        body: { storePath, key: "clientId", value: clientId },
+      });
+    if (clientSecret)
+      setField.mutate({
+        body: { storePath, key: "clientSecret", value: clientSecret },
+      });
+    setClientId("");
+    setClientSecret("");
   }
 
   async function handleConnect() {
@@ -217,7 +208,6 @@ export function GoogleSetup() {
                 />
                 <Button
                   variant="default"
-                  loading={saving}
                   disabled={!clientId && !clientSecret}
                   onClick={handleSaveCredentials}
                 >

@@ -65,15 +65,14 @@ sidequest's ops at low host-admission priority, behind the main track.
 - Web:
   - Contributes: `FieldPresentation.Register` "exposure:tasks_ext_track"
   - Uses:
-    - `infra/endpoints.useFetchEndpoint`
     - `network/live.FieldPresentation`
     - `network/live.mapRow`
     - `network/live.useLive`
+    - `network/live.useLiveMutation`
     - `network/live.useLiveRow`
     - `primitives/css/badge.Badge`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
-    - `shell/notifications.useToast`
   - Exports (values):
     - `TaskTrackControl`
     - `useStoredTracks`
@@ -112,13 +111,16 @@ sidequest's ops at low host-admission priority, behind the main track.
   - Resources:
     - `task-tracks.all` (keyed)
     - `task-tracks.all:rows` (keyed, point)
-  - Routes: `PUT /api/tasks/:taskId/track`
+  - Routes: `PUT /api/tasks/:taskId/track` — predicted
 - Core:
   - Uses:
     - `fields/text/config.enumTextField`
     - `infra/endpoints.defineEndpoint`
     - `infra/entity-extensions.defineExtensionShape`
+    - `network/live.choose`
     - `network/live.liveCollection`
+    - `network/live.removeRow`
+    - `network/live.upsertRow`
     - `tasks/tasks-core.tasksEntityRef`
   - Exports (types):
     - `TaskTrack`

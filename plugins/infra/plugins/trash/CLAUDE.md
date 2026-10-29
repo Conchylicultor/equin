@@ -166,8 +166,8 @@ bun test plugins/infra/plugins/trash
     - `trash-entries:rows` (keyed, point)
   - Routes:
     - `GET /api/trash/:sourceId`
-    - `POST /api/trash/:sourceId/:entryId/restore`
-    - `POST /api/trash/:sourceId/:entryId/purge`
+    - `POST /api/trash/:sourceId/:entryId/restore` — unpredicted (server-decided)
+    - `POST /api/trash/:sourceId/:entryId/purge` — unpredicted (server-decided)
 - Core:
   - Uses:
     - `fields.fieldsToZodObject`

@@ -115,7 +115,7 @@ The fix commands (`CLAUDE_CODE_FIX`) are the same two lines doctor.sh prints;
   - Uses:
     - `infra/endpoints.implementMachine`
     - `network/live.serveValue`
-  - Routes: `POST /api/claude-code/recheck`
+  - Routes: `POST /api/claude-code/recheck` — unpredicted (server-decided)
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`

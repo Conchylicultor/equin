@@ -29,6 +29,10 @@ import { ChordTokenSchema, type ChordToken } from "./token";
 export const ensureChordIndexEndpoint = defineEndpoint({
   route: "POST /api/chord/index/ensure",
   response: IndexStatusSchema,
+  unpredicted: {
+    reason: "server-decided",
+    why: "starts the index load, which the server runs; the gate shows its own pending and Retry from the mutation state",
+  },
 });
 
 export const ChordFeatureSchema = z.enum(CHORD_FEATURES);
@@ -129,6 +133,9 @@ export const nextChordsEndpoint = defineEndpoint({
       nextChords: z.array(NextChordCountSchema),
     }),
   ]),
+  internal: {
+    why: "a read sent as POST (a body too big for a URL); only the server handler and the e2e verify script call it",
+  },
 });
 
 export const CountLoopsInSetBodySchema = z.object({
@@ -165,6 +172,9 @@ export const countLoopsInSetEndpoint = defineEndpoint({
       windows: z.number().int().min(0),
     }),
   ]),
+  internal: {
+    why: "a read sent as POST (a body too big for a URL); only the server handler and the e2e verify script call it",
+  },
 });
 
 /**

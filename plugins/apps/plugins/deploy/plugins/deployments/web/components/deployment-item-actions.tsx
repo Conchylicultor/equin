@@ -4,12 +4,9 @@ import {
   type ItemActionProps,
 } from "@plugins/primitives/plugins/data-view/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import {
-  EndpointError,
-  useEndpointMutation,
-} from "@plugins/infra/plugins/endpoints/web";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useLive, useLiveMutation } from "@plugins/network/plugins/live/web";
 import { useServerHealth } from "@plugins/apps/plugins/deploy/plugins/health/web";
 import {
   deleteDeployment,
@@ -132,12 +129,13 @@ export function DeployAction({
 export function DeleteDeploymentAction({
   row,
 }: ItemActionProps<Deployment>): ReactElement {
-  const remove = useEndpointMutation(deleteDeployment);
+  // Predicted: the row leaves the list at once and the dialog closes with
+  // it; a refusal is the rejection toast.
+  const remove = useLiveMutation(deleteDeployment);
   return (
     <IconButton
       icon={deleteIcon}
       label="Delete deployment"
-      disabled={remove.isPending}
       onClick={(e) => {
         e.stopPropagation();
         // Fire-and-forget: returning the openDialog promise would pend the
@@ -147,17 +145,10 @@ export function DeleteDeploymentAction({
             <DeleteDeploymentDialog
               deployment={row}
               onCancel={close}
-              onConfirm={() =>
-                remove
-                  .mutateAsync({ params: { id: row.id } })
-                  .then(() => close())
-                  .catch((err: unknown) => {
-                    // Expected failure — the global toast already reported it;
-                    // keep the dialog open so the user can retry or cancel.
-                    if (err instanceof EndpointError) return;
-                    throw err;
-                  })
-              }
+              onConfirm={() => {
+                remove.mutate({ params: { id: row.id } });
+                close();
+              }}
             />
           ),
           { size: "sm" },

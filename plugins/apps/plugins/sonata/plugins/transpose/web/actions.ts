@@ -1,21 +1,20 @@
-import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useCallback } from "react";
+import { useLiveMutation } from "@plugins/network/plugins/live/web";
 import { setTransposeEndpoint } from "../shared/endpoints";
 
-// Fire-and-forget write: the UI never reads the response — state refreshes via
-// the `transposes` row push the upsert's commit triggers. `void` keeps
-// the no-floating-promises rule satisfied while a genuine network failure still
-// surfaces loudly as an unhandled rejection (reported by the crashes plugin).
-// Named `save*` (not `set*`) to stay distinct from the in-memory write of the
-// loaded song's setting (`useWriteSongSetting(transposeSetting)`), which the
-// control makes optimistically alongside this persistence call.
-export function saveTranspose(
-  fetchEndpoint: FetchEndpoint,
+// Predicted write: the `transposes` row shows the new offset at once, so the
+// observer (and the audio it drives) follows the request; the server's row
+// confirms it. Named `save*` (not `set*`) to stay distinct from the in-memory
+// write of the loaded song's setting (`useWriteSongSetting(transposeSetting)`),
+// which the control makes alongside this persistence call.
+export function useSaveTranspose(): (
   songId: string,
   semitones: number,
-): void {
-  void fetchEndpoint(
-    setTransposeEndpoint,
-    { id: songId },
-    { body: { semitones } },
+) => void {
+  const { mutate } = useLiveMutation(setTransposeEndpoint);
+  return useCallback(
+    (songId, semitones) =>
+      mutate({ params: { id: songId }, body: { semitones } }),
+    [mutate],
   );
 }

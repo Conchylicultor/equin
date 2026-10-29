@@ -92,7 +92,7 @@ and endpoint contract are consumed by this plugin's own `web` and `server` only.
     - `prompt-block-tasks` (keyed, window)
     - `prompt-block-tasks:groups` (push)
     - `prompt-block-tasks:rows` (keyed, point)
-  - Routes: `POST /api/prompt-blocks/tasks`
+  - Routes: `POST /api/prompt-blocks/tasks` — unpredicted (server-minted-id)
 - Web:
   - Uses:
     - `network/live.LiveListResult`

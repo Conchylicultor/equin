@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import { patchRow, removeRow } from "@plugins/network/plugins/live/core";
+import { deployServersEntityRef } from "../core";
 import { ServerSchema } from "./schemas";
 
 export const CreateServerBodySchema = z.object({
@@ -35,6 +37,10 @@ export const createServer = defineEndpoint({
   route: "POST /api/deploy/servers",
   body: CreateServerBodySchema,
   response: ServerSchema,
+  unpredicted: {
+    reason: "server-minted-id",
+    why: "the create form navigates to the server id the server mints; a 400 shows inline",
+  },
 });
 
 export const getServer = defineEndpoint({
@@ -46,10 +52,34 @@ export const updateServer = defineEndpoint({
   route: "PATCH /api/deploy/servers/:id",
   body: UpdateServerBodySchema,
   response: ServerSchema,
+  // Predicted: the fields the request sets show at once (the edit form's
+  // autosave). `consoleUrl` "" is stored as null, as the handler does.
+  effect: (on) =>
+    patchRow(
+      on,
+      deployServersEntityRef,
+      ({ params }) => params.id,
+      ({ body }) => ({
+        set: {
+          ...(body.name !== undefined && { name: body.name }),
+          ...(body.host !== undefined && { host: body.host }),
+          ...(body.port !== undefined && { port: body.port }),
+          ...(body.sshUser !== undefined && { sshUser: body.sshUser }),
+          ...(body.consoleUrl !== undefined && {
+            consoleUrl: body.consoleUrl || null,
+          }),
+        },
+        approx: { updatedAt: new Date() },
+      }),
+    ),
 });
 
 export const deleteServer = defineEndpoint({
   route: "DELETE /api/deploy/servers/:id",
+  // The server row leaves every read at once. Its deployments and the
+  // deleted SSH key are server-side consequences that arrive by push.
+  effect: (on) =>
+    removeRow(on, deployServersEntityRef, ({ params }) => params.id),
 });
 
 export const GenerateKeypairBodySchema = z.object({
@@ -68,6 +98,10 @@ export const generateSshKeypair = defineEndpoint({
   route: "POST /api/deploy/servers/:id/ssh-keypair",
   body: GenerateKeypairBodySchema,
   response: ServerSchema,
+  unpredicted: {
+    reason: "server-decided",
+    why: "the keypair is generated on the server and its fingerprint cannot be known beforehand; 409 without replace",
+  },
 });
 
 export const ImportKeypairBodySchema = z.object({
@@ -88,4 +122,8 @@ export const importSshPrivateKey = defineEndpoint({
   route: "POST /api/deploy/servers/:id/ssh-keypair/import",
   body: ImportKeypairBodySchema,
   response: ServerSchema,
+  unpredicted: {
+    reason: "precondition",
+    why: "ssh-keygen derives the public half; an invalid key is a 400 with remediation shown inline",
+  },
 });

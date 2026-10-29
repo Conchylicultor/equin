@@ -27,7 +27,7 @@
   - Exports (values): `dropTaskOnExit`
 - Machine:
   - Uses: `infra/endpoints.implementMachine`
-  - Routes: `POST /api/conversations/:id/drop-and-exit`
+  - Routes: `POST /api/conversations/:id/drop-and-exit` — predicted
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`

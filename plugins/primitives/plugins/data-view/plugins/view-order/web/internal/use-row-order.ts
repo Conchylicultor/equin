@@ -1,6 +1,5 @@
 import { useCallback, useMemo } from "react";
-import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useLive, useLiveMutation } from "@plugins/network/plugins/live/web";
 import {
   mapResource,
   type ResourceResult,
@@ -33,15 +32,10 @@ export function useRowOrder(dataViewId: string, viewId: string): RowOrderState {
 
 /**
  * Upsert a view instance's bounded row-order write set (the moved row + seeds).
- * Resolves once the write lands and rejects when it fails (after the mutation's
- * own error toast), so the DataView's pending-move overlay can release the row.
+ * A predicted write: the order reads the new ranks from the call, so the
+ * DataView needs no pending-move overlay (it returns nothing).
  */
-export function useSetRowOrder(): (args: SetRowOrderBody) => Promise<void> {
-  const { mutateAsync } = useEndpointMutation(setRowOrder);
-  return useCallback(
-    async (args) => {
-      await mutateAsync({ body: args });
-    },
-    [mutateAsync],
-  );
+export function useSetRowOrder(): (args: SetRowOrderBody) => void {
+  const set = useLiveMutation(setRowOrder, { label: "Row order" });
+  return useCallback((args) => set.mutate({ body: args }), [set]);
 }

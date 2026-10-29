@@ -330,9 +330,9 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `chord.index-status` (push)
     - `chord.loops` (invalidate, fixed, capped: FIND_LOOPS_MAX_LIMIT, whole: the chords of one loop window: a few bars' worth, whole: one section's beat grid: a point per beat of the section, whole: one loop window's distinct chords or spelling features)
   - Routes:
-    - `POST /api/chord/index/ensure`
-    - `POST /api/chord/loops/next-chords`
-    - `POST /api/chord/loops/count-in-set`
+    - `POST /api/chord/index/ensure` — unpredicted (server-decided)
+    - `POST /api/chord/loops/next-chords` — internal
+    - `POST /api/chord/loops/count-in-set` — internal
 - Core:
   - Uses:
     - `apps/chord/video-availability.VideoStatusSchema`

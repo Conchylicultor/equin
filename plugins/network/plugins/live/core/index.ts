@@ -183,16 +183,29 @@ export type {
 // hands the payload to the predicted-write client.
 export {
   applyRows,
+  choose,
   effects,
   patchRow,
+  patchValue,
+  patchWhere,
   readLiveEffect,
+  readSubject,
   removeRow,
+  removeWhere,
+  upsertRow,
+  upsertRows,
+  valueSubject,
 } from "./internal/predict";
 export type {
   LiveEffect,
   LiveEffectPart,
+  LiveLane,
   PredictOptions,
+  PredictPatchTarget,
+  PredictTarget,
   ResolvedLiveEffect,
   ResolvedLiveTarget,
   RowPatch,
+  TargetRow,
+  UpsertOptions,
 } from "./internal/predict";

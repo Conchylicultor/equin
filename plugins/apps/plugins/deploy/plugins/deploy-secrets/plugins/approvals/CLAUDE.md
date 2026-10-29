@@ -53,9 +53,9 @@
   - DB schema: `plugins/apps/plugins/deploy/plugins/deploy-secrets/plugins/approvals/server/internal/tables.ts`
   - Resources: `deploy-secrets.status` (push, notified, whole: one row per deploy secret the deployment's composition closure declares — a handful, whole: the plugins in one closure declaring the same key — normally one)
   - Routes:
-    - `PUT /api/deploy-secrets/values/:key`
-    - `POST /api/deploy-secrets/deployments/:deploymentId/approve`
-    - `POST /api/deploy-secrets/deployments/:deploymentId/env`
+    - `PUT /api/deploy-secrets/values/:key` — unpredicted (server-decided)
+    - `POST /api/deploy-secrets/deployments/:deploymentId/approve` — unpredicted (precondition)
+    - `POST /api/deploy-secrets/deployments/:deploymentId/env` — internal
 - Core:
   - Uses:
     - `apps/deploy/deployments.deploymentIdKind`

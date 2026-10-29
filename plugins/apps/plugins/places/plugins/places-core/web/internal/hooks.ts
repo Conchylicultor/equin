@@ -2,6 +2,7 @@ import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
   useLive,
   useLiveRow,
+  useLiveMutation,
   type LiveRowResult,
 } from "@plugins/network/plugins/live/web";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
@@ -71,11 +72,11 @@ export function useCreateCustomPlace() {
  * position, its note or its tags (the whole list — Been / Want to go included).
  */
 export function useUpdatePlace() {
-  return useEndpointMutation(updatePlace);
+  return useLiveMutation(updatePlace);
 }
 
 export function useDeletePlace() {
-  return useEndpointMutation(deletePlace);
+  return useLiveMutation(deletePlace);
 }
 
 /** Re-pick the place's icon with Haiku now (pending for the call's lifetime). */

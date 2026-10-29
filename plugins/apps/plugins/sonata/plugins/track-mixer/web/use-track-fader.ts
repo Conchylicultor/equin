@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
-import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { setTrackVolume } from "./actions";
+import { useTrackViewWrites } from "./actions";
 
 /**
  * How often a drag is allowed to reach the server, in milliseconds.
@@ -68,7 +67,7 @@ export function useTrackFader(
 ): TrackFader {
   /** The user's position, or null when there is nothing local to show. */
   const [draft, setDraft] = useState<number | null>(null);
-  const fetchEndpoint = useFetchEndpoint();
+  const writes = useTrackViewWrites();
 
   // Everything the throttle remembers is a ref. A drag writes at input
   // frequency, and re-rendering the panel just to record "when did I last
@@ -103,7 +102,7 @@ export function useTrackFader(
     lastWriteAtRef.current = performance.now();
     sentRef.current = value;
     sentValuesRef.current.add(value);
-    setTrackVolume(fetchEndpoint, songId, trackId, value);
+    writes.setVolume(songId, trackId, value);
   });
 
   const onValueChange = useEventCallback((next: number) => {

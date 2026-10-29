@@ -5,7 +5,7 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import { KeyModeObserver } from "./components/key-mode-observer";
 
-export { saveKeyAutoDetect } from "./actions";
+export { useSaveKeyAutoDetect } from "./actions";
 
 export default {
   description:

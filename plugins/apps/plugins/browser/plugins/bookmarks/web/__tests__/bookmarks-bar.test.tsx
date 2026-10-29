@@ -25,6 +25,7 @@ vi.mock("@plugins/network/plugins/live/web", () => ({
     state.queries.push(query);
     return state.result;
   },
+  useLiveMutation: () => ({ kind: "available", mutate: () => {} }),
 }));
 
 vi.mock("@plugins/infra/plugins/endpoints/web", () => ({

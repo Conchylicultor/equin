@@ -246,7 +246,7 @@ requests the helper build and reloads the tray onto it
   - Register:
     - `defineFileWatcher('menu-bar.shim-dir')`
     - `defineFileWatcher('menu-bar.pin-store')`
-  - Routes: `POST /api/menu-bar/pin/:appId`
+  - Routes: `POST /api/menu-bar/pin/:appId` — unpredicted (server-decided)
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`

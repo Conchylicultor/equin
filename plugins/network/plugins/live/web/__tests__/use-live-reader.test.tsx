@@ -41,8 +41,17 @@ import {
   type FakeWebSocket,
 } from "@plugins/primitives/plugins/networking/web/testing";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
-import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
-import { useLive, useLiveReader } from "@plugins/network/plugins/live/web";
+import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import {
+  liveCollection,
+  liveValue,
+  patchValue,
+} from "@plugins/network/plugins/live/core";
+import {
+  useLive,
+  useLiveMutation,
+  useLiveReader,
+} from "@plugins/network/plugins/live/web";
 import type { LiveAnswer } from "../internal/use-live-reader";
 
 const Result = z.object({ n: z.number() });
@@ -177,6 +186,43 @@ describe("useLiveReader", () => {
       live.queryClient.getQueryData(queryKeyFor(v.key, { dir: "a" })),
     );
     expect(calls).toEqual([]);
+  });
+
+  it("an observed tuple answers with the predicted writes its read shows", async () => {
+    const v = liveValue(key(), { schema: Result, params: ["dir"] });
+    const bump = defineEndpoint({
+      route: `POST /api/${v.key}/:dir/bump`,
+      effect: (on) =>
+        patchValue(
+          on,
+          v,
+          ({ params }) => ({ dir: params.dir }),
+          (r) => ({ n: r.n + 1 }),
+        ),
+    });
+    const { live, socket, answers, read } = await setup();
+    const { result } = renderHook(
+      () => ({ value: useLive(v, { dir: "a" }), write: useLiveMutation(bump) }),
+      { wrapper: live.Wrapper },
+    );
+    socket.serverSend({
+      kind: "sub-ack",
+      key: v.key,
+      params: { dir: "a" },
+      value: { n: 7 },
+      version: 3,
+      epoch: "b1",
+    });
+    await flush();
+    // The write is never answered: the prediction applies throughout.
+    answers.push(new Promise<Response>(() => {}));
+    result.current.write.mutate({ params: { dir: "a" } });
+    await flush();
+    expect(result.current.value).toMatchObject({ data: { n: 8 } });
+    expect(await read(v, { dir: "a" })).toEqual({
+      status: "ready",
+      data: { n: 8 },
+    });
   });
 
   it("an observed tuple with no value yet is read over HTTP, through the guarded write its readers share", async () => {

@@ -276,4 +276,8 @@ export const createPrototype = defineEndpoint({
   body: z.object({ title: z.string().optional() }),
   response: z.object({ id: z.string() }),
   needsMachine: { feature: "New prototype" },
+  unpredicted: {
+    reason: "server-minted-id",
+    why: "creates the folder on disk and the agent launch needs the id it returns",
+  },
 });

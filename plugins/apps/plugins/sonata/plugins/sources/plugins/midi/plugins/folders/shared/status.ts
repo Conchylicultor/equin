@@ -71,4 +71,8 @@ export const midiFolderSongCount = liveValue("sonata.midi-folders.song-count", {
 export const recheckMidiFolders = defineEndpoint({
   route: "POST /api/sonata/midi-folders/recheck",
   response: FolderStatusesSchema,
+  unpredicted: {
+    reason: "response",
+    why: "re-probes the watched folders and the button renders the returned access statuses",
+  },
 });

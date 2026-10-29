@@ -196,16 +196,16 @@ Gotchas the spike hit:
   - Contributes:
     - `HealthReport.Row` "Claude Code" → `ClaudeCodeRowDetail`
     - `ConfigV2.WebRegister` "runtime-sdk-auto-resume"
-  - Uses: 43 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/setup-steps` ×5
     - `infra/claude-cli/availability` ×4
     - `infra/endpoints` ×4
     - `primitives/css/ui-kit` ×4
     - `config_v2` ×3
     - `primitives/data-view` ×3
+    - `network/live` ×2
     - `primitives/live-state` ×2
     - `conversations/conversation-view.conversationPane`
-    - `network/live.useLive`
     - `primitives/avatar.Avatar`
     - `primitives/css/clip.Clip`
     - `primitives/css/fill.Fill`
@@ -272,8 +272,8 @@ Gotchas the spike hit:
     - `defineJob('runtime-sdk.attempt-ended')`
     - `defineJob('runtime-sdk.auto-resume')`
   - Routes:
-    - `POST /api/claude-usage/refresh`
-    - `POST /api/runtime-sdk/resume-stopped`
+    - `POST /api/claude-usage/refresh` — unpredicted (server-decided)
+    - `POST /api/runtime-sdk/resume-stopped` — unpredicted (response)
 - Core:
   - Uses:
     - `config_v2.defineConfig`
