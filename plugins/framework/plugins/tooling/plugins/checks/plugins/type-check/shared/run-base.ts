@@ -37,7 +37,8 @@
 // The ROOT's directory is bounded tighter than the shards' (one root per
 // distinct tree), and a root that carries a shard last marked used more than
 // `TOUCH_AFTER_DAYS` ago touches it — so every shard outlives every root that
-// names it (`ROOT_BOUNDS.maxAgeMs` + `TOUCH_AFTER_DAYS` < `SHARD_BOUNDS.maxAgeMs`).
+// names it: a root is kept at most its `maxAgeMs`, a shard at least its
+// `minLifetimeMs` (`assertShardsOutliveRoots`, run when this module loads).
 // A shard missing anyway (the count backstop, a hand deletion) is found
 // before the base is used and the run takes the full path, saying why.
 
@@ -46,7 +47,7 @@ import type { RawLintMessage } from "../core";
 import { runBaseRootsDir, runBaseShardsDir } from "../data-dirs";
 import { sha256 } from "./keys";
 import { messageSchema } from "./lint-results";
-import { openPassSet, type PassSetBounds } from "./pass-set";
+import { minLifetimeMs, openPassSet, type PassSetBounds } from "./pass-set";
 
 /** Bump when the meaning of a stored root or shard changes (its key would not). */
 export const RUN_BASE_FORMAT = 1;
@@ -58,17 +59,37 @@ export const TOUCH_AFTER_DAYS = 3;
 
 const ROOT_BOUNDS: PassSetBounds = {
   maxAgeMs: 7 * DAY_MS,
-  maxEntries: 3000,
-  trimTo: 2400,
-  pruneIntervalMs: 60 * 60 * 1000,
+  generations: 4,
+  // Directory entries: a promoted entry counts in each generation it is in.
+  maxEntries: 6000,
 };
 
 const SHARD_BOUNDS: PassSetBounds = {
   maxAgeMs: 14 * DAY_MS,
-  maxEntries: 200000,
-  trimTo: 160000,
-  pruneIntervalMs: 60 * 60 * 1000,
+  generations: 4,
+  // Directory entries: a promoted entry counts in each generation it is in.
+  maxEntries: 400000,
 };
+
+/**
+ * Throws unless every shard outlives every root that can name it: a root is
+ * kept at most `roots.maxAgeMs` after its last use, and its shards were last
+ * touched at most `TOUCH_AFTER_DAYS` before that — so a shard must be kept at
+ * least their sum. Shared by the walk base, which bounds itself the same way.
+ */
+export function assertShardsOutliveRoots(
+  label: string,
+  roots: PassSetBounds,
+  shards: PassSetBounds,
+): void {
+  const need = roots.maxAgeMs + TOUCH_AFTER_DAYS * DAY_MS;
+  if (need >= minLifetimeMs(shards)) {
+    throw new Error(
+      `${label}: a root can name a shard for up to ${need / DAY_MS} days, but a shard is only sure to be kept ${minLifetimeMs(shards) / DAY_MS} days — raise the shards' maxAgeMs or generations`,
+    );
+  }
+}
+assertShardsOutliveRoots("run base", ROOT_BOUNDS, SHARD_BOUNDS);
 
 /** One file's lint state in a base. Optional fields are absent when empty. */
 export const fileBaseSchema = z.object({

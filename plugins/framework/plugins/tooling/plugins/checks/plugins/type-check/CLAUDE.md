@@ -117,6 +117,11 @@ The rules that follow:
   - `type-check-name-records` (key H(path, version)): imports, resolution record, global flag, up to four results each under its R.
   - `type-check-contracts`: raw `.d.ts` by hash, program-level diagnostics per global hash.
   - Entries in use are rewritten after 3 days, so the 14-day age bound means "unused".
+- **Every store is a pass set** (`shared/pass-set.ts`): one JSON file per entry, in age generations (`generations/g<N>/`, N = floor(now / (maxAge / generations))).
+  - A record goes into the current generation; a read, `has` or `touch` hitting an older one hard-links it forward, so the bound is "unused for maxAge" (kept more than `minLifetimeMs`).
+  - An open lists only `generations/` and drops the generations that left the window whole (renamed aside, then unlinked at most 2000 entries per open): O(1) at any store size. The count backstop reads one write counter per generation.
+  - The run and walk bases assert at load that a shard outlives every root that can name it (`assertShardsOutliveRoots`).
+  - An edit to `pass-set.ts` moves the global hash (it is in `producerSources()` through `name-store.ts`). See `research/2026-10-27-global-type-check-store-generations.md`.
 - **Resolutions** (`shared/name-resolve.ts`) are keyed on what they PROBED: the view's listing of every consulted repo directory (a missing one counts its nearest existing ancestor) and the version of every repo file read.
   - A moved target puts the file in program 1.
   - A `node_modules` lookup records nothing (the lockfile's).
@@ -287,6 +292,7 @@ Sizes: `research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md`.
 | `type-check worker repo phases: type check …, lint … (cpu)` | where the worker CPU went |
 | `type-check worker repo programs: 1: … 2: …; N checked of M` | what each program held |
 | `type-check: walk: incremental (…) / full (<why>)`, `program 1: …`, `program 2: …`, `walk base … written` | the walk's cost and reads, each program's build/check/record ms, what was left for the next run |
+| `type-check: store opens: N in …ms; G generations dropped, U entries unlinked` | what opening the host-wide stores cost the worker (O(1) each, plus what an open evicted) |
 | `type-check worker repo: lane …, priority foreground (slot holder)` | lane and tier (`unknown (<reason>)` without darwinbg) |
 | `type-check: input: tree … (files, overlay N)` | the worker's input load |
 | `type-check: prepared off-thread in …` | prepare's phases with CPU, the base carried from (or `base none (<why>)` / `rules moved (…)`), files sent, what finalize wrote; `(finalize skipped: coverage gate failed)` |

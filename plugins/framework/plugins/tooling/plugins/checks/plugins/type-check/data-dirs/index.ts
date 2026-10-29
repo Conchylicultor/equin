@@ -1,5 +1,11 @@
 import { defineDataDir } from "@plugins/infra/plugins/paths/core";
 
+// Every live store below is a pass set (`shared/pass-set.ts`): its entries sit
+// in age generations, `generations/g<N>/<sha>.json`, and a generation is
+// removed whole once it leaves the age window. Flat `<sha>.json` entries
+// beside `generations/` were written before 2026-10-27; they are still read
+// (and moved forward when used) and removed in one pass once they age out.
+
 /**
  * The per-file lint result store: each file's raw lint messages per part (each
  * syntactic rule group, the typed part, or a directive file whole), keyed by

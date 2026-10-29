@@ -82,7 +82,7 @@ export interface NameStore {
    * out): the caller re-checks the file it belongs to instead.
    */
   readContract(hash: string): string | undefined;
-  /** Whether a contract is stored (no read). */
+  /** Whether a contract is stored (no read; marks it used). */
   hasContract(hash: string): boolean;
   writeContract(hash: string, text: string): void;
   /** A variant's prediction data, by its result key — undefined when absent. */
@@ -123,17 +123,17 @@ const entryKey = (path: string, version: string): string =>
 // ~12.5k, a commit adds a few dozen. Bounded like the lint result store.
 const ENTRY_BOUNDS: PassSetBounds = {
   maxAgeMs: 14 * 24 * 60 * 60 * 1000,
-  maxEntries: 300000,
-  trimTo: 240000,
-  pruneIntervalMs: 60 * 60 * 1000,
+  generations: 4,
+  // Directory entries: a promoted entry counts in each generation it is in.
+  maxEntries: 600000,
 };
 
 // One per distinct `.d.ts` text: early cutoff makes them rarer than entries.
 const CONTRACT_BOUNDS: PassSetBounds = {
   maxAgeMs: 14 * 24 * 60 * 60 * 1000,
-  maxEntries: 200000,
-  trimTo: 160000,
-  pruneIntervalMs: 60 * 60 * 1000,
+  generations: 4,
+  // Directory entries: a promoted entry counts in each generation it is in.
+  maxEntries: 400000,
 };
 
 const contractEntry = z.object({ text: z.string() });
@@ -161,10 +161,9 @@ export function openNameStore(): NameStore {
       const raw = contracts.read(hash);
       if (raw === undefined) return undefined;
       const text = contractEntry.parse(raw).text;
+      // The read marked it used (`PassSet.read` promotes): a stable file's
+      // `.d.ts` is read for years, written once.
       memo.set(hash, text);
-      // Marked used: the store's count bound evicts the least recently
-      // USED, and a stable file's `.d.ts` is read for years, written once.
-      contracts.touch(hash);
       return text;
     },
     hasContract: (hash) => memo.has(hash) || contracts.has(hash),

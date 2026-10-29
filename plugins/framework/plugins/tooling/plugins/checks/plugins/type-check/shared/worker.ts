@@ -54,6 +54,7 @@ import {
   type NameStore,
 } from "./name-store";
 import { openRepoView, parseTsconfigOver, type RepoView } from "./repo-view";
+import { passSetOpenStats } from "./pass-set";
 import { openRunBaseStore, runBaseLookup } from "./run-base";
 import {
   openWalkBase,
@@ -592,6 +593,13 @@ async function run(job: Job): Promise<Result> {
   const { results: lintResults, lintKeys } = await lint.finish(out.keys);
   const cpuEnd = cpuSeconds();
   lintCpu += cpuEnd - cpuFull;
+  // What opening the host-wide stores cost this process: O(1) each, plus
+  // what an open evicted (a generation dropped whole, the legacy sweep), a
+  // bounded number of unlinks per open.
+  const so = passSetOpenStats();
+  tscLines.push(
+    `type-check: store opens: ${so.opens} in ${Math.round(so.ms)}ms; ${so.dropped} generations dropped, ${so.removed} entries unlinked`,
+  );
 
   const r = out.report;
   return {

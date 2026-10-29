@@ -49,9 +49,9 @@ export interface TypeAwareGroups {
 // text. An entry is ~2 KB (one key per group), inside one 4 KB block.
 const BOUNDS: PassSetBounds = {
   maxAgeMs: 14 * 24 * 60 * 60 * 1000,
-  maxEntries: 200000,
-  trimTo: 160000,
-  pruneIntervalMs: 60 * 60 * 1000,
+  generations: 4,
+  // Directory entries: a promoted entry counts in each generation it is in.
+  maxEntries: 400000,
 };
 
 /** One raw lint message as stored (here, and in the run base `./run-base.ts`). */

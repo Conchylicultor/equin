@@ -478,10 +478,16 @@ test(
     await run();
     // Every stored shard gone (the directory also holds earlier trees'
     // shards, so removing one would not reliably hit this root's).
-    const dir = runBaseShardsDir.path;
-    const stored = readdirSync(dir).filter((n) => n.endsWith(".json"));
+    const gens = join(runBaseShardsDir.path, "generations");
+    const stored = readdirSync(gens)
+      .filter((g) => /^g\d+$/.test(g))
+      .flatMap((g) =>
+        readdirSync(join(gens, g))
+          .filter((n) => n.endsWith(".json"))
+          .map((n) => join(gens, g, n)),
+      );
     if (stored.length === 0) throw new Error("no shard stored");
-    for (const n of stored) rmSync(join(dir, n));
+    for (const f of stored) rmSync(f);
     const r = await prepare();
     expect(r.plan.baseLine).toMatch(/missing 3 of 3 shards — full path/);
     expect(r.plan.lintBase).toBeNull();

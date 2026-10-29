@@ -52,7 +52,13 @@ import { sha256 } from "./keys";
 import { splitKey } from "./name-records";
 import { openPassSet, type PassSetBounds } from "./pass-set";
 import type { RepoView } from "./repo-view";
-import { dayNumber, listingHash, shardOf, TOUCH_AFTER_DAYS } from "./run-base";
+import {
+  assertShardsOutliveRoots,
+  dayNumber,
+  listingHash,
+  shardOf,
+  TOUCH_AFTER_DAYS,
+} from "./run-base";
 import { forEachComponent } from "./keys";
 import { engineSources, sourcesFp } from "./tsc-engine";
 
@@ -63,17 +69,18 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 const ROOT_BOUNDS: PassSetBounds = {
   maxAgeMs: 7 * DAY_MS,
-  maxEntries: 3000,
-  trimTo: 2400,
-  pruneIntervalMs: 60 * 60 * 1000,
+  generations: 4,
+  // Directory entries: a promoted entry counts in each generation it is in.
+  maxEntries: 6000,
 };
 
 const SHARD_BOUNDS: PassSetBounds = {
   maxAgeMs: 14 * DAY_MS,
-  maxEntries: 200000,
-  trimTo: 160000,
-  pruneIntervalMs: 60 * 60 * 1000,
+  generations: 4,
+  // Directory entries: a promoted entry counts in each generation it is in.
+  maxEntries: 400000,
 };
+assertShardsOutliveRoots("walk base", ROOT_BOUNDS, SHARD_BOUNDS);
 
 /** One source file's walk state. Optional fields are absent when empty. */
 export const walkFileSchema = z.object({
