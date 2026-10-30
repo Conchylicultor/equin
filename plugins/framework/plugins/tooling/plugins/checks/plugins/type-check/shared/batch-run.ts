@@ -188,6 +188,7 @@ const emptyStats = (): ProgramStats => ({
   sources: 0,
   checked: 0,
   contracts: 0,
+  held: 0,
   repoDecls: 0,
   env: 0,
   programMs: 0,

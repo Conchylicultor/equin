@@ -1082,3 +1082,53 @@ test("a batch importing a file outside the set waits for what that file's .d.ts 
   expect(out.checked).toEqual(["a.ts", "y.ts"]);
   expect(out.report.p1Batches!.batches).toBe(2);
 });
+
+// ─── An unservable .d.ts: its declaration emit reported a diagnostic ────────
+
+// `ep`'s type uses `Hidden`, which its file cannot name (TS4023): the forced
+// `.d.ts` prints `Hidden<"GET /x">` with no import, so a program served it
+// reads `ep.route` as an error type — `[ep.route]` instead of `"GET /x"` in
+// `u`'s `.d.ts`. The menu-bar `getAppCatalog` miss (TS2769 + TS4023).
+const UNNAMEABLE: Record<string, string> = {
+  "e.ts":
+    "interface Hidden<R extends string> { route: R; n: number }\nexport function define<R extends string>(route: R): Hidden<R> { return { route, n: 1 }; }\n",
+  "c.ts":
+    'import { define } from "./e";\nexport const ep = define("GET /x");\n',
+  "u.ts":
+    'import { ep } from "./c";\nexport const routes = { [ep.route]: ep.n };\n',
+};
+
+test("a file whose .d.ts cannot say its type is held as source by every program that loads it", async () => {
+  const root = freshRoot();
+  const store = memoryNameStore();
+  writeTree(root, UNNAMEABLE);
+  // Cold, and (the shadow run) in batches of one file: `u`'s batch loads `c`
+  // as source, not the `.d.ts` its batch just emitted.
+  const cold = await run(root, UNNAMEABLE, store);
+  expect(
+    cold.results.get("c.ts")!.diagnostics.some((d) => d.includes("TS4023")),
+  ).toBe(true);
+  // `u` alone in program 1, `c` stored: the same answer as a whole program.
+  const edited = {
+    ...UNNAMEABLE,
+    "u.ts":
+      'import { ep } from "./c";\n// edited\nexport const routes = { [ep.route]: ep.n };\n',
+  };
+  writeTree(root, edited, UNNAMEABLE);
+  const out = await run(root, edited, store);
+  expect(out.checked).toEqual(["u.ts"]);
+});
+
+test("a change of what an unservable file reads re-checks its users", async () => {
+  // `Hidden.n` turns into a string: `c`'s text and `.d.ts` do not change, but
+  // `u`, which reads `c` as source, now infers `routes` from a string.
+  const [, edited] = await walk([
+    UNNAMEABLE,
+    {
+      ...UNNAMEABLE,
+      "e.ts":
+        'interface Hidden<R extends string> { route: R; n: string }\nexport function define<R extends string>(route: R): Hidden<R> { return { route, n: "1" }; }\n',
+    },
+  ]);
+  expect(edited).toEqual(["c.ts", "e.ts", "u.ts"]);
+});

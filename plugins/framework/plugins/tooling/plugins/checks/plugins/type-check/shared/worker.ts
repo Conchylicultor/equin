@@ -99,7 +99,7 @@ function reportLines(r: NameRunReport): string[] {
   ): string =>
     s === null
       ? `type-check: ${label}: none`
-      : `type-check: ${label}: ${s.sources} sources (${s.checked} checked) + ${s.contracts} .d.ts + ${s.repoDecls} repo decl + ${s.env} env; build ${Math.round(s.programMs)}ms, check ${Math.round(s.checkMs)}ms, records ${Math.round(s.recordMs)}ms${batched(b)}`;
+      : `type-check: ${label}: ${s.sources} sources (${s.checked} checked) + ${s.contracts} .d.ts${s.held > 0 ? ` + ${s.held} held as source (unservable .d.ts)` : ""} + ${s.repoDecls} repo decl + ${s.env} env; build ${Math.round(s.programMs)}ms, check ${Math.round(s.checkMs)}ms, records ${Math.round(s.recordMs)}ms${batched(b)}`;
   const ms = (x: number): number => Math.round(x);
   const w = r.walk;
   const moved =

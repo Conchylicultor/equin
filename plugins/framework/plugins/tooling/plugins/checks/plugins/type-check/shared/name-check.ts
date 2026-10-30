@@ -24,7 +24,11 @@ import {
   formatDiagnostic,
   type DeclaringSpelling,
 } from "./tsc-engine";
-import { createNameHost, type SourceFileCache } from "./name-host";
+import {
+  createNameHost,
+  storedContract,
+  type SourceFileCache,
+} from "./name-host";
 import { contractNames, nameKey, WHOLE, type NameRec } from "./name-records";
 import type { RecordingResolver, ResolutionRecord } from "./name-resolve";
 import type { RepoView } from "./repo-view";
@@ -560,6 +564,12 @@ export interface FileCheck {
   canonical: string;
   /** Its raw `.d.ts`: what importers are served. */
   raw: string;
+  /**
+   * Its declaration emit reported a diagnostic: the `.d.ts` does not say what
+   * the source does (a type it cannot name prints as a name it does not
+   * import), so it must never stand for the source (`storedContract`).
+   */
+  unservable: boolean;
 }
 
 /**
@@ -754,6 +764,7 @@ export function checkFile(
     signature: sha256(`${canonical}\n${declLines.join("\n")}`),
     canonical,
     raw: dts,
+    unservable: declaration.length > 0,
   };
 }
 
@@ -769,7 +780,7 @@ export interface CheckedFile {
   star: string[];
   diagnostics: string[];
   signature: string;
-  /** Its raw `.d.ts`. */
+  /** Its raw `.d.ts`, as stored and served (`storedContract`: marked when unservable). */
   contract: string;
 }
 
@@ -780,6 +791,8 @@ export interface ProgramStats {
   checked: number;
   /** Repo source files served as their stored `.d.ts`. */
   contracts: number;
+  /** Repo source files held as source because their `.d.ts` is unservable. */
+  held: number;
   /** Repo declaration inputs (`.d.ts`, JSON). */
   repoDecls: number;
   /** lib, `@types`, `node_modules`. */
@@ -800,6 +813,24 @@ export interface ProgramRun {
   /** Options and global diagnostics, formatted. */
   programDiagnostics: string[];
   stats: ProgramStats;
+}
+
+/**
+ * A name of an UNSERVABLE file (`FileCheck.unservable`): its users read the
+ * file's SOURCE, so the name means what the source does — its text (the
+ * file's, not only the `.d.ts`'s, which cannot say it) and everything the
+ * source uses, as d-edges. An edit of the file, or of anything it reads, moves
+ * the name and re-checks its users.
+ */
+function unservableName(
+  r: Pick<NameRec, "t" | "d">,
+  text: string,
+  uses: readonly string[],
+): Pick<NameRec, "t" | "d"> {
+  return {
+    t: sha256(`unservable\0${r.t}\0${sha256(text)}`).slice(0, 32),
+    d: [...new Set([...r.d, ...uses])].sort(),
+  };
 }
 
 export function runProgram(input: {
@@ -847,6 +878,7 @@ export function runProgram(input: {
     sources: 0,
     checked: 0,
     contracts: 0,
+    held: 0,
     repoDecls: 0,
     env: 0,
     programMs,
@@ -865,6 +897,10 @@ export function runProgram(input: {
       continue;
     }
     if (needsContract(p)) {
+      if (host.held.has(p)) {
+        stats.held++;
+        continue;
+      }
       if (!sources.has(p)) {
         throw new Error(
           `type-check: ${p} entered the program as source, but is not one of its sources`,
@@ -904,24 +940,26 @@ export function runProgram(input: {
     };
     const cn = contractNames(fc.canonical, p, (spec) => resolve(p, spec, -1));
     const inferred = inferenceEdges(sf, p, checker, options, resolve);
-    const names: Record<string, NameRec> = {};
-    for (const [n, r] of Object.entries(cn.names)) {
-      names[n] = { ...r, i: inferred.get(n) ?? [] };
-    }
     const specs = new Map<string, [string, number]>();
     for (const [s, m] of imports) specs.set(`${s}\0${m}`, [s, m]);
     for (const s of cn.specifiers) specs.set(`${s}\0-1`, [s, -1]);
     const res = resolver.record(p, [...specs.values()]);
+    const uses = usesOf(imports, res.targets, input.ambient);
+    const names: Record<string, NameRec> = {};
+    for (const [n, r] of Object.entries(cn.names)) {
+      const rec = fc.unservable ? unservableName(r, sf.text, uses) : r;
+      names[n] = { ...rec, i: inferred.get(n) ?? [] };
+    }
     checked.set(p, {
       global: isGlobalFile(sf),
       imports,
       res,
-      uses: usesOf(imports, res.targets, input.ambient),
+      uses,
       names,
       star: cn.star,
       diagnostics: fc.diagnostics,
       signature: fc.signature,
-      contract: fc.raw,
+      contract: storedContract(fc.raw, fc.unservable),
     });
     stats.checkMs += t2 - t1;
     stats.recordMs += performance.now() - t2;

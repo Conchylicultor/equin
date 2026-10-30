@@ -688,7 +688,15 @@ export function phase1(
         p2,
         prevOf,
         meanings,
-        directStale,
+        // What program 1 showed of an owner is stale when it was served a
+        // `.d.ts` it no longer has, or read one through its own imports: its
+        // `.d.ts` names their types (and a file held as source — an
+        // unservable `.d.ts` — is read whole).
+        (o) =>
+          staleRead.has(o) ||
+          (fixedStale !== undefined &&
+            !files.has(o) &&
+            fixedStale(o, staleRead)),
         served,
         first,
         files,
@@ -770,8 +778,9 @@ export function phase1(
  * record, what program 1 was served: a program-2 file (`second`, from an
  * earlier component, or a member) counts as served its previous record unless
  * it was served another contract; any other owner served a contract it no
- * longer has (`directStale`) counts as moved — or when a target in a program-2
- * member, or in its own file, is ⊥ (propagated). `meanings` holds every
+ * longer has, or that read one through its imports (`readStale`), counts as
+ * moved — or when a target in a program-2 member, or in its own file, is ⊥
+ * (propagated). `meanings` holds every
  * member's name under its current record (program-2 members on their previous
  * one, no name ⊥); a ⊥ name of an earlier component reads as moved.
  */
@@ -779,7 +788,7 @@ function predictBottom(
   p2: readonly string[],
   prevOf: (p: string) => WalkRecord | null,
   meanings: Meanings,
-  directStale: ReadonlySet<string>,
+  readStale: (owner: string) => boolean,
   served: ReadonlyMap<string, string>,
   first: ReadonlySet<string>,
   files: ReadonlyMap<string, WalkFile>,
@@ -795,13 +804,14 @@ function predictBottom(
     // A program-1 record was made against what program 1 was served. For a
     // program-2 owner that is its previous record (its newest variant) unless
     // the served contract was another: a name of it not ⊥ means then what it
-    // meant. Any other owner served a contract it no longer has: moved.
+    // meant. Any other owner that showed program 1 a stale `.d.ts` — its
+    // own, or one it imports: moved.
     if (inside.has(owner) || second.has(owner)) {
       if (first.has(owner)) return false;
       const sv = served.get(owner);
       return sv !== undefined && files.get(owner)?.variants[0]?.contract !== sv;
     }
-    return directStale.has(owner);
+    return readStale(owner);
   };
   const bottom = new Set<string>();
   const rev = new Map<string, string[]>();

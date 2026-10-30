@@ -17,7 +17,11 @@
 //     source's do — `./types` to the next contract, a bare specifier to the
 //     plugin-local `node_modules`, which a mirror tree cannot reach. A module
 //     that resolves to a source in the set is the source, for every importer,
-//     a served contract included.
+//     a served contract included;
+//   - an UNSERVABLE contract's file as source instead (a file whose
+//     declaration emit reported a diagnostic: its `.d.ts` does not say what
+//     its source does — `unservableContract`), so every program reads it as a
+//     whole program does. It is HELD, not checked.
 
 import { createHash } from "crypto";
 import { relative } from "path";
@@ -33,6 +37,28 @@ const sha256 = (s: string): string =>
 
 /** A contract's name in the store: the hash of its raw `.d.ts` text. */
 export const contractHash = (text: string): string => sha256(text).slice(0, 32);
+
+/**
+ * The first line of an UNSERVABLE contract: its file's declaration emit
+ * reported a diagnostic (a type it cannot name, TS4023 / TS2883 / TS2742 …),
+ * so the forced `.d.ts` prints a name it does not import, and a program served
+ * it reads an error type where the source has the real one. A comment, so the
+ * canonical text (and the signature) do not see it; part of the raw text, so
+ * every holder of the contract — a stored variant, a walk base, a batch — can
+ * tell, by the text it already serves.
+ */
+const UNSERVABLE_HEADER =
+  "// type-check: unservable — this file's declaration emit reported a diagnostic, so every program holds it as source\n";
+
+/** A file's raw `.d.ts` as stored: marked unservable when its declaration emit reported a diagnostic. */
+export function storedContract(raw: string, unservable: boolean): string {
+  return unservable ? UNSERVABLE_HEADER + raw : raw;
+}
+
+/** Whether a stored contract may stand for its source (`storedContract`). */
+export function unservableContract(text: string): boolean {
+  return text.startsWith(UNSERVABLE_HEADER);
+}
 
 /** The parsed environment, shared by every program in a process. */
 export interface SourceFileCache {
@@ -65,9 +91,11 @@ export interface NameHost {
   host: ts.CompilerHost;
   /** Each repo file served as a contract → the hash of the text served. */
   served: Map<string, string>;
+  /** Repo files not in the set held as source: their contract is unservable. */
+  held: Set<string>;
   /** The repo path a program file stands for: a contract's source, or itself. */
   repoPathOf(abs: string): string;
-  /** The virtual file serving `path`'s contract, to name as a program root. */
+  /** The file standing for `path` as a program root: its contract, or itself when that is unservable. */
   contractRoot(path: string): string;
 }
 
@@ -91,17 +119,24 @@ export function createNameHost(input: NameHostInput): NameHost {
   // Virtual contract file (canonical absolute) → [repo source path, text].
   const virtual = new Map<string, { source: string; text: string }>();
   const served = new Map<string, string>();
+  const held = new Set<string>();
 
   const repoPathOf = (abs: string): string => {
     const v = virtual.get(canonical(abs));
     return v !== undefined ? v.source : rel(root, abs);
   };
 
+  /** The file standing for `target`: its virtual contract, or the source itself. */
   const serve = (target: string): string => {
     const abs = contractFileName(`${root}/${target}`);
     const key = canonical(abs);
     if (virtual.has(key)) return abs;
+    if (held.has(target)) return `${root}/${target}`;
     const text = contractOf(target);
+    if (unservableContract(text)) {
+      held.add(target);
+      return `${root}/${target}`;
+    }
     virtual.set(key, { source: target, text });
     // The same hash the store names a contract by (`./name-run.ts`).
     served.set(target, contractHash(text));
@@ -156,9 +191,12 @@ export function createNameHost(input: NameHostInput): NameHost {
         if (resolved === undefined) return r;
         const to = rel(root, resolved.resolvedFileName);
         if (!isRepoPath(to) || !needsContract(to) || sources.has(to)) return r;
+        const standIn = serve(to);
+        // An unservable contract: the module is its source, as resolved.
+        if (held.has(to)) return r;
         return {
           resolvedModule: {
-            resolvedFileName: serve(to),
+            resolvedFileName: standIn,
             extension: ts.Extension.Dts,
             isExternalLibraryImport: false,
             resolvedUsingTsExtension: false,
@@ -167,5 +205,5 @@ export function createNameHost(input: NameHostInput): NameHost {
       });
     },
   };
-  return { host, served, repoPathOf, contractRoot: serve };
+  return { host, served, held, repoPathOf, contractRoot: serve };
 }

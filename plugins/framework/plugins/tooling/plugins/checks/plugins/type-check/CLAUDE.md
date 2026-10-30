@@ -131,6 +131,10 @@ The rules that follow:
   - Serving canonical text changes tsc's printing in importers' diagnostics.
 - Requires `skipLibCheck`; throws without it.
 - **Every exported value must have a nameable type**: `TS2883` / `TS4023` declaration diagnostics are real errors here — fix with an annotation.
+- **An unservable `.d.ts` is never served.** A file whose declaration emit reported a diagnostic gets a forced `.d.ts` naming a type it does not import, so a program served it reads an error type where the source has the real one (the menu-bar `[getAppCatalog.route]` miss).
+  - Its stored contract is marked (`storedContract` / `unservableContract`, `shared/name-host.ts`): every program, batch and later run that would serve it HOLDS the file as source instead (not checked; `held as source` in the program line) — as a whole program does.
+  - Its names mean what the source does: `t` salted with the file's text, every use of the file a d-edge — an edit of it, or of anything it reads, re-keys its users.
+  - Transient by construction: the diagnostic fails the check.
 - **Soundness is validated**:
   - `dual` mode (`TscMode`) also runs a full check of a fresh whole program with TypeScript's own host (`shared/full-check.ts`) and compares diagnostics + signatures per file; a divergence rewrites the store cold.
   - By hand: `scripts/dual-check.ts` (`--mode keyed` for the check alone).
