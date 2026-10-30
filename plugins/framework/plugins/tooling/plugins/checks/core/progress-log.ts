@@ -15,6 +15,7 @@ import type { OwnerShare, StallKind } from "./thread-attribution";
 import {
   openThreadWatch,
   type StallCpu,
+  type StallHeld,
   type ThreadStall,
   type ThreadSummary,
 } from "./thread-watch";
@@ -201,6 +202,9 @@ export interface ProgressStall {
   /** How much of the stall's window the process spent on a CPU — see `StallCpu`.
    *  OPTIONAL on the wire, same reason and same null-not-zero normalization. */
   cpu?: StallCpu;
+  /** How much of `lateMs` code held the thread vs the OS starved it — see
+   *  `StallHeld`. Same optionality and null-not-zero normalization. */
+  held?: StallHeld;
 }
 
 /**
@@ -226,6 +230,9 @@ export interface ProgressThread {
   /** The whole run's CPU time. Same optionality and normalization as the
    *  `stall` record's `cpu`. */
   cpu?: StallCpu;
+  /** Σ held / starved over the stalls (`ThreadSummary.held`; null without a
+   *  thread CPU clock). Same optionality and normalization as `cpu`. */
+  held?: ThreadSummary["held"];
   stallOwners: RecordOwner[];
 }
 
@@ -251,6 +258,7 @@ function stallRecord(stall: ThreadStall): ProgressStall {
     kinds: stall.kinds,
     leaves: stall.leaves,
     cpu: stall.cpu,
+    held: stall.held,
   };
 }
 
@@ -268,6 +276,7 @@ function threadRecord(summary: ThreadSummary): ProgressThread {
     })),
     kinds: summary.kinds,
     cpu: summary.cpu,
+    held: summary.held,
     stallOwners: summary.stallOwners.map(recordOwner),
   };
 }
@@ -680,27 +689,30 @@ export interface CheckRunProgress {
   /**
    * Every thread stall recorded so far, in order — readable WHILE the run is in
    * flight, since each lands the moment its late tick runs. `kinds`/`leaves`/
-   * `cpu` are `null` for a stall recorded before that split existed — see
-   * `ProgressStall`.
+   * `cpu`/`held` are `null` for a stall recorded before that split existed —
+   * see `ProgressStall`.
    */
   stalls: Array<
-    Omit<ProgressStall, "kinds" | "leaves" | "cpu"> & {
+    Omit<ProgressStall, "kinds" | "leaves" | "cpu" | "held"> & {
       at: string;
       kinds: Record<StallKind, number> | null;
       leaves: Array<{ leaf: string; samples: number }> | null;
       cpu: StallCpu | null;
+      held: StallHeld | null;
     }
   >;
   /**
    * The run's thread summary. Null until `finish()` writes it — and for every
    * run recorded before the watch existed. `kinds`/`cpu` are null for a run
-   * recorded before that split existed, same rule as a stall's.
+   * recorded before that split existed, same rule as a stall's; `held` is
+   * null for such a run AND for one without a thread CPU clock.
    */
   thread:
-    | (Omit<ProgressThread, "kinds" | "cpu"> & {
+    | (Omit<ProgressThread, "kinds" | "cpu" | "held"> & {
         at: string;
         kinds: Record<StallKind, number> | null;
         cpu: StallCpu | null;
+        held: ThreadSummary["held"];
       })
     | null;
   /** Present iff the run reached its `done` record. */
@@ -841,21 +853,23 @@ export function reconstructRuns(
         stalledMs: record.stalledMs ?? null,
       });
     } else if (record.phase === "stall") {
-      const { kinds, leaves, cpu, ...fields } = fieldsOf(record);
+      const { kinds, leaves, cpu, held, ...fields } = fieldsOf(record);
       run.stalls.push({
         ...fields,
         at: record.t,
         kinds: kinds ?? null,
         leaves: leaves ?? null,
         cpu: cpu ?? null,
+        held: held ?? null,
       });
     } else if (record.phase === "thread") {
-      const { kinds, cpu, ...fields } = fieldsOf(record);
+      const { kinds, cpu, held, ...fields } = fieldsOf(record);
       run.thread = {
         ...fields,
         at: record.t,
         kinds: kinds ?? null,
         cpu: cpu ?? null,
+        held: held ?? null,
       };
     } else if (record.phase === "done") {
       run.done = {

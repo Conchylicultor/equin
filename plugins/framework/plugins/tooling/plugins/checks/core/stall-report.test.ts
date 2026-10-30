@@ -62,7 +62,8 @@ const KINDS = {
   native: 0,
 };
 
-function stall(lateMs: number): ThreadStall {
+/** A stall `lateMs` late, of which code held the thread `heldMs` (all of it by default). */
+function stall(lateMs: number, heldMs = lateMs): ThreadStall {
   return {
     offsetMs: 500,
     durationMs: lateMs + 50,
@@ -74,17 +75,26 @@ function stall(lateMs: number): ThreadStall {
     kinds: KINDS,
     leaves: [],
     cpu: { userMs: 10, systemMs: 5 },
+    held: {
+      measured: true,
+      threadCpuMs: heldMs,
+      blockedMs: 0,
+      heldMs,
+      starvedMs: lateMs - heldMs,
+    },
   };
 }
 
-function summary(stalledMs: number): ThreadSummary {
+function summary(stalledMs: number, heldMs = stalledMs): ThreadSummary {
   return {
     longestLateMs: 4_000,
     stallCount: 7,
     stalledMs,
+    held: { heldMs, starvedMs: stalledMs - heldMs, longestHeldMs: 0 },
     samples: 900,
     rateHz: 40,
     selfMs: 12,
+    selfClock: "thread-cpu",
     owners: [],
     kinds: KINDS,
     cpu: { userMs: 1_000, systemMs: 200 },
@@ -122,7 +132,7 @@ describe("openStallReporter", () => {
       running: ["plugin-boundaries"],
     });
     expect(report?.message).toBe(
-      "check thread stalled 2.0 s — check plugin-boundaries (blocking-io)",
+      "check thread held 2.0 s (of a 2.0 s stall) — check plugin-boundaries (blocking-io)",
     );
     expect(report?.code).toEqual({
       mergeBase: MERGE_BASE,
@@ -158,6 +168,57 @@ describe("openStallReporter", () => {
       stallCount: 7,
       longestLateMs: 4_000,
     });
+  });
+
+  test("a long stall the thread was starved for, not held, files nothing", async () => {
+    const { sink, filed } = fakeSink();
+    const r = reporter(sink);
+    r.stall(stall(9_000, STALL_REPORT_MS - 1));
+    r.finish(summary(TOTAL_REPORT_MS * 3, TOTAL_REPORT_MS - 1));
+    await r.settled();
+    expect(filed).toHaveLength(0);
+  });
+
+  test("the total is judged on held time, and says how late too", async () => {
+    const { sink, filed } = fakeSink();
+    const r = reporter(sink);
+    r.finish(summary(61_000, TOTAL_REPORT_MS));
+    await r.settled();
+    expect(filed[0]?.message).toBe(
+      "check run held its thread 20.0 s over 7 stalls (61.0 s late) — mostly check plugin-boundaries",
+    );
+  });
+
+  test("without a thread CPU clock, a stall is judged on its lateness", async () => {
+    const { sink, filed } = fakeSink();
+    const r = reporter(sink);
+    r.stall({ ...stall(STALL_REPORT_MS), held: { measured: false } });
+    r.finish({ ...summary(TOTAL_REPORT_MS), held: null });
+    await r.settled();
+    expect(filed.map((f) => f.message)).toEqual([
+      "check thread stalled 2.0 s (held time unmeasured) — check plugin-boundaries (blocking-io)",
+      "check run stalled 20.0 s in total over 7 stalls — mostly check plugin-boundaries",
+    ]);
+  });
+
+  test("a payload written before the held split still parses", () => {
+    const { held: _held, ...legacy } = {
+      trigger: "stall" as const,
+      worktree: "wt",
+      runId: "run-1",
+      transcript: null,
+      lateMs: 3_000,
+      offsetMs: 0,
+      topOwner: "import",
+      running: [],
+      bootstrap: [],
+      samples: 0,
+      owners: [],
+      kinds: KINDS,
+      cpu: { userMs: 0, systemMs: 0 },
+      held: undefined,
+    };
+    expect(CheckThreadStallPayloadSchema.safeParse(legacy).success).toBe(true);
   });
 
   test("the merge-base is read once per run, and never by a run that files nothing", async () => {

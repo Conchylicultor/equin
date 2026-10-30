@@ -63,6 +63,18 @@ export function codePathsOf(owners: readonly OwnerShare[]): string[] {
   return [...paths].sort();
 }
 
+/**
+ * The time a stall report is judged on: how long code HELD the thread, not how
+ * late the tick fired — a starved thread (runnable, not scheduled: a
+ * background-priority check pass on a busy host) is no code's doing, and was
+ * most of what this used to file. Without a thread CPU clock there is no split,
+ * and the lateness is all there is: erring toward a report, never toward
+ * silence on a platform.
+ */
+function heldOrLateMs(stall: ThreadStall): number {
+  return stall.held.measured ? stall.held.heldMs : stall.lateMs;
+}
+
 function reportOwner(share: OwnerShare): CheckThreadStallOwner {
   return {
     owner: share.owner,
@@ -128,7 +140,7 @@ export function openStallReporter(args: {
 
   return {
     stall(stall) {
-      if (stall.lateMs < STALL_REPORT_MS) return;
+      if (heldOrLateMs(stall) < STALL_REPORT_MS) return;
       const owners = stall.owners.slice(0, REPORT_OWNERS);
       file(
         {
@@ -143,12 +155,13 @@ export function openStallReporter(args: {
           owners: owners.map(reportOwner),
           kinds: stall.kinds,
           cpu: stall.cpu,
+          held: stall.held,
         },
         owners,
       );
     },
     finish(summary) {
-      if (summary.stalledMs < TOTAL_REPORT_MS) return;
+      if ((summary.held?.heldMs ?? summary.stalledMs) < TOTAL_REPORT_MS) return;
       const owners = summary.stallOwners.slice(0, REPORT_OWNERS);
       file(
         {
@@ -160,6 +173,7 @@ export function openStallReporter(args: {
           stallOwners: owners.map(reportOwner),
           kinds: summary.kinds,
           cpu: summary.cpu,
+          held: summary.held,
         },
         owners,
       );

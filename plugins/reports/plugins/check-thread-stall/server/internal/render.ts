@@ -40,6 +40,20 @@ function kindsLine(kinds: Record<string, number>): string {
         .join(", ");
 }
 
+/** How much of a stall code held the thread vs the OS starved it. */
+function heldLine(
+  held: Extract<CheckThreadStallPayload, { trigger: "stall" }>["held"],
+): string {
+  if (held === undefined) return "not recorded (filed before the split)";
+  if (!held.measured)
+    return "unmeasured (no thread CPU clock on the writer's platform)";
+  return (
+    `held ${formatSeconds(held.heldMs)} (thread CPU ${formatSeconds(held.threadCpuMs)} + ` +
+    `sync I/O ${formatSeconds(held.blockedMs)}), starved ${formatSeconds(held.starvedMs)} ` +
+    "— starved is time the OS did not schedule the thread, no code's doing"
+  );
+}
+
 export function renderCheckThreadStallTask(
   row: ReportRow,
   d: CheckThreadStallPayload,
@@ -48,8 +62,10 @@ export function renderCheckThreadStallTask(
   if (d.trigger === "stall") {
     lines.push(
       `A \`./equin check\` run in \`${d.worktree}\` could not run a timer ` +
-        `for **${formatSeconds(d.lateMs)}**: something held the one JS thread every ` +
-        "check shares. While it did, no other check ran, every check's duration " +
+        `for **${formatSeconds(d.lateMs)}**, and code held the one JS thread every ` +
+        `check shares for ${d.held?.measured === true ? `**${formatSeconds(d.held.heldMs)}**` : "it (held time unmeasured)"} of that ` +
+        "— its own CPU time plus synchronous I/O, not the time the OS left it " +
+        "unscheduled. While it did, no other check ran, every check's duration " +
         "grew by the stall, and a check's own wall-clock timeout could fire " +
         "against a healthy service.",
     );
@@ -63,7 +79,8 @@ export function renderCheckThreadStallTask(
   } else {
     lines.push(
       `A \`./equin check\` run in \`${d.worktree}\` spent ` +
-        `**${formatSeconds(d.stalledMs)}** stalled in total, over ${d.stallCount} ` +
+        `**${formatSeconds(d.held?.heldMs ?? d.stalledMs)}** with its thread held ` +
+        `(${formatSeconds(d.stalledMs)} late in total), over ${d.stallCount} ` +
         `stalls (the longest ${formatSeconds(d.longestLateMs)}). The track's target ` +
         "for a whole pass is under 20 s.",
     );
@@ -95,10 +112,10 @@ export function renderCheckThreadStallTask(
     lines.push(
       `**What the thread was doing (samples):** ${kindsLine(d.kinds)}`,
     );
+    lines.push(`**Held vs starved:** ${heldLine(d.held)}`);
     lines.push(
-      `**CPU over the stall:** user ${Math.round(d.cpu.userMs)} ms, system ` +
-        `${Math.round(d.cpu.systemMs)} ms — near zero against ` +
-        `${d.lateMs} ms late means the thread was waiting, not working`,
+      `**Process CPU over the stall:** user ${Math.round(d.cpu.userMs)} ms, system ` +
+        `${Math.round(d.cpu.systemMs)} ms (every thread, workers included)`,
     );
     lines.push(
       `**Checks in flight:** ${d.running.length > 0 ? d.running.map((c) => `\`${c}\``).join(", ") : "none"}`,
@@ -114,6 +131,12 @@ export function renderCheckThreadStallTask(
     lines.push(
       `**What the thread was doing, whole run (samples):** ${kindsLine(d.kinds)}`,
     );
+    if (d.held) {
+      lines.push(
+        `**Held vs starved, all stalls:** held ${formatSeconds(d.held.heldMs)}, ` +
+          `starved ${formatSeconds(d.held.starvedMs)} (longest held ${formatSeconds(d.held.longestHeldMs)})`,
+      );
+    }
     lines.push(
       `**CPU, whole run:** user ${Math.round(d.cpu.userMs)} ms, system ${Math.round(d.cpu.systemMs)} ms`,
     );

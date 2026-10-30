@@ -12,6 +12,7 @@ import {
   stepWatch,
   summarizeWatch,
   type InFlight,
+  type WatchClocks,
 } from "./thread-watch";
 
 // The tick step is pure over (state, now, samples): no timer, no sampler, no
@@ -52,9 +53,12 @@ const running =
 /** A synthetic absolute `process.cpuUsage()` reading, in ms (converted to the
  *  µs the real API uses). Cumulative-since-zero, same as the real thing, so a
  *  delta between two of these is just their difference. */
-const cpu = (userMs: number, systemMs: number): NodeJS.CpuUsage => ({
-  user: Math.round(userMs * 1000),
-  system: Math.round(systemMs * 1000),
+const cpu = (userMs: number, systemMs: number, threadMs = 0): WatchClocks => ({
+  process: {
+    user: Math.round(userMs * 1000),
+    system: Math.round(systemMs * 1000),
+  },
+  thread: { supported: true, ms: threadMs },
 });
 /** The constant reading every test that isn't ABOUT cpu accounting passes at
  *  every tick — every delta is then 0, disturbing nothing else. */
@@ -173,6 +177,93 @@ describe("stepWatch", () => {
     stepWatch(state, 50, [], idle, cpu(0, 0));
     const stall = stepWatch(state, 1_100, [], idle, cpu(300, 50));
     expect(stall?.cpu).toEqual({ userMs: 300, systemMs: 50 });
+  });
+});
+
+describe("held vs starved", () => {
+  test("a stall the thread spent on its own CPU is held", () => {
+    const state = createWatchState(0, ROOTS, idle(), cpu(0, 0, 0));
+    const stall = stepWatch(
+      state,
+      3_050,
+      samples(10, IN_CHECK_X),
+      idle,
+      cpu(2_600, 0, 2_500),
+    );
+    expect(stall?.held).toEqual({
+      measured: true,
+      threadCpuMs: 2_500,
+      blockedMs: 0,
+      heldMs: 2_500,
+      starvedMs: 500,
+    });
+  });
+
+  test("a stall the OS did not schedule the thread for is starved, whatever the samples say", () => {
+    const state = createWatchState(0, ROOTS, idle(), cpu(0, 0, 0));
+    const stall = stepWatch(
+      state,
+      9_050,
+      samples(5, IN_CHECK_X),
+      idle,
+      cpu(1_800, 0, 300),
+    );
+    expect(stall?.held).toEqual({
+      measured: true,
+      threadCpuMs: 300,
+      blockedMs: 0,
+      heldMs: 300,
+      starvedMs: 8_700,
+    });
+  });
+
+  test("a synchronous syscall holds the thread without CPU: its sample share counts as held", () => {
+    const state = createWatchState(0, ROOTS, idle(), cpu(0, 0, 0));
+    const stall = stepWatch(
+      state,
+      4_050,
+      [...samples(8, BLOCKING), ...samples(2, IN_CHECK_X)],
+      idle,
+      cpu(100, 0, 100),
+    );
+    expect(stall?.held).toEqual({
+      measured: true,
+      threadCpuMs: 100,
+      blockedMs: 3_200,
+      heldMs: 3_300,
+      starvedMs: 700,
+    });
+  });
+
+  test("held never exceeds lateMs", () => {
+    const state = createWatchState(0, ROOTS, idle(), cpu(0, 0, 0));
+    const stall = stepWatch(state, 2_050, [], idle, cpu(0, 0, 2_100));
+    expect(stall?.held).toMatchObject({ heldMs: 2_000, starvedMs: 0 });
+  });
+
+  test("without a thread clock the split is unmeasured, never zero", () => {
+    const none: WatchClocks = {
+      process: { user: 0, system: 0 },
+      thread: { supported: false },
+    };
+    const state = createWatchState(0, ROOTS, idle(), none);
+    const stall = stepWatch(state, 3_050, [], idle, none);
+    expect(stall?.held).toEqual({ measured: false });
+    const summary = summarizeWatch(state);
+    expect(summary.held).toBeNull();
+    expect(summary.selfClock).toBe("wall");
+  });
+
+  test("the summary sums held and starved over the stalls", () => {
+    const state = createWatchState(0, ROOTS, idle(), cpu(0, 0, 0));
+    stepWatch(state, 3_050, [], idle, cpu(0, 0, 2_500)); // 3000 late, 2500 held
+    stepWatch(state, 5_100, [], idle, cpu(0, 0, 2_700)); // 2000 late, 200 held
+    const summary = summarizeWatch(state);
+    expect(summary.held).toEqual({
+      heldMs: 2_700,
+      starvedMs: 2_300,
+      longestHeldMs: 2_500,
+    });
   });
 });
 

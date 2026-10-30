@@ -116,9 +116,11 @@ function summary(over: Partial<ThreadSummary> = {}): ThreadSummary {
     longestLateMs: 7_400,
     stallCount: 2,
     stalledMs: 9_100,
+    held: { heldMs: 3_400, starvedMs: 5_700, longestHeldMs: 3_100 },
     samples: 100,
     rateHz: 10,
     selfMs: 12,
+    selfClock: "thread-cpu",
     owners: [
       { ...check, ms: 6_000 },
       { ...helper, ms: 2_000 },
@@ -150,6 +152,13 @@ function summary(over: Partial<ThreadSummary> = {}): ThreadSummary {
         },
         leaves: [{ leaf: "readdirSync [native]", samples: 45 }],
         cpu: { userMs: 700, systemMs: 90 },
+        held: {
+          measured: true,
+          threadCpuMs: 600,
+          blockedMs: 2_500,
+          heldMs: 3_100,
+          starvedMs: 4_300,
+        },
       },
       {
         offsetMs: 9_000,
@@ -168,6 +177,13 @@ function summary(over: Partial<ThreadSummary> = {}): ThreadSummary {
         },
         leaves: [{ leaf: "spawn [native]", samples: 5 }],
         cpu: { userMs: 100, systemMs: 10 },
+        held: {
+          measured: true,
+          threadCpuMs: 300,
+          blockedMs: 0,
+          heldMs: 300,
+          starvedMs: 1_400,
+        },
       },
     ],
     ...over,
@@ -177,7 +193,7 @@ function summary(over: Partial<ThreadSummary> = {}): ThreadSummary {
 describe("renderStallLine", () => {
   test("one line: longest stall, count, total, and who held the thread across the stalls", () => {
     expect(renderStallLine(summary(), "/tmp/check-r1.log")).toBe(
-      "⚠ check thread stalled 7.4 s (longest of 2, 9.1 s total) — mostly " +
+      "⚠ check thread stalled 7.4 s (longest of 2, 9.1 s total, 3.4 s held) — mostly " +
         "check x 75%, shared helper @ plugins/y/core/h.ts 25%. Details: /tmp/check-r1.log",
     );
   });
@@ -195,19 +211,21 @@ describe("renderStallLine", () => {
 describe("renderThreadBlock", () => {
   test("summary line, whole-run table with ms, then each stall with its running set and stacks", () => {
     expect(renderThreadBlock(summary())).toEqual([
-      "thread: 2 stalls, 9.1 s stalled (longest 7.4 s); longest late tick 7400ms; 100 samples at 10 Hz; watch cost 12ms",
+      "thread: 2 stalls, 9.1 s stalled, 3.4 s held (longest 7.4 s); longest late tick 7400ms; 100 samples at 10 Hz; watch cost 12ms",
       "  who used the thread (whole run):",
       "     60%  ~6.0 s  check x",
       "     20%  ~2.0 s  shared helper @ plugins/y/core/h.ts",
       "  stall 1 at +1.2 s: 7.4 s, 60 samples, 2 checks in flight",
       "    waiting on: blocking I/O 75%, CPU 25%",
       "    on CPU: 0.7 s user + 0.1 s system (11% of 7.4 s stalled)",
+      "    thread: held 3.1 s (thread CPU 0.6 s + sync I/O 2.5 s), starved 4.3 s",
       "    running: x, y",
       "    100%  check x",
       "          spin @ plugins/x/check/index.ts:3",
       "  stall 2 at +9.0 s: 1.7 s, 20 samples, 1 check in flight",
       "    waiting on: native 75%, process start 25%",
       "    on CPU: 0.1 s user + 0.0 s system (6% of 1.7 s stalled)",
+      "    thread: held 0.3 s (thread CPU 0.3 s + sync I/O 0.0 s), starved 1.4 s",
       "    running: y",
       "    100%  shared helper @ plugins/y/core/h.ts",
       "          helper @ plugins/y/core/h.ts:9",

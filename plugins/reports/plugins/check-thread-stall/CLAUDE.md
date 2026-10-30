@@ -10,8 +10,17 @@ owns the kind: its payload, fingerprint, task and summary line.
 
 | trigger | files when | fingerprint | one row per |
 | --- | --- | --- | --- |
-| `stall` | one stall's `lateMs ≥ STALL_REPORT_MS` (2 s) | `check-thread-stall:<top owner>` | owner (`check <plugin>`, `shared <fn @ path>`, `import`, `native <leaf>`) |
-| `total` | a run's `stalledMs ≥ TOTAL_REPORT_MS` (20 s) | `check-thread-stall:total` | — |
+| `stall` | one stall's `held.heldMs ≥ STALL_REPORT_MS` (2 s) | `check-thread-stall:<top owner>` | owner (`check <plugin>`, `shared <fn @ path>`, `import`, `native <leaf>`) |
+| `total` | a run's `held.heldMs ≥ TOTAL_REPORT_MS` (20 s) | `check-thread-stall:total` | — |
+
+**Held, not late.** A tick fires late when code holds the thread AND when the
+OS does not schedule it (a build's check pass runs at background priority).
+Only the first is code's doing, so the runner splits each stall into held (the
+main thread's own CPU time plus its synchronous-I/O wait) and starved, and
+files on held time. Without a thread CPU clock on the writer's platform
+(`held.measured: false`, the run's `held: null`) it falls back to `lateMs` /
+`stalledMs`. `held` is optional in the schema only so rows filed before the
+split still parse.
 
 The thresholds are the track's **targets**, not today's measurements, so both
 fire on most full passes until the remaining stalls are fixed. After that, a
@@ -20,7 +29,7 @@ report is a new regression.
 Warning variant, bell re-alerts at most every 6 h per row: a slow check is a
 chronic cost, not an outage. The row keeps the latest example — worktree, run
 id, transcript path, the top 3 owners with their stacks, the waiting-vs-working
-split and CPU.
+split, held vs starved, and CPU.
 
 ## How it is filed
 
@@ -37,7 +46,7 @@ stays zod-only: no React, no server code.
 
 ## Plugin reference
 
-- Description: Check-thread-stall report kind's Debug → Reports summary view: one line naming how long the check thread stalled, its top owner and what it was mostly doing. The report itself is filed by the check runner through the report outbox — no collector here. Check-thread-stall report kind: validates the check runner's thread-stall payloads (trigger stall = one stall of ≥ 2 s, fingerprinted by its top owner; trigger total = a run whose stalls add up to ≥ 20 s, one row), filed through the report outbox, and renders a task naming the owner, its stacks, the waiting-vs-working split and the run's transcript. Warning, re-arms every 6 h.
+- Description: Check-thread-stall report kind's Debug → Reports summary view: one line naming how long the check thread stalled, its top owner and what it was mostly doing. The report itself is filed by the check runner through the report outbox — no collector here. Check-thread-stall report kind: validates the check runner's thread-stall payloads (trigger stall = one stall whose code held the thread ≥ 2 s — held, not merely late: a starved thread files nothing —, fingerprinted by its top owner; trigger total = a run whose stalls add up to ≥ 20 s held, one row), filed through the report outbox, and renders a task naming the owner, its stacks, the held-vs-starved split and the run's transcript. Warning, re-arms every 6 h.
 - Web:
   - Contributes: `Reports.KindView` → `CheckThreadStallSummary`
   - Uses: `reports.Reports`

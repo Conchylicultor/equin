@@ -3,6 +3,10 @@ import type {
   StackSampler,
 } from "@plugins/infra/plugins/stack-sampler/core";
 import {
+  readThreadCpu,
+  type ThreadCpuReading,
+} from "@plugins/packages/plugins/thread-cpu-clock/core";
+import {
   createKindTally,
   createOwnerTally,
   ownerOf,
@@ -53,14 +57,11 @@ export interface InFlight {
 
 /**
  * ms of process-wide CPU time over some window — `process.cpuUsage()`'s delta,
- * converted from µs. Process-WIDE, not main-thread-only: Bun 1.3 exposes no
- * per-thread CPU clock (measured, not assumed — `process.threadCpuUsage` and
- * `Bun.threadCpuUsage` don't exist), so a Worker running concurrently in the
- * same process (`type-check`'s own tsc workers) would inflate this. Still the
- * one signal that tells apart a stall the thread spent WORKING (`cpu` ≈
- * `lateMs`) from one it spent WAITING in the kernel (near-zero `cpu` — see a
- * stall's `kinds["blocking-io"]`) or simply NOT SCHEDULED by the OS at all
- * (near-zero `cpu` *and* near-zero `samples`, despite a long `lateMs`).
+ * converted from µs. Process-WIDE, not main-thread-only, so a Worker running
+ * concurrently in the same process (`type-check`'s own tsc workers) inflates
+ * it. Kept for context; the verdict on a stall — did code hold the thread, or
+ * did the OS not schedule it — is `StallHeld`, read off the main thread's own
+ * CPU clock (`packages/thread-cpu-clock`; Bun itself exposes none).
  */
 export interface StallCpu {
   /** ms of USER-mode CPU time over the window. */
@@ -84,6 +85,68 @@ function cpuDelta(from: NodeJS.CpuUsage, to: NodeJS.CpuUsage): StallCpu {
 
 function addCpu(a: StallCpu, b: StallCpu): StallCpu {
   return { userMs: a.userMs + b.userMs, systemMs: a.systemMs + b.systemMs };
+}
+
+/**
+ * The two CPU clocks a tick reads, both RAW absolute values: the process-wide
+ * `process.cpuUsage()` and the main thread's own CPU time
+ * (`packages/thread-cpu-clock`). Passed in, never read here, so `stepWatch`
+ * stays a pure function of its inputs.
+ */
+export interface WatchClocks {
+  process: NodeJS.CpuUsage;
+  thread: ThreadCpuReading;
+}
+
+/**
+ * How much of a stall's `lateMs` the thread was HELD by code, and how much it
+ * was STARVED — runnable, but not scheduled. A late tick cannot tell the two
+ * apart on its own: an agent's check pass runs at macOS background priority,
+ * and on a busy host its tick fires seconds late while the thread ran a fifth
+ * of that time (the 2026-10-29 audit: median process CPU ÷ `lateMs` ≈ 0.2). A
+ * stall report names code; only the held part is code's doing.
+ *
+ * - `threadCpuMs`: the main thread's own CPU time over the window — exact, and
+ *   no worker inflates it (unlike `cpu`).
+ * - `blockedMs`: time inside a synchronous syscall (`readFileSync`,
+ *   `spawnSync`…), which holds the thread but accrues no CPU: `lateMs` × the
+ *   share of `blocking-io` samples. An estimate from samples, and the only
+ *   one: a thread waiting in the kernel looks the same as a starved one to
+ *   every clock.
+ * - `heldMs = min(lateMs, threadCpuMs + blockedMs)`; `starvedMs` is the rest.
+ *
+ * `measured: false` where the platform has no thread CPU clock — never read
+ * as "nothing held".
+ */
+export type StallHeld =
+  | {
+      measured: true;
+      threadCpuMs: number;
+      blockedMs: number;
+      heldMs: number;
+      starvedMs: number;
+    }
+  | { measured: false };
+
+/** The held/starved split of one window — see `StallHeld`. */
+export function heldOf(
+  lateMs: number,
+  threadCpuMs: number | null,
+  kinds: Record<StallKind, number>,
+): StallHeld {
+  if (threadCpuMs === null) return { measured: false };
+  const samples = Object.values(kinds).reduce((sum, n) => sum + n, 0);
+  const blockedMs =
+    samples > 0 ? Math.round((lateMs * kinds["blocking-io"]) / samples) : 0;
+  const cpuMs = Math.round(threadCpuMs);
+  const heldMs = Math.min(lateMs, cpuMs + blockedMs);
+  return {
+    measured: true,
+    threadCpuMs: cpuMs,
+    blockedMs,
+    heldMs,
+    starvedMs: lateMs - heldMs,
+  };
 }
 
 /** One stretch where the thread could not run a timer for ≥ `STALL_MS`. */
@@ -121,6 +184,8 @@ export interface ThreadStall {
   leaves: Array<{ leaf: string; samples: number }>;
   /** How much of THIS stall's window the process spent on a CPU — see `StallCpu`. */
   cpu: StallCpu;
+  /** How much of `lateMs` code held the thread, vs the OS not scheduling it. */
+  held: StallHeld;
 }
 
 /** The watch's verdict on the run, handed back by `ProgressRun.finish()`. */
@@ -134,6 +199,15 @@ export interface ThreadSummary {
   stallCount: number;
   /** Σ `lateMs` over the stalls. */
   stalledMs: number;
+  /**
+   * Σ `held.heldMs` / `held.starvedMs` over the stalls, and the longest single
+   * `heldMs` — null when the platform has no thread CPU clock (see `StallHeld`).
+   */
+  held: {
+    heldMs: number;
+    starvedMs: number;
+    longestHeldMs: number;
+  } | null;
   /** Every sample drained over the run, stall or not. */
   samples: number;
   /**
@@ -144,8 +218,12 @@ export interface ThreadSummary {
    * and the tables report shares only.
    */
   rateHz: number | null;
-  /** Time spent inside the watch's own tick handler. */
+  /** Time spent inside the watch's own tick handler — on the thread's own CPU
+   *  clock when there is one (see `selfClock`): wall time would also count
+   *  every tick the OS preempted, which under background priority made the
+   *  watch look like it cost 4–20 s a run. */
   selfMs: number;
+  selfClock: "thread-cpu" | "wall";
   /**
    * Who used the thread over the WHOLE run, not only inside stalls. Work that
    * yields between pieces never trips a stall but still uses the thread up —
@@ -190,6 +268,8 @@ export interface WatchState {
   /** Absolute `process.cpuUsage()` as of the last tick — the baseline the next
    *  tick's delta is measured from. */
   lastCpuUsage: NodeJS.CpuUsage;
+  /** Absolute main-thread CPU ms as of the last tick; null without the clock. */
+  lastThreadCpuMs: number | null;
   /** Every tick's cpu delta, summed — `selfMs`'s sibling for CPU instead of
    *  watch overhead. */
   cpuTotal: StallCpu;
@@ -199,7 +279,7 @@ export function createWatchState(
   openedAt: number,
   roots: readonly string[],
   inFlight: InFlight,
-  cpuUsage: NodeJS.CpuUsage,
+  clocks: WatchClocks,
 ): WatchState {
   return {
     openedAt,
@@ -214,7 +294,8 @@ export function createWatchState(
     stalled: createOwnerTally(roots),
     stallWindowMs: 0,
     selfMs: 0,
-    lastCpuUsage: cpuUsage,
+    lastCpuUsage: clocks.process,
+    lastThreadCpuMs: clocks.thread.supported ? clocks.thread.ms : null,
     cpuTotal: { userMs: 0, systemMs: 0 },
   };
 }
@@ -256,15 +337,21 @@ export function stepWatch(
   now: number,
   samples: readonly StackSample[],
   inFlight: () => InFlight,
-  cpuUsage: NodeJS.CpuUsage,
+  clocks: WatchClocks,
 ): ThreadStall | null {
   const gap = now - state.lastTickAt;
   const lateMs = Math.max(0, gap - TICK_MS);
   state.longestLateMs = Math.max(state.longestLateMs, lateMs);
 
-  const cpu = cpuDelta(state.lastCpuUsage, cpuUsage);
+  const cpu = cpuDelta(state.lastCpuUsage, clocks.process);
   state.cpuTotal = addCpu(state.cpuTotal, cpu);
-  state.lastCpuUsage = cpuUsage;
+  state.lastCpuUsage = clocks.process;
+  const threadMs = clocks.thread.supported ? clocks.thread.ms : null;
+  const threadCpuMs =
+    threadMs !== null && state.lastThreadCpuMs !== null
+      ? Math.max(0, threadMs - state.lastThreadCpuMs)
+      : null;
+  state.lastThreadCpuMs = threadMs;
 
   const batch = lateMs >= STALL_MS ? createOwnerTally(state.roots) : null;
   const kindBatch = lateMs >= STALL_MS ? createKindTally(state.roots) : null;
@@ -281,20 +368,23 @@ export function stepWatch(
 
   let stall: ThreadStall | null = null;
   if (batch && kindBatch) {
+    const roundedLateMs = Math.round(lateMs);
+    const kinds = kindBatch.counts();
     stall = {
       offsetMs: Math.round(state.lastTickAt - state.openedAt),
       durationMs: Math.round(gap),
-      lateMs: Math.round(lateMs),
+      lateMs: roundedLateMs,
       running: [...state.window.running],
       bootstrap: [...state.window.bootstrap],
       samples: samples.length,
       owners: batch.top(STALL_OWNERS),
-      kinds: kindBatch.counts(),
+      kinds,
       leaves: kindBatch.topLeaves(STALL_LEAVES),
       cpu: {
         userMs: Math.round(cpu.userMs),
         systemMs: Math.round(cpu.systemMs),
       },
+      held: heldOf(roundedLateMs, threadCpuMs, kinds),
     };
     state.stalls.push(stall);
     state.windows.push({ from: state.lastTickAt + TICK_MS, to: now });
@@ -338,6 +428,9 @@ export function overlapMs(
 
 /** The summary `finish()` hands back — a snapshot, safe to keep. */
 export function summarizeWatch(state: WatchState): ThreadSummary {
+  const measured = state.stalls.flatMap((stall) =>
+    stall.held.measured ? [stall.held] : [],
+  );
   const stallSamples = state.stalled.samples;
   const rateHz =
     stallSamples > 0 && state.stallWindowMs > 0
@@ -347,9 +440,22 @@ export function summarizeWatch(state: WatchState): ThreadSummary {
     longestLateMs: Math.round(state.longestLateMs),
     stallCount: state.stalls.length,
     stalledMs: state.stalls.reduce((sum, stall) => sum + stall.lateMs, 0),
+    // The clock is per platform, so either every stall is measured or none is.
+    held:
+      state.lastThreadCpuMs === null
+        ? null
+        : {
+            heldMs: measured.reduce((sum, h) => sum + h.heldMs, 0),
+            starvedMs: measured.reduce((sum, h) => sum + h.starvedMs, 0),
+            longestHeldMs: measured.reduce(
+              (max, h) => Math.max(max, h.heldMs),
+              0,
+            ),
+          },
     samples: state.run.samples,
     rateHz: rateHz === null ? null : Math.round(rateHz * 10) / 10,
     selfMs: Math.round(state.selfMs),
+    selfClock: state.lastThreadCpuMs === null ? "wall" : "thread-cpu",
     owners: state.run.top(RUN_OWNERS).map((share) => ({
       ...share,
       ms: rateHz === null ? null : Math.round((share.samples / rateHz) * 1000),
@@ -362,6 +468,10 @@ export function summarizeWatch(state: WatchState): ThreadSummary {
     stallOwners: state.stalled.top(STALL_OWNERS),
     stalls: [...state.stalls],
   };
+}
+
+function readClocks(): WatchClocks {
+  return { process: process.cpuUsage(), thread: readThreadCpu() };
 }
 
 /** A live watch: the overlap query `checkEnded` asks, and the stop `finish()` calls. */
@@ -404,20 +514,27 @@ export function openThreadWatch(args: {
     args.startedAt,
     args.roots ?? repoRoots(),
     args.inFlight(),
-    process.cpuUsage(),
+    readClocks(),
   );
 
   const tick = (): void => {
     const startedAt = performance.now();
+    const clocks = readClocks();
     const stall = stepWatch(
       state,
       startedAt,
       sampler.drain(),
       args.inFlight,
-      process.cpuUsage(),
+      clocks,
     );
     if (stall) args.onStall(stall);
-    state.selfMs += performance.now() - startedAt;
+    // On the thread's own clock when there is one: preemption mid-tick is the
+    // OS's time, not the watch's cost.
+    const end = clocks.thread.supported ? readThreadCpu() : null;
+    state.selfMs +=
+      clocks.thread.supported && end?.supported
+        ? end.ms - clocks.thread.ms
+        : performance.now() - startedAt;
   };
 
   // `.unref()` for the heartbeat's reason: this timer exists to observe the

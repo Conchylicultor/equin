@@ -51,9 +51,18 @@ function stallLine(run: CheckRunProgress): string | null {
     .map(([owner, n]) => `${owner} ${Math.round((n / total) * 100)}%`)
     .join(", ");
   const secs = (ms: number): string => `${(ms / 1000).toFixed(1)} s`;
+  // Held, not late, is what code did (a starved thread is the OS's doing) —
+  // summed over the stalls that measured it.
+  const measured = run.stalls.flatMap((s) =>
+    s.held?.measured === true ? [s.held.heldMs] : [],
+  );
+  const held =
+    measured.length > 0
+      ? `, ${secs(measured.reduce((sum, ms) => sum + ms, 0))} held`
+      : "";
   return (
     `  thread stalled ${run.stalls.length}× so far ` +
-    `(longest ${secs(longest.lateMs)} at +${secs(longest.offsetMs)})` +
+    `(longest ${secs(longest.lateMs)} at +${secs(longest.offsetMs)}${held})` +
     (top ? ` — top: ${top}` : "")
   );
 }

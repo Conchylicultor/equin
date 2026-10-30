@@ -247,10 +247,11 @@ describe("reconstructRuns", () => {
             example: ["spin @ a.ts:1"],
           },
         ],
-        // This stall's record predates the kind/cpu split — null, never 0.
+        // This stall's record predates the kind/cpu/held split — null, never 0.
         kinds: null,
         leaves: null,
         cpu: null,
+        held: null,
       },
     ]);
     expect(run?.thread).toMatchObject({
@@ -260,6 +261,7 @@ describe("reconstructRuns", () => {
     });
     expect(run?.thread?.kinds).toBeNull();
     expect(run?.thread?.cpu).toBeNull();
+    expect(run?.thread?.held).toBeNull();
     expect(run?.done).toEqual({ at: at(10), elapsedMs: 10_000, allOk: true });
   });
 
@@ -273,6 +275,14 @@ describe("reconstructRuns", () => {
     };
     const cpu = { userMs: 12, systemMs: 3 };
     const leaves = [{ leaf: "readdirSync [native]", samples: 5 }];
+    const held = {
+      measured: true as const,
+      threadCpuMs: 100,
+      blockedMs: 700,
+      heldMs: 800,
+      starvedMs: 150,
+    };
+    const runHeld = { heldMs: 800, starvedMs: 150, longestHeldMs: 800 };
     const records: ProgressRecord[] = [
       { ...base, t: at(0), phase: "run", scope: null, requested: null },
       {
@@ -289,6 +299,7 @@ describe("reconstructRuns", () => {
         kinds,
         leaves,
         cpu,
+        held,
       },
       {
         ...base,
@@ -304,6 +315,7 @@ describe("reconstructRuns", () => {
         stallOwners: [],
         kinds,
         cpu,
+        held: runHeld,
       },
       { ...base, t: at(2), phase: "done", elapsedMs: 2_000, allOk: true },
     ];
@@ -313,6 +325,8 @@ describe("reconstructRuns", () => {
     expect(run?.stalls[0]?.cpu).toEqual(cpu);
     expect(run?.thread?.kinds).toEqual(kinds);
     expect(run?.thread?.cpu).toEqual(cpu);
+    expect(run?.stalls[0]?.held).toEqual(held);
+    expect(run?.thread?.held).toEqual(runHeld);
   });
 
   test("a run recorded before the watch has no thread and no stalls, not an empty summary", () => {

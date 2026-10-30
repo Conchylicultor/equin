@@ -282,6 +282,7 @@ escape is a `sanctioned` exemption for a declaration desktop-only by policy.
     - `packages/single-flight` (1 debt)
     - `packages/sleep-clock` (1 debt)
     - `packages/spawn-priority` (3 debt)
+    - `packages/thread-cpu-clock` (1 debt)
     - `packages/ticket-line` (1 debt)
     - `plugin-meta/barrel-import` (1 debt)
     - `plugin-meta/parse-utils` (1 debt)

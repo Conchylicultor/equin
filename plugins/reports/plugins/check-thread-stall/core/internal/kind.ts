@@ -9,15 +9,21 @@ import { z } from "zod";
 export const CHECK_THREAD_STALL_KIND = "check-thread-stall";
 
 /**
- * One stall at least this long files a `stall` report. The thresholds are the
- * "Check pass speed" track's TARGETS, not today's numbers (stretch: the longest
- * stall under 2 s; the total under 20 s) — so a report means "this pass missed
- * the target", and once the remaining stalls are fixed, a new report means a
- * regression.
+ * A stall whose code HELD the thread at least this long files a `stall` report
+ * — held, not late: a tick also fires late when the OS does not schedule the
+ * thread (a check pass at background priority on a busy host), and that is no
+ * code's doing. Held is the thread's own CPU time plus its synchronous-syscall
+ * wait (`StallHeld` in the check runner's thread watch). Where the platform has
+ * no thread CPU clock, `lateMs` is compared instead.
+ *
+ * The thresholds are the "Check pass speed" track's TARGETS, not today's
+ * numbers (stretch: the longest stall under 2 s; the total under 20 s) — so a
+ * report means "this pass missed the target", and once the remaining stalls
+ * are fixed, a new report means a regression.
  */
 export const STALL_REPORT_MS = 2_000;
 
-/** A run whose stalls add up to at least this files one `total` report. See above. */
+/** A run whose stalls add up to at least this much HELD time files one `total` report. See above. */
 export const TOTAL_REPORT_MS = 20_000;
 
 /** One owner of the thread, with the first frames of one real stack. */
@@ -39,6 +45,31 @@ export type CheckThreadStallOwner = z.infer<typeof OwnerSchema>;
 const KindsSchema = z.record(z.string(), z.number());
 
 const CpuSchema = z.object({ userMs: z.number(), systemMs: z.number() });
+
+/**
+ * How much of a stall code held the thread vs the OS starved it. Optional on
+ * read only: rows and outbox entries written before the split lack it; the
+ * check runner always writes it.
+ */
+const HeldSchema = z.discriminatedUnion("measured", [
+  z.object({
+    measured: z.literal(true),
+    /** The main thread's own CPU time over the stall. */
+    threadCpuMs: z.number(),
+    /** Estimated time in a synchronous syscall (blocking-io sample share × lateMs). */
+    blockedMs: z.number(),
+    heldMs: z.number(),
+    starvedMs: z.number(),
+  }),
+  /** No thread CPU clock on the writer's platform. */
+  z.object({ measured: z.literal(false) }),
+]);
+
+const RunHeldSchema = z.object({
+  heldMs: z.number(),
+  starvedMs: z.number(),
+  longestHeldMs: z.number(),
+});
 
 const RunFields = {
   /** The checkout the check run was checking. */
@@ -66,6 +97,7 @@ export const CheckThreadStallSchema = z.object({
   owners: z.array(OwnerSchema),
   kinds: KindsSchema,
   cpu: CpuSchema,
+  held: HeldSchema.optional(),
 });
 
 /** A run whose stalls totalled ≥ `TOTAL_REPORT_MS`. One row, fingerprint `total`. */
@@ -81,6 +113,9 @@ export const CheckThreadTotalSchema = z.object({
   /** Over the whole run, stall or not. */
   kinds: KindsSchema,
   cpu: CpuSchema,
+  /** Σ held / starved over the stalls; null where the writer had no thread
+   *  CPU clock, absent on a row written before the split. */
+  held: RunHeldSchema.nullable().optional(),
 });
 
 export const CheckThreadStallPayloadSchema = z.discriminatedUnion("trigger", [
@@ -131,14 +166,17 @@ export function formatSeconds(ms: number): string {
 export function checkThreadStallMessage(d: CheckThreadStallPayload): string {
   const kind = dominantKind(d.kinds);
   if (d.trigger === "stall") {
-    return (
-      `check thread stalled ${formatSeconds(d.lateMs)} — ${d.topOwner}` +
-      (kind !== null ? ` (${kind})` : "")
-    );
+    const head =
+      d.held?.measured === true
+        ? `check thread held ${formatSeconds(d.held.heldMs)} (of a ${formatSeconds(d.lateMs)} stall)`
+        : `check thread stalled ${formatSeconds(d.lateMs)}` +
+          (d.held?.measured === false ? " (held time unmeasured)" : "");
+    return `${head} — ${d.topOwner}` + (kind !== null ? ` (${kind})` : "");
   }
   const top = d.stallOwners[0]?.owner;
-  return (
-    `check run stalled ${formatSeconds(d.stalledMs)} in total over ${d.stallCount} stalls` +
-    (top !== undefined ? ` — mostly ${top}` : "")
-  );
+  const head = d.held
+    ? `check run held its thread ${formatSeconds(d.held.heldMs)} over ${d.stallCount} stalls ` +
+      `(${formatSeconds(d.stalledMs)} late)`
+    : `check run stalled ${formatSeconds(d.stalledMs)} in total over ${d.stallCount} stalls`;
+  return head + (top !== undefined ? ` — mostly ${top}` : "");
 }

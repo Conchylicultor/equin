@@ -12,7 +12,7 @@ import {
   type OwnerShare,
   type StallKind,
 } from "./thread-attribution";
-import type { StallCpu, ThreadSummary } from "./thread-watch";
+import type { StallCpu, StallHeld, ThreadSummary } from "./thread-watch";
 
 /**
  * One settled check, as the transcript renders it. The runner's own outcome type
@@ -140,6 +140,25 @@ function cpuLine(cpu: StallCpu, lateMs: number): string {
 }
 
 /**
+ * `held 2.1 s (thread CPU 1.8 s + sync I/O 0.3 s), starved 6.9 s` — how much of
+ * the stall code held the thread, versus the OS not scheduling it (see
+ * `StallHeld`). Unlike `cpuLine`, the thread's own time: no Worker inflates it.
+ */
+function heldLine(held: StallHeld): string {
+  if (!held.measured)
+    return "unmeasured (no thread CPU clock on this platform)";
+  return (
+    `held ${seconds(held.heldMs)} (thread CPU ${seconds(held.threadCpuMs)} + ` +
+    `sync I/O ${seconds(held.blockedMs)}), starved ${seconds(held.starvedMs)}`
+  );
+}
+
+/** `, 3.2 s held` — the run's held total for a summary line; empty without a clock. */
+function heldPart(thread: ThreadSummary): string {
+  return thread.held === null ? "" : `, ${seconds(thread.held.heldMs)} held`;
+}
+
+/**
  * The run's thread block: a summary line, who used the thread over the whole
  * run, and one entry per stall with its owners and a real stack for each. This
  * is the full-detail copy — the progress log keeps 3 owners and 5 frames per
@@ -163,11 +182,11 @@ export function renderThreadBlock(thread: ThreadSummary): string[] {
     thread.stallCount === 0
       ? "no stall"
       : `${thread.stallCount} stall${thread.stallCount === 1 ? "" : "s"}, ` +
-        `${seconds(thread.stalledMs)} stalled (longest ${seconds(longestStallMs(thread))})`;
+        `${seconds(thread.stalledMs)} stalled${heldPart(thread)} (longest ${seconds(longestStallMs(thread))})`;
   lines.push(
     `${THREAD_BLOCK_HEAD}${stalledPart}; longest late tick ${thread.longestLateMs}ms; ` +
       `${thread.samples} samples${rate === null ? "" : ` at ${rate} Hz`}; ` +
-      `watch cost ${thread.selfMs}ms`,
+      `watch cost ${thread.selfMs}ms${thread.selfClock === "wall" ? " (wall)" : ""}`,
   );
 
   lines.push("  who used the thread (whole run):");
@@ -187,6 +206,7 @@ export function renderThreadBlock(thread: ThreadSummary): string[] {
     );
     lines.push(`    waiting on: ${kindsLine(stall.kinds, stall.samples)}`);
     lines.push(`    on CPU: ${cpuLine(stall.cpu, stall.lateMs)}`);
+    lines.push(`    thread: ${heldLine(stall.held)}`);
     if (stall.running.length > 0)
       lines.push(`    running: ${stall.running.join(", ")}`);
     if (stall.bootstrap.length > 0)
@@ -220,7 +240,7 @@ export function renderStallLine(
   const owners = headline(thread.stallOwners, stallSamples, 2);
   return (
     `⚠ check thread stalled ${seconds(longestStallMs(thread))} ` +
-    `(longest of ${thread.stallCount}, ${seconds(thread.stalledMs)} total)` +
+    `(longest of ${thread.stallCount}, ${seconds(thread.stalledMs)} total${heldPart(thread)})` +
     (owners ? ` — mostly ${owners}` : "") +
     "." +
     (detailsPath ? ` Details: ${detailsPath}` : "")

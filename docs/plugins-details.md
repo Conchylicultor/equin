@@ -27319,6 +27319,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/single-flight` (1 debt)
               - `packages/sleep-clock` (1 debt)
               - `packages/spawn-priority` (3 debt)
+              - `packages/thread-cpu-clock` (1 debt)
               - `packages/ticket-line` (1 debt)
               - `plugin-meta/barrel-import` (1 debt)
               - `plugin-meta/parse-utils` (1 debt)
@@ -27341,7 +27342,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons/icon-sets` (1 debt)
         - **`checks`** — Check runner and built-in checks for ./equin check
           - Core:
-            - Uses: 52 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
+            - Uses: 54 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
               - `framework/tooling` ×10
               - `framework/tooling/exempt` ×7
               - `reports/check-thread-stall` ×7
@@ -27352,6 +27353,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/parse-utils` ×3
               - `framework/tooling/collected-dir` ×2
               - `packages/macrotask-yield` ×2
+              - `packages/thread-cpu-clock` ×2
               - `reports/outbox` ×2
               - `infra/file-sink.defineFileSink`
               - `packages/flock.flockTry`
@@ -35135,6 +35137,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hashHex`
           - `sha1Hex`
           - `sha256Hex`
+    - **`thread-cpu-clock`** — CPU time of the calling thread (CLOCK_THREAD_CPUTIME_ID), read through bun:ffi on macOS and Linux: how long THIS thread actually ran, as opposed to how long it waited to be scheduled. Says so where it cannot tell.
+      - Cross-plugin:
+        - Imported by: `framework/tooling/checks`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `core/internal/thread-cpu-clock.ts` (debt)
+      - Core:
+        - Exports (types): `ThreadCpuReading`
+        - Exports (values): `readThreadCpu`
     - **`ticket-line`** — Crash-safe cross-process FIFO line: createTicketLine(dir).join() resolves once every caller that joined earlier has left, in arrival order — each ticket a flocked file named by the machine-wide monotonic clock, each waiter blocked (push-based, one flock-wait child) on the ticket just ahead of it, so a dead waiter's place frees itself.
       - Core:
         - Uses:
@@ -48339,7 +48349,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `caretFlightFingerprint`
           - `CaretFlightPayloadSchema`
-    - **`check-thread-stall`** — Check-thread-stall report kind's Debug → Reports summary view: one line naming how long the check thread stalled, its top owner and what it was mostly doing. The report itself is filed by the check runner through the report outbox — no collector here. Check-thread-stall report kind: validates the check runner's thread-stall payloads (trigger stall = one stall of ≥ 2 s, fingerprinted by its top owner; trigger total = a run whose stalls add up to ≥ 20 s, one row), filed through the report outbox, and renders a task naming the owner, its stacks, the waiting-vs-working split and the run's transcript. Warning, re-arms every 6 h.
+    - **`check-thread-stall`** — Check-thread-stall report kind's Debug → Reports summary view: one line naming how long the check thread stalled, its top owner and what it was mostly doing. The report itself is filed by the check runner through the report outbox — no collector here. Check-thread-stall report kind: validates the check runner's thread-stall payloads (trigger stall = one stall whose code held the thread ≥ 2 s — held, not merely late: a starved thread files nothing —, fingerprinted by its top owner; trigger total = a run whose stalls add up to ≥ 20 s held, one row), filed through the report outbox, and renders a task naming the owner, its stacks, the held-vs-starved split and the run's transcript. Warning, re-arms every 6 h.
       - Web:
         - Contributes: `Reports.KindView` → `CheckThreadStallSummary`
         - Uses: `reports.Reports`

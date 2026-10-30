@@ -236,11 +236,13 @@ Where it lands:
 - **`./equin check --status`**: a `thread stalled N× so far` line under
   each open run.
 - **Debug → Reports and the bell**, for a stall or run that misses the track's
-  targets ([`core/stall-report.ts`](core/stall-report.ts)). One stall of ≥ 2 s
-  files a `check-thread-stall` report the moment it closes, so a killed run
-  still reports; one row per top owner, each new stall by it bumping the
-  count. A run whose stalls add up to ≥ 20 s files one more at `finish()`, on
-  a single `total` row. The thresholds are the targets (longest stall under
+  targets ([`core/stall-report.ts`](core/stall-report.ts)), judged on **held**
+  time, never on lateness (see "Held vs starved" below). One stall whose code
+  held the thread ≥ 2 s files a `check-thread-stall` report the moment it
+  closes, so a killed run still reports; one row per top owner, each new stall
+  by it bumping the count. A run whose stalls add up to ≥ 20 s held files one
+  more at `finish()`, on a single `total` row. Without a thread CPU clock (an
+  unsupported platform) there is no split, and lateness is judged instead. The thresholds are the targets (longest stall under
   2 s, total under 20 s), not today's numbers, so both fire on most full
   passes until the remaining stalls are fixed. Filing is async and can never
   change the verdict; the runner awaits it before returning so an exiting
@@ -254,6 +256,21 @@ Where it lands:
   native frames left out). **Main drops the report when it has changed any of
   those files since that merge-base** — the stall may already be fixed there —
   and files it otherwise, including a stall this branch itself introduced.
+
+**Held vs starved** (`StallHeld` in `core/thread-watch.ts`). A tick fires late
+for two reasons a timer cannot tell apart: code did not yield (**held**), or the
+thread was runnable and the OS did not schedule it (**starved**). A check pass
+inside a build runs at macOS background priority, so on a busy host most of its
+lateness is starvation: the 2026-10-29 audit found process CPU ≈ 0.2 × `lateMs`
+across 478 stalls, the watcher itself a "top owner" 57 times, and reports
+filing at the rate builds ran rather than at the rate code changed. So each
+stall reads the main thread's own CPU clock (`packages/thread-cpu-clock`) and
+splits `lateMs` into `heldMs = threadCpuMs + blockedMs` (`blockedMs`: `lateMs`
+× the `blocking-io` sample share — a sync syscall holds the thread without CPU)
+and `starvedMs`, the rest. Every sink carries both; only held time files a
+report. The watch's own `selfMs` is on the same clock (`selfClock`), so
+preemption mid-tick no longer reads as watch cost. Per-check `stalledMs` and
+`overlapMs` still measure LATENESS: that is what a timer inside a check sees.
 
 **Reading an owner** ([`core/thread-attribution.ts`](core/thread-attribution.ts)):
 
@@ -277,13 +294,11 @@ Where it lands:
 each sample's innermost frame into `blocking-io` (a native `*Sync` frame — the
 class this project exists to remove), `process` (Bun's spawn machinery),
 `module-load` (the loader's own frames), `cpu` (ordinary JS), or `native`
-(unclassified, never dropped). Paired with `cpu` (the `process.cpuUsage()`
-delta over the same window — process-WIDE, not main-thread-only: Bun 1.3 has
-no per-thread CPU clock, so a concurrently-busy Worker, e.g. `type-check`'s,
-can inflate it), this tells apart a stall spent WORKING (`cpu` ≈ `lateMs`) from
-one spent WAITING in the kernel (`blocking-io`-heavy, near-zero `cpu`) or not
-scheduled by the OS at all (near-zero `cpu` *and* near-zero `samples`). The
-transcript prints one line of each per stall.
+(unclassified, never dropped). Its `blocking-io` share is what
+`StallHeld.blockedMs` is estimated from; `held` itself says how much of the
+stall was code's at all. `cpu` (the `process.cpuUsage()` delta, process-WIDE so
+a busy Worker inflates it) is kept as context. The transcript prints one line
+of each per stall.
 
 A sync function whose last act is `return heavy()` loses its frame to JSC's
 proper tail calls, and its samples go to the next frame out. An `async run()`
@@ -355,7 +370,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
 
 - Description: Check runner and built-in checks for ./equin check
 - Core:
-  - Uses: 52 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 54 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/tooling` ×10
     - `framework/tooling/exempt` ×7
     - `reports/check-thread-stall` ×7
@@ -366,6 +381,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `plugin-meta/parse-utils` ×3
     - `framework/tooling/collected-dir` ×2
     - `packages/macrotask-yield` ×2
+    - `packages/thread-cpu-clock` ×2
     - `reports/outbox` ×2
     - `infra/file-sink.defineFileSink`
     - `packages/flock.flockTry`

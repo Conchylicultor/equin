@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-packages-thread-cpu-clock",
+  "private": true,
+  "version": "0.0.1",
+  "description": "CPU time of the calling thread (CLOCK_THREAD_CPUTIME_ID), read through bun:ffi on macOS and Linux: how long THIS thread actually ran, as opposed to how long it waited to be scheduled. Says so where it cannot tell."
+}
