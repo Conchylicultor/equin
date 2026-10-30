@@ -10,6 +10,7 @@ import {
   unwrapPastedContent,
   userPromptText,
   questionAnswerText,
+  mergedSendUuids,
   tokenUsageOf,
   QuestionAnswerSchema,
   requestConfigChanges,
@@ -184,11 +185,23 @@ function humanQueuedPrompt(
   };
 }
 
+// The merged sends ride on a row only beside the line uuid they share it with
+// (a row with no uuid names no line), and only when there are any.
+function mergedOf(
+  uuid: string | undefined,
+  merged: string[],
+): { mergedSendUuids?: string[] } {
+  return uuid !== undefined && merged.length > 0
+    ? { mergedSendUuids: merged }
+    : {};
+}
+
 async function pushTextWithImages(
   text: string,
   at: string,
   out: JsonlEvent[],
   uuid: string | undefined,
+  merged: string[],
   readImage: TranscriptImageReader,
 ): Promise<void> {
   // Local regex instance — the g flag stores match state in lastIndex, so a
@@ -230,7 +243,15 @@ async function pushTextWithImages(
   if (segments.length === 0) return;
 
   if (!hasImages) {
-    if (text.trim()) out.push({ kind: "user-text", at, text, uuid });
+    if (text.trim()) {
+      out.push({
+        kind: "user-text",
+        at,
+        text,
+        uuid,
+        ...mergedOf(uuid, merged),
+      });
+    }
     return;
   }
 
@@ -239,7 +260,14 @@ async function pushTextWithImages(
     .map((s) => s.value)
     .join("");
 
-  out.push({ kind: "user-text", at, text: plainText, segments, uuid });
+  out.push({
+    kind: "user-text",
+    at,
+    text: plainText,
+    segments,
+    uuid,
+    ...mergedOf(uuid, merged),
+  });
 }
 
 interface RawBlock {
@@ -456,6 +484,8 @@ export async function buildJsonlEvents(
     ts: string,
     promptUuid: string | undefined,
     lineUuid: string | undefined,
+    // The other sends the CLI merged into this line (`mergedSendUuids`).
+    merged: string[],
   ): Promise<void> => {
     // First, before anything looks for a tag: the CLI wraps whatever it took
     // as a paste, so a relay envelope or a task-notification pasted into the
@@ -466,7 +496,13 @@ export async function buildJsonlEvents(
     // says the same, so the line carries no rewind cut point).
     const event = unwrapEventTurn(body);
     if (event !== null) {
-      events.push({ kind: "event-turn", at: ts, text: event, uuid: lineUuid });
+      events.push({
+        kind: "event-turn",
+        at: ts,
+        text: event,
+        uuid: lineUuid,
+        ...mergedOf(lineUuid, merged),
+      });
       return;
     }
     if (!seenPreprompt) {
@@ -495,7 +531,14 @@ export async function buildJsonlEvents(
         : afterTeammates;
     const remaining = extractTaskNotifications(body, ts, events);
     if (remaining.length > 0) {
-      await pushTextWithImages(remaining, ts, events, promptUuid, readImage);
+      await pushTextWithImages(
+        remaining,
+        ts,
+        events,
+        promptUuid,
+        merged,
+        readImage,
+      );
     }
   };
 
@@ -586,7 +629,13 @@ export async function buildJsonlEvents(
         uuid && userPromptText(obj) !== null ? uuid : undefined;
       const content = msg.content;
       if (typeof content === "string") {
-        await processUserText(content, ts, promptUuid, uuid ?? undefined);
+        await processUserText(
+          content,
+          ts,
+          promptUuid,
+          uuid ?? undefined,
+          mergedSendUuids(obj),
+        );
       } else if (Array.isArray(content)) {
         const questionAnswer = extractQuestionAnswer(
           obj,
@@ -630,6 +679,7 @@ export async function buildJsonlEvents(
               ts,
               promptUuid,
               uuid ?? undefined,
+              mergedSendUuids(obj),
             );
           } else if (
             // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
@@ -818,7 +868,13 @@ export async function buildJsonlEvents(
         if (queued) {
           const prev = events.at(-1)?.at;
           const at = prev && Date.parse(prev) > Date.parse(ts) ? prev : ts;
-          await processUserText(queued.prompt, at, queued.uuid, queued.uuid);
+          await processUserText(
+            queued.prompt,
+            at,
+            queued.uuid,
+            queued.uuid,
+            [],
+          );
           continue;
         }
         if (subtype === "prompt_snapshot" && !seenPreprompt) {

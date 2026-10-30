@@ -85,7 +85,10 @@ too (`/compact` writes `<command-name>/compact…` under the turn's uuid), and a
 prompt a busy agent folded into its running turn (the CLI writes a
 `queued_command` attachment, which the transcript parser makes the user's
 message under its `source_uuid`; see turn-ledger's "The transcript line a turn
-becomes"). No "newest event is later" guess: a reply or another turn landing
+becomes"), and a send the CLI merged into another's line (sends queued
+together are dequeued as ONE line under the first send's uuid; the rest ride
+on it as `mergedSendUuids`, which the parser carries on the event). No
+"newest event is later" guess: a reply or another turn landing
 after the confirmation says nothing about this line. And since the agent
 confirms a turn when its CLI **starts** it, not when it queues it, a queued
 turn stays an echo (Queued) until its line is due. A turn nothing confirmed

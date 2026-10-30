@@ -107,6 +107,7 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
     - `hookRecordOf`
     - `isInterruptContent`
     - `JsonlEventSchema`
+    - `mergedSendUuids`
     - `PREPROMPT_TAG`
     - `QuestionAnswerSchema`
     - `questionAnswerText`

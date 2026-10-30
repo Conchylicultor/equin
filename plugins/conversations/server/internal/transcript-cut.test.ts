@@ -105,6 +105,20 @@ describe("cutTranscriptAt", () => {
     });
   });
 
+  test("names the sends the CLI merged into the chosen message's line", () => {
+    const transcript = lines([
+      user("u1", null, "first"),
+      assistant("a1", "u1", "one"),
+      user("u2", "a1", "second\nthird", { mergedSendUuids: ["s3"] }),
+    ]);
+    const merged = cutTranscriptAt(transcript, "u2");
+    if (!merged.ok) throw new Error(merged.reason);
+    expect(merged.mergedSends).toEqual(["s3"]);
+    const plain = cutTranscriptAt(transcript, "u1");
+    if (!plain.ok) throw new Error(plain.reason);
+    expect(plain.mergedSends).toEqual([]);
+  });
+
   test("refuses an unknown uuid", () => {
     expect(cutTranscriptAt(lines([user("u1", null, "first")]), "nope")).toEqual(
       {

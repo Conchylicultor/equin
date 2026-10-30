@@ -181,6 +181,31 @@ describe("buildJsonlEvents — an event turn", () => {
     expect(events.map((e) => e.kind)).toEqual(["event-turn"]);
   });
 
+  test("sends merged into one line carry every send's uuid", async () => {
+    // CLI 2.1.310 dequeued two event turns sent 2 ms apart as ONE line: its
+    // uuid is the first send's, the second's only in `mergedSendUuids`.
+    const events = await buildJsonlEvents(
+      [
+        {
+          type: "user",
+          uuid: "first-send",
+          parentUuid: null,
+          timestamp: AT,
+          mergedSendUuids: ["second-send"],
+          message: { role: "user", content: `${ENVELOPE}\n${ENVELOPE}` },
+        },
+      ],
+      noImages,
+    );
+    expect(events).toEqual([
+      expect.objectContaining({
+        kind: "event-turn",
+        uuid: "first-send",
+        mergedSendUuids: ["second-send"],
+      }),
+    ]);
+  });
+
   test("folded into a running turn, under its source_uuid", async () => {
     const events = await buildJsonlEvents(
       [

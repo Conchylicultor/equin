@@ -66,6 +66,21 @@ describe("transcriptShows", () => {
     ).toBe(true);
   });
 
+  test("a send the CLI merged into another's line, by that line's merged uuids", () => {
+    // Two event turns queued together, dequeued as one line under the first
+    // send's uuid: the second has no line of its own.
+    const merged: JsonlEvent = {
+      kind: "event-turn",
+      at: at(600),
+      text: "two envelopes",
+      uuid: "first",
+      mergedSendUuids: ["mine"],
+    };
+    expect(
+      transcriptShows(turn("accepted", 500), [line("before", 100), merged]),
+    ).toBe(true);
+  });
+
   test("never with no transcript loaded", () => {
     expect(transcriptShows(turn("accepted", 500), [])).toBe(false);
   });

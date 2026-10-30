@@ -902,16 +902,20 @@ export async function previewRewind(
  * a submit the status reconciler weighs). Later turns first, by send time; then
  * the cut message itself, by its transcript line's uuid — the row the agent
  * confirmed as that line (the row predates its own line, so the time cut alone
- * misses it). A cut at an AskUserQuestion answer names a tool result, which no
- * turn row is.
+ * misses it), and any send merged into that line. A cut at an AskUserQuestion
+ * answer names a tool result, which no turn row is.
  */
 async function returnCutTurns(
   conversationId: string,
-  cut: { messageAt: Date | null },
+  cut: { messageAt: Date | null; mergedSends: readonly string[] },
   cutUuid: string,
 ): Promise<void> {
   if (cut.messageAt) await returnTurnsSince(conversationId, cut.messageAt);
-  await returnTurnByPromptUuid(conversationId, cutUuid);
+  // The line's own send, then every send the CLI merged into it — confirmed
+  // under its own uuid, but written nowhere else.
+  for (const uuid of [cutUuid, ...cut.mergedSends]) {
+    await returnTurnByPromptUuid(conversationId, uuid);
+  }
 }
 
 /**

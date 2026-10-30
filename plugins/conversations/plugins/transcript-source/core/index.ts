@@ -22,6 +22,7 @@ export { taskStopTimes } from "./task-stop";
 export { unwrapPastedContent } from "./pasted-content";
 export { questionAnswerText, userPromptText } from "./user-prompt";
 export { activeLineUuids } from "./branch-filter";
+export { mergedSendUuids } from "./merged-sends";
 export type { TeammateMessage } from "./relay";
 export {
   unwrapRelayEnvelopes,

@@ -133,7 +133,13 @@ Code writes under it (measured over 1,141 sdk turns, 2026-10-25):
   turn** at a tool boundary (`queue-operation remove` — 39 of 1,141), no user
   line at all: a `queued_command` attachment whose `source_uuid` is
   `prompt_uuid`. The transcript parser (`transcript-source`) turns it into the
-  user's own message under that uuid.
+  user's own message under that uuid;
+- for sends queued together and **dequeued as one line** (CLI 2.1.310: two
+  `event` turns sent 2 ms apart), one user line under the FIRST send's uuid,
+  holding every send's text, with the others' `prompt_uuid`s in its
+  `mergedSendUuids` — those sends have no line of their own. The parser
+  carries the list on the event (`mergedSendUuids`), and a rewind cutting at
+  the line returns every send it holds.
 
 So "the transcript shows this turn" is one uuid lookup over the parsed user
 messages — the web's echo retirement (`pending-turn`'s `transcriptShows`).

@@ -162,6 +162,14 @@ export const JsonlEventSchema = z.discriminatedUnion("kind", [
      * a delivered background report, a relayed message).
      */
     uuid: z.string().optional(),
+    /**
+     * The other sends the CLI merged into this line (its `mergedSendUuids`):
+     * they have no line of their own, so the turn ledger's confirmation of
+     * each names a uuid only this list carries. Present only beside `uuid`.
+     */
+    mergedSendUuids: wholeList(z.string(), {
+      reason: "the prompts one dequeue merged into one line — a handful",
+    }).optional(),
   }),
   z.object({
     kind: z.literal("user-image"),
@@ -287,6 +295,14 @@ export const JsonlEventSchema = z.discriminatedUnion("kind", [
      * the turn ledger's confirmation names, so a pending echo retires on it.
      */
     uuid: z.string().optional(),
+    /**
+     * The other sends the CLI merged into this line (its `mergedSendUuids`):
+     * they have no line of their own, so the turn ledger's confirmation of
+     * each names a uuid only this list carries. Present only beside `uuid`.
+     */
+    mergedSendUuids: wholeList(z.string(), {
+      reason: "the prompts one dequeue merged into one line — a handful",
+    }).optional(),
   }),
   z.object({
     kind: z.literal("task-notification"),

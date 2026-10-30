@@ -22,6 +22,9 @@ import type { LedgerTurn } from "@plugins/conversations/plugins/turn-ledger/core
 // uuid, which the transcript parser turns into the user's own message under
 // that uuid. Either way: a `user-text` event carrying `promptUuid` — or, for
 // an `event` turn (typed in the ledger's envelope), an `event-turn` event.
+// Sends queued together can be dequeued as ONE line: it carries the first
+// send's uuid, the rest under `mergedSendUuids` — so a turn's line is the
+// event carrying its uuid in either place.
 //
 // The agent confirms a turn when its CLI STARTS it (not when it is queued),
 // so `submittedAt` is never earlier than the turn's place in the transcript:
@@ -46,7 +49,8 @@ export function transcriptShows(
   return events.some(
     (event) =>
       (event.kind === "user-text" || event.kind === "event-turn") &&
-      event.uuid === promptUuid,
+      (event.uuid === promptUuid ||
+        event.mergedSendUuids?.includes(promptUuid) === true),
   );
 }
 

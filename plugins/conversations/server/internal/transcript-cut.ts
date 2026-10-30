@@ -1,5 +1,6 @@
 import {
   activeLineUuids,
+  mergedSendUuids,
   questionAnswerText,
   userPromptText,
 } from "@plugins/conversations/plugins/transcript-source/core";
@@ -37,6 +38,11 @@ export type CutResult =
       messageText: string;
       /** When the CLI wrote the removed message, or null when its line has no time. */
       messageAt: Date | null;
+      /**
+       * The other sends the CLI merged into the removed message's line
+       * (`mergedSendUuids`): they leave with it, though no line names them.
+       */
+      mergedSends: string[];
       losses: CutLosses;
     }
   | { ok: false; reason: CutRefusal };
@@ -308,6 +314,7 @@ function cutAt(
     startsOver,
     messageText,
     messageAt: stamp === null ? null : new Date(stamp),
+    mergedSends: mergedSendUuids(target.obj),
     losses: { laterUserTurns, lostReports, unreported },
   };
 }
