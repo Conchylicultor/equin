@@ -1852,7 +1852,9 @@ UI: **"Properties"** in View settings (`MdTune`) "Current view" — a `view`-sco
 
 - sortable rows with an eye toggle, "Show all fields";
 - over a view that declares slots: one band per slot (Lead, Title, …,
-  Hidden), each row's "Show in…" page moving the field to a slot
+  Hidden) — a field the user hid stays listed (faint) in the band it would be
+  drawn in if shown (`propertyBands`), so the eye toggles in place; Hidden
+  lists only what the view cannot draw — each row's "Show in…" page moving the field to a slot
   (`PropertyEntry.slot`, `moveToSlot`), and "Reset to the view's layout"
   (`resetSlots`);
 - applicable with >1 field;

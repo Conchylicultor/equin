@@ -280,3 +280,48 @@ export function dropOrderOf<TRow>(
   if (slot !== "trail" && slot !== "edge") return undefined;
   return -(placement.priority.get(field.id) ?? 0);
 }
+
+/**
+ * The band each field is listed under in the Properties editor: a shown field's
+ * slot, and for a field the user switched off, the slot it would take were it
+ * shown again — so hiding a field toggles its state in place instead of moving
+ * it to the Hidden band, and showing it puts it back where it was listed. Only
+ * a field the view cannot draw even when shown (no room, no slot taking its
+ * kind) is listed under Hidden.
+ *
+ * `placed` is the view's placement over `input.properties`; each hidden
+ * field's home is a placement over the same list with just that field shown —
+ * exactly what its eye would write.
+ */
+export function propertyBands<TRow>(
+  input: PlacementInput<TRow>,
+  placed: Placement<TRow>,
+  items: readonly {
+    field: FieldDef<TRow>;
+    visible: boolean;
+    slot?: Slot;
+  }[],
+): ReadonlyMap<string, Slot> {
+  const bands = new Map<string, Slot>();
+  for (const slot of SLOTS) {
+    for (const f of placed.slots[slot]) bands.set(f.id, slot);
+  }
+  const entries = (shownId: string): PropertyEntry[] =>
+    items.map((i) => ({
+      id: i.field.id,
+      ...(i.visible || i.field.id === shownId ? {} : { hidden: true as const }),
+      ...(i.slot ? { slot: i.slot } : {}),
+    }));
+  for (const item of items) {
+    if (item.visible) continue;
+    const home = resolvePlacement({
+      ...input,
+      properties: entries(item.field.id),
+    });
+    const slot = SLOTS.find((s) =>
+      home.slots[s].some((f) => f.id === item.field.id),
+    );
+    bands.set(item.field.id, slot ?? "hidden");
+  }
+  return bands;
+}

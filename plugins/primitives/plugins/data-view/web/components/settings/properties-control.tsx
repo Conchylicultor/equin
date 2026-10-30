@@ -21,8 +21,7 @@ import {
   type PropertiesController,
   type PropertyItem,
 } from "../../internal/use-properties-controller";
-import { usePlacement } from "../../internal/use-placement";
-import type { Placement } from "../../internal/placement";
+import { usePlacement, usePropertyBands } from "../../internal/use-placement";
 import { FieldSections } from "../../internal/field-sections";
 import { useDataViewControls } from "../controls/controls-context";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -67,9 +66,11 @@ const NO_SLOTS: ViewSlots = {};
  * row carries actions, which is how it once looked pressable and did nothing.
  * A shown field's eye waits for the hover with its other actions; a hidden
  * field's eye-off rests (`restingActions`) and its label is drawn `inactive`,
- * so what is hidden reads at a glance. A hidden field stays where it is, so
- * showing it again puts it back in the same place — the list's order is the
- * body's, hidden fields included. The hidden state is also spelled out to
+ * so what is hidden reads at a glance. A hidden field stays where it is — in
+ * its own slot band too (`propertyBands`: the slot it would take if shown) —
+ * so hiding only toggles its state, and showing it again puts it back in the
+ * same place; the list's order is the body's, hidden fields included. The
+ * Hidden band lists only what the view cannot draw even when shown. The hidden state is also spelled out to
  * screen readers in the label.
  *
  * "Show all fields" is the section's LAST ROW, not the panel's footer: a
@@ -109,6 +110,16 @@ export function PropertiesControl(): ReactNode {
     spec,
     activeSlots ?? NO_SLOTS,
   );
+  // The band each row is listed under: a hidden field keeps the band it would
+  // be drawn in, so hiding it toggles its state in place.
+  const bands = usePropertyBands(
+    fields,
+    activeState.properties,
+    spec,
+    activeSlots ?? NO_SLOTS,
+    placed,
+    controller.items,
+  );
 
   if (fields.length <= 1) return null;
 
@@ -130,7 +141,9 @@ export function PropertiesControl(): ReactNode {
       ) : (
         SLOTS.filter((slot) => slot === "hidden" || activeSlots[slot]).map(
           (slot) => {
-            const items = bandItems(controller.items, placed, slot);
+            const items = controller.items.filter(
+              (i) => (bands.get(i.field.id) ?? "hidden") === slot,
+            );
             if (items.length === 0) return null;
             return (
               <Fragment key={slot}>
@@ -164,27 +177,6 @@ export function PropertiesControl(): ReactNode {
       </ControlPanel.Row>
     </ControlPanel.Section>
   );
-}
-
-/** One slot band's rows, in the order the view draws them (a hidden field in
- *  the Hidden band, whatever slot it would take). */
-function bandItems<TRow>(
-  items: readonly PropertyItem<TRow>[],
-  placed: Placement<TRow>,
-  slot: Slot,
-): PropertyItem<TRow>[] {
-  if (slot === "hidden") {
-    const drawn = new Set(
-      SLOTS.filter((s) => s !== "hidden").flatMap((s) =>
-        placed.slots[s].map((f) => f.id),
-      ),
-    );
-    return items.filter((i) => !i.visible || !drawn.has(i.field.id));
-  }
-  const byId = new Map(items.map((i) => [i.field.id, i]));
-  return placed.slots[slot]
-    .map((f) => byId.get(f.id))
-    .filter((i): i is PropertyItem<TRow> => i !== undefined && i.visible);
 }
 
 /**

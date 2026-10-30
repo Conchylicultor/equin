@@ -5,10 +5,12 @@ import type {
   FieldOption,
   PlacementSpec,
   PropertyEntry,
+  Slot,
   ViewSlots,
 } from "../../core";
 import { useFieldIdentities } from "./use-field-identities";
-import { resolvePlacement, type Placement } from "./placement";
+import { propertyBands, resolvePlacement, type Placement } from "./placement";
+import type { PropertyItem } from "./use-properties-controller";
 
 /**
  * A field's kind: its type's (`FieldIdentity.kind`, through `extends`) —
@@ -62,5 +64,30 @@ export function usePlacement<TRow>(
   return useMemo(
     () => resolvePlacement({ fields, kindOf, viewSlots, spec, properties }),
     [fields, kindOf, viewSlots, spec, properties],
+  );
+}
+
+/**
+ * The band each field is listed under in the Properties editor
+ * (`propertyBands`): where it is drawn, or for a hidden field, where it would
+ * be drawn if shown again.
+ */
+export function usePropertyBands<TRow>(
+  fields: readonly FieldDef<TRow>[],
+  properties: readonly PropertyEntry[] | null | undefined,
+  spec: PlacementSpec,
+  viewSlots: ViewSlots,
+  placed: Placement<TRow>,
+  items: readonly PropertyItem<TRow>[],
+): ReadonlyMap<string, Slot> {
+  const kindOf = useResolveFieldKind() as (field: FieldDef<TRow>) => FieldKind;
+  return useMemo(
+    () =>
+      propertyBands(
+        { fields, kindOf, viewSlots, spec, properties },
+        placed,
+        items,
+      ),
+    [fields, kindOf, viewSlots, spec, properties, placed, items],
   );
 }
