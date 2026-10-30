@@ -11,6 +11,7 @@ import {
 } from "@plugins/conversations/plugins/conversations-view/plugins/data-view/web";
 import { useQueueRows, type QueueRow } from "./use-queue-rows";
 import { QUEUE_EXTRA_FIELDS, QUEUE_OVERRIDES } from "./queue-fields";
+import { QUEUE_ATTACH } from "./queue-attach";
 import {
   QueueItemActions,
   CloseConversationContext,
@@ -22,7 +23,8 @@ import {
  * bundle. Rows carry a synthetic `section` field (default group-by) so the
  * classic status sections render as group-by sections; `manualOrder` drives the
  * neighbor-based `reorderQueue` drag; `aggregate` collapses task-groups (in the
- * ranked/working sections) to one representative + `×N` badge.
+ * ranked/working sections) to one representative + `×N` badge; `attach` draws
+ * a supervised task beneath its supervisor's row (`QUEUE_ATTACH`).
  *
  * `render(bundle)` is ALWAYS called (readiness rides in the bundle) so the
  * surface chrome never vanishes while the queue reads load or fail.
@@ -84,6 +86,8 @@ export function QueueSource({
         viewOptions: QUEUE_VIEW_OPTIONS,
         itemActions: QueueItemActions,
         aggregate: QUEUE_AGGREGATE,
+        // Supervised tasks beneath their supervisor's row (Sub-items).
+        attach: QUEUE_ATTACH,
         manualOrder,
       })}
     </CloseConversationContext.Provider>

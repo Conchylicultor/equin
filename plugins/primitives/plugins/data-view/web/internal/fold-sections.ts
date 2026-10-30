@@ -7,6 +7,7 @@ import {
   type FoldRule,
   type ViewState,
 } from "../../core";
+import { entryHolds } from "./attach";
 
 /** The fold-line key of a section: its group key, or the ungrouped sentinel. */
 export function foldKeyOf(section: { key: string | null }): string {
@@ -52,7 +53,7 @@ export type FoldKeep<TRow> = (
  * Walking a section's entries in order, an entry is kept when
  *  - it is the selected row (the row the user has open is never folded away —
  *    an aggregate entry is the selected row when its representative or any of
- *    its members is), or
+ *    its members is, a parent when a row attached beneath it is), or
  *  - it matches the fold rule's `keep` (`matchesKeep`: the tree lowered by
  *    `useRowFilter`, the same evaluator the filter uses — `null` when there is
  *    no `keep`, or it constrains nothing, so an incomplete rule keeps everything
@@ -73,9 +74,7 @@ export function makeFoldKeep<TRow>(
 ): FoldKeep<TRow> {
   const { limit, selectedRowId, rowKey } = opts;
   const isSelected = (entry: DataViewRowEntry<TRow>): boolean =>
-    selectedRowId !== undefined &&
-    (entry.key === selectedRowId ||
-      (entry.members?.some((m) => rowKey(m) === selectedRowId) ?? false));
+    selectedRowId !== undefined && entryHolds(entry, selectedRowId, rowKey);
   return (entries) => {
     let kept = 0;
     return entries.map((entry) => {

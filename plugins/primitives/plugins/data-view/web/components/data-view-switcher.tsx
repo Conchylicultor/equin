@@ -13,6 +13,7 @@ import type {
   DataViewDensity,
   DataViewId,
   DataViewActiveChrome,
+  SubItemsKind,
 } from "../../core";
 import { DataViewSlots, type DataViewContribution } from "../slots";
 import {
@@ -176,6 +177,10 @@ function DataViewSwitcherHost<THostProps>(hostProps: {
       toolbar={toolbar}
       searchPlaceholder={searchPlaceholder}
       aside={aside}
+      subItems={(instance) =>
+        sourceContribs?.find((c) => c.id === instance.instance.source)
+          ?.subItems ?? null
+      }
     >
       {(activeInstance, chrome, readyModel) => {
         if (sourceContribs === null) {
@@ -212,6 +217,7 @@ function DataViewSwitcherHost<THostProps>(hostProps: {
                 activeInstance={activeInstance}
                 chrome={chrome}
                 sourceId={activeSource.id}
+                subItems={activeSource.subItems}
                 bundle={bundle as unknown as DataViewSourceBundle<unknown>}
               />
             ),
@@ -234,10 +240,22 @@ function SwitcherSourceBody(props: {
   activeInstance: ResolvedViewInstance<DataViewContribution>;
   chrome: DataViewShellChrome;
   sourceId: string;
+  subItems: SubItemsKind | undefined;
   bundle: DataViewSourceBundle<unknown>;
 }): ReactNode {
   const { storageKey, viewModel, activeInstance, chrome, sourceId, bundle } =
     props;
+  // The source's static `subItems` is what its views' settings offered before
+  // it mounted: a bundle that attaches rows must have declared it, and one
+  // declaring it must attach.
+  if ((bundle.attach != null) !== (props.subItems === "attach")) {
+    throw new Error(
+      `DataViewSwitcher(${storageKey}): source "${sourceId}" ` +
+        (bundle.attach != null
+          ? `passes \`attach\` but does not declare \`subItems: "attach"\``
+          : `declares \`subItems: "attach"\` but passes no \`attach\``),
+    );
+  }
   return (
     <DataViewBody<unknown>
       key={sourceId}

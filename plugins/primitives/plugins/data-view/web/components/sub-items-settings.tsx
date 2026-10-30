@@ -10,7 +10,7 @@ import type {
   ResolvedViewInstance,
   ViewActionsCore,
 } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
-import type { FilterScope, Nesting } from "../../core";
+import type { FilterScope, Nesting, SubItemsKind } from "../../core";
 import type { DataViewContribution } from "../slots";
 
 const NESTING_OPTIONS: readonly SegmentedOption<Nesting>[] = [
@@ -25,25 +25,47 @@ const FILTER_SCOPE_OPTIONS: readonly SegmentedOption<FilterScope>[] = [
 ];
 
 /**
- * The view settings' Sub-items section, for a surface over a hierarchical
- * source — Notion's per-view "Sub-items" setting. Offered only on a view type
- * that can nest (`nestsHierarchy`): a view that never nests has nothing to
- * switch. `nesting` and `filterScope` are host-injected keys of the view row,
- * merge-written so every other key stays.
+ * The view settings' Sub-items section, for a surface whose rows have
+ * sub-items — Notion's per-view "Sub-items" setting: a `hierarchy`, offered on
+ * a view type that nests one (`nestsHierarchy`), or rows that `attach` beneath
+ * others, offered on a view type that draws them (`nestsAttach`). A view that
+ * never nests them has nothing to switch. `nesting` and `filterScope` are
+ * host-injected keys of the view row, merge-written so every other key stays.
  */
-export const subItemsSettings: HostViewSettings<DataViewContribution> = (
+const hierarchySettings: HostViewSettings<DataViewContribution> = (
   instance,
   actions,
 ) =>
   instance.viewType.nestsHierarchy === true ? (
-    <SubItemsSettings instance={instance} actions={actions} />
+    <SubItemsSettings kind="hierarchy" instance={instance} actions={actions} />
   ) : null;
 
+const attachSettings: HostViewSettings<DataViewContribution> = (
+  instance,
+  actions,
+) =>
+  instance.viewType.nestsAttach === true ? (
+    <SubItemsSettings kind="attach" instance={instance} actions={actions} />
+  ) : null;
+
+/** The Sub-items settings for a surface whose rows have `kind` sub-items —
+ *  `undefined` for one without (nothing to offer). Stable per kind. */
+export function subItemsSettingsFor(
+  kind: SubItemsKind | null,
+): HostViewSettings<DataViewContribution> | undefined {
+  return kind === "hierarchy"
+    ? hierarchySettings
+    : kind === "attach"
+      ? attachSettings
+      : undefined;
+}
+
 function SubItemsSettings(props: {
+  kind: SubItemsKind;
   instance: ResolvedViewInstance<DataViewContribution>;
   actions: ViewActionsCore;
 }): ReactNode {
-  const { instance, actions } = props;
+  const { kind, instance, actions } = props;
   const id = instance.instance.id;
   const view = instance.instance.options as VariantValue | undefined;
   const nesting: Nesting =
@@ -63,7 +85,11 @@ function SubItemsSettings(props: {
     <ControlPanel.Section label="Sub-items">
       <ControlPanel.Setting
         label="Show"
-        hint="Nested draws children under their parent; Flat lists every row with a Parent column; Parents only lists the top-level rows."
+        hint={
+          kind === "hierarchy"
+            ? "Nested draws children under their parent; Flat lists every row with a Parent column; Parents only lists the top-level rows."
+            : "Nested draws attached rows under the row they belong to; Flat lists every row on its own; Parents only hides the attached rows."
+        }
         fit="inline"
         control={
           <SegmentedControl<Nesting>
@@ -75,7 +101,7 @@ function SubItemsSettings(props: {
           />
         }
       />
-      {nesting === "nested" ? (
+      {kind === "hierarchy" && nesting === "nested" ? (
         <ControlPanel.Setting
           label="Filter matches"
           hint="Any row keeps each match with its parents; Top-level tests only the top-level rows, each keeping its whole subtree."

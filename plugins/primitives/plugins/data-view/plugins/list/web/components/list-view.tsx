@@ -23,6 +23,8 @@ import {
   DropBackground,
   DropInsertLine,
   FieldCell,
+  attachExpandKey,
+  attachedChildrenOpen,
   FieldPresentationProvider,
   GroupedSections,
   PrimaryOverThumbnail,
@@ -48,6 +50,7 @@ import {
   useRowDnd,
   type CoverContent,
   type DataViewAggregateConfig,
+  type DataViewAttachConfig,
   type DataViewRowEntry,
   type DataViewRenderProps,
   type DataViewSection,
@@ -224,6 +227,14 @@ interface ListEntryProps {
   hasChildren: boolean;
   /** The row's detail is expanded (always `false` without `detail`). */
   open: boolean;
+  /** How many entries are attached beneath this one (`attach`); 0 ⇒ none,
+   *  and the row draws no disclosure for them. */
+  childCount: number;
+  /** Its attached entries are drawn (always `false` without any). */
+  childrenOpen: boolean;
+  /** An attached entry: drawn beneath its parent — never a manual-order drag
+   *  source or drop target, nor a native drop target. */
+  attached: boolean;
   /** Manual order: the row's rank — `null` when the row is not orderable (or
    *  no order is active), so it renders plain. */
   rank: Rank | null;
@@ -244,13 +255,14 @@ const ListEntry = memo(function ListEntry(props: ListEntryProps): ReactNode {
   const presentation = useFieldPresentation();
   const row = listRowNode(props, presentation);
   const { dnd } = props.config;
-  const node = dnd ? (
-    <DropRow dnd={dnd} rowKey={props.rowKey} row={props.row}>
-      {row}
-    </DropRow>
-  ) : (
-    row
-  );
+  const node =
+    dnd && !props.attached ? (
+      <DropRow dnd={dnd} rowKey={props.rowKey} row={props.row}>
+        {row}
+      </DropRow>
+    ) : (
+      row
+    );
   if (props.rank == null) return node;
   return (
     <ManualOrderRow id={props.rowKey} rank={props.rank} group={props.group}>
@@ -327,6 +339,9 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   // Aggregate arrives type-erased; present only when the consumer supplied it.
   const aggregate = props.aggregate as
     DataViewAggregateConfig<unknown> | undefined;
+  // Attach arrives type-erased; present only while the view's Sub-items
+  // setting draws attached rows under their parent.
+  const attach = props.attach as DataViewAttachConfig<unknown> | undefined;
   const sections = useDataViewSections(
     props.rows,
     props.fields,
@@ -337,6 +352,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       rowKey: props.rowKey,
       manualRank: manualOrder?.getRank,
       aggregate,
+      attach,
       now: props.now,
       groupOrder: props.groupOrder,
       rowsComplete: props.rowsComplete,
@@ -388,6 +404,11 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   if (detail && options.rowChrome === "tree") {
     throw new Error(
       "data-view list: `detail` needs the default row chrome — a tree-chrome row is one label line",
+    );
+  }
+  if (attach && options.rowChrome === "tree") {
+    throw new Error(
+      "data-view list: `attach` needs the default row chrome — a tree-chrome row draws no disclosure for its attached rows",
     );
   }
   // The host hands a fresh `setExpanded` closure each render; only a click
@@ -563,24 +584,58 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   // One entry's element, shared by both branches. Every prop is either the
   // shared `config` or a per-row value that keeps its identity while the row is
   // unchanged — never a closure minted here.
+  // Whether an entry's attached rows are drawn (the expand map, the source's
+  // default, the selected row).
+  const rowKeyOf = props.rowKey;
+  const childrenOpen = (entry: DataViewRowEntry<unknown>): boolean =>
+    attach != null &&
+    attachedChildrenOpen(entry, {
+      attach,
+      expanded: props.expanded,
+      selectedRowId: props.selectedRowId,
+      rowKey: (row) => rowKeyOf(row, 0),
+    });
   const renderEntry = (
     entry: DataViewRowEntry<unknown>,
     group: string | null,
-  ): ReactNode => (
-    <ListEntry
-      key={entry.key}
-      config={config}
-      row={entry.row}
-      rowKey={entry.key}
-      aggregateCount={entry.aggregateCount}
-      selected={entry.key === props.selectedRowId}
-      hovered={entry.key === props.hoveredRowId}
-      hasChildren={props.hasChildren?.(entry.key) ?? false}
-      open={detail ? props.expanded?.[entry.key] === true : false}
-      rank={manualOrder ? manualOrder.getRank(entry.row) : null}
-      group={group}
-    />
-  );
+    attached = false,
+  ): ReactNode => {
+    const open = childrenOpen(entry);
+    const node = (
+      <ListEntry
+        key={entry.key}
+        config={config}
+        row={entry.row}
+        rowKey={entry.key}
+        aggregateCount={entry.aggregateCount}
+        selected={entry.key === props.selectedRowId}
+        hovered={entry.key === props.hoveredRowId}
+        hasChildren={props.hasChildren?.(entry.key) ?? false}
+        open={detail ? props.expanded?.[entry.key] === true : false}
+        childCount={entry.children?.length ?? 0}
+        childrenOpen={open}
+        attached={attached}
+        rank={manualOrder && !attached ? manualOrder.getRank(entry.row) : null}
+        group={group}
+      />
+    );
+    if (!entry.children) return node;
+    // The attached rows are the entry's siblings, indented under it — outside
+    // its drag wrapper, so dragging the parent never drags them, and outside
+    // the section's rank order, so they are never drop targets.
+    return (
+      <Stack key={entry.key} gap="none">
+        {node}
+        <FoldMotion open={open}>
+          <Inset l="lg">
+            <Stack gap="none">
+              {entry.children.map((child) => renderEntry(child, group, true))}
+            </Stack>
+          </Inset>
+        </FoldMotion>
+      </Stack>
+    );
+  };
 
   // Window the render once a section is long enough to matter; otherwise keep the
   // plain `.map`. VirtualRows discovers the scroll ancestor itself. Manual order
@@ -1026,6 +1081,7 @@ function listRowNode(
 ): ReactNode {
   const { config, row, rowKey: key, aggregateCount, open } = props;
   const { titleField, detail, thumbnail } = config;
+  const { childCount, childrenOpen } = props;
   const trailing = hasTrailing(config, aggregateCount);
   // The title's marks (the `afterTitle` slot): rigid cells right after it.
   const marks = renderMarks(config, row, presentation);
@@ -1090,23 +1146,43 @@ function listRowNode(
         )
       }
       actions={
-        detail ? (
+        detail || childCount > 0 ? (
           <>
-            <IconButton
-              icon={open ? collapseIcon : expandIcon}
-              label={open ? "Hide details" : "Show details"}
-              aria-expanded={open}
-              onClick={() => config.setExpanded([{ id: key, expanded: !open }])}
-            />
+            {childCount > 0 ? (
+              <IconButton
+                icon={childrenOpen ? collapseIcon : expandIcon}
+                label={
+                  childrenOpen
+                    ? `Hide ${childCount} attached`
+                    : `Show ${childCount} attached`
+                }
+                aria-expanded={childrenOpen}
+                onClick={() =>
+                  config.setExpanded([
+                    { id: attachExpandKey(key), expanded: !childrenOpen },
+                  ])
+                }
+              />
+            ) : null}
+            {detail ? (
+              <IconButton
+                icon={open ? collapseIcon : expandIcon}
+                label={open ? "Hide details" : "Show details"}
+                aria-expanded={open}
+                onClick={() =>
+                  config.setExpanded([{ id: key, expanded: !open }])
+                }
+              />
+            ) : null}
             {itemActionNodes}
           </>
         ) : (
           itemActionNodes
         )
       }
-      // The disclosure must be findable, so a row with detail shows its
-      // cluster at rest.
-      actionsAlwaysVisible={detail ? true : undefined}
+      // The disclosure must be findable, so a row with detail or attached
+      // rows shows its cluster at rest.
+      actionsAlwaysVisible={detail || childCount > 0 ? true : undefined}
     >
       {config.renderRow ? (
         config.renderRow(row)

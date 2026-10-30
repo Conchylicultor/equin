@@ -1052,10 +1052,10 @@ export type SectionCount =
   { kind: "exact"; n: number } | { kind: "atLeast"; n: number };
 
 /**
- * One row entry within a `DataViewSection`. For group-by (Sub-task 1) it is a
- * 1:1 wrapper around a row; the optional `aggregateCount`/`members` fields are
- * the seam for aggregating sections (Sub-task 3), where one entry stands for a
- * collapsed group of rows sharing a key.
+ * One row entry within a `DataViewSection`: a 1:1 wrapper around a row, or —
+ * aggregating (`aggregate`) — one entry standing for a collapsed group of rows
+ * sharing a key (`aggregateCount` / `members`). Attaching (`attach`), it also
+ * carries the entries drawn beneath it (`children`).
  */
 export interface DataViewRowEntry<TRow> {
   /** Representative row (== the row when not aggregated). */
@@ -1066,13 +1066,17 @@ export interface DataViewRowEntry<TRow> {
   aggregateCount?: number;
   /** Collapsed members (aggregating only). */
   members?: readonly TRow[];
+  /**
+   * The entries attached beneath this one (`attach`), in order — each itself
+   * possibly aggregated and carrying children of its own. Absent when none
+   * attach. They take no section slot: the section counts this entry once.
+   */
+  children?: readonly DataViewRowEntry<TRow>[];
 }
 
 /**
- * Aggregating-sections config — the **seam** for Sub-task 3 (collapse rows
- * sharing a key into one representative + count badge). Declared now so
- * `useDataViewSections` can carry it through its `opts` unchanged; the aggregate
- * step itself is NOT implemented in Sub-task 1.
+ * Aggregating-sections config: collapse the rows of a section sharing a key
+ * into one representative entry + count badge (`aggregateSections`).
  */
 export interface DataViewAggregateConfig<TRow> {
   /** Group rows sharing a non-null key into one representative; `null` =
@@ -1081,6 +1085,38 @@ export interface DataViewAggregateConfig<TRow> {
   /** Pick the representative row for a collapsed group (default: first in
    *  current order). */
   pickRepresentative?: (members: readonly TRow[]) => TRow;
+}
+
+/**
+ * Attach config: a row is drawn BENEATH another row of the same view while
+ * that row is loaded, and where it is not, stays a row of its own. A relation
+ * between loaded rows, never the source's structure (that is `hierarchy`, with
+ * its ranks and moves): so it composes with `paging`, `manualOrder`, group-by,
+ * fold and `aggregate`.
+ *
+ * - An attached row rides with its parent: it lands in the parent's section
+ *   whatever its own group-by value, takes no section slot, and is never a
+ *   manual-order drop target or drag source.
+ * - The parent is the first top-level entry (section order, then entry order)
+ *   holding a row whose `getKey` is the child's `getParentKey` — several rows
+ *   may share a key (an aggregate's members).
+ * - A parent key no loaded row holds, one naming the row itself, or a cycle ⇒
+ *   the row stays top-level. A row the read pages (`DataViewPaging.isPaged`)
+ *   never attaches: hung far from its page, it would hold every page between
+ *   live.
+ *
+ * Drawn by a view type declaring `nestsAttach` (the list) while the view's
+ * Sub-items setting (`ViewState.nesting`) is `nested`; `flat` draws every row
+ * on its own, `roots` hides the rows that would attach.
+ */
+export interface DataViewAttachConfig<TRow> {
+  /** The row's identity in the relation (`null` ⇒ nothing attaches to it). */
+  getKey: (row: TRow) => string | null;
+  /** The key of the row it is drawn beneath; `null` ⇒ top-level. */
+  getParentKey: (row: TRow) => string | null;
+  /** A parent's children start open (the view's expand map overrides it per
+   *  row). Default false. */
+  defaultExpanded?: boolean;
 }
 
 /**
@@ -1284,6 +1320,13 @@ export interface DataViewRenderProps<TRow> {
    * render the badge in their natural trailing spot.
    */
   aggregate?: DataViewAggregateConfig<TRow>;
+  /**
+   * Present → rows attach beneath other rows (`DataViewAttachConfig`). The host
+   * passes it only to a view declaring `nestsAttach`, and only while the view's
+   * Sub-items setting is `nested`; the view hands it to `useDataViewSections`
+   * and draws each entry's `children` under it.
+   */
+  attach?: DataViewAttachConfig<TRow>;
   /** Present → the view enables checkbox multi-select (currently the tree). */
   selection?: SelectionConfig;
   /** Finder-style row selection (see {@link RowSelectionConfig}). */
@@ -1700,6 +1743,8 @@ interface DataViewHierarchyRows<TRow> {
   /** Hierarchy accessors + mutations. Present → hierarchical views (tree) appear. */
   hierarchy?: HierarchyConfig<TRow>;
   paging?: never;
+  /** A tree draws its own structure; a second relation beside it has no row. */
+  attach?: never;
 }
 
 /** An in-memory origin whose rows are a loaded prefix of a paged read. */
@@ -1715,6 +1760,12 @@ interface DataViewPagedRows<TRow> {
    * collection's is a live `source` instead.
    */
   paging?: DataViewPaging<TRow>;
+  /**
+   * Rows drawn beneath other rows while those are loaded — see
+   * {@link DataViewAttachConfig}. Safe over a partial read (unlike
+   * `hierarchy`): a row whose parent is not loaded stays a row of its own.
+   */
+  attach?: DataViewAttachConfig<TRow>;
 }
 
 /** What every in-memory origin holds, tree or paged. */
@@ -1953,6 +2004,8 @@ export interface DataViewLiveOrigin<TRow> {
   searchAccessor?: never;
   hierarchy?: never;
   manualOrder?: never;
+  /** Sections and order are the server's; attaching is in-memory only. */
+  attach?: never;
 }
 
 /** Where a DataView's rows come from — exactly one, so a stand-in (`rows={[]}` beside a server source) cannot be spelled. */

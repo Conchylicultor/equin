@@ -29,6 +29,7 @@ import {
 } from "@plugins/conversations/plugins/conversations-view/plugins/queue/web";
 import { spawnFailureRows } from "@plugins/conversations/plugins/spawn-failure/core";
 import { reuseRows } from "./reuse-rows";
+import { queueParentTaskId, stepFlags } from "./queue-attach";
 
 /** The read-time section a queue row belongs to (the enum the `section` field partitions by). */
 export type QueueSection =
@@ -218,6 +219,20 @@ export function useQueueRows(view: ViewState): {
 
     const out: QueueRow[] = [];
 
+    // A group the list draws beneath its supervisor's row (`QUEUE_ATTACH`) is
+    // not a row of the section a step moves past: the top / bottom / step
+    // flags count only the groups left top-level — those whose supervisor is
+    // not among the rows (or who have none).
+    const held = new Set<string>();
+    for (const c of active) held.add(c.taskId);
+    for (const c of gone) held.add(c.taskId);
+    const topLevel = (group: TaskGroup<QueueConversation>): boolean => {
+      const parent = queueParentTaskId(group.selected);
+      return (
+        parent === null || parent === group.selected.taskId || !held.has(parent)
+      );
+    };
+
     // Representative first, then the remaining members — so the aggregate entry's
     // key equals the representative id. Group-level flags apply to every member.
     const emitGroup = (
@@ -267,26 +282,24 @@ export function useQueueRows(view: ViewState): {
     // 1. pinned — the waiting clusters the user pinned (rank asc). Its own rank
     // space for the top/bottom affordances: a pinned row's neighbours are the
     // other pinned rows, which is what "move to top" means while it is up there.
-    pinnedGroups.forEach((group, idx) => {
+    const pinnedFlags = stepFlags(pinnedGroups, topLevel);
+    for (const group of pinnedGroups) {
       emitGroup(group, "pinned", {
         ranked: true,
-        isTop: idx === 0,
-        isBottom: idx === pinnedGroups.length - 1,
-        canStepDown: idx < pinnedGroups.length - 1,
+        ...pinnedFlags.get(group)!,
         isBlocked: blockedIds.has(group.selected.id),
       });
-    });
+    }
 
     // 2. queued — the unpinned waiting clusters (rank asc).
-    waitingGroups.forEach((group, idx) => {
+    const waitingFlags = stepFlags(waitingGroups, topLevel);
+    for (const group of waitingGroups) {
       emitGroup(group, "queued", {
         ranked: true,
-        isTop: idx === 0,
-        isBottom: idx === waitingGroups.length - 1,
-        canStepDown: idx < waitingGroups.length - 1,
+        ...waitingFlags.get(group)!,
         isBlocked: blockedIds.has(group.selected.id),
       });
-    });
+    }
 
     // 3. working — non-draggable (rank null).
     for (const group of workingGroups) {

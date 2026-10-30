@@ -5,6 +5,7 @@ import {
   atLeastCount,
   exactCount,
   type DataViewAggregateConfig,
+  type DataViewAttachConfig,
   type DataViewRowEntry,
   type DataViewRowsComplete,
   type DataViewSection,
@@ -24,6 +25,7 @@ import { useGroupingRegistry } from "../grouping-slot";
 import { IDENTITY_GROUPING } from "./identity-grouping";
 import { useFlatRows } from "./use-flat-rows";
 import { foldSections, makeFoldKeep } from "./fold-sections";
+import { resolveAttach, type ResolvedAttach } from "./attach";
 import { bodyRowMatcher, useRowFilter } from "./use-row-filter";
 
 /** Sentinel bucket key for rows whose group-by value is null/undefined. Holds a
@@ -528,6 +530,64 @@ export function aggregateSections<TRow>(
 }
 
 /**
+ * Hang the attached rows beneath the top-level entries (pure, testable without
+ * React). Runs after the roots are partitioned, rank-ordered and aggregated,
+ * and before the fold: each section's entries gain `children` — the rows of
+ * `childrenOf` for any key one of the entry's rows (`members ?? [row]`)
+ * carries, the first entry holding a key claiming its children. A child list
+ * keeps the order it was given (the view's sort), is rank-ordered under manual
+ * order and aggregated like a section, and hangs its own children beneath it.
+ * Section counts are untouched: they count the top-level entries.
+ */
+export function hangAttached<TRow>(
+  sections: DataViewSection<TRow>[],
+  resolved: ResolvedAttach<TRow>,
+  opts: {
+    attach: DataViewAttachConfig<TRow>;
+    rowKey: (row: TRow) => string;
+    manualRank?: (row: TRow) => Rank | null;
+    aggregate?: DataViewAggregateConfig<TRow>;
+  },
+): DataViewSection<TRow>[] {
+  if (resolved.childrenOf.size === 0) return sections;
+  const claimed = new Set<string>();
+  const childEntries = (
+    entry: DataViewRowEntry<TRow>,
+  ): DataViewRowEntry<TRow>[] | null => {
+    const rows: TRow[] = [];
+    for (const member of entry.members ?? [entry.row]) {
+      const key = opts.attach.getKey(member);
+      if (key === null || claimed.has(key)) continue;
+      const children = resolved.childrenOf.get(key);
+      if (!children) continue;
+      claimed.add(key);
+      rows.push(...children);
+    }
+    if (rows.length === 0) return null;
+    // The child list as a one-section pipeline: the same ordering and
+    // aggregation the sections ran.
+    let list: DataViewSection<TRow>[] = [
+      {
+        key: null,
+        count: { kind: "exact", n: rows.length },
+        entries: rows.map((row) => ({ row, key: opts.rowKey(row) })),
+      },
+    ];
+    if (opts.manualRank) list = orderSectionsByRank(list, opts.manualRank);
+    if (opts.aggregate) list = aggregateSections(list, opts.aggregate);
+    return list[0]!.entries.map(hang);
+  };
+  const hang = (entry: DataViewRowEntry<TRow>): DataViewRowEntry<TRow> => {
+    const children = childEntries(entry);
+    return children ? { ...entry, children } : entry;
+  };
+  return sections.map((section) => ({
+    ...section,
+    entries: section.entries.map(hang),
+  }));
+}
+
+/**
  * Pure manual-order step (testable without React): order each section's entries
  * by `manualRank`, WITHIN the section. Sections are HOMOGENEOUS — a section is
  * either all-ranked or all-null (the consumer guarantees it via its group-by
@@ -578,6 +638,14 @@ export function useDataViewSections<TRow>(
      */
     aggregate?: DataViewAggregateConfig<TRow>;
     /**
+     * `DataViewRenderProps.attach`: rows attaching beneath others are taken out
+     * BEFORE the partition — so they ride with their parent's section, whatever
+     * their own group value, and take no slot in it — then hung under their
+     * parent's entry (`entry.children`) once the roots are ordered and
+     * aggregated. Absent → every row is top-level.
+     */
+    attach?: DataViewAttachConfig<TRow>;
+    /**
      * Flat manual-order seam (Sub-task 2): when supplied, the field sort is
      * skipped (search/filter still run) and each section's entries are ordered
      * by this `Rank` instead — the flat analog of the tree ignoring sort.
@@ -618,6 +686,7 @@ export function useDataViewSections<TRow>(
   );
   const rowKey = opts.rowKey;
   const aggregate = opts.aggregate;
+  const attach = opts.attach;
   const {
     now,
     groupOrder,
@@ -644,11 +713,28 @@ export function useDataViewSections<TRow>(
     [storedGroupBy],
   );
   return useMemo(() => {
+    const keyOf = rowKey ?? ((_row: TRow, i: number) => String(i));
+    // Attached rows leave the partition; each keeps its index in the flat
+    // rows, so an index-based key names the same row either way.
+    let resolved: ResolvedAttach<TRow> | null = null;
+    let partitionRows: readonly TRow[] = flat;
+    let partitionKey = keyOf;
+    let flatKey: (row: TRow) => string = (row) => keyOf(row, 0);
+    if (attach) {
+      resolved = resolveAttach(flat, attach);
+      if (resolved.childrenOf.size > 0) {
+        const index = new Map<TRow, number>();
+        flat.forEach((row, i) => index.set(row, i));
+        partitionRows = resolved.roots;
+        partitionKey = (row) => keyOf(row, index.get(row)!);
+        flatKey = (row) => keyOf(row, index.get(row)!);
+      }
+    }
     let sections = partitionIntoSections(
-      flat,
+      partitionRows,
       fields,
       groupBy,
-      rowKey ?? ((_row: TRow, i: number) => String(i)),
+      partitionKey,
       { resolveGrouping, now, order: groupOrder, rowsComplete, sectioning },
     );
     // Order each section's entries by rank (within-section manual order) BEFORE
@@ -656,18 +742,27 @@ export function useDataViewSections<TRow>(
     if (manualRank) sections = orderSectionsByRank(sections, manualRank);
     // Collapse aggregate groups within each (already-ordered) section.
     if (aggregate) sections = aggregateSections(sections, aggregate);
+    // Hang the attached rows under their parent's (ordered, aggregated) entry,
+    // before the fold, so a fold keeps a parent whose child is selected.
+    if (attach && resolved) {
+      sections = hangAttached(sections, resolved, {
+        attach,
+        rowKey: flatKey,
+        manualRank,
+        aggregate,
+      });
+    }
     // Fold after aggregation, so it counts the entries the user sees (an
     // aggregate's representative decides, and counts once toward a `limit`)
     // and pulls folded rows from wherever they sort.
     if (fold) {
-      const key = rowKey ?? ((_row: TRow, i: number) => String(i));
       sections = foldSections(sections, {
         keep: makeFoldKeep(matchesKeep, {
           limit: fold.limit,
           selectedRowId,
           // A member carries no index of its own; keys that depend on the index
           // cannot identify it, and such a surface has no stable selection anyway.
-          rowKey: (row) => key(row, 0),
+          rowKey: flatKey,
         }),
         openKeys: openFolds ?? EMPTY_KEYS,
       });
@@ -682,6 +777,7 @@ export function useDataViewSections<TRow>(
     rowKey,
     manualRank,
     aggregate,
+    attach,
     resolveGrouping,
     now,
     groupOrder,

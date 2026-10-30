@@ -22,6 +22,7 @@ import {
   type DataViewProps,
   type DataViewReserve,
   type DataViewToolbarSpec,
+  type SubItemsKind,
   isHostedToolbar,
   isSectionsToolbar,
 } from "../../core";
@@ -29,6 +30,7 @@ import {
   CollapsedViewSwitcher,
   EditableViewSwitcher,
   type ResolvedViewInstance,
+  type ViewActionsCore,
 } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
 import type { ViewSourceEntry } from "@plugins/primitives/plugins/data-view/plugins/view-core/core";
 import { DataViewSlots, type DataViewContribution } from "../slots";
@@ -50,7 +52,11 @@ import { pendingLayoutModel, slotLayout } from "../internal/slot-layout";
 import { hoverRevealGroup } from "@plugins/primitives/plugins/hover-reveal/web";
 import { CreatorsControl, hostedCreators } from "./creators-control";
 import { DataViewBody, DataViewSectionsBody } from "./data-view-body";
-import { subItemsSettings } from "./sub-items-settings";
+import { subItemsSettingsFor } from "./sub-items-settings";
+
+// A single-source surface's sub-items are the same for every instance.
+const HIERARCHY_SUB_ITEMS = (): SubItemsKind => "hierarchy";
+const ATTACH_SUB_ITEMS = (): SubItemsKind => "attach";
 
 /**
  * Host entry point. Every DataView is config-backed (config mode is universal):
@@ -142,7 +148,13 @@ function DataViewHost<TRow>({
       switcherForm={props.switcherForm}
       viewShortcuts={props.viewShortcuts}
       pinnedView={props.pinnedView}
-      hierarchical={props.hierarchy != null}
+      subItems={
+        props.hierarchy != null
+          ? HIERARCHY_SUB_ITEMS
+          : props.attach != null
+            ? ATTACH_SUB_ITEMS
+            : undefined
+      }
       renderSections={(instances, chrome, readyModel) => (
         <DataViewSectionsBody<TRow>
           {...availableProps(props)}
@@ -223,8 +235,11 @@ export function DataViewShellFrame(props: {
   viewShortcuts?: true;
   /** Present → this host shows one named instance and paints no switcher. */
   pinnedView?: string;
-  /** The rows are a hierarchy: the view settings offer Sub-items. */
-  hierarchical?: boolean;
+  /** Which sub-items an instance's rows have (a hierarchy, or rows that
+   *  attach): its view settings offer Sub-items. Absent ⇒ none have any. */
+  subItems?: (
+    instance: ResolvedViewInstance<DataViewContribution>,
+  ) => SubItemsKind | null;
   /**
    * The sentence a needsMachine read's `unavailable` arm carries: present →
    * the surface shows it in place of every instance (the stand-in chrome
@@ -269,7 +284,7 @@ export function DataViewShellFrame(props: {
     switcherForm = "strip",
     viewShortcuts,
     pinnedView,
-    hierarchical,
+    subItems,
     unavailable,
     children,
     renderSections,
@@ -461,7 +476,13 @@ export function DataViewShellFrame(props: {
     activeId: activeViewId,
     onSelect: viewModel.setActiveView,
     actions: viewModel.actions,
-    hostSettings: hierarchical ? subItemsSettings : undefined,
+    hostSettings:
+      subItems === undefined
+        ? undefined
+        : (
+            instance: ResolvedViewInstance<DataViewContribution>,
+            actions: ViewActionsCore,
+          ) => subItemsSettingsFor(subItems(instance))?.(instance, actions),
   };
   // Under drafts a band's chip carries the active view's count and dirty dot
   // and opens the views as a draggable list; it reads the counts from the

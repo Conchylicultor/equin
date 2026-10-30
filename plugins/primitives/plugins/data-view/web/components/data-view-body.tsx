@@ -23,6 +23,7 @@ import {
   type ItemActionsDescriptor,
   type LiveDataSource,
   type ManualOrderConfig,
+  type DataViewAttachConfig,
   type DataViewFoldLines,
   type DataViewRowEntry,
   type DataViewPaging,
@@ -128,7 +129,7 @@ import { BandSurface } from "./band-surface";
 import { HostedOptions } from "./toolbar/hosted-options";
 import { hostedCreators } from "./creators-control";
 import { ViewSection } from "./view-section";
-import { subItemsSettings } from "./sub-items-settings";
+import { subItemsSettingsFor } from "./sub-items-settings";
 import {
   afterOpen,
   beforeOpen,
@@ -137,6 +138,7 @@ import {
 } from "@plugins/primitives/plugins/link-gesture/core";
 import { CollectRowActivation } from "../internal/collection-row-activation";
 import { rootRows, withParentField } from "../internal/flat-hierarchy";
+import { attachRoots } from "../internal/attach";
 import type { CollectionActivation } from "../internal/fold-activations";
 import {
   DataViewControlsProvider,
@@ -417,6 +419,7 @@ function DataViewBodyInner<TRow>(
     viewOptions,
     manualOrder,
     aggregate,
+    attach: consumerAttach,
     selection,
     rowSelection,
     rowDrag,
@@ -595,18 +598,44 @@ function DataViewBodyInner<TRow>(
   // below), so the table's own nested/flat switch cannot disagree with it.
   const canNest =
     hierarchy != null && activeInstance.viewType.nestsHierarchy === true;
-  const nesting = canNest ? (activeState.nesting ?? "nested") : "nested";
+  // The same per-view setting draws attached rows (`attach`) under their
+  // parent, on a view type that draws them (`nestsAttach`, the list). A row the
+  // read pages never attaches: hung far from its page, it would report that
+  // page on screen and hold every page between live.
+  const isPaged = heldPaging?.isPaged;
+  const attach = useMemo<DataViewAttachConfig<TRow> | undefined>(
+    () =>
+      consumerAttach && heldPaging
+        ? {
+            ...consumerAttach,
+            getParentKey: (row) =>
+              isPaged === undefined || isPaged(row)
+                ? null
+                : consumerAttach.getParentKey(row),
+          }
+        : consumerAttach,
+    [consumerAttach, heldPaging, isPaged],
+  );
+  const canAttach =
+    attach != null && activeInstance.viewType.nestsAttach === true;
+  const nesting =
+    canNest || canAttach ? (activeState.nesting ?? "nested") : "nested";
   const activeNests = canNest && nesting === "nested";
+  const activeAttaches = canAttach && nesting === "nested";
   // A nesting view told to draw its hierarchy flat (Sub-items: Flat / Parents
   // only): `roots` keeps the top-level rows only, and `flat` adds the derived
   // Parent field to the schema — a parent, not a nesting, carries the
   // structure. A view type that never nests (list, gallery) is left as is.
   const rows = useMemo(
     () =>
-      hierarchy != null && nesting === "roots" && heldRows
-        ? rootRows(heldRows, rowKey, hierarchy)
-        : heldRows,
-    [hierarchy, heldRows, nesting, rowKey],
+      nesting !== "roots" || !heldRows
+        ? heldRows
+        : hierarchy != null
+          ? rootRows(heldRows, rowKey, hierarchy)
+          : canAttach
+            ? attachRoots(heldRows, attach!)
+            : heldRows,
+    [hierarchy, heldRows, nesting, rowKey, canAttach, attach],
   );
   // The schema is already fully merged: `props.fields` here arrives AFTER
   // `DataViewBody` derived it and folded the global `DataViewSlots.FieldExtension`
@@ -1390,6 +1419,10 @@ function DataViewBodyInner<TRow>(
           // hand it to every flat view; only those rendering via `useDataViewSections`
           // (list/table/gallery) act on it — the tree ignores it.
           aggregate: aggregate as DataViewRenderProps<unknown>["aggregate"],
+          // Only while the view draws attached rows under their parent.
+          attach: (activeAttaches
+            ? attach
+            : undefined) as DataViewRenderProps<unknown>["attach"],
           selection,
           rowSelection,
           rowDrag: rowDrag as DataViewRenderProps<unknown>["rowDrag"],
@@ -1628,7 +1661,13 @@ function DataViewBodyInner<TRow>(
               onQueryChange={onQueryChange}
               searchPlaceholder={chrome.searchPlaceholder}
               actions={viewModel.actions}
-              hostSettings={hierarchy != null ? subItemsSettings : undefined}
+              hostSettings={subItemsSettingsFor(
+                hierarchy != null
+                  ? "hierarchy"
+                  : consumerAttach != null
+                    ? "attach"
+                    : null,
+              )}
             >
               {body}
             </ViewSection>

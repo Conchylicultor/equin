@@ -78,6 +78,14 @@ export interface DataViewContribution extends ViewTypeMeta {
    * `hideWhenEmpty`. Default false.
    */
   nestsHierarchy?: boolean;
+  /**
+   * Whether this view draws the rows a source ATTACHES beneath others
+   * (`DataViewProps.attach`) under them — reading each entry's `children` off
+   * `useDataViewSections` (the list). Only such a view receives `attach`, and
+   * only then is the source's Sub-items setting offered. Default false: the
+   * view draws every row on its own.
+   */
+  nestsAttach?: boolean;
   /** Under an `overlay` toolbar arrangement, whether this view starts at the
    *  surface's very top-left edge, UNDER the floating band and aside (a map
    *  that is the surface's canvas). Default false: the host insets the view by

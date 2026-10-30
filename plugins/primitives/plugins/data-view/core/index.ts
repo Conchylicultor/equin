@@ -54,7 +54,11 @@ export type {
   FilterScope,
   FilterScopeAccessors,
 } from "./internal/filter-scope";
-export { PARENT_FIELD_ID, type Nesting } from "./internal/nesting";
+export {
+  PARENT_FIELD_ID,
+  type Nesting,
+  type SubItemsKind,
+} from "./internal/nesting";
 
 export {
   atLeastCount,
@@ -124,6 +128,7 @@ export type {
   DataViewSectionPaging,
   DataViewRowEntry,
   DataViewAggregateConfig,
+  DataViewAttachConfig,
   DataViewRenderProps,
   ViewExpandAll,
   DataViewProps,

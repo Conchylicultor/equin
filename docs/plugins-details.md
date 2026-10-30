@@ -18902,7 +18902,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/data-view.defineItemActions`
                   - `primitives/data-view.liveDataSource`
                   - `primitives/icon-button.IconButton`
-            - **`queue`** — Contributes the priority Queue (pin/status group-by sections, task-group aggregation, and neighbor-based manual-order drag over the queue's live data/mutation layer) as the Queue source of the merged conversation-sidebar DataView.
+            - **`queue`** — Contributes the priority Queue (pin/status group-by sections, task-group aggregation, supervised tasks nested beneath their supervisor's row (attach, per-view Sub-items), and neighbor-based manual-order drag over the queue's live data/mutation layer) as the Queue source of the merged conversation-sidebar DataView.
               - Web:
                 - Slots: `queue-actions`
                 - Slot contributors: `queue-actions` ← `conversations.conversations-view.data-view.queue`
@@ -41860,10 +41860,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×4
           - `DataViewSlots.Setting` ×4
           - `IdKinds.Kind` ×2
-        - Uses: 130 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 131 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `network/live` ×20
           - `primitives/css/ui-kit` ×17
-          - `primitives/data-view/view-core` ×10
+          - `primitives/data-view/view-core` ×11
           - `primitives/live-state` ×6
           - `primitives/slot-render` ×5
           - `primitives/css/control-panel` ×4
@@ -41924,6 +41924,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CoverFrameProps`
           - `CreateOption`
           - `DataViewAggregateConfig`
+          - `DataViewAttachConfig`
           - `DataViewContribution`
           - `DataViewControlContribution`
           - `DataViewControlsContextValue`
@@ -42027,6 +42028,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ViewState`
         - Exports (values):
           - `applyFilter`
+          - `attachedChildrenOpen`
+          - `attachExpandKey`
           - `cardFieldsOf`
           - `CardMeta`
           - `CardTokens`
@@ -42145,6 +42148,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CreateOption`
           - `DataViewActiveChrome`
           - `DataViewAggregateConfig`
+          - `DataViewAttachConfig`
           - `DataViewBaseProps`
           - `DataViewDataOrigin`
           - `DataViewDeclaredSection`
@@ -42246,6 +42250,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SlotSpec`
           - `SortPreset`
           - `SortRule`
+          - `SubItemsKind`
           - `TableCellProps`
           - `ToolbarArrangement`
           - `ToolbarPartForms`
@@ -42538,8 +42543,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`list`** — List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
           - Web:
             - Contributes: `DataViewSlots.View` "List" → `ListView`
-            - Uses: 66 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md)
-              - `primitives/data-view` ×44
+            - Uses: 69 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md)
+              - `primitives/data-view` ×47
               - `primitives/rank-reorder` ×3
               - `primitives/css/spacing` ×2
               - `primitives/collapsible.FoldMotion`
@@ -51214,7 +51219,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `taskTree`
               - `treeDigest`
               - `TreeDigest`
-        - **`watch`** — Watch, web half: registers the watch and watch-event id kinds, so their ids are recognised in the browser as on the server; presents the exposed `managedBy` field (Agent / You — whether another task's agent watches the task) in every list whose rows reach a task. Watch, every host's half: task_watches (who watches which task's subtree; live while not ended and its conversation not done) and watch_inbox (routed, not yet delivered events), with their id kinds; watchTask / endWatch / retargetWatch / watchesOf; the WatchSource and WatchHandler contribution kinds; tasks_ext_manager (which task's agent watches each task, exposed as the `managedBy` field — Agent / You — of every list whose rows reach a task); the routing, quiet and delivery policy over the tables; and the stop waiver (a watcher whose subtree still has work running may stop — the next event wakes it). Names no source, handler or workflow.
+        - **`watch`** — Watch, web half: registers the watch and watch-event id kinds, so their ids are recognised in the browser as on the server; presents the exposed `managedBy` field (Agent / You — whether another task's agent watches the task) and `managerTaskId` (the watching agent's task, hidden by default) in every list whose rows reach a task. Watch, every host's half: task_watches (who watches which task's subtree; live while not ended and its conversation not done) and watch_inbox (routed, not yet delivered events), with their id kinds; watchTask / endWatch / retargetWatch / watchesOf; the WatchSource and WatchHandler contribution kinds; tasks_ext_manager (which task's agent watches each task, exposed as the `managedBy` field — Agent / You — of every list whose rows reach a task); the routing, quiet and delivery policy over the tables; and the stop waiver (a watcher whose subtree still has work running may stop — the next event wakes it). Names no source, handler or workflow.
           - Web:
             - Contributes:
               - `IdKinds.Kind` "watch"

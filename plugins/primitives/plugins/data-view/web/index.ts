@@ -137,6 +137,7 @@ export {
   isGroupableField,
 } from "./internal/use-data-view-sections";
 export type { PartitionOptions } from "./internal/use-data-view-sections";
+export { attachExpandKey, attachedChildrenOpen } from "./internal/attach";
 export { useResolveGroupings, useGroupingRegistry } from "./grouping-slot";
 export type { GroupingRegistry } from "./grouping-slot";
 export {
@@ -225,6 +226,7 @@ export type {
   DataViewSection,
   DataViewRowEntry,
   DataViewAggregateConfig,
+  DataViewAttachConfig,
   DataViewRenderProps,
   DataViewProps,
   DataViewViewEdits,

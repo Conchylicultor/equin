@@ -137,6 +137,17 @@ schema. See the data-view CLAUDE.md "Per-view visible fields (Properties)".
 When `options.renderRow` is set it owns the whole body instead, but is still
 wrapped in the selectable/clickable `Row`.
 
+## Attached rows
+
+Over a source with `attach` (data-view CLAUDE.md, "Attached rows") the list
+declares `nestsAttach`: each entry's `children` are drawn indented under it
+(`Inset l="lg"`, folding with `FoldMotion`), as siblings OUTSIDE the parent's
+`ManualOrderRow` — a child has no rank, no drop row, and is never a drag
+source. The parent's cluster gets a "Show / Hide N attached" disclosure (the
+cluster then shows at rest) writing `attachExpandKey(key)`; open state comes
+from `attachedChildrenOpen`. Default row chrome only (`rowChrome: "tree"`
+throws).
+
 ## Grouping
 
 Under group-by the grouped branch renders through the shared **`<GroupedSections>`**
@@ -207,8 +218,8 @@ conditional hook.
 - Description: List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
 - Web:
   - Contributes: `DataViewSlots.View` "List" → `ListView`
-  - Uses: 66 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×44
+  - Uses: 69 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×47
     - `primitives/rank-reorder` ×3
     - `primitives/css/spacing` ×2
     - `primitives/collapsible.FoldMotion`

@@ -4,7 +4,7 @@ import {
   defineRenderSlot,
   type RenderSlot,
 } from "@plugins/primitives/plugins/slot-render/web";
-import type { ViewState } from "../../core";
+import type { SubItemsKind, ViewState } from "../../core";
 import type { DataViewSourceBundle } from "./body-types";
 
 /**
@@ -48,6 +48,12 @@ export interface DataViewSourceContribution<THostProps> {
   icon: IconRef;
   /** STATIC view-type whitelist for this source's add-menu group. */
   views?: string[];
+  /**
+   * STATIC: which sub-items this source's rows have — `"attach"` when its
+   * bundle passes `attach` — so its views' settings offer Sub-items before the
+   * source mounts. A bundle disagreeing with it throws.
+   */
+  subItems?: SubItemsKind;
   component: ComponentType<DataViewSourceProps<THostProps>>;
 }
 

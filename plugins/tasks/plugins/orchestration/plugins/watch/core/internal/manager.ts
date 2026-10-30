@@ -16,7 +16,9 @@ import { tasksEntityRef } from "@plugins/tasks/plugins/tasks-core/core";
  * It EXPOSES its presence to every list whose rows reach a task (the
  * conversation lists, the task list) as `managedBy` — `agent` where the task
  * has a row, `you` where it has none — so a list filters out (or groups by)
- * what an agent is looking after.
+ * what an agent is looking after; and `managerTaskId` itself (null where it
+ * has none), so a list draws a managed task beneath its manager's row (the
+ * Queue's `attach`).
  */
 export const taskManagerShape = defineExtensionShape({
   key: "taskId",
@@ -24,6 +26,7 @@ export const taskManagerShape = defineExtensionShape({
   exposes: {
     parent: tasksEntityRef,
     name: "manager",
+    fields: { managerTaskId: { label: "Managed by task" } },
     presence: {
       id: "managedBy",
       label: "Managed by",

@@ -21,6 +21,8 @@ export default {
       // Opts into flat manual-order (rank-based drag reorder); active only when
       // the consumer supplies `manualOrder`.
       supportsManualOrder: true,
+      // Draws the rows a source attaches beneath others (`attach`) under them.
+      nestsAttach: true,
       // Per view instance, from its settings: a caption row over the list —
       // the title field's label, and each trailing field's over its slot.
       configSchema: {

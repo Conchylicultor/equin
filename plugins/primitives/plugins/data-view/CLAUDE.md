@@ -91,7 +91,7 @@ Authored terse (`{ name, view }`); view-core's `normalizeRows` derives `id`;
 - `fold`, `properties`.
 - `nesting` (`"nested" | "flat" | "roots"`) and `filterScope`
   (`"rows" | "roots"`, nested table only) — both written by the **Sub-items**
-  settings section.
+  settings section (a `hierarchy`, or rows that `attach`).
 
 **Authored-only** (read by the `sections` chrome): `hideWhenEmpty`,
 `description`.
@@ -660,8 +660,52 @@ interface DataViewAggregateConfig<TRow> {
 - **Output**: one `DataViewRowEntry` with `aggregateCount` and `members`, at the
   first member's position and `key`; `section.count` is the post-collapse count.
 - **Badge**: list trailing, table in the primary cell, gallery top-left `Pin`.
+- Members of an entry carry its attached rows (`attach`): a child whose parent
+  key is any member's hangs under the entry.
 - Acting on the representative "acts on the group" only if the **consumer** maps
   it so.
+
+## Attached rows (`attach`)
+
+`attach?: DataViewAttachConfig<TRow>` draws a row **beneath another row of the
+same view while that row is loaded** — a supervised task under its supervisor in
+the Queue. A relation between loaded rows, not the source's structure (that is
+`hierarchy`), so it composes with `paging`, `manualOrder`, group-by, fold and
+`aggregate`:
+
+```ts
+interface DataViewAttachConfig<TRow> {
+  getKey: (row: TRow) => string | null; // several rows may share one
+  getParentKey: (row: TRow) => string | null; // null = top-level
+  defaultExpanded?: boolean; // children open unless the expand map says otherwise
+}
+```
+
+- **Resolved once** (`web/internal/attach.ts`, `resolveAttach`): a row attaches
+  when its parent key is another key a held row carries and that key is
+  anchored (a root, or attached itself). A parent not loaded, a self-parent, a
+  cycle (and what hangs from it) ⇒ top-level — never hidden.
+- **Pipeline** (`useDataViewSections`): attached rows leave BEFORE the partition,
+  so they ride with their parent's section whatever their own group value and
+  take no slot in its count; after rank order and aggregate,
+  `hangAttached` puts them on the parent entry's `children` (first entry holding
+  the key wins), each child list rank-ordered and aggregated like a section,
+  nested to any depth. The fold keeps a parent whose attached row is selected.
+- **A row the read pages (`paging.isPaged`) never attaches** — the host strips
+  its parent key: hung far from its page it would report that page on screen
+  and hold every page between live.
+- **Per view: the Sub-items setting** (`ViewState.nesting`). Only a view type
+  declaring `nestsAttach` (the list) receives `attach`, and only while `nested`;
+  `flat` draws every row in its own section, `roots` drops the rows that would
+  attach (`attachRoots`). The setting is offered when the surface has `attach`
+  (`subItemsSettingsFor("attach")`); a `DataViewSwitcher` source declares it
+  statically (`subItems: "attach"`, asserted against its bundle).
+- **Drawing** (list): children indented under the row, outside its drag wrapper
+  — never a manual-order drag source or drop target. The disclosure is in the
+  row's cluster (shown at rest); open state is the expand map under
+  `attachExpandKey(key)` (never the row's own key, which `detail` uses), read
+  through `attachedChildrenOpen` — which also opens a parent holding the
+  selected row. Exclusive with `hierarchy` and a live `source` (tsc).
 
 ## Fold: "… N more" per section (`ViewState.fold`)
 
@@ -1965,10 +2009,10 @@ list, table and `primitives/tree` share it.
     - `DataViewSlots.Control` ×4
     - `DataViewSlots.Setting` ×4
     - `IdKinds.Kind` ×2
-  - Uses: 130 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 131 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live` ×20
     - `primitives/css/ui-kit` ×17
-    - `primitives/data-view/view-core` ×10
+    - `primitives/data-view/view-core` ×11
     - `primitives/live-state` ×6
     - `primitives/slot-render` ×5
     - `primitives/css/control-panel` ×4
@@ -2029,6 +2073,7 @@ list, table and `primitives/tree` share it.
     - `CoverFrameProps`
     - `CreateOption`
     - `DataViewAggregateConfig`
+    - `DataViewAttachConfig`
     - `DataViewContribution`
     - `DataViewControlContribution`
     - `DataViewControlsContextValue`
@@ -2132,6 +2177,8 @@ list, table and `primitives/tree` share it.
     - `ViewState`
   - Exports (values):
     - `applyFilter`
+    - `attachedChildrenOpen`
+    - `attachExpandKey`
     - `cardFieldsOf`
     - `CardMeta`
     - `CardTokens`
@@ -2250,6 +2297,7 @@ list, table and `primitives/tree` share it.
     - `CreateOption`
     - `DataViewActiveChrome`
     - `DataViewAggregateConfig`
+    - `DataViewAttachConfig`
     - `DataViewBaseProps`
     - `DataViewDataOrigin`
     - `DataViewDeclaredSection`
@@ -2351,6 +2399,7 @@ list, table and `primitives/tree` share it.
     - `SlotSpec`
     - `SortPreset`
     - `SortRule`
+    - `SubItemsKind`
     - `TableCellProps`
     - `ToolbarArrangement`
     - `ToolbarPartForms`

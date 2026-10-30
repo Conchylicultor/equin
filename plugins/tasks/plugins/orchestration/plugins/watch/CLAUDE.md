@@ -60,7 +60,9 @@ an agent (one `event` turn per batch) or code (a `WatchHandler`). Plan:
   `watch.managers-reconcile` (startup warm-up + nightly; a cascade-deleted
   watch runs no app code). Exposed as `managedBy` (Agent / You) in every list
   whose rows reach a task: a Queue view filtered `Managed by is You` shows
-  only what no agent is looking after.
+  only what no agent is looking after. `managerTaskId` itself is exposed too
+  (hidden by default): the Queue draws a managed task beneath its manager's
+  row with it (DataView `attach`, `queue-attach.ts`).
 
 Every delivering job is main-only (`isMain()`): a forked worktree DB inherits the trigger
 rows and the watches. The manager refreshes run everywhere — they rewrite a
@@ -71,7 +73,7 @@ it over the real tables with a fake agent.
 
 ## Plugin reference
 
-- Description: Watch, web half: registers the watch and watch-event id kinds, so their ids are recognised in the browser as on the server; presents the exposed `managedBy` field (Agent / You — whether another task's agent watches the task) in every list whose rows reach a task. Watch, every host's half: task_watches (who watches which task's subtree; live while not ended and its conversation not done) and watch_inbox (routed, not yet delivered events), with their id kinds; watchTask / endWatch / retargetWatch / watchesOf; the WatchSource and WatchHandler contribution kinds; tasks_ext_manager (which task's agent watches each task, exposed as the `managedBy` field — Agent / You — of every list whose rows reach a task); the routing, quiet and delivery policy over the tables; and the stop waiver (a watcher whose subtree still has work running may stop — the next event wakes it). Names no source, handler or workflow.
+- Description: Watch, web half: registers the watch and watch-event id kinds, so their ids are recognised in the browser as on the server; presents the exposed `managedBy` field (Agent / You — whether another task's agent watches the task) and `managerTaskId` (the watching agent's task, hidden by default) in every list whose rows reach a task. Watch, every host's half: task_watches (who watches which task's subtree; live while not ended and its conversation not done) and watch_inbox (routed, not yet delivered events), with their id kinds; watchTask / endWatch / retargetWatch / watchesOf; the WatchSource and WatchHandler contribution kinds; tasks_ext_manager (which task's agent watches each task, exposed as the `managedBy` field — Agent / You — of every list whose rows reach a task); the routing, quiet and delivery policy over the tables; and the stop waiver (a watcher whose subtree still has work running may stop — the next event wakes it). Names no source, handler or workflow.
 - Web:
   - Contributes:
     - `IdKinds.Kind` "watch"
