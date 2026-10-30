@@ -35,6 +35,7 @@ import {
   type LiveWindowParams,
 } from "./query";
 import { LIVE_ROW_KEY } from "./row-key";
+import type { OrderableKeys } from "./order-value";
 import type { MachineFeature } from "@plugins/infra/plugins/endpoints/core";
 import {
   machineFields,
@@ -527,7 +528,7 @@ export interface LiveAllOrderBase<Row> {
    */
   by?: readonly (keyof NoInfer<Row> & string)[];
   /** Row fields with their direction; non-empty, each field once. The id breaks ties. */
-  orderBy: LiveOrderBy<keyof NoInfer<Row> & string>;
+  orderBy: LiveOrderBy<OrderableKeys<NoInfer<Row>>>;
 }
 
 /**
@@ -605,6 +606,16 @@ export type LiveLookupSpec<Row> = LiveNoWindowSpec<Row, undefined>;
 export type LiveAllSpec<Row> = LiveNoWindowSpec<Row, LiveAllOrder<Row>> & {
   all: LiveAllOrder<Row>;
 };
+
+/**
+ * A window's order fields, checked against the row: `sortable` and
+ * `default.orderBy` name only fields a read can be ordered by
+ * ({@link OrderableKeys}) — so the browser can re-sort what it holds.
+ */
+interface OrderedBy<Row> {
+  sortable: readonly NoInfer<OrderableKeys<Row>>[];
+  default: { readonly orderBy: LiveOrderBy<NoInfer<OrderableKeys<Row>>> };
+}
 
 /** A window's default, in the fields spelling (its order over `S`). */
 export interface LiveFieldsDefault<S extends string> {
@@ -727,6 +738,7 @@ export function liveCollection<
     id: I;
     default: LiveFieldsDefault<S>;
     row?: never;
+  } & OrderedBy<FieldsRow<undefined, never, never, OF, CF>> & {
     filterable?: never;
     from?: never;
     pick?: never;
@@ -760,7 +772,8 @@ export function liveCollection<
     baseExposures?: B;
     arms?: never;
     default: LiveFieldsDefault<S>;
-  } & LiveFieldsForm<LiveFieldsDefault<S>, undefined, S, Cn, R> &
+  } & OrderedBy<FieldsRow<E, P, CP, OF, CF>> &
+    LiveFieldsForm<LiveFieldsDefault<S>, undefined, S, Cn, R> &
     LiveMachineSpec<NM>,
 ): LiveCollectionOf<
   FieldsRow<E, P, CP, OF, CF>,

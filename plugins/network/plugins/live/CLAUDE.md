@@ -398,7 +398,11 @@ close.mutate(req, { onSuccess: () => onDone() });                   // this call
     moved in the order (`all` sets by `all.orderBy`, windows by their query's);
     one sorted past the last held row of a window with more rows leaves until
     the server's frame brings it where it lands. An order naming an exposed /
-    scoped column moves nothing.
+    scoped column moves nothing. Order fields are compared by `orderScalar`
+    (`core/internal/order-value.ts`): a scalar, an instant, or a value object
+    whose `toJSON()` is its wire scalar (a `Rank`) — and `sortable`,
+    `default.orderBy` and `all.orderBy` are typed to exactly those fields
+    (`OrderableKeys`), so an order the browser cannot re-sort is a tsc error.
   - A `where` target skips a read whose rows lack a column the filter names.
   - Never a grouping or a count; the window's own `where` is not re-checked. A
     read no op touches keeps its server data's identity.
@@ -1439,6 +1443,8 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LiveWindowDescriptor`
     - `LiveWindowParams`
     - `NotCollectionRow`
+    - `OrderableKeys`
+    - `OrderableValue`
     - `PredictOptions`
     - `PredictPatchTarget`
     - `PredictTarget`
@@ -1477,6 +1483,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `liveArm`
     - `liveCollection`
     - `liveValue`
+    - `orderScalar`
     - `patchRow`
     - `patchValue`
     - `patchWhere`

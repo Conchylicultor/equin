@@ -34365,6 +34365,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveWindowDescriptor`
           - `LiveWindowParams`
           - `NotCollectionRow`
+          - `OrderableKeys`
+          - `OrderableValue`
           - `PredictOptions`
           - `PredictPatchTarget`
           - `PredictTarget`
@@ -34403,6 +34405,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `liveArm`
           - `liveCollection`
           - `liveValue`
+          - `orderScalar`
           - `patchRow`
           - `patchValue`
           - `patchWhere`
