@@ -33,8 +33,8 @@ shared check plumbing to say "inconclusive".
 
 > **Superseded, not landed.** While this was in review, main landed 8fa9b8d00e
 > ("build pins + 1-minute prune margin against concurrent builds"): every build
-> pins each entry it builds or reuses into a  sibling of its dist, which
->  already reads as roots — the exact lease design rejected
+> pins each entry it builds or reuses into a `web.*` sibling of its dist, which
+> `servedDistTargets` already reads as roots — the exact lease design rejected
 > below, done without a lock thanks to the snapshot margin. Only Fix 2 landed.
 
 
