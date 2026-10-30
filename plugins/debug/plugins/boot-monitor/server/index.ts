@@ -9,7 +9,7 @@ export { getGatewayBootReport } from "./internal/gateway-report";
 
 export default {
   description:
-    "Whole-boot monitor: a cheap per-worktree scheduled job that, once the boot profile is complete (its settled phase recorded), mints ONE 'boot' slow-op row + coherent trace per over-budget server boot — evidence-first, deduped per boot epoch — folding in the gateway-observed readiness wait when the gateway POSTed /api/boot/gateway-report.",
+    "Time-to-ready boot monitor: a cheap per-worktree scheduled job that, once the server is ready (markServerReady stamped the profiler's timeToReadyMs), mints ONE 'boot' slow-op row (operation server-ready) + coherent trace per boot that took longer than its budget to become ready — evidence-first, deduped per boot epoch — folding in the gateway-observed readiness wait when the gateway POSTed /api/boot/gateway-report. Post-ready warm-ups are not judged here (each has its own budget).",
   register: [bootMonitorJob],
   contributions: [ConfigV2.Register({ descriptor: bootMonitorConfig })],
   httpRoutes: {

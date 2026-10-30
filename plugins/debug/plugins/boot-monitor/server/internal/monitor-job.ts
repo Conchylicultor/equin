@@ -12,24 +12,25 @@ import { getGatewayBootReport } from "./gateway-report";
 // happens once per process, so the profile is static once complete and every
 // later tick would re-read the same data. The process lifetime IS the boot
 // epoch, so this boolean is inherently per-boot-epoch (boot-budget's Set,
-// collapsed to one bit — this monitor judges the whole boot, not per span).
+// collapsed to one bit — this monitor judges the boot's time to ready, not
+// per span).
 // Across a restart the module reloads with a fresh flag, so a chronically-slow
 // boot re-mints, collapsing onto its stable slow_ops row (`count` = number of
 // slow boots for this worktree).
 let minted = false;
 
-// Cheap per-worktree scheduled whole-boot monitor. Runs every minute in EACH
+// Cheap per-worktree scheduled time-to-ready monitor. Runs every minute in EACH
 // worktree's own backend (perWorktree) because getProfilingData() is per-process
 // in-memory boot state — every backend has its OWN boot to judge.
 // `dedup: "singleton"` + `maxAttempts: 3` mirror the other debug monitors.
-// Trip-only: a within-budget boot mints nothing (Debug → Boot Profile stays the
+// Trip-only: a boot ready within budget mints nothing (Debug → Boot Profile stays the
 // always-on deep-dive); an over-budget boot mints evidence-first — the coherent
 // trace before the durable slow-op row, the documented contract in
 // record-slow-op.ts — so the row and report can deep-link the trace id.
 export const bootMonitorJob = defineJob({
   name: "debug.boot-monitor",
   description:
-    "Files a report with a boot trace when a backend's whole startup took longer than its budget.",
+    "Files a report with a boot trace when a backend took longer than its budget to become ready.",
   hold: "instant",
   input: z.object({}),
   event: z.never(),
@@ -41,28 +42,29 @@ export const bootMonitorJob = defineJob({
     if (!cfg.enabled) return;
     if (minted) return;
 
-    const { spans, totalDurationMs, memoryCheckpoints } = getProfilingData();
-    // Boot-completeness guard: profilerStart pushes a span only when its end()
-    // closure runs, so the presence of the `settled` span (the framework's
-    // final, post-onAllReady settled phase — the warm-up drain) is a
-    // deterministic "boot fully complete" signal, whatever plugins the graph
-    // holds. Until it appears the profile is still growing — judging
-    // totalDurationMs mid-boot would under-report a slow boot as fast — so the
-    // tick is skipped, not marked.
-    if (!spans.some((s) => s.phase === "settled")) return;
+    const { spans, totalDurationMs, memoryCheckpoints, timeToReadyMs } =
+      getProfilingData();
+    // The trip metric is time to READY — process start → markServerReady(),
+    // the barrier the gateway waits on before it switches to this backend —
+    // never the profile's end: that waits for the settled phase's warm-up
+    // drain, background work each warm-up's own budget already judges
+    // (slow-ops). Readiness is final once stamped, so the first tick after
+    // it judges; until then the tick is skipped, not marked. The
+    // gateway-observed wait stays section EVIDENCE, never the trip metric.
+    if (timeToReadyMs === null) return;
     minted = true;
 
-    if (totalDurationMs <= cfg.totalBootBudgetMs) return;
+    if (timeToReadyMs <= cfg.readyBudgetMs) return;
 
-    // The trip metric is the profiler's own totalDurationMs — deterministic and
-    // gateway-version-independent; the gateway-observed wait is section
-    // EVIDENCE, never the trip metric.
     const gateway = getGatewayBootReport();
     const section: BootSection = {
       // Epoch ms of process start — the wall anchor for every offset in the
       // section, and boot-events' pairing key.
       wallStartMs: Math.round(performance.timeOrigin),
       totalDurationMs,
+      timeToReadyMs,
+      // The spans recorded by the mint tick: the boot through ready, plus
+      // whatever post-ready work has finished since (context, not the verdict).
       spans: spans.map((s) => ({
         id: s.id,
         phase: s.phase,
@@ -90,17 +92,17 @@ export const bootMonitorJob = defineJob({
 
     const trace = captureTrace({
       kind: "boot",
-      label: "server-boot",
-      durationMs: totalDurationMs,
-      thresholdMs: cfg.totalBootBudgetMs,
+      label: "server-ready",
+      durationMs: timeToReadyMs,
+      thresholdMs: cfg.readyBudgetMs,
       detail: section,
     });
     await recordSlowOp({
       operationKind: "boot",
-      operation: "server-boot",
-      durationMs: totalDurationMs,
-      ownMs: totalDurationMs,
-      thresholdMs: cfg.totalBootBudgetMs,
+      operation: "server-ready",
+      durationMs: timeToReadyMs,
+      ownMs: timeToReadyMs,
+      thresholdMs: cfg.readyBudgetMs,
       source: "server-boot-monitor",
       caller: null,
       ...(trace ? { traceId: trace.id } : {}),

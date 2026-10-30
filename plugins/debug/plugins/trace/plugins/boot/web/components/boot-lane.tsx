@@ -103,7 +103,8 @@ export function BootLane({ payload, onSelect }: TraceLaneProps): ReactElement {
     );
   }
   const section = parsed.data;
-  const { totalDurationMs, spans, memoryCheckpoints, gateway } = section;
+  const { totalDurationMs, timeToReadyMs, spans, memoryCheckpoints, gateway } =
+    section;
 
   const gw = gatewayWindow(section);
   // The gateway wait starts BEFORE process start (negative offset) and may end
@@ -132,6 +133,11 @@ export function BootLane({ payload, onSelect }: TraceLaneProps): ReactElement {
     <div className="border-b" onPointerDown={(e) => e.stopPropagation()}>
       <Stack direction="row" align="center" gap="sm" className="px-lg py-xs">
         <SectionLabel>Server boot</SectionLabel>
+        {timeToReadyMs !== undefined && (
+          <Badge variant="muted" mono>
+            ready {formatDuration(timeToReadyMs)}
+          </Badge>
+        )}
         <Badge variant="muted" mono>
           boot {formatDuration(totalDurationMs)}
         </Badge>

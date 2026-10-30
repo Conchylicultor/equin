@@ -1,7 +1,7 @@
-// @hash 0f305d6abc80
+// @hash b2827a06cee6
 {
   // When off, the monitor job returns early and mints no boot slow-ops or traces.
   "enabled": true,
-  // Mint a 'boot' slow-op + trace when a server boot's total profiled duration (through the settled phase) exceeds this many ms. Within-budget boots mint nothing — Debug → Boot Profile stays the always-on deep-dive.
-  "totalBootBudgetMs": 10000
+  // Mint a 'boot' slow-op + trace when a server takes longer than this many ms from process start to ready (the onReadyBlocking barrier done — what the gateway waits on before switching to it). Post-ready warm-ups are judged by their own budgets. Within-budget boots mint nothing — Debug → Boot Profile stays the always-on deep-dive.
+  "readyBudgetMs": 10000
 }

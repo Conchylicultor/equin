@@ -75,8 +75,13 @@ export const BootSectionSchema = z.object({
   // Epoch ms of process start (Math.round(performance.timeOrigin)) — the wall
   // anchor every offset below is relative to, and the boot-events pairing key.
   wallStartMs: z.number(),
-  // Profiler total: max span end offset, the same number the slow-op trips on.
+  // Profiler total: max span end offset recorded by the mint tick (post-ready
+  // work included) — context, not the verdict.
   totalDurationMs: z.number(),
+  // Ms from process start to markServerReady() — the number the slow-op trips
+  // on. Optional: traces minted before it existed (which tripped on
+  // totalDurationMs) still parse.
+  timeToReadyMs: z.number().optional(),
   spans: z.array(BootSpanSchema),
   memoryCheckpoints: z.array(BootMemoryCheckpointSchema),
   // Present only when the gateway POSTed its report before the mint tick.

@@ -1,10 +1,11 @@
 # boot
 
 Built-in trace event class for **slow server boots**. When a worktree backend's
-whole boot (profiler `totalDurationMs`) exceeds `debug/boot-monitor`'s
-`totalBootBudgetMs`, the monitor builds a `BootSection` from `getProfilingData()`
-(+ the gateway's readiness report when one was POSTed) and fires
-`captureTrace({ kind: "boot", label: "server-boot", detail: <BootSection> })`
+time to ready (profiler `timeToReadyMs`, process start → `markServerReady()`)
+exceeds `debug/boot-monitor`'s `readyBudgetMs`, the monitor builds a
+`BootSection` from `getProfilingData()` (+ the gateway's readiness report when
+one was POSTed) and fires
+`captureTrace({ kind: "boot", label: "server-ready", detail: <BootSection> })`
 (and records the `slow_ops` row). This class surfaces that section as a lane on
 the resulting trace.
 

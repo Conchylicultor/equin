@@ -6,6 +6,7 @@ import { captureBootSection } from "./class";
 const section: BootSection = {
   wallStartMs: 1_752_700_000_000,
   totalDurationMs: 12_500,
+  timeToReadyMs: 10_400,
   spans: [
     {
       id: "runMigrations",
@@ -45,7 +46,13 @@ function ctxFor(trigger: TraceTrigger): TripContext {
 describe("captureBootSection", () => {
   test("passes a boot trigger's detail through, and it is BootSection-valid", () => {
     const out = captureBootSection(
-      ctxFor({ kind: "boot", label: "server-boot", durationMs: 12_500, thresholdMs: 10_000, detail: section }),
+      ctxFor({
+        kind: "boot",
+        label: "server-ready",
+        durationMs: 10_400,
+        thresholdMs: 10_000,
+        detail: section,
+      }),
     );
     expect(out).toEqual(section);
     // The engine validates each section against the class schema before persist —

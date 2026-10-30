@@ -49,6 +49,7 @@ const bootStart = performance.now();
 const spans: Span[] = [];
 const idCounts = new Map<string, number>();
 const memoryCheckpoints: MemoryCheckpoint[] = [];
+let timeToReadyMs: number | null = null;
 
 /** bytes → MB, rounded to 1 decimal. */
 function toMb(bytes: number): number {
@@ -114,6 +115,15 @@ export function recordMemoryCheckpoint(label: string): void {
   });
 }
 
+/**
+ * Stamp the instant this backend became ready — called by `markServerReady()`
+ * only, so the profiler's ready instant cannot drift from the flag
+ * `/api/health/ready` reports and the gateway hot-swaps on.
+ */
+export function recordReadyInstant(): void {
+  timeToReadyMs = Math.round(performance.now());
+}
+
 export function getProfilingData(): {
   spans: Span[];
   totalDurationMs: number;
@@ -124,6 +134,14 @@ export function getProfilingData(): {
    * `timeOrigin` places an offset on the wall clock.
    */
   bootStartOffsetMs: number;
+  /**
+   * Ms from process start (`performance.timeOrigin` — the clock the gateway
+   * and `boot.jsonl` measure on, NOT the span offsets' axis) to
+   * `markServerReady()`: how long the backend took to become ready. `null`
+   * until then, and always in a host that never marks ready (`exec`, browser).
+   * Post-ready work (`onReady`, the settled phase's warm-up drain) is not in it.
+   */
+  timeToReadyMs: number | null;
 } {
   const totalDurationMs =
     spans.length === 0
@@ -134,5 +152,6 @@ export function getProfilingData(): {
     totalDurationMs,
     memoryCheckpoints,
     bootStartOffsetMs: bootStart,
+    timeToReadyMs,
   };
 }

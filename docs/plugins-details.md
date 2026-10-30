@@ -21272,7 +21272,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `debug/boot-watchdog`
           - `debug/timeline`
-    - **`boot-monitor`** — Boot-monitor web presence: registers the whole-boot budget config (enabled, totalBootBudgetMs) for Settings → Config. The minted signals flow through the existing slow-op report kind and the boot trace lane — no new renderer. Whole-boot monitor: a cheap per-worktree scheduled job that, once the boot profile is complete (its settled phase recorded), mints ONE 'boot' slow-op row + coherent trace per over-budget server boot — evidence-first, deduped per boot epoch — folding in the gateway-observed readiness wait when the gateway POSTed /api/boot/gateway-report.
+    - **`boot-monitor`** — Boot-monitor web presence: registers the time-to-ready budget config (enabled, readyBudgetMs) for Settings → Config. The minted signals flow through the existing slow-op report kind and the boot trace lane — no new renderer. Time-to-ready boot monitor: a cheap per-worktree scheduled job that, once the server is ready (markServerReady stamped the profiler's timeToReadyMs), mints ONE 'boot' slow-op row (operation server-ready) + coherent trace per boot that took longer than its budget to become ready — evidence-first, deduped per boot epoch — folding in the gateway-observed readiness wait when the gateway POSTed /api/boot/gateway-report. Post-ready warm-ups are not judged here (each has its own budget).
       - Web:
         - Contributes: `ConfigV2.WebRegister` "boot-monitor"
         - Uses: `config_v2.ConfigV2`
