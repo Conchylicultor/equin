@@ -1,0 +1,764 @@
+<!doctype html>
+<html lang="en" data-network="online" data-theme="dark" style="--accent: #34d399">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Circle — P2P friends</title>
+<meta name="description" content="Talk to your friends with no server in between: your identity is a key on your device, friends are added in person, messages travel directly or through mutual friends, and everything you share lives only on the devices you chose." />
+<meta name="prototype-option-group" content="Scenario" />
+<meta name="prototype-option" content="network: online | nearby | offline" />
+<meta name="prototype-option-group" content="Look" />
+<meta name="prototype-option" content="theme: dark | light" />
+<meta name="prototype-option" content="accent: color mint=#34d399 | violet=#8b7cff | amber=#f5a524 | sky=#38bdf8" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  :root {
+    --bg: #0b0d10; --panel: #12151a; --panel-2: #181c22; --line: #232831; --line-2: #2d333d;
+    --fg: #e8ebef; --fg-2: #a3abb7; --fg-3: #6b7380;
+    --warn: #f5a524; --off: #6b7380;
+    --accent-soft: color-mix(in oklab, var(--accent) 16%, transparent);
+    --accent-line: color-mix(in oklab, var(--accent) 45%, transparent);
+    --radius: 12px;
+    color-scheme: dark;
+  }
+  :root[data-theme="light"] {
+    --bg: #f4f5f7; --panel: #ffffff; --panel-2: #f7f8fa; --line: #e6e8ec; --line-2: #d8dbe1;
+    --fg: #14171c; --fg-2: #4d5562; --fg-3: #8a92a0;
+    --accent-soft: color-mix(in oklab, var(--accent) 14%, transparent);
+    color-scheme: light;
+  }
+  body { font-family: Inter, system-ui, sans-serif; background: var(--bg); color: var(--fg); font-size: 14px; -webkit-font-smoothing: antialiased; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+  input, textarea { font: inherit; color: inherit; }
+
+  .app { display: grid; grid-template-columns: 232px 1fr; height: var(--prototype-screen-height, 100vh); }
+  @media (max-width: 760px) { .app { grid-template-columns: 1fr; grid-template-rows: 1fr auto; } }
+
+  /* Rail */
+  .rail { background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; padding: 16px 12px; gap: 4px; min-width: 0; }
+  @media (max-width: 760px) {
+    .rail { order: 2; flex-direction: row; border-right: 0; border-top: 1px solid var(--line); padding: 6px; justify-content: space-around; }
+    .rail .me-card, .rail .rail-foot, .rail .brand { display: none; }
+    .nav-item span.label { display: none; }
+  }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px 16px; font-weight: 700; letter-spacing: -0.01em; font-size: 15px; }
+  .brand-mark { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--accent); position: relative; }
+  .brand-mark::after { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: var(--accent); }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; color: var(--fg-2); font-weight: 500; position: relative; }
+  .nav-item:hover { background: var(--panel-2); color: var(--fg); }
+  .nav-item.active { background: var(--accent-soft); color: var(--fg); }
+  .nav-item svg { width: 18px; height: 18px; flex: none; }
+  .nav-item .count { margin-left: auto; font-size: 11px; background: var(--accent); color: #06130d; border-radius: 99px; padding: 1px 7px; font-weight: 600; }
+  .rail-foot { margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
+  .me-card { display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2); }
+  .me-card .who { min-width: 0; }
+  .me-card .who b { display: block; font-size: 13px; }
+  .me-card .who small { color: var(--fg-3); font-size: 11px; }
+  .net-pill { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--fg-2); padding: 8px 10px; border-radius: 8px; border: 1px dashed var(--line-2); }
+  .zero-server { font-size: 11px; color: var(--fg-3); padding: 0 10px; line-height: 1.5; }
+  .zero-server b { color: var(--accent); font-weight: 600; }
+
+  /* Avatars + status */
+  .av { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 600; font-size: 13px; color: #0b0d10; flex: none; position: relative; }
+  .av.sm { width: 26px; height: 26px; font-size: 11px; }
+  .av.lg { width: 56px; height: 56px; font-size: 20px; }
+  .av .dot { position: absolute; right: -1px; bottom: -1px; width: 11px; height: 11px; border-radius: 50%; border: 2px solid var(--panel); }
+  .dot.direct { background: var(--accent); }
+  .dot.relay { background: transparent; box-shadow: inset 0 0 0 2px var(--accent); }
+  .dot.offline { background: var(--off); }
+  .sdot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
+  .sdot.direct { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .sdot.relay { box-shadow: inset 0 0 0 2px var(--accent); }
+  .sdot.offline { background: var(--off); }
+
+  /* Main */
+  .main { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+  .page-head { display: flex; align-items: center; gap: 12px; padding: 18px 24px; border-bottom: 1px solid var(--line); min-height: 64px; }
+  .page-head h1 { font-size: 17px; margin: 0; letter-spacing: -0.01em; }
+  .page-head .sub { color: var(--fg-3); font-size: 12px; }
+  .spacer { flex: 1; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 9px; font-weight: 600; font-size: 13px; border: 1px solid var(--line-2); background: var(--panel); white-space: nowrap; }
+  .btn:hover { border-color: var(--fg-3); }
+  .btn.primary { background: var(--accent); border-color: transparent; color: #06130d; }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn svg { width: 16px; height: 16px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 99px; font-size: 12px; border: 1px solid var(--line-2); color: var(--fg-2); white-space: nowrap; }
+  .chip.accent { border-color: var(--accent-line); color: var(--fg); background: var(--accent-soft); }
+  .chip svg { width: 12px; height: 12px; }
+
+  /* Messages */
+  .msgs { display: grid; grid-template-columns: 300px 1fr; flex: 1; min-height: 0; }
+  @media (max-width: 960px) { .msgs { grid-template-columns: 1fr; } .msgs .threads { display: none; } }
+  .threads { border-right: 1px solid var(--line); overflow: auto; padding: 8px; }
+  .thread { display: flex; gap: 12px; padding: 10px; border-radius: 10px; align-items: center; width: 100%; text-align: left; }
+  .thread:hover { background: var(--panel); }
+  .thread.active { background: var(--panel-2); }
+  .thread .t { min-width: 0; flex: 1; }
+  .thread .row { display: flex; gap: 6px; align-items: baseline; }
+  .thread b { font-weight: 600; font-size: 13.5px; }
+  .thread time { margin-left: auto; color: var(--fg-3); font-size: 11px; }
+  .thread p { margin: 2px 0 0; color: var(--fg-3); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .thread .q { color: var(--warn); }
+  .convo { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+  .convo-head { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--line); }
+  .convo-head b { font-size: 14px; }
+  .convo-head .path { color: var(--fg-3); font-size: 12px; display: flex; align-items: center; gap: 6px; }
+  .stream { flex: 1; overflow: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 6px; }
+  .day { align-self: center; font-size: 11px; color: var(--fg-3); margin: 10px 0; }
+  .bubble { max-width: min(520px, 78%); padding: 9px 13px; border-radius: 16px; line-height: 1.45; background: var(--panel-2); border: 1px solid var(--line); align-self: flex-start; border-bottom-left-radius: 5px; }
+  .bubble.mine { align-self: flex-end; background: var(--accent-soft); border-color: var(--accent-line); border-bottom-left-radius: 16px; border-bottom-right-radius: 5px; }
+  .meta { font-size: 11px; color: var(--fg-3); display: flex; gap: 6px; align-items: center; margin: 0 4px 6px; }
+  .meta.mine { align-self: flex-end; }
+  .meta svg { width: 12px; height: 12px; }
+  .meta .held { color: var(--warn); }
+  .composer { padding: 14px 20px 18px; border-top: 1px solid var(--line); display: flex; gap: 10px; align-items: center; }
+  .composer input { flex: 1; background: var(--panel); border: 1px solid var(--line-2); border-radius: 10px; padding: 11px 14px; outline: none; }
+  .composer input:focus { border-color: var(--accent-line); }
+  .route-hint { font-size: 11px; color: var(--fg-3); padding: 0 22px 0; margin-top: -10px; margin-bottom: 10px; display: flex; gap: 6px; align-items: center; }
+
+  /* Circle */
+  .circle { display: grid; grid-template-columns: 1fr 340px; flex: 1; min-height: 0; }
+  @media (max-width: 1000px) { .circle { grid-template-columns: 1fr; overflow: auto; } }
+  .graph-wrap { position: relative; min-height: 420px; display: grid; place-items: center; overflow: hidden; }
+  .graph-wrap svg { width: 100%; height: 100%; max-height: calc(var(--prototype-screen-height, 100vh) - 80px); }
+  .legend { position: absolute; left: 20px; bottom: 16px; display: flex; gap: 14px; font-size: 11.5px; color: var(--fg-3); flex-wrap: wrap; }
+  .legend span { display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
+  .legend i { width: 18px; height: 0; border-top: 2px solid var(--accent); display: inline-block; }
+  .legend i.d { border-top-style: dashed; }
+  .legend i.o { border-top: 2px dotted var(--off); }
+  .side { border-left: 1px solid var(--line); overflow: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; background: var(--panel); }
+  .card { border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; background: var(--panel-2); }
+  .card h3 { margin: 0 0 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--fg-3); font-weight: 600; }
+  .kv { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; padding: 5px 0; }
+  .kv span:first-child { color: var(--fg-2); }
+  .words { display: flex; flex-wrap: wrap; gap: 6px; }
+  .words span { font-family: "JetBrains Mono", monospace; font-size: 12.5px; padding: 4px 9px; border-radius: 6px; background: var(--panel); border: 1px solid var(--line-2); }
+  .node { cursor: pointer; }
+  .node text { fill: #0b0d10; font-size: 15px; font-weight: 700; }
+  .node .lbl { fill: var(--fg-2); font-size: 12px; font-weight: 500; }
+  .pulse { animation: pulse 2.4s ease-out infinite; transform-origin: center; transform-box: fill-box; }
+  @keyframes pulse { 0% { opacity: .5; transform: scale(1); } 100% { opacity: 0; transform: scale(2.2); } }
+  .flow { stroke-dasharray: 2 10; animation: flow 1.2s linear infinite; }
+  @keyframes flow { to { stroke-dashoffset: -12; } }
+
+  /* Moments */
+  .feed { flex: 1; overflow: auto; padding: 24px; }
+  .feed-inner { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+  .post { border: 1px solid var(--line); border-radius: 14px; background: var(--panel); overflow: hidden; }
+  .post-head { display: flex; gap: 10px; align-items: center; padding: 14px 16px 8px; }
+  .post-head b { font-size: 13.5px; }
+  .post-head small { color: var(--fg-3); font-size: 12px; }
+  .post p { margin: 0; padding: 4px 16px 12px; line-height: 1.5; }
+  .post .img { height: 220px; margin: 0 16px 12px; border-radius: 10px; }
+  .post-foot { display: flex; gap: 8px; align-items: center; padding: 10px 16px; border-top: 1px solid var(--line); font-size: 12px; color: var(--fg-3); flex-wrap: wrap; }
+  .compose-card { border: 1px solid var(--line); border-radius: 14px; background: var(--panel); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+  .compose-card textarea { background: transparent; border: 0; outline: none; resize: none; min-height: 48px; font-size: 14.5px; }
+  .aud { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .aud button.chip.on { border-color: var(--accent-line); background: var(--accent-soft); color: var(--fg); }
+
+  /* Me */
+  .me { flex: 1; overflow: auto; padding: 24px; }
+  .me-grid { max-width: 1040px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+  .me-grid .wide { grid-column: 1 / -1; }
+  .ledger-row { display: grid; grid-template-columns: 1fr auto auto; gap: 16px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 13px; align-items: center; }
+  .ledger-row:last-child { border-bottom: 0; }
+  .bar { height: 6px; border-radius: 99px; background: var(--line); overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+  .guardians { display: flex; gap: 6px; flex-wrap: wrap; justify-content: space-between; }
+  .g { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 11.5px; color: var(--fg-2); width: 50px; }
+  .g .shard { font-size: 10px; color: var(--accent); }
+  .big-num { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; }
+  .big-num small { font-size: 14px; color: var(--fg-3); font-weight: 500; margin-left: 4px; }
+
+  /* Modal */
+  .scrim { position: fixed; inset: 0; background: rgb(0 0 0 / .55); display: grid; place-items: center; padding: 20px; z-index: 10; backdrop-filter: blur(3px); }
+  .modal { background: var(--panel); border: 1px solid var(--line-2); border-radius: 18px; width: min(460px, 100%); padding: 24px; display: flex; flex-direction: column; gap: 18px; box-shadow: 0 30px 80px rgb(0 0 0 / .4); }
+  .modal h2 { margin: 0; font-size: 18px; letter-spacing: -0.01em; }
+  .modal .muted { color: var(--fg-2); font-size: 13px; line-height: 1.5; margin: 0; }
+  .tabs { display: flex; gap: 4px; background: var(--panel-2); padding: 4px; border-radius: 10px; border: 1px solid var(--line); }
+  .tabs button { flex: 1; padding: 7px; border-radius: 7px; font-weight: 600; font-size: 13px; color: var(--fg-2); }
+  .tabs button.on { background: var(--panel); color: var(--fg); box-shadow: 0 1px 2px rgb(0 0 0 / .2); }
+  .qr-box { display: grid; place-items: center; padding: 18px; background: #fff; border-radius: 14px; align-self: center; }
+  .scan { aspect-ratio: 1; width: 100%; max-width: 260px; align-self: center; border-radius: 14px; background: repeating-linear-gradient(45deg, var(--panel-2) 0 10px, var(--panel) 10px 20px); position: relative; display: grid; place-items: center; color: var(--fg-3); font-size: 12px; }
+  .scan::before { content: ""; position: absolute; inset: 22%; border: 2px solid var(--accent); border-radius: 12px; }
+  .scan::after { content: ""; position: absolute; left: 22%; right: 22%; height: 2px; background: var(--accent); top: 22%; animation: scanline 2s ease-in-out infinite alternate; box-shadow: 0 0 12px var(--accent); }
+  @keyframes scanline { to { top: 78%; } }
+  .match { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .match > div { border: 1px solid var(--line-2); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+  .match small { color: var(--fg-3); font-size: 11px; }
+  .row-end { display: flex; justify-content: flex-end; gap: 8px; }
+  .icon-btn { width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; color: var(--fg-2); }
+  .icon-btn:hover { background: var(--panel-2); color: var(--fg); }
+  .icon-btn svg { width: 18px; height: 18px; }
+  [title] { }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" data-presets="react">
+const { useState, useMemo } = React;
+const NETWORK = document.documentElement.dataset.network || "online";
+
+/* ---------- icons ---------- */
+const I = {
+  chat: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>,
+  circle: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="2.5"/><circle cx="12" cy="12" r="8" strokeDasharray="3 3"/><circle cx="19.5" cy="9" r="1.6" fill="currentColor"/><circle cx="5" cy="15" r="1.6" fill="currentColor"/></svg>,
+  moments: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"><rect x="3.5" y="4" width="17" height="16" rx="3"/><path d="m4 16 4.5-4.5 4 4 2.5-2.5L20 17.5"/><circle cx="15.5" cy="8.5" r="1.5"/></svg>,
+  key: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M16 7l3 3M18 5l2 2"/></svg>,
+  plus: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>,
+  lock: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>,
+  check: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 5 5 9-10"/></svg>,
+  dcheck: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m2 12 5 5 9-10M12 16l1 1 9-10"/></svg>,
+  clock: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>,
+  send: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12 20 4l-6 16-3-7-7-1z"/></svg>,
+  shield: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"><path d="M12 3 5 6v6c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6l-7-3z"/><path d="m9 12 2 2 4-4" strokeLinecap="round"/></svg>,
+  wifi: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 9a15 15 0 0 1 20 0M5.5 12.5a10 10 0 0 1 13 0M9 16a5 5 0 0 1 6 0"/><circle cx="12" cy="19" r="1" fill="currentColor"/></svg>,
+  globe: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.6 5.7 3.6 9s-1.1 6.3-3.6 9c-2.5-2.7-3.6-5.7-3.6-9S9.5 5.7 12 3z"/></svg>,
+  plane: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"><path d="M10 14 3 12l1-2 7 0 3-6h2l-1 6h4l2-2h1l-1 4 1 4h-1l-2-2h-4l1 6h-2l-3-6z"/></svg>,
+  laptop: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"><rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 19h20"/></svg>,
+  phone: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2" strokeLinecap="round"/></svg>,
+  close: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>,
+  link: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/></svg>,
+  eye: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>,
+};
+
+/* ---------- data ---------- */
+// Each friend: how they're reachable in each network scenario.
+const FRIENDS = [
+  { id: "maya",  name: "Maya Okafor",  short: "Maya",  hue: "#f9a8d4", where: { online: "direct", nearby: "direct", offline: "offline" }, via: "LAN · same Wi-Fi", met: "Met in person · Mar 2025", words: ["otter","lantern","quiet","maple"], circles: ["Inner circle","Sunday climbers"], stores: "2.1 MB sealed backup shard", fof: 4 },
+  { id: "tom",   name: "Tom Lindqvist", short: "Tom",  hue: "#93c5fd", where: { online: "relay",  nearby: "offline", offline: "offline" }, via: "Relayed by Maya — sealed, she can't read it", met: "Verified by video call", words: ["cobalt","harbor","seven","fern"], circles: ["Sunday climbers"], stores: "—", fof: 6 },
+  { id: "ines",  name: "Inès Morel",   short: "Inès",  hue: "#fcd34d", where: { online: "direct", nearby: "direct", offline: "offline" }, via: "Bluetooth · 4 m away", met: "Met in person · Jun 2024", words: ["velvet","comet","drift","nine"], circles: ["Inner circle","Family"], stores: "2.1 MB sealed backup shard", fof: 3 },
+  { id: "kenji", name: "Kenji Sato",   short: "Kenji", hue: "#a7f3d0", where: { online: "direct", nearby: "offline", offline: "offline" }, via: "Internet · hole-punched, end-to-end", met: "Introduced by Inès", words: ["amber","tundra","pixel","oak"], circles: ["Inner circle"], stores: "2.1 MB sealed backup shard", fof: 5 },
+  { id: "ada",   name: "Ada Brennan",  short: "Ada",   hue: "#c4b5fd", where: { online: "offline", nearby: "offline", offline: "offline" }, via: "Last seen 3 h ago", met: "Met in person · Jan 2026", words: ["meadow","rocket","salt","ivy"], circles: ["Family"], stores: "2.1 MB sealed backup shard", fof: 2 },
+  { id: "luca",  name: "Luca Ferri",   short: "Luca",  hue: "#fdba74", where: { online: "relay",  nearby: "offline", offline: "offline" }, via: "Relayed by Kenji — sealed, he can't read it", met: "Introduced by Kenji", words: ["glacier","ember","mint","four"], circles: ["Sunday climbers"], stores: "—", fof: 7 },
+  { id: "sam",   name: "Sam Rivera",   short: "Sam",   hue: "#fda4af", where: { online: "direct", nearby: "offline", offline: "offline" }, via: "Internet · hole-punched, end-to-end", met: "Met in person · Aug 2025", words: ["canyon","willow","radio","two"], circles: ["Inner circle","Family"], stores: "2.1 MB sealed backup shard", fof: 3 },
+];
+const F = Object.fromEntries(FRIENDS.map(f => [f.id, f]));
+const st = f => f.where[NETWORK];
+
+const THREADS = [
+  { id: "maya", last: "Bring the 9.5 rope, I'll take the quickdraws", time: "18:42", unread: 2 },
+  { id: "climb", group: true, name: "Sunday climbers", members: ["maya","tom","luca"], last: "Tom: forecast says dry 🌤", time: "17:10", unread: 0 },
+  { id: "tom", last: "Haha fair. Send me the photos?", time: "Yesterday", unread: 0 },
+  { id: "ines", last: "You: see you at the market", time: "Tue", unread: 0 },
+  { id: "ada", last: "Mum says thank you for the flowers", time: "Mon", unread: 0, queued: true },
+  { id: "kenji", last: "Ported the sync layer to the new CRDT", time: "Sep 30", unread: 0 },
+];
+
+const CONVO = {
+  maya: [
+    { day: "Today" },
+    { from: "maya", text: "Are we still on for the crag on Sunday?", path: "direct" },
+    { mine: true, text: "Yes! Leaving at 8. Tom and Luca are in too.", path: "direct" },
+    { from: "maya", text: "Perfect. Bring the 9.5 rope, I'll take the quickdraws", path: "direct" },
+    { from: "maya", text: "And snacks. Lots of snacks.", path: "direct" },
+  ],
+  climb: [
+    { day: "Today" },
+    { from: "luca", text: "Who's driving?", path: "relay", relay: "Kenji" },
+    { mine: true, text: "I can take 3 people", path: "direct" },
+    { from: "tom", text: "forecast says dry 🌤", path: "relay", relay: "Maya" },
+  ],
+  tom: [{ day: "Yesterday" }, { mine: true, text: "That last route was brutal", path: "relay", relay: "Maya" }, { from: "tom", text: "Haha fair. Send me the photos?", path: "relay", relay: "Maya" }],
+  ines: [{ day: "Tuesday" }, { from: "ines", text: "Market on Saturday?", path: "direct" }, { mine: true, text: "see you at the market", path: "direct" }],
+  ada: [{ day: "Monday" }, { from: "ada", text: "Mum says thank you for the flowers", path: "direct" }, { mine: true, text: "Tell her happy birthday again from me ❤️", held: true }],
+  kenji: [{ day: "Sep 30" }, { from: "kenji", text: "Ported the sync layer to the new CRDT", path: "direct" }],
+};
+
+const POSTS = [
+  { from: "ines", time: "2 h", text: "First tomatoes of the year. Way too proud of these.", img: "linear-gradient(135deg,#7c2d12,#dc2626 40%,#65a30d)", aud: "Inner circle", n: 6, holders: 6 },
+  { from: "maya", time: "5 h", text: "New project route at the crag — 7a, still haven't sent it. Sunday.", img: "linear-gradient(160deg,#1e293b,#475569 50%,#a8a29e)", aud: "Sunday climbers", n: 4, holders: 3 },
+  { from: "kenji", time: "Yesterday", text: "Moving to Lisbon in December. Small dinner at mine before I leave, details soon.", aud: "Inner circle", n: 6, holders: 5 },
+];
+
+const LEDGER = [
+  { who: "maya", bytes: 4.8, what: "Messages, 2 photos" },
+  { who: "kenji", bytes: 3.1, what: "Messages, relay for Luca" },
+  { who: "ines", bytes: 2.2, what: "Moments sync" },
+  { who: "sam", bytes: 0.9, what: "Backup shard check" },
+  { who: "tom", bytes: 0.4, what: "Via Maya, sealed" },
+];
+
+/* ---------- helpers ---------- */
+function Av({ f, size = "", dot = true }) {
+  const s = st(f);
+  return (
+    <div className={`av ${size}`} style={{ background: f.hue }}>
+      {f.short[0]}
+      {dot && <span className={`dot ${s}`} />}
+    </div>
+  );
+}
+function statusText(f) {
+  const s = st(f);
+  if (s === "direct") return f.via;
+  if (s === "relay") return f.via;
+  return NETWORK === "online" ? f.via : "Not reachable — messages wait on your device";
+}
+const NETWORK_LABEL = {
+  online: { icon: I.globe, text: "Internet + nearby", tip: "Peers found by your friends' devices, never by a directory server" },
+  nearby: { icon: I.wifi, text: "Nearby only", tip: "No internet. Still talking to friends on this Wi-Fi or within Bluetooth range" },
+  offline: { icon: I.plane, text: "Offline", tip: "Everything you send waits, encrypted, on this device" },
+};
+
+/* deterministic pseudo-QR */
+function QR({ seed = 7, size = 200 }) {
+  const n = 25, cell = size / n;
+  const rnd = useMemo(() => { let x = seed; return () => (x = (x * 16807) % 2147483647) / 2147483647; }, [seed]);
+  const cells = useMemo(() => {
+    const out = [];
+    const finder = (r, c) => [[0,0],[0,n-7],[n-7,0]].some(([fr, fc]) => r >= fr && r < fr + 7 && c >= fc && c < fc + 7);
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+      if (finder(r, c)) continue;
+      if (rnd() > 0.52) out.push([r, c]);
+    }
+    return out;
+  }, []);
+  const F = ([r, c]) => (
+    <g key={`${r}${c}`}>
+      <rect x={c*cell} y={r*cell} width={7*cell} height={7*cell} rx={cell*1.4} fill="#0b0d10" />
+      <rect x={(c+1)*cell} y={(r+1)*cell} width={5*cell} height={5*cell} rx={cell} fill="#fff" />
+      <rect x={(c+2)*cell} y={(r+2)*cell} width={3*cell} height={3*cell} rx={cell*0.6} fill="#0b0d10" />
+    </g>
+  );
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      {cells.map(([r, c]) => <rect key={r*n+c} x={c*cell+0.5} y={r*cell+0.5} width={cell-1} height={cell-1} rx={cell*0.35} fill="#0b0d10" />)}
+      {[[0,0],[0,n-7],[n-7,0]].map(F)}
+    </svg>
+  );
+}
+
+/* ---------- rail ---------- */
+function Rail({ tab, setTab, onAdd }) {
+  const reach = FRIENDS.filter(f => st(f) !== "offline").length;
+  const N = NETWORK_LABEL[NETWORK];
+  const items = [
+    ["chats", "Messages", I.chat, 2],
+    ["circle", "Circle", I.circle],
+    ["moments", "Moments", I.moments],
+    ["me", "Keys & privacy", I.key],
+  ];
+  return (
+    <nav className="rail">
+      <div className="brand"><span className="brand-mark" />Circle</div>
+      {items.map(([id, label, icon, count]) => (
+        <button key={id} className={`nav-item ${tab === id ? "active" : ""}`} onClick={() => setTab(id)}>
+          {icon}<span className="label">{label}</span>{count ? <span className="count">{count}</span> : null}
+        </button>
+      ))}
+      <button className="nav-item" onClick={onAdd}>{I.plus}<span className="label">Add a friend</span></button>
+      <div className="rail-foot">
+        <div className="net-pill" title={N.tip}>
+          <span style={{ width: 16, height: 16, display: "grid" }}>{N.icon}</span>
+          {N.text}<span className="spacer" /><b>{reach}/{FRIENDS.length}</b>
+        </div>
+        <div className="zero-server" title="Counted on this device. Peers are discovered through your friends, not a directory.">
+          <b>0 bytes</b> sent to any server, ever.
+        </div>
+        <div className="me-card">
+          <div className="av" style={{ background: "var(--accent)" }}>Y</div>
+          <div className="who"><b>You</b><small className="mono">quartz · river · bloom · six</small></div>
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+/* ---------- messages ---------- */
+function PathMeta({ m }) {
+  if (m.held) {
+    const label = NETWORK === "online" ? "Waiting for Ada — sealed on this device" : "Waiting — sealed on this device";
+    return <div className="meta mine"><span className="held" style={{ display: "inline-flex", gap: 5, alignItems: "center" }}>{I.clock}{label}</span></div>;
+  }
+  const cls = m.mine ? "meta mine" : "meta";
+  const via = m.path === "relay" ? `via ${m.relay} · sealed` : "direct";
+  return <div className={cls}>{I.lock}<span>{via}</span>{m.mine && I.dcheck}</div>;
+}
+
+function Messages() {
+  const [sel, setSel] = useState("maya");
+  const [draft, setDraft] = useState("");
+  const [extra, setExtra] = useState({});
+  const t = THREADS.find(x => x.id === sel);
+  const peers = t.group ? t.members.map(id => F[id]) : [F[sel]];
+  const reachable = peers.filter(p => st(p) !== "offline");
+  const msgs = [...CONVO[sel], ...(extra[sel] || [])];
+
+  function send() {
+    if (!draft.trim()) return;
+    const p = peers[0];
+    const s = st(p);
+    const m = { mine: true, text: draft };
+    if (t.group ? reachable.length === 0 : s === "offline") m.held = true;
+    else if (s === "relay") { m.path = "relay"; m.relay = p.via.match(/by (\w+)/)?.[1] || "a friend"; }
+    else m.path = "direct";
+    setExtra({ ...extra, [sel]: [...(extra[sel] || []), m] });
+    setDraft("");
+  }
+
+  const routeLine = (() => {
+    if (t.group) return reachable.length === peers.length
+      ? `Sent to ${peers.length} devices, each copy sealed for one person`
+      : `${reachable.length} of ${peers.length} reachable now — the others get it when they're next near a friend`;
+    const s = st(peers[0]);
+    if (s === "direct") return `Straight to ${peers[0].short}'s device`;
+    if (s === "relay") return peers[0].via.replace("—", "·");
+    return `${peers[0].short} is out of reach — will leave when either of you meets a mutual friend`;
+  })();
+
+  return (
+    <div className="msgs">
+      <div className="threads">
+        {THREADS.map(th => {
+          const f = th.group ? null : F[th.id];
+          return (
+            <button key={th.id} className={`thread ${sel === th.id ? "active" : ""}`} onClick={() => setSel(th.id)}>
+              {th.group
+                ? <div className="av" style={{ background: "linear-gradient(135deg,#fdba74,#93c5fd)" }}>SC</div>
+                : <Av f={f} />}
+              <div className="t">
+                <div className="row"><b>{th.group ? th.name : f.name}</b><time>{th.time}</time></div>
+                <p>{th.queued ? <span className="q">◷ 1 waiting · </span> : null}{th.last}</p>
+              </div>
+              {th.unread ? <span className="count" style={{ fontSize: 11, background: "var(--accent)", color: "#06130d", borderRadius: 99, padding: "1px 7px", fontWeight: 600 }}>{th.unread}</span> : null}
+            </button>
+          );
+        })}
+      </div>
+      <div className="convo">
+        <div className="convo-head">
+          {t.group
+            ? <div className="av" style={{ background: "linear-gradient(135deg,#fdba74,#93c5fd)" }}>SC</div>
+            : <Av f={peers[0]} />}
+          <div style={{ minWidth: 0 }}>
+            <b>{t.group ? t.name : peers[0].name}</b>
+            <div className="path">
+              {t.group
+                ? peers.map(p => <span key={p.id} style={{ display: "inline-flex", gap: 4, alignItems: "center", marginRight: 6 }}><span className={`sdot ${st(p)}`} />{p.short}</span>)
+                : <><span className={`sdot ${st(peers[0])}`} />{statusText(peers[0])}</>}
+            </div>
+          </div>
+          <span className="spacer" />
+          {!t.group && <span className="chip accent" title={`Safety words: ${peers[0].words.join(" · ")}`}>{I.shield}Verified</span>}
+        </div>
+        <div className="stream">
+          {msgs.map((m, i) => m.day
+            ? <div key={i} className="day">{m.day}</div>
+            : <React.Fragment key={i}>
+                {t.group && !m.mine && <div className="meta" style={{ marginBottom: -2 }}><b style={{ color: "var(--fg-2)" }}>{F[m.from].short}</b></div>}
+                <div className={`bubble ${m.mine ? "mine" : ""}`}>{m.text}</div>
+                {(i === msgs.length - 1 || msgs[i + 1].mine !== m.mine || m.held || m.path !== msgs[i + 1]?.path) && <PathMeta m={m} />}
+              </React.Fragment>
+          )}
+        </div>
+        <div className="composer">
+          <input value={draft} onChange={e => setDraft(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} placeholder={`Message ${t.group ? t.name : peers[0].short}`} />
+          <button className="btn primary" onClick={send}>{I.send}</button>
+        </div>
+        <div className="route-hint">{I.lock && <span style={{ width: 12, height: 12, display: "inline-grid" }}>{I.lock}</span>}{routeLine}</div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- circle (network graph) ---------- */
+function Circle() {
+  const [sel, setSel] = useState("maya");
+  const W = 640, H = 560, cx = W / 2, cy = H / 2, R = 170, R2 = 255;
+  const pos = Object.fromEntries(FRIENDS.map((f, i) => {
+    const a = -Math.PI / 2 + (i / FRIENDS.length) * Math.PI * 2;
+    return [f.id, { x: cx + R * Math.cos(a), y: cy + R * Math.sin(a), a }];
+  }));
+  const relayOf = f => (f.via.match(/by (\w+)/) || [])[1]?.toLowerCase();
+  const f = F[sel];
+  const s = st(f);
+
+  return (
+    <div className="circle">
+      <div className="graph-wrap">
+        <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet">
+          <circle cx={cx} cy={cy} r={R} fill="none" stroke="var(--line)" strokeDasharray="2 6" />
+          <circle cx={cx} cy={cy} r={R2} fill="none" stroke="var(--line)" strokeDasharray="1 8" opacity=".6" />
+          {/* friends of friends: anonymous dots */}
+          {FRIENDS.map(fr => Array.from({ length: fr.fof }).map((_, k) => {
+            const a = pos[fr.id].a + (k - (fr.fof - 1) / 2) * 0.09;
+            return <circle key={fr.id + k} cx={cx + R2 * Math.cos(a)} cy={cy + R2 * Math.sin(a)} r="3" fill="var(--fg-3)" opacity={st(fr) === "offline" ? .15 : .4}>
+              <title>Someone {fr.short} knows — you can't see who</title>
+            </circle>;
+          }))}
+          {/* links */}
+          {FRIENDS.map(fr => {
+            const p = pos[fr.id], state = st(fr);
+            if (state === "direct") return <g key={fr.id}>
+              <line x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="var(--accent)" strokeWidth={sel === fr.id ? 2.5 : 1.5} opacity={sel === fr.id ? 1 : .55} />
+              <line x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="var(--accent)" strokeWidth="3" className="flow" strokeLinecap="round" opacity=".9" />
+            </g>;
+            if (state === "relay") { const r = pos[relayOf(fr)]; return <path key={fr.id} d={`M${r.x},${r.y} Q${(r.x + p.x) / 2 + (cx - (r.x + p.x) / 2) * -0.35},${(r.y + p.y) / 2 + (cy - (r.y + p.y) / 2) * -0.35} ${p.x},${p.y}`} fill="none" stroke="var(--accent)" strokeDasharray="5 5" strokeWidth={sel === fr.id ? 2.5 : 1.5} opacity={sel === fr.id ? 1 : .55} />; }
+            return <line key={fr.id} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="var(--off)" strokeDasharray="1 5" strokeLinecap="round" strokeWidth="1.5" opacity=".6" />;
+          })}
+          {/* you */}
+          <circle cx={cx} cy={cy} r="30" fill="var(--accent)" className="pulse" />
+          <circle cx={cx} cy={cy} r="30" fill="var(--accent)" />
+          <text x={cx} y={cy + 6} textAnchor="middle" fill="#06130d" fontWeight="700" fontSize="17">Y</text>
+          {/* nodes */}
+          {FRIENDS.map(fr => {
+            const p = pos[fr.id], state = st(fr), on = sel === fr.id;
+            const lx = cx + (R + 46) * Math.cos(p.a), ly = cy + (R + 46) * Math.sin(p.a);
+            return (
+              <g key={fr.id} className="node" onClick={() => setSel(fr.id)} opacity={state === "offline" ? .5 : 1}>
+                {on && <circle cx={p.x} cy={p.y} r="28" fill="none" stroke="var(--accent)" strokeWidth="2" />}
+                <circle cx={p.x} cy={p.y} r="22" fill={fr.hue} />
+                <text x={p.x} y={p.y + 5} textAnchor="middle" fill="#0b0d10" fontSize="15">{fr.short[0]}</text>
+                <text className="lbl" x={lx} y={ly + 4} textAnchor="middle">{fr.short}</text>
+              </g>
+            );
+          })}
+        </svg>
+        <div className="legend">
+          <span><i />Direct</span>
+          <span><i className="d" />Through a friend</span>
+          <span><i className="o" />Out of reach</span>
+          <span><svg width="8" height="8"><circle cx="4" cy="4" r="3" fill="var(--fg-3)" /></svg>Their friends, unnamed</span>
+        </div>
+      </div>
+      <aside className="side">
+        <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+          <Av f={f} size="lg" />
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 17, fontWeight: 700 }}>{f.name}</div>
+            <div style={{ color: "var(--fg-3)", fontSize: 12.5, display: "flex", gap: 6, alignItems: "center", marginTop: 3 }}>
+              <span className={`sdot ${s}`} />{s === "direct" ? "Connected" : s === "relay" ? "Through a friend" : "Out of reach"}
+            </div>
+          </div>
+        </div>
+        <div className="card">
+          <h3>Route</h3>
+          <div style={{ fontSize: 13, lineHeight: 1.5 }}>{statusText(f)}</div>
+        </div>
+        <div className="card">
+          <h3>Safety words</h3>
+          <div className="words">{f.words.map(w => <span key={w}>{w}</span>)}</div>
+          <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 10, fontSize: 12, color: "var(--fg-2)" }}>
+            <span style={{ width: 14, height: 14, color: "var(--accent)", display: "inline-grid" }}>{I.shield}</span>{f.met}
+          </div>
+        </div>
+        <div className="card">
+          <h3>Between you</h3>
+          <div className="kv"><span>Circles</span><span>{f.circles.join(", ")}</span></div>
+          <div className="kv"><span>Holds for you</span><span>{f.stores}</span></div>
+          <div className="kv"><span>Their friends</span><span>{f.fof}, unnamed</span></div>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="btn primary" style={{ flex: 1, justifyContent: "center" }}>{I.chat}Message</button>
+          <button className="btn">Re-verify</button>
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+/* ---------- moments ---------- */
+function Moments() {
+  const [aud, setAud] = useState("Inner circle");
+  const sizes = { "Inner circle": 6, "Sunday climbers": 4, "Family": 3 };
+  return (
+    <div className="feed">
+      <div className="feed-inner">
+        <div className="compose-card">
+          <textarea placeholder="Share something with…" />
+          <div className="aud">
+            {Object.keys(sizes).map(a => (
+              <button key={a} className={`chip ${aud === a ? "on" : ""}`} onClick={() => setAud(a)}>{a} · {sizes[a]}</button>
+            ))}
+            <span className="spacer" />
+            <span style={{ fontSize: 12, color: "var(--fg-3)" }} title="Each copy is sealed for one person. No one else can open it, including friends who relay it.">Lives on {sizes[aud]} devices, nowhere else</span>
+            <button className="btn primary">Share</button>
+          </div>
+        </div>
+        {POSTS.map((p, i) => {
+          const f = F[p.from];
+          return (
+            <article key={i} className="post">
+              <div className="post-head"><Av f={f} size="sm" /><div><b>{f.name}</b> <small>· {p.time}</small></div></div>
+              <p>{p.text}</p>
+              {p.img && <div className="img" style={{ background: p.img }} />}
+              <div className="post-foot">
+                <span className="chip">{I.lock}{p.aud} · {p.n}</span>
+                <span title="Devices that hold a copy right now">{I.eye && <span style={{ width: 12, height: 12, display: "inline-grid", verticalAlign: "-2px", marginRight: 4 }}>{I.eye}</span>}On {p.holders} of {p.n} devices</span>
+                <span className="spacer" />
+                <span>Disappears from all of them if {f.short} deletes it</span>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- me ---------- */
+function Me() {
+  const max = Math.max(...LEDGER.map(l => l.bytes));
+  const guardians = ["maya", "ines", "kenji", "ada", "sam"];
+  return (
+    <div className="me">
+      <div className="me-grid">
+        <div className="card">
+          <h3>You are a key, not an account</h3>
+          <div style={{ display: "flex", gap: 14, alignItems: "center", marginBottom: 12 }}>
+            <div className="av lg" style={{ background: "var(--accent)" }}>Y</div>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 700 }}>You</div>
+              <div className="mono" style={{ fontSize: 11.5, color: "var(--fg-3)" }}>ed25519 · 7f3a…c91e</div>
+            </div>
+          </div>
+          <div className="words">{["quartz","river","bloom","six"].map(w => <span key={w}>{w}</span>)}</div>
+          <div style={{ fontSize: 12, color: "var(--fg-3)", marginTop: 10 }}>Created on this laptop. No email, no phone number.</div>
+        </div>
+
+        <div className="card">
+          <h3>Sent in the last 24 h</h3>
+          <div style={{ display: "flex", gap: 24, alignItems: "flex-end", marginBottom: 8 }}>
+            <div><div className="big-num">0<small>B</small></div><div style={{ fontSize: 12, color: "var(--fg-3)" }}>to servers</div></div>
+            <div><div className="big-num" style={{ color: "var(--accent)" }}>11.4<small>MB</small></div><div style={{ fontSize: 12, color: "var(--fg-3)" }}>to friends, sealed</div></div>
+          </div>
+          {LEDGER.map(l => (
+            <div key={l.who} className="ledger-row">
+              <div style={{ display: "flex", gap: 8, alignItems: "center", minWidth: 0 }}>
+                <Av f={F[l.who]} size="sm" dot={false} />
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600 }}>{F[l.who].short}</div>
+                  <div style={{ fontSize: 11.5, color: "var(--fg-3)" }}>{l.what}</div>
+                </div>
+              </div>
+              <div className="bar" style={{ width: 80 }}><i style={{ width: `${(l.bytes / max) * 100}%` }} /></div>
+              <div className="mono" style={{ fontSize: 12, color: "var(--fg-2)", width: 52, textAlign: "right" }}>{l.bytes} MB</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="card">
+          <h3>Your devices</h3>
+          {[["This laptop", I.laptop, "Holds your key", true], ["Pixel 8", I.phone, NETWORK === "offline" ? "Syncs when they meet" : "Synced 2 min ago · same Wi-Fi", false]].map(([n, ic, sub, here]) => (
+            <div key={n} className="kv" style={{ alignItems: "center" }}>
+              <span style={{ display: "flex", gap: 10, alignItems: "center", color: "var(--fg)" }}>
+                <span style={{ width: 18, height: 18, display: "inline-grid", color: "var(--fg-2)" }}>{ic}</span>
+                <span><b style={{ fontWeight: 600 }}>{n}</b><br /><small style={{ color: "var(--fg-3)" }}>{sub}</small></span>
+              </span>
+              {here && <span className="chip accent">here</span>}
+            </div>
+          ))}
+          <button className="btn" style={{ marginTop: 10 }}>{I.plus}Link a device</button>
+        </div>
+
+        <div className="card">
+          <h3>If you lose every device</h3>
+          <div style={{ fontSize: 13, color: "var(--fg-2)", lineHeight: 1.5, marginBottom: 14 }}>
+            Any <b style={{ color: "var(--fg)" }}>3 of these 5</b> friends together can give your key back. None of them alone can.
+          </div>
+          <div className="guardians">
+            {guardians.map(id => (
+              <div key={id} className="g"><Av f={F[id]} /><span>{F[id].short}</span><span className="shard mono">shard {guardians.indexOf(id) + 1}</span></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- add friend ---------- */
+function AddFriend({ onClose }) {
+  const [mode, setMode] = useState("show");
+  const [step, setStep] = useState("pair");
+  return (
+    <div className="scrim" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <h2>{step === "pair" ? "Add a friend" : "Do your words match?"}</h2>
+          <span className="spacer" />
+          <button className="icon-btn" onClick={onClose}>{I.close}</button>
+        </div>
+        {step === "pair" ? <>
+          <div className="tabs">
+            <button className={mode === "show" ? "on" : ""} onClick={() => setMode("show")}>My code</button>
+            <button className={mode === "scan" ? "on" : ""} onClick={() => setMode("scan")}>Scan theirs</button>
+            <button className={mode === "link" ? "on" : ""} onClick={() => setMode("link")}>Invite link</button>
+          </div>
+          {mode === "show" && <div className="qr-box"><QR seed={42} /></div>}
+          {mode === "scan" && <div className="scan" onClick={() => setStep("verify")} title="Pretend a code was found">Point at their code</div>}
+          {mode === "link" && <>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input readOnly value="circle://pair/7f3a-c91e#k=Zq8…" className="mono" style={{ flex: 1, background: "var(--panel-2)", border: "1px solid var(--line-2)", borderRadius: 9, padding: "9px 12px", fontSize: 12.5 }} />
+              <button className="btn">{I.link}Copy</button>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <span className="chip">Works once</span>
+              <span className="chip">Expires in 10 min</span>
+              <span className="chip" title="A link sent through another app can be intercepted, so you'll compare words over a call">Needs a call to verify</span>
+            </div>
+          </>}
+          <div className="row-end">
+            {mode !== "scan" && <button className="btn primary" onClick={() => setStep("verify")}>They scanned it</button>}
+          </div>
+        </> : <>
+          <div className="match">
+            <div><small>Your screen</small><div className="words">{["lotus","anchor","fifty","dune"].map(w => <span key={w}>{w}</span>)}</div></div>
+            <div><small>Read theirs aloud</small><div className="words" style={{ opacity: .5 }}>{["?","?","?","?"].map((w, i) => <span key={i}>{w}</span>)}</div></div>
+          </div>
+          <div className="row-end">
+            <button className="btn" onClick={() => setStep("pair")}>They don't match</button>
+            <button className="btn primary" onClick={onClose}>{I.check}They match</button>
+          </div>
+        </>}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- app ---------- */
+const TITLES = {
+  chats: ["Messages", "End-to-end, device to device"],
+  circle: ["Circle", "Who you can reach right now, and how"],
+  moments: ["Moments", "Shared only with the circle you pick"],
+  me: ["Keys & privacy", "Everything about you lives here, on this device"],
+};
+function App() {
+  const [tab, setTab] = useState("chats");
+  const [adding, setAdding] = useState(false);
+  const [title, sub] = TITLES[tab];
+  return (
+    <div className="app">
+      <Rail tab={tab} setTab={setTab} onAdd={() => setAdding(true)} />
+      <main className="main">
+        <header className="page-head">
+          <div><h1>{title}</h1><div className="sub">{sub}</div></div>
+          <span className="spacer" />
+          {NETWORK !== "online" && <span className="chip" style={{ borderColor: "var(--warn)", color: "var(--warn)" }}>{NETWORK_LABEL[NETWORK].text}</span>}
+          <button className="btn" onClick={() => setAdding(true)}>{I.plus}Add a friend</button>
+        </header>
+        {tab === "chats" && <Messages />}
+        {tab === "circle" && <Circle />}
+        {tab === "moments" && <Moments />}
+        {tab === "me" && <Me />}
+      </main>
+      {adding && <AddFriend onClose={() => setAdding(false)} />}
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

@@ -669,6 +669,7 @@ default, a left rail revealing each (`useRevealSection`).
     - `apps/deploy/deploy-history/rollback`
     - `apps/deploy/deploy-secrets/approvals`
     - `apps/deploy/deployments/runs-arm`
+    - `apps/deploy/fixtures`
     - `apps/deploy/host-query`
     - `apps/deploy/local-serve`
     - `apps/deploy/remote-deploy`

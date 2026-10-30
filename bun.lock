@@ -398,6 +398,10 @@
       "name": "@equin/plugin-apps-deploy-deployments-runs-arm",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/deploy/plugins/fixtures": {
+      "name": "@equin/plugin-apps-deploy-fixtures",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/deploy/plugins/health": {
       "name": "@equin/plugin-apps-deploy-health",
       "version": "0.0.1",
@@ -1442,6 +1446,17 @@
     "plugins/apps/plugins/website/plugins/pages/plugins/vision": {
       "name": "@equin/plugin-apps-website-pages-vision",
       "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/promo-film": {
+      "name": "@equin/plugin-apps-website-promo-film",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/promo-film/plugins/seed": {
+      "name": "@equin/plugin-apps-website-promo-film-seed",
+      "version": "0.0.1",
+      "dependencies": {
+        "@tonejs/midi": "^2.0.28",
+      },
     },
     "plugins/apps/plugins/website/plugins/shell": {
       "name": "@equin/plugin-apps-website-shell",
@@ -3307,6 +3322,10 @@
         "pg": "^8.23.1",
       },
     },
+    "plugins/framework/plugins/cli/plugins/build/plugins/experimental-marks": {
+      "name": "@equin/plugin-framework-cli-build-experimental-marks",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/cli/plugins/check": {
       "name": "@equin/plugin-framework-cli-check",
       "version": "0.0.1",
@@ -4424,6 +4443,21 @@
     "plugins/map/plugins/pin-layer": {
       "name": "@equin/plugin-map-pin-layer",
       "version": "0.0.1",
+    },
+    "plugins/media": {
+      "name": "@equin/plugin-media",
+      "version": "0.0.1",
+    },
+    "plugins/media/plugins/ffmpeg": {
+      "name": "@equin/plugin-media-ffmpeg",
+      "version": "0.0.1",
+    },
+    "plugins/media/plugins/film": {
+      "name": "@equin/plugin-media-film",
+      "version": "0.0.1",
+      "dependencies": {
+        "@fontsource-variable/inter": "^5.3.0",
+      },
     },
     "plugins/menu-bar": {
       "name": "@equin/plugin-menu-bar",
@@ -7204,6 +7238,8 @@
 
     "@equin/plugin-apps-deploy-deployments-runs-arm": ["@equin/plugin-apps-deploy-deployments-runs-arm@workspace:plugins/apps/plugins/deploy/plugins/deployments/plugins/runs-arm"],
 
+    "@equin/plugin-apps-deploy-fixtures": ["@equin/plugin-apps-deploy-fixtures@workspace:plugins/apps/plugins/deploy/plugins/fixtures"],
+
     "@equin/plugin-apps-deploy-health": ["@equin/plugin-apps-deploy-health@workspace:plugins/apps/plugins/deploy/plugins/health"],
 
     "@equin/plugin-apps-deploy-host-query": ["@equin/plugin-apps-deploy-host-query@workspace:plugins/apps/plugins/deploy/plugins/host-query"],
@@ -7703,6 +7739,10 @@
     "@equin/plugin-apps-website-pages-story": ["@equin/plugin-apps-website-pages-story@workspace:plugins/apps/plugins/website/plugins/pages/plugins/story"],
 
     "@equin/plugin-apps-website-pages-vision": ["@equin/plugin-apps-website-pages-vision@workspace:plugins/apps/plugins/website/plugins/pages/plugins/vision"],
+
+    "@equin/plugin-apps-website-promo-film": ["@equin/plugin-apps-website-promo-film@workspace:plugins/apps/plugins/website/plugins/promo-film"],
+
+    "@equin/plugin-apps-website-promo-film-seed": ["@equin/plugin-apps-website-promo-film-seed@workspace:plugins/apps/plugins/website/plugins/promo-film/plugins/seed"],
 
     "@equin/plugin-apps-website-shell": ["@equin/plugin-apps-website-shell@workspace:plugins/apps/plugins/website/plugins/shell"],
 
@@ -8616,6 +8656,8 @@
 
     "@equin/plugin-framework-cli-build": ["@equin/plugin-framework-cli-build@workspace:plugins/framework/plugins/cli/plugins/build"],
 
+    "@equin/plugin-framework-cli-build-experimental-marks": ["@equin/plugin-framework-cli-build-experimental-marks@workspace:plugins/framework/plugins/cli/plugins/build/plugins/experimental-marks"],
+
     "@equin/plugin-framework-cli-check": ["@equin/plugin-framework-cli-check@workspace:plugins/framework/plugins/cli/plugins/check"],
 
     "@equin/plugin-framework-cli-cli-name": ["@equin/plugin-framework-cli-cli-name@workspace:plugins/framework/plugins/cli/plugins/cli-name"],
@@ -9137,6 +9179,12 @@
     "@equin/plugin-map-google": ["@equin/plugin-map-google@workspace:plugins/map/plugins/google"],
 
     "@equin/plugin-map-pin-layer": ["@equin/plugin-map-pin-layer@workspace:plugins/map/plugins/pin-layer"],
+
+    "@equin/plugin-media": ["@equin/plugin-media@workspace:plugins/media"],
+
+    "@equin/plugin-media-ffmpeg": ["@equin/plugin-media-ffmpeg@workspace:plugins/media/plugins/ffmpeg"],
+
+    "@equin/plugin-media-film": ["@equin/plugin-media-film@workspace:plugins/media/plugins/film"],
 
     "@equin/plugin-menu-bar": ["@equin/plugin-menu-bar@workspace:plugins/menu-bar"],
 

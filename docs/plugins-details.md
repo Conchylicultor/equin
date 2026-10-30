@@ -2494,6 +2494,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/deploy-history/rollback`
               - `apps/deploy/deploy-secrets/approvals`
               - `apps/deploy/deployments/runs-arm`
+              - `apps/deploy/fixtures`
               - `apps/deploy/host-query`
               - `apps/deploy/local-serve`
               - `apps/deploy/remote-deploy`
@@ -2532,6 +2533,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `DEPLOY_RUN_KIND`
                   - `DEPLOY_STATUS_OUTCOME`
                   - `deployRunArm`
+        - **`fixtures`** — Writes a Deploy fixture (servers, their last check, deployments and finished runs) into this instance through the rows the app's own handlers write. Contributes nothing: a host boots it for the seed that imports it.
+          - Server:
+            - Uses:
+              - `apps/deploy/deployments._deployDeployments`
+              - `apps/deploy/deployments._deployRuns`
+              - `apps/deploy/health.serverHealth`
+              - `apps/deploy/servers._deployServers`
+              - `apps/deploy/servers.generateServerSshKey`
+              - `config_v2.getConfig`
+              - `database.db`
+            - Exports (values): `writeDeployFixture`
+          - Core:
+            - Exports (types):
+              - `DeployFixture`
+              - `DeploymentFixture`
+              - `DeployRunFixture`
+              - `DeployServerFixture`
         - **`health`** — Server reachability for the deploy app: probes a registered server over SSH, records the classified verdict, and exposes its verdict as the `status` field of every list of servers plus the verify step of the SSH setup flow, and the Deploy sidebar's Servers section (each server with its verdict dot). Owns the deploy_servers_ext_health side-table: the last SSH reachability verdict per server (ok, classified failure kind, the public key as of the check, and the TOFU-pinned host key), its live collection, its `status` field exposed to every list of servers, and the probe / forget-host-key endpoints.
           - Web:
             - Contributes:
@@ -2618,6 +2636,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape --radius`
             - Imported by:
               - `apps/deploy/deployments`
+              - `apps/deploy/fixtures`
               - `apps/deploy/host-query`
               - `apps/deploy/remote-deploy`
               - `apps/deploy/ssh-setup`
@@ -2850,6 +2869,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - DB schema: `plugins/apps/plugins/deploy/plugins/servers/server/internal/tables.ts`
             - Exports (values):
               - `_deployServers`
+              - `generateServerSshKey`
               - `getServerSshPrivateKey`
             - Resources:
               - `deploy.server-ssh-key` (push)
@@ -2892,6 +2912,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/deploy/deployments`
               - `apps/deploy/deployments/runs-arm`
+              - `apps/deploy/fixtures`
               - `apps/deploy/health`
               - `apps/deploy/ssh-setup`
             - Extended by: `apps/deploy/health` (table `deploy_servers_ext_health`)
@@ -6905,6 +6926,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `prototypeFixtureDataOf`
               - `prototypeFixtureStates`
               - `prototypeFixtureVersionFingerprint`
+          - Cross-plugin:
+            - Imported by: `apps/website/promo-film/seed`
           - Machine:
             - Exports (values):
               - `prototypeFixtureThumbnailsCheck`
@@ -11308,6 +11331,31 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by:
                   - `apps/website/landing/layers`
                   - `apps/website/pages/apps`
+        - **`promo-film`** — The equin showcase film (script: the Video page's Script v2): staged captures of the real app as layered stills, the film's timeline and scenes over media/film, and its licensed music track.
+          - Deps:
+            - Uses:
+              - `infra/deps.defineDep`
+              - `infra/deps/download.download`
+            - Exports (values):
+              - `PROMO_MUSIC`
+              - `promoMusic`
+          - Plugins:
+            - **`seed`** — The showcase film's seed: POST /api/promo-film/seed writes the film's curated story (the piano wiki, the practice-file conversation and its transcript and workspace files, a tidy task list, the Lisbon places, a deploy history, the Circle prototype) through each app's own write path. Booted only by the promo-film composition, and refused anywhere but its own first-launch database.
+              - Machine:
+                - Uses:
+                  - `apps/prototypes/fixtures.readPrototypeFixtureDir`
+                  - `infra/endpoints.implementMachine`
+                - Routes: `POST /api/promo-film/seed` — unpredicted (server-decided)
+              - Core:
+                - Uses: `infra/endpoints.defineEndpoint`
+                - Exports (types): `PromoFilmSeedReport`
+                - Exports (values):
+                  - `FILM_SEEN_HINTS`
+                  - `PROMO_FILM_COMPOSITION_ID`
+                  - `PromoFilmSeedReportSchema`
+                  - `seedPromoFilm`
+              - Structure:
+                - Non-standard folders: `data/`
         - **`shell`** — App shell for the Website (equin public site). Registers the /website app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, and contributes the site's own theme (equin: palette, chart ramp, font), which the website app selects, plus the equin-document sub-theme (type scale, density, shape) every page wears and the equin-page-hero sub-theme an inner page's heading wears.
           - Web:
             - Slots:
@@ -13371,6 +13419,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/worktree/reclaim.namespacesOwnedByComposition`
           - `infra/worktree/reclaim.OwnedNamespace`
           - `infra/worktree/reclaim.reclaimNamespace`
+        - Exports (values): `resetServedComposition`
         - Resources:
           - `build.serve-owned` (invalidate, snapshot, whole: one per checkout that has served this composition — the delete confirmation names every one it will erase)
           - `build.serve-status` (push, notified)
@@ -13621,8 +13670,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins: the registry over the user-layer store (the ConfigStore host service) and the committed layer (ConfigGitLayer), its live values and the scope routes.
   - Web:
     - Slots: `ConfigV2.WebRegister`
-    - Slot contributors: 93 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×93
+    - Slot contributors: 94 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×94
     - Uses:
       - `network/live.useLive`
       - `network/live.useLiveMutation`
@@ -13817,8 +13866,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 123 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `apps` ×34
+    - Imported by: 125 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `apps` ×35
       - `conversations` ×14
       - `backup` ×13
       - `debug` ×12
@@ -13827,6 +13876,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `config_v2` ×6
       - `tasks` ×5
       - `primitives` ×3
+      - `framework` ×2
       - `infra` ×2
       - `integrations` ×2
       - `plugin-meta` ×2
@@ -13835,7 +13885,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `stats` ×2
       - `audience`
       - `build`
-      - `framework/tooling/codegen`
       - `hints/ask`
       - `map/google`
       - `reorder`
@@ -20302,8 +20351,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `quotedRelationsIn`
       - `readTag`
   - Cross-plugin:
-    - Imported by: 133 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
-      - `apps` ×37
+    - Imported by: 134 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+      - `apps` ×38
       - `conversations` ×15
       - `page` ×15
       - `infra` ×13
@@ -24287,12 +24336,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boolField`
               - `boolSample`
           - Cross-plugin:
-            - Imported by: 33 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
+            - Imported by: 34 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
               - `debug` ×11
               - `apps` ×8
               - `conversations` ×5
               - `infra` ×2
               - `tasks` ×2
+              - `framework/cli/build/experimental-marks`
               - `history/engine`
               - `page/block-entity`
               - `release`
@@ -26365,6 +26415,40 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/doctor.assertPrerequisites`
               - `framework/cli/git-artifacts.registerMergeDrivers`
               - `framework/tooling/web-artifacts.carryForwardServedEntries`
+          - Plugins:
+            - **`experimental-marks`** — The Show experimental marks setting (view-options popover and Settings → Config, on an experimental build): useShowExperimentalMarks() is true when the build stamped this document experimental and the marks are on; the frame and the Wish banner both follow it. Registers the Show experimental marks config and, while it is off, serves a head script that hides the marks before the first frame.
+              - Web:
+                - Contributes:
+                  - `ConfigV2.WebRegister` "config"
+                  - `Core.Root` → `ExperimentalMarksHost`
+                  - `ActionBar.ViewOption` → `ExperimentalMarksSwitch`
+                - Uses:
+                  - `config_v2.ConfigV2`
+                  - `config_v2.useConfig`
+                  - `config_v2.useSetConfig`
+                  - `primitives/css/control-panel.ControlPanel`
+                  - `shell/action-bar.ActionBar`
+                  - `ui/icons.Icon`
+                - Exports (values): `useShowExperimentalMarks`
+              - Server:
+                - Contributes:
+                  - `ConfigV2.Register` "config"
+                  - `DocumentHead.Fragment` "experimental-marks"
+                - Uses:
+                  - `config_v2.ConfigV2`
+                  - `config_v2.getConfig`
+                  - `config_v2.onConfigDirChange`
+                  - `shell/document-head.DocumentHead`
+              - Core:
+                - Uses:
+                  - `config_v2.defineConfig`
+                  - `fields/bool/config.boolField`
+                - Exports (values):
+                  - `EXPERIMENTAL_CLASS`
+                  - `experimentalMarksConfig`
+                  - `MARKS_OFF_CLASS`
+              - Cross-plugin:
+                - Imported by: `tasks/task-draft-form`
         - **`check`** — `./equin check` — run the repo validation checks (all, a named subset, or one scope). The only in-process caller of runChecks(): `build` and `push` each spawn it as a subprocess, so their `checks ✓` is one claim.
           - Cli:
             - Uses:
@@ -27699,8 +27783,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 176 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
-              - `apps` ×51
+            - Imported by: 178 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+              - `apps` ×52
               - `primitives` ×27
               - `page` ×25
               - `conversations` ×24
@@ -27718,6 +27802,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database/admin`
               - `framework/principal`
               - `map/google`
+              - `media/film`
               - `menu-bar`
               - `network/live`
               - `plugin-meta/exhibits`
@@ -28244,8 +28329,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `Core.Root`
           - `Core.Boot`
-        - Slot contributors: 48 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
-          - `Core.Root` ×47
+        - Slot contributors: 49 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+          - `Core.Root` ×48
           - `Core.Boot` ← `infra.boot-snapshot`
       - Core:
         - Uses:
@@ -29663,6 +29748,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/chord/song-index`
           - `apps/sonata/transcription`
+          - `apps/website/promo-film`
           - `infra/audio-analysis`
           - `infra/codesign`
           - `infra/deps/build`
@@ -29670,6 +29756,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/mcp/browser`
           - `infra/safe-fetch/browser-fetch`
           - `integrations/youtube`
+          - `media/ffmpeg`
+          - `media/film`
           - `menu-bar`
           - `packages/signal-origin`
           - `packages/spawn-disclaim`
@@ -29734,7 +29822,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps/chord/song-index`
+              - `apps/website/promo-film`
               - `infra/codesign`
+              - `media/ffmpeg`
+              - `media/film`
           - Deps:
             - Exports (types):
               - `DownloadDerive`
@@ -30063,8 +30154,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 224 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×62
+        - Imported by: 225 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+          - `apps` ×63
           - `conversations` ×32
           - `infra` ×22
           - `page` ×19
@@ -33911,6 +34002,36 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: `map/google`
+
+- **`media`** — Umbrella for producing media from equin itself: the film engine (frame-exact composited video from captured app stills) and the ffmpeg it encodes with.
+  - Plugins:
+    - **`ffmpeg`** — ffmpeg + ffprobe as an on-demand dependency: a pinned static macOS arm64 build (libx264, aac), sha256-checked, installed by infra/deps on first use — the encoder and probe the film engine renders with.
+      - Deps:
+        - Uses:
+          - `infra/deps.defineDep`
+          - `infra/deps.ensureDepViaCli`
+          - `infra/deps.Ready`
+          - `infra/deps/download.download`
+          - `infra/deps/download.downloadedFile`
+        - Exports (types): `FfmpegPaths`
+        - Exports (values):
+          - `ffmpeg`
+          - `ffmpegPaths`
+          - `resolveFfmpeg`
+    - **`film`** — Film engine: a composition of layers over captured app stills, animated by keyframe tracks and a 3D camera, rendered frame by frame in a headless page (renderAt(t) is a pure function of film time), mixed with a music bed and synthesized SFX, encoded to MP4.
+      - Deps:
+        - Uses:
+          - `infra/deps.defineDep`
+          - `infra/deps.ensureDepViaCli`
+          - `infra/deps.Ready`
+          - `infra/deps/download.download`
+          - `infra/deps/download.downloadedFile`
+        - Exports (values):
+          - `mouseSoundFiles`
+          - `mouseSounds`
+          - `resolveMouseSounds`
+      - Cross-plugin:
+        - Imported by: `apps/website/promo-film`
 
 - **`menu-bar`** — The menu-bar panel the native helper opens: the menu-bar app (unlisted, colorMode light — the panel is designed light) mounted at /home/menu-bar, whose whole layout is the panel (no pane; chromeless under ?embed=1), whose body is the MenuBar.Section slot, drawn in its own theme (a native menu's: the system font, 13px rows, a 2–16px spacing ramp, the menu palette), plus the header (the spiral and a status line joined from MenuBar.Status parts, whose attention lights the menu-bar icon's dot) and the footer ('Running · <host>', opening equin). useNativeHost() reads the helper's bridge (window.equinNative): pending, absent (a plain browser), or present with its platform, capabilities and methods — a capability the host lacks has no method. useNativeApps() reads the device's installed and pinned apps from the helper that keeps them (pending / unavailable / ready / error), re-read on panel focus and after a pin. usePanelInput() is the panel's typed text (the task field writes it, the app grid filters by it), kept as a draft across reloads. MenuBar.Mount runs headless work while the panel page is alive; the panel reports its content height to the helper, shows no toasts, and reloads itself while hidden once main serves a newer web bundle.
   - Web:
@@ -40207,7 +40328,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×7
               - `ui/tokens/shape` ×2
               - `ui/tokens/shadow --shadow`
-            - Imported by: 45 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
+            - Imported by: 46 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
               - `apps` ×16
               - `page` ×5
               - `primitives` ×4
@@ -40219,6 +40340,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui` ×2
               - `apps-core/surface`
               - `conversations/conversation-view/dependencies`
+              - `framework/cli/build/experimental-marks`
               - `fullscreen`
               - `reports/panel-overflow`
               - `shell/global-action-bar`
@@ -49236,6 +49358,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ActionBar.ViewOption` ← `apps-core.surface`
           - `ActionBar.ViewOption` ← `audience.view-option`
           - `ActionBar.ViewOption` ← `config_v2.git-defaults-preview`
+          - `ActionBar.ViewOption` ← `framework.cli.build.experimental-marks`
           - `ActionBar.ViewOption` ← `fullscreen`
           - `ActionBar.Lead` ← `shell.health-report`
           - `ActionBar.Activity` ← `build`
@@ -49251,6 +49374,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `audience/view-option`
           - `build`
           - `config_v2/git-defaults-preview`
+          - `framework/cli/build/experimental-marks`
           - `fullscreen`
           - `hints/help-menu`
           - `screenshot`
@@ -49264,6 +49388,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `apps-core/app-manifest`
+          - `framework/cli/build/experimental-marks`
           - `ui/theme-engine`
       - Server:
         - Exports (types):
@@ -51529,7 +51654,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots: `TaskDraftFormSlots.Action`
         - Slot contributors: `TaskDraftFormSlots.Action` ← `wish.element-picker`
         - Contributes: `ConfigV2.WebRegister` "config"
-        - Uses: 45 symbols — full list in [`plugins/tasks/plugins/task-draft-form/REFERENCE.md`](../plugins/tasks/plugins/task-draft-form/REFERENCE.md)
+        - Uses: 46 symbols — full list in [`plugins/tasks/plugins/task-draft-form/REFERENCE.md`](../plugins/tasks/plugins/task-draft-form/REFERENCE.md)
           - `tasks/launch-options` ×5
           - `infra/endpoints` ×3
           - `primitives/css/ui-kit` ×3
@@ -51541,6 +51666,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/shortcuts` ×2
           - `shell/notifications` ×2
           - `apps-core.useCurrentAppId`
+          - `framework/cli/build/experimental-marks.useShowExperimentalMarks`
           - `hints.useHintAnchor`
           - `network/live.useLive`
           - `primitives/css/fill.Fill`
@@ -52799,7 +52925,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 363 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 364 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×96
           - `conversations` ×57
           - `primitives` ×42
@@ -52820,9 +52946,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hints` ×3
           - `reorder` ×3
           - `backup` ×2
+          - `framework` ×2
           - `reports` ×2
           - `auth`
-          - `framework/tooling/codegen`
           - `fullscreen`
           - `layouts/miller`
           - `map`

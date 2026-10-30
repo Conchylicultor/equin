@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<!-- The gallery card's name. -->
+<title>Circle — P2P friends</title>
+<!-- The gallery card's blurb — a sentence or two. -->
+<meta name="description" content="" />
+<!-- Uncomment ONLY if the design is for one kind of screen — left out, the
+     page fills whatever room the canvas gives it (responsive). By name: phone,
+     tablet, laptop, desktop, wide, or window (the viewer's own browser
+     window). The canvas opens at it; it is where the page starts, not a size
+     to hardcode below. Most prototypes leave this out.
+<meta name="prototype-viewport" content="phone" />
+-->
+<!-- Uncomment ONLY if this mocks something real in the app — the app can then
+     show the two side by side. "exhibit:<exhibit id>" for one component
+     (Debug → Exhibits lists them), "route:</in-app/path>" for a whole screen,
+     "app:</in-app/path>" for the whole app with its rail and tab bar. Most prototypes mock nothing
+     and leave this out.
+<meta name="mocks" content="exhibit:control-panel/setting-rail" />
+-->
+<!-- Uncomment ONLY if the design has variants to flip between. One tag per
+     option, values in picker order; the default goes on <html> itself
+     (<html lang="en" data-pane="flush">). The app draws the picker — never
+     build a switcher into the page. Style each value with
+     :root[data-pane="floating"] { … }, or read document.documentElement.dataset.
+     A color is a `color` option (never a palette enum): suggestions as
+     name=<color>, the default as --<name> in <html style="--accent: #7c5cff">,
+     read with var(--accent) — it changes live, without a reload.
+<meta name="prototype-option" content="pane: flush | floating" />
+<meta name="prototype-option" content="accent: color violet=#7c5cff | azure=#3b82f6" />
+-->
+
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body { font-family: system-ui, sans-serif; }
+  /* Fill the width you are given, like a real page. Compare frames the mock at
+     other widths too (480, 768, …), and a fixed px width there crops and
+     scrolls instead of reflowing. Cap wide content with max-width. */
+  #root { min-height: 100%; }
+</style>
+</head>
+<body>
+<div id="root">
+  <p>Replace everything here with your design.</p>
+</div>
+
+<!-- Uncomment the block below if you want React + JSX. Everything else
+     (plain .js files, .css files, images) loads without it.
+
+     JSX must stay INLINE. Babel fetches a `src` file over XHR, and the
+     browser blocks that on file:// — so an external .jsx file would break
+     the double-click-to-open rule. Plain <script src="data.js"> and
+     <link href="styles.css"> are fine.
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" data-presets="react">
+  function App() {
+    return <p>Replace everything here with your design.</p>;
+  }
+  ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+
+-->
+</body>
+</html>

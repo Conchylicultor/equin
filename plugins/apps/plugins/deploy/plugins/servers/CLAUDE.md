@@ -132,6 +132,7 @@ plus `sshKey`.
   - DB schema: `plugins/apps/plugins/deploy/plugins/servers/server/internal/tables.ts`
   - Exports (values):
     - `_deployServers`
+    - `generateServerSshKey`
     - `getServerSshPrivateKey`
   - Resources:
     - `deploy.server-ssh-key` (push)
@@ -174,6 +175,7 @@ plus `sshKey`.
   - Imported by:
     - `apps/deploy/deployments`
     - `apps/deploy/deployments/runs-arm`
+    - `apps/deploy/fixtures`
     - `apps/deploy/health`
     - `apps/deploy/ssh-setup`
   - Extended by: `apps/deploy/health` (table `deploy_servers_ext_health`)

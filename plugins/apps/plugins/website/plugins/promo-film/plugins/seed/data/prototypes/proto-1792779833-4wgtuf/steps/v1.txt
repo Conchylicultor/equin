@@ -1,0 +1,21 @@
+Make a new app that let's me connect to my friends on a P2P network. I…
+
+Request:
+Make a new app that let's me connect to my friends on a P2P network. I want decentralisation to reinstate privacy. Prototype first.
+
+Agent summary:
+The prototype is ready: **proto-1792779833-4wgtuf** ("Circle — P2P friends"). It's a clickable mockup on made-up data with no real networking yet. I opened every screen in a headless browser and found no console errors.
+
+It's built around one idea: you can see where your data is and how it got there.
+
+- **Messages:** every message is labelled with how it travelled: "direct", "via Maya · sealed" (a mutual friend passed it on but can't read it), or "waiting, sealed on this device" when the friend can't be reached. The line under the input box says how the next message will be sent.
+- **Circle:** a map of your friends, with you in the centre. Solid lines mean a direct connection, dashed lines mean through a friend, and dotted lines mean out of reach. Your friends' own friends show only as unnamed dots, so the app never reveals who knows whom. Clicking a friend shows the route, the safety words you checked when you added them, and what they store for you.
+- **Moments:** you share each post with one chosen group, and the post says how many devices hold a copy ("on 5 of 6 devices"). If the author deletes it, it's gone from all of them.
+- **Keys & privacy:**
+  - Your identity is a key stored on your device, shown as four words. There's no account, email or phone number.
+  - A counter of what left the device in the last 24 h: 0 bytes to servers, 11.4 MB to friends, broken down per friend.
+  - Your linked devices.
+  - Account recovery: any 3 of 5 chosen friends together can restore your key if you lose every device, but none of them can alone.
+- **Add a friend:** show your QR code, scan theirs, or send a one-time link that expires in 10 minutes. Then you both read four safety words aloud to confirm nobody is intercepting the connection.
+
+The picker outside the page has a **network** setting (`online | nearby | offline`) that shows how the app behaves without internet. In nearby mode only friends on the same Wi-Fi or within Bluetooth range are reachable, and everything else…

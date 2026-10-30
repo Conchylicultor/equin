@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-media-ffmpeg",
+  "description": "ffmpeg + ffprobe as an on-demand dependency: a pinned static macOS arm64 build (libx264, aac), sha256-checked, installed by infra/deps on first use — the encoder and probe the film engine renders with.",
+  "private": true,
+  "version": "0.0.1"
+}

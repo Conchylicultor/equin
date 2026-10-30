@@ -5,6 +5,7 @@ import { seedTagTree } from "./seed";
 import type { SeedTagKey } from "./seed-tags";
 import { insertPlace, type NewPlace } from "./places-repo";
 import { placeIconJob } from "./place-icon";
+import type { SavedSymbolName } from "@plugins/ui/plugins/icons/core";
 
 /**
  * One place of a bulk import: where it comes from — a Google snapshot (under
@@ -17,6 +18,11 @@ export interface ImportedPlace {
   tags: readonly SeedTagKey[];
   note: string;
   createdAt: Date;
+  /**
+   * Its map icon when the import already knows it — written as is, and no icon
+   * job is queued. Omitted: Haiku picks one (`placeIconJob`).
+   */
+  icon?: SavedSymbolName;
 }
 
 /**
@@ -48,7 +54,13 @@ export async function replaceAllPlaces(
       });
       const result = await insertPlace(
         entry.place,
-        { tags, autoTags: [], note: entry.note, createdAt: entry.createdAt },
+        {
+          tags,
+          autoTags: [],
+          note: entry.note,
+          createdAt: entry.createdAt,
+          ...(entry.icon === undefined ? {} : { icon: entry.icon }),
+        },
         tx,
       );
       if (result.kind === "conflict") {
@@ -60,7 +72,8 @@ export async function replaceAllPlaces(
         throw new Error(`Google place ${name} imported twice`);
       }
       inserted.push(result.place);
-      await placeIconJob.enqueue({ placeId: result.place.id }, { tx });
+      if (entry.icon === undefined)
+        await placeIconJob.enqueue({ placeId: result.place.id }, { tx });
     }
     return inserted;
   });

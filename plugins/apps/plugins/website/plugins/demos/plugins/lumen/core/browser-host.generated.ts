@@ -318,6 +318,7 @@ export const browserHost = {
     "fields.uuid",
     "fields.variant",
     "fields.variant.config",
+    "framework.cli.build.experimental-marks",
     "fullscreen",
     "hints",
     "history.dialog",

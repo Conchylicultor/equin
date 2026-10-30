@@ -1,0 +1,9 @@
+{
+  "name": "@equin/plugin-apps-website-promo-film-seed",
+  "description": "The showcase film's data: one curated, made-up session (a piano wiki, the agent conversation that made a practice MIDI file, a trip's saved places, a deploy history), written into the promo-film composition's own empty database through each app's own write path.",
+  "private": true,
+  "version": "0.0.1",
+  "dependencies": {
+    "@tonejs/midi": "^2.0.28"
+  }
+}

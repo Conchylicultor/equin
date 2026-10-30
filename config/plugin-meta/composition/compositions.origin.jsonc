@@ -1,4 +1,4 @@
-// @hash 2196517385b4
+// @hash 496e85d6d566
 {
   "manifests": [
     {
@@ -12,6 +12,19 @@
       "extends": [],
       "excludes": [],
       "serve": "off",
+      "home": "home"
+    },
+    {
+      "id": "promo-film",
+      "name": "promo-film",
+      "category": "app",
+      "entryPoints": [
+        "**"
+      ],
+      "selectedContributors": [],
+      "extends": [],
+      "excludes": [],
+      "serve": "manual",
       "home": "home"
     },
     {
@@ -288,7 +301,8 @@
       "category": "app",
       "entryPoints": [
         "apps.website.**",
-        "!apps.website.demos.**"
+        "!apps.website.demos.**",
+        "!apps.website.promo-film.**"
       ],
       "selectedContributors": [],
       "extends": [

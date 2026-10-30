@@ -22,6 +22,8 @@ import { deployServerIdKind } from "../core";
 
 export { _deployServers } from "./internal/tables";
 export { getServerSshPrivateKey } from "./internal/ssh-secret";
+// A demo's fixture writer gives its server a real key the way Generate key does.
+export { generateServerSshKey } from "./internal/store-ssh-key";
 
 export default {
   description: "Server registry for the deployment platform.",

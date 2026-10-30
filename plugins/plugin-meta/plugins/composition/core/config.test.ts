@@ -10,6 +10,7 @@
 import { test, expect } from "bun:test";
 import { flattenManifest } from "@plugins/plugin-meta/plugins/closure/core";
 import { compositionsConfig } from "./config";
+import { autoRebuildIntervalMs } from "./serve-mode";
 import {
   manifestItemToManifest,
   type CompositionManifestItem,
@@ -108,7 +109,14 @@ test("the website app seed takes the whole site subtree", () => {
   // `excludes` is read off the CONFIG ITEM, not off `m`: manifestItemToManifest
   // drops it deliberately (the closure engine never reads it).
   const entries = m.entryPoints.map(String);
-  expect(entries).toEqual(["apps.website.**", "!apps.website.demos.**"]);
+  // `!apps.website.promo-film.**` likewise: the showcase film is made from
+  // the whole app (its seed writes tasks and conversations), not part of the
+  // site.
+  expect(entries).toEqual([
+    "apps.website.**",
+    "!apps.website.demos.**",
+    "!apps.website.promo-film.**",
+  ]);
   expect(site.excludes).toContain("agent-runtime");
 });
 
@@ -146,10 +154,14 @@ test("every seed carries `excludes` and each ref resolves to a real bundle", () 
 
 test("every seed carries `serve` (default off) and the mapper drops it", () => {
   for (const s of seeds) {
-    // The serve mode is present on every seed, and nothing ships served: a
-    // committed seed that named a cadence would rebuild a namespace on a clean
-    // checkout that never asked for one.
-    expect(s.serve).toBe("off");
+    // The serve mode is present on every seed, and nothing ships on a cadence:
+    // a committed seed that named one would rebuild a namespace on a clean
+    // checkout that never asked for one. The one served seed is the showcase
+    // film's instance, `manual` — built only by an explicit
+    // `./equin build --composition promo-film`, and resettable (the reset
+    // guard refuses a composition whose mode is off).
+    expect(s.serve).toBe(s.id === "promo-film" ? "manual" : "off");
+    expect(autoRebuildIntervalMs(s.serve)).toBeNull();
     // Engine-opaque: `manifestItemToManifest` drops it exactly like `category` /
     // `excludes`, so the resolved `CompositionManifest` never carries it.
     const m = manifestItemToManifest(s);

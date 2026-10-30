@@ -6,6 +6,22 @@ import { _deployServers } from "./tables";
 import { type ServerRow } from "./project-server";
 import { SSH_SECRET_NAMESPACE } from "./ssh-secret";
 import { deployServerIdKind } from "../../core/id-kind";
+import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
+import { generateEd25519Keypair } from "./ssh-keygen";
+
+/**
+ * Give a server a fresh ed25519 key — Generate key's write: the pair made on
+ * this machine, the private half into the secrets store, the public half on
+ * the row. No replace guard: a caller replacing a key decides that first.
+ */
+export async function generateServerSshKey(
+  serverId: string,
+): Promise<ServerRow> {
+  const keypair = await generateEd25519Keypair(
+    `${LEGACY_IDS.deployKeyCommentPrefix}${serverId}`,
+  );
+  return storeSshKey(serverId, keypair);
+}
 
 /**
  * The tail every key-write path shares: stash the private half, then record the

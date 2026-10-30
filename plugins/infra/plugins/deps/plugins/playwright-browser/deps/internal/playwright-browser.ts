@@ -210,7 +210,21 @@ async function assertSystemLibraries(
 export type ChromiumLaunchOptions = Omit<
   LaunchOptions,
   "executablePath" | "channel"
->;
+> & {
+  /**
+   * Render with the machine's GPU instead of the software rasterizer headless
+   * Chromium falls back to (SwiftShader). Some pages refuse to draw without
+   * hardware WebGL: Google Maps silently falls back from a vector map to a
+   * raster one. Measured on macOS: `--enable-gpu` alone makes the headless
+   * shell use ANGLE on Metal (`--use-angle=metal` is then implied, and
+   * `--ignore-gpu-blocklist` changes nothing). Off by default — a GPU frame is
+   * the machine's, not a portable pixel baseline.
+   */
+  gpu?: boolean;
+};
+
+/** The Chromium switches `gpu: true` adds. */
+const GPU_ARGS = ["--enable-gpu"] as const;
 
 /**
  * Launch the installed Chromium. Taking a `Ready` makes "launched without
@@ -232,10 +246,12 @@ export async function launchChromium(
       `${ready.dep.id} is no longer intact (${read.reason}) — reinstall it: ./equin deps install ${ready.dep.id}`,
     );
   }
-  const headless = opts.headless ?? true;
+  const { gpu = false, ...launch } = opts;
+  const headless = launch.headless ?? true;
   const { chromium } = await import("playwright");
   return chromium.launch({
-    ...opts,
+    ...launch,
+    args: [...(launch.args ?? []), ...(gpu ? GPU_ARGS : [])],
     headless,
     executablePath: headless
       ? read.executables.headlessShell

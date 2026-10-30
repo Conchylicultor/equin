@@ -376,6 +376,7 @@ torch.
   - Imported by:
     - `apps/chord/song-index`
     - `apps/sonata/transcription`
+    - `apps/website/promo-film`
     - `infra/audio-analysis`
     - `infra/codesign`
     - `infra/deps/build`
@@ -383,6 +384,8 @@ torch.
     - `infra/mcp/browser`
     - `infra/safe-fetch/browser-fetch`
     - `integrations/youtube`
+    - `media/ffmpeg`
+    - `media/film`
     - `menu-bar`
     - `packages/signal-origin`
     - `packages/spawn-disclaim`

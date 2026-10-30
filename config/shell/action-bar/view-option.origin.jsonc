@@ -1,4 +1,4 @@
-// @hash cfa235c0f7a6
+// @hash 5426a6bc509c
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -10,6 +10,7 @@
     "apps-core.surface:placement-control",
     "audience.view-option:developer-mode",
     "config_v2.git-defaults-preview:git-defaults-preview",
+    "framework.cli.build.experimental-marks:experimental-marks",
     "fullscreen:fullscreen-toggle"
   ]
 }

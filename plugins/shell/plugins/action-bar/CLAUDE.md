@@ -36,6 +36,7 @@ inherit whichever the host chose, so every item in a host shares one height.
     - `ActionBar.ViewOption` ← `apps-core.surface`
     - `ActionBar.ViewOption` ← `audience.view-option`
     - `ActionBar.ViewOption` ← `config_v2.git-defaults-preview`
+    - `ActionBar.ViewOption` ← `framework.cli.build.experimental-marks`
     - `ActionBar.ViewOption` ← `fullscreen`
     - `ActionBar.Lead` ← `shell.health-report`
     - `ActionBar.Activity` ← `build`
@@ -51,6 +52,7 @@ inherit whichever the host chose, so every item in a host shares one height.
     - `audience/view-option`
     - `build`
     - `config_v2/git-defaults-preview`
+    - `framework/cli/build/experimental-marks`
     - `fullscreen`
     - `hints/help-menu`
     - `screenshot`

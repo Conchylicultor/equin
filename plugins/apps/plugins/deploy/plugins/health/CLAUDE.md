@@ -116,6 +116,7 @@ verdict is loading, and the SSH-setup card seeds open.
     - `ui/tokens/shape --radius`
   - Imported by:
     - `apps/deploy/deployments`
+    - `apps/deploy/fixtures`
     - `apps/deploy/host-query`
     - `apps/deploy/remote-deploy`
     - `apps/deploy/ssh-setup`

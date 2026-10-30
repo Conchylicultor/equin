@@ -193,6 +193,28 @@ export const compositionsConfig = defineConfig({
           home: "home",
         },
 
+        // ── The showcase film's instance ────────────────────────────────────────
+        // The whole app (`**`, like main) on its OWN empty database, served at
+        // http://promo-film.<checkout>.localhost:9000 by `./equin build
+        // --composition promo-film`. `./equin promo-film seed` resets it to
+        // first launch and writes the film's curated story into it
+        // (`apps.website.promo-film.seed`, whose endpoint answers only on this
+        // composition's namespace). The film is recorded here, never on main:
+        // curated data from the repo, and a namespace that is not main, so a
+        // task the film files is never launched.
+        // `research/2026-10-29-apps-promo-film-seed.md`.
+        {
+          id: "promo-film",
+          name: "promo-film",
+          category: "app" as const,
+          entryPoints: ["**"],
+          selectedContributors: [] as string[],
+          extends: [] as string[],
+          excludes: [] as string[],
+          serve: "manual",
+          home: "home",
+        },
+
         // ── The global exclusions ───────────────────────────────────────────────
         // The one row that says what is NOT in any app. Everything else in this
         // registry says what it includes; this one subtracts, and every other row
@@ -439,8 +461,15 @@ export const compositionsConfig = defineConfig({
         // site must ship without. The demos live here (each owns its data,
         // `apps/website/demos`) but are not part of the site's bundle until a
         // landing band embeds one — the sandbox `/demo` app renders it today.
+        // `!apps.website.promo-film.**`: the showcase film is made FROM the
+        // whole app (its seed writes tasks, conversations and places into the
+        // `promo-film` composition below), not part of the site it advertises.
         app("website", {
-          entryPoints: ["apps.website.**", "!apps.website.demos.**"],
+          entryPoints: [
+            "apps.website.**",
+            "!apps.website.demos.**",
+            "!apps.website.promo-film.**",
+          ],
           excludes: ["agent-runtime", "auth"],
         }),
 

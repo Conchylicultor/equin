@@ -1,0 +1,5 @@
+// @hash baa7c17141e6
+{
+  // On a build from worktree code (not main's), mark it as experimental: a red frame around the page and a banner in the Wish popover. Off hides both — for a recording or a demo. Has no effect on any other build.
+  "showExperimentalMarks": true
+}

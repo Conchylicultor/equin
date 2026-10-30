@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-framework-cli-build-experimental-marks",
+  "description": "The Show experimental marks setting: hides the red experimental frame and the Wish popover's experimental banner on a build from worktree code.",
+  "private": true,
+  "version": "0.0.1"
+}

@@ -29,7 +29,13 @@ export { waitFor, ELEMENT_TIMEOUT_MS } from "./wait";
 export { waitForNetworkIdle } from "./network-idle";
 export type { NetworkIdleOptions } from "./network-idle";
 export type { Settled } from "./wait";
-export type { Harness, Session, SessionOptions, BootOptions } from "./browser";
+export type {
+  BrowserOptions,
+  Harness,
+  Session,
+  SessionOptions,
+  BootOptions,
+} from "./browser";
 export { capture, requestFailure } from "./capture";
 export type { Captured } from "./capture";
 export { report, onBeforeFinish } from "./report";

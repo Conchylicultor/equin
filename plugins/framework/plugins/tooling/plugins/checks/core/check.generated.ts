@@ -17,6 +17,7 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "apps/plugins/agent-manager/plugins/welcome", id: "apps.agent-manager.welcome", loader: () => import("@plugins/apps/plugins/agent-manager/plugins/welcome/check"), dependsOn: [] },
   { pluginPath: "apps/plugins/prototypes/plugins/files", id: "apps.prototypes.files", loader: () => import("@plugins/apps/plugins/prototypes/plugins/files/check"), dependsOn: ["infra/plugins/paths/plugins/data-files"] },
   { pluginPath: "apps/plugins/website/plugins/demos/plugins/lumen", id: "apps.website.demos.lumen", loader: () => import("@plugins/apps/plugins/website/plugins/demos/plugins/lumen/check"), dependsOn: [] },
+  { pluginPath: "apps/plugins/website/plugins/promo-film/plugins/seed", id: "apps.website.promo-film.seed", loader: () => import("@plugins/apps/plugins/website/plugins/promo-film/plugins/seed/check"), dependsOn: [] },
   { pluginPath: "config_v2", id: "config_v2", loader: () => import("@plugins/config_v2/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen"] },
   { pluginPath: "conversations/plugins/model-provider", id: "conversations.model-provider", loader: () => import("@plugins/conversations/plugins/model-provider/check"), dependsOn: [] },
   { pluginPath: "database/plugins/change-feed", id: "database.change-feed", loader: () => import("@plugins/database/plugins/change-feed/check"), dependsOn: [] },

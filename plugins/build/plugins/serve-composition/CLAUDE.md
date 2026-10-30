@@ -260,6 +260,7 @@ code, that is the bug this section exists to prevent.
     - `infra/worktree/reclaim.namespacesOwnedByComposition`
     - `infra/worktree/reclaim.OwnedNamespace`
     - `infra/worktree/reclaim.reclaimNamespace`
+  - Exports (values): `resetServedComposition`
   - Resources:
     - `build.serve-owned` (invalidate, snapshot, whole: one per checkout that has served this composition — the delete confirmation names every one it will erase)
     - `build.serve-status` (push, notified)

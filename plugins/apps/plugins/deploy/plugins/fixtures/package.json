@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-deploy-fixtures",
+  "description": "Deploy fixtures: some servers, their deployments and their run history (DeployFixture), written through the tables the app's own handlers write, for demos.",
+  "private": true,
+  "version": "0.0.1"
+}

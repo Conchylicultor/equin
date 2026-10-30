@@ -78,8 +78,16 @@ export class CompositionResetError extends Error {
  * Wipe one served composition's DB + config back to its first-launch state, then
  * restart its backend. ALL guards must pass, else throw `CompositionResetError`
  * with nothing touched.
+ *
+ * `manifestNamespace` is the namespace whose user config layer holds this
+ * checkout's composition manifests — the answering backend's own
+ * (`runtimeNamespace()`) for the endpoint; a CLI acting on a checkout, which has
+ * no runtime namespace, passes the checkout's (`checkoutNamespace(root)`).
  */
-export async function resetCompositionData(id: string): Promise<void> {
+export async function resetCompositionData(
+  id: string,
+  manifestNamespace: Namespace = runtimeNamespace(),
+): Promise<void> {
   // Guard 1 — the explicit "never main/central" gate (rejects the reserved
   // {central, <main namespace>, main} namespaces and enforces a valid name).
   assertServableCompositionNamespace(id);
@@ -106,7 +114,7 @@ export async function resetCompositionData(id: string): Promise<void> {
   // options would let the guards disagree about what the manifest says.
   const values = readEffectiveConfigFromDisk(compositionsConfig, {
     root,
-    userConfigDir: configDir.file(runtimeNamespace()),
+    userConfigDir: configDir.file(manifestNamespace),
     hierarchyPath: COMPOSITIONS_HIERARCHY_PATH,
   });
 

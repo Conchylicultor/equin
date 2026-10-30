@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-media",
+  "description": "Umbrella for producing media from equin itself: the film engine (frame-exact composited video from captured app stills) and the ffmpeg it encodes with.",
+  "private": true,
+  "version": "0.0.1"
+}

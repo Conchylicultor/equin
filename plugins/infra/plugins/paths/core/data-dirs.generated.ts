@@ -24,6 +24,7 @@ export const dataDirsEntries: CollectedEntry[] = [
   { pluginPath: "apps/plugins/sonata", id: "apps.sonata", loader: () => import("@plugins/apps/plugins/sonata/data-dirs"), dependsOn: [] },
   { pluginPath: "apps/plugins/sonata/plugins/covers", id: "apps.sonata.covers", loader: () => import("@plugins/apps/plugins/sonata/plugins/covers/data-dirs"), dependsOn: [] },
   { pluginPath: "apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment", id: "apps.sonata.sources.ultimate-guitar.alignment", loader: () => import("@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/data-dirs"), dependsOn: [] },
+  { pluginPath: "apps/plugins/website/plugins/promo-film/plugins/seed", id: "apps.website.promo-film.seed", loader: () => import("@plugins/apps/plugins/website/plugins/promo-film/plugins/seed/data-dirs"), dependsOn: [] },
   { pluginPath: "config_v2", id: "config_v2", loader: () => import("@plugins/config_v2/data-dirs"), dependsOn: [] },
   { pluginPath: "conversations/plugins/conversation-view/plugins/rewind", id: "conversations.conversation-view.rewind", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/rewind/data-dirs"), dependsOn: [] },
   { pluginPath: "conversations/plugins/model-provider/plugins/catalog", id: "conversations.model-provider.catalog", loader: () => import("@plugins/conversations/plugins/model-provider/plugins/catalog/data-dirs"), dependsOn: [] },

@@ -29,6 +29,7 @@ import { listTags } from "./tags-repo";
 import { editPlaceTags } from "./tag-edits";
 import { placeIconJob } from "./place-icon";
 import { searchBias } from "./search-bias";
+import type { SavedSymbolName } from "@plugins/ui/plugins/icons/core";
 
 // Place reads and writes. Rows reach the UI through the live
 // `places.places.all` collection; these return the written row for the
@@ -183,6 +184,11 @@ export interface InsertPlaceExtras {
   note?: string;
   /** When it was saved; now when omitted (an import carries the original date). */
   createdAt?: Date;
+  /**
+   * Its map icon, when the caller already knows it (an import carrying the
+   * user's icons, a fixture); null — Haiku picks one later — when omitted.
+   */
+  icon?: SavedSymbolName;
 }
 
 export type InsertPlaceResult =
@@ -205,7 +211,7 @@ export async function insertPlace(
   const values = {
     id: placeIdKind.mint(),
     ...placeColumns(place),
-    icon: null,
+    icon: extras.icon ?? null,
     tags: extras.tags,
     autoTags: extras.autoTags,
     ...(extras.note === undefined ? {} : { note: extras.note }),

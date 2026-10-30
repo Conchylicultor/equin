@@ -1,5 +1,5 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import {
   SortableList,
   arrayMove,
@@ -18,10 +18,7 @@ import { ChainConnector } from "./chain-connector";
 import type { ChildEntry, DependencyExtras } from "./dependency-pill";
 import type { TaskChainRelateMode } from "@plugins/tasks/core";
 import type { LaunchOptionValues } from "@plugins/tasks/plugins/launch-options/web";
-import {
-  MAIN_COMPOSITION_ID,
-  namespaceFromHost,
-} from "@plugins/infra/plugins/namespace/core";
+import { useShowExperimentalMarks } from "@plugins/framework/plugins/cli/plugins/build/plugins/experimental-marks/web";
 import { useCaptureUrlDefault } from "../use-capture-url-default";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { TASK_DRAFT_FORM_WIDTH } from "../../core";
@@ -93,14 +90,6 @@ export interface TaskDraftHintAnchors {
   readonly send?: HintTarget;
 }
 
-function useIsAgentWorktree(): boolean {
-  return useMemo(() => {
-    // No namespace at all (bare `localhost`) is not an agent worktree either.
-    const ns = namespaceFromHost(window.location.host);
-    return ns !== null && ns !== MAIN_COMPOSITION_ID;
-  }, []);
-}
-
 /** A blank card; `options` / `includeUrl` carry choices, never defaults. */
 export function makeCard(
   options: LaunchOptionValues = {},
@@ -151,7 +140,7 @@ export function TaskDraftForm({
   headInsertRef,
   hintAnchors,
 }: TaskDraftFormProps) {
-  const isAgentWorktree = useIsAgentWorktree();
+  const isAgentWorktree = useShowExperimentalMarks();
   const panelAnchorRef = useHintAnchor(hintAnchors?.panel);
   const sendAnchorRef = useHintAnchor(hintAnchors?.send);
   const [draggingId, setDraggingId] = useState<string | null>(null);

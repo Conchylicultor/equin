@@ -55,12 +55,27 @@ function originSource(): string {
 
 export interface SessionOptions {
   viewport?: { width: number; height: number };
+  /**
+   * Device pixels per CSS pixel of a fresh context (Playwright's default 1).
+   * An attached session drives an existing tab, whose ratio is fixed.
+   */
+  deviceScaleFactor?: number;
   /** Defaults to the host OS appearance so screenshots match what the user sees. */
   colorScheme?: ColorScheme;
   /** Prefix for captured-error lines, e.g. "A" / "B" in a convergence test. */
   label?: string;
   /** Set false to skip the pageerror/console/requestfailed listeners. */
   capture?: boolean;
+}
+
+/** How `withBrowser` launches its Chromium (one browser per run, so per run, not per session). */
+export interface BrowserOptions {
+  /**
+   * Render with the machine's GPU instead of software WebGL — for a page that
+   * draws differently without hardware WebGL (Google's vector map falls back
+   * to raster). See `launchChromium`'s `gpu`.
+   */
+  gpu?: boolean;
 }
 
 export interface Session {
@@ -228,6 +243,7 @@ async function keepOriginHeadersOnTarget(
  */
 export async function withBrowser<T>(
   fn: (h: Harness) => Promise<T>,
+  opts: BrowserOptions = {},
 ): Promise<T> {
   // PROVE THE DEPLOY FIRST — before the repair below, not after it, and that
   // order is the highest-value half of this whole check. `repairAgentWrites`
@@ -238,7 +254,15 @@ export async function withBrowser<T>(
   await assertDeployIdentity();
 
   const attach = arg("attach");
-  if (attach !== undefined) return withAttachedBrowser(attach, fn);
+  if (attach !== undefined) {
+    // An attached session drives the agent browser, launched without asking
+    // us: a script that needs the GPU would silently run without it.
+    if (opts.gpu)
+      usage(
+        "this script needs a GPU-rendering browser (withBrowser gpu: true); --attach drives the agent browser, which is not launched that way.",
+      );
+    return withAttachedBrowser(attach, fn);
+  }
 
   // START REPAIR, before the browser exists. A previous run killed by Ctrl-C, a
   // SIGKILL or a Playwright timeout never reached its own revert, and its ledger
@@ -262,7 +286,10 @@ export async function withBrowser<T>(
   try {
     // Headless runs the recorded chrome-headless-shell, `--headed` the headed
     // binary of the same revision.
-    browser = await launchChromium(installed, { headless: !flag("headed") });
+    browser = await launchChromium(installed, {
+      headless: !flag("headed"),
+      gpu: opts.gpu ?? false,
+    });
   } catch (err) {
     throw launchFailure(err, installed);
   }
@@ -313,6 +340,7 @@ export async function withBrowser<T>(
       async session(opts: SessionOptions = {}): Promise<Session> {
         const context = await browser.newContext({
           viewport: opts.viewport ?? { ...DEFAULT_VIEWPORT },
+          deviceScaleFactor: opts.deviceScaleFactor,
           colorScheme: opts.colorScheme ?? detectOsColorScheme(),
           // Provenance, declared once for the whole harness. `extraHTTPHeaders`
           // applies to EVERY request the context issues — including the SPA's
