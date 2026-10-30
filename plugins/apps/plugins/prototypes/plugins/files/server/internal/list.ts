@@ -1,5 +1,6 @@
 import { prototypesFiles } from "@plugins/apps/plugins/prototypes/server";
 import {
+  PrototypeMetaMemo,
   listPrototypeMetas as listMetasOver,
   readPrototypeMeta as readMetaOver,
   readPrototypeTitle as readTitleOver,
@@ -12,9 +13,16 @@ import type { PrototypeMeta } from "../../core";
 // `resources.ts` and the server barrel (which `thumbnails` and `active-data`
 // read from) call these.
 
+/**
+ * Every folder's last meta, for the life of the backend: the list is re-read
+ * on every edit the watcher reports (an agent saving a prototype, several a
+ * minute), and only the folders that moved are read again.
+ */
+const memo = new PrototypeMetaMemo();
+
 /** Every prototype in the tree, as the gallery lists it. */
 export function listPrototypeMetas(): Promise<PrototypeMeta[]> {
-  return listMetasOver(prototypesFiles);
+  return listMetasOver(prototypesFiles, memo);
 }
 
 /**

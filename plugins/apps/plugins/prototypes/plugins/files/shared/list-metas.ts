@@ -31,9 +31,10 @@ import {
 } from "../core";
 import { listPrototypeDirNames, readPrototypeFolder } from "./read-folder";
 import {
-  readFolderFiles,
+  folderFilesOf,
   revOfSignature,
   signatureOfFiles,
+  type FolderFile,
 } from "./folder-signature";
 
 /** What `index.html` declares about itself, before defaults are folded in. */
@@ -107,16 +108,54 @@ function parseHtmlMeta(html: string): HtmlMeta {
  */
 export async function listPrototypeMetas(
   mount: Mount,
+  memo?: PrototypeMetaMemo,
 ): Promise<PrototypeMeta[]> {
   const dirNames = await listPrototypeDirNames(mount);
+  memo?.retain(dirNames);
 
   const metas: PrototypeMeta[] = [];
   for (const dirName of dirNames) {
-    const meta = await readMeta(mount, dirName, dirNames);
+    const meta = await readMeta(mount, dirName, dirNames, memo);
     // Removed between the listing and its read: it no longer exists to list.
     if (meta !== null) metas.push(meta);
   }
   return metas;
+}
+
+/**
+ * Each folder's last `PrototypeMeta`, keyed by everything it is derived from:
+ * the folder's signature (every file's size and mtime — the same fact its
+ * `rev` is), its birth time, and the sibling names its validation checks
+ * references against. A listing re-reads and re-validates only the folders
+ * whose key moved — an edit to one prototype costs one folder, not the tree
+ * (130 prototypes, 11 MB of text, re-read on every save an agent makes).
+ *
+ * Held by a long-lived lister (the server's); a one-shot one (the CLI) passes
+ * none. A folder that could not be read is never kept: its error is the
+ * moment's, not the bytes'.
+ */
+export class PrototypeMetaMemo {
+  private readonly entries = new Map<
+    string,
+    { key: string; meta: PrototypeMeta }
+  >();
+
+  /** Forget every folder no longer in the tree. */
+  retain(dirNames: readonly string[]): void {
+    const live = new Set(dirNames);
+    for (const name of this.entries.keys()) {
+      if (!live.has(name)) this.entries.delete(name);
+    }
+  }
+
+  get(dirName: string, key: string): PrototypeMeta | undefined {
+    const entry = this.entries.get(dirName);
+    return entry?.key === key ? entry.meta : undefined;
+  }
+
+  set(dirName: string, key: string, meta: PrototypeMeta): void {
+    this.entries.set(dirName, { key, meta });
+  }
 }
 
 /**
@@ -163,15 +202,52 @@ async function readMeta(
   mount: Mount,
   dirName: string,
   siblings: string[],
+  memo?: PrototypeMetaMemo,
 ): Promise<PrototypeMeta | null> {
   const dirStat = await mount.stat(relPath(dirName));
   if (dirStat.kind === "missing") return null;
-  const files = await readFolderFiles(mount, dirName);
-  if (files === null) return null;
+  const listed = await mount.list(relPath(dirName));
+  if (listed.kind === "missing") return null;
+  const files = folderFilesOf(listed.entries);
   const createdAt = dirStat.entry.birthtimeMs;
+  const signature = signatureOfFiles(files);
+  // Subdirs too: the signature skips them, but validation flags each one.
+  const subdirs = listed.entries
+    .filter((e) => e.kind === "dir" && !e.name.startsWith("."))
+    .map((e) => e.name)
+    .sort();
+  const key = [
+    createdAt,
+    siblings.join("/"),
+    subdirs.join("/"),
+    signature,
+  ].join("\n");
+  const known = memo?.get(dirName, key);
+  if (known !== undefined) return known;
+  const meta = await readMetaFresh(
+    mount,
+    dirName,
+    siblings,
+    files,
+    signature,
+    createdAt,
+  );
+  if (meta.readable) memo?.set(dirName, key, meta.meta);
+  return meta.meta;
+}
+
+/** {@link readMeta} past the memo: read, validate and parse the folder. */
+async function readMetaFresh(
+  mount: Mount,
+  dirName: string,
+  siblings: string[],
+  files: FolderFile[],
+  signature: string,
+  createdAt: number,
+): Promise<{ meta: PrototypeMeta; readable: boolean }> {
   const base = {
     name: dirName,
-    rev: revOfSignature(signatureOfFiles(files)),
+    rev: revOfSignature(signature),
     createdAt,
     modifiedAt: files.reduce((max, f) => Math.max(max, f.mtimeMs), createdAt),
     // NOT `dirName`: that is a minted id, which names nothing to a reader. See
@@ -190,17 +266,21 @@ async function readMeta(
     // One unreadable folder must not take the whole gallery down with it — but
     // it is reported on its own card rather than swallowed.
     return {
-      ...base,
-      problems: [{ path: "", detail: `could not be read: ${String(err)}` }],
+      meta: {
+        ...base,
+        problems: [{ path: "", detail: `could not be read: ${String(err)}` }],
+      },
+      readable: false,
     };
   }
 
   const problems: PrototypeProblem[] = validatePrototypeFolder(folder);
   const html = folder.texts.get(PROTOTYPE_ENTRY_FILE);
-  if (html === undefined) return { ...base, problems };
+  if (html === undefined)
+    return { meta: { ...base, problems }, readable: true };
 
   const parsed = parseHtmlMeta(html);
-  return {
+  const meta: PrototypeMeta = {
     ...base,
     title: parsed.title === "" ? UNTITLED_PROTOTYPE : parsed.title,
     blurb: parsed.blurb,
@@ -211,4 +291,5 @@ async function readMeta(
     options: readPrototypeOptions(html).options,
     problems,
   };
+  return { meta, readable: true };
 }

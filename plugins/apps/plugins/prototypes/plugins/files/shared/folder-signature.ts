@@ -6,6 +6,7 @@
 import { sha1Hex } from "@plugins/packages/plugins/string-hash/core";
 import {
   relPath,
+  type FileEntry,
   type Mount,
 } from "@plugins/infra/plugins/paths/plugins/data-files/core";
 
@@ -32,7 +33,12 @@ export async function readFolderFiles(
 ): Promise<FolderFile[] | null> {
   const listed = await mount.list(relPath(dirName));
   if (listed.kind === "missing") return null;
-  return listed.entries
+  return folderFilesOf(listed.entries);
+}
+
+/** {@link readFolderFiles} over a listing the caller already holds. */
+export function folderFilesOf(entries: readonly FileEntry[]): FolderFile[] {
+  return entries
     .filter((e) => e.kind === "file" && !e.name.startsWith("."))
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((e) => ({ name: e.name, size: e.size, mtimeMs: e.mtimeMs }));
