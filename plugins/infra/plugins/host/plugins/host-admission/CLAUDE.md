@@ -165,8 +165,9 @@ through:
   A holder of a scarce slot has no spelling for spawning its work demoted.
 - `inherit` → an `InheritSlot`: `spawnCaptured` as the caller asks, the tier
   left to the spawner — unchanged behaviour. The elastic `cpu` pool is
-  `inherit` by construction: it IS the fleet, and lifting it would lift every
-  agent (its interactive lane is lifted through `withHostGrant` instead).
+  `inherit` because a grant holder is not a `pool.run` holder: `withHostGrant`
+  lifts the whole holder process for the grant's body instead, in both lanes
+  (see *A grant runs its holder in the foreground* below).
 
 A repeat `defineHostPool` for an id must state the same holder (it throws
 otherwise). See `research/2026-10-16-global-scarce-slot-holders-run-foreground.md`.
@@ -224,16 +225,20 @@ the returned `slots` in an in-process `createSemaphore(slots)`
   and the child is their only spender. This is what deletes the old
   the host-slot-held marker / `kind: "exempt"` double-acquire dodge.
 
-### An interactive grant runs its holder in the foreground
+### A grant runs its holder in the foreground
 
-While `fn` runs under an `interactive` grant, `withHostGrant` takes the process
+While `fn` runs under a grant — either lane — `withHostGrant` takes the process
 out of macOS darwinbg (`spawn-priority`'s `withForegroundPriority`) and puts it
-back afterwards, so every child spawned meanwhile starts in the foreground. An
-agent session is darwinbg as a whole, so before this a push's lane bought it
-slots but not cores: its lock-holding type-check ran on the E-cores beside the
-fleet it was meant to outrank. Self-promotion is the only form that works from
-an agent session (`taskpolicy -B -p` from there is a silent no-op). Safe
-because the interactive lane is bounded: one push at a time, the reserved floor.
+back afterwards, so every child spawned meanwhile starts in the foreground. It
+is the scarce-slot invariant above applied to `cpu`: every op queued for the
+grant waits out each holder's whole hold, and an agent session is darwinbg as a
+whole, so a demoted holder buys slots but not cores and stretches every wait
+behind it (`research/2026-10-29-global-cpu-grant-holders-run-foreground.md`).
+Self-promotion is the only form that works from an agent session
+(`taskpolicy -B -p` from there is a silent no-op). Safe because the grant is
+the bound: at most the lane's slot window is lifted, and everything an agent
+runs outside a grant — its session, its backend, ungranted codegen — stays
+darwinbg.
 
 ### Weighted spend
 

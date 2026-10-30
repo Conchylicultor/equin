@@ -2,6 +2,7 @@ import { test, expect } from "bun:test";
 import { inheritedGrant } from "@plugins/infra/plugins/host/plugins/host-admission/server";
 import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { withEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core/testing";
+import { readDarwinBackground } from "@plugins/packages/plugins/spawn-priority/server";
 import { withPoolGrant } from "./grant";
 
 // Nothing here touches the real host `cpu` pool: its result would depend on
@@ -50,6 +51,36 @@ test("withPoolGrant grants the share's units, runs fn and releases the share", a
   expect(pool.calls.lanes).toEqual(["background"]);
   expect(pool.calls.released).toBe(1);
 });
+
+// The holder runs its granted body out of darwinbg in BOTH lanes, and goes back
+// to its own tier afterwards — on success and on a throw. Only a self read is
+// trustworthy (spawn-priority), which is exactly what this is. On a host with no
+// darwinbg tier the read is `unsupported` throughout.
+for (const lane of ["background", "interactive"] as const) {
+  test(`withPoolGrant lifts a ${lane} holder for fn, then restores its tier`, async () => {
+    const before = readDarwinBackground().kind;
+    const inside = await withPoolGrant(
+      fakePool(1),
+      { lane, priority: "normal", max: 1 },
+      async () => readDarwinBackground().kind,
+    );
+    expect(inside).toBe(
+      before === "unsupported" ? "unsupported" : "foreground",
+    );
+    expect(readDarwinBackground().kind).toBe(before);
+
+    await withPoolGrant(
+      fakePool(1),
+      { lane, priority: "normal", max: 1 },
+      async () => {
+        throw new Error("boom");
+      },
+    ).catch((err: unknown) => {
+      if (!(err instanceof Error && err.message === "boom")) throw err;
+    });
+    expect(readDarwinBackground().kind).toBe(before);
+  });
+}
 
 test("withPoolGrant releases the share when fn throws", async () => {
   const pool = fakePool(1);

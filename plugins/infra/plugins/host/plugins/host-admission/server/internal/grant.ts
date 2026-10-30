@@ -31,8 +31,9 @@ export const cpuPool = defineHostPool({
   size: cpuBudget().B,
   laned: true,
   backgroundLimit: cpuBudget().backgroundLimit,
-  // The elastic fleet itself: lifting its holders would lift every agent. Its
-  // interactive lane is lifted per holder by `withHostGrant` instead.
+  // Not a `pool.run` holder: a grant holder is lifted whole, in both lanes, by
+  // `withPoolGrant` (a spawn-scoped lift could not reach the children a
+  // grant's work spawns later). The slot itself stays `inherit`.
   holder: "inherit",
 });
 
@@ -88,17 +89,20 @@ function spendOf(want: number | undefined, held: number): number {
  * and yields one it won to a `normal` waiter that appeared meanwhile — see
  * `Priority`. It is applied after the spread for the same reason as `lane`.
  *
- * **An interactive grant runs its holder in the foreground.** The lane says a
- * human is blocked on this work, so while `fn` runs the process leaves macOS's
- * darwinbg tier (`withForegroundPriority`), and every child it spawns meanwhile
- * — the push's check subprocess, its type-check worker — inherits that. Without
- * it the lane bought slots but not cores: an agent session is darwinbg as a
- * whole, so a push's lock-holding type-check ran on the E-cores beside the
- * fleet it was meant to outrank, at 718–2211 CPU-s for a 99.9 %-warm program
- * (research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md). Tying
- * it to the lane leaves no spelling for an interactive holder at background
- * priority, and the lane is already bounded (one push at a time, the reserved
- * floor), so this cannot lift the agent fleet.
+ * **A grant runs its holder in the foreground, in both lanes.** While `fn` runs
+ * the process leaves macOS's darwinbg tier (`withForegroundPriority`), and every
+ * child it spawns meanwhile — a build's check subprocess, a type-check worker,
+ * vite — inherits that. An agent session is darwinbg as a whole, so a demoted
+ * holder bought slots but not cores, and everyone queued for the grant waited
+ * out its stretched hold: a push's lock-holding type-check ran at 718–2211
+ * CPU-s for a 99.9 %-warm program
+ * (research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md), and on
+ * 2026-10-29 agent builds' granted steps ran 4–17× slower than main's while 9
+ * ops queued on a 35–47 % idle host
+ * (research/2026-10-29-global-cpu-grant-holders-run-foreground.md). The grant
+ * itself bounds what this lifts — at most the slots of the lane's window are
+ * held — so the agent fleet outside it (sessions, backends, ungranted
+ * codegen) stays darwinbg. There is no spelling for a demoted grant holder.
  */
 export async function withHostGrant<T>(
   opts: { lane: Lane; priority: Priority; max: number; hooks?: GrantHooks },
@@ -126,9 +130,7 @@ export async function withPoolGrant<T>(
   });
   const grant = grantOfUnits(share.slots, opts.lane);
   try {
-    return opts.lane === "interactive"
-      ? await withForegroundPriority(() => fn(grant))
-      : await fn(grant);
+    return await withForegroundPriority(() => fn(grant));
   } finally {
     await share.release();
   }

@@ -31,7 +31,7 @@ the bulk work below default, and raise main's event-loop thread above it.
   for `fn`, restored after, each write verified by a read (`setpriority(…, 1)`
   returns 0 and changes nothing; only `PRIO_DARWIN_BG` = 0x1000 demotes). Like
   `boostInteractiveQos`, the caller owns the contract: its callers are
-  host-admission's interactive-lane `withHostGrant` and the Browser app's
+  host-admission's `withHostGrant` (a grant's body, either lane) and the Browser app's
   engine host (`apps/browser/engine`, for its whole life — the user watches
   and types into its pages). It lifts the WHOLE
   process for the async body, so everything else the process runs meanwhile
