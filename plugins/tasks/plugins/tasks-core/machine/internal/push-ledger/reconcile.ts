@@ -2,10 +2,11 @@
  * The `pushes` ledger as a PROJECTION of `main`'s trailer-bearing history.
  *
  * Every row is derivable from git: `./equin push` stamps each commit with
- * the conversation trailer and the push trailer, and the pre-push
- * `conversation-trailer` check FAILS a push whose commits lack the conversation
- * trailer — so a trailer-bearing commit on `main` is an enforced invariant, not a
- * convention. `main` is only ever fast-forwarded, so its history is a complete
+ * the push trailer and (on an attempt's branch) the attempt trailer, the
+ * prepare-commit-msg hook adds the conversation trailer, and the pre-push
+ * `conversation-trailer` check FAILS a push whose commits name neither (and do
+ * not say why) — so an attributable commit on `main` is an enforced invariant,
+ * not a convention. `main` is only ever fast-forwarded, so its history is a complete
  * record of what landed.
  *
  * That is what makes this a re-derivation rather than an append: running it twice
@@ -66,10 +67,13 @@ export async function reconcilePushLedger(): Promise<ReconcileResult> {
 
   const have = await existingPushShas(commits.map((c) => c.sha));
   const attemptByConversation = await attemptIdsByConversation([
-    ...new Set(commits.map((c) => c.conversationId)),
+    ...new Set(commits.flatMap((c) => c.conversationId ?? [])),
   ]);
   const liveAttempts = await existingAttemptIds([
-    ...new Set(attemptByConversation.values()),
+    ...new Set([
+      ...attemptByConversation.values(),
+      ...commits.flatMap((c) => c.attemptId ?? []),
+    ]),
   ]);
 
   const { rows, deferred } = planLedger(commits, {

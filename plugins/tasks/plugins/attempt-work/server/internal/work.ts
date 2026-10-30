@@ -251,10 +251,14 @@ const landedMemo = createSignedMemo<
   },
   // Reentrant inside attempt-work's own slot (one heavy slot for its whole
   // job); commits-graph's loader enters it here.
-  compute: async (_attemptId, input) => {
+  compute: async (attemptId, input) => {
     const mainRepoRoot = await ensureMainWorktreeRoot();
     return withHeavyReadSlot(() =>
-      readLanded(mainRepoRoot, new Set(input.convIds), input.since),
+      readLanded(
+        mainRepoRoot,
+        { attemptId, convIds: new Set(input.convIds) },
+        input.since,
+      ),
     );
   },
 });

@@ -33061,6 +33061,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `stats/cost`
           - `tasks/attempt-work`
           - `tasks/task-triage`
+          - `tasks/tasks-core`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/composition-namespace.ts`, `server/internal/install-checkout.ts`, `server/internal/spare-name.ts`, `server/internal/spare.ts`, `server/internal/spec.ts`, `server/internal/worktree-op.ts`, `server/internal/worktree.ts` (debt)
       - Core:
@@ -51743,7 +51744,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversationIdKind`
           - `taskIdKind`
       - Cross-plugin:
-        - Imported by: `hints/ask`
+        - Imported by:
+          - `hints/ask`
+          - `tasks/tasks-core`
     - **`task-list`** — Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions slots and ships the row actions (delete, child-count, launch-agent).
       - Web:
         - Slots: `Tasks.TaskActions`
@@ -52445,12 +52448,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks` (keyed)
           - `tasks:rows` (keyed, point)
       - Core:
-        - Uses: 27 symbols — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Uses: 30 symbols — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations/model-provider` ×3
           - `conversations/workspace` ×3
           - `fields/text/config` ×3
           - `fields` ×3
           - `fields/rank/config` ×2
+          - `infra/worktree` ×2
           - `network/live` ×2
           - `fields/bool/config.boolField`
           - `fields/date/config.dateField`
@@ -52462,6 +52466,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/pane.defineRoute`
           - `primitives/rank.RankSchema`
           - `tasks/orchestration/mandate/policy.defineCapability`
+          - `tasks/task-ids.attemptIdKind`
           - `ui/icons.symbol`
         - Exports (types):
           - `Attempt`
@@ -52483,9 +52488,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TrackFilingGrant`
           - `TrailerCommit`
         - Exports (values):
+          - `ATTEMPT_TRAILER_KEY`
           - `attemptConversationIds`
           - `attemptDeliveries`
           - `attemptDeliveriesEntityRef`
+          - `attemptOfBranch`
           - `attemptPushIds`
           - `attemptRows`
           - `AttemptSchema`
@@ -52536,6 +52543,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TaskStatusSchema`
           - `TrackFilingGrantSchema`
           - `TRAILER_LOG_FORMAT`
+          - `UNATTRIBUTED_TRAILER_KEY`
       - Cross-plugin:
         - Imported by: 77 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations` ×29

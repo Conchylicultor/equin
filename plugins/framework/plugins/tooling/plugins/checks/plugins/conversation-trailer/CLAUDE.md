@@ -1,9 +1,22 @@
 # conversation-trailer
 
-Fails unless `EQUIN_CONVERSATION_ID` is set and every one of this
-branch's own commits carries a conversation trailer naming it
-(stamped by `.githooks/prepare-commit-msg`), so the pushes ledger can attribute
-the push to its task.
+Fails unless every one of this branch's own commits can be credited to a task by
+the pushes ledger:
+
+- **`EQUIN_CONVERSATION_ID` set** (a session equin launched) — every own commit
+  carries a conversation trailer naming it (stamped by
+  `.githooks/prepare-commit-msg`).
+- **unset** (a session equin did not launch — a plain terminal, typically while
+  recovering a broken main) — the branch is an attempt's (`claude-web/<id>`:
+  `./equin push` stamps the `Equin-Attempt` trailer from it, so the push is
+  credited without a conversation), or each own commit already names its
+  conversation, its attempt, or an `Equin-Unattributed` reason. Otherwise the
+  failure points at `./equin push --unattributed "<reason>"`, which an agent
+  passes only with the user's approval in the current conversation.
+
+The trailer keys and `attemptOfBranch` are `tasks-core/core`'s (the trailer
+grammar's one home). The check runs after push's stamping, so a pushed commit is
+judged with the trailers it lands with.
 
 "This branch's own commits" are those reachable from `HEAD` and from no `main`
 the checkout knows of: local `main` and every `refs/remotes/<remote>/main` — the

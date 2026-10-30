@@ -17,22 +17,23 @@ export const markProgressPushedJob = defineJob({
   input: z.object({}).passthrough(),
   event: z
     .object({
-      conversationId: z.string(),
+      // Null when the push named only its attempt (a session equin did not
+      // launch); the attempt's conversations are marked either way.
+      conversationId: z.string().nullable().optional(),
       attemptId: z.string().optional(),
     })
     .passthrough(),
   dedup: "none",
   maxAttempts: 2,
   run: async ({ event }) => {
-    const conversationId = event?.conversationId;
+    const conversationId = event?.conversationId ?? null;
     const attemptId = event?.attemptId;
-    if (!conversationId) return;
 
     // Mark every conversation in the attempt so sibling conversations
     // (e.g. those that did the implementation work but didn't call push)
     // also advance to "pushed". Fall back to the single conversation if
     // attemptId is unavailable (legacy events in the queue).
-    let ids: string[] = [conversationId];
+    let ids: string[] = conversationId ? [conversationId] : [];
     if (attemptId) {
       const rows = await db
         .select({ id: _conversations.id })

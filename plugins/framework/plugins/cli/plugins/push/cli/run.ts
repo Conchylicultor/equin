@@ -1,4 +1,7 @@
-import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import {
+  envEntries,
+  readEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { realpathSync } from "node:fs";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import {
@@ -41,7 +44,11 @@ import {
   actAsCheckoutNamespace,
   checkoutRef,
 } from "@plugins/infra/plugins/paths/server";
-import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
+import {
+  resolvePushAttribution,
+  trailerAmendCommand,
+  trailerArgs,
+} from "./attribution";
 
 // One bound for both capture helpers below, because every command they run is
 // LOCAL git: `rev-parse`, `worktree list`, `status`, and the rebase. Nothing
@@ -537,7 +544,7 @@ async function withPushLock<T>(
 
 const pushAction: CliAction<
   [],
-  { message?: string; fromMain?: boolean }
+  { message?: string; fromMain?: boolean; unattributed?: string }
 > = async (opts) => {
   const branch = await getCurrentBranch();
   const onMain = branch === "main";
@@ -563,6 +570,22 @@ const pushAction: CliAction<
     );
     process.exit(1);
   }
+
+  // Who this push credits: the trailers stamped beside the push trailer on
+  // every commit it lands (the attempt its branch names, or an explicit
+  // `--unattributed` reason). Decided once, before anything is written, so a
+  // refused `--unattributed` leaves nothing half-done. See ./attribution.ts.
+  const attribution = resolvePushAttribution({
+    branch,
+    pushId,
+    conversationId: readEnv("CONVERSATION_ID"),
+    unattributed: opts.unattributed,
+  });
+  if (!attribution.ok) {
+    console.error(attribution.message);
+    process.exit(1);
+  }
+  const landingTrailers = attribution.trailers;
 
   // May this checkout publish at all? Asked ONCE, here — before the push
   // mutex, so a cold-cache probe's round trip is not paid while holding a
@@ -686,7 +709,7 @@ const pushAction: CliAction<
       // pushes ledger has no row for a push that really happened.
       const trailer =
         opts.fromMain && publish.kind === "local"
-          ? ["--trailer", `${LEGACY_IDS.pushTrailer}=${pushId}`]
+          ? trailerArgs(landingTrailers)
           : [];
       await exec(["git", "commit", "-m", opts.message, ...trailer]);
     } else {
@@ -752,7 +775,7 @@ const pushAction: CliAction<
                 "rebase",
                 `${publish.remote}/main`,
                 "--exec",
-                `git -c trailer.ifexists=replace commit --amend --no-edit --trailer ${LEGACY_IDS.pushTrailer}=${pushId}`,
+                trailerAmendCommand(landingTrailers),
               ],
               undefined,
               rebaseEnv(),
@@ -902,8 +925,7 @@ const pushAction: CliAction<
                 "commit",
                 "--amend",
                 "--no-edit",
-                "--trailer",
-                `${LEGACY_IDS.pushTrailer}=${pushId}`,
+                ...trailerArgs(landingTrailers),
               ],
               undefined,
               // Same suppression as push's rebases: `--amend` fires
@@ -945,7 +967,7 @@ const pushAction: CliAction<
               "rebase",
               "main",
               "--exec",
-              `git -c trailer.ifexists=replace commit --amend --no-edit --trailer ${LEGACY_IDS.pushTrailer}=${pushId}`,
+              trailerAmendCommand(landingTrailers),
             ],
             undefined,
             rebaseEnv(),

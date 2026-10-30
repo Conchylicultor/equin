@@ -32,9 +32,13 @@ in that table will ever describe. A complete ledger also still cannot see a comm
 that carries no trailer. So I3 below stands unchanged.
 
 Git has no such lag. Every commit that lands via `./equin push` carries
-the conversation trailer (`<convId>`) and the push trailer (`<uuid>`), and the
-pre-push `conversation-trailer` check *fails the push* when a commit lacks the
-conversation trailer — so this is an enforced invariant, not a convention. `main`
+the push trailer (`<uuid>`) and what names its attempt — the conversation
+trailer (`<convId>`), and on an attempt's branch the attempt trailer push stamps
+from it (the only name a push from a session equin did not launch carries) —
+and the pre-push `conversation-trailer` check *fails the push* when a commit
+names neither — so this is an enforced invariant, not a convention. `readLanded`
+counts a commit as the attempt's when it names one of its conversations or the
+attempt itself. `main`
 is only ever fast-forwarded, so its history is a complete record of what landed.
 Full design: `research/2026-08-17-global-attempt-work-git-derived-standing.md`.
 

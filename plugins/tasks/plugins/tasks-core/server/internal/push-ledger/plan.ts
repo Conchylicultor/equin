@@ -20,8 +20,9 @@ export interface LedgerPlan {
   /** Rows this database can attribute and does not already hold, oldest first. */
   rows: InsertPushInput[];
   /**
-   * Commits the walk saw and could NOT attribute: no conversation row here (and
-   * so no attempt to hang the FK on).
+   * Commits the walk saw and could NOT attribute: no conversation row here and
+   * no attempt trailer naming an attempt that exists here (so no attempt to hang
+   * the FK on).
    *
    * NAMED, not dropped. From inside this database "foreign, this instance will
    * never own it" and "not mine yet — the conversation row has not been adopted
@@ -40,7 +41,8 @@ export interface LedgerPlan {
  * Oldest-first so a push's commits reach `pushes.landed` subscribers in the order
  * `main` recorded them; `readMainCommits` hands them over newest-first.
  *
- * A commit is DEFERRED when its conversation or attempt is absent here. That is
+ * A commit is DEFERRED when neither its conversation's attempt nor its attempt
+ * trailer names an attempt present here. That is
  * not a failure: a worktree database forked before an attempt existed genuinely
  * has nothing to attach the push to, and inventing a row would break the FK. It
  * is also not final — hence the name, and hence the deferral horizon in
@@ -56,7 +58,14 @@ export function planLedger(
   for (let i = commits.length - 1; i >= 0; i--) {
     const commit = commits[i]!;
     if (state.have.has(commit.sha)) continue;
-    const attemptId = state.attemptByConversation.get(commit.conversationId);
+    // The conversation's attempt is the authority; the attempt trailer is what
+    // a push from a session equin did not launch (no conversation) is credited
+    // by — and what still attributes a commit whose conversation row this
+    // database never adopted.
+    const attemptId =
+      (commit.conversationId
+        ? state.attemptByConversation.get(commit.conversationId)
+        : undefined) ?? commit.attemptId;
     if (!attemptId || !state.liveAttempts.has(attemptId)) {
       deferred.push(commit);
       continue;

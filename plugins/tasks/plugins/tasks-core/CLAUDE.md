@@ -527,12 +527,13 @@ serves them.
     - `tasks` (keyed)
     - `tasks:rows` (keyed, point)
 - Core:
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/model-provider` ×3
     - `conversations/workspace` ×3
     - `fields/text/config` ×3
     - `fields` ×3
     - `fields/rank/config` ×2
+    - `infra/worktree` ×2
     - `network/live` ×2
     - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
@@ -544,6 +545,7 @@ serves them.
     - `primitives/pane.defineRoute`
     - `primitives/rank.RankSchema`
     - `tasks/orchestration/mandate/policy.defineCapability`
+    - `tasks/task-ids.attemptIdKind`
     - `ui/icons.symbol`
   - Exports (types):
     - `Attempt`
@@ -565,9 +567,11 @@ serves them.
     - `TrackFilingGrant`
     - `TrailerCommit`
   - Exports (values):
+    - `ATTEMPT_TRAILER_KEY`
     - `attemptConversationIds`
     - `attemptDeliveries`
     - `attemptDeliveriesEntityRef`
+    - `attemptOfBranch`
     - `attemptPushIds`
     - `attemptRows`
     - `AttemptSchema`
@@ -618,6 +622,7 @@ serves them.
     - `TaskStatusSchema`
     - `TrackFilingGrantSchema`
     - `TRAILER_LOG_FORMAT`
+    - `UNATTRIBUTED_TRAILER_KEY`
 - Cross-plugin:
   - Imported by: 77 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×29

@@ -16,6 +16,7 @@ import { join } from "node:path";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
+import { ATTEMPT_TRAILER_KEY } from "@plugins/tasks/plugins/tasks-core/core";
 import {
   GitError,
   WorktreeGoneError,
@@ -55,7 +56,8 @@ async function git(cwd: string, ...args: string[]): Promise<string> {
 }
 
 interface Trailers {
-  conv: string;
+  conv?: string;
+  attempt?: string;
   push: string;
 }
 
@@ -75,7 +77,13 @@ async function commit(
   if (trailers) {
     args.push(
       "-m",
-      `${LEGACY_IDS.conversationTrailer}: ${trailers.conv}\n${LEGACY_IDS.pushTrailer}: ${trailers.push}`,
+      [
+        trailers.conv && `${LEGACY_IDS.conversationTrailer}: ${trailers.conv}`,
+        `${LEGACY_IDS.pushTrailer}: ${trailers.push}`,
+        trailers.attempt && `${ATTEMPT_TRAILER_KEY}: ${trailers.attempt}`,
+      ]
+        .filter(Boolean)
+        .join("\n"),
     );
   }
   await git(repo, ...args);
@@ -149,7 +157,11 @@ test("D1: a rebased-and-fast-forwarded branch is ahead 0 yet reads as landed", a
     const pending = await readPendingInWorktree(repo);
     expect(pending).toMatchObject({ kind: "measured", ahead: 0, behind: 0 });
 
-    const landed = await readLanded(repo, new Set(["conv-1"]), ALL_TIME);
+    const landed = await readLanded(
+      repo,
+      { attemptId: "att-none", convIds: new Set(["conv-1"]) },
+      ALL_TIME,
+    );
     expect(landed.shas).toHaveLength(1);
     expect(landed.pushIds).toEqual(["push-1"]);
     // The whole point: nothing here reads as "this attempt has nothing at stake".
@@ -164,20 +176,60 @@ test("the landed grep is scoped to the attempt's own conversations", async () =>
     await commit(repo, "untrailered");
 
     expect(
-      (await readLanded(repo, new Set(["conv-mine"]), ALL_TIME)).shas,
+      (
+        await readLanded(
+          repo,
+          { attemptId: "att-none", convIds: new Set(["conv-mine"]) },
+          ALL_TIME,
+        )
+      ).shas,
     ).toHaveLength(1);
     expect(
-      (await readLanded(repo, new Set(["conv-mine", "conv-theirs"]), ALL_TIME))
-        .shas,
+      (
+        await readLanded(
+          repo,
+          {
+            attemptId: "att-none",
+            convIds: new Set(["conv-mine", "conv-theirs"]),
+          },
+          ALL_TIME,
+        )
+      ).shas,
     ).toHaveLength(2);
     expect(
-      (await readLanded(repo, new Set(["conv-nobody"]), ALL_TIME)).shas,
+      (
+        await readLanded(
+          repo,
+          { attemptId: "att-none", convIds: new Set(["conv-nobody"]) },
+          ALL_TIME,
+        )
+      ).shas,
     ).toHaveLength(0);
-    // No conversations at all: nothing can match, and no git runs.
-    expect(await readLanded(repo, new Set(), ALL_TIME)).toEqual({
-      shas: [],
-      pushIds: [],
-    });
+    expect(
+      (
+        await readLanded(
+          repo,
+          { attemptId: "att-none", convIds: new Set() },
+          ALL_TIME,
+        )
+      ).shas,
+    ).toHaveLength(0);
+  });
+});
+
+// A session equin did not launch has no conversation: push credits the
+// attempt its branch names, and that alone makes the commit the attempt's.
+test("a commit naming only the attempt lands for that attempt", async () => {
+  await withRepo(async (repo) => {
+    await commit(repo, "recovery fix", { attempt: "att-r", push: "push-r" });
+    await commit(repo, "theirs", { conv: "conv-theirs", push: "push-theirs" });
+    const landed = await readLanded(
+      repo,
+      { attemptId: "att-r", convIds: new Set() },
+      ALL_TIME,
+    );
+    expect(landed.shas).toHaveLength(1);
+    expect(landed.pushIds).toEqual(["push-r"]);
   });
 });
 
@@ -186,7 +238,11 @@ test("one push across several commits counts as one push", async () => {
     await commit(repo, "first", { conv: "conv-1", push: "push-1" });
     await commit(repo, "second", { conv: "conv-1", push: "push-1" });
     await commit(repo, "third", { conv: "conv-1", push: "push-2" });
-    const landed = await readLanded(repo, new Set(["conv-1"]), ALL_TIME);
+    const landed = await readLanded(
+      repo,
+      { attemptId: "att-none", convIds: new Set(["conv-1"]) },
+      ALL_TIME,
+    );
     expect(landed.shas).toHaveLength(3);
     expect([...landed.pushIds].sort()).toEqual(["push-1", "push-2"]);
   });
@@ -210,7 +266,11 @@ test("D2: local commits on a clean worktree read ahead > 0", async () => {
     });
     // Nothing landed (this repo's `main` never took the commit), yet the standing
     // is still not "none" — the drop must not be offered.
-    const landed = await readLanded(repo, new Set(["conv-2"]), ALL_TIME);
+    const landed = await readLanded(
+      repo,
+      { attemptId: "att-none", convIds: new Set(["conv-2"]) },
+      ALL_TIME,
+    );
     expect(landed.shas).toHaveLength(0);
     expect(standing(pending, landed)).toBe("pending");
   });
@@ -221,7 +281,11 @@ test("a branch that never committed reads ahead 0 with nothing landed", async ()
     await git(repo, "checkout", "-b", "claude-web/att-3", "main");
     const pending = await readPendingInWorktree(repo);
     expect(pending).toMatchObject({ kind: "measured", ahead: 0, behind: 0 });
-    const landed = await readLanded(repo, new Set(["conv-3"]), ALL_TIME);
+    const landed = await readLanded(
+      repo,
+      { attemptId: "att-none", convIds: new Set(["conv-3"]) },
+      ALL_TIME,
+    );
     // The drop affordance survives: this attempt really has nothing at stake.
     expect(standing(pending, landed)).toBe("none");
   });
@@ -240,7 +304,11 @@ test("rebasing onto a newer main does not make main's commits this attempt's wor
 
     const pending = await readPendingInWorktree(repo);
     expect(pending).toMatchObject({ kind: "measured", ahead: 0, behind: 0 });
-    const landed = await readLanded(repo, new Set(["conv-4"]), ALL_TIME);
+    const landed = await readLanded(
+      repo,
+      { attemptId: "att-none", convIds: new Set(["conv-4"]) },
+      ALL_TIME,
+    );
     expect(landed.shas).toHaveLength(0);
     expect(standing(pending, landed)).toBe("none");
   });
@@ -305,7 +373,13 @@ test("a git failure throws — it never resolves to a confident zero", async () 
       GitError,
     );
     expect(
-      await rejection(readLanded(dir, new Set(["conv-1"]), ALL_TIME)),
+      await rejection(
+        readLanded(
+          dir,
+          { attemptId: "att-none", convIds: new Set(["conv-1"]) },
+          ALL_TIME,
+        ),
+      ),
     ).toBeInstanceOf(GitError);
     expect(await rejection(probeHeadMain(dir))).toBeInstanceOf(GitError);
   } finally {

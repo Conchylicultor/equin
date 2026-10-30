@@ -7,7 +7,8 @@ import { withTaskStatusChange } from "../status-scope";
 export interface InsertPushInput {
   id: string;
   attemptId: string;
-  conversationId: string;
+  /** Null when the push named only its attempt (a session equin did not launch). */
+  conversationId: string | null;
   sha: string;
   pushId: string;
   message: string;

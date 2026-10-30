@@ -21,9 +21,12 @@ export type {
 // The reader half of the commit-trailer grammar. Lives with the `pushes` table
 // it fills; `attempt-work` reads it from here. See ./internal/trailers.ts.
 export {
+  ATTEMPT_TRAILER_KEY,
   CONVERSATION_TRAILER_KEY,
   PUSH_TRAILER_KEY,
+  UNATTRIBUTED_TRAILER_KEY,
   TRAILER_LOG_FORMAT,
+  attemptOfBranch,
   parseTrailerLog,
 } from "./internal/trailers";
 export type { TrailerCommit } from "./internal/trailers";

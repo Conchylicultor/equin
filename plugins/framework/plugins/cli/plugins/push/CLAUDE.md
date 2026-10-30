@@ -2,7 +2,8 @@
 
 `./equin push` — the one path work reaches `main`.
 
-`cli/index.ts` is the data-only declaration (`-m, --message`, `--from-main`);
+`cli/index.ts` is the data-only declaration (`-m, --message`, `--from-main`,
+`--unattributed`);
 `cli/run.ts` is the implementation, reached through the declaration's lazy
 `import()` so no other invocation pays for the host-admission, worktree and
 op-profiler barrels it pulls in.
@@ -107,6 +108,28 @@ In publish mode it rebases the checkout's own `main` onto `origin/main` *before*
 its final push, so a push that fails leaves local main advanced and already
 rebuilding. Long-standing, now stated in the code; the local arm never pushes,
 so it cannot happen there.
+
+## Attribution: who a push credits (`cli/attribution.ts`)
+
+Beside the push trailer, every landed commit is stamped with what names its
+task — decided once, before anything is written:
+
+- **an attempt's branch** (`claude-web/<attemptId>`, `attemptOfBranch` in
+  `tasks-core/core`) → the `Equin-Attempt` trailer, always. Derived from the
+  checkout, not from `EQUIN_CONVERSATION_ID`, so a session equin did not launch
+  (recovering a broken main from a plain terminal) still lands credited. The
+  conversation trailer, when the hook stamped one, stays the ledger's authority.
+- **`--unattributed "<reason>"`** → `Equin-Unattributed: <reason>`, for a branch
+  that is no attempt's pushed from such a session. Refused whenever the push is
+  attributable (the env var is set, or the branch is an attempt's), so it can
+  never discard a real name. Same rule as `--from-main`: an agent passes it only
+  with the user's explicit approval in the current conversation. The ledger
+  writes no row for it; git history keeps the reason.
+
+The trailers reach the rebase `--exec` as one single-quoted shell string
+(`trailerAmendCommand`), since a reason is free text.
+
+## Fatal signals
 
 A push owns no deploy receipt, so the fatal-signal tap armed here is its only
 record of being killed — and it is the op where that costs most, since the box

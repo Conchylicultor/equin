@@ -10,7 +10,10 @@ import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
  * invocation pay for this file alone; the body (and the host-admission, worktree
  * and profiler barrels it reaches) loads only when a push actually runs.
  */
-export default defineCliCommand<[], { message?: string; fromMain?: boolean }>({
+export default defineCliCommand<
+  [],
+  { message?: string; fromMain?: boolean; unattributed?: string }
+>({
   name: "push",
   description: "Commit (if -m provided), merge into main, and push",
   options: [
@@ -26,6 +29,14 @@ export default defineCliCommand<[], { message?: string; fromMain?: boolean }>({
         "Agents MUST NOT pass this flag without explicit user approval in the current conversation. " +
         "Intended only when a human is driving and the worktree detour would be pure churn " +
         "(e.g. small fixes already staged on main). Still runs checks.",
+    },
+    {
+      flags: "--unattributed <reason>",
+      description:
+        "Land a push that credits no conversation and no attempt, stamping the one-line <reason> instead. " +
+        "Only for a session equin did not launch (no conversation id in its environment) on a branch that is no attempt's — " +
+        "refused whenever the push is attributable (an attempt's claude-web/<id> branch is credited automatically). " +
+        "Agents MUST NOT pass this flag without explicit user approval in the current conversation.",
     },
   ],
   run: () => import("./run"),

@@ -188,10 +188,21 @@ export async function readPendingFromBranchRef(
   };
 }
 
+/** Whose landed commits {@link readLanded} greps for. */
+export interface LandedOwner {
+  readonly attemptId: string;
+  /** The attempt's conversations, in any order. */
+  readonly convIds: ReadonlySet<string>;
+}
+
 /**
  * The attempt's commits `main` already contains, found by their trailers rather
  * than by the pushes ledger — so a stalled ingest job cannot make landed work
  * look like no work at all.
+ *
+ * A commit is the attempt's when it names one of its conversations OR the
+ * attempt itself (the attempt trailer push stamps from the branch — the only
+ * name a push from a session equin did not launch carries).
  *
  * `main` is only ever fast-forwarded, so its history is a complete, non-lagging
  * record of what landed. The read is bounded by `since` (the attempt's own
@@ -203,12 +214,9 @@ export async function readPendingFromBranchRef(
  */
 export async function readLanded(
   mainRepoRoot: string,
-  convIds: ReadonlySet<string>,
+  owner: LandedOwner,
   since: Date,
 ): Promise<{ shas: string[]; pushIds: string[] }> {
-  // No conversations ⇒ no commit can carry a matching trailer. A genuinely empty
-  // domain, not an absorbed failure: there is nothing for the grep to match.
-  if (convIds.size === 0) return { shas: [], pushIds: [] };
   // runGit throws on failure — a failed log must never be absorbed into "nothing
   // landed", which is the exact lie this whole plugin exists to remove.
   const raw = await runGit(
@@ -221,8 +229,10 @@ export async function readLanded(
     ],
     mainRepoRoot,
   );
-  const mine = parseTrailerLog(raw).filter((c) =>
-    convIds.has(c.conversationId),
+  const mine = parseTrailerLog(raw).filter(
+    (c) =>
+      c.attemptId === owner.attemptId ||
+      (c.conversationId !== null && owner.convIds.has(c.conversationId)),
   );
   return {
     shas: mine.map((c) => c.sha),

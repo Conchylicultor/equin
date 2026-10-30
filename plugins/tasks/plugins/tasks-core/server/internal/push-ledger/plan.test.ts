@@ -12,6 +12,7 @@ function commit(overrides: Partial<TrailerCommit> = {}): TrailerCommit {
     sha: "sha1",
     committedAt: new Date("2026-08-17T10:00:00Z"),
     conversationId: "conv-1",
+    attemptId: null,
     pushId: "push-a",
     subject: "feat: something",
     ...overrides,
@@ -107,6 +108,37 @@ describe("planLedger", () => {
     expect(after.deferred).toEqual([]);
     expect(after.rows.map((r) => r.sha)).toEqual(["adopted"]);
     expect(after.rows[0]!.attemptId).toBe("att-2");
+  });
+
+  // A session equin did not launch has no conversation: the push names only
+  // the attempt its branch belongs to.
+  test("attributes a commit naming only its attempt", () => {
+    const { rows, deferred } = planLedger(
+      [commit({ conversationId: null, attemptId: "att-1" })],
+      state(),
+    );
+    expect(deferred).toEqual([]);
+    expect(rows[0]).toMatchObject({ attemptId: "att-1", conversationId: null });
+  });
+
+  test("the conversation's attempt wins over the attempt trailer", () => {
+    const { rows } = planLedger(
+      [commit({ attemptId: "att-2" })],
+      state({ liveAttempts: new Set(["att-1", "att-2"]) }),
+    );
+    expect(rows[0]!.attemptId).toBe("att-1");
+  });
+
+  test("an unknown conversation falls back to the attempt trailer", () => {
+    const { rows, deferred } = planLedger(
+      [commit({ conversationId: "conv-unknown", attemptId: "att-1" })],
+      state(),
+    );
+    expect(deferred).toEqual([]);
+    expect(rows[0]).toMatchObject({
+      attemptId: "att-1",
+      conversationId: "conv-unknown",
+    });
   });
 
   test("keys the row on (pushId, sha), so one push spans many commits", () => {

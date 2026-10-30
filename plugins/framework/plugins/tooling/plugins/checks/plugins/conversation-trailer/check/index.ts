@@ -1,11 +1,16 @@
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
-import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import {
   envName,
   readEnv,
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import {
+  ATTEMPT_TRAILER_KEY,
+  CONVERSATION_TRAILER_KEY,
+  UNATTRIBUTED_TRAILER_KEY,
+  attemptOfBranch,
+} from "@plugins/tasks/plugins/tasks-core/core";
 
-const TRAILER = LEGACY_IDS.conversationTrailer;
+const TRAILER = CONVERSATION_TRAILER_KEY;
 
 // Wedge-breaker for a metadata-only git read: far above any real duration,
 // because starvation under a saturated check run is what these suffer, not
@@ -43,9 +48,15 @@ async function currentBranch(): Promise<string> {
 // commits, which sit on `<remote>/main` and not on local `main`: they were
 // authored in upstream's own sessions (or none), so their trailers are not
 // this pane's to have, and asking would fail every upstream update's push.
-async function commitsAheadOfMain(): Promise<
-  { sha: string; trailer: string }[]
-> {
+interface OwnCommit {
+  sha: string;
+  /** The conversation trailer's value(s), comma-joined; "" when absent. */
+  trailer: string;
+  /** Carries an attempt or an unattributed trailer. */
+  namedOtherwise: boolean;
+}
+
+async function commitsAheadOfMain(): Promise<OwnCommit[]> {
   const { stdout, exitCode } = await run([
     "git",
     "log",
@@ -53,12 +64,16 @@ async function commitsAheadOfMain(): Promise<
     "--not",
     "main",
     "--glob=refs/remotes/*/main",
-    `--format=%H%x00%(trailers:key=${TRAILER},valueonly,separator=%x2C)`,
+    `--format=%H%x00%(trailers:key=${TRAILER},valueonly,separator=%x2C)%x00%(trailers:key=${ATTEMPT_TRAILER_KEY},valueonly,separator=%x2C)%(trailers:key=${UNATTRIBUTED_TRAILER_KEY},valueonly,separator=%x2C)`,
   ]);
   if (exitCode !== 0 || !stdout) return [];
   return stdout.split("\n").map((line) => {
     const parts = line.split("\0");
-    return { sha: parts[0]!, trailer: (parts[1] ?? "").trim() };
+    return {
+      sha: parts[0]!,
+      trailer: (parts[1] ?? "").trim(),
+      namedOtherwise: (parts[2] ?? "").trim() !== "",
+    };
   });
 }
 
@@ -72,7 +87,7 @@ async function hasStrayBodyTrailer(sha: string): Promise<boolean> {
 
 const check: Check = {
   id: "conversation-trailer",
-  description: `${envName("CONVERSATION_ID")} is set and every commit ahead of every known main (local, and each <remote>/main) carries the ${TRAILER} trailer`,
+  description: `every commit ahead of every known main (local, and each <remote>/main) is attributable: with ${envName("CONVERSATION_ID")} set it carries that conversation's ${TRAILER} trailer; without it the branch is an attempt's (push credits it with ${ATTEMPT_TRAILER_KEY}) or each commit names its conversation, attempt or ${UNATTRIBUTED_TRAILER_KEY} reason`,
   // Not a pure function of the working tree: reads EQUIN_CONVERSATION_ID
   // env and the trailers of this branch's own commits. Never cache.
   cacheSignature: () => null,
@@ -81,15 +96,28 @@ const check: Check = {
     if (branch === "main") return { ok: true };
 
     const envId = readEnv("CONVERSATION_ID");
+    const commits = await commitsAheadOfMain();
     if (!envId) {
+      // A session equin did not launch (a plain terminal, e.g. recovering a
+      // broken main): there is no conversation to vouch for. An attempt's
+      // branch still names who the push credits — push stamps the attempt
+      // trailer from it on every commit it lands.
+      if (attemptOfBranch(branch)) return { ok: true };
+      const unnamed = commits.filter((c) => !c.trailer && !c.namedOtherwise);
+      if (unnamed.length === 0) return { ok: true };
+      const list = unnamed.map((c) => `  ${c.sha.slice(0, 12)}`).join("\n");
       return {
         ok: false,
-        message: `${envName("CONVERSATION_ID")} is not set in this shell. The \`./equin push\` amend would strip attribution, orphaning the push from its task.`,
-        hint: STOP_MESSAGE,
+        message:
+          `${envName("CONVERSATION_ID")} is not set (this session was not launched by equin) and ${branch} is no attempt's branch, ` +
+          `so nothing names who these ${unnamed.length} commit(s) ahead of main are for:\n${list}`,
+        hint:
+          "Ask the user before landing it unattributed; with their approval in this conversation, push with " +
+          '`./equin push --unattributed "<one-line reason>"`, which records the reason in the commit instead. ' +
+          "Do not set the env var by hand to another conversation's id.",
       };
     }
 
-    const commits = await commitsAheadOfMain();
     if (commits.length === 0) return { ok: true };
 
     const missing = commits.filter((c) => !c.trailer);
