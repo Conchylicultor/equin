@@ -254,7 +254,8 @@ export const compositionsConfig = defineConfig({
         // transcripts, the migration history bundled as text, the baseline
         // model catalog, the task titles kept as filed, the guest host account,
         // the in-memory config store, the committed config bundled as text, the
-        // in-memory data files and the prototypes' snapshot version history.
+        // in-memory data files, the prototypes' snapshot version history and
+        // the warm-up admission of a sole host.
         // A desktop backend
         // provides each of those services from a machine half
         // (`database#machine`, `jobs#machine`, `config_v2#machine`, …), and a
@@ -278,6 +279,7 @@ export const compositionsConfig = defineConfig({
             "!conversations.model-provider.catalog.baseline.**",
             "!tasks.task-title.filed-titles.**",
             "!infra.host-account.guest.**",
+            "!infra.warmup.sole-host.**",
             "!config_v2.browser-store.**",
             "!config_v2.bundled-layer.**",
             "!infra.paths.data-files.memory.**",

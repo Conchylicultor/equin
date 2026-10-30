@@ -28,9 +28,10 @@ import type { LoadedServerPlugin, ServerPluginDefinition } from "./types";
 // - `serve` — the gateway-spawned, long-lived backend (`../bin/index.ts`). Runs
 //   every phase: this file's sequence, plus the socket bind interleaved into it
 //   and the post-ready phases (`runPostReadyPhases`: `onReady`, `onAllReady`)
-//   and `drainWarmups` after it.
+//   and the settled phase (`runSettledPhase`: `onSettled`) after it.
 // - `browser` — a page's Web Worker (`./browser-host.ts`), the other SERVING
-//   host: the sequence, its seed, then the same post-ready phases.
+//   host: the sequence, the same post-ready phases, its seed, then the same
+//   settled phase.
 // - `exec` — a short-lived process that runs ONE registered piece of work and
 //   exits (`../cli/run-exec.ts`). Runs `bootPluginGraph` and nothing else.
 //
@@ -429,6 +430,50 @@ export async function runPostReadyPhases(
   await runGraphPhase(ordered, "onReady");
   recordMemoryCheckpoint("after-onReady");
   await runAllReadyPhase(ordered);
+}
+
+// ── onSettled ───────────────────────────────────────────────────
+/**
+ * The settled phase of a SERVING host (`serve`, `browser`): every plugin's
+ * `onSettled`, once the host is already serving and every post-ready phase
+ * has resolved — post-serving catch-up work (infra/warmup drains every
+ * declared warm-up here). `exec` has no path to it: a short-lived child must
+ * never run heavy post-serving work, and this function is the only caller of
+ * the hook.
+ *
+ * Parallel; same error policy as `onAllReady` — logged, and a load-bearing
+ * plugin's rejection rejects the phase. Wrapped in one `settled` profiler span
+ * (each hook an `onSettled:<id>` span under it), so a boot profile is complete
+ * once that span is recorded, whatever plugins the graph holds.
+ */
+export async function runSettledPhase(
+  ordered: LoadedServerPlugin[],
+): Promise<void> {
+  const end = profilerStart("settled", "settled", "Settled");
+  try {
+    await Promise.all(
+      ordered.map(async (p) => {
+        if (!p.onSettled) return;
+        const endHook = profilerStart(
+          `onSettled:${p.id}`,
+          "onSettled",
+          p.id,
+          p.id,
+        );
+        try {
+          await p.onSettled();
+        } catch (err) {
+          console.error(`[plugin.${p.id}] onSettled failed`, err);
+          if (p.loadBearing) throw err;
+        } finally {
+          endHook();
+        }
+      }),
+    );
+  } finally {
+    end();
+  }
+  recordMemoryCheckpoint("after-settled");
 }
 
 /**

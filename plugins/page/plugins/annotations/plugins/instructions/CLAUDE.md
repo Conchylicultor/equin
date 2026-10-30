@@ -43,8 +43,8 @@ per-instance appearance" rule still holds.
 
 `server/` is portable (every host writes the card, the demo's worker
 included; the content hash is `sha256Hex`, `packages/string-hash`, identical
-to the desktop's former `node:crypto` digest); the deliveries table's nightly
-retention sweep is the `machine/` half's.
+to the desktop's former `node:crypto` digest), and so is the deliveries
+table's nightly retention sweep.
 
 The API the agent-facing page tools and the MCP connect-time instructions consume.
 It names no tool and no MCP concept — it answers "which instructions cover this
@@ -121,7 +121,7 @@ at a time; exclusivity with `author`, and `global` requiring `instructions`, is
 
 ## Plugin reference
 
-- Description: Instructions block type: a void CONTAINER whose soft-tinted box wraps blocks of any type, holding the human's standing instructions to agents working under the page it sits on — delivered to them with their reads, and to every conversation at its start when the card's Global switch is on. Instructions: registers the card's `data` schema ({ global? }) at the server write boundary, and owns page_instructions_deliveries — which instructions each conversation has received, at which content hash — with the scope queries (instructionsInScope, globalInstructions) and the render-hash-compare delivery helpers the agent-facing page tools and the MCP connect-time instructions consume. Portable, so every host writes the card; the deliveries' nightly retention sweep is the machine half's.
+- Description: Instructions block type: a void CONTAINER whose soft-tinted box wraps blocks of any type, holding the human's standing instructions to agents working under the page it sits on — delivered to them with their reads, and to every conversation at its start when the card's Global switch is on. Instructions: registers the card's `data` schema ({ global? }) at the server write boundary, and owns page_instructions_deliveries — which instructions each conversation has received, at which content hash — with the scope queries (instructionsInScope, globalInstructions) and the render-hash-compare delivery helpers the agent-facing page tools and the MCP connect-time instructions consume. Portable, so every host writes the card and runs the deliveries' nightly retention sweep (older than 30 days, per worktree DB).
 - Web:
   - Contributes:
     - `Editor.Block` "instructions" → `ContainerNoRow`
@@ -137,6 +137,7 @@ at a time; exclusivity with `author`, and `global` requiring `instructions`, is
   - Uses:
     - `database.db`
     - `database.DbExecutor`
+    - `infra/retention.defineRetention`
     - `page/annotations.humanAudienceTypes`
     - `page/editor._blocks`
     - `page/editor.Editor`
@@ -157,6 +158,7 @@ at a time; exclusivity with `author`, and `global` requiring `instructions`, is
     - `markInstructionsDelivered`
     - `renderForDelivery`
     - `renderInstructions`
+  - Register: `defineJob('retention.page_instructions_deliveries')`
 - Core:
   - Uses:
     - `page/annotations.defineAnnotationBlock`
@@ -171,8 +173,6 @@ at a time; exclusivity with `author`, and `global` requiring `instructions`, is
     - `ui/tokens/color-palette --primary-text`
     - `ui/tokens/shape --radius`
   - Imported by: `page/annotations/agent-access`
-- Machine:
-  - Register: `defineJob('retention.page_instructions_deliveries')`
 - Sub-plugins:
   - **`instructions-page`** — Instructions pages in the page editor: a sub-page whose data marks it `instructions: true` is tinted with the instructions card's wash wherever it is referenced (its row in the parent page, the…
 

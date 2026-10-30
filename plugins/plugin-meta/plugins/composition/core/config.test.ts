@@ -282,6 +282,7 @@ test("the base-exclusions row keeps the browser-only host-service providers out 
     "conversations.model-provider.catalog.baseline",
     "tasks.task-title.filed-titles",
     "infra.host-account.guest",
+    "infra.warmup.sole-host",
     "config_v2.browser-store",
     "config_v2.bundled-layer",
   ]) {

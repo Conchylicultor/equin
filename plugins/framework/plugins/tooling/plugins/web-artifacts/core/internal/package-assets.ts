@@ -30,7 +30,7 @@ import {
 } from "node:path";
 import type { Metafile } from "esbuild";
 import { sha256Hex } from "../hash";
-import { publishDir, pruneCacheDir, WEB_ARTIFACTS_DIR } from "./store";
+import { publishDir, WEB_ARTIFACTS_DIR, type CachePrunePolicy } from "./store";
 
 const ASSETS_ROOT = join(WEB_ARTIFACTS_DIR, "package-assets");
 
@@ -63,12 +63,20 @@ export function isFileInput(inPath: string): boolean {
   return !NAMESPACED_INPUT_RE.test(inPath);
 }
 
-/** The asset store entry holding `file`'s bytes; published on first use. */
-async function ensurePackageAsset(file: string): Promise<string> {
+/**
+ * The asset store entry holding `file`'s bytes; published on first use. Pinned
+ * into the build's lease before it is checked or published (`lease.ts`), so a
+ * concurrent prune cannot remove it before it is hard-linked.
+ */
+async function ensurePackageAsset(
+  file: string,
+  pin: (paths: readonly string[]) => Promise<void>,
+): Promise<string> {
   const dir = join(
     ASSETS_ROOT,
     `${sha256Hex(readFileSync(file)).slice(0, 16)}.${basename(file)}`,
   );
+  await pin([dir]);
   if (existsSync(join(dir, "meta.json"))) return join(dir, basename(file));
   mkdirSync(ASSETS_ROOT, { recursive: true });
   const tmp = join(ASSETS_ROOT, `.tmp.${basename(dir)}.${process.pid}`);
@@ -95,6 +103,8 @@ export async function placePackageAssets(opts: {
   metafile: Metafile;
   /** The dir esbuild resolved the metafile's relative paths against. */
   cwd: string;
+  /** Pin an asset entry into the build's lease (`lease.ts`). */
+  pin: (paths: readonly string[]) => Promise<void>;
 }): Promise<Set<string>> {
   const placed = new Set<string>();
   const refsOf = new Map<string, string[]>();
@@ -119,7 +129,7 @@ export async function placePackageAssets(opts: {
         }
         const dest = resolve(outDir, ref);
         if (placed.has(dest)) continue;
-        const stored = await ensurePackageAsset(asset);
+        const stored = await ensurePackageAsset(asset, opts.pin);
         mkdirSync(dirname(dest), { recursive: true });
         linkSync(stored, dest);
         for (const ext of [".br", ".gz"]) {
@@ -135,16 +145,11 @@ export async function placePackageAssets(opts: {
 
 // A vendor set holds hard links, never a path into this store, so an aged-out
 // entry costs nothing a served dist still needs — only the next vendor build
-// that wants it republishes it.
-const ASSETS_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
-
-/** Prune asset entries no vendor build used for two weeks. */
-export function prunePackageAssets(): void {
-  pruneCacheDir({
-    root: ASSETS_ROOT,
-    maxAgeMs: ASSETS_MAX_AGE_MS,
-    maxEntries: 200,
-    trimTo: 150,
-    referenced: new Set(),
-  });
-}
+// that wants it republishes it. Pruned with the other caches, under the store
+// lock (`pruneWebArtifactCaches`, `lease.ts`).
+export const PACKAGE_ASSETS_PRUNE_POLICY: CachePrunePolicy = {
+  root: ASSETS_ROOT,
+  maxAgeMs: 14 * 24 * 60 * 60 * 1000,
+  maxUnreferenced: 200,
+  trimTo: 150,
+};

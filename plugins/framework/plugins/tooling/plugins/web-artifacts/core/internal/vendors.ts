@@ -27,9 +27,8 @@ import { init as cjsInit, parse as cjsParse } from "cjs-module-lexer";
 import { init as esInit, parse as esParse } from "es-module-lexer/minimal";
 import * as esbuild from "esbuild";
 import { sha256Hex } from "../hash";
-import { publishDir, pruneCacheDir, WEB_ARTIFACTS_DIR } from "./store";
-import { servedDistTargets } from "./served-dists";
-import { placePackageAssets, prunePackageAssets } from "./package-assets";
+import { publishDir, WEB_ARTIFACTS_DIR, type CachePrunePolicy } from "./store";
+import { placePackageAssets } from "./package-assets";
 import {
   computeVendorCacheGate,
   loadVendorResolutionCache,
@@ -466,9 +465,12 @@ export async function ensureVendorSet(opts: {
   builderVersion: number;
   builderSource: string;
   root: string;
+  /** Pin the set into the build's lease before it is read or published (`lease.ts`). */
+  pin: (paths: readonly string[]) => Promise<void>;
 }): Promise<{ meta: VendorSetMeta; stats: VendorResolveStats }> {
   const { resolved, setHash, stats } = await resolveVendorSet(opts);
   const dest = vendorSetPath(setHash);
+  await opts.pin([dest]);
   const metaFile = join(dest, "meta.json");
   if (existsSync(metaFile)) {
     const now = new Date();
@@ -541,6 +543,7 @@ export async function ensureVendorSet(opts: {
   const precompressed = await placePackageAssets({
     metafile: result.metafile,
     cwd: process.cwd(),
+    pin: opts.pin,
   });
 
   // Per-file static imports (for the modulepreload closure). Relative to set dir.
@@ -580,25 +583,16 @@ export async function ensureVendorSet(opts: {
   return { meta, stats };
 }
 
-// Pruning bounds — same policy as the artifact store (age, then count). A vendor
-// set is one esbuild split build of every external package, so it is BIG (~48 MB
-// measured) while the live population is tiny (13 sets in 14 days). Age is the
-// evictor that matters; the count is a disk backstop sized well clear of the
-// working set, bounding the dir at ~2.3 GB worst case.
-const VENDORS_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
-const VENDORS_MAX_ENTRIES = 48;
-const VENDORS_TRIM_TO = 32;
-
-/** Prune aged vendor sets, then cap total count — never one a served dist links. */
-export function pruneVendorSets(
-  referenced: ReadonlySet<string> = servedDistTargets(),
-): void {
-  prunePackageAssets();
-  pruneCacheDir({
-    root: VENDORS_ROOT,
-    maxAgeMs: VENDORS_MAX_AGE_MS,
-    maxEntries: VENDORS_MAX_ENTRIES,
-    trimTo: VENDORS_TRIM_TO,
-    referenced,
-  });
-}
+// Pruning bounds — same policy as the artifact store (age, then a count bound
+// over the UNREFERENCED sets; one a dist links or a build lease pins is never
+// pruned nor counted). A vendor set is one esbuild split build of every external
+// package, so it is BIG (~48 MB measured) while the live population is small
+// (13 sets in 14 days). Age is the evictor that matters; the count is a disk
+// backstop sized well clear of the working set, bounding the unreferenced sets
+// at ~2.3 GB worst case.
+export const VENDOR_PRUNE_POLICY: CachePrunePolicy = {
+  root: VENDORS_ROOT,
+  maxAgeMs: 14 * 24 * 60 * 60 * 1000,
+  maxUnreferenced: 48,
+  trimTo: 32,
+};

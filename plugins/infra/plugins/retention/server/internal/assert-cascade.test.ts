@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { pgTable, text } from "drizzle-orm/pg-core";
 import { findCascadeFk, markCascadeBounded } from "./assert-cascade";
-import { getGrowthBounds } from "./growth-bounds";
+import { getTableGrowthBounds } from "./growth-bounds";
 
 // Throwaway physical schemas (no live DB) — only the drizzle FK metadata matters.
 const owner = pgTable("ac_owner", {
@@ -54,7 +54,7 @@ describe("findCascadeFk (pure)", () => {
 describe("markCascadeBounded", () => {
   test("records a cascade bound on a valid cascading FK", () => {
     markCascadeBounded(cascadingChild, owner);
-    expect(getGrowthBounds().get("table:ac_cascading_child")).toEqual({
+    expect(getTableGrowthBounds().get("ac_cascading_child")).toEqual({
       kind: "cascade",
       owner: "ac_owner",
     });

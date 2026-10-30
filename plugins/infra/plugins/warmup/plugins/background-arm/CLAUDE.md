@@ -2,12 +2,14 @@
 
 The `warmup` kind of the Background activity catalog
 (`infra/background/catalog`). A child of `warmup` rather than part of it for
-the same reason as the jobs arm: the warmup barrel is imported by the server
-boot entry (`drainWarmups`), and must stay free of the catalog.
+the same reason as the jobs arm: the warmup barrel is booted by every host
+(its `onSettled` drains the warm-ups), and must stay free of the catalog.
 
 - **List.** Every registered warm-up (`listRegisteredWarmups`), grouped
-  `After boot`, trigger `boot`. Scope: `host` → main only (`runsHere` false in a
-  worktree), `worktree` → every worktree.
+  `After boot`, trigger `boot`. Scope: `host` → main only, `worktree` → every
+  worktree; `runsHere` is the host's answer (`WarmupHost.runs`, the one the
+  drain reads), so a desktop worktree says false for a `host` warm-up and a
+  sole host (the browser) says true.
 - **Runs.** A warm-up runs once per boot, so its history is that one run, kept
   in memory by the drain (`warmupRunOf`); a host warm-up skipped off main has
   none. Corpus indexes appear through the warm-up they declare.
@@ -23,6 +25,7 @@ boot entry (`drainWarmups`), and must stay free of the catalog.
     - `infra/background/catalog.defineBackgroundKind`
     - `infra/warmup.listRegisteredWarmups`
     - `infra/warmup.onWarmupRun`
+    - `infra/warmup.WarmupHost`
     - `infra/warmup.WarmupRun`
     - `infra/warmup.warmupRunOf`
   - Register: `defineBackgroundKind('warmup')`

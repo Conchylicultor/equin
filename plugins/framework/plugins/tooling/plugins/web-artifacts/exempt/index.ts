@@ -10,6 +10,7 @@ export default [
       "core/internal/expected.ts",
       "core/internal/global-css.ts",
       "core/internal/identity.ts",
+      "core/internal/lease.ts",
       "core/internal/own-files.ts",
       "core/internal/package-assets.ts",
       "core/internal/pipeline.ts",

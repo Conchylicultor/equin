@@ -7,7 +7,7 @@ export const bootProfilingServed = serveValue(bootProfiling, {
   changes: {
     snapshot: {
       reason:
-        "the profile grows after serving starts (onReady / onAllReady spans, warm-ups, the closing drainWarmups span, the gateway report) and neither the profiler nor the gateway report has a change signal; re-read on mount and on the pane's Refresh",
+        "the profile grows after serving starts (onReady / onAllReady spans, warm-ups, the closing settled span, the gateway report) and neither the profiler nor the gateway report has a change signal; re-read on mount and on the pane's Refresh",
     },
   },
   loader: readBootProfile,

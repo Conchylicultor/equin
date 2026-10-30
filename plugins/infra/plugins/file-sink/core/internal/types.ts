@@ -36,8 +36,9 @@ export interface FileSinkSpec {
 /**
  * A rotation bound. TRUE by construction: `append()` IS the rotation, so a sink
  * that exists is a sink whose file is bounded — there is no "declared but
- * unbounded" state to represent. Structurally identical to retention's
- * `GrowthBound` `rotate` constructor, so a sink's bound is a growth bound.
+ * unbounded" state to represent. The file half of the growth bounds: retention
+ * holds the table half (`getTableGrowthBounds`) and stays free of this
+ * `node:fs` module, so a reader that wants both joins them with `getFileSinks()`.
  */
 export interface RotateBound {
   kind: "rotate";

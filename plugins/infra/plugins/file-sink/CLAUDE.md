@@ -44,9 +44,9 @@ rotates `path` → `path.1`, `path.1` → `path.2`, …, drops `path.keep`, then
 the line into a fresh live file. So a sink that *exists* is a sink whose file is
 bounded; there is no "declared but unbounded" state. `appendAll` shares that one
 implementation and one gate — see below — so a batch is bounded identically. This
-is why
-`retention.getGrowthBounds()` can merge every registered sink's `bound` in as a
-real growth bound without verifying anything (see `../retention/CLAUDE.md`).
+is why every registered sink's `bound` is a real growth bound without verifying
+anything — the file half beside retention's table half (see
+`../retention/CLAUDE.md`).
 
 Rotated files are `path.N` — the suffix is appended **after** the full path (a
 `foo.jsonl` live file rotates to `foo.jsonl.1`), so a `endsWith(".jsonl")` listing
@@ -80,9 +80,8 @@ filter naturally excludes the rotations.
   `getFileSinks()` then exposes it as part of the true, enumerable set of sinks.
   A sink does **not** declare who reads it (see below).
 - **`getFileSinks() → ReadonlyMap<string, FileSink>`** — a **copy** of the
-  registry, never the live map. Its consumer is `retention` (which merges each
-  sink into `getGrowthBounds()` under `file:${id}`) and, later, the
-  undeclared-growth monitor.
+  registry, never the live map. Its consumer is, later, the undeclared-growth
+  monitor (which joins it with retention's `getTableGrowthBounds()`).
 - **`openDynamicSink(dir, name) → FileSink`** — for the ONE genuinely open-ended
   family: browser-supplied `clientLog` channel ids. Same rotation, but `name` is
   **sanitized** into `dir` (path-traversal guard — every non-`[A-Za-z0-9_-]` char

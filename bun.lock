@@ -4356,6 +4356,10 @@
       "name": "@equin/plugin-infra-warmup-background-arm",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/warmup/plugins/sole-host": {
+      "name": "@equin/plugin-infra-warmup-sole-host",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/worktree": {
       "name": "@equin/plugin-infra-worktree",
     },
@@ -9147,6 +9151,8 @@
     "@equin/plugin-infra-warmup": ["@equin/plugin-infra-warmup@workspace:plugins/infra/plugins/warmup"],
 
     "@equin/plugin-infra-warmup-background-arm": ["@equin/plugin-infra-warmup-background-arm@workspace:plugins/infra/plugins/warmup/plugins/background-arm"],
+
+    "@equin/plugin-infra-warmup-sole-host": ["@equin/plugin-infra-warmup-sole-host@workspace:plugins/infra/plugins/warmup/plugins/sole-host"],
 
     "@equin/plugin-infra-worktree": ["@equin/plugin-infra-worktree@workspace:plugins/infra/plugins/worktree"],
 

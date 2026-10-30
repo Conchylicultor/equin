@@ -192,6 +192,17 @@ export interface ServerPluginDefinition {
    */
   onAllReady?: () => void | Promise<void>;
   /**
+   * Called once on a SERVING host (the desktop's `serve`, the browser host)
+   * after `onAllReady` — and, in the browser, the seed — while the host is
+   * already serving; never in `exec`. Runs in parallel across plugins; a
+   * load-bearing plugin's rejection rejects the phase.
+   *
+   * Not a home for new post-serving work: declare a `defineWarmup`
+   * (infra/warmup), which drains here under a concurrency gate, a host slot
+   * and per-host scope admission, and shows in Background activity.
+   */
+  onSettled?: () => void | Promise<void>;
+  /**
    * Called once on SIGTERM/SIGINT before the process exits. Use this to drain
    * background workers, flush buffered state, and release DB connections.
    * Run in parallel across plugins (same contract as `onReady`); rejections

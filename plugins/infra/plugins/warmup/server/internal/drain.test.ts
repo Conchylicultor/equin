@@ -1,9 +1,14 @@
 import { describe, expect, test } from "bun:test";
-import { drainWarmupsWith, type WarmupExecDeps } from "./executor";
+import {
+  drainWarmupsWith,
+  type WarmupExecDeps,
+  type WarmupRun,
+} from "./executor";
 import type { WarmupSpec } from "./registry";
 
 // A passthrough heavy-read slot + a real macrotask yield, so the tests exercise
-// the executor's own concurrency gate / scope gate / error handling without the
+// the executor's own concurrency gate / scope gate (`runs`, stubbed — the host's
+// `WarmupHost.runs` in production) / error handling without the
 // host flock semaphore or the profiler wiring.
 function baseDeps(
   warmups: WarmupSpec[],
@@ -11,7 +16,7 @@ function baseDeps(
 ): WarmupExecDeps {
   return {
     warmups,
-    isMain: () => true,
+    runs: () => true,
     withSlot: (fn) => fn(),
     yieldMacrotask: () => new Promise<void>((r) => setImmediate(r)),
     concurrency: 2,
@@ -20,7 +25,7 @@ function baseDeps(
 }
 
 describe("drainWarmupsWith", () => {
-  test("skips host-scoped warm-ups when isMain() is false", async () => {
+  test("skips a warm-up whose scope the host does not run", async () => {
     let ran = false;
     const warmups: WarmupSpec[] = [
       {
@@ -32,11 +37,20 @@ describe("drainWarmupsWith", () => {
         },
       },
     ];
-    await drainWarmupsWith(baseDeps(warmups, { isMain: () => false }));
+    const runs: Record<string, WarmupRun> = {};
+    await drainWarmupsWith(
+      baseDeps(warmups, {
+        runs: (scope) => scope === "worktree",
+        onRun: (name, run) => {
+          runs[name] = run;
+        },
+      }),
+    );
     expect(ran).toBe(false);
+    expect(runs["host-one"]).toEqual({ outcome: "skipped" });
   });
 
-  test("runs host-scoped warm-ups when isMain() is true", async () => {
+  test("runs host-scoped warm-ups when the host runs that scope", async () => {
     let ran = false;
     const warmups: WarmupSpec[] = [
       {
@@ -48,11 +62,11 @@ describe("drainWarmupsWith", () => {
         },
       },
     ];
-    await drainWarmupsWith(baseDeps(warmups, { isMain: () => true }));
+    await drainWarmupsWith(baseDeps(warmups, { runs: () => true }));
     expect(ran).toBe(true);
   });
 
-  test("always runs worktree-scoped warm-ups regardless of isMain()", async () => {
+  test("asks the host per scope", async () => {
     let ran = false;
     const warmups: WarmupSpec[] = [
       {
@@ -64,8 +78,17 @@ describe("drainWarmupsWith", () => {
         },
       },
     ];
-    await drainWarmupsWith(baseDeps(warmups, { isMain: () => false }));
+    const asked: string[] = [];
+    await drainWarmupsWith(
+      baseDeps(warmups, {
+        runs: (scope) => {
+          asked.push(scope);
+          return scope === "worktree";
+        },
+      }),
+    );
     expect(ran).toBe(true);
+    expect(asked).toEqual(["worktree"]);
   });
 
   test("never exceeds the concurrency cap", async () => {

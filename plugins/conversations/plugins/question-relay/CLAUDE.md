@@ -58,7 +58,7 @@ moves on and the transcript card takes it over.
 
 ## Plugin reference
 
-- Description: Answers a held AskUserQuestion from the web: owns the transcript's `"question"` pending prompt — the held question's form, answered as the tool's real result. The AskUserQuestion relay's backend: the pending_questions table (one row per held call: open → answered | abandoned), onQuestionResolved, and the open-questions live collection. Holding a question (the runtime parks the call in-process), the question-hold source the status reconciler reads (and its dead-holder retirement) and the 7-day retention sweep are the machine half's.
+- Description: Answers a held AskUserQuestion from the web: owns the transcript's `"question"` pending prompt — the held question's form, answered as the tool's real result. The AskUserQuestion relay's backend: the pending_questions table (one row per held call: open → answered | abandoned), onQuestionResolved, the open-questions live collection and the 7-day retention sweep of resolved rows. Holding a question (the runtime parks the call in-process), the question-hold source the status reconciler reads (and its dead-holder retirement) are the machine half's.
 - Web:
   - Contributes: `JsonlViewer.PendingPrompt` "question" → `RelayQuestionCard`
   - Uses:
@@ -86,11 +86,13 @@ moves on and the transcript card takes it over.
     - `infra/endpoints.HttpError`
     - `infra/entities.defaultNow`
     - `infra/entities.defineEntity`
+    - `infra/retention.defineRetention`
     - `network/live.serveCollection`
     - `tasks/tasks-core._conversations`
   - DB schema: `plugins/conversations/plugins/question-relay/server/internal/tables.ts`
   - Exports (types): `ResolvedQuestion`
   - Exports (values): `onQuestionResolved`
+  - Register: `defineJob('retention.pending_questions')`
   - Resources:
     - `question-relay.pending` (keyed, window)
     - `question-relay.pending:groups` (push)
@@ -100,7 +102,6 @@ moves on and the transcript card takes it over.
   - Exports (values):
     - `holdQuestion`
     - `retireQuestion`
-  - Register: `defineJob('retention.pending_questions')`
   - Routes: `POST /api/conversations/:id/questions/:toolUseId/answer` — unpredicted (precondition)
 - Core:
   - Uses:

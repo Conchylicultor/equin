@@ -17,7 +17,7 @@ deep-dive — this is **trip-only**: within-budget boots mint nothing.
 Key mechanics:
 
 - **Boot-completeness guard.** `profilerStart` pushes a span only when its
-  `end()` closure runs, so a `phase === "drainWarmups"` span in
+  `end()` closure runs, so a `phase === "settled"` span in
   `getProfilingData().spans` is a deterministic "boot fully complete" signal;
   ticks are skipped (not marked) until it appears.
 - **Evidence-first.** `captureTrace` runs before `recordSlowOp` (the documented
@@ -38,7 +38,7 @@ Key mechanics:
 
 ## Plugin reference
 
-- Description: Boot-monitor web presence: registers the whole-boot budget config (enabled, totalBootBudgetMs) for Settings → Config. The minted signals flow through the existing slow-op report kind and the boot trace lane — no new renderer. Whole-boot monitor: a cheap per-worktree scheduled job that, once the boot profile is complete (drainWarmups present), mints ONE 'boot' slow-op row + coherent trace per over-budget server boot — evidence-first, deduped per boot epoch — folding in the gateway-observed readiness wait when the gateway POSTed /api/boot/gateway-report.
+- Description: Boot-monitor web presence: registers the whole-boot budget config (enabled, totalBootBudgetMs) for Settings → Config. The minted signals flow through the existing slow-op report kind and the boot trace lane — no new renderer. Whole-boot monitor: a cheap per-worktree scheduled job that, once the boot profile is complete (its settled phase recorded), mints ONE 'boot' slow-op row + coherent trace per over-budget server boot — evidence-first, deduped per boot epoch — folding in the gateway-observed readiness wait when the gateway POSTed /api/boot/gateway-report.
 - Web:
   - Contributes: `ConfigV2.WebRegister` "boot-monitor"
   - Uses: `config_v2.ConfigV2`

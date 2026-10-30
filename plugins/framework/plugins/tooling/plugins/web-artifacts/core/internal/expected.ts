@@ -144,9 +144,9 @@ export async function planExpectedFleet(opts: {
     plan.entryTarget,
   ];
 
-  // A host whose recorded inputs no longer describe this tree has no address
-  // yet: it is missing until a build records one. Its worker closure is planned
-  // exactly as the pipeline plans it.
+  // A host no stored build's recorded inputs describe (this tree hashes to
+  // none of their addresses) is missing until a build of this tree stores one.
+  // Its worker closure is planned exactly as the pipeline plans it.
   const hosts: ExpectedHost[] = [];
   const served = servedSpecsOf(pageTargets);
   for (const host of plan.hosts) {

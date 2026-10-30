@@ -162,7 +162,7 @@ card, not a collection.
 
 ## Plugin reference
 
-- Description: Reads the task a TODO card was dispatched onto (useTodoTask / useTodoTaskState, joined live to the tasks resource; the runs come from tasks-core's useTaskConversations) and renders the card's two dispatched surfaces — the dispatch panel behind its name, and the chips at its foot, one per run. Contributes no slot of its own; the todo card's anchor, rail menu and foot host them. Owns page_blocks_ext_todo_task: the ONE task a TODO card dispatches agents onto. The block-keyed link table (its primary key IS the one-task-per-card rule), the per-card live read, the idempotent dispatch endpoint that composes the agent's prompt, and the markdown provider that emits the card's task_id/status to read_page.
+- Description: Reads the task a TODO card was dispatched onto (useTodoTask / useTodoTaskState, joined live to the tasks resource; the runs come from tasks-core's useTaskConversations) and renders the card's two dispatched surfaces — the dispatch panel behind its name, and the chips at its foot, one per run. Contributes no slot of its own; the todo card's anchor, rail menu and foot host them. Owns page_blocks_ext_todo_task: the ONE task a TODO card dispatches agents onto. The block-keyed link table (its primary key IS the one-task-per-card rule), the per-card live read, the idempotent dispatch endpoint that composes the agent's prompt, and the markdown provider that emits the card's task_id/status to read_page. Its growth bound is the cascade to page_blocks, checked at boot (markCascadeBounded).
 - Server:
   - Contributes:
     - `resource.declare` "todo-block-task:rows"
@@ -172,6 +172,7 @@ card, not a collection.
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/entity-extensions.defineExtension`
+    - `infra/retention.markCascadeBounded`
     - `network/live.serveCollection`
     - `page/editor._blocks`
     - `page/editor.Editor`

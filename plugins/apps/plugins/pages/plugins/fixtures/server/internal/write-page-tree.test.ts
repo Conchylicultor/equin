@@ -11,7 +11,7 @@
  * history read off disk. Booted through `bootBrowserHost` — the browser host's
  * own boot: every plugin asserted portable, then the post-ready phases (the
  * events' trigger sync, the in-process queue's start, the change feed's
- * LISTEN) — so a write runs its effects exactly as it does in the demo's
+ * LISTEN), then the settled phase (the boot warm-ups, awaited) — so a write runs its effects exactly as it does in the demo's
  * worker. `settleJobQueue` then runs the queue dry, the snapshot's 4 s
  * debounce fast-forwarded.
  *
@@ -90,6 +90,9 @@ const PROVIDERS: Entry[] = [
   ]),
   serverEntryFor("primitives/plugins/log-channels/plugins/memory-persistence", [
     "primitives/plugins/log-channels",
+  ]),
+  serverEntryFor("infra/plugins/warmup/plugins/sole-host", [
+    "infra/plugins/warmup",
   ]),
 ];
 
@@ -230,7 +233,7 @@ const TREE: PageTreeFixture = [
 
 describe.if(IN_CHILD)("writePageTree on a portable host", () => {
   beforeAll(async () => {
-    await bootBrowserHost({
+    const host = await bootBrowserHost({
       entries: [
         ...portableClosureOf([SUBJECT, ...CONSUMERS, ...HOST]),
         ...PROVIDERS,
@@ -238,6 +241,9 @@ describe.if(IN_CHILD)("writePageTree on a portable host", () => {
       ],
       onUnmatched: unmatchedApiResponse,
     });
+    // The boot warm-ups (links and search backfills) enqueue over the empty
+    // corpus; let them land before the write, so the settle below runs them.
+    await host.settled;
     await writePageTree(TREE);
     await settleJobQueue();
   });

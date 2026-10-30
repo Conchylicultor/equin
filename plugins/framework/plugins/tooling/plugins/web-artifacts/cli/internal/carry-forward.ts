@@ -150,7 +150,9 @@ function listDir(dir: string): string[] {
 
 /**
  * Every file name held by any CSS cache dir. The scan is bounded by the CSS
- * cache's own count cap (`pruneGlobalCssCache`, ≤600 dirs of ~20 files). A
+ * cache's own count cap (`CSS_PRUNE_POLICY`, ≤600 dirs of ~20 files — a CSS
+ * entry is copied into a dist, never linked, so only an in-flight build's lease
+ * ever exempts one from it). A
  * leftover temp dir from a crashed pass is counted too: its files are genuine
  * pass output, so it can only lengthen a name's retention by the hour such a
  * dir survives.

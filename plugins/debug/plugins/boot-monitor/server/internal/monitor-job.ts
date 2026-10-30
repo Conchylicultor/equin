@@ -43,12 +43,13 @@ export const bootMonitorJob = defineJob({
 
     const { spans, totalDurationMs, memoryCheckpoints } = getProfilingData();
     // Boot-completeness guard: profilerStart pushes a span only when its end()
-    // closure runs, so the presence of a drainWarmups span (the final,
-    // post-onAllReady warm-up drain phase) is a deterministic "boot fully
-    // complete" signal. Until it appears the profile is still growing — judging
+    // closure runs, so the presence of the `settled` span (the framework's
+    // final, post-onAllReady settled phase — the warm-up drain) is a
+    // deterministic "boot fully complete" signal, whatever plugins the graph
+    // holds. Until it appears the profile is still growing — judging
     // totalDurationMs mid-boot would under-report a slow boot as fast — so the
     // tick is skipped, not marked.
-    if (!spans.some((s) => s.phase === "drainWarmups")) return;
+    if (!spans.some((s) => s.phase === "settled")) return;
     minted = true;
 
     if (totalDurationMs <= cfg.totalBootBudgetMs) return;

@@ -19,7 +19,9 @@ there, not in a composition root, unless it is genuinely serve-only.
 - **`serve`** — the gateway-spawned, long-lived backend (`bin/index.ts`). Runs
   everything: the shared sequence, with the socket bind interleaved into it, then
   the post-ready phases (`runPostReadyPhases`: the change-feed assertion,
-  `onReady`, `onAllReady`), `drainWarmups`, signal handlers and the orphan poll.
+  `onReady`, `onAllReady`), signal handlers and the orphan poll, then the
+  settled phase (`runSettledPhase`: every plugin's `onSettled` — the warm-up
+  drain) — last, so a SIGTERM during a long drain shuts the backend down.
 - **`exec`** — a short-lived process that runs ONE registered piece of work and
   exits (`cli/run-exec.ts`, exported as `runExec` from
   `@plugins/framework/plugins/server-core/cli`). Runs load waves,
@@ -41,7 +43,10 @@ there, not in a composition root, unless it is genuinely serve-only.
   `settleJobQueue`, never deriving by hand), and only then hands back the
   request router
   (`hostHttpRoutes`, the one route table `bin/index.ts` mounts too), the
-  live-state socket handler and the served keys. `framework/browser-server`'s
+  live-state socket handler and the served keys — with the settled phase
+  started but not awaited (`BrowserHost.settled`; a failure is logged and
+  rethrown inside `bootBrowserHost`, a test awaits it before asserting on what
+  the warm-ups produce). `framework/browser-server`'s
   `serveOverPort` carries them to the page. Hosts install no probes: no heap
   reader means no memory checkpoints, no wyhash means the portable `hash64`.
 
@@ -55,7 +60,7 @@ there, not in a composition root, unless it is genuinely serve-only.
 | `markServerReady()`                            | yes     | no     | no        |
 | change-feed assertion (D3), `onReady` / `onAllReady` | yes | no   | yes       |
 | seed (after the post-ready phases, before serving) | no  | no     | yes       |
-| `drainWarmups`                                 | yes     | no     | no        |
+| settled phase (`onSettled`: the warm-up drain) | yes     | no     | yes (not awaited) |
 | QoS boost, signal handlers, orphan-exit poll   | yes     | no     | no        |
 
 The **change-feed assertion** (`assertDbReadsHaveChangeFeed`, D3 of
@@ -124,8 +129,11 @@ backend it returns **true**. Nothing in the tree misbehaves today only
 because every main-only side effect happens to hang off a phase `exec` skips:
 cron installation (`jobs`' `onAllReady`), the graphile runners and the git
 watcher's `git.refAdvanced` emit (`onReady`), the supervised-run reconciler
-(`onReady`), the change-feed LISTEN consumer (`onReady`), host-scoped warm-ups
-(`drainWarmups`). That is a load-bearing accident, not a guarantee. **Moving any
+(`onReady`), the change-feed LISTEN consumer (`onReady`). That is a
+load-bearing accident, not a guarantee — except for warm-ups: they drain in
+`onSettled`, which only `runSettledPhase` calls and only a serving host calls
+that, so an exec child never runs one by construction (and which host runs a
+`host`-scoped one is the `warmup.host` service's answer, not `isMain()`). **Moving any
 main-only work into `register` or `onReadyBlocking` makes an exec child do it** —
 installing duplicate crontab items, emitting ref-advanced events, or adopting and
 writing off supervised runs including the one that spawned it.
@@ -195,7 +203,7 @@ composition boots two. Today's services: `database.driver`,
 `attachments.blobs`, `tasks-core.push-ledger`,
 `conversations.transcript-source`, `model-provider.catalog-source`,
 `task-title.generator`, `config-v2.store`, `config-v2.git-layer`,
-`host-account.source` (each declared
+`host-account.source`, `warmup.host` (each declared
 `export const X = defineHostService<…>("<id>")`).
 
 - **Placement is checked** (`check/`, `host-services:provider-placement`):
@@ -533,6 +541,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `getReadSetIndex` — The whole index as a plain object, each key's tables sorted — every key that ever captured a table, including one a removal emptied (`[]`).
     - `removeReadSetTable` — Remove `table` from the read-set of every key EXCEPT those in `keepKeys` — the one eviction path of an append-only index (a suite isolating its own keys from another's captures).
     - `runPostReadyPhases` — The post-ready phases of a SERVING host (`serve`, `browser`): `onReady` (graph-driven: each plugin fires as soon as its `dependsOn` parents have resolved), then the `onAllReady` barrier. `exec` never runs them — a short-lived child has no subscribers, so no watcher, job runner or LISTEN belongs in it.
+    - `runSettledPhase` — The settled phase of a SERVING host (`serve`, `browser`): every plugin's `onSettled`, once the host is already serving and every post-ready phase has resolved — post-serving catch-up work (infra/warmup drains every declared warm-up here). `exec` has no path to it: a short-lived child must never run heavy post-serving work, and this function is the only caller of the hook.
     - `serverEntries`
     - `serverEntryFor` — The registry entry of `pluginPath`'s server barrel, as codegen writes one (`<id>` the dotted path, loaded by its `@plugins/<path>/server` specifier), with the `dependsOn` the caller states.
     - `withHostServices` — Run `fn` with `providers` (each a `Svc.provide(impl)`) answering their services — over the unbooted host's providers and over a collected graph's — and put the previous answers back once it settles, so a suite swapping a service cannot leak it into the suites after it in the same bun process.

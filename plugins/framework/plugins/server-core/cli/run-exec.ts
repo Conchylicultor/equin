@@ -42,8 +42,10 @@ import { bootPluginGraph, runShutdownHooks } from "../core/boot-stages";
 //   would re-attach to (or write off) runs it does not own.
 // - **`onAllReady`.** Cron installation lives here (`jobs`' `installScheduledCronItems`).
 //   A child installing crontab items is a duplicate scheduler.
-// - **`drainWarmups`.** Heavy, deliberately-post-serving warm-up work whose whole
-//   justification is that a long-lived backend will answer requests from it.
+// - **`onSettled`** (`runSettledPhase`, the warm-up drain). Heavy,
+//   deliberately-post-serving work whose whole justification is that a
+//   long-lived backend will answer requests from it. Not imported here, so an
+//   exec child has no path to it.
 // - **The QoS boost.** `serve` raises MAIN's event-loop thread to
 //   user-interactive; a background child must stay at background priority or it
 //   defeats the priority isolation it was spawned under.

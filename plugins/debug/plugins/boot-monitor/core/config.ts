@@ -24,7 +24,7 @@ export const bootMonitorConfig = defineConfig({
       min: 0,
       label: "Total boot budget (ms)",
       description:
-        "Mint a 'boot' slow-op + trace when a server boot's total profiled duration (through the drainWarmups phase) exceeds this many ms. Within-budget boots mint nothing — Debug → Boot Profile stays the always-on deep-dive.",
+        "Mint a 'boot' slow-op + trace when a server boot's total profiled duration (through the settled phase) exceeds this many ms. Within-budget boots mint nothing — Debug → Boot Profile stays the always-on deep-dive.",
     }),
   },
 });

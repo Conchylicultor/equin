@@ -33,6 +33,10 @@
  * pages derive — backlinks, search docs, history snapshots — is asserted here
  * as the triggers and jobs left it, with no derivation call in the seed.
  *
+ * The settled phase runs in the worker too: the warm-ups drained (host-scoped
+ * ones included — a sole host runs every scope) and the retention sweeps are
+ * mounted, one of them run through the in-process queue against PGlite.
+ *
  * Run: `./equin test plugins/apps/plugins/website/plugins/demos/plugins/lumen`.
  */
 
@@ -112,6 +116,9 @@ import { loadPageTags } from "@plugins/page/plugins/tags/server";
 import { promptBlock } from "@plugins/page/plugins/prompt/plugins/link/server";
 import { PAGES_CATEGORY_ID } from "@plugins/page/plugins/prompt/plugins/link/core";
 import { searchResults } from "@plugins/search/plugins/engine/core";
+import { warmupRunOf } from "@plugins/infra/plugins/warmup/server";
+import { listRegisteredJobs } from "@plugins/infra/plugins/jobs/server";
+import { settleJobQueue } from "@plugins/infra/plugins/jobs/plugins/in-process/server";
 import { hostReads } from "../core/browser-host.generated";
 import { conversationTurns } from "@plugins/conversations/plugins/turn-ledger/core";
 import { DEMO_CONVERSATION_ID } from "../core/internal/scenario";
@@ -889,6 +896,57 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
     await pruneChangelog(db);
     // Everything under the floor is gone; nothing at or above it is touched.
     expect(await counts()).toEqual({ below: 0, above: before.above });
+  });
+
+  // ── The settled phase: warm-ups and retention, as on the desktop ─────────
+  test("the settled phase drained the warm-ups, host-scoped ones included", async () => {
+    await host.settled;
+    // Worktree-scoped (the pages search and links backfills) and host-scoped
+    // (auto-start's dropped sweep): a sole host runs every scope, so none is
+    // skipped and each ran to success.
+    for (const name of [
+      "pages.search.backfill",
+      "page.links.backfill",
+      "tasks.auto-start-dropped-sweep",
+    ]) {
+      expect({ name, outcome: warmupRunOf(name)?.outcome }).toEqual({
+        name,
+        outcome: "succeeded",
+      });
+    }
+  });
+
+  test("the retention sweeps folded off machine/ are registered, and one sweeps on PGlite", async () => {
+    const names = new Set(listRegisteredJobs().map((j) => j.name));
+    for (const table of [
+      "app_usage_daily",
+      "usage_stats",
+      "entity_versions",
+      "trash_entries",
+      "pending_questions",
+      "conversation_turns",
+    ]) {
+      expect({ table, registered: names.has(`retention.${table}`) }).toEqual({
+        table,
+        registered: true,
+      });
+    }
+    // One sweep through the in-process queue: a row older than the TTL goes,
+    // a fresh one stays.
+    await db.execute(
+      sql`INSERT INTO app_usage_daily (usage_key, day, app_id, last_flushed_at) VALUES
+            ('2020-01-01:retention-test', '2020-01-01', 'retention-test', now() - interval '3 years'),
+            ('2026-01-01:retention-test', '2026-01-01', 'retention-test', now())`,
+    );
+    const sweep = listRegisteredJobs().find(
+      (j) => j.name === "retention.app_usage_daily",
+    );
+    await sweep!.enqueue({});
+    await settleJobQueue();
+    const left = await db.execute<{ usage_key: string }>(
+      sql`SELECT usage_key FROM app_usage_daily WHERE app_id = 'retention-test'`,
+    );
+    expect(left.rows).toEqual([{ usage_key: "2026-01-01:retention-test" }]);
   });
 
   // ── Prototypes: the tree a memory data-files root, seeded ──────────────────

@@ -8,6 +8,7 @@ import {
   historyVersionServed,
   historyVersionsServed,
 } from "./internal/resources";
+import { entityVersionsRetention } from "./internal/retention";
 
 export { defineHistorySource } from "./internal/registry";
 export type { HistorySource } from "./internal/registry";
@@ -17,7 +18,8 @@ export { _entityVersions } from "./internal/tables";
 export default {
   portable: true,
   description:
-    "Domain-agnostic versioning substrate: the entity_versions table, a defineHistorySource registry, time-bucketed recordVersion + deleteVersions, the live history.versions timeline and history.version value, and the restore (plus an e2e-only list) endpoints; the 30-day retention sweep is the machine half's.",
+    "Domain-agnostic versioning substrate: the entity_versions table, a defineHistorySource registry, time-bucketed recordVersion + deleteVersions, the live history.versions timeline and history.version value, and the restore (plus an e2e-only list) endpoints, and the 30-day retention sweep (its growth bound).",
+  register: [entityVersionsRetention],
   contributions: [
     IdKinds.Kind({ kind: versionIdKind }),
     ...historyVersionsServed.declare,

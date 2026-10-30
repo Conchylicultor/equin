@@ -25,6 +25,7 @@ import type {
 import {
   bootPluginGraph,
   runPostReadyPhases,
+  runSettledPhase,
   runShutdownHooks,
 } from "../core/boot-stages";
 // The ACTIVE registry (which app is this backend?) and the on-disk plugins dir,
@@ -35,7 +36,6 @@ import {
   isMain,
   readServingSocket,
 } from "@plugins/infra/plugins/runtime-identity/core";
-import { drainWarmups } from "@plugins/infra/plugins/warmup/server";
 import { createRequestHandler } from "@plugins/framework/plugins/http-router/core";
 import {
   HOST_ROUTES_ROUTE,
@@ -219,23 +219,6 @@ markServerReady();
 // `dependsOn` parents have resolved), then the `onAllReady` barrier.
 await runPostReadyPhases(ordered);
 
-// ── drainWarmups ────────────────────────────────────────────────
-// Declared heavy boot warm-ups (infra/warmup) run LAST, after every phase has
-// settled — the backend is already serving (since markServerReady), so the
-// drain throttles itself (concurrency gate + host heavy-read slot + macrotask
-// yield) and never competes with first requests. `host`-scoped warm-ups run
-// only on main; a warm-up throw is logged, never fatal. Empty until a consumer
-// declares one — this is the keystone the migrations land on.
-{
-  const end = profilerStart("drainWarmups", "drainWarmups", "Drain Warmups");
-  try {
-    await drainWarmups();
-  } finally {
-    end();
-  }
-}
-recordMemoryCheckpoint("after-drainWarmups");
-
 // Graceful shutdown: drain workers, flush state, release DB connections.
 // Guarded against double-entry so both SIGTERM and a follow-up SIGINT can't
 // run shutdown twice while the first pass is still draining.
@@ -262,3 +245,11 @@ if (process.ppid !== 1) {
     if (process.ppid === 1) process.exit(0);
   }, 2000).unref();
 }
+
+// ── onSettled ───────────────────────────────────────────────────
+// The serving host's settled phase (`core/boot-stages.ts`'s `runSettledPhase`),
+// shared with the browser host: post-serving catch-up work — every declared
+// warm-up drains here (infra/warmup's `onSettled`). LAST, after the signal
+// handlers and the orphan poll are installed, so a SIGTERM during a long drain
+// shuts the backend down instead of waiting for it.
+await runSettledPhase(ordered);

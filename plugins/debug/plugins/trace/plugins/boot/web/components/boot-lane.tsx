@@ -34,7 +34,8 @@ const PHASE_COLORS: Record<string, string> = {
   onReadyBlocking: "bg-categorical-6",
   onReady: "bg-categorical-7",
   onAllReady: "bg-categorical-8",
-  drainWarmups: "bg-categorical-9",
+  settled: "bg-categorical-9",
+  onSettled: "bg-categorical-9",
   warmup: "bg-categorical-9",
 };
 const PHASE_PALETTE = [

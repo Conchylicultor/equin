@@ -4,7 +4,7 @@
 // the barrel closure, vendor-request assembly, and map-entry assembly live in
 // `plan.ts`, shared with the `web-artifacts:map-in-sync` check.
 
-import { mkdirSync, readdirSync, symlinkSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import os from "node:os";
 import { basename, join } from "node:path";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
@@ -35,7 +35,7 @@ import {
   artifactStorePath,
   ensureStoreDirs,
   loadFingerprintCache,
-  pruneStore,
+  hasArtifact,
   readArtifactMeta,
   saveFingerprintCache,
   touchArtifact,
@@ -48,7 +48,6 @@ import {
 } from "./vite-builder";
 import {
   ensureVendorSet,
-  pruneVendorSets,
   vendorSetDirName,
   vendorSetPath,
   type VendorSetMeta,
@@ -56,10 +55,15 @@ import {
 import {
   computeGlobalCssKey,
   ensureGlobalCss,
+  cssCacheDir,
   hasGlobalCssCache,
   unionCandidates,
-  pruneGlobalCssCache,
 } from "./global-css";
+import {
+  openBuildLease,
+  pruneWebArtifactCaches,
+  type BuildLease,
+} from "./lease";
 import { ensureBrowserHost } from "./browser-hosts";
 import { composedHostsOf } from "./expected";
 import {
@@ -77,12 +81,6 @@ export interface WebArtifactsPipelineOptions {
   root: string;
   /** The build's staging dist dir (published atomically by the caller). */
   stagingDir: string;
-  /**
-   * Where this run pins the cache entries it uses until its dist is published:
-   * a `web.*` sibling of the live dist (`<live>.pins`), so pruners keep them.
-   * The caller removes it after a successful publish.
-   */
-  pinDir: string;
   minify: boolean;
   buildId: string;
   /**
@@ -139,29 +137,25 @@ export interface WebArtifactsPipelineResult {
 export async function runWebArtifactsPipeline(
   opts: WebArtifactsPipelineOptions,
 ): Promise<WebArtifactsPipelineResult> {
-  // Every cache entry this run builds or reuses is PINNED from the moment it
-  // has it: linked into `opts.pinDir/artifacts/`, a `web.*` sibling of the
-  // live dist that every pruner's `servedDistTargets` reads as a dist. A
-  // concurrent build's prune otherwise deletes entries this run published and
-  // has not composed yet (observed under a fleet of full rebuilds: 1,152 mapped
-  // URLs gone at compose). The caller clears the pins once a successful run is
-  // published (the live dist links everything then); a failed run keeps them,
-  // so its retry reuses what it built.
-  const pinDir = join(opts.pinDir, "artifacts");
-  mkdirSync(pinDir, { recursive: true });
-  const pin = (name: string, storePath: string): void => {
-    try {
-      symlinkSync(storePath, join(pinDir, name));
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
-    }
-  };
-  return runPipeline(opts, pin);
+  // Every cache entry this build reuses or publishes — artifacts (page and
+  // worker), the registry, browser hosts, worker links and tree, the vendor
+  // set and its package assets, the CSS cache dir — is pinned into this lease
+  // BEFORE it is read or published, and the lease is held until compose has
+  // linked them all into the staging dist (itself a prune root from then on),
+  // so no concurrent prune can remove what this build is about to compose
+  // (`lease.ts`). Released on success and failure alike; a crash releases it
+  // through the kernel.
+  const lease = openBuildLease();
+  try {
+    return await runPipeline(opts, lease);
+  } finally {
+    await lease.release();
+  }
 }
 
 async function runPipeline(
   opts: WebArtifactsPipelineOptions,
-  pin: (name: string, storePath: string) => void,
+  lease: BuildLease,
 ): Promise<WebArtifactsPipelineResult> {
   const { root, log } = opts;
   const pluginsRoot = join(root, "plugins");
@@ -187,9 +181,7 @@ async function runPipeline(
     "detect changed artifacts",
     async () => {
       ensureStoreDirs();
-      pruneStore();
-      pruneVendorSets();
-      pruneGlobalCssCache();
+      await pruneWebArtifactCaches();
 
       const fleet = await planFleet({
         root,
@@ -222,15 +214,17 @@ async function runPipeline(
   );
   const metas = new Map<string, ArtifactMeta>(); // dirName → meta
   const counts = { built: 0, reused: 0 };
+  // Pin first, then look: planning read the store before this build held
+  // anything, so a prune since may have taken a planned reuse — which then
+  // simply builds.
   const ensure = async (t: PlannedTarget): Promise<ArtifactMeta> => {
-    if (t.needsBuild) {
+    await lease.pin([artifactStorePath(t.dirName)]);
+    if (t.needsBuild || !hasArtifact(t.dirName)) {
       const meta = await gate.run(() => buildArtifact(t, ctx));
-      pin(t.dirName, artifactStorePath(t.dirName));
       metas.set(t.dirName, meta);
       counts.built++;
       return meta;
     }
-    pin(t.dirName, artifactStorePath(t.dirName));
     touchArtifact(t.dirName);
     const meta = readArtifactMeta(t.dirName);
     metas.set(t.dirName, meta);
@@ -243,11 +237,11 @@ async function runPipeline(
     `build artifacts (${plan.staleWeb + (plan.entryTarget.needsBuild ? 1 : 0)} stale)`,
     async () => {
       const registryPromise = (async () => {
-        pin(
-          plan.registryTarget.dirName,
-          artifactStorePath(plan.registryTarget.dirName),
-        );
-        if (plan.registryTarget.needsBuild) {
+        await lease.pin([artifactStorePath(plan.registryTarget.dirName)]);
+        if (
+          plan.registryTarget.needsBuild ||
+          !hasArtifact(plan.registryTarget.dirName)
+        ) {
           const meta = await buildRegistryArtifact({
             dirName: plan.registryTarget.dirName,
             inputsHash: plan.registryTarget.inputsHash,
@@ -334,8 +328,8 @@ async function runPipeline(
           identityHash: plan.identity.identityHash,
           minify: opts.minify,
           log,
+          pin: (paths) => lease.pin(paths),
         });
-        pin(dirName, artifactStorePath(dirName));
         out.push({ plan: host, dirName, entry, added });
       }
       saveFingerprintCache(worktreeName, cache);
@@ -358,6 +352,13 @@ async function runPipeline(
     "vendor pre-bundles",
     async () => {
       if (opts.vendors !== undefined) {
+        const dest = vendorSetPath(opts.vendors.setHash);
+        await lease.pin([dest]);
+        if (!existsSync(join(dest, "meta.json"))) {
+          throw new Error(
+            `vendors: the given set ${opts.vendors.setHash.slice(0, 12)} is not in the store (${dest})`,
+          );
+        }
         log(
           `vendors: reusing set ${opts.vendors.setHash.slice(0, 12)} ` +
             `(${Object.keys(opts.vendors.entries).length} specifiers)`,
@@ -376,6 +377,7 @@ async function runPipeline(
         builderVersion: BUILDER_VERSION,
         builderSource: plan.identity.sourceDigest,
         root,
+        pin: (paths) => lease.pin(paths),
       });
       log(
         `vendors: ${requests.length} specifiers, ${stats.cached} cached / ${stats.resolved} resolved ` +
@@ -384,7 +386,6 @@ async function runPipeline(
       return meta;
     },
   );
-  pin(vendorSetDirName(vendors.setHash), vendorSetPath(vendors.setHash));
 
   // ── Stage 4: global css ─────────────────────────────────────────────
   // The union of the shipped artifacts' candidates (recorded at build), then
@@ -409,6 +410,8 @@ async function runPipeline(
     },
   );
   const cssKey = cssInput.key;
+  // Pinned until ensureGlobalCss has copied the stylesheet into staging.
+  await lease.pin([cssCacheDir(cssKey)]);
   const cssCached = hasGlobalCssCache(cssKey);
   const css = await stage(
     "artifacts:css",
@@ -457,11 +460,11 @@ async function runPipeline(
       await Promise.all(
         [...linked.keys()].map((dirName) =>
           gateLink.run(async () => {
-            const linked = await ensureWorkerLinked({
+            await lease.pin([artifactStorePath(workerLinkedDirName(dirName))]);
+            await ensureWorkerLinked({
               dirName,
               vendorEntries: vendors.entries,
             });
-            pin(linked, artifactStorePath(linked));
           }),
         ),
       );
@@ -469,8 +472,8 @@ async function runPipeline(
         linked: [...linked.values()],
         vendorSetDir: vendorSetPath(vendors.setHash),
       });
+      await lease.pin([artifactStorePath(tree.dirName)]);
       await ensureWorkerTree(tree);
-      pin(tree.dirName, artifactStorePath(tree.dirName));
       log(`worker tree: ${linked.size} artifacts linked (${tree.dirName})`);
       return {
         tree,

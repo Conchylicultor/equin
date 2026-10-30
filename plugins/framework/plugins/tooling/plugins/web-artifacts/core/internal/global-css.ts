@@ -37,8 +37,7 @@ import type { Plugin as VitePlugin } from "vite";
 import { BUILDER_VERSION, packageNameOf } from "../constants";
 import { computeIdentityHash, sha256Hex } from "../hash";
 import { packageVersion } from "./identity";
-import { publishDir, pruneCacheDir, WEB_ARTIFACTS_DIR } from "./store";
-import { servedDistTargets } from "./served-dists";
+import { publishDir, WEB_ARTIFACTS_DIR, type CachePrunePolicy } from "./store";
 
 const CSS_ROOT = join(WEB_ARTIFACTS_DIR, "css");
 
@@ -135,7 +134,8 @@ function compiledCssPlugin(id: string, css: string): VitePlugin {
   };
 }
 
-function cssCacheDir(key: string): string {
+/** The cache entry for the global stylesheet keyed `key` (what a build pins). */
+export function cssCacheDir(key: string): string {
   return join(CSS_ROOT, `css.${key.slice(0, 16)}`);
 }
 
@@ -263,23 +263,14 @@ export async function ensureGlobalCss(opts: {
   }
 }
 
-// Pruning bounds — same policy as the vendor sets (age, then count). An entry is
-// one built stylesheet plus its font assets (~0.6 MB measured, 134 live in 14
-// days). Age is the evictor that matters; the count is a disk backstop sized 4×
-// clear of the working set, bounding the dir at ~360 MB worst case.
-const CSS_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
-const CSS_MAX_ENTRIES = 600;
-const CSS_TRIM_TO = 450;
-
-/** Prune aged css cache entries, then cap total count (same policy as the vendor sets). */
-export function pruneGlobalCssCache(
-  referenced: ReadonlySet<string> = servedDistTargets(),
-): void {
-  pruneCacheDir({
-    root: CSS_ROOT,
-    maxAgeMs: CSS_MAX_AGE_MS,
-    maxEntries: CSS_MAX_ENTRIES,
-    trimTo: CSS_TRIM_TO,
-    referenced,
-  });
-}
+// Pruning bounds — same policy as the vendor sets (age, then a count bound over
+// the UNREFERENCED entries). An entry is one built stylesheet plus its font
+// assets (~0.6 MB measured, 134 live in 14 days). Age is the evictor that
+// matters; the count is a disk backstop sized 4× clear of the working set,
+// bounding the unreferenced entries at ~360 MB worst case.
+export const CSS_PRUNE_POLICY: CachePrunePolicy = {
+  root: CSS_ROOT,
+  maxAgeMs: 14 * 24 * 60 * 60 * 1000,
+  maxUnreferenced: 600,
+  trimTo: 450,
+};

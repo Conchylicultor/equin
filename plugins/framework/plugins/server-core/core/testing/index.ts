@@ -40,6 +40,10 @@ export { bootPluginGraph } from "../boot-stages";
 // queue and the change feed's LISTEN live (a fixture writer's boot test).
 export { runPostReadyPhases } from "../boot-stages";
 
+// …and its settled phase (`onSettled`: the warm-up drain), for a suite that
+// boots through `bootPluginGraph` and needs what the warm-ups produce.
+export { runSettledPhase } from "../boot-stages";
+
 // The app's server registry (the committed main composition), for a
 // suite that boots a slice of it: each entry's loader and its codegen-derived
 // `dependsOn`, from which a `dependsOn` closure is the graph to boot.

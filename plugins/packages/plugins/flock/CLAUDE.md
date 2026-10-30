@@ -86,6 +86,7 @@ coalescing; `checkout-lock.ts` builds a size-1 mutex.
 - Cross-plugin:
   - Imported by:
     - `framework/tooling/checks`
+    - `framework/tooling/web-artifacts`
     - `infra/spawn`
     - `infra/worktree`
     - `packages/host-semaphore`

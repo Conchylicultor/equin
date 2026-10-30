@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Owns the tasks_ext_auto_start side-table via the entity-extensions primitive; the model picker over it is the launch-option sub-plugin. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart, and the tasks.autoStartArmed trigger event whatever launches agents subscribes to.
+- Description: Owns the tasks_ext_auto_start side-table via the entity-extensions primitive; the model picker over it is the launch-option sub-plugin. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart, and the tasks.autoStartArmed trigger event whatever launches agents subscribes to, and a host-scoped boot warm-up that clears leftover markers from already-dropped tasks.
 - Web:
   - Contributes: `Tasks.TaskActions` "queued-chip" → `QueuedChipAction`
   - Uses:
@@ -28,6 +28,7 @@
     - `infra/events.defineTriggerEvent`
     - `infra/events.Trigger`
     - `infra/jobs.defineJob`
+    - `infra/warmup.defineWarmup`
     - `network/live.serveCollection`
     - `tasks/tasks-core._tasks`
     - `tasks/tasks-core.hasBlockingDep`
@@ -48,6 +49,7 @@
   - Register:
     - `defineTriggerEvent('tasks.autoStartArmed')`
     - `defineJob('tasks.auto-start-cancel-on-drop')`
+    - `defineWarmup('tasks.auto-start-dropped-sweep')`
   - Resources: `tasks-auto-start:rows` (keyed, point)
 - Core:
   - Uses:
@@ -84,8 +86,6 @@
     - `tasks/orchestration/watch`
 - Exemptions:
   - Exempts itself from: `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
-- Machine:
-  - Register: `defineWarmup('tasks.auto-start-dropped-sweep')`
 - Sub-plugins:
   - **`launch-option`** — Auto-start model picker as a launch option: the same controlled select on the task detail's Prompt card (bound to the task's row) and on the task-draft popover (bound to the draft card). Applies a…
 

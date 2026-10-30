@@ -75,7 +75,7 @@ export function getRefReactions(): RefReactionSpec[] {
  *
  * `reactions` is a parameter (defaulted to the registry) so the behaviour is
  * exercisable without writing to module-global state — the same shape
- * `drainWarmups` uses.
+ * warm-up executor's `drainWarmupsWith` uses.
  */
 export async function runRefReactions(
   advance: RefAdvancedPayload,

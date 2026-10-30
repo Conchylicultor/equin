@@ -72,7 +72,7 @@ A long span is **not** always a blocked event loop: a span can be long because i
 *awaited IO* (flat RSS) rather than *burned CPU* (RSS spikes). This monitor
 budgets on span **wall-time** only. As free authoritative context it carries the
 phase-boundary memory checkpoints (`recordMemoryCheckpoint`: `boot-start`,
-`after-onReadyBlocking`, `after-onReady`, `after-onAllReady`) into the report so a
+`after-onReadyBlocking`, `after-onReady`, `after-onAllReady`, `after-settled`) into the report so a
 human can read the phys_footprint jump across a phase to distinguish heavy CPU
 work from IO wait.
 

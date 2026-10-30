@@ -83,13 +83,14 @@ gap in that plugin.
 
 ## Plugin reference
 
-- Description: Reads an agent-authored block's authorship (useAgentNotesAuthors, and useAgentNotesCreator for the first writer) and renders it as the card's provenance popover — one row per contributing conversation, opening the conversation that wrote it. Contributes no slot of its own; the agent-notes anchor hosts it. Owns page_blocks_agent_authors: which conversations wrote into an agent-notes card. A race-free (block, conversation) link table, the recordAgentNotesAuthor stamp any writer calls, and the per-card live read behind the card's provenance popover; a copied block keeps its authors.
+- Description: Reads an agent-authored block's authorship (useAgentNotesAuthors, and useAgentNotesCreator for the first writer) and renders it as the card's provenance popover — one row per contributing conversation, opening the conversation that wrote it. Contributes no slot of its own; the agent-notes anchor hosts it. Owns page_blocks_agent_authors: which conversations wrote into an agent-notes card. A race-free (block, conversation) link table, the recordAgentNotesAuthor stamp any writer calls, and the per-card live read behind the card's provenance popover; a copied block keeps its authors. Its growth bound is the cascade to page_blocks, checked at boot (markCascadeBounded).
 - Server:
   - Contributes:
     - `resource.declare` "agent-notes-authors"
     - `page.editor.block.onCopy`
   - Uses:
     - `database.db`
+    - `infra/retention.markCascadeBounded`
     - `network/live.serveValue`
     - `page/editor._blocks`
     - `page/editor.BlockLifecycle`

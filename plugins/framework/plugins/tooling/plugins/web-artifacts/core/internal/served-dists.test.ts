@@ -57,7 +57,7 @@ describe("pruneCacheDir keeps entries a served dist links", () => {
     pruneCacheDir({
       root: f.store,
       maxAgeMs: 14 * DAY,
-      maxEntries: 100,
+      maxUnreferenced: 100,
       trimTo: 50,
       referenced: servedDistTargets(f.worktrees),
     });
@@ -76,30 +76,31 @@ describe("pruneCacheDir keeps entries a served dist links", () => {
     pruneCacheDir({
       root: f.store,
       maxAgeMs: 14 * DAY,
-      maxEntries: 4,
+      maxUnreferenced: 4,
       trimTo: 3,
       referenced: servedDistTargets(f.worktrees),
     });
     expect(existsSync(oldest)).toBe(true);
-    // 6 total, trim to 3: the referenced one + the 2 newest unreferenced remain.
+    // 5 unreferenced > 4, trimmed to 3: the 2 oldest unreferenced go.
     expect(others.map((p) => existsSync(p))).toEqual([
       false,
       false,
-      false,
+      true,
       true,
       true,
     ]);
   });
 
-  test("an entry younger than the referenced snapshot is never trimmed", () => {
+  test("an entry younger than the margin counts toward the cap but is never trimmed", () => {
     const f = fixture();
     const old = [0, 1].map((i) => f.entry(`old${i}`, (3 + i) * MINUTE));
-    // Published (and pinned) while the prune walked: its snapshot predates them.
+    // Published by a build that holds no lease (older code) while the prune
+    // walked: no root can speak for them.
     const fresh = [0, 1].map((i) => f.entry(`fresh${i}`, i * 1000));
     pruneCacheDir({
       root: f.store,
       maxAgeMs: 14 * DAY,
-      maxEntries: 2,
+      maxUnreferenced: 2,
       trimTo: 1,
       referenced: servedDistTargets(f.worktrees),
     });
@@ -107,22 +108,41 @@ describe("pruneCacheDir keeps entries a served dist links", () => {
     expect(old.some((p) => existsSync(p))).toBe(false);
   });
 
-  test("referenced entries beyond the cap are all kept", () => {
+  test("referenced entries beyond the cap are all kept, and do not count toward it", () => {
     const f = fixture();
     const refs = [0, 1, 2, 3].map((i) => {
       const p = f.entry(`r${i}`, (i + 1) * 1000);
       f.link(`r${i}`, p);
       return p;
     });
-    const spare = f.entry("spare", 2 * MINUTE);
+    // Roots alone exceed the cap; the two unreferenced entries are within it.
+    const spares = [f.entry("spare0", 2000), f.entry("spare1", 0)];
     pruneCacheDir({
       root: f.store,
       maxAgeMs: 14 * DAY,
-      maxEntries: 2,
+      maxUnreferenced: 2,
       trimTo: 1,
       referenced: servedDistTargets(f.worktrees),
     });
     expect(refs.every((p) => existsSync(p))).toBe(true);
-    expect(existsSync(spare)).toBe(false);
+    expect(spares.map((p) => existsSync(p))).toEqual([true, true]);
+  });
+
+  test("past the cap, unreferenced entries trim oldest-first to trimTo", () => {
+    const f = fixture();
+    const ref = f.entry("ref", 9000);
+    f.link("ref", ref);
+    const spares = [3, 2, 1].map((i) =>
+      f.entry(`s${i}`, i * 1000 + 2 * MINUTE),
+    );
+    pruneCacheDir({
+      root: f.store,
+      maxAgeMs: 14 * DAY,
+      maxUnreferenced: 2,
+      trimTo: 1,
+      referenced: servedDistTargets(f.worktrees),
+    });
+    expect(existsSync(ref)).toBe(true);
+    expect(spares.map((p) => existsSync(p))).toEqual([false, false, true]);
   });
 });

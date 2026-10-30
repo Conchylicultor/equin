@@ -9,10 +9,12 @@ export type PhaseId =
   | "onReadyBlocking"
   | "onReady"
   | "onAllReady"
-  // Post-serving heavy warm-up drain (infra/warmup), after the onAllReady
-  // barrier. `drainWarmups` is the wrapping phase; each `warmup:<name>` span
-  // sits under `warmup`.
-  | "drainWarmups"
+  // The serving host's settled phase (`runSettledPhase`), after the onAllReady
+  // barrier: `settled` is the wrapping span — its presence marks a complete
+  // boot profile — each plugin's hook an `onSettled:<id>` span, and each
+  // drained warm-up (infra/warmup) a `warmup:<name>` span.
+  | "settled"
+  | "onSettled"
   | "warmup";
 
 export interface Span {

@@ -4,8 +4,8 @@ import {
 } from "@plugins/framework/plugins/server-core/core";
 
 /**
- * A declared heavy boot warm-up. Deferred past serving-ready and drained by
- * {@link drainWarmups} under a concurrency gate + heavy-read slot + macrotask
+ * A declared heavy boot warm-up. Deferred past serving-ready and drained in
+ * the serving host's settled phase (`onSettled`) under a concurrency gate + heavy-read slot + macrotask
  * yield — never run eagerly from `onReady`.
  *
  * `defineWarmup` is the *declarative* contribution that makes "heavy boot work"
@@ -23,15 +23,16 @@ export interface WarmupSpec {
    */
   description: string;
   /**
-   * `host` ⇒ runs ONLY on the main backend (the `isMain()` gate) — the
-   * N×-worktree-redundancy killer for host-global corpora/indexes. `worktree`
-   * ⇒ runs on every backend, acting only on its own worktree state.
+   * `host` ⇒ runs once per host: on the desktop, ONLY on the main backend —
+   * the N×-worktree-redundancy killer for host-global corpora/indexes; on a
+   * sole host (the browser), always. `worktree` ⇒ runs on every backend,
+   * acting only on its own worktree state. The host answers (`WarmupHost`).
    */
   scope: "host" | "worktree";
   /**
    * The warm-up body. Awaited under the drain's heavy-read slot. A warm-up is
    * an OPTIMIZATION, never a correctness dependency — a throw is logged and the
-   * drain continues (see {@link drainWarmups}). Consumers must work cold via
+   * drain continues. Consumers must work cold via
    * their own lazy on-demand refresh.
    */
   run: () => Promise<void>;
@@ -42,8 +43,8 @@ export interface WarmupSpec {
 /**
  * Module-load-time registry. Populated by `defineWarmup(...).register()` during
  * the framework's register phase (mounted by a consumer plugin via
- * `register: [warmupToken]`, exactly like `defineJob`). Drained once by
- * {@link drainWarmups} after the `onAllReady` barrier.
+ * `register: [warmupToken]`, exactly like `defineJob`). Drained once in the
+ * settled phase, after the `onAllReady` barrier.
  */
 export const warmupRegistry = new Map<string, WarmupSpec>();
 

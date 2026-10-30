@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-infra-warmup-sole-host",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Warm-up admission of a sole host: the WarmupHost host service running every scope with no slot, for the browser composition and the portable boot test. Never booted by the desktop."
+}

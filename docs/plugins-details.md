@@ -5424,7 +5424,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by: `apps/mail/search`
     - **`pages`** — Notion-like pages app.
       - Plugins:
-        - **`agent-origin`** — Agent-origin provenance for pages: presents the exposed `origin` field (Private / Scratch) of the Pages sidebar DataView, so pages written by an automated session land in their own Scratch section of the sidebar. Agent-origin provenance for pages (page_blocks_ext_origin): a create-hook contributor stamps every page written by an automated session (the origin header set to agent) with the script that minted it, the marker's presence is exposed as the `origin` field (agent | user) of every list whose rows are blocks — the Pages sidebar's Private / Scratch sections — and the machine half's 24h retention sweep trashes the marked pages.
+        - **`agent-origin`** — Agent-origin provenance for pages: presents the exposed `origin` field (Private / Scratch) of the Pages sidebar DataView, so pages written by an automated session land in their own Scratch section of the sidebar. Agent-origin provenance for pages (page_blocks_ext_origin): a create-hook contributor stamps every page written by an automated session (the origin header set to agent) with the script that minted it, the marker's presence is exposed as the `origin` field (agent | user) of every list whose rows are blocks — the Pages sidebar's Private / Scratch sections — and a 24h retention sweep trashes the marked pages.
           - Web:
             - Contributes: `FieldPresentation.Register` "exposure:page_blocks_ext_origin"
             - Uses: `network/live.FieldPresentation`
@@ -5435,14 +5435,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `live.columns.expose` "page_blocks ← page_blocks_ext_origin"
               - `page.editor.block.afterCreate`
             - Uses:
+              - `database.db`
               - `infra/entity-extensions.defineExtension`
+              - `infra/retention.defineRetention`
               - `network/live.LiveColumns`
               - `page/editor._blocks`
               - `page/editor.BlockLifecycle`
+              - `page/editor.deleteBlocksSubtree`
+              - `page/editor.liveBlocks`
             - DB schema: `plugins/apps/plugins/pages/plugins/agent-origin/server/internal/tables.ts`
             - Entity extension of: `page/editor` (table `page_blocks_ext_origin`)
             - Exports (values): `pageBlocksOrigin`
-          - Machine:
             - Register: `defineJob('retention.page_blocks_ext_origin')`
         - **`auto-icon`** — Regenerate action for the page icon picker: a footer row that forces a new auto-picked emoji for the page pending while the pick runs in the request. Auto-icon provenance (page_blocks_ext_auto_icon): a row records that icon generation ran for a page, so it never runs again unasked. Everything model-driven — the pick, its jobs, the boot backfill and Regenerate — is the machine half's.
           - Server:
@@ -5470,7 +5473,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Routes: `POST /api/pages/:pageId/auto-icon/regenerate` — unpredicted (server-decided)
           - Cross-plugin:
             - Imported by: `apps/pages/page-tree`
-        - **`content-search`** — Pages full-text search consumer: contributes the Search button into the Pages sidebar, opening the reusable quick-find dialog scoped to the pages source. Pages full-text search consumer: indexes pages into the search engine, reindexing on blocksChanged, with the backfill job that seeds existing pages (enqueued at boot by the machine half's warm-up).
+        - **`content-search`** — Pages full-text search consumer: contributes the Search button into the Pages sidebar, opening the reusable quick-find dialog scoped to the pages source. Pages full-text search consumer: indexes pages into the search engine, reindexing on blocksChanged, with the backfill job that seeds existing pages (enqueued at boot by a warm-up, so pages that predate the index — or drifted — become searchable).
           - Web:
             - Contributes: `Pages.Sidebar` "Search" → `PagesSearch`
             - Uses:
@@ -5491,6 +5494,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database.db`
               - `infra/events.Trigger`
               - `infra/jobs.defineJob`
+              - `infra/warmup.defineWarmup`
               - `page/editor.BlockDeleteHook`
               - `page/editor.BlockLifecycle`
               - `page/editor.BlockRestoreHook`
@@ -5507,6 +5511,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Register:
               - `defineJob('pages.search.reindex')`
               - `defineJob('pages.search.backfill')`
+              - `defineWarmup('pages.search.backfill')`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --muted`
@@ -5522,8 +5527,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-medium`
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-label`
-          - Machine:
-            - Register: `defineWarmup('pages.search.backfill')`
         - **`copy-id`** — Copy block ID button next to the title in the page-detail header: copies the open page's block id (the id agents' page tools take) to the clipboard.
           - Web:
             - Contributes: `pageDetailPane.Actions` "copy-id" → `CopyIdAction`
@@ -11768,7 +11771,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core/app-rail-framing.AppRailFraming`
               - `apps-core/app-rail.AppRail`
               - `primitives/css/spacing.Stack`
-    - **`app-usage`** — Records per-app usage from the browser — a launch whenever the focused app changes to another, active time while the app is focused, the page visible, the window focused and the user not idle for 5 minutes — and reads it back with useAppUsageSummary(). Owns app_usage_daily: per (local day, app) opens and active milliseconds, added to by one batched upsert from the browser tracker's flush endpoint, served as the live per-app summary (7-day and all-time); swept after two years by the machine half.
+    - **`app-usage`** — Records per-app usage from the browser — a launch whenever the focused app changes to another, active time while the app is focused, the page visible, the window focused and the user not idle for 5 minutes — and reads it back with useAppUsageSummary(). Owns app_usage_daily: per (local day, app) opens and active milliseconds, added to by one batched upsert from the browser tracker's flush endpoint, served as the live per-app summary (7-day and all-time); swept after two years by a nightly retention job.
       - Web:
         - Contributes: `Core.Root` → `AppUsageRecorder`
         - Uses:
@@ -11785,9 +11788,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database.db`
           - `database/sql-projection.nullable`
           - `infra/endpoints.implement`
+          - `infra/retention.defineRetention`
           - `network/live.serveValue`
         - DB schema: `plugins/apps-core/plugins/app-usage/server/internal/tables.ts`
         - Exports (values): `_appUsageDaily`
+        - Register: `defineJob('retention.app_usage_daily')`
         - Resources: `app-usage.summary` (push, whole: one row per app id ever used — bounded by the installed app registry (tens of apps), never by time: the GROUP BY folds every day into its app)
         - Routes: `POST /api/app-usage/flush` — unpredicted (server-decided)
       - Core:
@@ -11810,8 +11815,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by: `apps/home/usage-fields`
       - Exemptions:
         - Exempts itself from: `networking/no-page-transport` — `web/components/app-usage-recorder.tsx` (sanctioned)
-      - Machine:
-        - Register: `defineJob('retention.app_usage_daily')`
     - **`chrome-theme`** — The app chrome's fixed theme (graphite): the rail, tab bar, action bar and toasts wear it whichever app is focused, so the frame stays the same while the app inside changes.
       - Web:
         - Contributes: `ThemeEngine.FixedTheme` "Chrome"
@@ -19296,7 +19299,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-preprompt`
       - Shared:
         - Exports (values): `prepromptsConfig`
-    - **`question-relay`** — Answers a held AskUserQuestion from the web: owns the transcript's `"question"` pending prompt — the held question's form, answered as the tool's real result. The AskUserQuestion relay's backend: the pending_questions table (one row per held call: open → answered | abandoned), onQuestionResolved, and the open-questions live collection. Holding a question (the runtime parks the call in-process), the question-hold source the status reconciler reads (and its dead-holder retirement) and the 7-day retention sweep are the machine half's.
+    - **`question-relay`** — Answers a held AskUserQuestion from the web: owns the transcript's `"question"` pending prompt — the held question's form, answered as the tool's real result. The AskUserQuestion relay's backend: the pending_questions table (one row per held call: open → answered | abandoned), onQuestionResolved, the open-questions live collection and the 7-day retention sweep of resolved rows. Holding a question (the runtime parks the call in-process), the question-hold source the status reconciler reads (and its dead-holder retirement) are the machine half's.
       - Web:
         - Contributes: `JsonlViewer.PendingPrompt` "question" → `RelayQuestionCard`
         - Uses:
@@ -19324,11 +19327,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.HttpError`
           - `infra/entities.defaultNow`
           - `infra/entities.defineEntity`
+          - `infra/retention.defineRetention`
           - `network/live.serveCollection`
           - `tasks/tasks-core._conversations`
         - DB schema: `plugins/conversations/plugins/question-relay/server/internal/tables.ts`
         - Exports (types): `ResolvedQuestion`
         - Exports (values): `onQuestionResolved`
+        - Register: `defineJob('retention.pending_questions')`
         - Resources:
           - `question-relay.pending` (keyed, window)
           - `question-relay.pending:groups` (push)
@@ -19338,7 +19343,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `holdQuestion`
           - `retireQuestion`
-        - Register: `defineJob('retention.pending_questions')`
         - Routes: `POST /api/conversations/:id/questions/:toolUseId/answer` — unpredicted (precondition)
       - Core:
         - Uses:
@@ -20024,7 +20028,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/read-set`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/anchor.ts`, `server/internal/chain-signature.ts`, `server/internal/session-writes.ts`, `server/internal/watcher.ts` (debt)
-    - **`turn-ledger`** — Registers the turn id kind (turn) with the web id registry — the server barrel registers the same kind. The turn ledger's backend: the conversation_turns table (one row per turn sent to an agent, its state moved only by applyTurnEvent's pure transition), the accept that holds a turn while its conversation starts, confirmTurn (the agent's confirmation that it took a turn, applied to that row by the turn id it echoed, with the transcript line's uuid; resolvePromptSubmit is its temporary equality-matched fallback for an agent started before turn ids), Stop's and rewind's returnTurnByPromptUuid (the turn taken back, by its transcript line), the turn-ledger.turns live collection and the conversation.userTurnSent event (emitted once the agent confirmed a user's turn).
+    - **`turn-ledger`** — Registers the turn id kind (turn) with the web id registry — the server barrel registers the same kind. The turn ledger's backend: the conversation_turns table (one row per turn sent to an agent, its state moved only by applyTurnEvent's pure transition), the accept that holds a turn while its conversation starts, confirmTurn (the agent's confirmation that it took a turn, applied to that row by the turn id it echoed, with the transcript line's uuid; resolvePromptSubmit is its temporary equality-matched fallback for an agent started before turn ids), Stop's and rewind's returnTurnByPromptUuid (the turn taken back, by its transcript line), the turn-ledger.turns live collection, the conversation.userTurnSent event (emitted once the agent confirmed a user's turn) and the 7-day retention sweep of settled rows.
       - Web:
         - Contributes: `IdKinds.Kind` "turn"
         - Uses: `ids.IdKinds`
@@ -20041,6 +20045,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/entities.defineEntity`
           - `infra/entities.sqlDefault`
           - `infra/events.defineTriggerEvent`
+          - `infra/retention.defineRetention`
           - `network/live.serveCollection`
           - `tasks/tasks-core._conversations`
           - `tasks/tasks-core.getConversation`
@@ -20070,7 +20075,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `returnTurnByPromptUuid`
           - `returnTurnsSince`
           - `userTurnSent`
-        - Register: `defineTriggerEvent('conversation.userTurnSent')`
+        - Register:
+          - `defineTriggerEvent('conversation.userTurnSent')`
+          - `defineJob('retention.conversation_turns')`
         - Resources:
           - `turn-ledger.turns` (keyed, window)
           - `turn-ledger.turns:groups` (push)
@@ -20110,8 +20117,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/transcript-source`
       - Exemptions:
         - Exempts itself from: `ids:pk-declared` — `server/internal/tables-user-turn-sent-event.ts` (debt)
-      - Machine:
-        - Register: `defineJob('retention.conversation_turns')`
     - **`usage`** — Cost, Tokens and Agents fields on every conversation list whose rows are conversations (the usage extension's exposed fields), sorting and filtering server-side. Per-conversation usage — cost, tokens and launched sub-agents — stored in conversations_ext_usage and exposed to every conversation list (LiveColumns.Expose). Counting it from the transcripts is the machine half's.
       - Web:
         - Contributes: `FieldPresentation.Register` "exposure:conversations_ext_usage"
@@ -20352,8 +20357,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `quotedRelationsIn`
       - `readTag`
   - Cross-plugin:
-    - Imported by: 134 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
-      - `apps` ×38
+    - Imported by: 135 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+      - `apps` ×39
       - `conversations` ×15
       - `page` ×15
       - `infra` ×13
@@ -21248,7 +21253,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `debug/boot-watchdog`
           - `debug/timeline`
-    - **`boot-monitor`** — Boot-monitor web presence: registers the whole-boot budget config (enabled, totalBootBudgetMs) for Settings → Config. The minted signals flow through the existing slow-op report kind and the boot trace lane — no new renderer. Whole-boot monitor: a cheap per-worktree scheduled job that, once the boot profile is complete (drainWarmups present), mints ONE 'boot' slow-op row + coherent trace per over-budget server boot — evidence-first, deduped per boot epoch — folding in the gateway-observed readiness wait when the gateway POSTed /api/boot/gateway-report.
+    - **`boot-monitor`** — Boot-monitor web presence: registers the whole-boot budget config (enabled, totalBootBudgetMs) for Settings → Config. The minted signals flow through the existing slow-op report kind and the boot trace lane — no new renderer. Whole-boot monitor: a cheap per-worktree scheduled job that, once the boot profile is complete (its settled phase recorded), mints ONE 'boot' slow-op row + coherent trace per over-budget server boot — evidence-first, deduped per boot epoch — folding in the gateway-observed readiness wait when the gateway POSTed /api/boot/gateway-report.
       - Web:
         - Contributes: `ConfigV2.WebRegister` "boot-monitor"
         - Uses: `config_v2.ConfigV2`
@@ -22386,6 +22391,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/categorical --categorical-6`
               - `ui/tokens/categorical --categorical-7`
               - `ui/tokens/categorical --categorical-8`
+              - `ui/tokens/categorical --categorical-9`
               - `ui/tokens/color-palette --destructive`
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/color-palette --success`
@@ -27077,6 +27083,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `getReadSetIndex` — The whole index as a plain object, each key's tables sorted — every key that ever captured a table, including one a removal emptied (`[]`).
           - `removeReadSetTable` — Remove `table` from the read-set of every key EXCEPT those in `keepKeys` — the one eviction path of an append-only index (a suite isolating its own keys from another's captures).
           - `runPostReadyPhases` — The post-ready phases of a SERVING host (`serve`, `browser`): `onReady` (graph-driven: each plugin fires as soon as its `dependsOn` parents have resolved), then the `onAllReady` barrier. `exec` never runs them — a short-lived child has no subscribers, so no watcher, job runner or LISTEN belongs in it.
+          - `runSettledPhase` — The settled phase of a SERVING host (`serve`, `browser`): every plugin's `onSettled`, once the host is already serving and every post-ready phase has resolved — post-serving catch-up work (infra/warmup drains every declared warm-up here). `exec` has no path to it: a short-lived child must never run heavy post-serving work, and this function is the only caller of the hook.
           - `serverEntries`
           - `serverEntryFor` — The registry entry of `pluginPath`'s server barrel, as codegen writes one (`<id>` the dotted path, loaded by its `@plugins/<path>/server` specifier), with the `dependsOn` the caller states.
           - `withHostServices` — Run `fn` with `providers` (each a `Svc.provide(impl)`) answering their services — over the unbooted host's providers and over a collected graph's — and put the previous answers back once it settles, so a suite swapping a service cannot leak it into the suites after it in the same bun process.
@@ -27267,7 +27274,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/guards` (10 debt)
               - `framework/tooling/import-closure` (1 debt)
               - `framework/tooling/lint` (2 debt)
-              - `framework/tooling/web-artifacts` (19 debt)
+              - `framework/tooling/web-artifacts` (20 debt)
               - `framework/web-core` (1 debt)
               - `infra/asset-mirror` (3 debt)
               - `infra/audio-analysis` (4 debt)
@@ -28235,6 +28242,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/web-core.loadBabelContributions`
               - `infra/namespace.MAIN_COMPOSITION_ID`
               - `infra/paths.worktreesDir`
+              - `packages/coalesce.createCoalescer`
+              - `packages/flock.flockRelease`
+              - `packages/flock.flockTry`
+              - `packages/flock.flockTryShared`
+              - `packages/flock.waitForFlock`
               - `packages/semaphore.createSemaphore`
             - Exports (types):
               - `ArtifactKind`
@@ -28279,7 +28291,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/build`
               - `framework/tooling/codegen`
           - Exemptions:
-            - Exempts itself from: `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/expected.ts`, `core/internal/global-css.ts`, `core/internal/identity.ts`, `core/internal/own-files.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/tailwind-candidates.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts` (debt)
+            - Exempts itself from: `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/expected.ts`, `core/internal/global-css.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/own-files.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/tailwind-candidates.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts` (debt)
           - Cli:
             - Exports (types): `CarryForwardResult`
             - Exports (values): `carryForwardServedEntries`
@@ -28761,7 +28773,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --spacing`
         - Imported by: `apps/pages/history`
-    - **`engine`** — Registers the version id kind (ver) with the web id registry — the server barrel registers the same kind. Domain-agnostic versioning substrate: the entity_versions table, a defineHistorySource registry, time-bucketed recordVersion + deleteVersions, the live history.versions timeline and history.version value, and the restore (plus an e2e-only list) endpoints; the 30-day retention sweep is the machine half's.
+    - **`engine`** — Registers the version id kind (ver) with the web id registry — the server barrel registers the same kind. Domain-agnostic versioning substrate: the entity_versions table, a defineHistorySource registry, time-bucketed recordVersion + deleteVersions, the live history.versions timeline and history.version value, and the restore (plus an e2e-only list) endpoints, and the 30-day retention sweep (its growth bound).
       - Web:
         - Contributes: `IdKinds.Kind` "ver"
         - Uses: `ids.IdKinds`
@@ -28779,6 +28791,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.implement`
           - `infra/entities.defaultNow`
           - `infra/entities.defineEntity`
+          - `infra/retention.defineRetention`
           - `network/live.serveCollection`
           - `network/live.serveValue`
         - DB schema: `plugins/history/plugins/engine/server/internal/tables.ts`
@@ -28788,6 +28801,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineHistorySource`
           - `deleteVersions`
           - `recordVersion`
+        - Register: `defineJob('retention.entity_versions')`
         - Resources:
           - `history.version` (push)
           - `history.versions` (keyed, window)
@@ -28829,8 +28843,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `VersionWithSnapshotSchema`
       - Cross-plugin:
         - Imported by: `apps/pages/history`
-      - Machine:
-        - Register: `defineJob('retention.entity_versions')`
 
 - **`ids`** — The id-kind registry, web half: IdKinds.Kind registers a declared kind and IdKinds.Presenter how its ids render and open (icon, useReferent, useTarget); useIdKinds() / useIdPresenters() read them at render time. The id-kind registry, server half: IdKinds.Kind registers a declared kind and IdKinds.Referent resolves a kind's id to its title; getIdKinds() reads them at call time. idColumn / idRef are a kind's drizzle primary-key and foreign-key columns (typed Id<P>; idRef cascades on update).
   - Web:
@@ -31001,7 +31013,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/worktree-cleanup`
               - `infra/corpus-index`
               - `infra/host-fs`
-              - `infra/warmup`
               - `plugin-meta/plugin-tree`
               - `review/plugin-changes`
               - `tasks/attempt-work`
@@ -32594,7 +32605,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `revertAgentWrites`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/ledger.ts` (debt)
-    - **`retention`** — Retention primitive: defineRetention wraps defineJob into a nightly TTL sweep (DELETE WHERE column < now()-ttl) whose growth bound is recorded only when the sweep is mounted; markCascadeBounded verifies at module eval that an FK onDelete cascade really reclaims the rows. getGrowthBounds exposes the resulting true set of growth bounds.
+    - **`retention`** — Retention primitive, on every host: defineRetention wraps defineJob into a nightly TTL sweep (DELETE WHERE column < now()-ttl) whose growth bound is recorded only when the sweep is mounted; markCascadeBounded verifies at module eval that an FK onDelete cascade really reclaims the rows. getTableGrowthBounds exposes the resulting true set of table growth bounds.
       - Server:
         - Uses:
           - `database.db`
@@ -32602,26 +32613,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/jobs.defineJob`
           - `infra/jobs.JobFactory`
         - Exports (types):
-          - `GrowthBound`
           - `RetentionJob`
           - `RetentionSpec`
-          - `SinkKey`
+          - `TableGrowthBound`
         - Exports (values):
           - `defineRetention`
-          - `getGrowthBounds`
+          - `getTableGrowthBounds`
           - `markCascadeBounded`
       - Cross-plugin:
-        - Imported by:
-          - `apps/deploy/analytics/collect`
-          - `apps/deploy/deployments`
-          - `apps/deploy/site-messages/intake`
-          - `apps/events/refresh`
-          - `debug/boot-profile`
-          - `debug/latency-ledger`
-          - `debug/profiling/op-log/op-store`
-          - `debug/slow-ops`
-          - `debug/trace/engine`
-          - `infra/jobs/supervised-job`
+        - Imported by: 21 plugins — full list in [`plugins/infra/plugins/retention/REFERENCE.md`](../plugins/infra/plugins/retention/REFERENCE.md)
+          - `apps` ×5
+          - `debug` ×5
+          - `page` ×3
+          - `conversations` ×2
+          - `infra` ×2
+          - `apps-core/app-usage`
+          - `history/engine`
+          - `primitives/usage-rank`
           - `reports/engine`
       - Test helpers:
         - Server: `@plugins/infra/plugins/retention/server/testing`
@@ -32979,7 +32987,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `frameKey`
           - `normalizeTraces`
           - `withThreadActivity`
-    - **`trash`** — Web seam of the trash primitive: useUndoableTrash() runs a trashing mutation and records ONE entry on the tab's undo stack (undo = restore the minted trash entry, redo = re-trash and re-capture the new entry id), so every trash source gets Cmd+Z restore without hand-rolling it. Generic trash primitive: the trash_entries operation ledger, a defineTrashSource registry, list/restore/purge endpoints, the trash-entries live collection (filterable by source); the 30-day purge sweep is the machine half's — so user content is soft-deleted (restorable) instead of hard-deleted, and FK cascades fire only at purge.
+    - **`trash`** — Web seam of the trash primitive: useUndoableTrash() runs a trashing mutation and records ONE entry on the tab's undo stack (undo = restore the minted trash entry, redo = re-trash and re-capture the new entry id), so every trash source gets Cmd+Z restore without hand-rolling it. Generic trash primitive: the trash_entries operation ledger, a defineTrashSource registry, list/restore/purge endpoints, the trash-entries live collection (filterable by source) and the 30-day purge sweep (a nightly retention job running each source's purge before the ledger rows go) — so user content is soft-deleted (restorable) instead of hard-deleted, and FK cascades fire only at purge.
       - Web:
         - Contributes: `IdKinds.Kind` "trash"
         - Uses:
@@ -33003,6 +33011,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.implement`
           - `infra/entities.defaultNow`
           - `infra/entities.defineEntity`
+          - `infra/retention.defineRetention`
           - `network/live.serveCollection`
         - DB schema: `plugins/infra/plugins/trash/server/internal/tables.ts`
         - Exports (types):
@@ -33013,6 +33022,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineTrashSource`
           - `getTrashSource`
           - `recordTrashEntry`
+        - Register: `defineJob('retention.trash_entries')`
         - Resources:
           - `trash-entries` (keyed, window)
           - `trash-entries:groups` (push)
@@ -33054,32 +33064,35 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/pages/page-tree`
           - `page/editor`
-      - Machine:
-        - Register: `defineJob('retention.trash_entries')`
-    - **`warmup`** — Declared heavy boot warm-up category: defineWarmup registers a deferred, throttled, scope-gated warm-up; drainWarmups drains them after onAllReady under a concurrency gate + heavy-read slot + macrotask yield, recording each warm-up's run in memory (warmupRunOf / onWarmupRun); listRegisteredWarmups lists the declared set with the plugin that declared each.
+    - **`warmup`** — Declared heavy boot warm-up category, on every host: defineWarmup registers a deferred, throttled, scope-gated warm-up; the plugin's onSettled drains them once the serving host has settled (never in exec) under a concurrency gate + the host's admission (the WarmupHost host service: which scopes run here, and the slot each takes) + macrotask yield, recording each warm-up's run in memory (warmupRunOf / onWarmupRun); listRegisteredWarmups lists the declared set with the plugin that declared each.
       - Server:
-        - Uses: `infra/host/host-read-pool.withHeavyReadSlot`
+        - Contributes: `host-service:warmup.host` "warmup.host"
         - Exports (types):
           - `RegisteredWarmup`
+          - `WarmupHostImpl`
           - `WarmupRun`
           - `WarmupSpec`
         - Exports (values):
           - `defineWarmup`
-          - `drainWarmups`
           - `listRegisteredWarmups`
           - `onWarmupRun`
           - `WARMUP_CONCURRENCY`
+          - `WarmupHost`
           - `warmupRunOf`
       - Cross-plugin:
         - Imported by:
+          - `apps/pages/content-search`
           - `apps/places/places-core`
           - `apps/sonata/sources/midi/folders`
           - `infra/corpus-index`
           - `infra/warmup/background-arm`
+          - `infra/warmup/sole-host`
           - `infra/worktree/spare-pool`
+          - `page/links`
           - `plugin-meta/plugin-tree`
           - `reports/engine`
           - `stats/cost`
+          - `tasks/auto-start`
           - `tasks/automations`
           - `tasks/sidequest-autopilot`
           - `tasks/task-triage`
@@ -33090,9 +33103,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/background/catalog.defineBackgroundKind`
               - `infra/warmup.listRegisteredWarmups`
               - `infra/warmup.onWarmupRun`
+              - `infra/warmup.WarmupHost`
               - `infra/warmup.WarmupRun`
               - `infra/warmup.warmupRunOf`
             - Register: `defineBackgroundKind('warmup')`
+        - **`sole-host`** (excluded) — Warm-up admission of a sole host — one backend with no neighbours (the browser composition, the portable boot test): provides the WarmupHost host service running every scope, host-scoped warm-ups included, with no slot to take. Never booted by the desktop.
+          - Server:
+            - Contributes: `host-service:warmup.host` "warmup.host"
+            - Uses: `infra/warmup.WarmupHost`
     - **`worktree`**
       - Server:
         - Uses:
@@ -34743,7 +34761,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `canonicalParams`
     - **`coalesce`** — Trigger coalescer: createCoalescer / createKeyedCoalescer run a reaction at most once at a time per key and fold every trigger that lands mid-run into ONE trailing run (its items merged), so however many triggers arrive the work is bounded to one running plus one pending per key — and a trigger never joins a run that started before it.
       - Cross-plugin:
-        - Imported by: `packages/watched-memo`
+        - Imported by:
+          - `framework/tooling/web-artifacts`
+          - `packages/watched-memo`
       - Core:
         - Exports (types):
           - `Coalescer`
@@ -34775,6 +34795,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `framework/tooling/checks`
+          - `framework/tooling/web-artifacts`
           - `infra/spawn`
           - `infra/worktree`
           - `packages/host-semaphore`
@@ -35303,13 +35324,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --info`
                   - `ui/tokens/color-palette --muted-foreground`
                   - `ui/tokens/shape --spacing`
-            - **`authorship`** — Reads an agent-authored block's authorship (useAgentNotesAuthors, and useAgentNotesCreator for the first writer) and renders it as the card's provenance popover — one row per contributing conversation, opening the conversation that wrote it. Contributes no slot of its own; the agent-notes anchor hosts it. Owns page_blocks_agent_authors: which conversations wrote into an agent-notes card. A race-free (block, conversation) link table, the recordAgentNotesAuthor stamp any writer calls, and the per-card live read behind the card's provenance popover; a copied block keeps its authors.
+            - **`authorship`** — Reads an agent-authored block's authorship (useAgentNotesAuthors, and useAgentNotesCreator for the first writer) and renders it as the card's provenance popover — one row per contributing conversation, opening the conversation that wrote it. Contributes no slot of its own; the agent-notes anchor hosts it. Owns page_blocks_agent_authors: which conversations wrote into an agent-notes card. A race-free (block, conversation) link table, the recordAgentNotesAuthor stamp any writer calls, and the per-card live read behind the card's provenance popover; a copied block keeps its authors. Its growth bound is the cascade to page_blocks, checked at boot (markCascadeBounded).
               - Server:
                 - Contributes:
                   - `resource.declare` "agent-notes-authors"
                   - `page.editor.block.onCopy`
                 - Uses:
                   - `database.db`
+                  - `infra/retention.markCascadeBounded`
                   - `network/live.serveValue`
                   - `page/editor._blocks`
                   - `page/editor.BlockLifecycle`
@@ -35370,7 +35392,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --muted`
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/shape --radius`
-        - **`instructions`** — Instructions block type: a void CONTAINER whose soft-tinted box wraps blocks of any type, holding the human's standing instructions to agents working under the page it sits on — delivered to them with their reads, and to every conversation at its start when the card's Global switch is on. Instructions: registers the card's `data` schema ({ global? }) at the server write boundary, and owns page_instructions_deliveries — which instructions each conversation has received, at which content hash — with the scope queries (instructionsInScope, globalInstructions) and the render-hash-compare delivery helpers the agent-facing page tools and the MCP connect-time instructions consume. Portable, so every host writes the card; the deliveries' nightly retention sweep is the machine half's.
+        - **`instructions`** — Instructions block type: a void CONTAINER whose soft-tinted box wraps blocks of any type, holding the human's standing instructions to agents working under the page it sits on — delivered to them with their reads, and to every conversation at its start when the card's Global switch is on. Instructions: registers the card's `data` schema ({ global? }) at the server write boundary, and owns page_instructions_deliveries — which instructions each conversation has received, at which content hash — with the scope queries (instructionsInScope, globalInstructions) and the render-hash-compare delivery helpers the agent-facing page tools and the MCP connect-time instructions consume. Portable, so every host writes the card and runs the deliveries' nightly retention sweep (older than 30 days, per worktree DB).
           - Web:
             - Contributes:
               - `Editor.Block` "instructions" → `ContainerNoRow`
@@ -35386,6 +35408,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `database.db`
               - `database.DbExecutor`
+              - `infra/retention.defineRetention`
               - `page/annotations.humanAudienceTypes`
               - `page/editor._blocks`
               - `page/editor.Editor`
@@ -35406,6 +35429,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `markInstructionsDelivered`
               - `renderForDelivery`
               - `renderInstructions`
+            - Register: `defineJob('retention.page_instructions_deliveries')`
           - Core:
             - Uses:
               - `page/annotations.defineAnnotationBlock`
@@ -35420,8 +35444,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --primary-text`
               - `ui/tokens/shape --radius`
             - Imported by: `page/annotations/agent-access`
-          - Machine:
-            - Register: `defineJob('retention.page_instructions_deliveries')`
           - Plugins:
             - **`instructions-page`** — Instructions pages in the page editor: a sub-page whose data marks it `instructions: true` is tinted with the instructions card's wash wherever it is referenced (its row in the parent page, the Pages sidebar), carries a Global chip when it reaches every conversation, and can be made from the caret's line with `/instructions page`. Declares no block type — the page is an ordinary `page` row.
               - Web:
@@ -35506,7 +35528,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
           - Plugins:
-            - **`task-link`** — Reads the task a TODO card was dispatched onto (useTodoTask / useTodoTaskState, joined live to the tasks resource; the runs come from tasks-core's useTaskConversations) and renders the card's two dispatched surfaces — the dispatch panel behind its name, and the chips at its foot, one per run. Contributes no slot of its own; the todo card's anchor, rail menu and foot host them. Owns page_blocks_ext_todo_task: the ONE task a TODO card dispatches agents onto. The block-keyed link table (its primary key IS the one-task-per-card rule), the per-card live read, the idempotent dispatch endpoint that composes the agent's prompt, and the markdown provider that emits the card's task_id/status to read_page.
+            - **`task-link`** — Reads the task a TODO card was dispatched onto (useTodoTask / useTodoTaskState, joined live to the tasks resource; the runs come from tasks-core's useTaskConversations) and renders the card's two dispatched surfaces — the dispatch panel behind its name, and the chips at its foot, one per run. Contributes no slot of its own; the todo card's anchor, rail menu and foot host them. Owns page_blocks_ext_todo_task: the ONE task a TODO card dispatches agents onto. The block-keyed link table (its primary key IS the one-task-per-card rule), the per-card live read, the idempotent dispatch endpoint that composes the agent's prompt, and the markdown provider that emits the card's task_id/status to read_page. Its growth bound is the cascade to page_blocks, checked at boot (markCascadeBounded).
               - Server:
                 - Contributes:
                   - `resource.declare` "todo-block-task:rows"
@@ -35516,6 +35538,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/endpoints.HttpError`
                   - `infra/endpoints.implement`
                   - `infra/entity-extensions.defineExtension`
+                  - `infra/retention.markCascadeBounded`
                   - `network/live.serveCollection`
                   - `page/editor._blocks`
                   - `page/editor.Editor`
@@ -36868,7 +36891,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: `apps/website/demos/lumen`
-    - **`links`** — Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource. Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource (the boot backfill is the machine half's).
+    - **`links`** — Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource. Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource, and the boot backfill (a warm-up enqueuing a job that reindexes every live page's outgoing links, off the serving-critical boot path).
       - Server:
         - Contributes:
           - `resource.declare` "page-backlinks"
@@ -36885,6 +36908,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/sql-projection.parsed`
           - `infra/events.Trigger`
           - `infra/jobs.defineJob`
+          - `infra/warmup.defineWarmup`
           - `network/live.serveCollection`
           - `network/live.serveValue`
           - `page/editor._blocks`
@@ -36906,7 +36930,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `loadBacklinkSources`
           - `PageLinks`
           - `reindexPage`
-        - Register: `defineJob('page.links.reindex')`
+        - Register:
+          - `defineJob('page.links.reindex')`
+          - `defineJob('page.links.backfill')`
+          - `defineWarmup('page.links.backfill')`
         - Resources:
           - `page-backlinks` (push, whole: the pages that link to one page — a join over page_links and the live page blocks, not the rows of one table, whole: one page's ancestors — as deep as the page tree nests)
           - `page-links.sources` (keyed)
@@ -36959,10 +36986,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/inline-page-link`
           - `page/markdown-apply`
           - `page/page-link`
-      - Machine:
-        - Register:
-          - `defineJob('page.links.backfill')`
-          - `defineWarmup('page.links.backfill')`
     - **`map`** — Map block type: draws every located item on the page on an interactive map (through the map primitive), with overlays derived on each render from the page's blocks by contributed PageMap.Layer functions — so the map cannot drift from the page and names no block type. Clicking a pin scrolls to and selects the block it stands for; items a layer cannot place yet are counted under the map. Map block type: registers its (empty) `data` schema at the server write boundary.
       - Web:
         - Slots: `PageMap.Layer`
@@ -47560,7 +47583,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/table`
           - `page/tags`
           - `primitives/text-editor`
-    - **`usage-rank`** — Frecency usage ranking for any (namespace, key) set: useRecordUsage() returns the recorder that fires one atomic decay-and-increment, useUsageOrder() returns the most-used-first order — one coalesced id-set subscription, frozen per context so chips never move under the cursor, seeded from a local cache so the first paint does not re-sort — and useRecentUsage() lists a namespace's most recently used keys (a bounded window), for a Recent row with no candidate set to rank. Owns the usage_stats table: one frecency rollup per (namespace, key), updated by a single atomic decay-and-increment upsert, served as a lookup-only live collection read by id set (the nightly 1-year retention sweep is the machine half).
+    - **`usage-rank`** — Frecency usage ranking for any (namespace, key) set: useRecordUsage() returns the recorder that fires one atomic decay-and-increment, useUsageOrder() returns the most-used-first order — one coalesced id-set subscription, frozen per context so chips never move under the cursor, seeded from a local cache so the first paint does not re-sort — and useRecentUsage() lists a namespace's most recently used keys (a bounded window), for a Recent row with no candidate set to rank. Owns the usage_stats table: one frecency rollup per (namespace, key), updated by a single atomic decay-and-increment upsert, served as a lookup-only live collection read by id set, and the nightly sweep of keys unused for a year.
       - Server:
         - Contributes:
           - `resource.declare` "usage-stats"
@@ -47570,9 +47593,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database.db`
           - `infra/endpoints.implement`
           - `infra/entities.defineEntity`
+          - `infra/retention.defineRetention`
           - `network/live.serveCollection`
         - DB schema: `plugins/primitives/plugins/usage-rank/server/internal/tables.ts`
         - Exports (values): `_usageStats`
+        - Register: `defineJob('retention.usage_stats')`
         - Resources:
           - `usage-stats` (keyed, window)
           - `usage-stats:groups` (push)
@@ -47624,8 +47649,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/pages/page-tree`
           - `conversations/conversation-view/prompt-templates`
           - `primitives/css/color-picker`
-      - Machine:
-        - Register: `defineJob('retention.usage_stats')`
     - **`view-switcher`** — Presentational view-switcher chrome: borderless ghost-pill SegmentedControl mapping {id,title,icon} options to a single-select switcher (pure chrome — selection state stays with the caller), plus the opt-in device-local active-id helper useActiveViewId.
       - Web:
         - Uses:
@@ -50636,7 +50659,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `standingOf`
       - Cross-plugin:
         - Imported by: `conversations/conversation-view/drop-and-exit`
-    - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive; the model picker over it is the launch-option sub-plugin. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart, and the tasks.autoStartArmed trigger event whatever launches agents subscribes to.
+    - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive; the model picker over it is the launch-option sub-plugin. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart, and the tasks.autoStartArmed trigger event whatever launches agents subscribes to, and a host-scoped boot warm-up that clears leftover markers from already-dropped tasks.
       - Web:
         - Contributes: `Tasks.TaskActions` "queued-chip" → `QueuedChipAction`
         - Uses:
@@ -50660,6 +50683,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/events.defineTriggerEvent`
           - `infra/events.Trigger`
           - `infra/jobs.defineJob`
+          - `infra/warmup.defineWarmup`
           - `network/live.serveCollection`
           - `tasks/tasks-core._tasks`
           - `tasks/tasks-core.hasBlockingDep`
@@ -50680,6 +50704,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register:
           - `defineTriggerEvent('tasks.autoStartArmed')`
           - `defineJob('tasks.auto-start-cancel-on-drop')`
+          - `defineWarmup('tasks.auto-start-dropped-sweep')`
         - Resources: `tasks-auto-start:rows` (keyed, point)
       - Core:
         - Uses:
@@ -50716,8 +50741,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/orchestration/watch`
       - Exemptions:
         - Exempts itself from: `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
-      - Machine:
-        - Register: `defineWarmup('tasks.auto-start-dropped-sweep')`
       - Plugins:
         - **`launch-option`** — Auto-start model picker as a launch option: the same controlled select on the task detail's Prompt card (bound to the task's row) and on the task-draft popover (bound to the draft card). Applies a drafted auto-start model to a newly created task: arms the launch (enqueuing immediately when nothing blocks it), only records the model when the host starts the task inline itself, or clears the marker when the draft says Off.
           - Web:

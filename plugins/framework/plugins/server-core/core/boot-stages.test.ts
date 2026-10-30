@@ -1,7 +1,17 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
-import { defineResource } from "./resources";
-import { bootPluginGraph } from "./boot-stages";
+import {
+  clearRelationBases,
+  defineResource,
+  setRelationBases,
+  setWatermarkSource,
+} from "./resources";
+import type { LoadedServerPlugin } from "./types";
+import {
+  bootPluginGraph,
+  runPostReadyPhases,
+  runSettledPhase,
+} from "./boot-stages";
 import { clearHostServices } from "./host-service";
 
 // The boot asserts every declared host service; the services the `bun test`
@@ -61,5 +71,65 @@ describe("bootPluginGraph — the preload-declare assert", () => {
     expect(caught).toBeInstanceOf(Error);
     expect((caught as Error).message).toContain(`"${key}"`);
     expect(barrierRan).toBe(false);
+  });
+});
+
+// The settled phase of a serving host: `runSettledPhase` is the only caller of
+// `onSettled`, after the post-ready phases. Plugins are handed in directly — the
+// phases read only the loaded definitions.
+describe("runSettledPhase — the onSettled hook", () => {
+  // The post-ready phases hold a serving host to a change feed and a watermark
+  // source when it serves live reads; this graph serves none, but the resource
+  // runtime is a process singleton other suites in this bun process register
+  // DB-backed reads on, so install inert ones for the duration.
+  async function asServingHost<T>(fn: () => Promise<T>): Promise<T> {
+    setRelationBases((relation) => [relation]);
+    setWatermarkSource(() => Promise.resolve("0"));
+    try {
+      return await fn();
+    } finally {
+      setWatermarkSource(null);
+      clearRelationBases();
+    }
+  }
+
+  test("runs after every onAllReady, and never in the post-ready phases", async () => {
+    const events: string[] = [];
+    const ordered: LoadedServerPlugin[] = [
+      {
+        id: "test.slow-all-ready",
+        onAllReady: async () => {
+          await new Promise<void>((r) => setTimeout(r, 5));
+          events.push("onAllReady");
+        },
+      },
+      {
+        id: "test.settled",
+        onSettled: () => {
+          events.push("onSettled");
+        },
+      },
+    ];
+    await asServingHost(() => runPostReadyPhases(ordered));
+    expect(events).toEqual(["onAllReady"]);
+    await runSettledPhase(ordered);
+    expect(events).toEqual(["onAllReady", "onSettled"]);
+  });
+
+  test("a load-bearing plugin's throw rejects the phase; another's is logged", async () => {
+    const boom = (): never => {
+      throw new Error("settle-boom");
+    };
+    await runSettledPhase([{ id: "test.optional", onSettled: boom }]);
+
+    let caught: unknown;
+    try {
+      await runSettledPhase([
+        { id: "test.load-bearing", loadBearing: true, onSettled: boom },
+      ]);
+    } catch (err) {
+      caught = err;
+    }
+    expect((caught as Error).message).toBe("settle-boom");
   });
 });

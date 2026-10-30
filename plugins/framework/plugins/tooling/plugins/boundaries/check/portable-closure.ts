@@ -26,7 +26,7 @@ const SERVER_BARREL_RE =
  * import whose every named binding is `type` (both erase). The same reading the
  * `boundaries/no-platform-api` lint rule makes of one file.
  */
-function loadsAtRuntime(ref: ImportRef): boolean {
+export function loadsAtRuntime(ref: ImportRef): boolean {
   if (ref.typeOnly) return false;
   const named = /^\s*\{([^}]*)\}\s*$/.exec(ref.clause);
   if (named === null) return true;
@@ -38,7 +38,7 @@ function loadsAtRuntime(ref: ImportRef): boolean {
 }
 
 /** One closure module that imports a platform API or uses a host-only value, with the chain to it. */
-interface Offender {
+export interface Offender {
   module: string;
   /** Platform modules it imports, and host-only values it uses (`global Buffer`, `unguarded .unref()`). */
   specifiers: string[];
@@ -52,7 +52,7 @@ interface Offender {
  * chain from the barrel. `needs` memoizes each module's reading across the
  * run's barrels, whose closures overlap heavily (one parse per module).
  */
-async function platformOffenders(
+export async function platformOffenders(
   root: string,
   barrel: string,
   read: (path: string) => Promise<string | null>,

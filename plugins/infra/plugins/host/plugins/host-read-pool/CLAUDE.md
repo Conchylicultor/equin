@@ -117,7 +117,6 @@ froze). Pinned by `server/internal/pool.test.ts`. See
     - `debug/worktree-cleanup`
     - `infra/corpus-index`
     - `infra/host-fs`
-    - `infra/warmup`
     - `plugin-meta/plugin-tree`
     - `review/plugin-changes`
     - `tasks/attempt-work`

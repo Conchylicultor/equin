@@ -1,9 +1,8 @@
-import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import { profilerStart } from "@plugins/framework/plugins/server-core/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
-import { withHeavyReadSlot } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { yieldMacrotask } from "@plugins/packages/plugins/macrotask-yield/core";
+import { WarmupHost } from "./host";
 import { warmupRegistry, type WarmupSpec } from "./registry";
 import { recordWarmupRun } from "./runs";
 
@@ -11,20 +10,19 @@ import { recordWarmupRun } from "./runs";
  * How many warm-ups may run at once. Kept deliberately small: warm-ups drain
  * *while the server is already serving requests*, so the cap (plus the heavy-read
  * slot and macrotask yield) keeps the drain from competing with first requests.
- * host-read-pool exposes no sizing helper for a fresh semaphore, so a small
- * constant it is.
  */
 export const WARMUP_CONCURRENCY = 2;
 
 /**
  * Injectable dependencies for {@link drainWarmupsWith} — the real wiring lives in
  * {@link drainWarmups}, the seam exists so tests can drive the executor with
- * stubbed `isMain` / slot / yield / registry (mirroring `usage-index.ts`'s
+ * stubbed scope gate / slot / yield / registry (mirroring `usage-index.ts`'s
  * injectable-deps testability).
  */
 export interface WarmupExecDeps {
   warmups: WarmupSpec[];
-  isMain: () => boolean;
+  /** Whether a warm-up of this scope runs on this host (`WarmupHost.runs`). */
+  runs: (scope: WarmupSpec["scope"]) => boolean;
   withSlot: <T>(fn: () => Promise<T>) => Promise<T>;
   yieldMacrotask: () => Promise<void>;
   concurrency: number;
@@ -34,8 +32,9 @@ export interface WarmupExecDeps {
 
 /**
  * One warm-up's run in this process — kept in memory, since a warm-up runs
- * once per boot. `skipped`: a host-scoped warm-up on a backend that is not
- * main (the executor never started it).
+ * once per boot. `skipped`: a warm-up whose scope this host does not run (a
+ * `host`-scoped one on a desktop backend that is not main) — the executor
+ * never started it.
  */
 export type WarmupRun =
   | { outcome: "running"; startedAt: Date }
@@ -50,8 +49,9 @@ export type WarmupRun =
 
 /**
  * Drain the given warm-ups. Executor semantics (baked in, not per-consumer):
- * - `host`-scoped warm-ups are SKIPPED when `!isMain()` (kills N×-worktree
- *   redundancy on host-global work);
+ * - a warm-up whose scope the host does not run (`runs(scope)` false — on the
+ *   desktop, a `host`-scoped one off main: kills N×-worktree redundancy on
+ *   host-global work) is SKIPPED;
  * - each `run` is gated by a bounded `createSemaphore(concurrency)` and wrapped
  *   in `withSlot` (the host-wide heavy-read budget), with a macrotask
  *   `yieldMacrotask()` before each so request IO/timers interleave;
@@ -65,7 +65,7 @@ export async function drainWarmupsWith(deps: WarmupExecDeps): Promise<void> {
   await Promise.all(
     deps.warmups.map((w) =>
       gate.run(async () => {
-        if (w.scope === "host" && !deps.isMain()) {
+        if (!deps.runs(w.scope)) {
           deps.onRun?.(w.name, { outcome: "skipped" });
           return;
         }
@@ -85,7 +85,7 @@ export async function drainWarmupsWith(deps: WarmupExecDeps): Promise<void> {
           await runTracked(`warmup:${w.name}`, () =>
             deps.withSlot(() => w.run()),
           );
-          // A warm-up is an optimization, never a correctness dependency: every failure maps to the same handling (log loudly + keep draining the other warm-ups), so one bad warm-up can neither abort its siblings nor reject drainWarmups() into the post-serving boot path. Mirrors the framework's own onShutdown isolation loop in bin/index.ts.
+          // A warm-up is an optimization, never a correctness dependency: every failure maps to the same handling (log loudly + keep draining the other warm-ups), so one bad warm-up can neither abort its siblings nor reject drainWarmups() into the settled phase. Mirrors the framework's own onShutdown isolation loop.
         } catch (err) {
           console.error(`[warmup] ${w.name} failed`, err);
           error = err instanceof Error ? err.message : String(err);
@@ -105,15 +105,18 @@ export async function drainWarmupsWith(deps: WarmupExecDeps): Promise<void> {
 }
 
 /**
- * Drain every registered warm-up. Called once by the server boot path
- * (`server-core/bin/index.ts`) immediately after the `onAllReady` barrier, so
- * all migrations and `onReady` state are settled. Wires the real host deps.
+ * Drain every registered warm-up — this plugin's `onSettled`, so every serving
+ * host (the desktop's `serve`, the browser host) runs it once after the
+ * `onAllReady` barrier, with all migrations and `onReady` state settled, and
+ * an `exec` child never does. Scope and admission are the host's answer
+ * (`WarmupHost`).
  */
 export async function drainWarmups(): Promise<void> {
+  const host = WarmupHost.get();
   await drainWarmupsWith({
     warmups: [...warmupRegistry.values()],
-    isMain,
-    withSlot: withHeavyReadSlot,
+    runs: (scope) => host.runs(scope),
+    withSlot: (fn) => host.withSlot(fn),
     yieldMacrotask,
     concurrency: WARMUP_CONCURRENCY,
     onRun: recordWarmupRun,

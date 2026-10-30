@@ -62,18 +62,6 @@ export function distNames(dir: string, pid: number = process.pid): DistNames {
   };
 }
 
-/**
- * Where a build of `dir` pins the cache entries it uses until it publishes
- * (web-artifacts' `pinDir`): `<base>.pins`, a sibling the artifact-store
- * pruners read as a dist (`servedDistTargets`: every `<base>.*` but `.swap.`).
- * Not a transient sibling: the sweep keeps it, so a failed build's pins hold
- * its artifacts for the retry; the next successful publish removes it.
- */
-export function distPinPath(dir: string): string {
-  const { parent, base } = distNames(dir);
-  return join(parent, `${base}.pins`);
-}
-
 /** The staging dir a build of this process should compile into for `dir`. */
 export function distStagingPath(
   dir: string,
@@ -91,7 +79,7 @@ export function distStagingPath(
  * release `dir` currently points at (deleting it would dangle the live symlink).
  */
 export async function sweepDistLeftovers(dir: string): Promise<void> {
-  const { parent, prefixes } = distNames(dir);
+  const { parent, base, prefixes } = distNames(dir);
   if (!existsSync(parent)) return; // nothing was ever published here
   const entries = await readdir(parent);
 
@@ -122,7 +110,11 @@ export async function sweepDistLeftovers(dir: string): Promise<void> {
       entry.startsWith(prefixes.staging) ||
       entry.startsWith(prefixes.live) ||
       entry.startsWith(prefixes.swap) ||
-      entry.startsWith(prefixes.old)
+      entry.startsWith(prefixes.old) ||
+      // Legacy: a build once pinned its in-flight cache entries in a
+      // `<base>.pins` sibling (now a build lease, web-artifacts' `lease.ts`);
+      // one a failed build left would pin its entries forever.
+      entry === `${base}.pins`
     ) {
       await rm(join(parent, entry), { recursive: true, force: true });
     }

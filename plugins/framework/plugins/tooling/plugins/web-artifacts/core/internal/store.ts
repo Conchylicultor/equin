@@ -1,10 +1,11 @@
 // Content-addressed artifact store at `~/.equin/cache/web-artifacts/`, shared
 // across worktrees: a dir per artifact keyed by its inputs hash. Reuse bumps the
-// dir's mtime so live artifacts never age out; pruning follows the
-// `checks/core/cache.ts` shape (age + count bounds).
+// dir's mtime; pruning (age + a count bound over unreferenced entries) runs
+// under the store lock with build leases as roots — `lease.ts`.
 
 import {
   existsSync,
+  lstatSync,
   mkdirSync,
   readdirSync,
   readFileSync,
@@ -17,7 +18,6 @@ import {
 import { join } from "node:path";
 import { webArtifactsDir } from "../../data-dirs";
 import { precompressDir } from "./precompress";
-import { servedDistTargets } from "./served-dists";
 
 // Read off the declaration in this plugin's `data-dirs/index.ts` rather than
 // joining the data root by hand. These stay module-level consts, exactly as
@@ -33,9 +33,10 @@ const FINGERPRINTS_DIR = webArtifactsDir.file("fingerprints");
 
 // Pruning bounds. An artifact dir is small (one module + map); one build links
 // ~1600 of them, so these bound the UNREFERENCED population only — an entry a
-// live served dist links is a root and is never pruned (see `pruneCacheDir`).
+// dist links or a build lease pins is a root, never pruned and never counted
+// (see `pruneCacheDir`). ~9,000 entries are referenced on a busy host.
 const MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
-const MAX_ENTRIES = 8000;
+const MAX_UNREFERENCED = 8000;
 const TRIM_TO = 6000;
 
 /** Per-artifact metadata persisted next to `index.js`. */
@@ -92,6 +93,42 @@ export function ensureStoreDirs(): void {
 /** True iff the artifact completed publishing (meta.json is written last). */
 export function hasArtifact(dirName: string): boolean {
   return existsSync(join(artifactStorePath(dirName), "meta.json"));
+}
+
+/**
+ * Every complete artifact whose store name starts with `prefix`, most recently
+ * used first (reuse bumps a dir's mtime — {@link touchArtifact}), ties by name.
+ */
+export function listArtifacts(prefix: string): string[] {
+  let names: string[];
+  try {
+    names = readdirSync(STORE_DIR);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    return [];
+  }
+  const found: { name: string; mtimeMs: number }[] = [];
+  for (const name of names) {
+    if (!name.startsWith(prefix) || !hasArtifact(name)) continue;
+    let mtimeMs: number;
+    try {
+      mtimeMs = statSync(artifactStorePath(name)).mtimeMs;
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+      continue; // pruned underneath us
+    }
+    found.push({ name, mtimeMs });
+  }
+  found.sort((a, b) =>
+    b.mtimeMs !== a.mtimeMs
+      ? b.mtimeMs - a.mtimeMs
+      : a.name < b.name
+        ? -1
+        : a.name > b.name
+          ? 1
+          : 0,
+  );
+  return found.map((f) => f.name);
 }
 
 export function readArtifactMeta(dirName: string): ArtifactMeta {
@@ -169,52 +206,57 @@ export function artifactTmpDir(dirName: string): string {
   return tmp;
 }
 
-/** Opportunistic prune: age-out stale artifact dirs, then cap total count. */
-export function pruneStore(
-  referenced: ReadonlySet<string> = servedDistTargets(),
-): void {
-  ensureStoreDirs();
-  pruneCacheDir({
-    root: STORE_DIR,
-    maxAgeMs: MAX_AGE_MS,
-    maxEntries: MAX_ENTRIES,
-    trimTo: TRIM_TO,
-    referenced,
-  });
+/**
+ * One write-once cache dir's prune bounds. The count bound applies to the
+ * UNREFERENCED population only: an entry a dist links or a build lease pins is
+ * a root, never a victim and never counted (see {@link pruneCacheDir}).
+ */
+export interface CachePrunePolicy {
+  root: string;
+  /** Unreferenced entries older than this go (leftover `.tmp.*` dirs after an hour). */
+  maxAgeMs: number;
+  /** Past this many unreferenced entries, the oldest are trimmed… */
+  maxUnreferenced: number;
+  /** …down to this many. */
+  trimTo: number;
 }
+
+/** The artifact store's bounds (pruned by `pruneWebArtifactCaches`, `lease.ts`). */
+export const STORE_PRUNE_POLICY: CachePrunePolicy = {
+  root: STORE_DIR,
+  maxAgeMs: MAX_AGE_MS,
+  maxUnreferenced: MAX_UNREFERENCED,
+  trimTo: TRIM_TO,
+};
 
 /**
  * The ONE prune policy of every write-once cache dir (artifact store, vendor
- * sets, CSS cache): age out entries older than `maxAgeMs` (leftover `.tmp.*`
- * dirs from crashed builds after an hour), then, past `maxEntries`, trim the
- * oldest down to `trimTo`.
+ * sets, CSS cache): age out unreferenced entries older than `maxAgeMs`
+ * (leftover `.tmp.*` dirs from crashed builds after an hour), then, past
+ * `maxUnreferenced` unreferenced entries, trim the oldest down to `trimTo`.
  *
- * `referenced` are absolute entry paths a live served dist links to
- * (`servedDistTargets`). They are roots: never deleted, neither by age nor by
- * the count cap, and they do not count toward the cap's victims — a served dist
- * must keep resolving every link it has, however long the fleet has built since.
- * If referenced entries alone exceed the cap, they are all kept.
+ * `referenced` are absolute entry paths that are roots — every entry a dist on
+ * disk links (`servedDistTargets`) and every entry a live build lease pins
+ * (`liveLeaseTargets`). They are never deleted, neither by age nor by the count
+ * cap, and they do not count toward it: the cap bounds what is reclaimable, so
+ * it stays meaningful however many entries the fleet's dists hold. (It used to
+ * count roots too, so once they alone exceeded it every prune deleted EVERY
+ * unreferenced entry — including what in-flight builds were about to compose.)
  *
- * A build in flight is a root the same way: it pins every entry it builds or
- * reuses into a `web.*` sibling of its live dist (`pinDir`, pipeline.ts),
- * which `servedDistTargets` reads like any dist.
- *
- * `referenced` is a snapshot taken before the walk, and a walk over thousands
- * of entries is slow under load: an entry published (and pinned) after the
- * snapshot is not in it. So an entry modified within `SNAPSHOT_MARGIN_MS` of
- * this call is never deleted — the snapshot cannot speak for it.
+ * Call only under the exclusive store lock (`pruneWebArtifactCaches`): the
+ * roots a lease contributes are only stable there. A build of this code pins
+ * before it publishes, so its entries are always roots; an entry modified
+ * within `SNAPSHOT_MARGIN_MS` of this call is still never deleted (it counts
+ * toward the cap, never as a victim), for a build running older code that
+ * publishes without a lease.
  */
 
-/** Entries younger than this were published after the `referenced` snapshot could see them. */
+/** Entries younger than this may belong to a build that publishes without a lease. */
 const SNAPSHOT_MARGIN_MS = 60 * 1000;
 
-export function pruneCacheDir(opts: {
-  root: string;
-  maxAgeMs: number;
-  maxEntries: number;
-  trimTo: number;
-  referenced: ReadonlySet<string>;
-}): void {
+export function pruneCacheDir(
+  opts: CachePrunePolicy & { referenced: ReadonlySet<string> },
+): void {
   let names: string[];
   try {
     names = readdirSync(opts.root);
@@ -237,26 +279,59 @@ export function pruneCacheDir(opts: {
     }
     const isTmp = name.startsWith(".tmp.");
     if (now - mtimeMs > (isTmp ? 60 * 60 * 1000 : opts.maxAgeMs)) {
-      rmSync(path, { recursive: true, force: true });
+      removeCacheEntry(path);
     } else if (!isTmp) {
       if (now - mtimeMs < SNAPSHOT_MARGIN_MS) unjudged++;
       else candidates.push({ path, mtimeMs });
     }
   }
-  // Referenced entries count toward the population the cap bounds, but are
-  // never victims: only unreferenced ones are trimmed.
-  const referencedHere = names.filter((n) =>
-    opts.referenced.has(join(opts.root, n)),
-  ).length;
-  const total = candidates.length + unjudged + referencedHere;
-  if (total > opts.maxEntries) {
+  const total = candidates.length + unjudged;
+  if (total > opts.maxUnreferenced) {
     candidates.sort((a, b) => a.mtimeMs - b.mtimeMs); // oldest first
-    const excess = Math.min(
-      candidates.length,
-      Math.max(0, total - opts.trimTo),
-    );
+    // Young entries count toward the bound but are never victims.
+    const excess = Math.min(candidates.length, total - opts.trimTo);
     for (const { path } of candidates.slice(0, excess)) {
-      rmSync(path, { recursive: true, force: true });
+      removeCacheEntry(path);
+    }
+  }
+}
+
+/** True iff nothing (not even a dangling link) is at `path`. */
+function isGone(path: string): boolean {
+  try {
+    lstatSync(path);
+    return false;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    return true;
+  }
+}
+
+/**
+ * Remove one cache entry, tolerating exactly one failure: another process
+ * removing the same entry at the same time. A recursive rm racing another
+ * remover fails with ENOENT (a child already unlinked) or, on macOS, EPERM (the
+ * top path vanished between its stat and its unlink, so the dir is unlinked as
+ * a file). Either is fine iff the entry is gone afterwards; if it is still
+ * there, the other remover is mid-way, so remove it once more — any failure of
+ * that attempt that leaves the entry in place is real and throws. (A prune of
+ * this code is serialized by the store lock; the race is with older builds that
+ * prune unlocked.)
+ */
+export function removeCacheEntry(
+  path: string,
+  rm: (path: string) => void = (p) =>
+    rmSync(p, { recursive: true, force: true }),
+): void {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      rm(path);
+      return;
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code !== "ENOENT" && code !== "EPERM") throw err;
+      if (isGone(path)) return;
+      if (attempt >= 1) throw err;
     }
   }
 }

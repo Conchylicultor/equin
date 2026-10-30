@@ -4,6 +4,7 @@ import { taskStatusChanged } from "@plugins/tasks/plugins/tasks-core/server";
 import { taskAutoStartServed } from "./internal/resource";
 import { cancelAutoStartOnDropJob } from "./internal/cancel-on-drop";
 import { taskAutoStartArmed } from "./internal/tables-events";
+import { autoStartDroppedSweepWarmup } from "./internal/dropped-sweep";
 
 export {
   setTaskAutoStart,
@@ -21,7 +22,7 @@ export type { TaskAutoStartArmedPayload } from "./internal/tables-events";
 export default {
   portable: true,
   description:
-    "Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart, and the tasks.autoStartArmed trigger event whatever launches agents subscribes to.",
+    "Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart, and the tasks.autoStartArmed trigger event whatever launches agents subscribes to, and a host-scoped boot warm-up that clears leftover markers from already-dropped tasks.",
   contributions: [
     ...taskAutoStartServed.declare,
     Trigger({
@@ -31,5 +32,9 @@ export default {
       oneShot: false,
     }),
   ],
-  register: [taskAutoStartArmed, cancelAutoStartOnDropJob],
+  register: [
+    taskAutoStartArmed,
+    cancelAutoStartOnDropJob,
+    autoStartDroppedSweepWarmup,
+  ],
 } satisfies ServerPluginDefinition;

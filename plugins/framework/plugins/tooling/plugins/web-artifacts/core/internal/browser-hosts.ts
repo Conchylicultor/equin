@@ -13,10 +13,17 @@
 //   - `frames-sw.js`: the frame-serving Service Worker
 //     (`framework/browser-server`'s `web/frames-sw.ts`), a classic script (no
 //     imports), so bundled whole. Its address is the content of every repo file
-//     the last build of it loaded, their directories' listings and glob roots,
-//     the lockfile and the builder identity — recorded per host beside the
-//     store; a host never built, or whose list names a file that is gone,
-//     builds. It is a few modules, not the server graph.
+//     a build of it loaded, their directories' listings and glob roots, the
+//     lockfile and the builder identity. That list is only known after a
+//     build, so each build records it INSIDE the artifact dir it addresses
+//     (`inputs.json`: immutable, pruned with it). Planning asks every stored
+//     build of the host, most recently used first, whether this tree still
+//     hashes to its recorded address: the first that does is this tree's host;
+//     none does → build. No record is shared mutable state, so a build in one
+//     checkout cannot move another's address (a per-host "latest" record did:
+//     whichever checkout built last overwrote it, and every other checkout's
+//     `map-in-sync` recomputed its address from a foreign file list). It is a
+//     few modules, not the server graph.
 //
 // The build is gated: a repo module that imports a Node builtin (vite's
 // "externalized for browser compatibility") fails it.
@@ -24,7 +31,6 @@
 import { createHash } from "node:crypto";
 import {
   existsSync,
-  mkdirSync,
   readdirSync,
   readFileSync,
   rmSync,
@@ -33,7 +39,6 @@ import {
 } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import type { Plugin as VitePlugin } from "vite";
-import { webArtifactsDir } from "../../data-dirs";
 import {
   BROWSER_HOST_SPECIFIER_PREFIX,
   BROWSER_HOST_WORKER_SPECIFIER_PREFIX,
@@ -41,8 +46,10 @@ import {
 import { globRootsOf } from "./own-files";
 import {
   artifactDirName,
+  artifactStorePath,
   artifactTmpDir,
   hasArtifact,
+  listArtifacts,
   publishArtifact,
   touchArtifact,
   type ArtifactMeta,
@@ -66,7 +73,13 @@ const FRAMES_SW_ENTRY_REL =
 /** Where a host's declaration lives inside its plugin. */
 const HOST_ENTRY_REL = join("bin", "browser-host.ts");
 
-const INPUTS_DIR = webArtifactsDir.file("browser-hosts");
+/**
+ * A host's input record, published INSIDE its store dir beside `meta.json`:
+ * written once with the artifact, never rewritten, pruned with it. There is no
+ * per-host "latest" record — every checkout finds its own address by asking
+ * each recorded address whether this tree still hashes to it.
+ */
+const HOST_INPUTS_FILE = "inputs.json";
 
 /** One host of the fleet. */
 export interface BrowserHostPlan {
@@ -76,22 +89,25 @@ export interface BrowserHostPlan {
   /** `@browser-host/<pluginPath>` */
   specifier: string;
   entryFile: string;
-  /** The store dir of the current tree's host, when its inputs are known. */
+  /** The store dir of the current tree's host, when one is stored. */
   dirName: string | null;
   needsBuild: boolean;
 }
 
-/** The recorded inputs of a host's last build. */
-interface HostInputs {
+/** The inputs one build of a host loaded. */
+export interface HostInputs {
   /** Repo-relative files the bundler loaded. */
   files: string[];
   /**
    * Repo-relative static bases of the `import.meta.glob` patterns those files
-   * hold, listed recursively by the address. Absent from a record an older
-   * build wrote: such a record no longer describes the address, so the host
-   * builds.
+   * hold, listed recursively by the address.
    */
-  globRoots?: string[];
+  globRoots: string[];
+}
+
+/** {@link HostInputs} as recorded under the address they hash to. */
+export interface HostInputsRecord extends HostInputs {
+  inputsHash: string;
 }
 
 const slugOf = (pluginPath: string) => pluginPath.split("/plugins/").join(".");
@@ -113,54 +129,127 @@ export function hostModuleSource(pluginPath: string): string {
   );
 }
 
-function inputsFile(pluginPath: string): string {
-  return join(INPUTS_DIR, `${slugOf(pluginPath)}.json`);
+/**
+ * The address of a host over `inputs`: the files' contents, their
+ * directories' listings, each glob root's recursive listing, the lockfile and
+ * the builder identity. `null` when a listed file is gone (the list does not
+ * describe this tree). Reads are memoized per hasher, so asking it about many
+ * recorded lists (one per stored build) reads each file once.
+ */
+export function hostInputsHasher(
+  root: string,
+  identityHash: string,
+): (inputs: HostInputs) => string | null {
+  const digest = (bytes: Buffer | string) =>
+    createHash("sha256").update(bytes).digest("hex");
+  const fileDigests = new Map<string, string | null>();
+  const dirListings = new Map<string, string>();
+  const globListings = new Map<string, string>();
+  let lockDigest: string | null = null;
+  const fileDigest = (rel: string): string | null => {
+    let d = fileDigests.get(rel);
+    if (d === undefined) {
+      const abs = join(root, rel);
+      d = existsSync(abs) ? digest(readFileSync(abs)) : null;
+      fileDigests.set(rel, d);
+    }
+    return d;
+  };
+  const dirListing = (dir: string): string => {
+    let l = dirListings.get(dir);
+    if (l === undefined) {
+      l = readdirSync(join(root, dir)).sort().join("\0");
+      dirListings.set(dir, l);
+    }
+    return l;
+  };
+  const globListing = (rel: string): string => {
+    let l = globListings.get(rel);
+    if (l === undefined) {
+      const abs = join(root, rel);
+      l = existsSync(abs)
+        ? (readdirSync(abs, { recursive: true }) as string[])
+            .map((n) => n.split(sep).join("/"))
+            .sort()
+            .join("\0")
+        : "-";
+      globListings.set(rel, l);
+    }
+    return l;
+  };
+  return ({ files, globRoots }) => {
+    lockDigest ??= digest(readFileSync(join(root, "bun.lock")));
+    const h = createHash("sha256");
+    h.update(`identity\t${identityHash}\n`);
+    h.update(`lock\t${lockDigest}\n`);
+    const dirs = new Set<string>();
+    for (const rel of [...files].sort()) {
+      const d = fileDigest(rel);
+      if (d === null) return null;
+      h.update(`file\t${rel}\t${d}\n`);
+      dirs.add(dirname(rel));
+    }
+    for (const dir of [...dirs].sort()) {
+      h.update(`dir\t${dir}\t${dirListing(dir)}\n`);
+    }
+    for (const rel of [...globRoots].sort()) {
+      h.update(`globroot\t${rel}\t${globListing(rel)}\n`);
+    }
+    return h.digest("hex");
+  };
 }
 
-function readInputs(pluginPath: string): HostInputs | null {
-  const file = inputsFile(pluginPath);
-  if (!existsSync(file)) return null;
-  return JSON.parse(readFileSync(file, "utf8")) as HostInputs;
+/** One-shot {@link hostInputsHasher}. */
+export function hostInputsHash(
+  root: string,
+  inputs: HostInputs,
+  identityHash: string,
+): string | null {
+  return hostInputsHasher(root, identityHash)(inputs);
 }
 
 /**
- * The address of a host over `files` and `globRoots`: the files' contents,
- * their directories' listings, each glob root's recursive listing, the lockfile
- * and the builder identity. `null` when a listed file is gone (the recorded
- * list no longer describes this tree: build).
+ * The first record this tree still hashes to — its own recorded address —
+ * or `null` when none does (the host builds). A record matches exactly when
+ * every input its build loaded is unchanged here, so the build of this tree
+ * would load the same graph and land on the same address; which checkout
+ * wrote it, or what was built since, does not matter.
  */
-export function hostInputsHash(
-  root: string,
-  inputs: Required<HostInputs>,
-  identityHash: string,
-): string | null {
-  const { files, globRoots } = inputs;
-  const h = createHash("sha256");
-  h.update(`identity\t${identityHash}\n`);
-  h.update(`lock\t${readFileSync(join(root, "bun.lock"), "utf8")}\n`);
-  const dirs = new Set<string>();
-  for (const rel of [...files].sort()) {
-    const abs = join(root, rel);
-    if (!existsSync(abs)) return null;
-    h.update(`file\t${rel}\t`);
-    h.update(readFileSync(abs));
-    h.update("\n");
-    dirs.add(dirname(rel));
+export function matchHostRecord<R extends HostInputsRecord>(
+  records: Iterable<R>,
+  hash: (inputs: HostInputs) => string | null,
+): R | null {
+  for (const record of records) {
+    if (hash(record) === record.inputsHash) return record;
   }
-  for (const dir of [...dirs].sort()) {
-    const names = readdirSync(join(root, dir)).sort();
-    h.update(`dir\t${dir}\t${names.join("\0")}\n`);
+  return null;
+}
+
+/** The input records of every stored build of a host, most recently used first. */
+function* storedHostRecords(
+  pluginPath: string,
+): Generator<HostInputsRecord & { dirName: string }> {
+  const slug = slugOf(pluginPath);
+  for (const dirName of listArtifacts(`${slug}.browser-host.`)) {
+    const file = join(artifactStorePath(dirName), HOST_INPUTS_FILE);
+    let text: string;
+    try {
+      text = readFileSync(file, "utf8");
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+      // No record: a dir published before records moved under the address
+      // (never matchable; ages out with the store), or one another checkout's
+      // prune removed after listArtifacts snapshotted the store.
+      continue;
+    }
+    const record = JSON.parse(text) as HostInputsRecord;
+    if (artifactDirName(slug, "browser-host", record.inputsHash) !== dirName) {
+      throw new Error(
+        `browser host record ${file} names address ${record.inputsHash}, not its own dir ${dirName}`,
+      );
+    }
+    yield { ...record, dirName };
   }
-  for (const rel of [...globRoots].sort()) {
-    const abs = join(root, rel);
-    const names = existsSync(abs)
-      ? (readdirSync(abs, { recursive: true }) as string[])
-          .map((n) => n.split(sep).join("/"))
-          .sort()
-      : null;
-    h.update(`globroot\t${rel}\t${names === null ? "-" : names.join("\0")}\n`);
-  }
-  return h.digest("hex");
 }
 
 /** The builder identity, bound to the host module's source. */
@@ -172,8 +261,8 @@ function hostIdentity(identityHash: string, hostSource: string): string {
 
 /**
  * The hosts the fleet carries — one per fleet plugin with a
- * `bin/browser-host.ts` — each with its current address when its inputs are
- * recorded and unchanged files still describe it.
+ * `bin/browser-host.ts` — each at the stored address whose recorded inputs this
+ * tree still hashes to, or to build when none does.
  */
 export function planBrowserHosts(opts: {
   root: string;
@@ -185,26 +274,18 @@ export function planBrowserHosts(opts: {
     const entryFile = join(opts.root, "plugins", pluginPath, HOST_ENTRY_REL);
     if (!existsSync(entryFile)) continue;
     const hostSource = hostModuleSource(pluginPath);
-    const inputs = readInputs(pluginPath);
-    const hash =
-      inputs === null || inputs.globRoots === undefined
-        ? null
-        : hostInputsHash(
-            opts.root,
-            { files: inputs.files, globRoots: inputs.globRoots },
-            hostIdentity(opts.identityHash, hostSource),
-          );
-    const dirName =
-      hash === null
-        ? null
-        : artifactDirName(slugOf(pluginPath), "browser-host", hash);
+    const match = matchHostRecord(
+      storedHostRecords(pluginPath),
+      hostInputsHasher(opts.root, hostIdentity(opts.identityHash, hostSource)),
+    );
+    const dirName = match?.dirName ?? null;
     plans.push({
       pluginPath,
       hostSource,
       specifier: `${BROWSER_HOST_SPECIFIER_PREFIX}${pluginPath}`,
       entryFile,
       dirName,
-      needsBuild: dirName === null || !hasArtifact(dirName),
+      needsBuild: dirName === null,
     });
   }
   return plans;
@@ -213,7 +294,7 @@ export function planBrowserHosts(opts: {
 /** Records every repo module the worker bundle loads, and the static bases of their globs. */
 function moduleRecorder(root: string): {
   plugin: VitePlugin;
-  inputs: () => Required<HostInputs>;
+  inputs: () => HostInputs;
 } {
   const files = new Set<string>();
   const globRoots = new Set<string>();
@@ -255,11 +336,18 @@ export async function ensureBrowserHost(opts: {
   identityHash: string;
   minify: boolean;
   log: (line: string) => void;
+  /** Pin an entry into the build's lease before it is read or published (`lease.ts`). */
+  pin: (paths: readonly string[]) => Promise<void>;
 }): Promise<string> {
   const { root, plan } = opts;
   if (!plan.needsBuild && plan.dirName !== null) {
-    touchArtifact(plan.dirName);
-    return plan.dirName;
+    await opts.pin([artifactStorePath(plan.dirName)]);
+    // Pinned, so it stays if it is still there; a prune that ran since planning
+    // may have taken it, and then the host builds again.
+    if (hasArtifact(plan.dirName)) {
+      touchArtifact(plan.dirName);
+      return plan.dirName;
+    }
   }
   const { build: viteBuild, createLogger } = await import("vite");
   const slug = slugOf(plan.pluginPath);
@@ -345,12 +433,17 @@ export async function ensureBrowserHost(opts: {
       tailwindCandidates: [],
       builtAtMs: Date.now(),
     };
-    await publishArtifact(dirName, tmpDir, meta);
-    mkdirSync(INPUTS_DIR, { recursive: true });
+    // The record rides inside the artifact dir, published with it: immutable,
+    // keyed by the address it hashes to, gone when the artifact is pruned.
     writeFileSync(
-      inputsFile(plan.pluginPath),
-      JSON.stringify(inputs satisfies HostInputs, null, 2),
+      join(tmpDir, HOST_INPUTS_FILE),
+      JSON.stringify({
+        inputsHash: hash,
+        ...inputs,
+      } satisfies HostInputsRecord),
     );
+    await opts.pin([artifactStorePath(dirName)]);
+    await publishArtifact(dirName, tmpDir, meta);
     opts.log(
       `browser host ${plan.pluginPath}: host module + Service Worker (${files.length} repo modules, ${(bytes / 1024).toFixed(0)} KB) (${dirName})`,
     );

@@ -58,6 +58,9 @@ const PROVIDERS: Entry[] = [
   serverEntryFor("primitives/plugins/log-channels/plugins/memory-persistence", [
     "primitives/plugins/log-channels",
   ]),
+  serverEntryFor("infra/plugins/warmup/plugins/sole-host", [
+    "infra/plugins/warmup",
+  ]),
 ];
 
 // The committed migration history, read off disk by THIS harness.

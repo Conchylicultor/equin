@@ -19,12 +19,15 @@
 // adopted by the watcher), exactly as a user's write would — the seed settles
 // what it queued (`settleJobQueue`) rather than calling derivations by hand.
 // The page cannot connect before the handler exists, so nothing is served
-// mid-seed. Only `drainWarmups` (desktop warm-ups) is not run.
+// mid-seed. Then the settled phase (`runSettledPhase`: every declared warm-up)
+// starts WITHOUT blocking readiness — exactly as `serve` drains it while already
+// serving — and its promise is the host's `settled`.
 
 import { createRequestHandler } from "@plugins/framework/plugins/http-router/core";
 import {
   bootPluginGraph,
   runPostReadyPhases,
+  runSettledPhase,
   type ServerRegistryEntry,
 } from "./boot-stages";
 import { hostHttpRoutes } from "./host-routes";
@@ -66,6 +69,13 @@ export interface BrowserHost {
   keys: readonly string[];
   /** Where the boot spent its time, for the page to log. */
   boot: BrowserHostBoot;
+  /**
+   * The settled phase (`onSettled`: the warm-up drain), started once the host
+   * can serve and never awaited by the boot. Resolves when it is done; a
+   * failure is already logged loudly by the host, and rejects this too — await
+   * it (a test) before asserting on what the warm-ups produce.
+   */
+  settled: Promise<void>;
 }
 
 /** How long one browser-host boot took, on the worker's clock. */
@@ -124,8 +134,18 @@ export async function bootBrowserHost(
     },
     onUnmatched: opts.onUnmatched,
   });
+  // Not awaited: the host is ready to serve now, and catch-up work runs while
+  // it does. The catch is here, not at each entry, so none can forget it: it
+  // names the phase and rethrows, so the failure surfaces as the worker's
+  // unhandled rejection even when nothing awaits `settled`.
+  const settled = runSettledPhase(ordered);
+  void settled.catch((err: unknown) => {
+    console.error("[browser-host] the settled phase failed", err);
+    throw err;
+  });
   return {
     request,
+    settled,
     notifications: notificationsWsHandler,
     keys: Resource.Declare.getContributions().map((c) => c.key),
     boot: {

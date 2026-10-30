@@ -3,9 +3,9 @@ import type {
   BackgroundRun,
 } from "@plugins/infra/plugins/background/plugins/catalog/core";
 import { defineBackgroundKind } from "@plugins/infra/plugins/background/plugins/catalog/server";
-import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import {
   listRegisteredWarmups,
+  WarmupHost,
   warmupRunOf,
   type WarmupRun,
 } from "@plugins/infra/plugins/warmup/server";
@@ -30,9 +30,13 @@ function toRun(run: WarmupRun | undefined): BackgroundRun | null {
   };
 }
 
-/** Every declared warm-up as a catalog entry, with its run in this process. */
+/**
+ * Every declared warm-up as a catalog entry, with its run in this process.
+ * Whether it runs here is the host's answer (`WarmupHost.runs`) — the same
+ * one the drain reads, so the catalog and the executor cannot disagree.
+ */
 export function listWarmupEntries(): BackgroundEntryDraft[] {
-  const main = isMain();
+  const host = WarmupHost.get();
   return listRegisteredWarmups().map(({ spec: w, declaredIn }) => {
     const scope = w.scope === "host" ? "main" : "every-worktree";
     const lastRun = toRun(warmupRunOf(w.name));
@@ -43,7 +47,7 @@ export function listWarmupEntries(): BackgroundEntryDraft[] {
       group: "After boot",
       trigger: { kind: "boot" },
       scope,
-      runsHere: scope === "main" ? main : true,
+      runsHere: host.runs(w.scope),
       declaredIn,
       lastRun,
       history: {

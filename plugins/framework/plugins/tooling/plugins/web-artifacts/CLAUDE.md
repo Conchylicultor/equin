@@ -137,6 +137,19 @@ Key invariants:
   itself (`internal/browser-hosts.ts`, served as `@browser-host/<pluginPath>`)
   is `host.js` plus the frame-serving Service Worker (`frames-sw.js`, a classic
   script bundled whole, keyed by its own recorded inputs).
+- **A browser host's inputs are recorded under the address they hash to.** The
+  host artifact's address is the content of every repo file its build loaded
+  (vite's module list), their directories' listings, each `import.meta.glob`
+  static base's recursive listing, `bun.lock` and the builder identity. That
+  list is only known after a build, so it is published INSIDE the artifact dir
+  (`inputs.json`: `{ inputsHash, files, globRoots }`), never rewritten, pruned
+  with it. Planning (build and `map-in-sync` alike) walks every stored build of
+  the host, most recently used first, and takes the first whose recorded list
+  this tree still hashes to its recorded address (`matchHostRecord`; one
+  memoized hasher, so each file is read once); none ⇒ the host builds. Never
+  add a per-host "latest" record: the store is shared by every checkout, so
+  whichever built last would overwrite it and every other checkout's
+  `map-in-sync` would recompute its address from a foreign file list.
 - **An artifact's address covers its glob roots.** A literal
   `import.meta.glob` inlines what it matches, possibly outside the plugin (the
   bundled migrations' `data/*.sql`, the repo's `/config/**`). Each pattern's
@@ -190,6 +203,39 @@ Key invariants:
   precompresses the shell's own top-level files in staging. The gateway only
   negotiates (`gateway/encoding.go`). Readers that list an entry's files filter
   by extension, so a `.br`/`.gz` never reads as a module.
+- **A prune can never remove what a build in progress will compose.** Every
+  checkout's build prunes the shared caches at its start, while other builds
+  are between reusing/publishing entries and composing them — minutes in which
+  no dist links them yet. So each pipeline run holds a **build lease**
+  (`core/internal/lease.ts`): it PINS every entry (page and worker artifacts,
+  registry, browser host, worker links and worker tree, vendor set, package
+  assets, CSS cache dir) — a symlink in its own
+  `~/.equin/cache/web-artifacts/leases/<pid>-<rand>/` — BEFORE it checks the
+  entry exists or publishes it, and releases the lease after compose, once the
+  staging dist (`web.staging.*`, a root) links everything. Pins take a SHARED
+  flock on `store.lock`; `pruneWebArtifactCaches` holds it EXCLUSIVE for its
+  whole run (roots read + deletes), so the two never interleave: a pin that
+  lands first is a root, a prune that lands first is over before the build
+  looks, and a planned reuse it removed is simply built (`ensure` re-checks
+  `hasArtifact` after pinning). The release removes the lease dir under the
+  shared lock too, so a prune never reads a half-removed lease. Concurrent pins
+  of one lease fold into one batch (`createCoalescer`): a contended lock costs
+  one `waitForFlock` child per lease, never one per pin (a build pins ~1,700
+  artifacts at once). The lock also serializes concurrent prunes.
+  Crash-safe through the kernel, like `.build.lock`: the owner holds an
+  exclusive flock on the lease's `owner.lock` for its life; a prune that can
+  take it knows the owner died and reaps the lease. No pid, no heartbeat, no
+  age grace. **The count cap bounds the UNREFERENCED population only**
+  (`maxUnreferenced`/`trimTo`): roots (dist links + leases) are never victims
+  and never counted. It used to count roots, and once the fleet's dists alone
+  linked more entries than the cap (~10,800 vs 8,000), every prune deleted
+  EVERY unreferenced entry — including what concurrent builds had just
+  published — and compose failed with "N mapped URL(s) do not resolve to a real
+  file" on every build. Removal tolerates exactly a concurrent remover
+  (`removeCacheEntry`: ENOENT, or macOS's EPERM when the top path vanished
+  mid-rm, iff the entry is gone; once retried if it is still there). A build
+  running code older than this neither pins nor locks, so its prune can still
+  remove a new build's entries until every checkout has rebased.
 - **Expected vs deployed cannot drift**: the pipeline and the
   `web-artifacts:map-in-sync` check share the same planning code
   (`core/internal/plan.ts`).
@@ -216,17 +262,13 @@ Key invariants:
   app.css keeps `source(none)` (auto-detection from the repo root walked
   `.claude/worktrees/` on main, ~5s → ~320s) for the scans Tailwind still runs
   itself; `tailwind-scan-covers-classes` guards it.
-- **A build in flight pins what it uses.** Pruning keeps every entry a dist
-  links (`servedDistTargets`, every `web.*` sibling of a namespace's live link).
-  A running pipeline links each entry it builds or reuses — artifacts, the
-  registry, hosts, worker links and tree, the vendor set — into
-  `<live>.pins/artifacts/` (`pinDir`) the moment it has it; the build CLI
-  removes the dir after a successful publish and keeps it after a failure, so
-  the retry reuses what the failed run built. And a prune never deletes an
-  entry modified within a minute of its call: its `referenced` snapshot is
-  older than its walk, so it cannot speak for an entry published meanwhile.
-  Without both, concurrent builds' prunes deleted entries a build had published
-  minutes before its compose read them.
+- **A young entry is never a prune victim.** A prune never deletes an entry
+  modified within a minute of its call (it counts toward the cap, never as a
+  victim): a build of this code pins before it publishes, but a build running
+  older code publishes without a lease, and no root can speak for its entry
+  yet. (The build lease above superseded a per-dist `<live>.pins/` link dir,
+  which pinned only after reading or publishing, so a prune could still take a
+  reused entry in between; the dist sweep reclaims a leftover one.)
 - **A served dist keeps serving every address it ever served, while the cache
   still holds it.** A tab resolves imports only through the import map of the
   page it loaded, and fetches much of it lazily — hours later for a background
@@ -238,15 +280,17 @@ Key invariants:
   inline; a second publish of an address is discarded), so an old tab gets
   exactly the files it was built with and cannot reach a newer build's. The set
   is bounded by the cache's own pruning; carrying never bumps a target's mtime.
-  **Pruning never breaks a served dist.** `pruneStore` / `pruneVendorSets` /
-  `pruneGlobalCssCache` (one `pruneCacheDir` policy: 14-day age-out, then an
-  oldest-first count trim) treat every `artifacts/<name>` link target of every
-  dist under the worktrees dir (`web`, `web.live.*`, `web.staging.*`, release
-  scratch dists — `core/internal/served-dists.ts`) as a root: never deleted by
-  age or by the cap, even when the referenced entries alone exceed it. Only
-  unreferenced entries age out. (Before this, an idle worktree lost its modules
-  to the fleet's builds and never booted again.) Dead dists release their
-  entries when their worktree is reaped.
+  **Pruning never breaks a served dist.** `pruneWebArtifactCaches`
+  (`core/internal/lease.ts`; one `pruneCacheDir` policy per cache —
+  `STORE_PRUNE_POLICY`, `VENDOR_PRUNE_POLICY`, `CSS_PRUNE_POLICY`,
+  `PACKAGE_ASSETS_PRUNE_POLICY`: 14-day
+  age-out, then an oldest-first count trim) treats every `artifacts/<name>` link
+  target of every dist under the worktrees dir (`web`, `web.live.*`,
+  `web.staging.*`, release scratch dists — `core/internal/served-dists.ts`) as a
+  root: never deleted by age or by the cap. Only unreferenced entries age out.
+  (Before this, an idle worktree lost its modules to the fleet's builds and
+  never booted again.) Dead dists release their entries when their worktree is
+  reaped.
   Accepted race, deliberately unlocked: another worktree's prune may remove a
   target between the check and the swap — that one address 404s until the next
   publish. It lives in `cli/`, not `core/`, because `builderSourceDigest` hashes
@@ -269,6 +313,11 @@ Key invariants:
     - `framework/web-core.loadBabelContributions`
     - `infra/namespace.MAIN_COMPOSITION_ID`
     - `infra/paths.worktreesDir`
+    - `packages/coalesce.createCoalescer`
+    - `packages/flock.flockRelease`
+    - `packages/flock.flockTry`
+    - `packages/flock.flockTryShared`
+    - `packages/flock.waitForFlock`
     - `packages/semaphore.createSemaphore`
   - Exports (types):
     - `ArtifactKind`
@@ -313,7 +362,7 @@ Key invariants:
     - `framework/cli/build`
     - `framework/tooling/codegen`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/expected.ts`, `core/internal/global-css.ts`, `core/internal/identity.ts`, `core/internal/own-files.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/tailwind-candidates.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts` (debt)
+  - Exempts itself from: `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/expected.ts`, `core/internal/global-css.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/own-files.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/tailwind-candidates.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts` (debt)
 - Cli:
   - Exports (types): `CarryForwardResult`
   - Exports (values): `carryForwardServedEntries`

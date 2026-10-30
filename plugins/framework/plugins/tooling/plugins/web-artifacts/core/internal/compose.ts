@@ -48,7 +48,7 @@ export interface ComposeOptions {
    * a symlink into this host's store either ships dangling or, if the copier
    * dereferenced, races the store: a release writes its dist in phase 1 (a
    * `build --hermetic` child that drops `.build.lock` on exit) and copies it in
-   * phase 3, and in that unlocked window a concurrent build's `pruneStore()` can
+   * phase 3, and in that unlocked window a concurrent build's `pruneWebArtifactCaches()` can
    * unlink the very artifact dirs the links point at. Materializing at
    * composition time closes the window instead of narrowing it: the produced
    * tree never referenced the store at all.

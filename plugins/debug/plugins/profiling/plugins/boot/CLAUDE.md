@@ -52,6 +52,7 @@
     - `ui/tokens/categorical --categorical-6`
     - `ui/tokens/categorical --categorical-7`
     - `ui/tokens/categorical --categorical-8`
+    - `ui/tokens/categorical --categorical-9`
     - `ui/tokens/color-palette --destructive`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --success`

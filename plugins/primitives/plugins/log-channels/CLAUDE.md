@@ -33,8 +33,8 @@ channel either declares a durable file sink or it doesn't.
   from `@plugins/primitives/plugins/log-channels/server`. This registers the
   channel AND (on the desktop, via `LogPersistence`) a `defineFileSink` under the per-worktree logs dir (declared at
   import, its path resolved lazily on first use) — one declared, enumerable, 128 MB × 3-rotation growth bound
-  (`@plugins/infra/plugins/file-sink`, merged into `retention.getGrowthBounds()` as
-  `file:<id>`). The `description` is what makes a perf sink (`health`,
+  (`@plugins/infra/plugins/file-sink`, listed by `getFileSinks()` beside
+  retention's table bounds). The `description` is what makes a perf sink (`health`,
   `health-host`, `slow-op-markers`) distinguishable from an ops log in
   `getFileSinks()`. A channel never declares who reads it — alerting belongs to
   the code that detects the failure (see `infra/file-sink`, *A sink is

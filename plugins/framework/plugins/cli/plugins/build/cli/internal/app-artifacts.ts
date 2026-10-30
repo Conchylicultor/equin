@@ -65,11 +65,7 @@ import {
   type MigrationAnswer,
 } from "@plugins/framework/plugins/cli/plugins/migrations/cli";
 import { planCompositionSet } from "./composition-set";
-import {
-  distPinPath,
-  distStagingPath,
-  publishDistAtomic,
-} from "./dist-publish";
+import { distStagingPath, publishDistAtomic } from "./dist-publish";
 import { stampExperimentalMarker } from "./experimental-marker";
 import {
   MAIN_COMPOSITION_ID,
@@ -969,7 +965,6 @@ export async function buildAndPublishWebDist(
         runWebArtifactsPipeline({
           root,
           stagingDir: stagingPath,
-          pinDir: distPinPath(livePath),
           minify: opts.minify,
           buildId,
           buildCommit: opts.headAtStart,
@@ -1168,8 +1163,6 @@ export async function buildAndPublishWebDist(
     "atomic publish",
   );
   await publishDistAtomic({ dir: livePath, stagingPath });
-  // The live dist links everything the run pinned: the pins have done their job.
-  await rm(distPinPath(livePath), { recursive: true, force: true });
   endPublish();
 
   return { ok: true, steps, stagingPath, livePath, buildCommit, graphHash };

@@ -32,6 +32,8 @@ const PHASE_ORDER = [
   "onReadyBlocking",
   "onReady",
   "onAllReady",
+  "settled",
+  "onSettled",
 ];
 
 const PHASE_CONFIG: Record<string, PhaseConfig> = {
@@ -74,6 +76,16 @@ const PHASE_CONFIG: Record<string, PhaseConfig> = {
     label: "onAllReady (parallel)",
     color: "bg-categorical-8",
     bg: "bg-categorical-8/10",
+  },
+  settled: {
+    label: "Settled",
+    color: "bg-categorical-9",
+    bg: "bg-categorical-9/10",
+  },
+  onSettled: {
+    label: "onSettled (parallel)",
+    color: "bg-categorical-9",
+    bg: "bg-categorical-9/10",
   },
 };
 
@@ -161,8 +173,8 @@ const PHASE_DELTA_COLUMNS: ColumnDef<PhaseDeltaRow>[] = [
  * CAVEAT: onReadyBlocking / onReady plugins run under Promise.all, so the
  * per-span (per-plugin) footprint deltas summed here overlap in wall-clock time
  * and are only directional. The phase-boundary checkpoints (boot-start →
- * after-import → after-onReadyBlocking → after-onReady → after-onAllReady) are
- * the authoritative numbers.
+ * after-import → after-onReadyBlocking → after-onReady → after-onAllReady →
+ * after-settled) are the authoritative numbers.
  */
 function MemorySummary({
   spans,
