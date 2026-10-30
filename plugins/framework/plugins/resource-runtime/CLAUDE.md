@@ -662,7 +662,12 @@ the part of `deliverMs` the entry's declared throttle held the change
 (`PendingNotify.holdMs`: enqueue → the window's release,
 `debounceReleasedAt`; 0 on the leading edge or without a throttle). A tab
 splits it into the `update` signal's `throttle-hold` phase, so a declared hold
-never reads as slowness.
+never reads as slowness. `ResourceDelivery.queueMs` (`PendingNotify.queueMs`,
+stamped where `drainEntry` takes the pending) is the part after the hold spent
+waiting for other drains — an earlier pass's barrier entries, an earlier level
+of this one, or a leaf's own previous lane still in flight. server-core hands it to the profiler as the
+delivery's `queue`, so `deliver:<key>` is judged on its own drain and a slow
+pass is filed once (`research/2026-10-30-global-slow-op-flush-queue.md`).
 
 ## Invariant harness (`core/*.test.ts` + `core/test-support.ts`)
 

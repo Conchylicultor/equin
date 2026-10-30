@@ -37,6 +37,7 @@ import {
   type FlightSpan,
   type FlightWindow,
   type SlowSpan,
+  type SlowWait,
   type SpanKind,
   type Track,
   type WaitBand,
@@ -519,8 +520,8 @@ describe("claims — a slow op filed once, by the innermost op that was slow", (
           });
         });
         fakeNow = 3000;
-        // queue-health.pulse waited 3000 ms — 2900 of it on the filed loader —
-        // plus a 50 ms declared hold.
+        // queue-health.pulse waited 3000 ms: a 50 ms declared hold first, then
+        // its drain — 2850 of it on the filed loader.
         recordSpan("push", "deliver:queue-health.pulse", 3000, undefined, {
           latency: true,
           waits: { "throttle-hold": 50 },
@@ -538,9 +539,143 @@ describe("claims — a slow op filed once, by the innermost op that was slow", (
     const deliver = getRuntimeProfile().slowest.push.find(
       (s) => s.label === "deliver:queue-health.pulse",
     )!;
-    expect(deliver.excludedMs).toBe(2950);
-    expect(deliver.claims).toEqual({ "loader context-usage": 2900 });
+    // The hold leads the window, so the claim is counted only past it: no
+    // interval is taken off twice.
+    expect(deliver.excludedMs).toBe(2900);
+    expect(deliver.claims).toEqual({ "loader context-usage": 2850 });
     expect(deliver.waits).toEqual({ "throttle-hold": 50 });
+  });
+});
+
+describe("lanes — a delivery queued behind an earlier flush pass", () => {
+  function fileOver(bar: number, filed: string[]) {
+    return onSlowSpan(
+      (span, claim) => {
+        if (span.durationMs - span.excludedMs < bar) return;
+        filed.push(`${span.kind} ${span.label}`);
+        claim();
+      },
+      { thresholdMs: 0 },
+    );
+  }
+  function watchWaits(seen: SlowWait[]) {
+    return onSlowWait((w) => seen.push(w), { thresholdMs: 0 });
+  }
+
+  // Pass N runs 0 → 2100 holding `slow`; `x` turns stale at 300, waits for
+  // pass N, and is drained by pass N+1 in 20 ms.
+  async function passThenQueued(passN: () => Promise<void> | void) {
+    await recordEntrySpan("flush", "flushNotifies", passN);
+    await recordEntrySpan("flush", "flushNotifies", () => {
+      fakeNow = 2120;
+      recordSpan("push", "deliver:x", 1820, undefined, {
+        latency: true,
+        queue: { layer: "flush-queue", ms: 1800 },
+      });
+    });
+  }
+
+  test("an unfiled slow pass: the queue is filed once, as the lane's", async () => {
+    const filed: string[] = [];
+    const seen: SlowWait[] = [];
+    const a = fileOver(1000, filed);
+    const b = watchWaits(seen);
+    try {
+      await passThenQueued(async () => {
+        // Under every bar: a join wait, nothing of its own.
+        await recordEntrySpan("push", "slow", () => {
+          fakeNow = 2100;
+          chargeWait("read-coalesce", 2100, "join");
+        });
+      });
+    } finally {
+      a.dispose();
+      b.dispose();
+    }
+    // The delivery is judged on its own 20 ms only.
+    expect(filed).toEqual([]);
+    const deliver = getRuntimeProfile().slowest.push.find(
+      (s) => s.label === "deliver:x",
+    )!;
+    expect(deliver.excludedMs).toBe(1800);
+    expect(deliver.waits).toEqual({ "flush-queue": 1800 });
+    expect(seen).toEqual([
+      {
+        layer: "flush-queue",
+        ms: 1800,
+        caller: { kind: "push", label: "deliver:x" },
+        latency: true,
+      },
+    ]);
+  });
+
+  test("a pass that filed its slow op: the queue behind it is net of it", async () => {
+    const filed: string[] = [];
+    const seen: SlowWait[] = [];
+    const a = fileOver(1000, filed);
+    const b = watchWaits(seen);
+    try {
+      await passThenQueued(async () => {
+        await recordEntrySpan("push", "slow", async () => {
+          await recordEntrySpan("loader", "slow", () => {
+            fakeNow = 2100;
+          });
+        });
+      });
+    } finally {
+      a.dispose();
+      b.dispose();
+    }
+    expect(filed).toEqual(["loader slow"]);
+    // Queue [300, 2100] lies inside the filed loader [0, 2100]: nothing left.
+    expect(seen).toEqual([
+      expect.objectContaining({ layer: "flush-queue", ms: 0 }),
+    ]);
+  });
+
+  test("a pass filed on its own time is a claim on its lane", async () => {
+    const filed: string[] = [];
+    const seen: SlowWait[] = [];
+    const a = fileOver(1000, filed);
+    const b = watchWaits(seen);
+    try {
+      await passThenQueued(() => {
+        fakeNow = 2100; // the pass's own work
+      });
+    } finally {
+      a.dispose();
+      b.dispose();
+    }
+    expect(filed).toEqual(["flush flushNotifies"]);
+    expect(seen.map((w) => w.ms)).toEqual([0]);
+  });
+
+  test("a claim in another lane does not net the queue", async () => {
+    const filed: string[] = [];
+    const seen: SlowWait[] = [];
+    const a = fileOver(1000, filed);
+    const b = watchWaits(seen);
+    try {
+      // A slow sub-origin loader, filed, in the `sub` lane over the same time.
+      await recordEntrySpan("sub", "other", async () => {
+        await recordEntrySpan("loader", "other", () => {
+          fakeNow = 2100;
+        });
+      });
+      fakeNow = 2100;
+      await recordEntrySpan("flush", "flushNotifies", () => {
+        fakeNow = 2120;
+        recordSpan("push", "deliver:x", 1820, undefined, {
+          latency: true,
+          queue: { layer: "flush-queue", ms: 1800 },
+        });
+      });
+    } finally {
+      a.dispose();
+      b.dispose();
+    }
+    expect(filed).toEqual(["loader other"]);
+    expect(seen.map((w) => w.ms)).toEqual([1800]);
   });
 });
 

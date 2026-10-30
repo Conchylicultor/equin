@@ -116,6 +116,20 @@ never less). A plain leaf (a `db` query) never subtracts a sibling's claim:
 concurrent siblings are independent work. See
 `research/2026-10-30-global-slow-op-one-cause-one-report.md`.
 
+**Lanes — a queue behind an earlier entry.** A root entry kind is a *lane*
+(`flush` passes run one after another). Every claim that reaches a root entry,
+and a root entry filed itself, is also kept in its lane's ring (`laneClaims`,
+positioned, bounded at 32, drop-oldest), which outlives the entry. A latency
+leaf's window is laid out `waits` | `queue` | own part: `opts.queue: { layer,
+ms }` (latency leaves only — a type error otherwise) is the part spent queued
+for its lane (a delivery waiting for an earlier pass). The leaf excludes it in
+full and is judged on its own part only (claims are intersected with that part,
+so nothing is taken off twice). The queue's remainder, net of what the lane
+claimed inside it, goes to `onSlowWait` as `{ layer, ms, caller: the leaf,
+latency: true }`, so a slow pass is filed once (by its slow op, or as the
+lane's queue), never again by each delivery behind it. See
+`research/2026-10-30-global-slow-op-flush-queue.md`.
+
 ## Windowed max (`recentMaxMs` / `maxAgeMs`)
 
 Each aggregate keeps a rolling ~5-min bucketed max: `recentMaxMs` answers "is it slow NOW"
@@ -156,7 +170,8 @@ imports `server/`, so on the client every entry point is a transparent passthrou
 - `onSlowWait(handler, { thresholdMs })` — the push seam for a slow `queue`
   wait: called once per wait, from `chargeWait` (an ancestor's union would
   count it once per level), with the layer, the ms and the innermost open
-  entry that waited. Context-less waits already become a `db [layer]` span and
+  entry that waited — and from a latency leaf's `queue` (see Lanes), flagged
+  `latency: true`. Context-less waits already become a `db [layer]` span and
   are not handed here. slow-ops files each as `wait <layer>`.
 - `currentCallerKind()` — the `kind` of the **innermost** enclosing entry point (or
   `undefined` when none is active). A thin read of the same ambient context; the DB pool

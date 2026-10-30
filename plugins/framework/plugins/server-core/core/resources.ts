@@ -397,6 +397,10 @@ export function onResourcePush(cb: ResourcePushObserver): () => void {
   return () => pushObservers.delete(cb);
 }
 
+// The wait layer a delivery's queue for the flush lane is charged on (and
+// filed as, `wait flush-queue`, when slow).
+const FLUSH_QUEUE_LAYER = "flush-queue";
+
 // Delivery-latency observer registry — the same shape as `onResourcePush` above.
 // The runtime reports EVERY delivery to >=1 subscriber (first notify → ws.send);
 // the profiler keeps only an aggregate and the slow-op funnel keeps only the ones
@@ -406,6 +410,7 @@ export function onResourcePush(cb: ResourcePushObserver): () => void {
 // change's wall clock when the frame carried `timing`).
 export type ResourceDeliveryObserver = (key: string, info: RtDelivery) => void;
 const deliveryObservers = new Set<ResourceDeliveryObserver>();
+
 export function onResourceDelivery(cb: ResourceDeliveryObserver): () => void {
   deliveryObservers.add(cb);
   return () => deliveryObservers.delete(cb);
@@ -478,11 +483,14 @@ const runtime = createResourceRuntime({
   // cannot: time the change waited before this thread read its NOTIFY (an open
   // writing transaction, a stalled serving thread).
   //
-  // A LATENCY leaf: the delivery waited on the flush's work, it did not do it.
-  // It is judged net of the declared throttle hold and of every op the flush
-  // already filed as slow inside its window (a slow loader of another resource
-  // in the same cycle) — so a delivery is filed only when it was slow for a
-  // reason nothing else reported.
+  // A LATENCY leaf: first notify → send is the declared throttle hold, then
+  // the queue for the flush lane (an earlier pass still running, or an earlier
+  // level of this one — other resources' drains), then this resource's own
+  // drain. It is judged on its own drain only, net of every op the flush
+  // already filed inside it; the queue is the lane's, filed once as
+  // `wait flush-queue` net of what the lane already filed — so a slow pass is
+  // reported by what made it slow, never again by each delivery behind it.
+  // See research/2026-10-30-global-slow-op-flush-queue.md.
   onDelivered: (key, info) => {
     recordSpan(
       "push",
@@ -500,6 +508,7 @@ const runtime = createResourceRuntime({
       {
         latency: true,
         ...(info.holdMs > 0 && { waits: { "throttle-hold": info.holdMs } }),
+        queue: { layer: FLUSH_QUEUE_LAYER, ms: info.queueMs },
       },
     );
     for (const observer of deliveryObservers) observer(key, info);

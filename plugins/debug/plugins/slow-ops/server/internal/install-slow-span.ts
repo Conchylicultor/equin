@@ -10,6 +10,7 @@ import { recordSlowOp } from "./record-slow-op";
 import {
   perfFloorMs,
   resolveSlowThreshold,
+  resolveWaitThreshold,
   slowSpanMs,
   type Thresholds,
 } from "./resolve-threshold";
@@ -108,16 +109,18 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
     { thresholdMs: floor },
   );
 
-  // The gate as the slow op: a `queue` wait at least the loader bar long files
+  // The gate as the slow op: a `queue` wait past its bar files
   // `wait <layer>` — once per wait, where it happened, its waiter the caller —
   // so a congested gate is ONE row and one report naming it, with every op
   // that queued on it among its callers, instead of a report against each of
   // them. The profiler hands only `queue` waits here (a `join` is the run it
-  // joined, which reports itself). Judged against `loaderMs`: no separate knob,
-  // which would also lower the perf floor for every span.
+  // joined, which reports itself). A latency leaf's queue (a delivery waiting
+  // for the flush lane) arrives already net of what the lane filed inside it.
+  // The bar per wait is `resolveWaitThreshold`; the floor is the lowest of them.
   waitDisposer = onSlowWait(
     (wait: SlowWait) => {
-      const threshold = thresholds.loaderMs;
+      const threshold = resolveWaitThreshold(wait, thresholds);
+      if (wait.ms < threshold) return;
       const trace = captureTrace({
         kind: WAIT_KIND,
         label: wait.layer,
@@ -137,6 +140,6 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
         traceId: trace?.id,
       });
     },
-    { thresholdMs: thresholds.loaderMs },
+    { thresholdMs: Math.min(thresholds.loaderMs, thresholds.updateMs) },
   );
 }

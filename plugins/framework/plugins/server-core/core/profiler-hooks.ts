@@ -46,11 +46,17 @@ export interface ProfilerSpanDetail {
   measures?: Partial<Record<ProfilerMeasureName, number>>;
 }
 
-/** The profiler's `LeafSpanOptions`, seen through the seam. */
-export interface ProfilerLeafOptions {
-  waits?: Record<string, number>;
-  latency?: boolean;
-}
+/**
+ * The profiler's `LeafSpanOptions`, seen through the seam: a `queue` exists
+ * only on a latency leaf.
+ */
+export type ProfilerLeafOptions =
+  | { waits?: Record<string, number>; latency?: false }
+  | {
+      waits?: Record<string, number>;
+      latency: true;
+      queue?: { layer: string; ms: number };
+    };
 
 /**
  * The profiler operations server-core's resource runtime depends on. Param types

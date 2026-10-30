@@ -1074,6 +1074,15 @@ interface PendingNotify {
    */
   holdMs?: number;
   /**
+   * How long this pending, once released (`enqueuedAt + holdMs`), waited for
+   * a drain to take it: an earlier pass's barrier entries, an earlier depth
+   * level of this pass, or (a leaf) its own previous lane still in flight.
+   * Stamped by `drainEntry` when it takes the pending. Time spent waiting on
+   * other drains, not this one — `onDelivered` reports it apart
+   * (`ResourceDelivery.queueMs`) so a delivery is judged on its own drain only.
+   */
+  queueMs?: number;
+  /**
    * `performance.now()` of the MOST RECENT notify merged into this pending — the
    * drain's freshness floor: every change coalesced here was committed before
    * this instant (a `pg_notify` is delivered only after its transaction commits,
@@ -1617,6 +1626,12 @@ export interface LoadInfo {
 export interface ResourceDelivery {
   latencyMs: number;
   holdMs: number;
+  /**
+   * The part of `latencyMs` after the hold spent queued for the flush lane
+   * (`PendingNotify.queueMs`): waiting on other drains. What is
+   * left — `latencyMs − holdMs − queueMs` — is this resource's own drain.
+   */
+  queueMs: number;
   subscribers: number;
   frameChars: number;
   changedAt?: number;
@@ -1662,6 +1677,7 @@ function delivery(
   return {
     latencyMs: performance.now() - pending.enqueuedAt,
     holdMs: pending.holdMs ?? 0,
+    queueMs: pending.queueMs ?? 0,
     subscribers,
     frameChars,
     ...(pending.changedAt !== undefined
@@ -6469,6 +6485,13 @@ export function createResourceRuntime(
     if (entry.debounceMs && releasedAt !== undefined)
       for (const p of pending)
         p.holdMs = Math.max(0, releasedAt - p.enqueuedAt);
+    // Each pending's wait for the lane: released → this drain taking it.
+    const drainStartedAt = performance.now();
+    for (const p of pending)
+      p.queueMs = Math.max(
+        0,
+        drainStartedAt - (p.enqueuedAt + (p.holdMs ?? 0)),
+      );
     entry.pendingNotifies.clear();
     const owedAcks = Array.from(entry.pendingAcks.values());
     entry.pendingAcks.clear();

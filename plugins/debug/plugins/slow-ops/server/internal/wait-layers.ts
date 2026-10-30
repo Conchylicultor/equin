@@ -19,6 +19,8 @@ const WAIT_LAYER_HINTS: Readonly<Record<string, string>> = {
   [SLEEP_LAYER]: "The machine was asleep — not counted against this op.",
   "throttle-hold":
     "The resource's own declared throttle held the change — by design, not counted against this op.",
+  "flush-queue":
+    "The change waited for the flush lane — an earlier flush pass still running (passes run one at a time), or an earlier level of this one — not for this resource. Filed once as `wait flush-queue`, net of any op already filed inside the pass; the trace's completed `flush` span shows which resources held the pass.",
   // perfs/latency-signal `update` phases.
   "server-notice":
     "The server took long to notice the change (commit → first notify): a long-held transaction, a slow change-feed consumer, or a stalled serving thread.",

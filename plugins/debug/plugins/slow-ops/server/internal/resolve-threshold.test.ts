@@ -3,7 +3,11 @@ import type {
   SlowSpan,
   SpanKind,
 } from "@plugins/infra/plugins/runtime-profiler/core";
-import { resolveSlowThreshold, type Thresholds } from "./resolve-threshold";
+import {
+  resolveSlowThreshold,
+  resolveWaitThreshold,
+  type Thresholds,
+} from "./resolve-threshold";
 
 const thresholds: Thresholds = {
   pageLoadMs: 2000,
@@ -51,5 +55,22 @@ describe("resolveSlowThreshold", () => {
     expect(
       resolveSlowThreshold({ ...span("push"), latency: true }, thresholds),
     ).toBe(thresholds.updateMs);
+  });
+});
+
+describe("resolveWaitThreshold", () => {
+  const caller = { kind: "push" as const, label: "deliver:x" };
+  test("a gate's queue holds work back: the loader bar", () => {
+    expect(
+      resolveWaitThreshold({ layer: "read-admit", ms: 0, caller }, thresholds),
+    ).toBe(2000);
+  });
+  test("a latency leaf's queue is staleness a tab shows: the update bar", () => {
+    expect(
+      resolveWaitThreshold(
+        { layer: "flush-queue", ms: 0, caller, latency: true },
+        { ...thresholds, updateMs: 800 },
+      ),
+    ).toBe(800);
   });
 });

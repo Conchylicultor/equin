@@ -61,6 +61,16 @@ import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core"
 // what it contained. A latency leaf (`recordSpan(…, { latency: true })`, a
 // delivery's first-notify → send) subtracts the claims its enclosing entry
 // collected inside its window: it waited on them, it did not do them.
+//
+// ## Lanes: a root entry kind runs one after another
+//
+// A claim that reaches a ROOT entry — and a root entry filed itself — is also
+// kept, positioned, in its root kind's lane ring (`laneClaims`), which outlives
+// the entry. A latency leaf's `queue` (the part of its window it waited for
+// its lane: a delivery queued behind an earlier `flush` pass) is judged net of
+// what the lane claimed inside it, and what remains is handed to `onSlowWait`
+// as the lane's queue — so one slow pass is filed once, by what made it slow,
+// not again by every delivery that waited for it to end.
 
 // `http` / `db` / `loader` are spans of real work. `sub` / `push` are *origin*
 // entries: the WS-subscription ack and the cascade/push flush that trigger a
@@ -282,17 +292,40 @@ export interface EntrySpanOptions {
  */
 export type SlowSpanHandler = (span: SlowSpan, claim: () => void) => void;
 
-/** Options a leaf span is recorded with (`recordSpan`). */
-export interface LeafSpanOptions {
-  /** Waits inside the leaf's duration (a delivery's declared `throttle-hold`). */
-  waits?: WaitBreakdown;
-  /**
-   * The leaf is a LATENCY window spent waiting on the enclosing entry's work
-   * (a delivery: first notify → send, under the flush), not work of its own.
-   * It is judged net of the claims that entry collected inside its window.
-   */
-  latency?: boolean;
-}
+/**
+ * Options a leaf span is recorded with (`recordSpan`). A `queue` exists only on
+ * a latency leaf — it is a part of a latency window.
+ */
+export type LeafSpanOptions =
+  | {
+      /** Waits inside the leaf's duration (a delivery's declared `throttle-hold`). */
+      waits?: WaitBreakdown;
+      latency?: false;
+    }
+  | {
+      /**
+       * Waits that LEAD the leaf's window (a delivery's declared
+       * `throttle-hold`: first notify → the throttle's release).
+       */
+      waits?: WaitBreakdown;
+      /**
+       * The leaf is a LATENCY window spent waiting on work, not work of its
+       * own (a delivery: first notify → send, under the flush). Its window is
+       * `waits` | `queue` | its own part, in that order, and it is judged on
+       * its own part net of the claims its enclosing entry collected there.
+       */
+      latency: true;
+      /**
+       * The part of the window right after `waits` spent queued for the leaf's
+       * LANE — its enclosing root entry's kind (a delivery waiting for an
+       * earlier `flush` pass, or an earlier level of this one). Not the leaf's
+       * time: excluded from it in full, and its remainder net of what the lane
+       * claimed inside it is handed to `onSlowWait` as a queue wait on `layer`
+       * (`latency: true`, the leaf its caller) — the lane's slowness, filed
+       * against the lane.
+       */
+      queue?: { layer: string; ms: number };
+    };
 
 export interface Aggregate {
   label: string;
@@ -798,8 +831,13 @@ export interface SlowWait {
   /** The gate's layer name (`read-admit`, `db-acquire`, …). */
   layer: string;
   ms: number;
-  /** The innermost open entry that waited. */
+  /** The innermost open entry that waited (a latency leaf: the leaf itself). */
   caller: SpanRef;
+  /**
+   * The queue of a latency leaf (`LeafSpanOptions.queue`): staleness someone
+   * sees, so a monitor may hold it to a latency bar rather than a work bar.
+   */
+  latency?: true;
 }
 
 export type SlowWaitHandler = (wait: SlowWait) => void;
@@ -812,6 +850,12 @@ const slowWaitSubs: { thresholdMs: number; handler: SlowWaitHandler }[] = [];
  * queued is reported here, against the gate, instead. Called synchronously from
  * `chargeWait`; the handler must only schedule. Returns a disposer.
  */
+/** Hand a queue wait to every subscriber whose floor it reaches. */
+function notifySlowWait(wait: SlowWait): void {
+  for (const sub of slowWaitSubs)
+    if (wait.ms >= sub.thresholdMs) sub.handler(wait);
+}
+
 export function onSlowWait(
   handler: SlowWaitHandler,
   opts: { thresholdMs: number },
@@ -1245,12 +1289,12 @@ function record(
   /** The innermost open entry a filed claim starts at (see `claimEnclosing`). */
   claimFrom?: EntryContext,
   latency?: boolean,
-): void {
-  if (profilingDisabled()) return;
+): boolean {
+  if (profilingDisabled()) return false;
   // Drop spans produced inside a runWithoutProfiling scope before any aggregate,
   // slowest-ring, or onSlowSpan work — this is what breaks the observability
   // self-feedback loop (see installProfilingSuppressionRuntime).
-  if (suppressionRuntime.suppressed()) return;
+  if (suppressionRuntime.suppressed()) return false;
 
   const cappedLabel =
     label.length > MAX_LABEL_LEN ? label.slice(0, MAX_LABEL_LEN) : label;
@@ -1425,7 +1469,46 @@ function record(
         atMs - durationMs,
         atMs,
       );
+    return claimed;
   }
+  return false;
+}
+
+// Max positioned claims kept per lane (root entry kind). A leaf's queue is
+// judged net of them; overflow drops the OLDEST (the queue windows that still
+// matter are recent), so a queue can only be judged on more than it was owed,
+// never less — a duplicate report, never a missing one.
+const LANE_CLAIM_CAP = 32;
+
+/**
+ * Per root entry kind (a LANE — e.g. `flush`, whose passes run one after
+ * another): the positioned intervals of ops filed inside any of its entries,
+ * and of its entries filed themselves. Unlike an entry's `claimBands`, this
+ * outlives the entry, so a latency leaf that queued behind an EARLIER entry of
+ * its lane can be judged net of what that entry claimed.
+ */
+const laneClaims = new Map<SpanKind, WaitBand[]>();
+
+function addLaneClaim(
+  lane: SpanKind,
+  name: string,
+  t0: number,
+  t1: number,
+): void {
+  let bands = laneClaims.get(lane);
+  if (!bands) {
+    bands = [];
+    laneClaims.set(lane, bands);
+  }
+  bands.push({ layer: name, t0, t1 });
+  if (bands.length > LANE_CLAIM_CAP) bands.shift();
+}
+
+/** The root of `ctx`'s chain — whose kind is the lane it runs in. */
+function rootOf(ctx: EntryContext): EntryContext {
+  let r = ctx;
+  while (r.parent) r = r.parent;
+  return r;
 }
 
 // Max positioned claim intervals kept per entry. A latency leaf intersects its
@@ -1457,8 +1540,10 @@ function claimEnclosing(
     contribute(track, start, end, a.startMs);
     contribute(a.excludedUnion, start, end, a.startMs);
     const lo = start < a.startMs ? a.startMs : start;
-    if (end > lo)
+    if (end > lo) {
       pushBand((a.claimBands ??= []), name, lo, end, CLAIM_BAND_CAP);
+      if (!a.parent) addLaneClaim(a.kind, name, lo, end);
+    }
   }
 }
 
@@ -1472,15 +1557,24 @@ function claimsWithin(
   start: number,
   end: number,
 ): { unionMs: number; byName: WaitBreakdown | undefined } {
+  return bandsWithin(ctx.claimBands ?? [], start, end);
+}
+
+/** `bands` clipped to `[start, end]`: their union, and per layer. */
+function bandsWithin(
+  bands: readonly WaitBand[],
+  start: number,
+  end: number,
+): { unionMs: number; byName: WaitBreakdown | undefined } {
   const clipped: WaitBand[] = [];
-  for (const b of ctx.claimBands ?? []) {
+  for (const b of bands) {
     const t0 = b.t0 > start ? b.t0 : start;
     const t1 = b.t1 < end ? b.t1 : end;
     if (t1 > t0) clipped.push({ layer: b.layer, t0, t1 });
   }
   if (clipped.length === 0) return { unionMs: 0, byName: undefined };
-  const union = (bands: WaitBand[]): number => {
-    const sorted = [...bands].sort((x, y) => x.t0 - y.t0);
+  const union = (bs: WaitBand[]): number => {
+    const sorted = [...bs].sort((x, y) => x.t0 - y.t0);
     let total = 0;
     let frontier = -Infinity;
     for (const b of sorted) {
@@ -1517,17 +1611,27 @@ export function recordSpan(
   opts?: LeafSpanOptions,
 ): void {
   const cur = contextRuntime.current();
-  const waits = opts?.waits;
+  let waits = opts?.waits;
   let waitMs = 0;
   if (waits) for (const layer in waits) waitMs += waits[layer]!;
   waitMs = Math.min(durationMs, waitMs);
-  // A latency leaf's window is `[now − duration, now]`: what the enclosing
-  // entry claimed inside it was another op's slowness, already filed.
+  // A latency leaf's window is `[now − duration, now]`, laid out as its
+  // leading `waits` | its `queue` | its own part. Only the own part is judged,
+  // net of what the enclosing entry claimed inside it (another op's slowness,
+  // already filed) — never the waits or the queue, so nothing is taken off
+  // twice.
   const end = now();
+  const queue = opts?.latency ? opts.queue : undefined;
+  const queueMs = queue
+    ? Math.min(durationMs - waitMs, Math.max(0, queue.ms))
+    : 0;
+  if (queue && queueMs > 0) waits = { ...waits, [queue.layer]: queueMs };
+  const ownStart = end - durationMs + waitMs + queueMs;
   const claimed =
     opts?.latency && cur
-      ? claimsWithin(cur, end - durationMs, end)
+      ? claimsWithin(cur, ownStart, end)
       : { unionMs: 0, byName: undefined };
+  const leafWaitMs = waitMs + queueMs;
   record(
     kind,
     label,
@@ -1536,17 +1640,45 @@ export function recordSpan(
     cur ? cur.id : null,
     cur ? { kind: cur.kind, label: cur.label } : null,
     waits,
-    waitMs,
+    leafWaitMs,
     0,
-    durationMs - waitMs,
+    durationMs - leafWaitMs,
     undefined,
     detail,
     undefined,
-    Math.min(durationMs, waitMs + claimed.unionMs),
+    Math.min(durationMs, leafWaitMs + claimed.unionMs),
     claimed.byName,
     cur,
     opts?.latency,
   );
+  // The queue is the lane's slowness: net of what the lane already filed
+  // inside it (an earlier pass's slow op, or that pass itself), what remains
+  // is handed on as the lane's queue wait, the leaf its caller.
+  if (
+    queue &&
+    queueMs > 0 &&
+    !profilingDisabled() &&
+    !suppressionRuntime.suppressed()
+  ) {
+    const queueStart = ownStart - queueMs;
+    const laneClaimed = cur
+      ? bandsWithin(
+          laneClaims.get(rootOf(cur).kind) ?? [],
+          queueStart,
+          ownStart,
+        ).unionMs
+      : 0;
+    notifySlowWait({
+      layer: queue.layer,
+      ms: queueMs - laneClaimed,
+      caller: {
+        kind,
+        label:
+          label.length > MAX_LABEL_LEN ? label.slice(0, MAX_LABEL_LEN) : label,
+      },
+      latency: true,
+    });
+  }
 }
 
 // Cap the variant at MAX_VARIANT_LEN and drop empty parts, so an absent detail
@@ -1610,15 +1742,8 @@ export function chargeWait(layer: string, ms: number, kind: WaitKind): void {
     record("db", `[${layer}]`, ms, nextSpanId++, null, null);
     return;
   }
-  if (kind === "queue" && slowWaitSubs.length > 0) {
-    const wait: SlowWait = {
-      layer,
-      ms,
-      caller: { kind: cur.kind, label: cur.label },
-    };
-    for (const sub of slowWaitSubs)
-      if (ms >= sub.thresholdMs) sub.handler(wait);
-  }
+  if (kind === "queue")
+    notifySlowWait({ layer, ms, caller: { kind: cur.kind, label: cur.label } });
   const end = now();
   const start = end - ms;
   for (let a: EntryContext | undefined = cur; a; a = a.parent) {
@@ -1913,7 +2038,7 @@ export async function recordEntrySpan<T>(
       for (const [name, track] of ctx.claimUnions) claims[name] = track.unionMs;
     }
     const parentId = ctx.parent ? ctx.parent.id : null;
-    record(
+    const filed = record(
       kind,
       label,
       wall,
@@ -1931,6 +2056,9 @@ export async function recordEntrySpan<T>(
       claims,
       ctx.parent,
     );
+    // A root entry filed as its own slow op is a claim on its lane: a later
+    // run of the lane queued behind it waited on an op already filed.
+    if (filed && !ctx.parent) addLaneClaim(kind, `${kind} ${label}`, t0, t1);
     // Hand the loader's captured table read-set to the sink, keyed by label
     // (the resource key) — an EMPTY one too: the per-run capture describes
     // the last run, so a run that read nothing (a pure follower, a memo hit)
@@ -2018,5 +2146,6 @@ export function resetRuntimeProfile(): void {
     slot.waitBands = undefined;
   }
   flightRingHead = 0;
+  laneClaims.clear();
   sinceMs = now();
 }

@@ -1,4 +1,7 @@
-import type { SlowSpan } from "@plugins/infra/plugins/runtime-profiler/core";
+import type {
+  SlowSpan,
+  SlowWait,
+} from "@plugins/infra/plugins/runtime-profiler/core";
 import {
   ceilingMsFor,
   getJobHold,
@@ -122,6 +125,18 @@ export function resolveSlowThreshold(span: SlowSpan, t: Thresholds): number {
 }
 
 /**
+ * The bar a gate's `queue` wait is judged against. A gate's queue holds work
+ * back, so it shares the loader bar (no separate knob, which would also lower
+ * the perf floor for every span). A latency leaf's queue (`SlowWait.latency`:
+ * a delivery waiting for the flush lane) is staleness a tab shows, so it is
+ * held to the update bar — the bar the delivery itself would have been judged
+ * on had the queue been counted against it.
+ */
+export function resolveWaitThreshold(wait: SlowWait, t: Thresholds): number {
+  return wait.latency ? t.updateMs : t.loaderMs;
+}
+
+/**
  * The perf floor handed to `onSlowSpan`: the profiler only calls back for spans
  * at least this long, so a fast span never reaches the handler at all.
  *
@@ -131,8 +146,7 @@ export function resolveSlowThreshold(span: SlowSpan, t: Thresholds): number {
  * than assumed to be larger. (The profiler gates on wall-clock `durationMs`
  * while a span is judged on its own time — sound in this direction only, since
  * own ≤ wall: a span whose own time passes its bar necessarily ran at least
- * that long.) The same floor gates `onSlowWait`: a gate wait is judged on the
- * loader bar, which the floor never exceeds.
+ * that long.) `onSlowWait` takes the lowest of `resolveWaitThreshold`'s bars.
  *
  * The other client knobs (`pageLoadMs`, `elementMs`, `confirmMs`) stay OUT:
  * no server span is ever judged by them, so including one would only lower the

@@ -133,6 +133,63 @@ describe("timing on pushed frames", () => {
     expect("changedAt" in delivered[0]!).toBe(false);
   });
 
+  test("a change that waits for an earlier pass reports the wait as queueMs, apart from its own drain", async () => {
+    const delivered = new Map<string, ResourceDelivery>();
+    const h = createHarness({
+      onDelivered: (key, info) => delivered.set(key, info),
+    });
+    let gate: Promise<void> | null = null;
+    let n = 0;
+    const slow = h.runtime.defineExternalResource({
+      key: "slow",
+      mode: "push",
+      schema: z.number(),
+      loader: async () => {
+        if (gate) await gate;
+        return ++n;
+      },
+    });
+    // A downstream keeps `slow` on the pass's barrier (a leaf would drain in
+    // its own lane and hold nobody).
+    h.runtime.defineResource({
+      key: "slow-down",
+      mode: "push",
+      schema: z.number(),
+      loader: async () => ++n,
+      dependsOn: [{ resource: slow }],
+    });
+    const fast = h.runtime.defineExternalResource({
+      key: "fast",
+      mode: "push",
+      schema: z.number(),
+      loader: async () => ++n,
+    });
+    await h.subscribe("slow");
+    await h.subscribe("slow-down");
+    await h.subscribe("fast");
+
+    let release!: () => void;
+    gate = new Promise<void>((r) => {
+      release = r;
+    });
+    slow.notify(); // pass N starts and blocks on slow's loader (its barrier)
+    await tick();
+    fast.notify(); // stale mid-pass: waits for pass N to end
+    await new Promise((r) => setTimeout(r, 200));
+    gate = null;
+    release();
+    await new Promise((r) => setTimeout(r, 50));
+
+    const s = delivered.get("slow")!;
+    const f = delivered.get("fast")!;
+    // slow was taken by the pass at once: its time is its own drain.
+    expect(s.queueMs).toBeLessThan(100);
+    expect(s.latencyMs).toBeGreaterThanOrEqual(190);
+    // fast waited for pass N; its own drain is what is left.
+    expect(f.queueMs).toBeGreaterThanOrEqual(150);
+    expect(f.latencyMs - f.holdMs - f.queueMs).toBeLessThan(100);
+  });
+
   describe("keyed deltas", () => {
     function keyedRows() {
       const h = createHarness();
