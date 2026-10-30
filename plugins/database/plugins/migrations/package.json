@@ -3,6 +3,17 @@
   "private": true,
   "version": "0.0.1",
   "dependencies": {
-    "drizzle-kit": "^0.31.11"
+    "drizzle-kit": "^0.31.9"
+  },
+  "dependencyPolicy": {
+    "holds": [
+      {
+        "names": ["drizzle-kit"],
+        "below": "0.31.10",
+        "reason": "0.31.10 made its prompt renderer reject every prompt when stdin or stdout is not a TTY. The build's prompt runner (framework/cli/migrations, runDrizzleKitWithPrompts) answers drizzle-kit's create-vs-rename prompts over pipes, so on 0.31.10+ no migration can rename or replace a column and --migration-answers does nothing. 0.31.x has no non-interactive API: drizzle-kit/api's generateMigration calls the same prompting resolvers. The fix is drizzle-kit 1.0, whose generate takes --hints (and generateMigration(prev, cur, { hints })) instead of prompting, but it requires drizzle-orm >= 1.0, held below 0.39 (task-1793083762-bu58fd). Checked 2026-10-30 against 0.31.11 and 1.0.0-rc.5. Lift together with that move, replacing the prompt runner with hints. migrations-interactive.test.ts fails on any release that breaks prompt driving.",
+        "issue": "https://github.com/drizzle-team/drizzle-orm/issues/5307",
+        "reviewBy": "2027-01-28"
+      }
+    ]
   }
 }
