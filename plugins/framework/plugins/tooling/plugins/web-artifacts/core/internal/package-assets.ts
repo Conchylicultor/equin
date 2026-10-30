@@ -52,6 +52,17 @@ export function urlAssetRefs(source: string): string[] {
   return [...refs].sort();
 }
 
+// esbuild names a module outside the file namespace `<namespace>:<path>` —
+// `(disabled):<path>` for one a package's `browser` field maps to `false`
+// (its bytes are an empty stub, not the file at <path>). A file-namespace
+// input is a plain path, with no colon before its first separator.
+const NAMESPACED_INPUT_RE = /^[^/\\]*:/;
+
+/** Whether a metafile input is a file on disk (not a namespaced module). */
+export function isFileInput(inPath: string): boolean {
+  return !NAMESPACED_INPUT_RE.test(inPath);
+}
+
 /** The asset store entry holding `file`'s bytes; published on first use. */
 async function ensurePackageAsset(file: string): Promise<string> {
   const dir = join(
@@ -92,6 +103,7 @@ export async function placePackageAssets(opts: {
     const outDir = dirname(resolve(opts.cwd, outPath));
     for (const inPath of Object.keys(output.inputs)) {
       if (!inPath.includes("node_modules")) continue; // a virtual entry, repo code
+      if (!isFileInput(inPath)) continue; // a disabled stub: no source to read
       const input = resolve(opts.cwd, inPath);
       let refs = refsOf.get(input);
       if (refs === undefined) {
