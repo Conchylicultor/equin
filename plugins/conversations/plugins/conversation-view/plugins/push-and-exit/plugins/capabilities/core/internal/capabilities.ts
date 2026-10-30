@@ -53,10 +53,32 @@ export const pushPolicy = defineCapability<MandatePushPolicy>({
   label: "Push policy",
 });
 
-/** May close its own conversation once the work landed (`exit_clean`). */
-export const exitClean = defineCapability<true>({
+/**
+ * When the agent closes its own conversation with `exit_clean` — a tool every
+ * conversation has; this says when to call it (instructions only).
+ *
+ * - `on-request` — once a person asks it to wrap up (a task a person drives,
+ *   or an automation whose report a person reviews in the open conversation).
+ * - `when-done` — on its own, as soon as its work is complete (its outcome
+ *   report submitted, when one is required): a supervisor's worker, whose
+ *   reviewer is the supervisor — a `message_agent` resumes a closed one.
+ */
+export const EXIT_WHENS = ["on-request", "when-done"] as const;
+export const ExitWhenSchema = z.enum(EXIT_WHENS);
+export type ExitWhen = z.infer<typeof ExitWhenSchema>;
+
+/** The instruction each exit policy becomes in the mandate instructions. */
+export const EXIT_WHEN_TEXT: Record<ExitWhen, string> = {
+  "on-request":
+    "When the user asks you to wrap up, you may close this conversation with `exit_clean` once your work landed and there is nothing they need to know. Never call it on your own: the conversation stays open for review.",
+  "when-done":
+    "Once your work is complete (your outcome report submitted, when your mandate requires one) and there is nothing left to do, close this conversation with `exit_clean` — do not wait to be asked. Whoever supervises you can still message you: that resumes you.",
+};
+
+/** When the agent closes its own conversation (`exit_clean`). */
+export const exitClean = defineCapability<ExitWhen>({
   id: "exit.clean",
-  schema: z.literal(true),
+  schema: ExitWhenSchema,
   label: "Exit cleanly",
 });
 

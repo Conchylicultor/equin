@@ -1,5 +1,6 @@
 import { Mandate } from "@plugins/tasks/plugins/orchestration/plugins/mandate/server";
 import {
+  EXIT_WHEN_TEXT,
   exitClean,
   flagRaise,
   MANDATE_PUSH_POLICY_TEXT,
@@ -14,8 +15,7 @@ export const pushAndExitCapabilities = [
   }),
   Mandate.Capability({
     cap: exitClean,
-    describe: () =>
-      "When the user asks you to wrap up, you may close this conversation with `exit_clean` once your work landed and there is nothing they need to know.",
+    describe: (when) => EXIT_WHEN_TEXT[when],
   }),
   Mandate.Capability({
     cap: flagRaise,

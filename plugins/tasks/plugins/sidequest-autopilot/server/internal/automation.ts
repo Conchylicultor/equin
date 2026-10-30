@@ -44,15 +44,15 @@ export const sidequestAutopilotAutomation = defineAutomation({
     "Works through the sidequests you approve: triage reads each one first and proposes it, you approve what may run, and it starts agents on the approved ones, best first, a few at a time up to your cap — each leaves you a report.",
   config: sidequestAutopilotConfig,
   // Its agents may file sidequests a person starts, push as far as the Push
-  // setting allows and raise a flag. The report is how they finish, not
-  // exit_clean; exit.clean is granted only so a person who later asks one to
-  // push-and-exit can close it.
+  // setting allows and raise a flag. The report is how they finish; the
+  // conversation stays open for review, closed with exit_clean only when a
+  // person asks.
   mandate: (settings) =>
     mandatePolicy([
       tasksFile.grant({ sidequest: { start: ["manual"] } }),
       pushPolicy.grant(settings.push),
       flagRaise.grant(true),
-      exitClean.grant(true),
+      exitClean.grant("on-request"),
       reportRequired.grant(true),
     ]),
   triggers: {

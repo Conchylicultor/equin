@@ -28,7 +28,7 @@ export function interactivePolicy(): MandatePolicy {
       sidequest: { start: ["manual"] },
     }),
     pushPolicy.grant("on-request"),
-    exitClean.grant(true),
+    exitClean.grant("on-request"),
     flagRaise.grant(true),
   ]);
 }
@@ -49,10 +49,10 @@ export function supervisorPolicy(): MandatePolicy {
     {
       root: [
         pushPolicy.grant("on-request"),
-        exitClean.grant(true),
+        exitClean.grant("on-request"),
         watchTree.grant(true),
       ],
-      below: [reportRequired.grant(true)],
+      below: [reportRequired.grant(true), exitClean.grant("when-done")],
     },
   );
 }

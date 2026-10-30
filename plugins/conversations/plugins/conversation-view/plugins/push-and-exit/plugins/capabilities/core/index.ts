@@ -1,4 +1,5 @@
 export {
+  EXIT_WHEN_TEXT,
   exitClean,
   flagRaise,
   MANDATE_PUSH_POLICIES,
@@ -10,4 +11,8 @@ export {
   pushPolicy,
   PushPolicySchema,
 } from "./internal/capabilities";
-export type { MandatePushPolicy, PushPolicy } from "./internal/capabilities";
+export type {
+  ExitWhen,
+  MandatePushPolicy,
+  PushPolicy,
+} from "./internal/capabilities";

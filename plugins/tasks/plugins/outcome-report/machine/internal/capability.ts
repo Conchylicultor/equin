@@ -8,5 +8,5 @@ export const OUTCOME_REPORT_TOOL = "submit_outcome_report";
 export const reportRequiredCapability = Mandate.Capability({
   cap: reportRequired,
   describe: () =>
-    `You must finish with an outcome report: the user is not watching, so never ask questions mid-way — decide, or stop. Always end by calling \`${OUTCOME_REPORT_TOOL}\` (see its description), then end your turn; you cannot stop before it. Do not call \`exit_clean\` on your own: the conversation stays open for review. Call it only when a person asks you to exit.`,
+    `You must finish with an outcome report: the user is not watching, so never ask questions mid-way — decide, or stop. Always end by calling \`${OUTCOME_REPORT_TOOL}\` (see its description) — you cannot stop before it. Your mandate's exit rule says whether you then close the conversation with \`exit_clean\` or end your turn and leave it open for review.`,
 });

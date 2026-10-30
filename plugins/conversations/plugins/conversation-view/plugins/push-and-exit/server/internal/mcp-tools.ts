@@ -7,10 +7,7 @@ import {
   updateConversation,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { granted } from "@plugins/tasks/plugins/orchestration/plugins/mandate/server";
-import {
-  exitClean,
-  flagRaise,
-} from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
+import { flagRaise } from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
 import { exitCleanFinalizeJob } from "./exit-clean-finalize-job";
 import { _conversationFlags } from "./tables";
 import { conversationFlagIdKind } from "../../core";
@@ -30,20 +27,18 @@ import { conversationFlagRaised } from "./tables-events";
 // (returns to `waiting`) and the flag text is still rendered inline in the
 // transcript by the flag-raise tool-call renderer.
 //
-// Each is visible only to a conversation whose mandate grants it
-// (`exit.clean` / `flag.raise`, the capabilities sub-plugin). Both handlers
-// are callable outside the toolbar-initiated flow so the model
-// can call them in response to an explicit "Exit" instruction.
+// `exit_clean` is visible to every conversation (a scratch profile still sees
+// only its own allowlist): any agent can close itself. WHEN it should is its
+// mandate's `exit.clean` grant (instructions only — on request, or when done).
+// `flag_raise` is visible only to a mandate granting `flag.raise`. Both
+// handlers are callable outside the toolbar-initiated flow so the model can
+// call them in response to an explicit "Exit" instruction.
 
 export const exitCleanTool = Mcp.tool({
   name: "exit_clean",
-  // Only a mandate granting `exit.clean` (interactive ones and every
-  // automation's — an automated agent is told to call it only when a person
-  // asks it to exit).
-  when: granted(exitClean),
-  description: `Signal that the push-and-exit flow finished cleanly: the branch landed and there's nothing the user needs to know about. The conversation will close automatically after this turn ends.
+  description: `Close this conversation cleanly: your work is finished (the branch landed, or there was nothing to land) and there's nothing the user needs to know about. The conversation will close automatically after this turn ends.
 
-Only call this in response to the push-and-exit prompt. If anything went wrong or there's something worth surfacing, call \`flag_raise\` instead.`,
+Call it when your mandate says to (on request — the push-and-exit prompt or an explicit "Exit" — or on your own once your work is done). If anything went wrong or there's something worth surfacing, call \`flag_raise\` instead.`,
   inputSchema: {},
   async handler(_args, { conversationId }) {
     await updateConversation(conversationId, { closeRequested: true });

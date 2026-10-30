@@ -51,13 +51,13 @@ export const upstreamMergeAutomation = defineAutomation({
   watch: null,
   config: upstreamMergeConfig,
   // Its agent may push as far as the Push setting allows and raise a flag for
-  // the person. It finishes with its outcome report, not exit_clean; exit.clean
-  // is granted only so a person who later asks it to push-and-exit can close it.
+  // the person. It finishes with its outcome report and stays open for review:
+  // it calls exit_clean only when a person asks it to.
   mandate: (settings) =>
     mandatePolicy([
       pushPolicy.grant(settings.push),
       flagRaise.grant(true),
-      exitClean.grant(true),
+      exitClean.grant("on-request"),
       reportRequired.grant(true),
     ]),
   triggers: { kinds: ["schedule"] },

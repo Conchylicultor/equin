@@ -20,8 +20,9 @@ export const interactiveMandate = defineMandate({
  * the brief as sidequests a person starts), watches what it files and the
  * whole tree, messages the agents of the tree (a reply to a report, "push
  * it") and may compact its own context. The tasks below it are workers:
- * each ends with a report (`report.required`) instead of an exit, watches what
- * it files, may message the tree's agents, talks back through `flag_raise`
+ * each ends with a report (`report.required`), then closes itself with
+ * `exit_clean` (`exit.clean: when-done` — the supervisor's message resumes
+ * it), watches what it files, may message the tree's agents, talks back through `flag_raise`
  * and may compact. Workers get no
  * `push.policy`: they follow the repo rule (never push unless told) — how a run
  * pushes is the user's to say in the brief or a preprompt.

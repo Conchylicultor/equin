@@ -18480,13 +18480,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pushAndExitConfig`
               - `startPushAndExit`
           - Plugins:
-            - **`capabilities`** — The push-and-exit mandate capabilities as plain data: push.policy (on-request | never | safe | checks — on-request for a task a person drives, the other three the closed automation push policy set; their labels and the instruction each becomes), exit.clean (exit_clean) and flag.raise (flag_raise). A leaf, so every root creator can grant them without a cycle through push-and-exit, which imports conversations.
+            - **`capabilities`** — The push-and-exit mandate capabilities as plain data: push.policy (on-request | never | safe | checks — on-request for a task a person drives, the other three the closed automation push policy set; their labels and the instruction each becomes), exit.clean (on-request | when-done — when the agent closes itself with exit_clean, a tool every conversation has) and flag.raise (flag_raise). A leaf, so every root creator can grant them without a cycle through push-and-exit, which imports conversations.
               - Core:
                 - Uses: `tasks/orchestration/mandate/policy.defineCapability`
                 - Exports (types):
+                  - `ExitWhen`
                   - `MandatePushPolicy`
                   - `PushPolicy`
                 - Exports (values):
+                  - `EXIT_WHEN_TEXT`
                   - `exitClean`
                   - `flagRaise`
                   - `MANDATE_PUSH_POLICIES`

@@ -6,12 +6,13 @@ The named mandates for the code that creates a root task
 
 - `interactiveMandate` (`interactive`) — a task a person starts by hand:
   `tasks.file` (`main: after`, `sidequest: manual`), `push.policy:
-  on-request`, `exit.clean`, `flag.raise`.
+  on-request`, `exit.clean: on-request`, `flag.raise`.
 - `supervisorMandate` (`supervisor`) — a supervisor's root (the Supervisor
   launch option, `tasks/supervisor-run`). Whole tree: `tasks.file` (`main:
   now/after/manual`, `sidequest: manual`), `watch.children`, `message.tree`,
   `flag.raise`, `context.compact`. Root only: `push.policy: on-request`,
-  `exit.clean`, `watch.tree`. Below the root (the workers): `report.required`.
+  `exit.clean: on-request`, `watch.tree`. Below the root (the workers):
+  `report.required`, `exit.clean: when-done` (close once reported).
 
 **A task names its mandate; it never copies the grants.** The grants
 (`interactivePolicy()` / `supervisorPolicy()`) are computed at every
