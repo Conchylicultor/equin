@@ -4,6 +4,11 @@ export {
   type SchemaDescription,
 } from "./internal/describe";
 export {
+  fallbackTo,
+  retype,
+  type FallbackValue,
+} from "./internal/described-fn";
+export {
   childrenOf,
   inspect,
   isUncheckedBase,

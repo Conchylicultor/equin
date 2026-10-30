@@ -50,15 +50,15 @@ describe("a schema that narrows the column", () => {
     expect(t.kind.mapFromDriverValue("agent")).toBe("agent");
   });
 
-  // A tolerant column is a `z.preprocess` — a pipe out of a transform, not a
-  // bare string — so it must land on the decoding branch. It is the one arm where a wrong branch
+  // A tolerant column is a `.catch` over the enum, not a bare string — so it
+  // must land on the decoding branch. It is the one arm where a wrong branch
   // would be invisible: the identity branch would accept the legacy value AND
   // hand it on unnormalized, which is the bug the tolerant schema exists to fix.
-  test("a tolerant (preprocess) schema decodes, and normalizes on read", () => {
+  test("a tolerant schema decodes, and normalizes on read", () => {
     const tolerant = pgTable("text_storage_tolerant", {
       model: decode(
         "model",
-        tolerantEnum(z.enum(["opus-5", "sonnet-5"]), () => "opus-5" as const),
+        tolerantEnum(z.enum(["opus-5", "sonnet-5"]), { fallback: "opus-5" }),
       ),
     });
     expect(is(tolerant.model, PgCustomColumn)).toBe(true);

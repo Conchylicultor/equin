@@ -8,6 +8,7 @@ import {
   pickMeta,
 } from "@plugins/fields/core";
 import { textFieldType } from "@plugins/fields/plugins/text/core";
+import { retype } from "@plugins/packages/plugins/zod-introspect/core";
 import type { AnyIdKind, Id, IdKind, IdShape } from "./id-kind";
 
 // Every stored-id decoder minted, and the kind it decodes. A column built with
@@ -24,9 +25,10 @@ const decoderKinds = new WeakMap<object, AnyIdKind>();
 export function storedIdSchema<P extends string>(
   kind: IdKind<P, IdShape>,
 ): z.ZodType<Id<P>> {
-  const schema: z.ZodType<Id<P>> = z
-    .string()
-    .transform((value) => value as Id<P>);
+  // `retype`, not an inline cast: a row schema holding it stays describable
+  // (zod-introspect's `describeSchema`), so a read decoding ids keeps its
+  // definition.
+  const schema: z.ZodType<Id<P>> = z.string().transform(retype<Id<P>>);
   decoderKinds.set(schema, kind as AnyIdKind);
   return schema;
 }
@@ -93,7 +95,8 @@ export function externalIdField(opts: {
   // (`fields/text/storage`), and the decoder is the only thing
   // `ids:pk-declared` can read this declaration back off — a bare string here
   // left every `defineEntity` external id reported as undeclared.
-  const schema: z.ZodType<string> = z.string().transform((value) => value);
+  // `retype` keeps it describable (`describeSchema`).
+  const schema: z.ZodType<string> = z.string().transform(retype<string>);
   decoderExternals.set(schema, opts.reason);
   return Object.freeze({
     type: textFieldType,

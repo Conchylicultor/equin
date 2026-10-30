@@ -74,7 +74,7 @@ const reportedCorrupt = new Set<string>();
 /** Loud-but-deduped signal for a stored effort value that isn't a known id. */
 export function reportUnknownEffort(raw: unknown): void {
   const s = String(raw);
-  if (s in EFFORT_REGISTRY || reportedCorrupt.has(s)) return;
+  if (Object.hasOwn(EFFORT_REGISTRY, s) || reportedCorrupt.has(s)) return;
   reportedCorrupt.add(s);
   console.error(
     `[effort] corrupt/unknown stored effort ${JSON.stringify(raw)} — degraded to ${FALLBACK_EFFORT}. Indicates a corrupt DB row or a writer on incompatible code.`,
@@ -87,8 +87,7 @@ export function reportUnknownEffort(raw: unknown): void {
  * rejecting the whole array payload on the WS push path. Keep request-input/API-body
  * schemas strict (use the raw EffortLevelSchema there).
  */
-export const StoredEffortSchema = tolerantEnum(
-  EffortLevelSchema,
-  normalizeEffort,
-  reportUnknownEffort,
-);
+export const StoredEffortSchema = tolerantEnum(EffortLevelSchema, {
+  fallback: FALLBACK_EFFORT,
+  onFallback: reportUnknownEffort,
+});

@@ -29036,6 +29036,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `fields.FieldType`
       - `fields.pickMeta`
       - `fields/text.textFieldType`
+      - `packages/zod-introspect.retype`
     - Exports (types):
       - `AnyIdKind`
       - `DetectedId`
@@ -35320,13 +35321,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`zod-introspect`** — The one owner of zod internals: inspect(schema) reads one level of a zod 4 schema (a zod 3 one is refused and named as such) as a repo-owned SchemaNode union in zod 4's model (refine a check, transform / preprocess a pipe, brand transparent, native enum an enum, passthrough an opaque object), with childrenOf, peel (strip optional / nullable / default / prefault / catch / readonly / nonoptional), valueSide (a pipe's value schema), isUncheckedBase (a bare base with no check), describeSchema (a version-independent description, function-bodied parts marked opaque) and defineSchemaTag (a namespaced tag stamped by clone, never mutation); plus the no-zod-internals and no-zod-subpath lint rules.
       - Cross-plugin:
         - Imported by:
+          - `ids`
           - `network/live`
           - `packages/list-bound`
+          - `primitives/live-state`
+          - `ui/icons/saved-names`
       - Exemptions:
         - Exempts itself from: `zod-introspect/no-zod-internals` — `core/internal`, `lint` (sanctioned)
         - Exempted by: `packages/zod-introspect` (0 debt)
       - Core:
         - Exports (types):
+          - `FallbackValue`
           - `FormatParam`
           - `PeelableKind`
           - `Schema`
@@ -35346,11 +35351,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `childrenOf`
           - `defineSchemaTag`
           - `describeSchema`
+          - `fallbackTo`
           - `inspect`
           - `isUncheckedBase`
           - `isZodSchema`
           - `OPAQUE_MARK`
           - `peel`
+          - `retype`
           - `valueSide`
 
 - **`page`** — Block-based page editor.
@@ -44434,6 +44441,31 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useResourceAcks`
           - `useResourceContractMismatches`
           - `useResources`
+      - Core:
+        - Uses: `packages/zod-introspect.fallbackTo`
+        - Exports (types):
+          - `PointParams`
+          - `PointResourceDescriptor`
+          - `Resolvable`
+          - `ResourceDescriptor`
+          - `ResourceErrorKind`
+          - `ResourceOrigin`
+          - `ResourcePreload`
+          - `ResourceReadiness`
+          - `ResourceStatus`
+          - `ResourceUnavailable`
+          - `WindowParams`
+          - `WindowResourceDescriptor`
+          - `WindowSelector`
+        - Exports (values):
+          - `compareTxWatermark`
+          - `registerResourceDescriptor`
+          - `resolvableSchema`
+          - `resolved`
+          - `resourceDescriptorByKey`
+          - `ResourceError`
+          - `tolerantEnum`
+          - `unresolved`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
@@ -44476,30 +44508,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `live/no-legacy-resource-spelling` — `.` (sanctioned)
           - `live/no-endpoint-read` — `web` (sanctioned)
         - Exempted by: `apps/file-explorer/git` (0 debt)
-      - Core:
-        - Exports (types):
-          - `PointParams`
-          - `PointResourceDescriptor`
-          - `Resolvable`
-          - `ResourceDescriptor`
-          - `ResourceErrorKind`
-          - `ResourceOrigin`
-          - `ResourcePreload`
-          - `ResourceReadiness`
-          - `ResourceStatus`
-          - `ResourceUnavailable`
-          - `WindowParams`
-          - `WindowResourceDescriptor`
-          - `WindowSelector`
-        - Exports (values):
-          - `compareTxWatermark`
-          - `registerResourceDescriptor`
-          - `resolvableSchema`
-          - `resolved`
-          - `resourceDescriptorByKey`
-          - `ResourceError`
-          - `tolerantEnum`
-          - `unresolved`
       - Test helpers:
         - Web: `@plugins/primitives/plugins/live-state/web/testing`
           - `createLiveStateHarness` — A fresh `NotificationsClient` and the `QueryClient` it owns, under a transport, for ONE test — what the app's `TransportProvider` + `NotificationsProvider` mount, minus the page's pipeline (which keeps the first cache it was built with, so a second test would mount a cache nothing writes).
@@ -53396,6 +53404,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SYMBOL_NAMES_REL_PATH`
               - `symbolNamesInputsHash`
         - **`saved-names`** — The membership-checked SavedSymbolName: a user-picked Material Symbols name, parsed against the installed sets before anything stores it.
+          - Core:
+            - Uses: `packages/zod-introspect.retype`
+            - Exports (values):
+              - `allSavedSymbolNames`
+              - `isSavedSymbolName`
+              - `parseSavedSymbolName`
+              - `SavedSymbolNameSchema`
           - Cross-plugin:
             - Imported by:
               - `apps/places/places-core`
@@ -53406,12 +53421,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/callout`
               - `primitives/icon-picker`
               - `tag-tree/engine`
-          - Core:
-            - Exports (values):
-              - `allSavedSymbolNames`
-              - `isSavedSymbolName`
-              - `parseSavedSymbolName`
-              - `SavedSymbolNameSchema`
         - **`saved-sources`** — The saved-icon source registry: defineSavedIconSource registers a place that stores user-picked icons (its tables, its names, a watch for a non-DB store), and savedIconSources lists them for the sprites plugin's resident icons.saved-sprites value. Pure and portable, so a plugin whose server half runs in the browser host can register its source without reaching the sprites builder.
           - Cross-plugin:
             - Imported by:

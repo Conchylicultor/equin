@@ -233,7 +233,22 @@ export function inspectV4(schema: V4Schema): SchemaNode {
       };
     }
     case "transform":
-      return { kind: "transform", schema, checks };
+      return {
+        kind: "transform",
+        schema,
+        checks,
+        fn: (def as unknown as core.$ZodTransformDef).transform,
+      };
+    case "catch": {
+      const d = def as unknown as core.$ZodCatchDef;
+      return {
+        kind: "catch",
+        schema,
+        checks,
+        inner: child(d.innerType, "inner type"),
+        catchValue: d.catchValue,
+      };
+    }
     case "default":
     case "prefault": {
       // `defaultValue` is a getter on the def: each read is one fill.
@@ -250,7 +265,6 @@ export function inspectV4(schema: V4Schema): SchemaNode {
     case "nullable":
     case "readonly":
     case "nonoptional":
-    case "catch":
     case "promise":
     case "success":
       return {

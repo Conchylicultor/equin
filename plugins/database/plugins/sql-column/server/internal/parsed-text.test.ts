@@ -116,11 +116,10 @@ describe("writing", () => {
 
 describe("a tolerant schema", () => {
   const seen: unknown[] = [];
-  const StoredStatusSchema = tolerantEnum(
-    JobWaitStatusSchema,
-    () => "pending" as const,
-    (raw) => seen.push(raw),
-  );
+  const StoredStatusSchema = tolerantEnum(JobWaitStatusSchema, {
+    fallback: "pending",
+    onFallback: (raw) => seen.push(raw),
+  });
   const legacy = pgTable("legacy_waits", {
     status: parsedText("status", StoredStatusSchema).notNull(),
   });

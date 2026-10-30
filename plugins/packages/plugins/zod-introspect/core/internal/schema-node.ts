@@ -101,7 +101,6 @@ export type SchemaInnerKind =
   | "nullable"
   | "readonly"
   | "nonoptional"
-  | "catch"
   | "promise"
   | "success"
   | "lazy";
@@ -226,7 +225,17 @@ export type SchemaNode =
       readonly output: Schema;
     })
   /** A function step: its output is whatever the function returns. */
-  | (NodeBase & { readonly kind: "transform" })
+  | (NodeBase & {
+      readonly kind: "transform";
+      /** The function itself — data only when this plugin minted it (`describedFn`). */
+      readonly fn: unknown;
+    })
+  | (NodeBase & {
+      readonly kind: "catch";
+      readonly inner: Schema;
+      /** The function of the failed parse — data only when this plugin minted it (`describedFn`). */
+      readonly catchValue: unknown;
+    })
   | (NodeBase & {
       readonly kind: "default" | "prefault";
       readonly inner: Schema;

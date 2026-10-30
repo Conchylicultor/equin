@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { describeSchema } from "./describe";
+import { fallbackTo, retype } from "./described-fn";
 import {
   childrenOf,
   inspect,
@@ -629,6 +630,145 @@ describe("describeSchema — what moves the description", () => {
       { kind: "format", format: "f", params: {}, rewrites: false },
       { kind: "refine" },
     ]);
+  });
+
+  test("a literal Date default is described by its instant; a computed one stays blind", () => {
+    const epoch = z.coerce.date().default(new Date(0));
+    expect(describeSchema(epoch)).toEqual({
+      description: {
+        kind: "default",
+        inner: { kind: "date", coerce: true, checks: [] },
+        date: "1970-01-01T00:00:00.000Z",
+        checks: [],
+      },
+      opaque: [],
+    });
+    expect(same(epoch, z.coerce.date().default(new Date(1)))).toBe(false);
+    expect(same(epoch, z.date().default(new Date(0)))).toBe(false);
+    // A JSON default spelling the same text is a different description.
+    expect(same(epoch, z.any().default("1970-01-01T00:00:00.000Z"))).toBe(
+      false,
+    );
+    expect(describeSchema(z.date().default(() => new Date())).opaque).toEqual([
+      "(root): a default that is not one JSON value",
+    ]);
+    expect(describeSchema(z.date().default(new Date(NaN))).opaque).toEqual([
+      "(root): a default that is not one JSON value",
+    ]);
+  });
+
+  test("a `retype` transform is data; any other transform is blind", () => {
+    const branded = z.string().transform(retype<string & { b: 1 }>);
+    expect(describeSchema(branded)).toEqual({
+      description: {
+        kind: "pipe",
+        in: str(),
+        out: { kind: "transform", fn: "retype", checks: [] },
+        checks: [],
+      },
+      opaque: [],
+    });
+    expect(same(branded, z.number().transform(retype<number>))).toBe(false);
+    expect(
+      same(
+        branded,
+        z
+          .string()
+          .max(3)
+          .transform(retype<string>),
+      ),
+    ).toBe(false);
+    expect(describeSchema(z.string().transform((v) => v)).opaque).toEqual([
+      "/out: a transform",
+    ]);
+  });
+
+  test("a `fallbackTo` catch is described by its value; a literal catch stays blind", () => {
+    const report: unknown[] = [];
+    const tolerant = z
+      .enum(["a", "b"])
+      .catch(fallbackTo("a", (input) => report.push(input)));
+    expect(describeSchema(tolerant)).toEqual({
+      description: {
+        kind: "catch",
+        inner: {
+          kind: "enum",
+          entries: [
+            ["a", "a"],
+            ["b", "b"],
+          ],
+          checks: [],
+        },
+        value: { fallback: "a" },
+        checks: [],
+      },
+      opaque: [],
+    });
+    expect(tolerant.parse("zz")).toBe("a");
+    expect(tolerant.parse("b")).toBe("b");
+    expect(report).toEqual(["zz"]);
+    expect(same(tolerant, z.enum(["a", "b"]).catch(fallbackTo("b")))).toBe(
+      false,
+    );
+    expect(same(tolerant, z.enum(["a", "b", "c"]).catch(fallbackTo("a")))).toBe(
+      false,
+    );
+    // A refinement under it picks the output: its body is no longer inert.
+    expect(
+      describeSchema(
+        z
+          .string()
+          .refine((s) => s.length > 2)
+          .catch(fallbackTo("x")),
+      ).opaque,
+    ).toEqual([
+      "(root): a catch over a refinement (its verdict picks the output)",
+    ]);
+    expect(
+      describeSchema(
+        z
+          .object({ a: z.string().refine(() => true) })
+          .nullable()
+          .catch(fallbackTo(null)),
+      ).opaque,
+    ).toEqual([
+      "(root): a catch over a refinement (its verdict picks the output)",
+    ]);
+    expect(describeSchema(z.string().catch("x")).opaque).toEqual([
+      "(root): a catch value (a function of the failed input)",
+    ]);
+    expect(() => fallbackTo(Number.NaN)).toThrow(/not a JSON number/);
+  });
+
+  test("a union over a refinement is blind unless it is discriminated", () => {
+    expect(
+      describeSchema(
+        z.union([z.string().refine((s) => s.startsWith("a")), z.string()]),
+      ).opaque,
+    ).toEqual([
+      "(root): a union over a refinement (its verdict picks the option)",
+    ]);
+    expect(
+      describeSchema(
+        z.object({
+          v: z.union([
+            z.object({ a: z.string().refine(() => true) }),
+            z.object({ b: z.number() }),
+          ]),
+        }),
+      ).opaque,
+    ).toEqual(["/v: a union over a refinement (its verdict picks the option)"]);
+    expect(
+      describeSchema(
+        z.discriminatedUnion("k", [
+          z.object({ k: z.literal("a"), v: z.string().refine(() => true) }),
+          z.object({ k: z.literal("b") }),
+        ]),
+      ).opaque,
+    ).toEqual([]);
+    expect(describeSchema(z.union([z.string(), z.number()])).opaque).toEqual(
+      [],
+    );
   });
 
   test("a codec is blinded: its decode is a function body", () => {

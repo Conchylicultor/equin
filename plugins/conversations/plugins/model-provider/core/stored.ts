@@ -75,13 +75,13 @@ export function normalizeModelChoice(stored: string): ModelChoice {
  * path — which would blank the entire resource. Request-input schemas (API
  * bodies) stay strict so bad input is rejected loudly.
  */
-export const StoredModelSchema = tolerantEnum(
-  ConversationModelSchema,
-  normalizeModel,
-);
+export const StoredModelSchema = tolerantEnum(ConversationModelSchema, {
+  fallback: FALLBACK_MODEL,
+  onFallback: (raw) => reportMalformedModel(raw, FALLBACK_MODEL),
+});
 
 /** The tolerant schema for a persisted *choice* (auto-start marker, agent, launch prompt). */
-export const StoredModelChoiceSchema = tolerantEnum(
-  ModelChoiceSchema,
-  normalizeModelChoice,
-);
+export const StoredModelChoiceSchema = tolerantEnum(ModelChoiceSchema, {
+  fallback: DEFAULT_MODEL_CHOICE,
+  onFallback: (raw) => reportMalformedModel(raw, DEFAULT_MODEL_CHOICE),
+});

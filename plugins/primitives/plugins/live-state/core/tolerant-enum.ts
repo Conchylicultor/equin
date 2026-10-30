@@ -1,10 +1,12 @@
-import { z } from "zod";
+import type { z } from "zod";
+import { fallbackTo } from "@plugins/packages/plugins/zod-introspect/core";
 
 /**
  * A `z.ZodType<T>` that accepts a strict enum value OR any unknown string and
- * normalizes it to a valid `T`. Use for persisted fields backed by an evolving
- * enum (e.g. a model id whose value set changes over time): a legacy/unknown
- * stored value degrades to a concrete `T` instead of rejecting the payload.
+ * degrades it to the declared `fallback`. Use for persisted fields backed by an
+ * evolving enum (e.g. a model id whose value set changes over time): a
+ * legacy/unknown stored value degrades to a concrete `T` instead of rejecting
+ * the payload.
  *
  * This matters because live resources parse the whole `z.array(...)` atomically
  * — a single stale row would otherwise throw a `ZodError` on the WS push path
@@ -12,16 +14,19 @@ import { z } from "zod";
  * construction.
  *
  * Per the "fail loudly" rule this is opt-in per field, not a blanket wrapper:
- * every other field still rejects bad input. And the degrade is no longer
- * silent: the optional `onFallback` callback fires for any value that failed
- * the strict `schema` (i.e. needed normalizing) BEFORE it is normalized, so the
- * caller can surface the bad value loudly. It never fires for a valid id — only
- * for legacy/unknown input. The caller decides which fallbacks are expected
- * (silent) vs corrupt (loud); this helper just hands it the raw value.
+ * every other field still rejects bad input. And the degrade is not silent:
+ * the optional `onFallback` callback fires for any value that failed the
+ * strict `schema` BEFORE it degrades, so the caller can surface the bad value
+ * loudly. It never fires for a valid id — only for legacy/unknown input. The
+ * caller decides which fallbacks are expected (silent) vs corrupt (loud); this
+ * helper just hands it the raw value.
  *
- * `normalize`'s own output is re-validated by `schema`, so a normalizer that
- * returns something outside the enum still fails loudly rather than smuggling
- * an invalid value through.
+ * The fallback is a VALUE, not a normalizer: the schema is
+ * `schema.catch(fallbackTo(fallback, onFallback))`, which zod-introspect's
+ * `describeSchema` reads as data — so a row schema holding a tolerant field
+ * stays describable (its fingerprint moves with the enum and the fallback),
+ * where a function body would blind it. The fallback must parse against
+ * `schema` — checked here, loudly, once.
  *
  * Generic over the schema (not over its value type): a branded schema is an
  * intersection that `z.ZodType<infer T>` reads as its unbranded base, widening
@@ -29,12 +34,16 @@ import { z } from "zod";
  */
 export function tolerantEnum<S extends z.ZodType<string>>(
   schema: S,
-  normalize: (raw: string) => z.output<S>,
-  onFallback?: (raw: unknown) => void,
+  opts: {
+    fallback: z.output<S>;
+    onFallback?: (raw: unknown) => void;
+  },
 ): z.ZodType<z.output<S>> {
-  return z.preprocess((raw) => {
-    if (schema.safeParse(raw).success) return raw;
-    onFallback?.(raw);
-    return normalize(String(raw));
-  }, schema);
+  const checked = schema.safeParse(opts.fallback);
+  if (!checked.success) {
+    throw new Error(
+      `tolerantEnum: the fallback ${JSON.stringify(opts.fallback)} does not parse against its own schema — ${checked.error.message}`,
+    );
+  }
+  return schema.catch(fallbackTo(opts.fallback, opts.onFallback));
 }

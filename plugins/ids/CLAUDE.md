@@ -163,6 +163,7 @@ is reported by the schema file that exports it, which is where its plugin's
     - `fields.FieldType`
     - `fields.pickMeta`
     - `fields/text.textFieldType`
+    - `packages/zod-introspect.retype`
   - Exports (types):
     - `AnyIdKind`
     - `DetectedId`

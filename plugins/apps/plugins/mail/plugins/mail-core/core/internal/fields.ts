@@ -101,10 +101,9 @@ const reportedLabelTypes = new Set<string>();
  * Putting it on the COLUMN is what makes that `?? "user"` reach every reader
  * rather than only the one writer that spelled it.
  */
-const MailLabelTypeSchema = tolerantEnum(
-  z.enum(MAIL_LABEL_TYPES),
-  () => "user" as const,
-  (raw) => {
+const MailLabelTypeSchema = tolerantEnum(z.enum(MAIL_LABEL_TYPES), {
+  fallback: "user",
+  onFallback: (raw) => {
     const s = String(raw);
     if (reportedLabelTypes.has(s)) return;
     reportedLabelTypes.add(s);
@@ -113,7 +112,7 @@ const MailLabelTypeSchema = tolerantEnum(
         `Gmail added a label type, or a row was written by incompatible code.`,
     );
   },
-);
+});
 
 export const mailLabelFields = {
   id: externalIdField({

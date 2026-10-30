@@ -433,7 +433,10 @@ Details:
     `SchemaNode` (never zod's def layout; a zod 3 schema throws). It is
     fail-closed: a function-dependent part (transform, codec, rewrite check,
     catch, non-literal default) is an `{ $opaque }` marker — refused in a `parsed` decoder, folded in (not refused) for a
-    column or row schema (e.g. `tolerantEnum`).
+    column or row schema. The parts zod-introspect mints itself are data, not
+    function bodies: a `retype` brand cast (`idKindField`, saved icon names),
+    a `fallbackTo` catch (`tolerantEnum`), and a literal `Date` default
+    (`dateField`) — so a row built from them keeps a point definition.
   - A non-literal param (`Date`) is refused.
   - `:rows` has no L2 definition (never persisted).
 - **Tests:** `compile-alias.test.ts`, `compile-alias-closure.test.ts` (A23

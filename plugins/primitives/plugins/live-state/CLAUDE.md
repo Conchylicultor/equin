@@ -777,6 +777,31 @@ Details:
     - `useResourceAcks`
     - `useResourceContractMismatches`
     - `useResources`
+- Core:
+  - Uses: `packages/zod-introspect.fallbackTo`
+  - Exports (types):
+    - `PointParams`
+    - `PointResourceDescriptor`
+    - `Resolvable`
+    - `ResourceDescriptor`
+    - `ResourceErrorKind`
+    - `ResourceOrigin`
+    - `ResourcePreload`
+    - `ResourceReadiness`
+    - `ResourceStatus`
+    - `ResourceUnavailable`
+    - `WindowParams`
+    - `WindowResourceDescriptor`
+    - `WindowSelector`
+  - Exports (values):
+    - `compareTxWatermark`
+    - `registerResourceDescriptor`
+    - `resolvableSchema`
+    - `resolved`
+    - `resourceDescriptorByKey`
+    - `ResourceError`
+    - `tolerantEnum`
+    - `unresolved`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`
@@ -819,30 +844,6 @@ Details:
     - `live/no-legacy-resource-spelling` — `.` (sanctioned)
     - `live/no-endpoint-read` — `web` (sanctioned)
   - Exempted by: `apps/file-explorer/git` (0 debt)
-- Core:
-  - Exports (types):
-    - `PointParams`
-    - `PointResourceDescriptor`
-    - `Resolvable`
-    - `ResourceDescriptor`
-    - `ResourceErrorKind`
-    - `ResourceOrigin`
-    - `ResourcePreload`
-    - `ResourceReadiness`
-    - `ResourceStatus`
-    - `ResourceUnavailable`
-    - `WindowParams`
-    - `WindowResourceDescriptor`
-    - `WindowSelector`
-  - Exports (values):
-    - `compareTxWatermark`
-    - `registerResourceDescriptor`
-    - `resolvableSchema`
-    - `resolved`
-    - `resourceDescriptorByKey`
-    - `ResourceError`
-    - `tolerantEnum`
-    - `unresolved`
 - Test helpers:
   - Web: `@plugins/primitives/plugins/live-state/web/testing`
     - `createLiveStateHarness` — A fresh `NotificationsClient` and the `QueryClient` it owns, under a transport, for ONE test — what the app's `TransportProvider` + `NotificationsProvider` mount, minus the page's pipeline (which keeps the first cache it was built with, so a second test would mount a cache nothing writes).

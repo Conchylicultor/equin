@@ -191,8 +191,10 @@ The fix is to require a source on the hop table that sees every re-key:
   changes a value), so it is not opaque.
 - **Limit — opaque column / row schemas are folded in, not refused.** The
   definition moves when the schema's shape does, but not when only a transform
-  body does (a `tolerantEnum` column's `normalize`). Refusing them would rule
-  out the tasks entities.
+  body does (a hand-written `.transform()`). Refusing them would rule out
+  entities still carrying one. The point definition (epoch handoff) DOES refuse
+  them; the common row parts — `retype` brand casts, `tolerantEnum`'s
+  `fallbackTo` catch, literal `Date` defaults — are data, so they do not.
 - **`wire.ids` must be non-empty**: `encodeRow` is code the definition cannot
   read, so the stable ids of its codecs stand in for it.
 

@@ -422,9 +422,9 @@ describe("schemaDomain", () => {
       "text",
     );
     expect(schemaDomain(z.coerce.date())).toBe("instant");
-    expect(schemaDomain(tolerantEnum(z.enum(["a", "b"]), () => "a"))).toBe(
-      "text",
-    );
+    expect(
+      schemaDomain(tolerantEnum(z.enum(["a", "b"]), { fallback: "a" })),
+    ).toBe("text");
     expect(schemaDomain(z.enum({ A: "a", B: "b" }))).toBe("text");
     expect(schemaDomain(z.string().transform((v) => v.length))).toBe("text");
     expect(schemaDomain(z.lazy(() => z.number()))).toBe("number");

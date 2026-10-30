@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { SavedSymbolName } from "@plugins/ui/plugins/icons/core";
+import { retype } from "@plugins/packages/plugins/zod-introspect/core";
 import symbolNameList from "./symbol-names.json";
 
 let names: ReadonlySet<string> | null = null;
@@ -26,7 +27,9 @@ export const SavedSymbolNameSchema: z.ZodType<SavedSymbolName> = z
   .refine(isSavedSymbolName, {
     error: (iss) => `"${String(iss.input)}" is not a Material Symbols name`,
   })
-  .transform((name) => name as SavedSymbolName);
+  // `retype` (a brand cast zod-introspect describes as data), so a row schema
+  // holding a saved icon stays describable.
+  .transform(retype<SavedSymbolName>);
 
 /** {@link SavedSymbolNameSchema} as a throwing call, for a name read from somewhere with no schema. */
 export function parseSavedSymbolName(name: string): SavedSymbolName {

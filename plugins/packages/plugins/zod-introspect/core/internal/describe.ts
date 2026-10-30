@@ -1,3 +1,4 @@
+import { describedFn } from "./described-fn";
 import { childrenOf, inspect } from "./inspect";
 import type { SchemaCheck, SchemaEdge, SchemaNode } from "./schema-node";
 
@@ -17,8 +18,9 @@ export interface SchemaDescription {
  * layout, so the description survives a zod upgrade, and moves only when what the schema accepts or produces does.
  *
  * FAIL-CLOSED: a part whose OUTPUT depends on a function body — a transform
- * (and so a preprocess), a codec (`z.codec`, `z.stringbool()`), a rewrite check (`.trim()` — zod 4 cannot say which
- * rewrite it is), a catch value, a default or literal that is not one stable
+ * (and so a preprocess) other than `retype`, a codec (`z.codec`, `z.stringbool()`), a rewrite check (`.trim()` — zod 4 cannot say which
+ * rewrite it is), a catch value not minted by `fallbackTo`, a default that is
+ * neither one stable JSON value nor a literal `Date`, a literal that is not a
  * JSON value — is described as `{ $opaque: <what> }` and listed in `opaque`,
  * never folded into a description that would stay the same when the body
  * changes. A refinement is NOT opaque: it accepts or refuses a value, it never
@@ -116,17 +118,31 @@ export function describeSchema(schema: unknown): SchemaDescription {
           rest: node.rest === null ? null : kid({ kind: "rest" }),
           checks,
         };
-      case "union":
+      case "union": {
+        const options = node.options.map((_, index) =>
+          kid({ kind: "option", index }),
+        );
+        // Without a discriminator, the options are tried in turn and the
+        // first that accepts gives the output: a refinement inside one is
+        // then no longer "only accepts or refuses" — its verdict picks which
+        // option's output is served, so a change to its body changes the
+        // value. Blind. (A discriminated union picks its option by the
+        // discriminator alone; a refinement there only refuses.)
         return {
           kind: "union",
-          options: node.options.map((_, index) =>
-            kid({ kind: "option", index }),
-          ),
+          options:
+            node.discriminator === undefined && options.some(holdsRefine)
+              ? blind(
+                  path,
+                  "a union over a refinement (its verdict picks the option)",
+                )
+              : options,
           discriminator: node.discriminator ?? null,
           inclusive: node.inclusive,
           unionFallback: node.unionFallback,
           checks,
         };
+      }
       case "intersection":
         return {
           kind: "intersection",
@@ -167,7 +183,15 @@ export function describeSchema(schema: unknown): SchemaDescription {
           checks,
         };
       case "transform":
-        return { kind: "transform", fn: blind(path, "a transform"), checks };
+        // A function this plugin minted (`retype`) is data; any other is a body.
+        return {
+          kind: "transform",
+          fn:
+            describedFn(node.fn)?.fn === "retype"
+              ? "retype"
+              : blind(path, "a transform"),
+          checks,
+        };
       case "default":
       case "prefault": {
         // Read twice, so a default that is not one stable JSON value (a
@@ -175,6 +199,25 @@ export function describeSchema(schema: unknown): SchemaDescription {
         // recorded as one sample.
         const value = node.defaultValue();
         const again = node.defaultValue();
+        // A literal `Date` default (`.default(new Date(0))`) is handed out as
+        // the SAME object on every fill (zod clones only plain objects and
+        // arrays), so it is described by its instant — under its own key, so
+        // it can never read as a JSON default. A computed one
+        // (`() => new Date()`) is a fresh object per fill, and stays blind;
+        // a function returning one constant `Date` is admitted — its output
+        // IS that instant.
+        if (
+          value instanceof Date &&
+          value === again &&
+          Number.isFinite(value.getTime())
+        ) {
+          return {
+            kind: node.kind,
+            inner: kid({ kind: "inner" }),
+            date: value.toISOString(),
+            checks,
+          };
+        }
         return {
           kind: node.kind,
           inner: kid({ kind: "inner" }),
@@ -186,14 +229,29 @@ export function describeSchema(schema: unknown): SchemaDescription {
           checks,
         };
       }
-      case "catch":
-        // A literal catch value and a function of the failed input look alike.
+      case "catch": {
+        // A literal catch value and a function of the failed input look
+        // alike — unless this plugin minted the function (`fallbackTo`).
+        // Even then, a refinement under it is no longer "only accepts or
+        // refuses": its verdict picks between the input and the fallback,
+        // so a change to its body changes the output — blind.
+        const minted = describedFn(node.catchValue);
+        const inner = kid({ kind: "inner" });
         return {
           kind: "catch",
-          inner: kid({ kind: "inner" }),
-          value: blind(path, "a catch value (a function of the failed input)"),
+          inner,
+          value:
+            minted?.fn !== "fallback"
+              ? blind(path, "a catch value (a function of the failed input)")
+              : holdsRefine(inner)
+                ? blind(
+                    path,
+                    "a catch over a refinement (its verdict picks the output)",
+                  )
+                : { fallback: minted.value },
           checks,
         };
+      }
       case "optional":
       case "nullable":
       case "readonly":
@@ -249,6 +307,15 @@ function describeCheck(
       );
     }
   }
+}
+
+/** Whether a description holds a `refine` check anywhere (a function body deciding acceptance). */
+function holdsRefine(description: unknown): boolean {
+  if (Array.isArray(description)) return description.some(holdsRefine);
+  if (typeof description !== "object" || description === null) return false;
+  const record = description as Record<string, unknown>;
+  if (record.kind === "refine") return true;
+  return Object.values(record).some(holdsRefine);
 }
 
 function jsonNumber(value: number | bigint): unknown {

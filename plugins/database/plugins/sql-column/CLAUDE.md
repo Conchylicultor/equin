@@ -44,7 +44,7 @@ spellable with nothing new:
 | the value set | schema | on an unknown value |
 |---|---|---|
 | closed, private to one engine — an outsider is a bug | the strict `z.enum` | throw `SqlColumnError` |
-| evolves — ids get renamed, old rows outlive them | `tolerantEnum(strict, normalize, report)` | normalize, and fire the deduped corruption report |
+| evolves — ids get renamed, old rows outlive them | `tolerantEnum(strict, { fallback, onFallback })` | degrade to the fallback, and fire the deduped corruption report |
 
 Tolerant is not a softer guardrail: it is the same rule applied to a set whose
 members really do change. What both forbid is a type nobody checks. The

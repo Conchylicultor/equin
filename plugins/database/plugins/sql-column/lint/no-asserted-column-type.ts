@@ -159,8 +159,8 @@ const TEXT_REMEDY =
   "same `text` column through drizzle's `customType`, with the schema as the real `fromDriver` / " +
   "`toDriver` decoder, and infers the column's type from that schema alone — so the type cannot be " +
   "chosen independently of what runs. Pass the strict `z.enum` when the value set is closed and " +
-  "private to one engine (an outsider is a bug, so it throws), or a `tolerantEnum(strict, normalize, " +
-  "report)` when ids get renamed and old rows outlive them (it normalizes and fires the deduped " +
+  "private to one engine (an outsider is a bug, so it throws), or a `tolerantEnum(strict, { fallback, " +
+  "onFallback })` when ids get renamed and old rows outlive them (it degrades to the fallback and fires the deduped " +
   "corruption report instead). The generated DDL is byte-identical to `text(...)` — `getSQLType()` is " +
   '"text" — so adopting it produces no migration. ' +
   "See research/2026-08-25-database-decoded-columns.md.";

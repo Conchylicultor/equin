@@ -9,7 +9,10 @@
  *   - it moves with the projection, the static `where`, the row schema, the id
  *     bound and an `encodeRow`'s id;
  *   - none for a function `where`, an `encodeRow` naming no id, an opaque
- *     decoder or an opaque schema part.
+ *     decoder or an opaque schema part;
+ *   - defined over the row parts zod-introspect describes as data (a literal
+ *     `Date` default, a `retype` brand cast, a `fallbackTo` catch), and moved
+ *     by each of them.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -17,6 +20,10 @@ import { eq, sql, type SQL } from "drizzle-orm";
 import { pgTable, text } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import type { PointQueryResourceContract } from "@plugins/infra/plugins/query-resource/core";
+import {
+  fallbackTo,
+  retype,
+} from "@plugins/packages/plugins/zod-introspect/core";
 import { recordingQueryDb } from "../testing/recording-db";
 import { compileWindowQuery } from "./compile-window";
 import type { PointQueryResourceSpec } from "./spec";
@@ -151,5 +158,64 @@ describe("a point read's handoff definition", () => {
         },
       ),
     ).toBeNull();
+  });
+
+  test("is defined over a literal Date default, a retype cast and a fallbackTo catch — each of which moves it", () => {
+    const row = (o: {
+      updatedAt?: z.ZodType;
+      id?: z.ZodType;
+      model?: z.ZodType;
+    }) => ({
+      schema: z.array(
+        z.object({
+          id: o.id ?? z.string().transform(retype<string & { id: 1 }>),
+          title: z.string().nullable(),
+          updatedAt: o.updatedAt ?? z.coerce.date().default(new Date(0)),
+          model:
+            o.model ?? z.enum(["opus", "sonnet"]).catch(fallbackTo("opus")),
+        }),
+      ),
+    });
+    const base = definitionOf({}, row({}));
+    expect(base).toEqual(expect.any(String));
+    expect(definitionOf({}, row({}))).toBe(base);
+    const moved = [
+      // the default
+      definitionOf(
+        {},
+        row({ updatedAt: z.coerce.date().default(new Date(1)) }),
+      ),
+      // the field type under the default
+      definitionOf({}, row({ updatedAt: z.date().default(new Date(0)) })),
+      // the field type under the cast
+      definitionOf({}, row({ id: z.number().transform(retype<number>) })),
+      // the fallback value
+      definitionOf(
+        {},
+        row({ model: z.enum(["opus", "sonnet"]).catch(fallbackTo("sonnet")) }),
+      ),
+      // the enum under the catch
+      definitionOf(
+        {},
+        row({
+          model: z.enum(["opus", "sonnet", "haiku"]).catch(fallbackTo("opus")),
+        }),
+      ),
+      // the id bound
+      definitionOf({}, { ...row({}), maxIds: 7 }),
+    ];
+    for (const d of moved) {
+      expect(d).toEqual(expect.any(String));
+      expect(d).not.toBe(base);
+    }
+    expect(new Set(moved).size).toBe(moved.length);
+    // A computed default, an inline cast and a literal catch stay opaque.
+    for (const opaque of [
+      row({ updatedAt: z.coerce.date().default(() => new Date()) }),
+      row({ id: z.string().transform((v) => v) }),
+      row({ model: z.enum(["opus", "sonnet"]).catch("opus") }),
+    ]) {
+      expect(answerOf({}, opaque).kind).toBe("none");
+    }
   });
 });
