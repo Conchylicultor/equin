@@ -1,15 +1,13 @@
 import { sql as drizzleSql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { z } from "zod";
-import {
-  executeOne,
-  executeRows,
-} from "@plugins/database/plugins/sql-rows/core";
+import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import {
   readLayout,
   routeChange,
 } from "@plugins/database/plugins/change-feed/server";
 import type { FeedChange } from "@plugins/database/plugins/change-feed/server";
+import type { ReplayScope } from "@plugins/framework/plugins/server-core/core";
 import {
   LIVE_STATE_CHANGELOG_TABLE,
   LIVE_STATE_SNAPSHOT_TABLE,
@@ -42,9 +40,15 @@ const ChangelogRowSchema = z.object({
 });
 type ChangelogRow = z.infer<typeof ChangelogRowSchema>;
 
-// `min(...)` over an empty table is NULL, so the floor read is nullable. A bare
-// aggregate with no GROUP BY ⇒ exactly one row, hence `executeOne`.
-const MinPositionRowSchema = z.object({ min_position: z.string().nullable() });
+// One usable row's catch-up floor (`position`, an xid8-family numeric cast to
+// text — never through a JS number).
+const PositionRowSchema = z.object({
+  resource_key: z.string(),
+  position: z.string(),
+});
+
+/** How a replay routes one changelog row (change-feed's `routeChange`). */
+export type ReplayRoute = (change: FeedChange, replay?: ReplayScope) => void;
 
 // Replay one changelog row through the EXACT same cascade the live listener uses
 // (change-feed's exported `routeChange`). Catch-up ≡ "replay the missed changelog
@@ -57,7 +61,8 @@ const MinPositionRowSchema = z.object({ min_position: z.string().nullable() });
 // See research/2026-06-22-global-live-state-l2-persisted-materialization.md §3.5.
 function replayChange(
   row: ChangelogRow,
-  route: (change: FeedChange) => void,
+  route: ReplayRoute,
+  floors: ReadonlyMap<string, string>,
 ): void {
   // The layout is read by the live NOTIFY's own rule (`readLayout`): one that
   // does not parse replays the row unscoped (FULL for its readers) rather than
@@ -80,12 +85,19 @@ function replayChange(
   // column a new route reads that the old gate did not compare is simply not
   // listed, so that route is reached. Likewise its `keys`: a column the old
   // layout did not carry reads as unknown, which recomputes — never skips.
-  route({
-    source: "feed",
-    table: row.t,
-    op: row.op,
-    ...scope,
-  });
+  //
+  // `floors` (the replay scope): a persisted key whose L2 row was read at a
+  // position above this row's xid already reflects it, so the router skips
+  // that key's `{}` (see `ReplayScope`) — the rest is the live routing.
+  route(
+    {
+      source: "feed",
+      table: row.t,
+      op: row.op,
+      ...scope,
+    },
+    { xid: row.xid, floors },
+  );
 }
 
 /**
@@ -102,32 +114,48 @@ function replayChange(
 export type CatchUpProbe =
   | { kind: "none" }
   | { kind: "backstop"; floor: string; horizon: string }
-  | { kind: "replay"; floor: string };
+  | {
+      kind: "replay";
+      floor: string;
+      /** Every usable row's own position, by key — `floor` is their min. */
+      positions: ReadonlyMap<string, string>;
+    };
 
 /** The lower of two catch-up positions (xid8 as numeric text). */
 export function minPosition(a: string, b: string): string {
   return BigInt(a) <= BigInt(b) ? a : b;
 }
 
+/** Every usable persisted row's position, by key — one statement. */
+export async function readUsablePositions(
+  db: NodePgDatabase,
+  exp: L2Expectation,
+): Promise<Map<string, string>> {
+  const rows = await executeRows(db, {
+    query: drizzleSql`
+      SELECT resource_key, position::text AS position
+      FROM ${drizzleSql.raw(LIVE_STATE_SNAPSHOT_TABLE)}
+      WHERE params_key = '{}' AND ${usableRowSql(exp)}
+    `,
+    row: PositionRowSchema,
+    label: "catch-up/snapshot-positions",
+  });
+  return new Map(rows.map((r) => [r.resource_key, r.position]));
+}
+
 // The floor is the OLDEST USABLE persisted row's position (the conservative
 // floor — every usable row already incorporates everything strictly older than
 // its own). A row the usable-row predicate refuses is recomputed, never
-// served or seeded, so its position bounds nothing.
+// served or seeded, so its position bounds nothing. Every row's own position
+// comes back with it, from the same statement: the replay routes a changelog
+// row to a key only at or above ITS position (`ReplayScope`).
 export async function probeCatchUp(
   db: NodePgDatabase,
   exp: L2Expectation,
 ): Promise<CatchUpProbe> {
-  const floorRow = await executeOne(db, {
-    query: drizzleSql`
-      SELECT min(position)::text AS min_position
-      FROM ${drizzleSql.raw(LIVE_STATE_SNAPSHOT_TABLE)}
-      WHERE params_key = '{}' AND ${usableRowSql(exp)}
-    `,
-    row: MinPositionRowSchema,
-    label: "probeCatchUp/snapshot-floor",
-  });
-  const floor = floorRow.min_position;
-  if (floor === null) return { kind: "none" };
+  const positions = await readUsablePositions(db, exp);
+  if (positions.size === 0) return { kind: "none" };
+  const floor = [...positions.values()].reduce((a, b) => minPosition(a, b));
 
   // The prune horizon: if the prune deleted a row at or after our floor,
   // history was pruned out from under a stale snapshot. (Not the oldest
@@ -137,7 +165,7 @@ export async function probeCatchUp(
   if (horizon !== null && isPrunedPast(floor, horizon)) {
     return { kind: "backstop", floor, horizon };
   }
-  return { kind: "replay", floor };
+  return { kind: "replay", floor, positions };
 }
 
 // Bounded cold-boot catch-up: replay only the changelog rows committed at or
@@ -152,10 +180,16 @@ export async function probeCatchUp(
 // the post-LISTEN ordering documented at the call site in `server/index.ts`:
 // this runs after change-feed's listener has its LISTEN up, so a commit landing
 // after the `SELECT` below is delivered on the live path (no gap).
+//
+// `floors` is each persisted key's own floor: a row below a key's floor is not
+// routed to that key's `{}` (its value already reflects it), so a key gets only
+// the rows since its own position — never the whole history since the oldest
+// one. A key absent from it (recomputed at boot) gets every row.
 export async function replayCatchUp(
   db: NodePgDatabase,
   floor: string,
-  route: (change: FeedChange) => void = routeChange,
+  floors: ReadonlyMap<string, string>,
+  route: ReplayRoute = routeChange,
 ): Promise<void> {
   const rows = await executeRows(db, {
     query: drizzleSql`
@@ -176,7 +210,18 @@ export async function replayCatchUp(
   }
 
   log.publish(
-    `[live-state-snapshot] catch-up: replaying ${rows.length} changelog row(s) since floor xid ${floor}`,
+    `[live-state-snapshot] catch-up: replaying ${rows.length} changelog row(s) since floor xid ${floor} (per-key floors: ${formatFloors(floors)})`,
   );
-  for (const row of rows) replayChange(row, route);
+  for (const row of rows) replayChange(row, route, floors);
+}
+
+// `key@position, …` lowest first — which keys reach how far back.
+function formatFloors(floors: ReadonlyMap<string, string>): string {
+  if (floors.size === 0) return "none";
+  return [...floors]
+    .sort(([, a], [, b]) =>
+      BigInt(a) < BigInt(b) ? -1 : BigInt(a) > BigInt(b) ? 1 : 0,
+    )
+    .map(([key, position]) => `${key}@${position}`)
+    .join(", ");
 }

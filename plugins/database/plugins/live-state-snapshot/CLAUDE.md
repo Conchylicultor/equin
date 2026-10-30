@@ -167,6 +167,23 @@ in this order:
    boot-snapshot stops serving it) and the key recomputed. The barrier sweep
    above already cleared such rows; this is the backstop.
 
+**Per-key replay floors.** The replay READS from the lowest floor, but each
+row is routed with a `ReplayScope` — its xid and every persisted key's own
+floor (its usable row's position, lowered to its seeded position and to a
+re-read just before the replay — a hot swap's previous backend may lower any
+row after the probe, so the replay's read floor follows that re-read, and a
+row lowered past the prune horizon is recomputed; a key recomputed at boot has
+none). The runtime skips a persisted key's `{}` for a
+row whose xid is below that key's floor: the value was read under a snapshot
+whose xmin was the floor, so it already reflects every lower transaction.
+`xid >= floor` still routes — the same boundary as the changelog select — and
+every other target (a subscribed non-persisted tuple, a key without a floor)
+gets every row, as before. Without it, one idle key (or an alias whose floor
+persists only `LEAST` the position) pinned the global floor up to an hour back,
+and every OTHER key re-derived that whole hour at each boot (median 9k rows on
+main). An alias's own floor still sits at its last FULL rebuild until the cut
+primitive raises it (follow-up: research/2026-10-30-global-boot-catch-up-per-key-floors.md, part B).
+
 `onShutdown` drops the armed trailing floor persists (`dropPendingPersists`): their
 changes are in the changelog and each row's floor still predates them.
 

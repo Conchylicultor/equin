@@ -433,6 +433,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `ProfilerMeasureName`
     - `ProfilerSpanDetail`
     - `Registration`
+    - `ReplayScope`
     - `ResourceContract`
     - `ResourceDefinition`
     - `ResourceDeliveryObserver`

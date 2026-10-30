@@ -1,5 +1,6 @@
 import {
   routeTableChange,
+  type ReplayScope,
   type TableChange,
 } from "@plugins/framework/plugins/server-core/core";
 import type { ResourceRuntime } from "@plugins/framework/plugins/resource-runtime/core";
@@ -80,9 +81,15 @@ function tableChangeOf(change: RoutedChange): TableChange {
 // reader of `tasks_v`). A DB-backed resource that declares none is refused at
 // boot (D6). See research/2026-09-29-global-scoped-change-routing.md and
 // research/2026-10-17-global-live-declared-reads-externals-session2.md.
-export const routeChange: (routed: RoutedChange) => void = createChangeRouter({
+//
+// `replay` is the catch-up's only (see `ReplayScope`): the same routing, minus
+// the persisted keys whose L2 row already reflects the replayed row.
+export const routeChange: ChangeRouter = createChangeRouter({
   routeTableChange,
 });
+
+/** Route one change; `replay` only from the L2 catch-up (see `routeChange`). */
+export type ChangeRouter = (routed: RoutedChange, replay?: ReplayScope) => void;
 
 /**
  * The routing above, into ANY runtime's router — `routeChange` is it
@@ -93,9 +100,9 @@ export const routeChange: (routed: RoutedChange) => void = createChangeRouter({
  */
 export function createChangeRouter(
   runtime: ResourceRuntimeRouter,
-): (routed: RoutedChange) => void {
+): ChangeRouter {
   const { routeTableChange } = runtime;
   // A routed table's trigger carries its key layout and, for a gated UPDATE,
   // the unchanged columns; every other table's leaves both null (unknown).
-  return (routed) => routeTableChange(tableChangeOf(routed));
+  return (routed, replay) => routeTableChange(tableChangeOf(routed), replay);
 }

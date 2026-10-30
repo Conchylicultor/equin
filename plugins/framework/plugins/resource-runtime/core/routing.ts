@@ -57,6 +57,21 @@ export interface TableChange {
   changedAt?: number;
 }
 
+/**
+ * The context of a REPLAYED change (the L2 boot catch-up re-routing a
+ * changelog row): the row's transaction, and the catch-up floor each persisted
+ * key's L2 row was read at this boot — its `position`, the xmin of the read its
+ * value came from, so the value already reflects every transaction below it.
+ * A persisted entry's `{}` tuple skips a replayed change with `xid` below its
+ * floor; every other target is routed exactly as a live change. A key with
+ * no floor (recomputed at boot, no usable row) is always routed. `xid` is a
+ * floor comparison only — never an ack (`TableChange.xid`).
+ */
+export interface ReplayScope {
+  xid: string;
+  floors: ReadonlyMap<string, string>;
+}
+
 /** How one table's changed rows map into the host's `keyOf` space. */
 export type HostMap =
   /**

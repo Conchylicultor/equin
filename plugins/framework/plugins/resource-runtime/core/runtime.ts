@@ -46,6 +46,7 @@ import {
   type Route,
   type RoutePlan,
   type RoutePlanInput,
+  type ReplayScope,
   type RouteVia,
   type TableChange,
   type TableLayoutRequirement,
@@ -2194,8 +2195,12 @@ export interface ResourceRuntime {
    * resolve later, in the drain). Never throws. An entry with no plan is reached
    * by no table change (D6: change-feed refuses one at boot).
    * See research/2026-09-29-global-scoped-change-routing.md.
+   *
+   * `replay` (the L2 boot catch-up only, see `ReplayScope`): a persisted
+   * entry's `{}` tuple skips the change when its xid is below the floor its L2
+   * row proves, since the value already reflects it. Every other target routes as a live change.
    */
-  routeTableChange: (change: TableChange) => void;
+  routeTableChange: (change: TableChange, replay?: ReplayScope) => void;
   /**
    * Force a FULL recompute of a single registered resource by key (param-less →
    * key `{}`), routed through the SAME cascade the feed uses (`source: "feed"`).
@@ -7991,6 +7996,7 @@ export function createResourceRuntime(
       notifyStats: NotifyCounts;
       subShortCircuits: number;
       staleFlightSupersedes: number;
+      replaySkips: number;
       ackOverflows: number;
       derivedSubs: number;
       deriveFallbacks: Partial<Record<DeriveRefusal, number>>;
@@ -8123,6 +8129,9 @@ export function createResourceRuntime(
         // revert is still reachable under load — and is now refused instead of
         // broadcast under a fresh version.
         staleFlightSupersedes: staleFlightSupersedes.get(entry.key) ?? 0,
+        // Boot catch-up rows this key's `{}` skipped as already reflected in
+        // its L2 row (see `replayReflected`).
+        replaySkips: replaySkips.get(entry.key) ?? 0,
         // Drained tuple-cycles whose ackTx was suppressed by the sourceTx cap
         // (see `recordAckOverflow`).
         ackOverflows: ackOverflows.get(entry.key) ?? 0,
@@ -8290,10 +8299,10 @@ export function createResourceRuntime(
   // pending is merged in this call, so the whole change rides one flush.
   // Defensive: a failure is reported, never thrown at the producer — and isolated per entry (per tuple inside `routeEntryChange`), so
   // one failing entry cannot take the change from the others.
-  function routeTableChange(change: TableChange): void {
+  function routeTableChange(change: TableChange, replay?: ReplayScope): void {
     for (const entry of routedByTable.get(change.table) ?? []) {
       try {
-        routeEntryChange(entry, change);
+        routeEntryChange(entry, change, replay);
       } catch (err) {
         reportLoaderError(
           `routeTableChange failed for ${entry.key} (table "${change.table}")`,
@@ -8312,8 +8321,18 @@ export function createResourceRuntime(
   // gets nothing: a fresh subscribe loads from scratch.
   function routedTargets(
     entry: RegistryEntry,
+    replay?: ReplayScope,
   ): [pk: string, params: ResourceParams][] {
     const targets = [...entry.tracked];
+    if (replay !== undefined && replayReflected(entry, replay)) {
+      // The `{}` tuple's value already reflects this replayed change (see
+      // `replayReflected`): drop it, whether or not a tab subscribed to it —
+      // any value it holds was read at or after its L2 floor.
+      const i = targets.findIndex(([pk]) => pk === EMPTY_PK);
+      if (i !== -1) targets.splice(i, 1);
+      replaySkips.set(entry.key, (replaySkips.get(entry.key) ?? 0) + 1);
+      return targets;
+    }
     if (
       !entry.tracked.has(EMPTY_PK) &&
       (isPersisted(entry) ||
@@ -8324,6 +8343,22 @@ export function createResourceRuntime(
       targets.push([EMPTY_PK, {}]);
     }
     return targets;
+  }
+
+  // Whether a replayed change (`ReplayScope`) is already reflected in a
+  // PERSISTED entry's `{}` value: its xid is below the entry's L2 floor — the
+  // xmin of the read the row's value came from, so every lower transaction had
+  // finished before it. A key with no floor (recomputed at boot, no usable row)
+  // is never proven current, so the change routes. No downstream can miss it
+  // through the skip: a persisted entry is never external, and every
+  // `dependsOn` upstream is (T15), so a persisted entry cascades to nothing.
+  // Per key: replayed changes skipped as already reflected (`_debug`).
+  const replaySkips = new Map<string, number>();
+
+  function replayReflected(entry: RegistryEntry, replay: ReplayScope): boolean {
+    if (!isPersisted(entry)) return false;
+    const floor = replay.floors.get(entry.key);
+    return floor !== undefined && BigInt(replay.xid) < BigInt(floor);
   }
 
   // Whether `{}` is a tuple of the entry — its own params gate, the one every
@@ -8342,7 +8377,11 @@ export function createResourceRuntime(
     }
   }
 
-  function routeEntryChange(entry: RegistryEntry, change: TableChange): void {
+  function routeEntryChange(
+    entry: RegistryEntry,
+    change: TableChange,
+    replay?: ReplayScope,
+  ): void {
     const routing = entry.routing!;
     reachFollows(entry, routing, change);
     const routes = routing.byTable.get(change.table);
@@ -8350,12 +8389,12 @@ export function createResourceRuntime(
       // A table only the drift guard indexed (A8 fail-open): no route names it
       // — or only a tagged route, read outside its tag — so nothing scopes
       // it: every target recomputes FULL.
-      for (const [pk, params] of routedTargets(entry)) {
+      for (const [pk, params] of routedTargets(entry, replay)) {
         deliverRouted(entry, pk, params, { kind: "full" }, change);
       }
       return;
     }
-    for (const [pk, params] of routedTargets(entry)) {
+    for (const [pk, params] of routedTargets(entry, replay)) {
       let outcome: ShapedRouting;
       try {
         const uses = usesFor(entry, routing, pk, params);

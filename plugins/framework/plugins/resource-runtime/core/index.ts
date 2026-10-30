@@ -50,6 +50,7 @@ export type {
   NotifiedRead,
   ReachPlan,
   RelationRead,
+  ReplayScope,
   Route,
   RoutePlan,
   RouteVia,

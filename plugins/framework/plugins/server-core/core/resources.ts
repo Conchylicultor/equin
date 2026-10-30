@@ -14,6 +14,7 @@ import type {
   ResourceParams as RtParams,
   DependsOnEntry as RtDep,
   TableChange as RtTableChange,
+  ReplayScope as RtReplayScope,
   ChangeSource as RtChangeSource,
   TableLayoutRequirement as RtTableLayoutRequirement,
   PersistMeta as RtPersistMeta,
@@ -90,6 +91,9 @@ export type DependsOnEntry<P extends ResourceParams = ResourceParams> =
 // What a change producer hands `routeTableChange` (see resource-runtime/core's
 // `routing.ts`): the DB change-feed builds one per NOTIFY, catch-up row and sweep.
 export type TableChange = RtTableChange;
+// A replayed change's context (the L2 boot catch-up): `routeTableChange`'s
+// second argument, which skips a persisted key's `{}` its L2 row already covers.
+export type ReplayScope = RtReplayScope;
 // Which producer made a `TableChange`: the DB change feed, or an in-process
 // change producer (change-feed's `defineChangeProducer`).
 export type ChangeSource = RtChangeSource;

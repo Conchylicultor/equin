@@ -107,6 +107,7 @@ export type {
   PersistedValueCheck,
   ResourceDefinition,
   TableChange,
+  ReplayScope,
   ChangeSource,
   TableLayoutRequirement,
   ResourceContract,

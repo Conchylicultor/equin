@@ -16,6 +16,7 @@ import { ensureChangelogTable } from "@plugins/database/plugins/change-feed/serv
 import type { FeedChange } from "@plugins/database/plugins/change-feed/server";
 import type {
   PersistedValueCheck,
+  ReplayScope,
   SeedOutcome,
 } from "@plugins/framework/plugins/server-core/core";
 import {
@@ -95,10 +96,13 @@ function recorder(aliasKeys: string[], invalid: readonly string[] = []) {
   const recomputed: string[] = [];
   const seeded: Array<{ key: string; value: unknown; position: string }> = [];
   const routed: FeedChange[] = [];
+  // The per-key floors each replayed row was routed with (one map per run).
+  const floors: Array<ReadonlyMap<string, string> | undefined> = [];
   return {
     recomputed,
     seeded,
     routed,
+    floors,
     rt: {
       aliasKeys,
       recompute: (k: string) => recomputed.push(k),
@@ -115,7 +119,10 @@ function recorder(aliasKeys: string[], invalid: readonly string[] = []) {
         seeded.push({ key, value, position: base.position });
         return { kind: "seeded" };
       },
-      route: (c: FeedChange) => routed.push(c),
+      route: (c: FeedChange, replay?: ReplayScope) => {
+        routed.push(c);
+        floors.push(replay?.floors);
+      },
       healedRollups: [] as readonly string[],
     },
   };
@@ -128,9 +135,9 @@ const exp = (
 
 // A hot swap's other writer: once `arm()` is called (from a runtime callback
 // the boot makes AFTER its probe), the next statement the boot issues is
-// preceded by that writer's floor persist LOWERING the alias row to `lowerTo`
-// — the row the boot then seeds from sits below the probe's floor.
-function lowerAfterProbe(lowerTo: string) {
+// preceded by that writer's floor persist LOWERING `key`'s row to `lowerTo`
+// — the row the boot then seeds from (or re-reads) sits below the probe's floor.
+function lowerAfterProbe(lowerTo: string, key = "alias") {
   let armed = false;
   let done = false;
   const db = new Proxy(t.db, {
@@ -139,7 +146,7 @@ function lowerAfterProbe(lowerTo: string) {
       return async (...args: Parameters<typeof target.execute>) => {
         if (armed && !done) {
           done = true;
-          await persistSnapshot(t.db, "alias", "{}", [{ id: "a1" }], lowerTo, {
+          await persistSnapshot(t.db, key, "{}", [{ id: "a1" }], lowerTo, {
             mode: "floor",
             definition: null,
             guardTables: ["t"],
@@ -221,6 +228,32 @@ describe("runBootCatchUp", () => {
       { key: "alias", value: [{ id: "a1" }], position: "100" },
     ]);
     expect(r.routed.map((c) => c.ids)).toEqual([["x"]]);
+    // Only the seeded alias has a floor: the recomputed keys get every row.
+    expect(r.floors).toEqual([new Map([["alias", "100"]])]);
+  });
+
+  test("each key's replay floor is its own row's position, and a key recomputed at boot has none", async () => {
+    await row("low", "100", null, [{ id: "a1" }]);
+    await row("high", "300", null, [{ id: "b1" }]);
+    await row("stale-def", "50", "old");
+    await changelog(1, "40"); // oldest retained, below every floor
+    await changelog(2, "200");
+    await changelog(3, "300");
+    const r = recorder(["low", "high"]);
+    const verdict = await runBootCatchUp(
+      t.db,
+      exp(["low", "high", "stale-def"], { "stale-def": "new" }),
+      r.rt,
+    );
+    expect(verdict).toBe("replay");
+    expect(r.recomputed).toEqual(["stale-def"]);
+    expect(r.routed).toHaveLength(2);
+    expect(r.floors[0]).toEqual(
+      new Map([
+        ["low", "100"],
+        ["high", "300"],
+      ]),
+    );
   });
 
   test("A30: an alias whose value does not parse as its payload is treated as missing — row cleared, key recomputed, never seeded", async () => {
@@ -269,6 +302,35 @@ describe("runBootCatchUp", () => {
     ]);
     // Replayed from 50, not the probe's 100: the commit at 70 reaches the alias.
     expect(r.routed).toHaveLength(2);
+    // …and the alias's own floor is lowered with it, so the router does not
+    // skip it for that commit.
+    expect(r.floors[0]).toEqual(new Map([["alias", "50"]]));
+  });
+
+  test("a non-alias row lowered after the probe (hot swap) lowers that key's replay floor too", async () => {
+    await row("plain", "100");
+    await changelog(1, "40"); // oldest retained
+    await changelog(2, "70"); // below the probe's 100, above the lowered 50
+    await changelog(3, "120");
+    const other = lowerAfterProbe("50", "plain");
+    const r = recorder([]); // no alias: nothing seeded
+    const rt = {
+      ...r.rt,
+      recompute: (k: string) => {
+        other.arm();
+        r.rt.recompute(k);
+      },
+    };
+    const verdict = await runBootCatchUp(
+      other.db as typeof t.db,
+      exp(["plain", "trigger"]),
+      rt,
+    );
+    expect(verdict).toBe("replay");
+    // The re-read before the replay lowers `plain`'s floor to 50 — and the
+    // replay's read floor with it, so the commit at 70 reaches the key.
+    expect(r.routed).toHaveLength(2);
+    expect(r.floors[0]).toEqual(new Map([["plain", "50"]]));
   });
 
   test("a seeded row lowered past the prune horizon is recomputed, never seeded", async () => {

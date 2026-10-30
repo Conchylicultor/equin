@@ -1,5 +1,4 @@
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import type { FeedChange } from "@plugins/database/plugins/change-feed/server";
 import type {
   PersistedBase,
   PersistedValueCheck,
@@ -11,7 +10,13 @@ import {
   readPersistedSnapshots,
 } from "./persist";
 import type { L2Expectation } from "./persist";
-import { minPosition, probeCatchUp, replayCatchUp } from "./catch-up";
+import {
+  minPosition,
+  probeCatchUp,
+  readUsablePositions,
+  replayCatchUp,
+} from "./catch-up";
+import type { ReplayRoute } from "./catch-up";
 import { isPrunedPast, readPruneHorizon } from "./changelog-horizon";
 import { snapshotLog as log } from "./log-sink";
 
@@ -28,7 +33,7 @@ export interface BootCatchUpRuntime {
    */
   seed: (key: string, value: unknown, base: PersistedBase) => SeedOutcome;
   /** Route one replayed changelog row (change-feed's `routeChange`). */
-  route?: (change: FeedChange) => void;
+  route?: ReplayRoute;
   /**
    * The rollups this boot's committed reconcile HEALED (derived-tables'
    * `reconciledRollups()`, rows upserted or deleted). A heal rewrites rollup
@@ -158,11 +163,23 @@ export async function runBootCatchUp(
   // a newly-persisted resource, a changed definition, an older writer's row, an
   // empty read-set): catch-up cannot bound it. The recompute persists its value
   // AND read-set for the next boot.
+  //
+  // `floors` — each key's own replay floor (`ReplayScope`): its usable row's
+  // position, lowered to its seeded row's below; a key recomputed here is
+  // dropped from it, so the replay routes every row to it as before.
+  const floors =
+    probe.kind === "replay"
+      ? new Map(probe.positions)
+      : new Map<string, string>();
+  const recompute = (key: string): void => {
+    floors.delete(key);
+    rt.recompute(key);
+  };
   const aliases = new Set(rt.aliasKeys);
   const seedKeys: string[] = [];
   for (const key of exp.persisted) {
     if (!usable.get(key)?.length) {
-      rt.recompute(key);
+      recompute(key);
       continue;
     }
     if (aliases.has(key)) seedKeys.push(key);
@@ -189,7 +206,7 @@ export async function runBootCatchUp(
     const horizon = rows.size === 0 ? null : await readPruneHorizon(db);
     for (const [key, row] of rows) {
       if (isPrunedPast(row.position, horizon)) {
-        rt.recompute(key);
+        recompute(key);
         continue;
       }
       const seeded = rt.seed(key, row.value, {
@@ -206,9 +223,16 @@ export async function runBootCatchUp(
           "stderr",
         );
         await clearPersistedSnapshots(db, [key]);
-        rt.recompute(key);
+        recompute(key);
         continue;
       }
+      // The seeded snapshot stands on THIS row's position; a row the previous
+      // backend lowered since the probe lowers the key's floor with it.
+      const probed = floors.get(key);
+      floors.set(
+        key,
+        probed === undefined ? row.position : minPosition(probed, row.position),
+      );
       replayFloor =
         replayFloor === undefined
           ? row.position
@@ -218,7 +242,27 @@ export async function runBootCatchUp(
 
   // 4c. Replay from the lowest floor anything seeded or probed stands on.
   if (replayFloor !== undefined) {
-    await replayCatchUp(db, replayFloor, rt.route);
+    // A hot swap's previous backend may have rewritten a NON-alias row since
+    // the probe — a replace from an older flight leaves a lower position, and
+    // boot-snapshot may serve that row. Re-read every key still holding a
+    // floor and keep the lower position, as the seed read does for aliases:
+    // a key's floor is only ever the lowest this boot read for it.
+    // The replay floor follows it (a lowered row's commits must be READ, not
+    // only routed), and a row lowered past the prune horizon is recomputed,
+    // exactly as a seeded alias's is.
+    const reread = await readUsablePositions(db, exp);
+    const reHorizon = reread.size === 0 ? null : await readPruneHorizon(db);
+    for (const [key, position] of reread) {
+      const held = floors.get(key);
+      if (held === undefined || BigInt(position) >= BigInt(held)) continue;
+      if (isPrunedPast(position, reHorizon)) {
+        recompute(key);
+        continue;
+      }
+      floors.set(key, position);
+      replayFloor = minPosition(replayFloor, position);
+    }
+    await replayCatchUp(db, replayFloor, floors, rt.route);
   }
   return probe.kind;
 }

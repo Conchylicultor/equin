@@ -321,6 +321,13 @@ no contributor).
     *Reverse routes*).
 - **A skip is never a pending**: it owes at most an ack (`entry.pendingAcks`). An
   empty scoped pending is a skip on every entry kind.
+- **Replay floors** (`routeTableChange(change, replay?: ReplayScope)`, the L2
+  boot catch-up only): a persisted entry's `{}` skips a replayed change whose
+  `replay.xid` is below `replay.floors.get(key)` — its L2 row's position, the
+  xmin of the read its value came from. No key in `floors` ⇒ routed. Nothing
+  downstream can miss it: a persisted entry is never external, so it cascades
+  to nothing (T15). Counted per key in `_debug.replaySkips`
+  (`runtime-replay-floors.test.ts`).
 - **An ack covers the changes routed before its drain**, so a producer must deliver
   a transaction's changes together (change-feed routes one NOTIFY burst per
   macrotask).
@@ -703,6 +710,7 @@ Out of reach at this seam (DB-backed harness instead):
     - `ReachPlan`
     - `ReadTags`
     - `RelationRead`
+    - `ReplayScope`
     - `Resource`
     - `ResourceContract`
     - `ResourceDefinition`

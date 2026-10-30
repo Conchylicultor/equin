@@ -26875,6 +26875,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ReachPlan`
           - `ReadTags`
           - `RelationRead`
+          - `ReplayScope`
           - `Resource`
           - `ResourceContract`
           - `ResourceDefinition`
@@ -26981,6 +26982,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ProfilerMeasureName`
           - `ProfilerSpanDetail`
           - `Registration`
+          - `ReplayScope`
           - `ResourceContract`
           - `ResourceDefinition`
           - `ResourceDeliveryObserver`

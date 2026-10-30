@@ -14,6 +14,7 @@ import {
 } from "@plugins/database/plugins/derived-views/core";
 import { ensureChangelogTable } from "@plugins/database/plugins/change-feed/server/testing";
 import type { FeedChange } from "@plugins/database/plugins/change-feed/server";
+import type { ReplayScope } from "@plugins/framework/plugins/server-core/core";
 import { ensureSnapshotTable } from "./tables-ddl";
 import {
   createTestDb,
@@ -74,9 +75,13 @@ async function seedFloor(position: string, key = `floor-${position}`) {
 }
 
 // The boot's catch-up: probe, then replay from the probe's floor.
-async function runCatchUp(route: (c: FeedChange) => void): Promise<void> {
+async function runCatchUp(
+  route: (c: FeedChange, replay?: ReplayScope) => void,
+): Promise<void> {
   const probe = await probeCatchUp(t.db, expectation());
-  if (probe.kind === "replay") await replayCatchUp(t.db, probe.floor, route);
+  if (probe.kind === "replay") {
+    await replayCatchUp(t.db, probe.floor, probe.positions, route);
+  }
 }
 
 interface ChangelogSeed {
@@ -118,12 +123,19 @@ async function insertChangelog(row: ChangelogSeed): Promise<void> {
   `);
 }
 
-function recorder(): { routed: FeedChange[]; route: (c: FeedChange) => void } {
+function recorder(): {
+  routed: FeedChange[];
+  scopes: Array<ReplayScope | undefined>;
+  route: (c: FeedChange, replay?: ReplayScope) => void;
+} {
   const routed: FeedChange[] = [];
+  const scopes: Array<ReplayScope | undefined> = [];
   return {
     routed,
-    route: (c) => {
+    scopes,
+    route: (c, replay) => {
       routed.push(c);
+      scopes.push(replay);
     },
   };
 }
@@ -246,10 +258,44 @@ describe("probeCatchUp + replayCatchUp", () => {
     expect(await probeCatchUp(t.db, expectation())).toEqual({
       kind: "replay",
       floor: "100",
+      positions: new Map([["floor-100", "100"]]),
     });
     const { routed, route } = recorder();
     await runCatchUp(route);
     expect(routed.map((c) => c.ids)).toEqual([["c"]]);
+  });
+
+  test("every replayed row carries its xid and EVERY key's own floor, from the probe's one read", async () => {
+    // Two keys at 100 and 300: the replay still reads from the oldest (100),
+    // and hands the router each row's xid with both floors, so the router can
+    // skip the key at 300 for the rows below it (see `ReplayScope`).
+    await seedFloor("100", "low");
+    await seedFloor("300", "high");
+    await insertChangelog({ seq: 1, xid: "99", t: "ta", op: "U", ids: ["a"] });
+    await insertChangelog({ seq: 2, xid: "100", t: "ta", op: "U", ids: ["b"] });
+    await insertChangelog({ seq: 3, xid: "299", t: "ta", op: "U", ids: ["c"] });
+    await insertChangelog({ seq: 4, xid: "300", t: "ta", op: "U", ids: ["d"] });
+    const probe = await probeCatchUp(t.db, expectation());
+    expect(probe).toEqual({
+      kind: "replay",
+      floor: "100",
+      positions: new Map([
+        ["low", "100"],
+        ["high", "300"],
+      ]),
+    });
+    const { routed, scopes, route } = recorder();
+    await runCatchUp(route);
+    expect(routed.map((c) => c.ids)).toEqual([["b"], ["c"], ["d"]]);
+    expect(scopes.map((r) => r?.xid)).toEqual(["100", "299", "300"]);
+    for (const scope of scopes) {
+      expect(scope?.floors).toEqual(
+        new Map([
+          ["low", "100"],
+          ["high", "300"],
+        ]),
+      );
+    }
   });
 
   test("the floor is the oldest USABLE row's: an unusable row's position bounds nothing", async () => {
@@ -265,6 +311,7 @@ describe("probeCatchUp + replayCatchUp", () => {
     expect(await probeCatchUp(t.db, expectation())).toEqual({
       kind: "replay",
       floor: "300",
+      positions: new Map([["floor-300", "300"]]),
     });
   });
 
