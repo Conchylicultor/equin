@@ -25,7 +25,13 @@ export function SlowOpKindView({ report }: { report: Report }) {
       <Badge variant="warning" mono>
         {d.operationKind}:{d.operation}
       </Badge>
-      <span>— {Math.round(d.durationMs)}ms</span>
+      {d.burst && (
+        <span>
+          {d.burst.count} ops at once, slowest{" "}
+          {d.burst.operations[0]?.operation}
+        </span>
+      )}
+      <span>— {Math.round(d.ownMs ?? d.durationMs)}ms</span>
       <span className="text-muted-foreground">
         (threshold {Math.round(d.thresholdMs)}ms)
       </span>

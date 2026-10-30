@@ -90,7 +90,10 @@ all or it is charged to the op that owns it:
 | Excluded | Where it is measured | Who owns it |
 |---|---|---|
 | A server span's gate waits (`waitMs`) | `slowSpanMs` (resolve-threshold.ts), every kind | The gate. A `queue` wait at or past `loaderMs` files `wait <layer>` (`onSlowWait`): one row per gate, its waiters as callers. A `join` wait (an identical run in flight) is that run's, which reports itself. |
-| An update's `throttle-hold` | `HELD_PHASES` / `ownMsOf` (perfs/latency-signal) | Nobody. The resource declared the hold (`throttleMs`). |
+| A span's time inside an enclosed op already filed (`claims`) | `slowSpanMs` over the profiler's `excludedMs` | That op, filed once (see "One cause, one report"). |
+| A delivery's wait on its flush's filed ops, and its `throttle-hold` | `deliver:<key>` is a latency leaf (`recordSpan(…, { latency: true })`) | The filed op; the hold is declared. |
+| An update's `throttle-hold` | `EXCLUDED_PHASES` / `ownMsOf` (perfs/latency-signal) | Nobody. The resource declared the hold (`throttleMs`). |
+| An update's `server-deliver` (notify → send) | `EXCLUDED_PHASES` / `ownMsOf` | The server: exactly the window its `push deliver:<key>` span judges (and the loader or flush it waited on). |
 | An element's transport bring-up (`notifications-transport`) | `elementSlowOp` | The transport. It is filed once per page as `wait notifications-transport` (`transportSlowOp`). |
 | Main-thread stalls ≥ 1 s (`main-thread-stall`) | `judgePagePauses` at the queue's flush, via perfs/page-pauses | main-thread-stall, which files the frozen page as its own `main-thread` op. |
 | A hidden or frozen tab | The same | Nobody. The whole item is dropped, because throttling distorts every layer. |
@@ -120,6 +123,45 @@ Storage is unchanged. Rows keep wall-clock `durationMs` / `totalMs` / `maxMs`
 plus the per-layer `waits`, so the list's Wait column shows the excluded share.
 The report's `ownMs` drives its title and message ("1502ms own of 2500ms").
 Design: `research/2026-10-30-global-slow-op-own-time.md`.
+
+## One cause, one report
+
+Own time removes what an op did not do; the same rule, applied to ops that
+CONTAIN each other, keeps one slowness from being filed once per measurement
+that saw it. On main after own-time landed (2026-10-30 13:57:21), one 2.66 s
+`edited-files` load filed 14 fingerprints: the loader, its `push`, the `flush`,
+the watcher's `bg` pass, four `deliver:*` (two of them `notifications`, which
+only waited in the same cycle) and four client `update`s. Now:
+
+- **The innermost slow op is filed; what encloses it is judged without it.**
+  The install hook calls the profiler's `claim()` on every span it files, and
+  the profiler takes that span's interval off every open enclosing entry
+  (`excludedMs`, `claims` — runtime-profiler, "Claims"). The row's `waits` name
+  the claimed op as a layer (`loader edited-files 2600`), so an enclosing span
+  still filed shows what was taken off.
+- **A delivery is a latency, not work.** `deliver:<key>` subtracts its declared
+  `throttle-hold` and the claims its flush collected inside its window; it is
+  filed only when slow for a reason nothing else reported, so it stays the
+  end-to-end server measure — held to `updateMs` (the bar of the client half it
+  replaces, below), not `loaderMs`.
+- **The client does not re-file the server's window.** An update's
+  `server-deliver` is that same window, so `ownMsOf` excludes it
+  (`EXCLUDED_PHASES`, owner `server`); the update is judged on `server-notice +
+  transport + client-apply`, and the server's delivery on the same 1000 ms bar. An `element` carries no server split on the wire, so
+  it still counts the server's `sub` time.
+- **A batch's burst is one report** (`reportsFor`, `server/internal/report-groups.ts`).
+  A client batch (one tab's 250 ms window) with several items of one kind is
+  one incident — a stalled socket delivers every pending update late, a page
+  boot settles every element late — so it files ONE report, operation `burst`
+  (`slow-op:<kind>:burst`), carrying its slowest item's measurement and trace and
+  naming the rest (counted over distinct operations: one op tripping twice is
+  still its own report). Rows are unaffected: every item still lands on its own op's
+  row. Server spans reach the funnel one per batch, so each files its own.
+- **A warm-up is judged once**, here, on its `bg` span (against its declared
+  `budgetMs` or `DEFAULT_WARMUP_BUDGET_MS`); boot-budget no longer judges its
+  boot span.
+
+Design: `research/2026-10-30-global-slow-op-one-cause-one-report.md`.
 
 ## The client beacon is batched
 
@@ -198,8 +240,8 @@ through the pure `latencySlowOp` (`web/internal/latency-slow-op.ts`):
 
 A span may carry the bar its call site declared: `runTracked(label, fn,
 { budgetMs })` for a background span, and a warm-up's `defineWarmup({ budgetMs })`,
-which the warm-up executor stamps on its `bg` span (and on its boot span, for
-the boot-budget monitor). `resolveSlowThreshold` returns it ahead of every kind
+which the warm-up executor stamps on its `bg` span (`DEFAULT_WARMUP_BUDGET_MS`
+when it declares none — slow-ops is a warm-up's one judge). `resolveSlowThreshold` returns it ahead of every kind
 default — the work said how long it is expected to take, and judging it on a
 global knob (`loaderMs` for every `bg` span) filed reports against work that was
 on budget (`warmup:plugin-tree.trees`, budget 15 s, ~6 s; `task-title:generate`,
@@ -226,7 +268,7 @@ job expected to run long still raises its own bar with
 registration for — a queue row written by a plugin this composition does not
 load.
 
-**A job is judged on WORK time (`durationMs − waitMs`), not on wall-clock hold**
+**A job is judged on WORK time (`durationMs − excludedMs`), not on wall-clock hold**
 — as every span kind now is (see "Own time"). A job's slot-hold is substantially not a property
 of the job: `jobs.dead-gc` was measured holding a worker slot 77 s to do 254 ms
 of work, the rest blocked on `background-tx-acquire`, an admission gate entered

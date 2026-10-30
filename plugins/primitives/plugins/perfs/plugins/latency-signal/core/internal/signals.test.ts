@@ -139,7 +139,7 @@ describe("clientLatencySink", () => {
 });
 
 describe("ownMsOf", () => {
-  test("subtracts the held phases (an update's throttle hold), never below 0", () => {
+  test("subtracts the excluded phases (an update's throttle hold), never below 0", () => {
     const sample: ClientLatencySample = {
       signal: "update",
       key: "queue-health.pulse",
@@ -153,11 +153,30 @@ describe("ownMsOf", () => {
       }),
       totalMs: 1002,
     };
-    expect(ownMsOf(sample)).toBe(4);
+    expect(ownMsOf(sample)).toBe(3);
     expect(ownMsOf({ ...sample, totalMs: 500 })).toBe(0);
   });
 
-  test("a signal with no held phase is all own time", () => {
+  test("an update's notify → send is the server's to judge, not the client's", () => {
+    // queue-health.pulse at 14:24:20 on main: 3424 ms, 3295 ms of it waiting
+    // in the server's flush behind a slow loader the server already filed.
+    const sample: ClientLatencySample = {
+      signal: "update",
+      key: "queue-health.pulse",
+      params: {},
+      phases: splitPhases("update", {
+        "server-notice": 20,
+        "throttle-hold": 0,
+        "server-deliver": 3295,
+        transport: 100,
+        "client-apply": 9,
+      }),
+      totalMs: 3424,
+    };
+    expect(ownMsOf(sample)).toBe(129);
+  });
+
+  test("a signal with no excluded phase is all own time", () => {
     const sample: ClientLatencySample = {
       signal: "confirm",
       key: "k",

@@ -13,9 +13,9 @@ export const BootBudgetPayloadSchema = z.object({
   plugin: z.string().optional(),
   durationMs: z.number(),
   budgetMs: z.number(),
-  // Where `budgetMs` came from: the span's own declaration (a warm-up's
-  // `budgetMs`) or the per-phase config default. Optional: rows filed before it
-  // existed were all `config`.
+  // Where `budgetMs` came from, on reports filed while warm-ups (which could
+  // declare one) were judged here. New reports omit it: every budget is the
+  // per-phase config default.
   budgetSource: z.enum(["declared", "config"]).optional(),
   memoryCheckpoints: z
     .array(

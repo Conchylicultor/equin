@@ -26979,6 +26979,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PhaseId`
           - `ProcMemory`
           - `ProfilerHooks`
+          - `ProfilerLeafOptions`
           - `ProfilerMeasureName`
           - `ProfilerSpanDetail`
           - `Registration`
@@ -46016,7 +46017,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `CLIENT_LATENCY_SIGNALS`
               - `clientLatencySink`
-              - `HELD_PHASES`
+              - `EXCLUDED_PHASES`
               - `ownMsOf`
               - `splitPhases`
               - `splitReachedPhases`

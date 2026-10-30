@@ -91,6 +91,31 @@ recompute) and the 0 ms markers `git-memo-hit:<name>` / `git-memo-miss:<name>`
 falls back to a standalone `db [layer]` span so the wait is never lost. See
 `research/2026-07-02-global-profiler-wait-propagation.md`.
 
+### Claims — one slow op, filed once (`excludedMs` / `claims`)
+
+An `onSlowSpan` handler gets `(span, claim)`. Calling `claim()` says "I filed
+this span as its own slow op": the recorder then unions the span's wall interval
+into every still-open enclosing entry — the same all-ancestor walk as a gate
+wait — on a per-claimant track (`<kind> <label>`), and into `excludedUnion`
+(waits ∪ claims). Each record carries `excludedMs` (that union, `≤ durationMs`)
+and `claims` (per claimant); a monitor judges `durationMs − excludedMs`. So a
+slow loader is filed once, not again as its `push`, its `flush`, the watcher
+`bg` pass or the `http`/`sub` around it — an enclosing span is filed only when it
+was slow on top of what it contained. A child is always recorded (and judged)
+before its parent closes, so the order is right by construction; a detached
+child finishing after its parent closed claims nothing there (closed entries are
+final).
+
+A **latency leaf** — `recordSpan(kind, label, ms, detail, { latency: true,
+waits })` — is a window spent waiting on the enclosing entry's work, not work
+of its own (a delivery's first-notify → send under the `flush`). It is judged net
+of its own `waits` (a declared `throttle-hold`) and of the claims its enclosing
+entry collected inside its window (`claimBands`, positioned, bounded at 16 —
+overflow drops the smallest, so a leaf can only be judged on more own time,
+never less). A plain leaf (a `db` query) never subtracts a sibling's claim:
+concurrent siblings are independent work. See
+`research/2026-10-30-global-slow-op-one-cause-one-report.md`.
+
 ## Windowed max (`recentMaxMs` / `maxAgeMs`)
 
 Each aggregate keeps a rolling ~5-min bucketed max: `recentMaxMs` answers "is it slow NOW"
@@ -117,9 +142,10 @@ imports `server/`, so on the client every entry point is a transparent passthrou
   union accumulators), while recording the entry span itself against the *outer* parent (an
   entry is never its own parent). Records in `finally`, materializing
   `waits`/`waitMs`/`childMs`/`selfMs`.
-- `recordSpan(kind, label, durationMs)` — leaf path (DB pool wrapper); attributes to the
-  current ambient context automatically. A leaf has no decomposition: `waitMs`/`childMs`
-  default to 0, `selfMs` to the full duration.
+- `recordSpan(kind, label, durationMs, detail?, opts?)` — leaf path (DB pool wrapper);
+  attributes to the current ambient context automatically. A leaf has no decomposition:
+  `waitMs`/`childMs` default to 0, `selfMs` to the full duration — unless `opts.waits`
+  names waits inside it; `opts.latency` makes it a latency leaf (see Claims).
 - `chargeWait(layer, ms, kind)` — see the decomposition section above. `kind`
   (`WaitKind`, required) says what the caller waited FOR: `queue` means
   capacity on a shared gate or pool, so the time is the gate's; `join` means an

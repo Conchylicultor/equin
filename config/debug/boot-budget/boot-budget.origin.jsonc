@@ -1,4 +1,4 @@
-// @hash aa94bea229cb
+// @hash 68cc03dcba0d
 {
   // When off, the monitor job returns early and files no boot-budget reports.
   "enabled": true,
@@ -7,7 +7,5 @@
   // File a boot-budget report when a plugin's onReady hook runs longer than this many ms. onReady runs concurrent with request serving on the single event-loop thread, so a long span competes with first requests.
   "onReadyBudgetMs": 500,
   // File a boot-budget report when a plugin's onAllReady hook runs longer than this many ms.
-  "onAllReadyBudgetMs": 500,
-  // File a boot-budget report when a declared warmup span (warmup:<name>) runs longer than this many ms — the default for a warmup that declares no budgetMs of its own (a declared one wins). Looser than the onReady phases because warmups are the declared heavy deferred category, throttled and run after the barrier.
-  "warmupBudgetMs": 2000
+  "onAllReadyBudgetMs": 500
 }

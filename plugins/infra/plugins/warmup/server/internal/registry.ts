@@ -37,13 +37,20 @@ export interface WarmupSpec {
    */
   run: () => Promise<void>;
   /**
-   * Per-warmup wall-time budget (ms). The executor stamps it on both of the
-   * warm-up's spans, so the boot-budget monitor and slow-ops judge the run on it
-   * instead of their global defaults (boot-budget's `warmupBudgetMs`, slow-ops'
-   * `loaderMs`). Omit it to be judged on those defaults.
+   * Per-warmup budget (ms) on its own time. The executor stamps it on the
+   * warm-up's `bg` span, which slow-ops judges it by (the one judge of a
+   * warm-up). Omit it to be judged on `DEFAULT_WARMUP_BUDGET_MS`.
    */
   budgetMs?: number;
 }
+
+/**
+ * The budget of a warm-up that declares none. Looser than a loader's bar:
+ * warm-ups are the declared heavy deferred category (throttled, run after the
+ * `onAllReady` barrier, one heavy-read slot each). It was boot-budget's
+ * `warmupBudgetMs` default when that monitor judged warm-ups too.
+ */
+export const DEFAULT_WARMUP_BUDGET_MS = 2000;
 
 /**
  * Module-load-time registry. Populated by `defineWarmup(...).register()` during

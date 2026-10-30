@@ -36,8 +36,11 @@ export const slowOpKind = ReportKind({
     const coldStartSuffix = d.transportColdStart
       ? " — transport cold-start"
       : "";
+    const what = d.burst
+      ? `${d.operationKind} burst of ${d.burst.count} (slowest ${d.burst.operations[0]?.operation ?? "?"})`
+      : `${d.operationKind} ${d.operation}`;
     return {
-      title: `[slow-op] ${d.operationKind} ${d.operation} — ${timeLabel(d)}${coldStartSuffix}`,
+      title: `[slow-op] ${what} — ${timeLabel(d)}${coldStartSuffix}`,
       description: renderDescription(row, d),
     };
   },
@@ -52,8 +55,29 @@ function timeLabel(d: SlowOpReportPayload): string {
 
 function renderDescription(row: ReportRow, d: SlowOpReportPayload): string {
   const lines: string[] = [];
+  if (d.burst) {
+    lines.push(
+      `${d.burst.count} \`${d.operationKind}\` operations exceeded their ` +
+        `slow-op threshold in the same instant (one batch) — one incident, so ` +
+        `one report. Its numbers are the slowest one's. Look for what they ` +
+        `share (the tab, its socket, its boot, a server stall) before any one ` +
+        `of them.`,
+    );
+    lines.push("");
+    lines.push(
+      `**Operations (slowest first):** ` +
+        d.burst.operations
+          .map((o) => `\`${o.operation}\` ${o.ownMs}ms`)
+          .join(", ") +
+        (d.burst.count > d.burst.operations.length
+          ? `, +${d.burst.count - d.burst.operations.length} more`
+          : "") +
+        ".",
+    );
+    lines.push("");
+  }
   lines.push(
-    `The \`${d.operationKind}\` operation \`${d.operation}\` has been exceeding ` +
+    `The \`${d.operationKind}\` operation \`${d.burst?.operations[0]?.operation ?? d.operation}\` has been exceeding ` +
       `its configured slow-op threshold of ${d.thresholdMs}ms.`,
   );
   lines.push("");
@@ -63,7 +87,8 @@ function renderDescription(row: ReportRow, d: SlowOpReportPayload): string {
     lines.push(
       `Judged on its own time: the rest was spent not working (queued on a ` +
         `gate, held by a declared throttle, a frozen or hidden page, machine ` +
-        `sleep) — see the layers below.`,
+        `sleep, or inside another op already filed on its own) — see the ` +
+        `layers below.`,
     );
   lines.push(`**Threshold:** ${d.thresholdMs}ms`);
   if (d.transportColdStart) {

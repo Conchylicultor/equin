@@ -3,7 +3,11 @@ import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { yieldMacrotask } from "@plugins/packages/plugins/macrotask-yield/core";
 import { WarmupHost } from "./host";
-import { warmupRegistry, type WarmupSpec } from "./registry";
+import {
+  DEFAULT_WARMUP_BUDGET_MS,
+  warmupRegistry,
+  type WarmupSpec,
+} from "./registry";
 import { recordWarmupRun } from "./runs";
 
 /**
@@ -58,8 +62,7 @@ export type WarmupRun =
  * - each is wrapped in a `warmup:<name>` profiler span for boot-Gantt visibility,
  *   timed — like its recorded run — from the moment its slot is granted;
  * - a throw is NEVER fatal — a warm-up is an optimization, so it is logged and
- *   the drain continues (the boot-budget monitor separately flags slow/failed
- *   warm-ups).
+ *   the drain continues (slow-ops flags a slow one, on its `bg` span).
  */
 export async function drainWarmupsWith(deps: WarmupExecDeps): Promise<void> {
   const gate = createSemaphore(deps.concurrency);
@@ -73,11 +76,10 @@ export async function drainWarmupsWith(deps: WarmupExecDeps): Promise<void> {
         // A real macrotask breath before each heavy unit — unlike a microtask
         // `await Promise.resolve()`, this admits queued request IO/timers.
         await deps.yieldMacrotask();
-        // The declared budget rides on BOTH spans, so the boot-budget monitor
-        // (boot span) and slow-ops (`bg` span) judge the warm-up on the bar it
-        // declared rather than on their global defaults.
-        const budget =
-          w.budgetMs === undefined ? undefined : { budgetMs: w.budgetMs };
+        // ONE judge: slow-ops, on the `bg` span (own time, against the bar the
+        // warm-up declared or the warm-up default). The boot span is only the
+        // Gantt bar — judging it too filed every slow warm-up twice.
+        const budget = { budgetMs: w.budgetMs ?? DEFAULT_WARMUP_BUDGET_MS };
         // The run is timed from the moment the host's slot is GRANTED: a
         // warm-up queued behind others' heavy reads is not slow itself (the
         // boot Gantt bar, `startedAt` and `durationMs` all start inside the
@@ -101,7 +103,6 @@ export async function drainWarmupsWith(deps: WarmupExecDeps): Promise<void> {
                     "warmup",
                     w.name,
                     w.name,
-                    budget,
                   ),
                   at: new Date(),
                   t0: performance.now(),

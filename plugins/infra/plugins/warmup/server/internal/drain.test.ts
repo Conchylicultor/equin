@@ -9,7 +9,7 @@ import {
   type WarmupExecDeps,
   type WarmupRun,
 } from "./executor";
-import type { WarmupSpec } from "./registry";
+import { DEFAULT_WARMUP_BUDGET_MS, type WarmupSpec } from "./registry";
 
 // A passthrough heavy-read slot + a real macrotask yield, so the tests exercise
 // the executor's own concurrency gate / scope gate (`runs`, stubbed — the host's
@@ -176,7 +176,7 @@ describe("drainWarmupsWith", () => {
     expect(yields).toBe(2);
   });
 
-  test("stamps a declared budget on both the boot span and the bg span", async () => {
+  test("stamps the budget on the bg span only — slow-ops is a warm-up's one judge", async () => {
     const seen: SlowSpan[] = [];
     const sub = onSlowSpan((span) => seen.push(span), { thresholdMs: 0 });
     try {
@@ -200,18 +200,15 @@ describe("drainWarmupsWith", () => {
     } finally {
       sub.dispose();
     }
+    // The boot span stays, as the Gantt bar.
     const boot = getProfilingData().spans;
-    expect(boot.find((s) => s.id === "warmup:budgeted-one")?.budgetMs).toBe(
-      15_000,
-    );
-    const unbudgeted = boot.find((s) => s.id === "warmup:unbudgeted-one");
-    expect(unbudgeted).toBeDefined();
-    expect(unbudgeted?.budgetMs).toBeUndefined();
+    expect(boot.find((s) => s.id === "warmup:budgeted-one")).toBeDefined();
     const bg = (label: string) =>
       seen.find((s) => s.kind === "bg" && s.label === label);
     expect(bg("warmup:budgeted-one")?.budgetMs).toBe(15_000);
-    expect(bg("warmup:unbudgeted-one")).toBeDefined();
-    expect(bg("warmup:unbudgeted-one")?.budgetMs).toBeUndefined();
+    expect(bg("warmup:unbudgeted-one")?.budgetMs).toBe(
+      DEFAULT_WARMUP_BUDGET_MS,
+    );
   });
 
   test("a run is timed from its slot grant, not from when it queued for it", async () => {

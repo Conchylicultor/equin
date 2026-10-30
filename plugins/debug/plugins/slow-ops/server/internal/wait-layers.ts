@@ -23,7 +23,7 @@ const WAIT_LAYER_HINTS: Readonly<Record<string, string>> = {
   "server-notice":
     "The server took long to notice the change (commit → first notify): a long-held transaction, a slow change-feed consumer, or a stalled serving thread.",
   "server-deliver":
-    "The server took long to recompute and send the frame after noticing (notify → send): look at this resource's loader and the push lane.",
+    "The server's notify → send — not counted against this update: the server judges that window itself (its `push deliver:<key>` span, and the loader or flush it waited on, each filed on its own).",
   transport:
     "The frame took long on the wire (send → receipt) — the one phase measured across two clocks, so skew lands here too; on one machine it is socket backpressure or a busy browser main thread.",
   "client-apply":

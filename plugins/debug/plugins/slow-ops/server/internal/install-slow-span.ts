@@ -43,14 +43,24 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
   // The handler runs SYNCHRONOUSLY in the profiler hot path — it must only
   // schedule, never block or throw.
   disposer = onSlowSpan(
-    (span: SlowSpan) => {
+    (span: SlowSpan, claim) => {
       const threshold = resolveSlowThreshold(span, thresholds);
-      // Every kind is judged on its OWN time (`durationMs − waitMs`) — see
+      // Every kind is judged on its OWN time (`durationMs − excludedMs`) — see
       // `slowSpanMs`. Time queued on a gate is the gate's, filed against it by
       // the `onSlowWait` subscription below; a `sub` that spent 7.7 s of 9 s
-      // queued on `read-admit` is not itself slow.
+      // queued on `read-admit` is not itself slow. Time inside an enclosed op
+      // already filed is that op's.
       const ownMs = slowSpanMs(span);
       if (ownMs < threshold) return;
+      // This span is the slow op: every span enclosing it (and a delivery that
+      // waited on it) is judged without it, so it is filed once — here.
+      claim();
+      // The row's layers: the gate waits, plus each filed op this span
+      // contained, named by the op — the time it was judged without.
+      const waits =
+        span.claims === undefined
+          ? span.waits
+          : { ...span.waits, ...span.claims };
       // 1. Evidence FIRST, synchronously: captureTrace's admission + the sync
       // coherent-instant capture must run before any await so the flight window
       // (open spans, gate occupancy) describes THIS trip's instant. Admission is
@@ -68,7 +78,7 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
           // reader can root the call tree at it rather than guessing by label.
           spanId: span.id,
           parent: span.parent,
-          waits: span.waits,
+          waits,
           waitMs: span.waitMs,
           childMs: span.childMs,
           selfMs: span.selfMs,
@@ -90,7 +100,7 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
         thresholdMs: threshold,
         source: "server-slow-op",
         caller: span.parent,
-        waits: span.waits,
+        waits,
         detail: span.detail,
         traceId: trace?.id,
       });

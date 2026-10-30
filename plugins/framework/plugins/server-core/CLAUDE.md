@@ -430,6 +430,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `PhaseId`
     - `ProcMemory`
     - `ProfilerHooks`
+    - `ProfilerLeafOptions`
     - `ProfilerMeasureName`
     - `ProfilerSpanDetail`
     - `Registration`

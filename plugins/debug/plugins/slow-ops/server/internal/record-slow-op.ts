@@ -19,6 +19,7 @@ import type { SlowOpMarker } from "../../core";
 import { foldSlowOpBatch, type FoldedBatch, type FoldItem } from "./fold-batch";
 import type { RecordSlowOpInput } from "./input";
 import { buildCallerUpsert, buildOpUpsert } from "./merge-sql";
+import { reportsFor } from "./report-groups";
 import { slowOpCallersProducer, slowOpsProducer } from "./producer";
 
 export type { RecordSlowOpInput } from "./input";
@@ -161,61 +162,27 @@ export async function recordSlowOpBatch(
   );
 
   for (const { input, occurredAt } of admitted) {
-    const {
-      operationKind,
-      operation,
-      durationMs,
-      ownMs,
-      thresholdMs,
-      source,
-      transportColdStart,
-      waits,
-      traceId,
-    } = input;
-
     // Dual-write a slim marker for the health-monitor overlay (one line per
     // recorded slow op). The snapshot was captured inside the suppression scope
     // above; reuse it so the marker shares the box state the aggregate recorded.
     markerChannel.publish(
       JSON.stringify({
         atTime: occurredAt,
-        durationMs,
-        operationKind,
-        operation,
+        durationMs: input.durationMs,
+        operationKind: input.operationKind,
+        operation: input.operation,
         loadAvg1: snapshot.loadAvg1,
         cpuCount: snapshot.cpuCount,
       } satisfies SlowOpMarker),
     );
-
-    // Fire-and-forget the per-operation report. The fingerprint keys on
-    // (operationKind, operation), so each distinct slow op gets its own report; the
-    // message reflects this op's latest tripping duration.
-    const durationRounded = Math.round(durationMs);
-    const ownRounded = Math.round(ownMs);
-    const took =
-      ownRounded === durationRounded
-        ? `${durationRounded}ms`
-        : `${ownRounded}ms of its own (${durationRounded}ms wall)`;
-    void recordReport({
-      kind: "slow-op",
-      source,
-      data: {
-        operationKind,
-        operation,
-        durationMs,
-        ownMs,
-        thresholdMs,
-        // Optional cold-start attribution — surfaced in the report title/desc.
-        ...(transportColdStart !== undefined ? { transportColdStart } : {}),
-        // This trip's per-layer split, so the description can name the layer
-        // the time went to (the row's `waits` are cumulative, not this trip's).
-        ...(waits !== undefined ? { waits } : {}),
-        // Optional link to the coherent-instant trace captured for this trip.
-        ...(traceId !== undefined ? { traceId } : {}),
-      },
-      message: `${operationKind} ${operation} took ${took} (threshold ${thresholdMs}ms)`,
-    });
   }
+
+  // Fire-and-forget the reports: one per op, except that a batch's several
+  // items of one kind are one incident and file ONE `burst` report
+  // (`reportsFor`). The fingerprint keys on (operationKind, operation); the
+  // message reflects the latest trip.
+  for (const report of reportsFor(admitted.map((a) => a.input)))
+    void recordReport({ kind: "slow-op", ...report });
 }
 
 // The durable write of a folded batch: ONE upsert per table, each through its

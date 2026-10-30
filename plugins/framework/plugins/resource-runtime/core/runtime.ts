@@ -1600,10 +1600,14 @@ export interface LoadInfo {
  * stale" window as the serving thread sees it); `subscribers` = how many sockets
  * received the frame; `frameChars` = its serialized size; `changedAt` = the
  * wall-clock epoch ms of the earliest change folded in (`PendingNotify.changedAt`)
- * — absent exactly when the frame carried no `timing`.
+ * — absent exactly when the frame carried no `timing`. `holdMs` = the part of
+ * `latencyMs` the entry's declared throttle held the change
+ * (`PendingNotify.holdMs`, 0 when none): a monitor judging the delivery takes
+ * it off, as the frame's `timing.holdMs` lets a tab do.
  */
 export interface ResourceDelivery {
   latencyMs: number;
+  holdMs: number;
   subscribers: number;
   frameChars: number;
   changedAt?: number;
@@ -1648,6 +1652,7 @@ function delivery(
 ): ResourceDelivery {
   return {
     latencyMs: performance.now() - pending.enqueuedAt,
+    holdMs: pending.holdMs ?? 0,
     subscribers,
     frameChars,
     ...(pending.changedAt !== undefined

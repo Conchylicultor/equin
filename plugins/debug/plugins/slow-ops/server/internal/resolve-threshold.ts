@@ -18,8 +18,12 @@ export type Thresholds = ConfigValues<(typeof slowOpConfig)["fields"]>;
 // a threshold below the floor is a threshold nobody can ever reach.
 
 /**
- * The quantity a span is judged on: its **own time** (`durationMs − waitMs`),
- * for every kind — the part of the run that is a property of the span itself.
+ * The quantity a span is judged on: its **own time** (`durationMs −
+ * excludedMs`), for every kind — the part of the run that is a property of the
+ * span itself. `excludedMs` is the union of its gate waits (below) and its
+ * claims: time inside an enclosed span already filed as its own slow op (the
+ * install hook calls `claim()` on every span it files), so one slow loader is
+ * filed once, not again by the `push`, `flush`, `sub` or `http` around it.
  *
  * Time spent queued on a named gate is not. A `sub` span waits on the 6-slot
  * `read-admit` gate for ~85% of its wall time on average (2026-10-29 audit:
@@ -31,9 +35,9 @@ export type Thresholds = ConfigValues<(typeof slowOpConfig)["fields"]>;
  * same held for jobs first: `jobs.dead-gc` held a worker slot 77 s to do 254 ms
  * of work, the rest blocked on `background-tx-acquire`.
  *
- * `waitMs` is a wall-clock-overlapping OVERLAY, not an additive component: the
+ * `excludedMs` is a wall-clock-overlapping OVERLAY, not an additive component: the
  * recorder accumulates it as an interval union over the span's own timeline, so
- * `waitMs ≤ durationMs` holds at every level and this subtraction can never go
+ * `excludedMs ≤ durationMs` holds at every level and this subtraction can never go
  * negative (`runtime-profiler/core/recorder.ts`, "Wall-clock decomposition").
  * Only *named gate* waits count as wait — a model call's latency is work.
  *
@@ -49,7 +53,7 @@ export type Thresholds = ConfigValues<(typeof slowOpConfig)["fields"]>;
  * `waits`, so the wait-vs-work split stays readable off the row.
  */
 export function slowSpanMs(span: SlowSpan): number {
-  return Math.max(0, span.durationMs - span.waitMs);
+  return Math.max(0, span.durationMs - span.excludedMs);
 }
 
 // Map a span to its configured threshold — the single source of "what is slow",
@@ -69,6 +73,11 @@ export function slowSpanMs(span: SlowSpan): number {
 // honored (the profiler never calls back for the span).
 export function resolveSlowThreshold(span: SlowSpan, t: Thresholds): number {
   if (span.budgetMs !== undefined) return span.budgetMs;
+  // A latency leaf (a `deliver:<key>`: first notify → send) is the server half
+  // of the client's `update`, which no longer counts that window
+  // (`EXCLUDED_PHASES`, owner `server`) — so it is held to the update's bar,
+  // or a 1–2 s delivery would be judged by nobody.
+  if (span.latency) return t.updateMs;
   switch (span.kind) {
     case "http":
       // A route may hold a tighter bar than the global `httpMs` via
@@ -125,13 +134,16 @@ export function resolveSlowThreshold(span: SlowSpan, t: Thresholds): number {
  * that long.) The same floor gates `onSlowWait`: a gate wait is judged on the
  * loader bar, which the floor never exceeds.
  *
- * The client knobs (`pageLoadMs`, `elementMs`, `updateMs`, `confirmMs`) stay
- * OUT: no server span is ever judged by them, so including one would only
- * lower the profiler floor for every server span.
+ * The other client knobs (`pageLoadMs`, `elementMs`, `confirmMs`) stay OUT:
+ * no server span is ever judged by them, so including one would only lower the
+ * profiler floor for every server span. `updateMs` is IN: a latency leaf (a
+ * delivery) is judged by it.
  */
 export function perfFloorMs(t: Thresholds): number {
   return Math.min(
     t.loaderMs,
+    // A latency leaf is judged on the update bar (see resolveSlowThreshold).
+    t.updateMs,
     t.httpMs,
     t.dbMs,
     t.jobMs,

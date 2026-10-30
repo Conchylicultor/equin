@@ -9,6 +9,7 @@ import {
   recordLoaderReadSet,
   setProfilerHooks,
   type LoaderReadsSink,
+  type ProfilerLeafOptions,
   type ProfilerMeasureName,
   type ProfilerSpanDetail,
 } from "@plugins/framework/plugins/server-core/core";
@@ -109,7 +110,8 @@ setProfilerHooks({
     label: string,
     durationMs: number,
     detail?: ProfilerSpanDetail,
-  ): void => recordSpan(kind as SpanKind, label, durationMs, detail),
+    opts?: ProfilerLeafOptions,
+  ): void => recordSpan(kind as SpanKind, label, durationMs, detail, opts),
   chargeWait,
   registerGateGauge: (layer: string, read: () => unknown): void =>
     registerGateGauge(layer, read as () => GateGauge),

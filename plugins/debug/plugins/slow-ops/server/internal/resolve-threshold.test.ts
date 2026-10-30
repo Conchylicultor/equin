@@ -28,6 +28,7 @@ function span(kind: SpanKind, budgetMs?: number): SlowSpan {
     waitMs: 0,
     childMs: 0,
     selfMs: 5000,
+    excludedMs: 0,
     ...(budgetMs !== undefined && { budgetMs }),
   };
 }
@@ -44,5 +45,11 @@ describe("resolveSlowThreshold", () => {
     expect(resolveSlowThreshold(span("db"), thresholds)).toBe(500);
     // An unregistered job name falls back to the global `jobMs`.
     expect(resolveSlowThreshold(span("job"), thresholds)).toBe(3000);
+  });
+
+  test("a latency leaf (a delivery) is held to the update bar", () => {
+    expect(
+      resolveSlowThreshold({ ...span("push"), latency: true }, thresholds),
+    ).toBe(thresholds.updateMs);
   });
 });

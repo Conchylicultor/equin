@@ -427,6 +427,123 @@ describe("onSlowWait — a queue wait is the gate's slowness", () => {
   });
 });
 
+describe("claims — a slow op filed once, by the innermost op that was slow", () => {
+  // A subscriber that files (claims) every span past `bar` on its own time,
+  // the way slow-ops' install hook does.
+  function fileOver(bar: number, filed: SlowSpan[]) {
+    return onSlowSpan(
+      (span, claim) => {
+        if (span.durationMs - span.excludedMs < bar) return;
+        filed.push(span);
+        claim();
+      },
+      { thresholdMs: 0 },
+    );
+  }
+
+  test("a filed loader is taken off the own time of every enclosing entry", async () => {
+    const filed: SlowSpan[] = [];
+    const sub = fileOver(200, filed);
+    try {
+      await recordEntrySpan("bg", "watch-pass", async () => {
+        await recordEntrySpan("flush", "flushNotifies", async () => {
+          await recordEntrySpan("push", "edited-files", async () => {
+            await recordEntrySpan("loader", "edited-files", () => {
+              fakeNow = 2600; // the slow load
+            });
+            fakeNow = 2650;
+          });
+          fakeNow = 2700;
+        });
+        fakeNow = 2750;
+      });
+    } finally {
+      sub.dispose();
+    }
+    expect(filed.map((s) => `${s.kind} ${s.label}`)).toEqual([
+      "loader edited-files",
+    ]);
+    const all = getRuntimeProfile().slowest;
+    const flush = all.flush.find((s) => s.label === "flushNotifies")!;
+    expect(flush.durationMs).toBe(2700);
+    expect(flush.excludedMs).toBe(2600);
+    expect(flush.claims).toEqual({ "loader edited-files": 2600 });
+  });
+
+  test("an enclosing entry slow ON TOP of its filed child is still filed", async () => {
+    const filed: SlowSpan[] = [];
+    const sub = fileOver(100, filed);
+    try {
+      await recordEntrySpan("http", "GET /x", async () => {
+        await recordEntrySpan("loader", "l", () => {
+          fakeNow = 500;
+        });
+        fakeNow = 800; // 300 ms of its own after the loader
+      });
+    } finally {
+      sub.dispose();
+    }
+    expect(filed.map((s) => `${s.kind} ${s.label}`)).toEqual([
+      "loader l",
+      "http GET /x",
+    ]);
+    expect(filed[1]!.excludedMs).toBe(500);
+  });
+
+  test("an unfiled child claims nothing", async () => {
+    const filed: SlowSpan[] = [];
+    const sub = fileOver(1000, filed);
+    try {
+      await recordEntrySpan("push", "p", async () => {
+        await recordEntrySpan("loader", "l", () => {
+          fakeNow = 600; // under the bar: not filed
+        });
+        fakeNow = 1200;
+      });
+    } finally {
+      sub.dispose();
+    }
+    expect(filed.map((s) => `${s.kind} ${s.label}`)).toEqual(["push p"]);
+    expect(filed[0]!.excludedMs).toBe(0);
+    expect(filed[0]!.claims).toBeUndefined();
+  });
+
+  test("a latency leaf is judged net of the claims inside its window", async () => {
+    const filed: SlowSpan[] = [];
+    const sub = fileOver(1000, filed);
+    try {
+      await recordEntrySpan("flush", "flushNotifies", async () => {
+        await recordEntrySpan("push", "context-usage", async () => {
+          await recordEntrySpan("loader", "context-usage", () => {
+            fakeNow = 2900;
+          });
+        });
+        fakeNow = 3000;
+        // queue-health.pulse waited 3000 ms — 2900 of it on the filed loader —
+        // plus a 50 ms declared hold.
+        recordSpan("push", "deliver:queue-health.pulse", 3000, undefined, {
+          latency: true,
+          waits: { "throttle-hold": 50 },
+        });
+        // A plain leaf under the same flush is not a latency: nothing claimed.
+        recordSpan("db", "select 1", 1500);
+      });
+    } finally {
+      sub.dispose();
+    }
+    expect(filed.map((s) => `${s.kind} ${s.label}`)).toEqual([
+      "loader context-usage",
+      "db select 1",
+    ]);
+    const deliver = getRuntimeProfile().slowest.push.find(
+      (s) => s.label === "deliver:queue-health.pulse",
+    )!;
+    expect(deliver.excludedMs).toBe(2950);
+    expect(deliver.claims).toEqual({ "loader context-usage": 2900 });
+    expect(deliver.waits).toEqual({ "throttle-hold": 50 });
+  });
+});
+
 describe("origin class", () => {
   // `currentOriginClass` reads the ROOT of the entry chain, not the innermost
   // entry — the whole point is that a `loader` says nothing about *why* it runs.

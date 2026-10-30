@@ -19,13 +19,13 @@ const update = (over: Partial<ClientLatencySample> = {}): ClientLatencySample =>
     key: "tasks",
     params: { status: "open", id: "7" },
     phases: {
-      "server-notice": 900,
+      "server-notice": 1200,
       "throttle-hold": 0,
       "server-deliver": 300,
       transport: 2,
       "client-apply": 4,
     },
-    totalMs: 1206.4,
+    totalMs: 1506.4,
     ...over,
   }) as ClientLatencySample;
 
@@ -48,13 +48,13 @@ describe("latencySlowOp", () => {
     expect(latencySlowOp(update(), thresholds, "/agents")).toEqual({
       operationKind: "update",
       operation: "tasks",
-      durationMs: 1206,
+      durationMs: 1506,
       ownMs: 1206,
       thresholdMs: 1000,
       caller: { kind: "route", label: "/agents" },
       detail: { variant: '{"id":"7","status":"open"}' },
       waits: {
-        "server-notice": 900,
+        "server-notice": 1200,
         "throttle-hold": 0,
         "server-deliver": 300,
         transport: 2,
@@ -122,8 +122,28 @@ describe("latencySlowOp", () => {
       "/",
     );
     expect(slow?.durationMs).toBe(2500);
-    expect(slow?.ownMs).toBe(1502);
+    expect(slow?.ownMs).toBe(1402);
     expect(slow?.waits?.["throttle-hold"]).toBe(998);
+  });
+
+  test("an update slow only in the server's notify → send is the server's, not filed here", () => {
+    // The server judges that window on its own spans (deliver / loader / flush).
+    expect(
+      latencySlowOp(
+        update({
+          totalMs: 3424,
+          phases: {
+            "server-notice": 20,
+            "throttle-hold": 0,
+            "server-deliver": 3295,
+            transport: 100,
+            "client-apply": 9,
+          },
+        }),
+        thresholds,
+        "/",
+      ),
+    ).toBeNull();
   });
 
   test("files a censored (never-confirmed) sample as its own operation, with the phases it reached", () => {

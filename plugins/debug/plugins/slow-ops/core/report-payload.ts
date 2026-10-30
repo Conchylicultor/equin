@@ -33,5 +33,17 @@ export const SlowOpReportPayloadSchema = z.object({
   // engine admitted one). Stored in the jsonb `data` (no migration) so the
   // slow-op KindView / renderTask can deep-link the coherent-instant evidence.
   traceId: z.string().optional(),
+  // Present on a `burst` report (operation `burst`): several ops of this kind
+  // tripped in one batch — one incident — so ONE report stands for them all,
+  // carrying its slowest op's measurement. `operations` names the slowest few
+  // (`BURST_NAMED_CAP`), `count` all of them.
+  burst: z
+    .object({
+      count: z.number(),
+      operations: z.array(
+        z.object({ operation: z.string(), ownMs: z.number() }),
+      ),
+    })
+    .optional(),
 });
 export type SlowOpReportPayload = z.infer<typeof SlowOpReportPayloadSchema>;

@@ -25,11 +25,12 @@ const reported = new Set<string>();
 // `dedup: "singleton"` + `maxAttempts: 3` mirror the other debug monitors.
 // Silent when every boot span is within budget. Reads the post-boot profile ONCE
 // per tick (pull-only, no recorder hook) and files a deduped report per boot
-// hook / warmup span whose wall-time exceeds its per-phase budget.
+// hook span whose wall-time exceeds its per-phase budget (warm-ups are judged by
+// slow-ops on their `bg` span — see budget.ts).
 export const bootBudgetMonitorJob = defineJob({
   name: "debug.boot-budget-monitor",
   description:
-    "Files a report for each startup step or warm-up that took longer than its time budget.",
+    "Files a report for each startup step that took longer than its time budget.",
   hold: "instant",
   input: z.object({}),
   event: z.never(),
@@ -53,9 +54,8 @@ export const bootBudgetMonitorJob = defineJob({
     }));
 
     for (const span of spans) {
-      const budget = budgetForSpan(span, cfg);
-      if (budget === null) continue; // not a monitored boot span
-      const { budgetMs, source: budgetSource } = budget;
+      const budgetMs = budgetForSpan(span, cfg);
+      if (budgetMs === null) continue; // not a monitored boot span
       if (span.durationMs <= budgetMs) continue; // within budget
       if (reported.has(span.id)) continue; // already filed this boot
       reported.add(span.id);
@@ -68,10 +68,9 @@ export const bootBudgetMonitorJob = defineJob({
           ...(span.plugin ? { plugin: span.plugin } : {}),
           durationMs: span.durationMs,
           budgetMs,
-          budgetSource,
           memoryCheckpoints: checkpoints,
         },
-        message: `${span.id} — ${span.durationMs}ms boot (${span.phase}, ${budgetSource === "declared" ? "declared " : ""}budget ${budgetMs}ms)`,
+        message: `${span.id} — ${span.durationMs}ms boot (${span.phase}, budget ${budgetMs}ms)`,
       });
     }
   },

@@ -46,6 +46,12 @@ export interface ProfilerSpanDetail {
   measures?: Partial<Record<ProfilerMeasureName, number>>;
 }
 
+/** The profiler's `LeafSpanOptions`, seen through the seam. */
+export interface ProfilerLeafOptions {
+  waits?: Record<string, number>;
+  latency?: boolean;
+}
+
 /**
  * The profiler operations server-core's resource runtime depends on. Param types
  * are deliberately widened (`kind`/`layer` as `string`) so the framework core
@@ -72,6 +78,7 @@ export interface ProfilerHooks {
     label: string,
     durationMs: number,
     detail?: ProfilerSpanDetail,
+    opts?: ProfilerLeafOptions,
   ): void;
   chargeWait(layer: string, ms: number, kind: "queue" | "join"): void;
   getRuntimeProfile(): RuntimeProfileView;
@@ -118,8 +125,9 @@ export function recordSpan(
   label: string,
   durationMs: number,
   detail?: ProfilerSpanDetail,
+  opts?: ProfilerLeafOptions,
 ): void {
-  hooks?.recordSpan(kind, label, durationMs, detail);
+  hooks?.recordSpan(kind, label, durationMs, detail, opts);
 }
 
 /**

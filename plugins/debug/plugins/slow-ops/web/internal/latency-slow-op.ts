@@ -15,9 +15,11 @@ type Thresholds = ConfigValues<(typeof slowOpConfig)["fields"]>;
  * `CLIENT_SIGNAL_THRESHOLD`, the layers are the sample's own phases, so a new
  * signal needs no branch here.
  *
- * - It is judged on its OWN time (`ownMsOf`: the total minus its held phases,
- *   an update's declared `throttle-hold`) — at or under the threshold is not
- *   slow (the same `>` as every other signal). The held phases stay in `waits`.
+ * - It is judged on its OWN time (`ownMsOf`: the total minus its excluded
+ *   phases — an update's declared `throttle-hold`, and its `server-deliver`,
+ *   which the server judges on its own spans) — at or under the threshold is
+ *   not slow (the same `>` as every other signal). The excluded phases stay in
+ *   `waits`.
  * - Whether the tab was hidden or stalled inside it is the queue's to judge, at
  *   its flush (`judgePagePauses`), from the window the collector queues it with.
  * - `operation` is the resource key alone, so one resource stays one row; which

@@ -14,8 +14,8 @@ import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 //   • onReady runs CONCURRENT with request serving on the one event-loop thread,
 //     so a long span competes with first requests → tight budget.
 //   • onAllReady is a post-serving barrier → same tight budget.
-//   • warmup is the DECLARED heavy deferred category (defineWarmup, throttled and
-//     run after onAllReady), so it legitimately runs longer → loosest budget.
+// Warm-ups are not budgeted here: slow-ops judges each on its `bg` span, against
+// its declared `budgetMs` or the warm-up default (infra/warmup).
 //
 // The `name` is a load-bearing literal (persisted config); do not rename.
 export const bootBudgetConfig = defineConfig({
@@ -47,13 +47,6 @@ export const bootBudgetConfig = defineConfig({
       label: "onAllReady budget (ms)",
       description:
         "File a boot-budget report when a plugin's onAllReady hook runs longer than this many ms.",
-    }),
-    warmupBudgetMs: intField({
-      default: 2000,
-      min: 0,
-      label: "Warmup budget (ms)",
-      description:
-        "File a boot-budget report when a declared warmup span (warmup:<name>) runs longer than this many ms — the default for a warmup that declares no budgetMs of its own (a declared one wins). Looser than the onReady phases because warmups are the declared heavy deferred category, throttled and run after the barrier.",
     }),
   },
 });

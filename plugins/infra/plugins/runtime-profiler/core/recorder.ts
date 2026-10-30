@@ -49,6 +49,18 @@ import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core"
 // Gate waits, by contrast, go to ALL open ancestors — a union is idempotent
 // under re-covering the same time range, so the same wait interval landing in
 // every level is exactly what makes each level's `waits` self-contained.
+//
+// ## Claims: one slow op, filed once
+//
+// A span a slow-span subscriber FILES as its own slow op (`claim()`, see
+// `SlowSpanHandler`) is taken off the own time of every enclosing entry still
+// open — the same all-ancestor union walk as a gate wait, on a per-claimant
+// track, into `excludedUnion` (waits ∪ claims → `excludedMs`). So a slow loader
+// is reported once, not again as its `push`, its `flush` and the watcher pass
+// around them; an enclosing span is reported only when it was slow ON TOP of
+// what it contained. A latency leaf (`recordSpan(…, { latency: true })`, a
+// delivery's first-notify → send) subtracts the claims its enclosing entry
+// collected inside its window: it waited on them, it did not do them.
 
 // `http` / `db` / `loader` are spans of real work. `sub` / `push` are *origin*
 // entries: the WS-subscription ack and the cascade/push flush that trigger a
@@ -224,6 +236,25 @@ export interface SlowSpan {
   childMs: number;
   /** durationMs − union(waits ∪ child executions): own orchestration/CPU. Leaves: durationMs. */
   selfMs: number;
+  /**
+   * Union of the time that is not this span's own: its gate waits ∪ the
+   * intervals of enclosed spans already filed as slow ops of their own
+   * (`claims`). `≤ durationMs`. What a monitor judges is `durationMs −
+   * excludedMs` (see `onSlowSpan`'s `claim`).
+   */
+  excludedMs: number;
+  /**
+   * Time this span spent inside enclosed ops that were filed as their own slow
+   * op, by claimant (`<kind> <label>` → ms, a union per claimant). For a
+   * latency leaf (`recordSpan(…, { latency: true })`), the claims its enclosing
+   * entry collected inside the leaf's window.
+   */
+  claims?: WaitBreakdown;
+  /**
+   * Set on a latency leaf (`recordSpan(…, { latency: true })`): the span is a
+   * window spent waiting, not work — a monitor may hold it to a latency bar.
+   */
+  latency?: true;
   /** Variant + measures the call site attached, if any. Variant capped at `MAX_VARIANT_LEN`. */
   detail?: SpanDetail;
   /**
@@ -242,7 +273,26 @@ export interface EntrySpanOptions {
   budgetMs?: number;
 }
 
-export type SlowSpanHandler = (span: SlowSpan) => void;
+/**
+ * A slow-span subscriber. `claim()` says "I filed this span as its own slow
+ * op": its wall interval is then taken off the own time of every enclosing
+ * entry still open (and of a latency leaf recorded under one), so one slow
+ * operation is filed once — by the innermost op that was slow — not again by
+ * every span that merely contained it. Call it synchronously.
+ */
+export type SlowSpanHandler = (span: SlowSpan, claim: () => void) => void;
+
+/** Options a leaf span is recorded with (`recordSpan`). */
+export interface LeafSpanOptions {
+  /** Waits inside the leaf's duration (a delivery's declared `throttle-hold`). */
+  waits?: WaitBreakdown;
+  /**
+   * The leaf is a LATENCY window spent waiting on the enclosing entry's work
+   * (a delivery: first notify → send, under the flush), not work of its own.
+   * It is judged net of the claims that entry collected inside its window.
+   */
+  latency?: boolean;
+}
 
 export interface Aggregate {
   label: string;
@@ -453,6 +503,18 @@ export interface EntryContext {
   busyUnion: Track;
   /** Union of direct-child entry execution intervals → `childMs`. */
   childUnion: Track;
+  /** Union of gate waits ∪ claims → `excludedMs`. */
+  excludedUnion: Track;
+  /**
+   * Per-claimant unions — time inside an enclosed span filed as its own slow
+   * op (see `SlowSpanHandler`) → `claims`. Lazily created on the first claim.
+   */
+  claimUnions?: Map<string, Track>;
+  /**
+   * The claimed intervals themselves, positioned and bounded
+   * (`CLAIM_BAND_CAP`): what a latency leaf intersects its window with.
+   */
+  claimBands?: WaitBand[];
   /**
    * The set of DB tables this entry read, lazily created on first
    * `recordReadTables` (unlike the tracks, which are always allocated). Handed
@@ -1178,6 +1240,11 @@ function record(
   waitBands?: WaitBand[],
   rawDetail?: SpanDetail,
   budgetMs?: number,
+  excludedMs = waitMs,
+  claims?: WaitBreakdown,
+  /** The innermost open entry a filed claim starts at (see `claimEnclosing`). */
+  claimFrom?: EntryContext,
+  latency?: boolean,
 ): void {
   if (profilingDisabled()) return;
   // Drop spans produced inside a runWithoutProfiling scope before any aggregate,
@@ -1287,6 +1354,8 @@ function record(
     waitMs,
     childMs,
     selfMs,
+    excludedMs,
+    ...(claims && { claims }),
     detail,
   });
   if (ring.length > SLOWEST_CAP) {
@@ -1336,14 +1405,101 @@ function record(
       waitMs,
       childMs,
       selfMs,
+      excludedMs,
+      ...(claims && { claims }),
+      ...(latency && { latency: true as const }),
       detail,
       ...(budgetMs !== undefined && { budgetMs }),
     };
+    let claimed = false;
+    const claim = () => {
+      claimed = true;
+    };
     for (const sub of slowSpanSubs) {
-      if (durationMs >= sub.thresholdMs) sub.handler(span);
+      if (durationMs >= sub.thresholdMs) sub.handler(span, claim);
     }
+    if (claimed && claimFrom)
+      claimEnclosing(
+        claimFrom,
+        `${kind} ${cappedLabel}`,
+        atMs - durationMs,
+        atMs,
+      );
   }
 }
+
+// Max positioned claim intervals kept per entry. A latency leaf intersects its
+// window with them; overflow drops the smallest (pushBand), so a leaf can only
+// be judged on MORE own time than it had, never less.
+const CLAIM_BAND_CAP = 16;
+
+/**
+ * Take `[start, end]` — a span just filed as its own slow op — off the own time
+ * of every open entry from `from` up: each unions it into its per-claimant
+ * track and its `excludedUnion`, and keeps the interval as a positioned band
+ * for latency leaves. Arrives end-ordered (the span just ended), like
+ * `chargeWait`. Closed entries are skipped: their records are final.
+ */
+function claimEnclosing(
+  from: EntryContext,
+  name: string,
+  start: number,
+  end: number,
+): void {
+  for (let a: EntryContext | undefined = from; a; a = a.parent) {
+    if (a.closed) continue;
+    const unions = (a.claimUnions ??= new Map());
+    let track = unions.get(name);
+    if (!track) {
+      track = { unionMs: 0, prevEnd: a.startMs };
+      unions.set(name, track);
+    }
+    contribute(track, start, end, a.startMs);
+    contribute(a.excludedUnion, start, end, a.startMs);
+    const lo = start < a.startMs ? a.startMs : start;
+    if (end > lo)
+      pushBand((a.claimBands ??= []), name, lo, end, CLAIM_BAND_CAP);
+  }
+}
+
+/**
+ * The claims `ctx` collected inside `[start, end]`: their union, and per
+ * claimant. For a latency leaf — how much of its window it spent waiting on
+ * enclosed ops that were filed on their own.
+ */
+function claimsWithin(
+  ctx: EntryContext,
+  start: number,
+  end: number,
+): { unionMs: number; byName: WaitBreakdown | undefined } {
+  const clipped: WaitBand[] = [];
+  for (const b of ctx.claimBands ?? []) {
+    const t0 = b.t0 > start ? b.t0 : start;
+    const t1 = b.t1 < end ? b.t1 : end;
+    if (t1 > t0) clipped.push({ layer: b.layer, t0, t1 });
+  }
+  if (clipped.length === 0) return { unionMs: 0, byName: undefined };
+  const union = (bands: WaitBand[]): number => {
+    const sorted = [...bands].sort((x, y) => x.t0 - y.t0);
+    let total = 0;
+    let frontier = -Infinity;
+    for (const b of sorted) {
+      const lo = b.t0 > frontier ? b.t0 : frontier;
+      if (b.t1 > lo) {
+        total += b.t1 - lo;
+        frontier = b.t1;
+      }
+    }
+    return total;
+  };
+  const byName: WaitBreakdown = {};
+  for (const name of new Set(clipped.map((b) => b.layer)))
+    byName[name] = union(clipped.filter((b) => b.layer === name));
+  return { unionMs: union(clipped), byName };
+}
+
+// Test-only export: the window intersection a latency leaf is judged by.
+export { claimsWithin as __claimsWithin };
 
 /**
  * Record a leaf span (e.g. a DB query), attributed to the innermost enclosing
@@ -1358,8 +1514,20 @@ export function recordSpan(
   label: string,
   durationMs: number,
   detail?: SpanDetail,
+  opts?: LeafSpanOptions,
 ): void {
   const cur = contextRuntime.current();
+  const waits = opts?.waits;
+  let waitMs = 0;
+  if (waits) for (const layer in waits) waitMs += waits[layer]!;
+  waitMs = Math.min(durationMs, waitMs);
+  // A latency leaf's window is `[now − duration, now]`: what the enclosing
+  // entry claimed inside it was another op's slowness, already filed.
+  const end = now();
+  const claimed =
+    opts?.latency && cur
+      ? claimsWithin(cur, end - durationMs, end)
+      : { unionMs: 0, byName: undefined };
   record(
     kind,
     label,
@@ -1367,12 +1535,17 @@ export function recordSpan(
     nextSpanId++,
     cur ? cur.id : null,
     cur ? { kind: cur.kind, label: cur.label } : null,
-    undefined,
+    waits,
+    waitMs,
     0,
-    0,
-    durationMs,
+    durationMs - waitMs,
     undefined,
     detail,
+    undefined,
+    Math.min(durationMs, waitMs + claimed.unionMs),
+    claimed.byName,
+    cur,
+    opts?.latency,
   );
 }
 
@@ -1458,6 +1631,7 @@ export function chargeWait(layer: string, ms: number, kind: WaitKind): void {
     const covered = contribute(track, start, end, a.startMs);
     contribute(a.waitUnion, start, end, a.startMs);
     contribute(a.busyUnion, start, end, a.startMs);
+    contribute(a.excludedUnion, start, end, a.startMs);
     // Record a band for exactly the slice the layer track just counted:
     // `[end − covered, end]`. A charge that covered nothing (a fully re-covered
     // interval, or a 0 ms git-memo marker) adds no band, since it added no union
@@ -1689,6 +1863,7 @@ export async function recordEntrySpan<T>(
     waitUnion: { unionMs: 0, prevEnd: t0 },
     busyUnion: { unionMs: 0, prevEnd: t0 },
     childUnion: { unionMs: 0, prevEnd: t0 },
+    excludedUnion: { unionMs: 0, prevEnd: t0 },
   };
   openEntries.add(ctx);
   try {
@@ -1732,6 +1907,11 @@ export async function recordEntrySpan<T>(
         for (const b of bands) waitBands.push(b);
       }
     }
+    let claims: WaitBreakdown | undefined;
+    if (ctx.claimUnions) {
+      claims = {};
+      for (const [name, track] of ctx.claimUnions) claims[name] = track.unionMs;
+    }
     const parentId = ctx.parent ? ctx.parent.id : null;
     record(
       kind,
@@ -1747,6 +1927,9 @@ export async function recordEntrySpan<T>(
       waitBands,
       detail,
       opts?.budgetMs,
+      ctx.excludedUnion.unionMs,
+      claims,
+      ctx.parent,
     );
     // Hand the loader's captured table read-set to the sink, keyed by label
     // (the resource key) — an EMPTY one too: the per-run capture describes

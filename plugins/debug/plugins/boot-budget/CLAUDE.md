@@ -11,8 +11,8 @@ plan (`research/2026-07-08-global-bounding-boot-time-work.md`, "Enforcement /
 visibility"): a cheap per-worktree scheduled `defineJob`
 (`debug.boot-budget-monitor`) reads the post-boot profile once each tick and files
 a deduped `boot-budget` report — from which an investigation task is filed on
-demand (Debug → Reports) — for every boot hook or warmup span over its
-per-phase wall-time budget. Modeled on `debug/op-rate` (durable signal → `ReportKind` → deduped report via a per-worktree
+demand (Debug → Reports) — for every boot hook span over its per-phase
+wall-time budget. Modeled on `debug/op-rate` (durable signal → `ReportKind` → deduped report via a per-worktree
 scheduled job; investigation task on demand).
 
 ## What it monitors
@@ -25,12 +25,16 @@ span is checked against its phase's budget (`budgetForSpan`):
   Requiring `span.plugin` cleanly excludes the whole-phase wrapper spans (e.g. the
   aggregate `onReadyBlocking` span, recorded with no plugin) so a report always
   attributes to a specific plugin, never the aggregate phase.
-- **warmup spans** — spans named `warmup:<name>` (the declared heavy deferred
-  category from `defineWarmup`, landing in Phase 1 of the plan). Matched by id
-  prefix **before** the phase branches, because a warmup may carry any phase
-  (warmups drain after `onAllReady`) — its id, not its phase, decides its budget.
+A span that is not one (register/migrations/route-population/etc.) is skipped.
 
-A span that is neither (register/migrations/route-population/etc.) is skipped.
+**Warm-ups are not judged here.** A warm-up is judged once, by slow-ops, on
+its `bg` span: its own time (the heavy-read queue excluded, and any slow op
+inside it already filed), against its declared `budgetMs` or
+`DEFAULT_WARMUP_BUDGET_MS` (`infra/warmup`). Judging its `warmup:<name>` boot
+span here too filed every slow warm-up twice
+(`research/2026-10-30-global-slow-op-one-cause-one-report.md`). The boot span
+stays, as the boot Gantt's bar. Reports filed before carry `budgetSource` and
+still render.
 
 ## Dedup — why a per-process "already reported" Set
 
@@ -59,9 +63,6 @@ reported this boot" rather than a delta or a drain.
 - `onReadyBudgetMs = 500` — runs concurrent with request serving on the single
   event-loop thread, so a long span competes with first requests.
 - `onAllReadyBudgetMs = 500` — post-serving barrier.
-- `warmupBudgetMs = 2000` — looser, because warmups are the declared heavy
-  deferred category (throttled, run after the barrier), so they legitimately run
-  longer.
 
 Per-phase (not a single floor) mirrors op-rate's per-kind budgets: the phases have
 very different natures and a single floor would drown the signal.

@@ -32,10 +32,13 @@ out-of-order span can come out negative), so a clamped set can sum to more
 than the total. `variant` is a free-form sub-kind (a confirm's `mode/edge`);
 consumers fall back to the params.
 
-**Own time.** `HELD_PHASES` names, per signal, the phases that are held by
-design rather than slow (an update's `throttle-hold`). `ownMsOf(sample)` is
-`totalMs` less them, which is what a consumer judging "was this slow" compares
-to its bar.
+**Own time.** `EXCLUDED_PHASES` names, per signal, the phases that are not
+the operation's own time, each with its owner: `declared` (held by design — an
+update's `throttle-hold`) or `server` (a window the server judges on its own
+spans — an update's `server-deliver` is exactly the server's `push
+deliver:<key>` span, so counting it here too filed one server slowness twice).
+`ownMsOf(sample)` is `totalMs` less them, which is what a consumer judging "was
+this slow" compares to its bar.
 
 **No visibility flag.** A sample is emitted at its end, so a consumer places
 it on the wall clock as `[now − totalMs, now]` and asks
@@ -58,8 +61,8 @@ sample must tell the two apart (slow-ops files a censored confirm as
 1. An entry in `CLIENT_LATENCY_SIGNALS` (its phase tuple).
 2. A slow-ops threshold — `CLIENT_SIGNAL_THRESHOLD` is a
    `Record<ClientLatencySignal, …>`, so tsc refuses the build until it exists.
-3. A `HELD_PHASES` entry (a `Record` over the signals, so tsc asks) — `[]`
-   when none of its phases is a declared hold.
+3. An `EXCLUDED_PHASES` entry (a `Record` over the signals, so tsc asks) —
+   `{}` when every phase is the operation's own time.
 4. An emit site: `clientLatencySink.emit({ signal, key, params, phases:
    splitPhases(signal, …), totalMs })` at the operation's end, guarded by
    `clientLatencySink.hasSubscribers()` when building it costs anything.
@@ -81,7 +84,7 @@ Consumers never name a signal: they read `signal` / `phases` generically.
   - Exports (values):
     - `CLIENT_LATENCY_SIGNALS`
     - `clientLatencySink`
-    - `HELD_PHASES`
+    - `EXCLUDED_PHASES`
     - `ownMsOf`
     - `splitPhases`
     - `splitReachedPhases`

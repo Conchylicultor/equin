@@ -1,6 +1,6 @@
 export {
   CLIENT_LATENCY_SIGNALS,
-  HELD_PHASES,
+  EXCLUDED_PHASES,
   ownMsOf,
   clientLatencySink,
   splitPhases,

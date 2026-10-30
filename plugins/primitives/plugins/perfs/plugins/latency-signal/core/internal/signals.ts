@@ -32,17 +32,28 @@ export type PhaseOf<S extends ClientLatencySignal> =
   (typeof CLIENT_LATENCY_SIGNALS)[S][number];
 
 /**
- * The phases of each signal that are NOT the operation's own time: time it was
- * held by design rather than slow. `throttle-hold` is the resource's declared
- * `throttleMs` — a 1000 ms throttle judged against a 1000 ms bar would
- * otherwise read as "slow" on every change. A `Record` over the signals, so a
- * new signal states its own (possibly empty) list. Read through `ownMsOf`.
+ * Why a phase is not the operation's own time:
+ * - `declared`: held by design — the resource's declared `throttleMs` (a 1000 ms
+ *   throttle judged against a 1000 ms bar would read as "slow" on every change).
+ * - `server`: a window the server judges itself, on its own spans — the
+ *   update's notify → send is the server's `push deliver:<key>` span (and the
+ *   loader or flush it waited on), each filed there when slow. Counting it here
+ *   too filed one server slowness twice, once per side.
  */
-export const HELD_PHASES: {
-  readonly [S in ClientLatencySignal]: readonly PhaseOf<S>[];
+export type ExcludedPhaseOwner = "declared" | "server";
+
+/**
+ * The phases of each signal that are NOT the operation's own time, each with
+ * who owns it. A `Record` over the signals, so a new signal states its own
+ * (possibly empty) set. Read through `ownMsOf`.
+ */
+export const EXCLUDED_PHASES: {
+  readonly [S in ClientLatencySignal]: Readonly<
+    Partial<Record<PhaseOf<S>, ExcludedPhaseOwner>>
+  >;
 } = {
-  update: ["throttle-hold"],
-  confirm: [],
+  update: { "throttle-hold": "declared", "server-deliver": "server" },
+  confirm: {},
 };
 
 /**
@@ -152,13 +163,14 @@ export function splitReachedPhases<S extends CensorableSignal>(
 }
 
 /**
- * The sample's own time: `totalMs` minus its held phases (`HELD_PHASES`),
- * never below 0. What a consumer judging "was this slow" compares to its bar.
+ * The sample's own time: `totalMs` minus its excluded phases
+ * (`EXCLUDED_PHASES`), never below 0. What a consumer judging "was this slow"
+ * compares to its bar.
  */
 export function ownMsOf(sample: ClientLatencySample): number {
   const phases = sample.phases as Readonly<Record<string, number | undefined>>;
-  let held = 0;
-  for (const name of HELD_PHASES[sample.signal] as readonly string[])
-    held += phases[name] ?? 0;
-  return Math.max(0, sample.totalMs - held);
+  let excluded = 0;
+  for (const name of Object.keys(EXCLUDED_PHASES[sample.signal]))
+    excluded += phases[name] ?? 0;
+  return Math.max(0, sample.totalMs - excluded);
 }

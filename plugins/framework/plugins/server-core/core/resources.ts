@@ -440,16 +440,31 @@ const runtime = createResourceRuntime({
   // change's wall clock → send, when the change has one) shows what `latencyMs`
   // cannot: time the change waited before this thread read its NOTIFY (an open
   // writing transaction, a stalled serving thread).
+  //
+  // A LATENCY leaf: the delivery waited on the flush's work, it did not do it.
+  // It is judged net of the declared throttle hold and of every op the flush
+  // already filed as slow inside its window (a slow loader of another resource
+  // in the same cycle) — so a delivery is filed only when it was slow for a
+  // reason nothing else reported.
   onDelivered: (key, info) => {
-    recordSpan("push", `deliver:${key}`, info.latencyMs, {
-      measures: {
-        subscribers: info.subscribers,
-        frameChars: info.frameChars,
-        ...(info.changedAt !== undefined
-          ? { sinceChangeMs: Math.max(0, Date.now() - info.changedAt) }
-          : {}),
+    recordSpan(
+      "push",
+      `deliver:${key}`,
+      info.latencyMs,
+      {
+        measures: {
+          subscribers: info.subscribers,
+          frameChars: info.frameChars,
+          ...(info.changedAt !== undefined
+            ? { sinceChangeMs: Math.max(0, Date.now() - info.changedAt) }
+            : {}),
+        },
       },
-    });
+      {
+        latency: true,
+        ...(info.holdMs > 0 && { waits: { "throttle-hold": info.holdMs } }),
+      },
+    );
     for (const observer of deliveryObservers) observer(key, info);
   },
   // Read-admission gate queue-wait, charged to the enclosing `sub` entry (mirrors
