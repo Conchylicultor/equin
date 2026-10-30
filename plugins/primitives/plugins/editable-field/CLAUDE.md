@@ -8,14 +8,15 @@ every change to either side.
 
 The external `value` (a live-state resource, in all 13 call sites) can move
 under the user at any time: an agent renames the task, another tab edits, an
-undo patch lands, a collaborator writes. What happens then is decided by ONE
-question — does the draft carry edits no save has taken yet (`draft !==
-lastSaved`)? — and the four answers are spelled out as a pure function,
-`internal/reconcile.ts`:
+undo patch lands, a collaborator writes. What happens then is decided by two
+questions — is the value one this field already left behind, and does the
+draft carry edits no save has taken yet (`draft !== lastSaved`)? — and the five
+answers are spelled out as a pure function, `internal/reconcile.ts`:
 
 | | meaning | what the hook does |
 |---|---|---|
 | `echo` | the external value IS what we last saved | nothing (self-echo suppression) |
+| `stale` | it is a value this field already LEFT BEHIND (its starting value or an earlier save) | nothing — never adopted, never a conflict |
 | `adopt` | it moved on, the draft has nothing unsaved | take it — **even while focused** |
 | `converged` | the draft already spells it | record the agreement; no save on blur |
 | `conflict` | it moved on AND the draft has unsaved edits | keep the draft, report the divergence |
@@ -35,6 +36,25 @@ the external value, the external value comes back as our own echo, or
 
 `adopt` also cancels any pending debounce: that timer would re-save the very
 value being replaced.
+
+## A field's own past is never news (`stale`)
+
+The external value is a VIEW of the source, and a view can lag: a predicted
+write retired before its frame landed, a late frame, a refetch racing a write, a
+tab on an older bundle reading a newer server. Each shows, for a moment, a value
+the field itself already moved past — and `adopt` would put deleted text back
+and throw the caret. So the hook remembers what it has left behind (`past`:
+its starting value and every save before the latest, bounded, reset whenever it
+adopts someone else's value) and ignores any of them coming back. Only a value
+the field never held is somebody else's edit.
+
+This is the field's own guarantee, independent of how good the transport is:
+the class "a stale view overwrites what the user typed" cannot happen through
+any lower layer. Its one cost: another writer setting the field to exactly a
+value this session already left behind is not adopted until a further change —
+the user's own text wins, which is the side that must never be lost. `stale` is
+decided before `converged`, so a stale echo can never mark an unsaved draft that
+spells an old value as saved.
 
 There is no `frozen` option. It was declared, implemented in four places and
 called from nowhere — a "the server owns this field, mirror it unconditionally"

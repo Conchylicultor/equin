@@ -110,6 +110,65 @@ describe("external writes while focused", () => {
   });
 });
 
+describe("stale echoes of the field's own past", () => {
+  it("never puts deleted text back when the source briefly shows the pre-save value", async () => {
+    const onSave = vi.fn();
+    const { result, rerender } = renderField({
+      value: "abc",
+      onSave,
+      debounceMs: 5,
+    });
+
+    act(() => result.current.onFocus());
+    act(() => result.current.onChange("ab")); // delete "c"
+    await act(async () => new Promise((r) => setTimeout(r, 20)));
+    expect(onSave).toHaveBeenCalledWith("ab");
+
+    // The write's prediction, then an older view of the source, then its echo.
+    rerender({ value: "ab" });
+    rerender({ value: "abc" });
+    expect(result.current.value).toBe("ab");
+    expect(result.current.conflict).toBeNull();
+    rerender({ value: "ab" });
+    expect(result.current.value).toBe("ab");
+  });
+
+  it("still saves a draft typed back to an old value when a stale echo of it lands", async () => {
+    const onSave = vi.fn();
+    const { result, rerender } = renderField({
+      value: "a",
+      onSave,
+      debounceMs: 5,
+    });
+
+    act(() => result.current.onFocus());
+    act(() => result.current.onChange("ab"));
+    await act(async () => new Promise((r) => setTimeout(r, 20)));
+    rerender({ value: "ab" });
+
+    act(() => result.current.onChange("a")); // typed back, not saved yet
+    rerender({ value: "a" }); // a stale view of the seed
+    await act(async () => new Promise((r) => setTimeout(r, 20)));
+    expect(onSave).toHaveBeenLastCalledWith("a");
+  });
+
+  it("takes an old value again once someone else has moved the source", async () => {
+    const { result, rerender } = renderField({
+      value: "a",
+      onSave: vi.fn(),
+      debounceMs: 5,
+    });
+
+    act(() => result.current.onChange("b"));
+    await act(async () => new Promise((r) => setTimeout(r, 20)));
+    rerender({ value: "b" });
+    rerender({ value: "c" }); // another writer: the new baseline
+    expect(result.current.value).toBe("c");
+    rerender({ value: "a" }); // a real write that happens to spell "a"
+    expect(result.current.value).toBe("a");
+  });
+});
+
 describe("save lifecycle", () => {
   it("debounces a typing run into one save", async () => {
     const onSave = vi.fn();

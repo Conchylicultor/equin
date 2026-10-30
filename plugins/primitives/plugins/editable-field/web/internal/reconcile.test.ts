@@ -2,23 +2,37 @@ import { describe, expect, test } from "bun:test";
 import { reconcile } from "./reconcile";
 import { mapCaret } from "./map-caret";
 
+const none = new Set<string>();
+
 describe("reconcile", () => {
   test("the external value being the last saved one is an echo", () => {
-    expect(reconcile("a", "a", "a")).toBe("echo");
+    expect(reconcile("a", "a", "a", none)).toBe("echo");
     // Our own write coming back while the user has typed past it.
-    expect(reconcile("a", "ab", "a")).toBe("echo");
+    expect(reconcile("a", "ab", "a", none)).toBe("echo");
   });
 
   test("adopts an external change the draft has nothing to lose to", () => {
-    expect(reconcile("new", "old", "old")).toBe("adopt");
+    expect(reconcile("new", "old", "old", none)).toBe("adopt");
   });
 
   test("a draft with unsaved edits conflicts with an external change", () => {
-    expect(reconcile("theirs", "mine", "was")).toBe("conflict");
+    expect(reconcile("theirs", "mine", "was", none)).toBe("conflict");
   });
 
   test("a draft that already spells the external value is converged", () => {
-    expect(reconcile("same", "same", "was")).toBe("converged");
+    expect(reconcile("same", "same", "was", none)).toBe("converged");
+  });
+
+  test("a value the field already left behind is a stale echo, never adopted", () => {
+    // Deleted "c" and saved "ab": the old "abc" showing up again is the
+    // source's older view of our own writes, not an edit.
+    expect(reconcile("abc", "ab", "ab", new Set(["abc"]))).toBe("stale");
+  });
+
+  test("a stale echo never marks an unsaved draft spelling it as saved", () => {
+    // Saved "ab" after "a", then typed back to "a" (unsaved): a stale "a" must
+    // not read as converged, or the save of "a" would be skipped.
+    expect(reconcile("a", "a", "ab", new Set(["a"]))).toBe("stale");
   });
 });
 

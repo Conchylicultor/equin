@@ -100,6 +100,20 @@ function captureCaret(
   return { prev, next, start, end, direction: el.selectionDirection };
 }
 
+/** How many left-behind values a field remembers as its own past. */
+const PAST_CAP = 64;
+
+/**
+ * Record that `prev` is no longer what the source should hold. Bounded, oldest
+ * first (a Set iterates in insertion order): a long edit session keeps its
+ * recent values, which is where a stale view comes from.
+ */
+function leavePast<T>(past: Set<T>, prev: T): void {
+  past.delete(prev);
+  past.add(prev);
+  if (past.size > PAST_CAP) past.delete(past.values().next().value as T);
+}
+
 export function useEditableField<T extends string>(
   opts: UseEditableFieldOptions<T>,
 ): EditableField<T> {
@@ -120,6 +134,11 @@ export function useEditableField<T extends string>(
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savePromiseRef = useRef<Promise<void> | null>(null);
   const lastSavedRef = useRef<T>(value);
+  // The values this field has LEFT BEHIND: where it started and every save
+  // before the latest, since the last value it adopted from elsewhere. One of
+  // them showing up again is a stale echo of our own past (see `reconcile`'s
+  // `stale`), never someone else's edit.
+  const pastRef = useRef<Set<T>>(new Set());
   const onSaveRef = useRef(opts.onSave);
   const pendingCaretRef = useRef<CaretAdoption | null>(null);
 
@@ -141,14 +160,20 @@ export function useEditableField<T extends string>(
   // nothing unsaved to lose, and when it does, keep the user's text but report
   // the divergence instead of discarding it.
   useEffect(() => {
-    switch (reconcile(value, draft, lastSavedRef.current)) {
+    switch (reconcile(value, draft, lastSavedRef.current, pastRef.current)) {
       case "echo":
         // Our own write coming back (or the seed) — the two sides agree.
         setConflict(null);
         return;
+      case "stale":
+        // A value we already moved past — the source showing an older view of
+        // our own writes for a moment. The draft stands; the next view (our
+        // write's echo) supersedes it. Not a conflict: nobody else wrote.
+        return;
       case "converged":
         // The draft already spells the external value; record the agreement so
         // a later blur doesn't re-save identical text.
+        leavePast(pastRef.current, lastSavedRef.current);
         lastSavedRef.current = value;
         setConflict(null);
         return;
@@ -170,6 +195,10 @@ export function useEditableField<T extends string>(
           value,
           focusedRef.current,
         );
+        // Someone else's value: the new baseline. What we had left behind is
+        // history now, not a stale echo — a later write may legitimately
+        // spell one of those values again.
+        pastRef.current = new Set();
         lastSavedRef.current = value;
         setDraft(value);
         setConflict(null);
@@ -223,6 +252,9 @@ export function useEditableField<T extends string>(
         setIsError(true);
         throw err;
       }
+      leavePast(pastRef.current, lastSavedRef.current);
+      // Saved again, it is current, not past.
+      pastRef.current.delete(next);
       lastSavedRef.current = next;
       setIsError(false);
       setSavedAt(Date.now());
@@ -301,6 +333,8 @@ export function useEditableField<T extends string>(
       pending.external,
       focusedRef.current,
     );
+    // Theirs is the new baseline, as an adopt's is.
+    pastRef.current = new Set();
     lastSavedRef.current = pending.external;
     setDraft(pending.external);
     setConflict(null);
