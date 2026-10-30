@@ -23,8 +23,8 @@ export const reportsProducer = defineChangeProducer({
 });
 `;
 
-const tablesMap = () => {
-  const decls = findProducerDecls(ts, [{ rel: "p.ts", src: PRODUCER }]);
+const tablesMap = async () => {
+  const decls = await findProducerDecls(ts, [{ rel: "p.ts", src: PRODUCER }]);
   return resolveTableNames(
     ts,
     [{ rel: "tables.ts", src: TABLES }],
@@ -38,17 +38,21 @@ const interp = (name: string): string => "$" + "{" + name + "}";
 // Every scanned writer imports the binding and the producer on line 1, so a
 // write's reported line is its index in `lines` + 2.
 const IMPORTS = `import { _reports } from "./tables"; import { reportsProducer } from "./producer";`;
-const writes = (lines: readonly string[], header = IMPORTS) =>
-  findProducedWrites(
-    ts,
-    [{ rel: "w.ts", src: [header, ...lines].join("\n") }],
-    tablesMap(),
-    new Set(["reportsProducer"]),
+const writes = async (lines: readonly string[], header = IMPORTS) =>
+  (
+    await findProducedWrites(
+      ts,
+      [{ rel: "w.ts", src: [header, ...lines].join("\n") }],
+      await tablesMap(),
+      new Set(["reportsProducer"]),
+    )
   ).map((w) => [w.kind, w.line]);
 
 describe("producer-writes scan", () => {
-  test("finds the producer's binding and resolves it through a wrapper", () => {
-    expect(findProducerDecls(ts, [{ rel: "p.ts", src: PRODUCER }])).toEqual([
+  test("finds the producer's binding and resolves it through a wrapper", async () => {
+    expect(
+      await findProducerDecls(ts, [{ rel: "p.ts", src: PRODUCER }]),
+    ).toEqual([
       {
         binding: "_reports",
         producer: "reportsProducer",
@@ -56,10 +60,12 @@ describe("producer-writes scan", () => {
         line: 4,
       },
     ]);
-    expect(tablesMap()).toEqual(new Map([["_reports", new Set(["reports"])]]));
+    expect(await tablesMap()).toEqual(
+      new Map([["_reports", new Set(["reports"])]]),
+    );
   });
 
-  test("resolves an entity built from a ref through the ref's `entityRef` name", () => {
+  test("resolves an entity built from a ref through the ref's `entityRef` name", async () => {
     const tables = `
 const reportsEntity = defineEntity(reportsEntityRef, { primaryKey: "id" });
 export const _reports = reportsEntity.table;
@@ -71,19 +77,19 @@ export const otherRef = entityRef("other_rows", fields);
 export const unrelatedRef = entityRef("unrelated", fields);
 `;
     const bindings = new Set(["_reports", "_direct"]);
-    const refs = entityRefIdentifiers(
+    const refs = await entityRefIdentifiers(
       ts,
       [{ rel: "server/tables.ts", src: tables }],
       bindings,
     );
     expect(refs).toEqual(new Set(["reportsEntityRef", "otherRef"]));
-    const refNames = resolveEntityRefNames(
+    const refNames = await resolveEntityRefNames(
       ts,
       [{ rel: "core/entity.ts", src: refFile }],
       refs,
     );
     expect(
-      resolveTableNames(
+      await resolveTableNames(
         ts,
         [{ rel: "server/tables.ts", src: tables }],
         bindings,
@@ -97,7 +103,7 @@ export const unrelatedRef = entityRef("unrelated", fields);
     );
   });
 
-  test("resolves an entity's table: `defineEntity(…)` or `<entity>.table`", () => {
+  test("resolves an entity's table: `defineEntity(…)` or `<entity>.table`", async () => {
     const entityTables = `
 const traces = defineEntity(tracesRef, { primaryKey: "id" });
 export const _traces = traces.table;
@@ -106,7 +112,7 @@ const notAnEntity = { table: 1 };
 export const _bogus = notAnEntity.table;
 `;
     expect(
-      resolveTableNames(
+      await resolveTableNames(
         ts,
         [{ rel: "tables.ts", src: entityTables }],
         new Set(["_traces", "_inline", "_bogus"]),
@@ -123,23 +129,25 @@ export const _bogus = notAnEntity.table;
     );
     // A write beside the entity's own declaration is in scope too.
     expect(
-      findProducedWrites(
-        ts,
-        [
-          {
-            rel: "tables.ts",
-            src: `${entityTables}\nawait db.delete(_traces).where(p);`,
-          },
-        ],
-        new Map([["_traces", new Set(["traces"])]]),
-        new Set(["tracesProducer"]),
+      (
+        await findProducedWrites(
+          ts,
+          [
+            {
+              rel: "tables.ts",
+              src: `${entityTables}\nawait db.delete(_traces).where(p);`,
+            },
+          ],
+          new Map([["_traces", new Set(["traces"])]]),
+          new Set(["tracesProducer"]),
+        )
       ).map((w) => [w.kind, w.line]),
     ).toEqual([["drizzle", 8]]);
   });
 
-  test("flags a drizzle write on the binding outside mutate", () => {
+  test("flags a drizzle write on the binding outside mutate", async () => {
     expect(
-      writes([
+      await writes([
         "await db.update(_reports).set({ noise: true });",
         "await db.insert(_reports).values(v);",
         "await db.delete(_reports).where(p);",
@@ -152,9 +160,9 @@ export const _bogus = notAnEntity.table;
     ]);
   });
 
-  test("follows an aliased import, a re-bind and a property access", () => {
+  test("follows an aliased import, a re-bind and a property access", async () => {
     expect(
-      writes(
+      await writes(
         [
           "const again = r;",
           "await db.delete(r).where(p);",
@@ -170,18 +178,18 @@ export const _bogus = notAnEntity.table;
     ]);
   });
 
-  test("an unrelated local that only shares the name is not the table", () => {
+  test("an unrelated local that only shares the name is not the table", async () => {
     expect(
-      writes(
+      await writes(
         ["const _reports = new Set<string>();", "seen.delete(_reports);"],
         "",
       ),
     ).toEqual([]);
   });
 
-  test("the table's own declaring file is in scope", () => {
+  test("the table's own declaring file is in scope", async () => {
     expect(
-      writes(
+      await writes(
         [
           `const _reports = pgTable("reports", {});`,
           "await db.delete(_reports);",
@@ -191,9 +199,9 @@ export const _bogus = notAnEntity.table;
     ).toEqual([["drizzle", 3]]);
   });
 
-  test("a write inside a mutate builder callback is the producer's own", () => {
+  test("a write inside a mutate builder callback is the producer's own", async () => {
     expect(
-      writes([
+      await writes([
         "await reportsProducer.mutate(db, (q, t) => q.update(t).set(x), { latency: 'background' });",
         "await reportsProducer.mutate(db, (q) => q.delete(_reports).where(p), { latency: 'background' });",
         "await reportsProducer.mutate(db, function (q) { return q.insert(_reports).values(v); }, { latency: 'interactive' });",
@@ -201,9 +209,9 @@ export const _bogus = notAnEntity.table;
     ).toEqual([]);
   });
 
-  test("only a producer's mutate, and only the builder it returns", () => {
+  test("only a producer's mutate, and only the builder it returns", async () => {
     expect(
-      writes([
+      await writes([
         "await query.mutate(db, (q) => q.delete(_reports), {});",
         "await reportsProducer.mutate(db, (q) => { void db.delete(_reports); return q.update(_reports).set(x); }, { latency: 'background' });",
       ]),
@@ -213,9 +221,9 @@ export const _bogus = notAnEntity.table;
     ]);
   });
 
-  test("flags raw SQL writing the table, quoted, qualified or interpolated", () => {
+  test("flags raw SQL writing the table, quoted, qualified or interpolated", async () => {
     expect(
-      writes([
+      await writes([
         "await db.execute(sql`DELETE FROM reports`);",
         'await pool.query(\'UPDATE "public"."reports" SET noise = true\');',
         `await db.execute(sql\`WITH x AS (SELECT 1) INSERT INTO reports (id) VALUES (${interp("id")})\`);`,

@@ -1,11 +1,6 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { matchBracket } from "@plugins/plugin-meta/plugins/parse-utils/core";
-import { listRepoFiles } from "@plugins/framework/plugins/tooling/plugins/checks/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-
-type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
+import type { Check, RepoFiles } from "@plugins/framework/plugins/tooling/core";
+import { sliceCheckThread } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 
 /**
  * Enforces that a Tailwind `@theme inline` BRIDGE copy (`--color-input:
@@ -57,27 +52,41 @@ function lineOf(src: string, index: number): number {
   return src.slice(0, index).split("\n").length;
 }
 
+/** `rel`'s text; `rel` came from `repo`'s own listing, so null means the tree moved under the run. */
+async function readListed(repo: RepoFiles, rel: string): Promise<string> {
+  const text = await repo.read(rel);
+  if (text === null) {
+    throw new Error(
+      `${rel} is in the repo's file set but could not be read — it was removed after the set was listed.`,
+    );
+  }
+  return text;
+}
+
 const check: Check = {
   id: "theme-bridge-reads",
   description:
     "No `var(--color-*)` read of an `@theme inline` bridge outside `@theme` — the bridge resolves at :root and ignores scoped app themes; read the runtime var it copies",
-  async run() {
-    const root = await getWorktreeRoot();
-    const files = (await listRepoFiles(root)).filter((p) =>
-      p.startsWith("plugins/"),
-    );
+  async run(ctx) {
+    const repo = await ctx.repo();
+    const files = repo.under("plugins");
     const cssFiles = files.filter((p) => p.endsWith(".css"));
     const codeFiles = files.filter(
       (p) => p.endsWith(".ts") || p.endsWith(".tsx"),
     );
+    // Every read through the run's gated async set, never one blocking read
+    // per file on the thread every check shares.
+    const [cssTexts, codeTexts] = await Promise.all([
+      Promise.all(cssFiles.map((rel) => readListed(repo, rel))),
+      Promise.all(codeFiles.map((rel) => readListed(repo, rel))),
+    ]);
 
     // Pass 1: every bridge, `--color-<name>` → the runtime var it copies.
     const bridges = new Map<string, string>();
     const cssRest = new Map<string, string>();
-    for (const rel of cssFiles) {
-      const { themes, rest } = splitThemeBlocks(
-        stripCssComments(readFileSync(join(root, rel), "utf8")),
-      );
+    for (const [i, rel] of cssFiles.entries()) {
+      await sliceCheckThread();
+      const { themes, rest } = splitThemeBlocks(stripCssComments(cssTexts[i]!));
       cssRest.set(rel, rest);
       for (const body of themes) {
         for (const bm of body.matchAll(
@@ -90,7 +99,8 @@ const check: Check = {
 
     // Pass 2: every read of one outside `@theme`.
     const offenders: string[] = [];
-    const scan = (rel: string, src: string) => {
+    const scan = async (rel: string, src: string) => {
+      await sliceCheckThread();
       for (const vm of src.matchAll(/var\(\s*(--color-[\w-]+)/g)) {
         const runtime = bridges.get(vm[1]!);
         if (runtime) {
@@ -100,9 +110,8 @@ const check: Check = {
         }
       }
     };
-    for (const [rel, rest] of cssRest) scan(rel, rest);
-    for (const rel of codeFiles)
-      scan(rel, readFileSync(join(root, rel), "utf8"));
+    for (const [rel, rest] of cssRest) await scan(rel, rest);
+    for (const [i, rel] of codeFiles.entries()) await scan(rel, codeTexts[i]!);
 
     if (offenders.length === 0) return { ok: true };
     return {

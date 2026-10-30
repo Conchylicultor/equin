@@ -344,7 +344,9 @@ Sizes: `research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md`.
   - Uses tokens: `ui/tokens/shadow --shadow`
   - Imported by: `framework/tooling/checks/type-check/backstop`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/full-check.ts`, `shared/keys.ts`, `shared/lockfile.ts`, `shared/name-check.ts`, `shared/name-host.ts`, `shared/name-records.ts`, `shared/name-resolve.ts`, `shared/name-run.ts`, `shared/name-store.ts`, `shared/name-walk.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (debt)
+  - Exempts itself from:
+    - `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/full-check.ts`, `shared/keys.ts`, `shared/lockfile.ts`, `shared/name-check.ts`, `shared/name-host.ts`, `shared/name-records.ts`, `shared/name-resolve.ts`, `shared/name-run.ts`, `shared/name-store.ts`, `shared/name-walk.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (debt)
+    - `check-thread-safety/no-blocking-check-work` — `check/import-graph.ts` (debt)
 - Sub-plugins:
   - **`backstop`** — The two-program type check's backstop: a daily main-only job runs the type-check worker in dual mode (the two-program check beside a full check of a fresh whole program, compared file by file) and…
 

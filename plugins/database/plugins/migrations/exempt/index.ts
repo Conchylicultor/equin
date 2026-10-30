@@ -29,4 +29,17 @@ export default [
     task: "task-1792338443-riwqev",
     reason: "not yet split into server/ + machine/",
   },
+  {
+    rule: "check-thread-safety/no-blocking-check-work",
+    paths: [
+      "check/fork-schema-drift.ts",
+      "check/internal/declared-schema-inputs.ts",
+      "check/migration-phases-valid.ts",
+      "check/orphaned-tables.ts",
+    ],
+    kind: "debt",
+    task: "task-1793375830-dv7cez",
+    reason:
+      "Per-file synchronous work on the shared check thread (a blocking fs/process call made per item, or a direct maskSource / createSourceFile) that predates the rule; move it onto ctx.repo() / fs/promises and checks/core's maskedSource / parsedTsSource.",
+  },
 ] satisfies Exemptions;

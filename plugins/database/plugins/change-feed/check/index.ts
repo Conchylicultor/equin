@@ -44,7 +44,7 @@ const check: Check = {
     const declSources = (
       await listCandidateSources({ grepArg: "defineChangeProducer", pathspecs })
     ).filter((s) => ctx.inScope(s.rel));
-    const decls = findProducerDecls(ts, declSources);
+    const decls = await findProducerDecls(ts, declSources);
     if (decls.length === 0) return { ok: true };
 
     const bindings = new Set(decls.map((d) => d.binding));
@@ -56,11 +56,11 @@ const check: Check = {
     });
     // An entity built from a ref is named by the ref, declared in another
     // file (the plugin's `core/`): find those files by the ref identifiers.
-    const refs = entityRefIdentifiers(ts, bindingSources, bindings);
+    const refs = await entityRefIdentifiers(ts, bindingSources, bindings);
     const refNames =
       refs.size === 0
         ? new Map<string, Set<string>>()
-        : resolveEntityRefNames(
+        : await resolveEntityRefNames(
             ts,
             await listCandidateSources({
               grepArg: alternation(refs),
@@ -68,7 +68,12 @@ const check: Check = {
             }),
             refs,
           );
-    const tables = resolveTableNames(ts, bindingSources, bindings, refNames);
+    const tables = await resolveTableNames(
+      ts,
+      bindingSources,
+      bindings,
+      refNames,
+    );
     const unresolved = decls.filter((d) => !tables.has(d.binding));
     if (unresolved.length > 0) {
       // A producer whose table this scan cannot name would make every check of
@@ -91,11 +96,8 @@ const check: Check = {
       decls.flatMap((d) => (d.producer === null ? [] : [d.producer])),
     );
     const exempt = await ctx.exempt("change-feed:producer-writes");
-    const writes = findProducedWrites(
-      ts,
-      writeSources,
-      tables,
-      producers,
+    const writes = (
+      await findProducedWrites(ts, writeSources, tables, producers)
     ).filter((w) => !exempt.skips(w.path));
     if (writes.length === 0) return { ok: true };
     return {

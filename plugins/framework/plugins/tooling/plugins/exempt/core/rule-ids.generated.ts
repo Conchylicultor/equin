@@ -22,6 +22,7 @@ export type ExemptableRuleId =
   | "caret-trigger-safety/no-adhoc-caret-trigger"
   | "change-feed:producer-writes"
   | "check-runner-safety/no-adhoc-check-runner"
+  | "check-thread-safety/no-blocking-check-work"
   | "claude-sdk/no-claude-bin-spawn"
   | "claude-sdk/no-direct-sdk-query"
   | "cli:legacy-cli-name"

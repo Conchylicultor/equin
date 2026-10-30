@@ -480,7 +480,9 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `tag-tree/picker`
     - `wish`
 - Exemptions:
-  - Exempts itself from: `icons/reserved-nav-icon` — `core/nav-icons.ts` (sanctioned)
+  - Exempts itself from:
+    - `icons/reserved-nav-icon` — `core/nav-icons.ts` (sanctioned)
+    - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
   - Exempted by: `ui/icons` (0 debt)
 - Server:
   - Exports (types):

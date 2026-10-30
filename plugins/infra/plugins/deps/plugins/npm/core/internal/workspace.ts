@@ -2,11 +2,12 @@
 // (its declared dependencies and its `dependencyPolicy`) and what `bun.lock`
 // resolved each to. Read-only.
 
-import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parse, printParseErrorCode, type ParseError } from "jsonc-parser";
 import { z } from "zod";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { POLICY_KEY, PolicySchema, type Policy } from "./policy";
 import { parseSpec, type Spec } from "./spec";
 
@@ -162,14 +163,25 @@ export function parseLock(text: string): Lock {
   };
 }
 
+/** How many `package.json` reads `readWorkspace` holds open at once. */
+const MANIFEST_READ_CONCURRENCY = 32;
+
 export async function readWorkspace(root: string): Promise<Workspace> {
   const declared: Declared[] = [];
   const policies: DeclaredPolicy[] = [];
   const policyErrors: PolicyError[] = [];
-  for (const manifest of await workspaceManifests(root)) {
-    const pkg = ManifestSchema.parse(
-      JSON.parse(readFileSync(join(root, manifest), "utf8")),
-    );
+  // Read asynchronously through a bounded gate: a blocking read per manifest
+  // (a few hundred of them) held the check thread every check shares for
+  // seconds.
+  const manifests = await workspaceManifests(root);
+  const reads = createSemaphore(MANIFEST_READ_CONCURRENCY);
+  const texts = await Promise.all(
+    manifests.map((manifest) =>
+      reads.run(() => readFile(join(root, manifest), "utf8")),
+    ),
+  );
+  for (const [i, manifest] of manifests.entries()) {
+    const pkg = ManifestSchema.parse(JSON.parse(texts[i]!));
     const workspace = pkg.name ?? manifest;
     for (const section of SECTIONS) {
       for (const [name, raw] of Object.entries(pkg[section] ?? {})) {
@@ -199,7 +211,7 @@ export async function readWorkspace(root: string): Promise<Workspace> {
     declared,
     policies,
     policyErrors,
-    lock: parseLock(readFileSync(join(root, "bun.lock"), "utf8")),
+    lock: parseLock(await readFile(join(root, "bun.lock"), "utf8")),
   };
 }
 

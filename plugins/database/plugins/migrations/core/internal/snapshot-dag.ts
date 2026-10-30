@@ -15,17 +15,21 @@
  * research/2026-09-30-global-clone-migrations-published-set.md §3 and
  * research/2026-10-22-global-single-live-migration-snapshot.md.
  */
-import { readdirSync } from "fs";
+import { readdir } from "fs/promises";
+import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { join } from "path";
 import {
   legacySnapshotFiles,
   legacySnapshotSql,
   readLegacySnapshots,
   readSnapshotHead,
-  readSnapshotLineage,
+  readSnapshotLineageAsync,
   SCHEMA_SNAPSHOT_FILE,
   schemaSnapshotPath,
 } from "./schema-snapshot";
+
+/** How many migration headers `readSnapshotNodes` reads at once. */
+const HEADER_READ_CONCURRENCY = 32;
 
 /** drizzle's `prevId` of the first snapshot. */
 export const NULL_SNAPSHOT_ID = "00000000-0000-0000-0000-000000000000";
@@ -215,10 +219,19 @@ export async function readSnapshotNodes(
     const head = readSnapshotHead(join(dataDir, "meta", file))!;
     nodes.push({ file: sql, ...head, mergeParents: null, lineage: "legacy" });
   }
-  for (const file of readdirSync(dataDir)
+  // Every header read asynchronously, through a bounded gate: a blocking read
+  // per migration held the check thread for seconds (snapshot-chain-intact).
+  const files = (await readdir(dataDir))
     .filter((f) => f.endsWith(".sql"))
-    .sort()) {
-    const lineage = readSnapshotLineage(dataDir, file);
+    .sort();
+  const reads = createSemaphore(HEADER_READ_CONCURRENCY);
+  const lineages = await Promise.all(
+    files.map((file) =>
+      reads.run(() => readSnapshotLineageAsync(dataDir, file)),
+    ),
+  );
+  for (const [i, file] of files.entries()) {
+    const lineage = lineages[i]!;
     if (lineage === null) continue;
     nodes.push({
       file,

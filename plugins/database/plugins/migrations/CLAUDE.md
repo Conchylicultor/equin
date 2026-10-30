@@ -599,6 +599,7 @@ only agreement that matters.
     - `database/migrations/phases.SnapshotLineage`
     - `infra/spawn.spawnCaptured`
     - `infra/spawn.spawnExpectOk`
+    - `packages/semaphore.createSemaphore`
   - Exports (types):
     - `ContractOp`
     - `DrizzleGenerateOptions`
@@ -674,6 +675,7 @@ only agreement that matters.
     - `product-name:legacy-id` — `data` (sanctioned)
     - `imperative-create-table-allowlisted` — `check/imperative-create-table-allowlisted.ts` (sanctioned)
     - `boundaries/no-platform-api` — `core/internal/drizzle-stage.ts`, `core/internal/published-immutable.ts`, `core/internal/schema-load-probe.ts`, `core/internal/schema-snapshot.ts`, `core/internal/snapshot-bodies.ts`, `core/internal/snapshot-dag.ts` (debt)
+    - `check-thread-safety/no-blocking-check-work` — `check/fork-schema-drift.ts`, `check/internal/declared-schema-inputs.ts`, `check/migration-phases-valid.ts`, `check/orphaned-tables.ts` (debt)
   - Exempted by: `database/migrations` (0 debt)
 - Machine:
   - Exports (values):

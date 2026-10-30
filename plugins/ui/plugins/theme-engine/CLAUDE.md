@@ -396,6 +396,8 @@ exactly.
     - `menu-bar`
     - `plugin-meta/token-usage`
     - `reports/theme-resolution`
+- Exemptions:
+  - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
 - Sub-plugins:
   - **`quick-theme`** — Quick-switch theme popover on the global action bar: contributed quick sections (the theme picker, the light/dark switch), every component variant picker, and a hand-off to the full customizer pane…
   - **`saved-themes`** — Saved themes (tweakcn imports and custom themes) as a resident theme source read live (saved-themes.list, hydrated before first paint), plus useEditTheme — the one place theme edits land, copying a…

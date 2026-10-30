@@ -336,11 +336,24 @@ So check code:
 - **Reads contents asynchronously**: `repo.read(path)`, or `node:fs/promises`.
   `read` is bounded by one run-wide gate, so `Promise.all` over thousands of
   paths is fine through it — never through raw `readFile`.
-- **Yields in CPU loops** over thousands of items: `await yieldMacrotask()`
-  (`packages/macrotask-yield`) every ~10 ms of work. Not `await
-  Promise.resolve()` — a microtask never lets a timer run.
+- **Masks and parses through `checks/core`**: `await maskedSource(source)` and
+  `await parsedTsSource(ts, source)`, never `maskSource` / `ts.createSourceFile`
+  directly. Each yields the check thread's one shared time slice
+  (`sliceCheckThread`, ~10 ms) before working and keeps its result for the run,
+  so a loop over thousands of candidates yields by construction, and a file
+  `grepCode` masked for one check — or a pass parsed — is free for the next.
+- **Yields in its own CPU loops** over thousands of items: `await
+  sliceCheckThread()` between items. Not `await Promise.resolve()` — a
+  microtask never lets a timer run.
 - **Makes `cacheSignature()` async** when it needs git, rather than
   `spawnSync`-ing it.
+
+The `check-thread-safety/no-blocking-check-work` lint rule holds the first
+three in a `check/` folder's code: no blocking fs / process call made per item
+(in a loop or a callback), no direct `maskSource` / `createSourceFile`
+(`research/2026-10-30-framework-checks-never-hold-the-check-thread.md`). It
+cannot see into a core helper a check calls — keep those async too
+(`readWorkspace`, `readSnapshotNodes`); the thread watch still names them.
 
 For an `inputKeyed` check, `ctx.repo()` records what it answers: `has` as an
 existence fact, `under(dir)` as the membership of `dir/**`, `all()` as the whole
@@ -404,6 +417,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `ProgressRecord`
     - `QueryFact`
     - `RunChecksOptions`
+    - `SourceText`
     - `TreeSnapshot`
     - `TscProgram`
     - `ValidateOptions`
@@ -426,7 +440,9 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `listRepoFiles`
     - `loadTreeSnapshot`
     - `markBuildInProgress`
+    - `maskedSource`
     - `openCheckCache`
+    - `parsedTsSource`
     - `readCheckProgress`
     - `readTranscriptVerdict`
     - `readTreeSnapshot`
@@ -434,6 +450,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `requestedJobs`
     - `runChecks`
     - `scopeOf`
+    - `sliceCheckThread`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
 - Exemptions:
@@ -451,13 +468,13 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
   - **`bun-runtime`** [exempt]
   - **`class-token-walk-single-source`**
   - **`color-token-ref-in-sync`**
-  - **`composition-closure`**
-  - **`config-origins-in-sync`**
-  - **`config-stable-list-ids`**
+  - **`composition-closure`** [exempt]
+  - **`config-origins-in-sync`** [exempt]
+  - **`config-stable-list-ids`** [exempt]
   - **`conversation-trailer`**
-  - **`css-vars-single-owner`**
-  - **`css-vars-supplied`**
-  - **`data-migration-dml-only`**
+  - **`css-vars-single-owner`** [exempt]
+  - **`css-vars-supplied`** [exempt]
+  - **`data-migration-dml-only`** [exempt]
   - **`data-views-in-sync`**
   - **`eager-tier-in-sync`**
   - **`fields-eager-in-sync`**
@@ -465,13 +482,13 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
   - **`generated-artifacts-normalized`**
   - **`host-budget`**
   - **`host-pools-declared`**
-  - **`inherited-theme-defaults-scoped`**
-  - **`keyed-resource-scope`**
+  - **`inherited-theme-defaults-scoped`** [exempt]
+  - **`keyed-resource-scope`** [exempt]
   - **`lint-directives-stable`**
-  - **`migration-hashes-unique`**
+  - **`migration-hashes-unique`** [exempt]
   - **`migration-metadata-consistent`**
   - **`migrations-in-sync`**
-  - **`no-db-backed-notify`**
+  - **`no-db-backed-notify`** [exempt]
   - **`no-disabled-flag`**
   - **`no-gitlinks`**
   - **`no-hand-built-link-to`**
@@ -481,20 +498,20 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
   - **`no-raw-event-source`**
   - **`no-raw-sse`** [exempt]
   - **`no-raw-websocket`**
-  - **`no-reexport-default`**
+  - **`no-reexport-default`** [exempt]
   - **`no-relative-server-imports`**
   - **`no-use-resource-cast`**
   - **`plugin-boundaries`** [exempt]
   - **`plugin-refs-resolve`**
   - **`plugins-doc-in-sync`**
-  - **`plugins-have-claudemd`**
+  - **`plugins-have-claudemd`** [exempt]
   - **`plugins-registry-in-sync`**
   - **`pre-barrel-manifests-complete`**
   - **`reorderable-slots-in-sync`**
   - **`snapshot-chain-intact`**
   - **`space-ramp-in-sync`**
-  - **`table-defs-in-schema-glob`**
-  - **`tailwind-scan-covers-classes`**
+  - **`table-defs-in-schema-glob`** [exempt]
+  - **`tailwind-scan-covers-classes`** [exempt]
   - **`theme-bridge-reads`**
   - **`theme-declarations-in-sync`**
   - **`token-group-vars-in-sync`**

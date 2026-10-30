@@ -2571,6 +2571,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)
     - `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
+    - `check-thread-safety/no-blocking-check-work` — `check/index.ts`, `check/no-token-identity-outside-owner.ts` (debt)
   - Exempted by: `page/editor` (0 debt)
 - Test helpers:
   - Web: `@plugins/page/plugins/editor/web/testing`

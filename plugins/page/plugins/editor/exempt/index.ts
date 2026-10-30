@@ -77,4 +77,12 @@ export default [
     reason:
       "A trigger table built by infra/events' defineTriggerEvent, whose shared column set (events/server/internal/base-columns.ts) keys every *_triggers table by a bare uuid. Phase 6 of the unified prefixed ids keys them all at once (uuid -> text + a declared kind) in that one file; delete this entry then.",
   },
+  {
+    rule: "check-thread-safety/no-blocking-check-work",
+    paths: ["check/index.ts", "check/no-token-identity-outside-owner.ts"],
+    kind: "debt",
+    task: "task-1793375830-dv7cez",
+    reason:
+      "Per-file synchronous work on the shared check thread (a blocking fs/process call made per item, or a direct maskSource / createSourceFile) that predates the rule; move it onto ctx.repo() / fs/promises and checks/core's maskedSource / parsedTsSource.",
+  },
 ] satisfies Exemptions;

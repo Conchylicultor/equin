@@ -6,7 +6,7 @@
 
 - Description: Block-based page editor.
 - Sub-plugins:
-  - **`annotations`** — The annotation family's server-side reading of its audience axis: humanAudienceTypes(), the block types withheld from agents, read off the Editor.BlockData registry at call time.
+  - **`annotations`** [exempt] — The annotation family's server-side reading of its audience axis: humanAudienceTypes(), the block types withheld from agents, read off the Editor.BlockData registry at call time.
     - Plugins:
       - **`agent-access`** — The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one agent-authored block's whole contents — an <agent-inline> card, or an…
       - **`agent-notes`** — Agent-notes block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, holding what an agent wrote back to the page's author. Agent-notes block type: registers its…

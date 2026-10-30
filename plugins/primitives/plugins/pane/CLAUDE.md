@@ -945,7 +945,9 @@ with an empty route.
     - `screenshot`
     - `shell/notifications`
 - Exemptions:
-  - Exempts itself from: `pane/no-core-define-route-in-web` — `.` (sanctioned)
+  - Exempts itself from:
+    - `pane/no-core-define-route-in-web` — `.` (sanctioned)
+    - `check-thread-safety/no-blocking-check-work` — `check/identity-manifest.ts`, `check/index.ts` (debt)
   - Exempted by:
     - `primitives/bar` (0 debt)
     - `primitives/pane` (0 debt)

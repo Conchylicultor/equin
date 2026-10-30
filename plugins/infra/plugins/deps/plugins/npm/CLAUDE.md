@@ -146,6 +146,7 @@ functions in `core/internal/coherence.ts` over `readWorkspace(root)`.
     - `infra/deps/updates.OutdatedWaiting`
     - `infra/deps/updates.utcDay`
     - `infra/spawn.spawnCaptured`
+    - `packages/semaphore.createSemaphore`
   - Exports (types):
     - `Packument`
     - `Plan`

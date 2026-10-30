@@ -39,6 +39,8 @@ export {
   listCandidateSources,
   gitGrepList,
 } from "./grep-code";
+export { maskedSource, parsedTsSource, sliceCheckThread } from "./source-work";
+export type { SourceText } from "./source-work";
 export {
   isBuildInProgress,
   isBuildProcess,

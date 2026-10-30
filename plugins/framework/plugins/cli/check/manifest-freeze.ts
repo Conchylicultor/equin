@@ -1,11 +1,16 @@
-import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type TS from "typescript";
+import { parsedTsSource } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import {
   importClosure,
   loadTypescript,
   type ImportClosure,
 } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
+
+/** How many module reads one measurement holds open at once. */
+const READ_CONCURRENCY = 32;
 
 export interface ManifestFreezeInput {
   root: string;
@@ -98,17 +103,19 @@ export async function measureManifestFreeze(
     ]);
   }
 
-  const callers = new Map<string, boolean>();
-  const callsWriter = async (module: string): Promise<boolean> => {
+  // One answer per module, read asynchronously through a bounded gate: a
+  // closure lists hundreds of modules, and a blocking read of each held the
+  // thread every check shares.
+  const callers = new Map<string, Promise<boolean>>();
+  const reads = createSemaphore(READ_CONCURRENCY);
+  const callsWriter = (module: string): Promise<boolean> => {
     let hit = callers.get(module);
     if (hit === undefined) {
-      hit =
-        /\.[cm]?[jt]sx?$/.test(module) &&
-        (await callsFunction(
-          module,
-          readFileSync(join(root, module), "utf8"),
-          writer,
-        ));
+      hit = /\.[cm]?[jt]sx?$/.test(module)
+        ? reads
+            .run(() => readFile(join(root, module), "utf8"))
+            .then((source) => callsFunction(module, source, writer))
+        : Promise.resolve(false);
       callers.set(module, hit);
     }
     return hit;
@@ -194,13 +201,8 @@ export async function callsFunction(
 ): Promise<boolean> {
   if (!source.includes(name)) return false;
   const ts = await loadTypescript();
-  const sf = ts.createSourceFile(
-    file,
-    source,
-    ts.ScriptTarget.Latest,
-    false,
-    file.endsWith("x") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
-  );
+  // The kind (TS / TSX) follows `file`'s extension.
+  const sf = await parsedTsSource(ts, { rel: file, src: source });
   let found = false;
   const visit = (node: TS.Node): void => {
     if (found) return;

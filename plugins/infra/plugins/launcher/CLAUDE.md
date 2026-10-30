@@ -381,6 +381,7 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `marker-scan-safety/no-adhoc-marker-scan` — `check/internal/strip-comments.ts` (sanctioned)
     - `spawn-safety/no-raw-bun-spawn` — `server/internal/boot.ts` (sanctioned)
     - `boundaries/no-platform-api` — `server/internal/boot.ts`, `server/internal/config-propagate.ts` (debt)
+    - `check-thread-safety/no-blocking-check-work` — `check/internal/strip-comments.ts` (debt)
 - Sub-plugins:
   - **`env-names`** — The app's own environment variables, declared by key (forwarded to the runtime tree or withheld from it, with why), and the one way to read and write them: readEnv / envEntries / setEnv /…
   - **`gateway-drift`** — Gateway drift, shown: the health report's Gateway row — attention while the machine's login-service gateway (installed or running) differs from what ./equin start --force would install now from…

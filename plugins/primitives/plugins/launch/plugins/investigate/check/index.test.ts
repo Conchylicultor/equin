@@ -19,29 +19,29 @@ const REGISTER =
 const names = (r: { name: string }[]) => r.map((m) => m.name);
 
 describe("investigate:failures-registered", () => {
-  test("a tint reached through a chain of imported constants is flagged until registered", () => {
+  test("a tint reached through a chain of imported constants is flagged until registered", async () => {
     const constants = [
       file("a", "core/meta.ts", META),
       file("a", "core/fields.ts", FIELDS),
     ];
     const declaring = [file("a", "core/index.ts", COLLECTION)];
-    expect(names(unregisteredFailures(declaring, constants, []))).toEqual([
-      "runsList",
-    ]);
+    expect(names(await unregisteredFailures(declaring, constants, []))).toEqual(
+      ["runsList"],
+    );
     expect(
-      unregisteredFailures(declaring, constants, [
+      await unregisteredFailures(declaring, constants, [
         file("a", "web/index.ts", REGISTER),
       ]),
     ).toEqual([]);
   });
 
-  test("a helper exported from a file calling Investigate.Register counts as a registration", () => {
+  test("a helper exported from a file calling Investigate.Register counts as a registration", async () => {
     const helper =
       "export function investigateIt(owner) {\n  return Investigate.Register({ owner });\n}\n";
     const use =
       'import { runsList as rl } from "../core";\nconst c = investigateIt(rl, { noun: "run" });\n';
     expect(
-      unregisteredFailures(
+      await unregisteredFailures(
         [file("a", "core/index.ts", COLLECTION)],
         [file("a", "core/meta.ts", META), file("a", "core/fields.ts", FIELDS)],
         [file("b", "web/helper.ts", helper), file("a", "web/index.ts", use)],
@@ -49,7 +49,7 @@ describe("investigate:failures-registered", () => {
     ).toEqual([]);
   });
 
-  test("an untinted collection, a lookup-only one and a same-named local constant are not flagged", () => {
+  test("an untinted collection, a lookup-only one and a same-named local constant are not flagged", async () => {
     const plain =
       'export const quiet = liveCollection("a.quiet", {\n  fields: { s: enumTextField(S, { options: { x: { label: "X", variant: "muted" } } }) },\n  default: { limit: 10 },\n});\n';
     const lookup =
@@ -58,7 +58,7 @@ describe("investigate:failures-registered", () => {
     const shadow =
       'const runFields = { n: intField() };\nexport const other = liveCollection("b.other", { fields: runFields, default: { limit: 10 } });\n';
     expect(
-      unregisteredFailures(
+      await unregisteredFailures(
         [
           file("a", "core/quiet.ts", plain),
           file("a", "core/by-id.ts", lookup),
@@ -70,7 +70,7 @@ describe("investigate:failures-registered", () => {
     ).toEqual([]);
   });
 
-  test("a tinted union is answered by its arms: the union is never flagged, every arm is", () => {
+  test("a tinted union is answered by its arms: the union is never flagged, every arm is", async () => {
     const union =
       'import { runFields } from "./fields";\nexport const all = liveCollection("a.all", {\n  fields: runFields,\n  arms: { discriminator: "kind" },\n  default: { limit: 10 },\n});\n';
     const arm =
@@ -83,13 +83,13 @@ describe("investigate:failures-registered", () => {
       file("a", "core/union.ts", union),
       file("b", "core/index.ts", arm),
     ];
-    expect(names(unregisteredFailures(declaring, constants, []))).toEqual([
-      "bArm",
-    ]);
+    expect(names(await unregisteredFailures(declaring, constants, []))).toEqual(
+      ["bArm"],
+    );
     const reg =
       'import { bArm } from "../core";\nconst c = Investigate.Register({ owner: bArm });\n';
     expect(
-      unregisteredFailures(declaring, constants, [
+      await unregisteredFailures(declaring, constants, [
         file("b", "web/index.ts", reg),
       ]),
     ).toEqual([]);

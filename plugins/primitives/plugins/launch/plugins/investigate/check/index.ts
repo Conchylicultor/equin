@@ -2,12 +2,13 @@ import { isTestCodePath } from "@plugins/framework/plugins/plugin-id/core";
 import type { Check } from "@plugins/framework/plugins/tooling/core";
 import {
   listCandidateSources,
+  maskedSource,
+  sliceCheckThread,
   type CandidateSource,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import {
   findImports,
   lineAt,
-  maskSource,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
@@ -96,8 +97,16 @@ interface FileIndex {
   consts: Map<string, { masked: string; raw: string }>;
 }
 
-function indexFile(file: CandidateSource): FileIndex {
-  const masked = maskSource(file.src);
+// Each file is indexed once per run, whichever pass first meets it: the
+// follow-the-constants loop below re-reads the same files up to eight times.
+const indexed = new Map<string, FileIndex>();
+
+/** `file`'s index — kept for the run while its text is unchanged. */
+async function indexFile(file: CandidateSource): Promise<FileIndex> {
+  const hit = indexed.get(file.rel);
+  if (hit !== undefined && hit.file.src === file.src) return hit;
+  const masked = await maskedSource(file);
+  await sliceCheckThread();
   const consts = new Map<string, { masked: string; raw: string }>();
   for (const m of masked.matchAll(CONST)) {
     const start = m.index + m[0].length;
@@ -107,7 +116,14 @@ function indexFile(file: CandidateSource): FileIndex {
       raw: file.src.slice(start, end),
     });
   }
-  return { file, masked, imported: importAliases(file), consts };
+  const idx = { file, masked, imported: importAliases(file), consts };
+  indexed.set(file.rel, idx);
+  return idx;
+}
+
+/** Index every file, the check thread's slice yielded between them. */
+function indexAll(files: readonly CandidateSource[]): Promise<FileIndex[]> {
+  return Promise.all(files.map(indexFile));
 }
 
 /** The identifiers a span names. */
@@ -149,7 +165,9 @@ interface Tinted {
  * names are per file; across files a tinted constant is known by the name it
  * is exported under.
  */
-export function tintedConstants(files: readonly FileIndex[]): Tinted {
+export async function tintedConstants(
+  files: readonly FileIndex[],
+): Promise<Tinted> {
   const known = new Set<string>();
   const local = new Map<string, Set<string>>(
     files.map((f) => [f.file.rel, new Set<string>()]),
@@ -157,6 +175,7 @@ export function tintedConstants(files: readonly FileIndex[]): Tinted {
   for (let changed = true; changed;) {
     changed = false;
     for (const idx of files) {
+      await sliceCheckThread();
       const mine = local.get(idx.file.rel)!;
       for (const [name, init] of idx.consts) {
         if (mine.has(name)) continue;
@@ -172,21 +191,21 @@ export function tintedConstants(files: readonly FileIndex[]): Tinted {
 }
 
 /** The failure-bearing declarations no registration names, as `path:line — name`. */
-export function unregisteredFailures(
+export async function unregisteredFailures(
   declaring: readonly CandidateSource[],
   constantSources: readonly CandidateSource[],
   registering: readonly CandidateSource[],
-): { path: string; line: number; name: string }[] {
+): Promise<{ path: string; line: number; name: string }[]> {
   const byPath = new Map<string, FileIndex>();
   for (const f of [...constantSources, ...declaring].filter(notTest)) {
-    if (!byPath.has(f.rel)) byPath.set(f.rel, indexFile(f));
+    if (!byPath.has(f.rel)) byPath.set(f.rel, await indexFile(f));
   }
   const files = [...byPath.values()];
-  const tinted = tintedConstants(files);
+  const tinted = await tintedConstants(files);
 
   // Every name an `Investigate.Register(…)` — or a helper exported from a file
   // calling it — passes, undone to the name it was imported under.
-  const regFiles = registering.filter(notTest).map(indexFile);
+  const regFiles = await indexAll(registering.filter(notTest));
   const helpers = new Set<string>();
   for (const idx of regFiles) {
     if ([...idx.masked.matchAll(REGISTER)].length === 0) continue;
@@ -221,6 +240,7 @@ export function unregisteredFailures(
   }
   const declarations: Declaration[] = [];
   for (const f of declaring.filter(notTest)) {
+    await sliceCheckThread();
     const idx = byPath.get(f.rel)!;
     const localTinted = tinted.local.get(f.rel) ?? new Set<string>();
     for (const m of idx.masked.matchAll(DECLARATION)) {
@@ -298,8 +318,10 @@ const failuresRegistered: Check = {
     // constant found so far, until no new file appears.
     const sources = new Map(constants.map((f) => [f.rel, f]));
     for (let pass = 0; pass < 8; pass++) {
-      const names = tintedConstants(
-        [...sources.values(), ...declaring].filter(notTest).map(indexFile),
+      const names = (
+        await tintedConstants(
+          await indexAll([...sources.values(), ...declaring].filter(notTest)),
+        )
       ).known;
       if (names.size === 0) break;
       const more = await listCandidateSources({
@@ -314,10 +336,8 @@ const failuresRegistered: Check = {
       if (sources.size === before) break;
     }
     const exempt = await ctx.exempt(ID);
-    const missing = unregisteredFailures(
-      declaring,
-      [...sources.values()],
-      registering,
+    const missing = (
+      await unregisteredFailures(declaring, [...sources.values()], registering)
     ).filter((m) => !exempt.skips(m.path));
     if (missing.length === 0) return { ok: true };
     return {

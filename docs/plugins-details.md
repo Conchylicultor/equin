@@ -89,6 +89,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `active-data/show-me`
       - `active-data/task`
       - `conversations/conversation-view/jsonl-viewer/assistant-text`
+  - Exemptions:
+    - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
   - Test helpers:
     - Web: `@plugins/active-data/web/testing`
       - `activeDataPlugin`
@@ -13906,6 +13908,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `map/google`
       - `reorder`
       - `review/code-review`
+  - Exemptions:
+    - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/config-registrations.ts`, `check/overrides-authored.ts` (debt)
   - Test helpers:
     - Core: `@plugins/config_v2/core/testing`
       - `LEGEND_MARKER` — The build-owned `// @legend` block of a committed config override: a descriptor's `overrideLegend` lines, stamped directly under the `// @hash` header so whoever opens the file to hand-edit it sees how to write its values — for a reorder slot, that a spacer node exists and what it does.
@@ -20887,6 +20891,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/migrations/phases.SnapshotLineage`
           - `infra/spawn.spawnCaptured`
           - `infra/spawn.spawnExpectOk`
+          - `packages/semaphore.createSemaphore`
         - Exports (types):
           - `ContractOp`
           - `DrizzleGenerateOptions`
@@ -20962,6 +20967,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `product-name:legacy-id` — `data` (sanctioned)
           - `imperative-create-table-allowlisted` — `check/imperative-create-table-allowlisted.ts` (sanctioned)
           - `boundaries/no-platform-api` — `core/internal/drizzle-stage.ts`, `core/internal/published-immutable.ts`, `core/internal/schema-load-probe.ts`, `core/internal/schema-snapshot.ts`, `core/internal/snapshot-bodies.ts`, `core/internal/snapshot-dag.ts` (debt)
+          - `check-thread-safety/no-blocking-check-work` — `check/fork-schema-drift.ts`, `check/internal/declared-schema-inputs.ts`, `check/migration-phases-valid.ts`, `check/orphaned-tables.ts` (debt)
         - Exempted by: `database/migrations` (0 debt)
       - Machine:
         - Exports (values):
@@ -27414,6 +27420,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ProgressRecord`
               - `QueryFact`
               - `RunChecksOptions`
+              - `SourceText`
               - `TreeSnapshot`
               - `TscProgram`
               - `ValidateOptions`
@@ -27436,7 +27443,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `listRepoFiles`
               - `loadTreeSnapshot`
               - `markBuildInProgress`
+              - `maskedSource`
               - `openCheckCache`
+              - `parsedTsSource`
               - `readCheckProgress`
               - `readTranscriptVerdict`
               - `readTreeSnapshot`
@@ -27444,6 +27453,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `requestedJobs`
               - `runChecks`
               - `scopeOf`
+              - `sliceCheckThread`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shadow --shadow`
           - Exemptions:
@@ -27460,16 +27470,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`barrel-stubs-in-sync`**
             - **`bun-runtime`**
               - Exemptions:
-                - Exempts itself from: `spawn-safety/no-raw-bun-spawn` — `check/internal/fd-double-close-probe.ts` (sanctioned)
+                - Exempts itself from:
+                  - `spawn-safety/no-raw-bun-spawn` — `check/internal/fd-double-close-probe.ts` (sanctioned)
+                  - `check-thread-safety/no-blocking-check-work` — `check/internal/fd-double-close-probe.ts` (debt)
             - **`class-token-walk-single-source`**
             - **`color-token-ref-in-sync`**
             - **`composition-closure`**
+              - Exemptions:
+                - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/companions-visible.ts` (debt)
             - **`config-origins-in-sync`**
+              - Exemptions:
+                - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
             - **`config-stable-list-ids`**
+              - Exemptions:
+                - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
             - **`conversation-trailer`**
             - **`css-vars-single-owner`**
+              - Exemptions:
+                - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
             - **`css-vars-supplied`**
+              - Exemptions:
+                - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
             - **`data-migration-dml-only`**
+              - Exemptions:
+                - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
             - **`data-views-in-sync`**
             - **`eager-tier-in-sync`**
             - **`fields-eager-in-sync`**
@@ -27480,13 +27504,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Exemptions:
                 - Exempted by: `infra/host/host-admission` (0 debt)
             - **`inherited-theme-defaults-scoped`**
+              - Exemptions:
+                - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
             - **`keyed-resource-scope`**
+              - Exemptions:
+                - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
             - **`lint-directives-stable`**
             - **`migration-hashes-unique`**
+              - Exemptions:
+                - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
             - **`migration-metadata-consistent`**
             - **`migrations-in-sync`**
             - **`no-db-backed-notify`**
               - Exemptions:
+                - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/resolve.ts` (debt)
                 - Exempted by:
                   - `apps/chord/curriculum` (0 debt)
                   - `apps/chord/song-index` (0 debt)
@@ -27525,22 +27556,32 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/networking` (0 debt)
                   - `primitives/networking/request-guard` (0 debt)
             - **`no-reexport-default`**
+              - Exemptions:
+                - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
             - **`no-relative-server-imports`**
             - **`no-use-resource-cast`**
             - **`plugin-boundaries`**
               - Exemptions:
-                - Exempts itself from: `marker-scan-safety/no-adhoc-marker-scan` — `check/parse.ts` (sanctioned)
+                - Exempts itself from:
+                  - `marker-scan-safety/no-adhoc-marker-scan` — `check/parse.ts` (sanctioned)
+                  - `check-thread-safety/no-blocking-check-work` — `check/index.ts`, `check/parse.ts` (debt)
                 - Exempted by: `framework/web-core` (0 debt)
             - **`plugin-refs-resolve`**
             - **`plugins-doc-in-sync`**
             - **`plugins-have-claudemd`**
+              - Exemptions:
+                - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
             - **`plugins-registry-in-sync`**
             - **`pre-barrel-manifests-complete`**
             - **`reorderable-slots-in-sync`**
             - **`snapshot-chain-intact`**
             - **`space-ramp-in-sync`**
             - **`table-defs-in-schema-glob`**
+              - Exemptions:
+                - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
             - **`tailwind-scan-covers-classes`**
+              - Exemptions:
+                - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
             - **`theme-bridge-reads`**
             - **`theme-declarations-in-sync`**
             - **`token-group-vars-in-sync`**
@@ -27581,7 +27622,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses tokens: `ui/tokens/shadow --shadow`
                 - Imported by: `framework/tooling/checks/type-check/backstop`
               - Exemptions:
-                - Exempts itself from: `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/full-check.ts`, `shared/keys.ts`, `shared/lockfile.ts`, `shared/name-check.ts`, `shared/name-host.ts`, `shared/name-records.ts`, `shared/name-resolve.ts`, `shared/name-run.ts`, `shared/name-store.ts`, `shared/name-walk.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (debt)
+                - Exempts itself from:
+                  - `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/full-check.ts`, `shared/keys.ts`, `shared/lockfile.ts`, `shared/name-check.ts`, `shared/name-host.ts`, `shared/name-records.ts`, `shared/name-resolve.ts`, `shared/name-run.ts`, `shared/name-store.ts`, `shared/name-walk.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (debt)
+                  - `check-thread-safety/no-blocking-check-work` — `check/import-graph.ts` (debt)
               - Plugins:
                 - **`backstop`** — The two-program type check's backstop: a daily main-only job runs the type-check worker in dual mode (the two-program check beside a full check of a fresh whole program, compared file by file) and files a type-check-divergence report for every file whose result differs.
                   - Server:
@@ -28111,6 +28154,41 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`check-runner-safety`** — check-runner-safety lint rule: no-adhoc-check-runner
               - Exemptions:
                 - Exempted by: `framework/cli/check` (0 debt)
+            - **`check-thread-safety`** — check-thread-safety lint rule: no-blocking-check-work (check/ code makes no blocking fs/process call and no direct maskSource / createSourceFile: it reads through ctx.repo() or fs/promises and masks/parses through checks/core's thread-yielding maskedSource / parsedTsSource, so no check holds the one thread every check shares)
+              - Exemptions:
+                - Exempted by:
+                  - `active-data` (1 debt)
+                  - `config_v2` (2 debt)
+                  - `database/migrations` (4 debt)
+                  - `framework/tooling/checks/bun-runtime` (1 debt)
+                  - `framework/tooling/checks/composition-closure` (1 debt)
+                  - `framework/tooling/checks/config-origins-in-sync` (1 debt)
+                  - `framework/tooling/checks/config-stable-list-ids` (1 debt)
+                  - `framework/tooling/checks/css-vars-single-owner` (1 debt)
+                  - `framework/tooling/checks/css-vars-supplied` (1 debt)
+                  - `framework/tooling/checks/data-migration-dml-only` (1 debt)
+                  - `framework/tooling/checks/inherited-theme-defaults-scoped` (1 debt)
+                  - `framework/tooling/checks/keyed-resource-scope` (1 debt)
+                  - `framework/tooling/checks/migration-hashes-unique` (1 debt)
+                  - `framework/tooling/checks/no-db-backed-notify` (1 debt)
+                  - `framework/tooling/checks/no-reexport-default` (1 debt)
+                  - `framework/tooling/checks/plugin-boundaries` (2 debt)
+                  - `framework/tooling/checks/plugins-have-claudemd` (1 debt)
+                  - `framework/tooling/checks/table-defs-in-schema-glob` (1 debt)
+                  - `framework/tooling/checks/tailwind-scan-covers-classes` (1 debt)
+                  - `framework/tooling/checks/type-check` (1 debt)
+                  - `framework/tooling/test-layout` (1 debt)
+                  - `infra/launcher` (1 debt)
+                  - `infra/paths/data-files` (1 debt)
+                  - `network/live` (1 debt)
+                  - `page/annotations` (1 debt)
+                  - `page/editor` (2 debt)
+                  - `plugin-meta/facets` (1 debt)
+                  - `primitives/css/layout-harness` (1 debt)
+                  - `primitives/pane` (2 debt)
+                  - `ui/icons` (1 debt)
+                  - `ui/theme-engine` (1 debt)
+                  - `ui/tokens/type-scale` (1 debt)
             - **`context-safety`** — context-safety lint rule: no-unstable-context-value
             - **`detached-work-safety`** — detached-work-safety lint rule: no-untracked-detached-work
               - Exemptions:
@@ -28268,7 +28346,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `partitionTestPaths`
               - `TEST_FILE_GLOB`
           - Exemptions:
-            - Exempts itself from: `marker-scan-safety/no-adhoc-marker-scan` — `check/index.ts` (sanctioned)
+            - Exempts itself from:
+              - `marker-scan-safety/no-adhoc-marker-scan` — `check/index.ts` (sanctioned)
+              - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
         - **`web-artifacts`** — Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
           - Core:
             - Uses:
@@ -29937,6 +30017,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/deps/updates.OutdatedWaiting`
               - `infra/deps/updates.utcDay`
               - `infra/spawn.spawnCaptured`
+              - `packages/semaphore.createSemaphore`
             - Exports (types):
               - `Packument`
               - `Plan`
@@ -31798,6 +31879,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `marker-scan-safety/no-adhoc-marker-scan` — `check/internal/strip-comments.ts` (sanctioned)
           - `spawn-safety/no-raw-bun-spawn` — `server/internal/boot.ts` (sanctioned)
           - `boundaries/no-platform-api` — `server/internal/boot.ts`, `server/internal/config-propagate.ts` (debt)
+          - `check-thread-safety/no-blocking-check-work` — `check/internal/strip-comments.ts` (debt)
       - Plugins:
         - **`env-names`** — The app's own environment variables, declared by key (forwarded to the runtime tree or withheld from it, with why), and the one way to read and write them: readEnv / envEntries / setEnv / setEnvDefault / unsetEnv, each key named EQUIN_<key>. A leaf importing only framework/product-name, so every runtime and the lowest-level packages can import it.
           - Core:
@@ -32405,6 +32487,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/prototypes/thumbnails`
               - `infra/paths/data-files/memory`
               - `primitives/file-viewer`
+          - Exemptions:
+            - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/roots.ts` (debt)
           - Machine:
             - Exports (values):
               - `diskDirMount`
@@ -34648,6 +34732,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `live/no-endpoint-read` — `web` (sanctioned)
           - `no-db-backed-notify` — `server/internal/serve-off-feed.ts` (sanctioned)
           - `no-raw-websocket` — `e2e/narrowing.ts` (sanctioned)
+          - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
         - Exempted by:
           - `framework/central-core` (0 debt)
           - `framework/resource-runtime` (0 debt)
@@ -34985,11 +35070,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`semaphore`**
       - Cross-plugin:
         - Imported by:
+          - `database/migrations`
           - `framework/resource-runtime`
           - `framework/tooling`
           - `framework/tooling/checks`
           - `framework/tooling/codegen`
           - `framework/tooling/web-artifacts`
+          - `infra/deps/npm`
           - `infra/endpoints`
           - `plugin-meta/barrel-import`
       - Core:
@@ -35249,6 +35336,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/annotations/instructions`
           - `page/annotations/private-notes`
           - `page/annotations/todo`
+      - Exemptions:
+        - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
       - Plugins:
         - **`agent-access`** — The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one agent-authored block's whole contents — an <agent-inline> card, or an <agent-page> by its own id) and edit_page (any block, judged by what the diff touched — every write must resolve inside a region an agent authors, so an <agent-inline> card or an <agent-page> admits it and a <human> or <todo> card nested there refuses it; a tagless <agent-page title> mints a sub-page). The policy over page/markdown-apply's audience-and-author-agnostic engine, as portable functions (pageTools.read / edit / writeNote — the exact tool results) that the machine half's MCP tools wrap.
           - Server:
@@ -36496,6 +36585,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
           - `ids:pk-declared` — `server/internal/tables.ts` (debt)
           - `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
+          - `check-thread-safety/no-blocking-check-work` — `check/index.ts`, `check/no-token-identity-outside-owner.ts` (debt)
         - Exempted by: `page/editor` (0 debt)
       - Test helpers:
         - Web: `@plugins/page/plugins/editor/web/testing`
@@ -38358,6 +38448,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/facets/slots`
           - `plugin-meta/facets/structure`
           - `plugin-meta/plugin-tree`
+      - Exemptions:
+        - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
       - Plugins:
         - **`contributions`**
           - Core:
@@ -40603,7 +40695,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --chrome-pad-x`
               - `ui/tokens/density --space-lg`
           - Exemptions:
-            - Exempts itself from: `boundaries/no-platform-api` — `web/internal/build-measurer-page.ts`, `web/internal/measure-page.ts` (debt)
+            - Exempts itself from:
+              - `boundaries/no-platform-api` — `web/internal/build-measurer-page.ts`, `web/internal/measure-page.ts` (debt)
+              - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
           - Core:
             - Exports (types):
               - `MeasuredBox`
@@ -45885,7 +45979,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `screenshot`
           - `shell/notifications`
       - Exemptions:
-        - Exempts itself from: `pane/no-core-define-route-in-web` — `.` (sanctioned)
+        - Exempts itself from:
+          - `pane/no-core-define-route-in-web` — `.` (sanctioned)
+          - `check-thread-safety/no-blocking-check-work` — `check/identity-manifest.ts`, `check/index.ts` (debt)
         - Exempted by:
           - `primitives/bar` (0 debt)
           - `primitives/pane` (0 debt)
@@ -53091,7 +53187,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tag-tree/picker`
           - `wish`
       - Exemptions:
-        - Exempts itself from: `icons/reserved-nav-icon` — `core/nav-icons.ts` (sanctioned)
+        - Exempts itself from:
+          - `icons/reserved-nav-icon` — `core/nav-icons.ts` (sanctioned)
+          - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
         - Exempted by: `ui/icons` (0 debt)
       - Server:
         - Exports (types):
@@ -53833,6 +53931,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `menu-bar`
           - `plugin-meta/token-usage`
           - `reports/theme-resolution`
+      - Exemptions:
+        - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
       - Plugins:
         - **`quick-theme`** — Quick-switch theme popover on the global action bar: contributed quick sections (the theme picker, the light/dark switch), every component variant picker, and a hand-off to the full customizer pane — so a theme change never costs the user their current context.
           - Web:
@@ -54838,7 +54938,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `search/quick-find`
               - `tag-tree/picker`
           - Exemptions:
-            - Exempts itself from: `type-scale:closed-role-ladder:raw-vars` — `.` (sanctioned)
+            - Exempts itself from:
+              - `type-scale:closed-role-ladder:raw-vars` — `.` (sanctioned)
+              - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
     - **`tree-disclosure`** — Tree-row disclosure region (merged / dimmed-leaf / column). Contributes its variant-region host into Tree.Disclosure.
       - Web:
         - Slots: `TreeDisclosure.Variant`

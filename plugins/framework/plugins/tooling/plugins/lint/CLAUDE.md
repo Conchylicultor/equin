@@ -210,6 +210,7 @@ its disable does not cover. Parameters and imports have no in-file value.
   - **`button-safety`** — button-safety lint rules: no-async-raw-button, no-redundant-cursor-pointer
   - **`caret-trigger-safety`** — caret-trigger-safety lint rule: no-adhoc-caret-trigger
   - **`check-runner-safety`** — check-runner-safety lint rule: no-adhoc-check-runner
+  - **`check-thread-safety`** — check-thread-safety lint rule: no-blocking-check-work (check/ code makes no blocking fs/process call and no direct maskSource / createSourceFile: it reads through ctx.repo() or fs/promises and…
   - **`context-safety`** — context-safety lint rule: no-unstable-context-value
   - **`detached-work-safety`** — detached-work-safety lint rule: no-untracked-detached-work
   - **`dom-access-safety`** — dom-access-safety lint rule: no-module-scope-dom

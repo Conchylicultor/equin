@@ -1,9 +1,7 @@
 import { join } from "path";
-import { createTimeSlicer } from "@plugins/packages/plugins/macrotask-yield/core";
 import {
   findImports,
   lineAt,
-  maskSource,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import {
   getWorktreeRoot,
@@ -12,6 +10,7 @@ import {
 } from "@plugins/infra/plugins/spawn/core";
 import { InconclusiveCheckError } from "@plugins/framework/plugins/tooling/core";
 import { currentScanTree, currentScanView } from "./scan-context";
+import { maskedSource, sliceCheckThread } from "./source-work";
 
 // Both spawns below SCAN — `git grep` walks the tree, `git cat-file --batch`
 // streams back one blob per candidate — so unlike a `ls-files` metadata read
@@ -112,14 +111,15 @@ export async function grepCode(opts: GrepCodeOptions): Promise<CodeMatch[]> {
     ? opts.pattern.flags
     : opts.pattern.flags + "g";
 
-  // Each candidate is a synchronous mask + re-scan; over a wide candidate set
-  // that is seconds of work on the check runner's one shared thread, so yield a
-  // macrotask every few milliseconds of it.
-  const slice = createTimeSlicer();
+  // Each candidate is a mask + re-scan; over a wide candidate set that is
+  // seconds of work on the check runner's one shared thread, so the mask yields
+  // the thread's slice (and is shared with every other check masking the file),
+  // and the re-scan yields it too.
   const matches: CodeMatch[] = [];
-  for (const { rel, src } of candidates) {
-    await slice();
-    const masked = maskSource(src, { strings: maskStrings });
+  for (const candidate of candidates) {
+    const { rel, src } = candidate;
+    const masked = await maskedSource(candidate, { strings: maskStrings });
+    await sliceCheckThread();
     const maskedLines = masked.split("\n");
     const origLines = src.split("\n");
     const re = new RegExp(opts.pattern.source, flags);
@@ -183,10 +183,9 @@ export async function grepImports(
   );
 
   // Same shared-thread slicing as `grepCode`.
-  const slice = createTimeSlicer();
   const matches: ImportMatch[] = [];
   for (const { rel, src } of candidates) {
-    await slice();
+    await sliceCheckThread();
     const origLines = src.split("\n");
     for (const imp of findImports(src)) {
       if (!opts.filter(imp.specifier)) continue;

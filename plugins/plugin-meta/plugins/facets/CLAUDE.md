@@ -123,6 +123,8 @@ See `plugins/commands/` for the reference implementation.
     - `plugin-meta/facets/slots`
     - `plugin-meta/facets/structure`
     - `plugin-meta/plugin-tree`
+- Exemptions:
+  - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
 - Sub-plugins:
   - **`contributions`**
     - Plugins:

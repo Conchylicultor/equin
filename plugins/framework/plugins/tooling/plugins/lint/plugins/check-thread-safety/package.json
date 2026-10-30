@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-framework-tooling-lint-check-thread-safety",
+  "version": "0.0.1",
+  "private": true,
+  "description": "check-thread-safety lint rule: no-blocking-check-work (check/ code makes no blocking fs/process call and no direct maskSource / createSourceFile: it reads through ctx.repo() or fs/promises and masks/parses through checks/core's thread-yielding maskedSource / parsedTsSource, so no check holds the one thread every check shares)"
+}

@@ -215,6 +215,8 @@ Behavior:
     - `active-data/show-me`
     - `active-data/task`
     - `conversations/conversation-view/jsonl-viewer/assistant-text`
+- Exemptions:
+  - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
 - Test helpers:
   - Web: `@plugins/active-data/web/testing`
     - `activeDataPlugin`

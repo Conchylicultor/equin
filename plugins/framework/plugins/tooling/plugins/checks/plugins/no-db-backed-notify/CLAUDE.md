@@ -5,6 +5,7 @@
 ## Plugin reference
 
 - Exemptions:
+  - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/resolve.ts` (debt)
   - Exempted by:
     - `apps/chord/curriculum` (0 debt)
     - `apps/chord/song-index` (0 debt)

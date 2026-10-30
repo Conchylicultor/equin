@@ -218,6 +218,8 @@ against both providers; a new provider runs it too.
     - `apps/prototypes/thumbnails`
     - `infra/paths/data-files/memory`
     - `primitives/file-viewer`
+- Exemptions:
+  - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/roots.ts` (debt)
 - Machine:
   - Exports (values):
     - `diskDirMount`

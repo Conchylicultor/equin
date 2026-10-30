@@ -3764,6 +3764,10 @@
       "name": "@equin/plugin-framework-tooling-lint-check-runner-safety",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/lint/plugins/check-thread-safety": {
+      "name": "@equin/plugin-framework-tooling-lint-check-thread-safety",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/lint/plugins/context-safety": {
       "name": "@equin/plugin-framework-tooling-lint-context-safety",
       "version": "0.0.1",
@@ -8893,6 +8897,8 @@
     "@equin/plugin-framework-tooling-lint-caret-trigger-safety": ["@equin/plugin-framework-tooling-lint-caret-trigger-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/caret-trigger-safety"],
 
     "@equin/plugin-framework-tooling-lint-check-runner-safety": ["@equin/plugin-framework-tooling-lint-check-runner-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/check-runner-safety"],
+
+    "@equin/plugin-framework-tooling-lint-check-thread-safety": ["@equin/plugin-framework-tooling-lint-check-thread-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/check-thread-safety"],
 
     "@equin/plugin-framework-tooling-lint-context-safety": ["@equin/plugin-framework-tooling-lint-context-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/context-safety"],
 

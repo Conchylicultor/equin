@@ -1408,6 +1408,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `live/no-endpoint-read` — `web` (sanctioned)
     - `no-db-backed-notify` — `server/internal/serve-off-feed.ts` (sanctioned)
     - `no-raw-websocket` — `e2e/narrowing.ts` (sanctioned)
+    - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
   - Exempted by:
     - `framework/central-core` (0 debt)
     - `framework/resource-runtime` (0 debt)

@@ -266,6 +266,8 @@ rest. Don't reinstate it: two renderings of one status drift.
     - `page/annotations/instructions`
     - `page/annotations/private-notes`
     - `page/annotations/todo`
+- Exemptions:
+  - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
 - Sub-plugins:
   - **`agent-access`** — The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one agent-authored block's whole contents — an <agent-inline> card, or an…
   - **`agent-notes`** — Agent-notes block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, holding what an agent wrote back to the page's author. Agent-notes block type: registers its…

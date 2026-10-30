@@ -623,6 +623,8 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `map/google`
     - `reorder`
     - `review/code-review`
+- Exemptions:
+  - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/config-registrations.ts`, `check/overrides-authored.ts` (debt)
 - Test helpers:
   - Core: `@plugins/config_v2/core/testing`
     - `LEGEND_MARKER` — The build-owned `// @legend` block of a committed config override: a descriptor's `overrideLegend` lines, stamped directly under the `// @hash` header so whoever opens the file to hand-edit it sees how to write its values — for a reorder slot, that a spacer node exists and what it does.

@@ -1,11 +1,16 @@
 import type TS from "typescript";
+import {
+  parsedTsSource,
+  sliceCheckThread,
+} from "@plugins/framework/plugins/tooling/plugins/checks/core";
 
 // The pure half of `change-feed:producer-writes` (A11 of
 // research/2026-10-01-global-scoped-change-routing-p5-p8.md): every write to a
 // produced table goes through its producer's `mutate`. A table with a change
 // producer has no trigger, so a write that bypasses the producer reaches no live
 // reader — the surface showing that row stays stale until it remounts, with
-// nothing to say so. No git, no fs: the check feeds it sources, so what counts
+// nothing to say so. No git, no fs: the check feeds it sources (parsed through checks/core's
+// run-shared, thread-yielding `parsedTsSource`), so what counts
 // as a declaration, a binding and a write is unit-testable on literal strings.
 //
 // Three passes:
@@ -56,8 +61,13 @@ export interface ProducedWrite {
   text: string;
 }
 
-function parse(ts: typeof TS, { rel, src }: Source): TS.SourceFile {
-  return ts.createSourceFile(rel, src, ts.ScriptTarget.Latest, true);
+// One parse per file for the whole run — the passes below re-read the same
+// candidates — and the check thread's slice yielded before each file's walk,
+// so a pass over hundreds of files never holds the thread every check shares.
+async function parse(ts: typeof TS, source: Source): Promise<TS.SourceFile> {
+  const sf = await parsedTsSource(ts, source);
+  await sliceCheckThread();
+  return sf;
 }
 
 function lineOf(sf: TS.SourceFile, node: TS.Node): number {
@@ -77,13 +87,13 @@ function calleeName(ts: typeof TS, call: TS.CallExpression): string | null {
 }
 
 /** Pass 1: every `defineChangeProducer({ table: <identifier> })`. */
-export function findProducerDecls(
+export async function findProducerDecls(
   ts: typeof TS,
   sources: readonly Source[],
-): ProducerDecl[] {
+): Promise<ProducerDecl[]> {
   const out: ProducerDecl[] = [];
   for (const source of sources) {
-    const sf = parse(ts, source);
+    const sf = await parse(ts, source);
     walk(sf, ts, (node) => {
       if (!ts.isCallExpression(node)) return;
       if (calleeName(ts, node) !== "defineChangeProducer") return;
@@ -187,15 +197,15 @@ function fileDecls(
  * `refNames` (its ref's `entityRef` name, `resolveEntityRefNames`). A binding
  * declared in several files maps to every name found.
  */
-export function resolveTableNames(
+export async function resolveTableNames(
   ts: typeof TS,
   sources: readonly Source[],
   bindings: ReadonlySet<string>,
   refNames: ReadonlyMap<string, ReadonlySet<string>> = new Map(),
-): Map<string, Set<string>> {
+): Promise<Map<string, Set<string>>> {
   const out = new Map<string, Set<string>>();
   for (const source of sources) {
-    const sf = parse(ts, source);
+    const sf = await parse(ts, source);
     const decls = fileDecls(ts, sf);
     for (const [binding, initializer] of decls) {
       if (!bindings.has(binding)) continue;
@@ -216,14 +226,14 @@ export function resolveTableNames(
  * declared in the plugin's `core/` — so the caller finds those files by these
  * identifiers and reads them with `resolveEntityRefNames`.
  */
-export function entityRefIdentifiers(
+export async function entityRefIdentifiers(
   ts: typeof TS,
   sources: readonly Source[],
   bindings: ReadonlySet<string>,
-): Set<string> {
+): Promise<Set<string>> {
   const refs = new Set<string>();
   for (const source of sources) {
-    const sf = parse(ts, source);
+    const sf = await parse(ts, source);
     const decls = fileDecls(ts, sf);
     for (const [binding, initializer] of decls) {
       if (bindings.has(binding)) {
@@ -235,14 +245,14 @@ export function entityRefIdentifiers(
 }
 
 /** Each ref's table name: the first string argument of its `const <ref> = entityRef("<name>", …)`. */
-export function resolveEntityRefNames(
+export async function resolveEntityRefNames(
   ts: typeof TS,
   sources: readonly Source[],
   refs: ReadonlySet<string>,
-): Map<string, Set<string>> {
+): Promise<Map<string, Set<string>>> {
   const out = new Map<string, Set<string>>();
   for (const source of sources) {
-    const sf = parse(ts, source);
+    const sf = await parse(ts, source);
     for (const [ref, initializer] of fileDecls(ts, sf)) {
       if (!refs.has(ref)) continue;
       walk(initializer, ts, (inner) => {
@@ -389,12 +399,12 @@ function isMutateBuilder(
  * each binding to its SQL names (pass 2); `producers` are the producer
  * variables (pass 1) whose `.mutate` builders may write them.
  */
-export function findProducedWrites(
+export async function findProducedWrites(
   ts: typeof TS,
   sources: readonly Source[],
   tables: ReadonlyMap<string, ReadonlySet<string>>,
   producers: ReadonlySet<string>,
-): ProducedWrite[] {
+): Promise<ProducedWrite[]> {
   const bindings = new Set(tables.keys());
   const names = [...new Set([...tables.values()].flatMap((s) => [...s]))];
   const rawWrite = names.map((name) => ({
@@ -408,7 +418,7 @@ export function findProducedWrites(
     [...(tables.get(binding) ?? [])].sort().join(" | ");
   const out: ProducedWrite[] = [];
   for (const source of sources) {
-    const sf = parse(ts, source);
+    const sf = await parse(ts, source);
     const decls = fileDecls(ts, sf);
     const inScope = scopeNames(
       ts,

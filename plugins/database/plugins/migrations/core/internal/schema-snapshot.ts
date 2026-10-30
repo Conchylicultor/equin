@@ -25,6 +25,7 @@ import {
   readFileSync,
   readSync,
 } from "fs";
+import { open } from "fs/promises";
 import { join } from "path";
 import {
   snapshotLineage,
@@ -69,6 +70,28 @@ export function readStart(path: string): string | null {
     return buf.toString("utf8", 0, bytesRead);
   } finally {
     closeSync(fd);
+  }
+}
+
+/**
+ * `readStart`, without blocking the thread: a caller reading the start of every
+ * migration (hundreds of files) on a thread others share — a check pass — must
+ * not hold it for a syscall per file.
+ */
+export async function readStartAsync(path: string): Promise<string | null> {
+  let handle: Awaited<ReturnType<typeof open>>;
+  try {
+    handle = await open(path, "r");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw err;
+  }
+  try {
+    const buf = Buffer.alloc(HEAD_BYTES);
+    const { bytesRead } = await handle.read(buf, 0, HEAD_BYTES, 0);
+    return buf.toString("utf8", 0, bytesRead);
+  } finally {
+    await handle.close();
   }
 }
 
@@ -175,6 +198,15 @@ export function readSnapshotLineage(
   file: string,
 ): SnapshotLineage | null {
   const start = readStart(join(dataDir, file));
+  return start === null ? null : snapshotLineage(start);
+}
+
+/** `readSnapshotLineage`, read with `readStartAsync`. */
+export async function readSnapshotLineageAsync(
+  dataDir: string,
+  file: string,
+): Promise<SnapshotLineage | null> {
+  const start = await readStartAsync(join(dataDir, file));
   return start === null ? null : snapshotLineage(start);
 }
 
