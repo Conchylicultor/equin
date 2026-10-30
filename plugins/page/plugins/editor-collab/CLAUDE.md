@@ -15,11 +15,9 @@ Originated as Plan B (`research/2026-07-07-page-per-block-crdt-plan-b.md`).
   live resource.
 - `blockDocs` — the lookup-only `liveCollection("page-block-doc", { row, id:
   "blockId" })`: no default window, so it mints `page-block-doc:rows` alone,
-  served by `serveCollection(blockDocs, { from: _pageBlockDocs })` and read with
-  `useLiveRow(blockDocs, blockId)` (`found: false` = no doc yet → seed). Only
-  mounted editors subscribe (lazy content loading), each to its own block's id
-  set, and the point membership routes a `doc-update` to that block's tuple and
-  no other (a delta for a 1-row set carries a 1-id `order`). This replaced the
+  served by `serveCollection(blockDocs, { from: _pageBlockDocs })`: the by-id
+  read of ANY block's doc, trashed ones included (e2e `fetchBlockDoc`). The
+  editor no longer reads it — see `pageBlockDocs`. This replaced the
   hand-written keyed `blockContentResource` + `rowIdentity` (see
   `research/2026-09-26-global-live-values-migration-contract.md` §10; the older
   own-row analysis is `research/2026-08-25-global-own-row-resource-scoping.md`).
@@ -28,6 +26,20 @@ Originated as Plan B (`research/2026-07-07-page-per-block-crdt-plan-b.md`).
   form (via sql-column's `withWire`) is base64 encoded in JS per row — Postgres
   `encode(…, 'base64')` folds lines at 76 chars — by `bytesToBase64`, the one
   encoder the doc-init response shares.
+- `pageBlockDocs` — what the page editor reads: `liveCollection("page-block-docs",
+  { from: pagesEntityRef, all: { by: ["pageId"] } })`, ONE tuple per page (a
+  per-block read made an 800-block page 800 subscriptions, loads and frames).
+  Served over `page_blocks` (`deleted_at IS NULL`, scoped by `page_id` — the
+  same membership as `pageBlocks`) with `page_block_docs` LEFT-joined on the
+  block id: `{ id, pageId, state | null }`. A `doc-update` is a one-row refill
+  of its page's tuple; a create / trash / restore an entrant / exit; the
+  typing projection refills nothing (the tuple reads no `data`). Read by
+  `useCollabBlockDoc` with `useLive(pageBlockDocs, { where: { pageId },
+  select })` — the block's row: `state` / `null` (no doc yet → seed) /
+  absent (not in the loaded page — never "no doc": a trashed block's doc
+  survives it, so a restored row waits to re-enter the set). The `bytea`
+  wire codec on a scoped `all` set is allowed by network/live because a
+  scoped set is never persisted (its definition guards no stored row).
 - `POST /api/blocks/:id/doc-init` (body: raw update bytes via `blob()`) — the
   first-writer-wins seed and the ONLY row creator (`ON CONFLICT DO NOTHING`,
   then return the authoritative state as base64 JSON). A losing seeder merges
@@ -56,10 +68,12 @@ bun test plugins/page/plugins/editor-collab/server/internal
 
 ## Plugin reference
 
-- Description: Per-block content-CRDT server (content-agnostic): the page_block_docs state store, the per-block lookup-only live collection (page-block-doc:rows), the first-writer-wins doc-init seed, and the doc-update Yjs merge endpoint.
+- Description: Per-block content-CRDT server (content-agnostic): the page_block_docs state store, the per-block lookup-only live collection (page-block-doc:rows), the per-page block-docs set the page editor reads (page-block-docs, one tuple per page), the first-writer-wins doc-init seed, and the doc-update Yjs merge endpoint.
 - Server:
   - Contributes:
     - `resource.declare` "page-block-doc:rows"
+    - `resource.declare` "page-block-docs"
+    - `resource.declare` "page-block-docs:rows"
     - `page.editor.block.onCopy`
   - Uses:
     - `database.db`
@@ -67,6 +81,7 @@ bun test plugins/page/plugins/editor-collab/server/internal
     - `infra/endpoints.implement`
     - `infra/entities.defaultNow`
     - `infra/entities.defineEntity`
+    - `network/live.ServeAllCollectionOptions`
     - `network/live.serveCollection`
     - `page/editor._blocks`
     - `page/editor.BlockLifecycle`
@@ -77,7 +92,10 @@ bun test plugins/page/plugins/editor-collab/server/internal
     - `initBlockDoc`
     - `loadBlockDocs`
     - `mergeBlockDocUpdate`
-  - Resources: `page-block-doc:rows` (keyed, point)
+  - Resources:
+    - `page-block-doc:rows` (keyed, point)
+    - `page-block-docs` (keyed)
+    - `page-block-docs:rows` (keyed, point)
   - Routes:
     - `POST /api/blocks/:id/doc-init`
     - `POST /api/blocks/:id/doc-update`
@@ -85,6 +103,7 @@ bun test plugins/page/plugins/editor-collab/server/internal
   - Uses:
     - `fields.FieldsRecord`
     - `fields.fieldsToZodObject`
+    - `fields.nullable`
     - `fields/bytes/config.bytesField`
     - `fields/date/config.dateField`
     - `fields/text/config.textField`
@@ -92,11 +111,15 @@ bun test plugins/page/plugins/editor-collab/server/internal
     - `infra/endpoints.defineEndpoint`
     - `infra/entities.entityRef`
     - `network/live.liveCollection`
+    - `network/live.LiveRowsCollection`
+    - `page/block-entity.pagesEntityRef`
+  - Exports (types): `PageBlockDocsRow`
   - Exports (values):
     - `blockDocInit`
     - `BlockDocRowSchema`
     - `blockDocs`
     - `blockDocUpdate`
+    - `pageBlockDocs`
     - `pageBlockDocsEntityRef`
 - Cross-plugin:
   - Imported by:

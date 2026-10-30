@@ -31,7 +31,7 @@ vi.mock("@plugins/primitives/plugins/live-state/web", () => ({
   liveStateSocketKind: () => "worktree",
 }));
 vi.mock("@plugins/network/plugins/live/web", () => ({
-  useLiveRow: vi.fn(() => ({
+  useLive: vi.fn(() => ({
     status: "loading",
     refetch: () => Promise.resolve(),
   })),

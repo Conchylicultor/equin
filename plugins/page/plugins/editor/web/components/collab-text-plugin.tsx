@@ -266,6 +266,7 @@ function ServerCollabTextPlugin({ block, textVariant }: CollabTextPluginProps) {
   const rowTruth = rowTruthOf(block.id);
   const doc = useCollabBlockDoc(
     block.id,
+    block.pageId,
     (block.data as Record<string, unknown> | null)?.text,
     rowTruth,
     projectText,

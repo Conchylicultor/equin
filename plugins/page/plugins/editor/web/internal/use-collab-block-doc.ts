@@ -7,16 +7,14 @@ import {
 } from "react";
 import type { Doc } from "yjs";
 import type { Provider } from "@lexical/yjs";
-import {
-  useLiveRow,
-  type LiveRowResult,
-} from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import {
   useEventCallback,
   useLatestRef,
 } from "@plugins/primitives/plugins/latest-ref/web";
 import { yDocContent } from "@plugins/primitives/plugins/collab-doc/core";
-import { blockDocs } from "@plugins/page/plugins/editor-collab/core";
+import { pageBlockDocs } from "@plugins/page/plugins/editor-collab/core";
 import { coalesce, runsOf, xmlTextContentLength } from "../../core";
 import type { ProjectTextFn } from "./doc-sourced-runs";
 import type { RowTruth } from "./row-truth";
@@ -783,21 +781,54 @@ function useHydrationState(hold: CollabDocHold): HydrationSnapshot {
 }
 
 // The row read as what the provider should merge: see the call site.
-function serverStateOf<S>(
-  content: LiveRowResult<{ state: S }>,
-): S | null | undefined {
+/** A `pageBlockDocs` row, as the selector reads it. */
+interface PageBlockDocRow {
+  id: string;
+  state: string | null;
+}
+
+// One id index per delivered array (a push hands a new array; an unchanged
+// set keeps its identity), so every block editor of a page finds its row in
+// O(1) instead of each scanning the whole page's set.
+const docIndexes = new WeakMap<
+  readonly PageBlockDocRow[],
+  ReadonlyMap<string, PageBlockDocRow>
+>();
+function docIndexOf(
+  rows: readonly PageBlockDocRow[],
+): ReadonlyMap<string, PageBlockDocRow> {
+  let index = docIndexes.get(rows);
+  if (index === undefined) {
+    index = new Map(rows.map((row) => [row.id, row]));
+    docIndexes.set(rows, index);
+  }
+  return index;
+}
+
+/**
+ * The block's slice of its page's docs: its doc state, `null` when the block
+ * is in the page with no doc yet, `undefined` when it is not in the loaded
+ * page (yet) — a client-minted block before its row lands, or a restored one
+ * before its restore does. Only a present row is a positive answer: a block
+ * absent from the set may still own a stored doc (every delete is a trash, and
+ * the doc survives it), so its absence must never read as "no doc → seed".
+ */
+type BlockDocSlice = string | null | undefined;
+
+function serverStateOf(content: ResourceResult<BlockDocSlice>): BlockDocSlice {
   switch (content.status) {
     case "loading":
       return undefined;
     case "error":
-      return content.stale?.state;
+      return content.stale;
     case "ready":
-      return content.found ? content.row.state : null;
+      return content.data;
   }
 }
 
 export function useCollabBlockDoc(
   blockId: string,
+  pageId: string | null,
   dataText: unknown,
   rowTruth: RowTruth,
   projectText: ProjectTextFn,
@@ -816,16 +847,34 @@ export function useCollabBlockDoc(
       ensure(blockId).owner.provider.markBlockRowConfirmed();
   }, [blockId, rowTruth, ensure]);
 
-  // IN: the per-block live row. Subscribing only while a block editor is
-  // mounted is the lazy content-loading win; each pushed state flows into the
-  // provider, which merges it (idempotently) into the shared doc.
-  const content = useLiveRow(blockDocs, blockId);
-  // While loading we can't tell "absent" (→ seed) from "not arrived yet", so
-  // nothing is delivered until the row settles (`undefined`); `found: false`
-  // is the positive "no doc yet" (`null`). A FAILED read is never "absent" —
-  // seeding over a doc we could not read would fork it — so it delivers only
-  // the state last seen (already merged; the merge is idempotent), else
-  // nothing; live-state's resource-error sink reports the failure.
+  // IN: the block's row of its PAGE's docs — one live tuple per page, shared
+  // by every block editor on it (a per-block read was one subscription and one
+  // load per block: N+1). Each pushed state flows into the provider, which
+  // merges it (idempotently) into the shared doc; the selector re-renders this
+  // editor only when ITS state changes.
+  if (pageId === null) {
+    throw new Error(
+      `useCollabBlockDoc: block "${blockId}" has no page — a text block's docs are read by its page`,
+    );
+  }
+  const selectDoc = useCallback(
+    (rows: PageBlockDocRow[]): BlockDocSlice => {
+      const row = docIndexOf(rows).get(blockId);
+      return row === undefined ? undefined : row.state;
+    },
+    [blockId],
+  );
+  const content = useLive(pageBlockDocs, {
+    where: { pageId },
+    select: selectDoc,
+  });
+  // While loading — or while the block is not in its loaded page — we can't
+  // tell "absent" (→ seed) from "not arrived yet", so nothing is delivered
+  // (`undefined`); a present row with no state is the positive "no doc yet"
+  // (`null`). A FAILED read is never "absent" — seeding over a doc we could
+  // not read would fork it — so it delivers only the state last seen (already
+  // merged; the merge is idempotent), else nothing; live-state's
+  // resource-error sink reports the failure.
   const serverState = serverStateOf(content);
   useEffect(() => {
     if (serverState === undefined) return;

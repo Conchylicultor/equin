@@ -405,7 +405,7 @@ export function compileCollection<
   B extends string = never,
 >(
   collection: LiveAllCollection<Row, B>,
-  opts: ServeAllCollectionOptions<T, Row, J>,
+  opts: ServeAllCollectionOptions<T, Row, J, B>,
   // Positional like the window form's: an `all` set is never scoped (refused
   // when non-empty), and folds the exposures it reaches.
   scoped?: readonly ServedScopedColumns[],
@@ -1197,7 +1197,7 @@ export interface ServeCollectionOverloads<H> {
     B extends string = never,
   >(
     collection: LiveAllCollection<Row, B> & H,
-    opts: ServeAllCollectionOptions<T, Row, J>,
+    opts: ServeAllCollectionOptions<T, Row, J, B>,
   ): ServedAllCollection<Row, B>;
   <
     Row,

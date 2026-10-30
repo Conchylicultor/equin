@@ -34435,9 +34435,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useLiveReader`
           - `useLiveRow`
       - Server:
-        - Uses: 38 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Uses: 39 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `infra/query-resource` ×35
-          - `database/sql-column` ×2
+          - `database/sql-column` ×3
           - `network/live/filter.filterSql`
         - Exports (types):
           - `AllCollectionSpecs`
@@ -35798,6 +35798,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `page/editor`
+          - `page/editor-collab`
           - `page/links`
           - `page/tags`
     - **`block-text-write`** — Server-side text writes for a block's content doc — read a stored doc's true runs, splice it to target runs (or seed it first-writer-wins), then write the row's data.text projection: the one text channel every server-side content writer goes through.
@@ -36095,7 +36096,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Editor.TurnInto` ×2
           - `Editor.BlockMenuItem` ← `page.open-as-page`
         - Contributes: `IdKinds.Kind` "block"
-        - Uses: 93 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+        - Uses: 91 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
           - `primitives/live-state` ×6
           - `primitives/text-editor/caret-trigger` ×5
           - `infra/endpoints` ×4
@@ -36106,7 +36107,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/persistent-draft` ×4
           - `primitives/slot-render` ×4
           - `primitives/undo-redo` ×4
-          - `network/live` ×3
           - `primitives/css/control-panel` ×3
           - `primitives/css/coords` ×3
           - `primitives/multi-select` ×3
@@ -36115,6 +36115,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reorder` ×3
           - `primitives/latest-ref` ×2
           - `ids.IdKinds`
+          - `network/live.useLive`
           - `primitives/announce.announce`
           - `primitives/copy-to-clipboard.useCopyToClipboard`
           - `primitives/css/badge.Badge`
@@ -36598,10 +36599,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resolveBlockSlots` — The two web block SLOT OBJECTS, resolved once per call from the declaration pass that named them, so every loop that reads a block contribution compares by IDENTITY instead of against an id string.
           - `WEB_BLOCK_FRAME_SLOT`
           - `WEB_BLOCK_SLOT`
-    - **`editor-collab`** — Per-block content-CRDT server (content-agnostic): the page_block_docs state store, the per-block lookup-only live collection (page-block-doc:rows), the first-writer-wins doc-init seed, and the doc-update Yjs merge endpoint.
+    - **`editor-collab`** — Per-block content-CRDT server (content-agnostic): the page_block_docs state store, the per-block lookup-only live collection (page-block-doc:rows), the per-page block-docs set the page editor reads (page-block-docs, one tuple per page), the first-writer-wins doc-init seed, and the doc-update Yjs merge endpoint.
       - Server:
         - Contributes:
           - `resource.declare` "page-block-doc:rows"
+          - `resource.declare` "page-block-docs"
+          - `resource.declare` "page-block-docs:rows"
           - `page.editor.block.onCopy`
         - Uses:
           - `database.db`
@@ -36609,6 +36612,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.implement`
           - `infra/entities.defaultNow`
           - `infra/entities.defineEntity`
+          - `network/live.ServeAllCollectionOptions`
           - `network/live.serveCollection`
           - `page/editor._blocks`
           - `page/editor.BlockLifecycle`
@@ -36619,7 +36623,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `initBlockDoc`
           - `loadBlockDocs`
           - `mergeBlockDocUpdate`
-        - Resources: `page-block-doc:rows` (keyed, point)
+        - Resources:
+          - `page-block-doc:rows` (keyed, point)
+          - `page-block-docs` (keyed)
+          - `page-block-docs:rows` (keyed, point)
         - Routes:
           - `POST /api/blocks/:id/doc-init`
           - `POST /api/blocks/:id/doc-update`
@@ -36627,6 +36634,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `fields.FieldsRecord`
           - `fields.fieldsToZodObject`
+          - `fields.nullable`
           - `fields/bytes/config.bytesField`
           - `fields/date/config.dateField`
           - `fields/text/config.textField`
@@ -36634,11 +36642,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.defineEndpoint`
           - `infra/entities.entityRef`
           - `network/live.liveCollection`
+          - `network/live.LiveRowsCollection`
+          - `page/block-entity.pagesEntityRef`
+        - Exports (types): `PageBlockDocsRow`
         - Exports (values):
           - `blockDocInit`
           - `BlockDocRowSchema`
           - `blockDocs`
           - `blockDocUpdate`
+          - `pageBlockDocs`
           - `pageBlockDocsEntityRef`
       - Cross-plugin:
         - Imported by:

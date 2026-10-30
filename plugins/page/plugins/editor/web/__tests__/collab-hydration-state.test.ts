@@ -56,14 +56,14 @@ vi.mock(
   }),
 );
 
-// The block's `blockDocs` row as `useLiveRow` hands it over: pending until the
-// test delivers a stored state.
+// The block's page's `pageBlockDocs` rows as `useLive` reads them: pending
+// until the test delivers a stored state. The mock applies the hook's own
+// selector, as the real read does.
 let rowValue:
   | { status: "loading"; refetch: () => Promise<void> }
   | {
       status: "ready";
-      found: true;
-      row: { state: string };
+      data: { id: string; state: string | null }[];
       refetch: () => Promise<void>;
     } = {
   status: "loading",
@@ -74,7 +74,15 @@ vi.mock("@plugins/primitives/plugins/live-state/web", () => ({
   liveStateSocketUrl: () => "ws://x/worktree",
 }));
 vi.mock("@plugins/network/plugins/live/web", () => ({
-  useLiveRow: () => rowValue,
+  useLive: (
+    _collection: unknown,
+    query: {
+      select: (rows: { id: string; state: string | null }[]) => unknown;
+    },
+  ) =>
+    rowValue.status === "ready"
+      ? { ...rowValue, data: query.select(rowValue.data) }
+      : rowValue,
 }));
 
 import {
@@ -363,6 +371,7 @@ test("hydrating suppresses the data.text projection, and opening the gate replay
     () =>
       useCollabBlockDoc(
         id,
+        "page-hydration",
         [],
         "present",
         projectText as unknown as ProjectTextFn,
@@ -552,6 +561,7 @@ test("refetch() re-reads the server without dropping the session or re-attaching
     () =>
       useCollabBlockDoc(
         id,
+        "page-hydration",
         [],
         "present",
         projectText as unknown as ProjectTextFn,
@@ -573,8 +583,7 @@ test("refetch() re-reads the server without dropping the session or re-attaching
   act(() => {
     rowValue = {
       status: "ready",
-      found: true,
-      row: { state: toBase64(docStateFor([{ text: "hello" }])) },
+      data: [{ id, state: toBase64(docStateFor([{ text: "hello" }])) }],
       refetch: () => Promise.resolve(),
     };
     rerender();
@@ -619,6 +628,7 @@ test("rehydrate() DOES re-attach — and the everRendered latch survives it", as
     () =>
       useCollabBlockDoc(
         id,
+        "page-hydration",
         [],
         "present",
         projectText as unknown as ProjectTextFn,
@@ -634,8 +644,7 @@ test("rehydrate() DOES re-attach — and the everRendered latch survives it", as
   act(() => {
     rowValue = {
       status: "ready",
-      found: true,
-      row: { state: toBase64(docStateFor([{ text: "hello" }])) },
+      data: [{ id, state: toBase64(docStateFor([{ text: "hello" }])) }],
       refetch: () => Promise.resolve(),
     };
     rerender();

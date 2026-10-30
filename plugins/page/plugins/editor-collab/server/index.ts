@@ -1,6 +1,6 @@
 import { BlockLifecycle } from "@plugins/page/plugins/editor/server";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { blockDocsServed } from "./internal/resource";
+import { blockDocsServed, pageBlockDocsServed } from "./internal/resource";
 import { copyBlockDocsHook } from "./internal/copy-hook";
 import { handleBlockDocInit, handleBlockDocUpdate } from "./internal/routes";
 import { blockDocInit, blockDocUpdate } from "../core";
@@ -20,9 +20,10 @@ export {
 export default {
   portable: true,
   description:
-    "Per-block content-CRDT server (content-agnostic): the page_block_docs state store, the per-block lookup-only live collection (page-block-doc:rows), the first-writer-wins doc-init seed, and the doc-update Yjs merge endpoint.",
+    "Per-block content-CRDT server (content-agnostic): the page_block_docs state store, the per-block lookup-only live collection (page-block-doc:rows), the per-page block-docs set the page editor reads (page-block-docs, one tuple per page), the first-writer-wins doc-init seed, and the doc-update Yjs merge endpoint.",
   contributions: [
     ...blockDocsServed.declare,
+    ...pageBlockDocsServed.declare,
     BlockLifecycle.OnCopy(copyBlockDocsHook),
   ],
   httpRoutes: {

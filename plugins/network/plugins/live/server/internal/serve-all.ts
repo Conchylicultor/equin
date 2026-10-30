@@ -1,7 +1,11 @@
 import type { z } from "zod";
 import { getTableColumns, type SQL } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
-import { columnWireCodec } from "@plugins/database/plugins/sql-column/server";
+import {
+  columnWireCodec,
+  type ColumnWire,
+  type WireCodec,
+} from "@plugins/database/plugins/sql-column/server";
 import {
   BASE_RELATION,
   isExprField,
@@ -32,6 +36,7 @@ import type { ExposingExtension } from "./serve-columns";
 import {
   isEntitySource,
   type CollectionSource,
+  type ColumnNamesOf,
   type ColumnsOf,
   type TableOf,
   type WireCheck,
@@ -90,13 +95,53 @@ type AllFieldBinding<
   T extends CollectionSource,
   J extends readonly AllJoinSpec[],
   V,
+  B extends string,
 > = (
   j: AllJoinRefs<ColumnsOf<T>, J>,
 ) =>
-  | ColumnBinding<AllJoinRefs<ColumnsOf<T>, J>>
+  | PersistableBinding<ColumnBinding<AllJoinRefs<ColumnsOf<T>, J>>, B>
   | AggregateRef<string, string, V, "decoded">
   | AggregateRef<string, string, JsonForm<V>, "json">
   | ExprField<V>;
+
+/**
+ * Wire-encoded columns are served by a SCOPED set only (`B` its `by` fields).
+ * The L2 persisted value of a set is guarded by its definition (A18), which
+ * cannot read a codec's code — and persistence is `preload`, which only the
+ * whole set (`B` = `never`) may declare: `preload` beside `all.by` is a tsc
+ * error (`AllQueryResourceContract`) and a throw (`liveCollection`). So a set
+ * that may be persisted cannot bind a column whose type declares a wire form
+ * (sql-column `withWire`): through `columns`, the ref drops out of the
+ * binding's type; by name, `PersistableWireCheck` names the field.
+ */
+type PersistableBinding<X, B extends string> = [B] extends [never]
+  ? X extends { col: infer C }
+    ? ColumnWire<C> extends { wire: unknown }
+      ? never
+      : X
+    : X
+  : X;
+
+/** Row fields bound BY NAME to a wire-encoded column of `from`. */
+type WireNamed<T, Row> = {
+  [K in keyof Row & ColumnNamesOf<T>]: ColumnWire<ColumnsOf<T>[K]> extends {
+    wire: unknown;
+  }
+    ? K
+    : never;
+}[keyof Row & ColumnNamesOf<T>];
+
+/** On a set that may be persisted, a by-name wire column is a REQUIRED `never` property naming the field: a tsc error. */
+export type PersistableWireCheck<T, Row, B extends string> = [B] extends [never]
+  ? [WireNamed<T, Row>] extends [never]
+    ? unknown
+    : {
+        [
+          K in WireNamed<T, Row> &
+            string as `row field "${K}" reads a wire-encoded column — only a scoped set (\`all: { by }\`, never persisted) may serve one`
+        ]: never;
+      }
+  : unknown;
 
 /** `columns`, optional while every row field is a column of `from` by name (as `serveCollection`'s). */
 type AllColumnOverrides<
@@ -104,14 +149,16 @@ type AllColumnOverrides<
   Row,
   N extends string & keyof Row,
   J extends readonly AllJoinSpec[],
+  B extends string,
 > = [Exclude<N, keyof ColumnsOf<T> & string>] extends [never]
-  ? { columns?: { [K in N]?: AllFieldBinding<T, J, Row[K]> } }
+  ? { columns?: { [K in N]?: AllFieldBinding<T, J, Row[K], B> } }
   : {
-      columns: { [K in N]?: AllFieldBinding<T, J, Row[K]> } & {
+      columns: { [K in N]?: AllFieldBinding<T, J, Row[K], B> } & {
         [K in Exclude<N, keyof ColumnsOf<T> & string>]: AllFieldBinding<
           T,
           J,
-          Row[K]
+          Row[K],
+          B
         >;
       };
     };
@@ -139,6 +186,8 @@ export type ServeAllCollectionOptions<
   T extends CollectionSource,
   Row,
   J extends readonly AllJoinSpec[] = readonly [],
+  /** The set's `by` fields — `never` for the whole set, which alone may be persisted. */
+  B extends string = never,
 > = {
   from: T;
   /**
@@ -166,9 +215,11 @@ export type ServeAllCollectionOptions<
   Row,
   // `$columns` is folded (an exposing set's exposures), never bound.
   Exclude<keyof Row & string, typeof LIVE_COLUMNS_KEY>,
-  J
+  J,
+  B
 > &
-  WireCheck<T, Row>;
+  WireCheck<T, Row> &
+  PersistableWireCheck<T, Row, B>;
 
 /**
  * An `all` collection's compiled server halves (query-resource's
@@ -271,12 +322,20 @@ export function compileAllSpecs<Row, B extends string = never>(
   };
   // A wire codec's `encode` is code the L2 definition cannot read (A18): a
   // change to it would serve rows persisted under the old encoding as current.
-  // No `all` collection needs one, so it is refused rather than fingerprinted
-  // by a name nothing keeps honest.
+  // So a set that may be persisted — the whole set — refuses one rather than
+  // fingerprinting it by a name nothing keeps honest. A SCOPED set
+  // (`all: { by }`) is never preloaded, so never persisted: its definition
+  // guards no stored row, and a column's codec (sql-column `withWire`, e.g.
+  // `bytea` → base64) is applied in JS per row, as a window's is. An
+  // expression's `wire` stays refused (no scoped set needs one yet).
+  const scoped = collection.all.all.by !== undefined;
   const wireRefused = (name: string): never =>
     fail(
-      `row field "${name}" reads a wire-encoded value (sql-column \`withWire\`, or an expression's \`wire\`) — an \`all\` collection is L2-persisted and its definition cannot read an encoder's code, so a wire form is not served here.`,
+      `row field "${name}" reads a wire-encoded value (sql-column \`withWire\`, or an expression's \`wire\`) — an \`all\` collection is L2-persisted and its definition cannot read an encoder's code, so a wire form is not served here${scoped ? " (a scoped set takes a column's codec, never an expression's)" : ""}.`,
     );
+  // The column codecs a scoped set's fields read, by field — filled by
+  // `select` (the compile runs it once, before it reads `wire`).
+  const wired = new Map<string, WireCodec<unknown, unknown>>();
 
   const select = (bind: AllBind): SelectMap => {
     const j = bind.j as unknown as Record<
@@ -329,7 +388,11 @@ export function compileAllSpecs<Row, B extends string = never>(
             `row field "${name}" binds to "${ref.from}"."${ref.col.name}", which is not a wire column of that relation — a server-only column never reaches the wire.`,
           );
         }
-        if (columnWireCodec(ref.col) !== undefined) wireRefused(name);
+        const codec = columnWireCodec(ref.col);
+        if (codec !== undefined) {
+          if (!scoped) wireRefused(name);
+          wired.set(name, codec);
+        }
         read = bind.render(ref);
       }
       // The runtime backstop of the binding's type (as `serveCollection`'s
@@ -372,15 +435,43 @@ export function compileAllSpecs<Row, B extends string = never>(
     return out;
   };
   const foldId = `exposed:${[...exposedFields.keys()].sort().join(",")}`;
+  // The row a loader returns, as the wire carries it: the fold, then each
+  // wired field's codec (a NULL stays `null`).
+  const encodeRow = (row: Record<string, unknown>): Record<string, unknown> => {
+    const out = exposes === null ? { ...row } : fold(row);
+    for (const [name, codec] of wired) {
+      const value = out[name];
+      if (value !== null && value !== undefined)
+        out[name] = codec.encode(value);
+    }
+    return out;
+  };
+  // Read by the compile AFTER `select` ran (a getter, so `wired` is filled):
+  // the fold's id, and a scoped set's codecs — named by field only, which is
+  // enough for a definition that guards no persisted row (see `scoped`).
+  const wireOf = ():
+    | { encodeRow: typeof encodeRow; ids: Record<string, string> }
+    | undefined => {
+    if (exposes === null && wired.size === 0) return undefined;
+    return {
+      encodeRow,
+      ids: {
+        ...(exposes === null ? {} : { [LIVE_COLUMNS_KEY]: foldId }),
+        ...Object.fromEntries(
+          [...wired.keys()].map((name) => [name, "column-wire-codec"]),
+        ),
+      },
+    };
+  };
   return compileAllCollection(
     { all: collection.all, rows: collection.rows },
     {
       from: opts.from,
       ...(joins.length > 0 ? { joins } : {}),
       select,
-      ...(exposes === null
-        ? {}
-        : { wire: { encodeRow: fold, ids: { [LIVE_COLUMNS_KEY]: foldId } } }),
+      get wire() {
+        return wireOf();
+      },
       ...(where === undefined
         ? {}
         : {

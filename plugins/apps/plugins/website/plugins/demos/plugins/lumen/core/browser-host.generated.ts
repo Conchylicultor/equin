@@ -806,7 +806,7 @@ export const hostReads: readonly {
   { key: "op-store.history", needsMachine: true },
   { key: "op-store.in-flight.all", needsMachine: true },
   { key: "page-backlinks", needsMachine: false },
-  { key: "page-block-doc", needsMachine: false },
+  { key: "page-block-docs", needsMachine: false },
   { key: "page-blocks.v2", needsMachine: false },
   { key: "page-links.sources", needsMachine: false },
   { key: "page-tags.assignments", needsMachine: false },

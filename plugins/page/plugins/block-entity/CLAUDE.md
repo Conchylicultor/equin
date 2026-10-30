@@ -25,6 +25,7 @@
 - Cross-plugin:
   - Imported by:
     - `page/editor`
+    - `page/editor-collab`
     - `page/links`
     - `page/tags`
 

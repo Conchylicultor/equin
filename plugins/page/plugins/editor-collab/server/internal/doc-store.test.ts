@@ -30,9 +30,10 @@ import type { QueryDb } from "@plugins/infra/plugins/query-resource/server";
 import { compileWindowQuery } from "@plugins/infra/plugins/query-resource/server/testing";
 import { compileCollection } from "@plugins/network/plugins/live/server";
 import { bytesToBase64 } from "@plugins/fields/plugins/bytes/plugins/storage/server";
-import { blockDocs } from "../../core";
+import { blockDocs, pageBlockDocs } from "../../core";
 import type { BlockDocRow } from "../../core/internal/resources";
 import { _pageBlockDocs } from "./tables";
+import { pageBlockDocsServeOptions } from "./resource";
 import { initBlockDoc, loadBlockDocs, mergeBlockDocUpdate } from "./doc-store";
 
 let t: TestDb;
@@ -238,6 +239,65 @@ describe("blockDocs :rows (the served lookup-only collection)", () => {
   test("an uninitialized block is absent — the reader's found: false", async () => {
     const blockId = await createBlock();
     expect(await readRows([blockId])).toEqual([]);
+  });
+});
+
+describe("pageBlockDocs (one tuple per page, the editor's read)", () => {
+  /** The scoped set's FULL loader `serveCollection` registers, over the test DB. */
+  const readPage = async (
+    pageId: string,
+  ): Promise<{ id: string; pageId: string | null; state: string | null }[]> => {
+    const specs = compileCollection(pageBlockDocs, {
+      ...pageBlockDocsServeOptions,
+      db: t.db as unknown as QueryDb,
+    });
+    return (await specs.all.loader({ pageId })) as {
+      id: string;
+      pageId: string | null;
+      state: string | null;
+    }[];
+  };
+
+  let nextPage = 0;
+  async function createPageWith(
+    n: number,
+  ): Promise<{ page: string; blocks: string[] }> {
+    const page = `page-${++nextPage}`;
+    await t.db.execute(
+      sql`INSERT INTO page_blocks (id, type, rank, doc_rank) VALUES (${page}, 'page', ${`c${nextPage.toString(36).padStart(2, "0")}`}, 'a0')`,
+    );
+    const blocks: string[] = [];
+    for (let i = 0; i < n; i++) {
+      const id = `${page}-b${i}`;
+      await t.db.execute(
+        sql`INSERT INTO page_blocks (id, type, rank, parent_id, page_id) VALUES (${id}, 'text', ${`a${i}`}, ${page}, ${page})`,
+      );
+      blocks.push(id);
+    }
+    return { page, blocks };
+  }
+
+  test("every live block of the page, its doc as unfolded base64 or null; another page's blocks out", async () => {
+    const { page, blocks } = await createPageWith(2);
+    const [withDoc, bare] = blocks as [string, string];
+    const other = await createPageWith(1);
+    await initBlockDoc(
+      t.db,
+      withDoc,
+      Y.encodeStateAsUpdate(docOf("x".repeat(400))),
+    );
+    await initBlockDoc(
+      t.db,
+      other.blocks[0]!,
+      Y.encodeStateAsUpdate(docOf("other")),
+    );
+    const rows = await readPage(page);
+    expect(rows.map((r) => r.id).sort()).toEqual([bare, withDoc].sort());
+    const doc = rows.find((r) => r.id === withDoc)!;
+    expect(doc.pageId).toBe(page);
+    expect(doc.state).toBe(bytesToBase64(await storedState(withDoc)));
+    expect(doc.state).not.toContain("\n");
+    expect(rows.find((r) => r.id === bare)!.state).toBeNull();
   });
 });
 

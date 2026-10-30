@@ -316,9 +316,49 @@ describe("serveCollection — the `all` arm (C4)", () => {
       id: "id",
       all: { orderBy: [["id", "asc"]], unbounded: { reason: "a test set" } },
     });
+    // A set that may be persisted (the whole set) cannot bind one: a tsc
+    // error at the serve site, and a throw for an untyped caller.
+    // @ts-expect-error — `blob` reads a wire-encoded column on a persistable set
     expect(() => compileCollection(w, { from: wired, db })).toThrow(
       /reads a wire-encoded value/,
     );
+  });
+
+  test("a SCOPED set (never persisted) serves a wire-encoded column through its codec, in JS per row", async () => {
+    const wired = pgTable("sca_wired_scoped", {
+      id: text("id").primaryKey(),
+      scope: text("scope").notNull(),
+      blob: withWire(text("blob"), {
+        schema: z.string(),
+        encode: (v: string) => v.toUpperCase(),
+      }),
+    });
+    const w = liveCollection(`test.live.all-wire-scoped-${seq++}`, {
+      fields: {
+        id: textField({ label: "Id" }),
+        scope: textField({ label: "Scope" }),
+        blob: nullable(textField({ label: "Blob" })),
+      },
+      id: "id",
+      all: {
+        by: ["scope"],
+        orderBy: [["id", "asc"]],
+        unbounded: { reason: "a test set" },
+      },
+    });
+    const { db } = recordingQueryDb(() => [
+      { id: "a", scope: "s", blob: "low" },
+      { id: "b", scope: "s", blob: null },
+    ]);
+    const specs = compileCollection(w, { from: wired, db });
+    expect(await specs.all.loader({ scope: "s" })).toEqual([
+      { id: "a", scope: "s", blob: "LOW" },
+      { id: "b", scope: "s", blob: null },
+    ]);
+    // `:rows` (the scripted db answers every query alike) encodes the same way.
+    expect(
+      await specs.rows.loader(w.rows.point.encode(["a"]) as never),
+    ).toContainEqual({ id: "a", scope: "s", blob: "LOW" });
   });
 
   test("a collection declared by its own fields only is refused over a table", () => {

@@ -205,6 +205,10 @@ with no same-named column is bound in `columns: { name: (j) => j.base.col }`
 - **Wire-encoded columns** (sql-column `withWire`, e.g. `bytea` → base64) are
   encoded in JS (`encodeRow`), never SQL. The row field must be the codec's
   wire type (tsc). Never filterable or the id (throws).
+  On an `all` set only a SCOPED one (`all: { by }`) may serve one: the whole
+  set may be persisted (`preload`), and its L2 definition cannot read a
+  codec's code — a tsc error at the serve site (`PersistableWireCheck`), a
+  throw for an untyped caller. A scoped set cannot declare `preload` (tsc).
 - Returns `window`, `rows`, `groups`, `keys`, `declare`. `compileCollection`
   is the same derivation without registering (tests).
 - **The `all` arm** (`server/internal/serve-all.ts`): compiled by
@@ -1111,9 +1115,9 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `useLiveReader`
     - `useLiveRow`
 - Server:
-  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/query-resource` ×35
-    - `database/sql-column` ×2
+    - `database/sql-column` ×3
     - `network/live/filter.filterSql`
   - Exports (types):
     - `AllCollectionSpecs`
