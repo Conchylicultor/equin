@@ -2415,6 +2415,12 @@ export type PersistedValueCheck =
 
 const HEARTBEAT_MS = 20_000;
 
+// How recently a commit-watermark capture must have started for a flight to
+// share it (`captureSharedWatermark`): long enough to span one herd wave of
+// cold reads (an xmin round trip measured ~18 ms under boot load), short
+// enough that a hung capture is superseded rather than waited on by every read.
+const WATERMARK_SHARE_MS = 100;
+
 // Read-admission concurrency cap. Bounds how many COLD read-path loads (WS
 // sub-ack + HTTP GET fallback) — and the `revalidate` git/fs spawns they may run
 // first — execute at once, so no fan-out (boot, a post-restart resubscribe herd,
@@ -2503,7 +2509,8 @@ export function createResourceRuntime(
   // `entry.versions` is per-boot in-memory state (created empty at registration,
   // bumped only in the flush paths — nothing restores it across restarts), so a
   // client-echoed version is comparable ONLY when the epochs match: same epoch +
-  // same version ⇒ for a non-revalidate resource, no state change since the
+  // same version ⇒ for a resource whose counter is complete
+  // (`versionIsComplete`), no state change since the
   // client's value was produced — the per-pk version counter is its complete
   // change signal. See the version short-circuit in `handleSub`.
   const bootEpoch = globalThis.crypto.randomUUID();
@@ -3028,6 +3035,67 @@ export function createResourceRuntime(
     );
   }
 
+  // Whether the per-pk version counter is this entry's COMPLETE change signal
+  // within a tracking span — what the same-boot version short-circuit trusts.
+  // True for every resource without a `revalidate` signature (each change routes
+  // through flushNotifies, which bumps it), and for one declared `notified`:
+  // the declaration says every change is told by `notify`, which bumps it too.
+  // Only an undeclared revalidatable resource (truth outside any notify stream,
+  // e.g. git) keeps its ETag as the authority on every replay.
+  function versionIsComplete(entry: RegistryEntry): boolean {
+    return !entry.revalidate || entry.freshness?.kind === "notified";
+  }
+
+  // Whether a flight of this entry may read Postgres — so whether its commit
+  // watermark describes anything. A guarded external with no routing record
+  // reads none while the D5 drift guard is armed (a read capture is wired): a
+  // captured read would have given it a drift-only record (`failOpenDrift`).
+  // With no capture wired nothing proves it, so it captures as before. A
+  // DB-free flight captures no watermark: an xmin round trip inside a
+  // read-admission slot for a value no transaction is reflected in (every
+  // `config-v2.values` tuple of a post-boot replay paid one). Shipping no
+  // watermark is the safe direction — "no causal floor"
+  // forbids a denial, never a confirmation by content — and an external is
+  // never L2-persisted, so no floor is lost there.
+  function readsDb(entry: RegistryEntry): boolean {
+    return !(
+      opts.lastReadSet !== undefined &&
+      guardedExternal(entry) &&
+      !entry.routing
+    );
+  }
+
+  // One xmin capture shared by every flight that asks while it is in flight.
+  // Sound by `captureWatermark`'s own contract: the shared capture resolves
+  // before the joining flight's loader starts, so it was taken before that
+  // flight's first read — a valid floor, at worst OLDER than a capture of its
+  // own (an older floor only over-replays at catch-up and confirms less). A
+  // replay herd of N cold flights then costs one round trip per wave, not N.
+  // Sharing must not couple failures: a flight joins only a capture started
+  // within `WATERMARK_SHARE_MS` (a hung one is superseded, never waited on by
+  // every later read), and a joiner whose shared capture failed captures its
+  // own — the starter's error is the starter's.
+  const watermarkFlight = createInflight();
+  async function captureSharedWatermark(
+    capture: () => Promise<string>,
+  ): Promise<string> {
+    let started = false;
+    const shared = watermarkFlight.run(
+      "watermark",
+      () => {
+        started = true;
+        return capture();
+      },
+      { notBefore: performance.now() - WATERMARK_SHARE_MS },
+    );
+    try {
+      return await shared;
+    } catch (err) {
+      if (started) throw err;
+      return capture();
+    }
+  }
+
   // Whether a captured `relation` is one the entry's declaration covers — the
   // ONE predicate the drift guard (A8 / D5) and the boot drift seed
   // (`seedRouteDrift`) judge by: routes ∪ derived ∪ unfed ∪ relation reads ∪
@@ -3392,9 +3460,9 @@ export function createResourceRuntime(
     // only in the STARTER's frame; joiners coalesce onto the resolved object.
     const load = async (): Promise<FlightValue> => {
       let watermark: string | undefined;
-      if (opts.captureWatermark) {
+      if (opts.captureWatermark && readsDb(entry)) {
         try {
-          watermark = await opts.captureWatermark();
+          watermark = await captureSharedWatermark(opts.captureWatermark);
         } catch (err) {
           // Tokenless degrade — the value still ships; the client just cannot
           // causally deny against this frame. Loud via the report hook.
@@ -7111,7 +7179,7 @@ export function createResourceRuntime(
     // Version short-circuit: the client echoed the (epoch, version) its cached
     // value was produced under. If the epoch is THIS boot and the version equals
     // the current per-pk counter, nothing changed since that value shipped — for
-    // a non-revalidate resource the version counter is its complete change
+    // a `versionIsComplete` resource the version counter is its complete change
     // signal WITHIN a tracking span (every state change of a subscribed tuple
     // routes through flushNotifies, which bumps it), and a matching version is
     // always this span's: each span opens with a fresh one (`registerSubOnSocket`).
@@ -7129,9 +7197,12 @@ export function createResourceRuntime(
     //     a replay on a NEW socket, after the old one's close released the
     //     tuple, takes the full path like a post-restart one; a replay on the
     //     same socket registers before it reconciles and keeps its span;
-    //   - non-`revalidate` resources — a revalidatable resource's freshness
-    //     authority is its ETag signature (probed below), not the version
-    //     counter (its truth may live outside the notify stream, e.g. git).
+    //   - resources whose version counter is complete (`versionIsComplete`):
+    //     every non-`revalidate` one, and a `revalidate` one declared
+    //     `notified` — its notify stream is its whole change signal, so its
+    //     ETag only has to answer what the counter cannot: a replay from
+    //     another boot. An undeclared `revalidate` resource's truth may live
+    //     outside any notify stream (git), so its ETag stays the authority.
     // The HTTP path (`handleResourceHttp`) deliberately has NO version
     // short-circuit: the invalidate-mode refetch must return a body at an equal
     // version (the client's strict-`<` HTTP guard accepts it). That HTTP body
@@ -7141,7 +7212,7 @@ export function createResourceRuntime(
     const currentVersion = entry.versions.get(pk) ?? 0;
     if (
       !firstGlobal &&
-      !entry.revalidate &&
+      versionIsComplete(entry) &&
       m.epoch === bootEpoch &&
       typeof m.version === "number" &&
       m.version === currentVersion
@@ -7493,7 +7564,7 @@ export function createResourceRuntime(
       const version = p.entry.versions.get(p.pk) ?? 0;
       if (
         !p.firstGlobal &&
-        !p.entry.revalidate &&
+        versionIsComplete(p.entry) &&
         m.epoch === bootEpoch &&
         typeof p.version === "number" &&
         p.version === version

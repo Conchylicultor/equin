@@ -462,6 +462,14 @@ both encoders.
   - Captured BEFORE the loader read, by the single-flight STARTER (joiners adopt
     its pair).
   - A throwing capture is reported and the frame ships without one.
+  - **Shared per wave** (`captureSharedWatermark`): a flight joins a capture
+    started within `WATERMARK_SHARE_MS` (100 ms) — still taken before its own
+    first read, so a valid (at worst older) floor. A joiner whose shared
+    capture failed captures its own; an older one is superseded, never waited on.
+  - **None for a flight that reads no Postgres** (`readsDb`): a guarded external
+    (`notified` / undeclared freshness) with no routing record, while a read
+    capture is wired (D5 would have given a DB read a drift record). No
+    watermark = no causal floor — the safe direction.
   - The same per-flight capture is the L2 `replace` floor and base floor — never a
     second capture at the drain (it could be newer than the value and make
     catch-up skip the missing commit).
@@ -510,11 +518,15 @@ All but the version are co-produced by the starter. A push drain mints
 - **Version short-circuit.**
   - `sub-ack` / `up-to-date` carry `epoch` (`bootEpoch`, per runtime instance).
   - A `sub` echoing a `{ version, epoch }` of THIS boot equal to the current
-    counter, on a non-`revalidate` resource, gets `up-to-date` with no load.
+    counter, on a `versionIsComplete` resource, gets `up-to-date` with no load.
   - Relies on: *the per-pk version counter is the complete change signal within a
     tracking span*. So **every span opens with a fresh version** (bumped at global
     0→1 in `registerSubOnSocket`); a pre-span version never matches.
-  - `revalidate` resources are exempt (the ETag is their authority).
+  - `versionIsComplete`: every non-`revalidate` resource, and a `revalidate` one
+    declared `notified` (its notify stream is its whole change signal; its ETag
+    answers only another boot's replay — `config-v2.values`). An undeclared
+    `revalidate` resource is exempt (truth outside any notify stream: the ETag
+    is its authority).
   - HTTP has no short-circuit.
 - **Gate-after-dedup.** The read-admission slot is acquired INSIDE the
   single-flight, so N concurrent reads of one tuple take 1 slot.

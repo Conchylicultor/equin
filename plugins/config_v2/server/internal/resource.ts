@@ -155,6 +155,21 @@ export const configValuesServed = serveValue(configValues, {
     }
     return resolveRedactedConfig(descriptor, scopeId);
   }),
+  // The ETag is the resolved document itself (the runtime hashes it): restart-
+  // stable, and exact — a moved default, a file edit or a new resolve rule all
+  // change it. A tab replaying its hundreds of config tuples after a backend
+  // restart is then answered `up-to-date` per tuple, with no value re-sent and
+  // re-applied. Within one boot the version counter stays the authority (a
+  // `notified` value — see resource-runtime's `versionIsComplete`).
+  revalidate: whenRegistryReady(({ path, scopeId }) => {
+    const descriptor = descriptorByPath.get(path);
+    if (!descriptor) {
+      throw new Error(
+        `[config-v2] no descriptor registered for resource path "${path}"`,
+      );
+    }
+    return JSON.stringify(resolveRedactedConfig(descriptor, scopeId));
+  }),
   preloadParams: async () => {
     await registryReady;
     const tuples: { path: string; scopeId?: string }[] = [];
