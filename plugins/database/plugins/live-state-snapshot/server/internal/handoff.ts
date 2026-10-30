@@ -172,7 +172,9 @@ export async function loadEpochHandoff(
       if (isPrunedPast(cutXid, horizon)) {
         return { ok: false, reason: "pruned" };
       }
-      for (const change of changes) replayChange(change, route);
+      // No per-key floors: every handed-over tuple is marked by every row.
+      const noFloors = new Map<string, string>();
+      for (const change of changes) replayChange(change, route, noFloors);
       return { ok: true };
     },
   };
