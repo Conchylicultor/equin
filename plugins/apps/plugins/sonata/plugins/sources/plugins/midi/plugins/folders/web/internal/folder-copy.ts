@@ -8,6 +8,7 @@ export const folderIcon = symbol("folder");
 const lockIcon = symbol("lock");
 const goneIcon = symbol("folder-off");
 const warningIcon = symbol("warning");
+const waitingIcon = symbol("hourglass-empty");
 
 /** The folder's last path segment — how a sentence names it. */
 export function folderName(path: string): string {
@@ -27,6 +28,8 @@ export function folderStateIcon(status: FolderStatus): IconRef {
       return goneIcon;
     case "unreadable":
       return warningIcon;
+    case "checking":
+      return waitingIcon;
   }
 }
 
@@ -43,6 +46,8 @@ export function unreadableReason(status: UnreadableFolder): string {
       return "This path is a file, not a folder, so there is nothing to import from it.";
     case "unreadable":
       return `equin can't read this folder (${status.code}: ${status.message}), so the MIDI files in it aren't being imported.`;
+    case "checking":
+      return "macOS is asking whether equin may open this folder — answer its dialog (it may be behind other windows). The MIDI files in it are imported once you allow it.";
   }
 }
 
@@ -57,6 +62,8 @@ export function shortStatus(status: UnreadableFolder): string {
       return "Not a folder";
     case "unreadable":
       return `Can't be read (${status.code})`;
+    case "checking":
+      return "Waiting for macOS to answer";
   }
 }
 
@@ -71,7 +78,9 @@ export function deniedByMacOs(status: UnreadableFolder): boolean {
 
 /** What a Check again that changed nothing says. */
 export function stillUnreadable(status: UnreadableFolder): string {
-  return status.state === "denied"
+  return status.state === "checking"
+    ? "macOS still hasn't answered — look for its dialog."
+    : status.state === "denied"
     ? "Still no access — checked just now."
     : status.state === "missing"
       ? "Still not there — checked just now."

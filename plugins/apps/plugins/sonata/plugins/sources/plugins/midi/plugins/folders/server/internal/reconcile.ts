@@ -129,8 +129,9 @@ export async function reconcileWith(deps: ReconcileDeps): Promise<void> {
 export async function reconcile(): Promise<void> {
   // Re-probe first: a folder that became readable (access granted, drive
   // plugged back in) is walked by this very reconcile, and one that stopped
-  // being readable is left out of it.
-  refreshFolderStatuses();
+  // being readable is left out of it. Bounded: a folder macOS is still asking
+  // about reads `checking` and is walked once its answer lands.
+  await refreshFolderStatuses();
   await reconcileWith({
     markDirty: () => midiIndex.markDirty(),
     ensureFresh: () => midiIndex.ensureFresh(),

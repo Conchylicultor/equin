@@ -90,7 +90,7 @@ async function reconfigure(opts: { reconcile: boolean }): Promise<void> {
     // (`mounting` keeps this probe's own change from queueing a second remount.)
     mounting = true;
     try {
-      refreshFolderStatuses();
+      await refreshFolderStatuses();
     } finally {
       mounting = false;
     }

@@ -129,6 +129,10 @@ function FolderNoticeRow({ folder }: { folder: UnreadableFolder }) {
               <>
                 Sonata can't open <b>{name}</b>
               </>
+            ) : folder.state === "checking" ? (
+              <>
+                Waiting for macOS to open <b>{name}</b>
+              </>
             ) : folder.state === "missing" ? (
               <>
                 <b>{name}</b> isn't there

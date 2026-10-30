@@ -31,14 +31,29 @@ Two mechanisms keep the DB in sync with disk:
 ### An unreadable folder is a state, never a skip
 
 Every configured folder is **probed** (`server/internal/folder-status.ts`:
-resolve with `realpathSync`, then open it) into a typed `FolderStatus` —
+resolve with `realpath`, then open it) into a typed `FolderStatus` —
 `ok`, `missing`, `not-a-folder`, `denied` (EPERM: macOS's Files & Folders
-refused equin; EACCES: the folder's own permissions) or `unreadable` (any
-other errno, with its code and message). Only the `ok` folders' real paths
+refused equin; EACCES: the folder's own permissions), `unreadable` (any
+other errno, with its code and message) or `checking` (the OS has not
+answered yet). Only the `ok` folders' real paths
 (`readableDirs()`) are watched, walked by the corpus index and used by
 reverse drift — so one bad folder can neither crash the backend, abort the
 walk nor fail the watcher for the others, and the songs of an unreadable
 folder are never marked "File missing" (their files are not known to be gone).
+
+**The probe never runs on the JS thread.** While macOS's "allow equin to
+access Downloads?" prompt is up, resolving the folder blocks until someone
+answers it. On 2026-10-11 a sync `realpathSync` there froze main's whole JS
+thread for 5.5 h from boot (every span, timer and request stood still; two
+worktree backends with the same folder froze too) — the ~20,058 s server
+spans the slow-op audit later found. So the probe is async, one per folder at
+a time (a re-check joins the waiting one), and a refresh waits at most
+`PROBE_ANSWER_MS` (1 s): a folder still unanswered reads `checking` — not
+readable, so neither watched nor walked (the walk would block on the same
+prompt) — and its answer is published when it lands, which re-mounts the
+watcher and reconciles like any readable-set change. The library says to
+answer the dialog. See
+`research/2026-10-30-apps-sonata-midi-folder-probe-off-the-js-thread.md`.
 
 The statuses are the `sonata.midi-folders.status` live value (pushed when a
 probe's result changes); the library shows each unreadable folder as a

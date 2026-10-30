@@ -19,9 +19,13 @@ import { wholeList } from "@plugins/packages/plugins/list-bound/core";
  *   given access to the folder (Privacy & Security → Files & Folders).
  * - `unreadable` — any other error, with its code and message as the OS said
  *   them.
+ * - `checking` — the OS has not answered yet. On macOS that is a permission
+ *   prompt ("allow access to Downloads?") waiting for someone to answer it;
+ *   the folder is left alone until it does.
  */
 export const FolderStatusSchema = z.discriminatedUnion("state", [
   z.object({ state: z.literal("ok"), path: z.string(), dir: z.string() }),
+  z.object({ state: z.literal("checking"), path: z.string(), dir: z.string() }),
   z.object({ state: z.literal("missing"), path: z.string(), dir: z.string() }),
   z.object({
     state: z.literal("not-a-folder"),
