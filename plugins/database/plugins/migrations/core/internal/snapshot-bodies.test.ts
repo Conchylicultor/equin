@@ -8,7 +8,7 @@ import {
   renderMergeSnapshotMigration,
   renderPhasedMigration,
   renderSnapshotHeader,
-} from "./phases";
+} from "@plugins/database/plugins/migrations/plugins/phases/core";
 import { MissingSnapshotBodyError, snapshotBodies } from "./snapshot-bodies";
 import {
   analyzeSnapshotDag,

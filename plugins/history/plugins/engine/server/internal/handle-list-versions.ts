@@ -1,8 +1,8 @@
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { listVersions } from "../../core/endpoints";
-import type { Version } from "../../core/schemas";
+import { listVersions } from "../../core";
+import type { Version } from "../../core";
 import { _entityVersions } from "./tables";
 
 // Version metadata for one entity, newest first. Metadata only — the snapshot

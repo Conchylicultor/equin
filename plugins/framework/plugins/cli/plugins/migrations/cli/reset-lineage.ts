@@ -42,15 +42,17 @@ import {
   equivalentSnapshots,
   mergeSnapshots,
   MissingSnapshotBodyError,
-  parseMigration,
   readSnapshotNodes,
   type Snapshot,
   snapshotAncestors,
   type SnapshotBodies,
   type SnapshotNode,
   splitStatements,
-  type Supersession,
 } from "@plugins/database/plugins/migrations/core";
+import {
+  parseMigration,
+  type Supersession,
+} from "@plugins/database/plugins/migrations/plugins/phases/core";
 
 const NEW_FORMAT = /^(\d{8})_(\d{6})_([0-9a-f]{8})__(.+)\.sql$/;
 

@@ -211,3 +211,54 @@ export type {
   TargetRow,
   UpsertOptions,
 } from "./internal/predict";
+export {
+  compilePagedValue,
+  compileQueryValue,
+  compileValue,
+} from "./internal/compile-value";
+export type {
+  AnyServeOptions,
+  BytesPairing,
+  CompiledPagedValue,
+  CompiledValue,
+  ExternalServed,
+  LiveValueChanges,
+  LiveValueSource,
+  PagedChanges,
+  ServePagedValueOptions,
+  ServeValueOptions,
+  ServedFor,
+  ServedValueBase,
+  SnapshotPairing,
+} from "./internal/compile-value";
+export {
+  FOLLOW_SOURCE,
+  followReaches,
+  followsDeferred,
+  followsOf,
+  followSubjectOf,
+} from "./internal/follows";
+export type {
+  FollowBuilder,
+  FollowIds,
+  FollowIdsSource,
+  FollowIdsTarget,
+  FollowMap,
+  FollowsFn,
+  FollowWhere,
+  FollowWhereSource,
+  FollowWhereTarget,
+  NoFollows,
+} from "./internal/follows";
+export { sliceRange } from "./internal/key-order";
+export {
+  compileExternalCollection,
+  externalCollectionRegistrar,
+} from "./internal/serve-on";
+export type {
+  AnyCollection,
+  AnyExternalCollectionOptions,
+  AnyServedExternal,
+  ChangeHooks,
+  ExternalCollectionChangeOptions,
+} from "./internal/serve-on";

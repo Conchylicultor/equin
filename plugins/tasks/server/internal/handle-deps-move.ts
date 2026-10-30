@@ -3,7 +3,7 @@ import {
   withTaskStatusBatch,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { moveTaskInDepsTree } from "../../core/endpoints";
+import { moveTaskInDepsTree } from "../../core";
 import { applyDepsTreeMove } from "./deps-tree-move";
 
 export const handleDepsMove = implement(

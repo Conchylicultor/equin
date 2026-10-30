@@ -1,6 +1,6 @@
 import { db } from "@plugins/database/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { purgeTrash } from "../../core/endpoints";
+import { purgeTrash } from "../../core";
 import { consumeTrashEntry } from "./entry-lifecycle";
 
 // "Delete permanently" — the source runs its destroy hooks and hard-deletes the

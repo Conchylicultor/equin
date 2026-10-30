@@ -8,13 +8,13 @@ import {
   pageData,
   pageKindOf,
   withPageKind,
-} from "../../core/schemas";
-import type { PageData } from "../../core/schemas";
-import type { BlockNode } from "../../core/block-ops";
-import { newBlockId } from "../../core/block-id";
-import { hasTextKey } from "../../core/row-data";
-import { runsOf, type RichText } from "../../core/rich-text";
-import { dataEqual } from "../../core/block-diff";
+} from "../../core";
+import type { PageData } from "../../core";
+import type { BlockNode } from "../../core";
+import { newBlockId } from "../../core";
+import { hasTextKey } from "../../core";
+import { runsOf, type RichText } from "../../core";
+import { dataEqual } from "../../core";
 import { liveBlocks } from "./live-blocks";
 import { loadPageBlocks } from "./forest";
 import {

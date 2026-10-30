@@ -1,5 +1,5 @@
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { PAGE_BLOCK_TYPE } from "../../core/schemas";
+import { PAGE_BLOCK_TYPE } from "../../core";
 import type { PageScope } from "./page-forest";
 import { blocksChanged } from "./tables-events";
 

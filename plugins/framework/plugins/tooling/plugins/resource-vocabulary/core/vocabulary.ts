@@ -399,6 +399,10 @@ type ServingPrimitiveName =
 export const resourceServingPrimitives = {
   serveValueOn: { barrel: LIVE_CORE },
   serveCollectionOn: { barrel: LIVE_CORE },
+  // The external arm's erased compilation, which the Bun `serveCollection`
+  // dispatches to (exported for the portable server barrel, which reaches its
+  // own core only through the barrel).
+  compileExternalCollection: { barrel: LIVE_CORE },
 } satisfies Record<ServingPrimitiveName, ServingPrimitive>;
 
 /**

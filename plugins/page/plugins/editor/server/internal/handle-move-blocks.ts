@@ -1,9 +1,9 @@
 import { inArray } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { moveBlocks } from "../../core/endpoints";
-import { planBulkMove } from "../../core/block-ops";
-import { BlockSchema, PAGE_BLOCK_TYPE } from "../../core/schemas";
+import { moveBlocks } from "../../core";
+import { planBulkMove } from "../../core";
+import { BlockSchema, PAGE_BLOCK_TYPE } from "../../core";
 import { liveBlocks } from "./live-blocks";
 import { blocksChanged } from "./tables-events";
 import { loadLiveSiblings } from "./forest";

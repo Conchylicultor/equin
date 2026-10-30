@@ -13,11 +13,13 @@ import {
 } from "./browser-hosts";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import {
+  BROWSER_HOST_ENTRY_KIND,
   FORCED_VENDOR_SPECS,
   isBareSpecifier,
   isBrowserUnreachableDynamic,
+  WORKER_ONLY_KINDS,
 } from "../constants";
 import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 import { COMPOSITION_REGISTRY_SPECIFIER } from "../composition-modules";
@@ -255,11 +257,12 @@ export async function planFleet(opts: {
   ): Promise<PlannedTarget> => {
     const slug = pluginPath ? pluginIdOf(pluginPath) : "web-core";
     const pluginDir = pluginPath ? join(pluginsRoot, pluginPath) : webSrcDir;
-    const ownHash = await ownHashFor({
+    const { ownHash, globRoots } = await ownHashFor({
       cacheKey: `${pluginPath ?? "__entry"}|${kind}`,
       pluginDir,
       kind,
       cache,
+      repoRoot: root,
     });
     const inputsHash = computeInputsHash({
       ownHash,
@@ -274,6 +277,7 @@ export async function planFleet(opts: {
       specifier,
       entryFile,
       inputsHash,
+      globRoots,
       coEntries: pluginPath ? coEntriesFor(kind, pluginPath, pluginDir) : [],
       needsBuild: !hasArtifact(dirName),
     };
@@ -412,29 +416,15 @@ export async function resolveBarrelClosure(opts: {
               `(expected ${barrelFile}) — cannot compose it into the import map.`,
           );
         }
-        const ownHash = await ownHashFor({
-          cacheKey: `${pluginPath}|${kind}`,
-          pluginDir,
+        const t = await planBarrelTarget({
+          pluginsRoot: opts.pluginsRoot,
+          pluginPath,
           kind,
+          entryFile: barrelFile,
+          specifier: spec,
+          identityHash: opts.identityHash,
           cache: opts.cache,
         });
-        const inputsHash = computeInputsHash({
-          ownHash,
-          kind,
-          identityHash: opts.identityHash,
-        });
-        const t: PlannedTarget = {
-          dirName: artifactDirName(pluginIdOf(pluginPath), kind, inputsHash),
-          kind,
-          pluginPath,
-          specifier: spec,
-          entryFile: barrelFile,
-          inputsHash,
-          coEntries: coEntriesFor(kind, pluginPath, pluginDir),
-          needsBuild: !hasArtifact(
-            artifactDirName(pluginIdOf(pluginPath), kind, inputsHash),
-          ),
-        };
         return { spec, t };
       }),
     );
@@ -448,6 +438,85 @@ export async function resolveBarrelClosure(opts: {
     frontier = waveMetas.filter((m): m is ArtifactMeta => m !== null);
   }
   return barrelTargets;
+}
+
+/**
+ * One folder-barrel target of `pluginPath` (`kind` names the folder whose own
+ * files, plus `shared/` and the glob roots they declare, are its address).
+ */
+export async function planBarrelTarget(opts: {
+  pluginsRoot: string;
+  pluginPath: string;
+  kind: ArtifactKind;
+  entryFile: string;
+  specifier: string | null;
+  identityHash: string;
+  cache: FingerprintCache;
+}): Promise<PlannedTarget> {
+  const { pluginPath, kind } = opts;
+  const pluginDir = join(opts.pluginsRoot, pluginPath);
+  const { ownHash, globRoots } = await ownHashFor({
+    cacheKey: `${pluginPath}|${kind}`,
+    pluginDir,
+    kind,
+    cache: opts.cache,
+    repoRoot: dirname(opts.pluginsRoot),
+  });
+  const inputsHash = computeInputsHash({
+    ownHash,
+    kind,
+    identityHash: opts.identityHash,
+  });
+  const dirName = artifactDirName(pluginIdOf(pluginPath), kind, inputsHash);
+  return {
+    dirName,
+    kind,
+    pluginPath,
+    specifier: opts.specifier,
+    entryFile: opts.entryFile,
+    inputsHash,
+    globRoots,
+    coEntries: coEntriesFor(kind, pluginPath, pluginDir),
+    needsBuild: !hasArtifact(dirName),
+  };
+}
+
+/**
+ * A browser host's worker graph as artifacts: its entry (the host plugin's
+ * `bin/`, kind `BROWSER_HOST_ENTRY_KIND`) and the barrel closure of what the
+ * entry reaches — the generated registry's `server` barrels, every barrel they
+ * import, transitively. Barrels the page already serves (`servedSpecs`) are
+ * reused as they are: a `core` artifact is one artifact for page and worker.
+ * Returns the entry and the targets this closure added.
+ */
+export async function planHostClosure(opts: {
+  pluginsRoot: string;
+  host: BrowserHostPlan;
+  identityHash: string;
+  cache: FingerprintCache;
+  servedSpecs: ReadonlySet<string | null>;
+  ensure: (t: PlannedTarget) => Promise<ArtifactMeta | null>;
+}): Promise<{ entry: PlannedTarget; added: PlannedTarget[] }> {
+  const entry = await planBarrelTarget({
+    pluginsRoot: opts.pluginsRoot,
+    pluginPath: opts.host.pluginPath,
+    kind: BROWSER_HOST_ENTRY_KIND,
+    entryFile: opts.host.entryFile,
+    specifier: null,
+    identityHash: opts.identityHash,
+    cache: opts.cache,
+  });
+  const entryMeta = await opts.ensure(entry);
+  if (entryMeta === null) return { entry, added: [] };
+  const added = await resolveBarrelClosure({
+    pluginsRoot: opts.pluginsRoot,
+    identityHash: opts.identityHash,
+    cache: opts.cache,
+    servedSpecs: opts.servedSpecs,
+    seedMetas: [entryMeta],
+    ensure: opts.ensure,
+  });
+  return { entry, added: [...added.values()] };
 }
 
 /**
@@ -525,6 +594,57 @@ export async function collectVendorRequests(opts: {
   }));
 }
 
+/** A composed browser host, as the import map names it. */
+export interface ComposedHost {
+  /** `@browser-host/<pluginPath>` */
+  specifier: string;
+  /** The host module's store dir (`host.js`, `frames-sw.js`). */
+  dirName: string;
+  /** `@browser-host-worker/<pluginPath>` */
+  workerSpecifier: string;
+  /** The worker entry inside the dist's worker tree. */
+  workerUrl: string;
+}
+
+/**
+ * Every artifact a browser host's worker loads, entry first: the closure of
+ * the entry's `@plugins/*` imports — static, and dynamic unless declared
+ * browser-unreachable — over `targets` (page and host targets alike; a co-built
+ * folder resolves to its host artifact). Every edge must land on a target:
+ * the planner put each one there, so a miss is a planning bug.
+ */
+export function workerClosure(opts: {
+  entry: PlannedTarget;
+  targets: readonly PlannedTarget[];
+  metaOf: (dirName: string) => ArtifactMeta;
+}): PlannedTarget[] {
+  const bySpec = new Map<string, PlannedTarget>();
+  for (const t of opts.targets) {
+    if (t.specifier !== null) bySpec.set(t.specifier, t);
+    for (const e of t.coEntries) bySpec.set(e.specifier, t);
+  }
+  const seen = new Map<string, PlannedTarget>([
+    [opts.entry.dirName, opts.entry],
+  ]);
+  const queue = [opts.entry];
+  while (queue.length > 0) {
+    const t = queue.pop()!;
+    for (const spec of closureSpecsOf(opts.metaOf(t.dirName))) {
+      if (!spec.startsWith("@plugins/")) continue;
+      const dep = bySpec.get(spec);
+      if (dep === undefined) {
+        throw new Error(
+          `worker closure: ${t.dirName} imports "${spec}", which no planned artifact serves`,
+        );
+      }
+      if (seen.has(dep.dirName)) continue;
+      seen.set(dep.dirName, dep);
+      queue.push(dep);
+    }
+  }
+  return [...seen.values()];
+}
+
 /**
  * The import-map entry set of a composed fleet: one entry per target specifier
  * (the entry artifact has none), the registry alias, and one entry per vendor
@@ -536,11 +656,13 @@ export function composeMapEntries(opts: {
   targets: PlannedTarget[];
   registryDirName: string;
   vendorMeta: VendorSetMeta;
-  /** The fleet's browser hosts, each at its store dir. */
-  hosts: readonly { specifier: string; dirName: string }[];
+  /** The fleet's browser hosts: the host module, and the worker entry's URL. */
+  hosts: readonly ComposedHost[];
 }): ImportMapEntry[] {
   const entries: ImportMapEntry[] = [];
   for (const t of opts.targets) {
+    // The worker's own artifacts are reached through its link tree.
+    if (WORKER_ONLY_KINDS.has(t.kind)) continue;
     if (t.specifier !== null)
       entries.push({ specifier: t.specifier, url: artifactUrl(t.dirName) });
     // One artifact, several specifiers: each co-entry is served from its own
@@ -561,6 +683,7 @@ export function composeMapEntries(opts: {
       specifier: host.specifier,
       url: `/artifacts/${host.dirName}/${BROWSER_HOST_FILE}`,
     });
+    entries.push({ specifier: host.workerSpecifier, url: host.workerUrl });
   }
   const vendorLink = vendorSetDirName(opts.vendorMeta.setHash);
   for (const [spec, file] of Object.entries(opts.vendorMeta.entries)) {

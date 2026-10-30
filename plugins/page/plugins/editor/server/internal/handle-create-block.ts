@@ -5,9 +5,9 @@ import {
 } from "@plugins/primitives/plugins/rank/server";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { createBlock } from "../../core/endpoints";
-import { newBlockId } from "../../core/block-id";
-import { BlockSchema } from "../../core/schemas";
+import { createBlock } from "../../core";
+import { newBlockId } from "../../core";
+import { BlockSchema } from "../../core";
 import { _blocks } from "./tables";
 import { liveBlocks } from "./live-blocks";
 import { computePageId } from "./page-id";

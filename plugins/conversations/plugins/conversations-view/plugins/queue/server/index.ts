@@ -22,7 +22,7 @@ import {
   stepDownQueue,
   rerankQueue,
   pinQueue,
-} from "../core/endpoints";
+} from "../core";
 
 export { conversationsQueue } from "./internal/tables";
 export { seedRankJob } from "./internal/seed-rank-job";

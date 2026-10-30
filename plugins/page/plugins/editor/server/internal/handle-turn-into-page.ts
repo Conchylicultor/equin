@@ -2,16 +2,16 @@ import { asc, eq } from "drizzle-orm";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { turnIntoPage, type TurnIntoPageBody } from "../../core/endpoints";
-import { newBlockId } from "../../core/block-id";
-import { applyBlockOp, textOf } from "../../core/block-ops";
-import { hasTextKey } from "../../core/row-data";
+import { turnIntoPage, type TurnIntoPageBody } from "../../core";
+import { newBlockId } from "../../core";
+import { applyBlockOp, textOf } from "../../core";
+import { hasTextKey } from "../../core";
 import {
   BlockSchema,
   PAGE_BLOCK_TYPE,
   withPageKind,
   type Block,
-} from "../../core/schemas";
+} from "../../core";
 import { liveBlocks } from "./live-blocks";
 import { recomputePageIdSubtree } from "./page-id";
 import {

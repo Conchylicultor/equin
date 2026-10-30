@@ -6,7 +6,7 @@ import {
   sqlDefault,
 } from "@plugins/infra/plugins/entities/server";
 import { _conversations } from "@plugins/tasks/plugins/tasks-core/server";
-import { ledgerTurnsEntityRef } from "../../core/entity";
+import { ledgerTurnsEntityRef } from "../../core";
 
 // One row per turn sent to an agent — every sender (the prompt input, a held
 // turn's delivery, Push & Exit, a question's answer) goes through the ledger,

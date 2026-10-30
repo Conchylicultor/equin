@@ -10,10 +10,7 @@ import {
   type IdKind,
   type IdShape,
 } from "../../core";
-import {
-  externalReasonOfDecoder,
-  idKindOfDecoder,
-} from "../../core/internal/id-field";
+import { externalReasonOfDecoder, idKindOfDecoder } from "../../core";
 
 type FkAction =
   "cascade" | "restrict" | "no action" | "set null" | "set default";

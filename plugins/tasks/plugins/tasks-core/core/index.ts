@@ -1,5 +1,6 @@
 export {
   TaskSchema,
+  TaskListItemSchema,
   TaskStatusSchema,
   TASK_STATUS_OPTIONS,
   AttemptSchema,

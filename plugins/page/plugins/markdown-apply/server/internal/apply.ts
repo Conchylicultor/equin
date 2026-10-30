@@ -22,7 +22,7 @@ import {
 } from "../../core";
 // Not through the core barrel: the wording has exactly one caller, and this
 // plugin's public API is the engine, not the sentence it refuses with.
-import { roundTripCreatesRefusal } from "../../core/refusal";
+import { roundTripCreatesRefusal } from "../../core";
 import { serverMarkdownContext } from "./markdown-context";
 import { loadBlockScope, type BlockScopePageRow } from "./read";
 

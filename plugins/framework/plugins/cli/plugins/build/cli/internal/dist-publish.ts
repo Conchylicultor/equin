@@ -62,6 +62,18 @@ export function distNames(dir: string, pid: number = process.pid): DistNames {
   };
 }
 
+/**
+ * Where a build of `dir` pins the cache entries it uses until it publishes
+ * (web-artifacts' `pinDir`): `<base>.pins`, a sibling the artifact-store
+ * pruners read as a dist (`servedDistTargets`: every `<base>.*` but `.swap.`).
+ * Not a transient sibling: the sweep keeps it, so a failed build's pins hold
+ * its artifacts for the retry; the next successful publish removes it.
+ */
+export function distPinPath(dir: string): string {
+  const { parent, base } = distNames(dir);
+  return join(parent, `${base}.pins`);
+}
+
 /** The staging dir a build of this process should compile into for `dir`. */
 export function distStagingPath(
   dir: string,

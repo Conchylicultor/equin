@@ -1,5 +1,5 @@
 import { serveCollection } from "@plugins/network/plugins/live/server";
-import { conversationTurns } from "../../core/resources";
+import { conversationTurns } from "../../core";
 import { conversationTurnsEntity } from "./tables";
 
 // Every row, newest first per conversation: the web renders a card for the

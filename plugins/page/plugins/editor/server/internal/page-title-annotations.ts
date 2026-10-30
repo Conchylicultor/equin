@@ -1,10 +1,10 @@
-import { markdownTagNameOf } from "../../core/markdown";
+import { markdownTagNameOf } from "../../core";
 import {
   PAGE_BLOCK_TYPE,
   pageBlockHandle,
   pageBlockMarkdown,
   pageData,
-} from "../../core/schemas";
+} from "../../core";
 
 /**
  * The `title` of every HUMAN sub-page among `rows` — the value of the annotated

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import { PAGE_BLOCK_TYPE } from "../../core/schemas";
+import { PAGE_BLOCK_TYPE } from "../../core";
 import { _blocks } from "./tables";
 import type { BlockReadExecutor } from "./page-id";
 import type { PageScope } from "./page-forest";

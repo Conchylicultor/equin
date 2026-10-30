@@ -3,7 +3,7 @@ import {
   renderAdoptionMigration,
   renderMergeSnapshotMigration,
   renderPhasedMigration,
-} from "@plugins/database/plugins/migrations/core";
+} from "@plugins/database/plugins/migrations/plugins/phases/core";
 import {
   generationsKnowing,
   planMigrations,

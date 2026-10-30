@@ -1,5 +1,5 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { applyCatalogTheme } from "../core/endpoints";
+import { applyCatalogTheme } from "../core";
 import { handleApply } from "./internal/handle-apply";
 import { communityCatalogServed } from "./internal/resource";
 

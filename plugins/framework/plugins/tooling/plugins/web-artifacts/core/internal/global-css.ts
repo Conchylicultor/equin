@@ -1,34 +1,25 @@
-// Global CSS stays global (v1): ONE Tailwind v4 pass over app.css's own
-// `@source` directives, emitting the single global stylesheet plus its font
-// assets. app.css imports Tailwind with
-// `source(none)`, so the pass scans EXACTLY the declared @source dirs — never
-// automatic source detection, whose base is the vite root (the REPO ROOT
-// here): on the main checkout that walked `.claude/worktrees/` (~90 agent
-// checkouts, millions of files; oxide's walkdir does not honor .gitignore)
-// and turned the ~5s pass into ~320s. The `tailwind-scan-covers-classes`
-// check enforces source(none) stays. The pass is the dominant warm-build cost
-// (~5–15s), so its output is CACHED content-addressed in the store, keyed by
-// a fingerprint that errs WIDER than the true input surface:
+// The global stylesheet: ONE Tailwind v4 compile of app.css over the union of
+// the composition's artifacts' class candidates. Each artifact records its own
+// candidates when it is built (`tailwind-candidates.ts`, read from exactly the
+// files its address hashed), so the union is a combination of per-artifact
+// records — no file walk, no scan, no fingerprint of `plugins/`. An edit that
+// adds no candidate (a comment, a doc, a lock file) leaves the union, and so
+// the stylesheet, unchanged; one that does recompiles from the list (~0.3 s:
+// compile app.css, build the candidates, optimize).
 //
-//   - every not-ignored file in the worktree, enumerated with `git ls-files`
-//     (tracked ∪ untracked-not-ignored) — a superset of the scanned dirs, so
-//     the key can never under-cover them;
-//   - every `@source` directory declared in app.css (parsed, not hardcoded —
-//     today just `plugins/`, inside the repo, but an explicit walk covers a
-//     declared dir even if it were gitignored or moved outside);
-//   - every `@import`ed stylesheet input (parsed from app.css): package
-//     imports contribute their resolved package VERSION, relative imports
-//     their content hash;
-//   - toolchain versions (vite, tailwindcss, @tailwindcss/vite), the minify
-//     flag, and BUILDER_VERSION.
+// app.css still imports Tailwind with `source(none)`: nothing here reads its
+// `@source` entries (the candidates come from the artifacts), and auto-detection
+// from the vite root (the REPO ROOT here) walked `.claude/worktrees/` on the
+// main checkout (~90 checkouts, millions of files) — ~5s became ~320s. The
+// `tailwind-scan-covers-classes` check keeps both: source(none), and every
+// class-authoring file inside some artifact.
 //
-// Content hashing goes through the shared stat-fingerprint fast path, so a
-// warm no-op key computation is one `git ls-files` + a stat sweep (~0.5s)
-// instead of the full Tailwind pass. Over-inclusion (a README edit re-runs the
-// pass) is safe; under-inclusion (a missed class source) would silently serve
-// stale CSS — so the fingerprint errs wide.
+// The output is cached content-addressed in the store, keyed by what the
+// compile reads: the candidate union, app.css, every `@import`ed stylesheet
+// (a package's resolved version, a relative file's content), the toolchain
+// versions, the minify flag and BUILDER_VERSION. The key is a combination of
+// records, and a miss costs one compile from the list.
 
-import { execFileSync } from "node:child_process";
 import {
   cpSync,
   existsSync,
@@ -41,17 +32,12 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, isAbsolute, join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import type { Plugin as VitePlugin } from "vite";
 import { BUILDER_VERSION, packageNameOf } from "../constants";
 import { computeIdentityHash, sha256Hex } from "../hash";
 import { packageVersion } from "./identity";
-import { cachedAggregateHash } from "./own-files";
-import {
-  publishDir,
-  pruneCacheDir,
-  WEB_ARTIFACTS_DIR,
-  type FingerprintCache,
-} from "./store";
+import { publishDir, pruneCacheDir, WEB_ARTIFACTS_DIR } from "./store";
 import { servedDistTargets } from "./served-dists";
 
 const CSS_ROOT = join(WEB_ARTIFACTS_DIR, "css");
@@ -64,101 +50,61 @@ export function globalCssSource(pluginsRoot: string): string {
   );
 }
 
-/** The `@source` dirs and `@import` specifiers declared in a Tailwind css file. */
-export function parseCssInputs(cssSource: string): {
-  sourceDirs: string[];
-  importSpecs: string[];
-} {
-  const sourceDirs: string[] = [];
+/** The `@import` specifiers declared in a Tailwind css file. */
+export function parseCssImports(cssSource: string): string[] {
   const importSpecs: string[] = [];
-  for (const m of cssSource.matchAll(
-    /@source\s+(?:not\s+)?["']([^"']+)["']/g,
-  )) {
-    sourceDirs.push(m[1]!);
-  }
   for (const m of cssSource.matchAll(
     /@import\s+(?:url\(\s*)?["']([^"']+)["']/g,
   )) {
     importSpecs.push(m[1]!);
   }
-  return { sourceDirs, importSpecs };
-}
-
-// Dirs Tailwind's scanner never reads (gitignored / VCS / build output) — the
-// walk exists to cover @source dirs even when git doesn't, so it mirrors the
-// scanner's own exclusions rather than the artifact own-file skip list.
-const WALK_SKIP = new Set(["node_modules", ".git"]);
-
-function walkAllFiles(dir: string, out: string[]): void {
-  let entries;
-  try {
-    entries = readdirSync(dir, { withFileTypes: true });
-  } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
-    if (code !== "ENOENT" && code !== "ENOTDIR") throw err;
-    return;
-  }
-  for (const e of entries) {
-    const p = join(dir, e.name);
-    if (e.isSymbolicLink()) continue;
-    if (e.isDirectory()) {
-      if (
-        WALK_SKIP.has(e.name) ||
-        e.name === "dist" ||
-        e.name.startsWith("dist.")
-      )
-        continue;
-      walkAllFiles(p, out);
-    } else if (e.isFile()) {
-      out.push(p);
-    }
-  }
-}
-
-/** Worktree files as git sees them: tracked ∪ untracked-not-ignored. */
-function gitListFiles(repoRoot: string): string[] {
-  const out: string[] = [];
-  for (const args of [
-    ["ls-files", "-z"],
-    ["ls-files", "-z", "--others", "--exclude-standard"],
-  ]) {
-    const stdout = execFileSync("git", args, {
-      cwd: repoRoot,
-      maxBuffer: 64 * 1024 * 1024,
-    }).toString("utf8");
-    for (const rel of stdout.split("\0")) {
-      if (rel) out.push(join(repoRoot, rel));
-    }
-  }
-  return out;
+  return importSpecs;
 }
 
 /**
- * The global stylesheet's cache key. Uses (and updates) the caller's
- * fingerprint cache for the file-content aggregate's stat fast path.
+ * The union of the given artifacts' Tailwind candidates, sorted. Throws on a
+ * meta that carries none: one written before candidates were recorded cannot
+ * be told apart from "this artifact authors no class", and a missing class is
+ * a silently unstyled page.
  */
-export async function computeGlobalCssKey(opts: {
-  repoRoot: string;
+export function unionCandidates(
+  metas: ReadonlyArray<{ tailwindCandidates?: readonly string[] }>,
+  labelOf: (index: number) => string,
+): string[] {
+  const union = new Set<string>();
+  metas.forEach((meta, i) => {
+    if (!Array.isArray(meta.tailwindCandidates)) {
+      throw new Error(
+        `global css: artifact ${labelOf(i)} records no tailwindCandidates (built by an older builder?)`,
+      );
+    }
+    for (const c of meta.tailwindCandidates) union.add(c);
+  });
+  return [...union].sort();
+}
+
+/** The global stylesheet's cache key, over the candidate union and what the compile reads. */
+export function computeGlobalCssKey(opts: {
   pluginsRoot: string;
   minify: boolean;
-  cache: FingerprintCache;
-}): Promise<string> {
+  candidates: readonly string[];
+}): string {
   const appCssFile = globalCssSource(opts.pluginsRoot);
   const appCss = readFileSync(appCssFile, "utf8");
-  const { sourceDirs, importSpecs } = parseCssInputs(appCss);
 
   // Toolchain versions resolve from THIS plugin (its own deps — repo root has
   // none of them under bun's isolated installs); @import packages resolve from
-  // app.css's dir, exactly where the css pipeline resolves them from.
+  // app.css's dir, exactly where the compile resolves them from.
   const record: Record<string, string | number | boolean> = {
     builderVersion: BUILDER_VERSION,
     minify: opts.minify,
     vite: packageVersion("vite"),
     tailwindcss: packageVersion("tailwindcss"),
-    tailwindVite: packageVersion("@tailwindcss/vite"),
+    tailwindNode: packageVersion("@tailwindcss/node"),
     appCss: sha256Hex(appCss),
+    candidates: sha256Hex(opts.candidates.join("\n")),
   };
-  for (const spec of importSpecs) {
+  for (const spec of parseCssImports(appCss)) {
     if (spec.startsWith(".")) {
       record[`import:${spec}`] = sha256Hex(
         readFileSync(resolve(dirname(appCssFile), spec)),
@@ -172,25 +118,21 @@ export async function computeGlobalCssKey(opts: {
       );
     }
   }
-
-  // One deduped file set: the git enumeration (the scanner's auto-detected
-  // surface) plus an explicit walk of each @source dir (covers them even if
-  // gitignored). Content-hashed via the shared stat fast path.
-  const files = new Set<string>(gitListFiles(opts.repoRoot));
-  for (const dir of sourceDirs) {
-    const abs = isAbsolute(dir) ? dir : resolve(dirname(appCssFile), dir);
-    const walked: string[] = [];
-    walkAllFiles(abs, walked);
-    for (const f of walked) files.add(f);
-  }
-  record.inputs = await cachedAggregateHash({
-    cacheKey: "__global-css|inputs",
-    baseDir: opts.repoRoot,
-    files: [...files].sort(),
-    cache: opts.cache,
-  });
-
   return computeIdentityHash(record);
+}
+
+/**
+ * Serves the compiled stylesheet to vite as a module sitting beside app.css,
+ * so its `url()`s (rewritten by the compile relative to app.css's dir — the
+ * fontsource files) resolve exactly as they did from app.css itself.
+ */
+function compiledCssPlugin(id: string, css: string): VitePlugin {
+  return {
+    name: "global-css-compiled",
+    enforce: "pre",
+    resolveId: (source) => (source === id ? id : null),
+    load: (loaded) => (loaded === id ? css : null),
+  };
 }
 
 function cssCacheDir(key: string): string {
@@ -218,8 +160,8 @@ function installAssets(cacheDir: string, stagingDir: string): void {
 }
 
 /**
- * Ensure the global stylesheet for `key` exists in the cache (running the
- * Tailwind pass on a miss), then install it + its font assets into the staging
+ * Ensure the global stylesheet for `key` exists in the cache (compiling
+ * `candidates` on a miss), then install it + its font assets into the staging
  * dist. Returns the stylesheet href.
  */
 export async function ensureGlobalCss(opts: {
@@ -228,6 +170,7 @@ export async function ensureGlobalCss(opts: {
   stagingDir: string;
   minify: boolean;
   key: string;
+  candidates: readonly string[];
 }): Promise<{ href: string; cached: boolean }> {
   const cacheDir = cssCacheDir(opts.key);
   const metaFile = join(cacheDir, "meta.json");
@@ -240,24 +183,36 @@ export async function ensureGlobalCss(opts: {
   }
 
   // Lazy toolchain load — see vite-builder.ts (CLI-startup cost).
-  const [{ build: viteBuild }, { default: tailwindcss }] = await Promise.all([
+  const [{ build: viteBuild }, { compile, optimize }] = await Promise.all([
     import("vite"),
-    import("@tailwindcss/vite"),
+    import("@tailwindcss/node"),
   ]);
+  const appCssFile = globalCssSource(opts.pluginsRoot);
+  const compiler = await compile(readFileSync(appCssFile, "utf8"), {
+    base: dirname(appCssFile),
+    from: appCssFile,
+    shouldRewriteUrls: true,
+    onDependency: () => {},
+  });
+  // As `@tailwindcss/vite` does in a build: lightningcss lowers the output
+  // (nesting, prefixes) before vite's own minify.
+  const compiled = optimize(compiler.build([...opts.candidates]), {
+    minify: false,
+  }).code;
+  const compiledId = join(dirname(appCssFile), "__global.compiled.css");
+
   const workDir = mkdtempSync(join(tmpdir(), "web-artifacts-css-"));
   const outDir = join(workDir, "out");
   try {
     const entry = join(workDir, "entry.js");
-    writeFileSync(
-      entry,
-      `import ${JSON.stringify(globalCssSource(opts.pluginsRoot))};\n`,
-    );
+    writeFileSync(entry, `import ${JSON.stringify(compiledId)};\n`);
 
+    // vite turns the compiled CSS's `url()`s into hashed assets and minifies.
     await viteBuild({
       configFile: false,
       logLevel: "error",
       root: opts.repoRoot,
-      plugins: [tailwindcss()],
+      plugins: [compiledCssPlugin(compiledId, compiled)],
       build: {
         outDir,
         emptyOutDir: true,

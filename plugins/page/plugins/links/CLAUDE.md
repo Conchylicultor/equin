@@ -137,6 +137,7 @@ a steady-state reboot writes nothing).
   - Exports (types):
     - `BacklinkRow`
     - `BacklinkSnippet`
+    - `PageLinkSourcesRow`
   - Exports (values):
     - `BacklinkRowSchema`
     - `pageBacklinks`

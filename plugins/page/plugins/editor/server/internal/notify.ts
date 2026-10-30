@@ -1,5 +1,5 @@
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { PAGE_BLOCK_TYPE } from "../../core/schemas";
+import { PAGE_BLOCK_TYPE } from "../../core";
 import { blocksChanged } from "./tables-events";
 
 // Announce a change to a single block. Emits `blocksChanged` so subscribers

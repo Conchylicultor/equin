@@ -28,6 +28,7 @@ function target(
     pluginPath: "x",
     entryFile: "/x/web/index.ts",
     inputsHash: "0".repeat(64),
+    globRoots: [],
     coEntries: [],
     needsBuild: false,
   };
@@ -114,6 +115,7 @@ describe("closureSpecsOf (which emitted imports extend the barrel closure)", () 
     kind: "web",
     pluginPath: "x",
     inputsHash: "0".repeat(64),
+    tailwindCandidates: [],
     builtAtMs: 0,
     ...partial,
   });
@@ -314,6 +316,7 @@ describe("co-built folders (exhibits/ is a second entry of the web artifact)", (
       kind: "core",
       pluginPath: "catalog",
       inputsHash: "0".repeat(64),
+      tailwindCandidates: [],
       builtAtMs: 0,
       staticImportsByFile: { "index.js": [] },
       dynamicImports: ["@plugins/both/exhibits"],
@@ -345,6 +348,7 @@ describe("co-built folders (exhibits/ is a second entry of the web artifact)", (
       kind: "core",
       pluginPath: "catalog",
       inputsHash: "0".repeat(64),
+      tailwindCandidates: [],
       builtAtMs: 0,
       staticImportsByFile: { "index.js": [] },
       dynamicImports: ["@plugins/both/exhibits"],

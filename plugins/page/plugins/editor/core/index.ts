@@ -215,3 +215,7 @@ export type {
 
 export { textDataSchema, textBlockSchema } from "./text-data";
 export type { TextData, TextBearingSchema } from "./text-data";
+export { planBulkMove } from "./block-ops";
+export { planDocRanks } from "./doc-rank";
+export type { DocRankChange } from "./doc-rank";
+export type { PageBlocksRow } from "./resources";

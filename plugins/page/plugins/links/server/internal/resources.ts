@@ -20,8 +20,8 @@ import {
   inlineTokenReferentTables,
   inlineTokensAsText,
 } from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/server";
-import { pageBacklinks, pageLinkSources } from "../../core/resources";
-import type { BacklinkRow } from "../../core/schemas";
+import { pageBacklinks, pageLinkSources } from "../../core";
+import type { BacklinkRow } from "../../core";
 import { linkSourceRowsServeOptions } from "./link-source-rows";
 import { deriveSnippet } from "./snippet";
 import { _pageLinks } from "./tables";

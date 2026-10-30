@@ -2,7 +2,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { defineTrashSource } from "@plugins/infra/plugins/trash/server";
 import { IdKinds } from "@plugins/ids/server";
 import { DerivedTable } from "@plugins/database/plugins/derived-tables/server";
-import { blockIdKind } from "../core/block-id";
+import { blockIdKind } from "../core";
 import { handleListPages } from "./internal/handle-list-pages";
 import { handleListBlocks } from "./internal/handle-list-blocks";
 import { handleGetBlockPage } from "./internal/handle-get-block-page";
@@ -33,7 +33,7 @@ import {
   pageBlockHandle,
   PAGES_TRASH_SOURCE,
   PAGE_BLOCKS_TRASH_SOURCE,
-} from "../core/schemas";
+} from "../core";
 import {
   listPages,
   listBlocks,
@@ -47,7 +47,7 @@ import {
   setPageKind,
   applyBlockOpEndpoint,
   patchBlocks,
-} from "../core/endpoints";
+} from "../core";
 
 export { _blocks } from "./internal/tables";
 // The LIVE relation every reader takes (`page_blocks WHERE deleted_at IS NULL`,
@@ -81,8 +81,8 @@ export {
   PageDataSchema,
   PAGE_BLOCK_TYPE,
   pageData,
-} from "../core/schemas";
-export type { Block, PageData } from "../core/schemas";
+} from "../core";
+export type { Block, PageData } from "../core";
 // History restore's read and write. The write keeps block identity and edits
 // text through a writer the caller hands in (`page/block-text-write`).
 export {

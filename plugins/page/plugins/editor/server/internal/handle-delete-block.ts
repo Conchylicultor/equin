@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import type { TrashOutcome } from "@plugins/infra/plugins/trash/core";
-import { deleteBlock } from "../../core/endpoints";
+import { deleteBlock } from "../../core";
 import { liveBlocks } from "./live-blocks";
 import { blocksChanged } from "./tables-events";
 import { deleteBlocksSubtree } from "./trash-blocks";

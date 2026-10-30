@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { putBinding, deleteBinding } from "../../core/endpoints";
+import { putBinding, deleteBinding } from "../../core";
 import { _activeDataBindings } from "./tables";
 
 function parseOccurrenceIndex(raw: string): number {

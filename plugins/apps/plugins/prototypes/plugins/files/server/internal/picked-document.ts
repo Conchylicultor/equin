@@ -1,5 +1,5 @@
 import { picksFromQuery, readPrototypeOptions } from "../../core";
-import { stampPicks } from "../../core/stamp-picks";
+import { stampPicks } from "../../core";
 
 // Option picks on a served document — shared by the live file route and the
 // version file route, so a past version is switchable exactly like the live

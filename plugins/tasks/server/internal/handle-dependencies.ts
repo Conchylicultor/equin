@@ -4,7 +4,10 @@ import {
   removeTaskDependency,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { addTaskDependency, removeTaskDependency as removeTaskDependencyEndpoint } from "../../core/endpoints";
+import {
+  addTaskDependency,
+  removeTaskDependency as removeTaskDependencyEndpoint,
+} from "../../core";
 
 export const handleAddDependency = implement(
   addTaskDependency,

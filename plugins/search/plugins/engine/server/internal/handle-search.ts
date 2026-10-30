@@ -1,5 +1,5 @@
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { searchEndpoint } from "../../core/endpoints";
+import { searchEndpoint } from "../../core";
 import { runSearch } from "./run-search";
 
 // The plain HTTP form of the search, kept for the editor-collab e2e script

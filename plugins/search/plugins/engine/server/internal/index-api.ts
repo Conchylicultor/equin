@@ -1,6 +1,6 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import type { SearchDoc } from "../../core/schemas";
+import type { SearchDoc } from "../../core";
 import { _searchDocuments } from "./tables";
 
 // Generic index-mutation helpers consumers call from their own reindex jobs.

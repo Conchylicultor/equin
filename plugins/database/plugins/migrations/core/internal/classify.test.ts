@@ -7,7 +7,7 @@ import {
   renderStatements,
   type StatementClass,
 } from "./classify";
-import { parseMigration } from "./phases";
+import { parseMigration } from "@plugins/database/plugins/migrations/plugins/phases/core";
 import { schemaMigrationFiles } from "./schema-snapshot";
 import { splitStatements } from "./statements";
 

@@ -2,13 +2,15 @@ import { readdirSync, readFileSync } from "fs";
 import { join } from "path";
 import {
   classifyStatement,
-  parseMigration,
   publishedMigrationBasenames,
   publishedMigrationRefsSignature,
   schemaMigrationFiles,
-  snapshotLineage,
   splitStatements,
 } from "@plugins/database/plugins/migrations/core";
+import {
+  parseMigration,
+  snapshotLineage,
+} from "@plugins/database/plugins/migrations/plugins/phases/core";
 // The runner's own planner validates the claims, so this check cannot drift
 // from what boot would refuse.
 import { planSchemaSteps } from "@plugins/database/plugins/migrations/server";

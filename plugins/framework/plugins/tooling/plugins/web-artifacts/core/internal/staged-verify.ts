@@ -16,13 +16,23 @@
 // typecheck green while the emitted bytes disagree). This is the whole composed
 // fleet's bytes, checked on every build.
 
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  statSync,
+} from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import {
   init as esLexerInit,
   parse as esLexerParse,
 } from "es-module-lexer/minimal";
-import { isBrowserUnreachableDynamic } from "../constants";
+import {
+  isBrowserUnreachableDynamic,
+  WORKER_LINKED_SUFFIX,
+  WORKER_TREE_PREFIX,
+} from "../constants";
 import { type ImportClause, parseImportClause } from "./import-clause";
 
 export interface StagedModuleIssue {
@@ -94,14 +104,50 @@ export async function scanStagedModules(opts: {
   /** The registry artifact's own module — the importer of every web barrel. */
   let registryFile: string | null = null;
   const artifactsDir = join(opts.stagingDir, "artifacts");
+  const realOf = (url: string): string | null => {
+    const abs = join(opts.stagingDir, url.slice(1));
+    return existsSync(abs) ? realpathSync(abs) : null;
+  };
 
   // Pass 1 — read each staged module once: its exports, and its import edges.
+  // A worker tree is a dir of links to artifacts (`worker-link.ts`); each is
+  // scanned THROUGH the tree, so its relative imports resolve, and are joined
+  // against their targets' exports, exactly as the worker resolves them.
+  const roots: Array<{ linkName: string; linkDir: string }> = [];
   for (const linkName of readdirSync(artifactsDir).sort()) {
+    const linkDir = join(artifactsDir, linkName);
+    // A linked copy is also linked at the top level (so pruners keep it); its
+    // relative imports resolve only inside the tree, where it is scanned.
+    if (linkName.endsWith(WORKER_LINKED_SUFFIX)) continue;
+    if (!linkName.startsWith(WORKER_TREE_PREFIX)) {
+      roots.push({ linkName, linkDir });
+      continue;
+    }
+    for (const child of readdirSync(linkDir).sort()) {
+      if (child === "meta.json") continue;
+      roots.push({
+        linkName: join(linkName, child),
+        linkDir: join(linkDir, child),
+      });
+    }
+  }
+  // Files are keyed by their REAL path, and a real dir is scanned once: a worker
+  // tree's `_vendor` is the page's vendor set, and its edges must join the very
+  // export sets the page's do — lexing the set twice bought nothing but time.
+  const scannedDirs = new Set<string>();
+  /** A scanned file's dist-relative name, for reports. */
+  const distRelOf = new Map<string, string>();
+  for (const { linkName, linkDir } of roots) {
+    const realDir = realpathSync(linkDir);
+    if (scannedDirs.has(realDir)) continue;
+    scannedDirs.add(realDir);
     // The registry's dynamic imports are the app's plugin loaders — as
     // load-bearing as static edges, so a miss is a failure, not a warning.
     const isRegistry = linkName.startsWith("composition-web-registry.");
-    const linkDir = join(artifactsDir, linkName);
-    for (const dirent of readdirSync(linkDir, { recursive: true, withFileTypes: true })) {
+    for (const dirent of readdirSync(linkDir, {
+      recursive: true,
+      withFileTypes: true,
+    })) {
       if (!dirent.isFile()) continue;
       if (!dirent.name.endsWith(".js") && !dirent.name.endsWith(".mjs")) continue;
       const abs = join(dirent.parentPath, dirent.name);
@@ -110,22 +156,26 @@ export async function scanStagedModules(opts: {
       const [imports, exports] = esLexerParse(src, distRel);
       if (isRegistry && dirent.name === "index.js") registryFile ??= distRel;
       const self: StagedFile = { exports: new Set(exports.map((e) => e.n)), opaque: false };
-      files.set(distRel, self);
+      const real = realpathSync(abs);
+      files.set(real, self);
+      distRelOf.set(real, distRel);
       for (const imp of imports) {
         const spec = imp.n;
         if (spec === undefined) continue;
         const isDynamic = imp.d >= 0;
         let target: string | null = null;
+        // A module the worker link spells to throw when loaded: nothing to resolve.
+        if (spec.startsWith("data:")) continue;
         if (spec.startsWith("./") || spec.startsWith("../")) {
           const targetAbs = resolve(dirname(abs), spec);
           if (existsSync(targetAbs) && statSync(targetAbs).isFile()) {
-            target = relative(opts.stagingDir, targetAbs);
+            target = realpathSync(targetAbs);
           } else {
             failures.push({ specifier: spec, file: distRel });
           }
         } else if (spec in opts.imports) {
           // Every map URL is an exact file URL under `/artifacts/`.
-          target = opts.imports[spec]!.slice(1);
+          target = realOf(opts.imports[spec]!);
         } else if (!isDynamic || isRegistry) {
           failures.push({ specifier: spec, file: distRel });
         } else if (!isBrowserUnreachableDynamic(spec)) {
@@ -152,7 +202,7 @@ export async function scanStagedModules(opts: {
       // `export *` makes the target's export set a lower bound, so a "missing"
       // name here would be a false failure. Skip — and say so loudly, rather
       // than building a transitive star union the fleet never exercises.
-      opaque.add(target);
+      opaque.add(distRelOf.get(target) ?? target);
       return;
     }
     for (const name of names) {
@@ -171,8 +221,9 @@ export async function scanStagedModules(opts: {
   // every web barrel — assert the default from there.
   for (const [spec, url] of Object.entries(opts.imports)) {
     if (!spec.startsWith("@plugins/") || !spec.endsWith("/web")) continue;
-    const target = url.slice(1);
-    checkNames(target, registryFile ?? target, spec, ["default"]);
+    const target = realOf(url);
+    if (target === null) continue; // an unresolvable URL is compose's failure
+    checkNames(target, registryFile ?? url, spec, ["default"]);
   }
 
   return { failures, warnings, linkFailures, opaqueTargets: [...opaque].sort() };

@@ -1,7 +1,7 @@
 import { taskAttachments, updateTask } from "@plugins/tasks/plugins/tasks-core/server";
 import { extractAttachmentIds } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/core";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { updateTask as updateTaskEndpoint } from "../../core/endpoints";
+import { updateTask as updateTaskEndpoint } from "../../core";
 
 export const handleUpdate = implement(updateTaskEndpoint, async ({ params, body }) => {
   let row;

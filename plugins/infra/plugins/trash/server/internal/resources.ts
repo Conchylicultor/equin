@@ -1,5 +1,5 @@
 import { serveCollection } from "@plugins/network/plugins/live/server";
-import { trashEntries } from "../../core/resources";
+import { trashEntries } from "../../core";
 import { _trashEntries } from "./tables";
 
 // The trash ledger over `trash_entries`: its window (filterable on `sourceId`,

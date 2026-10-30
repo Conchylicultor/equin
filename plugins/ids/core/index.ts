@@ -14,3 +14,4 @@ export {
   storedIdSchema,
 } from "./internal/id-field";
 export { kindLabel, parseKindLabel } from "./internal/kind-label";
+export { externalReasonOfDecoder, idKindOfDecoder } from "./internal/id-field";

@@ -10,7 +10,7 @@ import {
   jobRuns,
   jobs,
   type DeadJobsPayload,
-} from "../../core/resources";
+} from "../../core";
 import { JobQueue } from "./queue";
 import { _deadJobs, _jobRuns } from "./tables";
 

@@ -5,7 +5,7 @@ export {
   serveCollection,
 } from "./internal/serve-collection";
 export { serveValue } from "./internal/serve-value";
-export { sliceRange } from "../core/internal/key-order";
+export { sliceRange } from "../core";
 export { serveUnionCollection } from "./internal/serve-union";
 export type {
   ServedUnion,
@@ -21,11 +21,7 @@ export type {
   ScopedMemberRead,
   ServedScopedColumns,
 } from "./internal/serve-columns";
-export {
-  compilePagedValue,
-  compileQueryValue,
-  compileValue,
-} from "../core/internal/compile-value";
+export { compilePagedValue, compileQueryValue, compileValue } from "../core";
 export type {
   ServedExternalQueryValue,
   ServedExternalValue,
@@ -39,10 +35,10 @@ export type {
   LiveValueSource,
   ServePagedValueOptions,
   ServeValueOptions,
-} from "../core/internal/compile-value";
+} from "../core";
 // The `follow` a value's `follows` is handed — for a helper declaring
 // follows shared by several values (transcript-source's chain follows).
-export type { FollowBuilder } from "../core/internal/follows";
+export type { FollowBuilder } from "../core";
 export type {
   AllCollectionSpecs,
   AllWhereColumns,

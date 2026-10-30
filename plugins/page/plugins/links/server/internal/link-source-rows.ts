@@ -7,7 +7,7 @@ import {
 } from "@plugins/infra/plugins/query-resource/core";
 import type { ServeAllCollectionOptions } from "@plugins/network/plugins/live/server";
 import { _blocks, PAGE_BLOCK_TYPE } from "@plugins/page/plugins/editor/server";
-import type { PageLinkSourcesRow } from "../../core/schemas";
+import type { PageLinkSourcesRow } from "../../core";
 import { _pageLinks } from "./tables";
 
 // How `pageLinkSources` (core: every live page with the pages linking to it,

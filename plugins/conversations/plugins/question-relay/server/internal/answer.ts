@@ -1,8 +1,4 @@
-import type {
-  AnswerQuestionBody,
-  CliAnswer,
-  RelayQuestion,
-} from "../../core/schemas";
+import type { AnswerQuestionBody, CliAnswer, RelayQuestion } from "../../core";
 import { withPicksInResponse } from "@plugins/conversations/plugins/transcript-source/core";
 
 // The web's structured answer → the AskUserQuestion tool's own answer shape,

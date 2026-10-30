@@ -1,5 +1,5 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { compactionContext } from "../core/endpoints";
+import { compactionContext } from "../core";
 import { handleCompactionContext } from "./internal/handler";
 
 export { CompactionContext } from "./internal/registry";

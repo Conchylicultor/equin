@@ -25,17 +25,6 @@ export {
   DRIZZLE_CONFIG_PATH,
 } from "./internal/drizzle-cli";
 export type { DrizzleGenerateOptions } from "./internal/drizzle-cli";
-// The phased-migration file grammar, shared by the generator (cli) and the
-// runner (server). See research/2026-09-29-global-phased-migrations.md.
-export {
-  migrationClaimId,
-  parseMigration,
-  renderAdoptionMigration,
-  renderMergeSnapshotMigration,
-  renderPhasedMigration,
-  renderSnapshotHeader,
-  snapshotLineage,
-} from "./internal/phases";
 // The snapshot DAG (prevId edges + merge-node parents): one definition of its
 // edges for the CLI's tip join and the snapshot-chain-intact check, and the
 // single-tip out-dir every drizzle-kit run reads instead of data/ (drizzle-kit
@@ -90,12 +79,6 @@ export {
   UnjoinedSnapshotTipsError,
 } from "./internal/drizzle-stage";
 export type { DrizzleStage, EmittedSnapshot } from "./internal/drizzle-stage";
-export type {
-  ParsedMigration,
-  PhasedMigration,
-  SnapshotLineage,
-  Supersession,
-} from "./internal/phases";
 // The one statement splitter for migration SQL (comment/literal/dollar-quote
 // aware), shared by the phaser and the data-migration-dml-only and
 // fork-schema-drift checks.

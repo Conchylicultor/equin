@@ -88,14 +88,25 @@ export async function precompressFiles(files: string[]): Promise<void> {
   await Promise.all(due.map((f) => gate.run(() => compressFile(f))));
 }
 
-/** {@link precompressFiles} over every file under `dir`, recursively. */
-export async function precompressDir(dir: string): Promise<void> {
+/**
+ * {@link precompressFiles} over every file under `dir`, recursively, except
+ * `precompressed` ones, whose sidecars are already in place. Never through a
+ * symlink: a worker tree is a dir of links into other store entries, and Bun's
+ * recursive `readdirSync` follows them — compressing every linked entry again,
+ * in place, on each tree publish.
+ */
+export async function precompressDir(
+  dir: string,
+  precompressed: ReadonlySet<string> = new Set(),
+): Promise<void> {
   const files: string[] = [];
-  for (const dirent of readdirSync(dir, {
-    recursive: true,
-    withFileTypes: true,
-  })) {
-    if (dirent.isFile()) files.push(join(dirent.parentPath, dirent.name));
-  }
+  const walk = (d: string): void => {
+    for (const dirent of readdirSync(d, { withFileTypes: true })) {
+      const path = join(d, dirent.name);
+      if (dirent.isDirectory()) walk(path);
+      else if (dirent.isFile() && !precompressed.has(path)) files.push(path);
+    }
+  };
+  walk(dir);
   await precompressFiles(files);
 }

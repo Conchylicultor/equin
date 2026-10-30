@@ -1,26 +1,25 @@
 // Browser hosts: a plugin's `bin/browser-host.ts` — a Web Worker booting a
-// portable server graph (`server-core`'s `bootBrowserHost`) — built into ONE
-// artifact of the store and served through the import map as
-// `@browser-host/<pluginPath>`, whose module exports `start(): Worker` and
-// `serviceWorkerUrl` — the frame-serving Service Worker
-// (`framework/browser-server`'s `web/frames-sw.ts`) built beside it as a
-// classic script, so its scope (`frames/` next to it) is this build's own.
+// portable server graph (`server-core`'s `bootBrowserHost`). The worker's code
+// is NOT here: it is the same per-plugin artifacts the page loads (one per
+// `server` barrel, the page's own `core` barrels, the vendor set), planned by
+// `planHostClosure` and reached through the worker link tree
+// (`worker-link.ts`), so an edit costs the one artifact it touches.
 //
-// Unlike every other artifact, a host is a whole-graph bundle: import maps do
-// not reach workers, so the worker inlines every module it loads, across ~50
-// plugins, plus the npm packages (PGlite's wasm and data ride as assets). So
-// its address cannot be "this plugin's own files". It is the content of every
-// repo file the LAST build of the host loaded (the bundler's own module list,
-// raw-imported SQL included), the listing of every directory holding one (so a
-// new sibling — a new migration a glob would pick up — re-addresses it), the
-// recursive listing of every `import.meta.glob` pattern's static base (so a new
-// file in a new subdirectory — a new config document — does too), the
-// lockfile, and the builder identity. That list is recorded per host beside the
-// store; a host never built, or whose list names a file that is gone, builds.
+// What this module builds is the host's page-side artifact, served through the
+// import map as `@browser-host/<pluginPath>`:
+//   - `host.js`: `start(): Worker`, starting the worker from its entry's
+//     import-map specifier (`@browser-host-worker/<pluginPath>`, mapped to the
+//     entry artifact inside the dist's worker tree), and `serviceWorkerUrl`;
+//   - `frames-sw.js`: the frame-serving Service Worker
+//     (`framework/browser-server`'s `web/frames-sw.ts`), a classic script (no
+//     imports), so bundled whole. Its address is the content of every repo file
+//     the last build of it loaded, their directories' listings and glob roots,
+//     the lockfile and the builder identity — recorded per host beside the
+//     store; a host never built, or whose list names a file that is gone,
+//     builds. It is a few modules, not the server graph.
 //
 // The build is gated: a repo module that imports a Node builtin (vite's
-// "externalized for browser compatibility") fails it — a dependency's own
-// guarded platform branch (PGlite's `node:module`) does not.
+// "externalized for browser compatibility") fails it.
 
 import { createHash } from "node:crypto";
 import {
@@ -32,13 +31,14 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join, relative, resolve, sep } from "node:path";
+import { dirname, join, relative, sep } from "node:path";
 import type { Plugin as VitePlugin } from "vite";
 import { webArtifactsDir } from "../../data-dirs";
 import {
   BROWSER_HOST_SPECIFIER_PREFIX,
-  isBrowserHostSpecifier,
+  BROWSER_HOST_WORKER_SPECIFIER_PREFIX,
 } from "../browser-host-specifier";
+import { globRootsOf } from "./own-files";
 import {
   artifactDirName,
   artifactTmpDir,
@@ -48,7 +48,7 @@ import {
   type ArtifactMeta,
 } from "./store";
 
-/** The host's emitted module: `export function start(): Worker`. */
+/** The host's page-side module: `export function start(): Worker`. */
 export const BROWSER_HOST_FILE = "host.js";
 
 /** The host's frame-serving Service Worker script, beside its module. */
@@ -71,6 +71,8 @@ const INPUTS_DIR = webArtifactsDir.file("browser-hosts");
 /** One host of the fleet. */
 export interface BrowserHostPlan {
   pluginPath: string;
+  /** The `host.js` source: part of the host's address. */
+  hostSource: string;
   /** `@browser-host/<pluginPath>` */
   specifier: string;
   entryFile: string;
@@ -93,6 +95,23 @@ interface HostInputs {
 }
 
 const slugOf = (pluginPath: string) => pluginPath.split("/plugins/").join(".");
+
+/** The import-map specifier of a host's worker entry. */
+export function hostWorkerSpecifier(pluginPath: string): string {
+  return `${BROWSER_HOST_WORKER_SPECIFIER_PREFIX}${pluginPath}`;
+}
+
+/**
+ * The host's page-side module. It starts the worker from its entry's
+ * import-map specifier (`import.meta.resolve`), so this source never changes
+ * with the worker's code: the map does.
+ */
+export function hostModuleSource(pluginPath: string): string {
+  return (
+    `export function start() {\n  return new Worker(import.meta.resolve(${JSON.stringify(hostWorkerSpecifier(pluginPath))}), { type: "module" });\n}\n` +
+    `export const serviceWorkerUrl = import.meta.url.replace(/[^/]*$/, ${JSON.stringify(FRAMES_SW_FILE)});\n`
+  );
+}
 
 function inputsFile(pluginPath: string): string {
   return join(INPUTS_DIR, `${slugOf(pluginPath)}.json`);
@@ -144,52 +163,11 @@ export function hostInputsHash(
   return h.digest("hex");
 }
 
-// `import.meta.glob(` with an optional type argument; what follows decides
-// whether the pattern is a literal the address can list.
-const GLOB_CALL_RE = /import\.meta\.glob\s*(?:<[^>()]*>)?\s*\(\s*/g;
-const STRING_LITERAL_RE = /^(["'])((?:(?!\1)[^\\\n])*)\1/;
-const GLOB_META_RE = /[*?{}[\]!]/;
-
-/**
- * The repo-relative static bases of every `import.meta.glob` pattern in one
- * module's source: the path segments before the first holding a glob
- * metacharacter, resolved against the module's directory (or the repo root,
- * for a root-absolute pattern — the host build's `root` is the repo). A
- * pattern that is not one string literal throws, naming the module: vite
- * requires literals, and an address cannot list what it cannot read.
- */
-export function globRootsOf(
-  root: string,
-  moduleRel: string,
-  source: string,
-): string[] {
-  const roots: string[] = [];
-  for (const m of source.matchAll(GLOB_CALL_RE)) {
-    const rest = source.slice(m.index + m[0].length);
-    const lit = STRING_LITERAL_RE.exec(rest);
-    if (lit === null) {
-      throw new Error(
-        `${moduleRel}: import.meta.glob takes one string-literal pattern here (the browser host's address lists its static base)`,
-      );
-    }
-    const pattern = lit[2]!;
-    const segments = pattern.split("/");
-    const metaAt = segments.findIndex((seg) => GLOB_META_RE.test(seg));
-    const staticPart = segments
-      .slice(0, metaAt < 0 ? segments.length - 1 : metaAt)
-      .join("/");
-    const abs = pattern.startsWith("/")
-      ? join(root, staticPart)
-      : resolve(root, dirname(moduleRel), staticPart);
-    const rel = relative(root, abs).split(sep).join("/");
-    if (rel.startsWith("..")) {
-      throw new Error(
-        `${moduleRel}: import.meta.glob pattern "${pattern}" reaches outside the repo`,
-      );
-    }
-    roots.push(rel === "" ? "." : rel);
-  }
-  return roots;
+/** The builder identity, bound to the host module's source. */
+function hostIdentity(identityHash: string, hostSource: string): string {
+  return createHash("sha256")
+    .update(`${identityHash}\n${hostSource}`)
+    .digest("hex");
 }
 
 /**
@@ -206,6 +184,7 @@ export function planBrowserHosts(opts: {
   for (const pluginPath of opts.pluginPaths) {
     const entryFile = join(opts.root, "plugins", pluginPath, HOST_ENTRY_REL);
     if (!existsSync(entryFile)) continue;
+    const hostSource = hostModuleSource(pluginPath);
     const inputs = readInputs(pluginPath);
     const hash =
       inputs === null || inputs.globRoots === undefined
@@ -213,7 +192,7 @@ export function planBrowserHosts(opts: {
         : hostInputsHash(
             opts.root,
             { files: inputs.files, globRoots: inputs.globRoots },
-            opts.identityHash,
+            hostIdentity(opts.identityHash, hostSource),
           );
     const dirName =
       hash === null
@@ -221,6 +200,7 @@ export function planBrowserHosts(opts: {
         : artifactDirName(slugOf(pluginPath), "browser-host", hash);
     plans.push({
       pluginPath,
+      hostSource,
       specifier: `${BROWSER_HOST_SPECIFIER_PREFIX}${pluginPath}`,
       entryFile,
       dirName,
@@ -284,16 +264,6 @@ export async function ensureBrowserHost(opts: {
   const { build: viteBuild, createLogger } = await import("vite");
   const slug = slugOf(plan.pluginPath);
   const tmpDir = artifactTmpDir(`${slug}.browser-host.pending`);
-  // The page imports this module; vite's worker pass builds the worker it
-  // names whole (no externals, no page preload helper), its assets beside it.
-  // The Service Worker's URL is spelled off `import.meta.url` without
-  // `new URL(…)`, which vite would try to resolve at build time.
-  const stub = `${tmpDir}.stub.js`;
-  writeFileSync(
-    stub,
-    `export function start() {\n  return new Worker(new URL(${JSON.stringify(relative(dirname(stub), plan.entryFile))}, import.meta.url), { type: "module" });\n}\n` +
-      `export const serviceWorkerUrl = import.meta.url.replace(/[^/]*$/, ${JSON.stringify(FRAMES_SW_FILE)});\n`,
-  );
   const recorder = moduleRecorder(root);
   const offenders: string[] = [];
   const logger = createLogger("warn");
@@ -306,41 +276,6 @@ export async function ensureBrowserHost(opts: {
     warn(msg, options);
   };
   try {
-    await viteBuild({
-      configFile: false,
-      logLevel: "warn",
-      customLogger: logger,
-      root,
-      base: "./",
-      resolve: { alias: { "@plugins": join(root, "plugins") } },
-      define: { "process.env.NODE_ENV": JSON.stringify("production") },
-      worker: {
-        format: "es",
-        plugins: () => [recorder.plugin],
-        rolldownOptions: {
-          // A host's code may sit beside a scenario naming a browser host (its
-          // own, even); a worker never starts one, so the import stays a dead
-          // reference Rolldown drops with the code that holds it.
-          external: isBrowserHostSpecifier,
-          output: { inlineDynamicImports: true },
-        },
-      },
-      build: {
-        outDir: tmpDir,
-        emptyOutDir: true,
-        target: "esnext",
-        minify: opts.minify ? "oxc" : false,
-        // PGlite's wasm and data are fetched by URL, never inlined.
-        assetsInlineLimit: 0,
-        modulePreload: false,
-        reportCompressedSize: false,
-        rolldownOptions: {
-          input: { host: stub },
-          preserveEntrySignatures: "strict",
-          output: { entryFileNames: BROWSER_HOST_FILE },
-        },
-      },
-    });
     // The frame-serving Service Worker, into the same dir: a classic script
     // (a module Service Worker is not supported everywhere), bundled whole.
     // Its modules are recorded too, so an edit to it re-addresses the host.
@@ -355,7 +290,7 @@ export async function ensureBrowserHost(opts: {
       plugins: [recorder.plugin],
       build: {
         outDir: tmpDir,
-        emptyOutDir: false,
+        emptyOutDir: true,
         target: "esnext",
         minify: opts.minify ? "oxc" : false,
         modulePreload: false,
@@ -372,17 +307,24 @@ export async function ensureBrowserHost(opts: {
     });
     if (offenders.length > 0) {
       throw new Error(
-        `the worker bundle reaches Node builtins from repo code — a browser host boots portable code only:\n  ${offenders.join("\n  ")}`,
+        `the frame-serving Service Worker reaches Node builtins from repo code:\n  ${offenders.join("\n  ")}`,
       );
     }
+    writeFileSync(join(tmpDir, BROWSER_HOST_FILE), plan.hostSource);
     const inputs = recorder.inputs();
     const { files } = inputs;
     if (files.length === 0) {
-      throw new Error("the worker bundle recorded no repo module");
+      throw new Error("the Service Worker build recorded no repo module");
     }
-    const hash = hostInputsHash(root, inputs, opts.identityHash);
+    const hash = hostInputsHash(
+      root,
+      inputs,
+      hostIdentity(opts.identityHash, plan.hostSource),
+    );
     if (hash === null) {
-      throw new Error("a module the worker bundle loaded vanished mid-build");
+      throw new Error(
+        "a module the Service Worker build loaded vanished mid-build",
+      );
     }
     const dirName = artifactDirName(slug, "browser-host", hash);
     let bytes = 0;
@@ -395,10 +337,12 @@ export async function ensureBrowserHost(opts: {
       kind: "browser-host",
       pluginPath: plan.pluginPath,
       inputsHash: hash,
-      // The page imports nothing from it but `start` and `serviceWorkerUrl`;
-      // the worker and the Service Worker are inlined.
+      // `host.js` imports nothing: the worker's modules are the link tree's,
+      // started by URL, and the Service Worker is a classic script.
       staticImportsByFile: { [BROWSER_HOST_FILE]: [] },
       dynamicImports: [],
+      // A worker draws nothing: its classes are not the page's.
+      tailwindCandidates: [],
       builtAtMs: Date.now(),
     };
     await publishArtifact(dirName, tmpDir, meta);
@@ -408,7 +352,7 @@ export async function ensureBrowserHost(opts: {
       JSON.stringify(inputs satisfies HostInputs, null, 2),
     );
     opts.log(
-      `browser host ${plan.pluginPath}: ${files.length} repo modules, ${bytes} bytes (${(bytes / 1_048_576).toFixed(1)} MB) (${dirName})`,
+      `browser host ${plan.pluginPath}: host module + Service Worker (${files.length} repo modules, ${(bytes / 1024).toFixed(0)} KB) (${dirName})`,
     );
     return dirName;
   } catch (err) {
@@ -417,7 +361,5 @@ export async function ensureBrowserHost(opts: {
       `browser host build failed for ${plan.pluginPath}: ${err instanceof Error ? err.message : String(err)}`,
       { cause: err },
     );
-  } finally {
-    rmSync(stub, { force: true });
   }
 }

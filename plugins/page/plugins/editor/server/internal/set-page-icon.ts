@@ -1,10 +1,6 @@
 import { db } from "@plugins/database/server";
 import type { Emoji } from "@plugins/ui/plugins/icons/plugins/emoji/core";
-import {
-  PageDataSchema,
-  PAGE_BLOCK_TYPE,
-  type Block,
-} from "../../core/schemas";
+import { PageDataSchema, PAGE_BLOCK_TYPE, type Block } from "../../core";
 import type { ForestExecutor } from "./page-forest";
 import { rewritePageRow } from "./page-row-write";
 import { rewriteBlockData } from "./parse-block-data";

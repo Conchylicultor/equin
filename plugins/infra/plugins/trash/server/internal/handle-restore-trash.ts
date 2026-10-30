@@ -1,6 +1,6 @@
 import { db } from "@plugins/database/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { restoreTrash } from "../../core/endpoints";
+import { restoreTrash } from "../../core";
 import { consumeTrashEntry } from "./entry-lifecycle";
 
 // Restore a single trashed root: the source clears its domain `deleted_at`

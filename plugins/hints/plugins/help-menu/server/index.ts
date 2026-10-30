@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { TaskCategory } from "@plugins/tasks/plugins/task-category/server";
-import { HELP_CATEGORY_ID } from "../core/task-category";
+import { HELP_CATEGORY_ID } from "../core";
 
 export default {
   description:

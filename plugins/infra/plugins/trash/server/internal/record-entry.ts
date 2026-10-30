@@ -1,7 +1,7 @@
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
-import type { TrashEntry } from "../../core/schemas";
-import { trashEntryIdKind, type TrashEntryId } from "../../core/id-kind";
+import type { TrashEntry } from "../../core";
+import { trashEntryIdKind, type TrashEntryId } from "../../core";
 import { _trashEntries } from "./tables";
 
 // Any drizzle executor the ledger insert can ride on: the global handle, a

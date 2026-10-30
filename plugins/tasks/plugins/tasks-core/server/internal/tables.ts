@@ -22,7 +22,7 @@ import {
   taskDependenciesEntityRef,
   conversationsEntityRef,
   tasksEntityRef,
-} from "../../core/entity-refs";
+} from "../../core";
 
 // Physical tables only. This file is a load-order leaf: it must NOT import
 // from any other plugin's schema/tables file so that cross-plugin schemas can

@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { nextRankUnder } from "@plugins/primitives/plugins/rank/server";
 import { _conversationGroupMembers, _conversationGroups } from "./tables";
-import { conversationGroupIdKind } from "../../core/id-kinds";
+import { conversationGroupIdKind } from "../../core";
 
 export async function addMembersToGroup(
   groupId: string,

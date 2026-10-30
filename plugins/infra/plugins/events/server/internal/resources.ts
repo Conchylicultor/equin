@@ -13,7 +13,7 @@ import {
   eventTriggers,
   type EmissionsPayload,
   type TriggerRow,
-} from "../../core/resources";
+} from "../../core";
 import { triggerTableRegistry } from "./registry";
 import { _event_emissions } from "./tables";
 

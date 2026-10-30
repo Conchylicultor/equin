@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-database-migrations-phases",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The phased-migration file grammar (expand / claimed data migrations / contract, snapshot lineage headers): parse and render, shared by the generator (cli/migrations), the runner (migrations/server) and the checks. A portable leaf, so the runner's portable server reaches it without migrations/core's Bun-only half."
+}

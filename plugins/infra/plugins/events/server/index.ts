@@ -21,7 +21,7 @@ import {
   listTriggers,
   deleteTriggerEndpoint,
   patchTriggerEndpoint,
-} from "../core/endpoints";
+} from "../core";
 
 export { defineTriggerEvent } from "./internal/event";
 export type {

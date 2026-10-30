@@ -10,7 +10,7 @@ import { rankAfterSibling } from "@plugins/primitives/plugins/rank/server";
 import { scheduleTaskTitleUpdate } from "@plugins/tasks/plugins/task-title/server";
 import { synthesiseTitleFallback } from "@plugins/tasks/plugins/task-title/core";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { createTask as createTaskEndpoint } from "../../core/endpoints";
+import { createTask as createTaskEndpoint } from "../../core";
 import { armTaskAutoStart } from "./arm-auto-start";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {

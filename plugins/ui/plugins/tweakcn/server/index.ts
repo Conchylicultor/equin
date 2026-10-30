@@ -1,5 +1,5 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { importTweakcnTheme } from "../core/endpoints";
+import { importTweakcnTheme } from "../core";
 import { handleImport } from "./internal/handle-import";
 
 export default {

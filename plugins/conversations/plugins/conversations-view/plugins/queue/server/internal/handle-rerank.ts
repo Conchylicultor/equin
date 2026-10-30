@@ -1,7 +1,7 @@
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { rerankQueue } from "../../core/endpoints";
+import { rerankQueue } from "../../core";
 import { lockDeck, rankForTop, seatJoiningGroup, upsertRank } from "./queue-ranks";
 
 export const handleRerank = implement(rerankQueue, async ({ body }) => {

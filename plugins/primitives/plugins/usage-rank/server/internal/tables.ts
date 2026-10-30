@@ -1,5 +1,5 @@
 import { defineEntity } from "@plugins/infra/plugins/entities/server";
-import { usageStatsEntityRef } from "../../core/internal/schema";
+import { usageStatsEntityRef } from "../../core";
 
 /**
  * Generic (namespace, key) usage rollup — ONE row per tracked thing, no event

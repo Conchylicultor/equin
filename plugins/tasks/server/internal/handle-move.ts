@@ -7,7 +7,7 @@ import {
   isDescendant,
   unionTaskClusters,
 } from "@plugins/tasks/plugins/tasks-core/server";
-import { moveTask } from "../../core/endpoints";
+import { moveTask } from "../../core";
 
 export const handleMove = implement(moveTask, async ({ params, body }) => {
   if (body.folderId === params.id) {

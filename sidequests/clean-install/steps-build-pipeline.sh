@@ -49,8 +49,11 @@
 #  W1   plugin body edit x3: a comment line appended to a keyboard-party web file.
 #  W2   schema edit x3: a nullable column added to app_usage_daily (the
 #       migration is generated inside the VM; each run adds another column).
+#  W4   server body edit x3: a comment line appended to a server file of a
+#       browser-host graph member (apps-core/app-usage) — the host's rebuild case.
 #  W3   fresh worktree from main, stores warm x2 (db fork + build --skip-checks).
 #  ISO  measure-build-steps.ts, one run per step-order preset, in a clean worktree.
+#       BUILD_PIPELINE_SKIP_ISO=1 skips it (for a step that leaves codegen alone).
 #
 # Profiling: every build runs with BUN_OPTIONS="--cpu-prof-md --cpu-prof-dir=...";
 # Bun forwards it to every bun child (build, drizzle-kit probe, workers), one .md
@@ -235,7 +238,22 @@ git status --short | head
 step_08_w2_DOC="W2 x3: a nullable column added to app_usage_daily's table (a migration is generated each run), then build --skip-checks."
 step_08_w2_TAG="harness-only"
 
-step_09_w3() {
+step_09_w4() {
+  guest_zsh '
+export EQUIN_CONVERSATION_ID=conv-bench-bp-w0
+cd ~/equin/.claude/worktrees/att-bp-w0
+P="$HOME/.equin/worktrees/att-bp-w0/build-profile-*.json"
+F=plugins/apps-core/plugins/app-usage/server/internal/routes.ts
+for n in 1 2 3; do
+  echo "// bp-w4-$n" >> $F
+  bp_build W4-$n "$P" -- ./equin build --skip-checks
+done
+'
+}
+step_09_w4_DOC="W4 x3: one comment line appended to a server file of a browser-host graph member (apps-core/app-usage), then build --skip-checks. The browser host's own rebuild case."
+step_09_w4_TAG="harness-only"
+
+step_10_w3() {
   guest_zsh '
 for n in a b; do
   bp_worktree bp-w3$n
@@ -243,10 +261,12 @@ for n in a b; do
 done
 '
 }
-step_09_w3_DOC="W3 x2: two more fresh worktrees from main, db fork each, build --skip-checks with the shared stores warm."
-step_09_w3_TAG="harness-only"
+step_10_w3_DOC="W3 x2: two more fresh worktrees from main, db fork each, build --skip-checks with the shared stores warm."
+step_10_w3_TAG="harness-only"
 
-step_10_iso() {
+step_11_iso() {
+  # BUILD_PIPELINE_SKIP_ISO=1: skip (a step that does not touch codegen).
+  if [ -n "${BUILD_PIPELINE_SKIP_ISO:-}" ]; then echo 'echo "ISO skipped (BUILD_PIPELINE_SKIP_ISO)"'; return; fi
   # No BUN_OPTIONS here: the per-step timings should not carry profiler overhead.
   # measure-build-steps.ts is written by another agent; it must exist in the tree.
   guest_zsh '
@@ -259,10 +279,10 @@ for order in pipeline docs-first guard-first tree-only migrations-only; do
 done
 '
 }
-step_10_iso_DOC="Per-step isolation: measure-build-steps.ts under each order preset (pipeline, docs-first, guard-first, tree-only, migrations-only) in a clean worktree."
-step_10_iso_TAG="harness-only"
+step_11_iso_DOC="Per-step isolation: measure-build-steps.ts under each order preset (pipeline, docs-first, guard-first, tree-only, migrations-only) in a clean worktree."
+step_11_iso_TAG="harness-only"
 
-step_11_collect() {
+step_12_collect() {
   cat <<'CMD'
 set -e
 cd "$HOME"
@@ -271,8 +291,8 @@ tar czf /tmp/bp-out.tgz bp-out
 ls -l /tmp/bp-out.tgz
 CMD
 }
-step_11_collect_DOC="Tars $HOME/bp-out (build logs, profile JSONs, cpu-prof md, step JSONs) to /tmp/bp-out.tgz for scp."
-step_11_collect_TAG="harness-only"
+step_12_collect_DOC="Tars $HOME/bp-out (build logs, profile JSONs, cpu-prof md, step JSONs) to /tmp/bp-out.tgz for scp."
+step_12_collect_TAG="harness-only"
 
 STEPS=(
   step_01_baseline
@@ -283,7 +303,8 @@ STEPS=(
   step_06_w0
   step_07_w1
   step_08_w2
-  step_09_w3
-  step_10_iso
-  step_11_collect
+  step_09_w4
+  step_10_w3
+  step_11_iso
+  step_12_collect
 )

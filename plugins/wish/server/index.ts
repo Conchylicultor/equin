@@ -2,7 +2,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { Trigger } from "@plugins/infra/plugins/events/server";
 import { TaskCategory } from "@plugins/tasks/plugins/task-category/server";
 import { conversationCreated } from "@plugins/tasks/plugins/tasks-core/server";
-import { WISHES_CATEGORY_ID } from "../core/task-category";
+import { WISHES_CATEGORY_ID } from "../core";
 import { applyGroupJob } from "./internal/apply-group-job";
 
 export { _improvePendingGroups } from "./internal/tables";

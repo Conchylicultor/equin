@@ -56,3 +56,5 @@ export { expr, isExprField } from "./internal/expr";
 export type { ExprField } from "./internal/expr";
 export { armKeyCodec, KIND_RE } from "./internal/arm-key";
 export type { ArmKeyCodec } from "./internal/arm-key";
+export { SQL_TYPE_RE } from "./internal/expr";
+export type { ExprDecoder } from "./internal/expr";

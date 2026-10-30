@@ -3,7 +3,7 @@ import { deriveUpdatedAt } from "@plugins/database/plugins/derived-updated-at/se
 import { rankText } from "@plugins/primitives/plugins/rank/core";
 import { _conversations } from "@plugins/tasks/plugins/tasks-core/server";
 import { idColumn } from "@plugins/ids/server";
-import { conversationGroupIdKind } from "../../core/id-kinds";
+import { conversationGroupIdKind } from "../../core";
 
 // User-defined groupings shown in the conversation sidebar list. Each
 // conversation can be a member of at most one group (PK on conversation_id).

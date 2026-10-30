@@ -32,16 +32,11 @@ import {
   type EmittedSnapshot,
   isSchemaMigration,
   LOCAL_MAIN_REF,
-  migrationClaimId,
   migrationContentHash,
   MIGRATIONS_DATA_DIR,
   MIGRATIONS_PLUGIN_DIR,
-  parseMigration,
   phaseStatements,
   publishedMigrationOrigins,
-  renderAdoptionMigration,
-  renderPhasedMigration,
-  renderSnapshotHeader,
   renderStatements,
   SCHEMA_SNAPSHOT_FILE,
   schemaLoadFailures,
@@ -49,10 +44,17 @@ import {
   schemaSnapshotPath,
   type Snapshot,
   snapshotBodies,
-  type SnapshotLineage,
   stageDrizzleOut,
-  type Supersession,
 } from "@plugins/database/plugins/migrations/core";
+import {
+  migrationClaimId,
+  parseMigration,
+  renderAdoptionMigration,
+  renderPhasedMigration,
+  renderSnapshotHeader,
+  type SnapshotLineage,
+  type Supersession,
+} from "@plugins/database/plugins/migrations/plugins/phases/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import {
   promptKey,

@@ -4,12 +4,12 @@
 // the barrel closure, vendor-request assembly, and map-entry assembly live in
 // `plan.ts`, shared with the `web-artifacts:map-in-sync` check.
 
-import { readdirSync } from "node:fs";
+import { mkdirSync, readdirSync, symlinkSync } from "node:fs";
 import os from "node:os";
 import { basename, join } from "node:path";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { loadBabelContributions } from "@plugins/framework/plugins/web-core/core";
-import { BUILDER_VERSION } from "../constants";
+import { BUILDER_VERSION, WORKER_ONLY_KINDS } from "../constants";
 import {
   findUnmappedDynamicWarnings,
   type ImportMapEntry,
@@ -20,9 +20,12 @@ import {
   composeMapEntries,
   eagerWebTargets,
   planFleet,
+  planHostClosure,
   resolveBarrelClosure,
   servedSpecsOf,
   WEB_CORE_REL,
+  workerClosure,
+  type ComposedHost,
   type FleetSource,
   type PlannedTarget,
 } from "./plan";
@@ -54,9 +57,19 @@ import {
   computeGlobalCssKey,
   ensureGlobalCss,
   hasGlobalCssCache,
+  unionCandidates,
   pruneGlobalCssCache,
 } from "./global-css";
 import { ensureBrowserHost } from "./browser-hosts";
+import { composedHostsOf } from "./expected";
+import {
+  assertPortableArtifacts,
+  ensureWorkerLinked,
+  ensureWorkerTree,
+  workerLinkedDirName,
+  workerLinkName,
+  workerTreeOf,
+} from "./worker-link";
 import { composeDist } from "./compose";
 import { scanStagedModules } from "./staged-verify";
 
@@ -64,6 +77,12 @@ export interface WebArtifactsPipelineOptions {
   root: string;
   /** The build's staging dist dir (published atomically by the caller). */
   stagingDir: string;
+  /**
+   * Where this run pins the cache entries it uses until its dist is published:
+   * a `web.*` sibling of the live dist (`<live>.pins`), so pruners keep them.
+   * The caller removes it after a successful publish.
+   */
+  pinDir: string;
   minify: boolean;
   buildId: string;
   /**
@@ -92,6 +111,12 @@ export interface WebArtifactsPipelineOptions {
    */
   materialize?: boolean;
   log: (line: string) => void;
+  /**
+   * What needs the computer (boundaries' `isPlatformApi`): a browser host's
+   * worker artifact importing one fails the build. Passed in, so the engine
+   * depends on no checker.
+   */
+  isPlatformApi: (specifier: string) => boolean;
   /** Stage wrapper — the caller records profiler spans here. */
   onStage: <T>(id: string, label: string, run: () => Promise<T>) => Promise<T>;
 }
@@ -114,14 +139,50 @@ export interface WebArtifactsPipelineResult {
 export async function runWebArtifactsPipeline(
   opts: WebArtifactsPipelineOptions,
 ): Promise<WebArtifactsPipelineResult> {
+  // Every cache entry this run builds or reuses is PINNED from the moment it
+  // has it: linked into `opts.pinDir/artifacts/`, a `web.*` sibling of the
+  // live dist that every pruner's `servedDistTargets` reads as a dist. A
+  // concurrent build's prune otherwise deletes entries this run published and
+  // has not composed yet (observed under a fleet of full rebuilds: 1,152 mapped
+  // URLs gone at compose). The caller clears the pins once a successful run is
+  // published (the live dist links everything then); a failed run keeps them,
+  // so its retry reuses what it built.
+  const pinDir = join(opts.pinDir, "artifacts");
+  mkdirSync(pinDir, { recursive: true });
+  const pin = (name: string, storePath: string): void => {
+    try {
+      symlinkSync(storePath, join(pinDir, name));
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
+    }
+  };
+  return runPipeline(opts, pin);
+}
+
+async function runPipeline(
+  opts: WebArtifactsPipelineOptions,
+  pin: (name: string, storePath: string) => void,
+): Promise<WebArtifactsPipelineResult> {
   const { root, log } = opts;
   const pluginsRoot = join(root, "plugins");
   const webSrcDir = join(root, WEB_CORE_REL, "web");
   const worktreeName = basename(root);
+  // Every stage's wall time in the transcript too: a caller without profiler
+  // spans (the hermetic build) still shows where a cold build spent it.
+  const stage = async <T>(
+    id: string,
+    label: string,
+    run: () => Promise<T>,
+  ): Promise<T> => {
+    const t0 = performance.now();
+    const out = await opts.onStage(id, label, run);
+    log(`stage ${id}: ${((performance.now() - t0) / 1000).toFixed(2)}s`);
+    return out;
+  };
 
   // ── Stage 1: detect ─────────────────────────────────────────────────
   const cache = loadFingerprintCache(worktreeName);
-  const plan = await opts.onStage(
+  const plan = await stage(
     "artifacts:detect",
     "detect changed artifacts",
     async () => {
@@ -145,41 +206,47 @@ export async function runWebArtifactsPipeline(
   );
 
   // ── Stage 2: build (webs + entry + registry, then the core closure) ─
-  const buildOut = await opts.onStage(
+  // One builder for every artifact, page and worker alike: the host stage
+  // below builds its closure through the same `ensure`.
+  const ctx: BuilderCtx = {
+    repoRoot: root,
+    pluginsRoot,
+    babelPlugins: await loadBabelContributions({
+      pluginsRoot,
+      repoRoot: root,
+    }),
+    minify: opts.minify,
+  };
+  const gate = createSemaphore(
+    Math.min(8, Math.max(2, Math.floor(os.cpus().length / 2))),
+  );
+  const metas = new Map<string, ArtifactMeta>(); // dirName → meta
+  const counts = { built: 0, reused: 0 };
+  const ensure = async (t: PlannedTarget): Promise<ArtifactMeta> => {
+    if (t.needsBuild) {
+      const meta = await gate.run(() => buildArtifact(t, ctx));
+      pin(t.dirName, artifactStorePath(t.dirName));
+      metas.set(t.dirName, meta);
+      counts.built++;
+      return meta;
+    }
+    pin(t.dirName, artifactStorePath(t.dirName));
+    touchArtifact(t.dirName);
+    const meta = readArtifactMeta(t.dirName);
+    metas.set(t.dirName, meta);
+    counts.reused++;
+    return meta;
+  };
+
+  const buildOut = await stage(
     "artifacts:build",
     `build artifacts (${plan.staleWeb + (plan.entryTarget.needsBuild ? 1 : 0)} stale)`,
     async () => {
-      const ctx: BuilderCtx = {
-        repoRoot: root,
-        pluginsRoot,
-        babelPlugins: await loadBabelContributions({
-          pluginsRoot,
-          repoRoot: root,
-        }),
-        minify: opts.minify,
-      };
-      const gate = createSemaphore(
-        Math.min(8, Math.max(2, Math.floor(os.cpus().length / 2))),
-      );
-      const metas = new Map<string, ArtifactMeta>(); // dirName → meta
-      let built = 0;
-      let reused = 0;
-
-      const ensure = async (t: PlannedTarget): Promise<ArtifactMeta> => {
-        if (t.needsBuild) {
-          const meta = await gate.run(() => buildArtifact(t, ctx));
-          metas.set(t.dirName, meta);
-          built++;
-          return meta;
-        }
-        touchArtifact(t.dirName);
-        const meta = readArtifactMeta(t.dirName);
-        metas.set(t.dirName, meta);
-        reused++;
-        return meta;
-      };
-
       const registryPromise = (async () => {
+        pin(
+          plan.registryTarget.dirName,
+          artifactStorePath(plan.registryTarget.dirName),
+        );
         if (plan.registryTarget.needsBuild) {
           const meta = await buildRegistryArtifact({
             dirName: plan.registryTarget.dirName,
@@ -188,14 +255,14 @@ export async function runWebArtifactsPipeline(
             minify: opts.minify,
           });
           metas.set(plan.registryTarget.dirName, meta);
-          built++;
+          counts.built++;
         } else {
           touchArtifact(plan.registryTarget.dirName);
           metas.set(
             plan.registryTarget.dirName,
             readArtifactMeta(plan.registryTarget.dirName),
           );
-          reused++;
+          counts.reused++;
         }
       })();
 
@@ -216,20 +283,51 @@ export async function runWebArtifactsPipeline(
       saveFingerprintCache(worktreeName, cache);
 
       log(
-        `build: ${built} built, ${reused} reused (${barrelTargets.size} barrel artifacts)`,
+        `build: ${counts.built} built, ${counts.reused} reused (${barrelTargets.size} barrel artifacts)`,
       );
-      return { metas, coreTargets: [...barrelTargets.values()], built, reused };
+      return { metas, coreTargets: [...barrelTargets.values()] };
     },
   );
 
-  // ── Stage 2b: browser hosts (whole-graph worker bundles) ────────────
-  const hosts = await opts.onStage(
+  // ── Stage 2b: browser hosts ─────────────────────────────────────────
+  // Each host's worker graph is per-plugin artifacts: its `bin/` entry and the
+  // barrel closure it reaches (the `server` barrels, any `core` the page does
+  // not already serve), built by the same `ensure`; then the host's page-side
+  // module (`host.js` + the frame-serving Service Worker).
+  const pageTargets: PlannedTarget[] = [
+    ...plan.webTargets,
+    ...buildOut.coreTargets,
+    plan.entryTarget,
+  ];
+  const hosts = await stage(
     "artifacts:browser-hosts",
-    `browser hosts (${plan.hosts.filter((h) => h.needsBuild).length} stale)`,
+    `browser hosts (${plan.hosts.length})`,
     async () => {
-      const out: Array<{ specifier: string; dirName: string }> = [];
-      // One at a time: each is a whole-graph vite build.
+      const before = { ...counts };
+      const out: Array<{
+        plan: (typeof plan.hosts)[number];
+        dirName: string;
+        entry: PlannedTarget;
+        added: PlannedTarget[];
+      }> = [];
+      const served = servedSpecsOf(pageTargets);
       for (const host of plan.hosts) {
+        const { entry, added } = await planHostClosure({
+          pluginsRoot,
+          host,
+          identityHash: plan.identity.identityHash,
+          cache,
+          servedSpecs: served,
+          ensure,
+        });
+        for (const s of servedSpecsOf(added)) served.add(s);
+        assertPortableArtifacts(
+          [entry, ...added].map((t) => ({
+            dirName: t.dirName,
+            meta: metas.get(t.dirName)!,
+          })),
+          opts.isPlatformApi,
+        );
         const dirName = await ensureBrowserHost({
           root,
           plan: host,
@@ -237,20 +335,25 @@ export async function runWebArtifactsPipeline(
           minify: opts.minify,
           log,
         });
-        out.push({ specifier: host.specifier, dirName });
+        pin(dirName, artifactStorePath(dirName));
+        out.push({ plan: host, dirName, entry, added });
       }
+      saveFingerprintCache(worktreeName, cache);
+      log(
+        `browser hosts: ${out.length} host(s), ${out.reduce((n, h) => n + h.added.length + 1, 0)} worker artifacts planned (${counts.built - before.built} built, ${counts.reused - before.reused} reused)`,
+      );
       return out;
     },
   );
 
   // ── Stage 3: vendors ────────────────────────────────────────────────
+  // Every artifact's npm imports, page and worker: one vendor set serves both.
   const allTargets: PlannedTarget[] = [
-    ...plan.webTargets,
-    ...buildOut.coreTargets,
-    plan.entryTarget,
+    ...pageTargets,
+    ...hosts.flatMap((h) => [h.entry, ...h.added]),
   ];
 
-  const vendors = await opts.onStage(
+  const vendors = await stage(
     "artifacts:vendors",
     "vendor pre-bundles",
     async () => {
@@ -281,26 +384,35 @@ export async function runWebArtifactsPipeline(
       return meta;
     },
   );
+  pin(vendorSetDirName(vendors.setHash), vendorSetPath(vendors.setHash));
 
   // ── Stage 4: global css ─────────────────────────────────────────────
-  const cssKey = await opts.onStage(
+  // The union of the shipped artifacts' candidates (recorded at build), then
+  // one compile from the list when the union's key is not cached.
+  const cssInput = await stage(
     "artifacts:css-key",
-    "global css input fingerprint",
+    "global css candidates",
     async () => {
-      const key = await computeGlobalCssKey({
-        repoRoot: root,
+      const shipped = allTargets
+        .filter((t) => !WORKER_ONLY_KINDS.has(t.kind))
+        .map((t) => t.dirName);
+      const candidates = unionCandidates(
+        shipped.map((dirName) => buildOut.metas.get(dirName)!),
+        (i) => shipped[i]!,
+      );
+      const key = computeGlobalCssKey({
         pluginsRoot,
         minify: opts.minify,
-        cache,
+        candidates,
       });
-      saveFingerprintCache(worktreeName, cache);
-      return key;
+      return { key, candidates };
     },
   );
+  const cssKey = cssInput.key;
   const cssCached = hasGlobalCssCache(cssKey);
-  const css = await opts.onStage(
+  const css = await stage(
     "artifacts:css",
-    cssCached ? "global css (cached)" : "global tailwind pass",
+    cssCached ? "global css (cached)" : "global css compile",
     () =>
       ensureGlobalCss({
         repoRoot: root,
@@ -308,14 +420,84 @@ export async function runWebArtifactsPipeline(
         stagingDir: opts.stagingDir,
         minify: opts.minify,
         key: cssKey,
+        candidates: cssInput.candidates,
       }),
   );
   log(
-    `css: ${css.cached ? "cache hit" : "tailwind pass"} (key ${cssKey.slice(0, 12)})`,
+    `css: ${css.cached ? "cache hit" : "compiled"} from ${cssInput.candidates.length} candidates (key ${cssKey.slice(0, 12)})`,
   );
 
+  // ── Stage 4b: worker trees ──────────────────────────────────────────
+  // Each host's closure, linked for the worker (`worker-link.ts`), under ONE
+  // tree entry per build: the page maps each host's worker entry into it.
+  const workerTree = await stage(
+    "artifacts:worker-link",
+    "worker link tree",
+    async () => {
+      if (hosts.length === 0) return null;
+      const linked = new Map<
+        string,
+        { linkName: string; linkedDirName: string }
+      >();
+      for (const host of hosts) {
+        const closure = workerClosure({
+          entry: host.entry,
+          targets: allTargets,
+          metaOf: (dirName) => buildOut.metas.get(dirName)!,
+        });
+        for (const t of closure) {
+          if (linked.has(t.dirName)) continue;
+          linked.set(t.dirName, {
+            linkName: workerLinkName(t.pluginPath!, t.kind),
+            linkedDirName: workerLinkedDirName(t.dirName),
+          });
+        }
+      }
+      const gateLink = createSemaphore(8);
+      await Promise.all(
+        [...linked.keys()].map((dirName) =>
+          gateLink.run(async () => {
+            const linked = await ensureWorkerLinked({
+              dirName,
+              vendorEntries: vendors.entries,
+            });
+            pin(linked, artifactStorePath(linked));
+          }),
+        ),
+      );
+      const tree = workerTreeOf({
+        linked: [...linked.values()],
+        vendorSetDir: vendorSetPath(vendors.setHash),
+      });
+      await ensureWorkerTree(tree);
+      pin(tree.dirName, artifactStorePath(tree.dirName));
+      log(`worker tree: ${linked.size} artifacts linked (${tree.dirName})`);
+      return {
+        tree,
+        linked: [...linked.values()].map((l) => l.linkedDirName),
+      };
+    },
+  );
+  // The same derivation the map-in-sync check runs (`expected.ts`).
+  const composedHosts: ComposedHost[] = composedHostsOf({
+    hosts,
+    targets: allTargets,
+    metas: buildOut.metas,
+    vendorSetHash: vendors.setHash,
+  });
+  if (
+    workerTree !== null &&
+    composedHosts.some(
+      (h) => !h.workerUrl.startsWith(`/artifacts/${workerTree.tree.dirName}/`),
+    )
+  ) {
+    throw new Error(
+      `worker tree: the linked tree ${workerTree.tree.dirName} is not the one the import map names`,
+    );
+  }
+
   // ── Stage 5: compose ────────────────────────────────────────────────
-  const composed = await opts.onStage(
+  const composed = await stage(
     "artifacts:compose",
     "compose dist",
     async () => {
@@ -361,7 +543,11 @@ export async function runWebArtifactsPipeline(
         }
       };
 
-      for (const t of allTargets) registerArtifact(t.dirName, false);
+      // Every target the page's map names: the page fleet, and the `core`
+      // barrels only a browser host's worker reaches (mapped like any core).
+      for (const t of allTargets) {
+        if (!WORKER_ONLY_KINDS.has(t.kind)) registerArtifact(t.dirName, false);
+      }
       registerArtifact(plan.registryTarget.dirName, true);
 
       // Map entries: one per target specifier + the registry alias + one per
@@ -371,13 +557,27 @@ export async function runWebArtifactsPipeline(
         targets: allTargets,
         registryDirName: plan.registryTarget.dirName,
         vendorMeta: vendors,
-        hosts,
+        hosts: composedHosts,
       });
       for (const host of hosts) {
         links.push({
           linkName: host.dirName,
           storePath: artifactStorePath(host.dirName),
         });
+      }
+      if (workerTree !== null) {
+        links.push({
+          linkName: workerTree.tree.dirName,
+          storePath: artifactStorePath(workerTree.tree.dirName),
+        });
+        // Each linked copy at the top level too: the served-root form every
+        // pruner reads (a tree's own links are not followed by older ones).
+        for (const linked of workerTree.linked) {
+          links.push({
+            linkName: linked,
+            storePath: artifactStorePath(linked),
+          });
+        }
       }
 
       // Vendor set: one symlink; per-file imports feed the preload closure.
@@ -486,8 +686,8 @@ export async function runWebArtifactsPipeline(
   return {
     webArtifacts: plan.webTargets.length,
     coreArtifacts: buildOut.coreTargets.length,
-    builtArtifacts: buildOut.built,
-    reusedArtifacts: buildOut.reused,
+    builtArtifacts: counts.built,
+    reusedArtifacts: counts.reused,
     vendorSpecs: Object.keys(vendors.entries).length,
     preloads: composed.preloads.length,
     graphHash: composed.graphHash,

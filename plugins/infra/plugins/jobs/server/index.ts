@@ -11,7 +11,7 @@ import {
 } from "./internal/resources";
 import { jobsResumeJob } from "./internal/resume-job";
 import { JobQueue } from "./internal/queue";
-import { listDeadJobs, retryJob, cancelJob } from "../core/endpoints";
+import { listDeadJobs, retryJob, cancelJob } from "../core";
 
 export {
   defineJob,
@@ -79,8 +79,8 @@ export {
   pickupTargetMsFor,
   reachableSlots,
   holdForTask,
-} from "../core/hold";
-export type { HoldClass, HoldClassSpec, RunnerSpec } from "../core/hold";
+} from "../core";
+export type { HoldClass, HoldClassSpec, RunnerSpec } from "../core";
 
 export default {
   description:

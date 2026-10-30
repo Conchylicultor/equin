@@ -21,7 +21,7 @@ import {
   createTestDb,
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
-import { renderPhasedMigration } from "@plugins/database/plugins/migrations/core";
+import { renderPhasedMigration } from "@plugins/database/plugins/migrations/plugins/phases/core";
 import type { DeclaredView } from "@plugins/database/plugins/derived-views/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import {

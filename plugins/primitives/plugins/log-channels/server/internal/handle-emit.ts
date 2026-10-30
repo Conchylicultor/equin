@@ -1,5 +1,5 @@
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { emitLogs } from "../../core/endpoints";
+import { emitLogs } from "../../core";
 import { emitClientLogs } from "./client-ingress";
 import { LogPersistence } from "./persistence";
 

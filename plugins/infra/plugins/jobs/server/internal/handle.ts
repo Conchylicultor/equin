@@ -1,5 +1,5 @@
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { listDeadJobs, retryJob, cancelJob } from "../../core/endpoints";
+import { listDeadJobs, retryJob, cancelJob } from "../../core";
 import { JobQueue } from "./queue";
 import { loadDeadJobsList } from "./resources";
 

@@ -1,6 +1,6 @@
 import { db, currentTxId } from "@plugins/database/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { reorderQueue } from "../../core/endpoints";
+import { reorderQueue } from "../../core";
 import { lockDeck, rankAdjacentTo, reseatGroupMembers, upsertRank } from "./queue-ranks";
 import { cascadeBlockedDependents } from "./cascade-blocked";
 

@@ -58,6 +58,38 @@ export const BROWSER_UNREACHABLE_DYNAMIC_KINDS: ReadonlySet<string> = new Set(
   LEAF_FOLDERS.filter((folder) => !(folder in COBUILT_FOLDERS)),
 );
 
+/**
+ * The kind of a browser host's worker entry artifact: the host plugin's `bin/`
+ * (`bin/browser-host.ts` and the modules beside it), linked into the worker
+ * tree like every other artifact the worker loads.
+ */
+export const BROWSER_HOST_ENTRY_KIND = "bin";
+
+/**
+ * A worker tree's store-entry name prefix (`internal/worker-link.ts`): a dir of
+ * links into the store, so pruning follows its links as served roots.
+ */
+export const WORKER_TREE_PREFIX = "worker-tree.";
+
+/**
+ * The store-name suffix of an artifact's linked copy (`internal/worker-link.ts`).
+ * A dist links each one at its top level too, so every pruner's
+ * `servedDistTargets` keeps it; it is loaded only through the tree.
+ */
+export const WORKER_LINKED_SUFFIX = ".worker";
+
+/**
+ * Artifact kinds only a browser host's worker loads, never the page: a
+ * portable `server` barrel and the host's entry. They get no import-map entry
+ * and no preload, and contribute no Tailwind candidates — the worker reaches
+ * them through its own link tree (`internal/worker-link.ts`). The `core`
+ * barrels the worker loads are the page's own artifacts.
+ */
+export const WORKER_ONLY_KINDS: ReadonlySet<string> = new Set([
+  "server",
+  BROWSER_HOST_ENTRY_KIND,
+]);
+
 /** The folder-barrel kind of a `@plugins/<path>/<kind>` specifier (its last segment), or null. */
 export function barrelKindOf(specifier: string): string | null {
   if (!specifier.startsWith("@plugins/")) return null;

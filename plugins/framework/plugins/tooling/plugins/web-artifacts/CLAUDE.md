@@ -97,7 +97,7 @@ Key invariants:
   artifact, addressed by its source. It sits behind a fixed bare specifier that
   is external to every build (`COMPOSITION_SPECIFIERS`) and mapped to the
   deployed composition's file.
-- **A worker is bundled whole, from its own plugin only.** A
+- **A page worker is bundled whole, from its own plugin only.** A
   `new SharedWorker(new URL("./x.worker.ts", import.meta.url), { type: "module" })`
   (networking's shared socket is the one user) is built by vite's nested
   worker pass into `assets/<name>-<hash>.js` inside the artifact, its URL
@@ -111,29 +111,43 @@ Key invariants:
   only); `scanStagedModules` still re-lexes them. Being inside the artifact's
   content-addressed dir, a worker's URL changes exactly when its plugin's code
   does — so a SharedWorker instance is per plugin version by construction.
-- **A browser host is the one whole-graph artifact** (`core/internal/browser-hosts.ts`).
-  A fleet plugin with a `bin/browser-host.ts` (a Web Worker booting a portable
-  server graph — `server-core`'s `bootBrowserHost`) is built, in its own stage
-  (`artifacts:browser-hosts`), through a stub entry `host.js`
-  (`export function start(): Worker`) whose `new Worker(new URL(…))` makes
-  vite's worker pass bundle the graph whole: no externals (import maps do not
-  reach workers), no page preload helper, PGlite's wasm and data as assets. It
-  is served as `@browser-host/<pluginPath>` (external to every artifact build,
-  never a vendor). The stub also exports `serviceWorkerUrl`: the frame-serving
-  Service Worker (`browser-server/web/frames-sw.ts`) that a second vite pass
-  bundles whole into the same dir as the classic script `frames-sw.js` (vite
-  bundles no `navigator.serviceWorker.register(new URL(…))`), its modules
-  recorded into the address like the worker's, its URL spelled off
-  `import.meta.url` so vite leaves it alone. Its address cannot be "its own plugin's files": it is the
-  content of every repo file the LAST build loaded (vite's module list, `?raw`
-  SQL and config included), every such file's directory listing (a new
-  migration re-addresses it), the recursive listing of every
-  `import.meta.glob` pattern's static base (`globRoots` — a new config file in a
-  new directory re-addresses it; a non-literal pattern fails the build),
-  `bun.lock` and the builder identity, the list recorded per host under the
-  store's `browser-hosts/` (a record without `globRoots` rebuilds). The build fails when repo code in the
-  bundle imports a Node builtin. Its graph is the plugin's
-  `bin/browser-host.generated.ts` (codegen's `browser-host-gen.ts`).
+- **A browser host's worker loads the page's own per-plugin artifacts,
+  through a link tree.** A fleet plugin with a `bin/browser-host.ts` (a Web
+  Worker booting a portable server graph — `server-core`'s `bootBrowserHost`)
+  gets its worker graph planned as artifacts (`planHostClosure`, `plan.ts`): the
+  host's `bin/` (kind `bin`) and the barrel closure it reaches — one `server`
+  artifact per graph member, the page's own `core` artifacts reused as they
+  are. `server` and `bin` are worker-only kinds (`WORKER_ONLY_KINDS`): no
+  import-map entry, no preload, no Tailwind candidates. Import maps do not reach
+  workers, so each artifact in the closure gets a LINKED copy
+  (`internal/worker-link.ts`, store entry `<dirName>.worker`) whose bare
+  specifiers are rewritten to relative URLs spelled from names alone
+  (`<plugin-id>.<kind>/index.js`, `_vendor/<entry>.js`) — a pure function of the
+  artifact's bytes, so a dependency's rebuild never changes its importers. One
+  `worker-tree.<hash>` store entry per build links them (and the vendor set);
+  its hash combines its links, so a running worker never sees its tree change,
+  and the page reaches the entry through the import map
+  (`@browser-host-worker/<pluginPath>` — `host.js` calls `import.meta.resolve`
+  on it). What a worker never loads (`@browser-host/*`, a browser-unreachable
+  leaf's dynamic import) links to a module that throws when loaded. The "no
+  Node builtins" gate is per artifact (`assertPortableArtifacts`, boundaries'
+  `isPlatformApi`), before the vendor set is built. `scanStagedModules` scans
+  each tree through its links, so the worker's relative imports are resolved
+  and joined against their targets' exports like the page's. The host module
+  itself (`internal/browser-hosts.ts`, served as `@browser-host/<pluginPath>`)
+  is `host.js` plus the frame-serving Service Worker (`frames-sw.js`, a classic
+  script bundled whole, keyed by its own recorded inputs).
+- **An artifact's address covers its glob roots.** A literal
+  `import.meta.glob` inlines what it matches, possibly outside the plugin (the
+  bundled migrations' `data/*.sql`, the repo's `/config/**`). Each pattern's
+  static base is a glob root (`globRootsOf`, `own-files.ts`): its files join the
+  address and the inline audit's allowed roots. A non-literal pattern, or a
+  base as wide as the repo or `plugins/`, throws.
+- **Vendor assets follow their module.** A bundled npm module fetching a file by
+  `new URL("./x.wasm", import.meta.url)` gets it beside every output holding it
+  (`internal/package-assets.ts`), hard-linked from a per-content store entry
+  published (precompressed) once — rebuilding the vendor set never recompresses
+  PGlite's 16 MB.
 - **An artifact's address covers exactly what its bytes inline.** The store
   reuses an artifact whenever its address matches, so any source file whose
   content reaches the bundle but not the hash fossilises the artifact: it is
@@ -191,12 +205,28 @@ Key invariants:
   includes it too — changing scanner/compose/vite/vendor semantics can never
   silently reuse stale artifacts. `BUILDER_VERSION` remains only as a forced-bump
   lever.
-- **The global CSS pass never auto-scans the vite root.** app.css imports
-  Tailwind with `source(none)`, so the scan surface is exactly its declared
-  `@source` dirs. The pass builds with the repo root as vite root, and
-  auto-detection from there walked `.claude/worktrees/` on the main checkout
-  (~90 checkouts, millions of files; oxide's walkdir ignores `.gitignore`) —
-  ~5s became ~320s. Enforced by `tailwind-scan-covers-classes`.
+- **The global stylesheet is compiled from the artifacts' candidates, never a
+  scan.** Each artifact records the Tailwind candidates of exactly the files its
+  address hashed (`tailwindCandidates` in its meta, `internal/tailwind-candidates.ts`);
+  the CSS stage compiles their union over the composition with
+  `@tailwindcss/node`, cached by the union's key. The inline audit makes this
+  complete: an artifact ships only files it hashed, so every shipped class is a
+  candidate. Extraction goes through the scanner's file path, one source per
+  file — `scanFiles` on raw content disagrees with Tailwind's own per-file rules.
+  app.css keeps `source(none)` (auto-detection from the repo root walked
+  `.claude/worktrees/` on main, ~5s → ~320s) for the scans Tailwind still runs
+  itself; `tailwind-scan-covers-classes` guards it.
+- **A build in flight pins what it uses.** Pruning keeps every entry a dist
+  links (`servedDistTargets`, every `web.*` sibling of a namespace's live link).
+  A running pipeline links each entry it builds or reuses — artifacts, the
+  registry, hosts, worker links and tree, the vendor set — into
+  `<live>.pins/artifacts/` (`pinDir`) the moment it has it; the build CLI
+  removes the dir after a successful publish and keeps it after a failure, so
+  the retry reuses what the failed run built. And a prune never deletes an
+  entry modified within a minute of its call: its `referenced` snapshot is
+  older than its walk, so it cannot speak for an entry published meanwhile.
+  Without both, concurrent builds' prunes deleted entries a build had published
+  minutes before its compose read them.
 - **A served dist keeps serving every address it ever served, while the cache
   still holds it.** A tab resolves imports only through the import map of the
   page it loaded, and fetches much of it lazily — hours later for a background
@@ -283,9 +313,7 @@ Key invariants:
     - `framework/cli/build`
     - `framework/tooling/codegen`
 - Exemptions:
-  - Exempts itself from:
-    - `repo-walk-safety/no-adhoc-repo-walk` — `core/internal/global-css.ts` (sanctioned)
-    - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/expected.ts`, `core/internal/global-css.ts`, `core/internal/identity.ts`, `core/internal/own-files.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts` (debt)
+  - Exempts itself from: `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/expected.ts`, `core/internal/global-css.ts`, `core/internal/identity.ts`, `core/internal/own-files.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/tailwind-candidates.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts` (debt)
 - Cli:
   - Exports (types): `CarryForwardResult`
   - Exports (values): `carryForwardServedEntries`

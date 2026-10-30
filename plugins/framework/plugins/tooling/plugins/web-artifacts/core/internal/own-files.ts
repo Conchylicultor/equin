@@ -9,6 +9,13 @@
 // Nested sub-plugins live under `<dir>/plugins/` — never an inlined root — so a
 // child's change never touches the parent's hash.
 //
+// One addition the roots cannot express: a literal `import.meta.glob` inlines
+// whatever its pattern matches, which may sit outside the plugin (the bundled
+// migrations' `data/*.sql` in their parent plugin, the repo's `/config/**`).
+// Each such pattern's static base is a GLOB ROOT: its files join the address
+// (`ownHashFor`) and the inline audit's allowed roots, so a new or changed file
+// there re-addresses the artifact that inlines it — and only that one.
+//
 // All I/O here is async (`node:fs/promises`) behind a small shared concurrency
 // gate. This module runs on the check runner's ONE shared thread (as well as
 // inside `./equin build`), and a fleet-wide hash pass touches thousands
@@ -18,14 +25,14 @@
 // across a whole fleet) without serializing reads one at a time.
 
 import { readdir, readFile, stat } from "node:fs/promises";
-import { join, relative, sep } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import {
   isTestCodePath,
   TESTS_DIR,
   TESTING_FOLDER,
 } from "@plugins/framework/plugins/plugin-id/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
-import { computeOwnHash, type OwnFile } from "../hash";
+import { computeOwnHash, sha256Hex, type OwnFile } from "../hash";
 import { inlinedRootsFor, type ArtifactKind } from "../own-roots";
 import type { FingerprintCache, FingerprintRecord } from "./store";
 
@@ -169,6 +176,11 @@ export async function cachedAggregateHash(opts: {
   baseDir: string;
   files: string[];
   cache: FingerprintCache;
+  /**
+   * Record the files' glob roots (`globRootsOf`) on a rewritten record, from
+   * the contents this read already holds, resolved against this repo root.
+   */
+  globRootsFrom?: string;
 }): Promise<string> {
   const stats: Array<{
     abs: string;
@@ -223,25 +235,170 @@ export async function cachedAggregateHash(opts: {
   );
   const ownHash = computeOwnHash(contents);
   const next: FingerprintRecord = { files: {}, ownHash };
+  if (opts.globRootsFrom !== undefined) {
+    next.globRoots = globRootsOfContents(
+      opts.globRootsFrom,
+      contents.map((c) => ({
+        abs: join(opts.baseDir, c.rel),
+        source: c.content,
+      })),
+    );
+  }
   for (const s of stats) next.files[s.rel] = [s.mtimeMs, s.size];
   opts.cache.records[opts.cacheKey] = next;
   return ownHash;
 }
 
+// `import.meta.glob(` with an optional type argument; what follows decides
+// whether the pattern is a literal the address can list.
+const GLOB_CALL_RE = /import\.meta\.glob\s*(?:<[^>()]*>)?\s*\(\s*/g;
+const STRING_LITERAL_RE = /^(["'])((?:(?!\1)[^\\\n])*)\1/;
+const GLOB_META_RE = /[*?{}[\]!]/;
+
 /**
- * The plugin's own-content hash — `cachedAggregateHash` over the artifact
- * kind's own-file roots.
+ * The repo-relative static bases of every `import.meta.glob` pattern in one
+ * module's source: the path segments before the first holding a glob
+ * metacharacter, resolved against the module's directory (or the repo root,
+ * for a root-absolute pattern — vite's root is the repo). A pattern that is not
+ * one string literal throws, naming the module: vite requires literals, and an
+ * address cannot list what it cannot read.
+ */
+export function globRootsOf(
+  root: string,
+  moduleRel: string,
+  source: string,
+): string[] {
+  const roots: string[] = [];
+  for (const m of source.matchAll(GLOB_CALL_RE)) {
+    const rest = source.slice(m.index + m[0].length);
+    const lit = STRING_LITERAL_RE.exec(rest);
+    if (lit === null) {
+      throw new Error(
+        `${moduleRel}: import.meta.glob takes one string-literal pattern here (an artifact's address lists its static base)`,
+      );
+    }
+    const pattern = lit[2]!;
+    const segments = pattern.split("/");
+    const metaAt = segments.findIndex((seg) => GLOB_META_RE.test(seg));
+    const staticPart = segments
+      .slice(0, metaAt < 0 ? segments.length - 1 : metaAt)
+      .join("/");
+    const abs = pattern.startsWith("/")
+      ? join(root, staticPart)
+      : resolve(root, dirname(moduleRel), staticPart);
+    const rel = relative(root, abs).split(sep).join("/");
+    if (rel.startsWith("..")) {
+      throw new Error(
+        `${moduleRel}: import.meta.glob pattern "${pattern}" reaches outside the repo`,
+      );
+    }
+    roots.push(rel === "" ? "." : rel);
+  }
+  return roots;
+}
+
+// A glob root this wide would make one artifact's address the whole repo.
+const TOO_WIDE_GLOB_ROOTS = new Set([".", "plugins"]);
+
+/** The repo-relative glob roots of these modules' sources, deduped and sorted. */
+function globRootsOfContents(
+  repoRoot: string,
+  modules: ReadonlyArray<{ abs: string; source: string | Uint8Array }>,
+): string[] {
+  const roots = new Set<string>();
+  for (const { abs, source } of modules) {
+    if (!/\.[cm]?[jt]sx?$/.test(abs)) continue;
+    const text =
+      typeof source === "string" ? source : new TextDecoder().decode(source);
+    if (!text.includes("import.meta.glob")) continue;
+    const rel = relative(repoRoot, abs).split(sep).join("/");
+    for (const g of globRootsOf(repoRoot, rel, text)) {
+      if (TOO_WIDE_GLOB_ROOTS.has(g)) {
+        throw new Error(
+          `${rel}: import.meta.glob's static base "${g}" is the whole ${g === "." ? "repo" : "plugin tree"} — narrow the pattern`,
+        );
+      }
+      roots.add(g);
+    }
+  }
+  return [...roots].sort();
+}
+
+/**
+ * The glob roots of `files`, as recorded on their fingerprint record: computed
+ * from the contents `cachedAggregateHash` read when it (re)wrote the record,
+ * so a record on the stat fast path costs nothing. A record written before
+ * glob roots were recorded is read once and completed.
+ */
+async function globRootsRecorded(opts: {
+  cacheKey: string;
+  repoRoot: string;
+  files: string[];
+  cache: FingerprintCache;
+}): Promise<string[]> {
+  const record = opts.cache.records[opts.cacheKey];
+  if (record === undefined) {
+    throw new Error(`glob roots: no fingerprint record for ${opts.cacheKey}`);
+  }
+  if (record.globRoots !== undefined) return record.globRoots;
+  const modules = await Promise.all(
+    opts.files
+      .filter((f) => /\.[cm]?[jt]sx?$/.test(f))
+      .map(async (abs) => ({
+        abs,
+        source: await withIoSlot(() => readFile(abs, "utf8")),
+      })),
+  );
+  record.globRoots = globRootsOfContents(opts.repoRoot, modules);
+  return record.globRoots;
+}
+
+/**
+ * The artifact's own address: `cachedAggregateHash` over the kind's own-file
+ * roots, plus — for each glob root those files declare — the content of every
+ * file under it (each root's own fingerprint record, shared by every artifact
+ * globbing it). Returns the absolute glob roots too: the inline audit allows
+ * exactly them beside the own roots.
  */
 export async function ownHashFor(opts: {
   cacheKey: string;
   pluginDir: string;
   kind: ArtifactKind;
   cache: FingerprintCache;
-}): Promise<string> {
-  return cachedAggregateHash({
+  repoRoot: string;
+}): Promise<{ ownHash: string; globRoots: string[] }> {
+  const files = await listOwnFiles(opts.pluginDir, opts.kind);
+  const ownHash = await cachedAggregateHash({
     cacheKey: opts.cacheKey,
     baseDir: opts.pluginDir,
-    files: await listOwnFiles(opts.pluginDir, opts.kind),
+    files,
+    cache: opts.cache,
+    globRootsFrom: opts.repoRoot,
+  });
+  const globRoots = await globRootsRecorded({
+    cacheKey: opts.cacheKey,
+    repoRoot: opts.repoRoot,
+    files,
     cache: opts.cache,
   });
+  if (globRoots.length === 0) return { ownHash, globRoots: [] };
+  const parts = [ownHash];
+  for (const rel of globRoots) {
+    const abs = join(opts.repoRoot, rel);
+    const under: string[] = [];
+    await walkFiles(abs, under);
+    under.sort();
+    parts.push(
+      `${rel}\t${await cachedAggregateHash({
+        cacheKey: `glob|${rel}`,
+        baseDir: opts.repoRoot,
+        files: under,
+        cache: opts.cache,
+      })}`,
+    );
+  }
+  return {
+    ownHash: sha256Hex(parts.join("\n")),
+    globRoots: globRoots.map((rel) => join(opts.repoRoot, rel)),
+  };
 }

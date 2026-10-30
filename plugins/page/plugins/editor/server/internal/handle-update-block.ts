@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { updateBlock } from "../../core/endpoints";
-import { BlockSchema } from "../../core/schemas";
+import { updateBlock } from "../../core";
+import { BlockSchema } from "../../core";
 import { liveBlocks } from "./live-blocks";
 import { withPageForest } from "./page-forest";
 import { updateBlockFields, type BlockColumnChanges } from "./forest-writer";

@@ -11,6 +11,7 @@ import { join } from "node:path";
 import { pruneCacheDir } from "./store";
 import { servedDistTargets } from "./served-dists";
 
+const MINUTE = 60 * 1000;
 const DAY = 24 * 60 * 60 * 1000;
 
 function fixture() {
@@ -68,7 +69,10 @@ describe("pruneCacheDir keeps entries a served dist links", () => {
     const f = fixture();
     const oldest = f.entry("e0", 5 * DAY);
     f.link("e0", oldest);
-    const others = [1, 2, 3, 4, 5].map((i) => f.entry(`e${i}`, (5 - i) * 1000));
+    // Older than the snapshot margin (1 min): judged by the count trim.
+    const others = [1, 2, 3, 4, 5].map((i) =>
+      f.entry(`e${i}`, (5 - i) * 1000 + 2 * MINUTE),
+    );
     pruneCacheDir({
       root: f.store,
       maxAgeMs: 14 * DAY,
@@ -87,6 +91,22 @@ describe("pruneCacheDir keeps entries a served dist links", () => {
     ]);
   });
 
+  test("an entry younger than the referenced snapshot is never trimmed", () => {
+    const f = fixture();
+    const old = [0, 1].map((i) => f.entry(`old${i}`, (3 + i) * MINUTE));
+    // Published (and pinned) while the prune walked: its snapshot predates them.
+    const fresh = [0, 1].map((i) => f.entry(`fresh${i}`, i * 1000));
+    pruneCacheDir({
+      root: f.store,
+      maxAgeMs: 14 * DAY,
+      maxEntries: 2,
+      trimTo: 1,
+      referenced: servedDistTargets(f.worktrees),
+    });
+    expect(fresh.every((p) => existsSync(p))).toBe(true);
+    expect(old.some((p) => existsSync(p))).toBe(false);
+  });
+
   test("referenced entries beyond the cap are all kept", () => {
     const f = fixture();
     const refs = [0, 1, 2, 3].map((i) => {
@@ -94,7 +114,7 @@ describe("pruneCacheDir keeps entries a served dist links", () => {
       f.link(`r${i}`, p);
       return p;
     });
-    const spare = f.entry("spare", 0);
+    const spare = f.entry("spare", 2 * MINUTE);
     pruneCacheDir({
       root: f.store,
       maxAgeMs: 14 * DAY,

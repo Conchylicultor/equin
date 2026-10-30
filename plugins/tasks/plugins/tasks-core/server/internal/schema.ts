@@ -2,4 +2,24 @@
 // from the per-table field records — off the server-only `defineEntity` path so
 // the browser can evaluate them. This shim keeps every server importer
 // (`../schema` / `./schema`) resolving unchanged.
-export * from "../../core/internal/schema";
+export {
+  AttemptSchema,
+  AttemptStatusSchema,
+  ConversationKindSchema,
+  ConversationSchema,
+  PushSchema,
+  TASK_STATUS_OPTIONS,
+  TaskListItemSchema,
+  TaskSchema,
+  TaskStatusSchema,
+} from "../../core";
+export type {
+  Attempt,
+  AttemptStatus,
+  Conversation,
+  ConversationKind,
+  Push,
+  Task,
+  TaskListItem,
+  TaskStatus,
+} from "../../core";

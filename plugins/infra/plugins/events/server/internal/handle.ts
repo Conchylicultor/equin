@@ -7,7 +7,7 @@ import {
   listTriggers,
   deleteTriggerEndpoint,
   patchTriggerEndpoint,
-} from "../../core/endpoints";
+} from "../../core";
 import { triggerTableRegistry } from "./registry";
 import { deleteTrigger } from "./trigger";
 import { loadEmissions, loadTriggers } from "./resources";

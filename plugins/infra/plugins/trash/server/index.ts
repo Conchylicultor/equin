@@ -1,7 +1,7 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { IdKinds } from "@plugins/ids/server";
 import { trashEntryIdKind } from "../core";
-import { listTrash, restoreTrash, purgeTrash } from "../core/endpoints";
+import { listTrash, restoreTrash, purgeTrash } from "../core";
 import { handleListTrash } from "./internal/handle-list-trash";
 import { handleRestoreTrash } from "./internal/handle-restore-trash";
 import { handlePurgeTrash } from "./internal/handle-purge-trash";

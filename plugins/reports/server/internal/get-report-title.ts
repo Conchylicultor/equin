@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { reportIdKind } from "../../core/id-kind";
+import { reportIdKind } from "../../core";
 import { _reports } from "./tables";
 
 /**

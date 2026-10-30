@@ -11,8 +11,9 @@
 // plus readlinks of each dist's `artifacts/` — bounded, and run once per build.
 
 import { readdirSync, readlinkSync, realpathSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { worktreesDir } from "@plugins/infra/plugins/paths/core";
+import { WORKER_TREE_PREFIX } from "../constants";
 
 /** Entries of `dir`; none when it does not exist (a concurrent reap races the scan). */
 function readdirOrEmpty(dir: string): string[] {
@@ -22,6 +23,17 @@ function readdirOrEmpty(dir: string): string[] {
     const code = (err as NodeJS.ErrnoException).code;
     if (code !== "ENOENT" && code !== "ENOTDIR") throw err;
     return [];
+  }
+}
+
+/** The target of the symlink at `path`, or null when it is not one (or gone). */
+function readLinkOrNull(path: string): string | null {
+  try {
+    return readlinkSync(path);
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code !== "ENOENT" && code !== "EINVAL") throw err; // EINVAL: not a link
+    return null;
   }
 }
 
@@ -68,11 +80,16 @@ export function servedDistTargets(
   for (const root of distRoots(worktrees)) {
     const artifacts = join(root, "artifacts");
     for (const name of readdirOrEmpty(artifacts)) {
-      try {
-        targets.add(readlinkSync(join(artifacts, name)));
-      } catch (err) {
-        const code = (err as NodeJS.ErrnoException).code;
-        if (code !== "ENOENT" && code !== "EINVAL") throw err; // EINVAL: not a link
+      const target = readLinkOrNull(join(artifacts, name));
+      if (target === null) continue;
+      targets.add(target);
+      // A worker tree is itself a dir of links into the store: what it links
+      // is served too.
+      if (basename(target).startsWith(WORKER_TREE_PREFIX)) {
+        for (const child of readdirOrEmpty(target)) {
+          const linked = readLinkOrNull(join(target, child));
+          if (linked !== null) targets.add(linked);
+        }
       }
     }
   }

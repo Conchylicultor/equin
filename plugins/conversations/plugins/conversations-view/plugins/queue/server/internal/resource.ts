@@ -1,6 +1,6 @@
 import { serveCollection } from "@plugins/network/plugins/live/server";
 import { conversationsActive } from "@plugins/tasks/plugins/tasks-core/core";
-import { queueRanks } from "../../core/resources";
+import { queueRanks } from "../../core";
 import { conversationsQueue } from "./tables";
 
 // The queue rows, served from the queue extension's side-table. The extension

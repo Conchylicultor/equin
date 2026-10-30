@@ -144,7 +144,7 @@ Both sides are published, so the fork is **joined**, never rebased. After
   `--reset-migration` hint.
 - Several published tips: it writes a **merge node**, a phased migration with
   empty sections behind a two-parent snapshot header (grammar:
-  `core/internal/phases.ts`):
+  `plugins/phases/core/internal/phases.ts`):
 
   ```sql
   -- <marker>:snapshot id=<derived> parents=<snapshotIdA>,<snapshotIdB>
@@ -198,7 +198,7 @@ migration to push time, after every data migration), so the ordering is
 declared in the schema migration itself. At generation — in `generateMigration`
 (`framework/cli/plugins/migrations/cli/migrations.ts`), before the content is
 hashed — every freshly generated schema migration is rewritten into marked
-sections (grammar: `core/internal/phases.ts`):
+sections (grammar: `plugins/phases/core/internal/phases.ts`):
 
 ```sql
 -- <marker>:phase expand
@@ -314,7 +314,7 @@ keyed by hash: without more, the next boot would run the new file's
 (`research/2026-10-20-global-merged-migration-supersedes-authored.md`).
 
 So the regenerated file names what it replaced, in header lines before its
-phase markers (grammar: `core/internal/phases.ts`):
+phase markers (grammar: `plugins/phases/core/internal/phases.ts`):
 
 ```sql
 -- <marker>:supersedes 38bc8c97 f09303fa

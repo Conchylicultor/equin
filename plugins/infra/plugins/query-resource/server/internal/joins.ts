@@ -38,7 +38,7 @@ import {
   type KeyedSideJoin,
   type RollupJoin,
 } from "@plugins/infra/plugins/query-resource/core";
-import { SQL_TYPE_RE, type ExprDecoder } from "../../core/internal/expr";
+import { SQL_TYPE_RE, type ExprDecoder } from "../../core";
 import { anyOf, type InvalidIdPolicy } from "./raw-sql";
 import {
   tablePrimary,

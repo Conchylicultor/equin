@@ -8,3 +8,4 @@ export {
 export type { RecordUsageBody } from "./internal/endpoints";
 export { decayedScore, sortByUsage } from "./internal/scoring";
 export type { ScorableStat } from "./internal/scoring";
+export { usageStatsEntityRef } from "./internal/schema";

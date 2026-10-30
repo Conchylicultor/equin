@@ -1,5 +1,5 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { stopGate } from "../core/endpoints";
+import { stopGate } from "../core";
 import { handleStopGate } from "./internal/handler";
 
 export { StopGate, StopWaiver } from "./internal/registry";

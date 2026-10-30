@@ -27,7 +27,7 @@ import {
   type LivePortableDecl,
 } from "@plugins/network/plugins/live/core";
 import type { MachineFeature } from "@plugins/infra/plugins/endpoints/core";
-import { serveValueOn } from "../../core/internal/serve-on";
+import { serveValueOn } from "../../core";
 import { canonicalParams } from "@plugins/packages/plugins/canonical-params/core";
 import type {
   AnyServeOptions,
@@ -41,7 +41,7 @@ import type {
   ServePagedValueOptions,
   ServeValueOptions,
   SnapshotPairing,
-} from "../../core/internal/compile-value";
+} from "../../core";
 import {
   followReaches,
   followsDeferred,
@@ -50,7 +50,7 @@ import {
   type FollowMap,
   type FollowsFn,
   type NoFollows,
-} from "../../core/internal/follows";
+} from "../../core";
 
 // `serveValue` — the server half of a worktree `liveValue`. It declares WHERE the
 // value's truth lives (`source`) and how to read it (`loader`), never a delivery

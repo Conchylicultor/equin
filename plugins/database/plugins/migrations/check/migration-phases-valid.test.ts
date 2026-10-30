@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   renderAdoptionMigration,
   renderMergeSnapshotMigration,
-} from "@plugins/database/plugins/migrations/core";
+} from "@plugins/database/plugins/migrations/plugins/phases/core";
 import { findPhaseErrors, type MigrationFile } from "./migration-phases-valid";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 

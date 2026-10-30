@@ -1,4 +1,4 @@
-import type { RelayResolution } from "../../core/schemas";
+import type { RelayResolution } from "../../core";
 
 // The in-process side of a question being answered: the agent that holds the
 // question (the sdk runtime's `canUseTool`) listens here. The answer endpoint

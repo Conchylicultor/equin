@@ -15,16 +15,15 @@ import {
   installDerivedUpdatedAt,
   type DerivedUpdatedAtSpec,
 } from "@plugins/database/plugins/derived-updated-at/server";
-// The phase grammar by its own file, not through the `core` barrel: the barrel
-// also carries the generator's and the checks' filesystem tooling (drizzle-kit
-// staging, the published set, the snapshot DAG), and this runner runs on every
-// host. Moving that tooling out of `core` is follow-up work (task in the
-// portable-split plan's follow-ups).
+// The phase grammar from its own portable leaf (`migrations/phases`), not
+// `migrations/core`: that barrel also carries the generator's and the checks'
+// filesystem tooling (drizzle-kit staging, the published set, the snapshot
+// DAG), and this runner runs on every host.
 import {
   migrationClaimId,
   parseMigration,
   type Supersession,
-} from "../../core/internal/phases";
+} from "@plugins/database/plugins/migrations/plugins/phases/core";
 import { MIGRATIONS_TABLE_NAME } from "@plugins/database/plugins/derived-views/core";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { z } from "zod";

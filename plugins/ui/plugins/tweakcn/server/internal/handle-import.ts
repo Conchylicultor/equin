@@ -1,7 +1,7 @@
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { saveTheme } from "@plugins/ui/plugins/theme-engine/plugins/saved-themes/server";
-import { importTweakcnTheme } from "../../core/endpoints";
-import { convertTweakcnTheme } from "../../core/convert";
+import { importTweakcnTheme } from "../../core";
+import { convertTweakcnTheme } from "../../core";
 
 export const handleImport = implement(importTweakcnTheme, async ({ body }) => {
   const { themeId } = body;

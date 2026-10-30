@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { getBlockPage } from "../../core/endpoints";
-import { PAGE_BLOCK_TYPE } from "../../core/schemas";
+import { getBlockPage } from "../../core";
+import { PAGE_BLOCK_TYPE } from "../../core";
 import { liveBlocks } from "./live-blocks";
 
 // The one "no page to open" answer, shared by all three ways of reaching it.

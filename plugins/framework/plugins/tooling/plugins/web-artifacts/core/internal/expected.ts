@@ -9,13 +9,17 @@
 import { basename, join } from "node:path";
 import { BUILDER_VERSION } from "../constants";
 import { buildImportMap } from "../import-map";
+import { hostWorkerSpecifier, type BrowserHostPlan } from "./browser-hosts";
 import {
   artifactUrl,
   collectVendorRequests,
   composeMapEntries,
   planFleet,
+  planHostClosure,
   resolveBarrelClosure,
   servedSpecsOf,
+  workerClosure,
+  type ComposedHost,
   type FleetSource,
   type PlannedTarget,
 } from "./plan";
@@ -30,8 +34,59 @@ import {
   readVendorSetMeta,
   resolveVendorSet,
   vendorSetDirName,
+  vendorSetPath,
   type VendorSetMeta,
 } from "./vendors";
+import {
+  workerLinkedDirName,
+  workerLinkName,
+  workerTreeOf,
+} from "./worker-link";
+
+/** A host as planned: its module's store dir and its worker closure. */
+export interface ExpectedHost {
+  plan: BrowserHostPlan;
+  dirName: string;
+  entry: PlannedTarget;
+  added: PlannedTarget[];
+}
+
+/**
+ * The hosts as the import map names them: each host module, and its worker
+ * entry inside the worker tree the pipeline links (`worker-link.ts`) — the
+ * same pure tree name, computed from the closure's artifact addresses.
+ */
+export function composedHostsOf(opts: {
+  hosts: readonly ExpectedHost[];
+  targets: readonly PlannedTarget[];
+  metas: ReadonlyMap<string, ArtifactMeta>;
+  vendorSetHash: string;
+}): ComposedHost[] {
+  if (opts.hosts.length === 0) return [];
+  const linked = new Map<string, { linkName: string; linkedDirName: string }>();
+  for (const host of opts.hosts) {
+    for (const t of workerClosure({
+      entry: host.entry,
+      targets: opts.targets,
+      metaOf: (dirName) => opts.metas.get(dirName)!,
+    })) {
+      linked.set(t.dirName, {
+        linkName: workerLinkName(t.pluginPath!, t.kind),
+        linkedDirName: workerLinkedDirName(t.dirName),
+      });
+    }
+  }
+  const tree = workerTreeOf({
+    linked: [...linked.values()],
+    vendorSetDir: vendorSetPath(opts.vendorSetHash),
+  });
+  return opts.hosts.map((h) => ({
+    specifier: h.plan.specifier,
+    dirName: h.dirName,
+    workerSpecifier: hostWorkerSpecifier(h.plan.pluginPath),
+    workerUrl: `/artifacts/${tree.dirName}/${workerLinkName(h.entry.pluginPath!, h.entry.kind)}/index.js`,
+  }));
+}
 
 export type ExpectedComposition =
   | { kind: "computed"; imports: Record<string, string>; entryUrl: string }
@@ -47,7 +102,7 @@ export async function planExpectedFleet(opts: {
   targets: PlannedTarget[];
   registryDirName: string;
   entryDirName: string;
-  hosts: Array<{ specifier: string; dirName: string }>;
+  hosts: ExpectedHost[];
   metas: Map<string, ArtifactMeta>;
   missing: string[];
   builderSource: string;
@@ -75,15 +130,6 @@ export async function planExpectedFleet(opts: {
 
   for (const t of [...plan.webTargets, plan.entryTarget]) read(t.dirName);
   read(plan.registryTarget.dirName);
-  // A host whose recorded inputs no longer describe this tree has no address
-  // yet: it is missing until a build records one.
-  const hosts: Array<{ specifier: string; dirName: string }> = [];
-  for (const host of plan.hosts) {
-    if (host.dirName === null) missing.push(`browser host ${host.pluginPath}`);
-    else if (read(host.dirName) !== null)
-      hosts.push({ specifier: host.specifier, dirName: host.dirName });
-  }
-
   const barrelTargets = await resolveBarrelClosure({
     pluginsRoot,
     identityHash: plan.identity.identityHash,
@@ -92,12 +138,37 @@ export async function planExpectedFleet(opts: {
     seedMetas: [...metas.values()],
     ensure: async (t) => read(t.dirName),
   });
+  const pageTargets = [
+    ...plan.webTargets,
+    ...barrelTargets.values(),
+    plan.entryTarget,
+  ];
+
+  // A host whose recorded inputs no longer describe this tree has no address
+  // yet: it is missing until a build records one. Its worker closure is planned
+  // exactly as the pipeline plans it.
+  const hosts: ExpectedHost[] = [];
+  const served = servedSpecsOf(pageTargets);
+  for (const host of plan.hosts) {
+    const { entry, added } = await planHostClosure({
+      pluginsRoot,
+      host,
+      identityHash: plan.identity.identityHash,
+      cache,
+      servedSpecs: served,
+      ensure: async (t) => read(t.dirName),
+    });
+    for (const s of servedSpecsOf(added)) served.add(s);
+    if (host.dirName === null) missing.push(`browser host ${host.pluginPath}`);
+    else if (read(host.dirName) !== null)
+      hosts.push({ plan: host, dirName: host.dirName, entry, added });
+  }
   // Persist the (pure, stat-keyed) fingerprint cache so repeated check runs
   // stay on the fast path even before the next build saves it.
   saveFingerprintCache(basename(opts.root), cache);
 
   return {
-    targets: [...plan.webTargets, ...barrelTargets.values(), plan.entryTarget],
+    targets: [...pageTargets, ...hosts.flatMap((h) => [h.entry, ...h.added])],
     registryDirName: plan.registryTarget.dirName,
     entryDirName: plan.entryTarget.dirName,
     hosts,
@@ -139,7 +210,12 @@ export async function computeExpectedComposition(opts: {
     targets: fleet.targets,
     registryDirName: fleet.registryDirName,
     vendorMeta,
-    hosts: fleet.hosts,
+    hosts: composedHostsOf({
+      hosts: fleet.hosts,
+      targets: fleet.targets,
+      metas: fleet.metas,
+      vendorSetHash: vendorMeta.setHash,
+    }),
   });
   return {
     kind: "computed",

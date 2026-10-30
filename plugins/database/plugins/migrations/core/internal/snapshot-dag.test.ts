@@ -2,7 +2,10 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
-import { renderPhasedMigration, renderSnapshotHeader } from "./phases";
+import {
+  renderPhasedMigration,
+  renderSnapshotHeader,
+} from "@plugins/database/plugins/migrations/plugins/phases/core";
 import {
   analyzeSnapshotDag,
   NULL_SNAPSHOT_ID,

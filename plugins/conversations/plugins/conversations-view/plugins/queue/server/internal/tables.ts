@@ -1,6 +1,6 @@
 import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server";
 import { _conversations } from "@plugins/tasks/plugins/tasks-core/server";
-import { queueShape } from "../../core/resources";
+import { queueShape } from "../../core";
 
 // The queue row of a conversation: its position (`rank`) and whether the user
 // pinned it. The pin sits on the SAME row as the rank — it is a plain per-row

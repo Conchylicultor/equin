@@ -1,4 +1,5 @@
 import { writeFileSync } from "node:fs";
+import { isPlatformApi } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
 import { rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
@@ -64,7 +65,11 @@ import {
   type MigrationAnswer,
 } from "@plugins/framework/plugins/cli/plugins/migrations/cli";
 import { planCompositionSet } from "./composition-set";
-import { distStagingPath, publishDistAtomic } from "./dist-publish";
+import {
+  distPinPath,
+  distStagingPath,
+  publishDistAtomic,
+} from "./dist-publish";
 import { stampExperimentalMarker } from "./experimental-marker";
 import {
   MAIN_COMPOSITION_ID,
@@ -964,12 +969,14 @@ export async function buildAndPublishWebDist(
         runWebArtifactsPipeline({
           root,
           stagingDir: stagingPath,
+          pinDir: distPinPath(livePath),
           minify: opts.minify,
           buildId,
           buildCommit: opts.headAtStart,
           source,
           materialize: opts.materialize,
           log: (line) => lines.push({ text: line, stream: "stdout" }),
+          isPlatformApi,
           onStage: async (id, label, run) => {
             const endStage = hooks.span(id, "build:frontend", label);
             try {
@@ -1161,6 +1168,8 @@ export async function buildAndPublishWebDist(
     "atomic publish",
   );
   await publishDistAtomic({ dir: livePath, stagingPath });
+  // The live dist links everything the run pinned: the pins have done their job.
+  await rm(distPinPath(livePath), { recursive: true, force: true });
   endPublish();
 
   return { ok: true, steps, stagingPath, livePath, buildCommit, graphHash };

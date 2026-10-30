@@ -20,7 +20,7 @@ import {
   PAGE_BLOCKS_TRASH_SOURCE,
   PAGES_TRASH_SOURCE,
   pageData,
-} from "../../core/schemas";
+} from "../../core";
 import { _blocks } from "./tables";
 import type { BlockRow } from "./forest";
 import { collectBlockSubtrees } from "./collect-subtree";

@@ -100,7 +100,7 @@ import {
   type AnyCollection,
   type AnyExternalCollectionOptions,
   type AnyServedExternal,
-} from "../../core/internal/serve-on";
+} from "../../core";
 import {
   compileAllSpecs,
   type AllCollectionSpecs,
@@ -116,7 +116,7 @@ import {
   type FollowWhere,
   type FollowWhereSource,
   type FollowWhereTarget,
-} from "../../core/internal/follows";
+} from "../../core";
 import {
   assertServesItsRows,
   isEntitySource,

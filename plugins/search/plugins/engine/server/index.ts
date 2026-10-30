@@ -1,5 +1,5 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { searchEndpoint } from "../core/endpoints";
+import { searchEndpoint } from "../core";
 import { handleSearch } from "./internal/handle-search";
 import { searchResultsServed } from "./internal/resources";
 

@@ -1,5 +1,5 @@
 import { serveValue } from "@plugins/network/plugins/live/server";
-import { searchResults } from "../../core/live";
+import { searchResults } from "../../core";
 import { _searchDocuments } from "./tables";
 import { runSearch } from "./run-search";
 

@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { getHistorySource } from "./registry";
-import { versionIdKind } from "../../core/id-kind";
+import { versionIdKind } from "../../core";
 import { _entityVersions } from "./tables";
 
 // Notion-style time bucketing: edits within one ~10-min active-editing window

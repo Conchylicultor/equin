@@ -7,7 +7,7 @@ import type {
   RegisterQuestionBody,
   RelayResolution,
   RelayState,
-} from "../../core/schemas";
+} from "../../core";
 import { _pendingQuestions } from "./tables";
 
 const t = _pendingQuestions;

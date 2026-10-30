@@ -6,14 +6,14 @@ import {
   type ServeAllCollectionOptions,
 } from "@plugins/network/plugins/live/server";
 import { Rank, withRank } from "@plugins/primitives/plugins/rank/core";
-import { PAGE_BLOCK_TYPE } from "../../core/schemas";
+import { PAGE_BLOCK_TYPE } from "../../core";
 import {
   blockLocations,
   pagesTree,
   pageBlocks,
   type PageBlocksRow,
-} from "../../core/resources";
-import type { PageRow } from "../../core/schemas";
+} from "../../core";
+import type { PageRow } from "../../core";
 import { liveBlocks } from "./live-blocks";
 import { pageEditedAtSql, pageRowsServeOptions } from "./page-rows";
 import { _pageContentEditedAt } from "./rollup-table";

@@ -7,10 +7,10 @@ import {
   _trashEntries,
 } from "@plugins/infra/plugins/trash/server";
 import { trashEntryIdKind } from "@plugins/infra/plugins/trash/core";
-import { textOf, type BlockNode } from "../../core/block-ops";
-import type { Block } from "../../core/schemas";
-import { PAGE_BLOCK_TYPE, PAGE_BLOCKS_TRASH_SOURCE } from "../../core/schemas";
-import { namesField, type BlockFieldChanges } from "../../core/block-diff";
+import { textOf, type BlockNode } from "../../core";
+import type { Block } from "../../core";
+import { PAGE_BLOCK_TYPE, PAGE_BLOCKS_TRASH_SOURCE } from "../../core";
+import { namesField, type BlockFieldChanges } from "../../core";
 import { _blocks } from "./tables";
 import type { BlockRow } from "./forest";
 import {

@@ -1,7 +1,7 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { handleEmit } from "./internal/handle-emit";
 import { wsHandler } from "./internal/ws-handler";
-import { emitLogs } from "../core/endpoints";
+import { emitLogs } from "../core";
 
 export { Log, declaredDurableChannels, defineLogSink } from "./internal/log";
 export type { LogChannel, LogStream } from "./internal/log";

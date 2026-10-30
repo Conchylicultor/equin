@@ -32,7 +32,6 @@ import {
   mergeNodeSnapshotText,
   migrationContentHash,
   readSnapshotNodes,
-  renderMergeSnapshotMigration,
   schemaSnapshotPath,
   type Snapshot,
   type SnapshotBodies,
@@ -40,6 +39,7 @@ import {
   type SnapshotDag,
   type SnapshotNode,
 } from "@plugins/database/plugins/migrations/core";
+import { renderMergeSnapshotMigration } from "@plugins/database/plugins/migrations/plugins/phases/core";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 const MIGRATION_TS_RE = /^(\d{8})_(\d{6})_[0-9a-f]{8}__.+\.sql$/;

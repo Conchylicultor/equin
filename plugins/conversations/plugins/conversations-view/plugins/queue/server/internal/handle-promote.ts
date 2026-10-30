@@ -1,7 +1,7 @@
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { promoteQueue } from "../../core/endpoints";
+import { promoteQueue } from "../../core";
 import { lockDeck, rankForTop, reseatGroupMembers, upsertRank } from "./queue-ranks";
 
 export const handlePromote = implement(promoteQueue, async ({ body }) => {

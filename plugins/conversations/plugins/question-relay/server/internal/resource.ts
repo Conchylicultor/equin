@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { serveCollection } from "@plugins/network/plugins/live/server";
-import { pendingQuestions } from "../../core/resources";
+import { pendingQuestions } from "../../core";
 import { _pendingQuestions, pendingQuestionsEntity } from "./tables";
 
 // The collection IS the open holds: answering, releasing or abandoning one is a

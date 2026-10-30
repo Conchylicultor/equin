@@ -1,10 +1,10 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
-import { restoreVersion } from "../../core/endpoints";
+import { restoreVersion } from "../../core";
 import { recordVersion } from "./record-version";
 import { getHistorySource } from "./registry";
-import { versionIdKind } from "../../core/id-kind";
+import { versionIdKind } from "../../core";
 import { _entityVersions } from "./tables";
 
 // Reversible replace. First snapshot the current state as a distinct "Before

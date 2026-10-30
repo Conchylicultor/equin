@@ -1,7 +1,7 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { activeDataBindingsServed } from "./internal/resource";
 import { handleDeleteBinding, handlePutBinding } from "./internal/routes";
-import { putBinding, deleteBinding } from "../core/endpoints";
+import { putBinding, deleteBinding } from "../core";
 
 export { _activeDataBindings } from "./internal/tables";
 

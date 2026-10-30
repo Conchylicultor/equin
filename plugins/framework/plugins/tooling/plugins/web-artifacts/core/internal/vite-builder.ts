@@ -33,10 +33,11 @@ import { WORKER_ASSETS_DIR } from "../constants";
 import { makeArtifactExternal } from "../externals";
 import { inlinedRootsFor } from "../own-roots";
 import { createInlineAudit } from "./inline-audit";
-import { hashedRootsFor } from "./own-files";
+import { hashedRootsFor, listOwnFiles } from "./own-files";
 import { artifactSourcemaps } from "./sourcemaps";
 import type { ArtifactMeta } from "./store";
 import { artifactTmpDir, publishArtifact } from "./store";
+import { tailwindCandidatesOf } from "./tailwind-candidates";
 
 export interface BuilderCtx {
   repoRoot: string;
@@ -56,6 +57,12 @@ export interface ArtifactBuildTarget {
   specifier: string | null;
   entryFile: string;
   inputsHash: string;
+  /**
+   * Absolute static bases of the own files' `import.meta.glob` patterns
+   * (`own-files.ts`): their files are part of the address, so the inline audit
+   * allows them beside the own roots.
+   */
+  globRoots: readonly string[];
   /**
    * Extra entries built into THIS artifact (a co-built folder such as
    * `exhibits/` of a `web` artifact — `COBUILT_FOLDERS` in `../own-roots.ts`).
@@ -413,9 +420,13 @@ export async function buildArtifact(
   const pluginDir = target.pluginPath
     ? join(ctx.pluginsRoot, target.pluginPath)
     : dirname(target.entryFile);
+  const hashedRoots = [
+    ...hashedRootsFor(pluginDir, target.kind),
+    ...target.globRoots,
+  ];
   const audit = createInlineAudit({
     dirName: target.dirName,
-    hashedRoots: hashedRootsFor(pluginDir, target.kind),
+    hashedRoots,
     kind: target.kind,
   });
   // A worker (`new SharedWorker(new URL("./x.worker.ts", import.meta.url))`) is
@@ -426,7 +437,7 @@ export async function buildArtifact(
   // fossilising unhashed bytes.
   const workerAudit = createInlineAudit({
     dirName: `${target.dirName} (worker)`,
-    hashedRoots: hashedRootsFor(pluginDir, target.kind),
+    hashedRoots,
     kind: target.kind,
   });
 
@@ -532,6 +543,9 @@ export async function buildArtifact(
       inputsHash: target.inputsHash,
       staticImportsByFile,
       dynamicImports,
+      tailwindCandidates: await tailwindCandidatesOf(
+        await listOwnFiles(pluginDir, target.kind),
+      ),
       builtAtMs: Date.now(),
     };
     await publishArtifact(target.dirName, tmpDir, meta);
@@ -586,6 +600,8 @@ export async function buildRegistryArtifact(opts: {
     inputsHash: opts.inputsHash,
     staticImportsByFile,
     dynamicImports,
+    // The registry is generated code: no markup of its own.
+    tailwindCandidates: [],
     builtAtMs: Date.now(),
   };
   await publishArtifact(opts.dirName, tmpDir, meta);

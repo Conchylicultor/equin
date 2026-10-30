@@ -12,12 +12,14 @@ import { tmpdir } from "os";
 import { join } from "path";
 import {
   NULL_SNAPSHOT_ID,
-  renderPhasedMigration,
-  renderSnapshotHeader,
   SCHEMA_SNAPSHOT_FILE,
   type Snapshot,
   snapshotBodies,
 } from "@plugins/database/plugins/migrations/core";
+import {
+  renderPhasedMigration,
+  renderSnapshotHeader,
+} from "@plugins/database/plugins/migrations/plugins/phases/core";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 import {
   readResetPrior as readPrior,

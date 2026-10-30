@@ -3,7 +3,7 @@ import {
   defineEntity,
   defaultNow,
 } from "@plugins/infra/plugins/entities/server";
-import { trashEntriesEntityRef } from "../../core/entity";
+import { trashEntriesEntityRef } from "../../core";
 
 // Operation ledger: one row per trashed ROOT entity (a bulk delete of two
 // sub-pages = two independently-restorable entries). Domain-agnostic — the

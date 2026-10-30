@@ -1,8 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { listBlocks } from "../../core/endpoints";
-import { PAGE_BLOCK_TYPE } from "../../core/schemas";
+import { listBlocks } from "../../core";
+import { PAGE_BLOCK_TYPE } from "../../core";
 import { liveBlocks } from "./live-blocks";
 import { pageBlocksServed } from "./resources";
 

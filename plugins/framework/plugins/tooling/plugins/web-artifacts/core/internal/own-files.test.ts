@@ -2,7 +2,12 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { hashedRootsFor, isHashedFile, listOwnFiles } from "./own-files";
+import {
+  globRootsOf,
+  hashedRootsFor,
+  isHashedFile,
+  listOwnFiles,
+} from "./own-files";
 
 // A plugin tree with one file per folder, so which folders an artifact HASHES
 // is readable straight off the returned list.
@@ -93,5 +98,45 @@ describe("isHashedFile", () => {
     for (const f of files.filter((f) => !f.endsWith("package.json"))) {
       expect(isHashedFile(hashedRootsFor(dir, "web"), f)).toBe(true);
     }
+  });
+});
+
+describe("globRootsOf", () => {
+  test("a relative pattern's static base resolves against its module", () => {
+    expect(
+      globRootsOf(
+        "/repo",
+        "pkg/a/b/server/internal/bundled.ts",
+        'const f = import.meta.glob<string>("../../../../data/*.sql", { eager: true });',
+      ),
+    ).toEqual(["pkg/data"]);
+  });
+
+  test("a root-absolute pattern's static base resolves against the repo", () => {
+    expect(
+      globRootsOf(
+        "/repo",
+        "pkg/x/server/internal/bundled.ts",
+        "import.meta.glob('/config/**/*.jsonc', { query: '?raw' })",
+      ),
+    ).toEqual(["config"]);
+  });
+
+  test("a mention outside a call is not a pattern", () => {
+    expect(
+      globRootsOf("/repo", "a.ts", "// vite rewrites `import.meta.glob` here"),
+    ).toEqual([]);
+  });
+
+  test("a non-literal pattern throws, naming the module", () => {
+    expect(() =>
+      globRootsOf("/repo", "pkg/x/a.ts", "import.meta.glob(PATTERN)"),
+    ).toThrow(/pkg\/x\/a\.ts/);
+  });
+
+  test("a pattern reaching outside the repo throws", () => {
+    expect(() =>
+      globRootsOf("/repo", "a.ts", 'import.meta.glob("../outside/*.ts")'),
+    ).toThrow(/outside the repo/);
   });
 });

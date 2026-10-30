@@ -1,5 +1,5 @@
 import { getOrCreateChannel } from "./registry";
-import type { EmitLogsBody } from "../../core/endpoints";
+import type { EmitLogsBody } from "../../core";
 import { LogPersistence } from "./persistence";
 
 /**

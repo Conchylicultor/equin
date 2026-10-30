@@ -1,10 +1,7 @@
 import { and, eq, inArray, isNull, notInArray, or } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
-import type {
-  ConversationStatus,
-  ConversationWorkingOn,
-} from "../../../core/conversation-status";
+import type { ConversationStatus, ConversationWorkingOn } from "../../../core";
 import { _attempts, _conversations, _tasks } from "../tables";
 import { conversations } from "../views";
 import {

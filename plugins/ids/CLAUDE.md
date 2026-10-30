@@ -174,9 +174,11 @@ is reported by the schema file that exports it, which is where its plugin's
     - `defineIdKind`
     - `detectIds`
     - `externalIdField`
+    - `externalReasonOfDecoder`
     - `ID_PREFIX_RE`
     - `ID_SHAPES`
     - `idKindField`
+    - `idKindOfDecoder`
     - `IdParseError`
     - `inlineBoundary`
     - `kindLabel`

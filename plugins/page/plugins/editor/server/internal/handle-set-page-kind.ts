@@ -1,13 +1,13 @@
 import { db } from "@plugins/database/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { setPageKind } from "../../core/endpoints";
+import { setPageKind } from "../../core";
 import {
   pageData,
   pageKindOf,
   samePageKind,
   type Block,
   type PageKind,
-} from "../../core/schemas";
+} from "../../core";
 import type { ForestExecutor } from "./page-forest";
 import { rewritePageRow } from "./page-row-write";
 import { rekindPageData } from "./parse-block-data";

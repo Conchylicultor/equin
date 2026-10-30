@@ -1,5 +1,17 @@
 # tailwind-scan-covers-classes
 
+**Who scans what.** The deployed global stylesheet does not scan `@source`.
+- **Where its candidates come from:** it is compiled from the union of the
+  composition's artifacts' Tailwind candidates (`web-artifacts`'
+  `core/internal/tailwind-candidates.ts`). Each artifact extracts them at build
+  time from exactly the files its address hashed.
+- **Why that covers every shipped class:** the inline audit already fails any
+  artifact whose bytes reach a file it did not hash. So "used in shipped code"
+  ⊆ "candidate of some artifact" holds by construction, not by this check.
+- **What this check still guards:** Tailwind's own scans of `app.css`. These
+  are the layout harness's measurer page (`@tailwindcss/vite` over `app.css`)
+  and editor tooling. For them the two halves below stay exactly as stated.
+
 Enforces the real invariant behind Tailwind styling: **every utility class used
 in source must be present in the compiled CSS** (`used ⊆ emitted`).
 

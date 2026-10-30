@@ -1,5 +1,5 @@
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { compactionContext } from "../../core/endpoints";
+import { compactionContext } from "../../core";
 import { CompactionContext } from "./registry";
 
 /**

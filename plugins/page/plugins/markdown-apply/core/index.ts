@@ -32,3 +32,4 @@ export { pageMetaHeader, splitPageMeta } from "./page-meta";
 export type { PageMeta, PageMetaTag, ParsedPageMeta } from "./page-meta";
 
 export type { StoredRow } from "./stored-row";
+export { roundTripCreatesRefusal } from "./refusal";

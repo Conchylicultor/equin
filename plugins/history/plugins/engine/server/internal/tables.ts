@@ -3,7 +3,7 @@ import {
   defineEntity,
   defaultNow,
 } from "@plugins/infra/plugins/entities/server";
-import { entityVersionsEntityRef } from "../../core/entity";
+import { entityVersionsEntityRef } from "../../core";
 
 // One row per stored version. 1:N (a versioning table — NOT a 1:1
 // entity-extension side-table). Domain-agnostic: the engine never knows what a

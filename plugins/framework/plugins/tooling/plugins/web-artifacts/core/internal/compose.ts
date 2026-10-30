@@ -184,7 +184,8 @@ export function composeDist(opts: ComposeOptions): {
   for (const link of opts.links) {
     const dest = join(artifactsDir, link.linkName);
     if (opts.materialize) {
-      cpSync(link.storePath, dest, { recursive: true });
+      // A worker tree is a dir of links into the store: copy what they name.
+      cpSync(link.storePath, dest, { recursive: true, dereference: true });
     } else {
       symlinkSync(link.storePath, dest);
     }

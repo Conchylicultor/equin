@@ -8,3 +8,4 @@ export {
   rerankQueue,
   pinQueue,
 } from "./endpoints";
+export { queueShape } from "./resources";

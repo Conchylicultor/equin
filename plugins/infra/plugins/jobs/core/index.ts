@@ -40,3 +40,5 @@ export {
 export type { HoldClass, HoldClassSpec, RunnerSpec } from "./hold";
 export { cronMatches, nextCronFiring, parseCrontab } from "./cron";
 export type { Crontab } from "./cron";
+export { ceilingMsFor } from "./hold";
+export { deadJobsEntityRef } from "./resources";

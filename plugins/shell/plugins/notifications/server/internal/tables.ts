@@ -6,7 +6,7 @@ import {
   defineEntity,
   defaultNow,
 } from "@plugins/infra/plugins/entities/server";
-import { notificationsEntityRef } from "../../core/entity";
+import { notificationsEntityRef } from "../../core";
 
 // Built from `notificationFields` (core/entity.ts). `dedupKey` is the server
 // field: the producer's collapse key, never on the wire.

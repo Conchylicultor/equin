@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
-import type { TrashEntry } from "../../core/schemas";
-import { trashEntryIdKind } from "../../core/id-kind";
+import type { TrashEntry } from "../../core";
+import { trashEntryIdKind } from "../../core";
 import { getTrashSource, type TrashSource } from "./registry";
 import type { TrashExecutor } from "./record-entry";
 import { _trashEntries } from "./tables";

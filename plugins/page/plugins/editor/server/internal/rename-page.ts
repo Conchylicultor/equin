@@ -1,12 +1,12 @@
 import { db } from "@plugins/database/server";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { blockAuthorOf, type BlockAuthor } from "../../core/define-block";
+import { blockAuthorOf, type BlockAuthor } from "../../core";
 import {
   pageBlockHandle,
   PageDataSchema,
   PAGE_BLOCK_TYPE,
   type Block,
-} from "../../core/schemas";
+} from "../../core";
 import type { ForestExecutor } from "./page-forest";
 import { rewritePageRow } from "./page-row-write";
 import { rewriteBlockData } from "./parse-block-data";

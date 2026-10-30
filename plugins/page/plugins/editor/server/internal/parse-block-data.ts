@@ -13,10 +13,10 @@ import {
   samePageKind,
   withPageKind,
   type PageKind,
-} from "../../core/schemas";
-import { runsOf } from "../../core/rich-text";
-import { blockAuthorOf } from "../../core/define-block";
-import { markdownTagNameOf } from "../../core/markdown";
+} from "../../core";
+import { runsOf } from "../../core";
+import { blockAuthorOf } from "../../core";
+import { markdownTagNameOf } from "../../core";
 import { resolveBlockHandle } from "./block-registry";
 
 /**

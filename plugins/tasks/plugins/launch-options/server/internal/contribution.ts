@@ -1,5 +1,5 @@
 import { defineServerContribution } from "@plugins/framework/plugins/server-core/core";
-import type { LaunchOptionDef } from "../../core/internal/define";
+import type { LaunchOptionDef } from "../../core";
 
 /**
  * What an apply gets besides the value. Deliberately NOT the task's

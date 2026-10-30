@@ -6,7 +6,7 @@ import {
   type RollupJoin,
 } from "@plugins/infra/plugins/query-resource/core";
 import type { ServeAllCollectionOptions } from "@plugins/network/plugins/live/server";
-import { PAGE_BLOCK_TYPE, type PageRow } from "../../core/schemas";
+import { PAGE_BLOCK_TYPE, type PageRow } from "../../core";
 import { pageContentEditedAt } from "./rollup-spec";
 import { _pageContentEditedAt } from "./rollup-table";
 import { _blocks } from "./tables";

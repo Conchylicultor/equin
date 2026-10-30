@@ -13,11 +13,13 @@ import {
   analyzeSnapshotDag,
   migrationContentHash,
   NULL_SNAPSHOT_ID,
-  parseMigration,
   readSnapshotNodes,
   snapshotBodies,
-  snapshotLineage,
 } from "@plugins/database/plugins/migrations/core";
+import {
+  parseMigration,
+  snapshotLineage,
+} from "@plugins/database/plugins/migrations/plugins/phases/core";
 import {
   formatMigrationTimestamp,
   joinSnapshotTips as joinWith,

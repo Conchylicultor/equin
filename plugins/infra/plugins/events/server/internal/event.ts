@@ -12,7 +12,7 @@ import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import { eventTriggerColumns } from "./base-columns";
 import { eventsDispatchJob } from "./dispatch-job";
 import { triggerTableRegistry } from "./registry";
-import { EMISSIONS_CAP } from "../../core/resources";
+import { EMISSIONS_CAP } from "../../core";
 import { _event_emissions } from "./tables";
 
 /**

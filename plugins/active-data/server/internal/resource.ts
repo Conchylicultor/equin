@@ -1,7 +1,7 @@
 import { asc, eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { serveValue } from "@plugins/network/plugins/live/server";
-import { activeDataBindings } from "../../core/resource";
+import { activeDataBindings } from "../../core";
 import { _activeDataBindings } from "./tables";
 
 // Push over `active_data_bindings`: the declared `reads` name the table, so the

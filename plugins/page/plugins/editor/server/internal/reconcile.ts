@@ -1,4 +1,4 @@
-import type { BlockNode } from "../../core/block-ops";
+import type { BlockNode } from "../../core";
 import type { BlockRow } from "./forest";
 
 // ---------------------------------------------------------------------------

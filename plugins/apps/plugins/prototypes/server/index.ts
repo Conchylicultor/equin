@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { TaskCategory } from "@plugins/tasks/plugins/task-category/server";
-import { PROTOTYPES_CATEGORY_ID } from "../core/task-category";
+import { PROTOTYPES_CATEGORY_ID } from "../core";
 
 // The app's data dir as a file root — the one way any sub-plugin reaches the
 // prototypes tree, on every host.

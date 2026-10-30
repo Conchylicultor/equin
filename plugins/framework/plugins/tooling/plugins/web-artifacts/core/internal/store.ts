@@ -53,6 +53,13 @@ export interface ArtifactMeta {
   staticImportsByFile: Record<string, string[]>;
   /** External specifiers ANY emitted file dynamically imports (union). */
   dynamicImports: string[];
+  /**
+   * The Tailwind class candidates of the files this artifact's address hashed
+   * (`tailwind-candidates.ts`), sorted. The global stylesheet is compiled from
+   * their union over the composition. Empty for an artifact that ships no
+   * page markup (the registry, a browser host).
+   */
+  tailwindCandidates: string[];
   builtAtMs: number;
 }
 
@@ -118,8 +125,13 @@ export async function publishDir(opts: {
   dest: string;
   meta: unknown;
   isComplete: () => boolean;
+  /**
+   * Files already carrying their sidecars (hard links to a published entry's
+   * file and its `.br`/`.gz`): never compressed again.
+   */
+  precompressed?: ReadonlySet<string>;
 }): Promise<void> {
-  await precompressDir(opts.tmpDir);
+  await precompressDir(opts.tmpDir, opts.precompressed);
   writeFileSync(
     join(opts.tmpDir, "meta.json"),
     JSON.stringify(opts.meta, null, 2),
@@ -182,7 +194,20 @@ export function pruneStore(
  * the count cap, and they do not count toward the cap's victims — a served dist
  * must keep resolving every link it has, however long the fleet has built since.
  * If referenced entries alone exceed the cap, they are all kept.
+ *
+ * A build in flight is a root the same way: it pins every entry it builds or
+ * reuses into a `web.*` sibling of its live dist (`pinDir`, pipeline.ts),
+ * which `servedDistTargets` reads like any dist.
+ *
+ * `referenced` is a snapshot taken before the walk, and a walk over thousands
+ * of entries is slow under load: an entry published (and pinned) after the
+ * snapshot is not in it. So an entry modified within `SNAPSHOT_MARGIN_MS` of
+ * this call is never deleted — the snapshot cannot speak for it.
  */
+
+/** Entries younger than this were published after the `referenced` snapshot could see them. */
+const SNAPSHOT_MARGIN_MS = 60 * 1000;
+
 export function pruneCacheDir(opts: {
   root: string;
   maxAgeMs: number;
@@ -199,6 +224,7 @@ export function pruneCacheDir(opts: {
   }
   const now = Date.now();
   const candidates: { path: string; mtimeMs: number }[] = [];
+  let unjudged = 0;
   for (const name of names) {
     const path = join(opts.root, name);
     if (opts.referenced.has(path)) continue;
@@ -213,7 +239,8 @@ export function pruneCacheDir(opts: {
     if (now - mtimeMs > (isTmp ? 60 * 60 * 1000 : opts.maxAgeMs)) {
       rmSync(path, { recursive: true, force: true });
     } else if (!isTmp) {
-      candidates.push({ path, mtimeMs });
+      if (now - mtimeMs < SNAPSHOT_MARGIN_MS) unjudged++;
+      else candidates.push({ path, mtimeMs });
     }
   }
   // Referenced entries count toward the population the cap bounds, but are
@@ -221,7 +248,7 @@ export function pruneCacheDir(opts: {
   const referencedHere = names.filter((n) =>
     opts.referenced.has(join(opts.root, n)),
   ).length;
-  const total = candidates.length + referencedHere;
+  const total = candidates.length + unjudged + referencedHere;
   if (total > opts.maxEntries) {
     candidates.sort((a, b) => a.mtimeMs - b.mtimeMs); // oldest first
     const excess = Math.min(
@@ -244,6 +271,13 @@ export function pruneCacheDir(opts: {
 export interface FingerprintRecord {
   files: Record<string, [number, number]>;
   ownHash: string;
+  /**
+   * Repo-relative static bases of the files' `import.meta.glob` patterns
+   * (`own-files.ts`), recorded with the hash they were read under. Absent
+   * until first computed; a rewritten record drops it, so it is re-read
+   * exactly when the files change.
+   */
+  globRoots?: string[];
 }
 
 export interface FingerprintCache {

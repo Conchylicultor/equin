@@ -12,9 +12,9 @@ import {
   attachmentMarkdown,
   extractAttachmentIds,
 } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/core";
-import { type TaskChainCard } from "../../core/task-chain-types";
+import { type TaskChainCard } from "../../core";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { createTaskChain } from "../../core/endpoints";
+import { createTaskChain } from "../../core";
 import { withNotifyBatch } from "@plugins/framework/plugins/server-core/core";
 import { resolveLaunchOptions } from "@plugins/tasks/plugins/launch-options/server";
 import { rewireDependencies } from "./rewire-dependencies";

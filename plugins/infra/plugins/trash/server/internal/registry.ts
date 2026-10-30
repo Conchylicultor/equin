@@ -1,5 +1,5 @@
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
-import type { TrashEntry } from "../../core/schemas";
+import type { TrashEntry } from "../../core";
 
 // A registered trash source. The primitive owns the ledger table and the
 // list/restore/purge wiring; each source owns how its domain rows are restored

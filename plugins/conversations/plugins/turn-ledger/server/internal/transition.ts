@@ -1,4 +1,4 @@
-import type { TurnState } from "../../core/schemas";
+import type { TurnState } from "../../core";
 
 // The ledger's whole state machine, as one pure function: what an event does
 // to a row. Every writer (the send path, the agent's confirmation, Stop, Retry) goes

@@ -1,6 +1,6 @@
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { listPages } from "../../core/endpoints";
-import { PageRowSchema } from "../../core/schemas";
+import { listPages } from "../../core";
+import { PageRowSchema } from "../../core";
 import { loadPages } from "./resources";
 
 // The live pages ordered by `(page_id, doc_rank)` — a plain select of the

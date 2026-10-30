@@ -10,7 +10,7 @@ import {
   MAIN_COMPOSITION_ID,
   MAIN_WORKTREE_NAME,
 } from "@plugins/infra/plugins/namespace/core";
-import { buildRunsEntityRef } from "../../core/internal/entity";
+import { buildRunsEntityRef } from "../../core";
 
 // The `build_runs` table, built from its ref (core/internal/entity.ts). The
 // CLI never imports it: its recorder writes hand SQL (`shared/recorder.ts`).

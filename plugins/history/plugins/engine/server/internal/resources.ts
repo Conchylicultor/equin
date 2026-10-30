@@ -4,9 +4,9 @@ import {
   serveCollection,
   serveValue,
 } from "@plugins/network/plugins/live/server";
-import { historyVersion, historyVersions } from "../../core/live";
-import type { VersionWithSnapshot } from "../../core/schemas";
-import { versionIdKind } from "../../core/id-kind";
+import { historyVersion, historyVersions } from "../../core";
+import type { VersionWithSnapshot } from "../../core";
+import { versionIdKind } from "../../core";
 import { _entityVersions } from "./tables";
 
 // The version timeline over `entity_versions`: every `Version` field is a

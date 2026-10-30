@@ -5,7 +5,7 @@ import {
   listDependentIds,
   type DbExecutor,
 } from "@plugins/tasks/plugins/tasks-core/server";
-import type { DepsMoveBody } from "../../core/endpoints";
+import type { DepsMoveBody } from "../../core";
 
 // Move an EXISTING task node within the dependency tree — the "relocate a node
 // with heal" operation, the sibling of `rewireDependencies` ("insert a NEW

@@ -1,4 +1,4 @@
-import type { StopGateResponse } from "../../core/endpoints";
+import type { StopGateResponse } from "../../core";
 import type { StopGateEntry, StopVerdict, StopWaiverEntry } from "./registry";
 
 /**

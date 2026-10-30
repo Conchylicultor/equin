@@ -1,4 +1,4 @@
-import type { HoldClass } from "../../core/hold";
+import type { HoldClass } from "../../core";
 
 /** The report kind a floor trip files. Spelled here because THIS is the side
  * that writes the durable line (synchronously, on the way out); the

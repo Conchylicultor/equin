@@ -4,6 +4,8 @@
   "private": true,
   "description": "Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map",
   "dependencies": {
+    "@tailwindcss/node": "^4.3.3",
+    "@tailwindcss/oxide": "^4.3.3",
     "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "^5.2.0",
     "cjs-module-lexer": "^2.3.0",

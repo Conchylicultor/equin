@@ -1,4 +1,4 @@
-import type { BacklinkSnippet } from "../../core/schemas";
+import type { BacklinkSnippet } from "../../core";
 
 /** Roughly how many characters of context a snippet keeps around its match. */
 export const SNIPPET_CONTEXT = 80;

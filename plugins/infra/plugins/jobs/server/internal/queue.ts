@@ -1,8 +1,8 @@
 import { defineHostService } from "@plugins/framework/plugins/server-core/core";
 import type { LiveGroup } from "@plugins/network/plugins/live/core";
 import type { FilterScalar } from "@plugins/network/plugins/live/plugins/filter/core";
-import type { HoldClass } from "../../core/hold";
-import type { JobRow } from "../../core/resources";
+import type { HoldClass } from "../../core";
+import type { JobRow } from "../../core";
 import type {
   JobsCountQuery,
   JobsGroupQuery,

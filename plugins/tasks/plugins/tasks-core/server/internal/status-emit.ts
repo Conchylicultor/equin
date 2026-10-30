@@ -1,6 +1,6 @@
 import type { EmitTx } from "@plugins/infra/plugins/events/server";
 import type { TaskStatus } from "./schema";
-import type { ConversationStatus } from "../../core/conversation-status";
+import type { ConversationStatus } from "../../core";
 import {
   taskStatusChanged,
   conversationStatusChanged,

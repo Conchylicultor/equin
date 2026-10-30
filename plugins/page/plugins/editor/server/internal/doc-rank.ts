@@ -1,4 +1,4 @@
-import { planDocRanks, type DocRankChange } from "../../core/doc-rank";
+import { planDocRanks, type DocRankChange } from "../../core";
 import {
   compareDocOrder,
   docOrderRows,

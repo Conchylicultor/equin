@@ -5,9 +5,9 @@ import {
   _conversations,
   getConversation,
 } from "@plugins/tasks/plugins/tasks-core/server";
-import { turnIdKind, type TurnId } from "../../core/id-kind";
-import { typedTextOf } from "../../core/event-envelope";
-import type { TurnKind } from "../../core/schemas";
+import { turnIdKind, type TurnId } from "../../core";
+import { typedTextOf } from "../../core";
+import type { TurnKind } from "../../core";
 import { _conversationTurns } from "./tables";
 import { userTurnSent } from "./tables-user-turn-sent-event";
 import {

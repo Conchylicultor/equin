@@ -26,7 +26,10 @@ import {
   readSync,
 } from "fs";
 import { join } from "path";
-import { snapshotLineage, type SnapshotLineage } from "./phases";
+import {
+  snapshotLineage,
+  type SnapshotLineage,
+} from "@plugins/database/plugins/migrations/plugins/phases/core";
 
 /** The tip snapshot body, under `data/meta/`. */
 export const SCHEMA_SNAPSHOT_FILE = "schema.snapshot.json";

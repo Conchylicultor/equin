@@ -28,7 +28,7 @@ import {
   type ArmKeyCodec,
   type JoinSpec,
 } from "@plugins/infra/plugins/query-resource/core";
-import { SQL_TYPE_RE } from "../../core/internal/expr";
+import { SQL_TYPE_RE } from "../../core";
 import { routedReads, type TupleReads } from "./arm-plan";
 import { armKeySql } from "./arm-key-sql";
 import {

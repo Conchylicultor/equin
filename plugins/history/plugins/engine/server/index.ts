@@ -1,7 +1,7 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { IdKinds } from "@plugins/ids/server";
 import { versionIdKind } from "../core";
-import { listVersions, restoreVersion } from "../core/endpoints";
+import { listVersions, restoreVersion } from "../core";
 import { handleListVersions } from "./internal/handle-list-versions";
 import { handleRestoreVersion } from "./internal/handle-restore-version";
 import {

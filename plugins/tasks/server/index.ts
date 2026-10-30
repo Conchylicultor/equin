@@ -24,7 +24,7 @@ import {
   addTaskDependency,
   removeTaskDependency,
   moveTaskInDepsTree,
-} from "../core/endpoints";
+} from "../core";
 import {
   setTaskAutoStart,
   clearTaskAutoStart,

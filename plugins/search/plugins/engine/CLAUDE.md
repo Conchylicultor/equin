@@ -32,6 +32,7 @@
     - `SearchResult`
   - Exports (values):
     - `SEARCH_QUERY_MAX`
+    - `SEARCH_RESULTS_LIMIT`
     - `SearchDocSchema`
     - `searchEndpoint`
     - `SearchQuerySchema`

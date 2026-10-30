@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { pinQueue } from "../../core/endpoints";
+import { pinQueue } from "../../core";
 import { conversationsQueue } from "./tables";
 import {
   lockDeck,

@@ -1,7 +1,7 @@
 import { text } from "drizzle-orm/pg-core";
 import { defineTriggerEvent } from "@plugins/infra/plugins/events/server";
 import type { TaskStatus } from "./schema";
-import type { ConversationStatus } from "../../core/conversation-status";
+import type { ConversationStatus } from "../../core";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 
 export interface PushLandedPayload {

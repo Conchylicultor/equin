@@ -89,6 +89,8 @@ export async function computeBuilderIdentity(opts: {
     vite: packageVersion("vite"),
     esbuild: packageVersion("esbuild"),
     pluginReact: packageVersion("@vitejs/plugin-react"),
+    // Extracts every artifact's Tailwind candidates (`tailwind-candidates.ts`).
+    tailwindOxide: packageVersion("@tailwindcss/oxide"),
   };
   for (const pkg of INLINE_PACKAGES) {
     record[`inline:${pkg}`] = packageVersion(pkg, opts.repoRoot);

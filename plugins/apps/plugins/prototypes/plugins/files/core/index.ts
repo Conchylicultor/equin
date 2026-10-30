@@ -85,3 +85,4 @@ export type {
   OptionGroup,
 } from "./options";
 export { readOptionSource, readPrototypeOptions } from "./option-source";
+export { stampPicks } from "./stamp-picks";

@@ -4,7 +4,7 @@ import {
   registeringPlugin,
   type Registration,
 } from "@plugins/framework/plugins/server-core/core";
-import { ceilingMsFor, type HoldClass } from "../../core/hold";
+import { ceilingMsFor, type HoldClass } from "../../core";
 import { DEFAULT_MAX_ATTEMPTS } from "./constants";
 import { JobQueue, type JobRowOpts, type QueuedJob } from "./queue";
 import { singletonJobKey } from "./run-identity";

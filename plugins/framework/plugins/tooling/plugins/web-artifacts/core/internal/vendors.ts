@@ -29,6 +29,7 @@ import * as esbuild from "esbuild";
 import { sha256Hex } from "../hash";
 import { publishDir, pruneCacheDir, WEB_ARTIFACTS_DIR } from "./store";
 import { servedDistTargets } from "./served-dists";
+import { placePackageAssets, prunePackageAssets } from "./package-assets";
 import {
   computeVendorCacheGate,
   loadVendorResolutionCache,
@@ -535,6 +536,12 @@ export async function ensureVendorSet(opts: {
       `vendor build failed: ${result.errors.map((e) => e.text).join("\n")}`,
     );
   }
+  // Files the bundled packages fetch by URL (PGlite's wasm and data), placed
+  // beside the outputs that fetch them, already compressed.
+  const precompressed = await placePackageAssets({
+    metafile: result.metafile,
+    cwd: process.cwd(),
+  });
 
   // Per-file static imports (for the modulepreload closure). Relative to set dir.
   await esInit();
@@ -568,6 +575,7 @@ export async function ensureVendorSet(opts: {
     dest,
     meta,
     isComplete: () => existsSync(join(dest, "meta.json")),
+    precompressed,
   });
   return { meta, stats };
 }
@@ -585,6 +593,7 @@ const VENDORS_TRIM_TO = 32;
 export function pruneVendorSets(
   referenced: ReadonlySet<string> = servedDistTargets(),
 ): void {
+  prunePackageAssets();
   pruneCacheDir({
     root: VENDORS_ROOT,
     maxAgeMs: VENDORS_MAX_AGE_MS,

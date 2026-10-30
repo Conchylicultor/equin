@@ -3,7 +3,7 @@ import {
   defineEntity,
   defaultNow,
 } from "@plugins/infra/plugins/entities/server";
-import { reportsEntityRef } from "../../core/entity";
+import { reportsEntityRef } from "../../core";
 
 // One row per (fingerprint, worktree). Upserts atomically dedupe repeats:
 // first report inserts + creates a task; repeats bump count and advance

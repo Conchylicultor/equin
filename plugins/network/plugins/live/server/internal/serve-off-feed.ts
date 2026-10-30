@@ -25,7 +25,7 @@ import {
   type AnyServedExternal,
   type ChangeHooks,
   type ExternalCollectionChangeOptions,
-} from "../../core/internal/serve-on";
+} from "../../core";
 import type {
   CollectionSpecs,
   LookupCollectionSpecs,

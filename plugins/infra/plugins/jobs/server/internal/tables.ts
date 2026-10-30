@@ -17,7 +17,7 @@ import {
   deadJobsEntityRef,
   JobRunOutcomeSchema,
   jobRunsEntityRef,
-} from "../../core/resources";
+} from "../../core";
 import {
   defineEntity,
   defaultNow,

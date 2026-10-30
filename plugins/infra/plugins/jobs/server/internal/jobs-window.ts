@@ -11,7 +11,7 @@ import {
   matchesFilter,
   type FilterScalar,
 } from "@plugins/network/plugins/live/plugins/filter/core";
-import { jobRunAtKeyText, jobs, type JobRow } from "../../core/resources";
+import { jobRunAtKeyText, jobs, type JobRow } from "../../core";
 
 // The questions the `jobs` collection asks a queue (`JobQueue`'s `window` /
 // `rows` / `groups` / `count`), and their one in-memory answer over a list of

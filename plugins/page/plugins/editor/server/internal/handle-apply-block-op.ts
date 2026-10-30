@@ -1,15 +1,15 @@
 import { asc, eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { applyBlockOpEndpoint } from "../../core/endpoints";
+import { applyBlockOpEndpoint } from "../../core";
 import {
   applyBlockOp,
   blockOpContextOf,
   type BlockNode,
   type BlockOp,
   type BlockOpContext,
-} from "../../core/block-ops";
-import { BlockSchema, PAGE_BLOCK_TYPE, type Block } from "../../core/schemas";
+} from "../../core";
+import { BlockSchema, PAGE_BLOCK_TYPE, type Block } from "../../core";
 import { liveBlocks } from "./live-blocks";
 import { Editor as BlockRegistry } from "./block-registry";
 import { withPageForest, type ForestExecutor } from "./page-forest";

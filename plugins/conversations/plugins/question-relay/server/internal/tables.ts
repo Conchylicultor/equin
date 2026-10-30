@@ -9,8 +9,8 @@ import {
   defineEntity,
 } from "@plugins/infra/plugins/entities/server";
 import { _conversations } from "@plugins/tasks/plugins/tasks-core/server";
-import { pendingQuestionsEntityRef } from "../../core/entity";
-import { CliAnswerSchema, RelayStateSchema } from "../../core/schemas";
+import { pendingQuestionsEntityRef } from "../../core";
+import { CliAnswerSchema, RelayStateSchema } from "../../core";
 
 // One row per AskUserQuestion call a relay hook held, keyed by the CLI's
 // tool-use id (unique per call, and what the relay re-registers under after a

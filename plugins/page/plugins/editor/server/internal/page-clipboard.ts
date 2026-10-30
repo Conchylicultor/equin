@@ -1,9 +1,9 @@
 import { eq, inArray } from "drizzle-orm";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
-import type { BlockOp } from "../../core/block-ops";
-import { newBlockId } from "../../core/block-id";
-import { PAGE_BLOCK_TYPE } from "../../core/schemas";
-import type { IdentifiedBlock } from "../../core/serialized-block";
+import type { BlockOp } from "../../core";
+import { newBlockId } from "../../core";
+import { PAGE_BLOCK_TYPE } from "../../core";
+import type { IdentifiedBlock } from "../../core";
 import { _blocks } from "./tables";
 import { collectBlockSubtrees } from "./collect-subtree";
 import {

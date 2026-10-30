@@ -1,5 +1,5 @@
 import { defineRequestSink } from "@plugins/primitives/plugins/report-sink/core";
-import type { HoldClass } from "../../core/hold";
+import type { HoldClass } from "../../core";
 
 /**
  * The seam every deadline event is announced on: one run overran its hold

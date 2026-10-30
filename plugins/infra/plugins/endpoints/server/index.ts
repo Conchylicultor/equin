@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
-export { implement, rawEndpointHandler, HttpError } from "../core/implement";
+export { implement, rawEndpointHandler, HttpError } from "../core";
 export { callEndpoint } from "./internal/call-endpoint";
 
 export default {

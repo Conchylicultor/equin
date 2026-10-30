@@ -11,7 +11,10 @@ import {
 import { tmpdir } from "os";
 import { dirname, join } from "path";
 import { stageDrizzleOut, UnjoinedSnapshotTipsError } from "./drizzle-stage";
-import { renderPhasedMigration, renderSnapshotHeader } from "./phases";
+import {
+  renderPhasedMigration,
+  renderSnapshotHeader,
+} from "@plugins/database/plugins/migrations/plugins/phases/core";
 import { NULL_SNAPSHOT_ID } from "./snapshot-dag";
 
 let pluginDir: string;
