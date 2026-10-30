@@ -7,6 +7,7 @@ import {
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { z } from "zod";
+import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import {
   applyRows,
@@ -393,6 +394,33 @@ describe("re-sort", () => {
     expect(
       predictRows([op], { ...t, more: false }, rows).map((r) => r.id),
     ).toEqual(["b", "a"]);
+  });
+});
+
+describe("an order field holding a value object", () => {
+  // A `rankValueField` row carries a `Rank`, ordered by its wire key.
+  const ranked = (id: string, rank: string, points: number): PredictRow => ({
+    ...point(id, points),
+    rank: Rank.from(rank),
+  });
+
+  test("a patch that leaves the rank alone keeps the order", () => {
+    const op = opOf(bump, { params: { id: "b" } }, "r");
+    const rows = [ranked("a", "a0", 1), ranked("b", "a1", 1)];
+    const t = scoreTuple("t", { order: [["rank", "asc"]] });
+    expect(predictRows([op], t, rows).map((r) => r.id)).toEqual(["a", "b"]);
+  });
+
+  test("ties on the rank re-sort by the next order field", () => {
+    const op = opOf(bump, { params: { id: "b" } }, "r");
+    const rows = [ranked("a", "a0", 5), ranked("b", "a0", 1)];
+    const t = scoreTuple("t", {
+      order: [
+        ["rank", "asc"],
+        ["points", "desc"],
+      ],
+    });
+    expect(predictRows([op], t, rows).map((r) => r.id)).toEqual(["b", "a"]);
   });
 });
 

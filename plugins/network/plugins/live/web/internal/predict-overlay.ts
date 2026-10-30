@@ -217,15 +217,34 @@ function matchesWhere(
   return matchesFilter(row, t.filter, t.filterable);
 }
 
-/** An order field's value as the filter language compares it (an instant as epoch ms). */
+/**
+ * An order field's value as the filter language compares it: an instant as
+ * epoch ms, and a value object its field's schema decoded from the wire (a
+ * `Rank`, `rankValueField`) as its wire form — the scalar the server sorted.
+ */
 function orderScalar(v: unknown): FilterScalar | null {
   if (v === null || v === undefined) return null;
   if (v instanceof Date) return v.getTime();
-  if (typeof v === "string" || typeof v === "number" || typeof v === "boolean")
-    return v;
+  if (isScalar(v)) return v;
+  const wire = wireForm(v);
+  if (wire !== undefined) return wire;
   throw new Error(
     `predict overlay: an order field holds ${JSON.stringify(v)} — a read is ordered by scalar fields.`,
   );
+}
+
+function isScalar(v: unknown): v is FilterScalar {
+  return (
+    typeof v === "string" || typeof v === "number" || typeof v === "boolean"
+  );
+}
+
+/** A value object's wire form, when it serializes to a scalar (`toJSON`). */
+function wireForm(v: unknown): FilterScalar | undefined {
+  if (typeof v !== "object" || v === null || !("toJSON" in v)) return undefined;
+  if (typeof v.toJSON !== "function") return undefined;
+  const wire: unknown = v.toJSON();
+  return isScalar(wire) ? wire : undefined;
 }
 
 /** `a` vs `b` in `order` (NULLS LAST either way), the id ascending last. */
