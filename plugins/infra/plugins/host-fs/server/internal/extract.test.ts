@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { defineArchiveFormat, type ArchiveMember } from "./archive/registry";
 import { extractHostArchive } from "./extract";
+import { asUserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // A fake format: a `.fakex` file is JSON — `{ members: [...] }`, each file
 // member's text inline. An `encrypted` member fails to open.
@@ -75,7 +76,7 @@ describe("extractHostArchive", () => {
       { path: "photos/sub/b.txt", kind: "file", text: "B" },
       { path: "__MACOSX/photos/._a.txt", kind: "file", text: "junk" },
     ]);
-    expect(await extractHostArchive(path)).toEqual({
+    expect(await extractHostArchive(asUserPath(path))).toEqual({
       kind: "extracted",
       path,
       created: join(dirname(path), "photos"),
@@ -92,7 +93,7 @@ describe("extractHostArchive", () => {
       { path: "report.pdf", kind: "file", text: "pdf" },
       { path: ".DS_Store", kind: "file", text: "junk" },
     ]);
-    expect(await extractHostArchive(path)).toMatchObject({
+    expect(await extractHostArchive(asUserPath(path))).toMatchObject({
       kind: "extracted",
       created: join(dirname(path), "report.pdf"),
       layout: "single",
@@ -106,7 +107,7 @@ describe("extractHostArchive", () => {
       { path: "docs/b.txt", kind: "file", text: "B" },
       { path: "empty", kind: "dir" },
     ]);
-    expect(await extractHostArchive(path)).toMatchObject({
+    expect(await extractHostArchive(asUserPath(path))).toMatchObject({
       kind: "extracted",
       created: join(dirname(path), "bundle"),
       layout: "folder",
@@ -124,10 +125,10 @@ describe("extractHostArchive", () => {
       { path: "notes.txt", kind: "file", text: "new" },
     ]);
     writeFileSync(join(dirname(path), "notes.txt"), "old");
-    expect(await extractHostArchive(path)).toMatchObject({
+    expect(await extractHostArchive(asUserPath(path))).toMatchObject({
       created: join(dirname(path), "notes 2.txt"),
     });
-    expect(await extractHostArchive(path)).toMatchObject({
+    expect(await extractHostArchive(asUserPath(path))).toMatchObject({
       created: join(dirname(path), "notes 3.txt"),
     });
     expect(readFileSync(join(dirname(path), "notes.txt"), "utf8")).toBe("old");
@@ -138,7 +139,7 @@ describe("extractHostArchive", () => {
       { path: "a.txt", kind: "file", text: "A" },
       { path: "b.txt", kind: "file", encrypted: true },
     ]);
-    expect(await extractHostArchive(path)).toEqual({
+    expect(await extractHostArchive(asUserPath(path))).toEqual({
       kind: "unreadable-archive",
       path,
       archive: path,
@@ -149,7 +150,7 @@ describe("extractHostArchive", () => {
 
   test("a file no format claims is not an archive", async () => {
     const path = archiveIn("plain.txt", []);
-    expect(await extractHostArchive(path)).toEqual({
+    expect(await extractHostArchive(asUserPath(path))).toEqual({
       kind: "not-an-archive",
       path,
     });
@@ -157,6 +158,9 @@ describe("extractHostArchive", () => {
 
   test("a missing archive is missing", async () => {
     const path = join(root, "nowhere.fakex");
-    expect(await extractHostArchive(path)).toEqual({ kind: "missing", path });
+    expect(await extractHostArchive(asUserPath(path))).toEqual({
+      kind: "missing",
+      path,
+    });
   });
 });

@@ -168,7 +168,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`ids`** — The id-kind registry, web half: IdKinds.Kind registers a declared kind and IdKinds.Presenter how its ids render and open (icon, useReferent, useTarget); useIdKinds() / useIdPresenters() read them at…
 
-- **`infra`** [test helpers] [exempt] [95 sub-plugins] — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
+- **`infra`** [test helpers] [exempt] [96 sub-plugins] — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
 
 - **`integrations`** — Umbrella for third-party service integrations that consume an auth connection (Gmail, …).
   - Plugins:

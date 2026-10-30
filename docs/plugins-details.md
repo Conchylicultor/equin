@@ -24764,6 +24764,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `fields.defineFieldIdentity`
           - `fields.defineFieldType`
+          - `infra/host-fs/user-path.asUserPath`
+          - `infra/host-fs/user-path.UserPath`
           - `ui/icons.symbol`
         - Exports (values):
           - `directoryPathFieldType`
@@ -24787,6 +24789,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields.FieldMeta`
               - `fields.pickMeta`
               - `fields/directory-path.directoryPathFieldType`
+              - `infra/host-fs/user-path.asUserPath`
+              - `infra/host-fs/user-path.UserPath`
+              - `infra/host-fs/user-path.UserPathSchema`
             - Exports (types): `DirPathFieldDef`
             - Exports (values):
               - `dirPathField`
@@ -31369,6 +31374,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host-fs.HostFileOpen`
               - `infra/host-fs.inertHeaders`
               - `infra/host-fs.openHostFile`
+              - `infra/host-fs.resolveHostPath`
               - `infra/jobs.defineJob`
               - `primitives/log-channels.Log`
             - Register: `defineJob('host-fs-image.sweep')`
@@ -31406,6 +31412,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `snapEdge`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/resize.ts`, `server/internal/sweep.ts` (debt)
+        - **`user-path`** — UserPath: a host path the user (or their config) chose — branded where it enters (a dirPathField value, a host-fs request), and the type-aware lint rule that keeps a synchronous fs call off it, so a macOS Files & Folders prompt can never freeze a backend's JS thread.
+          - Cross-plugin:
+            - Imported by:
+              - `fields/directory-path`
+              - `fields/directory-path/config`
+          - Core:
+            - Exports (types): `UserPath`
+            - Exports (values):
+              - `asUserPath`
+              - `UserPathSchema`
         - **`zip`** — Zip as a host-fs archive format: a native reader of the zip central directory (zip64, UTF-8 / CP437 / Info-ZIP Unicode names, extended timestamps) registered through defineArchiveFormat, so a .zip browses like a folder — members stored or deflated, encrypted and other methods typed as unreadable.
           - Server:
             - Uses:

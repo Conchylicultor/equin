@@ -1,4 +1,5 @@
 import { fieldSample } from "@plugins/config_v2/plugins/fields/core";
+import { asUserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { dirPathField } from "./directory-path";
 
 /**
@@ -11,5 +12,5 @@ export const dirPathSample = fieldSample(
     label: "Scratch directory",
     description: "Where agents write temporary files.",
   }),
-  "/tmp",
+  asUserPath("/tmp"),
 );

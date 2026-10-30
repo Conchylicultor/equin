@@ -9,6 +9,7 @@ import type {
   ArchiveMember,
   ArchiveUnreadable,
 } from "./registry";
+import type { UserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /** More members than this is `too-many-entries`: the index is held in memory. */
 export const MAX_ARCHIVE_MEMBERS = 200_000;
@@ -135,7 +136,7 @@ interface Cached {
 const cache = new Map<string, Cached>();
 const flights = createInflight();
 
-function remember(file: string, cached: Cached): void {
+function remember(file: UserPath, cached: Cached): void {
   cache.delete(file);
   cache.set(file, cached);
   let total = 0;
@@ -156,7 +157,7 @@ function remember(file: string, cached: Cached): void {
  * budget. Throws the raw `stat` error (the caller classifies it).
  */
 export async function archiveTree(
-  file: string,
+  file: UserPath,
   format: ArchiveFormat,
 ): Promise<ArchiveTreeResult> {
   const st = await stat(file);

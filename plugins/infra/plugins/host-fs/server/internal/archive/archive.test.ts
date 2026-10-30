@@ -18,6 +18,10 @@ import { readHostPathText } from "../text";
 import { locateHostPath } from "./locate";
 import { defineArchiveFormat, type ArchiveMember } from "./registry";
 import { normaliseMemberPath } from "./tree";
+import {
+  asUserPath,
+  type UserPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // A fake format: a `.fake` file is JSON — `{ corrupt?: true, members: [...] }`,
 // each file member's text held inline. Stored members are Blobs (sliceable),
@@ -67,7 +71,7 @@ const fakeFormat = defineArchiveFormat({
 });
 
 let root: string;
-let archive: string;
+let archive: UserPath;
 
 function writeArchive(path: string, members: FakeMember[], corrupt = false) {
   writeFileSync(path, JSON.stringify({ corrupt, members }));
@@ -76,7 +80,7 @@ function writeArchive(path: string, members: FakeMember[], corrupt = false) {
 beforeAll(async () => {
   await fakeFormat.register();
   root = mkdtempSync(join(tmpdir(), "host-fs-archive-test-"));
-  archive = join(root, "photos.fake");
+  archive = asUserPath(join(root, "photos.fake"));
   writeArchive(archive, [
     { path: "readme.txt", kind: "file", text: "hello archive" },
     { path: "2022/summer/a.txt", kind: "file", text: "nested" },
@@ -109,11 +113,11 @@ describe("normaliseMemberPath", () => {
 
 describe("locateHostPath", () => {
   test("a path on disk is a disk path, even under a claimed name", async () => {
-    expect(await locateHostPath(archive)).toEqual({
+    expect(await locateHostPath(asUserPath(archive))).toEqual({
       kind: "disk",
       path: archive,
     });
-    const inside = join(root, "real-dir.fake", "inside.txt");
+    const inside = asUserPath(join(root, "real-dir.fake", "inside.txt"));
     expect(await locateHostPath(inside)).toEqual({
       kind: "disk",
       path: inside,
@@ -121,7 +125,7 @@ describe("locateHostPath", () => {
   });
   test("a path under an archive file is a member path", async () => {
     const located = await locateHostPath(
-      join(archive, "2022", "summer", "a.txt"),
+      asUserPath(join(archive, "2022", "summer", "a.txt")),
     );
     expect(located.kind).toBe("archive");
     if (located.kind !== "archive") return;
@@ -129,7 +133,7 @@ describe("locateHostPath", () => {
     expect(located.inner).toBe("2022/summer/a.txt");
   });
   test("a missing path no archive explains stays a disk path", async () => {
-    const missing = join(root, "nope", "x.txt");
+    const missing = asUserPath(join(root, "nope", "x.txt"));
     expect(await locateHostPath(missing)).toEqual({
       kind: "disk",
       path: missing,
@@ -139,7 +143,7 @@ describe("locateHostPath", () => {
 
 describe("list", () => {
   test("a disk listing marks archive files", async () => {
-    const res = await listHostPath(root);
+    const res = await listHostPath(asUserPath(root));
     if (res.kind !== "ok") throw new Error(`expected ok, got ${res.kind}`);
     const byName = Object.fromEntries(res.entries.map((e) => [e.name, e]));
     expect(byName["photos.fake"]!.archive).toEqual({ format: "fake" });
@@ -147,7 +151,7 @@ describe("list", () => {
     expect(byName["real-dir.fake"]!.archive).toBeUndefined();
   });
   test("an archive file lists its root, with implied directories and no escapes", async () => {
-    const res = await listHostPath(archive);
+    const res = await listHostPath(asUserPath(archive));
     if (res.kind !== "ok") throw new Error(`expected ok, got ${res.kind}`);
     expect(res.within).toEqual({ archive, format: "fake" });
     expect(res.parent).toBe(root);
@@ -175,19 +179,21 @@ describe("list", () => {
     expect(byName["readme.txt"]!.atimeMs).toBeUndefined();
   });
   test("a nested directory lists; a member file is not-a-dir; an unknown one missing", async () => {
-    const nested = await listHostPath(join(archive, "2022"));
+    const nested = await listHostPath(asUserPath(join(archive, "2022")));
     if (nested.kind !== "ok")
       throw new Error(`expected ok, got ${nested.kind}`);
     expect(nested.entries.map((e) => e.name)).toEqual(["b.stream", "summer"]);
-    expect((await listHostPath(join(archive, "readme.txt"))).kind).toBe(
-      "not-a-dir",
+    expect(
+      (await listHostPath(asUserPath(join(archive, "readme.txt")))).kind,
+    ).toBe("not-a-dir");
+    expect((await listHostPath(asUserPath(join(archive, "nope")))).kind).toBe(
+      "missing",
     );
-    expect((await listHostPath(join(archive, "nope"))).kind).toBe("missing");
-    const empty = await listHostPath(join(archive, "empty"));
+    const empty = await listHostPath(asUserPath(join(archive, "empty")));
     expect(empty.kind === "ok" && empty.entries).toEqual([]);
   });
   test("an unreadable archive is its own failure, never an empty folder", async () => {
-    expect(await listHostPath(join(root, "broken.fake"))).toEqual({
+    expect(await listHostPath(asUserPath(join(root, "broken.fake")))).toEqual({
       kind: "unreadable-archive",
       path: join(root, "broken.fake"),
       archive: join(root, "broken.fake"),
@@ -198,7 +204,7 @@ describe("list", () => {
 
 describe("peek", () => {
   test("a folder inside an archive is read from the index; the archive file is never opened", async () => {
-    expect(await peekHostDir(join(archive, "2022"))).toEqual({
+    expect(await peekHostDir(asUserPath(join(archive, "2022")))).toEqual({
       kind: "ok",
       path: join(archive, "2022"),
       children: [
@@ -207,19 +213,19 @@ describe("peek", () => {
       ],
     });
     const calls = indexCalls;
-    expect(await peekHostDir(join(root, "broken.fake"))).toEqual({
+    expect(await peekHostDir(asUserPath(join(root, "broken.fake")))).toEqual({
       kind: "archive",
       path: join(root, "broken.fake"),
     });
     expect(indexCalls).toBe(calls);
   });
   test("a broken archive's member folder is unreadable, not empty", async () => {
-    expect((await peekHostDir(join(root, "broken.fake", "x"))).kind).toBe(
-      "unreadable-archive",
-    );
+    expect(
+      (await peekHostDir(asUserPath(join(root, "broken.fake", "x")))).kind,
+    ).toBe("unreadable-archive");
   });
   test("a real directory under a claimed name is read from disk", async () => {
-    const real = await peekHostDir(join(root, "real-dir.fake"));
+    const real = await peekHostDir(asUserPath(join(root, "real-dir.fake")));
     expect(real.kind === "ok" && real.children).toEqual([
       { name: "inside.txt", hidden: false },
     ]);
@@ -228,23 +234,29 @@ describe("peek", () => {
 
 describe("stat / text", () => {
   test("stat describes a member and says it is within the archive", async () => {
-    const res = await statHostOrArchivePath(join(archive, "2022", "summer"));
+    const res = await statHostOrArchivePath(
+      asUserPath(join(archive, "2022", "summer")),
+    );
     if (res.kind !== "ok") throw new Error(`expected ok, got ${res.kind}`);
     expect(res.entry).toMatchObject({ name: "summer", kind: "dir" });
     expect(res.within).toEqual({ archive, format: "fake" });
   });
   test("text reads a member, refuses a directory, types an encrypted one", async () => {
     expect(
-      await readHostPathText(join(archive, "2022", "summer", "a.txt")),
+      await readHostPathText(
+        asUserPath(join(archive, "2022", "summer", "a.txt")),
+      ),
     ).toMatchObject({
       kind: "ok",
       content: "nested",
       size: 6,
     });
-    expect((await readHostPathText(join(archive, "2022"))).kind).toBe(
-      "not-a-file",
-    );
-    expect(await readHostPathText(join(archive, "secret.txt"))).toMatchObject({
+    expect(
+      (await readHostPathText(asUserPath(join(archive, "2022")))).kind,
+    ).toBe("not-a-file");
+    expect(
+      await readHostPathText(asUserPath(join(archive, "secret.txt"))),
+    ).toMatchObject({
       kind: "unreadable-archive",
       reason: "encrypted",
     });
@@ -260,7 +272,7 @@ describe("raw", () => {
   });
   test("a Blob member honours Range", async () => {
     const res = await serveArchiveMember(
-      join(archive, "readme.txt"),
+      asUserPath(join(archive, "readme.txt")),
       at("readme.txt"),
       "bytes=0-4",
     );
@@ -271,7 +283,7 @@ describe("raw", () => {
   });
   test("a streamed member is served whole", async () => {
     const res = await serveArchiveMember(
-      join(archive, "2022", "b.stream"),
+      asUserPath(join(archive, "2022", "b.stream")),
       at("2022/b.stream"),
       "bytes=0-1",
     );
@@ -281,16 +293,22 @@ describe("raw", () => {
   });
   test("failures map to statuses", async () => {
     expect(
-      (await serveArchiveMember(join(archive, "x"), at("x"), null)).status,
+      (await serveArchiveMember(asUserPath(join(archive, "x")), at("x"), null))
+        .status,
     ).toBe(404);
     expect(
-      (await serveArchiveMember(join(archive, "2022"), at("2022"), null))
-        .status,
+      (
+        await serveArchiveMember(
+          asUserPath(join(archive, "2022")),
+          at("2022"),
+          null,
+        )
+      ).status,
     ).toBe(400);
     expect(
       (
         await serveArchiveMember(
-          join(archive, "secret.txt"),
+          asUserPath(join(archive, "secret.txt")),
           at("secret.txt"),
           null,
         )
@@ -301,7 +319,9 @@ describe("raw", () => {
 
 describe("open", () => {
   test("Open with default app on a member is in-archive", async () => {
-    expect(await openHostPath(join(archive, "readme.txt"), false)).toEqual({
+    expect(
+      await openHostPath(asUserPath(join(archive, "readme.txt")), false),
+    ).toEqual({
       kind: "in-archive",
       path: join(archive, "readme.txt"),
       archive,
@@ -314,14 +334,14 @@ describe("index cache", () => {
     const file = join(root, "cache.fake");
     writeArchive(file, [{ path: "one.txt", kind: "file", text: "1" }]);
     const before = indexCalls;
-    await listHostPath(file);
-    await listHostPath(file);
+    await listHostPath(asUserPath(file));
+    await listHostPath(asUserPath(file));
     expect(indexCalls).toBe(before + 1);
     writeArchive(file, [{ path: "two.txt", kind: "file", text: "22" }]);
     // Same-second rewrites can keep the mtime; a size change alone re-keys too,
     // but pin a later mtime so the test does not depend on it.
     utimesSync(file, new Date(), new Date(Date.now() + 5000));
-    const res = await listHostPath(file);
+    const res = await listHostPath(asUserPath(file));
     expect(indexCalls).toBe(before + 2);
     expect(res.kind === "ok" && res.entries.map((e) => e.name)).toEqual([
       "two.txt",

@@ -31,6 +31,7 @@ import {
   workspaceRootOf,
   type WorkspaceFile,
 } from "./workspace";
+import { asUserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
  * Call `onChange` whenever what a read of `file` under `root` answers may
@@ -63,7 +64,7 @@ export async function watchWorkspaceFile(
   } else {
     const abs = resolveInsideRoot(root.path, file.path);
     if (abs === null) return noWatch;
-    stop = await watchHostPath(abs, onChange);
+    stop = await watchHostPath(asUserPath(abs), onChange);
   }
   onChange();
   return stop;

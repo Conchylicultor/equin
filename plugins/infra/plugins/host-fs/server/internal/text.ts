@@ -4,9 +4,10 @@ import { locateHostPath } from "./archive/locate";
 import { readArchiveText } from "./archive/read";
 import { decodeTextBytes } from "./decode";
 import { classifyFsError } from "./path";
+import type { UserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /** Read the absolute host file `path` as text. The size gate runs before the read. */
-export async function readHostText(path: string): Promise<HostFsTextResult> {
+export async function readHostText(path: UserPath): Promise<HostFsTextResult> {
   try {
     const st = await stat(path);
     if (!st.isFile()) return { kind: "not-a-file", path };
@@ -24,7 +25,7 @@ export async function readHostText(path: string): Promise<HostFsTextResult> {
 
 /** Read the absolute host path `path` as text — a file on disk or a member of an archive. */
 export async function readHostPathText(
-  path: string,
+  path: UserPath,
 ): Promise<HostFsTextResult> {
   const located = await locateHostPath(path);
   return located.kind === "archive"

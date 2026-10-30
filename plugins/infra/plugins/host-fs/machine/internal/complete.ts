@@ -4,6 +4,7 @@ import { hostFsCompletions, type HostFsCompletions } from "../../core";
 import { completeHostDir, splitPrefix } from "../../server/internal/complete";
 import { refusalFor } from "./refuse";
 import { watchHostDir } from "./watch-dir";
+import { asUserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
  * The folder a prefix searches and the fragment it matches, or — when the
@@ -29,7 +30,7 @@ export async function completions(prefix: string): Promise<HostFsCompletions> {
   if ("invalid" in split) {
     throw hostFsCompletions.refuse("invalid-path", split.invalid);
   }
-  const done = await completeHostDir(split.dir, split.fragment);
+  const done = await completeHostDir(asUserPath(split.dir), split.fragment);
   if (done.kind !== "ok") throw refusalFor(hostFsCompletions.refuse, done);
   return { dir: done.dir, matches: done.matches, truncated: done.truncated };
 }
@@ -49,6 +50,6 @@ export const hostFsCompletionsServed = serveValue(hostFsCompletions, {
     const split = splitOrInvalid(prefix);
     // The loader refuses the spelling; there is nothing to watch.
     if ("invalid" in split) return () => {};
-    return watchHostDir(split.dir, () => notify());
+    return watchHostDir(asUserPath(split.dir), () => notify());
   },
 });

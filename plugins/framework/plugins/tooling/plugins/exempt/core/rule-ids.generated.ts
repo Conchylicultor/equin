@@ -169,6 +169,7 @@ export type ExemptableRuleId =
   | "ui-kit/class-field-must-be-branded"
   | "ui-kit/no-button-shadow"
   | "ui-kit/no-groupless-dropdown-menu-label"
+  | "user-path/no-sync-fs"
   | "viewport-overlay/no-adhoc-viewport-overlay"
   | "watcher-safety/no-detached-watch-reaction"
   | "watcher-safety/no-direct-parcel-watcher"

@@ -50,6 +50,7 @@ Plan: [`research/2026-10-07-primitives-image-viewer-fast-large-folders.md`](../.
     - `infra/host-fs.HostFileOpen`
     - `infra/host-fs.inertHeaders`
     - `infra/host-fs.openHostFile`
+    - `infra/host-fs.resolveHostPath`
     - `infra/jobs.defineJob`
     - `primitives/log-channels.Log`
   - Register: `defineJob('host-fs-image.sweep')`

@@ -5,6 +5,7 @@ import {
   type HostFsArchiveReason,
 } from "../../core";
 import { resolveHostPath } from "../../server/internal/path";
+import type { UserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /** A declaration's typed `refuse` (see `liveValue`'s `refusals`). */
 type Refuse<C extends string> = (code: C, message: string) => ResourceRefusal;
@@ -17,7 +18,7 @@ type Refuse<C extends string> = (code: C, message: string) => ResourceRefusal;
 export function resolveOrRefuse<C extends string>(
   refuse: Refuse<C | "invalid-path">,
   raw: string | undefined,
-): string {
+): UserPath {
   try {
     return resolveHostPath(raw);
   } catch (err) {
@@ -29,7 +30,7 @@ export function resolveOrRefuse<C extends string>(
 }
 
 /** The absolute path `raw` names, or `null` when no read could take it (nothing to watch). */
-export function resolvedOrNull(raw: string | undefined): string | null {
+export function resolvedOrNull(raw: string | undefined): UserPath | null {
   try {
     return resolveHostPath(raw);
   } catch (err) {

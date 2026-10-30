@@ -2,6 +2,7 @@ import sharp from "sharp";
 import { openHostFile } from "@plugins/infra/plugins/host-fs/server";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { resizedVersion, type ImageSize } from "../../core";
+import type { UserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /** Header reads are a few ms each; bounded so a big folder cannot open hundreds of files at once. */
 const reads = createSemaphore(8);
@@ -37,7 +38,7 @@ export function uprightSize(meta: {
 }
 
 /** The upright size of one image, or `null` when it vanished meanwhile. */
-export async function sizeOf(path: string): Promise<ImageSize | null> {
+export async function sizeOf(path: UserPath): Promise<ImageSize | null> {
   const file = await openHostFile(path);
   if (file.kind !== "ok") return null;
   const key = `${file.path}\0${resizedVersion(file)}`;

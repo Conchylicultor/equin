@@ -17,18 +17,22 @@ import {
   type AcquireDirWatch,
   type Rearm,
 } from "./watch-entry";
+import {
+  asUserPath,
+  type UserPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
  * The disk entry whose bytes answer for `path`: the path itself, or — for a
  * member of an archive — the archive file holding it.
  */
-async function anchorOf(path: string): Promise<string> {
+async function anchorOf(path: UserPath): Promise<UserPath> {
   const located = await locateHostPath(path);
   return located.kind === "archive" ? located.file : path;
 }
 
 /** The revision of the absolute host path `path` (see `FileVersionSchema`). */
-export async function hostPathVersion(path: string): Promise<FileVersion> {
+export async function hostPathVersion(path: UserPath): Promise<FileVersion> {
   try {
     const st = await stat(await anchorOf(path));
     return { stamp: `${st.ino}:${st.size}:${st.mtimeMs}` };
@@ -60,7 +64,7 @@ export async function hostPathVersion(path: string): Promise<FileVersion> {
  * re-read at arm time.
  */
 export function watchHostPath(
-  path: string,
+  path: UserPath,
   onChange: () => void,
 ): Promise<DirWatchRelease> {
   return watchHostPathOver(acquireDirWatch, path, onChange);
@@ -69,7 +73,7 @@ export function watchHostPath(
 /** {@link watchHostPath} over the given directory watches. */
 export function watchHostPathOver(
   acquire: AcquireDirWatch,
-  path: string,
+  path: UserPath,
   onChange: () => void,
 ): Promise<DirWatchRelease> {
   return rearmable(async (rearm) => {
@@ -88,7 +92,7 @@ export function watchHostPathOver(
       const target = await resolveOnDisk(anchor);
       if (target.kind === "there") {
         const real = target.real;
-        const folder = await resolveOnDisk(dirname(anchor));
+        const folder = await resolveOnDisk(asUserPath(dirname(anchor)));
         const entry =
           folder.kind === "there" ? join(folder.real, basename(anchor)) : null;
         if (real !== entry) {
@@ -107,7 +111,7 @@ export function watchHostPathOver(
 }
 
 /** What `path` is now: a folder, something else, or not there. */
-async function entryKind(path: string): Promise<"folder" | "other" | "gone"> {
+async function entryKind(path: UserPath): Promise<"folder" | "other" | "gone"> {
   try {
     return (await stat(path)).isDirectory() ? "folder" : "other";
   } catch (err) {
@@ -119,7 +123,7 @@ async function entryKind(path: string): Promise<"folder" | "other" | "gone"> {
 /** A children-scope watch of the folder `dir`; a re-arm when it went meanwhile. */
 async function watchEntriesOf(
   acquire: AcquireDirWatch,
-  dir: string,
+  dir: UserPath,
   onChange: () => void,
   rearm: Rearm,
 ): Promise<DirWatchRelease> {
@@ -151,7 +155,7 @@ export const hostFsVersionServed = serveValue(hostFsVersion, {
   source: "external",
   changes: "notified",
   loader: ({ path }) => {
-    let abs: string;
+    let abs: UserPath;
     try {
       abs = resolveHostPath(path);
     } catch (err) {
@@ -163,7 +167,7 @@ export const hostFsVersionServed = serveValue(hostFsVersion, {
     return hostPathVersion(abs);
   },
   whileSubscribed: async ({ path }, notify) => {
-    let abs: string;
+    let abs: UserPath;
     try {
       abs = resolveHostPath(path);
     } catch (err) {

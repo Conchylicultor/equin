@@ -15,6 +15,7 @@ import {
   type FolderImageSize,
 } from "../../core";
 import { sizeOf } from "../../server/internal/sizes";
+import { asUserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
  * The resizable images of one page's range, measured: the folder is listed,
@@ -40,7 +41,7 @@ async function pageOf(
     range,
   );
   const sizes = await Promise.all(
-    page.map(({ name }) => sizeOf(join(listed.path, name))),
+    page.map(({ name }) => sizeOf(asUserPath(join(listed.path, name)))),
   );
   return page.flatMap(({ name }, i) => {
     const size = sizes[i];

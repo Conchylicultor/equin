@@ -5,6 +5,7 @@ import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { locateHostPath, type HostLocation } from "./archive/locate";
 import { openArchiveMember } from "./archive/read";
 import { classifyFsError, resolveHostPath } from "./path";
+import type { UserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /** One satisfiable byte range, inclusive at both ends (as `Content-Range` spells it). */
 export type ByteRange = { start: number; end: number };
@@ -57,7 +58,7 @@ export function parseRange(header: string | null, size: number): RangeRequest {
  * document on the app's, so the sandbox would protect nothing.
  */
 export function inertHeaders(
-  path: string,
+  path: UserPath,
   contentType: string,
 ): Record<string, string> {
   return {
@@ -96,7 +97,7 @@ export async function handleRaw(req: Request): Promise<Response> {
  * (code-api's workspace-relative paths) resolves to a host path and lands here.
  */
 export async function serveHostPath(
-  path: string,
+  path: UserPath,
   rangeHeader: string | null,
 ): Promise<Response> {
   const located = await locateHostPath(path);
@@ -106,7 +107,7 @@ export async function serveHostPath(
 }
 
 export async function serveHostFile(
-  path: string,
+  path: UserPath,
   rangeHeader: string | null,
 ): Promise<Response> {
   let size: number;
@@ -156,7 +157,7 @@ export async function serveHostFile(
  * member's own name.
  */
 export async function serveArchiveMember(
-  path: string,
+  path: UserPath,
   at: Extract<HostLocation, { kind: "archive" }>,
   rangeHeader: string | null,
 ): Promise<Response> {

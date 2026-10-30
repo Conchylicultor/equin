@@ -2,6 +2,7 @@ import { lstat, readdir, readlink, statfs } from "node:fs/promises";
 import { join } from "node:path";
 import type { HostFsVolumeResult } from "../../core";
 import { classifyFsError } from "./path";
+import type { UserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 const VOLUMES_DIR = "/Volumes";
 
@@ -12,7 +13,7 @@ const VOLUMES_DIR = "/Volumes";
  * whose name is the one the Finder shows ("Macintosh HD"). Off macOS, or with
  * no such link, the boot volume is named `/`.
  */
-async function volumeName(path: string): Promise<string> {
+async function volumeName(path: UserPath): Promise<string> {
   const under = path.startsWith(`${VOLUMES_DIR}/`)
     ? path.slice(VOLUMES_DIR.length + 1)
     : "";
@@ -40,7 +41,7 @@ async function bootVolumeName(): Promise<string | undefined> {
 }
 
 /** The storage of the volume holding the absolute path `path`. */
-export async function hostVolume(path: string): Promise<HostFsVolumeResult> {
+export async function hostVolume(path: UserPath): Promise<HostFsVolumeResult> {
   try {
     const fs = await statfs(path);
     return {

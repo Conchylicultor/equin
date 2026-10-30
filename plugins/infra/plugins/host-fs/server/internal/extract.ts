@@ -8,6 +8,10 @@ import { archiveFormatFor } from "./archive/registry";
 import { archiveTree } from "./archive/tree";
 import { freePath } from "./free-path";
 import { classifyFsError } from "./path";
+import {
+  asUserPath,
+  type UserPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
  * What an extraction leaves out, as the Finder does: macOS's `__MACOSX/` tree
@@ -35,7 +39,7 @@ function folderNameFor(archiveName: string): string {
  * encrypted or corrupt member, a full disk) leaves nothing half-extracted.
  */
 export async function extractHostArchive(
-  path: string,
+  path: UserPath,
 ): Promise<HostFsExtractResult> {
   const located = await locateHostPath(path);
   if (located.kind === "archive") return { kind: "not-an-archive", path };
@@ -96,8 +100,8 @@ export async function extractHostArchive(
     }
 
     const created = single
-      ? await freePath(dir, single.name, single.kind !== "dir")
-      : await freePath(dir, folderNameFor(basename(path)), false);
+      ? await freePath(asUserPath(dir), single.name, single.kind !== "dir")
+      : await freePath(asUserPath(dir), folderNameFor(basename(path)), false);
     await rename(single ? join(staging, single.name) : staging, created);
     return {
       kind: "extracted",

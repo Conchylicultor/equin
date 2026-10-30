@@ -16,12 +16,16 @@ import {
 import { locateHostPath } from "./archive/locate";
 import { freePath, isTaken } from "./free-path";
 import { classifyFsError } from "./path";
+import {
+  asUserPath,
+  type UserPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /** `rename(2)`, injectable so a test can stand in a cross-volume (`EXDEV`) one. */
-export type RenameFn = (from: string, to: string) => Promise<void>;
+export type RenameFn = (from: UserPath, to: UserPath) => Promise<void>;
 
 /** Whether `path` is `ancestor` or lies below it (both absolute, resolved). */
-function isWithin(path: string, ancestor: string): boolean {
+function isWithin(path: UserPath, ancestor: UserPath): boolean {
   return (
     path === ancestor ||
     path.startsWith(ancestor.endsWith(sep) ? ancestor : ancestor + sep)
@@ -32,8 +36,8 @@ function isWithin(path: string, ancestor: string): boolean {
  * The path with its parent's symlinks resolved but not itself: moving a
  * symlink moves the link, so the link's own location is what is compared.
  */
-async function realLocation(path: string): Promise<string> {
-  return join(await realpath(dirname(path)), basename(path));
+async function realLocation(path: UserPath): Promise<UserPath> {
+  return asUserPath(join(await realpath(dirname(path)), basename(path)));
 }
 
 /**
@@ -43,8 +47,8 @@ async function realLocation(path: string): Promise<string> {
  * copy leaves the source untouched and nothing half-copied behind.
  */
 export async function movePath(
-  from: string,
-  to: string,
+  from: UserPath,
+  to: UserPath,
   rename: RenameFn = fsRename,
 ): Promise<void> {
   try {
@@ -75,8 +79,8 @@ export async function movePath(
  * in a hidden sibling, put back if the move fails, and removed once it lands.
  */
 async function replacePath(
-  from: string,
-  to: string,
+  from: UserPath,
+  to: UserPath,
   rename: RenameFn,
 ): Promise<void> {
   const aside = join(dirname(to), `.${basename(to)}.replaced-${randomUUID()}`);
@@ -91,9 +95,9 @@ async function replacePath(
 }
 
 async function moveOne(
-  from: string,
-  destDir: string,
-  realDest: string,
+  from: UserPath,
+  destDir: UserPath,
+  realDest: UserPath,
   resolution: HostFsMoveResolution | undefined,
   rename: RenameFn,
 ): Promise<HostFsMoveOutcome> {
@@ -101,7 +105,7 @@ async function moveOne(
     return { kind: "archive", from };
   }
   let isDir: boolean;
-  let realFrom: string;
+  let realFrom: UserPath;
   try {
     isDir = (await lstat(from)).isDirectory();
     realFrom = await realLocation(from);
@@ -111,7 +115,7 @@ async function moveOne(
   if (isWithin(realDest, realFrom)) return { kind: "into-self", from };
   if (dirname(realFrom) === realDest) return { kind: "same-dir", from };
 
-  let to = join(destDir, basename(from));
+  let to = asUserPath(join(destDir, basename(from)));
   const taken = await isTaken(to);
   try {
     if (!taken) {
@@ -142,20 +146,20 @@ async function moveOne(
  * by absolute source path).
  */
 export async function moveHostPaths(
-  sources: readonly string[],
-  destDir: string,
-  resolutions: ReadonlyMap<string, HostFsMoveResolution>,
+  sources: readonly UserPath[],
+  destDir: UserPath,
+  resolutions: ReadonlyMap<UserPath, HostFsMoveResolution>,
   rename: RenameFn = fsRename,
 ): Promise<HostFsMoveResult> {
   if ((await locateHostPath(destDir)).kind === "archive") {
     return { kind: "archive", path: destDir };
   }
-  let realDest: string;
+  let realDest: UserPath;
   try {
     if (!(await stat(destDir)).isDirectory()) {
       return { kind: "not-a-dir", path: destDir };
     }
-    realDest = await realpath(destDir);
+    realDest = asUserPath(await realpath(destDir));
   } catch (err) {
     return { kind: classifyFsError(err), path: destDir };
   }

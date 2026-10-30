@@ -11,6 +11,7 @@ import { decodeTextBytes } from "../decode";
 import type { HostLocation } from "./locate";
 import type { MemberBytes } from "./registry";
 import { archiveTree, type ArchiveTree } from "./tree";
+import type { UserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 type InArchive = Extract<HostLocation, { kind: "archive" }>;
 type OpenedMember = Extract<MemberBytes, { kind: "ok" }>;
@@ -19,7 +20,11 @@ function withinOf(at: InArchive): HostFsWithin {
   return { archive: at.file, format: at.format.id };
 }
 
-function unreadable(path: string, at: InArchive, reason: HostFsArchiveReason) {
+function unreadable(
+  path: UserPath,
+  at: InArchive,
+  reason: HostFsArchiveReason,
+) {
   return {
     kind: "unreadable-archive" as const,
     path,
@@ -33,7 +38,7 @@ function unreadable(path: string, at: InArchive, reason: HostFsArchiveReason) {
  * its typed arm and a missing / denied archive file into `missing` / `denied`.
  */
 async function withTree<R>(
-  path: string,
+  path: UserPath,
   at: InArchive,
   read: (tree: ArchiveTree) => R | Promise<R>,
 ): Promise<
@@ -53,7 +58,7 @@ async function withTree<R>(
 
 /** List the directory `at.inner` of an archive (`""` is its root). */
 export function listArchiveDir(
-  path: string,
+  path: UserPath,
   at: InArchive,
 ): Promise<HostFsListResult> {
   return withTree(path, at, (tree): HostFsListResult => {
@@ -75,7 +80,7 @@ export function listArchiveDir(
 
 /** Describe the member `at.inner` of an archive. */
 export function statArchiveMember(
-  path: string,
+  path: UserPath,
   at: InArchive,
 ): Promise<HostFsStatResult> {
   return withTree(path, at, (tree): HostFsStatResult => {
@@ -98,7 +103,7 @@ export function statArchiveMember(
  * (or a symlink / device member) is `not-a-file`.
  */
 export function openArchiveMember(
-  path: string,
+  path: UserPath,
   at: InArchive,
 ): Promise<
   | OpenedMember
@@ -140,7 +145,7 @@ export function isCorruptStream(err: unknown): boolean {
 
 /** Read the member `at.inner` as text, its size gated before it is decompressed. */
 export async function readArchiveText(
-  path: string,
+  path: UserPath,
   at: InArchive,
 ): Promise<HostFsTextResult> {
   const sized = await statArchiveMember(path, at);

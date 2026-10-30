@@ -7,6 +7,7 @@ import {
   readHostPathText,
 } from "@plugins/infra/plugins/host-fs/server";
 import { resolveInsideRoot } from "../../server/internal/contained-path";
+import { asUserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // Every git read in this file serves an open HTTP request from the code
 // explorer: a local, metadata-or-blob read that finishes in milliseconds. The
@@ -54,7 +55,7 @@ export async function getFileContent(
   const absTarget = resolveInsideRoot(worktreePath, relPath);
   if (absTarget === null) return { kind: "invalid-path" };
 
-  const result = await readHostPathText(absTarget);
+  const result = await readHostPathText(asUserPath(absTarget));
   switch (result.kind) {
     case "ok":
       return { kind: "ok", content: result.content };

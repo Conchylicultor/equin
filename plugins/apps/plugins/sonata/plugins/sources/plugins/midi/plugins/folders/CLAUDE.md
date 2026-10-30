@@ -52,7 +52,8 @@ a time (a re-check joins the waiting one), and a refresh waits at most
 readable, so neither watched nor walked (the walk would block on the same
 prompt) — and its answer is published when it lands, which re-mounts the
 watcher and reconciles like any readable-set change. The library says to
-answer the dialog. See
+answer the dialog. The configured and real paths are `UserPath`s, so the
+`user-path/no-sync-fs` lint refuses a synchronous fs call on them. See
 `research/2026-10-30-apps-sonata-midi-folder-probe-off-the-js-thread.md`.
 
 The statuses are the `sonata.midi-folders.status` live value (pushed when a

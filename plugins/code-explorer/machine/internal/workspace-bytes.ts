@@ -7,6 +7,7 @@ import { resolveInsideRoot } from "../../server/internal/contained-path";
 import { isAllowedRef, resolveRef } from "../../server/internal/resolve-ref";
 import type { WorkspaceRoot } from "../../server/internal/resolve-worktree-path";
 import type { WorkspaceFile } from "./workspace";
+import { asUserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // A local blob read serving an open read; only a wedged child reaches this,
 // and it then fails as a named error (see get-file-content.ts).
@@ -51,7 +52,7 @@ export async function readWorkspaceBytes(
   if (abs === null) return { kind: "invalid-path" };
 
   if (file.ref === undefined) {
-    const opened = await openHostFile(abs);
+    const opened = await openHostFile(asUserPath(abs));
     switch (opened.kind) {
       case "ok":
         if (opened.size > maxBytes) {
@@ -110,7 +111,7 @@ export async function workspaceFileSignature(
   const abs = resolveInsideRoot(root.path, file.path);
   if (abs === null) return "invalid-path";
   if (file.ref === undefined) {
-    const { stamp } = await hostPathVersion(abs);
+    const { stamp } = await hostPathVersion(asUserPath(abs));
     return `disk:${abs}:${stamp ?? "none"}`;
   }
   if (!root.git) return "not-a-checkout";

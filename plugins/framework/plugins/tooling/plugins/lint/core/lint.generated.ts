@@ -72,6 +72,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/deps/plugins/python", id: "infra.deps.python", loader: () => import("@plugins/infra/plugins/deps/plugins/python/lint"), dependsOn: [] },
   { pluginPath: "infra/plugins/deps/plugins/rust", id: "infra.deps.rust", loader: () => import("@plugins/infra/plugins/deps/plugins/rust/lint"), dependsOn: [] },
   { pluginPath: "infra/plugins/endpoints", id: "infra.endpoints", loader: () => import("@plugins/infra/plugins/endpoints/lint"), dependsOn: [] },
+  { pluginPath: "infra/plugins/host-fs/plugins/user-path", id: "infra.host-fs.user-path", loader: () => import("@plugins/infra/plugins/host-fs/plugins/user-path/lint"), dependsOn: [] },
   { pluginPath: "infra/plugins/paths/plugins/data-files", id: "infra.paths.data-files", loader: () => import("@plugins/infra/plugins/paths/plugins/data-files/lint"), dependsOn: [] },
   { pluginPath: "infra/plugins/spawn", id: "infra.spawn", loader: () => import("@plugins/infra/plugins/spawn/lint"), dependsOn: [] },
   { pluginPath: "infra/plugins/spawn/plugins/daemon", id: "infra.spawn.daemon", loader: () => import("@plugins/infra/plugins/spawn/plugins/daemon/lint"), dependsOn: [] },

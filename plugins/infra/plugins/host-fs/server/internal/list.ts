@@ -5,6 +5,10 @@ import { locateHostDir } from "./archive/locate";
 import { listArchiveDir } from "./archive/read";
 import { byName, describeEntry } from "./entry";
 import { classifyFsError, parentOf } from "./path";
+import {
+  asUserPath,
+  type UserPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
  * List the absolute directory `path`. A symlink to a directory lists its
@@ -13,7 +17,7 @@ import { classifyFsError, parentOf } from "./path";
  * directory grants read but not search permission makes the whole listing
  * `denied` — a listing never invents metadata.
  */
-export async function listHostDir(path: string): Promise<HostFsListResult> {
+export async function listHostDir(path: UserPath): Promise<HostFsListResult> {
   try {
     const st = await stat(path);
     if (!st.isDirectory()) return { kind: "not-a-dir", path };
@@ -37,11 +41,11 @@ export async function listHostDir(path: string): Promise<HostFsListResult> {
 type Vanished = { kind: "vanished" };
 
 async function describeChild(
-  dir: string,
+  dir: UserPath,
   name: string,
 ): Promise<HostFsEntry | Vanished> {
   try {
-    return await describeEntry(join(dir, name), name);
+    return await describeEntry(asUserPath(join(dir, name)), name);
   } catch (err) {
     // ENOENT here is a race with a concurrent delete: the entry is gone.
     // EACCES/EPERM propagates and denies the listing.
@@ -55,7 +59,7 @@ async function describeChild(
  * List the absolute host path `path`: a directory on disk, an archive file on
  * disk (its root), or a directory inside an archive.
  */
-export async function listHostPath(path: string): Promise<HostFsListResult> {
+export async function listHostPath(path: UserPath): Promise<HostFsListResult> {
   const located = await locateHostDir(path);
   return located.kind === "archive"
     ? listArchiveDir(path, located)

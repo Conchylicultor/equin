@@ -1,6 +1,7 @@
 import { defineFieldShape } from "@plugins/config_v2/plugins/fields/web";
 import { directoryPathFieldType } from "@plugins/fields/plugins/directory-path/core";
 import { FolderPickerPopover } from "@plugins/primitives/plugins/folder-picker/web";
+import { asUserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 const DirPathRenderer = defineFieldShape({
   type: directoryPathFieldType,
@@ -12,7 +13,7 @@ const DirPathRenderer = defineFieldShape({
         purpose="edit"
         key={value}
         value={value}
-        onChange={onChange}
+        onChange={(path) => onChange(asUserPath(path))}
         placeholder={field.meta.placeholder}
       />
     ),

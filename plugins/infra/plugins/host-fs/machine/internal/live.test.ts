@@ -32,6 +32,7 @@ import {
 import { completions } from "./complete";
 import { watchHostPathOver } from "./version";
 import { watchHostDirOver, type AcquireDirWatch } from "./watch-dir";
+import { asUserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 let root: string;
 
@@ -61,7 +62,7 @@ async function refusalCode(p: Promise<unknown>): Promise<string> {
 
 describe("host-fs.list", () => {
   test("pages hold the paged-source contract over every range", async () => {
-    const listed = await listHostDir(root);
+    const listed = await listHostDir(asUserPath(root));
     if (listed.kind !== "ok") throw new Error(listed.kind);
     await checkPagedSource<HostFsEntry, { path?: string }>({
       value: hostFsListing,
@@ -209,7 +210,11 @@ describe("watchHostDir", () => {
     mkdirSync(dir);
     const dirs = fakeDirs();
     let heard = 0;
-    const release = await watchHostDirOver(dirs.acquire, dir, () => heard++);
+    const release = await watchHostDirOver(
+      dirs.acquire,
+      asUserPath(dir),
+      () => heard++,
+    );
     // Nothing at arm time: the runtime reads only once the watch is live.
     expect(heard).toBe(0);
     expect(dirs.watched()).toEqual([dir]);
@@ -226,7 +231,11 @@ describe("watchHostDir", () => {
     const dir = join(root, "later");
     const dirs = fakeDirs();
     let heard = 0;
-    const release = await watchHostDirOver(dirs.acquire, dir, () => heard++);
+    const release = await watchHostDirOver(
+      dirs.acquire,
+      asUserPath(dir),
+      () => heard++,
+    );
     expect(dirs.watched()).toEqual([root]);
     // A sibling's change is not this folder's.
     dirs.emit(join(root, "other.txt"));
@@ -253,7 +262,11 @@ describe("watchHostDir", () => {
     const dir = join(top, "b", "c");
     const dirs = fakeDirs();
     let heard = 0;
-    const release = await watchHostDirOver(dirs.acquire, dir, () => heard++);
+    const release = await watchHostDirOver(
+      dirs.acquire,
+      asUserPath(dir),
+      () => heard++,
+    );
     expect(dirs.watched()).toEqual([root]);
     mkdirSync(join(top, "b"), { recursive: true });
     dirs.emit(top);
@@ -276,7 +289,11 @@ describe("watchHostDir", () => {
     const original = console.error;
     console.error = (...args: unknown[]) => void errors.push(args);
     try {
-      const release = await watchHostDirOver(dirs.acquire, dir, () => {});
+      const release = await watchHostDirOver(
+        dirs.acquire,
+        asUserPath(dir),
+        () => {},
+      );
       mkdirSync(dir);
       dirs.fail(1);
       dirs.emit(dir);
@@ -303,7 +320,11 @@ describe("watchHostPath", () => {
     symlinkSync(join(target, "real.txt"), link);
     const dirs = fakeDirs();
     let heard = 0;
-    const release = await watchHostPathOver(dirs.acquire, link, () => heard++);
+    const release = await watchHostPathOver(
+      dirs.acquire,
+      asUserPath(link),
+      () => heard++,
+    );
     expect(dirs.watched()).toEqual([root, target].sort());
     dirs.emit(join(target, "real.txt"), "update");
     expect(heard).toBe(1);
@@ -315,7 +336,7 @@ describe("watchHostPath", () => {
     let folderHeard = 0;
     const stop = await watchHostPathOver(
       dirs.acquire,
-      folder,
+      asUserPath(folder),
       () => folderHeard++,
     );
     dirs.emit(join(folder, "child.txt"));
@@ -327,7 +348,11 @@ describe("watchHostPath", () => {
     const file = join(root, "dist", "out.js");
     const dirs = fakeDirs();
     let heard = 0;
-    const release = await watchHostPathOver(dirs.acquire, file, () => heard++);
+    const release = await watchHostPathOver(
+      dirs.acquire,
+      asUserPath(file),
+      () => heard++,
+    );
     expect(dirs.watched()).toEqual([root]);
     mkdirSync(join(root, "dist"));
     dirs.emit(join(root, "dist"));

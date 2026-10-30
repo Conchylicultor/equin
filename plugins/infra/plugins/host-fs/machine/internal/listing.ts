@@ -14,6 +14,7 @@ import { listHostPath } from "../../server/internal/list";
 import { peekHostDir } from "../../server/internal/peek";
 import { refusalFor, resolveOrRefuse, resolvedOrNull } from "./refuse";
 import { watchHostDir } from "./watch-dir";
+import type { UserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 type Listed = Extract<HostFsListResult, { kind: "ok" }>;
 
@@ -30,7 +31,7 @@ const held = new Map<
 >();
 
 /** The listing of the absolute folder `abs` — the held one when there is one. */
-async function listingOf(abs: string): Promise<HostFsListResult> {
+async function listingOf(abs: UserPath): Promise<HostFsListResult> {
   const entry = held.get(abs);
   if (entry === undefined) return listHostPath(abs);
   entry.listing ??= listHostPath(abs);
@@ -52,7 +53,7 @@ async function listedOrRefuse(path: string | undefined): Promise<Listed> {
 }
 
 /** Hold `abs`'s listing until the returned release runs. */
-function hold(abs: string): () => void {
+function hold(abs: UserPath): () => void {
   const entry = held.get(abs) ?? { holders: 0, listing: null };
   entry.holders += 1;
   held.set(abs, entry);

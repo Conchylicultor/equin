@@ -3,7 +3,8 @@ import { access, stat } from "node:fs/promises";
 import type { HostFsArchiveReason } from "../../core";
 import { locateHostPath } from "./archive/locate";
 import { openArchiveMember, statArchiveMember } from "./archive/read";
-import { classifyFsError, resolveHostPath } from "./path";
+import { classifyFsError } from "./path";
+import type { UserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
  * One host file, opened for a consumer that needs its whole bytes (a decoder,
@@ -31,11 +32,10 @@ export type HostFileOpen =
     };
 
 /**
- * Open the host file `raw` names (absolute, or starting with `~`). A relative
- * path or a NUL byte throws the same 400 `HttpError` every host-fs read does.
+ * Open the host file at `path` — resolved by `resolveHostPath` (or a read's
+ * `resolveOrRefuse`), which answers a bad spelling with its 400.
  */
-export async function openHostFile(raw: string): Promise<HostFileOpen> {
-  const path = resolveHostPath(raw);
+export async function openHostFile(path: UserPath): Promise<HostFileOpen> {
   const located = await locateHostPath(path);
   if (located.kind === "archive") {
     const described = await statArchiveMember(path, located);

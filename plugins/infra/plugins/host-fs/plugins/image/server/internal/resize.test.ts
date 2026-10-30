@@ -11,6 +11,7 @@ import { join } from "node:path";
 import sharp from "sharp";
 import { makeResizedHandler } from "./resize";
 import { sizeOf, uprightSize } from "./sizes";
+import { asUserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 let root: string;
 let cache: string;
@@ -105,15 +106,15 @@ describe("resized", () => {
 
 describe("sizes", () => {
   test("upright sizes, read from the headers", async () => {
-    expect(await sizeOf(join(root, "alpha.png"))).toEqual({
+    expect(await sizeOf(asUserPath(join(root, "alpha.png")))).toEqual({
       kind: "known",
       width: 50,
       height: 50,
     });
-    expect(await sizeOf(join(root, "garbage.jpg"))).toEqual({
+    expect(await sizeOf(asUserPath(join(root, "garbage.jpg")))).toEqual({
       kind: "unreadable",
     });
-    expect(await sizeOf(join(root, "turned.jpg"))).toEqual({
+    expect(await sizeOf(asUserPath(join(root, "turned.jpg")))).toEqual({
       kind: "known",
       width: 200,
       height: 400,
@@ -121,7 +122,7 @@ describe("sizes", () => {
   });
 
   test("a missing file has no size", async () => {
-    expect(await sizeOf(join(root, "nope.jpg"))).toBeNull();
+    expect(await sizeOf(asUserPath(join(root, "nope.jpg")))).toBeNull();
   });
 
   test("uprightSize", () => {

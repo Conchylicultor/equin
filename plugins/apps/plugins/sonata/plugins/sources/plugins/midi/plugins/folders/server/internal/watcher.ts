@@ -11,6 +11,7 @@ import {
   getSongMidiBySourcePath,
   setSourceMissing,
 } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/midi/server";
+import type { UserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { midiFoldersConfig } from "../../shared/config";
 import { importMidiFileJob } from "./import-job";
 import { reconcile } from "./reconcile";
@@ -49,7 +50,7 @@ const lostReconciles = createCoalescer({
 // there is no polling.
 let watcher: FileWatcher | null = null;
 // The readable dirs the current watcher was mounted over (`[]`: none).
-let mountedDirs: string[] = [];
+let mountedDirs: UserPath[] = [];
 let configSub: Disposable | null = null;
 let statusSub: (() => void) | null = null;
 let mounting = false;
@@ -155,6 +156,6 @@ export async function stopMidiFolderWatcher(): Promise<void> {
   }
 }
 
-function sameDirs(a: readonly string[], b: readonly string[]): boolean {
+function sameDirs(a: readonly UserPath[], b: readonly UserPath[]): boolean {
   return a.length === b.length && a.every((dir, i) => dir === b[i]);
 }

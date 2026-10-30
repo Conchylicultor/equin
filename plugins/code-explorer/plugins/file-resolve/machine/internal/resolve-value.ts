@@ -14,6 +14,7 @@ import {
   type ResolvedFile,
 } from "../../shared/resolved-file";
 import { cleanQuery, resolveFilePath, targetOf } from "./resolve-path";
+import { asUserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /** Where a `code.resolve-file` tuple resolves under its workspace's `root`, or its refusal. */
 export async function loadResolvedFile(
@@ -74,7 +75,9 @@ async function watchResolution(
     }
     const cleaned = cleanQuery(path);
     if (cleaned) {
-      stops.push(await watchHostPath(targetOf(root.path, cleaned), onChange));
+      stops.push(
+        await watchHostPath(asUserPath(targetOf(root.path, cleaned)), onChange),
+      );
     }
   } catch (err) {
     stopAll();

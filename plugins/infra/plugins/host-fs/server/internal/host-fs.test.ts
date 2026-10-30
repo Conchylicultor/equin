@@ -19,6 +19,7 @@ import { parseRange, serveHostFile } from "./raw";
 import { statHostPath } from "./stat";
 import { decodeTextBytes } from "./decode";
 import { readHostText } from "./text";
+import { asUserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // Fixture:
 //   root/
@@ -53,15 +54,15 @@ afterAll(() => {
 
 describe("resolveHostPath", () => {
   test("expands ~ and ~/", () => {
-    expect(expandTilde("~", "/home/u")).toBe("/home/u");
-    expect(expandTilde("~/a/b", "/home/u")).toBe("/home/u/a/b");
-    expect(expandTilde("/x/~/y", "/home/u")).toBe("/x/~/y");
-    expect(resolveHostPath("~/docs/", "/home/u")).toBe("/home/u/docs");
+    expect<string>(expandTilde("~", "/home/u")).toBe("/home/u");
+    expect<string>(expandTilde("~/a/b", "/home/u")).toBe("/home/u/a/b");
+    expect<string>(expandTilde("/x/~/y", "/home/u")).toBe("/x/~/y");
+    expect<string>(resolveHostPath("~/docs/", "/home/u")).toBe("/home/u/docs");
   });
   test("defaults to home and normalises", () => {
-    expect(resolveHostPath(undefined, "/home/u")).toBe("/home/u");
-    expect(resolveHostPath("", "/home/u")).toBe("/home/u");
-    expect(resolveHostPath("/a/./b/../c/", "/home/u")).toBe("/a/c");
+    expect<string>(resolveHostPath(undefined, "/home/u")).toBe("/home/u");
+    expect<string>(resolveHostPath("", "/home/u")).toBe("/home/u");
+    expect<string>(resolveHostPath("/a/./b/../c/", "/home/u")).toBe("/a/c");
   });
   test("rejects relative paths and NUL bytes with a 400", () => {
     expect(() => resolveHostPath("relative/x")).toThrow(HttpError);
@@ -75,7 +76,7 @@ describe("resolveHostPath", () => {
 
 describe("peek", () => {
   test("names every child with its hidden flag, without describing it", async () => {
-    const res = await peekHostDir(root);
+    const res = await peekHostDir(asUserPath(root));
     if (res.kind !== "ok") throw new Error(`expected ok, got ${res.kind}`);
     const children = Object.fromEntries(
       res.children.map((c) => [c.name, c.hidden]),
@@ -92,7 +93,7 @@ describe("peek", () => {
     });
   });
   test("reads a symlinked folder through the link", async () => {
-    const res = await peekHostDir(join(root, "link-to-beta"));
+    const res = await peekHostDir(asUserPath(join(root, "link-to-beta")));
     expect(res.kind === "ok" && res.children).toEqual([
       { name: "file.txt", hidden: false },
     ]);
@@ -101,7 +102,7 @@ describe("peek", () => {
     expect(
       await Promise.all(
         ["locked", "nope", "notes.txt", "Alpha"].map((name) =>
-          peekHostDir(join(root, name)),
+          peekHostDir(asUserPath(join(root, name))),
         ),
       ),
     ).toEqual([
@@ -115,7 +116,7 @@ describe("peek", () => {
 
 describe("listHostDir", () => {
   test("lists every entry sorted by name, with kinds, hidden flags and symlink targets", async () => {
-    const res = await listHostDir(root);
+    const res = await listHostDir(asUserPath(root));
     if (res.kind !== "ok") throw new Error(`expected ok, got ${res.kind}`);
     expect(res.parent).toBe(join(root, ".."));
     const byName = Object.fromEntries(res.entries.map((e) => [e.name, e]));
@@ -153,51 +154,61 @@ describe("listHostDir", () => {
     expect(byName["locked"]).toMatchObject({ kind: "dir" });
   });
   test("follows a symlink to a directory", async () => {
-    const res = await listHostDir(join(root, "link-to-beta"));
+    const res = await listHostDir(asUserPath(join(root, "link-to-beta")));
     if (res.kind !== "ok") throw new Error(`expected ok, got ${res.kind}`);
     expect(res.entries.map((e) => e.name)).toEqual(["file.txt"]);
   });
   test("missing / not-a-dir / denied are typed, never an empty listing", async () => {
-    expect(await listHostDir(join(root, "nope"))).toEqual({
+    expect(await listHostDir(asUserPath(join(root, "nope")))).toEqual({
       kind: "missing",
       path: join(root, "nope"),
     });
-    expect(await listHostDir(join(root, "notes.txt", "x"))).toMatchObject({
+    expect(
+      await listHostDir(asUserPath(join(root, "notes.txt", "x"))),
+    ).toMatchObject({
       kind: "missing",
     });
-    expect(await listHostDir(join(root, "notes.txt"))).toMatchObject({
+    expect(
+      await listHostDir(asUserPath(join(root, "notes.txt"))),
+    ).toMatchObject({
       kind: "not-a-dir",
     });
-    expect(await listHostDir(join(root, "dangling"))).toMatchObject({
-      kind: "missing",
-    });
-    expect(await listHostDir(join(root, "locked"))).toEqual({
+    expect(await listHostDir(asUserPath(join(root, "dangling")))).toMatchObject(
+      {
+        kind: "missing",
+      },
+    );
+    expect(await listHostDir(asUserPath(join(root, "locked")))).toEqual({
       kind: "denied",
       path: join(root, "locked"),
     });
   });
   test("the filesystem root has no parent", async () => {
-    const res = await listHostDir("/");
+    const res = await listHostDir(asUserPath("/"));
     expect(res.kind === "ok" && res.parent).toBe(null);
   });
 });
 
 describe("statHostPath", () => {
   test("describes files, dirs and symlinks", async () => {
-    expect(await statHostPath(join(root, "notes.txt"))).toMatchObject({
+    expect(
+      await statHostPath(asUserPath(join(root, "notes.txt"))),
+    ).toMatchObject({
       kind: "ok",
       parent: root,
       entry: { name: "notes.txt", kind: "file", size: 5 },
       read: "readable",
     });
-    expect(await statHostPath(join(root, "link-to-beta"))).toMatchObject({
+    expect(
+      await statHostPath(asUserPath(join(root, "link-to-beta"))),
+    ).toMatchObject({
       kind: "ok",
       entry: { kind: "dir", symlinkTarget: join(root, "beta") },
     });
-    const dangling = await statHostPath(join(root, "dangling"));
+    const dangling = await statHostPath(asUserPath(join(root, "dangling")));
     expect(dangling).toMatchObject({ kind: "ok", entry: { kind: "symlink" } });
     expect(dangling).not.toHaveProperty("read");
-    expect(await statHostPath("/")).toMatchObject({
+    expect(await statHostPath(asUserPath("/"))).toMatchObject({
       kind: "ok",
       parent: null,
       entry: { name: "/", kind: "dir" },
@@ -205,17 +216,19 @@ describe("statHostPath", () => {
   });
   test("a path it can describe but not read says why", async () => {
     // Describing `locked` needs only its parent; reading it needs its own mode.
-    expect(await statHostPath(join(root, "locked"))).toMatchObject({
+    expect(await statHostPath(asUserPath(join(root, "locked")))).toMatchObject({
       kind: "ok",
       entry: { kind: "dir" },
       read: "permissions",
     });
   });
   test("missing and denied", async () => {
-    expect(await statHostPath(join(root, "nope"))).toMatchObject({
+    expect(await statHostPath(asUserPath(join(root, "nope")))).toMatchObject({
       kind: "missing",
     });
-    expect(await statHostPath(join(root, "locked", "inside"))).toMatchObject({
+    expect(
+      await statHostPath(asUserPath(join(root, "locked", "inside"))),
+    ).toMatchObject({
       kind: "denied",
     });
   });
@@ -240,7 +253,7 @@ describe("complete", () => {
     expect(() => splitPrefix("", "/home/u")).toThrow(HttpError);
   });
   test("folder-only, case-insensitive, symlinks to dirs included, hidden on request", async () => {
-    const all = await completeHostDir(root, "");
+    const all = await completeHostDir(asUserPath(root), "");
     if (all.kind !== "ok") throw new Error(`expected ok, got ${all.kind}`);
     expect(all.matches.map((m) => m.name)).toEqual([
       "Alpha",
@@ -251,26 +264,32 @@ describe("complete", () => {
     expect(all.matches[0]!.path).toBe(join(root, "Alpha"));
     expect(all.truncated).toBe(false);
 
-    const a = await completeHostDir(root, "a");
+    const a = await completeHostDir(asUserPath(root), "a");
     expect(a.kind === "ok" && a.matches.map((m) => m.name)).toEqual(["Alpha"]);
-    const hidden = await completeHostDir(root, ".");
+    const hidden = await completeHostDir(asUserPath(root), ".");
     expect(hidden.kind === "ok" && hidden.matches.map((m) => m.name)).toEqual([
       ".hidden-dir",
     ]);
   });
   test("caps the result", async () => {
-    const res = await completeHostDir(root, "", 2);
+    const res = await completeHostDir(asUserPath(root), "", 2);
     expect(res).toMatchObject({ kind: "ok", truncated: true });
     expect(res.kind === "ok" && res.matches.length).toBe(2);
   });
   test("typed failures for the searched directory", async () => {
-    expect(await completeHostDir(join(root, "nope"), "")).toMatchObject({
+    expect(
+      await completeHostDir(asUserPath(join(root, "nope")), ""),
+    ).toMatchObject({
       kind: "missing",
     });
-    expect(await completeHostDir(join(root, "notes.txt"), "")).toMatchObject({
+    expect(
+      await completeHostDir(asUserPath(join(root, "notes.txt")), ""),
+    ).toMatchObject({
       kind: "not-a-dir",
     });
-    expect(await completeHostDir(join(root, "locked"), "")).toMatchObject({
+    expect(
+      await completeHostDir(asUserPath(join(root, "locked")), ""),
+    ).toMatchObject({
       kind: "denied",
     });
   });
@@ -290,16 +309,16 @@ describe("text", () => {
     });
   });
   test("readHostText", async () => {
-    expect(await readHostText(join(root, "notes.txt"))).toEqual({
+    expect(await readHostText(asUserPath(join(root, "notes.txt")))).toEqual({
       kind: "ok",
       path: join(root, "notes.txt"),
       content: "hello",
       size: 5,
     });
-    expect(await readHostText(join(root, "beta"))).toMatchObject({
+    expect(await readHostText(asUserPath(join(root, "beta")))).toMatchObject({
       kind: "not-a-file",
     });
-    expect(await readHostText(join(root, "nope"))).toMatchObject({
+    expect(await readHostText(asUserPath(join(root, "nope")))).toMatchObject({
       kind: "missing",
     });
   });
@@ -332,9 +351,9 @@ describe("raw", () => {
   test("sandboxes every file but a PDF", async () => {
     writeFileSync(join(root, "page.html"), "<script></script>");
     writeFileSync(join(root, "doc.pdf"), "%PDF-1.4");
-    const html = await serveHostFile(join(root, "page.html"), null);
+    const html = await serveHostFile(asUserPath(join(root, "page.html")), null);
     expect(html.headers.get("content-security-policy")).toBe("sandbox");
-    const pdf = await serveHostFile(join(root, "doc.pdf"), null);
+    const pdf = await serveHostFile(asUserPath(join(root, "doc.pdf")), null);
     expect(pdf.headers.get("content-type")).toBe("application/pdf");
     expect(pdf.headers.get("content-security-policy")).toBeNull();
     expect(pdf.headers.get("x-content-type-options")).toBe("nosniff");
@@ -343,7 +362,10 @@ describe("raw", () => {
 
 describe("open", () => {
   test("argv never goes through a shell", () => {
-    expect(openArgv("/a b/c;rm -rf", false)).toEqual(["open", "/a b/c;rm -rf"]);
-    expect(openArgv("/x", true)).toEqual(["open", "-R", "/x"]);
+    expect(openArgv(asUserPath("/a b/c;rm -rf"), false)).toEqual([
+      "open",
+      "/a b/c;rm -rf",
+    ]);
+    expect(openArgv(asUserPath("/x"), true)).toEqual(["open", "-R", "/x"]);
   });
 });

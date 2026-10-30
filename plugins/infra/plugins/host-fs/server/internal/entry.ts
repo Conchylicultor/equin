@@ -7,6 +7,7 @@ import {
 } from "../../core";
 import { archiveFormatFor } from "./archive/registry";
 import { classifyFsError, isHiddenName } from "./path";
+import type { UserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /** How every listing orders its entries: `compareHostFsNames` of their names. */
 export const byName = (a: { name: string }, b: { name: string }): number =>
@@ -51,7 +52,7 @@ function archiveMark(
  * what a vanished or unreadable entry means for its own answer.
  */
 export async function describeEntry(
-  path: string,
+  path: UserPath,
   name: string,
 ): Promise<HostFsEntry> {
   const own = await lstat(path);
@@ -99,7 +100,7 @@ export async function describeEntry(
 export type FollowResult =
   { kind: "resolved"; stats: Stats } | { kind: "unresolvable" };
 
-export async function followLink(path: string): Promise<FollowResult> {
+export async function followLink(path: UserPath): Promise<FollowResult> {
   try {
     return { kind: "resolved", stats: await stat(path) };
   } catch (err) {

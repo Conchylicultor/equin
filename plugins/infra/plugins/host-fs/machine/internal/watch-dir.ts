@@ -12,6 +12,10 @@ import {
   watchEntryOver,
   type AcquireDirWatch,
 } from "./watch-entry";
+import {
+  asUserPath,
+  type UserPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 export type { AcquireDirWatch } from "./watch-entry";
 
@@ -40,7 +44,7 @@ export type { AcquireDirWatch } from "./watch-entry";
  * is awaited first), so nothing is re-read at arm time.
  */
 export function watchHostDir(
-  path: string,
+  path: UserPath,
   onChange: () => void,
 ): Promise<DirWatchRelease> {
   return watchHostDirOver(acquireDirWatch, path, onChange);
@@ -49,7 +53,7 @@ export function watchHostDir(
 /** {@link watchHostDir} over the given directory watches. */
 export async function watchHostDirOver(
   acquire: AcquireDirWatch,
-  path: string,
+  path: UserPath,
   onChange: () => void,
 ): Promise<DirWatchRelease> {
   const located = await locateHostDir(path);
@@ -57,11 +61,11 @@ export async function watchHostDirOver(
     return watchHostPathOver(acquire, located.file, onChange);
   }
   return rearmable(async (rearm) => {
-    let dir: string;
+    let dir: UserPath;
     try {
       // The hub takes the folder as the filesystem reports it (no symlinked
       // prefix), and its events name paths so.
-      dir = await realpath(path);
+      dir = asUserPath(await realpath(path));
     } catch (err) {
       // Missing or unreadable: wait for it to appear (or change) instead.
       classifyFsError(err);

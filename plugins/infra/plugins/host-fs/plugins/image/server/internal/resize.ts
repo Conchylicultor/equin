@@ -8,12 +8,14 @@ import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import {
   inertHeaders,
   openHostFile,
+  resolveHostPath,
   type HostFileOpen,
 } from "@plugins/infra/plugins/host-fs/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { parseEdge, resizedVersion, type ResizedEdge } from "../../core";
+import { asUserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /** JPEG / WebP quality of a resized copy: invisible loss at thumbnail and screen sizes. */
 const QUALITY = 82;
@@ -125,7 +127,7 @@ export function makeResizedHandler(dir: () => string) {
     if (edge === null) return new Response("Bad edge", { status: 400 });
     let file: HostFileOpen;
     try {
-      file = await openHostFile(raw);
+      file = await openHostFile(resolveHostPath(raw));
     } catch (err) {
       if (err instanceof HttpError)
         return new Response(err.message, { status: err.status });
@@ -167,7 +169,7 @@ export function makeResizedHandler(dir: () => string) {
     const current = params.get("v") === resizedVersion(file);
     return new Response(Bun.file(copy.file), {
       headers: {
-        ...inertHeaders(file.path, copy.type),
+        ...inertHeaders(asUserPath(file.path), copy.type),
         "Content-Type": copy.type,
         "Accept-Ranges": "none",
         "Cache-Control": current

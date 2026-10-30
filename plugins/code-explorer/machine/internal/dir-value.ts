@@ -24,6 +24,7 @@ import {
   watchCheckout,
   workspaceRootOf,
 } from "./workspace";
+import { asUserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 type DirQuery = { worktree: string; dir: string; ref?: string };
 
@@ -93,7 +94,7 @@ async function watchListing(
   }
   const abs = dirIn(root.path, q.dir);
   if (abs === null) return noWatch;
-  return watchHostDir(abs, onChange);
+  return watchHostDir(asUserPath(abs), onChange);
 }
 
 /** One page of a folder's entries under `root`: its name range of the listing. */

@@ -7,6 +7,10 @@ import type {
   FileChangeEvent,
 } from "@plugins/infra/plugins/file-watcher/server";
 import { classifyFsError } from "../../server/internal/path";
+import {
+  asUserPath,
+  type UserPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /** Opens one directory watch — the shared hub's `acquireDirWatch`, or a test's. */
 export type AcquireDirWatch = (
@@ -14,7 +18,7 @@ export type AcquireDirWatch = (
 ) => Promise<DirWatchRelease>;
 
 /** Whether `path` is not there (or not readable) any more. */
-export async function isGone(path: string): Promise<boolean> {
+export async function isGone(path: UserPath): Promise<boolean> {
   try {
     await realpath(path);
     return false;
@@ -25,12 +29,12 @@ export async function isGone(path: string): Promise<boolean> {
 }
 
 /** Where `path` resolves on disk, or that it is not there (or not readable). */
-export type Resolved = { kind: "there"; real: string } | { kind: "gone" };
+export type Resolved = { kind: "there"; real: UserPath } | { kind: "gone" };
 
 /** `realpath(path)`, as a {@link Resolved}. */
-export async function resolveOnDisk(path: string): Promise<Resolved> {
+export async function resolveOnDisk(path: UserPath): Promise<Resolved> {
   try {
-    return { kind: "there", real: await realpath(path) };
+    return { kind: "there", real: asUserPath(await realpath(path)) };
   } catch (err) {
     classifyFsError(err);
     return { kind: "gone" };
@@ -54,7 +58,7 @@ export type Rearm = (after?: () => void) => void;
  */
 export async function rearmable(
   arm: (rearm: Rearm) => Promise<DirWatchRelease>,
-  what: string,
+  what: UserPath,
 ): Promise<DirWatchRelease> {
   let stopped = false;
   let held: DirWatchRelease | null = null;
@@ -110,18 +114,18 @@ export async function rearmable(
  */
 export function watchEntryOver(
   acquire: AcquireDirWatch,
-  path: string,
+  path: UserPath,
   onChange: (events: FileChangeEvent[]) => void,
 ): Promise<DirWatchRelease> {
   return rearmable(async (rearm) => {
     // The nearest folder of the path that is there, and the path's next
     // component below it (the entry itself once that folder is its parent).
     let next = path;
-    let dir = dirname(path);
+    let dir = asUserPath(dirname(path));
     let found = await resolveOnDisk(dir);
     while (found.kind === "gone") {
       next = dir;
-      dir = dirname(dir);
+      dir = asUserPath(dirname(dir));
       found = await resolveOnDisk(dir);
     }
     const watched = found.real;

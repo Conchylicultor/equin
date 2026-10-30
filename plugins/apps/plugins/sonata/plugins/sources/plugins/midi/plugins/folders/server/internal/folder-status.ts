@@ -2,6 +2,10 @@ import { opendir, realpath } from "node:fs/promises";
 import { getConfig } from "@plugins/config_v2/server";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import {
+  asUserPath,
+  type UserPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { midiFoldersConfig } from "../../shared/config";
 import type { FolderStatus } from "../../shared/status";
 
@@ -21,10 +25,10 @@ import type { FolderStatus } from "../../shared/status";
  * Every errno becomes a state the library shows — none is skipped and none is
  * swallowed. A throw that is not an errno is a bug and propagates.
  */
-export async function probeFolder(path: string): Promise<FolderStatus> {
-  let dir: string;
+export async function probeFolder(path: UserPath): Promise<FolderStatus> {
+  let dir: UserPath;
   try {
-    dir = await realpath(path);
+    dir = asUserPath(await realpath(path));
   } catch (err) {
     return failed(path, path, err, "resolve");
   }
@@ -37,8 +41,8 @@ export async function probeFolder(path: string): Promise<FolderStatus> {
 }
 
 function failed(
-  path: string,
-  dir: string,
+  path: UserPath,
+  dir: UserPath,
   err: unknown,
   step: "resolve" | "open",
 ): FolderStatus {
@@ -82,28 +86,28 @@ export interface FolderStatusStore {
   /** The last statuses (the first refresh's, when none ran yet). */
   statuses(): Promise<FolderStatus[]>;
   /** The readable folders' real paths, as of the last published statuses. */
-  readableDirs(): string[];
+  readableDirs(): UserPath[];
   /** Called after every publish that changed the statuses; returns the unsubscribe. */
   onChange(listener: () => void): () => void;
 }
 
 export function createFolderStatusStore(deps: {
-  folders: () => string[];
-  probe: (path: string) => Promise<FolderStatus>;
+  folders: () => UserPath[];
+  probe: (path: UserPath) => Promise<FolderStatus>;
   answerWithinMs: number;
 }): FolderStatusStore {
   // One probe per path at a time: a pending prompt holds one probe, however
   // many re-checks ask meanwhile.
   const probes = createInflight();
   // Each configured path's last answer.
-  const answers = new Map<string, FolderStatus>();
+  const answers = new Map<UserPath, FolderStatus>();
   // The last published statuses, in config order — `null` until the first
   // refresh published.
   let published: FolderStatus[] | null = null;
   let first: Promise<FolderStatus[]> | null = null;
   const listeners = new Set<() => void>();
 
-  const checking = (path: string): FolderStatus => ({
+  const checking = (path: UserPath): FolderStatus => ({
     state: "checking",
     path,
     dir: path,
@@ -126,7 +130,7 @@ export function createFolderStatusStore(deps: {
     // reads `checking` until probed again, never a stale answer.
     for (const path of [...answers.keys()])
       if (!paths.includes(path)) answers.delete(path);
-    const settled = new Set<string>();
+    const settled = new Set<UserPath>();
     let late = false;
     const all = Promise.all(
       paths.map(async (path) => {
@@ -166,7 +170,9 @@ export function createFolderStatusStore(deps: {
     statuses: () =>
       published !== null ? Promise.resolve(published) : (first ??= refresh()),
     readableDirs: () =>
-      (published ?? []).filter((s) => s.state === "ok").map((s) => s.dir),
+      (published ?? [])
+        .filter((s) => s.state === "ok")
+        .map((s) => asUserPath(s.dir)),
     onChange: (listener) => {
       listeners.add(listener);
       return () => {
@@ -209,4 +215,4 @@ export const onFolderStatusChange = (listener: () => void): (() => void) =>
  * Sync because `defineCorpusIndex`'s `roots` is a synchronous
  * `() => string[]`, read fresh on every walk; every caller refreshes first.
  */
-export const readableDirs = (): string[] => store.readableDirs();
+export const readableDirs = (): UserPath[] => store.readableDirs();

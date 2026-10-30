@@ -1,5 +1,6 @@
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import type { HostFsArchiveReason } from "../../../core";
+import type { UserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /** An archive (or one member of it) that cannot be read, and why. */
 export type ArchiveUnreadable = {
@@ -57,7 +58,7 @@ export interface ArchiveFormat {
    * Any other I/O error throws (host-fs classifies ENOENT / EACCES).
    */
   index(
-    file: string,
+    file: UserPath,
     opts: { maxMembers: number },
   ): Promise<ArchiveIndexResult>;
 }

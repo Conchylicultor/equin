@@ -12,6 +12,7 @@ import {
   resolveWorktreePath,
 } from "./resolve-worktree-path";
 import { resolveInsideRoot } from "./contained-path";
+import { asUserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // Every git read in this file serves an open HTTP request from the code
 // explorer: a local, metadata-or-blob read that finishes in milliseconds. The
@@ -85,7 +86,7 @@ async function serveImage(
     const absTarget = resolveInsideRoot(root, path);
     if (absTarget === null)
       return new Response("Invalid path", { status: 400 });
-    return await serveHostPath(absTarget, req.headers.get("range"));
+    return await serveHostPath(asUserPath(absTarget), req.headers.get("range"));
   }
 
   // As of a revision: a git read, so the workspace must be a checkout.
@@ -113,5 +114,5 @@ async function serveImage(
   if (bytes.length > MAX_BYTES)
     return new Response("File too large", { status: 413 });
 
-  return new Response(bytes, { headers: inertHeaders(path, mime) });
+  return new Response(bytes, { headers: inertHeaders(asUserPath(path), mime) });
 }

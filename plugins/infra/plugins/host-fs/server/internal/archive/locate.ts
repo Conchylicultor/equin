@@ -2,14 +2,15 @@ import { lstat, stat } from "node:fs/promises";
 import { basename, relative } from "node:path";
 import { classifyFsError, parentOf } from "../path";
 import { archiveFormatFor, type ArchiveFormat } from "./registry";
+import type { UserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
  * Where a host path's bytes live: on disk, or inside an archive file on disk
  * (`inner` is the member path under it, `""` for the archive's root).
  */
 export type HostLocation =
-  | { kind: "disk"; path: string }
-  | { kind: "archive"; file: string; format: ArchiveFormat; inner: string };
+  | { kind: "disk"; path: UserPath }
+  | { kind: "archive"; file: UserPath; format: ArchiveFormat; inner: string };
 
 /**
  * Locate the absolute host path `path`. A path that exists on disk is a disk
@@ -22,7 +23,7 @@ export type HostLocation =
  * An archive inside an archive is not browsed: its members are not found, so
  * a path through one is `missing`.
  */
-export async function locateHostPath(path: string): Promise<HostLocation> {
+export async function locateHostPath(path: UserPath): Promise<HostLocation> {
   if (await existsOnDisk(path)) return { kind: "disk", path };
   for (let dir = parentOf(path); dir !== null; dir = parentOf(dir)) {
     const format = archiveFormatFor(basename(dir));
@@ -36,7 +37,7 @@ export async function locateHostPath(path: string): Promise<HostLocation> {
  * The location `list` reads: like {@link locateHostPath}, except that an
  * archive file on disk is listed as its own root.
  */
-export async function locateHostDir(path: string): Promise<HostLocation> {
+export async function locateHostDir(path: UserPath): Promise<HostLocation> {
   const located = await locateHostPath(path);
   if (located.kind === "archive") return located;
   const format = archiveFormatFor(basename(path));
@@ -47,7 +48,7 @@ export async function locateHostDir(path: string): Promise<HostLocation> {
 }
 
 /** `false` only for ENOENT / ENOTDIR: anything else is the caller's own read to report. */
-async function existsOnDisk(path: string): Promise<boolean> {
+async function existsOnDisk(path: UserPath): Promise<boolean> {
   try {
     await lstat(path);
     return true;
@@ -61,7 +62,7 @@ async function existsOnDisk(path: string): Promise<boolean> {
  * into; a missing or denied one explains nothing about the path below it.
  */
 async function kindAt(
-  path: string,
+  path: UserPath,
 ): Promise<"file" | "not-a-file" | "missing" | "denied"> {
   try {
     return (await stat(path)).isFile() ? "file" : "not-a-file";

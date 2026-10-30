@@ -4168,6 +4168,10 @@
         "sharp": "^0.35.5",
       },
     },
+    "plugins/infra/plugins/host-fs/plugins/user-path": {
+      "name": "@equin/plugin-infra-host-fs-user-path",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/host-fs/plugins/zip": {
       "name": "@equin/plugin-infra-host-fs-zip",
       "version": "0.0.1",
@@ -9089,6 +9093,8 @@
     "@equin/plugin-infra-host-fs": ["@equin/plugin-infra-host-fs@workspace:plugins/infra/plugins/host-fs"],
 
     "@equin/plugin-infra-host-fs-image": ["@equin/plugin-infra-host-fs-image@workspace:plugins/infra/plugins/host-fs/plugins/image"],
+
+    "@equin/plugin-infra-host-fs-user-path": ["@equin/plugin-infra-host-fs-user-path@workspace:plugins/infra/plugins/host-fs/plugins/user-path"],
 
     "@equin/plugin-infra-host-fs-zip": ["@equin/plugin-infra-host-fs-zip@workspace:plugins/infra/plugins/host-fs/plugins/zip"],
 

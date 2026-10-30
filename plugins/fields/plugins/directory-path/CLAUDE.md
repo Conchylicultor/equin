@@ -4,8 +4,9 @@ The **directory-path** field type — an absolute host filesystem directory.
 
 This barrel registers ONLY the `FieldIdentity` (label "Folder", `MdFolder`
 icon, string `coerce`) in the `fields.identity` registry. The value type is a
-plain `string`; what makes it more than `text` is its config renderer, a folder
-picker.
+`UserPath` (`infra/host-fs/user-path`) — a string the user chose, so backend
+code never reads it synchronously (`user-path/no-sync-fs`); what makes it more
+than `text` is its config renderer, a folder picker.
 
 - `plugins/config` — the `dirPathField` factory plus the renderer contributed
   to `config-v2.fields.renderer`. The renderer wraps the `folder-picker`
@@ -25,6 +26,8 @@ picker.
   - Uses:
     - `fields.defineFieldIdentity`
     - `fields.defineFieldType`
+    - `infra/host-fs/user-path.asUserPath`
+    - `infra/host-fs/user-path.UserPath`
     - `ui/icons.symbol`
   - Exports (values):
     - `directoryPathFieldType`

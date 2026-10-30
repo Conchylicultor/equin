@@ -6,11 +6,12 @@ import { locateHostPath } from "./archive/locate";
 import { statArchiveMember } from "./archive/read";
 import { describeEntry } from "./entry";
 import { classifyFsError, parentOf } from "./path";
+import type { UserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /** Describe the absolute host path `path` (the root `/` is named `/`). */
-export async function statHostPath(path: string): Promise<HostFsStatResult> {
+export async function statHostPath(path: UserPath): Promise<HostFsStatResult> {
   try {
-    const entry = await describeEntry(path, basename(path) || path);
+    const entry = await describeEntry(path, basename(path) || "/");
     // An unresolvable symlink has no contents to read.
     if (entry.kind === "symlink")
       return { kind: "ok", path, parent: parentOf(path), entry };
@@ -27,7 +28,7 @@ export async function statHostPath(path: string): Promise<HostFsStatResult> {
  * into), EACCES the path's own permissions. A path gone in between rethrows
  * as `missing` through the caller's classification.
  */
-async function readAccess(path: string): Promise<HostFsReadAccess> {
+async function readAccess(path: UserPath): Promise<HostFsReadAccess> {
   try {
     await access(path, constants.R_OK);
     return "readable";
@@ -41,7 +42,7 @@ async function readAccess(path: string): Promise<HostFsReadAccess> {
 
 /** Describe the absolute host path `path` — on disk, or a member of an archive. */
 export async function statHostOrArchivePath(
-  path: string,
+  path: UserPath,
 ): Promise<HostFsStatResult> {
   const located = await locateHostPath(path);
   return located.kind === "archive"

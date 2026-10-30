@@ -5,6 +5,10 @@ import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { HOST_FS_COMPLETE_LIMIT, type HostFsCompleteResult } from "../../core";
 import { followLink } from "./entry";
 import { classifyFsError, isHiddenName, resolveHostPath } from "./path";
+import {
+  asUserPath,
+  type UserPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
  * Split a typed prefix into the directory to search and the name fragment to
@@ -33,7 +37,7 @@ export function splitPrefix(
 
 /** Folder-only children of `dir` whose name starts with `fragment`, case-insensitively. */
 export async function completeHostDir(
-  dir: string,
+  dir: UserPath,
   fragment: string,
   limit: number = HOST_FS_COMPLETE_LIMIT,
 ): Promise<HostFsCompleteResult> {
@@ -71,9 +75,9 @@ export async function completeHostDir(
 }
 
 /** A directory, or a symlink that resolves to one (an unresolvable link is not). */
-async function isDirLike(dir: string, d: Dirent): Promise<boolean> {
+async function isDirLike(dir: UserPath, d: Dirent): Promise<boolean> {
   if (d.isDirectory()) return true;
   if (!d.isSymbolicLink()) return false;
-  const target = await followLink(join(dir, d.name));
+  const target = await followLink(asUserPath(join(dir, d.name)));
   return target.kind === "resolved" && target.stats.isDirectory();
 }

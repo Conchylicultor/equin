@@ -1,9 +1,13 @@
 import { lstat } from "node:fs/promises";
 import { extname, join } from "node:path";
 import { classifyFsError } from "./path";
+import {
+  asUserPath,
+  type UserPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /** Whether anything (a dangling symlink included) sits at `path`. */
-export async function isTaken(path: string): Promise<boolean> {
+export async function isTaken(path: UserPath): Promise<boolean> {
   try {
     await lstat(path);
     return true;
@@ -18,15 +22,15 @@ export async function isTaken(path: string): Promise<boolean> {
  * `photos 2`, `photos 3`, … for a folder, `a 2.txt` for a file.
  */
 export async function freePath(
-  dir: string,
+  dir: UserPath,
   name: string,
   isFile: boolean,
-): Promise<string> {
+): Promise<UserPath> {
   const ext = isFile ? extname(name) : "";
   const stem = name.slice(0, name.length - ext.length);
-  let candidate = join(dir, name);
+  let candidate = asUserPath(join(dir, name));
   for (let n = 2; await isTaken(candidate); n++) {
-    candidate = join(dir, `${stem} ${n}${ext}`);
+    candidate = asUserPath(join(dir, `${stem} ${n}${ext}`));
   }
   return candidate;
 }

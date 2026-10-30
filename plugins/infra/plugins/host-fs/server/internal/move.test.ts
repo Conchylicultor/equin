@@ -10,9 +10,16 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join as joinPath } from "node:path";
 import type { HostFsMoveResolution } from "../../core";
 import { moveHostPaths, movePath } from "./move";
+import {
+  asUserPath,
+  type UserPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+
+/** A fixture path, branded as the request path it stands for. */
+const join = (...parts: string[]): UserPath => asUserPath(joinPath(...parts));
 
 let root: string;
 let cases = 0;
@@ -25,7 +32,7 @@ function caseDirs(): { src: string; dest: string } {
   return { src: join(dir, "src"), dest: join(dir, "dest") };
 }
 
-const none = new Map<string, HostFsMoveResolution>();
+const none = new Map<UserPath, HostFsMoveResolution>();
 
 beforeAll(() => {
   root = realpathSync(mkdtempSync(join(tmpdir(), "host-fs-move-test-")));
@@ -39,7 +46,11 @@ describe("moveHostPaths", () => {
     mkdirSync(join(src, "docs"));
     writeFileSync(join(src, "docs/b.txt"), "B");
     expect(
-      await moveHostPaths([join(src, "a.txt"), join(src, "docs")], dest, none),
+      await moveHostPaths(
+        [join(src, "a.txt"), join(src, "docs")],
+        asUserPath(dest),
+        none,
+      ),
     ).toEqual({
       kind: "ok",
       destDir: dest,
@@ -68,7 +79,9 @@ describe("moveHostPaths", () => {
   test("a source already in the destination is left alone", async () => {
     const { src } = caseDirs();
     writeFileSync(join(src, "a.txt"), "A");
-    expect(await moveHostPaths([join(src, "a.txt")], src, none)).toMatchObject({
+    expect(
+      await moveHostPaths([join(src, "a.txt")], asUserPath(src), none),
+    ).toMatchObject({
       results: [{ kind: "same-dir", from: join(src, "a.txt") }],
     });
   });
@@ -79,7 +92,11 @@ describe("moveHostPaths", () => {
     writeFileSync(join(src, "b.txt"), "B");
     writeFileSync(join(dest, "a.txt"), "old");
     expect(
-      await moveHostPaths([join(src, "a.txt"), join(src, "b.txt")], dest, none),
+      await moveHostPaths(
+        [join(src, "a.txt"), join(src, "b.txt")],
+        asUserPath(dest),
+        none,
+      ),
     ).toMatchObject({
       results: [
         { kind: "exists", from: join(src, "a.txt"), to: join(dest, "a.txt") },
@@ -98,10 +115,12 @@ describe("moveHostPaths", () => {
     writeFileSync(join(dest, "a 2.txt"), "old 2");
     mkdirSync(join(dest, "docs"));
     const from = [join(src, "a.txt"), join(src, "docs")];
-    const resolutions = new Map<string, HostFsMoveResolution>(
+    const resolutions = new Map<UserPath, HostFsMoveResolution>(
       from.map((f) => [f, "keep-both"]),
     );
-    expect(await moveHostPaths(from, dest, resolutions)).toMatchObject({
+    expect(
+      await moveHostPaths(from, asUserPath(dest), resolutions),
+    ).toMatchObject({
       results: [
         { kind: "moved", to: join(dest, "a 3.txt") },
         { kind: "moved", to: join(dest, "docs 2") },
@@ -119,7 +138,11 @@ describe("moveHostPaths", () => {
     writeFileSync(join(dest, "docs/old.txt"), "O");
     const from = join(src, "docs");
     expect(
-      await moveHostPaths([from], dest, new Map([[from, "replace"]])),
+      await moveHostPaths(
+        [from],
+        asUserPath(dest),
+        new Map([[from, "replace"]]),
+      ),
     ).toMatchObject({ results: [{ kind: "moved", to: join(dest, "docs") }] });
     expect(readdirSync(join(dest, "docs"))).toEqual(["new.txt"]);
     // Nothing set aside is left behind.
@@ -131,7 +154,11 @@ describe("moveHostPaths", () => {
     mkdirSync(join(dest, "a/a"), { recursive: true });
     const from = join(dest, "a/a");
     expect(
-      await moveHostPaths([from], dest, new Map([[from, "replace"]])),
+      await moveHostPaths(
+        [from],
+        asUserPath(dest),
+        new Map([[from, "replace"]]),
+      ),
     ).toMatchObject({
       results: [{ kind: "replaces-ancestor", from, to: join(dest, "a") }],
     });
@@ -144,7 +171,7 @@ describe("moveHostPaths", () => {
     writeFileSync(join(dest, "a.txt"), "old");
     const from = join(src, "a.txt");
     expect(
-      await moveHostPaths([from], dest, new Map([[from, "skip"]])),
+      await moveHostPaths([from], asUserPath(dest), new Map([[from, "skip"]])),
     ).toMatchObject({ results: [{ kind: "skipped", from }] });
     expect(readFileSync(from, "utf8")).toBe("new");
   });
@@ -153,7 +180,7 @@ describe("moveHostPaths", () => {
     const { src, dest } = caseDirs();
     writeFileSync(join(src, "a.txt"), "A");
     const gone = join(src, "gone.txt");
-    expect(await moveHostPaths([gone], dest, none)).toMatchObject({
+    expect(await moveHostPaths([gone], asUserPath(dest), none)).toMatchObject({
       results: [{ kind: "missing", from: gone }],
     });
     expect(

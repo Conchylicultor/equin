@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { FolderStatus } from "../../shared/status";
 import { createFolderStatusStore, probeFolder } from "./folder-status";
+import { asUserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 let root: string;
 
@@ -29,7 +30,7 @@ afterAll(() => {
 
 describe("probeFolder", () => {
   test("a readable folder is ok, keyed by its real path", async () => {
-    expect(await probeFolder(join(root, "ok"))).toEqual({
+    expect(await probeFolder(asUserPath(join(root, "ok")))).toEqual({
       state: "ok",
       path: join(root, "ok"),
       dir: join(root, "ok"),
@@ -37,17 +38,19 @@ describe("probeFolder", () => {
   });
 
   test("nothing at the path is missing", async () => {
-    expect((await probeFolder(join(root, "gone"))).state).toBe("missing");
-  });
-
-  test("a component above the folder being a file is missing", async () => {
-    expect((await probeFolder(join(root, "file.mid", "sub"))).state).toBe(
+    expect((await probeFolder(asUserPath(join(root, "gone")))).state).toBe(
       "missing",
     );
   });
 
+  test("a component above the folder being a file is missing", async () => {
+    expect(
+      (await probeFolder(asUserPath(join(root, "file.mid", "sub")))).state,
+    ).toBe("missing");
+  });
+
   test("a file is not a folder", async () => {
-    expect((await probeFolder(join(root, "file.mid"))).state).toBe(
+    expect((await probeFolder(asUserPath(join(root, "file.mid")))).state).toBe(
       "not-a-folder",
     );
   });
@@ -57,7 +60,7 @@ describe("probeFolder", () => {
   test.skipIf(process.getuid?.() === 0)(
     "a folder the OS refuses to open is denied, with the errno",
     async () => {
-      const status = await probeFolder(join(root, "locked"));
+      const status = await probeFolder(asUserPath(join(root, "locked")));
       expect(status.state).toBe("denied");
       if (status.state === "denied") expect(status.code).toBe("EACCES");
     },
@@ -85,7 +88,7 @@ describe("createFolderStatusStore", () => {
   test("answers within the bound, an unanswered folder reading checking", async () => {
     const p = heldProbe();
     const store = createFolderStatusStore({
-      folders: () => ["/a", "/b"],
+      folders: () => [asUserPath("/a"), asUserPath("/b")],
       probe: (path) =>
         path === "/a" ? Promise.resolve(ok("/a")) : p.probe(path),
       answerWithinMs: 20,
@@ -96,13 +99,13 @@ describe("createFolderStatusStore", () => {
       { state: "checking", path: "/b", dir: "/b" },
     ]);
     // Only the answered folder is watched and walked.
-    expect(store.readableDirs()).toEqual(["/a"]);
+    expect(store.readableDirs()).toEqual<string[]>(["/a"]);
   });
 
   test("a late answer is published when it lands", async () => {
     const p = heldProbe();
     const store = createFolderStatusStore({
-      folders: () => ["/b"],
+      folders: () => [asUserPath("/b")],
       probe: p.probe,
       answerWithinMs: 10,
     });
@@ -114,14 +117,14 @@ describe("createFolderStatusStore", () => {
     p.answer("/b", ok("/b"));
     await published;
     expect(changes).toBe(2);
-    expect(store.readableDirs()).toEqual(["/b"]);
+    expect(store.readableDirs()).toEqual<string[]>(["/b"]);
     expect(await store.statuses()).toEqual([ok("/b")]);
   });
 
   test("a re-check joins the probe still waiting rather than starting another", async () => {
     const p = heldProbe();
     const store = createFolderStatusStore({
-      folders: () => ["/b"],
+      folders: () => [asUserPath("/b")],
       probe: p.probe,
       answerWithinMs: 5,
     });
@@ -133,15 +136,15 @@ describe("createFolderStatusStore", () => {
   test("a folder that stops answering is no longer readable", async () => {
     let pending: ReturnType<typeof heldProbe> | null = null;
     const store = createFolderStatusStore({
-      folders: () => ["/b"],
+      folders: () => [asUserPath("/b")],
       probe: (path) =>
         pending === null ? Promise.resolve(ok(path)) : pending.probe(path),
       answerWithinMs: 5,
     });
     await store.refresh();
-    expect(store.readableDirs()).toEqual(["/b"]);
+    expect(store.readableDirs()).toEqual<string[]>(["/b"]);
     pending = heldProbe();
     await store.refresh();
-    expect(store.readableDirs()).toEqual([]);
+    expect(store.readableDirs()).toEqual<string[]>([]);
   });
 });
