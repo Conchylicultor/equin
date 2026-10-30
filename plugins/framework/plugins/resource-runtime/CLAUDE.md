@@ -57,6 +57,14 @@ it once and re-presents its types as its own public surface.
     drains concurrently, with a barrier between levels.
   - `drainEntry` snapshots + clears pending synchronously and keeps its per-pk
     loop sequential (monotonic versions).
+  - **Only an entry with downstream is on the barrier.** A leaf (no
+    `downstream`) drains as a lane (`entry.lane`): the pass releases the flush
+    loop once its barrier entries are done, so the next pass runs while a slow
+    leaf loader (an agent round trip) is still loading. One drain per entry at a
+    time — a pass skips an entry whose lane is in flight, and the lane re-arms
+    its held work on settle. The pass's `wrapFlush` still encloses its lanes
+    (claims and latency judging need an open entry); passes may overlap.
+    `research/2026-10-30-framework-live-flush-leaf-drain-lanes.md`.
   - The scheduler is ONE state (`flushState`: `idle` | `queued` | `running` |
     `rerun`) with synchronous transitions. Never split it back into booleans: a
     notify landing between a rerun check and the release strands every later push.
@@ -65,8 +73,8 @@ it once and re-presents its types as its own public surface.
   most one drain per window, released only by `debounceDue`. Another entry's flush
   or a cascade into it does not drain it early.
 - **Heartbeat `pushStallMs`**: age of the oldest undelivered change.
-  - It is the oldest of the running pass's start (re-taken per re-drain pass) and
-    the oldest queued pending's `enqueuedAt`.
+  - It is the oldest of the running pass's start (re-taken per re-drain pass),
+    an in-flight lane's start, and the oldest queued pending's `enqueuedAt`.
   - Covers a hung loader and a change no flush ever picks up (e.g. a
     `withNotifyBatch` that never settles).
   - Health's Connection row flags ≥ 30 s.

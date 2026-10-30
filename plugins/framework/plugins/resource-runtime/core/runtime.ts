@@ -1447,6 +1447,14 @@ interface RegistryEntry {
    */
   draining: Set<string>;
   /**
+   * A leaf's (no `downstream`) drain in flight off the flush loop's critical
+   * path — see `runFlushPass`. One drain per entry at a time: a pass skips the
+   * entry while this is set, and the lane re-arms its held work on settle.
+   * Never rejects. `startedAt` (`performance.now()`) feeds `pushStallMs`: the
+   * pendings it took are no longer in `pendingNotifies`.
+   */
+  lane?: { done: Promise<void>; startedAt: number };
+  /**
    * D8 — per tracked pk of a held-value entry (`holdsValue`: a pushed,
    * non-persisted value): what every holder of the tuple holds at `version`
    * — the value as served (after the schema parse, which copies, so a loader
@@ -2688,11 +2696,15 @@ export function createResourceRuntime(
   // pass opens at all; so did a stranded scheduler request before `flushState`
   // (2026-10-26: 7 min of no pushes behind a 0 flush age).
   // A debounced entry's held pending is owed for at most its window, far below
-  // any stall threshold. O(entries + pendings), once per heartbeat.
+  // any stall threshold. A leaf's drain off the critical path (`lane`) took its
+  // pendings out of `pendingNotifies`, so its own start counts too.
+  // O(entries + pendings), once per heartbeat.
   function pushStallMs(): number {
     const now = performance.now();
     let oldest = flushPassStartedAt ?? now;
     for (const entry of registry.values()) {
+      if (entry.lane && entry.lane.startedAt < oldest)
+        oldest = entry.lane.startedAt;
       for (const pending of entry.pendingNotifies.values()) {
         if (pending.enqueuedAt < oldest) oldest = pending.enqueuedAt;
       }
@@ -5729,8 +5741,7 @@ export function createResourceRuntime(
         // recordEntrySpan("flush", ...)) so each pass is one `flush` entry and the
         // per-resource `push` loads it triggers nest under it (byParent =
         // head-of-line blocking attribution). Identity passthrough on central.
-        if (opts.wrapFlush) await opts.wrapFlush(runFlushPass);
-        else await runFlushPass();
+        await runPassCriticalPath();
         if (currentFlushState() === "rerun") {
           flushState = "running";
           continue;
@@ -5750,14 +5761,101 @@ export function createResourceRuntime(
     }
   }
 
+  // Run one pass, resolving once its CRITICAL PATH is done — every drain a
+  // deeper level could depend on — while its leaf lanes may still be loading.
+  // The pass's wrapper (its `flush` span) stays open until the lanes settle, so
+  // their loads and deliveries are judged inside an open entry. A wrapper
+  // failure before the release fails this pass (the loop reports it); one after
+  // it is reported here, the loop having moved on.
+  async function runPassCriticalPath(): Promise<void> {
+    let released = false;
+    let release!: () => void;
+    const criticalPath = new Promise<void>((resolve) => {
+      release = () => {
+        released = true;
+        resolve();
+      };
+    });
+    const run = () => runFlushPass(release);
+    const settled = (opts.wrapFlush ? opts.wrapFlush(run) : run()).catch(
+      (err: unknown) => {
+        if (!released) throw err;
+        reportLoaderError("flush pass failed", err);
+      },
+    );
+    await Promise.race([criticalPath, settled]);
+  }
+
   // One flush pass. Each depth level runs concurrently; a barrier between levels
   // so every cascade merged into a (strictly-deeper) downstream settles before
   // that downstream level drains. A slow loader can no longer head-of-line-block
   // an unrelated entry at the same or an earlier depth.
-  async function runFlushPass(): Promise<void> {
+  //
+  // Only an entry with downstream is ON the barrier. A leaf (no downstream —
+  // every membership entry, most values) has nothing deeper waiting for it, so
+  // its drain runs as a lane: the pass releases the flush loop once the
+  // barrier entries are done, and the next pass runs while a slow leaf (a round
+  // trip to a busy agent process, 2–10 s) is still loading — a change landing
+  // meanwhile no longer waits for it. The pass itself awaits its lanes before
+  // returning, so its wrapper encloses them.
+  // research/2026-10-30-framework-live-flush-leaf-drain-lanes.md
+  async function runFlushPass(release: () => void): Promise<void> {
     rebuildDag();
+    const lanes: Promise<void>[] = [];
     for (const level of topoLevels) {
-      await Promise.all(level.map(drainEntry));
+      const barrier: Promise<void>[] = [];
+      for (const entry of level) {
+        if (entry.downstream.length === 0) {
+          const lane = startLane(entry);
+          if (lane) lanes.push(lane);
+        } else {
+          barrier.push(drainOnBarrier(entry));
+        }
+      }
+      await Promise.all(barrier);
+    }
+    release();
+    await Promise.all(lanes);
+  }
+
+  // An entry with downstream drains on the pass's barrier. A lane of its own
+  // still in flight (it was a leaf until a downstream registered) settles
+  // first: one drain per entry at a time.
+  async function drainOnBarrier(entry: RegistryEntry): Promise<void> {
+    if (entry.lane) await entry.lane.done;
+    await drainEntry(entry);
+  }
+
+  // Start a leaf's drain as its lane, or leave its work held when one is
+  // already in flight (the lane re-arms it on settle). Returns the new lane.
+  function startLane(entry: RegistryEntry): Promise<void> | undefined {
+    if (entry.lane) return undefined;
+    const done = drainEntry(entry)
+      .catch((err: unknown) => {
+        // A drain reports its own loader failures; reaching here is a bug in
+        // the drain itself — loud, and the lane still clears.
+        reportLoaderError(`drain failed for ${entry.key}`, err);
+      })
+      .finally(() => {
+        entry.lane = undefined;
+        rearmAfterLane(entry);
+      });
+    // Set before any continuation runs, so the `finally` above always clears it.
+    entry.lane = { done, startedAt: performance.now() };
+    return done;
+  }
+
+  // What a pass held while the lane was in flight, released now: the entry's
+  // own window (a debounced entry whose window opened meanwhile) or its
+  // pending, and any downstream a cascade fed (an edge that registered while
+  // the lane ran — a pass drains a downstream only behind the barrier).
+  function rearmAfterLane(entry: RegistryEntry): void {
+    if (entry.debounceDue) scheduleFlush();
+    else if (entry.pendingNotifies.size > 0 || entry.pendingAcks.size > 0)
+      armFlush(entry);
+    for (const edge of entry.downstream) {
+      const down = registry.get(edge.downstreamKey);
+      if (down && down.pendingNotifies.size > 0) armFlush(down);
     }
   }
 

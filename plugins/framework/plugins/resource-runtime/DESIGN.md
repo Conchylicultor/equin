@@ -33,6 +33,18 @@ Why one parameterized runtime for server and central:
   - Why parallel: a slow loader cannot head-of-line-block an unrelated entry at
     the same or an earlier depth.
   - [Research](../../../../research/2026-06-19-global-parallel-flush-notifies.md).
+- **Leaf drain lanes.** Level-parallelism still made every change that landed
+  mid-pass wait for the pass's slowest drain: `conversations.context-usage`
+  (a round trip to a busy agent, 2–10 s) delayed every other delivery by its
+  own duration. A leaf has nothing deeper waiting on it, so it leaves the
+  barrier and the loop moves on without it.
+  - Why the pass still awaits its lanes inside `wrapFlush`: the profiler skips
+    closed entries, so a lane outliving its `flush` span would lose its loader's
+    claim and file the delivery as a second slow op for one cause.
+  - Rejected: a per-resource "slow" declaration (every slow leaf would need one)
+    and a time budget after which a drain detaches (a guess, and still holds
+    the loop for the budget).
+  - [Research](../../../../research/2026-10-30-framework-live-flush-leaf-drain-lanes.md).
 - **One `flushState`, never booleans.** With separate flags, the loop checked
   the rerun flag a few microtask hops before releasing the mutex; a notify in
   that gap left every later push un-flushed until restart (health dot green).

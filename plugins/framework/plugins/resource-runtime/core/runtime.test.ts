@@ -171,7 +171,7 @@ describe("flushNotifies — level-parallel", () => {
     expect(sent.map((f) => f.version)).toEqual([base + 1, base + 2]);
   });
 
-  test("a notify arriving mid-flush is re-drained, once, after the in-flight flush", async () => {
+  test("a notify arriving mid-flush is not held behind a slow leaf's drain", async () => {
     let n = 0; // a new value on every recompute (an equal one ships nothing)
     const h = createHarness();
     const slow = controllable(0);
@@ -191,26 +191,22 @@ describe("flushNotifies — level-parallel", () => {
     await h.subscribe("s");
     await h.subscribe("f");
 
-    // Start a flush that parks on the slow loader.
+    // Start a flush that parks on the slow loader (a leaf: its own lane).
     slow.block();
     slow.setValue(1);
     slowR.notify();
-    await tick(); // flush is now mid-await on `s` (flushState running)
+    await tick();
 
-    // This notify lands during the in-flight flush.
+    // This notify lands while `s` is still loading: the next pass takes it.
     fastR.notify();
-    await tick(); // the guard records a rerun; it does NOT start a second flush
-
-    // `f` is held back until the in-flight flush finishes (no overlap).
-    expect(h.pushesFor("f")).toHaveLength(0);
+    await tick();
+    expect(h.pushesFor("f")).toHaveLength(1);
+    expect(h.pushesFor("s")).toHaveLength(0);
 
     slow.release();
     await tick();
-
-    // Both delivered, `f` exactly once, and AFTER `s` (single-active-flush order).
     expect(h.pushesFor("s")).toHaveLength(1);
     expect(h.pushesFor("f")).toHaveLength(1);
-    expect(h.pushesFor("s")[0]!.seq).toBeLessThan(h.pushesFor("f")[0]!.seq);
   });
 });
 
