@@ -321,7 +321,7 @@ bar).
     - `slow-ops.ops` (keyed, window)
     - `slow-ops.ops:groups` (push)
     - `slow-ops.ops:rows` (keyed, point)
-  - Routes: `POST /api/slow-ops/client` — telemetry
+  - Routes: `POST /api/slow-ops/client`
 - Core:
   - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×3

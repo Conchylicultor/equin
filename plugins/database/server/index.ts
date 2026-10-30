@@ -1,6 +1,5 @@
 import {
   getBootMode,
-  setExternalNotifyAttribution,
   setWatermarkSource,
   type ServerPluginDefinition,
 } from "@plugins/framework/plugins/server-core/core";

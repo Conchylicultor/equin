@@ -62,7 +62,7 @@ every flush.
   - Exports (values): `_appUsageDaily`
   - Register: `defineJob('retention.app_usage_daily')`
   - Resources: `app-usage.summary` (push, whole: one row per app id ever used — bounded by the installed app registry (tens of apps), never by time: the GROUP BY folds every day into its app)
-  - Routes: `POST /api/app-usage/flush` — unpredicted (server-decided)
+  - Routes: `POST /api/app-usage/flush`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`

@@ -91,7 +91,6 @@ export {
   keptSnapshotValue,
   dropPendingPersists,
   setRelationBases,
-  setExternalNotifyAttribution,
   setWatermarkSource,
   setLiveStateSnapshotHooks,
   setClientBuildIdentity,

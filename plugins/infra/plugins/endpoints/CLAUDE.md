@@ -500,13 +500,9 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `AssetBase`
     - `AssetPath`
     - `Codec`
-    - `CommitCapture`
     - `ContentPath`
-    - `EffectOn`
-    - `EffectRequest`
     - `EndpointAnswer`
     - `EndpointDef`
-    - `EndpointEffect`
     - `EndpointRequestOpts`
     - `ExtractParams`
     - `InternalDecl`
@@ -517,13 +513,8 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `MachineFeature`
     - `MachineResult`
     - `MachineUnavailable`
-    - `PredictedEndpointDef`
-    - `PredictedMachineEndpointDef`
-    - `PredictionGap`
     - `ReadMarker`
     - `ReadOf`
-    - `Unpredicted`
-    - `UnpredictedReason`
     - `WriteEndpoint`
   - Exports (values):
     - `agentWriteRefusedMessage`
@@ -531,13 +522,10 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `assetBase`
     - `assetPath`
     - `blob`
-    - `brandEndpointEffect`
     - `contentPath`
     - `dateString`
     - `defineEndpoint`
     - `EndpointAgentWriteRefusedError`
-    - `endpointContractOf`
-    - `endpointEffectPayload`
     - `EndpointError`
     - `endpointPath`
     - `endpointRequest`
@@ -546,32 +534,27 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `getRouteSlowThresholdMs`
     - `HttpError`
     - `implement`
-    - `installCommitCapture`
     - `interpolatePath`
     - `isAgentWriteRefusal`
     - `isCodec`
-    - `isTransactionId`
-    - `mintExternalWriteId`
     - `multipart`
-    - `PREDICTION_GAPS`
     - `rawEndpointHandler`
-    - `readCommitsHeader`
     - `readEndpointResponse`
     - `unavailableMessage`
     - `unmatchedApiResponse`
     - `unsupportedEndpointResponse`
 - Cross-plugin:
-  - Imported by: 225 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×63
-    - `conversations` ×32
+  - Imported by: 230 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×65
+    - `conversations` ×33
     - `infra` ×22
     - `page` ×19
     - `debug` ×17
-    - `tasks` ×16
-    - `primitives` ×14
+    - `tasks` ×17
+    - `primitives` ×15
     - `reports` ×6
     - `ui` ×6
-    - `auth` ×4
+    - `auth` ×5
     - `active-data` ×2
     - `apps-core` ×2
     - `build` ×2
@@ -585,7 +568,6 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `database/fork`
     - `hints`
     - `menu-bar`
-    - `network/live`
     - `release`
     - `search/engine`
     - `shell/notifications`
@@ -595,6 +577,10 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `networking/no-request-guard-capability` — `web/internal/asset-url.ts`, `web/internal/asset-src.ts` (sanctioned)
   - Exempted by:
     - `apps/pages/page-tree` (0 debt)
+    - `apps/sonata/playback-history` (0 debt)
+    - `apps/sonata/rich/key-mode` (0 debt)
+    - `apps/sonata/rich/swing` (0 debt)
+    - `apps/sonata/transpose` (0 debt)
     - `conversations/compaction-context` (0 debt)
     - `conversations/stop-gate` (0 debt)
     - `infra/boot-snapshot` (0 debt)
@@ -602,7 +588,6 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `infra/health` (0 debt)
     - `infra/mcp/browser` (0 debt)
     - `infra/ndjson-stream` (0 debt)
-    - `network/live` (0 debt)
     - `primitives/live-state` (0 debt)
     - `primitives/networking` (0 debt)
     - `shell/notifications` (0 debt)

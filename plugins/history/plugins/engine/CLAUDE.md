@@ -73,7 +73,7 @@ through the change feed — the restore mutation invalidates nothing. The plain
     - `history.versions:rows` (keyed, point)
   - Routes:
     - `GET /api/history/:sourceId/:entityId/versions`
-    - `POST /api/history/:sourceId/:entityId/versions/:versionId/restore` — unpredicted (server-decided)
+    - `POST /api/history/:sourceId/:entityId/versions/:versionId/restore`
 - Core:
   - Uses:
     - `fields.fieldsToZodObject`

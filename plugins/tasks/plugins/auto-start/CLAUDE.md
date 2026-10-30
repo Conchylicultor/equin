@@ -9,8 +9,8 @@
   - Contributes: `Tasks.TaskActions` "queued-chip" → `QueuedChipAction`
   - Uses:
     - `conversations/model-provider.useModelCatalog`
+    - `infra/endpoints.useEndpointMutation`
     - `network/live.LiveRowResult`
-    - `network/live.useLiveMutation`
     - `network/live.useLiveRow`
     - `primitives/css/badge.Badge`
     - `primitives/live-state.ResourceErrorInline`
@@ -63,8 +63,6 @@
     - `infra/endpoints.defineEndpoint`
     - `infra/entity-extensions.defineExtensionShape`
     - `network/live.liveCollection`
-    - `network/live.removeRow`
-    - `network/live.upsertRow`
   - Exports (types):
     - `SetAutoStartBody`
     - `TaskAutoStartRow`

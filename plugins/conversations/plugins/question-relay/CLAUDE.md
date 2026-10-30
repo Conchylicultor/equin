@@ -102,7 +102,7 @@ moves on and the transcript card takes it over.
   - Exports (values):
     - `holdQuestion`
     - `retireQuestion`
-  - Routes: `POST /api/conversations/:id/questions/:toolUseId/answer` — unpredicted (precondition)
+  - Routes: `POST /api/conversations/:id/questions/:toolUseId/answer`
 - Core:
   - Uses:
     - `fields/date/config.dateField`

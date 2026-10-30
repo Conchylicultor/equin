@@ -15,7 +15,6 @@ export {
 } from "./internal/write-sinks";
 export { armUnconfirmedDeadline } from "./internal/unconfirmed-deadline";
 export { classifyRejection } from "./internal/write-sinks";
-export { hiddenSince } from "./internal/tab-hidden";
 export type {
   UnconfirmedDeadline,
   UnconfirmedDeadlineOptions,

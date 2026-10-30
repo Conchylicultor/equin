@@ -240,19 +240,6 @@ export function setWatermarkSource(fn: (() => Promise<string>) | null): void {
   watermarkSource = fn;
 }
 
-// Which request an external resource's hand `notify()` belongs to — the
-// runtime's `attributeExternalNotify`, boot-injected by `database` beside the
-// watermark source: its commit capture is the one async context that knows the
-// predicted handler a call runs in. Read at call time; until installed (and on
-// a host without a database) nothing is attributed and the client confirms such
-// a write at its ack.
-let externalNotifyAttribution: (() => string | undefined) | null = null;
-export function setExternalNotifyAttribution(
-  fn: (() => string | undefined) | null,
-): void {
-  externalNotifyAttribution = fn;
-}
-
 /**
  * A serving host that serves live reads must have a watermark source: every
  * flight captures one (`captureWatermark` below — DB-backed or not), so without
@@ -520,9 +507,6 @@ const runtime = createResourceRuntime({
     }
     return watermarkSource();
   },
-  // An external value's write attributed to its predicted request (see
-  // `setExternalNotifyAttribution`). central: omitted (nothing predicted).
-  attributeExternalNotify: () => externalNotifyAttribution?.(),
   // L2 persisted materialization. Both read the boot-injected holder at call
   // time (set by the live-state-snapshot plugin once the DB is ready). Until then
   // — and on central, which never installs them — `shouldPersist` returns false,

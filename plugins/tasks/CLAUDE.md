@@ -36,19 +36,19 @@
   - Resources: `tasks.repo-info` (invalidate, snapshot)
   - Routes:
     - `GET /api/tasks`
-    - `POST /api/tasks` — unpredicted (server-minted-id)
-    - `POST /api/tasks/chain` — unpredicted (server-minted-id)
-    - `POST /api/tasks/insert-between` — unpredicted (server-minted-id)
+    - `POST /api/tasks`
+    - `POST /api/tasks/chain`
+    - `POST /api/tasks/insert-between`
     - `GET /api/tasks/:id`
-    - `PATCH /api/tasks/:id` — predicted
-    - `POST /api/tasks/:id/move` — unpredicted (server-decided)
-    - `POST /api/tasks/:id/dependencies` — unpredicted (precondition)
-    - `DELETE /api/tasks/:id/dependencies/:depId` — unpredicted (server-decided)
-    - `POST /api/tasks/:id/deps-move` — unpredicted (server-decided)
+    - `PATCH /api/tasks/:id`
+    - `POST /api/tasks/:id/move`
+    - `POST /api/tasks/:id/dependencies`
+    - `DELETE /api/tasks/:id/dependencies/:depId`
+    - `POST /api/tasks/:id/deps-move`
 - Web:
   - Uses:
+    - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
-    - `network/live.useLiveMutation`
     - `primitives/live-state.mapResource`
     - `primitives/live-state.ResourceResult`
   - Exports (types): `TaskPatch`
@@ -67,17 +67,15 @@
     - `mcpTool('task_tree')`
     - `mcpInstructions('tree-digest')`
     - `defineWarmup('tasks.auto-start-reconcile')`
-  - Routes: `POST /api/tasks/launch` — unpredicted (server-decided)
+  - Routes: `POST /api/tasks/launch`
 - Core:
   - Uses:
     - `conversations/model-provider.ModelChoiceSchema`
     - `infra/endpoints.dateString`
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
-    - `network/live.patchRow`
     - `tasks/task-subject.TaskSubjectSchema`
     - `tasks/tasks-core.ConversationSchema`
-    - `tasks/tasks-core.tasksEntityRef`
   - Exports (types):
     - `AddDependencyBody`
     - `CreateTaskBody`

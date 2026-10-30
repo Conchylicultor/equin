@@ -191,7 +191,7 @@ card, not a collection.
     - `todoTask`
     - `todoTasksServed`
   - Resources: `todo-block-task:rows` (keyed, point)
-  - Routes: `POST /api/todo-blocks/:blockId/task` — unpredicted (response)
+  - Routes: `POST /api/todo-blocks/:blockId/task`
 - Web:
   - Uses:
     - `conversations/conversation-ui/chip.ConversationChip`

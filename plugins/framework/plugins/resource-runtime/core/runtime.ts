@@ -1111,9 +1111,8 @@ interface PendingNotify {
    * produces. Unioned on EVERY merge branch, INCLUDING the FULL absorb/degrade
    * (a FULL recompute reads post-commit, so the "W's rows have been re-read"
    * claim survives the scope degrade — contrast `deleted`, which FULL drops).
-   * Absent for synthetic pendings and for a hand `notify()` no request is
-   * attributed for (`attributeExternalNotify` — no HTTP mutation corresponds),
-   * so those frames are structurally ack-less.
+   * Absent for hand-`notify()` / synthetic pendings (no HTTP mutation
+   * corresponds), so those frames are structurally ack-less.
    */
   sourceTx?: Set<string>;
   /**
@@ -1800,17 +1799,6 @@ export interface ResourceRuntimeOptions {
    * `subShortCircuits`. server: optional metric hook; central / omitted: no-op.
    */
   onStaleFlightSupersede?: (key: string) => void;
-  /**
-   * Attribute an EXTERNAL resource's hand `notify()` to the request that made
-   * it: the id of the write, or `undefined` when no captured request encloses
-   * the call (a file watcher, a job, boot). The id rides the recompute's frames
-   * as `ackTx`, exactly as a change-feed source transaction does, so a
-   * predicted write to a value whose truth lives outside Postgres (a config
-   * file) is confirmed once its OWN frame arrives — not at the HTTP ack, which
-   * can land before that frame and show the old value in between. server:
-   * the database's commit capture (`noteExternalWrite`); central: omit.
-   */
-  attributeExternalNotify?: () => string | undefined;
   /**
    * The build graph this process serves (the web bundle built alongside it),
    * for judging a contract mismatch: a client whose `build` differs is running
@@ -4262,17 +4250,7 @@ export function createResourceRuntime(
         // nothing can be served — so nobody holds a value — before its bind,
         // and its loader refuses until then.
         if (deferred.has(entry.key)) return;
-        // Only an external entry's notify IS the change; a DB entry's write
-        // already names its commit through the change feed.
-        const sourceTx = entry.externalSource
-          ? opts.attributeExternalNotify?.()
-          : undefined;
-        scheduleNotify(
-          entry,
-          (params ?? {}) as ResourceParams,
-          null,
-          sourceTx === undefined ? undefined : { sourceTx },
-        );
+        scheduleNotify(entry, (params ?? {}) as ResourceParams, null);
       },
     };
   }
@@ -5106,10 +5084,8 @@ export function createResourceRuntime(
     opts?: {
       source?: "hand" | ChangeSource | "synthetic";
       deleted?: Set<string>;
-      /** Source txid — mutation-ack attribution: the feed's, or an external
-       *  entry's hand notify attributed to its request
-       *  (`attributeExternalNotify`). Synthetic notifies never carry one, nor
-       *  does an unattributed hand notify, so their frames are ack-less. */
+      /** Source txid (feed only) — mutation-ack attribution. Hand/synthetic
+       *  notifies never carry one, so their frames are structurally ack-less. */
       sourceTx?: string;
       /** Wall-clock epoch ms of the change (feed). A hand `notify()` defaults to
        *  now — the call IS the change for an external resource. */

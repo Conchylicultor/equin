@@ -83,7 +83,7 @@ demo's browser host serves (and prunes) it too.
     - `usage-stats` (keyed, window)
     - `usage-stats:groups` (push)
     - `usage-stats:rows` (keyed, point)
-  - Routes: `POST /api/usage-rank/record` — unpredicted (server-decided)
+  - Routes: `POST /api/usage-rank/record`
 - Web:
   - Uses:
     - `infra/endpoints.useFetchEndpoint`

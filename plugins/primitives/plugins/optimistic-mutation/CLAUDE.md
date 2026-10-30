@@ -625,8 +625,7 @@ that drops it from the overlay — is emitted on `clientLatencySink`
     - `useOptimisticResource`
 - Cross-plugin:
   - Imported by:
-    - `conversations/conversations-view/data-view/queue`
-    - `conversations/conversations-view/queue`
+    - `apps/sonata/track-mixer`
     - `page/editor`
     - `ui/theme-engine/saved-themes`
 - Exemptions:

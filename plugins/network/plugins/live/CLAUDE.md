@@ -1042,14 +1042,20 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
   - Slot contributors: 42 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `FieldPresentation.Register` ×39
     - `ClientFields.Resolve` ×3
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/live-state` ×12
-    - `primitives/networking` ×4
-    - `infra/endpoints` ×3
-    - `primitives/latest-ref.useLatestRef`
+  - Uses:
+    - `primitives/live-state.PagedResourceResult`
+    - `primitives/live-state.ResourceDerivation`
+    - `primitives/live-state.ResourceDescriptor`
+    - `primitives/live-state.ResourceError`
+    - `primitives/live-state.ResourceResult`
+    - `primitives/live-state.ResourceTupleResult`
+    - `primitives/live-state.ResourceUnavailable`
+    - `primitives/live-state.useNotificationsClient`
+    - `primitives/live-state.useResource`
+    - `primitives/live-state.useResources`
     - `primitives/log-channels.clientLog`
+    - `primitives/networking.useTransport`
     - `primitives/slot-render.renderIsolated`
-    - `primitives/sync-status.useReportSync`
   - Exports (types):
     - `ClientFieldReaders`
     - `ClientFieldsResolution`
@@ -1064,10 +1070,6 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LiveFieldOptionsRead`
     - `LiveIdsQuery`
     - `LiveListResult`
-    - `LiveMutation`
-    - `LiveMutationCallbacks`
-    - `LiveMutationOptions`
-    - `LiveMutationRequest`
     - `LivePageError`
     - `LivePagePlaceholder`
     - `LivePagesQuery`
@@ -1094,7 +1096,6 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `clientFieldsKey`
     - `collectionPresentationKey`
     - `enqueueOnSendLane`
-    - `entitySendLaneKey`
     - `FieldPresentation`
     - `mapRow`
     - `mintVisibleRange`
@@ -1107,7 +1108,6 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `useClientFieldsResolvers`
     - `useFieldPresentations`
     - `useLive`
-    - `useLiveMutation`
     - `useLiveReader`
     - `useLiveRow`
 - Server:
@@ -1165,16 +1165,15 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `serveValue`
     - `sliceRange`
 - Core:
-  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `network/live/filter` ×8
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×6
+    - `network/live/filter` ×6
     - `packages/zod-introspect` ×6
     - `primitives/live-state` ×6
-    - `infra/endpoints` ×5
     - `packages/list-bound` ×3
-    - `packages/canonical-params` ×2
     - `packages/resource-protocol` ×2
     - `infra/query-resource.KIND_RE`
+    - `packages/canonical-params.canonicalJson`
   - Exports (types):
     - `AnyCollection`
     - `AnyExternalCollectionOptions`
@@ -1246,8 +1245,6 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LiveDecodedCountQuery`
     - `LiveDecodedGroupQuery`
     - `LiveDecodedQuery`
-    - `LiveEffect`
-    - `LiveEffectPart`
     - `LiveExposedColumns`
     - `LiveExposes`
     - `LiveField`
@@ -1273,10 +1270,8 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LiveKeyCut`
     - `LiveKeyDirection`
     - `LiveKeyRange`
-    - `LiveLane`
     - `LiveLookupCollection`
     - `LiveMachineDecl`
-    - `LiveMembership`
     - `LiveNoWindowCollection`
     - `LiveOrderBy`
     - `LivePageBounds`
@@ -1327,17 +1322,9 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LiveWindowParams`
     - `NoFollows`
     - `NotCollectionRow`
-    - `OrderableKeys`
-    - `OrderableValue`
     - `PagedChanges`
-    - `PredictOptions`
-    - `PredictPatchTarget`
-    - `PredictTarget`
     - `RequireLabel`
-    - `ResolvedLiveEffect`
-    - `ResolvedLiveTarget`
     - `RowKind`
-    - `RowPatch`
     - `ScopedColumnMember`
     - `ServedExternalAll`
     - `ServedExternalLookup`
@@ -1354,18 +1341,13 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `ServeValueOnOptions`
     - `ServeValueOptions`
     - `SnapshotPairing`
-    - `TargetRow`
-    - `UpsertOptions`
     - `WithContributedColumns`
   - Exports (values):
-    - `applyRows`
-    - `choose`
     - `clientFields`
     - `compileExternalCollection`
     - `compilePagedValue`
     - `compileQueryValue`
     - `compileValue`
-    - `effects`
     - `exposedColumns`
     - `extentOf`
     - `externalCollectionRegistrar`
@@ -1383,26 +1365,15 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `liveArm`
     - `liveCollection`
     - `liveValue`
-    - `orderScalar`
-    - `patchRow`
-    - `patchValue`
-    - `patchWhere`
-    - `readLiveEffect`
-    - `readSubject`
-    - `removeRow`
-    - `removeWhere`
     - `rowKind`
     - `scopedLiveColumns`
     - `serveCollectionOn`
     - `serveValueOn`
     - `sliceRange`
-    - `upsertRow`
-    - `upsertRows`
-    - `valueSubject`
 - Cross-plugin:
-  - Imported by: 316 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 312 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×83
-    - `conversations` ×55
+    - `conversations` ×52
     - `debug` ×32
     - `tasks` ×31
     - `infra` ×21
@@ -1413,10 +1384,10 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `stats` ×5
     - `code-explorer` ×4
     - `plugin-meta` ×4
-    - `ui` ×4
     - `auth` ×3
     - `reports` ×3
     - `review` ×3
+    - `ui` ×3
     - `apps-core` ×2
     - `config_v2` ×2
     - `hints` ×2
@@ -1437,7 +1408,6 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `live/no-endpoint-read` — `web` (sanctioned)
     - `no-db-backed-notify` — `server/internal/serve-off-feed.ts` (sanctioned)
     - `no-raw-websocket` — `e2e/narrowing.ts` (sanctioned)
-    - `endpoints/no-endpoint-effect-internals` — `core/internal/predict.ts`, `web` (sanctioned)
   - Exempted by:
     - `framework/central-core` (0 debt)
     - `framework/resource-runtime` (0 debt)
@@ -1463,7 +1433,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
   - Web: `@plugins/network/plugins/live/web/testing`
     - `activeSendLaneCount` — Occupied lanes.
     - `pageZeroParams` — The tuple a paged read of `collection` subscribes for its first page, asked nothing (`{}`): the page plan's start page, encoded by the collection's page source.
-    - `UNCONFIRMED_MS` — How long a predicted write may stay unconfirmed before it is reported.
+    - `UNCONFIRMED_MS` — How long an optimistic op may stay unconfirmed before it is reported.
     - Types: `OptimisticDivergenceReport`, `OptimisticRejectionReport`
   - Server: `@plugins/network/plugins/live/server/testing`
     - `checkPagedSource` — Ask `loader` every range over the items' and `cuts`' keys and throw — naming the range, the answer and the expected ids — on the first answer that differs from `sliceRange` or fails the served half's checks.
