@@ -14,6 +14,14 @@ export interface NativeCapabilities {
   launchApp: boolean;
   /** Opening a URL in the default browser. */
   openUrl: boolean;
+  /**
+   * This helper keeps the device's installed apps (`apps`, `pinApp`): the
+   * main instance's tray. Installing is the helper's power, never the
+   * server's.
+   */
+  apps: boolean;
+  /** It can keep an app in the Dock (macOS) / GNOME dash (Linux). */
+  pin: boolean;
 }
 
 /**
@@ -43,6 +51,17 @@ export interface NativeNotification {
   tag?: string;
 }
 
+/** `apps()`'s answer: the apps installed as OS apps, and those pinned. */
+export interface NativeApps {
+  installed: string[];
+  pinned: string[];
+}
+
+export const NativeAppsSchema: z.ZodType<NativeApps> = z.object({
+  installed: z.array(z.string()),
+  pinned: z.array(z.string()),
+});
+
 /**
  * The bridge the native helper injects as `window.equinNative` — in its panel
  * window only (app windows and other origins get none). The helper implements
@@ -56,9 +75,17 @@ export interface EquinNativeBridge {
   launchApp(appId: string): Promise<void>;
   hidePanel(): Promise<void>;
   setPanelHeight(px: number): Promise<void>;
+  /** The installed and pinned apps (after the sync the panel's load started). */
+  apps?(): Promise<unknown>;
+  /** Keep an app in the Dock / dash; resolves once it is pinned. */
+  pinApp?(appId: string): Promise<void>;
 }
 
-/** The method names {@link EquinNativeBridge} must carry, checked at the boundary. */
+/**
+ * The method names {@link EquinNativeBridge} must carry, checked at the
+ * boundary. `apps` / `pinApp` are checked only when `hostInfo()` says the
+ * helper keeps apps (a helper built before them has neither).
+ */
 export const BRIDGE_METHODS = [
   "hostInfo",
   "setAttention",
@@ -78,6 +105,10 @@ export const NativeHostInfoSchema: z.ZodType<NativeHostInfo> = z.object({
     attention: z.boolean(),
     launchApp: z.boolean(),
     openUrl: z.boolean(),
+    // Absent from a helper built before it installed apps itself: it keeps
+    // none.
+    apps: z.boolean().default(false),
+    pin: z.boolean().default(false),
   }),
   // Absent from a helper built before the material existed (an installed
   // binary outlives the web it was built beside): that window is the opaque

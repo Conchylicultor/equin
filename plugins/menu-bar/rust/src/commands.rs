@@ -5,6 +5,8 @@
 //! — and then gated again here (`handler`) on the page the calling window
 //! shows right now, by its row in src/command_table.rs.
 
+use std::sync::Arc;
+
 use serde::Serialize;
 use tauri::ipc::Invoke;
 use tauri::{AppHandle, Manager, WebviewWindow};
@@ -12,7 +14,7 @@ use tauri_plugin_notification::NotificationExt;
 use url::Url;
 
 use crate::command_table::{OFFLINE_COMMANDS, PANEL_COMMANDS};
-use crate::{gateway, panel, shim, tray};
+use crate::{apps, gateway, panel, shim, tray};
 
 /// Bump on a breaking change of the bridge; the web side reads it.
 const BRIDGE_VERSION: u8 = 1;
@@ -24,6 +26,11 @@ pub struct Capabilities {
     attention: bool,
     launch_app: bool,
     open_url: bool,
+    /// This helper keeps the device's installed apps (`apps`, `pin_app`):
+    /// the main instance's tray only.
+    apps: bool,
+    /// It can pin one to the Dock / GNOME dash.
+    pin: bool,
 }
 
 /// The panel window is a transparent vibrancy material (macOS): the page must
@@ -45,13 +52,55 @@ pub struct HostInfo {
 }
 
 #[tauri::command]
-fn host_info() -> HostInfo {
-    HostInfo {
+async fn host_info(app: AppHandle) -> Result<HostInfo, String> {
+    let keeper = keeper(&app).ok();
+    // The pin probe may run a command (Linux: gsettings): off the IPC thread.
+    let pin = match &keeper {
+        Some(k) => {
+            let k = Arc::clone(k);
+            tauri::async_runtime::spawn_blocking(move || k.can_pin()).await.map_err(|e| e.to_string())?
+        }
+        None => false,
+    };
+    Ok(HostInfo {
         version: BRIDGE_VERSION,
         platform: if cfg!(target_os = "macos") { "macos" } else { "linux" },
-        capabilities: Capabilities { notify: true, attention: true, launch_app: true, open_url: true },
+        capabilities: Capabilities {
+            notify: true,
+            attention: true,
+            launch_app: true,
+            open_url: true,
+            apps: keeper.is_some(),
+            pin,
+        },
         material: panel::MATERIAL_RADIUS.map(|corner_radius| Material { corner_radius }),
+    })
+}
+
+/// The device's app keeper — the main instance's tray only.
+fn keeper(app: &AppHandle) -> Result<Arc<apps::Keeper>, String> {
+    app.try_state::<Arc<apps::Keeper>>()
+        .map(|k| Arc::clone(&k))
+        .ok_or_else(|| "this helper does not keep the installed apps (not the main instance's tray)".into())
+}
+
+/// The installed and pinned apps, after the sync in flight (the panel's
+/// load starts one) settles.
+#[tauri::command]
+async fn apps(app: AppHandle) -> Result<apps::NativeApps, String> {
+    let k = keeper(&app)?;
+    tauri::async_runtime::spawn_blocking(move || k.apps()).await.map_err(|e| e.to_string())?
+}
+
+/// Keep an app in the Dock / GNOME dash (its shim written first when it is
+/// not there yet). Resolves once pinned.
+#[tauri::command]
+async fn pin_app(app: AppHandle, app_id: String) -> Result<(), String> {
+    if !shim::valid_app_id(&app_id) {
+        return Err(format!("{app_id:?} is not an app id"));
     }
+    let k = keeper(&app)?;
+    tauri::async_runtime::spawn_blocking(move || k.pin(&app_id)).await.map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
@@ -143,6 +192,8 @@ pub fn handler() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
         launch_app,
         hide_panel,
         set_panel_height,
+        apps,
+        pin_app,
         start_gateway
     ];
     move |invoke: Invoke| {
@@ -176,6 +227,9 @@ mod tests {
         let pin = panel::Pin::for_namespace("equin");
         assert!(admitted(&pin, "host_info", &u("http://equin.localhost:9000/home/menu-bar?embed=1")).is_ok());
         assert!(admitted(&pin, "notify", &u("http://equin.localhost:9000/home/menu-bar/x")).is_ok());
+        assert!(admitted(&pin, "pin_app", &u("http://equin.localhost:9000/home/menu-bar?embed=1")).is_ok());
+        assert!(admitted(&pin, "pin_app", &u("http://other.localhost:9000/home/menu-bar")).is_err());
+        assert!(admitted(&pin, "apps", &u("http://equin.localhost:9000/agents")).is_err());
         // An in-document route change away from the panel.
         assert!(admitted(&pin, "host_info", &u("http://equin.localhost:9000/agents")).is_err());
         assert!(admitted(&pin, "host_info", &u("http://equin.localhost:9000/home/menu-barx")).is_err());

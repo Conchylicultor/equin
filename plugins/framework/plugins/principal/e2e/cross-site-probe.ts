@@ -41,8 +41,11 @@ const FORGED = {
   "sec-fetch-site": "cross-site",
   "sec-fetch-mode": "cors",
 };
-const PIN_ROUTE = "POST /api/menu-bar/pin/:appId";
-const PIN_PATH = "/api/menu-bar/pin/no-such-app-probe";
+// F9 was "any website can install and pin apps" (the server's pin route).
+// Installing is the native helper's power now; what is left on the server is
+// the catalog the helper installs from — still owner-only.
+const F9_ROUTE = "GET /api/menu-bar/apps";
+const F9_PATH = "/api/menu-bar/apps";
 
 const r = report("principal: cross-site probe");
 const target = new URL(pathUrl("/"));
@@ -151,8 +154,8 @@ async function legA(): Promise<void> {
   );
 
   r.ok(
-    `F9: ${PIN_ROUTE} is in a route table`,
-    all.some((row) => row.route === PIN_ROUTE),
+    `F9: ${F9_ROUTE} is in a route table`,
+    all.some((row) => row.route === F9_ROUTE),
     "not listed; the F9 probe below still runs",
   );
 
@@ -183,9 +186,9 @@ async function legA(): Promise<void> {
     }
   }
 
-  const f9 = await raw("POST", PIN_PATH, FORGED);
+  const f9 = await raw("GET", F9_PATH, FORGED);
   r.ok(
-    "A F9: POST /api/menu-bar/pin/no-such-app-probe cross-site -> 403 cross-site-refused (not the handler's 404)",
+    "A F9: GET /api/menu-bar/apps cross-site -> 403 cross-site-refused",
     refused(f9),
     `got ${f9.status} ${f9.body.slice(0, 120)}`,
   );
@@ -232,10 +235,10 @@ interface Seen {
 const ATTACKER_HTML = (api: string, ws: string): string => `<!doctype html>
 <meta charset="utf-8"><title>attacker</title>
 <iframe name="sink" style="display:none"></iframe>
-<form id="f" method="POST" action="${api}${PIN_PATH}" target="sink"></form>
+<form id="f" method="GET" action="${api}${F9_PATH}" target="sink"></form>
 <script>
   window.__ws = { opened: false, closed: false, errored: false };
-  fetch(${JSON.stringify(api + PIN_PATH)}, { method: "POST", mode: "no-cors" })
+  fetch(${JSON.stringify(api + F9_PATH)}, { mode: "no-cors" })
     .catch(() => {});
   document.getElementById("f").submit();
   const s = new WebSocket(${JSON.stringify(ws)});
@@ -314,18 +317,18 @@ async function legB(): Promise<void> {
             (s) =>
               s.kind.startsWith("response") &&
               s.kind.endsWith(type) &&
-              s.url.includes(PIN_PATH),
+              s.url.includes(F9_PATH),
           )
           .map((s) => s.status ?? 0);
       const fetches = statusOf("fetch");
       const forms = statusOf("document");
       r.ok(
-        "B no-cors fetch POST pin -> 403",
+        "B no-cors fetch of the app catalog -> 403",
         fetches.length > 0 && fetches.every((s) => s === 403),
         `statuses ${JSON.stringify(fetches)}`,
       );
       r.ok(
-        "B form POST pin (hidden iframe) -> 403",
+        "B form GET of the app catalog (hidden iframe) -> 403",
         forms.length > 0 && forms.every((s) => s === 403),
         `statuses ${JSON.stringify(forms)}`,
       );

@@ -1,23 +1,21 @@
 import { defineDataDir } from "@plugins/infra/plugins/paths/core";
 
 /**
- * The native helper's stable copy (`equin-desktop`, plus the deps identity it
- * was copied from): what every installed app shim names — the Linux
- * `.desktop` entries run it by this path, the macOS bundles hold an APFS clone
- * of it. Copied out of the deps cache so a shim never names a cache identity
- * the sweep may delete; re-copied (and every shim re-synced) when the helper's
- * identity changes.
+ * Legacy: the native helper's stable copy the server's shim sync used to make.
+ * Nothing writes it any more — the helper installs apps itself, from its own
+ * executable (`rust/src/apps.rs`) — but Linux desktop entries written before
+ * that still name the binary here until the helper's first sync rewrites them.
  */
 export const menuBarState = defineDataDir({
   kind: "state",
   name: "menu-bar",
   owner: "menu-bar",
   description:
-    "The native menu-bar helper's stable copy, which every installed app shim (~/Applications, ~/.local/share/applications) runs",
+    "Legacy: the native helper copy installed-app shims ran before the helper installed apps itself; nothing writes it",
   reclaim: {
     kind: "never",
     reason:
-      "installed app shims run the helper by this path; deleting it breaks every installed app until the next install re-copies it",
+      "Linux desktop entries written before the helper installed apps itself run the helper by this path until its first sync rewrites them",
   },
 });
 

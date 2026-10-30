@@ -1,12 +1,14 @@
-//! Installed apps, as the helper sees them: the shims `menu-bar/machine`
-//! writes, read back from disk. The shim set IS the installed set — the helper
-//! keeps no list of its own, so an app's URL, name and launcher are whatever
-//! its shim says.
+//! Installed apps, as the helper sees them: the shims the helper itself
+//! writes (src/apps.rs), read back from disk. The shim set IS the installed
+//! set — the helper keeps no list of its own, so an app's URL, name and
+//! launcher are whatever its shim says.
 //!
 //! - macOS: `~/Applications/equin <Name>.app` whose `Info.plist` carries
-//!   `CFBundleIdentifier dev.equin.app.<id>`, `EquinAppId`, `EquinUrl`.
+//!   `CFBundleIdentifier dev.equin.app.<id>`, `EquinAppId`, `EquinUrl`,
+//!   `EquinShimHash`, `EquinHelperDigest`.
 //! - Linux: `~/.local/share/applications/equin-<id>.desktop` whose `Exec=`
-//!   is `<helper> window --app <id> --url <url>`.
+//!   is `<helper> window --app <id> --url <url>`, plus `X-Equin-ShimHash` /
+//!   `X-Equin-HelperDigest`.
 
 use std::path::PathBuf;
 use std::process::Command;
@@ -27,6 +29,47 @@ pub struct Shim {
     /// Linux: the `Exec=` program (the stable helper path).
     #[cfg_attr(target_os = "macos", allow(dead_code))]
     pub program: Option<String>,
+    /// The catalog fingerprint the shim was written from (`None`: written
+    /// before it had one — stale).
+    pub hash: Option<String>,
+    /// The digest of the helper executable the shim runs (`None`: stale).
+    pub helper_digest: Option<String>,
+}
+
+/// Where shims live: everything is under the user's home, injectable so a
+/// test (and `sync-apps` against a scratch home) never touches the real one.
+#[derive(Debug, Clone)]
+pub struct Roots {
+    pub home: PathBuf,
+}
+
+impl Roots {
+    /// The user's real home (`$HOME`), if set.
+    pub fn user() -> Option<Roots> {
+        home().map(|home| Roots { home })
+    }
+
+    /// macOS: the user's Applications folder.
+    #[cfg_attr(target_os = "linux", allow(dead_code))]
+    pub fn mac_applications(&self) -> PathBuf {
+        self.home.join("Applications")
+    }
+
+    /// Linux: the XDG data home (`~/.local/share`).
+    #[cfg_attr(target_os = "macos", allow(dead_code))]
+    pub fn xdg_data_home(&self) -> PathBuf {
+        self.home.join(".local/share")
+    }
+
+    /// The directory this platform's shims live in.
+    #[cfg_attr(target_os = "macos", allow(dead_code))]
+    pub fn shim_dir(&self) -> PathBuf {
+        if cfg!(target_os = "macos") {
+            self.mac_applications()
+        } else {
+            self.xdg_data_home().join("applications")
+        }
+    }
 }
 
 /// An app id as the shims spell it (`dev.equin.app.<id>`, `equin-<id>`).
@@ -137,7 +180,12 @@ pub fn hand_off(url: &Url) {
     }
 }
 
-pub use platform::installed;
+/// Every equin shim under the user's home.
+pub fn installed() -> Vec<Shim> {
+    Roots::user().map(|r| installed_in(&r)).unwrap_or_default()
+}
+
+pub use platform::installed_in;
 #[cfg(target_os = "macos")]
 pub use platform::own_bundle;
 
@@ -148,7 +196,7 @@ mod platform {
 
     use url::Url;
 
-    use super::{bundle_id, home, valid_app_id, Shim};
+    use super::{bundle_id, valid_app_id, Roots, Shim};
 
     fn read_plist(bundle: &Path) -> Option<Shim> {
         let value = plist::Value::from_file(bundle.join("Contents/Info.plist")).ok()?;
@@ -160,7 +208,15 @@ mod platform {
         }
         let url = Url::parse(&get("EquinUrl")?).ok().filter(|u| u.scheme() == "http" || u.scheme() == "https")?;
         let name = get("CFBundleName").unwrap_or_else(|| app_id.clone());
-        Some(Shim { app_id, name, url, path: bundle.to_path_buf(), program: None })
+        Some(Shim {
+            app_id,
+            name,
+            url,
+            path: bundle.to_path_buf(),
+            program: None,
+            hash: get("EquinShimHash"),
+            helper_digest: get("EquinHelperDigest"),
+        })
     }
 
     /// The shim this process runs from: the bundle around the executable
@@ -176,9 +232,8 @@ mod platform {
         }
     }
 
-    pub fn installed() -> Vec<Shim> {
-        let Some(dir) = home().map(|h| h.join("Applications")) else { return Vec::new() };
-        let Ok(entries) = std::fs::read_dir(&dir) else { return Vec::new() };
+    pub fn installed_in(roots: &Roots) -> Vec<Shim> {
+        let Ok(entries) = std::fs::read_dir(roots.mac_applications()) else { return Vec::new() };
         entries
             .filter_map(|e| e.ok())
             .map(|e| e.path())
@@ -211,7 +266,7 @@ mod platform {
 
     use url::Url;
 
-    use super::{home, valid_app_id, wm_class, Shim};
+    use super::{valid_app_id, wm_class, Roots, Shim};
 
     /// `Exec=` split per the Desktop Entry spec: whitespace-separated, a
     /// double-quoted argument may hold spaces and `\"`, `\\`, `` \` ``, `\$`.
@@ -257,6 +312,8 @@ mod platform {
     pub(super) fn read_desktop(path: &Path, text: &str) -> Option<Shim> {
         let mut name = None;
         let mut exec = None;
+        let mut hash = None;
+        let mut helper_digest = None;
         let mut in_entry = false;
         for line in text.lines() {
             let line = line.trim();
@@ -267,6 +324,10 @@ mod platform {
                     name = Some(v.to_string());
                 } else if let Some(v) = line.strip_prefix("Exec=") {
                     exec = Some(v.to_string());
+                } else if let Some(v) = line.strip_prefix("X-Equin-ShimHash=") {
+                    hash = Some(v.to_string());
+                } else if let Some(v) = line.strip_prefix("X-Equin-HelperDigest=") {
+                    helper_digest = Some(v.to_string());
                 }
             }
         }
@@ -283,12 +344,13 @@ mod platform {
             url,
             path: path.to_path_buf(),
             program: args.first().cloned(),
+            hash,
+            helper_digest,
         })
     }
 
-    pub fn installed() -> Vec<Shim> {
-        let Some(dir) = home().map(|h| h.join(".local/share/applications")) else { return Vec::new() };
-        let Ok(entries) = std::fs::read_dir(&dir) else { return Vec::new() };
+    pub fn installed_in(roots: &Roots) -> Vec<Shim> {
+        let Ok(entries) = std::fs::read_dir(roots.shim_dir()) else { return Vec::new() };
         entries
             .filter_map(|e| e.ok())
             .map(|e| e.path())

@@ -51,9 +51,11 @@ export const getAppIconPng = defineEndpoint({
 
 /**
  * The closed set of PNG sizes the icon route renders: 192 and 512 (what a
- * web-app manifest lists), 1024 (an `.icns` set's largest).
+ * web-app manifest lists), and every size of a macOS `.iconset` (16 to 1024),
+ * which the native helper fetches to build an installed app's icon — each
+ * rendered at its own size, never rescaled.
  */
-export const APP_ICON_SIZES = [192, 512, 1024] as const;
+export const APP_ICON_SIZES = [16, 32, 64, 128, 192, 256, 512, 1024] as const;
 export type AppIconSize = (typeof APP_ICON_SIZES)[number];
 
 /** The `:file` segment naming one size's PNG. */

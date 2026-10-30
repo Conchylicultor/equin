@@ -1,6 +1,11 @@
 import { declaredApps } from "@plugins/apps-core/server";
 import { machineHandler } from "@plugins/infra/plugins/endpoints/machine";
-import { getAppIconPng, installableApp, parseAppIconFile } from "../../core";
+import {
+  APP_ICON_SIZES,
+  getAppIconPng,
+  installableApp,
+  parseAppIconFile,
+} from "../../core";
 import { appIconPng } from "./icon-png";
 
 /**
@@ -12,7 +17,7 @@ export const handleAppIcon = machineHandler(getAppIconPng, (_req, params) => {
   const size = parseAppIconFile(params.file ?? "");
   if (app === undefined || size === null) {
     return new Response(
-      `No icon "${params.file}" for app "${params.appId}" (sizes: 192, 512, 1024 PNG; listed apps only).`,
+      `No icon "${params.file}" for app "${params.appId}" (sizes: ${APP_ICON_SIZES.join(", ")} PNG; listed apps only).`,
       { status: 404 },
     );
   }

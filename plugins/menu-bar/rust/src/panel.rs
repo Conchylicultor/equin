@@ -23,7 +23,7 @@ use tauri::{
 use url::Url;
 
 use crate::command_table::PANEL_COMMANDS;
-use crate::{gateway, shim};
+use crate::{apps, gateway, shim};
 
 pub const LABEL: &str = "panel";
 pub const WIDTH: f64 = 360.0;
@@ -63,6 +63,14 @@ impl Pin {
 
     pub fn url(&self) -> &Url {
         &self.url
+    }
+
+    /// The instance's origin as a URL (`http://<ns>.localhost:9000/`).
+    pub fn origin_url(&self) -> Url {
+        let mut u = self.url.clone();
+        u.set_path("/");
+        u.set_query(None);
+        u
     }
 
     /// `http://<ns>.localhost:9000` — what the ACL and bridge.js match.
@@ -178,6 +186,7 @@ pub fn create(app: &AppHandle, observer: Option<Observer>) -> tauri::Result<Webv
         offline_url()
     };
     let pin = panel.pin().clone();
+    let load_pin = pin.clone();
     let hand_off = panel.hand_off;
     let refused = observer.as_ref().map(|o| o.refused);
     let loaded = observer.as_ref().map(|o| o.loaded);
@@ -212,6 +221,15 @@ pub fn create(app: &AppHandle, observer: Option<Observer>) -> tauri::Result<Webv
             NewWindowResponse::Deny
         })
         .on_page_load(move |window, payload| {
+            // The pinned page starting to load (tray start, a reload onto a
+            // new web bundle — what a changed app set is): the keeper (the
+            // main instance's tray only) syncs the installed apps, marked
+            // before the page's scripts run, so its first `apps()` waits.
+            if matches!(payload.event(), tauri::webview::PageLoadEvent::Started) && load_pin.admits(payload.url()) {
+                if let Some(keeper) = window.app_handle().try_state::<std::sync::Arc<apps::Keeper>>() {
+                    keeper.begin_sync();
+                }
+            }
             if matches!(payload.event(), tauri::webview::PageLoadEvent::Finished) {
                 eprintln!("equin-desktop: panel loaded {}", payload.url());
                 if let Some(loaded) = loaded {

@@ -20,8 +20,9 @@ head tags linking them from the app's pages.
   `<link rel="manifest">`, `<meta name="theme-color">` and
   `<link rel="apple-touch-icon">` to that app's pages.
 - **`machine/`** — `GET /api/apps/:appId/icon/:file` (`getAppIconPng`,
-  `needsMachine`; `:file` is `<size>.png`, sizes `APP_ICON_SIZES` = 192, 512,
-  1024): `appIconToSvg` (`app-icon/core`) over the glyph `symbolBody`
+  `needsMachine`; `:file` is `<size>.png`, sizes `APP_ICON_SIZES` = 192 and 512
+  for the manifest, 16–1024 for the macOS iconset the native helper builds an
+  installed app's icon from): `appIconToSvg` (`app-icon/core`) over the glyph `symbolBody`
   (`ui/icons/server`) reads from the installed icon sets, on `appTileFill` (the
   same colour the rail's tile paints), rasterized with resvg like the release
   CLI, memoized per app and size for the process's life (its inputs only change

@@ -1,8 +1,10 @@
 import { useSyncExternalStore } from "react";
 import {
   BRIDGE_METHODS,
+  NativeAppsSchema,
   NativeHostInfoSchema,
   type EquinNativeBridge,
+  type NativeApps,
   type NativeCapabilities,
   type NativeHostInfo,
   type NativeMaterial,
@@ -33,6 +35,10 @@ export type NativeHost =
       setAttention: ((on: boolean) => Promise<void>) | null;
       openUrl: ((url: string) => Promise<void>) | null;
       launchApp: ((appId: string) => Promise<void>) | null;
+      /** The installed / pinned apps — null unless this helper keeps them. */
+      apps: (() => Promise<NativeApps>) | null;
+      /** Keep an app in the Dock / dash — null where it cannot. */
+      pinApp: ((appId: string) => Promise<void>) | null;
       hidePanel: () => Promise<void>;
       setPanelHeight: (px: number) => Promise<void>;
     };
@@ -62,6 +68,13 @@ function presentHost(
   info: NativeHostInfo,
 ): NativeHost {
   const caps = info.capabilities;
+  const { apps, pinApp } = bridge;
+  // A helper that says it keeps apps carries both methods, or it is broken.
+  if (caps.apps && (apps === undefined || pinApp === undefined)) {
+    throw new Error(
+      "window.equinNative keeps apps but is missing apps() / pinApp().",
+    );
+  }
   return {
     kind: "present",
     platform: info.platform,
@@ -71,6 +84,14 @@ function presentHost(
     setAttention: caps.attention ? (on) => bridge.setAttention(on) : null,
     openUrl: caps.openUrl ? (url) => bridge.openUrl(url) : null,
     launchApp: caps.launchApp ? (id) => bridge.launchApp(id) : null,
+    apps:
+      caps.apps && apps !== undefined
+        ? async () => NativeAppsSchema.parse(await apps.call(bridge))
+        : null,
+    pinApp:
+      caps.apps && caps.pin && pinApp !== undefined
+        ? (id) => pinApp.call(bridge, id)
+        : null,
     hidePanel: () => bridge.hidePanel(),
     setPanelHeight: (px) => bridge.setPanelHeight(px),
   };
@@ -106,16 +127,21 @@ function probe(): ProbeState {
   b.hostInfo().then(
     (raw) => {
       const parsed = NativeHostInfoSchema.safeParse(raw);
-      settle(
-        parsed.success
-          ? presentHost(b, parsed.data)
-          : {
-              kind: "failed",
-              error: new Error(
-                `equinNative.hostInfo() answered an unknown shape: ${parsed.error.message}`,
-              ),
-            },
-      );
+      if (parsed.success) {
+        try {
+          settle(presentHost(b, parsed.data));
+        } catch (err) {
+          if (!(err instanceof Error)) throw err;
+          settle({ kind: "failed", error: err });
+        }
+        return;
+      }
+      settle({
+        kind: "failed",
+        error: new Error(
+          `equinNative.hostInfo() answered an unknown shape: ${parsed.error.message}`,
+        ),
+      });
     },
     (err: unknown) =>
       settle({

@@ -66,12 +66,13 @@ namespaces and URLs, never an app.
 - **Bridge** (`rust/src/bridge.js`, the contract `core/` mirrors): an
   initialization script on the panel's main frame defines `window.equinNative`
   — `hostInfo()` (`{ version: 1, platform,
-  capabilities: { notify, attention, launchApp: true, openUrl } }`),
+  capabilities: { notify, attention, launchApp: true, openUrl, apps, pin } }`),
   `setAttention(on)`, `notify({ title, body?, tag? })`, `openUrl(url)` (http(s),
   default browser), `launchApp(appId)` (the installed app's running window comes forward, else
   its shim launches — macOS `open <bundle>`, Linux `gtk-launch equin-<id>`;
   rejects `"not-installed"` without a shim), `hidePanel()`,
-  `setPanelHeight(px)` (clamped 200–720).
+  `setPanelHeight(px)` (clamped 200–720), `apps()` / `pinApp(appId)` (the
+  device's installed apps, below — capabilities `apps` / `pin`).
   **The bridge answers ONE page: the pin** (`panel::Pin`, `rust/src/panel.rs`
   — the panel app's route `/home/menu-bar` at the configured instance's exact
   origin, `http://<ns>.localhost:9000`). Tauri's ACL sees only the caller's
@@ -112,71 +113,83 @@ namespaces and URLs, never an app.
 
 (`<gateway-label>` is the gateway's launchd label / systemd unit name, `dev.equin.gateway` (`GATEWAY_SERVICE` in `infra/launcher/core`); an install from before the rename keeps `LEGACY_IDS.launchdLabel` until `./equin data-dir migrate` relabels it — the service stays bound to whichever label is installed (`installedAs`).)
 
-## Installed apps (`machine/`)
+## Installed apps — the helper's device power (`rust/src/apps.rs`)
 
-**Every installable app is an OS app, ahead of any click.** Main keeps one
-launcher **shim** per app (`syncAllShimsOnMain`, `machine/internal/shims.ts`),
-running the helper's window mode on the app's MAIN-namespace URL
-(`namespaceUrl(MAIN_WORKTREE_NAME, basePath)`), so a menu-bar tile always opens
-the app's own window at once. (A shim's own bundle id is what gives a window its
-own Dock icon / Cmd-Tab entry, so it cannot be skipped. Creating one on the
-first click would cost ~0.7 s; with `sips` it was ~2.8 s.) The sync runs on main's boot and each
-helper build, only once the helper is built (it never requests the build: no
-helper, no tray). It writes missing or stale shims. A shim is stale when its recorded
-fingerprint (`shimHash`: app id, name, URL, namespace, icon SVG; `EquinShimHash`
-/ `X-Equin-ShimHash`) differs, or when the helper's identity changed. It removes
-shims of renamed apps (the old bundle name) and of removed apps. Only equin's own
-shims are touched (read by their `EquinAppId`). A current shim runs no command.
-APFS clones make the ~15 bundles nearly free on disk.
+**Installing and pinning an app acts on the device, so the helper does it,
+never the server** (Trust boundaries, principle 2: a power lives on the
+machine it acts on). The instance only says which apps exist and what they
+look like: `GET /api/menu-bar/apps` (`getAppCatalog`, `machine/`, owner-only —
+the helper is a local tool with no browser headers, which the gateway stamps
+as the owner) lists every installable app's id, name, base path, icon PNG
+paths (every iconset size, from `app-manifest`'s icon route) and a
+fingerprint (`hash`: id, name, base path, icon picture). Plan:
+`research/2026-10-29-menu-bar-device-powers-in-helper.md`.
 
-`POST /api/menu-bar/pin/:appId` (`pinApp`, `needsMachine`) keeps one in the
-Dock / GNOME dash, writing its shim first when it is not there yet (a worktree,
-or a pin racing main's first sync). The shim contract is fixed — the Rust helper
-reads it exactly so — and lives as pure data in
-`machine/internal/shim-files.ts`:
+**Every installable app is an OS app, ahead of any click.** The helper keeps
+one launcher **shim** per catalog app, on its instance's origin + base path,
+so a menu-bar tile always opens the app's own window at once. (A shim's own
+bundle id is what gives a window its own Dock icon / Cmd-Tab entry, so it
+cannot be skipped.)
 
+- **Who keeps them** — only the tray of the main instance (`tray` with no
+  `--namespace`, or the main namespace): it manages an `apps::Keeper`. A dev
+  tray on another namespace, the probes and a worktree's build never write a
+  shim (`hostInfo().capabilities.apps` is `false` there), so nothing but the
+  installed helper decides what every installed app runs.
+- **When** — the keeper syncs each time the pinned panel page *starts*
+  loading (`on_page_load` `Started`): the tray's start, and the panel's own
+  reload once main serves a newer web bundle — which is what a changed app set
+  or icon is. Nothing polls. It is marked pending before the page's scripts
+  run, so the page's first `apps()` answers after it.
+- **Sync** — fetch the catalog; write a missing or stale shim (stale: another
+  `EquinShimHash`, `EquinHelperDigest` — a digest of the helper's own
+  executable, so a new helper rewrites them all — or URL); remove shims of
+  renamed apps (the old bundle name) and of apps no longer in the catalog.
+  Only equin's own shims are touched (read by their `EquinAppId`, `shim.rs`).
+  A current shim runs no command and fetches no icon.
 - **macOS** — `~/Applications/equin <Name>.app`: `Contents/MacOS/equin-desktop`
-  (an APFS clone, `cp -c`, of the stable helper — the process must live in the
-  shim's bundle to get its own Dock icon), `Info.plist` (`CFBundleIdentifier
-  dev.equin.app.<id>`, `CFBundleExecutable equin-desktop`, `CFBundleIconFile
-  app`, `EquinAppId`, `EquinUrl`, `EquinNamespace`, `EquinShimHash`, the `localhost` ATS exception; no `LSUIElement`),
-  `Resources/app.icns` (every iconset size rendered by the app-manifest
-  renderer at that size, packed by `iconutil`; ten `sips` runs took ~2 s),
-  ad-hoc signed. Assembled in `<bundle>.staging` and swapped in
-  whole, so a running app's executable is never overwritten in place.
+  (an APFS clone, `cp -c`, of the helper's OWN executable — the process must
+  live in the shim's bundle to get its own Dock icon), `Info.plist`
+  (`CFBundleIdentifier dev.equin.app.<id>`, `CFBundleExecutable
+  equin-desktop`, `CFBundleIconFile app`, `EquinAppId`, `EquinUrl`,
+  `EquinNamespace`, `EquinShimHash`, `EquinHelperDigest`, the `localhost` ATS
+  exception; no `LSUIElement`), `Resources/app.icns` (each iconset size
+  fetched from the icon route, packed by `iconutil`), ad-hoc signed.
+  Assembled in `<bundle>.staging` and swapped in whole, so a running app's
+  executable is never overwritten in place.
 - **Linux** — `~/.local/share/applications/equin-<id>.desktop` (`Exec=<stable
   helper> window --app <id> --url <url>`, `StartupWMClass=equin-<id>`,
-  `Icon=equin-<id>`, `X-Equin-AppId`), PNG at
-  `~/.local/share/icons/hicolor/512x512/apps/equin-<id>.png`.
-- **Pin** (the pin endpoint, when `capabilities.pin`): macOS appends a `persistent-apps` tile with
-  `defaults write com.apple.dock`, then `killall Dock`; GNOME appends to
-  `gsettings org.gnome.shell favorite-apps`. Already pinned → nothing runs.
-- **Stable helper** — the dep's binary is copied into `state/menu-bar/`
-  (`menuBarState`, with the identity it came from) so no shim names a
-  deps-cache identity; when the identity changes every shim is rewritten
-  (`syncShims`' `rewriteAll`). Main owns the copy; a worktree pin uses its own
-  build until main's next sync.
-- **Helper not built yet** (a pin) — `readyNow` says so: the app is recorded
-  `waiting-for-helper`, `requestDep` builds it, and the pin finishes when the
-  build settles (pushed); a failed build marks the request `failed`.
-
-Live values (`core/install.ts`): `menu-bar.installed` (the shim set read from
-disk — notified by the sync, the endpoint and a `defineFileWatcher` on the shim
-folder, `depth: "children"`), `menu-bar.pinned` (the Dock's `persistent-apps`
-/ the dash's favorites matched against the shims — notified by the endpoint
-and, while subscribed, a watcher on `~/Library/Preferences` /
-`~/.config/dconf` filtered to the Dock's plist / dconf's `user`, so an unpin in
-the Dock itself is heard), `menu-bar.pin-requests` (in flight / failed, in
-memory) and `menu-bar.capabilities` (`{ platform, install, pin, reason }`:
-macOS both; Linux install, pin when `gsettings get org.gnome.shell
-favorite-apps` answers; elsewhere neither). Every host-touching step goes
-through `ShimHost` (roots, command runner, icon renderer), which the tests fake
-against a `/tmp` home — never the real `~/Applications`, Dock or dconf.
+  `Icon=equin-<id>`, `X-Equin-AppId`, `X-Equin-ShimHash`,
+  `X-Equin-HelperDigest`), PNG at
+  `~/.local/share/icons/hicolor/512x512/apps/equin-<id>.png`. The stable
+  helper is the helper's own copy at `~/.local/share/equin/equin-desktop`
+  (the deps cache it is built into may be swept).
+- **Names** — a bundle is named from the app's name only when it is a safe
+  path segment (no `/`, `:`, `\`, control character or leading dot, at most
+  64 characters); otherwise from its id.
+- **Pin** — `equinNative.pinApp(appId)` (writing its shim first when it is not
+  there yet): macOS appends a `persistent-apps` tile with `defaults write
+  com.apple.dock`, then `killall Dock`; GNOME appends to `gsettings
+  org.gnome.shell favorite-apps` (pin capability probed once: does `gsettings
+  get` answer). Already pinned → nothing runs.
+- **Read** — `equinNative.apps()` → `{ installed, pinned }` (the shims on
+  disk; the Dock's `persistent-apps` / the dash's favorites matched against
+  them), after the sync in flight. A failed sync is its failure.
+  `useNativeApps()` (web) reads it on mount, on each panel focus (so an app
+  dragged out of the Dock offers its pin again on the next open) and after a
+  pin; pins in flight / failed are its `requests`.
+- **Verify** — `HOME=$(mktemp -d) equin-desktop sync-apps --namespace <ns>`
+  runs one sync against a scratch home (real `iconutil` / `codesign`, never
+  the real `~/Applications` or Dock) and prints what it wrote and removed.
+- The `state/menu-bar` data dir is legacy (the server's old stable copy):
+  nothing writes it; Linux entries written before still name it until the
+  helper's first sync rewrites them.
 
 The app grid (`plugins/app-grid`) opens a tile's app through `launchApp` (its
-window) whenever it has a shim — every app, once main's first sync ran — and
-draws the **Keep in Dock** pin as a hover item action on each tile (data-view's
-icons view corner), hidden once pinned or where `capabilities.pin` is false.
+window) whenever it has a shim — every app, once the helper's first sync ran —
+and draws the **Keep in Dock** pin as a hover item action on each tile
+(data-view's icons view corner), hidden once pinned or where the helper cannot
+pin.
 
 `login-services/` declares `dev.equin.menu-bar` (`graphical`): the helper run
 as `tray` — on macOS from the equin app bundle, as its main executable
@@ -193,7 +206,7 @@ requests the helper build and reloads the tray onto it
 
 ## Plugin reference
 
-- Description: The menu-bar panel the native helper opens: the menu-bar app (unlisted, colorMode light — the panel is designed light) mounted at /home/menu-bar, whose whole layout is the panel (no pane; chromeless under ?embed=1), whose body is the MenuBar.Section slot, drawn in its own theme (a native menu's: the system font, 13px rows, a 2–16px spacing ramp, the menu palette), plus the header (the spiral and a status line joined from MenuBar.Status parts, whose attention lights the menu-bar icon's dot) and the footer ('Running · <host>', opening equin). useNativeHost() reads the helper's bridge (window.equinNative): pending, absent (a plain browser), or present with its platform, capabilities and methods — a capability the host lacks has no method. usePanelInput() is the panel's typed text (the task field writes it, the app grid filters by it), kept as a draft across reloads. MenuBar.Mount runs headless work while the panel page is alive; the panel reports its content height to the helper, shows no toasts, and reloads itself while hidden once main serves a newer web bundle.
+- Description: The menu-bar panel the native helper opens: the menu-bar app (unlisted, colorMode light — the panel is designed light) mounted at /home/menu-bar, whose whole layout is the panel (no pane; chromeless under ?embed=1), whose body is the MenuBar.Section slot, drawn in its own theme (a native menu's: the system font, 13px rows, a 2–16px spacing ramp, the menu palette), plus the header (the spiral and a status line joined from MenuBar.Status parts, whose attention lights the menu-bar icon's dot) and the footer ('Running · <host>', opening equin). useNativeHost() reads the helper's bridge (window.equinNative): pending, absent (a plain browser), or present with its platform, capabilities and methods — a capability the host lacks has no method. useNativeApps() reads the device's installed and pinned apps from the helper that keeps them (pending / unavailable / ready / error), re-read on panel focus and after a pin. usePanelInput() is the panel's typed text (the task field writes it, the app grid filters by it), kept as a draft across reloads. MenuBar.Mount runs headless work while the panel page is alive; the panel reports its content height to the helper, shows no toasts, and reloads itself while hidden once main serves a newer web bundle.
 - Web:
   - Slots:
     - `MenuBar.Section`
@@ -234,62 +247,41 @@ requests the helper build and reloads the tray onto it
     - `ui/theme-engine.ThemeEngine`
   - Exports (types):
     - `MenuBarStatus`
+    - `NativeAppsState`
     - `NativeHost`
   - Exports (values):
     - `MenuBar`
+    - `useNativeApps`
     - `useNativeHost`
     - `usePanelInput`
-- Server:
-  - Contributes:
-    - `resource.declare` "menu-bar.capabilities"
-    - `resource.declare` "menu-bar.installed"
-    - `resource.declare` "menu-bar.pin-requests"
-    - `resource.declare` "menu-bar.pinned"
-  - Resources:
-    - `menu-bar.capabilities` (push, fixed)
-    - `menu-bar.installed` (push, notified, whole: one id per app installed as an OS app — bounded by the apps there are)
-    - `menu-bar.pin-requests` (push, notified, whole: at most one in-flight or failed pin per app — bounded by the apps there are)
-    - `menu-bar.pinned` (push, notified, whole: one id per app installed as an OS app — bounded by the apps there are)
 - Machine:
   - Uses:
-    - `apps-core/app-manifest.appIconPng`
     - `apps-core/app-manifest.appIconSvg`
     - `infra/endpoints.implementMachine`
-    - `network/live.serveValue`
-  - Register:
-    - `defineFileWatcher('menu-bar.shim-dir')`
-    - `defineFileWatcher('menu-bar.pin-store')`
-  - Routes: `POST /api/menu-bar/pin/:appId` — unpredicted (server-decided)
+  - Routes: `GET /api/menu-bar/apps`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
-    - `network/live.liveValue`
     - `packages/list-bound.wholeList`
     - `primitives/pane.defineApp`
     - `ui/icons.symbol`
   - Exports (types):
+    - `AppCatalog`
+    - `CatalogApp`
     - `EquinNativeBridge`
-    - `InstallCapabilities`
-    - `InstalledApps`
+    - `NativeApps`
     - `NativeCapabilities`
     - `NativeHostInfo`
     - `NativeMaterial`
     - `NativeNotification`
-    - `PinRequest`
-    - `PinRequests`
   - Exports (values):
+    - `AppCatalogSchema`
     - `BRIDGE_METHODS`
-    - `InstallCapabilitiesSchema`
-    - `InstalledAppsSchema`
+    - `CatalogAppSchema`
+    - `getAppCatalog`
     - `menuBarApp`
-    - `menuBarCapabilities`
-    - `menuBarInstalled`
-    - `menuBarPinned`
-    - `menuBarPinRequests`
+    - `NativeAppsSchema`
     - `NativeHostInfoSchema`
-    - `pinApp`
-    - `PinRequestSchema`
-    - `PinRequestsSchema`
 - Deps:
   - Uses:
     - `infra/deps.defineDep`
@@ -314,7 +306,6 @@ requests the helper build and reloads the tray onto it
     - `menu-bar/app-grid`
     - `shell/notifications/native`
     - `tasks/menu-bar-task`
-  - Endpoint callers: `app-grid`
 - Sub-plugins:
   - **`app-grid`** — The menu-bar panel's app grid (MenuBar.Section 'apps'): every Apps.App but the current app and the home app (the desktop included: its URL is its base path as a route prefix) — as the icons DataView…
 

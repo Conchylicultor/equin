@@ -1,25 +1,19 @@
 export {
   BRIDGE_METHODS,
+  NativeAppsSchema,
   NativeHostInfoSchema,
   type EquinNativeBridge,
+  type NativeApps,
   type NativeCapabilities,
   type NativeHostInfo,
   type NativeMaterial,
   type NativeNotification,
 } from "./native-bridge";
 export {
-  InstallCapabilitiesSchema,
-  InstalledAppsSchema,
-  menuBarCapabilities,
-  menuBarInstalled,
-  menuBarPinned,
-  menuBarPinRequests,
-  pinApp,
-  PinRequestSchema,
-  PinRequestsSchema,
-  type InstallCapabilities,
-  type InstalledApps,
-  type PinRequest,
-  type PinRequests,
+  AppCatalogSchema,
+  CatalogAppSchema,
+  getAppCatalog,
+  type AppCatalog,
+  type CatalogApp,
 } from "./install";
 export { menuBarApp } from "./app";

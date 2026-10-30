@@ -3,7 +3,7 @@
 
 use tauri::{AppHandle, Manager};
 
-use crate::{commands, panel};
+use crate::{apps, cli, commands, panel};
 
 /// The icon's two looks, compiled in from build.rs's renders of icons/*.svg.
 #[cfg(target_os = "macos")]
@@ -135,9 +135,21 @@ pub use platform::Icon;
 
 pub fn run(namespace: String) {
     eprintln!("equin-desktop: tray mode, namespace {namespace}");
-    let app = tauri::Builder::default()
+    let pin = panel::Pin::for_namespace(&namespace);
+    // The device's installed apps are the main instance's: a tray on another
+    // namespace (a dev tray) never writes a shim.
+    let keeper = (namespace == cli::MAIN_NAMESPACE).then(|| apps::Keeper::new(pin.origin_url()));
+    let builder = tauri::Builder::default();
+    let builder = match keeper {
+        Some(k) => builder.manage(k),
+        None => {
+            eprintln!("equin-desktop: not the main instance; the installed apps are left alone");
+            builder
+        }
+    };
+    let app = builder
         .plugin(tauri_plugin_notification::init())
-        .manage(panel::Panel::new(panel::Pin::for_namespace(&namespace), panel::open_in_browser))
+        .manage(panel::Panel::new(pin, panel::open_in_browser))
         .invoke_handler(commands::handler())
         .setup(|app| {
             #[cfg(target_os = "macos")]

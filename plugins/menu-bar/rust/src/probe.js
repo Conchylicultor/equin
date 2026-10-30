@@ -56,7 +56,9 @@
     "try{var t=top;" +
     "var a=t.equinNative?t.equinNative.hostInfo():Promise.reject('no equinNative');" +
     "var b=t.__TAURI_INTERNALS__?t.__TAURI_INTERNALS__.invoke('host_info'):Promise.reject('no internals');" +
-    "var r=await Promise.allSettled([a,b]);" +
+    // A device power too: pinning an app to the Dock.
+    "var c=t.__TAURI_INTERNALS__?t.__TAURI_INTERNALS__.invoke('pin_app',{appId:'probe'}):Promise.reject('no internals');" +
+    "var r=await Promise.allSettled([a,b,c]);" +
     "rep({outcome:r.some(function(x){return x.status==='fulfilled'})?'answered':'rejected',detail:JSON.stringify(r)});" +
     "}catch(e){" +
     // An opaque frame cannot reach top: try the raw IPC with a guessed key.

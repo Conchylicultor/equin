@@ -44,6 +44,12 @@
     setPanelHeight: function (px) {
       return invoke("set_panel_height", { px: Number(px) }).then(done);
     },
+    apps: function () {
+      return invoke("apps");
+    },
+    pinApp: function (appId) {
+      return invoke("pin_app", { appId: String(appId) }).then(done);
+    },
   };
   Object.defineProperty(window, "equinNative", {
     value: Object.freeze(api),

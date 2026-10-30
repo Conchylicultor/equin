@@ -34,6 +34,10 @@ tauri-plugin-notification = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 url = "2"
+# The helper reads its instance's app catalog and icons (src/apps.rs) — the
+# reqwest Tauri already links. No TLS feature: the instance is
+# http://<ns>.localhost today; a hosted instance adds one.
+reqwest = { version = "0.13", default-features = false }
 
 # macOS: the status item is Tauri's own tray (NSStatusItem, template image).
 [target.'cfg(target_os = "macos")'.dependencies]

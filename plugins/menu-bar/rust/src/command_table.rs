@@ -13,6 +13,8 @@ pub const PANEL_COMMANDS: &[&str] = &[
     "launch_app",
     "hide_panel",
     "set_panel_height",
+    "apps",
+    "pin_app",
 ];
 
 /// The bundled "equin isn't running" page (local, in the panel window): its

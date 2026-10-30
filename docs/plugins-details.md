@@ -30062,7 +30062,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 225 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 224 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×62
           - `conversations` ×32
           - `infra` ×22
@@ -30080,12 +30080,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2` ×2
           - `history` ×2
           - `integrations` ×2
-          - `menu-bar` ×2
           - `screenshot` ×2
           - `tag-tree` ×2
           - `backup`
           - `database/fork`
           - `hints`
+          - `menu-bar`
           - `network/live`
           - `release`
           - `search/engine`
@@ -33909,7 +33909,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: `map/google`
 
-- **`menu-bar`** — The menu-bar panel the native helper opens: the menu-bar app (unlisted, colorMode light — the panel is designed light) mounted at /home/menu-bar, whose whole layout is the panel (no pane; chromeless under ?embed=1), whose body is the MenuBar.Section slot, drawn in its own theme (a native menu's: the system font, 13px rows, a 2–16px spacing ramp, the menu palette), plus the header (the spiral and a status line joined from MenuBar.Status parts, whose attention lights the menu-bar icon's dot) and the footer ('Running · <host>', opening equin). useNativeHost() reads the helper's bridge (window.equinNative): pending, absent (a plain browser), or present with its platform, capabilities and methods — a capability the host lacks has no method. usePanelInput() is the panel's typed text (the task field writes it, the app grid filters by it), kept as a draft across reloads. MenuBar.Mount runs headless work while the panel page is alive; the panel reports its content height to the helper, shows no toasts, and reloads itself while hidden once main serves a newer web bundle.
+- **`menu-bar`** — The menu-bar panel the native helper opens: the menu-bar app (unlisted, colorMode light — the panel is designed light) mounted at /home/menu-bar, whose whole layout is the panel (no pane; chromeless under ?embed=1), whose body is the MenuBar.Section slot, drawn in its own theme (a native menu's: the system font, 13px rows, a 2–16px spacing ramp, the menu palette), plus the header (the spiral and a status line joined from MenuBar.Status parts, whose attention lights the menu-bar icon's dot) and the footer ('Running · <host>', opening equin). useNativeHost() reads the helper's bridge (window.equinNative): pending, absent (a plain browser), or present with its platform, capabilities and methods — a capability the host lacks has no method. useNativeApps() reads the device's installed and pinned apps from the helper that keeps them (pending / unavailable / ready / error), re-read on panel focus and after a pin. usePanelInput() is the panel's typed text (the task field writes it, the app grid filters by it), kept as a draft across reloads. MenuBar.Mount runs headless work while the panel page is alive; the panel reports its content height to the helper, shows no toasts, and reloads itself while hidden once main serves a newer web bundle.
   - Web:
     - Slots:
       - `MenuBar.Section`
@@ -33950,62 +33950,41 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ui/theme-engine.ThemeEngine`
     - Exports (types):
       - `MenuBarStatus`
+      - `NativeAppsState`
       - `NativeHost`
     - Exports (values):
       - `MenuBar`
+      - `useNativeApps`
       - `useNativeHost`
       - `usePanelInput`
-  - Server:
-    - Contributes:
-      - `resource.declare` "menu-bar.capabilities"
-      - `resource.declare` "menu-bar.installed"
-      - `resource.declare` "menu-bar.pin-requests"
-      - `resource.declare` "menu-bar.pinned"
-    - Resources:
-      - `menu-bar.capabilities` (push, fixed)
-      - `menu-bar.installed` (push, notified, whole: one id per app installed as an OS app — bounded by the apps there are)
-      - `menu-bar.pin-requests` (push, notified, whole: at most one in-flight or failed pin per app — bounded by the apps there are)
-      - `menu-bar.pinned` (push, notified, whole: one id per app installed as an OS app — bounded by the apps there are)
   - Machine:
     - Uses:
-      - `apps-core/app-manifest.appIconPng`
       - `apps-core/app-manifest.appIconSvg`
       - `infra/endpoints.implementMachine`
-      - `network/live.serveValue`
-    - Register:
-      - `defineFileWatcher('menu-bar.shim-dir')`
-      - `defineFileWatcher('menu-bar.pin-store')`
-    - Routes: `POST /api/menu-bar/pin/:appId` — unpredicted (server-decided)
+    - Routes: `GET /api/menu-bar/apps`
   - Core:
     - Uses:
       - `infra/endpoints.defineEndpoint`
-      - `network/live.liveValue`
       - `packages/list-bound.wholeList`
       - `primitives/pane.defineApp`
       - `ui/icons.symbol`
     - Exports (types):
+      - `AppCatalog`
+      - `CatalogApp`
       - `EquinNativeBridge`
-      - `InstallCapabilities`
-      - `InstalledApps`
+      - `NativeApps`
       - `NativeCapabilities`
       - `NativeHostInfo`
       - `NativeMaterial`
       - `NativeNotification`
-      - `PinRequest`
-      - `PinRequests`
     - Exports (values):
+      - `AppCatalogSchema`
       - `BRIDGE_METHODS`
-      - `InstallCapabilitiesSchema`
-      - `InstalledAppsSchema`
+      - `CatalogAppSchema`
+      - `getAppCatalog`
       - `menuBarApp`
-      - `menuBarCapabilities`
-      - `menuBarInstalled`
-      - `menuBarPinned`
-      - `menuBarPinRequests`
+      - `NativeAppsSchema`
       - `NativeHostInfoSchema`
-      - `pinApp`
-      - `PinRequestSchema`
-      - `PinRequestsSchema`
   - Deps:
     - Uses:
       - `infra/deps.defineDep`
@@ -34030,29 +34009,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `menu-bar/app-grid`
       - `shell/notifications/native`
       - `tasks/menu-bar-task`
-    - Endpoint callers: `app-grid`
   - Plugins:
-    - **`app-grid`** — The menu-bar panel's app grid (MenuBar.Section 'apps'): every Apps.App but the current app and the home app (the desktop included: its URL is its base path as a route prefix) — as the icons DataView over the installedApp row kind, laid out as a menu's grid (viewOptions.icons.menu: four cells sharing the panel's width) (the tile and name Home and the launcher draw), each tile wearing its app's badge, filtered by name as the panel's field is typed (usePanelInput). Scrolling past four rows; drag reorders it, persisted per view (defineDataView('menu-bar.apps')). A tile opens its app in its own OS window through the helper (launchApp) — every app has its shim, kept by main ahead of any click (menu-bar.installed); in the default browser (openUrl) only for an app whose shim is not written yet; in this tab when the panel is not inside the helper. On hover a tile offers a pin (AppGridActions 'pin'): keeps the app in the Dock / GNOME dash through POST /api/menu-bar/pin/:appId — hidden once pinned (menu-bar.pinned, which follows the Dock itself) or where the host cannot pin (menu-bar.capabilities), a spinner while pending, an error mark when the pin failed.
+    - **`app-grid`** — The menu-bar panel's app grid (MenuBar.Section 'apps'): every Apps.App but the current app and the home app (the desktop included: its URL is its base path as a route prefix) — as the icons DataView over the installedApp row kind, laid out as a menu's grid (viewOptions.icons.menu: four cells sharing the panel's width) (the tile and name Home and the launcher draw), each tile wearing its app's badge, filtered by name as the panel's field is typed (usePanelInput). Scrolling past four rows; drag reorders it, persisted per view (defineDataView('menu-bar.apps')). A tile opens its app in its own OS window through the helper (launchApp) — every app has its shim, kept by the helper ahead of any click (useNativeApps, the helper's installed set); in the default browser (openUrl) only for an app with no shim (a helper that keeps no apps); in this tab when the panel is not inside the helper. On hover a tile offers a pin (AppGridActions 'pin'): keeps the app in the Dock / GNOME dash through the helper's bridge (pinApp — a device power, never the server's) — hidden once pinned (re-read on each panel open, so it follows the Dock itself) or where the helper cannot pin, a spinner while pending, an error mark when the pin failed.
       - Web:
         - Slots: `item-actions`
         - Slot contributors: `item-actions` ← `menu-bar.app-grid`
         - Contributes:
           - `MenuBar.Section` "Apps" → `MenuBarAppGrid`
           - `item-actions` "pin" → `PinAppAction`
-        - Uses: 28 symbols — full list in [`plugins/menu-bar/plugins/app-grid/REFERENCE.md`](../plugins/menu-bar/plugins/app-grid/REFERENCE.md)
+        - Uses: 26 symbols — full list in [`plugins/menu-bar/plugins/app-grid/REFERENCE.md`](../plugins/menu-bar/plugins/app-grid/REFERENCE.md)
+          - `menu-bar` ×5
           - `primitives/data-view` ×5
           - `apps-core` ×4
           - `apps-core/app-launcher` ×3
-          - `menu-bar` ×3
-          - `primitives/live-state` ×3
           - `primitives/css/ui-kit` ×2
           - `apps-core/tabs.useActivateApp`
-          - `infra/endpoints.useFetchEndpoint`
-          - `network/live.useLive`
           - `primitives/css/pin.Pin`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.insetClass`
           - `primitives/icon-button.IconButton`
+          - `primitives/live-state.mapResource`
           - `primitives/loading.Loading`
       - Cross-plugin:
         - Uses tokens:
@@ -34440,7 +34416,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `upsertRows`
           - `valueSubject`
       - Cross-plugin:
-        - Imported by: 316 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 314 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×83
           - `conversations` ×55
           - `debug` ×32
@@ -34462,7 +34438,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hints` ×2
           - `history` ×2
           - `integrations` ×2
-          - `menu-bar` ×2
           - `release` ×2
           - `search` ×2
           - `backup/runs-arm`

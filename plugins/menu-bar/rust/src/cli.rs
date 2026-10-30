@@ -7,7 +7,8 @@ pub const USAGE: &str = "usage:
   equin-desktop tray [--namespace <ns>]
   equin-desktop window --app <id> --url <url>
   equin-desktop probe --namespace <ns> [--other <ns>]
-  equin-desktop probe-window --namespace <ns>";
+  equin-desktop probe-window --namespace <ns>
+  equin-desktop sync-apps --namespace <ns>";
 
 /// The probe's "elsewhere" when none is given: a namespace nothing serves —
 /// the panel must refuse it before any load, so it need not exist.
@@ -23,6 +24,7 @@ pub enum Mode {
     Window { app: String, url: Url },
     Probe { namespace: String, other: String },
     ProbeWindow { namespace: String },
+    SyncApps { namespace: String },
 }
 
 /// A namespace as it may appear as a `.localhost` subdomain.
@@ -108,6 +110,14 @@ pub fn parse(args: &[String]) -> Result<Mode, String> {
                 return Err(format!("{namespace:?} is not a namespace to probe"));
             }
             Ok(Mode::ProbeWindow { namespace })
+        }
+        "sync-apps" => {
+            let f = flags(rest, &["--namespace"])?;
+            let namespace = get(&f, "--namespace").ok_or("sync-apps needs --namespace <ns>")?;
+            if !valid_namespace(&namespace) {
+                return Err(format!("{namespace:?} is not a namespace"));
+            }
+            Ok(Mode::SyncApps { namespace })
         }
         other => Err(format!("unknown mode {other:?}")),
     }

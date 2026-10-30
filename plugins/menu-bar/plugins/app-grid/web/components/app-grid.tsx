@@ -28,13 +28,13 @@ import { insetClass } from "@plugins/primitives/plugins/css/plugins/spacing/web"
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useNativeHost, usePanelInput } from "@plugins/menu-bar/web";
-import { menuBarInstalled } from "@plugins/menu-bar/core";
-import { useLive } from "@plugins/network/plugins/live/web";
 import {
-  foldResource,
-  mapResource,
-} from "@plugins/primitives/plugins/live-state/web";
+  useNativeApps,
+  useNativeHost,
+  usePanelInput,
+  type NativeAppsState,
+} from "@plugins/menu-bar/web";
+import { mapResource } from "@plugins/primitives/plugins/live-state/web";
 import { AppGridActions } from "./pin-action";
 
 const MENU_BAR_APPS_VIEW = defineDataView("menu-bar.apps");
@@ -87,13 +87,32 @@ function appUrl(basePath: string): string {
 }
 
 /**
+ * The ids of the apps installed as OS apps; null while the helper has not
+ * answered. A helper that keeps no apps (a dev tray) has none, so every tile
+ * opens in the browser; a failure throws to the section's error boundary — a
+ * tile cannot know where it opens without the installed set.
+ */
+function installedAppIds(state: NativeAppsState): string[] | null {
+  switch (state.kind) {
+    case "pending":
+      return null;
+    case "error":
+      throw state.error;
+    case "unavailable":
+      return [];
+    case "ready":
+      return state.apps.installed;
+  }
+}
+
+/**
  * Every app as the compact icons DataView — the tile and name Home
  * and the launcher draw, four to a row, scrolling past four rows. Dragging a
  * tile reorders the grid (persisted per view, `view-order`). A tile opens its
- * app: its own OS window (`launchApp`) — main keeps a shim for every app ahead
- * of any click, so that is every app once its first sync has run; in the
- * browser through the helper for an app with no shim yet; in this tab when
- * the panel is not inside the helper. Each tile carries a pin on hover
+ * app: its own OS window (`launchApp`) — the helper keeps a shim for every app
+ * ahead of any click (synced on each panel load), so that is every app once
+ * its first sync has run; in the browser through the helper for an app with
+ * no shim; in this tab when the panel is not inside the helper. Each tile carries a pin on hover
  * (`AppGridActions`: keep it in the Dock, hidden once pinned or where the
  * host cannot pin).
  *
@@ -112,7 +131,7 @@ export function MenuBarAppGrid() {
   const homeId = home.kind === "app" ? home.app.id : undefined;
   const activate = useActivateApp();
   const host = useNativeHost();
-  const installed = useLive(menuBarInstalled);
+  const installed = useNativeApps();
   const listing = useAppListing();
   const [input] = usePanelInput();
   const query = input.trim();
@@ -132,20 +151,7 @@ export function MenuBarAppGrid() {
   const launchApp = host.kind === "present" ? host.launchApp : null;
   // A helper that launches installed apps: a tile cannot know where it opens
   // until the installed set is known either.
-  const installedIds =
-    launchApp === null
-      ? []
-      : foldResource(installed, {
-          loading: () => null,
-          // The section's error boundary shows it: a tile cannot know where
-          // it opens without the installed set.
-          error: (err) => {
-            throw err;
-          },
-          // A transport without the computer has no installed apps to launch.
-          unavailable: () => [],
-          ready: (d) => d.appIds,
-        });
+  const installedIds = launchApp === null ? [] : installedAppIds(installed);
   if (installedIds === null)
     return <Loading variant="block" className="h-40 w-full" />;
   // The section's error boundary shows it: which apps this user is offered is
