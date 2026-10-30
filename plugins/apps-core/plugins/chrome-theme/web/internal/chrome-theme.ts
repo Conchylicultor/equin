@@ -101,7 +101,7 @@ export const chromeTheme = defineFixedTheme({
         input: HAIRLINE,
         ring: SIGNAL,
         // The chrome's one accent is its signal blue, so a primary action in a
-        // chrome popover (Improve's Create task) lights in it rather than in
+        // chrome popover (Improve's Launch) lights in it rather than in
         // the default palette's darker primary, which read as a dim blue on the graphite.
         primary: SIGNAL,
         primaryForeground: INK,

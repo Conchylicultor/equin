@@ -442,7 +442,7 @@ await withBrowser(async (h) => {
   const draft = page.locator('[aria-placeholder="Describe the task…"]');
   await draft.click();
   await page.keyboard.type("A prerequisite drafted in the demo");
-  await page.getByRole("button", { name: /Create task/ }).click();
+  await page.getByRole("button", { name: /^Launch/ }).click();
   await page.waitForTimeout(1_500);
   r.note(
     `after add prerequisite: ${(await workerLog(page)).slice(-3).join(" · ")}`,

@@ -73,7 +73,7 @@ left it closes the popover. Every task therefore has exactly one ×, and its
 label says which action a click will take.
 
 The footer holds "+ Follow-up task" (appends a card) on the left, then Cancel and
-"Create task" / "Create N tasks" with its ⌘↵ hint.
+"Launch" / "Launch N tasks" with its ⌘↵ hint.
 
 The composer alone is what the plugin exhibits (`exhibits/`, an `appExhibit`
 in the `plugin-meta/exhibits` catalog, id `task-draft/composer` — app, not

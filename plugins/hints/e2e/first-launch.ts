@@ -317,7 +317,7 @@ const passed = await withBrowser(async (h) => {
   );
   await visible("Improve opened with the first request", draft);
   await snap(page, out, "5-ask");
-  await page.getByRole("button", { name: /^Create task/ }).click();
+  await page.getByRole("button", { name: /^Launch/ }).click();
 
   await visible("agents step (send advanced)", card("Your agent is on it"));
   await snap(page, out, "6-agents");

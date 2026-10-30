@@ -6,7 +6,7 @@ export const wishButtonAnchor = defineHintAnchor("wish.button");
 /** The open Improve popover's draft form. */
 export const wishPanelAnchor = defineHintAnchor("wish.panel");
 
-/** The draft form's Send ("Create task") button. */
+/** The draft form's Send ("Launch") button. */
 export const wishSendAnchor = defineHintAnchor("wish.send");
 
 /** A request was sent from Improve: the tasks it filed. */

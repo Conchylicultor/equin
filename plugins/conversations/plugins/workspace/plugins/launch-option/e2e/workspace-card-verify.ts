@@ -38,7 +38,7 @@ await withBrowser(async (h) => {
     .getByRole("button", { name: "+ Prerequisite" })
     .click({ timeout: 15_000 });
   await page
-    .getByRole("button", { name: "Create task" })
+    .getByRole("button", { name: /^Launch/ })
     .waitFor({ state: "visible", timeout: 15_000 });
   await clearToasts(page);
 

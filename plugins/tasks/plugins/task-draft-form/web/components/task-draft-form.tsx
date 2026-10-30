@@ -338,7 +338,7 @@ export function TaskDraftForm({
           <Icon icon={addIcon} className="size-3.5" />
           Follow-up task
         </Button>
-        {/* Empty grow cell: it absorbs the slack so Cancel/Create sit flush-right. */}
+        {/* Empty grow cell: it absorbs the slack so Cancel/Launch sit flush-right. */}
         <Fill />
         <Button variant="ghost" onClick={onCancel} loading={submitting}>
           Cancel
@@ -349,7 +349,7 @@ export function TaskDraftForm({
           loading={submitting}
           disabled={hasEmpty}
         >
-          {isMulti ? `Create ${cards.length} tasks` : "Create task"}
+          {isMulti ? `Launch ${cards.length} tasks` : "Launch"}
           <Kbd className="border-transparent bg-primary-foreground/15 text-primary-foreground">
             ⌘↵
           </Kbd>
