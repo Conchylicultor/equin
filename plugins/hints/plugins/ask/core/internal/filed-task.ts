@@ -21,7 +21,7 @@ export const AskFiledTaskSchema = z.object({
     .trim()
     .min(1)
     .describe(
-      'What the user wants and why, with what you found (where it lives in the code, what exists today). Describe WHAT is needed, not HOW to build it. End with "Plan first." for anything non-mechanical.',
+      "What the user wants and why, with what you found (where it lives in the code, what exists today). Describe WHAT is needed, not HOW to build it.",
     ),
 });
 

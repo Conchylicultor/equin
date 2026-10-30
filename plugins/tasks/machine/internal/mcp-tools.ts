@@ -79,7 +79,7 @@ export const addTaskTool = Mcp.tool({
   description: `Add a task to the equin task tree.
 
 Task titles and descriptions should state the PROBLEM or ISSUE to solve —
-not instructions on how to solve it, and no hints or suggestions either.
+not instructions on how to solve it.
 The agent that picks up the task will design and plan the solution itself.
 Good: "Login button unresponsive on mobile". Bad: "Fix login button by
 adding a touchstart handler in auth.tsx".
@@ -149,7 +149,7 @@ agent on its own, a misfiled sidequest just waits for a human.
 
 **Next step of the feature:**
 
-  { "title": "Add dark mode support", "description": "... Plan first.", "track": "main", "start": "after" }
+  { "title": "Add dark mode support", "description": "...", "track": "main", "start": "after" }
 
 **Linear main-track chain** — chain each call off the previous one:
 
@@ -201,9 +201,7 @@ place in the dependency graph.`,
       .string()
       .optional()
       .describe(
-        "Optional longer description of the problem or issue. Describe WHAT is wrong or needed, not HOW to fix it. " +
-          'End with "Plan first." to instruct the executing agent to write its own plan before implementing — ' +
-          "do this for any non-mechanical task, even if a broader plan already exists.",
+        "Optional longer description of the problem or issue. Describe WHAT is wrong or needed, not HOW to fix it.",
       ),
     track: TaskTrackSchema.describe(
       "Heuristic: the user asked for it → `main`; you (the agent) came up with it → `sidequest`. " +
