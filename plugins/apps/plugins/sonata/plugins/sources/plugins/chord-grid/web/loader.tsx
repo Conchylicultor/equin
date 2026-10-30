@@ -31,6 +31,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { Fragment, useMemo, type ReactNode } from "react";
 import { asChordGridRaw, type ChordGridRaw } from "./compile";
+import { PLACEHOLDER_TEXT } from "./examples";
 import { parseGrid, type GridToken } from "./parse-grid";
 import "./chord-grid.css";
 
@@ -51,8 +52,6 @@ interface Props {
   raw?: unknown;
   onRaw: (raw: unknown) => void;
 }
-
-const PLACEHOLDER = "; Verse\nAmaj9 Am9 (E E6) (E E6)\nCmaj7 Am7 Dm9 G13";
 
 /** The syntax legend: each example beside what it means. */
 const LEGEND: readonly (readonly [example: string, meaning: string])[] = [
@@ -110,7 +109,7 @@ export function ChordGridLoader({ raw, onRaw }: Props) {
         value={text}
         onChange={(next) => update({ text: next })}
         decorate={(value) => decorateGrid(value, tokens)}
-        placeholder={PLACEHOLDER}
+        placeholder={PLACEHOLDER_TEXT}
         ariaLabel="Chord grid"
         className="chord-grid-tokens rounded-md border border-border bg-background focus-within:border-primary"
       />

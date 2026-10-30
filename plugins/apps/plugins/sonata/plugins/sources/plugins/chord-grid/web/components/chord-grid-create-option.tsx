@@ -7,6 +7,7 @@ import {
   type SourceCreateOption,
 } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { compile, type ChordGridRaw } from "../compile";
+import { STARTER_TEXT } from "../examples";
 import { createChordGridSong } from "../../shared/endpoints";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -23,13 +24,9 @@ const gridViewIcon = symbol("grid-view");
  * the surface's fetcher.
  *
  * The starter is the mini-language's real first impression — the loader's
- * placeholder never shows, since a new grid is born non-empty. So it leads with
- * a `#` comment (teaching the section-label idiom) and keeps the legacy `|`
- * form, which still parses.
+ * placeholder never shows, since a new grid is born non-empty (see `examples`).
  */
-const STARTER: ChordGridRaw = {
-  text: "# Verse\n| C  G | Am  F |",
-};
+const STARTER: ChordGridRaw = { text: STARTER_TEXT };
 
 export const chordGridCreateOption: SourceCreateOption = {
   id: "chord-grid",
