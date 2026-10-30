@@ -22,8 +22,10 @@ import {
   BACKGROUND_QUERY_MAX,
   BACKGROUND_TX_MAX,
   installQueryWrapper,
+  NestedBackgroundTxLeaseError,
   POOL_MAX,
   RESERVED_INTERACTIVE,
+  withTxLeaseScope,
 } from "./pg-driver";
 
 // ---------------------------------------------------------------------------
@@ -487,6 +489,99 @@ describe("pool.connect transaction lease (Gap B)", () => {
 // Capture is keyed on the CALLER kind and not the lane, so the interactive and
 // background checkout paths must both record.
 // ---------------------------------------------------------------------------
+
+describe("nested background transaction leases", () => {
+  // A transaction as `db.transaction()` opens one: its own lease scope, the
+  // checkout, the callback, the release.
+  async function transaction<T>(
+    pool: Pool,
+    body: (client: PoolClient) => Promise<T>,
+  ): Promise<T> {
+    return withTxLeaseScope(async () => {
+      const client = await pool.connect();
+      try {
+        return await body(client);
+      } finally {
+        client.release();
+      }
+    });
+  }
+
+  it("throws at once, naming both acquirers, when a lease holder asks for another", async () => {
+    const fake = createFakePool();
+    const err = await recordEntrySpan("job", "watch.deliver", () =>
+      transaction(fake.pool, () =>
+        transaction(fake.pool, async () => "unreachable"),
+      ),
+    ).catch((e: unknown) => e);
+
+    expect(err).toBeInstanceOf(NestedBackgroundTxLeaseError);
+    const nested = err as NestedBackgroundTxLeaseError;
+    expect(nested.heldBy).toContain("watch.deliver");
+    expect(nested.askedBy).toContain("watch.deliver");
+    // Refused, not queued: the outer lease is the only slot ever taken, and it
+    // is back once the outer transaction unwound.
+    expect(txGauge().queued).toBe(0);
+    expect(txGauge().active).toBe(0);
+  });
+
+  it("refuses the nested checkout even with free slots — a raw pool.connect() inside the transaction too", async () => {
+    const fake = createFakePool();
+    await recordEntrySpan("job", "j", () =>
+      transaction(fake.pool, async () => {
+        expect(txGauge().active).toBe(1);
+        const err = await fake.pool.connect().catch((e: unknown) => e);
+        expect(err).toBeInstanceOf(NestedBackgroundTxLeaseError);
+      }),
+    );
+    expect(txGauge().active).toBe(0);
+  });
+
+  it("allows sequential transactions in one chain", async () => {
+    const fake = createFakePool();
+    await recordEntrySpan("job", "j", async () => {
+      await transaction(fake.pool, async () => undefined);
+      await transaction(fake.pool, async () => undefined);
+    });
+    expect(txGauge().active).toBe(0);
+  });
+
+  it("allows concurrent sibling transactions that hold nothing of each other's", async () => {
+    const fake = createFakePool();
+    await recordEntrySpan("job", "j", () =>
+      Promise.all([
+        transaction(fake.pool, async () => undefined),
+        transaction(fake.pool, async () => undefined),
+      ]),
+    );
+    expect(txGauge().active).toBe(0);
+  });
+
+  it("lets detached work outlive the transaction that started it", async () => {
+    const fake = createFakePool();
+    const started = deferred();
+    let detached: Promise<void> | undefined;
+    await recordEntrySpan("job", "j", () =>
+      transaction(fake.pool, async () => {
+        detached = started.promise.then(() =>
+          transaction(fake.pool, async () => undefined),
+        );
+      }),
+    );
+    // The outer lease is released: its scope no longer counts as held.
+    started.resolve();
+    await detached;
+    expect(txGauge().active).toBe(0);
+  });
+
+  it("never refuses an interactive transaction nested in another (no lease is taken)", async () => {
+    const fake = createFakePool();
+    const result = await recordEntrySpan("http", "POST /x", () =>
+      transaction(fake.pool, () => transaction(fake.pool, async () => "ok")),
+    );
+    expect(result).toBe("ok");
+  });
+});
 
 describe("pool.connect read-set capture", () => {
   it("records a loader's read-set for a query on an interactive checked-out client", async () => {

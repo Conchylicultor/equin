@@ -13,6 +13,7 @@ import {
   recordSpan,
   chargeWait,
   currentCallerKind,
+  currentEntryLabel,
   currentOriginClass,
   recordReadTables,
   registerGateGauge,
@@ -137,6 +138,98 @@ if (
 
 const backgroundQueryGate = createSemaphore(BACKGROUND_QUERY_MAX);
 const backgroundTxGate = createSemaphore(BACKGROUND_TX_MAX);
+
+// The proof above also assumes background transaction leases never NEST: a
+// holder of one bg-tx slot that waits for a second one closes a cycle inside the
+// bg-tx gate itself, and BACKGROUND_TX_MAX such holders wedge the whole
+// background lane (2026-10-30: three `watch.deliver` jobs each held a lease and
+// awaited a fourth for the turn ledger's own transaction — every background
+// transaction after them hung, with no lock wait visible in Postgres). So the
+// rule is enforced, not assumed: every `db.transaction()` opens a lease scope
+// (`withTxLeaseScope`), the background checkout that follows records its lease
+// in it, and a background checkout asked for while a lease in the same async
+// call chain is still held throws `NestedBackgroundTxLeaseError` at once,
+// naming both acquirers, instead of queueing on the gate.
+//
+// The scope chain is per call: a nested `db.transaction()` opens its own scope
+// whose parent is the outer one, so the check walks up the chain. A lease is
+// matched only while held — detached work a transaction started that outlives
+// its commit inherits the scope, but by then the lease is released.
+
+/** One background transaction lease, as its scope records it. */
+interface TxLease {
+  /** Who took it: the entry it ran under and the call site that opened it. */
+  readonly acquiredBy: string;
+  held: boolean;
+}
+
+interface TxLeaseScope {
+  readonly parent: TxLeaseScope | undefined;
+  /** The call site that opened the scope, captured for background work only. */
+  readonly openedAt: string | undefined;
+  lease: TxLease | null;
+}
+
+const txLeaseScopes = new AsyncLocalStorage<TxLeaseScope>();
+
+/**
+ * A background transaction asked for a second lease while its call chain
+ * already holds one — the hold-and-wait that would wedge the bg-tx gate. Pass
+ * the transaction down (`exec`), or run the inner one after the commit
+ * (`afterCommit`).
+ */
+export class NestedBackgroundTxLeaseError extends Error {
+  constructor(
+    readonly heldBy: string,
+    readonly askedBy: string,
+  ) {
+    super(
+      "[database] nested background transaction: this call chain already holds a " +
+        "background transaction lease and asked for another. Waiting would hold one " +
+        `bg-tx slot while waiting for a second (BACKGROUND_TX_MAX = ${BACKGROUND_TX_MAX}), ` +
+        "and enough such holders wedge every background transaction. Pass the open " +
+        "transaction down, or run the inner work after the commit.\n" +
+        `  held by: ${heldBy}\n  asked by: ${askedBy}`,
+    );
+    this.name = "NestedBackgroundTxLeaseError";
+  }
+}
+
+/**
+ * Run `fn` — one transaction's whole life, checkout to release — in a lease
+ * scope of its own, so the background checkout it makes is recorded and a
+ * second one anywhere beneath it is refused. Wraps every `db.transaction()`
+ * (`realDb`). Exported for co-located unit testing.
+ */
+export function withTxLeaseScope<T>(fn: () => T): T {
+  const scope: TxLeaseScope = {
+    parent: txLeaseScopes.getStore(),
+    openedAt: currentOriginClass() === "background" ? callSite() : undefined,
+    lease: null,
+  };
+  return txLeaseScopes.run(scope, fn);
+}
+
+function heldTxLease(): TxLease | null {
+  for (let s = txLeaseScopes.getStore(); s; s = s.parent) {
+    if (s.lease?.held) return s.lease;
+  }
+  return null;
+}
+
+// The caller's frames, minus this module's own: what a nesting error names.
+function callSite(): string {
+  const frames = (new Error().stack ?? "").split("\n").slice(1);
+  const own = frames.filter((f) => !f.includes("pg-driver"));
+  return own
+    .slice(0, 8)
+    .map((f) => f.trim())
+    .join(" <- ");
+}
+
+function describeAcquirer(site: string): string {
+  return `${currentEntryLabel() ?? "(no entry)"} at ${site}`;
+}
 
 // Occupancy gauges for the flight recorder's gate snapshot: layer names join to
 // the corresponding `chargeWait` layers in span `waits`. `background-acquire` is
@@ -373,6 +466,18 @@ export function installQueryWrapper(pool: Pool): void {
       return origConnect().then(wrapClientQueryForReadSet);
     }
 
+    // Read the lease scope synchronously too: a lease already held in this
+    // call chain refuses the checkout outright — queueing on the gate would
+    // be the hold-and-wait the lane proof rules out.
+    const scope = txLeaseScopes.getStore();
+    const acquiredBy = describeAcquirer(scope?.openedAt ?? callSite());
+    const held = heldTxLease();
+    if (held) {
+      return Promise.reject(
+        new NestedBackgroundTxLeaseError(held.acquiredBy, acquiredBy),
+      );
+    }
+
     return (async (): Promise<PoolClient> => {
       const releaseSlot = await backgroundTxGate.acquire({
         onWait: (waitMs) => chargeWait("background-tx-acquire", waitMs),
@@ -387,7 +492,12 @@ export function installQueryWrapper(pool: Pool): void {
         releaseSlot();
         throw err;
       }
-      return armLease(wrapClientQueryForReadSet(client), releaseSlot);
+      const lease: TxLease = { acquiredBy, held: true };
+      if (scope && !scope.lease?.held) scope.lease = lease;
+      return armLease(wrapClientQueryForReadSet(client), () => {
+        lease.held = false;
+        releaseSlot();
+      });
     })();
   }) as typeof pool.connect;
 }
@@ -540,8 +650,15 @@ function pool(): Pool {
 let dbSingleton: Db | null = null;
 
 function realDb(): Db {
-  dbSingleton ??= drizzle(pool());
-  return dbSingleton;
+  if (dbSingleton) return dbSingleton;
+  const d = drizzle(pool());
+  // Every transaction runs in a lease scope (`withTxLeaseScope`); a nested
+  // (savepoint) `tx.transaction()` takes no connection and needs none.
+  const transaction = d.transaction.bind(d);
+  d.transaction = ((...a: Parameters<typeof transaction>) =>
+    withTxLeaseScope(() => transaction(...a))) as typeof d.transaction;
+  dbSingleton = d;
+  return d;
 }
 
 const PG_READY_TIMEOUT_MS = 30_000;

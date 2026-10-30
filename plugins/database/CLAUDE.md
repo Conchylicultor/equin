@@ -212,6 +212,25 @@ the query holders to finish and release the slots the transactions wait on. The
 inequality is asserted at module load, not left in prose. **Never raise either cap
 without re-checking it.**
 
+The proof also needs background transaction leases **never to nest**: a holder of
+one bg-tx slot waiting for a second closes a cycle inside the bg-tx gate itself,
+and `BACKGROUND_TX_MAX` such holders wedge every background transaction (the
+2026-10-30 incident: three `watch.deliver` jobs each held a lease inside their
+claim and awaited a fourth for the turn ledger's own `conn.transaction` — Postgres
+showed three sessions `idle in transaction` and no lock wait). This is
+**enforced**: every `db.transaction()` runs in a lease scope (`withTxLeaseScope`,
+an AsyncLocalStorage chain in `machine/internal/pg-driver.ts`), the background
+checkout records its lease there, and a background `pool.connect()` asked for while
+a lease in the same async call chain is still held rejects at once with
+`NestedBackgroundTxLeaseError`, naming the entry and call site of both acquirers —
+it never queues on the gate. Fix one by passing the open transaction down (the
+`exec` parameter; a nested `tx.transaction()` is a savepoint and takes no
+connection) or by running the inner work after the commit (`afterCommit(tx, …)`,
+or after the `await db.transaction(…)` returns). Sequential and sibling
+transactions are fine, and so is detached work that outlives its transaction (the
+outer lease is released by then). Interactive transactions take no lease and are
+not checked.
+
 Transaction hold-time is bounded by two halves of one guardrail: the
 `database/no-pool-await-in-transaction` ESLint rule (no awaiting the pool inside a
 transaction-scope callback — hold-and-wait), and the **required** `exec` parameter on
