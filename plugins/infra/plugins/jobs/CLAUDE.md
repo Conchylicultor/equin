@@ -167,6 +167,12 @@ overrun) the old row has exactly a dead job's columns.
 - **The stuck-lock sweeper deletes it** once its run is over — never releases
   it. Worker died: reported like a reclaim. Already unlocked: one `jobs` log
   line, no report (`dispatch()` reported any real failure).
+- **The same two statements race.** A worker locking the keyed row between
+  `add_jobs`' detach and its `ON CONFLICT … WHERE locked_at IS NULL` upsert
+  makes `add_job` return an all-NULL record (nothing written). `insertJobRow`
+  calls again (bounded, `ADD_JOB_LOCK_RACE_RETRIES`): the row is now visibly
+  locked, so the detach retires it and a fresh row lands
+  (`add-job-lock-race.test.ts`).
 - `installQueueSchema` installs it after graphile's migrations. A signature in
   the trigger's COMMENT makes every later boot a catalog read with no table lock.
 

@@ -55,23 +55,68 @@ async function insertJobRow(
   payload: JobTaskPayload,
   opts: JobRowOpts,
 ): Promise<{ jobId: string }> {
-  if (opts.tx) {
-    const insertion = graphileSpecFor(job, opts);
-    // Shared-tx path: write into graphile_worker.jobs on the caller's
-    // transaction client by calling Graphile's documented public SQL
-    // function. Rollback drops the row alongside the caller's writes.
-    // The reach-in to `_.session.client` is the only facade-piercing in
-    // the system; isolated here so a future drizzle bump has exactly
-    // one line to fix.
-    // biome-ignore lint/suspicious/noExplicitAny: drizzle's session.client is private in d.ts but stable at runtime.
-    const client = (opts.tx as any)._.session.client as PoolClient;
-    // `add_job` returns exactly one row, always. `queryOne` states that, so a
-    // zero-row result is a loud failure rather than an `undefined` the next
-    // line has to remember to check.
+  const insertion = graphileSpecFor(job, opts);
+  const addOnce = opts.tx
+    ? addJobOnTx(opts.tx, insertion, payload)
+    : async (): Promise<string | null> => {
+        const utils = await getWorkerUtils();
+        const added = await utils.addJob(
+          insertion.task,
+          payload,
+          insertion.spec,
+        );
+        // Typed `string`, but the same all-NULL record as the tx path below
+        // when the race hits: graphile's helper returns `add_job`'s row as is.
+        return (added.id as string | null) ?? null;
+      };
+  for (let attempt = 1; attempt <= ADD_JOB_LOCK_RACE_RETRIES + 1; attempt++) {
+    const id = await addOnce();
+    if (id !== null) return { jobId: id };
+  }
+  throw new Error(
+    `[jobs] graphile add_job for "${insertion.task}" (job key ${JSON.stringify(insertion.spec.jobKey ?? null)}) returned no row ${ADD_JOB_LOCK_RACE_RETRIES + 1} times in a row — a worker locked the keyed row between add_jobs' key-detach and its upsert on every try`,
+  );
+}
+
+/**
+ * How many times {@link insertJobRow} calls `add_job` again after it returned
+ * no row. graphile's `add_jobs` (sql/000020.sql) first detaches the key of an
+ * UNAVAILABLE row holding it (`key = null where is_available is not true`), then
+ * upserts `ON CONFLICT (key) DO UPDATE … WHERE jobs.locked_at IS NULL`. A worker
+ * locking the keyed row BETWEEN those two statements — or holding an
+ * uncommitted lock the upsert waits on — leaves a row the detach saw available
+ * and the upsert sees locked: the conflict updates nothing, `add_jobs` returns
+ * zero rows, and `add_job` an all-NULL record. Nothing was written, so calling
+ * again is the whole repair: the row is now visibly locked, the detach clears
+ * its key, and the insert lands a fresh row. One more race needs a second
+ * worker locking a second fresh row of the same key in the same instant; the
+ * bound turns a pathological loop into a loud error naming the cause.
+ */
+const ADD_JOB_LOCK_RACE_RETRIES = 2;
+
+/** One `add_job` call on the caller's transaction (see {@link insertJobRow}):
+ *  the new or upserted row's id, or `null` for the lock race above. */
+function addJobOnTx(
+  tx: NonNullable<JobRowOpts["tx"]>,
+  insertion: ReturnType<typeof graphileSpecFor>,
+  payload: JobTaskPayload,
+): () => Promise<string | null> {
+  // Shared-tx path: write into graphile_worker.jobs on the caller's
+  // transaction client by calling Graphile's documented public SQL
+  // function. Rollback drops the row alongside the caller's writes.
+  // The reach-in to `_.session.client` is the only facade-piercing in
+  // the system; isolated here so a future drizzle bump has exactly
+  // one line to fix.
+  // biome-ignore lint/suspicious/noExplicitAny: drizzle's session.client is private in d.ts but stable at runtime.
+  const client = (tx as any)._.session.client as PoolClient;
+  return async () => {
+    // `add_job` returns exactly one row, always — all-NULL when the lock race
+    // of ADD_JOB_LOCK_RACE_RETRIES hits. `queryOne` states the one row, so a
+    // zero-row result is a loud failure rather than an `undefined`.
     const row = await withQueueSchemaAssert(() =>
       queryOne(client, {
         // The returned `id` is `bigint`; `::text` is why this is a string.
-        row: z.object({ id: z.string() }),
+        row: z.object({ id: z.string().nullable() }),
         sql: `SELECT (graphile_worker.add_job(
            identifier   := $1,
            payload      := $2::json,
@@ -103,12 +148,8 @@ async function insertJobRow(
         ],
       }),
     );
-    return { jobId: row.id };
-  }
-  const utils = await getWorkerUtils();
-  const insertion = graphileSpecFor(job, opts);
-  const added = await utils.addJob(insertion.task, payload, insertion.spec);
-  return { jobId: String(added.id) };
+    return row.id;
+  };
 }
 
 /** Delete the not-yet-started rows matching `match` (`locked_at IS NULL`, so an
