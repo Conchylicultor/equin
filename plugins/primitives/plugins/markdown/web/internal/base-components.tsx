@@ -166,8 +166,11 @@ export function buildBaseComponents(
       return <InlineCode {...rest}>{children}</InlineCode>;
     },
     pre: ({ children }) => <>{children}</>,
-    // eslint-disable-next-line spacing/no-adhoc-spacing -- markdown block rhythm; siblings rendered independently by react-markdown
-    table: (p) => <table className="my-2 w-full border-collapse" {...p} />,
+    table: (p) => (
+      // clear-both: a table cannot wrap around a float — it starts below it.
+      // eslint-disable-next-line spacing/no-adhoc-spacing -- markdown block rhythm; siblings rendered independently by react-markdown
+      <table className="my-2 w-full clear-both border-collapse" {...p} />
+    ),
     th: ({ children, ...p }) => (
       <th
         className="border border-border bg-muted px-sm py-xs text-left"

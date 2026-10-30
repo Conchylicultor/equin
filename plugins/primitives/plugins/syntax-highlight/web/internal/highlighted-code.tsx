@@ -36,8 +36,12 @@ export function HighlightedCode({
   // wrap in <Scroll>/<Card> and no component form available. `[&>pre]:m-0`
   // resets its UA margin (there is no named utility for a reset-to-zero), and
   // the metrics are the `code` role rather than a hand-spelled size+leading.
+  //
+  // `clear-both`: a scroll box cannot wrap around a float (a transcript row's
+  // floated action strip) — beside one it is narrowed for its whole height,
+  // hiding code behind a blank column. It starts below the float instead.
   const wrapper =
-    "[&>pre]:m-0 [&>pre]:overflow-auto [&>pre]:rounded [&>pre]:bg-muted [&>pre]:p-md [&>pre]:text-code";
+    "clear-both [&>pre]:m-0 [&>pre]:overflow-auto [&>pre]:rounded [&>pre]:bg-muted [&>pre]:p-md [&>pre]:text-code";
 
   if (!resolved || html === null) {
     return (
@@ -48,7 +52,7 @@ export function HighlightedCode({
           // eslint-disable-next-line spacing/no-adhoc-spacing -- my-2 sets code-block vertical rhythm against surrounding content; one-off, no parent flex to own it
           className={cn(
             !flush && "my-2",
-            "rounded-md bg-muted p-md font-mono text-caption",
+            "clear-both rounded-md bg-muted p-md font-mono text-caption",
             className,
           )}
         >
