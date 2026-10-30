@@ -23121,7 +23121,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Exports (types): `ReportStormPayload`
         - Exports (values): `ReportStormPayloadSchema`
-    - **`reports`** — Debug pane listing all recorded reports (including low-signal/noise crashes) with kind, source, count, noise flag, and linked task.
+    - **`reports`** — Debug pane listing all recorded reports (including low-signal/noise crashes) with kind, source, count, noise flag, and linked task; and a report notification's Fix (the fix-report notification action), the detail pane's investigate launch.
       - Web:
         - Slots:
           - `reportsPane.Actions`
@@ -23133,9 +23133,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Pane.Register` "report-detail"
           - `Pane.Register` "reports"
           - `DebugApp.Sidebar` "Reports"
-        - Uses: 28 symbols — full list in [`plugins/debug/plugins/reports/REFERENCE.md`](../plugins/debug/plugins/reports/REFERENCE.md)
+          - `Notifications.Action` "fix-report"
+        - Uses: 30 symbols — full list in [`plugins/debug/plugins/reports/REFERENCE.md`](../plugins/debug/plugins/reports/REFERENCE.md)
           - `primitives/data-view` ×5
           - `primitives/pane` ×5
+          - `primitives/launch/investigate` ×2
           - `reports` ×2
           - `apps-core/tab-origin.TabOriginBadge`
           - `apps/debug/shell.DebugApp`
@@ -23149,10 +23151,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.ControlSizeProvider`
-          - `primitives/launch/investigate.InvestigateAction`
           - `primitives/live-state.ResourceErrorInline`
           - `primitives/loading.Loading`
           - `primitives/relative-time.RelativeTime`
+          - `shell/notifications.Notifications`
         - Exports (values):
           - `reportDetailPane`
           - `reportsPane`
@@ -45531,6 +45533,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/prototypes/present`
               - `primitives/css/ui-kit`
               - `primitives/css/viewport-overlay`
+              - `shell/toast`
           - Web:
             - Exports (values):
               - `PortalHost`
@@ -49649,6 +49652,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `notification-actions` ← `shell.notifications`
           - `Notifications.Action` ← `build.build-fix`
           - `Notifications.Action` ← `conversations.conversation-view.resume`
+          - `Notifications.Action` ← `debug.reports`
           - `Notifications.Action` ← `shell.notifications`
           - `Notifications.Action` ← `tasks.automations`
         - Contributes:
@@ -49786,15 +49790,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×10
           - `ui/tokens/density` ×5
           - `ui/tokens/shape` ×2
-        - Imported by: 33 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
+        - Imported by: 34 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
           - `conversations` ×13
           - `tasks` ×5
           - `build` ×3
           - `apps` ×2
+          - `debug` ×2
           - `reports` ×2
           - `screenshot` ×2
           - `auth`
-          - `debug/boot-profile`
           - `history/dialog`
           - `infra/events-test`
           - `page/inline-date`
@@ -49854,6 +49858,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/dom/element-size.useElementSize`
           - `primitives/link-gesture.linkProps`
           - `primitives/live-state.foldResource`
+          - `primitives/overlay/portal-host.PortalHost`
           - `primitives/select-scope.ContentScope`
           - `ui/icons.Icon`
         - Exports (types):

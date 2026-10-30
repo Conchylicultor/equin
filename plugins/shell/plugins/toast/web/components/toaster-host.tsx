@@ -7,6 +7,7 @@ import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { useZStackIndex } from "@plugins/primitives/plugins/css/plugins/z-layers/plugins/stack/web";
 import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { PortalHost } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
 import { DismissAllButton } from "./dismiss-all-button";
 import { useToastsSuppressed } from "../internal/suppress-toasts";
 import { usePublishReaderAudience } from "../internal/reader-audience";
@@ -71,31 +72,43 @@ function ToastsAt({ zIndex }: { zIndex: number }) {
     // wrapper's flow. A canvas here would be a full-width opaque band across the
     // page painting over the app.
     <Theme name={chromeThemeScope} surface="none">
-      <Sonner
-        theme={chromeTheme.scheme}
-        className="toaster group"
-        offset={{ bottom: VIEWPORT_OFFSET + reserved }}
-        mobileOffset={{ bottom: VIEWPORT_OFFSET + reserved }}
-        style={
-          {
-            // Sonner's own stylesheet pins the list at z-index 999999999, off
-            // the ladder; the inline style wins.
-            zIndex,
-            "--normal-bg": "var(--popover)",
-            "--normal-text": "var(--popover-foreground)",
-            "--normal-border": "var(--border)",
-            "--border-radius": "var(--radius)",
-          } as React.CSSProperties
-        }
-      />
-      <div
-        ref={actionsRef}
-        // eslint-disable-next-line layout/no-adhoc-layout -- viewport-corner fixed strip, anchored to the same inset as sonner's own fixed toast list
-        className="pointer-events-none fixed"
-        style={{ right: VIEWPORT_OFFSET, bottom: VIEWPORT_OFFSET, zIndex }}
+      {/* A popup opened from a toast (a notification's Fix popover) would
+          portal to `body` on the popover layer — BELOW the toasts, which sit
+          higher on the stack. The host draws it here instead: a fixed,
+          zero-size box on the toasts' own layer, after them in the DOM, so
+          the popup paints over the stack (same z, later wins) and still
+          positions against the viewport. Zero-size, so it takes no clicks. */}
+      <PortalHost
+        // eslint-disable-next-line layout/no-adhoc-layout -- the portal host's own box: fixed at the viewport origin so the popups inside it position against the viewport, on the toasts' layer
+        className="fixed left-0 top-0"
+        style={{ zIndex }}
       >
-        <DismissAllButton />
-      </div>
+        <Sonner
+          theme={chromeTheme.scheme}
+          className="toaster group"
+          offset={{ bottom: VIEWPORT_OFFSET + reserved }}
+          mobileOffset={{ bottom: VIEWPORT_OFFSET + reserved }}
+          style={
+            {
+              // Sonner's own stylesheet pins the list at z-index 999999999, off
+              // the ladder; the inline style wins.
+              zIndex,
+              "--normal-bg": "var(--popover)",
+              "--normal-text": "var(--popover-foreground)",
+              "--normal-border": "var(--border)",
+              "--border-radius": "var(--radius)",
+            } as React.CSSProperties
+          }
+        />
+        <div
+          ref={actionsRef}
+          // eslint-disable-next-line layout/no-adhoc-layout -- viewport-corner fixed strip, anchored to the same inset as sonner's own fixed toast list
+          className="pointer-events-none fixed"
+          style={{ right: VIEWPORT_OFFSET, bottom: VIEWPORT_OFFSET, zIndex }}
+        >
+          <DismissAllButton />
+        </div>
+      </PortalHost>
     </Theme>
   );
 }

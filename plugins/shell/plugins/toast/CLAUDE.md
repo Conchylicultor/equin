@@ -22,6 +22,7 @@
     - `primitives/dom/element-size.useElementSize`
     - `primitives/link-gesture.linkProps`
     - `primitives/live-state.foldResource`
+    - `primitives/overlay/portal-host.PortalHost`
     - `primitives/select-scope.ContentScope`
     - `ui/icons.Icon`
   - Exports (types):

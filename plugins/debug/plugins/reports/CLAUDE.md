@@ -38,7 +38,7 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
 
 ## Plugin reference
 
-- Description: Debug pane listing all recorded reports (including low-signal/noise crashes) with kind, source, count, noise flag, and linked task.
+- Description: Debug pane listing all recorded reports (including low-signal/noise crashes) with kind, source, count, noise flag, and linked task; and a report notification's Fix (the fix-report notification action), the detail pane's investigate launch.
 - Web:
   - Slots:
     - `reportsPane.Actions`
@@ -50,9 +50,11 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
     - `Pane.Register` "report-detail"
     - `Pane.Register` "reports"
     - `DebugApp.Sidebar` "Reports"
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Notifications.Action` "fix-report"
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×5
     - `primitives/pane` ×5
+    - `primitives/launch/investigate` ×2
     - `reports` ×2
     - `apps-core/tab-origin.TabOriginBadge`
     - `apps/debug/shell.DebugApp`
@@ -66,10 +68,10 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/launch/investigate.InvestigateAction`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
+    - `shell/notifications.Notifications`
   - Exports (values):
     - `reportDetailPane`
     - `reportsPane`

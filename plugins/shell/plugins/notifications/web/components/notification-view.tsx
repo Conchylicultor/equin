@@ -35,6 +35,7 @@ import {
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { useAppLink } from "@plugins/apps-core/plugins/tabs/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -273,7 +274,9 @@ function RunView({
 
 /**
  * A notification whose action draws its own control (a launch popover): the
- * kind renders it, at the compact size, from the payload.
+ * kind renders it, at the compact size, from the payload. In the bell, a row
+ * that also carries an in-app `linkTo` (a report's detail, a build's run)
+ * still opens it — the control is the row's sibling, never inside it.
  */
 function ControlView({
   kind,
@@ -281,10 +284,19 @@ function ControlView({
   ...view
 }: ViewProps & { kind: ControlKind; payload: Payload }): ReactElement {
   const { Control } = kind;
+  const appLink = useAppLink();
+  const { onActed } = view;
+  const linkTo = view.n.linkTo;
+  const activation =
+    view.surface === "bell" && linkTo?.startsWith("/") === true
+      ? afterOpen(appLink(linkTo), () => {
+          onActed?.();
+        })
+      : undefined;
   return (
     <NotificationLayout
       {...view}
-      activation={undefined}
+      activation={activation}
       button={
         <ControlSizeProvider size="xs">
           <Control payload={payload} label={kind.label} />

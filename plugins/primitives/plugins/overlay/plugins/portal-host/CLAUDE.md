@@ -32,6 +32,11 @@ popups' own positioning still resolves against the viewport.
 `PortalHost`.** First consumer: the prototypes `present` plugin's presentation
 overlay.
 
+A region that is not one box (the toast stack: sonner's own fixed list) puts
+the host itself on its layer: `style={{ zIndex }}` on a fixed, zero-size host
+after the region's contents, so popups paint over it at the same z and still
+position against the viewport (`shell/toast`'s `ToasterHost`).
+
 ## Why it imports nothing
 
 `ui-kit` imports this plugin, so it must import **only `react`** — same
@@ -48,6 +53,7 @@ precedent as `popup-open` and `overlay-boundary`.
     - `apps/prototypes/present`
     - `primitives/css/ui-kit`
     - `primitives/css/viewport-overlay`
+    - `shell/toast`
 - Web:
   - Exports (values):
     - `PortalHost`

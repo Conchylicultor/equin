@@ -7,15 +7,14 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { TabOriginBadge } from "@plugins/apps-core/plugins/tab-origin/web";
 import { useStaleFrontend } from "@plugins/build/web";
 import { reportsList, type Report } from "@plugins/reports/core";
-import { Reports, investigate } from "@plugins/reports/web";
-import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { Reports } from "@plugins/reports/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { InvestigateAction } from "@plugins/primitives/plugins/launch/plugins/investigate/web";
+import { ReportInvestigate } from "./report-investigate";
 import { reportDetailPane } from "../panes";
 import { ReportOccurrences } from "./report-occurrences";
 
@@ -202,43 +201,9 @@ function TimeField({ label, date }: { label: string; date: Date }) {
 }
 
 function Investigate({ report }: { report: Report }) {
-  const fetchEndpoint = useFetchEndpoint();
-  // A report owns its own report → task link (`report.taskId`, written by
-  // `investigate()`), so the action runs in link mode: View task once linked.
   return (
     <Stack align="start" gap="none">
-      <InvestigateAction
-        presentation="button"
-        noun="report"
-        linkedTaskId={report.taskId}
-        draftKey={`report-investigate:${report.id}`}
-        description={
-          <>
-            {report.kind}: {report.message}
-          </>
-        }
-        placeholder="Extra context (optional) — e.g. what you were doing, expected behaviour…"
-        resolve={async (userText) => {
-          const answer = await investigate(fetchEndpoint, report.id);
-          // Investigating needs the computer (`needsMachine`): a host without
-          // it records no report to investigate, so this is not reached there
-          // — said, if it ever is, never swallowed.
-          if (answer.kind === "unavailable") throw new Error(answer.message);
-          const { taskId } = answer.value;
-          const parts: string[] = [];
-          parts.push(`## Report (${report.kind})\n`);
-          parts.push(`**Source:** ${report.source}`);
-          parts.push(`**Message:** ${report.message}`);
-          parts.push(
-            `\n\`\`\`json\n${JSON.stringify(report.data, null, 2)}\n\`\`\``,
-          );
-          const extra = userText.trim();
-          if (extra) {
-            parts.push(`\n## Context\n\n${extra}`);
-          }
-          return { taskId, prompt: parts.join("\n") };
-        }}
-      />
+      <ReportInvestigate report={report} presentation="button" />
     </Stack>
   );
 }

@@ -418,6 +418,8 @@ export async function recordReport(
         // Deep-link to the report's detail sidepane in Debug → Reports, never a task.
         // Investigation tasks are filed on demand from that pane.
         linkTo: reportDetailRoute.link(debugApp, { reportId: row.id }),
+        // Fix: the report's investigate launch (debug/reports' `fix-report`).
+        action: { kind: "fix-report", payload: { reportId: row.id } },
         metadata: {
           reportId: row.id,
           source: row.source,

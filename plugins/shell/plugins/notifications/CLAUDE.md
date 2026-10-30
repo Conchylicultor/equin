@@ -54,12 +54,16 @@ once per drawn notification, or a component: `useLink` (the action GOES somewher
 beside the action, never around it, with ⌘ / middle-click gestures), `useRun` (the action DOES something — only its button
 runs it) or `Control` (the action needs its own UI first — build-fix's Fix opens
 its investigate popover: the kind draws its control from the payload, at the
-compact size, labelled with its `label`). This plugin contributes `open` (`payload.to`, an in-app route, via
+compact size, labelled with its `label`; in the bell, a row that also carries an
+in-app `linkTo` still opens it from the row, the control its sibling). A popover
+a `Control` opens from a toast draws above the toast stack: the toast host is a
+`PortalHost` on the toasts' own layer (`shell/toast`). This plugin contributes `open` (`payload.to`, an in-app route, via
 `useAppLink`; a link) and `reload` (a run); a row written before actions
 existed with an in-app `linkTo` gets an implicit `open`. Opening or acting
 closes the popover / dismisses the toast; a toast with no action shows a quiet
 × instead. A kind's owner contributes its own (never a `switch` here): `resume`
-(Retry — `conversation-view/resume`), `fix-build` (Fix — `build/build-fix`),
+(Retry — `conversation-view/resume`), `fix-build` (Fix — `build/build-fix`), `fix-report` (Fix on every
+report, crashes included — `debug/reports`),
 `review-automation` (Review — `tasks/automations`).
 
 **What a click does depends on the surface** (`NotificationView`'s required
@@ -180,6 +184,7 @@ DataView (`web/components/notifications-view.tsx`):
     - `notification-actions` ← `shell.notifications`
     - `Notifications.Action` ← `build.build-fix`
     - `Notifications.Action` ← `conversations.conversation-view.resume`
+    - `Notifications.Action` ← `debug.reports`
     - `Notifications.Action` ← `shell.notifications`
     - `Notifications.Action` ← `tasks.automations`
   - Contributes:
@@ -317,15 +322,15 @@ DataView (`web/components/notifications-view.tsx`):
     - `ui/tokens/type-scale` ×10
     - `ui/tokens/density` ×5
     - `ui/tokens/shape` ×2
-  - Imported by: 33 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 34 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×13
     - `tasks` ×5
     - `build` ×3
     - `apps` ×2
+    - `debug` ×2
     - `reports` ×2
     - `screenshot` ×2
     - `auth`
-    - `debug/boot-profile`
     - `history/dialog`
     - `infra/events-test`
     - `page/inline-date`
