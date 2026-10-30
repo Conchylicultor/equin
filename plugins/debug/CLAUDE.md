@@ -6,6 +6,7 @@
 
 - Description: Debug tools umbrella plugin.
 - Sub-plugins:
+  - **`backend-liveness`** [exempt] — Backend-frozen report renderer: a one-line Debug → Reports summary for the backend-frozen kind. The backend-frozen report kind — filed by central's liveness probe through the report outbox, drained…
   - **`background`** — Debug → Background activity: the list pane over the background catalog (everything this backend and the central runtime run on their own) and a detail pane per entry, with the Debug sidebar entry.
     - Plugins:
       - **`investigate`** — The Investigate action on every failed run in a background entry's Recent runs: launches an agent briefed on the run (its error verbatim, the entry's description, declaring plugin and facts, and…

@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-debug-backend-liveness",
+  "description": "Notices a frozen backend from outside its process: central probes every running backend's socket and records frozen episodes; main files backend-frozen reports from them, live for a worktree.",
+  "private": true,
+  "version": "0.0.1"
+}

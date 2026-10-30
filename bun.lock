@@ -2517,6 +2517,10 @@
       "name": "@equin/plugin-debug",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/backend-liveness": {
+      "name": "@equin/plugin-debug-backend-liveness",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/background": {
       "name": "@equin/plugin-debug-background",
       "version": "0.0.1",
@@ -8287,6 +8291,8 @@
     "@equin/plugin-database-sql-rows": ["@equin/plugin-database-sql-rows@workspace:plugins/database/plugins/sql-rows"],
 
     "@equin/plugin-debug": ["@equin/plugin-debug@workspace:plugins/debug"],
+
+    "@equin/plugin-debug-backend-liveness": ["@equin/plugin-debug-backend-liveness@workspace:plugins/debug/plugins/backend-liveness"],
 
     "@equin/plugin-debug-background": ["@equin/plugin-debug-background@workspace:plugins/debug/plugins/background"],
 

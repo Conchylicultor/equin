@@ -31,6 +31,7 @@ another worktree's logs. See `plugins/primitives/plugins/log-channels/CLAUDE.md`
     - `readChannelJsonAsync`
 - Cross-plugin:
   - Imported by:
+    - `debug/backend-liveness`
     - `debug/boot-events`
     - `debug/boot-watchdog`
     - `debug/health-monitor`

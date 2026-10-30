@@ -58,6 +58,7 @@ Watches this page's connection to its backends and says so.
     - `HealthResponseSchema`
 - Cross-plugin:
   - Imported by: `reports/crash`
+  - Endpoint callers: `backend-liveness`
 - Exemptions:
   - Exempts itself from:
     - `networking/no-page-transport` — `web/internal/client.ts` (sanctioned)

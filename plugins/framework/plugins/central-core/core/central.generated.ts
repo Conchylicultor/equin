@@ -18,6 +18,7 @@ export const centralEntries: CollectedEntry[] = [
   { pluginPath: "auth/plugins/google", id: "auth.google", loader: () => import("@plugins/auth/plugins/google/central"), dependsOn: ["auth", "fields/plugins/secret/plugins/config"] },
   { pluginPath: "auth/plugins/hooktheory", id: "auth.hooktheory", loader: () => import("@plugins/auth/plugins/hooktheory/central"), dependsOn: ["auth"] },
   { pluginPath: "auth/plugins/notion", id: "auth.notion", loader: () => import("@plugins/auth/plugins/notion/central"), dependsOn: ["auth", "fields/plugins/secret/plugins/config"] },
+  { pluginPath: "debug/plugins/backend-liveness", id: "debug.backend-liveness", loader: () => import("@plugins/debug/plugins/backend-liveness/central"), dependsOn: ["infra/plugins/background/plugins/timer"] },
   { pluginPath: "fields/plugins/secret/plugins/config", id: "fields.secret.config", loader: () => import("@plugins/fields/plugins/secret/plugins/config/central"), dependsOn: ["infra/plugins/secrets"] },
   { pluginPath: "infra/plugins/background/plugins/catalog", id: "infra.background.catalog", loader: () => import("@plugins/infra/plugins/background/plugins/catalog/central"), dependsOn: ["network/plugins/live"] },
   { pluginPath: "infra/plugins/background/plugins/timer", id: "infra.background.timer", loader: () => import("@plugins/infra/plugins/background/plugins/timer/central"), dependsOn: ["infra/plugins/background/plugins/catalog"] },

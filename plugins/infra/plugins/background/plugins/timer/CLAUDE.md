@@ -77,6 +77,7 @@ implementation site.
 - Cross-plugin:
   - Imported by:
     - `auth`
+    - `debug/backend-liveness`
     - `debug/health-monitor`
     - `debug/profiling/op-log/op-store`
     - `debug/stuck-spans`
@@ -85,6 +86,7 @@ implementation site.
   - Exempts itself from: `detached-work-safety/no-raw-set-interval` — `shared/timer.ts` (sanctioned)
   - Exempted by:
     - `auth` (0 debt)
+    - `debug/backend-liveness` (0 debt)
     - `debug/health-monitor` (0 debt)
     - `debug/profiling/op-log/op-store` (0 debt)
     - `debug/queue-health` (0 debt)

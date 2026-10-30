@@ -21194,6 +21194,40 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`debug`** — Debug tools umbrella plugin.
   - Plugins:
+    - **`backend-liveness`** — Backend-frozen report renderer: a one-line Debug → Reports summary for the backend-frozen kind. The backend-frozen report kind — filed by central's liveness probe through the report outbox, drained by main: every minute while a backend stays frozen, once when the episode ends (main's own freeze is filed as soon as its thread runs again). Plus a debug-only trigger that freezes a worktree backend's JS thread to reproduce it. Backend liveness probe (central): every 15 s asks each running backend for any HTTP answer on its own socket, and appends a frozen episode to the backend-liveness data dir when one stays unanswered for a minute of awake time (machine sleep never counts; a stopped process is paused, not frozen) — from outside the backend, so a frozen JS thread is noticed while it lasts.
+      - Web:
+        - Contributes: `Reports.KindView` → `BackendFrozenSummary`
+        - Uses:
+          - `primitives/css/badge.Badge`
+          - `primitives/css/inline.Inline`
+          - `reports.Reports`
+      - Server:
+        - Contributes: `report-kind` "backend-frozen"
+        - Uses:
+          - `infra/endpoints.HttpError`
+          - `infra/endpoints.implement`
+          - `primitives/log-channels/log-files.logsDirFor`
+          - `reports.ReportKind`
+        - Routes: `POST /api/debug/backend-liveness/freeze`
+      - Central:
+        - Uses: `infra/background/timer.defineTimer`
+        - Register: `defineTimer('debug.backend-liveness-probe')`
+      - Cross-plugin:
+        - Uses tokens: `ui/tokens/color-palette --muted-foreground`
+        - Endpoint callers: `read-set`
+      - Exemptions:
+        - Exempts itself from: `timer/no-unlisted-timer` — `central/internal/probe.ts` (sanctioned)
+      - Core:
+        - Exports (types):
+          - `BackendFrozenPayload`
+          - `EpisodeState`
+        - Exports (values):
+          - `BackendFrozenPayloadSchema`
+          - `FROZEN_AFTER_MS`
+          - `HEARTBEAT_MS`
+          - `humanMs`
+          - `PROBE_EVERY_MS`
+          - `PROBE_TIMEOUT_MS`
     - **`background`** — Debug → Background activity: the list pane over the background catalog (everything this backend and the central runtime run on their own) and a detail pane per entry, with the Debug sidebar entry.
       - Web:
         - Slots:
@@ -21507,7 +21541,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-3xs`
           - `ui/tokens/type-scale --line-height-caption`
-        - Endpoint callers: `read-set`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/broadcasts-file.ts`, `server/internal/entries-served.ts`, `server/internal/handle-write.ts` (debt)
       - Shared:
@@ -29357,6 +29390,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `auth`
+              - `debug/backend-liveness`
               - `debug/health-monitor`
               - `debug/profiling/op-log/op-store`
               - `debug/stuck-spans`
@@ -29365,6 +29399,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `detached-work-safety/no-raw-set-interval` — `shared/timer.ts` (sanctioned)
             - Exempted by:
               - `auth` (0 debt)
+              - `debug/backend-liveness` (0 debt)
               - `debug/health-monitor` (0 debt)
               - `debug/profiling/op-log/op-store` (0 debt)
               - `debug/queue-health` (0 debt)
@@ -30280,12 +30315,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 230 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 231 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×65
           - `conversations` ×33
           - `infra` ×22
           - `page` ×19
-          - `debug` ×17
+          - `debug` ×18
           - `tasks` ×17
           - `primitives` ×15
           - `reports` ×6
@@ -30954,6 +30989,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HealthResponseSchema`
       - Cross-plugin:
         - Imported by: `reports/crash`
+        - Endpoint callers: `backend-liveness`
       - Exemptions:
         - Exempts itself from:
           - `networking/no-page-transport` — `web/internal/client.ts` (sanctioned)
@@ -40227,9 +40263,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density` ×6
               - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 168 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 169 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×38
-              - `debug` ×33
+              - `debug` ×34
               - `conversations` ×24
               - `reports` ×14
               - `primitives` ×10
@@ -40659,10 +40695,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 97 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 98 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `apps` ×21
+              - `debug` ×15
               - `reports` ×15
-              - `debug` ×14
               - `primitives` ×11
               - `conversations` ×9
               - `page` ×6
@@ -44643,6 +44679,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `readChannelJsonAsync`
           - Cross-plugin:
             - Imported by:
+              - `debug/backend-liveness`
               - `debug/boot-events`
               - `debug/boot-watchdog`
               - `debug/health-monitor`
@@ -48310,8 +48347,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
   - Web:
     - Slots: `Reports.KindView`
-    - Slot contributors: 30 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `Reports.KindView` ×30
+    - Slot contributors: 31 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `Reports.KindView` ×31
     - Contributes:
       - `IdKinds.Kind` "report"
       - `ConfigV2.WebRegister` "reports"
@@ -48405,9 +48442,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SERVER_REPORT_SOURCES`
       - `submitReport`
   - Cross-plugin:
-    - Imported by: 54 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 55 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×25
-      - `debug` ×13
+      - `debug` ×14
       - `conversations` ×3
       - `database` ×3
       - `framework` ×2
@@ -54306,11 +54343,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 530 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 531 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×120
               - `conversations` ×89
               - `primitives` ×77
-              - `debug` ×36
+              - `debug` ×37
               - `page` ×33
               - `plugin-meta` ×29
               - `ui` ×26
