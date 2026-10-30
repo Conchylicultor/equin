@@ -104,7 +104,7 @@ export async function seed(prototypes: PrototypeFixtureData): Promise<void> {
       title: story.task,
       titleAuto: false,
       ...(story.prompt === undefined ? {} : { description: story.prompt }),
-      mandate: interactiveMandate(),
+      mandate: interactiveMandate,
     });
     if (story.category !== undefined)
       await setTaskCategory(taskId, story.category);

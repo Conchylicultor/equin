@@ -89,7 +89,7 @@ const nextId = (kind: string): string => `${kind}-${++seq}-${Date.now()}`;
 async function seedArmedTask(): Promise<string> {
   const id = nextId("task");
   await t.db.execute(sql`
-    INSERT INTO tasks (id, title, rank, mandate) VALUES (${id}, ${`title ${id}`}, ${`a${seq}`}, '{}')
+    INSERT INTO tasks (id, title, rank, mandate_ref) VALUES (${id}, ${`title ${id}`}, ${`a${seq}`}, 'interactive')
   `);
   await t.db.execute(sql`
     INSERT INTO tasks_ext_auto_start (parent_id, auto_start_at, auto_start_model)

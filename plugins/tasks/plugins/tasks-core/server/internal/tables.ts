@@ -5,11 +5,8 @@ import {
   index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
-import {
-  MandatePolicySchema,
-  type MandatePolicy,
-} from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { nullable } from "@plugins/fields/core";
 
 import {
   defineEntity,
@@ -42,16 +39,13 @@ import {
 // Server-only columns of `tasks`: never on the wire (no list shows them, and
 // `tasks_v` leaves them out).
 const taskServerFields = {
-  // The task's mandate (`tasks/orchestration/mandate`): what an agent may do
-  // inside its subtree, resolved nearest-wins up `folderId`. NULL = inherit the
-  // nearest ancestor's. A root task always has one (the CHECK below), so every
-  // task resolves to a policy. Declared as a field of `MandatePolicy | null`
-  // rather than `nullable(jsonField(...))`, which would demand a stand-in
-  // policy as the (discarded) inner default.
-  mandate: jsonField<MandatePolicy | null>({
-    schema: MandatePolicySchema.nullable(),
-    default: null,
-  }),
+  // The task's mandate (`tasks/orchestration/mandate`): the id of the named
+  // mandate its subtree runs under (`defineMandate`), resolved nearest-wins up
+  // `folderId` — never a copy of the grants, so a change to the mandate's
+  // definition reaches every tree under it. NULL = inherit the nearest
+  // ancestor's. A root task always names one (the CHECK below). Every task's
+  // EFFECTIVE mandate is materialized in `tasks_ext_mandate` (exposed to lists).
+  mandateRef: nullable(textField()),
 };
 
 const tasksEntity = defineEntity(tasksEntityRef, taskServerFields, {
@@ -75,7 +69,7 @@ const tasksEntity = defineEntity(tasksEntityRef, taskServerFields, {
       createdAt: false,
       // Policy, not a fact a list shows; a re-file's mandate copy rides the
       // `folderId` write, which already counts.
-      mandate: false,
+      mandateRef: false,
     },
   },
   columns: {
@@ -105,7 +99,7 @@ const tasksEntity = defineEntity(tasksEntityRef, taskServerFields, {
     // Every root task states its mandate, so every task resolves to one.
     check(
       "tasks_root_has_mandate",
-      sql`${t.folderId} IS NOT NULL OR ${t.mandate} IS NOT NULL`,
+      sql`${t.folderId} IS NOT NULL OR ${t.mandateRef} IS NOT NULL`,
     ),
   ],
 });

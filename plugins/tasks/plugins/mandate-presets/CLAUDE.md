@@ -1,22 +1,25 @@
 # mandate-presets
 
-Named compositions of mandate grants (`tasks/orchestration/mandate`), for the
-code that creates a root task and must state its mandate.
+The named mandates for the code that creates a root task
+(`tasks/orchestration/mandate`): a ref in core, its grants defined in server
+(`MandateDefinitions.Definition`, `mandate/plugins/definitions`).
 
-- `interactiveMandate()` — a task a person starts by hand: `tasks.file`
-  (`main: after`, `sidequest: manual`), `push.policy: never`, `exit.clean`,
-  `flag.raise`. Today's behaviour, made explicit.
-- `supervisorMandate()` — a supervisor's root (the Supervisor launch option,
-  `tasks/supervisor-run`). Whole tree: `tasks.file` (`main: now/after/manual`,
-  `sidequest: manual`), `watch.children`, `flag.raise`, `context.compact`.
-  Root only (an ordinary conversation with those powers): `push.policy:
-  on-request`, `exit.clean`, `watch.tree`. Below the root only (the workers):
-  `report.required`.
+- `interactiveMandate` (`interactive`) — a task a person starts by hand:
+  `tasks.file` (`main: after`, `sidequest: manual`), `push.policy:
+  on-request`, `exit.clean`, `flag.raise`.
+- `supervisorMandate` (`supervisor`) — a supervisor's root (the Supervisor
+  launch option, `tasks/supervisor-run`). Whole tree: `tasks.file` (`main:
+  now/after/manual`, `sidequest: manual`), `watch.children`, `message.tree`,
+  `flag.raise`, `context.compact`. Root only: `push.policy: on-request`,
+  `exit.clean`, `watch.tree`. Below the root (the workers): `report.required`.
 
-A preset is a function returning the expanded `MandatePolicy`; the row stores
-the grants, never the preset's name — a later change to a preset never rewrites
-a task's existing powers. Automations state their own mandate in their spec
-(`defineAutomation({ mandate })`), not here.
+**A task names its mandate; it never copies the grants.** The grants
+(`interactivePolicy()` / `supervisorPolicy()`) are computed at every
+resolution, so a capability added here reaches every tree under the mandate
+at once — running conversations included (a tool they gain appears in their
+tool list at their next MCP reconnect). Automations define one mandate each
+(`automation:<id>`, from `defineAutomation({ mandate })` and its current
+settings), not here.
 
 Not under `orchestration/`: a preset names capabilities and workflows, which
 the orchestration umbrella never does.
@@ -25,20 +28,14 @@ the orchestration umbrella never does.
 
 ## Plugin reference
 
-- Description: Named mandate compositions — interactiveMandate(): the grants a task a person starts by hand gets (file main tasks after the caller, sidequests manual, push only when the user asks, exit cleanly, raise a flag). A row always stores the expanded grants, never a preset name.
+- Description: Defines the named presets: what the interactive and supervisor mandates grant (MandateDefinitions.Definition), computed at every resolution — so a capability added here reaches every tree under them, running ones included.
+- Server:
+  - Contributes:
+    - `mandateDefinition` "interactive"
+    - `mandateDefinition` "supervisor"
+  - Uses: `tasks/orchestration/mandate/definitions.MandateDefinitions`
 - Core:
-  - Uses:
-    - `conversations/conversation-view/push-and-exit/capabilities.exitClean`
-    - `conversations/conversation-view/push-and-exit/capabilities.flagRaise`
-    - `conversations/conversation-view/push-and-exit/capabilities.pushPolicy`
-    - `conversations/self-compact/capability.contextCompact`
-    - `tasks/orchestration/mandate/policy.mandatePolicy`
-    - `tasks/orchestration/mandate/policy.MandatePolicy`
-    - `tasks/orchestration/message/capability.messageTree`
-    - `tasks/orchestration/watch/capabilities.watchChildren`
-    - `tasks/orchestration/watch/capabilities.watchTree`
-    - `tasks/outcome-report/capability.reportRequired`
-    - `tasks/tasks-core.tasksFile`
+  - Uses: `tasks/orchestration/mandate/policy.defineMandate`
   - Exports (values):
     - `interactiveMandate`
     - `supervisorMandate`

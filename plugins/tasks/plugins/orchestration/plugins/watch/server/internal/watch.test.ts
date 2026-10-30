@@ -46,9 +46,9 @@ const uid = (k: string) => `wt${k}-${Date.now()}-${++seq}`;
 async function task(tx: Tx, folderId: string | null): Promise<string> {
   const id = uid("task");
   await tx.execute(sql`
-    INSERT INTO tasks (id, title, title_auto, rank, folder_id, created_at, updated_at, mandate)
+    INSERT INTO tasks (id, title, title_auto, rank, folder_id, created_at, updated_at, mandate_ref)
     VALUES (${id}, ${`T ${id}`}, true, ${id}, ${folderId}, now(), now(),
-            ${folderId === null ? sql`'{}'::jsonb` : sql`NULL`})
+            ${folderId === null ? sql`'interactive'` : sql`NULL`})
   `);
   return id;
 }

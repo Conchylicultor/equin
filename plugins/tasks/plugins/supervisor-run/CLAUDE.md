@@ -9,7 +9,7 @@ building blocks:
   only), shown on every new-task composer: Interactive (unset, the pill rests
   as its icon) or Supervisor. No push variants: how a run pushes is the
   user's brief or preprompt.
-- **Mandate:** its server apply states `supervisorMandate()`
+- **Mandate:** its server apply names `supervisorMandate`
   (`tasks/mandate-presets`) on the task it files. Everything else follows from
   the grants, scoped by where a conversation sits (`policy`'s grant scopes):
   - **The root's own conversation** is an ordinary interactive conversation —
@@ -26,7 +26,7 @@ building blocks:
 
 ## Plugin reference
 
-- Description: The Supervisor launch option on every new-task composer (Home prompt, Make a wish, menu bar): Interactive (unset — the pill rests as its icon) or Supervisor. Draft-only — it decides how a task's tree runs when it is filed. The Supervisor launch option's server half: a task filed with it states the supervisor mandate (supervisorMandate()) as its own — its conversation an ordinary one with more powers, the tasks it files workers that report. Not inherited: the tasks its agents file are covered by the mandate already (nearest wins).
+- Description: The Supervisor launch option on every new-task composer (Home prompt, Make a wish, menu bar): Interactive (unset — the pill rests as its icon) or Supervisor. Draft-only — it decides how a task's tree runs when it is filed. The Supervisor launch option's server half: a task filed with it states the supervisor mandate (supervisorMandate) as its own — its conversation an ordinary one with more powers, the tasks it files workers that report. Not inherited: the tasks its agents file are covered by the mandate already (nearest wins).
 - Web:
   - Contributes: `TaskLaunch.Option` "Supervisor" → `SupervisorLaunchControl`
   - Uses:

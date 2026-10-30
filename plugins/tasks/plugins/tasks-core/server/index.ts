@@ -39,6 +39,9 @@ import {
 } from "./internal/tables-events";
 import { sweepOrphanedAttempts } from "./internal/sweep-orphaned-attempts";
 import { PushLedger } from "./internal/push-ledger/service";
+import { LiveColumns } from "@plugins/network/plugins/live/server";
+import { tasksMandate } from "./internal/tables-mandate";
+import { reconcileEffectiveMandates } from "./internal/mutations/mandate";
 
 // Per-domain attachment link handles (FK cascade on owner deletion). In their
 // own file so they don't leak server-only imports into tasks-core/shared.
@@ -176,7 +179,12 @@ export {
   removeTaskDependency,
   setMandate,
   clearMandate,
+  prepareRefile,
 } from "./internal/mutations/tasks";
+// Every task's effective mandate (`tasks_ext_mandate`): a re-file path outside
+// `updateTask` refreshes its subtree after its write.
+export { refreshEffectiveMandates } from "./internal/mutations/mandate";
+export { tasksMandate } from "./internal/tables-mandate";
 export type {
   CreateTaskInput,
   UpdateTaskPatch,
@@ -319,6 +327,9 @@ export default {
     View({ view: conversations }),
     View({ view: taskBlocking, dependsOn: ["attempts_v"] }),
     View({ view: tasks, dependsOn: ["task_blocking_v"] }),
+    // Every task's effective mandate, folded into every list whose rows
+    // reach a task (`mandate`).
+    LiveColumns.Expose(tasksMandate),
   ],
   register: [
     pushLanded,
@@ -335,9 +346,13 @@ export default {
     // an OPTIMIZATION the executor may skip — and this is the cold half of a
     // correctness guarantee. Bounded by the ledger's own high-water mark, so a
     // steady-state boot walks a day of commits and inserts nothing.
+    // The effective mandates are kept exact by every write that moves them;
+    // this re-derivation (one statement, writes nothing when consistent) is
+    // the backstop for a task written outside tasks-core (a raw seed).
     await Promise.all([
       sweepOrphanedAttempts(),
       PushLedger.get().ensureFresh(),
+      reconcileEffectiveMandates(),
     ]);
   },
 } satisfies ServerPluginDefinition;

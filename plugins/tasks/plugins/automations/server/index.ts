@@ -10,6 +10,7 @@ import { tasksLaunchDecision, tasksOrigin } from "./internal/tables";
 import { handleDecideLaunch, handleTaskApproval } from "./internal/routes";
 import { slotWatchHandler } from "./internal/slot-watch";
 import { refireWatchHandler } from "./internal/refire-watch";
+import { automationMandates } from "./internal/mandates";
 
 // What an automation's plugin uses: `defineAutomation` declares one (mount it
 // in `register`). Readers use the core live values; nothing names an
@@ -40,6 +41,8 @@ export default {
     LiveColumns.Expose(tasksLaunchDecision),
     slotWatchHandler,
     refireWatchHandler,
+    // Each automation's named mandate, `automation:<id>`.
+    automationMandates,
     Trigger({
       on: taskStatusChanged,
       do: automationTaskStatusJob,

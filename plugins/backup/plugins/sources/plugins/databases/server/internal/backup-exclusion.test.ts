@@ -58,7 +58,7 @@ beforeAll(async () => {
     VALUES ('test', 'span', 'slow thing', 1200, 1000, '{}'::jsonb)
   `);
   await source.db.execute(
-    sql`INSERT INTO tasks (id, title, rank, mandate) VALUES ('task-kept', 'kept row', 'a0', '{}')`,
+    sql`INSERT INTO tasks (id, title, rank, mandate_ref) VALUES ('task-kept', 'kept row', 'a0', 'interactive')`,
   );
 });
 

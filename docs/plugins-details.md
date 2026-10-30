@@ -18495,9 +18495,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `pushPolicy`
                   - `PushPolicySchema`
               - Cross-plugin:
-                - Imported by:
-                  - `tasks/automations`
-                  - `tasks/mandate-presets`
+                - Imported by: `tasks/automations`
         - **`push-counter`**
         - **`push-profiling`** — Toolbar button showing the op Gantt scoped to the conversation's worktree.
           - Web:
@@ -19645,8 +19643,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Core:
             - Uses: `tasks/orchestration/mandate/policy.defineCapability`
             - Exports (values): `contextCompact`
-          - Cross-plugin:
-            - Imported by: `tasks/mandate-presets`
     - **`session-chain`** — Registers the session-chain row id kind (sess) with the web id registry — the server barrel registers the same kind. Append-only mapping of a conversation to the ordered Claude session ids it has run under. Knows nothing about transcript files.
       - Web:
         - Contributes: `IdKinds.Kind` "sess"
@@ -30337,9 +30333,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineExtensionShape`
           - `EXTENSION_TIMESTAMPS`
       - Cross-plugin:
-        - Imported by: 42 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
+        - Imported by: 43 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
           - `apps` ×17
-          - `tasks` ×12
+          - `tasks` ×13
           - `conversations` ×9
           - `page` ×3
           - `plugin-meta/plugin-health`
@@ -34237,8 +34233,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `FieldPresentation.Register`
           - `ClientFields.Resolve`
-        - Slot contributors: 41 contributors — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `FieldPresentation.Register` ×38
+        - Slot contributors: 42 contributors — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `FieldPresentation.Register` ×39
           - `ClientFields.Resolve` ×3
         - Uses: 23 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `primitives/live-state` ×12
@@ -34599,11 +34595,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `upsertRows`
           - `valueSubject`
       - Cross-plugin:
-        - Imported by: 315 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 316 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×83
           - `conversations` ×55
           - `debug` ×32
-          - `tasks` ×30
+          - `tasks` ×31
           - `infra` ×21
           - `page` ×14
           - `active-data` ×12
@@ -34860,13 +34856,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wholeRecord`
           - `wholeTuple`
       - Cross-plugin:
-        - Imported by: 97 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
+        - Imported by: 98 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
           - `apps` ×17
           - `infra` ×14
           - `conversations` ×13
           - `debug` ×12
+          - `tasks` ×6
           - `primitives` ×5
-          - `tasks` ×5
           - `build` ×4
           - `fields` ×3
           - `integrations` ×3
@@ -44272,12 +44268,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/shadow --shadow`
-        - Imported by: 305 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Imported by: 306 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `apps` ×82
           - `conversations` ×50
           - `debug` ×29
           - `ui` ×25
-          - `tasks` ×23
+          - `tasks` ×24
           - `page` ×16
           - `primitives` ×16
           - `infra` ×9
@@ -50402,8 +50398,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `trigger` "watch.ingest"
       - `trigger` "watch.ingest"
       - `trigger` "watch.ingest"
-    - Uses: 30 symbols — full list in [`plugins/tasks/REFERENCE.md`](../plugins/tasks/REFERENCE.md)
-      - `tasks/tasks-core` ×16
+    - Uses: 31 symbols — full list in [`plugins/tasks/REFERENCE.md`](../plugins/tasks/REFERENCE.md)
+      - `tasks/tasks-core` ×17
       - `infra/endpoints` ×2
       - `primitives/rank` ×2
       - `tasks/auto-start` ×2
@@ -50825,8 +50821,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "automations.tasks:rows"
           - `watchHandler` "automations.refire"
           - `watchHandler` "automations.slot"
+          - `mandateDefinitionSource` "automations"
           - `trigger` "automations.task-status"
-        - Uses: 29 symbols — full list in [`plugins/tasks/plugins/automations/REFERENCE.md`](../plugins/tasks/plugins/automations/REFERENCE.md)
+        - Uses: 30 symbols — full list in [`plugins/tasks/plugins/automations/REFERENCE.md`](../plugins/tasks/plugins/automations/REFERENCE.md)
           - `tasks/tasks-core` ×6
           - `config_v2` ×4
           - `tasks/orchestration/watch` ×3
@@ -50840,6 +50837,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/log-channels.Log`
           - `shell/notifications.recordNotification`
           - `tasks/auto-start.listArmedTaskIds`
+          - `tasks/orchestration/mandate/definitions.MandateDefinitions`
           - `tasks/task-category.setTaskCategory`
           - `tasks.armTaskAutoStart`
         - DB schema: `plugins/tasks/plugins/automations/server/internal/tables.ts`
@@ -51044,20 +51042,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Exports (types): `LaunchOptionDef`
         - Exports (values): `defineLaunchOption`
-    - **`mandate-presets`** — Named mandate compositions — interactiveMandate(): the grants a task a person starts by hand gets (file main tasks after the caller, sidequests manual, push only when the user asks, exit cleanly, raise a flag). A row always stores the expanded grants, never a preset name.
+    - **`mandate-presets`** — Defines the named presets: what the interactive and supervisor mandates grant (MandateDefinitions.Definition), computed at every resolution — so a capability added here reaches every tree under them, running ones included.
+      - Server:
+        - Contributes:
+          - `mandateDefinition` "interactive"
+          - `mandateDefinition` "supervisor"
+        - Uses: `tasks/orchestration/mandate/definitions.MandateDefinitions`
       - Core:
-        - Uses:
-          - `conversations/conversation-view/push-and-exit/capabilities.exitClean`
-          - `conversations/conversation-view/push-and-exit/capabilities.flagRaise`
-          - `conversations/conversation-view/push-and-exit/capabilities.pushPolicy`
-          - `conversations/self-compact/capability.contextCompact`
-          - `tasks/orchestration/mandate/policy.mandatePolicy`
-          - `tasks/orchestration/mandate/policy.MandatePolicy`
-          - `tasks/orchestration/message/capability.messageTree`
-          - `tasks/orchestration/watch/capabilities.watchChildren`
-          - `tasks/orchestration/watch/capabilities.watchTree`
-          - `tasks/outcome-report/capability.reportRequired`
-          - `tasks/tasks-core.tasksFile`
+        - Uses: `tasks/orchestration/mandate/policy.defineMandate`
         - Exports (values):
           - `interactiveMandate`
           - `supervisorMandate`
@@ -51096,13 +51088,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --line-height-body`
     - **`orchestration`** — Umbrella for the workflow-agnostic building blocks agents are orchestrated by inside a task subtree: the mandate (what an agent may do, resolved nearest-wins up the folder tree), the tree digest and watchers. Names no workflow, automation or track.
       - Plugins:
-        - **`mandate`** — The mandate's server half: the Mandate.Capability registry (each owner contributes how its granted value reads), mandateOf (nearest-wins up the folder tree) and grantOf (per conversation, collapsed per request burst), granted(cap) for Mcp.tool.when, the `## Mandate` MCP instructions section, and the mandate.capabilities catalog value.
+        - **`mandate`** — The mandate's server half: the Mandate.Capability registry (each owner contributes how its granted value reads), mandateOf (the named mandate nearest-wins up the folder tree, resolved to its definition's current policy through mandate/definitions) and grantOf (per conversation, collapsed per request burst), granted(cap) for Mcp.tool.when, the `## Mandate` MCP instructions section, and the mandate.capabilities catalog value.
           - Server:
             - Contributes: `resource.declare` "mandate.capabilities"
             - Uses:
               - `database.db`
               - `infra/mcp.Mcp`
               - `network/live.serveValue`
+              - `tasks/orchestration/mandate/definitions.mandateDefinitionEntries`
               - `tasks/tasks-core.getConversation`
               - `tasks/tasks-core.nearestMandate`
             - Exports (types):
@@ -51130,6 +51123,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/orchestration/message`
               - `tasks/orchestration/tree-digest`
           - Plugins:
+            - **`definitions`** — The named-mandate registry's web presence: eagerly registers the boot-preloaded mandate.definitions live value (every named mandate's id and label) so boot-snapshot hydrates it before first paint. The named-mandate registry: MandateDefinitions.Definition (what one named mandate grants) and MandateDefinitions.Source (a runtime family of them — one per automation), read at every resolution through mandateDefinitionEntries, and the mandate.definitions value (every named mandate's id and label).
+              - Server:
+                - Contributes: `resource.declare` "mandate.definitions"
+                - Uses: `network/live.serveValue`
+                - Exports (types):
+                  - `MandateDefinitionEntry`
+                  - `MandateDefinitionSourceEntry`
+                - Exports (values):
+                  - `mandateDefinitionEntries`
+                  - `MandateDefinitions`
+                - Resources: `mandate.definitions` (push, fixed, whole: one entry per named mandate the code defines — the presets and one per automation, a handful)
+              - Core:
+                - Uses:
+                  - `network/live.liveValue`
+                  - `packages/list-bound.wholeList`
+                - Exports (types): `MandateDefinitions`
+                - Exports (values):
+                  - `mandateDefinitions`
+                  - `MandateDefinitionsSchema`
+              - Cross-plugin:
+                - Imported by:
+                  - `tasks/automations`
+                  - `tasks/mandate-presets`
+                  - `tasks/orchestration/mandate`
             - **`policy`** — The mandate's value types, as a leaf: defineCapability (a capability's id, schema and label, and grant(value)), the branded MandatePolicy built only by mandatePolicy(grants) — a capability granted twice throws — and MandatePolicySchema, the tasks.mandate column decoder. Imports nothing from tasks, so tasks-core can store a policy and the mandate server can read tasks-core.
               - Cross-plugin:
                 - Imported by:
@@ -51146,14 +51163,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `CapabilityDef`
                   - `Grant`
                   - `GrantScope`
+                  - `MandateId`
                   - `MandatePolicy`
+                  - `MandateRef`
                   - `ScopedGrants`
                 - Exports (values):
                   - `defineCapability`
+                  - `defineMandate`
                   - `GRANT_SCOPES`
+                  - `MandateIdSchema`
                   - `mandatePolicy`
-                  - `MandatePolicySchema`
                   - `scopeKey`
+              - Test helpers:
+                - Core: `@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core/testing`
+                  - `rawPolicy` — A policy as raw grants, unchecked by any capability — for a test of how a reader handles a value its capability's schema refuses, which `mandatePolicy` (parsing every grant) can never build.
         - **`message`** — Message the agents of a task tree, granted by message.tree: list_agents (every task of the caller's mandate tree an agent ran on, with its latest conversation and how it stands) and message_agent (an event turn typed into a task's latest conversation now — a working agent reads it at its next step — resuming it first when it stopped; refused outside the tree, to oneself, or where no agent ran). The capability's describe joins the Mandate section. Names no workflow.
           - Server:
             - Contributes: `mandateCapability` "message.tree"
@@ -51179,8 +51202,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Core:
                 - Uses: `tasks/orchestration/mandate/policy.defineCapability`
                 - Exports (values): `messageTree`
-              - Cross-plugin:
-                - Imported by: `tasks/mandate-presets`
         - **`tree-digest`** — The tree digest: what an agent is shown of its mandate's task subtree — treeDigest (the whole subtree the first time, then only the tasks created or changed since the conversation's digest_cursors row, capped at 40 lines, advancing the cursor) and taskTree (the whole subtree, read-only). Each line is a task's id, title and derived status plus the words every TreeDigest.Annotation contribution adds; names no track or workflow.
           - Server:
             - Uses:
@@ -51290,8 +51311,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values):
                   - `watchChildren`
                   - `watchTree`
-              - Cross-plugin:
-                - Imported by: `tasks/mandate-presets`
     - **`outcome-report`** — The outcome report an automated task's agent submitted: a card at the end of the transcript of the conversation that wrote it (scrolling with it, not pinned over it) (markdown body, pushed / branch-waiting / no-changes standing, and its question as one-click answers sent as the next turn), and OutcomeReportDetail — the same report read-only, shown in an expanded row of an automation's History (Automations.TaskDetail). Outcome reports: owns tasks_ext_outcome_report (one report per task — markdown body, the attempt's git-measured standing, an optional question with one-click answers), serves the outcome-reports lookup collection, and declares the outcomeReport.submitted event a submit emits. The submit_outcome_report MCP tool that writes it (visible only to conversations whose mandate grants report.required), its stop gate and its watch source are the machine half.
       - Web:
         - Contributes:
@@ -51367,8 +51386,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Core:
             - Uses: `tasks/orchestration/mandate/policy.defineCapability`
             - Exports (values): `reportRequired`
-          - Cross-plugin:
-            - Imported by: `tasks/mandate-presets`
     - **`reports-investigation`** — The Report investigations automation in the Automations pane: registers its config (trigger, push policy, model, prompt, scope) and contributes its Which reports section — severity, recurrence threshold, kind by kind with the uninvestigated reports that match right now. Files reports' investigation tasks: owns the Reports task category, registers the task-creating handler into reports' investigation sink (Investigate), and declares the Report investigations automation (off by default) — woken when a report nobody investigated is recorded (once the burst settles) or on a schedule, it files ONE task for the batch of in-scope reports (severity, recurrence, kind), links them to it, and launches an agent to find and fix the root cause.
       - Web:
         - Contributes:
@@ -51471,7 +51488,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineJob('sidequest-autopilot.triage-on-task')`
           - `defineJob('sidequest-autopilot.triage-backfill')`
           - `defineWarmup('sidequest-autopilot.triage-backfill')`
-    - **`supervisor-run`** — The Supervisor launch option on every new-task composer (Home prompt, Make a wish, menu bar): Interactive (unset — the pill rests as its icon) or Supervisor. Draft-only — it decides how a task's tree runs when it is filed. The Supervisor launch option's server half: a task filed with it states the supervisor mandate (supervisorMandate()) as its own — its conversation an ordinary one with more powers, the tasks it files workers that report. Not inherited: the tasks its agents file are covered by the mandate already (nearest wins).
+    - **`supervisor-run`** — The Supervisor launch option on every new-task composer (Home prompt, Make a wish, menu bar): Interactive (unset — the pill rests as its icon) or Supervisor. Draft-only — it decides how a task's tree runs when it is filed. The Supervisor launch option's server half: a task filed with it states the supervisor mandate (supervisorMandate) as its own — its conversation an ordinary one with more powers, the tasks it files workers that report. Not inherited: the tasks its agents file are covered by the mandate already (nearest wins).
       - Web:
         - Contributes: `TaskLaunch.Option` "Supervisor" → `SupervisorLaunchControl`
         - Uses:
@@ -52471,22 +52488,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`tasks-core`** — tasks-core web presence: eagerly registers the boot-critical tasks / attempts / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, and owns the client-side reads of them (useTaskAttempts / useTaskConversations, the one join from a task to the attempts and runs it produced). Schema + repository layer for the tasks/attempts/conversations FK cluster.
       - Web:
         - Contributes:
+          - `FieldPresentation.Register` "exposure:tasks_ext_mandate"
           - `IdKinds.Kind` "att|claude"
           - `IdKinds.Kind` "conv|claude"
           - `IdKinds.Kind` "task"
         - Uses:
           - `ids.IdKinds`
+          - `network/live.FieldPresentation`
+          - `network/live.LiveFieldOption`
+          - `network/live.LiveFieldOptionsRead`
           - `network/live.useLive`
+          - `primitives/live-state.mapResource`
         - Exports (values):
           - `useTaskAttempts`
           - `useTaskConversations`
       - Server:
-        - Contributes: 36 contributions — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Contributes: 37 contributions — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `resource.declare` ×26
           - `derived-view` ×4
           - `ids.kind` ×3
           - `derived-table` ×2
           - `host-service:tasks-core.push-ledger` "tasks-core.push-ledger"
+          - `live.columns.expose` "tasks ← tasks_ext_mandate"
         - Uses:
           - `database.db`
           - `database/derived-tables.DerivedTable`
@@ -52497,9 +52520,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/attachments.Attachments`
           - `infra/entities.defaultNow`
           - `infra/entities.defineEntity`
+          - `infra/entity-extensions.defineExtension`
           - `infra/events.defineTriggerEvent`
           - `infra/query-resource.compileLookup`
           - `network/live.ColumnOverride`
+          - `network/live.LiveColumns`
           - `network/live.serveCollection`
           - `primitives/rank.nextRankUnder`
           - `primitives/rank.RankExecutor`
@@ -52510,6 +52535,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugins/tasks/plugins/tasks-core/server/internal/schema-attachments.ts`
           - `plugins/tasks/plugins/tasks-core/server/internal/schema.ts`
           - `plugins/tasks/plugins/tasks-core/server/internal/tables-events.ts`
+          - `plugins/tasks/plugins/tasks-core/server/internal/tables-mandate.ts`
           - `plugins/tasks/plugins/tasks-core/server/internal/tables.ts`
           - `plugins/tasks/plugins/tasks-core/server/internal/views.ts`
         - Exports (types):
@@ -52610,12 +52636,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `moveConversationToAttempt`
           - `nearestMandate`
           - `orphanedAttemptSink`
+          - `prepareRefile`
           - `pushes`
           - `pushLanded`
           - `PushLedger`
           - `PushSchema`
           - `RECENT_GONE_LIMIT`
           - `recordScratchDelivery`
+          - `refreshEffectiveMandates`
           - `removeTaskDependency`
           - `runtimeOfConversationLookup`
           - `setConversationHibernated`
@@ -52626,6 +52654,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskDescriptionChanged`
           - `TaskListItemSchema`
           - `TaskSchema`
+          - `tasksMandate`
           - `taskStatusChanged`
           - `TaskStatusSchema`
           - `tasksView`
@@ -52674,7 +52703,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks` (keyed)
           - `tasks:rows` (keyed, point)
       - Core:
-        - Uses: 30 symbols — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Uses: 31 symbols — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations/model-provider` ×3
           - `conversations/workspace` ×3
           - `fields/text/config` ×3
@@ -52688,6 +52717,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/string-list/config.stringListField`
           - `framework/product-name.LEGACY_IDS`
           - `infra/entities.entityRef`
+          - `infra/entity-extensions.defineExtensionShape`
           - `packages/list-bound.wholeList`
           - `primitives/pane.defineRoute`
           - `primitives/rank.RankSchema`
@@ -52761,6 +52791,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TaskFilingStartSchema`
           - `TaskGraph`
           - `TaskListItemSchema`
+          - `taskMandateShape`
           - `taskRows`
           - `TaskSchema`
           - `tasksEntityRef`
@@ -52772,9 +52803,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TRAILER_LOG_FORMAT`
           - `UNATTRIBUTED_TRAILER_KEY`
       - Cross-plugin:
-        - Imported by: 78 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Imported by: 77 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations` ×29
-          - `tasks` ×24
+          - `tasks` ×23
           - `active-data` ×5
           - `debug` ×5
           - `page` ×3

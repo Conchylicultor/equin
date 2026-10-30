@@ -6,7 +6,7 @@ import {
   tasksView,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
-import type { MandatePolicy } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
+import type { MandateRef } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 import { SLOT_SETTLED_STATUSES, type AutomationTaskRow } from "../../core";
 import { FILED_CLOSED_STATUSES } from "./catalog-status";
 import { tasksOrigin } from "./tables";
@@ -191,8 +191,8 @@ export async function fileAutomationTask(args: {
   categoryId: string;
   filing: AutomationFiling;
   description: string;
-  /** The mandate the filed (root) task states. */
-  mandate: MandatePolicy;
+  /** The mandate the filed (root) task names. */
+  mandate: MandateRef;
 }): Promise<string> {
   const { automationId, categoryId, filing, description, mandate } = args;
   return db.transaction(async (tx) => {

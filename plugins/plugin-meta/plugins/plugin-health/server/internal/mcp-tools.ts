@@ -77,7 +77,7 @@ Good: "Floating promise in sidebar refresh". Bad: "Add await to line 42".`,
       // a conversation with no task to propose from — a root of its own.
       ...(currentTaskId
         ? { folderId: currentTaskId }
-        : { mandate: interactiveMandate() }),
+        : { mandate: interactiveMandate }),
       title,
       description: description ?? null,
       author: conversationId,

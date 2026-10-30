@@ -111,7 +111,7 @@ async function runTaskFor(taskId: string, task: TriagedTask): Promise<string> {
       author: TRIAGE_AUTHOR,
       // Interactive: the triage profile allowlists exit_clean / flag_raise,
       // and the tool gates still apply on top.
-      mandate: interactiveMandate(),
+      mandate: interactiveMandate,
     });
     await setTaskCategory(created.id, SYSTEM_CATEGORY_ID);
     await setTaskSubject(created.id, subject);

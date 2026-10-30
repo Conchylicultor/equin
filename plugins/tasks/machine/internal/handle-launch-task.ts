@@ -57,7 +57,7 @@ export const handleLaunchTask = implementMachine(
         titleAuto: true,
         description: body.prompt,
         author: "user",
-          mandate: interactiveMandate(),
+          mandate: interactiveMandate,
       });
       await setTaskCategory(task.id, categoryId);
       return task.id;

@@ -1,4 +1,4 @@
-import type { MandatePolicy } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
+import type { MandateRef } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 import { interactiveMandate } from "@plugins/tasks/plugins/mandate-presets/core";
 
 /**
@@ -8,6 +8,6 @@ import { interactiveMandate } from "@plugins/tasks/plugins/mandate-presets/core"
  */
 export function interactivePlacement(
   folderId: string | null | undefined,
-): { folderId: string } | { mandate: MandatePolicy } {
-  return folderId ? { folderId } : { mandate: interactiveMandate() };
+): { folderId: string } | { mandate: MandateRef } {
+  return folderId ? { folderId } : { mandate: interactiveMandate };
 }

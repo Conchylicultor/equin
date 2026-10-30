@@ -36,7 +36,7 @@
  * Run: `./equin test plugins/apps/plugins/website/plugins/demos/plugins/lumen`.
  */
 
-import { mandatePolicy } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
+import { defineMandate } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import { beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { readdirSync, readFileSync, statSync } from "node:fs";
@@ -133,6 +133,9 @@ import {
   type PrototypeMeta,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import type { ThumbnailState } from "@plugins/apps/plugins/prototypes/plugins/thumbnails/core";
+
+// Any registered mandate id: these tests never resolve it.
+const TEST_MANDATE = defineMandate({ id: "interactive", label: "Interactive" });
 
 setDefaultTimeout(300_000);
 
@@ -784,10 +787,7 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
       await subscribe(taskRows.key, all);
 
       const created = await inTx((tx) =>
-        createTask(
-          { title: "demo write: created", mandate: mandatePolicy([]) },
-          tx,
-        ),
+        createTask({ title: "demo write: created", mandate: TEST_MANDATE }, tx),
       );
       const id = created.value.id;
       // The created task reaches the collection's subscriber, acked by its xid.

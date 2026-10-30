@@ -48,7 +48,7 @@ function launchTarget(body: CreateConversationBody): ConversationTarget {
   }
   if (body.attemptId !== undefined) return { attemptId: body.attemptId };
   if (body.taskId !== undefined) return { taskId: body.taskId };
-  return { mandate: interactiveMandate() };
+  return { mandate: interactiveMandate };
 }
 
 export const handleCreate = implementMachine(

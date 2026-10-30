@@ -324,22 +324,28 @@ serves them.
 - Load-bearing: yes
 - Web:
   - Contributes:
+    - `FieldPresentation.Register` "exposure:tasks_ext_mandate"
     - `IdKinds.Kind` "att|claude"
     - `IdKinds.Kind` "conv|claude"
     - `IdKinds.Kind` "task"
   - Uses:
     - `ids.IdKinds`
+    - `network/live.FieldPresentation`
+    - `network/live.LiveFieldOption`
+    - `network/live.LiveFieldOptionsRead`
     - `network/live.useLive`
+    - `primitives/live-state.mapResource`
   - Exports (values):
     - `useTaskAttempts`
     - `useTaskConversations`
 - Server:
-  - Contributes: 36 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes: 37 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `resource.declare` ×26
     - `derived-view` ×4
     - `ids.kind` ×3
     - `derived-table` ×2
     - `host-service:tasks-core.push-ledger` "tasks-core.push-ledger"
+    - `live.columns.expose` "tasks ← tasks_ext_mandate"
   - Uses:
     - `database.db`
     - `database/derived-tables.DerivedTable`
@@ -350,9 +356,11 @@ serves them.
     - `infra/attachments.Attachments`
     - `infra/entities.defaultNow`
     - `infra/entities.defineEntity`
+    - `infra/entity-extensions.defineExtension`
     - `infra/events.defineTriggerEvent`
     - `infra/query-resource.compileLookup`
     - `network/live.ColumnOverride`
+    - `network/live.LiveColumns`
     - `network/live.serveCollection`
     - `primitives/rank.nextRankUnder`
     - `primitives/rank.RankExecutor`
@@ -363,6 +371,7 @@ serves them.
     - `plugins/tasks/plugins/tasks-core/server/internal/schema-attachments.ts`
     - `plugins/tasks/plugins/tasks-core/server/internal/schema.ts`
     - `plugins/tasks/plugins/tasks-core/server/internal/tables-events.ts`
+    - `plugins/tasks/plugins/tasks-core/server/internal/tables-mandate.ts`
     - `plugins/tasks/plugins/tasks-core/server/internal/tables.ts`
     - `plugins/tasks/plugins/tasks-core/server/internal/views.ts`
   - Exports (types):
@@ -463,12 +472,14 @@ serves them.
     - `moveConversationToAttempt`
     - `nearestMandate`
     - `orphanedAttemptSink`
+    - `prepareRefile`
     - `pushes`
     - `pushLanded`
     - `PushLedger`
     - `PushSchema`
     - `RECENT_GONE_LIMIT`
     - `recordScratchDelivery`
+    - `refreshEffectiveMandates`
     - `removeTaskDependency`
     - `runtimeOfConversationLookup`
     - `setConversationHibernated`
@@ -479,6 +490,7 @@ serves them.
     - `taskDescriptionChanged`
     - `TaskListItemSchema`
     - `TaskSchema`
+    - `tasksMandate`
     - `taskStatusChanged`
     - `TaskStatusSchema`
     - `tasksView`
@@ -527,7 +539,7 @@ serves them.
     - `tasks` (keyed)
     - `tasks:rows` (keyed, point)
 - Core:
-  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/model-provider` ×3
     - `conversations/workspace` ×3
     - `fields/text/config` ×3
@@ -541,6 +553,7 @@ serves them.
     - `fields/string-list/config.stringListField`
     - `framework/product-name.LEGACY_IDS`
     - `infra/entities.entityRef`
+    - `infra/entity-extensions.defineExtensionShape`
     - `packages/list-bound.wholeList`
     - `primitives/pane.defineRoute`
     - `primitives/rank.RankSchema`
@@ -614,6 +627,7 @@ serves them.
     - `TaskFilingStartSchema`
     - `TaskGraph`
     - `TaskListItemSchema`
+    - `taskMandateShape`
     - `taskRows`
     - `TaskSchema`
     - `tasksEntityRef`
@@ -625,9 +639,9 @@ serves them.
     - `TRAILER_LOG_FORMAT`
     - `UNATTRIBUTED_TRAILER_KEY`
 - Cross-plugin:
-  - Imported by: 78 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 77 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×29
-    - `tasks` ×24
+    - `tasks` ×23
     - `active-data` ×5
     - `debug` ×5
     - `page` ×3

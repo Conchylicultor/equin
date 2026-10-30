@@ -369,8 +369,9 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `resource.declare` "automations.tasks:rows"
     - `watchHandler` "automations.refire"
     - `watchHandler` "automations.slot"
+    - `mandateDefinitionSource` "automations"
     - `trigger` "automations.task-status"
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×6
     - `config_v2` ×4
     - `tasks/orchestration/watch` ×3
@@ -384,6 +385,7 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `primitives/log-channels.Log`
     - `shell/notifications.recordNotification`
     - `tasks/auto-start.listArmedTaskIds`
+    - `tasks/orchestration/mandate/definitions.MandateDefinitions`
     - `tasks/task-category.setTaskCategory`
     - `tasks.armTaskAutoStart`
   - DB schema: `plugins/tasks/plugins/automations/server/internal/tables.ts`

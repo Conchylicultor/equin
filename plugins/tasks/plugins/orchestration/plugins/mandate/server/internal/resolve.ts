@@ -10,28 +10,56 @@ import {
   scopeKey,
   type Capability,
   type GrantScope,
+  type MandateId,
   type MandatePolicy,
 } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
+import { mandateDefinitionEntries } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/definitions/server";
 
 /** A task's effective mandate, or `none` when nothing covers it. */
 export type EffectiveMandate =
-  | { kind: "found"; rootTaskId: string; policy: MandatePolicy }
+  | {
+      kind: "found";
+      rootTaskId: string;
+      mandateId: MandateId;
+      policy: MandatePolicy;
+    }
   | { kind: "none" };
 
 /**
- * A task's effective mandate: the policy on the nearest task up its folder
- * chain (itself included) — nearest wins. With every root carrying one (the
- * `tasks_root_has_mandate` CHECK), `none` means the task does not exist.
+ * A task's effective mandate: the named mandate on the nearest task up its
+ * folder chain (itself included) — nearest wins — and what it grants NOW (its
+ * `MandateDefinitions` entry's policy, computed at each call). With every root
+ * naming one (the `tasks_root_has_mandate` CHECK), `none` means the task does
+ * not exist. A stored id no plugin defines throws: a tree's powers never
+ * silently become nothing.
  */
 export async function mandateOf(taskId: string): Promise<EffectiveMandate> {
-  return nearestMandate(taskId, db);
+  const nearest = await nearestMandate(taskId, db);
+  if (nearest.kind === "none") return nearest;
+  return { ...nearest, policy: policyOf(nearest.mandateId) };
+}
+
+function policyOf(mandateId: MandateId): MandatePolicy {
+  const definition = mandateDefinitionEntries().get(mandateId);
+  if (definition === undefined) {
+    throw new Error(
+      `Mandate "${mandateId}" is stored on a task but no plugin defines it (MandateDefinitions)`,
+    );
+  }
+  return definition.policy();
 }
 
 /** A conversation's effective mandate, and where in its tree the
  * conversation sits: on the mandate's own task (`root`) or under it
  * (`below`) — which scoped grants cover it. */
 export type ConversationMandate =
-  | { kind: "found"; rootTaskId: string; policy: MandatePolicy; at: GrantScope }
+  | {
+      kind: "found";
+      rootTaskId: string;
+      mandateId: MandateId;
+      policy: MandatePolicy;
+      at: GrantScope;
+    }
   | { kind: "none" };
 
 /** One resolution per conversation at a time: every gated tool's `when` asks

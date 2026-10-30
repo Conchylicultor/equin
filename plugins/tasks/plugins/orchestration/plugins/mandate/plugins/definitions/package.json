@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-tasks-orchestration-mandate-definitions",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The named-mandate registry, portable: Mandate.Definition / Mandate.DefinitionSource (what each named mandate grants, computed at every resolution), the mandate.definitions live value (every named mandate's id and label) and the presentation of the exposed `mandate` task field."
+}

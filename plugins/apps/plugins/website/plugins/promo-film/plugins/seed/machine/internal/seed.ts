@@ -106,7 +106,7 @@ export async function seedPromoFilm(): Promise<PromoFilmSeedReport> {
       title: task.task,
       titleAuto: false,
       description: task.prompt,
-      mandate: interactiveMandate(),
+      mandate: interactiveMandate,
     });
   note(
     "tasks",
@@ -170,7 +170,7 @@ async function writeRun(run: FilmRun, ago: (ms: number) => Date) {
     title: run.task,
     titleAuto: false,
     description: run.prompt,
-    mandate: interactiveMandate(),
+    mandate: interactiveMandate,
   });
   if (run.category !== undefined)
     await setTaskCategory(run.taskId, run.category);

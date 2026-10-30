@@ -271,8 +271,8 @@ export const tasks = pgView("tasks_v").as((qb) => {
     minPushAt: attemptAgg.minPushAt,
   });
 
-  // `mandate` is a server-only column: off the view, as it is off the wire.
-  const { mandate: _mandate, ...taskColumns } = getTableColumns(_tasks);
+  // `mandateRef` is a server-only column: off the view, as it is off the wire.
+  const { mandateRef: _mandateRef, ...taskColumns } = getTableColumns(_tasks);
   return qb
     .with(attemptAgg, deps)
     .select({

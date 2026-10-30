@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "answers": [
+    {
+      "key": "column:tasks.mandate_ref",
+      "entityType": "column",
+      "entityName": "mandate_ref",
+      "action": "create"
+    }
+  ]
+}

@@ -14,18 +14,19 @@ import type { Task, TaskStatus } from "../schema";
 import { TaskGraph } from "../../../core";
 import type { DbExecutor } from "../status-batch";
 import {
-  MandatePolicySchema,
-  type MandatePolicy,
+  MandateIdSchema,
+  type MandateId,
 } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 
 /**
- * A task's effective mandate: the policy stated on the nearest task up its
- * folder chain (itself included), and the task that states it — the root of
- * the subtree the policy covers. `none` only for a task that does not exist:
- * every root carries one (the `tasks_root_has_mandate` CHECK).
+ * A task's effective mandate: the named mandate stated on the nearest task up
+ * its folder chain (itself included), and the task that states it — the root
+ * of the subtree it covers. `none` only for a task that does not exist: every
+ * root names one (the `tasks_root_has_mandate` CHECK). What the mandate grants
+ * is the mandate plugin's to resolve (`mandateOf`).
  */
 export type NearestMandate =
-  | { kind: "found"; rootTaskId: string; policy: MandatePolicy }
+  | { kind: "found"; rootTaskId: string; mandateId: MandateId }
   | { kind: "none" };
 
 /**
@@ -38,25 +39,25 @@ export async function nearestMandate(
 ): Promise<NearestMandate> {
   const rows = await executeRows(exec, {
     label: "task nearest mandate",
-    query: sql`WITH RECURSIVE chain(id, folder_id, mandate, depth) AS (
-          SELECT t.id, t.folder_id, t.mandate, 0
+    query: sql`WITH RECURSIVE chain(id, folder_id, mandate_ref, depth) AS (
+          SELECT t.id, t.folder_id, t.mandate_ref, 0
             FROM ${_tasks} t
            WHERE t.id = ${taskId}
           UNION ALL
-          SELECT p.id, p.folder_id, p.mandate, c.depth + 1
+          SELECT p.id, p.folder_id, p.mandate_ref, c.depth + 1
             FROM ${_tasks} p
             JOIN chain c ON p.id = c.folder_id
-           WHERE c.mandate IS NULL
+           WHERE c.mandate_ref IS NULL
         )
-        SELECT id, mandate FROM chain
-         WHERE mandate IS NOT NULL
+        SELECT id, mandate_ref FROM chain
+         WHERE mandate_ref IS NOT NULL
          ORDER BY depth
          LIMIT 1`,
-    row: z.object({ id: z.string(), mandate: MandatePolicySchema }),
+    row: z.object({ id: z.string(), mandate_ref: MandateIdSchema }),
   });
   const [row] = rows;
   return row
-    ? { kind: "found", rootTaskId: row.id, policy: row.mandate }
+    ? { kind: "found", rootTaskId: row.id, mandateId: row.mandate_ref }
     : { kind: "none" };
 }
 

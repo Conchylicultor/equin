@@ -80,7 +80,7 @@ async function seedConversation(status: string): Promise<string> {
   const attemptId = nextId("att");
   const conversationId = nextId("conv");
   await t.db.execute(sql`
-    INSERT INTO tasks (id, title, rank, mandate) VALUES (${taskId}, ${`title ${taskId}`}, ${`a${seq}`}, '{}')
+    INSERT INTO tasks (id, title, rank, mandate_ref) VALUES (${taskId}, ${`title ${taskId}`}, ${`a${seq}`}, 'interactive')
   `);
   await t.db.execute(sql`
     INSERT INTO attempts (id, task_id, worktree_path)

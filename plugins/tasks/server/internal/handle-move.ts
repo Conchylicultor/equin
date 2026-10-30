@@ -5,7 +5,8 @@ import { rankAdjacentTo } from "@plugins/primitives/plugins/rank/server";
 import {
   _tasks,
   isDescendant,
-  unionTaskClusters,
+  prepareRefile,
+  refreshEffectiveMandates,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { moveTask } from "../../core";
 
@@ -63,20 +64,16 @@ export const handleMove = implement(moveTask, async ({ params, body }) => {
       new Set([params.id]),
     );
 
-    // Union at or before the edge write, never after: a re-file into a folder is
-    // a membership edge, and the label must never lag behind it. On the same tx,
-    // so the union and the folder write commit or roll back together.
-    if (body.folderId !== null) {
-      await unionTaskClusters(params.id, body.folderId, tx);
-    }
-
+    // The re-file's other halves, on the same tx as the write: the cluster
+    // union (at or before the edge write — the label must never lag behind
+    // it), the mandate a task moved to the root keeps, then the subtree's
+    // effective mandates.
+    const refile = await prepareRefile(params.id, body.folderId, tx);
     await tx
       .update(_tasks)
-      .set({
-        folderId: body.folderId,
-        rank: rank.toJSON(),
-      })
+      .set({ ...refile, rank: rank.toJSON() })
       .where(eq(_tasks.id, params.id));
+    await refreshEffectiveMandates([params.id], tx);
   });
 
   // No `tasks.statusChanged` emit: a task's status derives from its drop/hold

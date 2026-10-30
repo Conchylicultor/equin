@@ -136,7 +136,7 @@ export async function ensureTodoTask(
     titleAuto: true,
     description: prompt,
     author: "user",
-    mandate: interactiveMandate(),
+    mandate: interactiveMandate,
   });
   scheduleTaskTitleUpdate(task.id, seed, fallbackTitle);
   // The SAME category `/prompt`-launched tasks get, from the plugin that owns

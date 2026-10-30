@@ -31,7 +31,7 @@ export async function createTaskFromPromptBlock(
     titleAuto: true,
     description: body.prompt,
     author: "user",
-    mandate: interactiveMandate(),
+    mandate: interactiveMandate,
   });
   scheduleTaskTitleUpdate(task.id, body.prompt, fallbackTitle);
   await setTaskCategory(task.id, PAGES_CATEGORY_ID);

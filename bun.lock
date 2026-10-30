@@ -6497,6 +6497,10 @@
       "name": "@equin/plugin-tasks-orchestration-mandate",
       "version": "0.0.1",
     },
+    "plugins/tasks/plugins/orchestration/plugins/mandate/plugins/definitions": {
+      "name": "@equin/plugin-tasks-orchestration-mandate-definitions",
+      "version": "0.0.1",
+    },
     "plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy": {
       "name": "@equin/plugin-tasks-orchestration-mandate-policy",
       "version": "0.0.1",
@@ -10133,6 +10137,8 @@
     "@equin/plugin-tasks-orchestration": ["@equin/plugin-tasks-orchestration@workspace:plugins/tasks/plugins/orchestration"],
 
     "@equin/plugin-tasks-orchestration-mandate": ["@equin/plugin-tasks-orchestration-mandate@workspace:plugins/tasks/plugins/orchestration/plugins/mandate"],
+
+    "@equin/plugin-tasks-orchestration-mandate-definitions": ["@equin/plugin-tasks-orchestration-mandate-definitions@workspace:plugins/tasks/plugins/orchestration/plugins/mandate/plugins/definitions"],
 
     "@equin/plugin-tasks-orchestration-mandate-policy": ["@equin/plugin-tasks-orchestration-mandate-policy@workspace:plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy"],
 

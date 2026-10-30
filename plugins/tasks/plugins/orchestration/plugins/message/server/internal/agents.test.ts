@@ -27,9 +27,9 @@ async function task(
 ): Promise<string> {
   const id = uid("task");
   await tx.execute(sql`
-    INSERT INTO tasks (id, title, title_auto, rank, folder_id, created_at, updated_at, mandate)
+    INSERT INTO tasks (id, title, title_auto, rank, folder_id, created_at, updated_at, mandate_ref)
     VALUES (${id}, ${title}, false, ${id}, ${folderId}, now(), now(),
-            ${folderId === null ? sql`'{}'::jsonb` : sql`NULL`})
+            ${folderId === null ? sql`'interactive'` : sql`NULL`})
   `);
   return id;
 }

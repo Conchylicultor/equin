@@ -32,8 +32,8 @@ async function seedTasks(tx: Tx, ids: string[]): Promise<void> {
     // `dropped` (dropped_at set) ⇒ status is 'dropped' regardless of deps, so a
     // move never changes any task's status and never emits an event.
     await tx.execute(sql`
-      INSERT INTO tasks (id, title, title_auto, rank, dropped_at, created_at, updated_at, mandate)
-      VALUES (${ids[i]}, ${ids[i]}, true, ${"a" + i}, now(), now(), now(), '{}')
+      INSERT INTO tasks (id, title, title_auto, rank, dropped_at, created_at, updated_at, mandate_ref)
+      VALUES (${ids[i]}, ${ids[i]}, true, ${"a" + i}, now(), now(), now(), 'interactive')
     `);
   }
 }

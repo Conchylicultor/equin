@@ -32,7 +32,7 @@ export function registerReportsInvestigation(
         description,
         author,
         // A person clicked Investigate: the task is theirs.
-        mandate: interactiveMandate(),
+        mandate: interactiveMandate,
       });
       await setTaskCategory(task.id, REPORTS_CATEGORY_ID);
       return { taskId: task.id };

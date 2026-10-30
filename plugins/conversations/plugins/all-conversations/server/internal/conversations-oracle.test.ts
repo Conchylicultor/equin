@@ -40,7 +40,7 @@
  * Run: `./equin test plugins/conversations/plugins/all-conversations`.
  */
 
-import { mandatePolicy } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
+import { defineMandate } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { eq, inArray, sql } from "drizzle-orm";
 import {
@@ -82,6 +82,9 @@ import {
   conversationHistory,
 } from "../../core";
 import { allConversationsDefaults } from "./defaults";
+
+// Any registered mandate id: these tests never resolve it.
+const TEST_MANDATE = defineMandate({ id: "interactive", label: "Interactive" });
 
 interface Load {
   key: string;
@@ -358,7 +361,7 @@ async function insertTask(id: string, title: string): Promise<void> {
     title,
     titleAuto: false,
     rank: `r${id}`,
-    mandate: mandatePolicy([]),
+    mandateRef: TEST_MANDATE.id,
   } as typeof _tasks.$inferInsert);
 }
 

@@ -36,8 +36,8 @@ async function conversation(tx: DbExecutor): Promise<string> {
   const attemptId = uid("att");
   const id = uid("conv");
   await tx.execute(sql`
-    INSERT INTO tasks (id, title, title_auto, rank, folder_id, created_at, updated_at, mandate)
-    VALUES (${taskId}, 'T', true, ${taskId}, NULL, now(), now(), '{}'::jsonb)
+    INSERT INTO tasks (id, title, title_auto, rank, folder_id, created_at, updated_at, mandate_ref)
+    VALUES (${taskId}, 'T', true, ${taskId}, NULL, now(), now(), 'interactive')
   `);
   await tx.execute(sql`
     INSERT INTO attempts (id, task_id, worktree_path)

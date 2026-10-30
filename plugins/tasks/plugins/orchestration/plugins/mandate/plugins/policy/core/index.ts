@@ -2,7 +2,6 @@ export {
   defineCapability,
   GRANT_SCOPES,
   mandatePolicy,
-  MandatePolicySchema,
   scopeKey,
 } from "./internal/define";
 export type {
@@ -13,3 +12,5 @@ export type {
   MandatePolicy,
   ScopedGrants,
 } from "./internal/define";
+export { defineMandate, MandateIdSchema } from "./internal/named";
+export type { MandateId, MandateRef } from "./internal/named";

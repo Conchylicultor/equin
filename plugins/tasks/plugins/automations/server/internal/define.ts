@@ -9,6 +9,10 @@ import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { armTaskAutoStart } from "@plugins/tasks/server";
 import { listArmedTaskIds } from "@plugins/tasks/plugins/auto-start/server";
 import { setMandate } from "@plugins/tasks/plugins/tasks-core/server";
+import {
+  defineMandate,
+  type MandateRef,
+} from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 import { PUSH_POLICY_TEXT } from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
 import {
   renderPrompt,
@@ -67,16 +71,18 @@ export interface Automation extends Registration {
 /** What one run did — the line it logs. */
 function runAutomation(
   spec: AutomationSpec,
+  mandate: MandateRef,
   signal: AbortSignal,
 ): Promise<string> {
   return spec.kind === "launch"
-    ? runLaunch(spec, signal)
-    : runFiling(spec, signal);
+    ? runLaunch(spec, mandate, signal)
+    : runFiling(spec, mandate, signal);
 }
 
 /** A file-kind run: detect → file ONE task → arm it; nothing while one is open. */
 async function runFiling(
   spec: FileAutomationSpec,
+  mandate: MandateRef,
   signal: AbortSignal,
 ): Promise<string> {
   const settings = automationSettings(spec);
@@ -103,7 +109,7 @@ async function runFiling(
       categoryId: spec.categoryId,
       filing,
       description: prompt,
-      mandate: spec.mandate(settings),
+      mandate,
     });
     catalogChanged();
     // Watched before its agent can start, so no settle goes unheard.
@@ -140,6 +146,7 @@ async function runFiling(
  */
 async function runLaunch(
   spec: LaunchAutomationSpec,
+  mandate: MandateRef,
   signal: AbortSignal,
 ): Promise<string> {
   const settings = automationSettings(spec);
@@ -187,7 +194,7 @@ async function runLaunch(
     if (!(await recordLaunch(spec.id, pick.taskId))) continue;
     // The launched agent works under the automation's mandate, nested on the
     // task (nearest wins) — the person's own tree above it keeps theirs.
-    await setMandate(pick.taskId, spec.mandate(settings));
+    await setMandate(pick.taskId, mandate);
     // Its slot is held until the agent reports or the task stops: the
     // automation watches the task in code (`automations.slot`), before the
     // agent can start.
@@ -306,6 +313,12 @@ export function defineAutomation(spec: AutomationSpec): Automation {
   // there.
   const common: AutomationSpec = spec;
   const jobName = `automation.${spec.id}`;
+  // Its named mandate: what each task it files or launches names; what it
+  // grants is `spec.mandate` of the settings at each resolution.
+  const mandate = defineMandate({
+    id: `automation:${spec.id}`,
+    label: spec.label,
+  });
 
   // The pending event-triggered run: when its burst began, and the start it
   // was last queued for. Process state — a restart forgets a burst's start,
@@ -330,7 +343,7 @@ export function defineAutomation(spec: AutomationSpec): Automation {
       burstStartedAt = null;
       queuedRunAt = null;
       log.publish(
-        `automation ${spec.id}: ${await runAutomation(common, ctx.signal)}`,
+        `automation ${spec.id}: ${await runAutomation(common, mandate, ctx.signal)}`,
       );
     },
   });
@@ -377,7 +390,7 @@ export function defineAutomation(spec: AutomationSpec): Automation {
       void job.enqueue({}, { runAt: new Date(runAt) });
     },
     async register() {
-      addAutomation({ spec: common, jobName, wake });
+      addAutomation({ spec: common, jobName, wake, mandate });
       await job.register();
       if (adoptWarmup !== null) await adoptWarmup.register();
     },

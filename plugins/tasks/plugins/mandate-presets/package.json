@@ -2,5 +2,5 @@
   "name": "@equin/plugin-tasks-mandate-presets",
   "private": true,
   "version": "0.0.1",
-  "description": "Named mandate compositions — interactiveMandate(): the grants a task a person starts by hand gets (file main tasks after the caller, sidequests manual, push only when the user asks, exit cleanly, raise a flag). A row always stores the expanded grants, never a preset name."
+  "description": "The named presets — interactiveMandate (a task a person starts by hand) and supervisorMandate (a supervisor's tree): refs in core, their grants defined in server and computed at every resolution, so a change here reaches every tree under them."
 }

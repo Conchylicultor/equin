@@ -44,12 +44,12 @@ beforeAll(async () => {
   exec = t.db as unknown as DbExecutor;
   // new: fresh, launched (origin row), excluded; settled: dropped, held.
   await t.db.execute(sql`
-    INSERT INTO tasks (id, title, title_auto, rank, held_at, dropped_at, mandate) VALUES
-      ('t-new', 'new', false, 'a1', NULL, NULL, '{}'),
-      ('t-launched', 'launched', false, 'a2', NULL, NULL, '{}'),
-      ('t-dropped', 'dropped', false, 'a3', NULL, now(), '{}'),
-      ('t-held', 'held', false, 'a4', now(), NULL, '{}'),
-      ('t-excluded', 'excluded', false, 'a5', NULL, NULL, '{}')`);
+    INSERT INTO tasks (id, title, title_auto, rank, held_at, dropped_at, mandate_ref) VALUES
+      ('t-new', 'new', false, 'a1', NULL, NULL, 'interactive'),
+      ('t-launched', 'launched', false, 'a2', NULL, NULL, 'interactive'),
+      ('t-dropped', 'dropped', false, 'a3', NULL, now(), 'interactive'),
+      ('t-held', 'held', false, 'a4', now(), NULL, 'interactive'),
+      ('t-excluded', 'excluded', false, 'a5', NULL, NULL, 'interactive')`);
   await t.db.insert(tasksOrigin.table).values({
     taskId: "t-launched",
     automationId: "probe",

@@ -37,8 +37,8 @@ function spec<T>(s: T | undefined, name: string): T {
 async function seedTask(): Promise<string> {
   const id = `dua-task-${++seq}`;
   await t.db.execute(sql`
-    INSERT INTO tasks (id, title, title_auto, rank, created_at, updated_at, mandate)
-    VALUES (${id}, 'a', true, ${id}, ${OLD}, ${OLD}, '{}')
+    INSERT INTO tasks (id, title, title_auto, rank, created_at, updated_at, mandate_ref)
+    VALUES (${id}, 'a', true, ${id}, ${OLD}, ${OLD}, 'interactive')
   `);
   return id;
 }

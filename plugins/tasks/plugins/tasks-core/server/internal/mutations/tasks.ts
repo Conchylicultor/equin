@@ -11,7 +11,8 @@ import {
   nearestMandate,
   taskDependsOn,
 } from "../queries/tasks";
-import type { MandatePolicy } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
+import type { MandateRef } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
+import { refreshEffectiveMandates } from "./mandate";
 import { withTaskStatusChange } from "../status-scope";
 import {
   taskCreated,
@@ -37,14 +38,15 @@ interface CreateTaskFields {
 
 /**
  * A task is filed under a folder (display-only hierarchy, not a dependency) —
- * and inherits that folder's mandate — or it is a root, and states its own
- * mandate: what an agent may do inside its subtree. There is no root without
- * one (tsc here, and the `tasks_root_has_mandate` CHECK underneath).
+ * and inherits that folder's mandate — or it is a root, and names its own
+ * mandate (`defineMandate`): what an agent may do inside its subtree. There is
+ * no root without one (tsc here, and the `tasks_root_has_mandate` CHECK
+ * underneath).
  */
 export type CreateTaskInput = CreateTaskFields &
   (
     | { folderId: string; mandate?: never }
-    | { folderId?: null; mandate: MandatePolicy }
+    | { folderId?: null; mandate: MandateRef }
   );
 
 export interface UpdateTaskPatch {
@@ -90,7 +92,7 @@ async function createTaskOn(input: CreateTaskInput, exec: DbExecutor) {
     await exec.insert(_tasks).values({
       id,
       folderId,
-      mandate: input.folderId == null ? input.mandate : null,
+      mandateRef: input.folderId == null ? input.mandate.id : null,
       groupId: input.groupId ?? null,
       title: input.title,
       titleAuto: input.titleAuto ?? true,
@@ -108,6 +110,7 @@ async function createTaskOn(input: CreateTaskInput, exec: DbExecutor) {
   // vanishing-from-its-tree failure this column exists to prevent, and it needs
   // no crash, just ordinary concurrency.
   if (folderId) await unionTaskClusters(id, folderId, exec);
+  await refreshEffectiveMandates([id], exec);
   // On the creating executor, so the event commits (or rolls back) with the
   // row. Same PgTransaction ⇄ EmitTx cast as `withTaskStatusChange`'s emit.
   await taskTitleChanged.emit(
@@ -180,23 +183,7 @@ async function updateTaskOn(
     ) {
       throw new Error("Cannot file a task into its own descendant");
     }
-    if (patch.folderId === null) {
-      // A root states its mandate (the CHECK). One with none of its own keeps
-      // the policy it had under its folder — derived, never a new input.
-      const own = await nearestMandate(id, exec);
-      if (own.kind === "none") {
-        throw new Error(
-          `Cannot re-file task ${id} to the root: no mandate up its folder chain`,
-        );
-      }
-      if (own.rootTaskId !== id) dbPatch.mandate = own.policy;
-    } else {
-      // Union BEFORE the write, and only after the self/descendant guards — a
-      // rejected re-file must not union. On the same executor as the write, so
-      // the label and the folder edge commit or roll back together.
-      await unionTaskClusters(id, patch.folderId, exec);
-    }
-    dbPatch.folderId = patch.folderId;
+    Object.assign(dbPatch, await prepareRefile(id, patch.folderId, exec));
   }
   // An empty patch writes nothing (drizzle rejects an empty SET); the read
   // below still answers whether the task exists.
@@ -213,6 +200,8 @@ async function updateTaskOn(
       return row;
     });
     if (!updated) return null;
+    if (dbPatch.folderId !== undefined)
+      await refreshEffectiveMandates([id], exec);
     if (typeof patch.title === "string") {
       await taskTitleChanged.emit(
         { taskId: id, title: patch.title },
@@ -239,21 +228,54 @@ async function updateTaskOn(
 }
 
 /**
- * States `policy` as the mandate of `taskId`'s subtree — on a nested task it
- * overrides its ancestors' (nearest wins). Code-only: no endpoint or MCP tool
- * writes a mandate.
+ * The part of a re-file that is not the write itself, run before it on the
+ * same executor (after the caller's self / descendant guards — a rejected
+ * re-file must not union): filing under a folder unions the clusters; filing
+ * to the root keeps the mandate the task had under its folder — a root names
+ * one (the CHECK) — copied as its own. Returns the columns the write sets.
+ * After the write, the caller refreshes the subtree's effective mandates
+ * ({@link refreshEffectiveMandates}). Shared by `updateTask` and the tree's
+ * drag move, so no re-file path skips either half.
+ */
+export async function prepareRefile(
+  id: string,
+  folderId: string | null,
+  exec: DbExecutor,
+): Promise<{ folderId: string | null; mandateRef?: string }> {
+  if (folderId !== null) {
+    // Union BEFORE the write. On the same executor as the write, so the label
+    // and the folder edge commit or roll back together.
+    await unionTaskClusters(id, folderId, exec);
+    return { folderId };
+  }
+  const own = await nearestMandate(id, exec);
+  if (own.kind === "none") {
+    throw new Error(
+      `Cannot re-file task ${id} to the root: no mandate up its folder chain`,
+    );
+  }
+  return own.rootTaskId === id
+    ? { folderId }
+    : { folderId, mandateRef: own.mandateId };
+}
+
+/**
+ * Names `mandate` as the mandate of `taskId`'s subtree — on a nested task it
+ * overrides its ancestors' (nearest wins). What it grants is the mandate's
+ * definition, read live.
  */
 export async function setMandate(
   taskId: string,
-  policy: MandatePolicy,
+  mandate: MandateRef,
   exec: DbExecutor = db,
 ): Promise<void> {
   const [row] = await exec
     .update(_tasks)
-    .set({ mandate: policy })
+    .set({ mandateRef: mandate.id })
     .where(eq(_tasks.id, taskId))
     .returning({ id: _tasks.id });
   if (!row) throw new Error(`setMandate: no task ${taskId}`);
+  await refreshEffectiveMandates([taskId], exec);
 }
 
 /**
@@ -275,7 +297,11 @@ export async function clearMandate(
       `clearMandate: task ${taskId} is a root — a root always states its mandate`,
     );
   }
-  await exec.update(_tasks).set({ mandate: null }).where(eq(_tasks.id, taskId));
+  await exec
+    .update(_tasks)
+    .set({ mandateRef: null })
+    .where(eq(_tasks.id, taskId));
+  await refreshEffectiveMandates([taskId], exec);
 }
 
 export async function updateTaskTitle(

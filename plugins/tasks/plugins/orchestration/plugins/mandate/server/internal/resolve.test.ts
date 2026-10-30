@@ -2,9 +2,9 @@ import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import {
   defineCapability,
-  MandatePolicySchema,
   mandatePolicy,
 } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
+import { rawPolicy } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core/testing";
 import { grantIn } from "./resolve";
 
 const level = defineCapability<"low" | "high">({
@@ -27,7 +27,7 @@ describe("grantIn", () => {
   test("an invalid stored value throws — never read as 'not granted'", () => {
     // A row written by other code: the column decoder only checks the shape
     // of the record, the capability's own schema checks the value.
-    const stored = MandatePolicySchema.parse({ "test.level": "medium" });
+    const stored = rawPolicy({ "test.level": "medium" });
     expect(() => grantIn(level, stored, "root")).toThrow(
       /"test\.level" holds an invalid value/,
     );
@@ -51,7 +51,7 @@ describe("grantIn", () => {
   });
 
   test("a stored policy granting a cap both whole-tree and scoped throws", () => {
-    const stored = MandatePolicySchema.parse({
+    const stored = rawPolicy({
       "test.level": "low",
       "@below": { "test.level": "high" },
     });

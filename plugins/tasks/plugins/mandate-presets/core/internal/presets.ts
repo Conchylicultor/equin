@@ -1,20 +1,4 @@
-import {
-  mandatePolicy,
-  type MandatePolicy,
-} from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
-import { tasksFile } from "@plugins/tasks/plugins/tasks-core/core";
-import {
-  exitClean,
-  flagRaise,
-  pushPolicy,
-} from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
-import { reportRequired } from "@plugins/tasks/plugins/outcome-report/plugins/capability/core";
-import {
-  watchChildren,
-  watchTree,
-} from "@plugins/tasks/plugins/orchestration/plugins/watch/plugins/capabilities/core";
-import { contextCompact } from "@plugins/conversations/plugins/self-compact/plugins/capability/core";
-import { messageTree } from "@plugins/tasks/plugins/orchestration/plugins/message/plugins/capability/core";
+import { defineMandate } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 
 /**
  * The mandate of a task a person starts by hand (a new conversation, a task
@@ -23,17 +7,10 @@ import { messageTree } from "@plugins/tasks/plugins/orchestration/plugins/messag
  * the user asks, and talks back through `exit_clean` / `flag_raise`. Exactly the
  * behaviour every agent had before mandates existed.
  */
-export function interactiveMandate(): MandatePolicy {
-  return mandatePolicy([
-    tasksFile.grant({
-      main: { start: ["after"] },
-      sidequest: { start: ["manual"] },
-    }),
-    pushPolicy.grant("on-request"),
-    exitClean.grant(true),
-    flagRaise.grant(true),
-  ]);
-}
+export const interactiveMandate = defineMandate({
+  id: "interactive",
+  label: "Interactive",
+});
 
 /**
  * The mandate of a supervisor's root task. The conversation on the root is an
@@ -49,25 +26,7 @@ export function interactiveMandate(): MandatePolicy {
  * `push.policy`: they follow the repo rule (never push unless told) — how a run
  * pushes is the user's to say in the brief or a preprompt.
  */
-export function supervisorMandate(): MandatePolicy {
-  return mandatePolicy(
-    [
-      tasksFile.grant({
-        main: { start: ["now", "after", "manual"] },
-        sidequest: { start: ["manual"] },
-      }),
-      watchChildren.grant(true),
-      messageTree.grant(true),
-      flagRaise.grant(true),
-      contextCompact.grant(true),
-    ],
-    {
-      root: [
-        pushPolicy.grant("on-request"),
-        exitClean.grant(true),
-        watchTree.grant(true),
-      ],
-      below: [reportRequired.grant(true)],
-    },
-  );
-}
+export const supervisorMandate = defineMandate({
+  id: "supervisor",
+  label: "Supervisor",
+});

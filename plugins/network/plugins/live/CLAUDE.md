@@ -1176,8 +1176,8 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
   - Slots:
     - `FieldPresentation.Register`
     - `ClientFields.Resolve`
-  - Slot contributors: 41 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `FieldPresentation.Register` ×38
+  - Slot contributors: 42 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `FieldPresentation.Register` ×39
     - `ClientFields.Resolve` ×3
   - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/live-state` ×12
@@ -1538,11 +1538,11 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `upsertRows`
     - `valueSubject`
 - Cross-plugin:
-  - Imported by: 315 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 316 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×83
     - `conversations` ×55
     - `debug` ×32
-    - `tasks` ×30
+    - `tasks` ×31
     - `infra` ×21
     - `page` ×14
     - `active-data` ×12

@@ -276,9 +276,9 @@ Never hand-edit the generated SQL to interleave the DML: the push-time hand-edit
     - `defineExtensionShape`
     - `EXTENSION_TIMESTAMPS`
 - Cross-plugin:
-  - Imported by: 42 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 43 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×17
-    - `tasks` ×12
+    - `tasks` ×13
     - `conversations` ×9
     - `page` ×3
     - `plugin-meta/plugin-health`

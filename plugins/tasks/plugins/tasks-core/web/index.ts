@@ -6,6 +6,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 // lives in ./hooks rather than being re-derived by every surface showing it.
 import "./internal/register";
 import { IdKinds } from "@plugins/ids/web";
+import { mandatePresentation } from "./internal/mandate-presentation";
 import {
   attemptIdKind,
   conversationIdKind,
@@ -19,6 +20,8 @@ export default {
   description:
     "tasks-core web presence: eagerly registers the boot-critical tasks / attempts / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, and owns the client-side reads of them (useTaskAttempts / useTaskConversations, the one join from a task to the attempts and runs it produced).",
   contributions: [
+    // The exposed `mandate` field (every task's effective named mandate).
+    mandatePresentation,
     IdKinds.Kind({ kind: taskIdKind }),
     IdKinds.Kind({ kind: attemptIdKind }),
     IdKinds.Kind({ kind: conversationIdKind }),

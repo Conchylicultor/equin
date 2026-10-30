@@ -54,7 +54,7 @@ export const handleLaunch = implementMachine(
   const task = await createTask({
     title: `Agent-${agent.name}-${formatLaunchTime(now)}`,
     author: "agents-plugin",
-      mandate: interactiveMandate(),
+      mandate: interactiveMandate,
   });
   await setTaskCategory(task.id, "agents");
 

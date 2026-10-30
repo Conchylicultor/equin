@@ -9,7 +9,10 @@ import type {
   TriggerKind,
 } from "../../core";
 import type { AutomationFiling } from "./origin";
-import type { MandatePolicy } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
+import type {
+  MandatePolicy,
+  MandateRef,
+} from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 
 /** What `detect` is handed: only what the person let take part. */
 export interface AutomationDetectCtx<
@@ -97,11 +100,13 @@ interface AutomationSpecBase<F extends AutomationConfigFields> {
    */
   promptVariables: readonly PromptVariable[];
   /**
-   * What the agents it starts may do — the mandate it states on each task:
-   * the ROOT task it files (file kind), or a nested mandate on each task it
-   * launches (launch kind; nearest wins over the task's own tree). Required:
-   * an automation decides its agents' powers, from its current settings (the
-   * Push setting is `settings.push`).
+   * What the agents it starts may do — the grants of its named mandate
+   * (`automation:<id>`), which it names on each task: the ROOT task it files
+   * (file kind), or a nested mandate on each task it launches (launch kind;
+   * nearest wins over the task's own tree). Required: an automation decides
+   * its agents' powers, from its current settings (the Push setting is
+   * `settings.push`) — read at every resolution, so a settings change reaches
+   * every tree it started.
    */
   mandate: (settings: AutomationSettings) => MandatePolicy;
 }
@@ -173,6 +178,12 @@ export type AutomationSpec = FileAutomationSpec | LaunchAutomationSpec;
 export interface RegisteredAutomation {
   spec: AutomationSpec;
   jobName: string;
+  /**
+   * Its named mandate (`automation:<id>`): what every task it files or
+   * launches names, granting `spec.mandate` of its CURRENT settings at each
+   * resolution (the `automations` MandateDefinitions.Source).
+   */
+  mandate: MandateRef;
   /**
    * Run its job as soon as possible, whatever its trigger — for a launch-kind
    * automation whose slots may have moved (a task it launched settled or was

@@ -78,7 +78,7 @@ async function seedTask(): Promise<string> {
   const tag = randomBytes(3).toString("hex");
   const id = `${SEED_PREFIX}${tag}`;
   await db.query(
-    `INSERT INTO tasks (id, title, title_auto, rank, mandate) VALUES ($1, $2, false, $3, '{}')`,
+    `INSERT INTO tasks (id, title, title_auto, rank, mandate_ref) VALUES ($1, $2, false, $3, 'interactive')`,
     [id, `${id} task`, `zz${tag}`],
   );
   await db.query(

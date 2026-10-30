@@ -109,3 +109,4 @@ export type {
   TasksFileGrant,
   TrackFilingGrant,
 } from "./internal/tasks-file";
+export { taskMandateShape } from "./task-mandate";

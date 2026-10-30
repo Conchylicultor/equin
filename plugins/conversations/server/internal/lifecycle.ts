@@ -21,7 +21,7 @@ import {
   type DbExecutor,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import type { EmitTx } from "@plugins/infra/plugins/events/server";
-import type { MandatePolicy } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
+import type { MandateRef } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 import { Runtime } from "./runtime";
 import {
   DEFAULT_CONVERSATION_RUNTIME,
@@ -119,7 +119,7 @@ async function resolveTaskEffort(
  */
 export type ConversationTarget =
   | { taskId: string; mandate?: never }
-  | { mandate: MandatePolicy; taskId?: never }
+  | { mandate: MandateRef; taskId?: never }
   | { attemptId: string; taskId?: never; mandate?: never }
   | { forkFromConversationId: string; taskId?: never; mandate?: never };
 
@@ -223,7 +223,7 @@ export interface PreparedConversation {
     | {
         kind: "new";
         attemptId: string;
-        task: { taskId: string } | { mandate: MandatePolicy };
+        task: { taskId: string } | { mandate: MandateRef };
       };
 }
 
@@ -256,7 +256,7 @@ function systemPromptAppend(
 
 // The mandate of the root task a new attempt with no task files. Only the
 // `mandate` arm reaches here (an `attemptId` / fork target reuses an attempt).
-function newRootMandate(opts: CreateConversationOpts): MandatePolicy {
+function newRootMandate(opts: CreateConversationOpts): MandateRef {
   if (!opts.mandate) {
     throw new Error(
       "prepareConversation: a new attempt needs a taskId or a mandate",
