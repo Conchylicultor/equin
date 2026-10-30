@@ -21,7 +21,7 @@ import { ConversationStatusSchema } from "@plugins/tasks/plugins/tasks-core/core
 import { isActiveStatus, isAgentBusy } from "@plugins/conversations/core";
 import { listLaunchableArmedIn } from "@plugins/tasks/plugins/auto-start/server";
 import { watchIdKind, type Watcher, type WatchId } from "../../core";
-import { _taskWatches } from "./tables";
+import { _taskWatches, tasksManager } from "./tables";
 
 export type WatchRow = typeof _taskWatches.$inferSelect;
 
@@ -119,6 +119,57 @@ export async function nearestLiveWatch(
     rows.map((r) => r.id),
   );
   return first ?? null;
+}
+
+const ManagerRow = z.object({
+  taskId: z.string(),
+  managerTaskId: z.string().nullable(),
+});
+
+/**
+ * Re-derive `tasks_ext_manager` for `taskIds`: a task is managed by the task
+ * of the oldest live conversation watch ON it from a conversation of another
+ * task (its own agent watching it — a tree watch on a root — manages nothing).
+ * Writes only what changed, so a refresh that moves nothing sends no row diff.
+ * Called on every watch write and when a watcher's conversation ends or comes
+ * back — every input of {@link liveWatchSql}.
+ */
+export async function refreshTaskManagers(
+  exec: DbExecutor,
+  taskIds: readonly string[],
+): Promise<void> {
+  const ids = [...new Set(taskIds)];
+  if (ids.length === 0) return;
+  const derived = await executeRows(exec, {
+    label: "watch task managers",
+    query: sql`SELECT t.id AS "taskId", (
+        SELECT a.task_id
+          FROM ${_taskWatches} w
+          JOIN ${_conversations} c ON c.id = w.watcher_conversation_id
+          JOIN ${_attempts} a ON a.id = c.attempt_id
+         WHERE w.task_id = t.id
+           AND ${liveWatchSql()}
+           AND a.task_id <> t.id
+         ORDER BY w.created_at, w.id
+         LIMIT 1) AS "managerTaskId"
+      FROM ${_tasks} t
+     WHERE t.id IN ${sqlList(ids)}`,
+    row: ManagerRow,
+  });
+  const current = new Map(
+    (
+      await exec
+        .select()
+        .from(tasksManager.table)
+        .where(inArray(tasksManager.table.taskId, ids))
+    ).map((r) => [r.taskId, r.managerTaskId]),
+  );
+  for (const { taskId, managerTaskId } of derived) {
+    const was = current.get(taskId) ?? null;
+    if (was === managerTaskId) continue;
+    if (managerTaskId === null) await tasksManager.delete(taskId, exec);
+    else await tasksManager.upsert(taskId, { managerTaskId }, exec);
+  }
 }
 
 /** Every live watch on `taskId`'s chain (itself and its ancestors) — the
@@ -226,7 +277,10 @@ export async function watchTask(
     })
     .onConflictDoNothing()
     .returning();
-  if (inserted) return inserted;
+  if (inserted) {
+    await refreshTaskManagers(exec, [taskId]);
+    return inserted;
+  }
   const [existing] = await exec
     .select()
     .from(_taskWatches)
@@ -250,10 +304,15 @@ export async function endWatch(
   watchId: WatchId,
   exec: DbExecutor = db,
 ): Promise<void> {
-  await exec
+  const ended = await exec
     .update(_taskWatches)
     .set({ endedAt: new Date() })
-    .where(and(eq(_taskWatches.id, watchId), isNull(_taskWatches.endedAt)));
+    .where(and(eq(_taskWatches.id, watchId), isNull(_taskWatches.endedAt)))
+    .returning({ taskId: _taskWatches.taskId });
+  await refreshTaskManagers(
+    exec,
+    ended.map((r) => r.taskId),
+  );
 }
 
 /** Hand a watch to another conversation (a watcher rolling over to a fresh
@@ -272,8 +331,9 @@ export async function retargetWatch(
       watcherConversationId: conversationId,
     })
     .where(and(eq(_taskWatches.id, watchId), isNull(_taskWatches.endedAt)))
-    .returning({ id: _taskWatches.id });
+    .returning({ taskId: _taskWatches.taskId });
   if (!row) throw new Error(`retargetWatch: no open watch ${watchId}`);
+  await refreshTaskManagers(exec, [row.taskId]);
 }
 
 /**

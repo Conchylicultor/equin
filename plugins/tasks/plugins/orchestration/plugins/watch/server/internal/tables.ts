@@ -14,7 +14,13 @@ import {
   _tasks,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { idColumn, idRef } from "@plugins/ids/server";
-import { watchEventIdKind, watchIdKind, WatcherSchema } from "../../core";
+import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server";
+import {
+  taskManagerShape,
+  watchEventIdKind,
+  watchIdKind,
+  WatcherSchema,
+} from "../../core";
 
 /**
  * Who watches which task's subtree. A watch is LIVE while `ended_at` is null
@@ -88,3 +94,16 @@ export const _watchInbox = pgTable(
       .where(sql`${t.deliveredInTurn} IS NULL`),
   ],
 );
+
+/**
+ * `tasks_ext_manager`: the task whose agent manages each task (see
+ * `taskManagerShape`). Derived from `task_watches` by `refreshTaskManagers`
+ * (`manager.ts`) — the only writer.
+ */
+export const tasksManager = defineExtension(
+  _tasks,
+  "manager",
+  taskManagerShape,
+);
+// Re-exported so drizzle-kit discovers the underlying pgTable.
+export const _tasksManagerExt = tasksManager.table;

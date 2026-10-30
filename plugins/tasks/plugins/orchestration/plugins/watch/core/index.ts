@@ -10,3 +10,4 @@ export type {
   WatchEventInput,
   WatchId,
 } from "./internal/types";
+export { taskManagerShape } from "./internal/manager";

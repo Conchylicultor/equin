@@ -2,12 +2,13 @@ import { z } from "zod";
 import { and, eq, exists, isNull } from "drizzle-orm";
 import { db, type DbExecutor } from "@plugins/database/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
+import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import {
   ConversationStatusSchema,
   TaskStatusSchema,
 } from "@plugins/tasks/plugins/tasks-core/core";
-import { isAgentBusy } from "@plugins/conversations/core";
+import { isActiveStatus, isAgentBusy } from "@plugins/conversations/core";
 import { submitTurn } from "@plugins/conversations/server";
 import { getTurn } from "@plugins/conversations/plugins/turn-ledger/server";
 import { automaticTurnReadiness } from "@plugins/conversations/plugins/automatic-turn/server";
@@ -30,11 +31,17 @@ import {
 import {
   enqueueOn,
   liveWatchesOnChain,
+  refreshTaskManagers,
   takeOverTreeWatch,
+  watchesOf,
 } from "../../server/internal/queries";
 import { evaluateQuiet } from "../../server/internal/quiet";
 import { routeEvents } from "../../server/internal/route";
-import { _taskWatches, _watchInbox } from "../../server/internal/tables";
+import {
+  _taskWatches,
+  _watchInbox,
+  tasksManager,
+} from "../../server/internal/tables";
 
 // Every job here is main-only: a forked worktree DB inherits main's trigger
 // rows and watches, so without the guard each worktree's worker would deliver
@@ -174,6 +181,14 @@ export const watchOnConversationStatusJob = defineJob({
     .passthrough(),
   run: async ({ event }) => {
     if (!event) return;
+    // The watcher ending (or coming back) moves who manages the tasks it
+    // watches. Not main-only: it rewrites a derived row from this DB's own
+    // watches and delivers nothing, like the tree-watch take-over.
+    if (isActiveStatus(event.status) !== isActiveStatus(event.previousStatus))
+      await refreshTaskManagers(
+        db,
+        (await watchesOf(event.conversationId)).map((w) => w.taskId),
+      );
     if (!isMain()) return;
     const busyChanged =
       isAgentBusy(event.status) !== isAgentBusy(event.previousStatus);
@@ -229,4 +244,44 @@ export const watchOnConversationCreatedJob = defineJob({
     if ((await grantOf(watchTree, event.conversationId)) === null) return;
     await takeOverTreeWatch(event.taskId, event.conversationId);
   },
+});
+
+export const watchManagersReconcileJob = defineJob({
+  name: "watch.managers-reconcile",
+  description:
+    "Re-derives which agent manages each task from the live watches — the backstop for a watch removed without a refresh (its conversation or attempt deleted, the watch going with it by cascade).",
+  hold: "instant",
+  input: z.object({}),
+  event: z.never(),
+  dedup: "singleton",
+  // A schedule, not a signal: a cascade delete runs no app code, so nothing
+  // tells the watch plugin a watch disappeared. Every other change refreshes
+  // inline (the watch writes, the watcher's conversation ending).
+  schedule: { cron: "15 4 * * *" },
+  run: () => reconcileTaskManagers(),
+});
+
+/** Re-derive the manager of every task that has a row or an open watch. */
+async function reconcileTaskManagers(): Promise<void> {
+  const managed = await db
+    .select({ taskId: tasksManager.table.taskId })
+    .from(tasksManager.table);
+  const watched = await db
+    .select({ taskId: _taskWatches.taskId })
+    .from(_taskWatches)
+    .where(isNull(_taskWatches.endedAt));
+  await refreshTaskManagers(db, [
+    ...managed.map((r) => r.taskId),
+    ...watched.map((r) => r.taskId),
+  ]);
+}
+
+// At startup too: a database whose watches predate the table (or missed a
+// refresh while the backend was down) is right from boot, not from 04:15.
+export const watchManagersReconcileWarmup = defineWarmup({
+  name: "watch.managers-reconcile",
+  description:
+    "Re-derives which agent manages each task from the live watches at startup.",
+  scope: "worktree",
+  run: () => reconcileTaskManagers(),
 });

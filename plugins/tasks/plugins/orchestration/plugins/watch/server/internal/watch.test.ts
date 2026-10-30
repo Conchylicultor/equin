@@ -30,12 +30,13 @@ import {
 import {
   endWatch,
   nearestLiveWatch,
+  refreshTaskManagers,
   takeOverTreeWatch,
   watchTask,
 } from "./queries";
 import { evaluateQuiet } from "./quiet";
 import { routeEvents } from "./route";
-import { _taskWatches, _watchInbox } from "./tables";
+import { _taskWatches, _watchInbox, tasksManager } from "./tables";
 
 type Tx = DbExecutor;
 
@@ -519,5 +520,54 @@ describe("tree watch", () => {
       before!.watcherConversationId,
     );
     expect(got.afterSecond.some((r) => r.id === got.code)).toBe(true);
+  });
+});
+
+describe("task managers", () => {
+  test("a task another task's live agent watches is managed by that task; its own agent, a code watcher, an ended watch and a done watcher manage nothing", async () => {
+    const got = await worktreeDbScenario(async (tx) => {
+      const manager = async (taskId: string) =>
+        (await tasksManager.get(taskId, tx))?.managerTaskId ?? null;
+      const root = await task(tx, null);
+      const child = await task(tx, root);
+      const rootConv = await conversation(tx, root, "waiting");
+      const childConv = await conversation(tx, child, "working");
+
+      // The root's own agent watching its tree, the child's own agent and a
+      // code watcher on the child: nobody else's agent.
+      await takeOverTreeWatch(root, rootConv, tx);
+      await watchTask(
+        child,
+        { kind: "conversation", conversationId: childConv },
+        tx,
+      );
+      await watchTask(child, { kind: "code", handler: "h", key: "k" }, tx);
+      const unmanaged = [await manager(root), await manager(child)];
+
+      // The root's agent watches what it filed.
+      const w = await watchTask(
+        child,
+        { kind: "conversation", conversationId: rootConv },
+        tx,
+      );
+      const managed = await manager(child);
+
+      // Its conversation ending, then coming back (the status job's refresh).
+      await setStatus(tx, rootConv, "done");
+      await refreshTaskManagers(tx, [child]);
+      const watcherDone = await manager(child);
+      await setStatus(tx, rootConv, "waiting");
+      await refreshTaskManagers(tx, [child]);
+      const watcherBack = await manager(child);
+
+      await endWatch(w.id, tx);
+      const ended = await manager(child);
+      return { root, unmanaged, managed, watcherDone, watcherBack, ended };
+    });
+    expect(got.unmanaged).toEqual([null, null]);
+    expect(got.managed).toBe(got.root);
+    expect(got.watcherDone).toBeNull();
+    expect(got.watcherBack).toBe(got.root);
+    expect(got.ended).toBeNull();
   });
 });

@@ -649,6 +649,7 @@ serves them.
     - `tasks/task-effort` (table `tasks_ext_effort`)
     - `plugin-meta/plugin-health` (table `tasks_ext_health_review`)
     - `tasks/automations` (table `tasks_ext_launch_decision`)
+    - `tasks/orchestration/watch` (table `tasks_ext_manager`)
     - `tasks/automations` (table `tasks_ext_origin`)
     - `tasks/outcome-report` (table `tasks_ext_outcome_report`)
     - `tasks/task-preprompt` (table `tasks_ext_preprompt`)

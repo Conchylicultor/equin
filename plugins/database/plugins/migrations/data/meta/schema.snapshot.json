@@ -1,6 +1,6 @@
 {
-  "id": "3886a0de-61e0-4fbb-9967-fd93a53098c3",
-  "prevId": "45f8cba3-4d04-4d79-a017-a592b04a52c6",
+  "id": "21e29e17-d798-48d9-a76a-9b6b861c067c",
+  "prevId": "3886a0de-61e0-4fbb-9967-fd93a53098c3",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -12407,6 +12407,59 @@
           ],
           "onDelete": "cascade",
           "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.tasks_ext_manager": {
+      "name": "tasks_ext_manager",
+      "schema": "",
+      "columns": {
+        "parent_id": {
+          "name": "parent_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "manager_task_id": {
+          "name": "manager_task_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "tasks_ext_manager_parent_id_tasks_id_fk": {
+          "name": "tasks_ext_manager_parent_id_tasks_id_fk",
+          "tableFrom": "tasks_ext_manager",
+          "tableTo": "tasks",
+          "columnsFrom": [
+            "parent_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
         }
       },
       "compositePrimaryKeys": {},

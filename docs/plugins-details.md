@@ -26057,10 +26057,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 72 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+            - Imported by: 73 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
               - `apps` ×20
               - `conversations` ×15
-              - `tasks` ×9
+              - `tasks` ×10
               - `infra` ×5
               - `debug` ×4
               - `page` ×3
@@ -30232,9 +30232,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineExtensionShape`
           - `EXTENSION_TIMESTAMPS`
       - Cross-plugin:
-        - Imported by: 41 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
+        - Imported by: 42 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
           - `apps` ×17
-          - `tasks` ×11
+          - `tasks` ×12
           - `conversations` ×9
           - `page` ×3
           - `plugin-meta/plugin-health`
@@ -34096,8 +34096,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `FieldPresentation.Register`
           - `ClientFields.Resolve`
-        - Slot contributors: 40 contributors — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `FieldPresentation.Register` ×37
+        - Slot contributors: 41 contributors — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `FieldPresentation.Register` ×38
           - `ClientFields.Resolve` ×3
         - Uses: 23 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `primitives/live-state` ×12
@@ -34416,11 +34416,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `upsertRows`
           - `valueSubject`
       - Cross-plugin:
-        - Imported by: 314 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 315 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×83
           - `conversations` ×55
           - `debug` ×32
-          - `tasks` ×29
+          - `tasks` ×30
           - `infra` ×21
           - `page` ×14
           - `active-data` ×12
@@ -50975,17 +50975,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `taskTree`
               - `treeDigest`
               - `TreeDigest`
-        - **`watch`** — Watch, web half: registers the watch and watch-event id kinds, so their ids are recognised in the browser as on the server. Watch, every host's half: task_watches (who watches which task's subtree; live while not ended and its conversation not done) and watch_inbox (routed, not yet delivered events), with their id kinds; watchTask / endWatch / retargetWatch / watchesOf; the WatchSource and WatchHandler contribution kinds; the routing, quiet and delivery policy over the tables; and the stop waiver (a watcher whose subtree still has work running may stop — the next event wakes it). Names no source, handler or workflow.
+        - **`watch`** — Watch, web half: registers the watch and watch-event id kinds, so their ids are recognised in the browser as on the server; presents the exposed `managedBy` field (Agent / You — whether another task's agent watches the task) in every list whose rows reach a task. Watch, every host's half: task_watches (who watches which task's subtree; live while not ended and its conversation not done) and watch_inbox (routed, not yet delivered events), with their id kinds; watchTask / endWatch / retargetWatch / watchesOf; the WatchSource and WatchHandler contribution kinds; tasks_ext_manager (which task's agent watches each task, exposed as the `managedBy` field — Agent / You — of every list whose rows reach a task); the routing, quiet and delivery policy over the tables; and the stop waiver (a watcher whose subtree still has work running may stop — the next event wakes it). Names no source, handler or workflow.
           - Web:
             - Contributes:
               - `IdKinds.Kind` "watch"
               - `IdKinds.Kind` "wevt"
-            - Uses: `ids.IdKinds`
+              - `FieldPresentation.Register` "exposure:tasks_ext_manager"
+            - Uses:
+              - `ids.IdKinds`
+              - `network/live.FieldPresentation`
           - Server:
             - Contributes:
               - `ids.kind` "watch"
               - `ids.kind` "wevt"
               - `conversations.stop-waiver` "watch"
+              - `live.columns.expose` "tasks ← tasks_ext_manager"
               - `mandateCapability` "watch.children"
               - `mandateCapability` "watch.tree"
               - `trigger` "watch.on-conversation-created"
@@ -50999,11 +51003,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ids.idColumn`
               - `ids.IdKinds`
               - `ids.idRef`
+              - `infra/entity-extensions.defineExtension`
+              - `network/live.LiveColumns`
               - `tasks/auto-start.listLaunchableArmedIn`
               - `tasks/tasks-core._attempts`
               - `tasks/tasks-core._conversations`
               - `tasks/tasks-core._tasks`
             - DB schema: `plugins/tasks/plugins/orchestration/plugins/watch/server/internal/tables.ts`
+            - Entity extension of: `tasks/tasks-core` (table `tasks_ext_manager`)
             - Exports (types):
               - `WatchHandlerCtx`
               - `WatchHandlerEntry`
@@ -51017,8 +51024,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `watchTask`
           - Core:
             - Uses:
+              - `fields/text/config.textField`
               - `ids.defineIdKind`
               - `ids.IdOf`
+              - `infra/entity-extensions.defineExtensionShape`
+              - `tasks/tasks-core.tasksEntityRef`
             - Exports (types):
               - `Watcher`
               - `WatchEvent`
@@ -51026,6 +51036,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `WatchId`
             - Exports (values):
               - `QUIET_EVENT_KIND`
+              - `taskManagerShape`
               - `WatcherSchema`
               - `watchEventIdKind`
               - `watchIdKind`
@@ -51044,6 +51055,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `defineJob('watch.on-task-status')`
               - `defineJob('watch.on-conversation-status')`
               - `defineJob('watch.on-conversation-created')`
+              - `defineJob('watch.managers-reconcile')`
+              - `defineWarmup('watch.managers-reconcile')`
           - Plugins:
             - **`capabilities`** — The watch.children and watch.tree mandate capabilities as plain data. A leaf, so a mandate author (mandate-presets, reached from conversations) can grant them without a cycle through watch, which imports conversations.
               - Core:
@@ -52554,6 +52567,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-effort` (table `tasks_ext_effort`)
           - `plugin-meta/plugin-health` (table `tasks_ext_health_review`)
           - `tasks/automations` (table `tasks_ext_launch_decision`)
+          - `tasks/orchestration/watch` (table `tasks_ext_manager`)
           - `tasks/automations` (table `tasks_ext_origin`)
           - `tasks/outcome-report` (table `tasks_ext_outcome_report`)
           - `tasks/task-preprompt` (table `tasks_ext_preprompt`)

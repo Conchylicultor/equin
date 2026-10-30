@@ -12,6 +12,8 @@ import {
 import {
   watchDeliverJob,
   watchIngestJob,
+  watchManagersReconcileJob,
+  watchManagersReconcileWarmup,
   watchOnConversationCreatedJob,
   watchOnConversationStatusJob,
   watchOnTaskStatusJob,
@@ -52,5 +54,7 @@ export default {
     watchOnTaskStatusJob,
     watchOnConversationStatusJob,
     watchOnConversationCreatedJob,
+    watchManagersReconcileJob,
+    watchManagersReconcileWarmup,
   ],
 } satisfies MachinePluginDefinition;
