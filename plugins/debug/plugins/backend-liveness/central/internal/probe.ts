@@ -188,7 +188,9 @@ async function processState(
   });
   // A host too loaded to run `ps` in time: no verdict this tick.
   if (result.timedOut) {
-    console.warn(`[backend-liveness] ps -p ${pid} did not answer in ${PROBE_TIMEOUT_MS}ms`);
+    console.warn(
+      `[backend-liveness] ps -p ${pid} did not answer in ${PROBE_TIMEOUT_MS}ms`,
+    );
     return "unknown";
   }
   // `ps -p` exits 1 with no row for a pid that does not exist.

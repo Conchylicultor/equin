@@ -25,12 +25,7 @@ export interface Observation {
    *   `ps` too slow): its streak neither grows nor ends.
    */
   result:
-    | "answered"
-    | "unanswered"
-    | "unserved"
-    | "paused"
-    | "exited"
-    | "unknown";
+    "answered" | "unanswered" | "unserved" | "paused" | "exited" | "unknown";
 }
 
 /** What one tick saw. */
