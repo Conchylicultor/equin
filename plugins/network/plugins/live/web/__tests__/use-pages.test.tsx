@@ -665,6 +665,43 @@ describe("useLive — a collection's pages, with a viewport", () => {
     expect(r.canGrow).toBe(true);
     expect(observe.mock.calls.filter(([key]) => key === c.key)).toEqual([]);
   });
+
+  it("a where over a column set's member reads its pages", async () => {
+    const c = liveCollection(`test.use-pages.${seq++}`, {
+      fields: ROW_FIELDS,
+      id: "id",
+      sortable: ["n"],
+      default: { orderBy: [["n", "asc"]], limit: 2 },
+      maxLimit: 4,
+      columnScope: "test.surface",
+    });
+    const live = createLiveStateHarness();
+    const custom = scopedLiveColumns("test.surface", "custom", {
+      a: { domain: "text", sortable: false },
+    });
+    // A member's column is no own field, so the typed query cannot spell it:
+    // a surface lowers its view filter onto it untyped (data-view's
+    // narrowing), as here.
+    const query = {
+      columns: [custom],
+      where: { column: "custom.a", op: "eq", operand: "x" },
+    } as unknown as LivePagesQuery<never, "n">;
+    // Its pages' params encode the member's filter, so they decode only with
+    // the column sets the query brings — the predict overlay's too.
+    const { result } = renderHook(
+      () => useLive(c, query, { viewport: MEASURING }),
+      { wrapper: live.Wrapper },
+    );
+    vi.spyOn(live.notifications, "hasEverBeenReady").mockReturnValue(true);
+    act(() => {
+      live.queryClient.setQueryData(
+        queryKeyFor(c.key, c.window.window.encode({ ...query, limit: 2 })),
+        wire(0, 2),
+      );
+    });
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(settled(result.current).rows).toEqual(rows(0, 2));
+  });
 });
 
 describe("useLive — a collection's pages, without a viewport", () => {

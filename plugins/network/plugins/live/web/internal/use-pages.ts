@@ -11,6 +11,7 @@ import {
   LIVE_ROW_KEY,
   type LivePagedValue,
   type LiveCollection,
+  type LiveColumnsDeclaration,
   type LiveQuery,
   type LiveValueOrigin,
 } from "@plugins/network/plugins/live/core";
@@ -256,6 +257,7 @@ export function useViewportPages<Row, F, S extends string, Meta, Q, QIn>(
     collection === null || query === null
       ? null
       : `${pageSource.key}|${pageSource.base(query)}`,
+    query?.columns,
     pages.status === "ready" ? pages.rows : undefined,
     held,
     pages.status === "ready" && !pages.exhausted,
@@ -292,13 +294,19 @@ function usePredictedFold<Row>(
     readonly rowKeys: readonly string[];
     readonly window: {
       readonly window: {
-        decode(params: Record<string, string>): {
+        decode(
+          params: Record<string, string>,
+          columns?: readonly LiveColumnsDeclaration[],
+        ): {
           readonly orderBy: readonly (readonly [string, string])[];
         };
       };
     };
   } | null,
   tupleKey: string | null,
+  // The column sets the read's query brings: its params were encoded with
+  // them (a `where` over an exposed column), so they decode only with them.
+  columns: readonly LiveColumnsDeclaration[] | undefined,
   serverRows: readonly Row[] | undefined,
   held: HeldTuples,
   more: boolean,
@@ -316,12 +324,13 @@ function usePredictedFold<Row>(
     if (collection === null || firstJson === null) return undefined;
     const decoded = collection.window.window.decode(
       JSON.parse(firstJson) as Record<string, string>,
+      columns,
     );
     return predictOrderOf(
       collection.rowKeys,
       decoded.orderBy as readonly (readonly [string, "asc" | "desc"])[],
     );
-  }, [collection, firstJson]);
+  }, [collection, firstJson, columns]);
   const tuple = useMemo(
     (): PredictTuple | null =>
       subject === null || tupleKey === null
@@ -381,6 +390,7 @@ export function useAllPages<Row, F, S extends string>(
   const fold = usePredictedFold(
     collection,
     `${pageSource.key}|${pageSource.base(rest)}`,
+    rest.columns,
     list.status === "ready"
       ? list.data
       : list.status === "error"
