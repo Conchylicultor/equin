@@ -166,6 +166,7 @@ const FRAME_TIMING = w.object({
   changedAt: w.number,
   sentAt: w.number,
   deliverMs: w.number,
+  holdMs: w.number,
 });
 
 const s = <const K extends string, const F extends WireFields>(
@@ -199,7 +200,9 @@ const c = <const K extends string, const F extends WireFields>(
  * - `timing` (update / patch / delta only): when the change behind a pushed frame
  *   happened and when the frame left — `changedAt` (wall-clock epoch ms of the
  *   change), `sentAt` (wall-clock epoch ms the frame was sent) and `deliverMs`
- *   (first notify → send, on the server's monotonic clock). One object so a
+ *   (first notify → send, on the server's monotonic clock), of which `holdMs`
+ *   is the resource's own declared throttle holding the drain (0 when it
+ *   declares none). One object so a
  *   frame cannot carry a change time without the send time that splits its
  *   latency into server and transport layers. Absent on every frame no change
  *   stands behind (catch-up replay, a forced resubscribe's answer, …).

@@ -3,7 +3,8 @@ import { captureTrace } from "@plugins/debug/plugins/trace/plugins/engine/server
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { submitClientSlowOp } from "../../shared/endpoints";
 import { recordSlowOpBatch } from "./record-slow-op";
-import { toRecordInputs } from "./client-record-input";
+import { sleptDuring } from "@plugins/infra/plugins/host/plugins/machine-sleep/server";
+import { toRecordInputs, withoutSleep } from "./client-record-input";
 
 // Signals the browser queue had to discard under its own cap before this batch
 // went out. A drop is real data loss, so it is recorded rather than swallowed:
@@ -37,7 +38,14 @@ export const handleClientSlowOp = implement(
       );
     }
 
-    const inputs = toRecordInputs(body.items, (item, batchCount) => {
+    // A nap the item's window spans is not its slowness: taken off first, so
+    // an item that was only asleep captures no trace and files nothing.
+    const items = body.items.flatMap((item) => {
+      const awake = withoutSleep(item, sleptDuring);
+      return awake === null ? [] : [awake];
+    });
+    if (items.length === 0) return { ok: true };
+    const inputs = toRecordInputs(items, (item, batchCount) => {
       // Capture the server-side coherent instant AROUND receipt of this batch.
       // A slow client signal is ~all transport/server wait, so the server window
       // at receipt is exactly the evidence sought; its window is anchored at

@@ -18,39 +18,37 @@ export type Thresholds = ConfigValues<(typeof slowOpConfig)["fields"]>;
 // a threshold below the floor is a threshold nobody can ever reach.
 
 /**
- * The quantity a span is judged on.
+ * The quantity a span is judged on: its **own time** (`durationMs − waitMs`),
+ * for every kind — the part of the run that is a property of the span itself.
  *
- * Wall-clock for every kind EXCEPT `job`, which is judged on **work time**
- * (`durationMs − waitMs`): the part of the run that is actually a property of
- * the handler.
- *
- * A job's slot-hold is substantially not its own doing. `jobs.dead-gc` was
- * measured holding a worker slot for **77 s while doing 254 ms of work** — the
- * rest blocked on `background-tx-acquire`, an admission gate entered *after*
- * graphile had already handed it a slot. `debug.session-divergence-monitor`:
- * 25.6 s hold, 4.2 s work. `mail.sync-tick`: 85% wait. Judging a job on hold
- * would file a slot-hog report against a correctly-classified `instant` job
- * every time the DB background lane got busy — punishing it for someone else's
- * congestion, and training every author to inflate their `hold` class until the
- * signal is worthless.
+ * Time spent queued on a named gate is not. A `sub` span waits on the 6-slot
+ * `read-admit` gate for ~85% of its wall time on average (2026-10-29 audit:
+ * `config-v2.values` 7.7e9 of 9e9 ms was `read-admit`), so judging wall time
+ * filed a report against every innocent resource that queued behind a busy
+ * gate. The queue is the GATE's slowness and is reported against it, once per
+ * wait, as a `wait <layer>` op (`onSlowWait`, install-slow-span.ts); a `join`
+ * wait (an identical run in flight) is that run's, which reports itself. The
+ * same held for jobs first: `jobs.dead-gc` held a worker slot 77 s to do 254 ms
+ * of work, the rest blocked on `background-tx-acquire`.
  *
  * `waitMs` is a wall-clock-overlapping OVERLAY, not an additive component: the
  * recorder accumulates it as an interval union over the span's own timeline, so
  * `waitMs ≤ durationMs` holds at every level and this subtraction can never go
  * negative (`runtime-profiler/core/recorder.ts`, "Wall-clock decomposition").
- * Only *named gate* waits count as wait — a model call's latency is work, which
- * is what makes a `seconds` job's own timeout the thing that bounds it.
+ * Only *named gate* waits count as wait — a model call's latency is work.
  *
- * Note this is deliberately NOT `selfMs`. `selfMs` also subtracts child-span
- * execution, which would credit a job for the work its own DB queries did. For
- * a leaf-shaped handler the two coincide (`77,111 − 76,858 = 253 ≈ selfMs 254`);
- * where they differ, work-including-children is the quantity a hold class means.
+ * Deliberately NOT `selfMs`, which also subtracts child-span execution and
+ * would credit a span for the work its own DB queries did.
  *
- * The recorded slow-op row still carries wall-clock `durationMs` plus its
- * per-layer `waits`, so the wait-vs-work split stays recoverable from the row.
+ * Machine sleep needs no subtraction here: the profiler's clock
+ * (`performance.now()` in Bun on macOS) stops while the machine sleeps —
+ * measured on main, 2026-10-30: a process up since 16:48 stamped 1,956 s at
+ * 22:12, the 18:02 sleep never reaching it.
+ *
+ * The recorded row still carries wall-clock `durationMs` plus its per-layer
+ * `waits`, so the wait-vs-work split stays readable off the row.
  */
 export function slowSpanMs(span: SlowSpan): number {
-  if (span.kind !== "job") return span.durationMs;
   return Math.max(0, span.durationMs - span.waitMs);
 }
 
@@ -122,9 +120,10 @@ export function resolveSlowThreshold(span: SlowSpan, t: Thresholds): number {
  * that threshold is unreachable. The config knobs are one source of thresholds;
  * the hold-class ceilings are now a second, so they are folded in here rather
  * than assumed to be larger. (The profiler gates on wall-clock `durationMs`
- * while a job is judged on work time — sound in this direction only, since work
- * ≤ wall: a job whose work passes its ceiling necessarily ran at least that
- * long.)
+ * while a span is judged on its own time — sound in this direction only, since
+ * own ≤ wall: a span whose own time passes its bar necessarily ran at least
+ * that long.) The same floor gates `onSlowWait`: a gate wait is judged on the
+ * loader bar, which the floor never exceeds.
  *
  * The client knobs (`pageLoadMs`, `elementMs`, `updateMs`, `confirmMs`) stay
  * OUT: no server span is ever judged by them, so including one would only

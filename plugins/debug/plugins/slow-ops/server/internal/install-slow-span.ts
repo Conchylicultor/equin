@@ -1,6 +1,11 @@
-import { onSlowSpan } from "@plugins/infra/plugins/runtime-profiler/core";
-import type { SlowSpan } from "@plugins/infra/plugins/runtime-profiler/core";
+import {
+  onSlowSpan,
+  onSlowWait,
+  type SlowSpan,
+  type SlowWait,
+} from "@plugins/infra/plugins/runtime-profiler/core";
 import { captureTrace } from "@plugins/debug/plugins/trace/plugins/engine/server";
+import { WAIT_KIND } from "../../shared/endpoints";
 import { recordSlowOp } from "./record-slow-op";
 import {
   perfFloorMs,
@@ -14,6 +19,7 @@ import {
 // threshold. The handler closure reads the LATEST thresholds object (captured
 // per (re)install) and does the final per-kind gating.
 let disposer: { dispose(): void } | null = null;
+let waitDisposer: { dispose(): void } | null = null;
 
 export function installSlowSpanHook(thresholds: Thresholds): void {
   // Dispose the prior subscription before creating a new one so config changes
@@ -21,6 +27,10 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
   if (disposer) {
     disposer.dispose();
     disposer = null;
+  }
+  if (waitDisposer) {
+    waitDisposer.dispose();
+    waitDisposer = null;
   }
 
   // Perf floor: the profiler only calls back for spans at least this long, so a
@@ -35,14 +45,12 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
   disposer = onSlowSpan(
     (span: SlowSpan) => {
       const threshold = resolveSlowThreshold(span, thresholds);
-      // Wall-clock for every kind except `job`, which is judged on work time
-      // (`durationMs − waitMs`) — see `slowSpanMs`. A job's slot-hold is
-      // substantially not a property of the job: `jobs.dead-gc` was measured
-      // holding a worker slot 77 s to do 254 ms of work, the rest blocked on an
-      // admission gate entered AFTER graphile had handed it a slot. Comparing
-      // hold would file a report against a correctly-classified job every time
-      // that gate got busy.
-      if (slowSpanMs(span) < threshold) return;
+      // Every kind is judged on its OWN time (`durationMs − waitMs`) — see
+      // `slowSpanMs`. Time queued on a gate is the gate's, filed against it by
+      // the `onSlowWait` subscription below; a `sub` that spent 7.7 s of 9 s
+      // queued on `read-admit` is not itself slow.
+      const ownMs = slowSpanMs(span);
+      if (ownMs < threshold) return;
       // 1. Evidence FIRST, synchronously: captureTrace's admission + the sync
       // coherent-instant capture must run before any await so the flight window
       // (open spans, gate occupancy) describes THIS trip's instant. Admission is
@@ -78,6 +86,7 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
         operationKind: span.kind,
         operation: span.label,
         durationMs: span.durationMs,
+        ownMs,
         thresholdMs: threshold,
         source: "server-slow-op",
         caller: span.parent,
@@ -87,5 +96,37 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
       });
     },
     { thresholdMs: floor },
+  );
+
+  // The gate as the slow op: a `queue` wait at least the loader bar long files
+  // `wait <layer>` — once per wait, where it happened, its waiter the caller —
+  // so a congested gate is ONE row and one report naming it, with every op
+  // that queued on it among its callers, instead of a report against each of
+  // them. The profiler hands only `queue` waits here (a `join` is the run it
+  // joined, which reports itself). Judged against `loaderMs`: no separate knob,
+  // which would also lower the perf floor for every span.
+  waitDisposer = onSlowWait(
+    (wait: SlowWait) => {
+      const threshold = thresholds.loaderMs;
+      const trace = captureTrace({
+        kind: WAIT_KIND,
+        label: wait.layer,
+        durationMs: wait.ms,
+        thresholdMs: threshold,
+        detail: { caller: wait.caller },
+      });
+      // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- observability write: recordSlowOp persists via its own background-lane/suppressed path; must stay profiler-invisible
+      void recordSlowOp({
+        operationKind: WAIT_KIND,
+        operation: wait.layer,
+        durationMs: wait.ms,
+        ownMs: wait.ms,
+        thresholdMs: threshold,
+        source: "server-slow-op",
+        caller: wait.caller,
+        traceId: trace?.id,
+      });
+    },
+    { thresholdMs: thresholds.loaderMs },
   );
 }

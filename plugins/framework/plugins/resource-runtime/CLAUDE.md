@@ -604,8 +604,13 @@ Bound to profiler spans in `server-core/core/resources.ts`:
 | `onDelivered(key, ResourceDelivery)` | a delivered frame |
 
 Value frames from a pending with `PendingNotify.changedAt` carry
-`timing: { changedAt, sentAt, deliverMs }`, built by `frameTiming(pending)` —
-observability only, nothing decides on it.
+`timing: { changedAt, sentAt, deliverMs, holdMs }`, built by
+`frameTiming(pending)`. Observability only; nothing decides on it. `holdMs` is
+the part of `deliverMs` the entry's declared throttle held the change
+(`PendingNotify.holdMs`: enqueue → the window's release,
+`debounceReleasedAt`; 0 on the leading edge or without a throttle). A tab
+splits it into the `update` signal's `throttle-hold` phase, so a declared hold
+never reads as slowness.
 
 ## Invariant harness (`core/*.test.ts` + `core/test-support.ts`)
 

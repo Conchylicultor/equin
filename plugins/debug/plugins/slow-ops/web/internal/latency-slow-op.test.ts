@@ -20,12 +20,12 @@ const update = (over: Partial<ClientLatencySample> = {}): ClientLatencySample =>
     params: { status: "open", id: "7" },
     phases: {
       "server-notice": 900,
+      "throttle-hold": 0,
       "server-deliver": 300,
       transport: 2,
       "client-apply": 4,
     },
     totalMs: 1206.4,
-    hidden: false,
     ...over,
   }) as ClientLatencySample;
 
@@ -41,7 +41,6 @@ const confirm = (totalMs: number): ClientLatencySample => ({
     "confirm-frame": 100,
   },
   totalMs,
-  hidden: false,
 });
 
 describe("latencySlowOp", () => {
@@ -50,11 +49,13 @@ describe("latencySlowOp", () => {
       operationKind: "update",
       operation: "tasks",
       durationMs: 1206,
+      ownMs: 1206,
       thresholdMs: 1000,
       caller: { kind: "route", label: "/agents" },
       detail: { variant: '{"id":"7","status":"open"}' },
       waits: {
         "server-notice": 900,
+        "throttle-hold": 0,
         "server-deliver": 300,
         transport: 2,
         "client-apply": 4,
@@ -92,10 +93,37 @@ describe("latencySlowOp", () => {
     ).toBeNull();
   });
 
-  test("skips a hidden sample however slow", () => {
-    expect(
-      latencySlowOp(update({ totalMs: 60_000, hidden: true }), thresholds, "/"),
-    ).toBeNull();
+  test("judges an update on its own time: a declared throttle hold is not slow", () => {
+    // queue-health.pulse: throttleMs 1000 against the 1000 ms bar.
+    const pulse = update({
+      totalMs: 1002,
+      phases: {
+        "server-notice": 1,
+        "throttle-hold": 998,
+        "server-deliver": 1,
+        transport: 1,
+        "client-apply": 1,
+      },
+    });
+    expect(latencySlowOp(pulse, thresholds, "/")).toBeNull();
+    // Slow on its own: filed, the hold kept in its layer.
+    const slow = latencySlowOp(
+      update({
+        totalMs: 2500,
+        phases: {
+          "server-notice": 1400,
+          "throttle-hold": 998,
+          "server-deliver": 100,
+          transport: 1,
+          "client-apply": 1,
+        },
+      }),
+      thresholds,
+      "/",
+    );
+    expect(slow?.durationMs).toBe(2500);
+    expect(slow?.ownMs).toBe(1502);
+    expect(slow?.waits?.["throttle-hold"]).toBe(998);
   });
 
   test("files a censored (never-confirmed) sample as its own operation, with the phases it reached", () => {
@@ -107,7 +135,6 @@ describe("latencySlowOp", () => {
       variant: "unconfirmed/awaiting-confirm-frame",
       phases: { "send-lane": 0, retry: 0, "server-ack": 80 },
       totalMs: 10_000.4,
-      hidden: false,
       detail: { ackWatermark: "123" },
     };
     const item = latencySlowOp(censored, thresholds, "/pages");
@@ -115,6 +142,7 @@ describe("latencySlowOp", () => {
       operationKind: "confirm",
       operation: "page.blocks (unconfirmed)",
       durationMs: 10_000,
+      ownMs: 10_000,
       thresholdMs: 2000,
       caller: { kind: "route", label: "/pages" },
       detail: {
@@ -130,24 +158,16 @@ describe("latencySlowOp", () => {
     );
   });
 
-  test("a censored sample under the threshold, or hidden, files nothing", () => {
+  test("a censored sample under the threshold files nothing", () => {
     const base = {
       signal: "confirm" as const,
       censored: true as const,
       key: "k",
       params: {},
       phases: {},
-      hidden: false,
     };
     expect(
       latencySlowOp({ ...base, totalMs: 1500 }, thresholds, "/"),
-    ).toBeNull();
-    expect(
-      latencySlowOp(
-        { ...base, totalMs: 60_000, hidden: true },
-        thresholds,
-        "/",
-      ),
     ).toBeNull();
   });
 });

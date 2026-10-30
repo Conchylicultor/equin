@@ -73,7 +73,7 @@ export interface ProfilerHooks {
     durationMs: number,
     detail?: ProfilerSpanDetail,
   ): void;
-  chargeWait(layer: string, ms: number): void;
+  chargeWait(layer: string, ms: number, kind: "queue" | "join"): void;
   getRuntimeProfile(): RuntimeProfileView;
   registerGateGauge(layer: string, read: () => unknown): void;
 }
@@ -122,8 +122,17 @@ export function recordSpan(
   hooks?.recordSpan(kind, label, durationMs, detail);
 }
 
-export function chargeWait(layer: string, ms: number): void {
-  hooks?.chargeWait(layer, ms);
+/**
+ * Charge a wait to the enclosing spans. `kind`: `queue` — for capacity on a
+ * shared gate (the gate's time); `join` — for an identical run already in
+ * flight, or a 0 ms marker (that run's time). See runtime-profiler's `WaitKind`.
+ */
+export function chargeWait(
+  layer: string,
+  ms: number,
+  kind: "queue" | "join",
+): void {
+  hooks?.chargeWait(layer, ms, kind);
 }
 
 export function getRuntimeProfile(): RuntimeProfileView {

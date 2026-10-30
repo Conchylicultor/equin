@@ -182,12 +182,13 @@ export function endpointHandler<
             const gated = gate
               ? () =>
                   gate.run(runHandler, {
-                    onWait: (ms) => chargeWait("endpoint-concurrency", ms),
+                    onWait: (ms) =>
+                      chargeWait("endpoint-concurrency", ms, "queue"),
                   })
               : runHandler;
             return dedupe
               ? dedupe.run(dedupeKey(req), gated, {
-                  onWait: (ms) => chargeWait("endpoint-dedupe", ms),
+                  onWait: (ms) => chargeWait("endpoint-dedupe", ms, "join"),
                 })
               : gated();
           },

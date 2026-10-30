@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-primitives-perfs-page-pauses",
+  "description": "Was this page paused during a span of wall-clock time? pausesDuring(start, end): hidden or frozen at any point, and how long its main thread was stalled (long animation frames ≥ 1 s) inside it — the one record every client latency consumer reads instead of tracking visibility itself.",
+  "private": true,
+  "version": "0.0.1"
+}

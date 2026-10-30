@@ -1064,6 +1064,14 @@ interface PendingNotify {
    */
   enqueuedAt: number;
   /**
+   * How long this pending sat waiting out its entry's declared throttle
+   * (`debounceMs`): from `enqueuedAt` to the instant the window released it
+   * (`debounceReleasedAt`), stamped by the drain. 0 / absent for an entry
+   * with no throttle and for a change that landed on the leading edge. Rides
+   * `timing.holdMs`, so a tab can tell a declared hold from slowness.
+   */
+  holdMs?: number;
+  /**
    * `performance.now()` of the MOST RECENT notify merged into this pending — the
    * drain's freshness floor: every change coalesced here was committed before
    * this instant (a `pg_notify` is delivered only after its transaction commits,
@@ -1401,6 +1409,12 @@ interface RegistryEntry {
    * Undefined until the first drain (so the first change drains at once).
    */
   debounceDrainedAt?: number;
+  /**
+   * `performance.now()` the window last released a drain (`debounceDue` set:
+   * the leading edge, or the timer firing) — the end of every held pending's
+   * `holdMs`.
+   */
+  debounceReleasedAt?: number;
   /** Global subscriber refcount per params-tuple (across all sockets). */
   subCounts: Map<string, number>;
   /**
@@ -1599,12 +1613,20 @@ export interface ResourceDelivery {
  * moment of send from the pending it drains: present exactly when the pending
  * knows its change time, so a frame never carries a change time without the send
  * time and server delay that split its latency into layers. `deliverMs` is the
- * same first-notify → send quantity `onDelivered` reports.
+ * same first-notify → send quantity `onDelivered` reports; `holdMs` is the part
+ * of it the entry's declared throttle held the change (`PendingNotify.holdMs`).
  */
 function frameTiming(
   pending: PendingNotify,
 ):
-  | { timing: { changedAt: number; sentAt: number; deliverMs: number } }
+  | {
+      timing: {
+        changedAt: number;
+        sentAt: number;
+        deliverMs: number;
+        holdMs: number;
+      };
+    }
   | Record<string, never> {
   if (pending.changedAt === undefined) return {};
   return {
@@ -1612,6 +1634,7 @@ function frameTiming(
       changedAt: pending.changedAt,
       sentAt: Date.now(),
       deliverMs: performance.now() - pending.enqueuedAt,
+      holdMs: pending.holdMs ?? 0,
     },
   };
 }
@@ -5109,12 +5132,14 @@ export function createResourceRuntime(
           : performance.now() - entry.debounceDrainedAt;
       if (sinceDrain >= entry.debounceMs) {
         entry.debounceDue = true;
+        entry.debounceReleasedAt = performance.now();
         scheduleFlush();
         return;
       }
       entry.debounceTimer = setTimeout(() => {
         entry.debounceTimer = undefined;
         entry.debounceDue = true;
+        entry.debounceReleasedAt = performance.now();
         scheduleFlush();
       }, entry.debounceMs - sinceDrain);
       return;
@@ -6184,6 +6209,11 @@ export function createResourceRuntime(
     // A throttled drain opens the window the next change waits out.
     if (entry.debounceMs) entry.debounceDrainedAt = performance.now();
     const pending = Array.from(entry.pendingNotifies.values());
+    // Each pending's share of the declared hold: enqueue → the window's release.
+    const releasedAt = entry.debounceReleasedAt;
+    if (entry.debounceMs && releasedAt !== undefined)
+      for (const p of pending)
+        p.holdMs = Math.max(0, releasedAt - p.enqueuedAt);
     entry.pendingNotifies.clear();
     const owedAcks = Array.from(entry.pendingAcks.values());
     entry.pendingAcks.clear();

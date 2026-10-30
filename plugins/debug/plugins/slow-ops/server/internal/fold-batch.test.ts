@@ -28,6 +28,7 @@ const item = (
     operationKind: "loader",
     operation: "test-op",
     durationMs: 100,
+    ownMs: 100,
     thresholdMs: 50,
     source: "server-slow-op",
     ...over,

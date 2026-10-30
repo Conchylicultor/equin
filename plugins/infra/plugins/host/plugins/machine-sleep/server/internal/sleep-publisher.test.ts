@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import type { SleepClockReading } from "@plugins/packages/plugins/sleep-clock/core";
-import { createSleepPublisher, sleepNowChanged } from "./sleep-publisher";
+import {
+  createSleepPublisher,
+  overlapMs,
+  sleepBetween,
+  sleepNowChanged,
+} from "./sleep-publisher";
 
 const BOOT = "B25F1FC6-798F-412D-B0DA-B41350248582";
 
@@ -86,5 +91,49 @@ describe("sleepNowChanged", () => {
     expect(sleepNowChanged(base, { ...base, wakeAtMs: 1 })).toBe(true);
     expect(sleepNowChanged(base, { ...base, asleepMs: 11 })).toBe(true);
     expect(sleepNowChanged(base, { ...base, asleepMs: 10.5 })).toBe(false);
+  });
+});
+
+describe("sleptDuring", () => {
+  test("places each sleep a reading reveals at its wake, and overlaps spans with it", () => {
+    const h = harness({
+      supported: true,
+      boot: BOOT,
+      asleepMs: 0,
+      wakeAtMs: null,
+    });
+    h.p.publish();
+    // 60 s of sleep, ended by the wake at t=100 000.
+    h.set({ supported: true, boot: BOOT, asleepMs: 60_000, wakeAtMs: 100_000 });
+    expect(h.p.sleptDuring(0, 200_000)).toBe(60_000);
+    expect(h.p.sleptDuring(90_000, 200_000)).toBe(10_000);
+    expect(h.p.sleptDuring(100_000, 200_000)).toBe(0);
+  });
+
+  test("cannot tell where the platform has no clock", () => {
+    const h = harness({ supported: false });
+    expect(h.p.sleptDuring(0, 1)).toBeNull();
+  });
+
+  test("a new boot places nothing", () => {
+    expect(
+      sleepBetween(
+        { boot: "a", asleepMs: 0, wakeAtMs: null },
+        { boot: "b", asleepMs: 5000, wakeAtMs: 10 },
+      ),
+    ).toBeNull();
+  });
+
+  test("overlapMs unions the sleeps", () => {
+    expect(
+      overlapMs(
+        [
+          { startMs: 0, endMs: 10 },
+          { startMs: 5, endMs: 20 },
+        ],
+        0,
+        100,
+      ),
+    ).toBe(20);
   });
 });

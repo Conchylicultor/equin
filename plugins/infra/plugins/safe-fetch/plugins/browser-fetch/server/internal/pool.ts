@@ -58,9 +58,10 @@ export function withBrowserSlot<T>(fn: () => Promise<T>): Promise<T> {
   return perWorktreeGate.run(
     () =>
       pool.run(fn, {
-        onAcquired: (waitMs) => chargeWait("browser-fetch-acquire", waitMs),
+        onAcquired: (waitMs) =>
+          chargeWait("browser-fetch-acquire", waitMs, "queue"),
       }),
-    { onWait: (waitMs) => chargeWait("browser-fetch-local", waitMs) },
+    { onWait: (waitMs) => chargeWait("browser-fetch-local", waitMs, "queue") },
   );
 }
 

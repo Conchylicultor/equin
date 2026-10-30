@@ -6,15 +6,22 @@ import { defineObservationSink } from "@plugins/primitives/plugins/report-sink/c
  * and an emit site — tsc demands the first, see CLAUDE.md).
  *
  * - `update`: a server-side change → its pushed frame applied to the client
- *   cache. `server-notice` (change → first notify), `server-deliver` (notify →
- *   send), `transport` (send → receipt; the one phase that crosses clocks),
- *   `client-apply` (receipt → cache written).
+ *   cache. `server-notice` (change → first notify), `throttle-hold` (the
+ *   resource's own declared `throttleMs` holding the drain), `server-deliver`
+ *   (the rest of notify → send), `transport` (send → receipt; the one phase
+ *   that crosses clocks), `client-apply` (receipt → cache written).
  * - `confirm`: an optimistic write dispatched → confirmed by the server.
  *   `send-lane` (dispatch → first send), `retry` (first → last send),
  *   `server-ack` (last send → ack), `confirm-frame` (ack → confirmation).
  */
 export const CLIENT_LATENCY_SIGNALS = {
-  update: ["server-notice", "server-deliver", "transport", "client-apply"],
+  update: [
+    "server-notice",
+    "throttle-hold",
+    "server-deliver",
+    "transport",
+    "client-apply",
+  ],
   confirm: ["send-lane", "retry", "server-ack", "confirm-frame"],
 } as const;
 
@@ -23,6 +30,20 @@ export type ClientLatencySignal = keyof typeof CLIENT_LATENCY_SIGNALS;
 /** The phase names of one signal. */
 export type PhaseOf<S extends ClientLatencySignal> =
   (typeof CLIENT_LATENCY_SIGNALS)[S][number];
+
+/**
+ * The phases of each signal that are NOT the operation's own time: time it was
+ * held by design rather than slow. `throttle-hold` is the resource's declared
+ * `throttleMs` — a 1000 ms throttle judged against a 1000 ms bar would
+ * otherwise read as "slow" on every change. A `Record` over the signals, so a
+ * new signal states its own (possibly empty) list. Read through `ownMsOf`.
+ */
+export const HELD_PHASES: {
+  readonly [S in ClientLatencySignal]: readonly PhaseOf<S>[];
+} = {
+  update: ["throttle-hold"],
+  confirm: [],
+};
 
 /**
  * The signals that may be sampled CENSORED — before the operation finished,
@@ -42,13 +63,13 @@ interface SampleBase<S extends ClientLatencySignal> {
   readonly params: Readonly<Record<string, string>>;
   /** A free-form sub-kind (e.g. a confirm's `mode/edge`); consumers fall back to the params. */
   readonly variant?: string;
-  readonly totalMs: number;
   /**
-   * The tab was hidden now or at any point since the sample's start stamp — a
-   * background tab's timers and frames are throttled, so its number measures
-   * the browser, not the system. Consumers exclude it.
+   * Measured end − start. The sample is emitted synchronously at its end, so a
+   * consumer places it on the wall clock as `[Date.now() − totalMs, Date.now()]`
+   * and asks `primitives/perfs/page-pauses` whether the page was hidden, frozen
+   * or stalled inside it — no producer tracks visibility itself.
    */
-  readonly hidden: boolean;
+  readonly totalMs: number;
 }
 
 /** A finished operation's sample: every phase of its signal present, no other. */
@@ -128,4 +149,16 @@ export function splitReachedPhases<S extends CensorableSignal>(
     if (ms !== undefined) out[name] = Math.max(0, ms);
   }
   return out;
+}
+
+/**
+ * The sample's own time: `totalMs` minus its held phases (`HELD_PHASES`),
+ * never below 0. What a consumer judging "was this slow" compares to its bar.
+ */
+export function ownMsOf(sample: ClientLatencySample): number {
+  const phases = sample.phases as Readonly<Record<string, number | undefined>>;
+  let held = 0;
+  for (const name of HELD_PHASES[sample.signal] as readonly string[])
+    held += phases[name] ?? 0;
+  return Math.max(0, sample.totalMs - held);
 }

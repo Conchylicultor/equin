@@ -49,6 +49,6 @@ export function withDbForkSlot<T>(
 ): Promise<T> {
   return gate.run(() => fn(), {
     signal,
-    onAcquired: (waitMs) => chargeWait("db-fork-acquire", waitMs),
+    onAcquired: (waitMs) => chargeWait("db-fork-acquire", waitMs, "queue"),
   });
 }

@@ -19,7 +19,6 @@ export {
 } from "./internal/write-sinks";
 export { armUnconfirmedDeadline } from "./internal/unconfirmed-deadline";
 export { classifyRejection } from "./internal/write-sinks";
-export { hiddenSince } from "./internal/tab-hidden";
 export { useLiveMutation } from "./internal/use-live-mutation";
 export type {
   LiveMutation,

@@ -671,16 +671,7 @@ export class NotificationsClient {
   private failingSnapshot: readonly FailingResource[] = [];
   private failingListeners = new Set<() => void>();
   private unsubscribeFromQueryCache: () => void;
-  /**
-   * Wall-clock epoch ms of the last instant this page was hidden (`null`: not
-   * since the client was built). Stamped on every `visibilitychange` — going
-   * hidden and coming back alike, so after a return it is the end of the
-   * hidden stretch. An update sample whose change happened at or before it
-   * spent part of its life in a throttled background tab (`isHiddenSince`).
-   * Per client, and the client is the page's one module singleton.
-   */
-  private lastHiddenAt: number | null = null;
-  /** `online` / `visibilitychange` handlers (event-driven retry + `lastHiddenAt`), removed in `destroy()`. */
+  /** `online` / `visibilitychange` handlers (event-driven retry), removed in `destroy()`. */
   private retryListeners: {
     online: () => void;
     visibility: () => void;
@@ -791,7 +782,6 @@ export class NotificationsClient {
       // and the user coming back to the tab. Only tuples in error are refetched
       // (a healthy read is already live over the socket).
       const visibility = () => {
-        this.lastHiddenAt = Date.now();
         if (document.visibilityState === "visible")
           this.retryFailing("visible");
       };
@@ -2572,8 +2562,9 @@ export class NotificationsClient {
    * resubscribe's answer — has none, so it times nothing). Runs AFTER the cache
    * write, so the clock stops once the value is in the tab's hands (written,
    * not painted). Only this tab's live subs reach here (the no-sub gate), so
-   * every tab reports its own samples, a background one flagged `hidden`. No
-   * work at all while nobody listens.
+   * every tab reports its own samples; whether the tab was hidden meanwhile is
+   * the consumer's to ask (`primitives/perfs/page-pauses`). No work at all
+   * while nobody listens.
    */
   private reportUpdateLatency(
     key: string,
@@ -2588,31 +2579,22 @@ export class NotificationsClient {
     )
       return;
     const appliedAt = Date.now();
-    const { changedAt, sentAt, deliverMs } = timing;
+    const { changedAt, sentAt, deliverMs, holdMs } = timing;
     clientLatencySink.emit({
       signal: "update",
       key,
       params,
       phases: splitPhases("update", {
         "server-notice": sentAt - deliverMs - changedAt,
-        "server-deliver": deliverMs,
+        // The resource's own declared throttle — held by design, not slow.
+        "throttle-hold": holdMs,
+        "server-deliver": deliverMs - holdMs,
         // The one phase across two clocks (server send → browser receipt).
         transport: receivedAt - sentAt,
         "client-apply": appliedAt - receivedAt,
       }),
       totalMs: appliedAt - changedAt,
-      hidden: this.isHiddenSince(changedAt),
     });
-  }
-
-  /**
-   * The page is hidden now, or was at any instant since `since` (wall-clock
-   * epoch ms): a background tab's timers and frames are throttled, so a span
-   * that overlaps one measures the browser, not the system.
-   */
-  private isHiddenSince(since: number): boolean {
-    if (document.visibilityState === "hidden") return true;
-    return this.lastHiddenAt !== null && this.lastHiddenAt >= since;
   }
 
   private applyUpdate(

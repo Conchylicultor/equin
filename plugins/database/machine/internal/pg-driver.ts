@@ -344,7 +344,7 @@ export function installQueryWrapper(pool: Pool): void {
       // layer), so the caller's wall-clock decomposition sums instead of the
       // connect-wait hiding inside a label-shared leaf bucket.
       recordSpan("db", "[acquire]", acqMs);
-      chargeWait("db-acquire", acqMs);
+      chargeWait("db-acquire", acqMs, "queue");
       try {
         const exec0 = performance.now();
         // The statement's deadline is the client's own (armed at this call).
@@ -423,7 +423,7 @@ export function installQueryWrapper(pool: Pool): void {
     // has no ambient entry and stays UNGATED, so boot can never deadlock on a gate.
     if (currentOriginClass() === "background") {
       return backgroundQueryGate.run(runRetrying, {
-        onWait: (waitMs) => chargeWait("background-acquire", waitMs),
+        onWait: (waitMs) => chargeWait("background-acquire", waitMs, "queue"),
       });
     }
     return runRetrying();
@@ -480,7 +480,8 @@ export function installQueryWrapper(pool: Pool): void {
 
     return (async (): Promise<PoolClient> => {
       const releaseSlot = await backgroundTxGate.acquire({
-        onWait: (waitMs) => chargeWait("background-tx-acquire", waitMs),
+        onWait: (waitMs) =>
+          chargeWait("background-tx-acquire", waitMs, "queue"),
       });
       let client: PoolClient;
       try {

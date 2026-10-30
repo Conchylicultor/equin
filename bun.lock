@@ -5920,6 +5920,10 @@
       "name": "@equin/plugin-primitives-perfs-latency-signal",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/perfs/plugins/page-pauses": {
+      "name": "@equin/plugin-primitives-perfs-page-pauses",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/perfs/plugins/scheduler": {
       "name": "@equin/plugin-primitives-perfs-scheduler",
       "version": "0.0.1",
@@ -9887,6 +9891,8 @@
     "@equin/plugin-primitives-perfs-boot-trace": ["@equin/plugin-primitives-perfs-boot-trace@workspace:plugins/primitives/plugins/perfs/plugins/boot-trace"],
 
     "@equin/plugin-primitives-perfs-latency-signal": ["@equin/plugin-primitives-perfs-latency-signal@workspace:plugins/primitives/plugins/perfs/plugins/latency-signal"],
+
+    "@equin/plugin-primitives-perfs-page-pauses": ["@equin/plugin-primitives-perfs-page-pauses@workspace:plugins/primitives/plugins/perfs/plugins/page-pauses"],
 
     "@equin/plugin-primitives-perfs-scheduler": ["@equin/plugin-primitives-perfs-scheduler@workspace:plugins/primitives/plugins/perfs/plugins/scheduler"],
 

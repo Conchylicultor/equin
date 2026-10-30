@@ -144,4 +144,43 @@ describe("debounceMs holds", () => {
     await sleep(40);
     expect(loads).toBe(afterSub + 2);
   });
+
+  test("a held change's frame says how long the throttle held it (timing.holdMs)", async () => {
+    const h = createHarness();
+    const r = h.runtime.defineExternalResource({
+      key: "held",
+      mode: "push",
+      schema: z.number(),
+      debounceMs: 60,
+      loader: () => Date.now(),
+    });
+    await h.subscribe("held");
+
+    r.notify(); // the leading edge: drains at once, held for nothing
+    await tick();
+    r.notify(); // inside the window the first drain opened: waits it out
+    await tick();
+    await sleep(100);
+
+    const timings = h.pushesFor("held").map((f) => f.timing);
+    expect(timings).toHaveLength(2);
+    expect(timings[0]!.holdMs).toBeLessThan(5);
+    // Held for the rest of the 60 ms window — and the hold sits inside deliverMs.
+    expect(timings[1]!.holdMs).toBeGreaterThan(30);
+    expect(timings[1]!.deliverMs).toBeGreaterThanOrEqual(timings[1]!.holdMs);
+  });
+
+  test("an entry with no throttle is never held", async () => {
+    const h = createHarness();
+    const r = h.runtime.defineExternalResource({
+      key: "free",
+      mode: "push",
+      schema: z.number(),
+      loader: () => Date.now(),
+    });
+    await h.subscribe("free");
+    r.notify();
+    await tick();
+    expect(h.pushesFor("free")[0]!.timing!.holdMs).toBe(0);
+  });
 });

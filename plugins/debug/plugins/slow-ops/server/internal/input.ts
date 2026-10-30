@@ -17,6 +17,12 @@ export interface RecordSlowOpInput {
   operationKind: string;
   operation: string;
   durationMs: number;
+  // The operation's OWN time: `durationMs` less the time it did not spend
+  // working — gate waits (a server span's `waitMs`), a declared hold, a wait
+  // charged to another op, a frozen page, machine sleep. THE quantity judged
+  // against `thresholdMs` (the funnel drops an item under it); the excluded
+  // time stays visible per layer in `waits`. See "Own time" in CLAUDE.md.
+  ownMs: number;
   thresholdMs: number;
   // The report source attributed to the rollup report (server-slow-op vs
   // client-slow-op). The funnel doesn't infer it — the caller knows its origin.

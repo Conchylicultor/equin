@@ -7,6 +7,22 @@ import { CallerRefSchema, MAX_CLIENT_SLOW_OP_ITEMS } from "../core";
 // notifications socket was not ready when the resource mounted.
 export const TRANSPORT_LAYER = "notifications-transport";
 
+// The op kind a wait charged to its OWN op files under — a server gate's queue
+// (`wait read-admit`) or the page's transport bring-up (`wait
+// notifications-transport`): the time an op spent waiting is judged against
+// what it waited on, not the op. See "Own time" in ../CLAUDE.md.
+export const WAIT_KIND = "wait";
+
+// The layer a client span's machine sleep is charged to: the server reads the
+// box's sleep clock over the item's window (one machine, one instance per user)
+// and takes the nap off its own time.
+export const SLEEP_LAYER = "sleep";
+
+// The layer a client span's main-thread stalls are charged to: the page was
+// frozen (a long animation frame ≥ page-pauses' STALL_MIN_MS), which
+// main-thread-stall files as its own `main-thread` slow-op.
+export const STALL_LAYER = "main-thread-stall";
+
 // One client-side slow-op signal. `operationKind` is "page-load", "element",
 // or a client latency signal from perfs/latency-signal ("update", "confirm",
 // …) — an open string, so a new signal needs no schema change here. A client
@@ -18,6 +34,13 @@ export const SlowOpClientItemSchema = z.object({
   operationKind: z.string(),
   operation: z.string(),
   durationMs: z.number(),
+  // The operation's OWN time — `durationMs` minus what it did not spend
+  // working: a declared hold (an update's `throttle-hold`), a wait charged to
+  // another op (`element`'s transport bring-up) and a main-thread stall the
+  // page was frozen in (`main-thread-stall`, filed on its own). Judged against
+  // `thresholdMs`; the excluded time stays visible in `waits`. Optional only
+  // for a tab on an older bundle, whose items read as all own time.
+  ownMs: z.number().optional(),
   thresholdMs: z.number(),
   caller: CallerRefSchema.optional(),
   // Per-layer split of `durationMs` (layer → ms), merged into the row's durable

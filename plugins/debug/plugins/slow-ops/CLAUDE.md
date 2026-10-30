@@ -78,38 +78,50 @@ A server span's `detail` lands on the row too: its `variant` merges into
 cluster tab reads only the columns its merge uses (`ClusterSlowOpSchema`, an
 explicit pick), so a fork on any schema stays readable.
 
-## Cold-start slowness is UX truth — don't suppress it
+## Own time — a report names an op that was itself slow
 
-The `element` signal measures a resource's mount → first-data settle = the
-**time-to-content** the user waits through on a fresh load. A slow boot wave is a
-**real UX regression, not noise** — never filter the post-deploy burst.
+Every item is judged on its **own time** (`ownMs`): its duration less the time
+it did not spend working. `recordSlowOpBatch` drops an item whose own time is
+under its bar. That is the one filter in the funnel, and it applies to every
+producer. The excluded time is never discarded silently. It stays in the
+item's `waits`, on its own layer, and it is either not the system's time at
+all or it is charged to the op that owns it:
 
-It shouldn't happen: the gateway hot-swaps only after `GET /api/health/ready`
-returns `200` (post `onReadyBlocking` barrier: migrations + pool/table warm-up),
-so "ready" means the next request is *fast*. A cluster of slow ops right after a
-swap = readiness flipped too early → a **readiness/hot-swap defect to fix at the
-source**, never to mute. See `gateway/CLAUDE.md`, `plugins/database/CLAUDE.md`,
-and `research/2026-06-14-global-cold-load-instant-boot.md`.
+| Excluded | Where it is measured | Who owns it |
+|---|---|---|
+| A server span's gate waits (`waitMs`) | `slowSpanMs` (resolve-threshold.ts), every kind | The gate. A `queue` wait at or past `loaderMs` files `wait <layer>` (`onSlowWait`): one row per gate, its waiters as callers. A `join` wait (an identical run in flight) is that run's, which reports itself. |
+| An update's `throttle-hold` | `HELD_PHASES` / `ownMsOf` (perfs/latency-signal) | Nobody. The resource declared the hold (`throttleMs`). |
+| An element's transport bring-up (`notifications-transport`) | `elementSlowOp` | The transport. It is filed once per page as `wait notifications-transport` (`transportSlowOp`). |
+| Main-thread stalls ≥ 1 s (`main-thread-stall`) | `judgePagePauses` at the queue's flush, via perfs/page-pauses | main-thread-stall, which files the frozen page as its own `main-thread` op. |
+| A hidden or frozen tab | The same | Nobody. The whole item is dropped, because throttling distorts every layer. |
+| Machine sleep (`sleep`) | `withoutSleep` in the client handler, over the item's `endedAt` window (machine-sleep's `sleptDuring`) | Nobody. A server span needs none: Bun's `performance.now()` stops while the machine sleeps (measured 2026-10-30). |
 
-### Transport cold-start attribution (enrich, don't suppress)
+Why: the 2026-10-29 audit of main found reports blaming ops for time they
+spent not working:
 
-A resource's mount → first-data settle is ~100% wait on the notifications
-transport (the client does no compute — it awaits the server value). On a cold
-deep-link the socket itself comes up late (its cross-tab-election `onElected` is
-starved by cold-boot main-thread saturation), so the settle wall-clock lands on
-whichever resource happened to mount — mislabelling e.g. `sonata-key-auto-detect`
-as "slow" when nothing about that resource is slow. To keep the signal honest
-**without suppressing it**, the `element` signal now carries additive root-cause
-attribution: `useResource` reads `NotificationsClient.getFirstReadyAt()` and, when
-the transport was not ready at mount, reports `transportColdStart` + the
-bring-up wait. The collector sends that wait as the item's
-`waits["notifications-transport"]`, merged into the durable `waits` (wait-vs-work
-split, no migration), and the server stamps `transportColdStart` into the report
-`data`, so the task title gains `— transport cold-start` and the description
-points the fix at transport/boot readiness rather than the resource. The full duration still fires
-and is still recorded — this is *attribution*, not a filter.
+- `sub` spans were 85% `read-admit` queue.
+- `update queue-health.pulse ~1002ms` was its own 1000 ms throttle against
+  the 1000 ms bar.
+- `update tasks 69 s` happened inside a 273 s frozen tab.
+- `element` settles were dominated by transport bring-up.
 
-## The client beacon is batched — transport only
+**Cold-start slowness stays loud**, on the op that owns it. A slow boot wave
+used to land on whichever resource happened to mount (`sonata-key-auto-detect`
+"slow" while the socket was still coming up). Now each resource is judged on
+what remained after the transport was ready, and the bring-up itself is one
+`wait notifications-transport` report per page. A cluster of those right after
+a hot swap is still a readiness defect to fix at the source (the gateway swaps
+only after `GET /api/health/ready`; see `gateway/CLAUDE.md` and
+`research/2026-06-14-global-cold-load-instant-boot.md`). The element item
+still carries `transportColdStart` and its wait, so its report says what was
+taken off.
+
+Storage is unchanged. Rows keep wall-clock `durationMs` / `totalMs` / `maxMs`
+plus the per-layer `waits`, so the list's Wait column shows the excluded share.
+The report's `ownMs` drives its title and message ("1502ms own of 2500ms").
+Design: `research/2026-10-30-global-slow-op-own-time.md`.
+
+## The client beacon is batched
 
 The browser does not POST once per slow element. `web/internal/slow-op-queue.ts`
 queues each signal, waits ~250 ms (one trailing debounce, never a poll), and
@@ -128,12 +140,13 @@ each call a DB transaction plus a report upsert plus a notification insert,
 against the backend that was already failing. See
 `research/2026-09-02-global-alert-fan-out-ceiling.md`.
 
-**Batching is a transport change and nothing else.** No signal is filtered,
-thresholded, deduped or delayed out of existence on the way — every element
-settle that trips today still reaches `recordSlowOp` with the same
-`transportColdStart` / `waits` / `caller` / `clientBoot` attribution,
-and the section above still holds in full. The only loss the queue can cause is
-its 1000-item cap, and that loss is counted and sent as the batch's `dropped`
+**Batching is a transport change, plus one judgement.** An item queued with
+its wall-clock window (every element and latency sample) is judged against the
+page's pauses inside it at the flush (`judgePagePauses`, see "Own time"). That
+is the only place late enough to ask, because a long frame's entry arrives
+after the frame. Nothing else is filtered, thresholded, deduped or delayed out
+of existence on the way. The only other loss the queue can cause is its
+1000-item cap, and that loss is counted and sent as the batch's `dropped`
 field, which the handler writes to the `slow-ops` log channel — never silently
 discarded.
 
@@ -152,9 +165,10 @@ through the pure `latencySlowOp` (`web/internal/latency-slow-op.ts`):
 | `operationKind` | the signal (`update`, `confirm`) |
 | `operation` | the resource key only, so one resource stays one row |
 | `detail.variant` | the sample's `variant` (a confirm's `mode/edge`), else `canonicalJson(params)` — merged into the row's `variants` |
-| `waits` | the signal's phases (`server-notice` / `server-deliver` / `transport` / `client-apply`; `send-lane` / `retry` / `server-ack` / `confirm-frame`) — merged into the row's durable `waits` |
+| `waits` | the signal's phases (`server-notice` / `throttle-hold` / `server-deliver` / `transport` / `client-apply`; `send-lane` / `retry` / `server-ack` / `confirm-frame`) — merged into the row's durable `waits` |
 | `caller` | the current route |
 | `durationMs` | `totalMs` (measured end − start; the clamped phases can sum to more) |
+| `ownMs` | `ownMsOf(sample)`: `totalMs` less its held phases (an update's `throttle-hold`) |
 
 - **Thresholds** are the `updateMs` (1000, the ledger's calm p95 bar) and
   `confirmMs` (2000) knobs, picked per signal by `CLIENT_SIGNAL_THRESHOLD` in
@@ -162,9 +176,10 @@ through the pure `latencySlowOp` (`web/internal/latency-slow-op.ts`):
   compile without its knob. They stay **out of `perfFloorMs`**: that floor
   pre-filters server spans, which no client knob ever judges, so a client knob
   there would only lower the profiler floor for every server span.
-- **A hidden sample is skipped.** The producer marks a sample `hidden` when the
-  tab is hidden now or was at any point since the sample's start stamp; a
-  throttled tab measures the browser, not the system.
+- **A sample the tab was hidden in is skipped**, judged at the queue's flush
+  from page-pauses over the sample's window (`[emit − totalMs, emit]`). No
+  producer tracks visibility. A throttled tab measures the browser, not the
+  system.
 - **One sample per tab.** Each visible tab reports its own sample of the same
   change, so a row's count includes every tab; the route caller shows which
   surface each came from. Documented, not deduplicated.
@@ -212,7 +227,7 @@ registration for — a queue row written by a plugin this composition does not
 load.
 
 **A job is judged on WORK time (`durationMs − waitMs`), not on wall-clock hold**
-— alone among the span kinds. A job's slot-hold is substantially not a property
+— as every span kind now is (see "Own time"). A job's slot-hold is substantially not a property
 of the job: `jobs.dead-gc` was measured holding a worker slot 77 s to do 254 ms
 of work, the rest blocked on `background-tx-acquire`, an admission gate entered
 *after* graphile had handed it a slot. Judging hold would file a report against a
@@ -252,6 +267,7 @@ bar).
     - `primitives/networking/page-transport.pageTransport`
     - `primitives/pane.currentRoutePath`
     - `primitives/perfs/boot-trace.getBootTrace`
+    - `primitives/perfs/page-pauses.pausesDuring`
     - `reports.Reports`
     - `ui/icons.Icon`
 - Server:
@@ -269,7 +285,7 @@ bar).
     - `change-producer` "slow_ops"
     - `fork-data-exclusion` "slow_op_callers"
     - `fork-data-exclusion` "slow_ops"
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/jobs` ×4
     - `infra/entities` ×3
     - `config_v2` ×2
@@ -280,6 +296,7 @@ bar).
     - `database.db`
     - `debug/trace/engine.captureTrace`
     - `infra/endpoints.implement`
+    - `infra/host/machine-sleep.sleptDuring`
     - `infra/retention.defineRetention`
     - `network/live.serveCollection`
     - `primitives/log-channels/log-files.readChannelJsonAsync`

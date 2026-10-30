@@ -122,10 +122,11 @@ export function withHeavyReadSlot<T>(
       // slot so a reentrant acquire runs its body directly (the fast path above).
       return pool.run(() => holdingSlot.run(true, fn), {
         signal,
-        onAcquired: (waitMs) => chargeWait("heavy-read-acquire", waitMs),
+        onAcquired: (waitMs) =>
+          chargeWait("heavy-read-acquire", waitMs, "queue"),
       });
     },
-    { onWait: (waitMs) => chargeWait("heavy-read-local", waitMs) },
+    { onWait: (waitMs) => chargeWait("heavy-read-local", waitMs, "queue") },
   );
 }
 

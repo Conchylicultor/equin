@@ -59,6 +59,7 @@ export function withWorktreeMutateSlot<T>(
 ): Promise<T> {
   return gate.run(() => fn(), {
     signal,
-    onAcquired: (waitMs) => chargeWait("worktree-mutate-acquire", waitMs),
+    onAcquired: (waitMs) =>
+      chargeWait("worktree-mutate-acquire", waitMs, "queue"),
   });
 }

@@ -10,6 +10,10 @@ export const SlowOpReportPayloadSchema = z.object({
   operationKind: z.string(),
   operation: z.string(),
   durationMs: z.number(),
+  // The operation's own time — what was judged against `thresholdMs` (see
+  // "Own time" in CLAUDE.md). Absent on reports filed before it existed, which
+  // judged the wall `durationMs`.
+  ownMs: z.number().optional(),
   thresholdMs: z.number(),
   // Optional, backward-compatible cold-start attribution (element signal only).
   // Stored in the report's jsonb `data`, so no migration. When present and true,

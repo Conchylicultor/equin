@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { SlowResourceInfo } from "@plugins/primitives/plugins/live-state/web";
-import { elementSlowOp } from "./element-slow-op";
+import { elementSlowOp, transportSlowOp } from "./element-slow-op";
 
 const thresholds = {
   pageLoadMs: 2000,
@@ -19,6 +19,7 @@ const settle = (over: Partial<SlowResourceInfo> = {}): SlowResourceInfo => ({
   durationMs: 1609.4,
   transportColdStart: false,
   transportWaitMs: 0,
+  transportReadyAtMs: null,
   ...over,
 });
 
@@ -28,6 +29,7 @@ describe("elementSlowOp", () => {
       operationKind: "element",
       operation: "edited-files",
       durationMs: 1609,
+      ownMs: 1609,
       thresholdMs: 1000,
       caller: { kind: "route", label: "/agents/c/1" },
       detail: { variant: '{"conversationId":"conv-1","page":"b"}' },
@@ -57,14 +59,33 @@ describe("elementSlowOp", () => {
     );
   });
 
-  test("charges a transport bring-up wait to its own layer", () => {
+  test("charges a transport bring-up wait to its own layer, off its own time", () => {
     const item = elementSlowOp(
-      settle({ transportColdStart: true, transportWaitMs: 1200 }),
+      settle({
+        durationMs: 3500,
+        transportColdStart: true,
+        transportWaitMs: 1200,
+      }),
       thresholds,
       "/",
     );
     expect(item?.transportColdStart).toBe(true);
+    expect(item?.ownMs).toBe(2300);
     expect(item?.waits).toEqual({ "notifications-transport": 1200 });
+  });
+
+  test("a settle that was all transport bring-up is not the resource's slowness", () => {
+    expect(
+      elementSlowOp(
+        settle({
+          durationMs: 5000,
+          transportColdStart: true,
+          transportWaitMs: 4800,
+        }),
+        thresholds,
+        "/",
+      ),
+    ).toBeNull();
   });
 
   test("at the threshold is not slow; the threshold is elementMs", () => {
@@ -74,5 +95,19 @@ describe("elementSlowOp", () => {
     expect(
       elementSlowOp(settle(), { ...thresholds, elementMs: 2000 }, "/"),
     ).toBeNull();
+  });
+});
+
+describe("transportSlowOp", () => {
+  test("the bring-up is filed against the transport, as a wait", () => {
+    expect(transportSlowOp(4800.4, thresholds, "/home")).toEqual({
+      operationKind: "wait",
+      operation: "notifications-transport",
+      durationMs: 4800,
+      ownMs: 4800,
+      thresholdMs: 1000,
+      caller: { kind: "route", label: "/home" },
+    });
+    expect(transportSlowOp(900, thresholds, "/home")).toBeNull();
   });
 });

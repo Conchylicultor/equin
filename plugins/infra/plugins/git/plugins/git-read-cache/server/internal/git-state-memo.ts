@@ -77,7 +77,7 @@ export function createGitStateMemo<T>(opts: { name: string }): GitStateMemo<T> {
       const hit = cache.get(worktreePath);
       if (hit && hit.signature === sig) {
         // 0ms marker: hit-rate signal only — never pollutes wait timing.
-        chargeWait(`git-memo-hit:${opts.name}`, 0);
+        chargeWait(`git-memo-hit:${opts.name}`, 0, "join");
         return hit.value; // short-circuit BEFORE any heavy slot
       }
       // Join only a compute probed at THIS signature (the inflight is keyed by
@@ -89,7 +89,7 @@ export function createGitStateMemo<T>(opts: { name: string }): GitStateMemo<T> {
       return inflight.run(
         `${worktreePath}\0${sig}`,
         async () => {
-          chargeWait(`git-memo-miss:${opts.name}`, 0);
+          chargeWait(`git-memo-miss:${opts.name}`, 0, "join");
           const value = await computeFn(); // computeFn owns withHeavyReadSlot
           // Cache only when the signature, re-probed after the compute, is
           // still `sig`. The compute may have read a later state than `sig`
@@ -119,7 +119,7 @@ export function createGitStateMemo<T>(opts: { name: string }): GitStateMemo<T> {
         // caches under its own signature, re-probed — a mismatch, never a
         // torn hit.)
         {
-          onWait: (ms) => chargeWait(`git-coalesce:${opts.name}`, ms),
+          onWait: (ms) => chargeWait(`git-coalesce:${opts.name}`, ms, "join"),
           notBefore: getOpts?.notBefore,
         },
       );

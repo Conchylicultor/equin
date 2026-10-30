@@ -1,5 +1,9 @@
 import type { SlowOpReportPayload } from "../../core";
-import { TRANSPORT_LAYER } from "../../shared/endpoints";
+import {
+  SLEEP_LAYER,
+  STALL_LAYER,
+  TRANSPORT_LAYER,
+} from "../../shared/endpoints";
 
 /**
  * What a wait layer's dominance points at. Keyed by layer name, not by
@@ -9,7 +13,12 @@ import { TRANSPORT_LAYER } from "../../shared/endpoints";
  */
 const WAIT_LAYER_HINTS: Readonly<Record<string, string>> = {
   [TRANSPORT_LAYER]:
-    "The notifications socket was still coming up — look at transport/boot readiness, not this resource.",
+    "The notifications socket was still coming up — not counted against this op; filed as `wait notifications-transport`.",
+  [STALL_LAYER]:
+    "The page's main thread was frozen — not counted against this op; the stall is filed on its own (main-thread-stall).",
+  [SLEEP_LAYER]: "The machine was asleep — not counted against this op.",
+  "throttle-hold":
+    "The resource's own declared throttle held the change — by design, not counted against this op.",
   // perfs/latency-signal `update` phases.
   "server-notice":
     "The server took long to notice the change (commit → first notify): a long-held transaction, a slow change-feed consumer, or a stalled serving thread.",

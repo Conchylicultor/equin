@@ -37,11 +37,18 @@ export const slowOpKind = ReportKind({
       ? " — transport cold-start"
       : "";
     return {
-      title: `[slow-op] ${d.operationKind} ${d.operation} — ${Math.round(d.durationMs)}ms${coldStartSuffix}`,
+      title: `[slow-op] ${d.operationKind} ${d.operation} — ${timeLabel(d)}${coldStartSuffix}`,
       description: renderDescription(row, d),
     };
   },
 });
+
+/** `1502ms own of 2500ms` when time was excluded, else the one duration. */
+function timeLabel(d: SlowOpReportPayload): string {
+  const wall = Math.round(d.durationMs);
+  if (d.ownMs === undefined || Math.round(d.ownMs) === wall) return `${wall}ms`;
+  return `${Math.round(d.ownMs)}ms own of ${wall}ms`;
+}
 
 function renderDescription(row: ReportRow, d: SlowOpReportPayload): string {
   const lines: string[] = [];
@@ -51,7 +58,13 @@ function renderDescription(row: ReportRow, d: SlowOpReportPayload): string {
   );
   lines.push("");
   lines.push(`**Operation:** \`${d.operationKind}\` \`${d.operation}\``);
-  lines.push(`**Latest duration:** ${Math.round(d.durationMs)}ms`);
+  lines.push(`**Latest duration:** ${timeLabel(d)}`);
+  if (d.ownMs !== undefined && Math.round(d.ownMs) !== Math.round(d.durationMs))
+    lines.push(
+      `Judged on its own time: the rest was spent not working (queued on a ` +
+        `gate, held by a declared throttle, a frozen or hidden page, machine ` +
+        `sleep) — see the layers below.`,
+    );
   lines.push(`**Threshold:** ${d.thresholdMs}ms`);
   if (d.transportColdStart) {
     const socketMs = d.waits?.[TRANSPORT_LAYER] ?? d.transportWaitMs;
@@ -61,11 +74,10 @@ function renderDescription(row: ReportRow, d: SlowOpReportPayload): string {
         : "";
     lines.push("");
     lines.push(
-      `**Root cause:** the notifications transport was not ready when this ` +
-        `resource mounted${waited}. This duration is time-to-first-data over the ` +
-        `transport, not the resource's own compute cost — investigate ` +
-        `transport/boot readiness, not this resource. (Cold-start slowness is ` +
-        `still a real regression to fix at the source.)`,
+      `**Cold start:** the notifications transport was not ready when this ` +
+        `resource mounted${waited}. That wait is not counted against the ` +
+        `resource — it is filed on its own, as \`wait ${TRANSPORT_LAYER}\` — so ` +
+        `this report is about what remained.`,
     );
   }
   const waitLines = describeWaits(d);

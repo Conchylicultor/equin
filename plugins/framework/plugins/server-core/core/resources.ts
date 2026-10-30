@@ -451,11 +451,11 @@ const runtime = createResourceRuntime({
   // Read-admission gate queue-wait, charged to the enclosing `sub` entry (mirrors
   // the DB background query gate's `background-acquire`), so a saturated read cap is visible in
   // get_runtime_profile as a `read-admit` wait rather than hidden queue time.
-  onReadGateWait: (ms) => chargeWait("read-admit", ms),
+  onReadGateWait: (ms) => chargeWait("read-admit", ms, "queue"),
   // Read-path single-flight coalescing wait (mirrors read-admit): the time a
   // JOINING caller spent awaiting another caller's in-flight loader for the
   // same (key, params), charged to the joiner's own enclosing entry.
-  onCoalesceWait: (ms) => chargeWait("read-coalesce", ms),
+  onCoalesceWait: (ms) => chargeWait("read-coalesce", ms, "join"),
   // Loader frequency for the _debug endpoint: find this key's loader aggregate in
   // the current profiling window and derive count / calls-per-minute / slowest.
   loaderStats: (key) => {

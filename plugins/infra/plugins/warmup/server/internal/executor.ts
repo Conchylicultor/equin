@@ -55,7 +55,8 @@ export type WarmupRun =
  * - each `run` is gated by a bounded `createSemaphore(concurrency)` and wrapped
  *   in `withSlot` (the host-wide heavy-read budget), with a macrotask
  *   `yieldMacrotask()` before each so request IO/timers interleave;
- * - each is wrapped in a `warmup:<name>` profiler span for boot-Gantt visibility;
+ * - each is wrapped in a `warmup:<name>` profiler span for boot-Gantt visibility,
+ *   timed — like its recorded run — from the moment its slot is granted;
  * - a throw is NEVER fatal — a warm-up is an optimization, so it is logged and
  *   the drain continues (the boot-budget monitor separately flags slow/failed
  *   warm-ups).
@@ -77,25 +78,40 @@ export async function drainWarmupsWith(deps: WarmupExecDeps): Promise<void> {
         // declared rather than on their global defaults.
         const budget =
           w.budgetMs === undefined ? undefined : { budgetMs: w.budgetMs };
-        const end = profilerStart(
-          `warmup:${w.name}`,
-          "warmup",
-          w.name,
-          w.name,
-          budget,
-        );
-        const startedAt = new Date();
-        const t0 = performance.now();
-        deps.onRun?.(w.name, { outcome: "running", startedAt });
+        // The run is timed from the moment the host's slot is GRANTED: a
+        // warm-up queued behind others' heavy reads is not slow itself (the
+        // boot Gantt bar, `startedAt` and `durationMs` all start inside the
+        // slot). The `bg` span (`runTracked`) stays around the slot so the
+        // queue is still charged to it, as the gate's wait — which slow-ops
+        // takes off its own time.
+        let started: { at: Date; t0: number; end: () => void } | null = null;
         let error: string | null = null;
         try {
-          // Boot-Gantt bar (profilerStart, above) and runtime `bg` aggregate
+          // Boot-Gantt bar (profilerStart) and runtime `bg` aggregate
           // (runTracked) are complementary: the former is the coarse boot phase,
           // the latter gives the warm-up's internal DB/file work an ambient span
           // so it appears under its own name in the profiler instead of vanishing.
           await runTracked(
             `warmup:${w.name}`,
-            () => deps.withSlot(() => w.run()),
+            () =>
+              deps.withSlot(() => {
+                started = {
+                  end: profilerStart(
+                    `warmup:${w.name}`,
+                    "warmup",
+                    w.name,
+                    w.name,
+                    budget,
+                  ),
+                  at: new Date(),
+                  t0: performance.now(),
+                };
+                deps.onRun?.(w.name, {
+                  outcome: "running",
+                  startedAt: started.at,
+                });
+                return w.run();
+              }),
             budget,
           );
           // A warm-up is an optimization, never a correctness dependency: every failure maps to the same handling (log loudly + keep draining the other warm-ups), so one bad warm-up can neither abort its siblings nor reject drainWarmups() into the settled phase. Mirrors the framework's own onShutdown isolation loop.
@@ -103,12 +119,23 @@ export async function drainWarmupsWith(deps: WarmupExecDeps): Promise<void> {
           console.error(`[warmup] ${w.name} failed`, err);
           error = err instanceof Error ? err.message : String(err);
         } finally {
-          end();
+          // Never granted a slot (its acquire threw): it never ran, so it was
+          // never timed — the failure above still names it.
+          const run = started as {
+            at: Date;
+            t0: number;
+            end: () => void;
+          } | null;
+          const startedAt = run?.at ?? new Date();
+          run?.end();
           deps.onRun?.(w.name, {
             outcome: error === null ? "succeeded" : "failed",
             startedAt,
             finishedAt: new Date(),
-            durationMs: Math.round((performance.now() - t0) * 10) / 10,
+            durationMs:
+              run === null
+                ? 0
+                : Math.round((performance.now() - run.t0) * 10) / 10,
             error,
           });
         }

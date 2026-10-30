@@ -92,8 +92,9 @@ export async function recordSlowOp(input: RecordSlowOpInput): Promise<void> {
 // — 210 commits during a stall, against the backend that IS the stall. One
 // contention snapshot and ONE upsert per table cover the whole batch.
 //
-// Nothing is filtered here. Every input that clears the shed gate is upserted,
-// markered, and reported exactly as it would have been alone.
+// One rule filters here — an input whose OWN time is under its bar is dropped
+// (see "Own time" in CLAUDE.md). Every other input that clears the shed gate is
+// upserted, markered, and reported exactly as it would have been alone.
 export async function recordSlowOpBatch(
   inputs: RecordSlowOpInput[],
 ): Promise<void> {
@@ -114,6 +115,9 @@ export async function recordSlowOpBatch(
   // even when this row write is shed (and vice versa).
   const admitted: FoldItem[] = [];
   for (const input of inputs) {
+    // THE own-time rule, once for every producer: an op whose own time is
+    // under its bar was not slow itself, however long it took on the wall.
+    if (input.ownMs < input.thresholdMs) continue;
     const occurredAt = (input.occurredAt ??= new Date());
     if (!slowOpShed.admit(input).persist) continue;
     admitted.push({ input, occurredAt });
@@ -161,6 +165,7 @@ export async function recordSlowOpBatch(
       operationKind,
       operation,
       durationMs,
+      ownMs,
       thresholdMs,
       source,
       transportColdStart,
@@ -186,6 +191,11 @@ export async function recordSlowOpBatch(
     // (operationKind, operation), so each distinct slow op gets its own report; the
     // message reflects this op's latest tripping duration.
     const durationRounded = Math.round(durationMs);
+    const ownRounded = Math.round(ownMs);
+    const took =
+      ownRounded === durationRounded
+        ? `${durationRounded}ms`
+        : `${ownRounded}ms of its own (${durationRounded}ms wall)`;
     void recordReport({
       kind: "slow-op",
       source,
@@ -193,6 +203,7 @@ export async function recordSlowOpBatch(
         operationKind,
         operation,
         durationMs,
+        ownMs,
         thresholdMs,
         // Optional cold-start attribution — surfaced in the report title/desc.
         ...(transportColdStart !== undefined ? { transportColdStart } : {}),
@@ -202,7 +213,7 @@ export async function recordSlowOpBatch(
         // Optional link to the coherent-instant trace captured for this trip.
         ...(traceId !== undefined ? { traceId } : {}),
       },
-      message: `${operationKind} ${operation} took ${durationRounded}ms (threshold ${thresholdMs}ms)`,
+      message: `${operationKind} ${operation} took ${took} (threshold ${thresholdMs}ms)`,
     });
   }
 }

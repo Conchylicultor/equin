@@ -34,7 +34,6 @@ import {
 import {
   armUnconfirmedDeadline,
   classifyRejection,
-  hiddenSince,
   enqueueOnSendLane,
   optimisticDivergenceReportSink,
   optimisticRejectionSink,
@@ -116,7 +115,6 @@ function confirmSample<Vars>(
       "confirm-frame": confirmedAt - ackedAt,
     }),
     totalMs: confirmedAt - dispatchedAt,
-    hidden: hiddenSince(dispatchedAt),
   };
 }
 
@@ -162,7 +160,6 @@ function unconfirmedSample<Vars>(
           : ackedAt - lastSentAt,
     }),
     totalMs: now - dispatchedAt,
-    hidden: hiddenSince(dispatchedAt),
     ...(op.ackWatermark === undefined
       ? {}
       : { detail: { ackWatermark: op.ackWatermark } }),

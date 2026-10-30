@@ -130,6 +130,7 @@ state rather than the previous window's numbers.
     - `primitives/log-channels.clientLog`
     - `primitives/networking/page-transport.pageTransport`
     - `primitives/pane.currentRoutePath`
+    - `primitives/perfs/page-pauses.pausesDuring`
 - Server:
   - Contributes:
     - `resource.declare` "latency-ledger.summary"

@@ -1,10 +1,12 @@
 import { fetchEndpointOver } from "@plugins/infra/plugins/endpoints/web";
 import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/page-transport/web";
+import { pausesDuring } from "@plugins/primitives/plugins/perfs/plugins/page-pauses/web";
 import { MAX_CLIENT_SLOW_OP_ITEMS } from "../../core";
 import {
   submitClientSlowOp,
   type SlowOpClientItem,
 } from "../../shared/endpoints";
+import { judgePagePauses, type SpanWindow } from "./page-pause-judge";
 
 // Page-wide telemetry: slow-op samples always reach the page's own server (D3).
 const fetchEndpoint = fetchEndpointOver(pageTransport);
@@ -22,12 +24,19 @@ const fetchEndpoint = fetchEndpointOver(pageTransport);
 // retried across a backend restart (SLOW_OP_RETRY), and a batch that still
 // fails after that is dropped, loudly.
 //
-// This queue is TRANSPORT ONLY. It never filters, thresholds or suppresses a
-// signal: every slow settle the collector observes still reaches recordSlowOp
-// with the same attribution. See the "Cold-start slowness is UX truth" section
-// of ../../CLAUDE.md.
+// One rule rides the flush: an item queued with its wall-clock window is
+// judged against the page's pauses inside it (`judgePagePauses`) — dropped when
+// the tab was hidden, its main-thread stalls taken off its own time. That is
+// the only place late enough to ask: a long frame's entry is delivered after
+// the frame. Nothing else is filtered here. See "Own time" in ../../CLAUDE.md.
 
-const queue: SlowOpClientItem[] = [];
+interface Queued {
+  item: SlowOpClientItem;
+  /** Where it sat on the wall clock; absent ⇒ not subject to page pauses. */
+  window?: SpanWindow;
+}
+
+const queue: Queued[] = [];
 const FLUSH_DELAY_MS = 250;
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -55,8 +64,16 @@ let dropped = 0;
  */
 const SLOW_OP_RETRY = { retries: 6, backoffMs: 500 };
 
-export function enqueueSlowOp(item: SlowOpClientItem): void {
-  queue.push(item);
+/**
+ * Queue one item. With `window`, the item is judged against the page's pauses
+ * inside it at the flush (and stamped `endedAt` = its end, so the server can
+ * place it — and take any machine sleep off it).
+ */
+export function enqueueSlowOp(
+  item: SlowOpClientItem,
+  window?: SpanWindow,
+): void {
+  queue.push(window === undefined ? { item } : { item, window });
   capQueue();
   scheduleFlush();
 }
@@ -85,7 +102,17 @@ async function flush(): Promise<void> {
     // Drain in chunks the server will accept (≤ MAX_CLIENT_SLOW_OP_ITEMS). An
     // over-cap POST would be rejected with 400, so the chunk size — not the
     // accumulated queue length — bounds each request.
-    const items = queue.splice(0, MAX_CLIENT_SLOW_OP_ITEMS);
+    const items = queue
+      .splice(0, MAX_CLIENT_SLOW_OP_ITEMS)
+      .flatMap(({ item, window }) => {
+        if (window === undefined) return [item];
+        const judged = judgePagePauses(
+          item,
+          pausesDuring(window.startMs, window.endMs),
+        );
+        return judged === null ? [] : [{ ...judged, endedAt: window.endMs }];
+      });
+    if (items.length === 0) continue;
     const carried = dropped;
     await fetchEndpoint(
       submitClientSlowOp,

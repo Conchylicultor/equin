@@ -19,6 +19,12 @@ export interface SlowResourceInfo {
    * bring-up rather than the resource.
    */
   transportWaitMs: number;
+  /**
+   * `performance.now()` the transport FIRST became ready (null: not yet) — the
+   * page's whole bring-up wait, which the consumer files once, against the
+   * transport, rather than against each resource that waited on it.
+   */
+  transportReadyAtMs: number | null;
 }
 
 /**

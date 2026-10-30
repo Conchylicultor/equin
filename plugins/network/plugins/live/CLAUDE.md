@@ -1233,7 +1233,6 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `enqueueOnSendLane`
     - `entitySendLaneKey`
     - `FieldPresentation`
-    - `hiddenSince`
     - `mapRow`
     - `mintVisibleRange`
     - `optimisticDivergenceReportSink`

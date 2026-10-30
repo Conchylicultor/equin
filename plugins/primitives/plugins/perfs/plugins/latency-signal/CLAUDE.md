@@ -8,11 +8,13 @@ number of consumers subscribe.
 
 | Signal | Phases (in order) | Produced by |
 |---|---|---|
-| `update` | `server-notice` · `server-deliver` · `transport` · `client-apply` | `live-state` — a pushed `update` / `delta` frame applied to the cache |
+| `update` | `server-notice` · `throttle-hold` · `server-deliver` · `transport` · `client-apply` | `live-state` — a pushed `update` / `delta` frame applied to the cache |
 | `confirm` | `send-lane` · `retry` · `server-ack` · `confirm-frame` | `optimistic-mutation` — an optimistic op confirmed |
 
 - **update** — `server-notice`: change → first notify (`sentAt − deliverMs −
-  changedAt`); `server-deliver`: notify → send (`deliverMs`); `transport`: send
+  changedAt`); `throttle-hold`: the resource's declared `throttleMs` holding the
+  drain (`holdMs`); `server-deliver`: the rest of notify → send (`deliverMs −
+  holdMs`); `transport`: send
   → receipt (`receivedAt − sentAt`); `client-apply`: receipt → cache written.
   `transport` is the **only phase that crosses clocks** (server send stamp vs
   client receipt stamp), so clock skew lands in that one named layer;
@@ -27,9 +29,18 @@ number of consumers subscribe.
 `totalMs` is measured end − start, never summed from the phases;
 `splitPhases(signal, raw)` clamps each phase to ≥ 0 (a cross-clock or
 out-of-order span can come out negative), so a clamped set can sum to more
-than the total. `hidden` marks a sample whose tab was hidden now or at any
-point since its start stamp — consumers exclude it. `variant` is a free-form
-sub-kind (a confirm's `mode/edge`); consumers fall back to the params.
+than the total. `variant` is a free-form sub-kind (a confirm's `mode/edge`);
+consumers fall back to the params.
+
+**Own time.** `HELD_PHASES` names, per signal, the phases that are held by
+design rather than slow (an update's `throttle-hold`). `ownMsOf(sample)` is
+`totalMs` less them, which is what a consumer judging "was this slow" compares
+to its bar.
+
+**No visibility flag.** A sample is emitted at its end, so a consumer places
+it on the wall clock as `[now − totalMs, now]` and asks
+`primitives/perfs/page-pauses` whether the tab was hidden, frozen or stalled
+inside it. Producers never track visibility.
 
 **Censored samples.** A signal in `CENSORABLE_SIGNALS` (only `confirm`) may
 also be sampled before it finished — a write still unconfirmed at its deadline
@@ -47,8 +58,10 @@ sample must tell the two apart (slow-ops files a censored confirm as
 1. An entry in `CLIENT_LATENCY_SIGNALS` (its phase tuple).
 2. A slow-ops threshold — `CLIENT_SIGNAL_THRESHOLD` is a
    `Record<ClientLatencySignal, …>`, so tsc refuses the build until it exists.
-3. An emit site: `clientLatencySink.emit({ signal, key, params, phases:
-   splitPhases(signal, …), totalMs, hidden })`, guarded by
+3. A `HELD_PHASES` entry (a `Record` over the signals, so tsc asks) — `[]`
+   when none of its phases is a declared hold.
+4. An emit site: `clientLatencySink.emit({ signal, key, params, phases:
+   splitPhases(signal, …), totalMs })` at the operation's end, guarded by
    `clientLatencySink.hasSubscribers()` when building it costs anything.
 
 Consumers never name a signal: they read `signal` / `phases` generically.
@@ -68,6 +81,8 @@ Consumers never name a signal: they read `signal` / `phases` generically.
   - Exports (values):
     - `CLIENT_LATENCY_SIGNALS`
     - `clientLatencySink`
+    - `HELD_PHASES`
+    - `ownMsOf`
     - `splitPhases`
     - `splitReachedPhases`
 

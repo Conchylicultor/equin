@@ -47,12 +47,6 @@ const flush = async (): Promise<void> => {
   await vi.advanceTimersByTimeAsync(0);
 };
 
-let visibility: DocumentVisibilityState = "visible";
-function setVisibility(next: DocumentVisibilityState): void {
-  visibility = next;
-  document.dispatchEvent(new Event("visibilitychange"));
-}
-
 describe("NotificationsClient — update latency sample", () => {
   const clients: NotificationsClient[] = [];
   const unsubs: (() => void)[] = [];
@@ -103,16 +97,13 @@ describe("NotificationsClient — update latency sample", () => {
     changedAt: NOW - 300,
     sentAt: NOW - 60,
     deliverMs: 40,
+    holdMs: 0,
   };
 
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(NOW);
     vi.spyOn(Math, "random").mockReturnValue(0.5);
-    visibility = "visible";
-    vi.spyOn(document, "visibilityState", "get").mockImplementation(
-      () => visibility,
-    );
     samples = [];
   });
 
@@ -146,12 +137,12 @@ describe("NotificationsClient — update latency sample", () => {
         params: { a: "1" },
         phases: {
           "server-notice": 200,
+          "throttle-hold": 0,
           "server-deliver": 40,
           transport: 60,
           "client-apply": 0, // the fake clock does not move inside one frame
         },
         totalMs: 300,
-        hidden: false,
       },
     ]);
   });
@@ -182,12 +173,18 @@ describe("NotificationsClient — update latency sample", () => {
       params: { a: "1" },
       value: { status: "v2" },
       version: 2,
-      timing: { changedAt: NOW - 100, sentAt: NOW + 50, deliverMs: 10 },
+      timing: {
+        changedAt: NOW - 100,
+        sentAt: NOW + 50,
+        deliverMs: 10,
+        holdMs: 0,
+      },
     });
     await flush();
     expect(samples).toHaveLength(1);
     expect(samples[0]!.phases).toEqual({
       "server-notice": 140,
+      "throttle-hold": 0,
       "server-deliver": 10,
       transport: 0,
       "client-apply": 0,
@@ -273,53 +270,23 @@ describe("NotificationsClient — update latency sample", () => {
     expect(samples).toHaveLength(0);
   });
 
-  test("hidden: a tab hidden now flags its sample", async () => {
+  test("a throttled resource's hold is its own phase, carved out of server-deliver", async () => {
     const { client, socket } = await setup();
     await seedValue(client, socket);
     listen();
-    setVisibility("hidden");
     socket.serverSend({
       kind: "update",
       key: "k",
       params: { a: "1" },
       value: { status: "v2" },
       version: 2,
-      timing,
+      timing: { ...timing, holdMs: 30 },
     });
     await flush();
-    expect(samples.map((s) => s.hidden)).toEqual([true]);
-  });
-
-  test("hidden: a tab hidden at any instant since the change flags its sample; one hidden before it does not", async () => {
-    const { client, socket } = await setup();
-    await seedValue(client, socket);
-    listen();
-    // Hidden and back BEFORE the change: the change's whole span was visible.
-    setVisibility("hidden");
-    setVisibility("visible");
-    vi.setSystemTime(NOW + 1000);
-    socket.serverSend({
-      kind: "update",
-      key: "k",
-      params: { a: "1" },
-      value: { status: "v2" },
-      version: 2,
-      timing: { changedAt: NOW + 900, sentAt: NOW + 950, deliverMs: 5 },
+    expect(samples[0]!.phases).toMatchObject({
+      "throttle-hold": 30,
+      "server-deliver": 10,
     });
-    await flush();
-    // Hidden and back AFTER the next change was stamped: throttled mid-span.
-    setVisibility("hidden");
-    setVisibility("visible");
-    socket.serverSend({
-      kind: "update",
-      key: "k",
-      params: { a: "1" },
-      value: { status: "v3" },
-      version: 3,
-      timing: { changedAt: NOW + 950, sentAt: NOW + 990, deliverMs: 5 },
-    });
-    await flush();
-    expect(samples.map((s) => s.hidden)).toEqual([false, true]);
   });
 
   test("no sample is built while nobody subscribes", async () => {

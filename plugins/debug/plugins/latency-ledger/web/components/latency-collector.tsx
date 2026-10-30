@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { clientLatencySink } from "@plugins/primitives/plugins/perfs/plugins/latency-signal/core";
+import { pausesDuring } from "@plugins/primitives/plugins/perfs/plugins/page-pauses/web";
 import { recordInteraction, recordSample } from "../internal/client-ledger";
 import { startInteractionTracking } from "../internal/interaction-tracker";
 
@@ -11,13 +12,16 @@ export function LatencyCollector() {
   useEffect(() => startInteractionTracking(recordInteraction), []);
 
   // The update delay is the `update` latency signal's total (change → pushed
-  // frame applied). Other signals have no ledger metric yet; a hidden tab's
-  // sample is kept but excluded from the percentiles.
+  // frame applied). Other signals have no ledger metric yet; a sample the tab
+  // spent hidden in (page-pauses, asked over the sample's span — it is emitted
+  // at its end) is kept but excluded from the percentiles.
   useEffect(
     () =>
       clientLatencySink.subscribe((sample) => {
         if (sample.signal !== "update") return;
-        recordSample("update-e2e", sample.totalMs, { excluded: sample.hidden });
+        const end = Date.now();
+        const { hidden } = pausesDuring(end - sample.totalMs, end);
+        recordSample("update-e2e", sample.totalMs, { excluded: hidden });
       }),
     [],
   );

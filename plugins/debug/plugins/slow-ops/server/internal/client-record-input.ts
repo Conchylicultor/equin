@@ -1,4 +1,4 @@
-import type { SlowOpClientItem } from "../../shared/endpoints";
+import { SLEEP_LAYER, type SlowOpClientItem } from "../../shared/endpoints";
 import type { RecordSlowOpInput } from "./input";
 
 /**
@@ -15,6 +15,8 @@ export function toRecordInput(
     operationKind: item.operationKind,
     operation: item.operation,
     durationMs: item.durationMs,
+    // An older tab's item carries no own time: all of it counts.
+    ownMs: item.ownMs ?? item.durationMs,
     thresholdMs: item.thresholdMs,
     source: "client-slow-op",
     caller: item.caller ?? null,
@@ -27,6 +29,33 @@ export function toRecordInput(
     ...(item.endedAt !== undefined
       ? { occurredAt: new Date(Math.min(item.endedAt, Date.now())) }
       : {}),
+  };
+}
+
+/**
+ * Take the machine's sleep off a client item: a browser times on the wall
+ * clock, which runs through a nap. The window is the item's last `durationMs`
+ * before its `endedAt` (stamped by the queue on every windowed item); the
+ * overlap is charged to the `sleep` layer and off its own time → the item, or
+ * null when it is no longer over its bar. `sleptMs` null (cannot tell) or 0
+ * leaves it unchanged; so does an item with no `endedAt`.
+ */
+export function withoutSleep(
+  item: SlowOpClientItem,
+  sleptMs: (startMs: number, endMs: number) => number | null,
+): SlowOpClientItem | null {
+  if (item.endedAt === undefined) return item;
+  const slept = sleptMs(item.endedAt - item.durationMs, item.endedAt);
+  if (slept === null || slept <= 0) return item;
+  const ownMs = Math.max(
+    0,
+    (item.ownMs ?? item.durationMs) - Math.round(slept),
+  );
+  if (ownMs <= item.thresholdMs) return null;
+  return {
+    ...item,
+    ownMs,
+    waits: { ...item.waits, [SLEEP_LAYER]: Math.round(slept) },
   };
 }
 

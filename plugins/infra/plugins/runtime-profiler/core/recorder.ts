@@ -717,6 +717,53 @@ export function onSlowSpan(
   };
 }
 
+// --- Slow-wait push seam ---
+
+/**
+ * What a charged wait waited FOR — the one fact that decides whose slowness it
+ * is:
+ * - `queue`: for capacity on a shared gate or pool (`read-admit`, `db-acquire`,
+ *   `heavy-read-*`): the time is the gate's, caused by whoever holds it.
+ * - `join`: for an identical run already in flight (`read-coalesce`,
+ *   `*-coalesce`, `endpoint-dedupe`), or a 0 ms hit/miss marker: the time is
+ *   that run's own work, which its own span already reports.
+ * Either way it is not the WAITER's time (see `slow-ops`' own-time rule).
+ */
+export type WaitKind = "queue" | "join";
+
+/** One `queue` wait at or past an `onSlowWait` floor. */
+export interface SlowWait {
+  /** The gate's layer name (`read-admit`, `db-acquire`, …). */
+  layer: string;
+  ms: number;
+  /** The innermost open entry that waited. */
+  caller: SpanRef;
+}
+
+export type SlowWaitHandler = (wait: SlowWait) => void;
+
+const slowWaitSubs: { thresholdMs: number; handler: SlowWaitHandler }[] = [];
+
+/**
+ * Subscribe to `queue` waits of at least `thresholdMs` — the gate as the slow
+ * op: a span is judged on its own time (its waits excluded), so the time it
+ * queued is reported here, against the gate, instead. Called synchronously from
+ * `chargeWait`; the handler must only schedule. Returns a disposer.
+ */
+export function onSlowWait(
+  handler: SlowWaitHandler,
+  opts: { thresholdMs: number },
+): { dispose: () => void } {
+  const sub = { thresholdMs: opts.thresholdMs, handler };
+  slowWaitSubs.push(sub);
+  return {
+    dispose: () => {
+      const i = slowWaitSubs.indexOf(sub);
+      if (i >= 0) slowWaitSubs.splice(i, 1);
+    },
+  };
+}
+
 // --- Store ---
 
 // Internal aggregate keeps byParent as a Map for O(1) updates; materialized to
@@ -1368,21 +1415,36 @@ function capDetail(detail: SpanDetail | undefined): SpanDetail | undefined {
  * markers use this to surface *that* a layer was consulted, not just how long
  * it blocked.
  *
+ * `kind` says what the caller was waiting FOR (see `WaitKind`): a `queue`
+ * wait at or past an `onSlowWait` floor is handed to its subscribers as the
+ * GATE's slowness, charged where it happens (once per wait — the per-ancestor
+ * unions above would count it once per level).
+ *
  * If no entry is active (context-less: jobs, pollers, migrations), fall back
  * to a standalone `db [layer]` span so the wait is never silently lost.
  * Suppression is honored here (unlike the old innermost-only version) because
  * a wait incurred inside `runWithoutProfiling` would otherwise pollute the
  * unions of ancestors whose own records are NOT suppressed.
  */
-export function chargeWait(layer: string, ms: number): void {
+export function chargeWait(layer: string, ms: number, kind: WaitKind): void {
   if (profilingDisabled()) return;
   if (suppressionRuntime.suppressed()) return;
   const cur = contextRuntime.current();
   if (!cur) {
     // Context-less by definition, so the fallback span is a root leaf: mint an
-    // id, no parent.
+    // id, no parent. That span is already named after the gate, so it is not
+    // also handed to `onSlowWait`.
     record("db", `[${layer}]`, ms, nextSpanId++, null, null);
     return;
+  }
+  if (kind === "queue" && slowWaitSubs.length > 0) {
+    const wait: SlowWait = {
+      layer,
+      ms,
+      caller: { kind: cur.kind, label: cur.label },
+    };
+    for (const sub of slowWaitSubs)
+      if (ms >= sub.thresholdMs) sub.handler(wait);
   }
   const end = now();
   const start = end - ms;

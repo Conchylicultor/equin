@@ -23,6 +23,7 @@ import {
   installProfilingSuppressionRuntime,
   installSpanContextRuntime,
   onSlowSpan,
+  onSlowWait,
   readGateGauges,
   recordEntrySpan,
   recordReadTables,
@@ -142,7 +143,7 @@ describe("wait propagation", () => {
       await recordEntrySpan("push", "res:tasks", async () => {
         await recordEntrySpan("loader", "tasks", async () => {
           fakeNow = 50;
-          chargeWait("loader-acquire", 50); // interval [0, 50]
+          chargeWait("loader-acquire", 50, "queue"); // interval [0, 50]
           fakeNow = 60;
         });
       });
@@ -176,11 +177,11 @@ describe("wait propagation", () => {
       const gateB = deferred();
       const childA = recordEntrySpan("loader", "a", async () => {
         await gateA.promise;
-        chargeWait("gate", 30); // resumes at now=40 → interval [10, 40]
+        chargeWait("gate", 30, "queue"); // resumes at now=40 → interval [10, 40]
       });
       const childB = recordEntrySpan("loader", "b", async () => {
         await gateB.promise;
-        chargeWait("gate", 30); // resumes at now=50 → interval [20, 50]
+        chargeWait("gate", 30, "queue"); // resumes at now=50 → interval [20, 50]
       });
       fakeNow = 40;
       gateA.resolve();
@@ -216,7 +217,7 @@ describe("decomposition coherence", () => {
   test("leaf entry: waitMs + selfMs == wall; composite: waitMs + selfMs ≤ wall, childMs ≈ wall", async () => {
     await recordEntrySpan("loader", "leaf", async () => {
       fakeNow = 30;
-      chargeWait("db-acquire", 30);
+      chargeWait("db-acquire", 30, "queue");
       fakeNow = 100;
     });
     const leaf = agg("loader", "leaf");
@@ -246,7 +247,7 @@ describe("closed-ancestor safety", () => {
     await recordEntrySpan("push", "p", async () => {
       child = recordEntrySpan("loader", "detached", async () => {
         await gate.promise;
-        chargeWait("gate", 50); // parent already closed by now
+        chargeWait("gate", 50, "queue"); // parent already closed by now
       });
       fakeNow = 10;
     });
@@ -313,7 +314,7 @@ describe("closed-ancestor safety", () => {
         // Detached child: started under p but NOT awaited, so p closes first.
         child = recordEntrySpan("loader", "l", async () => {
           await gate.promise;
-          chargeWait("gate", 30); // now=50 → [20,50]; p closed at 40, f still open
+          chargeWait("gate", 30, "queue"); // now=50 → [20,50]; p closed at 40, f still open
         });
         fakeNow = 40; // p closes here, before the child's gate resolves
       });
@@ -375,7 +376,7 @@ describe("rolling max", () => {
 
 describe("chargeWait fallbacks and markers", () => {
   test("no active entry → standalone db [layer] span", () => {
-    chargeWait("loader-acquire", 25);
+    chargeWait("loader-acquire", 25, "queue");
     const a = agg("db", "[loader-acquire]");
     expect(a.count).toBe(1);
     expect(a.totalMs).toBe(25);
@@ -387,13 +388,42 @@ describe("chargeWait fallbacks and markers", () => {
   test("zero-ms marker creates the layer key with 0 and leaves waitMs at 0", async () => {
     await recordEntrySpan("loader", "l", async () => {
       fakeNow = 10;
-      chargeWait("git-memo-hit", 0);
+      chargeWait("git-memo-hit", 0, "join");
       fakeNow = 20;
     });
     const a = agg("loader", "l");
     expect(a.waits).toEqual({ "git-memo-hit": 0 });
     expect(a.waitTotalMs).toBe(0);
     expect(a.selfTotalMs).toBe(20);
+  });
+});
+
+describe("onSlowWait — a queue wait is the gate's slowness", () => {
+  test("fires once per queue wait at/over the floor, naming the innermost entry", async () => {
+    const seen: Array<{ layer: string; ms: number; caller: string }> = [];
+    const sub = onSlowWait(
+      (w) =>
+        seen.push({
+          layer: w.layer,
+          ms: w.ms,
+          caller: `${w.caller.kind}:${w.caller.label}`,
+        }),
+      { thresholdMs: 20 },
+    );
+    try {
+      await recordEntrySpan("sub", "s", async () => {
+        await recordEntrySpan("loader", "l", async () => {
+          fakeNow = 30;
+          // Propagates to BOTH open entries, but is one wait: one callback.
+          chargeWait("read-admit", 30, "queue");
+          chargeWait("db-acquire", 5, "queue"); // under the floor
+          chargeWait("read-coalesce", 40, "join"); // a join is never the gate's
+        });
+      });
+    } finally {
+      sub.dispose();
+    }
+    expect(seen).toEqual([{ layer: "read-admit", ms: 30, caller: "loader:l" }]);
   });
 });
 
@@ -738,7 +768,7 @@ describe("flight recorder — open-entry registry", () => {
   test("an open span's live wait unions appear in the capture", async () => {
     await recordEntrySpan("loader", "l", async () => {
       fakeNow = 40;
-      chargeWait("db-acquire", 40); // interval [0, 40]
+      chargeWait("db-acquire", 40, "queue"); // interval [0, 40]
       fakeNow = 50;
       const w = captureFlightWindow({ windowStartMs: 0 });
       const span = w.open[0]!;
@@ -985,11 +1015,11 @@ describe("positioned wait bands", () => {
   test("per-layer band widths sum to the layer union; cross-layer union equals waitMs", async () => {
     await recordEntrySpan("loader", "l", async () => {
       fakeNow = 10;
-      chargeWait("db-acquire", 10); // [0,10]
+      chargeWait("db-acquire", 10, "queue"); // [0,10]
       fakeNow = 30;
-      chargeWait("db-acquire", 10); // [20,30] — disjoint from the first
+      chargeWait("db-acquire", 10, "queue"); // [20,30] — disjoint from the first
       fakeNow = 60;
-      chargeWait("read-admit", 20); // [40,60]
+      chargeWait("read-admit", 20, "queue"); // [40,60]
     });
     const span = completed("l");
     const bands = span.waitBands!;
@@ -1009,9 +1039,9 @@ describe("positioned wait bands", () => {
   test("overlapping layers: both carry bands; cross-layer union < per-layer sum, == waitMs", async () => {
     await recordEntrySpan("loader", "l", async () => {
       fakeNow = 50;
-      chargeWait("db-acquire", 40); // [10,50]
+      chargeWait("db-acquire", 40, "queue"); // [10,50]
       fakeNow = 60;
-      chargeWait("read-admit", 30); // [30,60] — overlaps the first in time
+      chargeWait("read-admit", 30, "queue"); // [30,60] — overlaps the first in time
     });
     const span = completed("l");
     const bands = span.waitBands!;
@@ -1032,7 +1062,7 @@ describe("positioned wait bands", () => {
         const width = i === 0 ? 1 : 10;
         t = i * 100 + width;
         fakeNow = t;
-        chargeWait("db-acquire", width);
+        chargeWait("db-acquire", width, "queue");
       }
       fakeNow = t;
     });
@@ -1049,9 +1079,9 @@ describe("positioned wait bands", () => {
   test("an open span's live bands appear at their true offsets mid-flight", async () => {
     await recordEntrySpan("loader", "l", async () => {
       fakeNow = 20;
-      chargeWait("db-acquire", 10); // [10,20]
+      chargeWait("db-acquire", 10, "queue"); // [10,20]
       fakeNow = 60;
-      chargeWait("db-acquire", 20); // [40,60] — disjoint
+      chargeWait("db-acquire", 20, "queue"); // [40,60] — disjoint
       fakeNow = 70;
       const span = captureFlightWindow({ windowStartMs: 0 }).open[0]!;
       expect(span.waitBands).toEqual([
@@ -1065,7 +1095,7 @@ describe("positioned wait bands", () => {
   test("a zero-ms marker charge produces no band", async () => {
     await recordEntrySpan("loader", "l", async () => {
       fakeNow = 10;
-      chargeWait("git-memo-hit", 0);
+      chargeWait("git-memo-hit", 0, "join");
       fakeNow = 20;
     });
     const span = completed("l");
@@ -1078,7 +1108,7 @@ describe("positioned wait bands", () => {
   test("resetRuntimeProfile clears the flight-ring wait bands", async () => {
     await recordEntrySpan("loader", "l", async () => {
       fakeNow = 30;
-      chargeWait("db-acquire", 30);
+      chargeWait("db-acquire", 30, "queue");
     });
     expect(completed("l").waitBands).toEqual([
       { layer: "db-acquire", t0: 0, t1: 30 },

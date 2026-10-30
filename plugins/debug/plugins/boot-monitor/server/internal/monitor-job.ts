@@ -99,6 +99,7 @@ export const bootMonitorJob = defineJob({
       operationKind: "boot",
       operation: "server-boot",
       durationMs: totalDurationMs,
+      ownMs: totalDurationMs,
       thresholdMs: cfg.totalBootBudgetMs,
       source: "server-boot-monitor",
       caller: null,

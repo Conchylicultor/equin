@@ -26,3 +26,13 @@ export function currentSleepReading(): SleepNow {
 export function onSleepReadingChanged(fn: () => void): () => void {
   return publisher.subscribe(fn);
 }
+
+/**
+ * ms the machine slept inside `[startMs, endMs]` (epoch ms) — for taking a nap
+ * off a span timed on the wall clock (a slow-op measured in a browser). Reads
+ * the clock first, so a wake moments ago counts. A process knows only the
+ * sleeps it lived through; `null` where the platform cannot tell.
+ */
+export function sleptDuring(startMs: number, endMs: number): number | null {
+  return publisher.sleptDuring(startMs, endMs);
+}

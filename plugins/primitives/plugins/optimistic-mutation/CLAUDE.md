@@ -572,9 +572,9 @@ that drops it from the overlay — is emitted on `clientLatencySink`
   `push` (the confirming snapshot landed after the response), `resolve` (it beat
   the response — `confirm-frame` is 0), `ack` (a standalone ack frame; the ack
   edge calls `reportOutcomes(next, "ack")` like the other two).
-- **Hidden**: tagged when the tab is hidden now or changed visibility at any
-  point since dispatch (`network/live`'s `hiddenSince` — one side of every
-  visibility change is hidden); consumers exclude it.
+- **Hidden**: not the producer's concern. A consumer places the sample on the
+  wall clock at emit (`[now − totalMs, now]`) and asks
+  `primitives/perfs/page-pauses` whether the tab was hidden inside it.
 - **No normal sample** for an op that never confirms (denied, denied-silent,
   rejected, stalled, unmounted while pending) — rejections and stalls already
   have their own sinks — nor, wholesale, when the sink has no subscriber.
@@ -600,8 +600,8 @@ that drops it from the overlay — is emitted on `clientLatencySink`
 
 - Description: Optimistic-mutation primitive over live-state: useOptimisticResource replays pending ops on server truth (overlay/replay) under the never-revert policy — causal (ack-watermark) and content-based confirmation, denial only under causal proof, keep-rendered transient failures with reconnect auto-retry, and permanent (4xx) rejections dropped and reported.
 - Web:
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `network/live` ×10
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live` ×9
     - `primitives/live-state` ×8
     - `infra/endpoints` ×3
     - `primitives/latest-ref.useLatestRef`

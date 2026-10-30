@@ -199,7 +199,7 @@ export function createWatchedMemo<T, F>(
     let stop: () => void;
     try {
       stop = await opts.changes(key, (resync) => {
-        if (resync === true) chargeWait(`memo-resync:${name}`, 0);
+        if (resync === true) chargeWait(`memo-resync:${name}`, 0, "join");
         if (entry.live && !entry.closed) passes.trigger(entry);
       });
     } catch (err) {
@@ -221,7 +221,7 @@ export function createWatchedMemo<T, F>(
     const signature = await opts.signatureOf(key, facts);
     const hit = cache.get(key);
     if (hit?.signature === signature) {
-      chargeWait(`memo-hit:${name}`, 0);
+      chargeWait(`memo-hit:${name}`, 0, "join");
       return hit.value;
     }
     // Join only a compute probed at THIS signature: one probed at an earlier
@@ -229,7 +229,7 @@ export function createWatchedMemo<T, F>(
     return inflight.run(
       `${key}\0${signature}`,
       async () => {
-        chargeWait(`memo-miss:${name}`, 0);
+        chargeWait(`memo-miss:${name}`, 0, "join");
         const value = await opts.compute(key, facts);
         // Cache only when a re-probe still reads `signature`: the compute may
         // have read a later state that has since been undone, and caching it
@@ -245,7 +245,7 @@ export function createWatchedMemo<T, F>(
         }
         return value;
       },
-      { onWait: (ms) => chargeWait(`memo-coalesce:${name}`, ms) },
+      { onWait: (ms) => chargeWait(`memo-coalesce:${name}`, ms, "join") },
     );
   }
 
@@ -253,7 +253,7 @@ export function createWatchedMemo<T, F>(
     async get(key) {
       const entry = entries.get(key);
       if (entry?.state.kind === "watched") {
-        chargeWait(`memo-watched-hit:${name}`, 0);
+        chargeWait(`memo-watched-hit:${name}`, 0, "join");
         return entry.state.value;
       }
       if (entry?.state.kind === "opening") {

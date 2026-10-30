@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   CLIENT_LATENCY_SIGNALS,
+  ownMsOf,
   clientLatencySink,
   splitPhases,
   splitReachedPhases,
@@ -16,12 +17,14 @@ describe("splitPhases", () => {
     const appliedAt = 1060;
     const phases = splitPhases("update", {
       "server-notice": sentAt - deliverMs - changedAt,
+      "throttle-hold": 0,
       "server-deliver": deliverMs,
       transport: receivedAt - sentAt,
       "client-apply": appliedAt - receivedAt,
     });
     expect(phases).toEqual({
       "server-notice": 25,
+      "throttle-hold": 0,
       "server-deliver": 15,
       transport: 12,
       "client-apply": 8,
@@ -55,6 +58,7 @@ describe("splitPhases", () => {
     // @ts-expect-error — `client-apply` missing
     splitPhases("update", {
       "server-notice": 0,
+      "throttle-hold": 0,
       "server-deliver": 0,
       transport: 0,
     });
@@ -65,7 +69,6 @@ describe("splitPhases", () => {
       // @ts-expect-error — an update phase on a confirm sample
       phases: { "send-lane": 0, retry: 0, "server-ack": 0, transport: 0 },
       totalMs: 0,
-      hidden: false,
     };
     expect(sample.signal).toBe("confirm");
   });
@@ -83,7 +86,7 @@ describe("censored samples", () => {
   });
 
   test("tsc: a censored sample may omit phases; a complete one may not; only confirm censors", () => {
-    const base = { key: "k", params: {}, totalMs: 1, hidden: false };
+    const base = { key: "k", params: {}, totalMs: 1 };
     const reached = { "send-lane": 0 };
     const censoredConfirm = {
       ...base,
@@ -121,16 +124,52 @@ describe("clientLatencySink", () => {
       params: {},
       phases: {
         "server-notice": 1,
+        "throttle-hold": 0,
         "server-deliver": 2,
         transport: 3,
         "client-apply": 4,
       },
       totalMs: 10,
-      hidden: false,
     };
     clientLatencySink.emit(sample);
     off();
     expect(seen).toEqual([sample]);
     expect(clientLatencySink.hasSubscribers()).toBe(false);
+  });
+});
+
+describe("ownMsOf", () => {
+  test("subtracts the held phases (an update's throttle hold), never below 0", () => {
+    const sample: ClientLatencySample = {
+      signal: "update",
+      key: "queue-health.pulse",
+      params: {},
+      phases: splitPhases("update", {
+        "server-notice": 1,
+        "throttle-hold": 998,
+        "server-deliver": 1,
+        transport: 1,
+        "client-apply": 1,
+      }),
+      totalMs: 1002,
+    };
+    expect(ownMsOf(sample)).toBe(4);
+    expect(ownMsOf({ ...sample, totalMs: 500 })).toBe(0);
+  });
+
+  test("a signal with no held phase is all own time", () => {
+    const sample: ClientLatencySample = {
+      signal: "confirm",
+      key: "k",
+      params: {},
+      phases: splitPhases("confirm", {
+        "send-lane": 1,
+        retry: 0,
+        "server-ack": 40,
+        "confirm-frame": 0,
+      }),
+      totalMs: 41,
+    };
+    expect(ownMsOf(sample)).toBe(41);
   });
 });

@@ -31,7 +31,7 @@ Every entry span decomposes its wall-clock into **`waitMs`** (time covered by na
 gate/pool waits at any depth of its subtree), **`childMs`** (time covered by direct-child
 entry executions), and **`selfMs`** (the remainder: its own orchestration/CPU — on a
 composite span a *conservative upper bound* of own work, since untracked awaits land here).
-A concurrency gate calls `chargeWait(layer, ms)` from its `onWait` callback; the interval
+A concurrency gate calls `chargeWait(layer, ms, kind)` from its `onWait` callback; the interval
 `[now − ms, now]` propagates to **every open ancestor entry** (innermost included) up the
 live `EntryContext.parent` chain, so a composite span like a `flush` draining many loaders
 names the gates its subtree waited on rather than showing huge wall-clock with empty `waits`.
@@ -120,7 +120,18 @@ imports `server/`, so on the client every entry point is a transparent passthrou
 - `recordSpan(kind, label, durationMs)` — leaf path (DB pool wrapper); attributes to the
   current ambient context automatically. A leaf has no decomposition: `waitMs`/`childMs`
   default to 0, `selfMs` to the full duration.
-- `chargeWait(layer, ms)` — see the decomposition section above.
+- `chargeWait(layer, ms, kind)` — see the decomposition section above. `kind`
+  (`WaitKind`, required) says what the caller waited FOR: `queue` means
+  capacity on a shared gate or pool, so the time is the gate's; `join` means an
+  identical run already in flight (a coalesce or dedupe), or a 0 ms hit/miss
+  marker, so the time is that run's. A slow-op consumer judges a span on its
+  own time (its waits excluded), so this is what decides who the waited time
+  is charged to.
+- `onSlowWait(handler, { thresholdMs })` — the push seam for a slow `queue`
+  wait: called once per wait, from `chargeWait` (an ancestor's union would
+  count it once per level), with the layer, the ms and the innermost open
+  entry that waited. Context-less waits already become a `db [layer]` span and
+  are not handed here. slow-ops files each as `wait <layer>`.
 - `currentCallerKind()` — the `kind` of the **innermost** enclosing entry point (or
   `undefined` when none is active). A thin read of the same ambient context; the DB pool
   wrapper uses it to decide whether to capture a query's read-set. Read it synchronously,
@@ -337,6 +348,8 @@ remaining allocations are one flat band array per completed entry span, and what
     - `ParentBreakdown`
     - `SlowSpan`
     - `SlowSpanHandler`
+    - `SlowWait`
+    - `SlowWaitHandler`
     - `SpanDetail`
     - `SpanKind`
     - `SpanMeasure`
@@ -345,6 +358,7 @@ remaining allocations are one flat band array per completed entry span, and what
     - `Track`
     - `WaitBand`
     - `WaitBreakdown`
+    - `WaitKind`
   - Exports (values):
     - `__contribute`
     - `__pushBand`
@@ -362,6 +376,7 @@ remaining allocations are one flat band array per completed entry span, and what
     - `installRootContextRuntime`
     - `installSpanContextRuntime`
     - `onSlowSpan`
+    - `onSlowWait`
     - `profilerNowMs`
     - `readGateGauges`
     - `recordEntrySpan`

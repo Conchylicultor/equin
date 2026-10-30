@@ -58,7 +58,6 @@ import {
   optimisticRejectionSink,
   REJECTION_MESSAGE_MAX,
 } from "./write-sinks";
-import { hiddenSince } from "./tab-hidden";
 
 // `useLiveMutation` — the one browser client of a PREDICTED endpoint (one
 // declared with an `effect`): design in
@@ -396,7 +395,6 @@ function confirmSample(op: PredictOp, doneAt: number) {
       "confirm-frame": doneAt - ackedAt,
     }),
     totalMs: doneAt - dispatchedAt,
-    hidden: hiddenSince(dispatchedAt),
   };
 }
 
@@ -434,7 +432,6 @@ function unconfirmedSample(op: PredictOp, now: number): UnconfirmedSample {
           : ackedAt - lastSentAt,
     }),
     totalMs: now - dispatchedAt,
-    hidden: hiddenSince(dispatchedAt),
   };
 }
 

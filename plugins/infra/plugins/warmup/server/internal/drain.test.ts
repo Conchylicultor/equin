@@ -213,4 +213,34 @@ describe("drainWarmupsWith", () => {
     expect(bg("warmup:unbudgeted-one")).toBeDefined();
     expect(bg("warmup:unbudgeted-one")?.budgetMs).toBeUndefined();
   });
+
+  test("a run is timed from its slot grant, not from when it queued for it", async () => {
+    const runs: Record<string, WarmupRun> = {};
+    const warmups: WarmupSpec[] = [
+      {
+        name: "queued",
+        description: "Test warm-up.",
+        scope: "worktree",
+        run: async () => {
+          await new Promise<void>((r) => setTimeout(r, 5));
+        },
+      },
+    ];
+    await drainWarmupsWith(
+      baseDeps(warmups, {
+        // The host's slot grants only after 80 ms of queueing.
+        withSlot: async (fn) => {
+          await new Promise<void>((r) => setTimeout(r, 80));
+          return fn();
+        },
+        onRun: (name, run) => {
+          runs[name] = run;
+        },
+      }),
+    );
+    const run = runs["queued"]!;
+    expect(run.outcome).toBe("succeeded");
+    if (run.outcome !== "succeeded") return;
+    expect(run.durationMs).toBeLessThan(60);
+  });
 });

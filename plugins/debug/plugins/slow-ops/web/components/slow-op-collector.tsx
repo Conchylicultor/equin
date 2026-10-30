@@ -7,9 +7,13 @@ import { clientLatencySink } from "@plugins/primitives/plugins/perfs/plugins/lat
 import { currentRoutePath } from "@plugins/primitives/plugins/pane/web";
 import { toClientBootSection } from "@plugins/debug/plugins/trace/plugins/client-boot/core";
 import { clientSlowOpSink, slowOpConfig } from "../../core";
-import { elementSlowOp } from "../internal/element-slow-op";
+import { elementSlowOp, transportSlowOp } from "../internal/element-slow-op";
 import { latencySlowOp } from "../internal/latency-slow-op";
+import { endingNow } from "../internal/page-pause-judge";
 import { enqueueSlowOp } from "../internal/slow-op-queue";
+
+// The page's transport bring-up is filed at most once (see transportSlowOp).
+let transportBringUpFiled = false;
 
 // A Core.Root side-effect component. It owns the client-side slow-op signals —
 // page-load timing, live-state element settle, and every client latency signal
@@ -48,6 +52,9 @@ export function SlowOpCollector() {
         operationKind: "page-load",
         operation: currentRoutePath(),
         durationMs,
+        // No window: a long frame during the load IS the load (bundle eval,
+        // first render), so nothing is taken off it.
+        ownMs: durationMs,
         thresholdMs: t,
         // The browser's own boot decomposition rides along (trimmed to stay far
         // under the 64KB keepalive cap), so the resulting trace carries the
@@ -64,15 +71,32 @@ export function SlowOpCollector() {
   // Element signal: live-state resources hand us their mount → settle duration.
   useEffect(() => {
     slowResourceReportSink.register((info) => {
-      // Mount→first-data settle IS the user-perceived time-to-content. Report it
-      // as-is, including the cold-start boot wave: a slow boot is a real UX
-      // regression, not noise. The gateway hot-swaps only once the backend is
-      // ready (warm pool, migrations applied) — so a slow settle right after a
-      // swap means readiness flipped before the backend could serve fast. Fix
-      // that at the source; never suppress this signal. Batching below is a
-      // transport change only — every signal still reaches the recorder.
-      const item = elementSlowOp(info, cfgRef.current, currentRoutePath());
-      if (item) enqueueSlowOp(item);
+      // Mount→first-data settle is the user-perceived time-to-content, judged
+      // on the resource's OWN part of it: the transport bring-up it waited out
+      // is the transport's, filed once against it below (a slow boot stays
+      // loud — on the op that owns it). See "Own time" in ../../CLAUDE.md.
+      const route = currentRoutePath();
+      const item = elementSlowOp(info, cfgRef.current, route);
+      if (item) enqueueSlowOp(item, endingNow(info.durationMs));
+      if (
+        !transportBringUpFiled &&
+        info.transportColdStart &&
+        info.transportReadyAtMs !== null
+      ) {
+        transportBringUpFiled = true;
+        const transport = transportSlowOp(
+          info.transportReadyAtMs,
+          cfgRef.current,
+          route,
+        );
+        // Page start → socket open, on the wall clock: a page loaded hidden is
+        // dropped at the flush like any other span.
+        if (transport)
+          enqueueSlowOp(transport, {
+            startMs: performance.timeOrigin,
+            endMs: performance.timeOrigin + info.transportReadyAtMs,
+          });
+      }
     });
     return () => slowResourceReportSink.register(null);
   }, []);
@@ -84,15 +108,20 @@ export function SlowOpCollector() {
     () =>
       clientLatencySink.subscribe((sample) => {
         const item = latencySlowOp(sample, cfgRef.current, currentRoutePath());
-        if (item) enqueueSlowOp(item);
+        // Emitted at its end: the window is the last `totalMs` of wall time.
+        if (item) enqueueSlowOp(item, endingNow(sample.totalMs));
       }),
     [],
   );
 
   // Fully-formed slow-ops from producers outside slow-ops (clientSlowOpSink):
-  // each judged itself against its own bar, so it is forwarded unchanged.
+  // each judged itself against its own bar, so it is forwarded unchanged —
+  // all of it its own time (a main-thread stall IS the frozen page).
   useEffect(
-    () => clientSlowOpSink.subscribe((signal) => enqueueSlowOp(signal)),
+    () =>
+      clientSlowOpSink.subscribe((signal) =>
+        enqueueSlowOp({ ...signal, ownMs: signal.durationMs }),
+      ),
     [],
   );
 

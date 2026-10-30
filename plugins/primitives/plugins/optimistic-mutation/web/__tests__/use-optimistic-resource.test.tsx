@@ -1584,7 +1584,6 @@ describe("useOptimisticResource — the unconfirmed deadline", () => {
         variant: "unconfirmed/awaiting-confirm-frame",
         phases: { "send-lane": 0, retry: 0, "server-ack": 50 },
         totalMs: UNCONFIRMED_MS,
-        hidden: false,
         detail: { ackWatermark: "777" },
       },
     ]);
@@ -1744,7 +1743,6 @@ describe("useOptimisticResource — confirm latency samples", () => {
           "confirm-frame": 30,
         },
         totalMs: 80,
-        hidden: false,
       },
     ]);
   });
@@ -1896,34 +1894,5 @@ describe("useOptimisticResource — confirm latency samples", () => {
       live.queryClient.setQueryData(queryKeyFor(value.key, undefined), [2]);
     });
     expect(samples).toEqual([]);
-  });
-
-  // Last: the visibility stamp is page-global, so it would tag any later op
-  // dispatched before it.
-  it("an op the tab was hidden during is tagged hidden", async () => {
-    const value = latencyValue("hidden");
-    const live = createLiveStateHarness();
-    const { mutate, release } = deferredMutate();
-    const { rows } = await mountRows(live, mutate, {
-      contentBased: true,
-      value,
-    });
-
-    clock = 1_000_000;
-    act(() => {
-      rows().dispatch(2);
-    });
-    clock = 1_000_010;
-    document.dispatchEvent(new Event("visibilitychange")); // hidden, then back
-    clock = 1_000_020;
-    await act(async () => {
-      release();
-    });
-    clock = 1_000_030;
-    act(() => {
-      live.queryClient.setQueryData(queryKeyFor(value.key, undefined), [2]);
-    });
-    expect(samples).toHaveLength(1);
-    expect(samples[0]!.hidden).toBe(true);
   });
 });

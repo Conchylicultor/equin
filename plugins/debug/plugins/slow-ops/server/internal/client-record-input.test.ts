@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import type { SlowOpClientItem } from "../../shared/endpoints";
-import { toRecordInput, toRecordInputs } from "./client-record-input";
+import {
+  toRecordInput,
+  toRecordInputs,
+  withoutSleep,
+} from "./client-record-input";
 
 const item = (over: Partial<SlowOpClientItem> = {}): SlowOpClientItem => ({
   operationKind: "update",
@@ -27,6 +31,7 @@ describe("toRecordInput", () => {
       operationKind: "update",
       operation: "tasks",
       durationMs: 1200,
+      ownMs: 1200,
       thresholdMs: 1000,
       source: "client-slow-op",
       caller: { kind: "route", label: "/agents" },
@@ -81,5 +86,40 @@ describe("toRecordInputs", () => {
   test("a kind whose trace was not admitted links nothing", () => {
     const inputs = toRecordInputs([item(), item()], () => undefined);
     expect(inputs.map((i) => i.traceId)).toEqual([undefined, undefined]);
+  });
+});
+
+describe("withoutSleep", () => {
+  const ended = item({
+    durationMs: 120_000,
+    ownMs: 120_000,
+    endedAt: 1_000_000,
+  });
+
+  test("asks about the item's own window", () => {
+    const asked: [number, number][] = [];
+    withoutSleep(ended, (a, b) => {
+      asked.push([a, b]);
+      return 0;
+    });
+    expect(asked).toEqual([[880_000, 1_000_000]]);
+  });
+
+  test("an item that was only asleep is dropped", () => {
+    expect(withoutSleep(ended, () => 119_500)).toBeNull();
+  });
+
+  test("still slow when awake: the nap is charged to its layer", () => {
+    expect(withoutSleep(ended, () => 100_000)).toEqual({
+      ...ended,
+      ownMs: 20_000,
+      waits: { sleep: 100_000 },
+    });
+  });
+
+  test("cannot tell, or no end time: unchanged", () => {
+    expect(withoutSleep(ended, () => null)).toBe(ended);
+    const live = item();
+    expect(withoutSleep(live, () => 5000)).toBe(live);
   });
 });

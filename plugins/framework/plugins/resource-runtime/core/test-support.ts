@@ -72,7 +72,12 @@ export interface RecordedFrame {
   /** Mutation-ack attribution: feed-driven value frames and `ack` frames. */
   ackTx?: string[];
   /** Push timing (`update` / `delta` with a known change time): see `frameTiming`. */
-  timing?: { changedAt: number; sentAt: number; deliverMs: number };
+  timing?: {
+    changedAt: number;
+    sentAt: number;
+    deliverMs: number;
+    holdMs: number;
+  };
   reason?: string;
   /** `sub-error` on contract-mismatch / unknown-key: skew / same-build / unknown. */
   verdict?: string;

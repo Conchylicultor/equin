@@ -17,7 +17,6 @@ const sample = (): UnconfirmedSample => ({
   variant: "unconfirmed/awaiting-ack",
   phases: { "send-lane": 0, retry: 0 },
   totalMs: UNCONFIRMED_MS,
-  hidden: false,
 });
 
 describe("armUnconfirmedDeadline", () => {

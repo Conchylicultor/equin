@@ -21832,6 +21832,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/log-channels.clientLog`
           - `primitives/networking/page-transport.pageTransport`
           - `primitives/pane.currentRoutePath`
+          - `primitives/perfs/page-pauses.pausesDuring`
       - Server:
         - Contributes:
           - `resource.declare` "latency-ledger.summary"
@@ -23383,6 +23384,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/networking/page-transport.pageTransport`
           - `primitives/pane.currentRoutePath`
           - `primitives/perfs/boot-trace.getBootTrace`
+          - `primitives/perfs/page-pauses.pausesDuring`
           - `reports.Reports`
           - `ui/icons.Icon`
       - Server:
@@ -23400,7 +23402,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `change-producer` "slow_ops"
           - `fork-data-exclusion` "slow_op_callers"
           - `fork-data-exclusion` "slow_ops"
-        - Uses: 24 symbols — full list in [`plugins/debug/plugins/slow-ops/REFERENCE.md`](../plugins/debug/plugins/slow-ops/REFERENCE.md)
+        - Uses: 25 symbols — full list in [`plugins/debug/plugins/slow-ops/REFERENCE.md`](../plugins/debug/plugins/slow-ops/REFERENCE.md)
           - `infra/jobs` ×4
           - `infra/entities` ×3
           - `config_v2` ×2
@@ -23411,6 +23413,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database.db`
           - `debug/trace/engine.captureTrace`
           - `infra/endpoints.implement`
+          - `infra/host/machine-sleep.sleptDuring`
           - `infra/retention.defineRetention`
           - `network/live.serveCollection`
           - `primitives/log-channels/log-files.readChannelJsonAsync`
@@ -31022,13 +31025,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/attempt-work`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/pool.ts` (debt)
-        - **`machine-sleep`** — useSleepNow(): the machine.sleep live value (and useSleepNowForFold: the reading as op-log's `sleepNow` fold parameter, unknown while loading or where the computer cannot be read) — the box's sleep clock, so a live surface can count a nap as asleep rather than as work. The machine's sleep clock, read and published: publishSleepReading() re-reads it and tells its listeners only when it changed — called by an existing periodic observer, so a wake reaches the browser without a poller of its own — with currentSleepReading() and onSleepReadingChanged() for the machine half that serves it as the machine.sleep live value.
+        - **`machine-sleep`** — useSleepNow(): the machine.sleep live value (and useSleepNowForFold: the reading as op-log's `sleepNow` fold parameter, unknown while loading or where the computer cannot be read) — the box's sleep clock, so a live surface can count a nap as asleep rather than as work. The machine's sleep clock, read and published: publishSleepReading() re-reads it and tells its listeners only when it changed — called by an existing periodic observer, so a wake reaches the browser without a poller of its own — with currentSleepReading() and onSleepReadingChanged() for the machine half that serves it as the machine.sleep live value, and sleptDuring(start, end) — the sleep this process saw inside a wall-clock span.
           - Server:
             - Contributes: `resource.declare` "machine.sleep"
             - Exports (values):
               - `currentSleepReading`
               - `onSleepReadingChanged`
               - `publishSleepReading`
+              - `sleptDuring`
             - Resources: `machine.sleep` (push, notified)
           - Web:
             - Uses:
@@ -31050,6 +31054,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/op-status`
               - `debug/health-monitor`
               - `debug/profiling/ops`
+              - `debug/slow-ops`
     - **`host-account`** — Host account, read: useHostAccount() — the account this instance runs as (login name and full name: the OS account on the desktop, a guest account on a host without the computer), loading until its value arrives. Its home directory is the hostHome value (core, needsMachine), read with useLive. Host account: serves the host-account value — the account this instance runs as (login name and full name), read once through the HostAccountSource host service: the OS account on the desktop (machine/), a fixed guest account on a host without the computer. Its sibling host-account.home, the account's home directory, is the machine half's.
       - Server:
         - Contributes:
@@ -32675,6 +32680,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ParentBreakdown`
           - `SlowSpan`
           - `SlowSpanHandler`
+          - `SlowWait`
+          - `SlowWaitHandler`
           - `SpanDetail`
           - `SpanKind`
           - `SpanMeasure`
@@ -32683,6 +32690,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Track`
           - `WaitBand`
           - `WaitBreakdown`
+          - `WaitKind`
         - Exports (values):
           - `__contribute`
           - `__pushBand`
@@ -32700,6 +32708,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `installRootContextRuntime`
           - `installSpanContextRuntime`
           - `onSlowSpan`
+          - `onSlowWait`
           - `profilerNowMs`
           - `readGateGauges`
           - `recordEntrySpan`
@@ -34312,7 +34321,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `enqueueOnSendLane`
           - `entitySendLaneKey`
           - `FieldPresentation`
-          - `hiddenSince`
           - `mapRow`
           - `mintVisibleRange`
           - `optimisticDivergenceReportSink`
@@ -45089,8 +45097,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `requestGuardReportSink`
     - **`optimistic-mutation`** — Optimistic-mutation primitive over live-state: useOptimisticResource replays pending ops on server truth (overlay/replay) under the never-revert policy — causal (ack-watermark) and content-based confirmation, denial only under causal proof, keep-rendered transient failures with reconnect auto-retry, and permanent (4xx) rejections dropped and reported.
       - Web:
-        - Uses: 24 symbols — full list in [`plugins/primitives/plugins/optimistic-mutation/REFERENCE.md`](../plugins/primitives/plugins/optimistic-mutation/REFERENCE.md)
-          - `network/live` ×10
+        - Uses: 23 symbols — full list in [`plugins/primitives/plugins/optimistic-mutation/REFERENCE.md`](../plugins/primitives/plugins/optimistic-mutation/REFERENCE.md)
+          - `network/live` ×9
           - `primitives/live-state` ×8
           - `infra/endpoints` ×3
           - `primitives/latest-ref.useLatestRef`
@@ -46059,8 +46067,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `CLIENT_LATENCY_SIGNALS`
               - `clientLatencySink`
+              - `HELD_PHASES`
+              - `ownMsOf`
               - `splitPhases`
               - `splitReachedPhases`
+        - **`page-pauses`** — Was this page paused during a span of wall-clock time? pausesDuring(start, end): hidden or frozen at any point (visibilitychange, Page Lifecycle freeze), and how long its main thread was stalled inside it (long animation frames ≥ 1 s, the bar main-thread-stall files its own slow-op at) — the one record every client latency consumer reads instead of tracking visibility itself.
+          - Cross-plugin:
+            - Imported by:
+              - `debug/latency-ledger`
+              - `debug/slow-ops`
+          - Web:
+            - Exports (types): `PagePauses`
+            - Exports (values):
+              - `pausesDuring`
+              - `STALL_MIN_MS`
         - **`scheduler`** — Main-thread scheduling primitives (yieldToMain: scheduler.yield → postTask → setTimeout(0)) for cooperative boot/work batching.
           - Cross-plugin:
             - Imported by: `framework/web-core`

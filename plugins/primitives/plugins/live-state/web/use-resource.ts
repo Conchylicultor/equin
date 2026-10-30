@@ -584,6 +584,7 @@ function reportTupleSettled(
     key,
     params,
     durationMs: startedAt === null ? 0 : now - startedAt,
+    transportReadyAtMs: firstReadyAt,
     transportColdStart:
       startedAt !== null &&
       (firstReadyAt === null || firstReadyAt >= startedAt),

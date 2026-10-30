@@ -1,6 +1,6 @@
 // The collector feeds the ledger's `update-e2e` metric from the `update`
 // latency signal's total — one subscriber on clientLatencySink among several.
-// A hidden tab's sample is kept but excluded; other signals are not recorded.
+// A sample the tab spent hidden in is kept but excluded; other signals are not recorded.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render } from "@testing-library/react";
@@ -15,25 +15,30 @@ vi.mock("../internal/client-ledger", () => ({
 vi.mock("../internal/interaction-tracker", () => ({
   startInteractionTracking: () => () => {},
 }));
+let pageHidden = false;
+vi.mock("@plugins/primitives/plugins/perfs/plugins/page-pauses/web", () => ({
+  pausesDuring: () => ({ hidden: pageHidden, stalledMs: 0 }),
+}));
 
 const recordMock = vi.mocked(recordSample);
 
-const update = (hidden: boolean) =>
+const update = () =>
   ({
     signal: "update",
     key: "tasks",
     params: {},
     phases: {
       "server-notice": 10,
+      "throttle-hold": 0,
       "server-deliver": 20,
       transport: 5,
       "client-apply": 3,
     },
     totalMs: 38,
-    hidden,
   }) as const;
 
 afterEach(() => {
+  pageHidden = false;
   cleanup();
   recordMock.mockClear();
 });
@@ -41,7 +46,7 @@ afterEach(() => {
 describe("LatencyCollector", () => {
   it("records an update sample's total as update-e2e", () => {
     render(<LatencyCollector />);
-    clientLatencySink.emit(update(false));
+    clientLatencySink.emit(update());
     expect(recordMock).toHaveBeenCalledTimes(1);
     expect(recordMock).toHaveBeenCalledWith("update-e2e", 38, {
       excluded: false,
@@ -50,7 +55,8 @@ describe("LatencyCollector", () => {
 
   it("excludes a hidden tab's sample", () => {
     render(<LatencyCollector />);
-    clientLatencySink.emit(update(true));
+    pageHidden = true;
+    clientLatencySink.emit(update());
     expect(recordMock).toHaveBeenCalledWith("update-e2e", 38, {
       excluded: true,
     });
@@ -70,7 +76,6 @@ describe("LatencyCollector", () => {
         "confirm-frame": 10,
       },
       totalMs: 50,
-      hidden: false,
     });
     expect(recordMock).not.toHaveBeenCalled();
   });
@@ -79,7 +84,7 @@ describe("LatencyCollector", () => {
     const { unmount } = render(<LatencyCollector />);
     unmount();
     expect(clientLatencySink.hasSubscribers()).toBe(false);
-    clientLatencySink.emit(update(false));
+    clientLatencySink.emit(update());
     expect(recordMock).not.toHaveBeenCalled();
   });
 });
