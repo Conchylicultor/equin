@@ -70,7 +70,10 @@ interface ControlPanelRowCommon {
    * hard contract (the row IS the click target, so an interactive control here
    * would be a nested one); on a row WITH `actions` the interactive trailing
    * content is the action cluster, and this still sits in front of it as plain
-   * text. Ignored when `select="switch"`, which owns the cell.
+   * text — OUTSIDE the selectable region, so a click on it does nothing. A
+   * glyph that looks pressable (an eye, a toggle) belongs in `actions` /
+   * `restingActions` as a real button, never here. Ignored when
+   * `select="switch"`, which owns the cell.
    */
   trailing?: React.ReactNode;
   /**
@@ -83,9 +86,25 @@ interface ControlPanelRowCommon {
    * click target's SIBLINGS rather than its descendants. See the component doc.
    */
   actions?: React.ReactNode;
+  /**
+   * Row actions drawn AT REST — the same xs `IconButton`s as `actions`, in
+   * their own always-visible cluster at the row's trailing edge, after the
+   * hover cluster (so an action keeps its x whether it rests or waits for the
+   * hover). For an action whose glyph is also the row's state and must read
+   * without a hover: a hidden field's eye-off. Like `actions`, it switches the
+   * row to its second construction.
+   */
+  restingActions?: React.ReactNode;
   tone?: ControlPanelRowTone;
   /** Muted foreground — for a secondary row ("New field", "Add filter"). */
   muted?: boolean;
+  /**
+   * The thing the row names is switched OFF — a hidden field, a paused rule —
+   * drawn in the faint ink, clearly apart from its live siblings. Not
+   * `disabled`: the row stays live (selecting it is how it comes back on). Not
+   * `muted`, which marks a secondary row and is only a shade off the resting ink.
+   */
+  inactive?: boolean;
   /**
    * Select on PRESS without taking focus — for a panel opened beside a live
    * caret (the page editor's block menu), where a plain click would first
@@ -210,6 +229,7 @@ export type ControlPanelRowProps = ControlPanelRowExplanation &
         checked: boolean;
         icon?: React.ReactNode;
         actions?: never;
+        restingActions?: never;
         indicator?: never;
         selected?: never;
       })
@@ -253,7 +273,7 @@ const TITLE_LINE_CELL = "self-start box-content h-lh py-xs text-body";
  * `onSelect`/`disabled` → `<button>`, else a plain `<div>`. Same rule as `Row`,
  * so an author learns it once.
  *
- * ## Two constructions, chosen by `actions`
+ * ## Two constructions, chosen by `actions` (or `restingActions`)
  *
  * **Without `actions`** the inferred element IS the row box: one node carrying
  * `cp-row`, with the four cells as its direct children. That is the shape ~50
@@ -284,8 +304,10 @@ export function ControlPanelRow({
   handleProps,
   trailing,
   actions,
+  restingActions,
   tone = "default",
   muted,
+  inactive,
   keepFocus,
   disabled,
   onSelect: onSelectProp,
@@ -310,7 +332,7 @@ export function ControlPanelRow({
   const isButton = !isLink && (onSelect != null || disabled != null);
   const press = selectHandlers(onSelect, keepFocus);
   const interactive = isLink || isButton;
-  const hasActions = actions != null;
+  const hasActions = actions != null || restingActions != null;
 
   // One callback ref for three possible hosts. A `RefObject`'s `current` is
   // MUTABLE, so `RefObject<HTMLElement>` is not assignable to
@@ -398,6 +420,7 @@ export function ControlPanelRow({
     MENU_ROW_PAINT,
     MENU_ROW_CHECKED,
     muted && "text-muted-foreground",
+    inactive && "text-faint-foreground",
     // This row's highlight states are `:hover` and KEYBOARD focus; the paint is
     // the shared one — so a row reached by Tab or arrow lights exactly like a
     // dropdown row under the arrow keys, one indicator in every menu rather
@@ -557,7 +580,14 @@ export function ControlPanelRow({
           className={cn("col-[-2/-1] flex items-center gap-2xs", MENU_VALUE)}
         >
           {trailingContent}
-          <RowActions pin={null}>{actions}</RowActions>
+          {actions != null ? (
+            <RowActions pin={null}>{actions}</RowActions>
+          ) : null}
+          {restingActions != null ? (
+            <RowActions pin={null} alwaysVisible>
+              {restingActions}
+            </RowActions>
+          ) : null}
         </span>
       </div>
     );

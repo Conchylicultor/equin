@@ -490,8 +490,8 @@ surface isn't viewport-capped, it fails loudly.
     - `useControlPanelHost`
     - `usePanelStack`
 - Cross-plugin:
-  - Uses tokens: 33 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/color-palette` ×12
+  - Uses tokens: 34 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/color-palette` ×13
     - `ui/tokens/density` ×11
     - `ui/tokens/type-scale` ×7
     - `ui/tokens/shape` ×2

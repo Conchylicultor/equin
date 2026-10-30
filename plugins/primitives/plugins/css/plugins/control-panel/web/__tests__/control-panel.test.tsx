@@ -181,6 +181,53 @@ describe("ControlPanel.Row — `actions` splits the row", () => {
     expect(classes).not.toContain("focus-within:menu-row-lit");
   });
 
+  it("draws `restingActions` at rest, after the hover cluster", () => {
+    const { container } = render(
+      <ControlPanel>
+        <ControlPanel.Row
+          onSelect={vi.fn()}
+          actions={<button type="button" aria-label="Move" />}
+          restingActions={<button type="button" aria-label="Show Trigger" />}
+        >
+          Trigger
+        </ControlPanel.Row>
+      </ControlPanel>,
+    );
+    // It splits the row like `actions` does: the resting button is a real
+    // button beside the selection, never inside it.
+    const box = container.querySelector(".cp-row")!;
+    expect(box.tagName).toBe("DIV");
+    const select = box.querySelector("[data-cp-select]")!;
+    const resting = screen.getByRole("button", { name: "Show Trigger" });
+    const move = screen.getByRole("button", { name: "Move" });
+    expect(select.contains(resting)).toBe(false);
+    // The hover cluster fades; the resting one never does, and it comes LAST,
+    // so an action keeps the trailing edge whether it rests or waits.
+    const clusterOf = (el: Element) =>
+      el.parentElement!.closest('[data-cp-cell="trailing"] > *')!;
+    expect(clusterOf(move).className).toContain("opacity-0");
+    expect(clusterOf(resting).className).not.toContain("opacity-0");
+    expect(
+      move.compareDocumentPosition(resting) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("draws an `inactive` row in the faint ink, still live", () => {
+    const onSelect = vi.fn();
+    const { container } = render(
+      <ControlPanel>
+        <ControlPanel.Row inactive onSelect={onSelect}>
+          Finished
+        </ControlPanel.Row>
+      </ControlPanel>,
+    );
+    const box = container.querySelector(".cp-row") as HTMLButtonElement;
+    expect(box.className).toContain("text-faint-foreground");
+    expect(box.disabled).toBe(false);
+    fireEvent.click(box);
+    expect(onSelect).toHaveBeenCalledTimes(1);
+  });
+
   it("leaves a row WITHOUT actions exactly as it was", () => {
     const { container } = render(
       <ControlPanel>

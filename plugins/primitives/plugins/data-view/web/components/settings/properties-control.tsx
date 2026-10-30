@@ -61,12 +61,16 @@ const NO_SLOTS: ViewSlots = {};
  * Each row is one `ControlPanel.Row` with no drag handle: the whole row is the
  * drag activator (its `SortableItem` wrapper carries the listeners — a press
  * that moves under 4px stays a click, and dnd-kit swallows the click that ends
- * a drag), the row itself is the show / hide toggle, and the trailing cell is
- * the eye that says which (`visibility` / `visibility-off`). A hidden field stays
- * where it is, dimmed (`muted`), so showing it again puts it back in the same
- * place — the list's order is the body's, hidden fields included. The eye is
- * presentational (the row is the click target), so the hidden state is also
- * spelled out to screen readers in the label.
+ * a drag), and both the row and its eye button (`visibility` /
+ * `visibility-off`) toggle show / hide. The eye is a real row action — a
+ * presentational `trailing` glyph sits outside the row's click target once the
+ * row carries actions, which is how it once looked pressable and did nothing.
+ * A shown field's eye waits for the hover with its other actions; a hidden
+ * field's eye-off rests (`restingActions`) and its label is drawn `inactive`,
+ * so what is hidden reads at a glance. A hidden field stays where it is, so
+ * showing it again puts it back in the same place — the list's order is the
+ * body's, hidden fields included. The hidden state is also spelled out to
+ * screen readers in the label.
  *
  * "Show all fields" is the section's LAST ROW, not the panel's footer: a
  * contribution owns a section, not the panel, and a footer placed from inside one
@@ -219,14 +223,26 @@ function PropertyRows({
         >
           {() => (
             <ControlPanel.Row
-              muted={!item.visible}
+              inactive={!item.visible}
               onSelect={() => controller.toggle(item.field.id)}
-              trailing={
-                <Icon icon={item.visible ? visibilityIcon : hiddenIcon} />
-              }
+              // The eye keeps the trailing edge either way: a shown field's
+              // waits for the hover after "Show in…", a hidden field's rests.
               actions={
-                slots === null ? undefined : (
-                  <MoveToSlotButton field={item.field} />
+                <>
+                  {slots === null ? null : (
+                    <MoveToSlotButton field={item.field} />
+                  )}
+                  {item.visible ? (
+                    <VisibilityButton
+                      item={item}
+                      onToggle={controller.toggle}
+                    />
+                  ) : null}
+                </>
+              }
+              restingActions={
+                item.visible ? undefined : (
+                  <VisibilityButton item={item} onToggle={controller.toggle} />
                 )
               }
             >
@@ -237,6 +253,23 @@ function PropertyRows({
         </SortableItem>
       ))}
     </SortableList>
+  );
+}
+
+/** The row's eye: shows or hides its field, saying which it is. */
+function VisibilityButton({
+  item,
+  onToggle,
+}: {
+  item: PropertyItem<unknown>;
+  onToggle: (id: string) => void;
+}): ReactNode {
+  return (
+    <IconButton
+      icon={item.visible ? visibilityIcon : hiddenIcon}
+      label={`${item.visible ? "Hide" : "Show"} ${item.field.label}`}
+      onClick={() => onToggle(item.field.id)}
+    />
   );
 }
 

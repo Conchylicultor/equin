@@ -40200,8 +40200,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useControlPanelHost`
               - `usePanelStack`
           - Cross-plugin:
-            - Uses tokens: 33 vars — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
-              - `ui/tokens/color-palette` ×12
+            - Uses tokens: 34 vars — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
+              - `ui/tokens/color-palette` ×13
               - `ui/tokens/density` ×11
               - `ui/tokens/type-scale` ×7
               - `ui/tokens/shape` ×2
