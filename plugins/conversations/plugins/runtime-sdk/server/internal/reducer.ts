@@ -16,6 +16,7 @@ export interface AgentProjection {
    * starts on the prompt the agent fed (`turn_started`) or on the CLI's own
    * `system/init`, which also opens the turns the CLI starts by itself (a
    * background task's completion notification) — no `turn_started` marks those.
+   * That notification, written at rest, opens it already (`task_notification`).
    */
   working: boolean;
   /**
@@ -115,8 +116,9 @@ export type AgentEffect =
    */
   | { kind: "turn-without-id"; seq: number; promptUuid: string; text: string }
   /**
-   * The agent went away: a turn handed to it and not started by then was in
-   * its CLI's queue, which died with it — the turn ledger fails it.
+   * The agent went away (`exited`), or a new process started (`started`): a
+   * turn handed to it before `at` and not started by then was in its CLI's
+   * queue, which died with it — the turn ledger fails it.
    */
   | { kind: "turns-dropped"; at: Date };
 
@@ -161,6 +163,7 @@ export interface ReduceResult {
 const SYSTEM_SCHEMAS = {
   init: z.object({ session_id: z.string() }),
   background_tasks_changed: z.object({ tasks: z.array(z.unknown()) }),
+  task_notification: z.object({}),
 };
 
 function isReadSubtype(
@@ -217,6 +220,13 @@ export function reduceEvents(
         const p = e.payload;
         switch (p.event) {
           case "started":
+            // A turn typed into an earlier process and never started died
+            // with that process's CLI queue — also when it went without
+            // writing `exited` (a crash, a kill): the ledger fails it, so no
+            // dead turn reads as one this agent will still start. This
+            // launch's own prompt is not typed yet (its launch waits for
+            // this line before recording it).
+            effects.push({ kind: "turns-dropped", at });
             s.agentPid = p.pid;
             // A new process holds no question, runs no turn and has no
             // background task yet.
@@ -341,6 +351,20 @@ export function reduceEvents(
               }
               s.backgroundTasks = parsed.data.tasks.length;
               s.statusAt = at;
+              break;
+            }
+            case "task_notification": {
+              // A background task finished. Mid-turn, its notification is
+              // folded into the running turn; at rest, the CLI starts a turn
+              // for it — its `init` follows (in every sdk events file on main,
+              // 2026-10-30: 2,577 of 2,577, ~300 ms later), but the
+              // `background_tasks_changed` to zero lands first. The turn opens
+              // here, so the agent never reads as at rest in between (a watch
+              // went quiet in that gap).
+              if (!s.working) {
+                s.working = true;
+                s.statusAt = at;
+              }
               break;
             }
           }

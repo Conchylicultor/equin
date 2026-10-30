@@ -113,9 +113,10 @@ SDK user message's uuid (`runtime-sdk/bin/agent.ts`), and only then writes
 `turn_started` carrying the row's id and that uuid — so `typed` is exactly
 "queued in the agent" (the web's Queued echo), and one identity runs from the
 ledger row through the agent's message to the transcript line (`prompt_uuid`).
-A CLI reporting no lifecycle confirms at hand-off. When the agent exits, every
-`typed` row sent before the exit is `dropped` (→ `failed`, Retry): its CLI's
-queue died with it. Findings:
+A CLI reporting no lifecycle confirms at hand-off. When the agent exits — or a new process starts in its
+place, which also covers an agent that died without writing `exited` — every
+`typed` row sent before is `dropped` (→ `failed`, Retry): its CLI's queue died
+with it. Findings:
 [`research/2026-10-25-conversations-queued-message-state.md`](../../../../research/2026-10-25-conversations-queued-message-state.md).
 
 ## The transcript line a turn becomes
@@ -165,9 +166,25 @@ The status reconciler (conversations server) reads `latestSubmitAt` per
 conversation and counts the agent `working` when it confirmed a turn after the
 runtime's last status write (`liveStatusFor`): an idle written before the submit
 is stale, one written after it (the turn ended, or was interrupted) stands. A
-resolved confirmation signals `onTurnSubmitted`, which the reconciler subscribes
+resolved confirmation signals `onStatusEvidence`, which the reconciler subscribes
 to, so the status follows the confirmation's arrival. The browser's optimistic status stops at
 `accepted` — the server is the one writer of `working` from there.
+
+A **pending** turn is evidence too (`conversationsWithPendingTurn`: a row
+`typing` or `typed` — one the agent will start with nobody doing anything
+more): a live agent holding one is `working`, never `waiting`. Without it the
+status read idle for the seconds a fresh agent's CLI boots with its launch
+prompt on its way, and at a turn's end with another queued behind it — and
+every reader (a watch going quiet, list_agents) took the agent to be at rest
+(research/2026-10-30-conversations-false-idle-at-turn-boundaries.md). A row
+entering or leaving those states signals `onStatusEvidence` too. Not `held`:
+it waits for a flush that may never come (`held-turn-undelivered`). Each
+pending state leaves only by an event, so a dead turn cannot keep an agent
+`working`: a new agent process fails every `typed` row of its predecessors
+(runtime-sdk's `started` → `turns-dropped`, also when the old one died without
+`exited`), and a backend boot fails every `typing` row its previous process
+was still sending (`failOrphanedTypingTurns`, the
+`turn-ledger.orphaned-typing` warm-up).
 
 ## Stop and rewind: the turn taken back, by its transcript line
 
@@ -231,6 +248,7 @@ withdrawn).
     - `infra/entities.sqlDefault`
     - `infra/events.defineTriggerEvent`
     - `infra/retention.defineRetention`
+    - `infra/warmup.defineWarmup`
     - `network/live.serveCollection`
     - `tasks/tasks-core._conversations`
     - `tasks/tasks-core.getConversation`
@@ -247,6 +265,7 @@ withdrawn).
     - `acceptTurn`
     - `applyTurnEvent`
     - `confirmTurn`
+    - `conversationsWithPendingTurn`
     - `dropTypedTurns`
     - `getTurn`
     - `hasHeldTurns`
@@ -254,7 +273,7 @@ withdrawn).
     - `holdIfStarting`
     - `latestSubmitAt`
     - `listHeldTurns`
-    - `onTurnSubmitted`
+    - `onStatusEvidence`
     - `resolvePromptSubmit`
     - `returnHeldTurns`
     - `returnTurnByPromptUuid`
@@ -263,6 +282,7 @@ withdrawn).
   - Register:
     - `defineTriggerEvent('conversation.userTurnSent')`
     - `defineJob('retention.conversation_turns')`
+    - `defineWarmup('turn-ledger.orphaned-typing')`
   - Resources:
     - `turn-ledger.turns` (keyed, window)
     - `turn-ledger.turns:groups` (push)

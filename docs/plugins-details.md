@@ -14193,9 +14193,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `report-kind` "held-turn-undelivered"
       - `resource.declare` "conversations.context-usage"
       - `resource.declare` "conversations.partial-message"
-    - Uses: 83 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+    - Uses: 84 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
       - `tasks/tasks-core` ×26
-      - `conversations/turn-ledger` ×13
+      - `conversations/turn-ledger` ×14
       - `conversations/transcript-watcher` ×7
       - `conversations/conversation-preprompt` ×3
       - `conversations/spawn-failure` ×3
@@ -20048,6 +20048,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/entities.sqlDefault`
           - `infra/events.defineTriggerEvent`
           - `infra/retention.defineRetention`
+          - `infra/warmup.defineWarmup`
           - `network/live.serveCollection`
           - `tasks/tasks-core._conversations`
           - `tasks/tasks-core.getConversation`
@@ -20064,6 +20065,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `acceptTurn`
           - `applyTurnEvent`
           - `confirmTurn`
+          - `conversationsWithPendingTurn`
           - `dropTypedTurns`
           - `getTurn`
           - `hasHeldTurns`
@@ -20071,7 +20073,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `holdIfStarting`
           - `latestSubmitAt`
           - `listHeldTurns`
-          - `onTurnSubmitted`
+          - `onStatusEvidence`
           - `resolvePromptSubmit`
           - `returnHeldTurns`
           - `returnTurnByPromptUuid`
@@ -20080,6 +20082,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register:
           - `defineTriggerEvent('conversation.userTurnSent')`
           - `defineJob('retention.conversation_turns')`
+          - `defineWarmup('turn-ledger.orphaned-typing')`
         - Resources:
           - `turn-ledger.turns` (keyed, window)
           - `turn-ledger.turns:groups` (push)
@@ -33083,6 +33086,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/pages/content-search`
           - `apps/places/places-core`
           - `apps/sonata/sources/midi/folders`
+          - `conversations/turn-ledger`
           - `infra/corpus-index`
           - `infra/warmup/background-arm`
           - `infra/warmup/sole-host`

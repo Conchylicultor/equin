@@ -52,6 +52,7 @@ function ctx(overrides: Partial<PlanContext> = {}): PlanContext {
     sessionAccepted: false,
     questionHold: null,
     lastSubmitAt: null,
+    turnPending: false,
     spawnInFlight: false,
     ...overrides,
   };
@@ -500,7 +501,11 @@ describe("liveStatusFor — a confirmed submit is evidence of work", () => {
 
   test("an idle written before the submit is stale: working", () => {
     expect(
-      liveStatusFor(info({ statusWrittenAt: new Date(NOW - 50) }), SUBMIT),
+      liveStatusFor(
+        info({ statusWrittenAt: new Date(NOW - 50) }),
+        SUBMIT,
+        false,
+      ),
     ).toEqual({ status: "working", workingOn: "turn" });
   });
 
@@ -508,12 +513,18 @@ describe("liveStatusFor — a confirmed submit is evidence of work", () => {
     // The 2026-10-18 rewind: submitted 15:53:10, idle 15:53:22, hook drained
     // 15:54:48 — still waiting.
     expect(
-      liveStatusFor(info({ statusWrittenAt: new Date(NOW + 12_000) }), SUBMIT),
+      liveStatusFor(
+        info({ statusWrittenAt: new Date(NOW + 12_000) }),
+        SUBMIT,
+        false,
+      ),
     ).toEqual({ status: "waiting" });
   });
 
   test("no status write to weigh (a dead agent, no event yet) — the submit overrides nothing", () => {
-    expect(liveStatusFor(info({ statusWrittenAt: null }), SUBMIT)).toEqual({
+    expect(
+      liveStatusFor(info({ statusWrittenAt: null }), SUBMIT, false),
+    ).toEqual({
       status: "waiting",
     });
   });
@@ -525,5 +536,55 @@ describe("liveStatusFor — a confirmed submit is evidence of work", () => {
       ctx({ lastSubmitAt: SUBMIT }),
     );
     expect(plan.kind === "patch" && plan.patch.status).toBe("working");
+  });
+});
+
+describe("liveStatusFor — a pending turn is work the agent will start on its own", () => {
+  test("an idle agent holding its launch prompt (CLI still booting) is working", () => {
+    // conv-1793370919-vpts6t, 2026-10-30: `started` at 14:35:25, launch turn
+    // typed, its turn_started at 14:35:29 — the row read `waiting` between and
+    // a watch went quiet on it.
+    const plan = planConversationUpdate(
+      row({ status: "starting", claudeSessionId: null }),
+      live({ claudeSessionId: null, statusWrittenAt: new Date(NOW) }),
+      ctx({ turnPending: true }),
+    );
+    expect(plan).toMatchObject({
+      kind: "patch",
+      patch: { status: "working", workingOn: "turn" },
+    });
+  });
+
+  test("a turn ending with another queued behind it stays working", () => {
+    expect(
+      planConversationUpdate(
+        row({ status: "working", workingOn: "turn" }),
+        live({ statusWrittenAt: new Date(NOW) }),
+        ctx({ turnPending: true }),
+      ),
+    ).toEqual({ kind: "noop" });
+  });
+
+  test("nothing pending: the idle stands", () => {
+    expect(
+      planConversationUpdate(
+        row({ status: "working", workingOn: "turn" }),
+        live({ statusWrittenAt: new Date(NOW) }),
+        ctx({ turnPending: false }),
+      ),
+    ).toMatchObject({ kind: "patch", patch: { status: "waiting" } });
+  });
+
+  test("a held question still wins: the agent is blocked on it", () => {
+    expect(
+      planConversationUpdate(
+        row({ status: "working", workingOn: "turn" }),
+        live({ workingOn: "turn" }),
+        ctx({ turnPending: true, questionHold: "open" }),
+      ),
+    ).toMatchObject({
+      kind: "patch",
+      patch: { status: "waiting", waitingFor: "question" },
+    });
   });
 });

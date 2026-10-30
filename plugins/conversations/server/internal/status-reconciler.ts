@@ -37,8 +37,9 @@ import {
   type UpdatePlan,
 } from "./plan-update";
 import {
+  conversationsWithPendingTurn,
   latestSubmitAt,
-  onTurnSubmitted,
+  onStatusEvidence,
 } from "@plugins/conversations/plugins/turn-ledger/server";
 import {
   findTranscriptPath,
@@ -230,6 +231,7 @@ async function planFor(
   live: LiveSnapshot,
   holds: ReadonlyMap<string, QuestionHold>,
   submits: ReadonlyMap<string, Date>,
+  pending: ReadonlySet<string>,
 ): Promise<{ plan: UpdatePlan; liveness: Liveness }> {
   const liveness = livenessOf(row, live);
   const candidate = sessionCandidate(row, liveness);
@@ -243,6 +245,7 @@ async function planFor(
     sessionAccepted: gate === "accepted",
     questionHold: holds.get(row.id) ?? null,
     lastSubmitAt: submits.get(row.id) ?? null,
+    turnPending: pending.has(row.id),
     spawnInFlight: live.spawnsInFlight.has(row.id),
   });
   const rowStaysLive = plan.kind === "noop" || plan.kind === "patch";
@@ -374,8 +377,9 @@ async function reconcileRows(
   await reapQuestionHolds(ids);
   const holds = await readQuestionHolds(ids);
   const submits = await latestSubmitAt(ids);
+  const pending = await conversationsWithPendingTurn(ids);
   for (const row of rows) {
-    const { plan } = await planFor(row, live, holds, submits);
+    const { plan } = await planFor(row, live, holds, submits, pending);
     await apply(row, plan);
   }
 }
@@ -475,9 +479,10 @@ export async function startStatusReconciler(): Promise<void> {
     const conversationIds = awaitingAny(sessionIds);
     if (conversationIds.length > 0) onSignal({ conversationIds });
   });
-  // A turn the ledger just confirmed submitting is working whatever the
-  // runtime's last status write said (see `liveStatusFor`).
-  onTurnSubmitted((conversationId) => {
+  // The ledger's evidence moved: a turn just confirmed submitting is working
+  // whatever the runtime's last status write said, and a turn entering or
+  // leaving a pending state moves the status with it (see `liveStatusFor`).
+  onStatusEvidence((conversationId) => {
     onSignal({ conversationIds: [conversationId] });
   });
   await reconcileAll();

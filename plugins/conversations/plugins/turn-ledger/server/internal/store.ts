@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray, lte, max } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, lt, lte, max } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
 import {
@@ -7,7 +7,7 @@ import {
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { turnIdKind, type TurnId } from "../../core";
 import { typedTextOf } from "../../core";
-import type { TurnKind } from "../../core";
+import type { TurnKind, TurnState } from "../../core";
 import { _conversationTurns } from "./tables";
 import { userTurnSent } from "./tables-user-turn-sent-event";
 import {
@@ -16,7 +16,7 @@ import {
   transitionTurn,
   type TurnEvent,
 } from "./transition";
-import { notifyTurnSubmitted } from "./submit-signal";
+import { notifyStatusEvidence } from "./status-evidence-signal";
 
 /** One ledger row, as the server holds it. */
 export type TurnRow = typeof _conversationTurns.$inferSelect;
@@ -139,6 +139,8 @@ export async function getTurn(
 
 interface Applied {
   row: TurnRow;
+  /** The state before the event. */
+  was: TurnState;
   changed: boolean;
 }
 
@@ -154,22 +156,26 @@ async function applyInTx(
     .for("update");
   if (!row) throw new Error(`turn ${turnId} not found`);
   const next = transitionTurn(row, event);
-  if (!next) return { row, changed: false };
+  if (!next) return { row, was: row.state, changed: false };
   const [updated] = await tx
     .update(_conversationTurns)
     .set({ state: next.state, ...next.patch })
     .where(eq(_conversationTurns.id, turnIdKind.key(turnId)))
     .returning();
-  return { row: updated!, changed: true };
+  return { row: updated!, was: row.state, changed: true };
 }
 
 /**
- * What a change means beyond the row: `conversation.userTurnSent` when it is
- * the moment the agent got a user's message — it confirmed a `turn` row.
+ * What a change means beyond the row: the status reconciler's evidence moved
+ * when the row entered or left a pending state; `conversation.userTurnSent`
+ * when it is the moment the agent got a user's message — it confirmed a
+ * `turn` row.
  */
 async function afterChange(applied: Applied): Promise<void> {
   if (!applied.changed) return;
   const { row } = applied;
+  if (isPending(applied.was) !== isPending(row.state))
+    notifyStatusEvidence(row.conversationId);
   if (row.kind !== "turn" || row.state !== "accepted") return;
   const conversation = await getConversation(row.conversationId);
   if (conversation) {
@@ -247,7 +253,7 @@ export type ConfirmOutcome =
  * sent with), as the transcript line `promptUuid`, at `at`: THAT row becomes
  * `accepted` — the `confirmed` event, whatever the row's state short of
  * settled. A row already settled is left as it is, so replaying the line
- * changes nothing. A confirmed row signals `onTurnSubmitted` and announces
+ * changes nothing. A confirmed row signals `onStatusEvidence` and announces
  * `userTurnSent`.
  *
  * An id no row has, or another conversation's, is a fact the caller reports:
@@ -288,7 +294,7 @@ export async function confirmTurn(
   const { applied } = found;
   await afterChange(applied);
   if (!applied.changed) return { kind: "settled", turn: applied.row };
-  notifyTurnSubmitted(conversationId);
+  notifyStatusEvidence(conversationId);
   return { kind: "confirmed", turn: applied.row };
 }
 
@@ -297,7 +303,7 @@ export async function confirmTurn(
  * — an agent started before turn ids, whose launch prompt carries none: the
  * oldest unsettled row whose typed text IS the prompt (`promptIs`, equality
  * only). A prompt matching no row is not resolved. Returns the resolved row,
- * or null. A resolved row signals `onTurnSubmitted`.
+ * or null. A resolved row signals `onStatusEvidence`.
  *
  * Deleted, with `confirmed-by-text`, once no agent started before turn ids
  * runs — no live `conversations_ext_sdk_agent` row with `turn_ids` false
@@ -333,7 +339,7 @@ export async function resolvePromptSubmit(
     );
     await afterChange(applied);
     if (applied.changed) {
-      notifyTurnSubmitted(conversationId);
+      notifyStatusEvidence(conversationId);
       return applied.row;
     }
   }
@@ -361,6 +367,86 @@ export async function latestSubmitAt(
   return new Map(
     rows.flatMap((row) => (row.at ? [[row.conversationId, row.at]] : [])),
   );
+}
+
+/**
+ * The states of a turn the agent will start with nobody doing anything more:
+ * `typing` (being sent — the launch prompt while its agent comes up) and
+ * `typed` (in its CLI's queue, started at the next tool boundary or the turn's
+ * end). Each leaves only by an event — the agent's confirmation, a failure,
+ * the agent going away or a new one starting (`dropped`), Stop, a restart of
+ * the sender (`failOrphanedTypingTurns`) — never a timer. Not `held`: that
+ * turn waits for a flush which may never come (`held-turn-undelivered`), so it
+ * is no evidence the agent will run.
+ */
+const PENDING_TURN_STATES = [
+  "typing",
+  "typed",
+] as const satisfies readonly TurnState[];
+
+function isPending(state: TurnState): boolean {
+  return (PENDING_TURN_STATES as readonly TurnState[]).includes(state);
+}
+
+/**
+ * The conversations of `conversationIds` holding a turn their agent has not
+ * started yet but will on its own ({@link PENDING_TURN_STATES}). The status
+ * reconciler's evidence that an agent between turns is not at rest: its
+ * launch prompt while its CLI boots, a turn queued behind a turn that just
+ * ended — see `liveStatusFor`. A row leaving these states signals
+ * `onStatusEvidence`, so the status follows it.
+ */
+export async function conversationsWithPendingTurn(
+  conversationIds: readonly string[],
+  conn: Pick<NodePgDatabase, "selectDistinct"> = db,
+): Promise<Set<string>> {
+  if (conversationIds.length === 0) return new Set();
+  const rows = await conn
+    .selectDistinct({ conversationId: _conversationTurns.conversationId })
+    .from(_conversationTurns)
+    .where(
+      and(
+        inArray(_conversationTurns.conversationId, [...conversationIds]),
+        inArray(_conversationTurns.state, [...PENDING_TURN_STATES]),
+      ),
+    );
+  return new Set(rows.map((row) => row.conversationId));
+}
+
+/**
+ * Fail every turn still `typing` since before `bootedAt`: the process sending
+ * it died mid-send (a backend restart), so nothing will ever record its
+ * verdict, and it would read as a turn the agent is about to start forever.
+ * Failed is the honest verdict — Retry; a confirmation still wins if the agent
+ * did take it. Returns how many it failed.
+ */
+export async function failOrphanedTypingTurns(
+  bootedAt: Date,
+  conn: NodePgDatabase = db,
+): Promise<number> {
+  const orphans = await conn
+    .select({ id: _conversationTurns.id })
+    .from(_conversationTurns)
+    .where(
+      and(
+        eq(_conversationTurns.state, "typing"),
+        lt(_conversationTurns.updatedAt, bootedAt),
+      ),
+    );
+  let failed = 0;
+  for (const { id } of orphans) {
+    const row = await applyTurnEvent(
+      id,
+      {
+        kind: "failed",
+        error:
+          "The backend restarted while sending it, so it may never have reached the agent.",
+      },
+      conn,
+    );
+    if (row.state === "failed") failed++;
+  }
+  return failed;
 }
 
 /**

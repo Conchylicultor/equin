@@ -179,6 +179,7 @@ describe("reduceEvents", () => {
   test("a turn the agent took carries its ledger id and transcript uuid", () => {
     const { effects } = reduceEvents(EMPTY_PROJECTION, stream.slice(0, 2));
     expect(effects).toEqual([
+      { kind: "turns-dropped", at: new Date(stream[0]!.t) },
       {
         kind: "prompt-submitted",
         turnId: "turn-p-a",
@@ -197,6 +198,7 @@ describe("reduceEvents", () => {
     ]);
     expect(state.turnIds).toBe(false);
     expect(effects.map((e) => e.kind)).toEqual([
+      "turns-dropped",
       "prompt-submitted-by-text",
       "prompt-submitted",
     ]);
@@ -210,7 +212,7 @@ describe("reduceEvents", () => {
       turnStarted(3, "where from?", "p-x", null),
     ]);
     expect(state.turnIds).toBe(true);
-    expect(effects).toEqual([
+    expect(effects.filter((e) => e.kind !== "turns-dropped")).toEqual([
       {
         kind: "turn-without-id",
         seq: 3,
@@ -337,6 +339,48 @@ describe("reduceEvents", () => {
     expect(state.working).toBe(true);
     const ended = reduceEvents(state, [result(9)]);
     expect(ended.state.working).toBe(false);
+  });
+
+  test("a background task finishing at rest opens the turn the CLI starts for it, before its tasks drop to zero", () => {
+    // conv-1793316442-7h9yh2, 2026-10-30 13:18:01: task_notification,
+    // background_tasks_changed (0), then init ~330 ms later — the projection
+    // read idle in between, and a watch went quiet on it.
+    const bg = (seq: number, n: number) =>
+      sdk(seq, {
+        type: "system",
+        subtype: "background_tasks_changed",
+        tasks: Array.from({ length: n }, (_, i) => ({ task_id: `t-${i}` })),
+      });
+    const resting = reduceEvents(EMPTY_PROJECTION, [
+      ...stream.slice(0, 3),
+      bg(4, 1),
+      result(5),
+    ]).state;
+    expect(resting).toMatchObject({ working: false, backgroundTasks: 1 });
+    const notified = reduceEvents(resting, [
+      sdk(6, { type: "system", subtype: "task_notification", task_id: "t-0" }),
+      bg(7, 0),
+    ]).state;
+    expect(notified).toMatchObject({ working: true, backgroundTasks: 0 });
+    const ran = reduceEvents(notified, [init(8, "sid-1"), result(9)]).state;
+    expect(ran.working).toBe(false);
+  });
+
+  test("a background task finishing mid-turn leaves the running turn as it is", () => {
+    const mid = reduceEvents(EMPTY_PROJECTION, stream.slice(0, 3)).state;
+    const statusAt = mid.statusAt;
+    const { state } = reduceEvents(mid, [
+      sdk(4, { type: "system", subtype: "task_notification", task_id: "t-0" }),
+    ]);
+    expect(state).toMatchObject({ working: true, statusAt });
+  });
+
+  test("a new process drops the turns typed into its predecessor, even one that died without `exited`", () => {
+    const { effects } = reduceEvents(EMPTY_PROJECTION, [started(1)]);
+    expect(effects).toContainEqual({
+      kind: "turns-dropped",
+      at: expect.any(Date),
+    });
   });
 
   test("a read system event that does not parse is reported, skipped, and does not stall the stream", () => {

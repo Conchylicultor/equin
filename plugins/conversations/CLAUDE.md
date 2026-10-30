@@ -44,9 +44,9 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `report-kind` "held-turn-undelivered"
     - `resource.declare` "conversations.context-usage"
     - `resource.declare` "conversations.partial-message"
-  - Uses: 83 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 84 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×26
-    - `conversations/turn-ledger` ×13
+    - `conversations/turn-ledger` ×14
     - `conversations/transcript-watcher` ×7
     - `conversations/conversation-preprompt` ×3
     - `conversations/spawn-failure` ×3

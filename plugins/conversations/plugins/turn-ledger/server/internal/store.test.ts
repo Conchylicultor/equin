@@ -36,7 +36,9 @@ import {
   acceptTurn,
   applyTurnEvent,
   confirmTurn,
+  conversationsWithPendingTurn,
   dropTypedTurns,
+  failOrphanedTypingTurns,
   getTurn,
   hasHeldTurns,
   holdIfStarting,
@@ -487,6 +489,49 @@ describe("latestSubmitAt", () => {
     const second = await acceptTurn(id, turn("second"), conn);
     await confirm(id, second, later);
     expect((await latestSubmitAt([id], conn)).get(id)).toEqual(later);
+  });
+});
+
+describe("conversationsWithPendingTurn", () => {
+  test("a turn held, being sent or queued is pending until the agent starts it or it fails", async () => {
+    const pending = async (id: string) =>
+      (await conversationsWithPendingTurn([id], conn)).has(id);
+    const starting = await seedConversation("starting");
+    expect(await pending(starting)).toBe(false);
+    await acceptTurn(starting, turn("launch"), conn);
+    // Held: it waits for a flush that may never come — no evidence.
+    expect(await pending(starting)).toBe(false);
+
+    const idle = await seedConversation("waiting");
+    const sent = await acceptTurn(idle, turn("go"), conn);
+    expect(await pending(idle)).toBe(true); // typing
+    await applyTurnEvent(sentId(sent), { kind: "typed" }, conn);
+    expect(await pending(idle)).toBe(true); // queued in the CLI
+    await confirm(idle, sent);
+    expect(await pending(idle)).toBe(false);
+
+    const dropped = await seedConversation("waiting");
+    const lost = await acceptTurn(dropped, turn("lost"), conn);
+    await applyTurnEvent(sentId(lost), { kind: "typed" }, conn);
+    await dropTypedTurns(dropped, new Date(Date.now() + 1_000), conn);
+    expect(await pending(dropped)).toBe(false);
+  });
+});
+
+describe("failOrphanedTypingTurns", () => {
+  test("fails a send left typing by an earlier process, not one this process started", async () => {
+    const id = await seedConversation("waiting");
+    const orphan = await acceptTurn(id, turn("orphan"), conn);
+    await Bun.sleep(2);
+    const [{ now }] = (
+      await t.db.execute<{ now: Date }>(sql`SELECT clock_timestamp() AS now`)
+    ).rows as [{ now: Date }];
+    await Bun.sleep(2);
+    const fresh = await acceptTurn(id, turn("fresh"), conn);
+    await failOrphanedTypingTurns(new Date(now), conn);
+    expect((await getTurn(sentId(orphan), conn))?.state).toBe("failed");
+    expect((await getTurn(sentId(fresh), conn))?.state).toBe("typing");
+    expect((await conversationsWithPendingTurn([id], conn)).has(id)).toBe(true);
   });
 });
 

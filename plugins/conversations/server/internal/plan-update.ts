@@ -71,6 +71,13 @@ export interface PlanContext {
    */
   lastSubmitAt: Date | null;
   /**
+   * Whether the conversation holds a turn its agent has not started yet but
+   * will on its own (the turn ledger's `conversationsWithPendingTurn`: being
+   * sent, or queued in its CLI) — the launch prompt while the CLI boots,
+   * a turn queued behind the one that just ended.
+   */
+  turnPending: boolean;
+  /**
    * Whether the conversation's `conversations.spawn` job is still coming —
    * queued, waiting out a retry, running, or suspended waiting on its
    * workspace (a worktree checkout) (`spawnConversationJob.inFlight`,
@@ -114,20 +121,29 @@ export type LiveStatus =
 
 /**
  * Working on what the runtime says the agent is busy with — or on a turn when
- * the turn ledger confirmed one submitted after the runtime's last status
- * write: an idle written BEFORE the submit is stale evidence; one written after
- * it (the turn ended, or was interrupted) is current. Causal order, not a
- * grace timer.
+ * the turn ledger says one is on its way:
+ *
+ * - confirmed submitted after the runtime's last status write: an idle written
+ *   BEFORE the submit is stale evidence; one written after it (the turn ended,
+ *   or was interrupted) is current. Causal order, not a grace timer.
+ * - pending (`turnPending`): handed to the agent, or about to be, and not
+ *   started yet. The agent will start it with nobody doing anything, so it is
+ *   not at rest — `waiting` would say its work is in front of the user, and
+ *   every reader of the status (a watch going quiet, list_agents) would act on
+ *   that. The launch prompt while the CLI boots (seconds) and a turn queued
+ *   behind the one that just ended are the gaps it closes.
  */
 export function liveStatusFor(
   info: RuntimeInfo,
   lastSubmitAt: Date | null,
+  turnPending: boolean,
 ): LiveStatus {
   const submittedSince =
     lastSubmitAt !== null &&
     info.statusWrittenAt !== null &&
     lastSubmitAt > info.statusWrittenAt;
-  if (submittedSince) return { status: "working", workingOn: "turn" };
+  if (submittedSince || turnPending)
+    return { status: "working", workingOn: "turn" };
   if (info.workingOn !== null)
     return { status: "working", workingOn: info.workingOn };
   return { status: "waiting" };
@@ -230,7 +246,7 @@ function planLive(
   const heldOpen = ctx.questionHold === "open";
   const desired: LiveStatus = heldOpen
     ? { status: "waiting" }
-    : liveStatusFor(info, ctx.lastSubmitAt);
+    : liveStatusFor(info, ctx.lastSubmitAt, ctx.turnPending);
   const desiredWorkingOn =
     desired.status === "working" ? desired.workingOn : null;
   // Only adopt a new claudeSessionId once the shell's gate accepted it (a
