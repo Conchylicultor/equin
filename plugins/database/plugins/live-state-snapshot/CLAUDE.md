@@ -8,10 +8,15 @@
 - Server:
   - Contributes:
     - `change-feed-changelog-retention` "live-state-snapshot's cold-boot catch-up replays the changelog; its hourly prune job (pruneChangelog) deletes the rows below the horizon no persisted snapshot needs"
+    - `fork-data-exclusion` "live_state_handoff"
     - `fork-data-exclusion` "live_state_snapshot"
   - Uses:
     - `database.db`
+    - `database.schemaChangedAtBoot`
     - `database/change-feed.ChangelogRetention`
+    - `database/change-feed.feedCut`
+    - `database/change-feed.feedListening`
+    - `database/change-feed.getCoveredTables`
     - `database/change-feed.producedTableNames`
     - `database/change-feed.readLayout`
     - `database/change-feed.relationBases`
@@ -201,6 +206,33 @@ whatever gate the trigger compared under, so a replay after a deploy that
 changed the routes still reaches a route reading a column the old gate did not
 compare; a column the old layout did not carry reads `keys` as unknown, which
 recomputes rather than skips.
+
+## The epoch handoff (`live_state_handoff`, `internal/handoff.ts`)
+
+The storage half of resource-runtime's epoch handoff
+(`research/2026-10-30-global-cross-boot-resume-epoch-handoff.md`), installed
+through server-core's `setEpochHandoffHooks` in `onReadyBlocking`:
+
+- **write** (the old backend's shutdown, before every `onShutdown`):
+  change-feed's `feedCut`, then the runtime's `handoffState()`, stored as one
+  row (epoch, `cut_xid`, tuples) within a 3 s budget, replacing every other
+  boot's record (only the immediate predecessor's cut is ever replayed from).
+  Never rejects: a failed cut or write is reported (`EpochHandoffError`) and
+  stores nothing.
+- **load** (the successor, on the first sub echoing a foreign epoch): the row
+  if written in the last 60 s, the trigger-covered tables
+  (`getCoveredTables`), and a `replay` that waits for the LISTEN session
+  (change-feed's `feedListening`, 5 s) and then routes every changelog row
+  with `xid >= cut_xid` (`readChangelogSince` + `replayChange`, shared with
+  catch-up). Refused (`migrated`) when this boot applied a migration or
+  deferred a contract (database's `schemaChangedAtBoot` — a migration may
+  write with no changelog row), (`healed-rollup`) after a boot reconcile healed
+  a rollup, and (`pruned`) when the prune horizon, read after the rows, is at
+  or past the cut.
+- A tool that rewrites the database with triggers off drops the record in the
+  same transaction (`paths/root-migration`'s `rewriteDatabase`).
+
+The table is fork-excluded (`machine/`). Pinned by `handoff.test.ts`.
 
 ## The prune horizon (`live_state_changelog_horizon`)
 

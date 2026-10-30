@@ -420,6 +420,22 @@ work. Two numbers ride along as measures: `ids` (how many changed ids) and
 than the duration because it also counts how long the writing transaction stayed
 open.
 
+## The feed cut (`feedCut`, `internal/cut.ts`)
+
+`feedCut()` → `{ cutXid }`: once it resolves, every change of every
+transaction with an xid below `cutXid` has gone through this process's router.
+It captures the snapshot watermark, then NOTIFYs a token on a third channel
+the listener LISTENs in the same statement (`live_state_barrier`); on that
+token the listener drains the burst router synchronously (`BurstRouter.drain`
+— everything held committed before the barrier) and answers. Postgres delivers
+one session's notifications in commit order, so every earlier transaction's
+changes and end marker arrived first. It is refused with no session, on a
+session lost or a listener stopped while waiting, and past 1.5 s. The epoch
+handoff's old half (live-state-snapshot) is its consumer; `feedListening()`
+(resolves once the first LISTEN session is up) gates its successor's replay.
+`live_state_handoff` is denylisted like the other plumbing tables. Pinned by
+`barrier.test.ts`.
+
 ## One entry, one router
 
 `routeChange` (`internal/route-change.ts`) is the single entry every change takes —
@@ -470,6 +486,7 @@ See `research/2026-09-29-global-scoped-change-routing.md`.
     - `database.db`
     - `database.ListenSession`
     - `database.loadKnownRelations`
+    - `database.snapshotWatermark`
     - `database/derived-tables.feedExemptTables`
     - `database/derived-tables.rollupSources`
     - `primitives/log-channels.defineLogSink`
@@ -481,6 +498,7 @@ See `research/2026-09-29-global-scoped-change-routing.md`.
     - `ChangeProducerSpec`
     - `DbChange`
     - `FeedChange`
+    - `FeedCut`
     - `ProducerBuilder`
     - `ProducerChange`
     - `ProducerExecutor`
@@ -491,6 +509,8 @@ See `research/2026-09-29-global-scoped-change-routing.md`.
     - `changeProducerFor`
     - `defineChangeProducer`
     - `ExcludeFromChangeFeed`
+    - `feedCut`
+    - `feedListening`
     - `getCoveredTables`
     - `parseLiveStatePayload`
     - `producedTableNames`

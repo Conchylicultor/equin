@@ -9,6 +9,7 @@ import {
 import {
   MIGRATIONS_TABLE_NAME,
   LIVE_STATE_CHANGELOG_TABLE,
+  LIVE_STATE_HANDOFF_TABLE,
   LIVE_STATE_SNAPSHOT_TABLE,
   LIVE_STATE_TRIGGER_STATE_TABLE,
 } from "@plugins/database/plugins/derived-views/core";
@@ -57,13 +58,15 @@ import {
 // `rebuildTriggers`) is denylisted for the same reason as the snapshot table: it
 // is written only by the rebuild itself and read only at boot, so it is pure
 // plumbing no live-state loader ever reads. Triggering on it would also make the
-// rebuild's own signature write re-enter the feed.
+// rebuild's own signature write re-enter the feed. `live_state_handoff` (the
+// epoch handoff live-state-snapshot writes at shutdown) is plumbing too.
 function buildDenylist(exclusions: TriggerExclusions): Set<string> {
   return new Set<string>([
     MIGRATIONS_TABLE_NAME,
     LIVE_STATE_CHANGELOG_TABLE,
     LIVE_STATE_SNAPSHOT_TABLE,
     LIVE_STATE_TRIGGER_STATE_TABLE,
+    LIVE_STATE_HANDOFF_TABLE,
     ...exclusions.feedExempt,
     ...exclusions.optedOut,
     ...exclusions.produced,

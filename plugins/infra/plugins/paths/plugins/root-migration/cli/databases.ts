@@ -8,6 +8,7 @@ import {
 } from "@plugins/database/plugins/connection/server";
 import { z } from "zod";
 import { queryOne, queryRows } from "@plugins/database/plugins/sql-rows/core";
+import { LIVE_STATE_HANDOFF_TABLE } from "@plugins/database/plugins/derived-views/core";
 import type { Move } from "./plan";
 
 // Every stored path in every database of the cluster — main AND each worktree's
@@ -186,7 +187,9 @@ export async function listDatabases(
  * Rewrite one database, in one transaction, with its triggers off
  * (`session_replication_role = replica`): moving the bytes a path names is not
  * a change to the row — a derived `updated_at`, a rollup or the change feed
- * must not see it. Returns the rows rewritten.
+ * must not see it. So nothing a backend handed its successor at shutdown (the
+ * epoch handoff) can be proven current after it: the same transaction drops
+ * the handoff, and the next backend's tabs load. Returns the rows rewritten.
  */
 export async function rewriteDatabase(
   conn: DatabaseConfig["connection"],
@@ -202,6 +205,13 @@ export async function rewriteDatabase(
       await client.query("BEGIN");
       try {
         await client.query("SET LOCAL session_replication_role = replica");
+        await client.query(
+          `DO $$ BEGIN
+             IF to_regclass('public.${LIVE_STATE_HANDOFF_TABLE}') IS NOT NULL THEN
+               DELETE FROM ${LIVE_STATE_HANDOFF_TABLE};
+             END IF;
+           END $$`,
+        );
         for (const table of tables) {
           for (const move of moves) {
             const { sql, params } = tableUpdateSql(table, move);

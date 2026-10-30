@@ -765,7 +765,22 @@ export function compileCollection<
           if (foldsColumns) fold(out);
           return out;
         };
-  const withEncode = encodeRow ? { encodeRow } : {};
+  // What `encodeRow` does, as data, for the point read's definition: the
+  // `$columns` fold alone is fixed by which wire field lands where. A wire
+  // codec's `encode` is code no id names, so a row with one has no definition
+  // (its point read is never inherited across a restart).
+  const encodeRowId =
+    encodeRow !== undefined && wired.length === 0
+      ? `fold:${JSON.stringify({
+          sets: handles.map((h) => h.name),
+          fields: [...foldedFields]
+            .map(([wire, { set, field }]) => [wire, set, field])
+            .sort(([a], [b]) => (a! < b! ? -1 : a! > b! ? 1 : 0)),
+        })}`
+      : undefined;
+  const withEncode = encodeRow
+    ? { encodeRow, ...(encodeRowId !== undefined ? { encodeRowId } : {}) }
+    : {};
   // The order signature reads a sorted exposed column off `$columns`.
   const readField = (row: Record<string, unknown>, field: string): unknown => {
     const c = foldedFields.get(field);

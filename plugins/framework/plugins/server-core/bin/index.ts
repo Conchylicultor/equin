@@ -12,6 +12,7 @@ import {
   hostHttpRoutes,
   reportServerError,
   markServerReady,
+  handOffEpoch,
 } from "@plugins/framework/plugins/server-core/core";
 import type {
   WsData,
@@ -227,6 +228,12 @@ async function shutdown(signal: string): Promise<void> {
   if (shuttingDown) return;
   shuttingDown = true;
   console.log(`[server] ${signal} received; shutting down`);
+  // First, while the change feed still listens and every tab is still on its
+  // socket: hand this boot's freshness to the successor (the epoch handoff).
+  // The tabs reconnect only when this process exits, after it.
+  // It never throws: a handoff that cannot be written is reported by its
+  // writer and leaves no record (the successor then loads every sub).
+  await handOffEpoch();
   await runShutdownHooks(ordered);
   process.exit(0);
 }

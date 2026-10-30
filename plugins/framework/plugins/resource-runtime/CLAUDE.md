@@ -535,6 +535,31 @@ All but the version are co-produced by the starter. A push drain mints
     `revalidate` resource is exempt (truth outside any notify stream: the ETag
     is its authority).
   - HTTP has no short-circuit.
+- **Epoch handoff (`EpochHandoff`, `resumeEpoch`, `handoffState`).** A restart
+  re-proves the short-circuit across boots for INHERITABLE entries: a routed
+  point read whose plan carries a `handoffDefinition` (query-resource's point
+  compile), with no drift, relation / derived / unfed / notified / tagged /
+  follow read, upstream, hooks or `revalidate`.
+  - The old backend, at SIGTERM (server-core's `handOffEpoch`, before any
+    `onShutdown`): change-feed's `feedCut`, then `handoffState()` — every
+    tracked tuple with a snapshot, no pending, not draining — stored by
+    live-state-snapshot.
+  - The successor, on the first sub echoing a foreign epoch: loads the record,
+    installs a SHADOW per tuple (equal definition, every route table in the
+    changelog), then replays the changelog since the cut into them; a live
+    change or notify reaching a shadow dirties it too.
+  - A claim answers `up-to-date` at the old version only for a clean shadow at
+    the echoed version, on a tuple this process has not served (its span
+    opened at 1, no snapshot / pending / drain) or opened by an earlier claim
+    and unchanged since. Everything else — no record, a load or replay
+    failure, history pruned past the cut, a mismatch — takes the full path.
+    Refusals are counted in `_debug.resume.refusals`, inheritances per key in
+    `resumedSubs`; `_debug.<key>.handoff` says why an entry is not
+    inheritable. Pinned by `runtime-resume-epoch.test.ts`.
+  - A claimed tuple has no snapshot, and `serveSub` seeds none while it was
+    opened by a claim: its holders hold the cut's value, so a newer read as the
+    base would absorb a change still in flight to them. Its next change drains
+    FULL to every holder.
 - **Gate-after-dedup.** The read-admission slot is acquired INSIDE the
   single-flight, so N concurrent reads of one tuple take 1 slot.
 - **Per-tab subs + batch replay.**
@@ -696,6 +721,9 @@ Out of reach at this seam (DB-backed harness instead):
     - `ExternalWindowPolicy`
     - `FollowReached`
     - `FullRoute`
+    - `HandoffDefinitionAnswer`
+    - `HandoffState`
+    - `HandoffTuple`
     - `HostMap`
     - `KeyedDiff`
     - `KeyedMembership`
@@ -719,6 +747,8 @@ Out of reach at this seam (DB-backed harness instead):
     - `ResourceParams`
     - `ResourceRuntime`
     - `ResourceRuntimeOptions`
+    - `ResumeRecord`
+    - `ResumeReplayOutcome`
     - `Route`
     - `RoutedRecomputeOn`
     - `RoutePlan`
@@ -748,6 +778,7 @@ Out of reach at this seam (DB-backed harness instead):
     - `retainSnapEncoder`
     - `tableLayoutRequirements`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shadow --shadow`
   - Imported by:
     - `framework/central-core`
     - `framework/server-core`

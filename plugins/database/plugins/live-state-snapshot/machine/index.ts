@@ -1,10 +1,13 @@
 import type { MachinePluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { ExcludeFromFork } from "@plugins/database/plugins/admin/server";
-import { LIVE_STATE_SNAPSHOT_TABLE } from "@plugins/database/plugins/derived-views/core";
+import {
+  LIVE_STATE_HANDOFF_TABLE,
+  LIVE_STATE_SNAPSHOT_TABLE,
+} from "@plugins/database/plugins/derived-views/core";
 
 export default {
   description:
-    "The L2 snapshot table excluded from a worktree's DB fork — forking is the desktop's, so this half is too.",
+    "The L2 snapshot and epoch handoff tables excluded from a worktree's DB fork — forking is the desktop's, so this half is too.",
   contributions: [
     // The snapshot is a cold-boot ACCELERATOR, not a correctness prerequisite —
     // `initSnapshotSubsystem` degrades to a full recompute when it is absent, so
@@ -24,6 +27,14 @@ export default {
       table: LIVE_STATE_SNAPSHOT_TABLE,
       reason:
         "Cold-boot accelerator computed from tables the fork empties; an inherited value would disagree with the rows behind it on first paint.",
+    }),
+    // A handoff names a boot of THIS database's backend; a fork's backend
+    // never echoes one (its epochs are its own), and the tuples it vouches
+    // for were computed from rows the fork empties.
+    ExcludeFromFork({
+      table: LIVE_STATE_HANDOFF_TABLE,
+      reason:
+        "The epoch handoff of the source's backend: no fork's tab echoes its epochs, and its tuples were computed from tables the fork empties.",
     }),
   ],
 } satisfies MachinePluginDefinition;

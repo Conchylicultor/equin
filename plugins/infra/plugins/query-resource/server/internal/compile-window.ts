@@ -4,6 +4,7 @@ import {
   defineResource,
 } from "@plugins/framework/plugins/server-core/core";
 import type {
+  HandoffDefinitionAnswer,
   ExternalPointMembership,
   ExternalWindowMembership,
   KeyedMembership,
@@ -31,6 +32,7 @@ import {
 import type { ReadColumn } from "./joins";
 import { compiledRoutePlan, routedBase } from "./routes";
 import { followablePoint, type FollowablePlan } from "./follow";
+import { pointDefinition } from "./point-definition";
 import type {
   BoundedQueryResourceSpec,
   PointQueryResourceSpec,
@@ -158,6 +160,13 @@ interface PointOuter<P extends ResourceParams> extends AssembleOuter {
   idsOf: (params: P) => string[];
   /** The tuple naming an id set — the descriptor's `point.encode` (a follow's params). */
   encode: (ids: readonly string[]) => P;
+  /**
+   * The point read's definition (`./point-definition`) — what the epoch
+   * handoff inherits a tuple under, `null` when anything in it is opaque —
+   * rendered on first ask and memoized: rendering goes through the database
+   * driver, which the compile (at module eval) must not touch.
+   */
+  handoffDefinition: () => HandoffDefinitionAnswer;
 }
 
 const encoder =
@@ -176,11 +185,15 @@ const encoder =
 function scopePolicyOf<Row, P extends ResourceParams>(
   arm: ArmPlan<Row, P>,
   membership: KeyedMembership<P>,
+  handoffDefinition?: () => HandoffDefinitionAnswer,
 ): ScopePolicy<P> {
   return {
     routes: compiledRoutePlan<P>(
       arm.routes,
       (params) => arm.tuple(params).uses,
+      [],
+      undefined,
+      handoffDefinition,
     ),
     membership,
     ...(arm.recomputeOn !== undefined && arm.recomputeOn.length > 0
@@ -339,7 +352,11 @@ export function assemblePoint<Row, P extends ResourceParams>(
     kind: "point",
     idsOf: (params) => outer.idsOf(params),
   };
-  const scopePolicy: ScopePolicy<P> = scopePolicyOf(arm, membership);
+  const scopePolicy: ScopePolicy<P> = scopePolicyOf(
+    arm,
+    membership,
+    outer.handoffDefinition,
+  );
   const serverOpts = {
     loader,
     ...scopePolicy,
@@ -354,6 +371,19 @@ export function assemblePoint<Row, P extends ResourceParams>(
       arm.pkColumn,
       outer.encode,
     ),
+  };
+}
+
+/** `fn`'s answer, computed on the first call and kept. */
+function memoOnce<T>(fn: () => T): () => T {
+  let done = false;
+  let value: T;
+  return () => {
+    if (!done) {
+      value = fn();
+      done = true;
+    }
+    return value;
   };
 }
 
@@ -491,6 +521,7 @@ function planBounded<Row, P extends WindowParams | PointParams>(
       identity: { pk: spec.point.by },
       mode: { kind: "point" },
     });
+    const encode = (ids: readonly string[]) => codec.encode(ids) as P;
     return {
       kind: "point",
       arm,
@@ -498,7 +529,20 @@ function planBounded<Row, P extends WindowParams | PointParams>(
         key,
         // `idsOf` IS the descriptor's pure `point.decode`.
         idsOf: (params) => codec.decode(params),
-        encode: (ids) => codec.encode(ids) as P,
+        encode,
+        handoffDefinition: memoOnce(() =>
+          pointDefinition<P>({
+            arm: arm as PointArmPlan<unknown, P>,
+            where: spec.where,
+            encode,
+            schema: contract.schema,
+            maxIds: codec.maxIds,
+            encodeRow:
+              spec.encodeRow === undefined
+                ? { declared: false }
+                : { declared: true, id: spec.encodeRowId },
+          }),
+        ),
         ...encodeRow,
         ...debounceMs,
       },

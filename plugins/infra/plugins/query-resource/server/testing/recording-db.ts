@@ -28,6 +28,7 @@ export function recordingQueryDb(
     groupBy: (...cols: unknown[]) => wrap(q.groupBy(...cols)),
     orderBy: (...o: SQL[]) => wrap(q.orderBy(...o)),
     limit: (n: number) => wrap(q.limit(n)),
+    getSQL: () => q.getSQL(),
     then: (
       resolve: (v: unknown[]) => unknown,
       reject?: (e: unknown) => unknown,

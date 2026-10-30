@@ -22,6 +22,8 @@ import type {
   SeedOutcome as RtSeedOutcome,
   PersistedValueCheck as RtPersistedValueCheck,
   ResourceDelivery as RtDelivery,
+  HandoffState as RtHandoffState,
+  ResumeRecord as RtResumeRecord,
 } from "@plugins/framework/plugins/resource-runtime/core";
 import {
   recordEntrySpan,
@@ -107,6 +109,10 @@ export type PersistedBase = RtPersistedBase;
 export type SeedOutcome = RtSeedOutcome;
 /** Whether an L2 value parses as its alias's payload (`validatePersistedValue`, A30). */
 export type PersistedValueCheck = RtPersistedValueCheck;
+/** See `ResourceRuntime.handoffState`. */
+export type HandoffState = RtHandoffState;
+/** See `ResourceRuntimeOptions.resumeEpoch`. */
+export type ResumeRecord = RtResumeRecord;
 
 // Resource.Declare stays here — its ~37 contributors import it from server-core.
 // `preload` (`"boot"` / `"boot-and-keep"`) is a param-less resource's opt-in to
@@ -297,6 +303,37 @@ export function setLiveStateSnapshotHooks(
   hooks: LiveStateSnapshotHooks | null,
 ): void {
   liveStateSnapshotHooks = hooks;
+}
+
+// The epoch handoff's storage (research/2026-10-30-global-cross-boot-resume-
+// epoch-handoff.md) — injected at boot by `live-state-snapshot` (server-core
+// must not import it: the same boot-injection pattern as
+// `setLiveStateSnapshotHooks`). `write` is the old backend's half, run by the
+// serving host's shutdown before any plugin's `onShutdown` (`handOffEpoch`);
+// `load` the successor's (`ResourceRuntimeOptions.resumeEpoch`). Before
+// injection, and on central, nothing is handed over: every foreign echo loads.
+export interface EpochHandoffHooks {
+  /**
+   * Cut the feed, take `state()` right after, and store it for the successor.
+   * Never rejects: a failure is reported and stores nothing.
+   */
+  write: (state: () => HandoffState) => Promise<void>;
+  /** The record the backend of boot `epoch` stored, or null when there is none. */
+  load: (epoch: string) => Promise<ResumeRecord | null>;
+}
+let epochHandoffHooks: EpochHandoffHooks | null = null;
+export function setEpochHandoffHooks(hooks: EpochHandoffHooks | null): void {
+  epochHandoffHooks = hooks;
+}
+
+/**
+ * Hand this process's freshness over to its successor (the serving host's
+ * shutdown, first): a no-op with no hooks installed. Never rejects (see
+ * `EpochHandoffHooks.write`): with no record the successor loads every sub.
+ */
+export async function handOffEpoch(): Promise<void> {
+  if (epochHandoffHooks === null) return;
+  await epochHandoffHooks.write(() => runtime.handoffState());
 }
 
 // The build graph this backend serves, for judging a live-resource contract
@@ -546,6 +583,11 @@ const runtime = createResourceRuntime({
     );
   },
   reportError: (ctx, err) => reportServerError(errorReport(ctx, err)),
+  // Reads the boot-injected holder at call time (see `setEpochHandoffHooks`).
+  resumeEpoch: (epoch) =>
+    epochHandoffHooks === null
+      ? Promise.resolve(null)
+      : epochHandoffHooks.load(epoch),
   // Reads the boot-injected holder at call time (see `setClientBuildIdentity`).
   serverBuildGraph: () => clientBuildIdentity(),
   keySet: () => keySet,

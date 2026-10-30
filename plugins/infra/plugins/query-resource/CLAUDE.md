@@ -435,7 +435,7 @@ Details:
     catch, non-literal default) is an `{ $opaque }` marker — refused in a `parsed` decoder, folded in (not refused) for a
     column or row schema (e.g. `tolerantEnum`).
   - A non-literal param (`Date`) is refused.
-  - `:rows` has no definition (never persisted).
+  - `:rows` has no L2 definition (never persisted).
 - **Tests:** `compile-alias.test.ts`, `compile-alias-closure.test.ts` (A23
   random-statement oracle), tasks-core's `all-parity.test.ts`, the compile-SQL
   golden's `all` group.
@@ -623,6 +623,18 @@ windowQueryResource(c.rows, {
     loaders, membership;
   - union and `all` reuse only the routed half (`routedReads`);
   - grouping: `planGroupArm` + `compileArmGroups`.
+
+- **Handoff definition (`internal/point-definition.ts`).** A point compile's
+  plan carries `handoffDefinition`, a memoized thunk (rendering goes through
+  the database driver, which a module-eval compile must not touch): the
+  sha256 of the point SQL, each field's decoder id, the row schema, `maxIds`
+  and the spec's `encodeRowId` — the epoch handoff inherits a `:rows` tuple
+  across a restart only under an equal one. Fail-closed to `null` (never
+  inherited) for a function `where`, an `encodeRow` with no `encodeRowId`, an
+  opaque decoder or schema part, a non-literal param. `serveCollection` names
+  its `$columns` fold as an `encodeRowId`; a wire codec has none. Bump
+  `POINT_DEFINITION_VERSION` when the point compile changes what a load
+  produces with none of those moving. Pinned by `point-definition.test.ts`.
 
 **Golden fixtures** (`network/live/server/internal/compile-sql-golden.test.ts`
 and `compile-union-golden.test.ts`) pin every shape's SQL, params, routes,

@@ -30,6 +30,8 @@ import { LIVE_STATE_CHANGELOG_TABLE } from "@plugins/database/plugins/derived-vi
 export const FEED_CHANNEL = "live_state";
 /** The channel a transaction's end marker is NOTIFYed on. */
 export const TXN_END_CHANNEL = "live_state_end";
+/** The channel a feed cut's barrier is NOTIFYed on (`feedCut`): its payload is the cut's token. */
+export const BARRIER_CHANNEL = "live_state_barrier";
 
 export const TXN_END_TRIGGER = "live_state_txn_end";
 

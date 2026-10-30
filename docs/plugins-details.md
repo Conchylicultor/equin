@@ -20346,6 +20346,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `database/migrations.schemaGeneration`
       - `database/migrations.SchemaLayerInputs`
       - `primitives/log-channels.defineLogSink`
+    - DB schema: `plugins/database/server/internal/boot-schema.ts`
     - Exports (types):
       - `DatabaseDriverImpl`
       - `Db`
@@ -20362,6 +20363,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadKnownRelations`
       - `quotedRelationsIn`
       - `readTag`
+      - `schemaChangedAtBoot`
+      - `snapshotWatermark`
   - Cross-plugin:
     - Imported by: 135 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×39
@@ -20481,6 +20484,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database.db`
           - `database.ListenSession`
           - `database.loadKnownRelations`
+          - `database.snapshotWatermark`
           - `database/derived-tables.feedExemptTables`
           - `database/derived-tables.rollupSources`
           - `primitives/log-channels.defineLogSink`
@@ -20492,6 +20496,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ChangeProducerSpec`
           - `DbChange`
           - `FeedChange`
+          - `FeedCut`
           - `ProducerBuilder`
           - `ProducerChange`
           - `ProducerExecutor`
@@ -20502,6 +20507,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `changeProducerFor`
           - `defineChangeProducer`
           - `ExcludeFromChangeFeed`
+          - `feedCut`
+          - `feedListening`
           - `getCoveredTables`
           - `parseLiveStatePayload`
           - `producedTableNames`
@@ -20724,6 +20731,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `IMPERATIVE_PUBLIC_TABLES`
           - `LIVE_STATE_CHANGELOG_HORIZON_TABLE`
           - `LIVE_STATE_CHANGELOG_TABLE`
+          - `LIVE_STATE_HANDOFF_TABLE`
           - `LIVE_STATE_SNAPSHOT_TABLE`
           - `LIVE_STATE_TRIGGER_STATE_TABLE`
           - `MIGRATIONS_TABLE_NAME`
@@ -20813,10 +20821,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Contributes:
           - `change-feed-changelog-retention` "live-state-snapshot's cold-boot catch-up replays the changelog; its hourly prune job (pruneChangelog) deletes the rows below the horizon no persisted snapshot needs"
+          - `fork-data-exclusion` "live_state_handoff"
           - `fork-data-exclusion` "live_state_snapshot"
         - Uses:
           - `database.db`
+          - `database.schemaChangedAtBoot`
           - `database/change-feed.ChangelogRetention`
+          - `database/change-feed.feedCut`
+          - `database/change-feed.feedListening`
+          - `database/change-feed.getCoveredTables`
           - `database/change-feed.producedTableNames`
           - `database/change-feed.readLayout`
           - `database/change-feed.relationBases`
@@ -26864,6 +26877,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ExternalWindowPolicy`
           - `FollowReached`
           - `FullRoute`
+          - `HandoffDefinitionAnswer`
+          - `HandoffState`
+          - `HandoffTuple`
           - `HostMap`
           - `KeyedDiff`
           - `KeyedMembership`
@@ -26887,6 +26903,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ResourceParams`
           - `ResourceRuntime`
           - `ResourceRuntimeOptions`
+          - `ResumeRecord`
+          - `ResumeReplayOutcome`
           - `Route`
           - `RoutedRecomputeOn`
           - `RoutePlan`
@@ -26916,6 +26934,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `retainSnapEncoder`
           - `tableLayoutRequirements`
       - Cross-plugin:
+        - Uses tokens: `ui/tokens/shadow --shadow`
         - Imported by:
           - `framework/central-core`
           - `framework/server-core`
@@ -26959,7 +26978,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ChangeSource`
           - `DependsOnEntry`
           - `EndpointHttpHandler`
+          - `EpochHandoffHooks`
           - `ExternalResource`
+          - `HandoffState`
           - `HeapMemory`
           - `HostService`
           - `HttpHandler`
@@ -26994,6 +27015,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ResourceMode`
           - `ResourceParams`
           - `ResourcePushObserver`
+          - `ResumeRecord`
           - `RuntimeProfileView`
           - `SeedOutcome`
           - `ServerContribution`
@@ -27022,6 +27044,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `getBootMode`
           - `getProfilingData`
           - `handleResourceHttp`
+          - `handOffEpoch`
           - `heapMemory`
           - `hostHttpRoutes`
           - `installHeapReader`
@@ -27062,6 +27085,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `seedRouteDrift`
           - `serverCollectedDir`
           - `setClientBuildIdentity`
+          - `setEpochHandoffHooks`
           - `setErrorReporter`
           - `setFatalReporter`
           - `setLiveStateSnapshotHooks`
@@ -54601,11 +54625,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-3xs`
               - `ui/tokens/type-scale --line-height-caption`
-            - Tokens used by: 74 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+            - Tokens used by: 75 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
               - `apps` ×30
               - `primitives` ×18
+              - `framework` ×6
               - `ui` ×6
-              - `framework` ×5
               - `page` ×3
               - `apps-core` ×2
               - `screenshot` ×2

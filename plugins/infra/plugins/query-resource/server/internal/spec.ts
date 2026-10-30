@@ -69,6 +69,8 @@ export interface QueryStep<Row = unknown> extends PromiseLike<Row[]> {
   groupBy(...columns: (PgColumn | SQL)[]): QueryStep<Row>;
   orderBy(...order: SQL[]): QueryStep<Row>;
   limit(count: number): QueryStep<Row>;
+  /** The statement as drizzle would send it — a definition renders it (`./point-definition`). */
+  getSQL(): SQL;
 }
 export interface QueryFrom<Row = unknown> {
   from(source: PgTable | PgView): QueryStep<Row>;
@@ -179,6 +181,13 @@ interface BoundedSpecBase<P extends ResourceParams> {
    * in SQL, where `encode(…, 'base64')` folds lines at 76 chars.
    */
   encodeRow?: (row: Record<string, unknown>) => Record<string, unknown>;
+  /**
+   * A stable id naming what `encodeRow` does — code a definition cannot read,
+   * so a point read whose `encodeRow` names none has no definition and is
+   * never inherited across a restart (`./point-definition`). Change it
+   * whenever the encoding changes.
+   */
+  encodeRowId?: string;
   /** Fixed-window trailing debounce (ms) for this resource's flushes. */
   debounceMs?: number;
   /** Test seam. Defaults to the real per-worktree drizzle `db`. */

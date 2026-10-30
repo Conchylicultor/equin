@@ -92,6 +92,16 @@ export const LIVE_STATE_CHANGELOG_HORIZON_TABLE =
   "live_state_changelog_horizon";
 
 /**
+ * Public table created imperatively by live-state-snapshot
+ * (`server/internal/tables-ddl.ts`): the epoch handoff — one row per backend
+ * boot that shut down cleanly, the tuples it vouched for at its feed cut and
+ * the cut's xid, read by its successor to answer a replayed sub `up-to-date`
+ * across the restart. Kept an hour. Not present in the drizzle snapshot; the
+ * orphaned-db-tables check treats it as declared.
+ */
+export const LIVE_STATE_HANDOFF_TABLE = "live_state_handoff";
+
+/**
  * Public table created imperatively by the derived-table rebuilder
  * (`plugins/database/plugins/derived-tables/server/internal/rebuild.ts`) — holds
  * the rollup layer's DEFINITION signatures, one row per object (each rollup's
@@ -198,6 +208,7 @@ export const IMPERATIVE_PUBLIC_TABLES = {
   LIVE_STATE_CHANGELOG_TABLE,
   LIVE_STATE_SNAPSHOT_TABLE,
   LIVE_STATE_CHANGELOG_HORIZON_TABLE,
+  LIVE_STATE_HANDOFF_TABLE,
   DERIVED_TABLE_STATE_TABLE,
   DERIVED_TABLE_OBJECT_STATE_TABLE,
   TASK_LATEST_CONVERSATION_TABLE,

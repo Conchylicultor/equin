@@ -407,7 +407,9 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `ChangeSource`
     - `DependsOnEntry`
     - `EndpointHttpHandler`
+    - `EpochHandoffHooks`
     - `ExternalResource`
+    - `HandoffState`
     - `HeapMemory`
     - `HostService`
     - `HttpHandler`
@@ -442,6 +444,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `ResourceMode`
     - `ResourceParams`
     - `ResourcePushObserver`
+    - `ResumeRecord`
     - `RuntimeProfileView`
     - `SeedOutcome`
     - `ServerContribution`
@@ -470,6 +473,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `getBootMode`
     - `getProfilingData`
     - `handleResourceHttp`
+    - `handOffEpoch`
     - `heapMemory`
     - `hostHttpRoutes`
     - `installHeapReader`
@@ -510,6 +514,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `seedRouteDrift`
     - `serverCollectedDir`
     - `setClientBuildIdentity`
+    - `setEpochHandoffHooks`
     - `setErrorReporter`
     - `setFatalReporter`
     - `setLiveStateSnapshotHooks`

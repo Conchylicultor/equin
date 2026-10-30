@@ -3,20 +3,26 @@ import {
   dropPendingPersists,
   persistedKeys,
   recomputeResource,
+  reportServerError,
   scopedResourceTables,
   seedPersistedSnapshot,
+  setEpochHandoffHooks,
   unboundedWindowKeys,
 } from "@plugins/framework/plugins/server-core/core";
 import {
   ChangelogRetention,
+  feedCut,
+  feedListening,
+  getCoveredTables,
   producedTableNames,
   relationBases,
 } from "@plugins/database/plugins/change-feed/server";
-import { db } from "@plugins/database/server";
+import { db, schemaChangedAtBoot } from "@plugins/database/server";
 import { LIVE_STATE_SNAPSHOT_TABLE } from "@plugins/database/plugins/derived-views/core";
 import { initSnapshotSubsystem } from "./internal/boot-init";
 import { runBootCatchUp } from "./internal/boot-catch-up";
 import { healedRollups } from "./internal/healed-rollups";
+import { loadEpochHandoff, writeEpochHandoff } from "./internal/handoff";
 import { l2Expectation } from "./internal/expectation";
 import { liveStateCompactJob } from "./internal/compact";
 import { snapshotLog as log } from "./internal/log-sink";
@@ -104,6 +110,34 @@ export default {
       scopedResourceTables(),
       produced,
     );
+    // The epoch handoff (`./internal/handoff`): installed before readiness
+    // flips, so the first replayed sub after the swap finds it. Its table is
+    // created by `ensureSnapshotTable` above; a degraded init leaves it
+    // missing, and every load then fails — reported, and every sub loads.
+    setEpochHandoffHooks({
+      write: (state) =>
+        writeEpochHandoff(db, {
+          cut: feedCut,
+          state,
+          report: (err) => {
+            log.publish(
+              `[live-state-snapshot] epoch handoff not written: ${String(err)}`,
+              "stderr",
+            );
+            reportServerError({
+              message: `[live-state-snapshot] the epoch handoff was not written — the successor reloads every sub: ${String(err)}`,
+              errorType: "EpochHandoffError",
+            });
+          },
+        }),
+      load: (epoch) =>
+        loadEpochHandoff(db, epoch, {
+          changelogTables: getCoveredTables,
+          healedRollups,
+          schemaChanged: schemaChangedAtBoot,
+          listening: feedListening,
+        }),
+    });
   },
   // Boot init + bounded catch-up, after the barrier (alongside change-feed's
   // listener, which also starts in onReady) — `runBootCatchUp` holds the order

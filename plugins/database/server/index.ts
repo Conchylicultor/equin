@@ -5,6 +5,7 @@ import {
 } from "@plugins/framework/plugins/server-core/core";
 import { db, DatabaseDriver } from "./internal/driver";
 import { snapshotWatermark } from "./internal/snapshot-watermark";
+import { setSchemaChangedAtBoot } from "./internal/boot-schema";
 import { loadKnownRelations } from "./internal/read-set-capture";
 import {
   applySchemaLayer,
@@ -20,6 +21,12 @@ import {
 } from "./internal/deferred-contract";
 import { publishReconciledRollups } from "@plugins/database/plugins/derived-tables/server";
 
+// The snapshot watermark (xid8 text), for a caller that needs one outside a
+// resource flight — change-feed's `feedCut`.
+export { snapshotWatermark } from "./internal/snapshot-watermark";
+// Whether this boot applied a migration or deferred a contract — read after
+// the boot schema layer committed (the epoch handoff refuses across one).
+export { schemaChangedAtBoot } from "./internal/boot-schema";
 export {
   afterCommit,
   db,
@@ -103,6 +110,9 @@ export default {
     // A20 boot check) run after this barrier, so they see this boot's answer.
     publishReconciledRollups(layer.rollups);
     setDeferredContract(layer.deferredContract);
+    setSchemaChangedAtBoot(
+      layer.pending > 0 || layer.deferredContract !== null,
+    );
     // Last, because every relation a loader can read now exists. This is the
     // snapshot that tells an unquoted table name in a loader's raw SQL apart
     // from a CTE name or a subquery alias, so its read-set records the tables it

@@ -38,7 +38,29 @@ const ChangelogRowSchema = z.object({
   keys: z.unknown(),
   unchanged: z.array(z.string()).nullable(),
 });
-type ChangelogRow = z.infer<typeof ChangelogRowSchema>;
+export type ChangelogRow = z.infer<typeof ChangelogRowSchema>;
+
+/**
+ * Every changelog row at or after `floor` (an xid8 as decimal text), in the
+ * order they were written. Shared by the boot catch-up and the epoch handoff's
+ * gap replay (`./handoff`), so both replay exactly what the live NOTIFY carried.
+ */
+export async function readChangelogSince(
+  db: NodePgDatabase,
+  floor: string,
+  label: string,
+): Promise<ChangelogRow[]> {
+  return executeRows(db, {
+    query: drizzleSql`
+      SELECT xid::text AS xid, t, op, ids, keys, unchanged
+      FROM ${drizzleSql.raw(LIVE_STATE_CHANGELOG_TABLE)}
+      WHERE xid >= ${floor}::numeric
+      ORDER BY seq
+    `,
+    row: ChangelogRowSchema,
+    label: `${label}/changelog-replay`,
+  });
+}
 
 // One usable row's catch-up floor (`position`, an xid8-family numeric cast to
 // text — never through a JS number).
@@ -59,7 +81,7 @@ export type ReplayRoute = (change: FeedChange, replay?: ReplayScope) => void;
 // recomputes in FULL regardless of ids; a membership entry gains the same
 // scoped delivery it gets on the live path.
 // See research/2026-06-22-global-live-state-l2-persisted-materialization.md §3.5.
-function replayChange(
+export function replayChange(
   row: ChangelogRow,
   route: ReplayRoute,
   floors: ReadonlyMap<string, string>,
@@ -191,16 +213,7 @@ export async function replayCatchUp(
   floors: ReadonlyMap<string, string>,
   route: ReplayRoute = routeChange,
 ): Promise<void> {
-  const rows = await executeRows(db, {
-    query: drizzleSql`
-      SELECT xid::text AS xid, t, op, ids, keys, unchanged
-      FROM ${drizzleSql.raw(LIVE_STATE_CHANGELOG_TABLE)}
-      WHERE xid >= ${floor}::numeric
-      ORDER BY seq
-    `,
-    row: ChangelogRowSchema,
-    label: "replayCatchUp/changelog-replay",
-  });
+  const rows = await readChangelogSince(db, floor, "replayCatchUp");
 
   if (rows.length === 0) {
     log.publish(

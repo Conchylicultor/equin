@@ -43,6 +43,14 @@ export type { DbChange } from "./internal/parse-payload";
 // driver (live-state-snapshot) so replay can never drift from the live LISTEN
 // path. See research/2026-06-22-global-live-state-l2-persisted-materialization.md.
 export { routeChange } from "./internal/route-change";
+// A routed-through cut of the feed: every change of every transaction below
+// the returned xid has gone through this process's router — the old backend's
+// half of the epoch handoff (live-state-snapshot).
+export { feedCut } from "./internal/cut";
+// Resolves once the LISTEN session was first established: a changelog replay
+// that must leave no gap with the live path reads only after it.
+export { feedListening } from "./internal/listener";
+export type { FeedCut } from "./internal/cut";
 // The base tables a read of a relation depends on (a view and a rollup expand
 // to the tables that feed them), under the graph read at boot — live-state-
 // snapshot's A6 (D28) judges a persisted read-set through it. Throws if read

@@ -89,6 +89,15 @@ export interface BurstRouter {
   close(): void;
   /** Hold again after `close()` (a new socket is listening). */
   reopen(): void;
+  /**
+   * Route NOW, synchronously, every change this router holds or has queued —
+   * a feed cut's barrier arrived (`feedCut`): every transaction whose changes
+   * reached the socket before it committed before it, so none is still
+   * waiting for anything. An open xid is released unreported (its end, sent
+   * in its own commit, would have preceded the barrier; a missing one is the
+   * deadline's to report, which still runs for a later one).
+   */
+  drain(): void;
 }
 
 function armUnref(fn: () => void, ms: number): () => void {
@@ -250,6 +259,11 @@ export function createBurstRouter(opts: BurstRouterOptions): BurstRouter {
 
     reopen() {
       closed = false;
+    },
+
+    drain() {
+      if (open) release(open);
+      flush();
     },
   };
 }

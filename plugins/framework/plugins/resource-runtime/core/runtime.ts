@@ -50,6 +50,7 @@ import {
   type RouteVia,
   type TableChange,
   type TableLayoutRequirement,
+  type HandoffDefinitionAnswer,
   type TupleRouting,
   type TupleUse,
   type TaggedRead,
@@ -1972,6 +1973,63 @@ export interface ResourceRuntimeOptions {
    * Default 2000. A test passes 0.
    */
   persistWindowMs?: number;
+  /**
+   * The epoch handoff's successor half: the record the backend that served
+   * boot `epoch` wrote at its shutdown (`ResourceRuntime.handoffState`), or
+   * `null` when there is none. Called at most once per foreign epoch at a
+   * time, on the first sub echoing it. With it a replayed sub of an unchanged
+   * tuple is answered `up-to-date` across a restart (see `EpochHandoff`).
+   * server: live-state-snapshot's handoff table, read lazily; central /
+   * omitted: every foreign echo takes the full path, as before.
+   */
+  resumeEpoch?: (epoch: string) => Promise<ResumeRecord | null>;
+  /**
+   * How long a `resumeEpoch` answer of "no record" is kept before a sub of
+   * that epoch asks again (ms). Default 2000. A test passes 0.
+   */
+  resumeNoRecordRetryMs?: number;
+}
+
+/**
+ * One tuple the old backend vouches for at its cut (`handoffState`): a
+ * client echoing `(epoch, version)` for it holds the value the old backend
+ * would have answered `up-to-date` at the cut.
+ */
+export interface HandoffTuple {
+  key: string;
+  pk: string;
+  params: ResourceParams;
+  version: number;
+  /** The entry's definition when it served the tuple — inherited only under an equal one. */
+  definition: string;
+}
+
+/** What a backend hands its successor (see `ResourceRuntime.handoffState`). */
+export interface HandoffState {
+  epoch: string;
+  tuples: HandoffTuple[];
+}
+
+/** Why a replay could not prove the restart gap — every tuple then loads. */
+export type ResumeReplayOutcome = { ok: true } | { ok: false; reason: string };
+
+/** A handoff record, as the successor reads it (`ResourceRuntimeOptions.resumeEpoch`). */
+export interface ResumeRecord {
+  tuples: readonly HandoffTuple[];
+  /**
+   * The tables whose every committed change is in the changelog `replay`
+   * reads (the trigger-covered set). A tuple reading any other table — a
+   * produced one, an opted-out one — cannot be proven and is not inherited.
+   */
+  changelogTables: ReadonlySet<string>;
+  /**
+   * Route every change committed since the record's cut through `route`
+   * (synchronously, in commit order of the changelog), or say why the gap
+   * cannot be proven (history pruned past the cut, a healed rollup). Called
+   * AFTER the shadows are installed, so a change committed after its read is
+   * routed live.
+   */
+  replay(route: (change: TableChange) => void): Promise<ResumeReplayOutcome>;
 }
 
 /** How one L2 persist writes its row — see `ResourceRuntimeOptions.persistSnapshot`. */
@@ -2397,6 +2455,16 @@ export interface ResourceRuntime {
    * boot's catch-up replays them. Returns how many were dropped.
    */
   dropPendingPersists: () => number;
+  /**
+   * The epoch handoff's old-backend half: every tuple this process would
+   * answer `up-to-date` right now and whose value no change has yet to reach
+   * — a tracked tuple of an inheritable entry (see `EpochHandoff`) holding a
+   * snapshot, with no pending notify and not draining — at its version. Taken
+   * right after a feed cut (change-feed's `feedCut`), so every change below
+   * the cut has already made its pending: a tuple a change reached is left
+   * out, and loads in the successor.
+   */
+  handoffState: () => HandoffState;
 }
 
 /** The L2 row a boot seed restores: its catch-up floor and when a replace last set it. */
@@ -2528,6 +2596,14 @@ export function createResourceRuntime(
   // memory: zero loader runs, zero read-admission slots). Monotonic; surfaced in
   // the `_debug` payload next to notifyStats for live re-validation.
   const subShortCircuits = new Map<string, number>();
+  // Per-key count of subs answered `up-to-date` across a restart by the epoch
+  // handoff, and why a handoff could not answer one (see `EpochHandoff`).
+  // Monotonic; surfaced in the `_debug` payload.
+  const resumedSubs = new Map<string, number>();
+  const resumeRefusals = new Map<string, number>();
+  function recordResumeRefusal(reason: string, n = 1): void {
+    resumeRefusals.set(reason, (resumeRefusals.get(reason) ?? 0) + n);
+  }
   function recordSubShortCircuit(key: string): void {
     subShortCircuits.set(key, (subShortCircuits.get(key) ?? 0) + 1);
     opts.onSubShortCircuit?.(key);
@@ -5116,6 +5192,9 @@ export function createResourceRuntime(
     // L2 recompute: one canonical tuple, however the caller spelled it.
     const params = canonicalTuple(entry, rawParams);
     const pk = paramsKey(params);
+    // Whatever reached this tuple also reached the state the previous backend
+    // handed over for it (`EpochHandoff`).
+    dirtyShadows(entry.key, pk);
     // Self-verification recorder (cascade is byte-identical regardless of source).
     const source = opts?.source ?? "hand";
     // A synthetic push (the debug churn emitter) drives the identical cascade but
@@ -6873,6 +6952,404 @@ export function createResourceRuntime(
     },
   };
 
+  // ── EpochHandoff: resume the version short-circuit across a restart ─────
+  //
+  // research/2026-10-30-global-cross-boot-resume-epoch-handoff.md. A restart
+  // closes every tab's socket and each replays its whole sub set; the version
+  // short-circuit cannot answer it (`bootEpoch` is per process), so every
+  // tuple reloads. The previous backend hands over what it would have answered
+  // `up-to-date` at its shutdown (`handoffState`, taken right after a feed
+  // cut), and this one re-proves the gap: a tuple is INHERITED — its echoed
+  // version answered `up-to-date` with no load — only when
+  //
+  //   - the old backend vouched for it at exactly the echoed version (a tuple
+  //     a change below the cut reached had a pending, and was left out);
+  //   - no change since the cut reached it: the changelog since the cut
+  //     replayed through the router (`ResumeRecord.replay`) and every live
+  //     change after the shadows were installed — both mark its SHADOW dirty;
+  //   - its entry is inheritable here and was there (`inheritable`), under an
+  //     EQUAL definition (a deploy that moved the SQL, a decoder, the row
+  //     schema or the encode reloads it), every table it reads written to the
+  //     changelog (`changelogTables`);
+  //   - this process has not served the tuple itself (it would answer from
+  //     its own version instead).
+  //
+  // Anything else — no record, a record that fails to load, history pruned
+  // past the cut, a definition mismatch, a dirty shadow, a version mismatch —
+  // takes the full path. The failure mode of a wrong proof is a stale value
+  // served as `up-to-date` that nothing heals until the next change, so every
+  // doubt loads.
+
+  /** One tuple the previous backend vouched for, until a change reaches it. */
+  interface Shadow {
+    epoch: string;
+    pk: string;
+    params: ResourceParams;
+    version: number;
+    dirty: boolean;
+  }
+  // The live shadows, by key, then `${epoch}\0${pk}`.
+  const shadows = new Map<string, Map<string, Shadow>>();
+  // Each foreign epoch's resume flight, kept until it expires.
+  type ResumeOutcome = { ok: true } | { ok: false; reason: string };
+  const resumes = new Map<string, Promise<ResumeOutcome>>();
+  // A tuple whose span this process opened at an inherited version, at that
+  // version (`tupleSlot`): later echoes of the old epoch keep matching it
+  // while it has not changed. Dropped with the span.
+  const inherited = new Map<string, number>();
+  const tupleSlot = (key: string, pk: string): string => `${key}\u0000${pk}`;
+  // How long a resume's shadows wait for the replay to claim them. The herd
+  // lands within seconds of the swap; a tab reconnecting later loads.
+  const RESUME_WINDOW_MS = 60_000;
+  // How long "no record for this epoch" is kept before a sub asks again.
+  const NO_RECORD_RETRY_MS = opts.resumeNoRecordRetryMs ?? 2_000;
+
+  // The entry's handoff definition (`RoutePlanInput.handoffDefinition`): its
+  // fingerprint, none (the plan carries none, or the compiler found something
+  // opaque — with why), or a thunk that threw — a compiler bug, reported.
+  // Only a `defined` one is ever inherited.
+  type HandoffDefinition =
+    HandoffDefinitionAnswer | { kind: "failed"; reason: string };
+  // Asked once per routing record (a rebind mints a new one): a thunk that
+  // threw is reported once, not on every sub that asks.
+  const handoffDefinitions = new WeakMap<RoutingRecord, HandoffDefinition>();
+  function handoffDefinitionOf(entry: RegistryEntry): HandoffDefinition {
+    const routing = entry.routing;
+    const thunk = routing?.plan.handoffDefinition;
+    if (routing === undefined || thunk === undefined) {
+      return { kind: "none", reason: "not compiled with one" };
+    }
+    let answer = handoffDefinitions.get(routing);
+    if (answer === undefined) {
+      try {
+        answer = thunk();
+      } catch (err) {
+        reportLoaderError(`the handoff definition of ${entry.key} threw`, err);
+        answer = { kind: "failed", reason: String(err) };
+      }
+      handoffDefinitions.set(routing, answer);
+    }
+    return answer;
+  }
+  // The definition an inheritable entry carries (`inheritable` checked it).
+  function definedHandoff(entry: RegistryEntry): string | null {
+    const d = handoffDefinitionOf(entry);
+    return d.kind === "defined" ? d.definition : null;
+  }
+
+  // Whether an entry's tuples can be inherited at all: a routed point read
+  // whose definition pins everything its value depends on, every change of it
+  // reaching it through its own routes — no drift, no relation or derived
+  // read, nothing unfed, notified, tagged or followed, no upstream, no hooks
+  // that a load would run — and a version counter that is its complete
+  // change signal.
+  function inheritable(entry: RegistryEntry): boolean {
+    return notInheritable(entry) === null;
+  }
+
+  // Why an entry's tuples cannot be inherited (the first reason), or null —
+  // `_debug`'s `handoff` per key.
+  function notInheritable(entry: RegistryEntry): string | null {
+    const routing = entry.routing;
+    if (routing === undefined) return "unrouted";
+    if (entry.membership?.kind !== "point") return "not-a-point-read";
+    const definition = handoffDefinitionOf(entry);
+    if (definition.kind !== "defined") {
+      return `no definition: ${definition.reason}`;
+    }
+    if (deferred.has(entry.key)) return "deferred";
+    if (entry.externalSource) return "external";
+    if (entry.revalidate !== undefined) return "revalidate";
+    if (entry.bytes !== undefined) return "bytes";
+    if (entry.authorize !== undefined) return "authorize";
+    if (entry.onFirstSubscribe !== undefined) return "on-first-subscribe";
+    if (entry.onFollowReached !== undefined) return "follows";
+    if (entry.upstreamKeys.length > 0) return "upstream";
+    if (!versionIsComplete(entry)) return "version-incomplete";
+    if (
+      routing.drifted.size > 0 ||
+      routing.driftBases.size > 0 ||
+      routing.seededDrift.size > 0
+    ) {
+      return "drift";
+    }
+    if (routing.relationBases.size > 0 || routing.relations.size > 0) {
+      return "relation-read";
+    }
+    if (routing.derived.size > 0) return "derived-read";
+    if (routing.unfed.size > 0) return "unfed-read";
+    if (routing.notified.size > 0) return "notified-read";
+    if (routing.tagged.size > 0) return "tagged-read";
+    if (routing.via.size > 0) return "follow-read";
+    return null;
+  }
+
+  function handoffState(): HandoffState {
+    const tuples: HandoffTuple[] = [];
+    for (const entry of registry.values()) {
+      if (!inheritable(entry)) continue;
+      const definition = definedHandoff(entry)!;
+      for (const [pk, params] of entry.tracked) {
+        const version = entry.versions.get(pk) ?? 0;
+        if (
+          version > 0 &&
+          entry.snapshots?.has(pk) === true &&
+          !entry.pendingNotifies.has(pk) &&
+          !entry.draining.has(pk)
+        ) {
+          tuples.push({ key: entry.key, pk, params, version, definition });
+        }
+      }
+    }
+    return { epoch: bootEpoch, tuples };
+  }
+
+  // Whether `change` may reach the shadowed tuple: the router's own rule
+  // (`routeTuple`) over the tuple's uses, cut to its own ids — and dirty on
+  // every doubt (an unindexed or failed-open table, a `usesOf` that throws or
+  // names an unknown route, an unresolved reverse route).
+  function shadowReached(
+    entry: RegistryEntry,
+    params: ResourceParams,
+    change: TableChange,
+  ): boolean {
+    const routing = entry.routing!;
+    const routes = routing.byTable.get(change.table);
+    if (routes === undefined || routing.driftBases.has(change.table)) {
+      return true;
+    }
+    let outcome: TupleRouting;
+    try {
+      const uses = routing.plan.usesOf(params);
+      for (const id of uses.keys()) {
+        if (!routing.routeIds.has(id)) return true;
+      }
+      outcome = routeTuple(change, routes, uses);
+    } catch (err) {
+      reportLoaderError(
+        `handoff routing failed for ${entry.key} (table "${change.table}")`,
+        err,
+      );
+      return true;
+    }
+    if (outcome.kind === "untouched") return false;
+    if (outcome.kind === "full") return true;
+    if (outcome.unresolved.length > 0) return true;
+    const membership = entry.membership!;
+    const ids = new Set(
+      membership.kind === "point" ? membership.idsOf(params) : [],
+    );
+    for (const set of [outcome.affected, outcome.valueOnly, outcome.deleted]) {
+      for (const id of set) if (ids.has(id)) return true;
+    }
+    return false;
+  }
+
+  function markShadows(entry: RegistryEntry, change: TableChange): void {
+    const byKey = shadows.get(entry.key);
+    if (byKey === undefined) return;
+    for (const shadow of byKey.values()) {
+      if (!shadow.dirty && shadowReached(entry, shadow.params, change)) {
+        shadow.dirty = true;
+      }
+    }
+  }
+
+  // A notify of the tuple (or of the whole key, `{}`) reached its shadows.
+  function dirtyShadows(key: string, pk: string): void {
+    const byKey = shadows.get(key);
+    if (byKey === undefined) return;
+    for (const shadow of byKey.values()) {
+      if (pk === EMPTY_PK || shadow.pk === pk) shadow.dirty = true;
+    }
+  }
+
+  // The replay's router: the changelog since the cut, into the shadows only —
+  // a tuple this process tracks already loaded after it.
+  function routeShadowChange(change: TableChange): void {
+    for (const entry of routedByTable.get(change.table) ?? []) {
+      markShadows(entry, change);
+    }
+  }
+
+  function dropShadows(epoch: string): void {
+    for (const [key, byKey] of shadows) {
+      for (const [slot, shadow] of byKey) {
+        if (shadow.epoch === epoch) byKey.delete(slot);
+      }
+      if (byKey.size === 0) shadows.delete(key);
+    }
+  }
+
+  function expireResume(epoch: string, ms = RESUME_WINDOW_MS): void {
+    const flight = resumes.get(epoch);
+    const timer = setTimeout(() => {
+      // Only this flight's: a later one under the epoch keeps its own timer.
+      if (resumes.get(epoch) !== flight) return;
+      resumes.delete(epoch);
+      dropShadows(epoch);
+    }, ms);
+    (timer as { unref?: () => void }).unref?.();
+  }
+
+  // One resume per foreign epoch: load its record, shadow every tuple that
+  // may be inherited, then replay the gap. A missing record is kept only
+  // briefly (a tab that reconnected before the old backend wrote it asks
+  // again soon after); every other outcome until it expires. Never rejects:
+  // whatever throws is reported and every sub of the epoch loads.
+  function resumeFor(epoch: string): Promise<ResumeOutcome> {
+    let flight = resumes.get(epoch);
+    if (flight === undefined) {
+      flight = startResume(epoch);
+      resumes.set(epoch, flight);
+    }
+    return flight;
+  }
+
+  async function startResume(epoch: string): Promise<ResumeOutcome> {
+    try {
+      return await resume(epoch);
+    } catch (err) {
+      reportLoaderError(`resuming the epoch ${epoch} failed`, err);
+      dropShadows(epoch);
+      expireResume(epoch);
+      return { ok: false, reason: "failed" };
+    }
+  }
+
+  async function resume(epoch: string): Promise<ResumeOutcome> {
+    // One turn first: `resumeFor` stores this flight only once this call
+    // returns its promise, and every expiry below matches against it.
+    await Promise.resolve();
+    let record: ResumeRecord | null;
+    try {
+      record = await opts.resumeEpoch!(epoch);
+    } catch (err) {
+      reportLoaderError(`loading the epoch handoff ${epoch} failed`, err);
+      expireResume(epoch);
+      return { ok: false, reason: "load-failed" };
+    }
+    if (record === null) {
+      expireResume(epoch, NO_RECORD_RETRY_MS);
+      return { ok: false, reason: "no-record" };
+    }
+    // Installed synchronously, BEFORE the replay reads the changelog: a change
+    // committed after that read is routed live into them.
+    for (const t of record.tuples) {
+      const entry = registry.get(t.key);
+      if (entry === undefined || !inheritable(entry)) {
+        recordResumeRefusal("not-inheritable");
+        continue;
+      }
+      if (definedHandoff(entry) !== t.definition) {
+        recordResumeRefusal("definition");
+        continue;
+      }
+      if (
+        entry.routing!.plan.routes.some(
+          (r) => !record.changelogTables.has(r.table),
+        )
+      ) {
+        recordResumeRefusal("unlogged-table");
+        continue;
+      }
+      const params = canonicalTuple(entry, t.params);
+      if (paramsKey(params) !== t.pk) {
+        recordResumeRefusal("params");
+        continue;
+      }
+      let byKey = shadows.get(t.key);
+      if (byKey === undefined) {
+        byKey = new Map();
+        shadows.set(t.key, byKey);
+      }
+      byKey.set(`${epoch}\u0000${t.pk}`, {
+        epoch,
+        pk: t.pk,
+        params,
+        version: t.version,
+        dirty: false,
+      });
+    }
+    expireResume(epoch);
+    let replayed: ResumeReplayOutcome;
+    try {
+      replayed = await record.replay(routeShadowChange);
+    } catch (err) {
+      reportLoaderError(`replaying the epoch handoff ${epoch} failed`, err);
+      dropShadows(epoch);
+      return { ok: false, reason: "replay-failed" };
+    }
+    if (!replayed.ok) {
+      dropShadows(epoch);
+      return { ok: false, reason: replayed.reason };
+    }
+    return { ok: true };
+  }
+
+  // Whether a sub echoing a foreign `(epoch, version)` may ask the handoff.
+  function asksHandoff(
+    entry: RegistryEntry,
+    epoch: unknown,
+    version: unknown,
+  ): epoch is string {
+    return (
+      opts.resumeEpoch !== undefined &&
+      typeof epoch === "string" &&
+      epoch !== bootEpoch &&
+      typeof version === "number" &&
+      inheritable(entry)
+    );
+  }
+
+  // The claim, once `epoch`'s resume settled: the version to answer
+  // `up-to-date` at, or why the tuple loads. Synchronous, so nothing can land
+  // between the checks and the version it sets.
+  function claimInherited(
+    entry: RegistryEntry,
+    pk: string,
+    epoch: string,
+    version: number,
+    outcome: ResumeOutcome,
+  ): { ok: true; version: number } | { ok: false; reason: string } {
+    if (!outcome.ok) return outcome;
+    if (!inheritable(entry)) return { ok: false, reason: "not-inheritable" };
+    const shadow = shadows.get(entry.key)?.get(`${epoch}\u0000${pk}`);
+    if (shadow === undefined) return { ok: false, reason: "not-handed-over" };
+    if (shadow.dirty) return { ok: false, reason: "changed" };
+    if (shadow.version !== version) return { ok: false, reason: "version" };
+    if ((entry.subCounts.get(pk) ?? 0) === 0) {
+      return { ok: false, reason: "unsubscribed" };
+    }
+    const current = entry.versions.get(pk) ?? 0;
+    const slot = tupleSlot(entry.key, pk);
+    const at = inherited.get(slot);
+    if (at !== undefined) {
+      // Inherited by an earlier claim: still that value while nothing minted.
+      return at === current
+        ? { ok: true, version: current }
+        : { ok: false, reason: "changed-here" };
+    }
+    // Fresh here: the only version this process minted for the tuple is the
+    // span opener of its first registration, and nothing loaded, queued or
+    // drained it since — so this process has no value of its own for it.
+    if (
+      current !== 1 ||
+      entry.snapshots?.has(pk) === true ||
+      entry.pendingNotifies.has(pk) ||
+      entry.draining.has(pk)
+    ) {
+      return { ok: false, reason: "served-here" };
+    }
+    entry.versions.set(pk, version);
+    inherited.set(slot, version);
+    return { ok: true, version };
+  }
+
+  function recordResumed(key: string): void {
+    resumedSubs.set(key, (resumedSubs.get(key) ?? 0) + 1);
+  }
+
   // Socket-level sub registration bookkeeping, shared by `handleSub` and
   // `handleSubBatch`. Fully synchronous: creates/updates the per-socket
   // `SocketSubRecord` (tagging the holding tab), and bumps `entry.subCounts` only
@@ -7239,6 +7716,31 @@ export function createResourceRuntime(
       return;
     }
 
+    // An echo of ANOTHER boot's version: the epoch handoff may answer it
+    // (`EpochHandoff`) — anything it cannot prove loads below.
+    if (asksHandoff(entry, m.epoch, m.version)) {
+      const claim = claimInherited(
+        entry,
+        pk,
+        m.epoch,
+        m.version as number,
+        await resumeFor(m.epoch),
+      );
+      if (claim.ok) {
+        sendJson(state.ws, {
+          kind: "up-to-date",
+          ...req,
+          key,
+          params,
+          version: claim.version,
+          epoch: bootEpoch,
+        });
+        recordResumed(key);
+        return;
+      }
+      recordResumeRefusal(claim.reason);
+    }
+
     await serveSub(state, entry, req, key, params, pk, clientEtag, firstGlobal);
   }
 
@@ -7420,9 +7922,15 @@ export function createResourceRuntime(
     // (runtime-reseed-ahead.test.ts: the queue's Unranked conversation). Kept,
     // the base can only lag this read, which costs this holder a redundant row
     // on the next delta, never a missing one.
+    //
+    // Nor while the tuple's span was opened by an epoch-handoff claim with no
+    // snapshot behind it (`inherited`): its holders hold the value of the
+    // previous backend's cut, so a base seeded from this NEWER read would
+    // absorb a change still in flight to them in the same way. Left without
+    // one, the next change drains FULL and ships to every holder.
     if (entry.mode === "keyed") {
       const snapshots = (entry.snapshots ??= new Map());
-      if (!snapshots.has(pk)) {
+      if (!snapshots.has(pk) && !inherited.has(tupleSlot(entry.key, pk))) {
         snapshots.set(pk, snapshotOf(entry, value));
         reseedOrderSigs(entry, params, value); // lifecycle mirrors the snapshot seed
         // The new base's floor is the flight's own watermark (C19): the value
@@ -7570,6 +8078,8 @@ export function createResourceRuntime(
       params: ResourceParams;
       version: number;
     }> = [];
+    // Entries echoing another boot's version the epoch handoff may answer.
+    const claims: typeof prepared = [];
     for (const p of prepared) {
       const version = p.entry.versions.get(p.pk) ?? 0;
       if (
@@ -7584,6 +8094,10 @@ export function createResourceRuntime(
         // and its `onFirstSubscribe` — always takes the full path below.
         recordSubShortCircuit(p.key);
         upToDate.push({ id: p.id, key: p.key, params: p.params, version });
+        continue;
+      }
+      if (asksHandoff(p.entry, m.epoch, p.version)) {
+        claims.push(p);
         continue;
       }
       void (async () => {
@@ -7614,6 +8128,54 @@ export function createResourceRuntime(
         tabId,
         entries: upToDate,
       });
+    }
+    // The handoff's claims, answered as one batch once the epoch's resume
+    // settled; each one it cannot prove takes the full path (an inheritable
+    // entry has no `onFirstSubscribe` to settle first).
+    if (claims.length > 0) {
+      const epoch = m.epoch as string;
+      void (async () => {
+        const outcome = await resumeFor(epoch);
+        const answered: typeof upToDate = [];
+        for (const c of claims) {
+          const claim = claimInherited(
+            c.entry,
+            c.pk,
+            epoch,
+            c.version!,
+            outcome,
+          );
+          if (claim.ok) {
+            recordResumed(c.key);
+            answered.push({
+              id: c.id,
+              key: c.key,
+              params: c.params,
+              version: claim.version,
+            });
+            continue;
+          }
+          recordResumeRefusal(claim.reason);
+          void serveSub(
+            state,
+            c.entry,
+            { id: c.id, tabId },
+            c.key,
+            c.params,
+            c.pk,
+            c.etag,
+            c.firstGlobal,
+          );
+        }
+        if (answered.length > 0) {
+          sendJson(state.ws, {
+            kind: "up-to-date-batch",
+            epoch: bootEpoch,
+            tabId,
+            entries: answered,
+          });
+        }
+      })();
     }
   }
 
@@ -7718,6 +8280,7 @@ export function createResourceRuntime(
     const next = prev - 1;
     if (next === 0) {
       entry.subCounts.delete(pk);
+      inherited.delete(tupleSlot(key, pk));
       // The tuple leaves the router's targets, and its memoized read-set with it.
       entry.tracked.delete(pk);
       entry.spans.delete(pk);
@@ -8000,6 +8563,8 @@ export function createResourceRuntime(
       loaderStats?: { count: number; ratePerMin: number; maxMs: number };
       notifyStats: NotifyCounts;
       subShortCircuits: number;
+      handoff: string;
+      resumedSubs: number;
       staleFlightSupersedes: number;
       replaySkips: number;
       ackOverflows: number;
@@ -8128,6 +8693,8 @@ export function createResourceRuntime(
         // zero read-admission slots). Live re-validation gauge for the
         // 2026-07-11 replay-storm fix.
         subShortCircuits: subShortCircuits.get(entry.key) ?? 0,
+        handoff: notInheritable(entry) ?? "inheritable",
+        resumedSubs: resumedSubs.get(entry.key) ?? 0,
         // Stale-flight supersessions for this key (a push drain refused an
         // in-flight read older than the notify it was draining, and ran its
         // own). Non-zero means the pre-commit join that produced the 2026-08-08
@@ -8174,7 +8741,16 @@ export function createResourceRuntime(
     }
     return new Response(
       JSON.stringify(
-        { topoOrder: topoOrder.map((e) => e.key), resources: out },
+        {
+          topoOrder: topoOrder.map((e) => e.key),
+          // The epoch handoff (`EpochHandoff`): why a foreign echo loaded,
+          // and how many shadows are still waiting to be claimed.
+          resume: {
+            refusals: Object.fromEntries(resumeRefusals),
+            shadows: [...shadows.values()].reduce((n, m) => n + m.size, 0),
+          },
+          resources: out,
+        },
         null,
         2,
       ),
@@ -8307,6 +8883,9 @@ export function createResourceRuntime(
   function routeTableChange(change: TableChange, replay?: ReplayScope): void {
     for (const entry of routedByTable.get(change.table) ?? []) {
       try {
+        // Every change — a catch-up replay's too — reaches the handed-over
+        // state (over-marking only costs a load).
+        markShadows(entry, change);
         routeEntryChange(entry, change, replay);
       } catch (err) {
         reportLoaderError(
@@ -8874,6 +9453,7 @@ export function createResourceRuntime(
     persistedDefinitions,
     keptSnapshotValue,
     dropPendingPersists,
+    handoffState,
     readGateStats: () => readLoadGate.stats(),
   };
 }

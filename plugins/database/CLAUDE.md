@@ -324,6 +324,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `database/migrations.schemaGeneration`
     - `database/migrations.SchemaLayerInputs`
     - `primitives/log-channels.defineLogSink`
+  - DB schema: `plugins/database/server/internal/boot-schema.ts`
   - Exports (types):
     - `DatabaseDriverImpl`
     - `Db`
@@ -340,6 +341,8 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `loadKnownRelations`
     - `quotedRelationsIn`
     - `readTag`
+    - `schemaChangedAtBoot`
+    - `snapshotWatermark`
 - Cross-plugin:
   - Imported by: 135 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×39

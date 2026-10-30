@@ -292,7 +292,22 @@ export interface RoutePlanInput<
    * that does not fingerprint yet).
    */
   definition?: string;
+  /**
+   * The definition of a BOUNDED compile (a collection's `:rows` point read),
+   * for the epoch handoff alone — the same discipline as `definition` (a
+   * fingerprint of everything that decides a load's value), but never an L2
+   * one: a bounded entry is never persisted. A thunk because rendering its SQL
+   * goes through the database driver, which a module-eval compile must not
+   * touch; asked once the server serves, memoized by the compiler. `none`
+   * (with why): something in it is opaque, so its tuples are never inherited
+   * across a restart. Absent = the same.
+   */
+  handoffDefinition?: () => HandoffDefinitionAnswer;
 }
+
+/** A bounded compile's handoff definition, or why it has none (`RoutePlanInput.handoffDefinition`). */
+export type HandoffDefinitionAnswer =
+  { kind: "defined"; definition: string } | { kind: "none"; reason: string };
 
 /**
  * A routed resource's plan: every table occurrence its SQL may read, and a pure
@@ -397,6 +412,7 @@ export interface ReachPlanInput<
    * against the NULL it expects (NULL matches NULL).
    */
   definition?: never;
+  handoffDefinition?: never;
   /**
    * A grouping joins no rollup (C9 / D24 of
    * research/2026-10-06-global-scoped-change-routing-p8-v3.md): its routes are
@@ -427,6 +443,7 @@ export interface ReachPlan<
 > extends RoutePlan<P> {
   routes: readonly FullRoute[];
   definition?: never;
+  handoffDefinition?: never;
   derivedReads?: never;
   unfed?: readonly UnfedRead[];
   relations?: readonly RelationRead[];
@@ -500,6 +517,9 @@ export function mintRoutePlan<P extends Record<string, string>>(
     routes: plan.routes,
     usesOf: plan.usesOf,
     ...(plan.definition !== undefined ? { definition: plan.definition } : {}),
+    ...(plan.handoffDefinition !== undefined
+      ? { handoffDefinition: plan.handoffDefinition }
+      : {}),
     // Only when non-empty: a plan reading no derived table is the shape it
     // always was.
     ...(derivedReads.length > 0 ? { derivedReads } : {}),

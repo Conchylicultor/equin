@@ -22,6 +22,10 @@ export type {
   KeyedMembership,
   AliasMembership,
   PersistMeta,
+  HandoffState,
+  HandoffTuple,
+  ResumeRecord,
+  ResumeReplayOutcome,
   PersistedBase,
   SeedOutcome,
   PersistedValueCheck,
@@ -45,6 +49,7 @@ export {
 export type {
   ChangeSource,
   DerivedRead,
+  HandoffDefinitionAnswer,
   FullRoute,
   HostMap,
   NotifiedRead,

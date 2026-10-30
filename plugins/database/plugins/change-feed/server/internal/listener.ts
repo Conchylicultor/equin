@@ -7,7 +7,7 @@ import {
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { parseLiveStatePayload, parseTxnEndPayload } from "./parse-payload";
 import { getCoveredTables } from "./triggers";
-import { FEED_CHANNEL, TXN_END_CHANNEL } from "./txn-end";
+import { BARRIER_CHANNEL, FEED_CHANNEL, TXN_END_CHANNEL } from "./txn-end";
 import { feedChange, routeChange, type FeedChange } from "./route-change";
 import { routeWithSpan } from "./route-span";
 import { createBurstRouter, type TxnEndProblem } from "./burst";
@@ -53,6 +53,9 @@ export interface ChangeFeedListenerOptions {
 export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
   start(): void;
   stop(): Promise<void>;
+  barrier(token: string, deadlineMs: number): Promise<void>;
+  /** Resolves once a LISTEN session was first established (never rejects). */
+  established: Promise<void>;
 } {
   const livenessIntervalMs = opts.livenessIntervalMs ?? LIVENESS_INTERVAL_MS;
   const reconnectMinMs = opts.reconnectMinMs ?? RECONNECT_MIN_MS;
@@ -67,6 +70,25 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
   let connecting = false;
   let firstConnect = true;
   let reconnectDelay = reconnectMinMs;
+  // Resolved by the first established session: from then on every commit
+  // reaches this listener (a later loss is covered by the reconnect sweep).
+  let markEstablished!: () => void;
+  const established = new Promise<void>((resolve) => {
+    markEstablished = resolve;
+  });
+  // The feed cuts waiting for their barrier (`barrier`), by token.
+  const barriers = new Map<
+    string,
+    { resolve: () => void; reject: (err: Error) => void }
+  >();
+  // A cut is proven only on the session that heard every change before its
+  // barrier: losing it (or stopping) fails every waiting cut.
+  function failBarriers(why: string): void {
+    for (const [token, waiter] of barriers) {
+      barriers.delete(token);
+      waiter.reject(new Error(`feed cut failed: ${why}`));
+    }
+  }
   // One transaction's NOTIFYs route together once its end marker arrived, so
   // its ack leaves only after every one of them landed (see `createBurstRouter`).
   const burst = createBurstRouter({
@@ -82,8 +104,8 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
   // LISTEN each carry the connection plugin's deadline — one that gets no reply
   // rejects into the catch below, the same reconnect path as any other open
   // failure, instead of leaving `connecting` true forever (which also silenced
-  // the liveness watchdog). Both channels are LISTENed in ONE statement, so no
-  // transaction is seen on one channel and not the other.
+  // the liveness watchdog). Every channel is LISTENed in ONE statement, so no
+  // transaction is seen on one channel and not another.
   //
   // An established session reports its loss (`lost`: a dropped socket, a
   // restarted Postgres, a clean end) once; that retires it and schedules a
@@ -100,17 +122,20 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
       err: undefined,
     };
     try {
-      const s = await opts.listen([FEED_CHANNEL, TXN_END_CHANNEL], {
-        notification: (channel, payload) => onNotification(channel, payload),
-        lost: (err) => {
-          if (opened === null) {
-            early.lost = true;
-            early.err = err;
-            return;
-          }
-          retire(opened, err);
+      const s = await opts.listen(
+        [FEED_CHANNEL, TXN_END_CHANNEL, BARRIER_CHANNEL],
+        {
+          notification: (channel, payload) => onNotification(channel, payload),
+          lost: (err) => {
+            if (opened === null) {
+              early.lost = true;
+              early.err = err;
+              return;
+            }
+            retire(opened, err);
+          },
         },
-      });
+      );
       opened = s;
       // `stop()` ran while this open was in flight: it found no session to
       // close, so this one is closed here — never installed, nor the burst
@@ -120,8 +145,9 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
         return;
       }
       session = s;
-      // This session hears both channels from here: hold transactions again.
+      // This session hears every channel from here: hold transactions again.
       burst.reopen();
+      markEstablished();
       reconnectDelay = reconnectMinMs; // reset backoff on success
 
       // Mark-stale-on-RECONNECT only — never on the first (boot) connect.
@@ -149,7 +175,7 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
       }
 
       log.publish(
-        `[change-feed] LISTEN ${FEED_CHANNEL}, ${TXN_END_CHANNEL} established`,
+        `[change-feed] LISTEN ${FEED_CHANNEL}, ${TXN_END_CHANNEL}, ${BARRIER_CHANNEL} established`,
       );
       if (early.lost) retire(s, early.err);
     } catch (err) {
@@ -163,6 +189,17 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
 
   function onNotification(channel: string, payload: string): void {
     if (!payload) return;
+    if (channel === BARRIER_CHANNEL) {
+      // Another process's cut (or one this listener no longer waits on — its
+      // deadline passed) is not ours to answer; routing what is held is
+      // harmless either way.
+      const waiter = barriers.get(payload);
+      if (waiter === undefined) return;
+      barriers.delete(payload);
+      burst.drain();
+      waiter.resolve();
+      return;
+    }
     if (channel === TXN_END_CHANNEL) {
       const end = parseTxnEndPayload(payload);
       if (!end) {
@@ -209,6 +246,7 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
     if (session !== s) return;
     log.publish(`[change-feed] LISTEN session lost: ${String(err)}`, "stderr");
     session = null;
+    failBarriers("the LISTEN session was lost");
     // A transaction cut off mid-delivery can never get its end on the next
     // session (it only hears later commits; the reconnect sweep covers the gap):
     // release it unreported, and hold nothing until a session listens again.
@@ -274,6 +312,7 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
 
   async function stop(): Promise<void> {
     started = false;
+    failBarriers("the listener stopped");
     // A transaction still waiting for its end routes now — never dropped.
     burst.close();
     if (livenessTimer) {
@@ -296,7 +335,45 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
     }
   }
 
-  return { start, stop };
+  // Wait for the barrier NOTIFY carrying `token` (sent by the caller AFTER
+  // this registers), routing everything held before it. Refused with no live
+  // session — a cut on a socket that is not listening proves nothing — and
+  // past `deadlineMs`.
+  function barrier(token: string, deadlineMs: number): Promise<void> {
+    if (session === null) {
+      return Promise.reject(
+        new Error("feed cut failed: no LISTEN session is established"),
+      );
+    }
+    if (barriers.has(token)) {
+      return Promise.reject(
+        new Error(`feed cut failed: token "${token}" is already waiting`),
+      );
+    }
+    return new Promise<void>((resolve, reject) => {
+      const timer = setTimeoutFn(() => {
+        if (barriers.delete(token)) {
+          reject(
+            new Error(
+              `feed cut failed: its barrier did not arrive within ${deadlineMs} ms`,
+            ),
+          );
+        }
+      }, deadlineMs);
+      barriers.set(token, {
+        resolve: () => {
+          clearTimeout(timer);
+          resolve();
+        },
+        reject: (err) => {
+          clearTimeout(timer);
+          reject(err);
+        },
+      });
+    });
+  }
+
+  return { start, stop, barrier, established };
 }
 
 // What each broken end-of-transaction assumption means for a reader, filed once
@@ -341,4 +418,21 @@ export function startListener(): void {
 
 export async function stopListener(): Promise<void> {
   await defaultListener.stop();
+}
+
+/**
+ * Resolves once the production listener first established its LISTEN session:
+ * from then on a commit reaches the router live — what a replay of the
+ * changelog must wait for before it reads (the epoch handoff's successor).
+ */
+export function feedListening(): Promise<void> {
+  return defaultListener.established;
+}
+
+/** The production listener's `barrier` — `feedCut`'s wait. */
+export function awaitFeedBarrier(
+  token: string,
+  deadlineMs: number,
+): Promise<void> {
+  return defaultListener.barrier(token, deadlineMs);
 }

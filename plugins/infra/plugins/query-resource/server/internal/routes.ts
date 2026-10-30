@@ -7,6 +7,7 @@ import {
   type PgColumn,
 } from "drizzle-orm/pg-core";
 import {
+  type HandoffDefinitionAnswer,
   mintReachPlan,
   mintRoutePlan,
   type DerivedRead,
@@ -161,12 +162,18 @@ export function compiledRoutePlan<P extends ResourceParams>(
    * never persisted.
    */
   definition?: string,
+  /**
+   * The epoch handoff's definition of a bounded compile (`./point-definition`)
+   * — a thunk, rendered once the server serves.
+   */
+  handoffDefinition?: () => HandoffDefinitionAnswer,
 ): RoutePlan<P> {
   return mintRoutePlan({
     routes,
     usesOf,
     ...(derivedReads.length > 0 ? { derivedReads } : {}),
     ...(definition !== undefined ? { definition } : {}),
+    ...(handoffDefinition !== undefined ? { handoffDefinition } : {}),
   });
 }
 

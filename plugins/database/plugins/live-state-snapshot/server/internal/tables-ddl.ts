@@ -5,6 +5,7 @@ import { executeOne } from "@plugins/database/plugins/sql-rows/core";
 import {
   LIVE_STATE_CHANGELOG_HORIZON_TABLE,
   LIVE_STATE_CHANGELOG_TABLE,
+  LIVE_STATE_HANDOFF_TABLE,
   LIVE_STATE_SNAPSHOT_TABLE,
 } from "@plugins/database/plugins/derived-views/core";
 
@@ -97,6 +98,19 @@ CREATE TABLE IF NOT EXISTS ${LIVE_STATE_CHANGELOG_HORIZON_TABLE} (
 );
 `;
 
+// `live_state_handoff` — the epoch handoff (`./handoff`): one row per backend
+// boot that shut down cleanly, the tuples it vouched for at its feed cut and
+// the cut's xid (xid8, as numeric), read by its successor. A row older than an
+// hour is deleted by the next write. Derived state, NOT a drizzle migration.
+const HANDOFF_TABLE_DDL = `
+CREATE TABLE IF NOT EXISTS ${LIVE_STATE_HANDOFF_TABLE} (
+  epoch      text        PRIMARY KEY,
+  cut_xid    numeric     NOT NULL,
+  tuples     jsonb       NOT NULL,
+  written_at timestamptz NOT NULL DEFAULT now()
+);
+`;
+
 const PresentRowSchema = z.object({ present: z.boolean() });
 
 async function relationExists(
@@ -150,4 +164,5 @@ export async function ensureSnapshotTable(db: NodePgDatabase): Promise<void> {
   await db.execute(drizzleSql.raw(SNAPSHOT_TABLE_RENAME_PERSISTED_AT));
   await db.execute(drizzleSql.raw(SNAPSHOT_TABLE_ADD_DEFINITION));
   await ensureChangelogHorizon(db);
+  await db.execute(drizzleSql.raw(HANDOFF_TABLE_DDL));
 }
