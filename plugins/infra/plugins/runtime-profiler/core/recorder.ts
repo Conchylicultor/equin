@@ -226,6 +226,20 @@ export interface SlowSpan {
   selfMs: number;
   /** Variant + measures the call site attached, if any. Variant capped at `MAX_VARIANT_LEN`. */
   detail?: SpanDetail;
+  /**
+   * The wall-time bar the call site DECLARED for this run (`runTracked(label,
+   * fn, { budgetMs })`), if any. A monitor judging the span uses it in place of
+   * its kind's default — the declaration travels on the span, so no monitor can
+   * look the bar up from the label and miss it. Not part of `detail`: detail is
+   * a fact about the run, a budget is an input to judging it.
+   */
+  budgetMs?: number;
+}
+
+/** Options an entry span is opened with — what the call site declares about it. */
+export interface EntrySpanOptions {
+  /** See {@link SlowSpan.budgetMs}. */
+  budgetMs?: number;
 }
 
 export type SlowSpanHandler = (span: SlowSpan) => void;
@@ -671,8 +685,9 @@ export function runInRootContext<T>(fn: () => T): T {
 export function runTracked<T>(
   label: string,
   fn: () => T | Promise<T>,
+  opts?: EntrySpanOptions,
 ): Promise<T> {
-  return recordEntrySpan("bg", label, fn);
+  return recordEntrySpan("bg", label, fn, undefined, undefined, opts);
 }
 
 // --- Slow-span push seam ---
@@ -1115,6 +1130,7 @@ function record(
   selfMs = durationMs,
   waitBands?: WaitBand[],
   rawDetail?: SpanDetail,
+  budgetMs?: number,
 ): void {
   if (profilingDisabled()) return;
   // Drop spans produced inside a runWithoutProfiling scope before any aggregate,
@@ -1274,6 +1290,7 @@ function record(
       childMs,
       selfMs,
       detail,
+      ...(budgetMs !== undefined && { budgetMs }),
     };
     for (const sub of slowSpanSubs) {
       if (durationMs >= sub.thresholdMs) sub.handler(span);
@@ -1586,6 +1603,7 @@ export async function recordEntrySpan<T>(
    * closes around it.
    */
   onReads?: LoaderReadSetOwnSink,
+  opts?: EntrySpanOptions,
 ): Promise<T> {
   const cur = contextRuntime.current();
   const parent: SpanRef | null = cur
@@ -1666,6 +1684,7 @@ export async function recordEntrySpan<T>(
       selfMs,
       waitBands,
       detail,
+      opts?.budgetMs,
     );
     // Hand the loader's captured table read-set to the sink, keyed by label
     // (the resource key) — an EMPTY one too: the per-run capture describes

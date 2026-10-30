@@ -72,7 +72,18 @@ export async function drainWarmupsWith(deps: WarmupExecDeps): Promise<void> {
         // A real macrotask breath before each heavy unit — unlike a microtask
         // `await Promise.resolve()`, this admits queued request IO/timers.
         await deps.yieldMacrotask();
-        const end = profilerStart(`warmup:${w.name}`, "warmup", w.name, w.name);
+        // The declared budget rides on BOTH spans, so the boot-budget monitor
+        // (boot span) and slow-ops (`bg` span) judge the warm-up on the bar it
+        // declared rather than on their global defaults.
+        const budget =
+          w.budgetMs === undefined ? undefined : { budgetMs: w.budgetMs };
+        const end = profilerStart(
+          `warmup:${w.name}`,
+          "warmup",
+          w.name,
+          w.name,
+          budget,
+        );
         const startedAt = new Date();
         const t0 = performance.now();
         deps.onRun?.(w.name, { outcome: "running", startedAt });
@@ -82,8 +93,10 @@ export async function drainWarmupsWith(deps: WarmupExecDeps): Promise<void> {
           // (runTracked) are complementary: the former is the coarse boot phase,
           // the latter gives the warm-up's internal DB/file work an ambient span
           // so it appears under its own name in the profiler instead of vanishing.
-          await runTracked(`warmup:${w.name}`, () =>
-            deps.withSlot(() => w.run()),
+          await runTracked(
+            `warmup:${w.name}`,
+            () => deps.withSlot(() => w.run()),
+            budget,
           );
           // A warm-up is an optimization, never a correctness dependency: every failure maps to the same handling (log loudly + keep draining the other warm-ups), so one bad warm-up can neither abort its siblings nor reject drainWarmups() into the settled phase. Mirrors the framework's own onShutdown isolation loop.
         } catch (err) {

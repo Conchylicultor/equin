@@ -1,15 +1,10 @@
 import { z } from "zod";
-import {
-  getProfilingData,
-  type Span,
-} from "@plugins/framework/plugins/server-core/core";
+import { getProfilingData } from "@plugins/framework/plugins/server-core/core";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { getConfig } from "@plugins/config_v2/server";
-import type { ConfigValues } from "@plugins/config_v2/core";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { bootBudgetConfig } from "../../core";
-
-type Budgets = ConfigValues<(typeof bootBudgetConfig)["fields"]>;
+import { budgetForSpan } from "./budget";
 
 // Per-process set of boot span names ALREADY reported this process. THE dedup
 // mechanism: boot happens once per process, so the profile is static after boot
@@ -58,8 +53,9 @@ export const bootBudgetMonitorJob = defineJob({
     }));
 
     for (const span of spans) {
-      const budgetMs = budgetForSpan(span, cfg);
-      if (budgetMs === null) continue; // not a monitored boot span
+      const budget = budgetForSpan(span, cfg);
+      if (budget === null) continue; // not a monitored boot span
+      const { budgetMs, source: budgetSource } = budget;
       if (span.durationMs <= budgetMs) continue; // within budget
       if (reported.has(span.id)) continue; // already filed this boot
       reported.add(span.id);
@@ -72,29 +68,11 @@ export const bootBudgetMonitorJob = defineJob({
           ...(span.plugin ? { plugin: span.plugin } : {}),
           durationMs: span.durationMs,
           budgetMs,
+          budgetSource,
           memoryCheckpoints: checkpoints,
         },
-        message: `${span.id} — ${span.durationMs}ms boot (${span.phase}, budget ${budgetMs}ms)`,
+        message: `${span.id} — ${span.durationMs}ms boot (${span.phase}, ${budgetSource === "declared" ? "declared " : ""}budget ${budgetMs}ms)`,
       });
     }
   },
 });
-
-// Map a profiler span to its wall-time budget, or null when the span is not a
-// monitored boot hook / warmup. Warmups (`warmup:<name>`) are checked FIRST — a
-// warmup span may carry any phase (they drain after onAllReady), so its id
-// prefix, not its phase, decides its budget. Per-plugin boot-hook spans require
-// `span.plugin` set, which cleanly excludes the whole-phase wrapper spans
-// (`onReadyBlocking` etc., recorded with no plugin) so we attribute to a specific
-// plugin, never the aggregate phase.
-function budgetForSpan(span: Span, cfg: Budgets): number | null {
-  if (span.id.startsWith("warmup:")) return cfg.warmupBudgetMs;
-  if (span.plugin == null) return null;
-  // An if-chain, not a switch: PhaseId is a growing closed union and we budget
-  // only three of its members — switch-exhaustiveness-check would force a case
-  // per member (register/migrations/…) that all return null.
-  if (span.phase === "onReadyBlocking") return cfg.onReadyBlockingBudgetMs;
-  if (span.phase === "onReady") return cfg.onReadyBudgetMs;
-  if (span.phase === "onAllReady") return cfg.onAllReadyBudgetMs;
-  return null;
-}

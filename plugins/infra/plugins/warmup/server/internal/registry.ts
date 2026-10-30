@@ -36,7 +36,12 @@ export interface WarmupSpec {
    * their own lazy on-demand refresh.
    */
   run: () => Promise<void>;
-  /** Per-warmup wall-time budget (ms). Read by the boot-budget monitor. */
+  /**
+   * Per-warmup wall-time budget (ms). The executor stamps it on both of the
+   * warm-up's spans, so the boot-budget monitor and slow-ops judge the run on it
+   * instead of their global defaults (boot-budget's `warmupBudgetMs`, slow-ops'
+   * `loaderMs`). Omit it to be judged on those defaults.
+   */
   budgetMs?: number;
 }
 

@@ -19,7 +19,10 @@ export function BootBudgetSummary({ report }: { report: Report }) {
       <span>
         — {d.durationMs}ms boot
       </span>
-      <span className="text-muted-foreground">(budget {d.budgetMs}ms)</span>
+      <span className="text-muted-foreground">
+        ({d.budgetSource === "declared" ? "declared budget" : "budget"}{" "}
+        {d.budgetMs}ms)
+      </span>
     </Inline>
   );
 }

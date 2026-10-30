@@ -62,7 +62,15 @@ export function slowSpanMs(span: SlowSpan): number {
 // `job` case is the hold class's ceiling on work time, with the per-job
 // override (`defineJob({ slowThresholdMs })`) still winning and the global
 // `jobMs` config as the fallback for a job this backend does not know.
+//
+// A bar the call site DECLARED on the span (`SlowSpan.budgetMs` — a warm-up's
+// `budgetMs`, `runTracked(label, fn, { budgetMs })`) wins over every kind
+// default: the work said how long it is expected to take, and judging it on a
+// global knob instead files reports against work that is on budget. Like a
+// per-job `slowThresholdMs`, a declared budget below `perfFloorMs` is not
+// honored (the profiler never calls back for the span).
 export function resolveSlowThreshold(span: SlowSpan, t: Thresholds): number {
+  if (span.budgetMs !== undefined) return span.budgetMs;
   switch (span.kind) {
     case "http":
       // A route may hold a tighter bar than the global `httpMs` via

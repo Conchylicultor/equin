@@ -179,6 +179,20 @@ through the pure `latencySlowOp` (`web/internal/latency-slow-op.ts`):
   name, never by kind), then lists every layer. It applies to every kind that
   carries waits, server spans included.
 
+## A declared budget wins (`SlowSpan.budgetMs`)
+
+A span may carry the bar its call site declared: `runTracked(label, fn,
+{ budgetMs })` for a background span, and a warm-up's `defineWarmup({ budgetMs })`,
+which the warm-up executor stamps on its `bg` span (and on its boot span, for
+the boot-budget monitor). `resolveSlowThreshold` returns it ahead of every kind
+default — the work said how long it is expected to take, and judging it on a
+global knob (`loaderMs` for every `bg` span) filed reports against work that was
+on budget (`warmup:plugin-tree.trees`, budget 15 s, ~6 s; `task-title:generate`,
+a Haiku call bounded by its own 30 s timeout, judged on 2 s). Declare a model
+call's, fetch's or subprocess's bound by deriving it from the timeout constant
+it already passes, so the two cannot drift. Like `slowThresholdMs`, a budget
+below `perfFloorMs` is not honored.
+
 ## Slow jobs (the `job` kind)
 
 Background job runs flow through the same pipeline as HTTP/loader ops. The jobs

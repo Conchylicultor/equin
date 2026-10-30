@@ -61,7 +61,12 @@ export interface ProfilerHooks {
     detail?: ProfilerSpanDetail,
     onReads?: LoaderReadsSink,
   ): Promise<T>;
-  runTracked<T>(label: string, fn: () => T | Promise<T>): Promise<T>;
+  /** `opts.budgetMs`: the bar the call site declares (the profiler's `SlowSpan.budgetMs`). */
+  runTracked<T>(
+    label: string,
+    fn: () => T | Promise<T>,
+    opts?: { budgetMs?: number },
+  ): Promise<T>;
   recordSpan(
     kind: string,
     label: string,
@@ -103,8 +108,9 @@ export function recordEntrySpan<T>(
 export function runTracked<T>(
   label: string,
   fn: () => T | Promise<T>,
+  opts?: { budgetMs?: number },
 ): Promise<T> {
-  return hooks ? hooks.runTracked(label, fn) : Promise.resolve(fn());
+  return hooks ? hooks.runTracked(label, fn, opts) : Promise.resolve(fn());
 }
 
 export function recordSpan(

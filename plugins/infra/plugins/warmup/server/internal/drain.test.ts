@@ -1,4 +1,9 @@
 import { describe, expect, test } from "bun:test";
+import { getProfilingData } from "@plugins/framework/plugins/server-core/core";
+import {
+  onSlowSpan,
+  type SlowSpan,
+} from "@plugins/infra/plugins/runtime-profiler/core";
 import {
   drainWarmupsWith,
   type WarmupExecDeps,
@@ -169,5 +174,43 @@ describe("drainWarmupsWith", () => {
       }),
     );
     expect(yields).toBe(2);
+  });
+
+  test("stamps a declared budget on both the boot span and the bg span", async () => {
+    const seen: SlowSpan[] = [];
+    const sub = onSlowSpan((span) => seen.push(span), { thresholdMs: 0 });
+    try {
+      await drainWarmupsWith(
+        baseDeps([
+          {
+            name: "budgeted-one",
+            description: "Test warm-up.",
+            scope: "worktree",
+            budgetMs: 15_000,
+            run: async () => {},
+          },
+          {
+            name: "unbudgeted-one",
+            description: "Test warm-up.",
+            scope: "worktree",
+            run: async () => {},
+          },
+        ]),
+      );
+    } finally {
+      sub.dispose();
+    }
+    const boot = getProfilingData().spans;
+    expect(boot.find((s) => s.id === "warmup:budgeted-one")?.budgetMs).toBe(
+      15_000,
+    );
+    const unbudgeted = boot.find((s) => s.id === "warmup:unbudgeted-one");
+    expect(unbudgeted).toBeDefined();
+    expect(unbudgeted?.budgetMs).toBeUndefined();
+    const bg = (label: string) =>
+      seen.find((s) => s.kind === "bg" && s.label === label);
+    expect(bg("warmup:budgeted-one")?.budgetMs).toBe(15_000);
+    expect(bg("warmup:unbudgeted-one")).toBeDefined();
+    expect(bg("warmup:unbudgeted-one")?.budgetMs).toBeUndefined();
   });
 });

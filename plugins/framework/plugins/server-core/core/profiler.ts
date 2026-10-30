@@ -28,6 +28,12 @@ export interface Span {
   physFootprintStartMb?: number;
   /** phys_footprint (MB) at span end. */
   physFootprintEndMb?: number;
+  /**
+   * The wall-time budget the code that opened this span DECLARED (a warm-up's
+   * `budgetMs`), if any — the boot-budget monitor judges the span on it in
+   * place of its phase's configured default.
+   */
+  budgetMs?: number;
 }
 
 /**
@@ -75,6 +81,7 @@ export function profilerStart(
   phase: PhaseId,
   label: string,
   plugin?: string,
+  opts?: { budgetMs?: number },
 ): () => void {
   const count = idCounts.get(id) ?? 0;
   idCounts.set(id, count + 1);
@@ -91,6 +98,7 @@ export function profilerStart(
       durationMs: Math.round(performance.now() - t0),
       physFootprintStartMb,
       physFootprintEndMb: footprintMb(),
+      ...(opts?.budgetMs !== undefined && { budgetMs: opts.budgetMs }),
     });
   };
 }

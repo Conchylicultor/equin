@@ -102,22 +102,27 @@ export function startUsageOnProbe(): void {
   unsubscribe ??= onClaudeCodeProbed((status) => {
     if (status.kind !== "ready") return;
     const accountId = activeClaudeAccountId();
-    void runTracked("runtime-sdk.usage-on-probe", async () => {
-      try {
-        await refreshClaudeUsageNow(accountId);
-      } catch (err) {
-        // Nobody awaits this read: a failure is reported, never swallowed.
-        await recordReport({
-          kind: "crash",
-          source: "server-caught",
-          message: `Reading Claude account "${accountId}"'s usage limits after a Claude Code probe failed: ${err instanceof Error ? err.message : String(err)}`,
-          data: {
-            errorType: "ClaudeUsageReadFailed",
-            label: "runtime-sdk.usage",
-          },
-        });
-      }
-    });
+    void runTracked(
+      "runtime-sdk.usage-on-probe",
+      async () => {
+        try {
+          await refreshClaudeUsageNow(accountId);
+        } catch (err) {
+          // Nobody awaits this read: a failure is reported, never swallowed.
+          await recordReport({
+            kind: "crash",
+            source: "server-caught",
+            message: `Reading Claude account "${accountId}"'s usage limits after a Claude Code probe failed: ${err instanceof Error ? err.message : String(err)}`,
+            data: {
+              errorType: "ClaudeUsageReadFailed",
+              label: "runtime-sdk.usage",
+            },
+          });
+        }
+      },
+      // The read's own timeout bounds it, so it is the bar the span declares.
+      { budgetMs: USAGE_READ_TIMEOUT_MS },
+    );
   });
 }
 

@@ -53,7 +53,7 @@ export const bootBudgetConfig = defineConfig({
       min: 0,
       label: "Warmup budget (ms)",
       description:
-        "File a boot-budget report when a declared warmup span (warmup:<name>) runs longer than this many ms. Looser than the onReady phases because warmups are the declared heavy deferred category, throttled and run after the barrier.",
+        "File a boot-budget report when a declared warmup span (warmup:<name>) runs longer than this many ms — the default for a warmup that declares no budgetMs of its own (a declared one wins). Looser than the onReady phases because warmups are the declared heavy deferred category, throttled and run after the barrier.",
     }),
   },
 });

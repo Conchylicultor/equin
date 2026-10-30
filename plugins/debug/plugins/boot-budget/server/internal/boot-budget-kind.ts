@@ -38,7 +38,7 @@ function renderDescription(row: ReportRow, d: BootBudgetPayload): string {
   lines.push(
     `The server boot span \`${d.spanName}\`${d.plugin ? ` (plugin \`${d.plugin}\`)` : ""} ` +
       `ran for **${d.durationMs}ms** in the \`${d.phase}\` phase — over its ` +
-      `**${d.budgetMs}ms** budget.`,
+      `**${d.budgetMs}ms** budget${d.budgetSource === "declared" ? " (declared by the span)" : ""}.`,
   );
   lines.push("");
   lines.push(
@@ -70,7 +70,9 @@ function renderDescription(row: ReportRow, d: BootBudgetPayload): string {
   lines.push(`**Phase:** ${d.phase}`);
   if (d.plugin) lines.push(`**Plugin:** \`${d.plugin}\``);
   lines.push(`**Duration:** ${d.durationMs}ms`);
-  lines.push(`**Budget:** ${d.budgetMs}ms`);
+  lines.push(
+    `**Budget:** ${d.budgetMs}ms${d.budgetSource === "declared" ? " (declared)" : " (config default)"}`,
+  );
   if (d.memoryCheckpoints && d.memoryCheckpoints.length > 0) {
     lines.push("");
     lines.push(`**Phase-boundary memory (phys_footprint / heapUsed):**`);

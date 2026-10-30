@@ -57,6 +57,12 @@ ${title}
   return parts.join("\n\n");
 }
 
+// The title model call's own bound — also the budget its background span
+// declares, so the slow-op monitor reports a title run only when it overran the
+// bound it was given, never for an on-budget Haiku call.
+const TITLE_TIMEOUT_MS = 30_000;
+const TITLE_SPAN = { budgetMs: TITLE_TIMEOUT_MS };
+
 /**
  * Both titles of a task, from one model call. `title`, when given, is the
  * task's fixed title (user-set, or already generated): the model repeats it and
@@ -74,7 +80,7 @@ export async function generateTitles(
     tier: "haiku",
     prompt: buildPrompt(readable, opts.title),
     system: SYSTEM_PROMPT,
-    timeoutMs: 30_000,
+    timeoutMs: TITLE_TIMEOUT_MS,
     source: {
       name: "task-title",
       context: opts.taskId ? { taskId: opts.taskId } : undefined,
@@ -127,49 +133,59 @@ export function scheduleTaskTitleUpdate(
   fallbackTitle: string,
 ): void {
   if (!description.trim()) return;
-  void runTracked("task-title:generate", async () => {
-    try {
-      const generated = await generateAndStore(
-        taskId,
-        description,
-        fallbackTitle,
-      );
-      if (generated !== fallbackTitle) {
-        await updateTaskTitle(taskId, generated, [fallbackTitle]);
+  void runTracked(
+    "task-title:generate",
+    async () => {
+      try {
+        const generated = await generateAndStore(
+          taskId,
+          description,
+          fallbackTitle,
+        );
+        if (generated !== fallbackTitle) {
+          await updateTaskTitle(taskId, generated, [fallbackTitle]);
+        }
+        await updateConversationsTitleForTask(taskId, generated, [
+          fallbackTitle,
+        ]);
+        // eslint-disable-next-line promise-safety/no-bare-catch
+      } catch (err) {
+        console.warn("[task-title] scheduleTaskTitleUpdate failed:", err);
       }
-      await updateConversationsTitleForTask(taskId, generated, [fallbackTitle]);
-      // eslint-disable-next-line promise-safety/no-bare-catch
-    } catch (err) {
-      console.warn("[task-title] scheduleTaskTitleUpdate failed:", err);
-    }
-  });
+    },
+    TITLE_SPAN,
+  );
 }
 
 const UNINFORMATIVE_TITLES = ["Untitled", "Untitled conversation"];
 
 export function scheduleTaskTitleUpgrade(taskId: string, text: string): void {
   if (!text.trim()) return;
-  void runTracked("task-title:generate", async () => {
-    try {
-      const task = await getTask(taskId);
-      if (!task || !UNINFORMATIVE_TITLES.includes(task.title)) return;
+  void runTracked(
+    "task-title:generate",
+    async () => {
+      try {
+        const task = await getTask(taskId);
+        if (!task || !UNINFORMATIVE_TITLES.includes(task.title)) return;
 
-      const generated = await generateAndStore(
-        taskId,
-        text,
-        synthesiseTitleFallback(text),
-      );
-      await updateTaskTitle(taskId, generated, UNINFORMATIVE_TITLES);
-      await updateConversationsTitleForTask(
-        taskId,
-        generated,
-        UNINFORMATIVE_TITLES,
-      );
-      // eslint-disable-next-line promise-safety/no-bare-catch
-    } catch (err) {
-      console.warn("[task-title] scheduleTaskTitleUpgrade failed:", err);
-    }
-  });
+        const generated = await generateAndStore(
+          taskId,
+          text,
+          synthesiseTitleFallback(text),
+        );
+        await updateTaskTitle(taskId, generated, UNINFORMATIVE_TITLES);
+        await updateConversationsTitleForTask(
+          taskId,
+          generated,
+          UNINFORMATIVE_TITLES,
+        );
+        // eslint-disable-next-line promise-safety/no-bare-catch
+      } catch (err) {
+        console.warn("[task-title] scheduleTaskTitleUpgrade failed:", err);
+      }
+    },
+    TITLE_SPAN,
+  );
 }
 
 /** The desktop's title generator: one Haiku call per title, in the background. */
