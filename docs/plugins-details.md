@@ -14320,11 +14320,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SYSTEM_CATEGORY_ID`
       - `withdrawConversationTurn`
   - Cross-plugin:
-    - Imported by: 57 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+    - Imported by: 58 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
       - `conversations` ×40
       - `apps` ×5
+      - `tasks` ×4
       - `review` ×3
-      - `tasks` ×3
       - `active-data` ×2
       - `debug/profiling/ops`
       - `hints/ask`
@@ -20301,12 +20301,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `quotedRelationsIn`
       - `readTag`
   - Cross-plugin:
-    - Imported by: 132 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 133 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×37
       - `conversations` ×15
       - `page` ×15
       - `infra` ×13
-      - `tasks` ×12
+      - `tasks` ×13
       - `active-data` ×8
       - `debug` ×6
       - `database` ×5
@@ -31842,6 +31842,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/mcp/browser`
           - `plugin-meta/plugin-health`
           - `tasks/orchestration/mandate`
+          - `tasks/orchestration/message`
           - `tasks/task-triage`
         - Endpoint callers: `health`
       - Plugins:
@@ -50858,6 +50859,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/self-compact/capability.contextCompact`
           - `tasks/orchestration/mandate/policy.mandatePolicy`
           - `tasks/orchestration/mandate/policy.MandatePolicy`
+          - `tasks/orchestration/message/capability.messageTree`
           - `tasks/orchestration/watch/capabilities.watchChildren`
           - `tasks/orchestration/watch/capabilities.watchTree`
           - `tasks/outcome-report/capability.reportRequired`
@@ -50931,6 +50933,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `conversations/conversation-view/push-and-exit`
               - `conversations/self-compact`
+              - `tasks/orchestration/message`
               - `tasks/orchestration/tree-digest`
           - Plugins:
             - **`policy`** — The mandate's value types, as a leaf: defineCapability (a capability's id, schema and label, and grant(value)), the branded MandatePolicy built only by mandatePolicy(grants) — a capability granted twice throws — and MandatePolicySchema, the tasks.mandate column decoder. Imports nothing from tasks, so tasks-core can store a policy and the mandate server can read tasks-core.
@@ -50939,6 +50942,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversation-view/push-and-exit/capabilities`
                   - `conversations/self-compact/capability`
                   - `tasks/mandate-presets`
+                  - `tasks/orchestration/message/capability`
                   - `tasks/orchestration/watch/capabilities`
                   - `tasks/outcome-report/capability`
                   - `tasks/tasks-core`
@@ -50956,6 +50960,33 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `mandatePolicy`
                   - `MandatePolicySchema`
                   - `scopeKey`
+        - **`message`** — Message the agents of a task tree, granted by message.tree: list_agents (every task of the caller's mandate tree an agent ran on, with its latest conversation and how it stands) and message_agent (an event turn typed into a task's latest conversation now — a working agent reads it at its next step — resuming it first when it stopped; refused outside the tree, to oneself, or where no agent ran). The capability's describe joins the Mandate section. Names no workflow.
+          - Server:
+            - Contributes: `mandateCapability` "message.tree"
+            - Uses:
+              - `conversations.ResumeBlockedError`
+              - `conversations.resumeConversation`
+              - `conversations.submitTurn`
+              - `database.db`
+              - `database.DbExecutor`
+              - `infra/mcp.Mcp`
+              - `tasks/orchestration/mandate.granted`
+              - `tasks/orchestration/mandate.Mandate`
+              - `tasks/orchestration/mandate.mandateOf`
+              - `tasks/tasks-core._attempts`
+              - `tasks/tasks-core._conversations`
+              - `tasks/tasks-core._tasks`
+              - `tasks/tasks-core.getConversation`
+            - Register:
+              - `mcpTool('list_agents')`
+              - `mcpTool('message_agent')`
+          - Plugins:
+            - **`capability`** — The message.tree mandate capability as plain data. A leaf, so a mandate author (mandate-presets, reached from conversations) can grant it without a cycle through message, which imports conversations.
+              - Core:
+                - Uses: `tasks/orchestration/mandate/policy.defineCapability`
+                - Exports (values): `messageTree`
+              - Cross-plugin:
+                - Imported by: `tasks/mandate-presets`
         - **`tree-digest`** — The tree digest: what an agent is shown of its mandate's task subtree — treeDigest (the whole subtree the first time, then only the tasks created or changed since the conversation's digest_cursors row, capped at 40 lines, advancing the cursor) and taskTree (the whole subtree, read-only). Each line is a task's id, title and derived status plus the words every TreeDigest.Annotation contribution adds; names no track or workflow.
           - Server:
             - Uses:
@@ -52545,9 +52576,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TRAILER_LOG_FORMAT`
           - `UNATTRIBUTED_TRAILER_KEY`
       - Cross-plugin:
-        - Imported by: 77 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Imported by: 78 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations` ×29
-          - `tasks` ×23
+          - `tasks` ×24
           - `active-data` ×5
           - `debug` ×5
           - `page` ×3

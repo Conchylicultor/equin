@@ -72,6 +72,7 @@ mandate })`.
   - Imported by:
     - `conversations/conversation-view/push-and-exit`
     - `conversations/self-compact`
+    - `tasks/orchestration/message`
     - `tasks/orchestration/tree-digest`
 - Sub-plugins:
   - **`policy`** — The mandate's value types, as a leaf: defineCapability (a capability's id, schema and label, and grant(value)), the branded MandatePolicy built only by mandatePolicy(grants) — a capability granted…

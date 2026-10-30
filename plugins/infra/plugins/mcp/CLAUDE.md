@@ -148,6 +148,7 @@ and without it no tool set can be computed.
     - `infra/mcp/browser`
     - `plugin-meta/plugin-health`
     - `tasks/orchestration/mandate`
+    - `tasks/orchestration/message`
     - `tasks/task-triage`
   - Endpoint callers: `health`
 - Sub-plugins:

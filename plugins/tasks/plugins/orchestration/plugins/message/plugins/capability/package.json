@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-tasks-orchestration-message-capability",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The message.tree mandate capability as plain data. A leaf, so a mandate author (mandate-presets, reached from conversations) can grant it without a cycle through message, which imports conversations."
+}

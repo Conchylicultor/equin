@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-tasks-orchestration-message",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Message the agents of a task tree: the list_agents and message_agent MCP tools (granted by message.tree) — every task's latest conversation in the caller's mandate tree with how it stands, and a turn sent to one of them now, resuming it first when it stopped."
+}

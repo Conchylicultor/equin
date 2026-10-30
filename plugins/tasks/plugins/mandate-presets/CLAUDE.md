@@ -34,6 +34,7 @@ the orchestration umbrella never does.
     - `conversations/self-compact/capability.contextCompact`
     - `tasks/orchestration/mandate/policy.mandatePolicy`
     - `tasks/orchestration/mandate/policy.MandatePolicy`
+    - `tasks/orchestration/message/capability.messageTree`
     - `tasks/orchestration/watch/capabilities.watchChildren`
     - `tasks/orchestration/watch/capabilities.watchTree`
     - `tasks/outcome-report/capability.reportRequired`

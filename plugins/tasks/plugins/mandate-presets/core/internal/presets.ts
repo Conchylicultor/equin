@@ -14,6 +14,7 @@ import {
   watchTree,
 } from "@plugins/tasks/plugins/orchestration/plugins/watch/plugins/capabilities/core";
 import { contextCompact } from "@plugins/conversations/plugins/self-compact/plugins/capability/core";
+import { messageTree } from "@plugins/tasks/plugins/orchestration/plugins/message/plugins/capability/core";
 
 /**
  * The mandate of a task a person starts by hand (a new conversation, a task
@@ -40,9 +41,11 @@ export function interactiveMandate(): MandatePolicy {
  * `exit_clean`, owes no report) with more powers: it may start sub-work on its
  * own (main tasks now, after others, or waiting for a person; ideas outside
  * the brief as sidequests a person starts), watches what it files and the
- * whole tree, and may compact its own context. The tasks below it are workers:
+ * whole tree, messages the agents of the tree (a reply to a report, "push
+ * it") and may compact its own context. The tasks below it are workers:
  * each ends with a report (`report.required`) instead of an exit, watches what
- * it files, talks back through `flag_raise` and may compact. Workers get no
+ * it files, may message the tree's agents, talks back through `flag_raise`
+ * and may compact. Workers get no
  * `push.policy`: they follow the repo rule (never push unless told) — how a run
  * pushes is the user's to say in the brief or a preprompt.
  */
@@ -54,6 +57,7 @@ export function supervisorMandate(): MandatePolicy {
         sidequest: { start: ["manual"] },
       }),
       watchChildren.grant(true),
+      messageTree.grant(true),
       flagRaise.grant(true),
       contextCompact.grant(true),
     ],

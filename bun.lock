@@ -6461,6 +6461,14 @@
       "name": "@equin/plugin-tasks-orchestration-mandate-policy",
       "version": "0.0.1",
     },
+    "plugins/tasks/plugins/orchestration/plugins/message": {
+      "name": "@equin/plugin-tasks-orchestration-message",
+      "version": "0.0.1",
+    },
+    "plugins/tasks/plugins/orchestration/plugins/message/plugins/capability": {
+      "name": "@equin/plugin-tasks-orchestration-message-capability",
+      "version": "0.0.1",
+    },
     "plugins/tasks/plugins/orchestration/plugins/tree-digest": {
       "name": "@equin/plugin-tasks-orchestration-tree-digest",
       "version": "0.0.1",
@@ -10071,6 +10079,10 @@
     "@equin/plugin-tasks-orchestration-mandate": ["@equin/plugin-tasks-orchestration-mandate@workspace:plugins/tasks/plugins/orchestration/plugins/mandate"],
 
     "@equin/plugin-tasks-orchestration-mandate-policy": ["@equin/plugin-tasks-orchestration-mandate-policy@workspace:plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy"],
+
+    "@equin/plugin-tasks-orchestration-message": ["@equin/plugin-tasks-orchestration-message@workspace:plugins/tasks/plugins/orchestration/plugins/message"],
+
+    "@equin/plugin-tasks-orchestration-message-capability": ["@equin/plugin-tasks-orchestration-message-capability@workspace:plugins/tasks/plugins/orchestration/plugins/message/plugins/capability"],
 
     "@equin/plugin-tasks-orchestration-tree-digest": ["@equin/plugin-tasks-orchestration-tree-digest@workspace:plugins/tasks/plugins/orchestration/plugins/tree-digest"],
 
