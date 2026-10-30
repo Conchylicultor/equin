@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import type { DbExecutor } from "@plugins/database/server";
 import {
   turnIdKind,
@@ -25,6 +25,9 @@ export interface DeliverPorts {
   submit(conversationId: string, turnId: TurnId, text: string): Promise<void>;
   /** The tree digest appended to the turn (advances the watcher's cursor). */
   digest(conversationId: string): Promise<string | null>;
+  /** Whether the turn ledger has `turnId` — a claim whose turn it lacks was
+   * never sent (the backend died between the claim and the send). */
+  turnRecorded(turnId: TurnId, exec: DbExecutor): Promise<boolean>;
   handler(id: string): WatchHandlerEntry | undefined;
 }
 
@@ -37,7 +40,21 @@ export type DeliverOutcome =
   | HeldTurn
   /** The watch is dead: its rows moved to `to` (each needs a delivery). */
   | { kind: "rerouted"; to: WatchId[]; dropped: number }
-  | { kind: "delivered"; turnId: string; count: number };
+  /** A code watcher's batch, handled on the claiming transaction. */
+  | { kind: "delivered"; turnId: string; count: number }
+  /** A conversation watcher's rows, claimed into one turn that is not sent
+   * yet: `sendClaimedTurn` sends it once the claim committed. */
+  | ClaimedTurn;
+
+/** Rows claimed for a conversation watcher, waiting to be sent as one turn. */
+export interface ClaimedTurn {
+  kind: "claimed";
+  watchId: WatchId;
+  conversationId: string;
+  turnId: TurnId;
+  events: WatchEvent[];
+  titles: ReadonlyMap<string, string>;
+}
 
 /** The turn a batch is: a uuid-shaped digest of its row ids, so delivering
  * the same rows again is the same turn (submitTurn no-ops on it). */
@@ -101,8 +118,39 @@ async function undelivered(
     .for("update");
 }
 
+/** Rows claimed into a turn the ledger never recorded go back to
+ * undelivered: the claim committed, the send never happened. */
+async function reclaimUnsent(
+  exec: DbExecutor,
+  watchId: WatchId,
+  ports: DeliverPorts,
+): Promise<void> {
+  const claimed = await exec
+    .selectDistinct({ turnId: _watchInbox.deliveredInTurn })
+    .from(_watchInbox)
+    .where(
+      and(
+        eq(_watchInbox.watchId, watchId),
+        isNotNull(_watchInbox.deliveredInTurn),
+      ),
+    );
+  for (const { turnId } of claimed) {
+    if (turnId === null) continue;
+    if (await ports.turnRecorded(turnIdKind.parse(turnId), exec)) continue;
+    await exec
+      .update(_watchInbox)
+      .set({ deliveredInTurn: null })
+      .where(
+        and(
+          eq(_watchInbox.watchId, watchId),
+          eq(_watchInbox.deliveredInTurn, turnId),
+        ),
+      );
+  }
+}
+
 /**
- * Deliver a watch's undelivered events — run on ONE transaction (`exec`).
+ * Claim a watch's undelivered events — run on ONE transaction (`exec`).
  *
  * - A dead watch (ended, or its conversation `done`) hands its rows to the
  *   next live watch above each row's task; rows no live watch covers drop.
@@ -112,9 +160,17 @@ async function undelivered(
  *   plugin's turn is pending for it (it goes first — typed after ours it
  *   would reach a busy CLI).
  * - Otherwise every undelivered row is claimed into ONE turn (or ONE code
- *   batch), whose id is derived from the rows.
+ *   batch), whose id is derived from the rows. A code batch is handled here,
+ *   on the claim; a conversation turn is only claimed (`claimed`) — sending it
+ *   is `sendClaimedTurn`, AFTER this transaction commits.
+ *
+ * Never send the turn on the claiming transaction: submitting a turn opens
+ * transactions of its own (the turn ledger) and may resume the agent, so a
+ * claim held across it pins a background transaction lease while waiting for
+ * another. Three deliveries at once took every lease and each waited for a
+ * fourth — wedging every background transaction in the backend (2026-10-30).
  */
-export async function deliverOn(
+export async function claimDelivery(
   exec: DbExecutor,
   watchId: WatchId,
   ports: DeliverPorts,
@@ -154,6 +210,7 @@ export async function deliverOn(
         `watch ${watchId}: its conversation ${watcher.conversationId} does not exist`,
       );
     if (readiness.kind === "held") return readiness;
+    await reclaimUnsent(exec, watchId, ports);
   }
 
   const rows = await undelivered(exec, watchId);
@@ -173,19 +230,56 @@ export async function deliverOn(
         `watch ${watchId}: no WatchHandler "${watcher.handler}" is contributed`,
       );
     await handler.onEvents(events, { watch, tx: exec });
-  } else {
-    const taskIds = [...new Set(events.map((e) => e.taskId))];
-    const titleRows = await exec
-      .select({ id: _tasks.id, title: _tasks.title })
-      .from(_tasks)
-      .where(inArray(_tasks.id, taskIds));
-    const titles = new Map(titleRows.map((t) => [t.id, t.title]));
-    const digest = await ports.digest(watcher.conversationId);
-    await ports.submit(
-      watcher.conversationId,
-      turnId,
-      renderEventTurn(events, titles, digest),
-    );
+    return { kind: "delivered", turnId, count: rows.length };
   }
-  return { kind: "delivered", turnId, count: rows.length };
+  const taskIds = [...new Set(events.map((e) => e.taskId))];
+  const titleRows = await exec
+    .select({ id: _tasks.id, title: _tasks.title })
+    .from(_tasks)
+    .where(inArray(_tasks.id, taskIds));
+  return {
+    kind: "claimed",
+    watchId,
+    conversationId: watcher.conversationId,
+    turnId,
+    events,
+    titles: new Map(titleRows.map((t) => [t.id, t.title])),
+  };
+}
+
+/**
+ * Send a committed claim as one `event` turn, on no transaction. A failed
+ * send gives the rows back (unclaims them) and rethrows, so the job's retry
+ * claims the same rows into the same turn — `submit` no-ops on a turn id it
+ * already recorded.
+ */
+export async function sendClaimedTurn(
+  exec: DbExecutor,
+  claim: ClaimedTurn,
+  ports: DeliverPorts,
+): Promise<{ kind: "delivered"; turnId: string; count: number }> {
+  try {
+    const digest = await ports.digest(claim.conversationId);
+    await ports.submit(
+      claim.conversationId,
+      claim.turnId,
+      renderEventTurn(claim.events, claim.titles, digest),
+    );
+  } catch (err) {
+    await exec
+      .update(_watchInbox)
+      .set({ deliveredInTurn: null })
+      .where(
+        and(
+          eq(_watchInbox.watchId, claim.watchId),
+          eq(_watchInbox.deliveredInTurn, claim.turnId),
+        ),
+      );
+    throw err;
+  }
+  return {
+    kind: "delivered",
+    turnId: claim.turnId,
+    count: claim.events.length,
+  };
 }

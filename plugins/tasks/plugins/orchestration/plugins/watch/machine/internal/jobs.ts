@@ -9,6 +9,7 @@ import {
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { isAgentBusy } from "@plugins/conversations/core";
 import { submitTurn } from "@plugins/conversations/server";
+import { getTurn } from "@plugins/conversations/plugins/turn-ledger/server";
 import { automaticTurnReadiness } from "@plugins/conversations/plugins/automatic-turn/server";
 import { treeDigest } from "@plugins/tasks/plugins/orchestration/plugins/tree-digest/server";
 import {
@@ -21,7 +22,11 @@ import {
   watchHandlerById,
   watchSourceById,
 } from "../../server/internal/contributions";
-import { deliverOn, type DeliverPorts } from "../../server/internal/deliver";
+import {
+  claimDelivery,
+  sendClaimedTurn,
+  type DeliverPorts,
+} from "../../server/internal/deliver";
 import {
   enqueueOn,
   liveWatchesOnChain,
@@ -52,6 +57,9 @@ const productionPorts: DeliverPorts = {
   async digest(conversationId) {
     return (await treeDigest({ conversationId }))?.text ?? null;
   },
+  async turnRecorded(turnId, exec) {
+    return (await getTurn(turnId, exec)) !== null;
+  },
   handler: watchHandlerById,
 };
 
@@ -67,13 +75,16 @@ export const watchDeliverJob = defineJob({
   dedup: { key: ({ watchId }) => watchId },
   run: async ({ input: { watchId } }) => {
     if (!isMain()) return;
-    await db.transaction(async (tx) => {
-      const out = await deliverOn(tx, watchId, productionPorts);
-      if (out.kind === "rerouted") {
-        for (const to of out.to)
+    const out = await db.transaction(async (tx) => {
+      const claim = await claimDelivery(tx, watchId, productionPorts);
+      if (claim.kind === "rerouted") {
+        for (const to of claim.to)
           await watchDeliverJob.enqueue({ watchId: to }, enqueueOn(tx));
       }
+      return claim;
     });
+    // After the commit, on no transaction: see claimDelivery.
+    if (out.kind === "claimed") await sendClaimedTurn(db, out, productionPorts);
   },
 });
 

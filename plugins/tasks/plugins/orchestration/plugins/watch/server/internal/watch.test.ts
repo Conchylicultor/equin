@@ -20,7 +20,13 @@ import { FALLBACK_MODEL } from "@plugins/conversations/plugins/model-provider/co
 import type { TurnId } from "@plugins/conversations/plugins/turn-ledger/core";
 import type { TurnReadiness } from "@plugins/conversations/plugins/automatic-turn/server";
 import type { WatchEvent, WatchId } from "../../core";
-import { deliverOn, turnIdFor, type DeliverPorts } from "./deliver";
+import {
+  claimDelivery,
+  sendClaimedTurn,
+  turnIdFor,
+  type DeliverOutcome,
+  type DeliverPorts,
+} from "./deliver";
 import {
   endWatch,
   nearestLiveWatch,
@@ -93,6 +99,7 @@ function fakePorts(state: Map<string, TurnReadiness> = new Map()) {
       turns.push({ conversationId, turnId, text });
     },
     digest: async () => "DIGEST",
+    turnRecorded: async (turnId) => turns.some((t) => t.turnId === turnId),
     handler: (id) =>
       id === "test.handler"
         ? {
@@ -104,6 +111,17 @@ function fakePorts(state: Map<string, TurnReadiness> = new Map()) {
         : undefined,
   };
   return { ports, turns, batches, state };
+}
+
+/** The job's two steps on the scenario's one transaction: claim, then send
+ * a conversation turn. */
+async function deliver(
+  tx: Tx,
+  watchId: WatchId,
+  ports: DeliverPorts,
+): Promise<DeliverOutcome> {
+  const out = await claimDelivery(tx, watchId, ports);
+  return out.kind === "claimed" ? sendClaimedTurn(tx, out, ports) : out;
 }
 
 describe("routing", () => {
@@ -264,8 +282,8 @@ describe("delivery", () => {
         { kind: "settled", taskId: child, summary: "done" },
       ]);
       const ids = (await inbox(tx, w.id)).map((r) => r.id);
-      const out = await deliverOn(tx, w.id, fake.ports);
-      const second = await deliverOn(tx, w.id, fake.ports);
+      const out = await deliver(tx, w.id, fake.ports);
+      const second = await deliver(tx, w.id, fake.ports);
       return { ids, out, second, conv };
     });
     expect(got.out).toEqual({
@@ -284,6 +302,67 @@ describe("delivery", () => {
     expect(turnIdFor([...got.ids].reverse())).toBe(turnIdFor(got.ids));
   });
 
+  test("a conversation turn is only claimed on the transaction; sending is the second step", async () => {
+    const fake = fakePorts();
+    const got = await worktreeDbScenario(async (tx) => {
+      const root = await task(tx, null);
+      const conv = await conversation(tx, root, "waiting");
+      const w = await watchTask(
+        root,
+        { kind: "conversation", conversationId: conv },
+        tx,
+      );
+      await routeEvents(tx, [{ kind: "flagged", taskId: root, summary: "x" }]);
+      const claim = await claimDelivery(tx, w.id, fake.ports);
+      return { claim: claim.kind, sentOnClaim: fake.turns.length };
+    });
+    expect(got.claim).toBe("claimed");
+    expect(got.sentOnClaim).toBe(0);
+  });
+
+  test("a failed send gives the rows back; a claim never sent is re-claimed", async () => {
+    const fake = fakePorts();
+    const got = await worktreeDbScenario(async (tx) => {
+      const root = await task(tx, null);
+      const conv = await conversation(tx, root, "waiting");
+      const w = await watchTask(
+        root,
+        { kind: "conversation", conversationId: conv },
+        tx,
+      );
+      await routeEvents(tx, [{ kind: "flagged", taskId: root, summary: "x" }]);
+      const failing: DeliverPorts = {
+        ...fake.ports,
+        submit: async () => {
+          throw new Error("agent gone");
+        },
+      };
+      let error: string | null = null;
+      try {
+        await deliver(tx, w.id, failing);
+      } catch (err) {
+        error = (err as Error).message;
+      }
+      const afterFailure = (await inbox(tx, w.id)).filter(
+        (r) => r.deliveredInTurn === null,
+      ).length;
+      // The backend dies between the claim and the send.
+      await claimDelivery(tx, w.id, fake.ports);
+      const lost = (await inbox(tx, w.id)).filter(
+        (r) => r.deliveredInTurn === null,
+      ).length;
+      const recovered = await deliver(tx, w.id, fake.ports);
+      const again = await deliver(tx, w.id, fake.ports);
+      return { error, afterFailure, lost, recovered, again };
+    });
+    expect(got.error).toBe("agent gone");
+    expect(got.afterFailure).toBe(1);
+    expect(got.lost).toBe(0);
+    expect(got.recovered.kind).toBe("delivered");
+    expect(got.again).toEqual({ kind: "empty" });
+    expect(fake.turns).toHaveLength(1);
+  });
+
   test("held while the watcher cannot take an automatic turn, claiming nothing", async () => {
     const fake = fakePorts();
     const got = await worktreeDbScenario(async (tx) => {
@@ -296,9 +375,9 @@ describe("delivery", () => {
       );
       await routeEvents(tx, [{ kind: "flagged", taskId: root, summary: "x" }]);
       fake.state.set(conv, { kind: "held", reason: "busy" });
-      const busy = await deliverOn(tx, w.id, fake.ports);
+      const busy = await deliver(tx, w.id, fake.ports);
       fake.state.set(conv, { kind: "held", reason: "waiting-for" });
-      const asking = await deliverOn(tx, w.id, fake.ports);
+      const asking = await deliver(tx, w.id, fake.ports);
       // Another plugin's turn (a compaction) goes first: typed after an
       // event turn it would reach a busy CLI.
       fake.state.set(conv, {
@@ -306,12 +385,12 @@ describe("delivery", () => {
         reason: "pending-turn",
         by: "other",
       });
-      const pending = await deliverOn(tx, w.id, fake.ports);
+      const pending = await deliver(tx, w.id, fake.ports);
       const unclaimed = (await inbox(tx, w.id)).filter(
         (r) => r.deliveredInTurn === null,
       ).length;
       fake.state.set(conv, { kind: "ready" });
-      const idle = await deliverOn(tx, w.id, fake.ports);
+      const idle = await deliver(tx, w.id, fake.ports);
       return { busy, asking, pending, unclaimed, idle };
     });
     expect(got.busy).toEqual({ kind: "held", reason: "busy" });
@@ -345,7 +424,7 @@ describe("delivery", () => {
       );
       await routeEvents(tx, [{ kind: "reported", taskId: mid, summary: "r" }]);
       await setStatus(tx, midConv, "done");
-      const out = await deliverOn(tx, midW.id, fake.ports);
+      const out = await deliver(tx, midW.id, fake.ports);
       return {
         out,
         rootW: rootW.id,
@@ -372,7 +451,7 @@ describe("delivery", () => {
         { kind: "reported", taskId: root, summary: "a" },
         { kind: "asking", taskId: root, summary: "b" },
       ]);
-      const out = await deliverOn(tx, w.id, fake.ports);
+      const out = await deliver(tx, w.id, fake.ports);
       const orphan = await watchTask(
         root,
         { kind: "code", handler: "nobody", key: "k" },
@@ -385,7 +464,7 @@ describe("delivery", () => {
       await routeEvents(tx, [{ kind: "flagged", taskId: root, summary: "c" }]);
       let error: string | null = null;
       try {
-        await deliverOn(tx, orphan.id, fake.ports);
+        await deliver(tx, orphan.id, fake.ports);
       } catch (err) {
         error = (err as Error).message;
       }
