@@ -10,6 +10,7 @@ import {
   spawnCaptured,
   type SpawnResult,
 } from "@plugins/infra/plugins/spawn/core";
+import { InconclusiveCheckError } from "@plugins/framework/plugins/tooling/core";
 import { currentScanTree, currentScanView } from "./scan-context";
 
 // Both spawns below SCAN — `git grep` walks the tree, `git cat-file --batch`
@@ -21,7 +22,8 @@ const GIT_SCAN_TIMEOUT_MS = 120_000;
 
 /**
  * A git scan that did not complete — a pattern git rejected, a bad pathspec or
- * tree-ish, a timeout, a truncated `cat-file` stream. Thrown, never absorbed:
+ * tree-ish, a truncated `cat-file` stream (a timeout is
+ * {@link GitScanTimeoutError}). Thrown, never absorbed:
  * the scans below feed PASS/FAIL verdicts, and a scan that never ran reads
  * exactly like one that found nothing. A throw from a check body fails that
  * check (fatal, uncached — see `thrown-outcome.ts`); from the cache replay hook
@@ -30,12 +32,10 @@ const GIT_SCAN_TIMEOUT_MS = 120_000;
 export class GitScanError extends Error {
   constructor(
     readonly argv: readonly string[],
-    readonly result: Pick<SpawnResult, "exitCode" | "timedOut" | "stderr">,
+    readonly result: Pick<SpawnResult, "exitCode" | "stderr">,
     detail?: string,
   ) {
-    const why = result.timedOut
-      ? `timed out after ${GIT_SCAN_TIMEOUT_MS / 1000}s`
-      : `exit ${result.exitCode}`;
+    const why = `exit ${result.exitCode}`;
     const stderr = result.stderr.trim();
     super(
       [
@@ -44,6 +44,23 @@ export class GitScanError extends Error {
       ].join("\n"),
     );
     this.name = "GitScanError";
+  }
+}
+
+/**
+ * A git scan that ran out of {@link GIT_SCAN_TIMEOUT_MS}: the host was too
+ * loaded to answer (a `cat-file --batch` of a few hundred blobs normally takes
+ * well under a second), which says nothing about the code scanned. Still never
+ * absorbed — no verdict is built on it — but the check it escapes from settles
+ * as inconclusive, not as a fatal "check bug" (see `thrown-outcome.ts`).
+ */
+export class GitScanTimeoutError extends InconclusiveCheckError {
+  constructor(readonly argv: readonly string[]) {
+    super(
+      `\`${argv.join(" ")}\` timed out after ${GIT_SCAN_TIMEOUT_MS / 1000}s`,
+      "Host load, not a verdict: the check re-runs on the next build.",
+    );
+    this.name = "GitScanTimeoutError";
   }
 }
 
@@ -309,7 +326,7 @@ export async function gitGrepList(
     timeoutMs: GIT_SCAN_TIMEOUT_MS,
   });
   const stdout = result.stdout.trim();
-  if (result.timedOut) throw new GitScanError(args, result);
+  if (result.timedOut) throw new GitScanTimeoutError(args);
   if (result.exitCode === 1) {
     // `git grep`'s "no matches". Output alongside it would be incoherent.
     if (stdout === "") return [];
@@ -344,8 +361,8 @@ async function readTreeBlobs(
     stdin: requests,
     timeoutMs: GIT_SCAN_TIMEOUT_MS,
   });
-  if (result.timedOut || result.exitCode !== 0)
-    throw new GitScanError(argv, result);
+  if (result.timedOut) throw new GitScanTimeoutError(argv);
+  if (result.exitCode !== 0) throw new GitScanError(argv, result);
   const buf = result.stdoutBytes;
 
   const decoder = new TextDecoder();

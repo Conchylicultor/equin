@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import type { Check } from "@plugins/framework/plugins/tooling/core";
+import {
+  InconclusiveCheckError,
+  type Check,
+} from "@plugins/framework/plugins/tooling/core";
 import { thrownOutcome, type CheckObservation } from "./thrown-outcome";
 
 // Pure: no check registry, no runner. A check that throws must fail ITSELF —
@@ -47,6 +50,19 @@ describe("thrownOutcome", () => {
     expect(result.message).toContain(err.stack ?? "no stack");
     expect(result.hint).toContain("bug in the check");
     expect(result.hint).toContain("still ran");
+  });
+
+  test("an InconclusiveCheckError settles as a non-fatal inconclusive", () => {
+    const err = new InconclusiveCheckError(
+      "`git cat-file --batch` timed out after 120s",
+      "re-run on a quieter host",
+    );
+    const outcome = settle(err);
+    const result = failed(outcome);
+    expect(outcome.cached).toBe(false);
+    expect(result.inconclusive).toBe(true);
+    expect(result.message).toBe("`git cat-file --batch` timed out after 120s");
+    expect(result.hint).toBe("re-run on a quieter host");
   });
 
   test("an Error's cause chain is kept", () => {

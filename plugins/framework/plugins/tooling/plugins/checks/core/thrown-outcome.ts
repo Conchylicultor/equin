@@ -1,7 +1,8 @@
 import { inspect } from "node:util";
-import type {
-  Check,
-  CheckResult,
+import {
+  InconclusiveCheckError,
+  type Check,
+  type CheckResult,
 } from "@plugins/framework/plugins/tooling/core";
 
 /** One `ctx.log` line a check emitted, buffered until the check settles. */
@@ -47,8 +48,10 @@ function describeThrown(err: unknown): string {
  * The failed outcome of a check whose `run()` THREW instead of returning a
  * result — so the throw fails that one check rather than the whole run.
  *
- * Fatal (never `inconclusive`): an uncaught throw is a bug in the check, and
- * softening it would let a broken check pass a build. Never cached: the
+ * Fatal: an uncaught throw is a bug in the check, and softening it would let a
+ * broken check pass a build. The one exception is an `InconclusiveCheckError`
+ * — shared plumbing saying, by type, that the environment (not the check)
+ * could not answer — which settles as `inconclusive`. Never cached: the
  * runner records passes only, and `cached: false` says this outcome came from
  * running the body. The observations are the ones the check logged before it
  * threw, kept because they are often the only clue to how far it got.
@@ -65,16 +68,27 @@ export function thrownOutcome(
     observations: CheckObservation[];
   },
 ): CheckOutcome {
+  const result: CheckResult =
+    err instanceof InconclusiveCheckError
+      ? {
+          ok: false,
+          inconclusive: true,
+          message: err.message,
+          hint:
+            err.hint ??
+            "Environmental (host load), not a verdict: the check re-runs on the next build.",
+        }
+      : {
+          ok: false,
+          message: `threw instead of returning a result:\n${describeThrown(err)}`,
+          hint:
+            "An uncaught throw is a bug in the check: it should return `{ ok: false }` " +
+            "(or `inconclusive` for an environmental cause) for any failure it can name. " +
+            "The other checks in this run still ran.",
+        };
   return {
     check,
-    result: {
-      ok: false,
-      message: `threw instead of returning a result:\n${describeThrown(err)}`,
-      hint:
-        "An uncaught throw is a bug in the check: it should return `{ ok: false }` " +
-        "(or `inconclusive` for an environmental cause) for any failure it can name. " +
-        "The other checks in this run still ran.",
-    },
+    result,
     durationMs: run.durationMs,
     wallStart: run.wallStart,
     cached: false,

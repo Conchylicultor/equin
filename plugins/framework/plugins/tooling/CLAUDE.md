@@ -21,6 +21,7 @@
     - `assertRepoPath`
     - `CHECK_SCOPES`
     - `globPaths`
+    - `InconclusiveCheckError`
     - `loadRepoFiles`
     - `pathspecToRegex`
     - `pathsUnder`
