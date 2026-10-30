@@ -38,7 +38,12 @@ export { extractMethod, extractPath, interpolatePath } from "./route-params";
 export { implement, rawEndpointHandler, HttpError } from "./implement";
 // The commit ack of a predicted write: the host's database installs the
 // capture `implement` runs a predicted handler under.
-export { installCommitCapture, readCommitsHeader } from "./commit-capture";
+export {
+  installCommitCapture,
+  isTransactionId,
+  mintExternalWriteId,
+  readCommitsHeader,
+} from "./commit-capture";
 export type { CommitCapture } from "./commit-capture";
 export { endpointPath, endpointRequest, readEndpointResponse } from "./request";
 export type { EndpointAnswer, EndpointRequestOpts } from "./request";

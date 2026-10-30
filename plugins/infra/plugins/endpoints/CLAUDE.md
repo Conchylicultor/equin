@@ -620,6 +620,8 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `interpolatePath`
     - `isAgentWriteRefusal`
     - `isCodec`
+    - `isTransactionId`
+    - `mintExternalWriteId`
     - `multipart`
     - `PREDICTION_GAPS`
     - `rawEndpointHandler`

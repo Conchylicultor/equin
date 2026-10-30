@@ -27056,6 +27056,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serverCollectedDir`
           - `setClientBuildIdentity`
           - `setErrorReporter`
+          - `setExternalNotifyAttribution`
           - `setFatalReporter`
           - `setLiveStateSnapshotHooks`
           - `setProfilerHooks`
@@ -30173,6 +30174,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `interpolatePath`
           - `isAgentWriteRefusal`
           - `isCodec`
+          - `isTransactionId`
+          - `mintExternalWriteId`
           - `multipart`
           - `PREDICTION_GAPS`
           - `rawEndpointHandler`

@@ -421,8 +421,13 @@ close.mutate(req, { onSuccess: () => onDone() });                   // this call
   of them (Rule B′). While such an op applies, the read asks for its tuples'
   ack frames (`requestAcks`), so a recompute that changed nothing visible
   still confirms. So an increment's +1 holds through an ack that lands before
-  its frame. An ack naming no commit (a host with no async context — PGlite —
-  or a write outside `db`) confirms at the ack, as before.
+  its frame. A write to an EXTERNAL value (a config file — no transaction)
+  is named too: the handler's `notify()` mints an external write id (database's
+  capture, `noteExternalWrite`) that rides the ack and that tuple's frame as
+  `ackTx`, and a watermark never vouches for it (Rule A only) — so the
+  prediction holds until the frame showing the write lands, never dropping to
+  the old value in between. An ack naming nothing (a host with no async
+  context — PGlite) confirms at the ack, as before.
 - **`useLiveMutation`** is the only client (`useEndpointMutation` /
   `FetchEndpoint` refuse a predicted def — tsc): `{ kind: "available",
   mutate(req): void } | { kind: "unavailable", message }`. No `isPending`, no

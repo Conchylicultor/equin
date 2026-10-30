@@ -18,11 +18,41 @@
 // client falls back to confirming at the ack.
 
 /**
- * The response header carrying the transaction ids (xid8 decimal text,
- * comma-joined, in commit order) a predicted endpoint's handler committed.
- * Absent when it committed none the capture could see.
+ * The response header carrying the writes (comma-joined, in order) a predicted
+ * endpoint's handler made: the transactions it committed (xid8 decimal text)
+ * and the external writes it notified (`mintExternalWriteId`). Absent when it
+ * made none the capture could see.
  */
 export const COMMITS_HEADER = "x-equin-commits";
+
+const TRANSACTION_ID = /^\d+$/;
+const EXTERNAL_WRITE_ID = /^e[0-9a-f]+\.\d+$/;
+
+/**
+ * Whether a write id is a Postgres transaction (xid8 decimal text) — the only
+ * kind a snapshot watermark can be compared against. An external write is
+ * acked by its tuple's own frame (`ackTx`) alone.
+ */
+export function isTransactionId(id: string): boolean {
+  return TRANSACTION_ID.test(id);
+}
+
+// The boot this process mints external write ids in: a tab outlives a server
+// restart, and its ack rings would otherwise take a restarted counter's `.1`
+// for the last boot's.
+const BOOT = globalThis.crypto.randomUUID().replaceAll("-", "").slice(0, 12);
+let externalWrites = 0;
+
+/**
+ * A fresh id for a write to a source outside Postgres (a config file): what an
+ * external value's `notify()` made inside a captured handler is acked by — the
+ * handler's response names it, and the recompute it triggers carries it as
+ * `ackTx`. Unique per process, never a transaction id.
+ */
+export function mintExternalWriteId(): string {
+  externalWrites++;
+  return `e${BOOT}.${externalWrites}`;
+}
 
 /** How a host attributes commits to the request that made them. */
 export interface CommitCapture {
@@ -60,7 +90,7 @@ export function commitsHeaderValue(commits: readonly string[]): string | null {
 }
 
 /**
- * The commit ids a response carries, `[]` for none. A malformed value throws:
+ * The write ids a response carries, `[]` for none. A malformed value throws:
  * the header is ours, so a garbled one is a server bug, not a missing ack.
  */
 export function readCommitsHeader(res: Response): readonly string[] {
@@ -68,9 +98,9 @@ export function readCommitsHeader(res: Response): readonly string[] {
   if (raw === null || raw === "") return [];
   const ids = raw.split(",");
   for (const id of ids) {
-    if (!/^\d+$/.test(id)) {
+    if (!TRANSACTION_ID.test(id) && !EXTERNAL_WRITE_ID.test(id)) {
       throw new Error(
-        `${COMMITS_HEADER}: ${JSON.stringify(raw)} is not a comma-joined list of transaction ids`,
+        `${COMMITS_HEADER}: ${JSON.stringify(raw)} is not a comma-joined list of transaction ids and external write ids`,
       );
     }
   }

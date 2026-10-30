@@ -15,6 +15,7 @@ import {
   type LiveRegistries,
 } from "@plugins/primitives/plugins/live-state/web";
 import { compareTxWatermark } from "@plugins/primitives/plugins/live-state/core";
+import { isTransactionId } from "@plugins/infra/plugins/endpoints/core";
 import {
   confirmedByCommit,
   createPredictStore,
@@ -77,24 +78,33 @@ export interface HeldTuples {
 }
 
 /**
- * Whether every tuple of `held` has seen a commit ack: one of its
- * transactions acked on the tuple (Rule A — the tuple's rows re-read after
- * it), or a full frame's watermark strictly past all of them (Rule B′ — the
- * snapshot saw them committed). A read of no tuple has seen nothing.
+ * Whether every tuple of `held` has seen a commit ack: one of its writes
+ * acked on the tuple (Rule A — the tuple's rows re-read after it), or a full
+ * frame's watermark strictly past all of them (Rule B′ — the snapshot saw them
+ * committed). A watermark vouches for TRANSACTIONS only: every frame carries
+ * one, an external value's too, but no Postgres snapshot can say a config file
+ * was rewritten — so a write naming an external id (`isTransactionId` false)
+ * is seen through Rule A alone. A read of no tuple has seen nothing.
  */
 function commitSeen(registries: LiveRegistries, held: HeldTuples): CommitSeen {
   const { key } = held.resource;
-  return (commits) =>
-    held.params.length > 0 &&
-    held.params.every((params) => {
-      if (commits.some((t) => registries.txAcks.has(key, params, t))) {
-        return true;
-      }
-      const wm = registries.watermarks.get(key, params);
-      return (
-        wm !== undefined && commits.every((t) => compareTxWatermark(wm, t) > 0)
-      );
-    });
+  return (commits) => {
+    const onlyTransactions = commits.every(isTransactionId);
+    return (
+      held.params.length > 0 &&
+      held.params.every((params) => {
+        if (commits.some((t) => registries.txAcks.has(key, params, t))) {
+          return true;
+        }
+        const wm = registries.watermarks.get(key, params);
+        return (
+          wm !== undefined &&
+          onlyTransactions &&
+          commits.every((t) => compareTxWatermark(wm, t) > 0)
+        );
+      })
+    );
+  };
 }
 
 /**

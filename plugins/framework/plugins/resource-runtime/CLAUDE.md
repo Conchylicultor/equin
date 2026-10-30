@@ -479,6 +479,10 @@ both encoders.
     `_debug.ackOverflows`).
   - They cascade into downstream pendings and are stamped on the resulting
     `update` / `delta`.
+  - An EXTERNAL entry's hand `notify()` inside a predicted handler is
+    attributed too (`attributeExternalNotify` → the database capture's
+    external write id), so its frame acks the write the same way.
+    Unattributed hand notifies stay ack-less.
   - Narrow claim: every row W wrote in this tuple is reflected. It may confirm,
     never deny, so a scoped delta may carry it.
   - FULL paths stamp the flight-resolved set (a joiner never stamps its own seed on

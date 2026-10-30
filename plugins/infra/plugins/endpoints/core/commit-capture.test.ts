@@ -4,6 +4,8 @@ import { brandEndpointEffect } from "./endpoint-effect";
 import {
   COMMITS_HEADER,
   installCommitCapture,
+  isTransactionId,
+  mintExternalWriteId,
   readCommitsHeader,
   type CommitCapture,
 } from "./commit-capture";
@@ -66,6 +68,18 @@ describe("commit capture", () => {
     const res = await implement(unpredicted, () => undefined)(req(), {});
     expect(res.headers.has(COMMITS_HEADER)).toBe(false);
     expect(state.runs).toBe(0);
+  });
+
+  test("an external write id rides the header beside the transactions, and is no transaction", () => {
+    const a = mintExternalWriteId();
+    const b = mintExternalWriteId();
+    expect(a).not.toBe(b);
+    const res = new Response(null, {
+      headers: { [COMMITS_HEADER]: `10,${a}` },
+    });
+    expect(readCommitsHeader(res)).toEqual(["10", a]);
+    expect(isTransactionId("10")).toBe(true);
+    expect(isTransactionId(a)).toBe(false);
   });
 
   test("a garbled header is a server bug, read loudly", () => {

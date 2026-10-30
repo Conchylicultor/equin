@@ -1,4 +1,7 @@
-import type { CommitCapture } from "@plugins/infra/plugins/endpoints/core";
+import {
+  mintExternalWriteId,
+  type CommitCapture,
+} from "@plugins/infra/plugins/endpoints/core";
 
 // The COMMIT CAPTURE the database gives `implement` (`infra/endpoints`'
 // `commit-capture.ts`): which transactions a predicted write's handler
@@ -22,7 +25,7 @@ import type { CommitCapture } from "@plugins/infra/plugins/endpoints/core";
 // nothing is captured — the response carries no ids, and the client confirms
 // at the ack as it did before.
 
-/** The scope of one captured handler: the ids it committed, in commit order. */
+/** The scope of one captured handler: the writes it made, in order. */
 interface CommitScope {
   readonly commits: string[];
 }
@@ -58,6 +61,22 @@ export function noteCommit(xid: string | null): void {
     );
   }
   runtime?.current()?.commits.push(xid);
+}
+
+/**
+ * Attribute a write to a source outside Postgres (an external live value's
+ * `notify()` — a config file the handler rewrote) to the enclosing captured
+ * handler: its fresh id, named in the response beside the handler's commits
+ * and carried by the recompute's frame as `ackTx`, so the browser confirms the
+ * prediction on that frame rather than at the ack. `undefined` outside one (a
+ * file watcher, a job): nothing waits on that change.
+ */
+export function noteExternalWrite(): string | undefined {
+  const scope = runtime?.current();
+  if (scope === undefined) return undefined;
+  const id = mintExternalWriteId();
+  scope.commits.push(id);
+  return id;
 }
 
 /**
