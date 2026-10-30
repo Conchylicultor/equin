@@ -40469,6 +40469,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.Tooltipped`
               - `primitives/css/ui-kit.useControlSize`
               - `primitives/link-gesture.activationProps`
+              - `primitives/link-gesture.LinkGestureProps`
             - Exports (types): `LinkChipProps`
             - Exports (values): `LinkChip`
           - Cross-plugin:

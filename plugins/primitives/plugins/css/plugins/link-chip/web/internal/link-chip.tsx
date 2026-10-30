@@ -7,7 +7,10 @@ import {
   type Tooltipped,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
-import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
+import {
+  activationProps,
+  type LinkGestureProps,
+} from "@plugins/primitives/plugins/link-gesture/web";
 import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
 import type React from "react";
 
@@ -111,14 +114,49 @@ export function LinkChip({
     <Badge
       as="button"
       type="button"
-      {...activationProps(activation, { isolate: true })}
       icon={leading}
       mono={mono}
       colorClass="bg-muted"
       className={cn(CHIP_CHROME, textClass, className)}
       {...rest}
+      {...chainHandlers(activationProps(activation, { isolate: true }), {
+        onClick: rest.onClick,
+        onAuxClick: rest.onAuxClick,
+        onMouseDown: rest.onMouseDown,
+      })}
     >
       {children}
     </Badge>
   );
+}
+
+/**
+ * The chip's own gesture handlers, each run AFTER the passthrough's handler of
+ * the same name instead of being replaced by it.
+ *
+ * A chip that is both a link and an overlay trigger (commit-link: a hover card
+ * on a chip that opens the commit pane) receives the trigger's `onClick` through
+ * the passthrough — base-ui's `render` clones the chip with it. Spread after the
+ * activation, that handler silently REPLACED the one that opens the pane, so the
+ * click closed the card and did nothing else. Spread before it, the activation
+ * would drop the trigger's instead. Both must run.
+ */
+function chainHandlers(
+  own: Partial<LinkGestureProps>,
+  theirs: Record<keyof LinkGestureProps, unknown>,
+): Partial<LinkGestureProps> {
+  const chained: Partial<LinkGestureProps> = {};
+  for (const key of ["onClick", "onAuxClick", "onMouseDown"] as const) {
+    const mine = own[key];
+    const before = theirs[key];
+    if (mine === undefined) continue;
+    chained[key] =
+      typeof before === "function"
+        ? (e) => {
+            (before as LinkGestureProps[typeof key])(e);
+            mine(e);
+          }
+        : mine;
+  }
+  return chained;
 }
