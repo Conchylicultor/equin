@@ -32,7 +32,9 @@ function tokenDrop(e: CompactionEvent): string | null {
 
 /**
  * A context compaction: one thin rule across the transcript, so the thread
- * reads straight through it. The summary the agent continues from and the
+ * reads straight through it. A `/compact` the user typed is the rule itself
+ * ("Compacted on request"), with what they asked it to focus on in the fold.
+ * The summary the agent continues from and the
  * files it re-read fold behind the rule — the summary as rendered markdown,
  * never as a message the user sent — and so does the context the harness
  * re-injected right after (a host: `hostsContext`), as a nested fold.
@@ -44,7 +46,10 @@ export function CompactionRow({ event }: { event: JsonlEvent }) {
     e.trigger === "manual" ? "Compacted on request" : "Context compacted";
   const hosted = useHostedContext();
   const hasFold =
-    e.summary !== undefined || e.files.length > 0 || hosted !== null;
+    e.instructions !== undefined ||
+    e.summary !== undefined ||
+    e.files.length > 0 ||
+    hosted !== null;
 
   const rule = (
     <>
@@ -89,6 +94,11 @@ export function CompactionRow({ event }: { event: JsonlEvent }) {
       {/* The fold hangs off the rule: a left hairline marks it as the compaction's. */}
       <CollapsibleContent className="pt-sm pl-xs">
         <Stack gap="md" className="border-l border-border pl-md">
+          {e.instructions !== undefined && (
+            <Text as="div" variant="caption" className="text-muted-foreground">
+              Asked to focus on · {e.instructions}
+            </Text>
+          )}
           {e.summary !== undefined && (
             <ContentScope>
               <Text as="div" variant="body" className="text-foreground/85">

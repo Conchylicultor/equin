@@ -65,6 +65,36 @@ const COMPACT_SUMMARY_PREAMBLE =
 const COMPACT_SUMMARY_POSTSCRIPT =
   /\n+(?:If you need specific details from before compaction|Continue the conversation from where it left off)[\s\S]*$/;
 
+/**
+ * A line of the `/compact` command the user typed, which Claude Code writes
+ * AFTER the compaction it ran (between the summary and the re-read files): the
+ * local-command caveat (`isMeta`), the command itself (under the turn's uuid,
+ * its args the user's focus instructions), and its stdout. Null for any other
+ * line.
+ */
+function compactCommandLine(
+  obj: Record<string, unknown>,
+  text: string,
+):
+  | { kind: "caveat" | "stdout" }
+  | { kind: "command"; uuid: string | undefined; instructions: string }
+  | null {
+  if (obj.type !== "user") return null;
+  const trimmed = text.trimStart();
+  if (obj.isMeta === true)
+    return trimmed.startsWith("<local-command-caveat>")
+      ? { kind: "caveat" }
+      : null;
+  if (trimmed.startsWith("<local-command-stdout>")) return { kind: "stdout" };
+  if (!trimmed.startsWith("<command-name>/compact</command-name>")) return null;
+  const args = /<command-args>([\s\S]*?)<\/command-args>/.exec(trimmed);
+  return {
+    kind: "command",
+    uuid: typeof obj.uuid === "string" ? obj.uuid : undefined,
+    instructions: args?.[1]?.trim() ?? "",
+  };
+}
+
 /** The attachment subtypes Claude Code writes for the files it re-reads right after compacting. */
 const COMPACTION_FILE_SUBTYPES = new Set(["file", "compact_file_reference"]);
 
@@ -560,9 +590,6 @@ export async function buildJsonlEvents(
     if (!ts || Number.isNaN(Date.parse(ts))) continue;
 
     const type = obj.type;
-    if (compaction && type !== "attachment" && obj.isCompactSummary !== true) {
-      compaction = null;
-    }
     const msg = obj.message as
       | {
           role?: string;
@@ -572,6 +599,18 @@ export async function buildJsonlEvents(
           stop_reason?: string;
         }
       | undefined;
+    if (compaction && type !== "attachment" && obj.isCompactSummary !== true) {
+      const command = compactCommandLine(obj, extractText(msg?.content));
+      if (command) {
+        if (command.kind === "command") {
+          if (command.uuid) compaction.requestUuid = command.uuid;
+          if (command.instructions)
+            compaction.instructions = command.instructions;
+        }
+        continue;
+      }
+      compaction = null;
+    }
 
     if (type === "user" && obj.isCompactSummary === true) {
       // The summary the agent continues from — written by the harness, never

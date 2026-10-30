@@ -54,6 +54,28 @@ describe("transcriptShows", () => {
     );
   });
 
+  test("a /compact turn, by the compaction the parser folds its line into", () => {
+    const compaction = (requestUuid?: string): JsonlEvent => ({
+      kind: "compaction",
+      at: at(600),
+      trigger: "manual",
+      files: [],
+      requestUuid,
+    });
+    expect(
+      transcriptShows(turn("accepted", 500), [
+        line("before", 100),
+        compaction("mine"),
+      ]),
+    ).toBe(true);
+    expect(
+      transcriptShows(turn("accepted", 500), [
+        line("before", 100),
+        compaction(),
+      ]),
+    ).toBe(false);
+  });
+
   test("an event turn, by the event card the parser makes of its line", () => {
     const event: JsonlEvent = {
       kind: "event-turn",

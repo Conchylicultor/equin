@@ -256,12 +256,22 @@ export const JsonlEventSchema = z.discriminatedUnion("kind", [
     // One context compaction, folded from the run of lines Claude Code writes
     // for it: the `compact_boundary` system line (its token counts), the
     // `isCompactSummary` user line (the summary the agent continues from — not
-    // something the user wrote) and the files re-read right after it.
+    // something the user wrote) and the files re-read right after it. A
+    // `/compact` the user typed adds its local-command lines between the
+    // summary and the files (the caveat, the command, its stdout): they are
+    // the request this compaction answers, so they fold in too.
     kind: z.literal("compaction"),
     at: z.string(),
     trigger: z.string().optional(),
     preTokens: z.number().optional(),
     postTokens: z.number().optional(),
+    /**
+     * The uuid of the `/compact` line the user sent — the turn this compaction
+     * is the transcript line of (the turn ledger's confirmation names it).
+     */
+    requestUuid: z.string().optional(),
+    /** What the user asked the summary to focus on (`/compact <instructions>`). */
+    instructions: z.string().optional(),
     /** The summary as markdown, without the harness's "This session is being continued…" preamble. */
     summary: z.string().optional(),
     files: wholeList(

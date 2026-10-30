@@ -15,8 +15,10 @@ import type { LedgerTurn } from "@plugins/conversations/plugins/turn-ledger/core
 //     the turn, so its line is above what is loaded.
 //
 // The line an agent writes for a turn (measured over 1,141 sdk turns,
-// 2026-10-25): a user line with the turn's uuid — a slash command too
-// (`/compact` writes `<command-name>/compact…` under it); or, for a turn sent
+// 2026-10-25): a user line with the turn's uuid — a slash command too; or, for
+// `/compact`, whose line Claude Code writes after the compaction it ran, the
+// `compaction` event the parser folds that line into (`requestUuid`); or, for a
+// turn sent
 // while the agent was busy and folded into the running turn at a tool
 // boundary, a `queued_command` attachment whose `source_uuid` is the turn's
 // uuid, which the transcript parser turns into the user's own message under
@@ -46,11 +48,12 @@ export function transcriptShows(
   if (promptUuid === null)
     return legacyTranscriptShows(row.submittedAt, events);
   if (Date.parse(oldest.at) > row.submittedAt.getTime()) return true;
-  return events.some(
-    (event) =>
-      (event.kind === "user-text" || event.kind === "event-turn") &&
-      (event.uuid === promptUuid ||
-        event.mergedSendUuids?.includes(promptUuid) === true),
+  return events.some((event) =>
+    event.kind === "compaction"
+      ? event.requestUuid === promptUuid
+      : (event.kind === "user-text" || event.kind === "event-turn") &&
+        (event.uuid === promptUuid ||
+          event.mergedSendUuids?.includes(promptUuid) === true),
   );
 }
 

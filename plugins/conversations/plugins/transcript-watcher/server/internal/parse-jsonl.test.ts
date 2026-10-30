@@ -563,6 +563,77 @@ describe("readJsonlEvents — context compaction", () => {
     });
   });
 
+  test("a /compact the user typed folds into the compaction it ran", async () => {
+    // Claude Code writes the command's local-command lines AFTER the summary,
+    // before the re-read files (shape read from a real transcript, 2026-10-30).
+    const commandLine = (
+      uuid: string,
+      parentUuid: string,
+      text: string,
+      extra: Record<string, unknown> = {},
+    ) => ({ ...userLine(uuid, parentUuid, text), ...extra });
+    const path = await writeFixture([
+      userLine("u1", null, "first"),
+      { ...boundary("b"), compactMetadata: { trigger: "manual" } },
+      summaryLine("s", "b"),
+      commandLine(
+        "c0",
+        "s",
+        "<local-command-caveat>The command below was run directly in Claude Code.</local-command-caveat>",
+        { isMeta: true },
+      ),
+      commandLine(
+        "turn-uuid",
+        "c0",
+        "<command-name>/compact</command-name>\n            <command-message>compact</command-message>\n            <command-args>keep the plan</command-args>",
+      ),
+      commandLine(
+        "c2",
+        "turn-uuid",
+        "<local-command-stdout>Compacted </local-command-stdout>",
+      ),
+      attachmentLine("f1", "c2", {
+        type: "file",
+        filename: "/w/out.txt",
+        content: {
+          type: "text",
+          file: { filePath: "/w/out.txt", numLines: 11 },
+        },
+      }),
+      attachmentLine("f2", "f1", {
+        type: "compact_file_reference",
+        filename: "/w/plan.md",
+      }),
+      attachmentLine("k", "f2", { type: "invoked_skills", skills: [] }),
+      userLine("u2", "k", "next"),
+      commandLine(
+        "c3",
+        "u2",
+        "<local-command-stdout>Not a compaction's</local-command-stdout>",
+      ),
+    ]);
+    const events = await readJsonlEvents(path);
+    expect(events.map((e) => e.kind)).toEqual([
+      "user-text",
+      "compaction",
+      "attachment",
+      "user-text",
+      "user-text",
+    ]);
+    expect(events[1]).toEqual({
+      kind: "compaction",
+      at: TS,
+      trigger: "manual",
+      summary: "## Done\n\n- the thing",
+      requestUuid: "turn-uuid",
+      instructions: "keep the plan",
+      files: [
+        { path: "/w/out.txt", lines: 11 },
+        { path: "/w/plan.md", lines: undefined },
+      ],
+    });
+  });
+
   test("a summary is never a user message, even without a boundary", async () => {
     const path = await writeFixture([
       userLine("u1", null, "first"),
