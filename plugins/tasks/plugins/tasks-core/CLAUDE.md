@@ -613,6 +613,7 @@ serves them.
     - `taskDetailRoute`
     - `TaskFilingStartSchema`
     - `TaskGraph`
+    - `TaskListItemSchema`
     - `taskRows`
     - `TaskSchema`
     - `tasksEntityRef`

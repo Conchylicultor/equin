@@ -6839,6 +6839,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `restorePrototypeVersion`
               - `setPrototypePicks`
               - `SIZE_PRESETS`
+              - `stampPicks`
               - `StoredPicksSchema`
               - `UNTITLED_PROTOTYPE`
               - `validatePrototypeFolder`
@@ -19028,6 +19029,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pinQueue`
               - `promoteQueue`
               - `queueRanks`
+              - `queueShape`
               - `reorderQueue`
               - `rerankQueue`
               - `stepDownQueue`
@@ -19364,6 +19366,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CliAnswerSchema`
           - `pendingQuestions`
           - `PendingQuestionSchema`
+          - `pendingQuestionsEntityRef`
           - `QuestionSelectionSchema`
           - `RegisterQuestionBodySchema`
           - `RelayQuestionSchema`
@@ -20097,11 +20100,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `conversationTurns`
           - `LedgerTurnSchema`
+          - `ledgerTurnsEntityRef`
           - `RETRYABLE_TURN_STATES`
           - `SETTLED_TURN_STATES`
           - `turnIdKind`
           - `TurnKindSchema`
           - `TurnStateSchema`
+          - `typedTextOf`
           - `unwrapEventTurn`
       - Cross-plugin:
         - Imported by:
@@ -20858,7 +20863,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `schemaGeneration`
       - Core:
         - Uses:
-          - `framework/product-name.LEGACY_IDS`
+          - `database/migrations/phases.snapshotLineage`
+          - `database/migrations/phases.SnapshotLineage`
           - `infra/spawn.spawnCaptured`
           - `infra/spawn.spawnExpectOk`
         - Exports (types):
@@ -20867,8 +20873,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DrizzleStage`
           - `EmittedSnapshot`
           - `ExpandOp`
-          - `ParsedMigration`
-          - `PhasedMigration`
           - `PhasedStatements`
           - `PublishedMergeBase`
           - `PublishedMigrationViolation`
@@ -20880,12 +20884,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SnapshotConflict`
           - `SnapshotDag`
           - `SnapshotDagProblem`
-          - `SnapshotLineage`
           - `SnapshotNode`
           - `Statement`
           - `StatementClass`
           - `StatementOp`
-          - `Supersession`
         - Exports (values):
           - `analyzeSnapshotDag`
           - `classifyStatement`
@@ -20903,13 +20905,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LOCAL_MAIN_REF`
           - `mergeNodeSnapshotText`
           - `mergeSnapshots`
-          - `migrationClaimId`
           - `migrationContentHash`
           - `MIGRATIONS_DATA_DIR`
           - `MIGRATIONS_PLUGIN_DIR`
           - `MissingSnapshotBodyError`
           - `NULL_SNAPSHOT_ID`
-          - `parseMigration`
           - `phaseStatements`
           - `PUBLISHED_MIGRATION_HINT`
           - `publishedMergeBases`
@@ -20920,11 +20920,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readLegacySnapshots`
           - `readSnapshotHead`
           - `readSnapshotNodes`
-          - `renderAdoptionMigration`
           - `renderLegacySnapshots`
-          - `renderMergeSnapshotMigration`
-          - `renderPhasedMigration`
-          - `renderSnapshotHeader`
           - `renderStatements`
           - `SCHEMA_SNAPSHOT_FILE`
           - `schemaGlobFiles`
@@ -20934,7 +20930,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `schemaSnapshotState`
           - `snapshotAncestors`
           - `snapshotBodies`
-          - `snapshotLineage`
           - `splitStatements`
           - `stageDrizzleOut`
           - `UnjoinedSnapshotTipsError`
@@ -20965,6 +20960,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database/migrations.Migration`
               - `database/migrations.migrationsFrom`
               - `database/migrations.MigrationSource`
+        - **`phases`** — The phased-migration file grammar (expand / claimed data migrations / contract, snapshot lineage headers): parse and render, shared by the generator (cli/migrations), the runner (migrations/server) and the checks. A portable leaf, so the runner's portable server reaches it without migrations/core's Bun-only half.
+          - Core:
+            - Uses: `framework/product-name.LEGACY_IDS`
+            - Exports (types):
+              - `ParsedMigration`
+              - `PhasedMigration`
+              - `SnapshotLineage`
+              - `Supersession`
+            - Exports (values):
+              - `migrationClaimId`
+              - `parseMigration`
+              - `renderAdoptionMigration`
+              - `renderMergeSnapshotMigration`
+              - `renderPhasedMigration`
+              - `renderSnapshotHeader`
+              - `snapshotLineage`
+          - Cross-plugin:
+            - Imported by: `database/migrations`
     - **`pgbouncer`** — PgBouncer connection pooler for the embedded Postgres cluster. Provides path constants for connection routing.
       - Cross-plugin:
         - Imported by:
@@ -26788,7 +26801,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/website/shell`
           - `conversations/workspace/scratch`
           - `database/derived-views`
-          - `database/migrations`
+          - `database/migrations/phases`
           - `framework/cli`
           - `framework/cli/cli-name`
           - `framework/plugin-id`
@@ -27257,7 +27270,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/guards` (10 debt)
               - `framework/tooling/import-closure` (1 debt)
               - `framework/tooling/lint` (2 debt)
-              - `framework/tooling/web-artifacts` (16 debt)
+              - `framework/tooling/web-artifacts` (19 debt)
               - `framework/web-core` (1 debt)
               - `infra/asset-mirror` (3 debt)
               - `infra/audio-analysis` (4 debt)
@@ -28103,7 +28116,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exempted by:
                   - `framework/cli/bootstrap` (0 debt)
                   - `framework/tooling/checks` (0 debt)
-                  - `framework/tooling/web-artifacts` (0 debt)
             - **`resize-observer-safety`** — resize-observer-safety lint rule: no-raw-resize-observer
               - Exemptions:
                 - Exempted by: `primitives/dom/element-size` (0 debt)
@@ -28270,9 +28282,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/build`
               - `framework/tooling/codegen`
           - Exemptions:
-            - Exempts itself from:
-              - `repo-walk-safety/no-adhoc-repo-walk` — `core/internal/global-css.ts` (sanctioned)
-              - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/expected.ts`, `core/internal/global-css.ts`, `core/internal/identity.ts`, `core/internal/own-files.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts` (debt)
+            - Exempts itself from: `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/expected.ts`, `core/internal/global-css.ts`, `core/internal/identity.ts`, `core/internal/own-files.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/tailwind-candidates.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts` (debt)
           - Cli:
             - Exports (types): `CarryForwardResult`
             - Exports (values): `carryForwardServedEntries`
@@ -28874,9 +28884,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `defineIdKind`
       - `detectIds`
       - `externalIdField`
+      - `externalReasonOfDecoder`
       - `ID_PREFIX_RE`
       - `ID_SHAPES`
       - `idKindField`
+      - `idKindOfDecoder`
       - `IdParseError`
       - `inlineBoundary`
       - `kindLabel`
@@ -31409,9 +31421,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `ALL_JOB_TASKS`
           - `cancelJob`
+          - `ceilingMsFor`
           - `cronMatches`
           - `DeadJobRowSchema`
           - `deadJobs`
+          - `deadJobsEntityRef`
           - `DeadJobsPayloadSchema`
           - `deadlineMsFor`
           - `HOLD_CLASSES`
@@ -32495,6 +32509,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ClosureRefs`
           - `ColumnRef`
           - `ColumnRefsOf`
+          - `ExprDecoder`
           - `ExprField`
           - `ExtensionJoin`
           - `ExtensionPresence`
@@ -32527,6 +32542,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `jsonAgg`
           - `jsonAggValue`
           - `KIND_RE`
+          - `SQL_TYPE_RE`
       - Test helpers:
         - Server: `@plugins/infra/plugins/query-resource/server/testing`
           - `compileAllCollection` — Compile a collection declared `all` (see the header).
@@ -34358,18 +34374,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/resource-protocol` ×2
           - `infra/query-resource.KIND_RE`
         - Exports (types):
+          - `AnyCollection`
+          - `AnyExternalCollectionOptions`
+          - `AnyServedExternal`
+          - `AnyServeOptions`
+          - `BytesPairing`
+          - `ChangeHooks`
           - `ClientFields`
           - `ClientFieldsOwner`
           - `ClientFieldsOwnerRow`
           - `ClientFieldValue`
           - `CollectionRow`
+          - `CompiledPagedValue`
+          - `CompiledValue`
           - `ContributedColumns`
           - `DomainOfValue`
           - `ExternalAllCollection`
+          - `ExternalCollectionChangeOptions`
           - `ExternalLookupCollection`
           - `ExternalNotifiedPagedValue`
           - `ExternalNotifiedQueryValue`
           - `ExternalNotifiedValue`
+          - `ExternalServed`
           - `ExternalSilentPagedValue`
           - `ExternalSilentValue`
           - `ExternalSourceRow`
@@ -34378,6 +34404,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FieldExtent`
           - `FieldsFilterable`
           - `FieldsRow`
+          - `FollowBuilder`
+          - `FollowIds`
+          - `FollowIdsSource`
+          - `FollowIdsTarget`
+          - `FollowMap`
+          - `FollowsFn`
+          - `FollowWhere`
+          - `FollowWhereSource`
+          - `FollowWhereTarget`
           - `LabelledKeys`
           - `LiveAllCollection`
           - `LiveAllOrder`
@@ -34476,9 +34511,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveTypedParamValueSpec`
           - `LiveTypedValueParams`
           - `LiveValue`
+          - `LiveValueChanges`
           - `LiveValueOrigin`
           - `LiveValueParamParsers`
           - `LiveValueParams`
+          - `LiveValueSource`
           - `LiveValueSpec`
           - `LiveWhere`
           - `LiveWhereObject`
@@ -34486,9 +34523,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveWindowCodec`
           - `LiveWindowDescriptor`
           - `LiveWindowParams`
+          - `NoFollows`
           - `NotCollectionRow`
           - `OrderableKeys`
           - `OrderableValue`
+          - `PagedChanges`
           - `PredictOptions`
           - `PredictPatchTarget`
           - `PredictTarget`
@@ -34502,12 +34541,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ServedExternalLookup`
           - `ServedExternalResource`
           - `ServedExternalWindow`
+          - `ServedFor`
           - `ServedPagedOn`
+          - `ServedValueBase`
           - `ServedValueOn`
           - `ServeExternalAllOptions`
           - `ServeExternalLookupOptions`
           - `ServeExternalWindowOptions`
+          - `ServePagedValueOptions`
           - `ServeValueOnOptions`
+          - `ServeValueOptions`
+          - `SnapshotPairing`
           - `TargetRow`
           - `UpsertOptions`
           - `WithContributedColumns`
@@ -34515,9 +34559,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `applyRows`
           - `choose`
           - `clientFields`
+          - `compileExternalCollection`
+          - `compilePagedValue`
+          - `compileQueryValue`
+          - `compileValue`
           - `effects`
           - `exposedColumns`
           - `extentOf`
+          - `externalCollectionRegistrar`
+          - `FOLLOW_SOURCE`
+          - `followReaches`
+          - `followsDeferred`
+          - `followsOf`
+          - `followSubjectOf`
           - `isPointId`
           - `LIVE_COLUMNS_KEY`
           - `LIVE_QUERY_MAX_BYTES`
@@ -34539,6 +34593,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `scopedLiveColumns`
           - `serveCollectionOn`
           - `serveValueOn`
+          - `sliceRange`
           - `upsertRow`
           - `upsertRows`
           - `valueSubject`
@@ -36218,6 +36273,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BlockUpdate`
           - `ColorToken`
           - `CreateBlockBody`
+          - `DocRankChange`
           - `ForestGranularity`
           - `IdentifiedBlock`
           - `InlineFormatContext`
@@ -36231,6 +36287,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MdParseCtx`
           - `MdSerializeCtx`
           - `MoveBlockBody`
+          - `PageBlocksRow`
           - `PageCover`
           - `PageData`
           - `PageKind`
@@ -36333,6 +36390,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `patchBlocks`
           - `patchesFromDiff`
           - `plainOf`
+          - `planBulkMove`
+          - `planDocRanks`
           - `planForestInsert`
           - `planSplice`
           - `prevVisibleLine`
@@ -36885,6 +36944,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `BacklinkRow`
           - `BacklinkSnippet`
+          - `PageLinkSourcesRow`
         - Exports (values):
           - `BacklinkRowSchema`
           - `pageBacklinks`
@@ -37012,6 +37072,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `parsePageTitleBanner`
           - `planMarkdownApply`
           - `planWriteCount`
+          - `roundTripCreatesRefusal`
           - `splitPageMeta`
           - `stripPageTitleBanner`
           - `subtractNoise`
@@ -47560,6 +47621,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `usageKey`
           - `usageStats`
           - `UsageStatSchema`
+          - `usageStatsEntityRef`
       - Cross-plugin:
         - Imported by:
           - `apps/pages/page-tree`
@@ -49264,6 +49326,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SearchResult`
         - Exports (values):
           - `SEARCH_QUERY_MAX`
+          - `SEARCH_RESULTS_LIMIT`
           - `SearchDocSchema`
           - `searchEndpoint`
           - `SearchQuerySchema`
@@ -52696,6 +52759,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskDetailRoute`
           - `TaskFilingStartSchema`
           - `TaskGraph`
+          - `TaskListItemSchema`
           - `taskRows`
           - `TaskSchema`
           - `tasksEntityRef`

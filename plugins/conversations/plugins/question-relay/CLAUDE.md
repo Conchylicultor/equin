@@ -126,6 +126,7 @@ moves on and the transcript card takes it over.
     - `CliAnswerSchema`
     - `pendingQuestions`
     - `PendingQuestionSchema`
+    - `pendingQuestionsEntityRef`
     - `QuestionSelectionSchema`
     - `RegisterQuestionBodySchema`
     - `RelayQuestionSchema`

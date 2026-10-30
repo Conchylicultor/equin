@@ -1314,18 +1314,28 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `packages/resource-protocol` ×2
     - `infra/query-resource.KIND_RE`
   - Exports (types):
+    - `AnyCollection`
+    - `AnyExternalCollectionOptions`
+    - `AnyServedExternal`
+    - `AnyServeOptions`
+    - `BytesPairing`
+    - `ChangeHooks`
     - `ClientFields`
     - `ClientFieldsOwner`
     - `ClientFieldsOwnerRow`
     - `ClientFieldValue`
     - `CollectionRow`
+    - `CompiledPagedValue`
+    - `CompiledValue`
     - `ContributedColumns`
     - `DomainOfValue`
     - `ExternalAllCollection`
+    - `ExternalCollectionChangeOptions`
     - `ExternalLookupCollection`
     - `ExternalNotifiedPagedValue`
     - `ExternalNotifiedQueryValue`
     - `ExternalNotifiedValue`
+    - `ExternalServed`
     - `ExternalSilentPagedValue`
     - `ExternalSilentValue`
     - `ExternalSourceRow`
@@ -1334,6 +1344,15 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `FieldExtent`
     - `FieldsFilterable`
     - `FieldsRow`
+    - `FollowBuilder`
+    - `FollowIds`
+    - `FollowIdsSource`
+    - `FollowIdsTarget`
+    - `FollowMap`
+    - `FollowsFn`
+    - `FollowWhere`
+    - `FollowWhereSource`
+    - `FollowWhereTarget`
     - `LabelledKeys`
     - `LiveAllCollection`
     - `LiveAllOrder`
@@ -1432,9 +1451,11 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LiveTypedParamValueSpec`
     - `LiveTypedValueParams`
     - `LiveValue`
+    - `LiveValueChanges`
     - `LiveValueOrigin`
     - `LiveValueParamParsers`
     - `LiveValueParams`
+    - `LiveValueSource`
     - `LiveValueSpec`
     - `LiveWhere`
     - `LiveWhereObject`
@@ -1442,9 +1463,11 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LiveWindowCodec`
     - `LiveWindowDescriptor`
     - `LiveWindowParams`
+    - `NoFollows`
     - `NotCollectionRow`
     - `OrderableKeys`
     - `OrderableValue`
+    - `PagedChanges`
     - `PredictOptions`
     - `PredictPatchTarget`
     - `PredictTarget`
@@ -1458,12 +1481,17 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `ServedExternalLookup`
     - `ServedExternalResource`
     - `ServedExternalWindow`
+    - `ServedFor`
     - `ServedPagedOn`
+    - `ServedValueBase`
     - `ServedValueOn`
     - `ServeExternalAllOptions`
     - `ServeExternalLookupOptions`
     - `ServeExternalWindowOptions`
+    - `ServePagedValueOptions`
     - `ServeValueOnOptions`
+    - `ServeValueOptions`
+    - `SnapshotPairing`
     - `TargetRow`
     - `UpsertOptions`
     - `WithContributedColumns`
@@ -1471,9 +1499,19 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `applyRows`
     - `choose`
     - `clientFields`
+    - `compileExternalCollection`
+    - `compilePagedValue`
+    - `compileQueryValue`
+    - `compileValue`
     - `effects`
     - `exposedColumns`
     - `extentOf`
+    - `externalCollectionRegistrar`
+    - `FOLLOW_SOURCE`
+    - `followReaches`
+    - `followsDeferred`
+    - `followsOf`
+    - `followSubjectOf`
     - `isPointId`
     - `LIVE_COLUMNS_KEY`
     - `LIVE_QUERY_MAX_BYTES`
@@ -1495,6 +1533,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `scopedLiveColumns`
     - `serveCollectionOn`
     - `serveValueOn`
+    - `sliceRange`
     - `upsertRow`
     - `upsertRows`
     - `valueSubject`

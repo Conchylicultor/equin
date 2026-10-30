@@ -728,9 +728,11 @@ connection and every statement on it gives up after 60 s with no reply, and the
   - Exports (values):
     - `ALL_JOB_TASKS`
     - `cancelJob`
+    - `ceilingMsFor`
     - `cronMatches`
     - `DeadJobRowSchema`
     - `deadJobs`
+    - `deadJobsEntityRef`
     - `DeadJobsPayloadSchema`
     - `deadlineMsFor`
     - `HOLD_CLASSES`

@@ -2373,6 +2373,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `BlockUpdate`
     - `ColorToken`
     - `CreateBlockBody`
+    - `DocRankChange`
     - `ForestGranularity`
     - `IdentifiedBlock`
     - `InlineFormatContext`
@@ -2386,6 +2387,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `MdParseCtx`
     - `MdSerializeCtx`
     - `MoveBlockBody`
+    - `PageBlocksRow`
     - `PageCover`
     - `PageData`
     - `PageKind`
@@ -2488,6 +2490,8 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `patchBlocks`
     - `patchesFromDiff`
     - `plainOf`
+    - `planBulkMove`
+    - `planDocRanks`
     - `planForestInsert`
     - `planSplice`
     - `prevVisibleLine`

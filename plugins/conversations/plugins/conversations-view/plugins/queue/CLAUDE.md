@@ -87,6 +87,7 @@
     - `pinQueue`
     - `promoteQueue`
     - `queueRanks`
+    - `queueShape`
     - `reorderQueue`
     - `rerankQueue`
     - `stepDownQueue`

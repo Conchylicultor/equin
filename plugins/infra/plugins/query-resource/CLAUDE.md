@@ -764,6 +764,7 @@ query.
     - `ClosureRefs`
     - `ColumnRef`
     - `ColumnRefsOf`
+    - `ExprDecoder`
     - `ExprField`
     - `ExtensionJoin`
     - `ExtensionPresence`
@@ -796,6 +797,7 @@ query.
     - `jsonAgg`
     - `jsonAggValue`
     - `KIND_RE`
+    - `SQL_TYPE_RE`
 - Test helpers:
   - Server: `@plugins/infra/plugins/query-resource/server/testing`
     - `compileAllCollection` — Compile a collection declared `all` (see the header).

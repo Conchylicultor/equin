@@ -123,6 +123,7 @@ browser host.
     - `usageKey`
     - `usageStats`
     - `UsageStatSchema`
+    - `usageStatsEntityRef`
 - Cross-plugin:
   - Imported by:
     - `apps/pages/page-tree`

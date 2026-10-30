@@ -694,6 +694,7 @@ for the `checkpoints` plugin's end-of-turn job, and the history contract
     - `restorePrototypeVersion`
     - `setPrototypePicks`
     - `SIZE_PRESETS`
+    - `stampPicks`
     - `StoredPicksSchema`
     - `UNTITLED_PROTOTYPE`
     - `validatePrototypeFolder`

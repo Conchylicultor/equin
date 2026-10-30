@@ -285,11 +285,13 @@ withdrawn).
   - Exports (values):
     - `conversationTurns`
     - `LedgerTurnSchema`
+    - `ledgerTurnsEntityRef`
     - `RETRYABLE_TURN_STATES`
     - `SETTLED_TURN_STATES`
     - `turnIdKind`
     - `TurnKindSchema`
     - `TurnStateSchema`
+    - `typedTextOf`
     - `unwrapEventTurn`
 - Cross-plugin:
   - Imported by:
