@@ -30,10 +30,6 @@ export type WriteBroadcastsResponse = z.infer<
 
 export const writeBroadcasts = defineEndpoint({
   route: "PUT /api/debug/broadcasts",
-  unpredicted: {
-    reason: "response",
-    why: "the panel renders the write's response (the resulting broadcast state)",
-  },
   body: WriteBroadcastsBodySchema,
   response: WriteBroadcastsResponseSchema,
 });

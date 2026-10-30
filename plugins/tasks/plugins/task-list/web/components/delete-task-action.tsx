@@ -23,7 +23,7 @@ export function DeleteTaskAction({
   const onClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (disabled) return;
-    patchTask(taskId, { drop: true });
+    return patchTask(taskId, { drop: true });
   };
 
   return (

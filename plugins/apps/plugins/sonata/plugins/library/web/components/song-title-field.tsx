@@ -1,6 +1,6 @@
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
-import { useLiveMutation } from "@plugins/network/plugins/live/web";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import {
   cn,
@@ -80,18 +80,18 @@ function SongTitleInner({
   song: Song;
   appearance: "field" | "heading";
 }) {
-  const { mutate } = useLiveMutation(updateSong);
+  const { mutateAsync } = useEndpointMutation(updateSong);
 
   const title = useEditableField({
     value: song.title,
     label: "Song title",
-    onSave: (next) => {
+    onSave: async (next) => {
       const trimmed = next.trim();
       // An empty title is not a rename — skip the write. The user can still
       // clear the input while typing; re-mounting re-seeds from the canonical
       // value, so the row is never left blank.
       if (!trimmed) return;
-      mutate({ params: { id: song.id }, body: { title: trimmed } });
+      await mutateAsync({ params: { id: song.id }, body: { title: trimmed } });
     },
   });
 

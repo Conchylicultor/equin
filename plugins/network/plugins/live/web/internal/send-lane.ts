@@ -15,16 +15,15 @@
 // lets a write be ordered for a target with NO mounted reader at all.
 //
 // It lives in `network/live` (not `optimistic-mutation`, which imports this
-// plugin) so every prediction system — `useOptimisticResource`'s overlay, its
-// detached writes, and the predicted endpoint effects — shares ONE registry:
-// writes to the same lane key are ordered against each other whoever issued
-// them.
+// plugin) so every writer — `useOptimisticResource`'s overlay and its detached
+// writes — shares ONE registry: writes to the same lane key are ordered against
+// each other whoever issued them.
 
 declare const sendLaneKeyBrand: unique symbol;
 
 /**
  * A send lane's identity. Branded, so a lane is only ever named through one of
- * the derivations below — a hand-built string cannot alias (or miss) a lane
+ * the derivation below — a hand-built string cannot alias (or miss) a lane
  * another writer derives.
  */
 export type SendLaneKey = string & { readonly [sendLaneKeyBrand]: true };
@@ -54,37 +53,6 @@ export function resourceSendLaneKey(
   const obj: Record<string, string> = {};
   for (const k of Object.keys(params).sort()) obj[k] = params[k]!;
   return `r|${resourceKey}|${JSON.stringify(obj)}` as SendLaneKey;
-}
-
-/**
- * The lane of one entity ROW `(entityName, rowId)` — for a write whose target is
- * a row of an entity rather than one resource tuple (a predicted endpoint
- * effect, which every collection over that entity reflects). Namespaced apart
- * from `resourceSendLaneKey`, so the two derivations can never collide.
- */
-export function entitySendLaneKey(
-  entityName: string,
-  rowId: string,
-): SendLaneKey {
-  return `e|${entityName}|${rowId}` as SendLaneKey;
-}
-
-/**
- * The lane of a whole predicted SUBJECT (an entity, a `from: null`
- * collection) — a write targeting its rows by a filter rather than by id.
- * Namespaced apart from the row lanes.
- */
-export function subjectSendLaneKey(subject: string): SendLaneKey {
-  return `s|${subject}` as SendLaneKey;
-}
-
-/**
- * A NAMED lane — a predicted effect's `lane: (req) => name` override, for
- * writes ordered per parent (every fader of one song) rather than per row.
- * Namespaced apart from every derived lane.
- */
-export function namedSendLaneKey(name: string): SendLaneKey {
-  return `n|${name}` as SendLaneKey;
 }
 
 /**
@@ -118,49 +86,6 @@ export function enqueueOnSendLane<T>(
   const run = existing.tail.then(send, send);
   existing.tail = run;
   trackSettle(laneKey, existing, run);
-  return run;
-}
-
-/**
- * Run `send` on EVERY lane of `laneKeys` at once: after every send already
- * queued on any of them, and before any send queued on any of them later —
- * for a write whose order matters across several targets (a predicted write
- * naming several rows). Same outcome, failure-proofing and idle fast path as
- * {@link enqueueOnSendLane}.
- *
- * It cannot deadlock: nothing is LOCKED — the send chains onto each lane's
- * current tail synchronously, in one step, and becomes each lane's new tail,
- * so the waits-for graph only ever points at earlier sends (a DAG). Keys are
- * still taken in sorted order (duplicates dropped), so the same set of lanes
- * is always entered the same way.
- */
-export function enqueueOnSendLanes<T>(
-  laneKeys: readonly SendLaneKey[],
-  send: () => Promise<T>,
-): Promise<T> {
-  const keys = [...new Set(laneKeys)].sort();
-  if (keys.length === 0) {
-    throw new Error(
-      "enqueueOnSendLanes: no lane — a send departs on at least one.",
-    );
-  }
-  if (keys.length === 1) return enqueueOnSendLane(keys[0]!, send);
-  const tails = keys
-    .map((k) => lanes.get(k)?.tail)
-    .filter((t): t is Promise<unknown> => t !== undefined);
-  // Every predecessor settled — resolve or reject alike (failure-proof).
-  const run =
-    tails.length === 0 ? send() : Promise.allSettled(tails).then(() => send());
-  for (const k of keys) {
-    let lane = lanes.get(k);
-    if (lane === undefined) {
-      lane = { tail: run, depth: 0 };
-      lanes.set(k, lane);
-    }
-    lane.depth += 1;
-    lane.tail = run;
-    trackSettle(k, lane, run);
-  }
   return run;
 }
 

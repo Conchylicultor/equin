@@ -18,9 +18,5 @@ export type RecordUsageBody = z.infer<typeof RecordUsageBodySchema>;
  */
 export const recordUsageEndpoint = defineEndpoint({
   route: "POST /api/usage-rank/record",
-  unpredicted: {
-    reason: "server-decided",
-    why: "fire-and-forget usage bump; the rank it affects is derived server-side",
-  },
   body: RecordUsageBodySchema,
 });

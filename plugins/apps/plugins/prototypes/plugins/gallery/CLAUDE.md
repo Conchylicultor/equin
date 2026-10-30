@@ -170,14 +170,14 @@ honest — the prototype does exist — and it self-corrects.
     - `trash-actions` "restore" → `RestoreCardAction`
   - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×8
+    - `infra/endpoints` ×5
     - `apps/prototypes/canvas` ×4
-    - `infra/endpoints` ×4
     - `apps/prototypes/state` ×3
     - `primitives/live-state` ×3
     - `primitives/pane` ×3
     - `apps/prototypes/thumbnails` ×2
-    - `network/live` ×2
     - `tag-tree/picker` ×2
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/icon-button.IconButton`

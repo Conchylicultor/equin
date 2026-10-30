@@ -11,8 +11,8 @@
     - `Conversation.PromptBar` "Notes" → `NotesToggleButton`
   - Uses:
     - `conversations/conversation-view.Conversation`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.LiveRowResult`
-    - `network/live.useLiveMutation`
     - `network/live.useLiveRow`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`
@@ -33,8 +33,8 @@
   - Exports (values): `conversationNotes`
   - Resources: `conversation-notes:rows` (keyed, point)
   - Routes:
-    - `PUT /api/conversation-notes/:conversationId` — predicted
-    - `DELETE /api/conversation-notes/:conversationId` — predicted
+    - `PUT /api/conversation-notes/:conversationId`
+    - `DELETE /api/conversation-notes/:conversationId`
 - Core:
   - Uses:
     - `fields/text/config.textField`

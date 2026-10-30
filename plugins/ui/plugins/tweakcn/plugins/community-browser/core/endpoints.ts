@@ -9,10 +9,6 @@ import { SavedThemeWriteSchema } from "@plugins/ui/plugins/theme-engine/plugins/
  */
 export const applyCatalogTheme = defineEndpoint({
   route: "POST /api/tweakcn/community/apply",
-  unpredicted: {
-    reason: "server-decided",
-    why: "the server fetches the catalog theme and saves it; the result is unknowable client-side",
-  },
   body: z.object({ themeId: z.string() }),
   response: SavedThemeWriteSchema,
 });

@@ -277,11 +277,11 @@ The job's transcript goes to the `sonata-ug-alignment` log channel.
     - `defineJob('sonata.ug-alignment.on-tab-saved')`
   - Resources: `sonata-ug-alignment:rows` (keyed, point)
   - Routes:
-    - `PUT /api/sonata/songs/:id/ultimate-guitar/alignment/video` — unpredicted (precondition)
-    - `POST /api/sonata/songs/:id/ultimate-guitar/alignment/realign` — unpredicted (precondition)
-    - `POST /api/sonata/songs/:id/ultimate-guitar/alignment/resolve` — unpredicted (server-decided)
-    - `POST /api/sonata/songs/:id/ultimate-guitar/alignment/video-refused` — unpredicted (server-decided)
-    - `POST /api/sonata/songs/:id/ultimate-guitar/alignment/cancel` — unpredicted (precondition)
+    - `PUT /api/sonata/songs/:id/ultimate-guitar/alignment/video`
+    - `POST /api/sonata/songs/:id/ultimate-guitar/alignment/realign`
+    - `POST /api/sonata/songs/:id/ultimate-guitar/alignment/resolve`
+    - `POST /api/sonata/songs/:id/ultimate-guitar/alignment/video-refused`
+    - `POST /api/sonata/songs/:id/ultimate-guitar/alignment/cancel`
 - Core:
   - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/sonata/sources/ultimate-guitar/tab` ×6

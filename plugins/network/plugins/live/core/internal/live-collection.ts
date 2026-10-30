@@ -13,9 +13,7 @@ import type {
   WindowQueryResourceContract,
 } from "@plugins/infra/plugins/query-resource/core";
 import {
-  canonicalizeFilter,
   LIST_MAX,
-  type Filter,
   type Filterable,
   type FilterScalar,
 } from "@plugins/network/plugins/live/plugins/filter/core";
@@ -35,7 +33,6 @@ import {
   type LiveWindowParams,
 } from "./query";
 import { LIVE_ROW_KEY } from "./row-key";
-import type { OrderableKeys } from "./order-value";
 import type { MachineFeature } from "@plugins/infra/plugins/endpoints/core";
 import {
   machineFields,
@@ -257,20 +254,6 @@ export interface LiveRowsCollection<Row> {
    * form (a window's `maxLimit`, an `all` set's bound, `:rows`' `maxIds`).
    */
   shape: ListShape;
-  /**
-   * The base membership a collection declared (`membership`), canonical,
-   * with the filterable declaration it is checked against — what a reader
-   * re-checks a row with (`matchesFilter(row, m.filter, m.filterable)`), and
-   * what `serveCollection` renders (`filterSql`). Absent when it declared none
-   * (its server half may still narrow it with a `where`).
-   */
-  membership?: LiveMembership;
-}
-
-/** A collection's base membership as data (see {@link LiveRowsCollection.membership}). */
-export interface LiveMembership {
-  readonly filter: Filter;
-  readonly filterable: Filterable;
 }
 
 /** The `:rows` id-set cap of a lookup-only or whole (`unbounded`) set that declares none. */
@@ -528,7 +511,7 @@ export interface LiveAllOrderBase<Row> {
    */
   by?: readonly (keyof NoInfer<Row> & string)[];
   /** Row fields with their direction; non-empty, each field once. The id breaks ties. */
-  orderBy: LiveOrderBy<OrderableKeys<NoInfer<Row>>>;
+  orderBy: LiveOrderBy<keyof NoInfer<Row> & string>;
 }
 
 /**
@@ -606,16 +589,6 @@ export type LiveLookupSpec<Row> = LiveNoWindowSpec<Row, undefined>;
 export type LiveAllSpec<Row> = LiveNoWindowSpec<Row, LiveAllOrder<Row>> & {
   all: LiveAllOrder<Row>;
 };
-
-/**
- * A window's order fields, checked against the row: `sortable` and
- * `default.orderBy` name only fields a read can be ordered by
- * ({@link OrderableKeys}) — so the browser can re-sort what it holds.
- */
-interface OrderedBy<Row> {
-  sortable: readonly NoInfer<OrderableKeys<Row>>[];
-  default: { readonly orderBy: LiveOrderBy<NoInfer<OrderableKeys<Row>>> };
-}
 
 /** A window's default, in the fields spelling (its order over `S`). */
 export interface LiveFieldsDefault<S extends string> {
@@ -738,7 +711,6 @@ export function liveCollection<
     id: I;
     default: LiveFieldsDefault<S>;
     row?: never;
-  } & OrderedBy<FieldsRow<undefined, never, never, OF, CF>> & {
     filterable?: never;
     from?: never;
     pick?: never;
@@ -772,8 +744,7 @@ export function liveCollection<
     baseExposures?: B;
     arms?: never;
     default: LiveFieldsDefault<S>;
-  } & OrderedBy<FieldsRow<E, P, CP, OF, CF>> &
-    LiveFieldsForm<LiveFieldsDefault<S>, undefined, S, Cn, R> &
+  } & LiveFieldsForm<LiveFieldsDefault<S>, undefined, S, Cn, R> &
     LiveMachineSpec<NM>,
 ): LiveCollectionOf<
   FieldsRow<E, P, CP, OF, CF>,
@@ -814,7 +785,6 @@ export function liveCollection<Row, F, S extends string>(
       arms?: unknown;
       sortable?: readonly string[];
       needsMachine?: MachineFeature;
-      membership?: Filter;
     };
     // A union's rows are no entity's: its base fields are its own, and each
     // arm's are the arm's (`liveArm`).
@@ -848,12 +818,6 @@ export function liveCollection<Row, F, S extends string>(
       }
     }
     const resolved = resolveFieldsSpec(key, fieldsSpec);
-    const membership = declaredMembership(
-      key,
-      fieldsSpec.membership,
-      fieldsSpec.arms !== undefined,
-      resolved.filterable as Filterable,
-    );
     const {
       from: _from,
       pick: _pick,
@@ -862,7 +826,6 @@ export function liveCollection<Row, F, S extends string>(
       carry: _carry,
       baseExposures: _baseExposures,
       needsMachine: _needsMachine,
-      membership: _membership,
       ...rest
     } = fieldsSpec;
     if (fieldsSpec.arms !== undefined && _needsMachine !== undefined) {
@@ -901,40 +864,9 @@ export function liveCollection<Row, F, S extends string>(
       // author's fields, never the `$columns` fold (each exposure's fields
       // are its extension's).
       shape: declaredShape(`liveCollection("${key}")`, resolved.row, ""),
-      ...(membership === null ? {} : { membership }),
       ...machineFields(fieldsSpec),
     };
   }
-}
-
-/**
- * A declared `membership`, checked and canonical (the filter language's
- * `canonicalizeFilter` — it throws on a column that is not filterable, an op
- * the column's domain does not take, a malformed operand), or `null`.
- */
-function declaredMembership(
-  key: string,
-  membership: Filter | undefined,
-  union: boolean,
-  filterable: Filterable,
-): LiveMembership | null {
-  if (membership === undefined) return null;
-  const fail = (message: string): never => {
-    throw new Error(`liveCollection("${key}"): ${message}`);
-  };
-  if (union) {
-    // Typed away (the union overload takes none).
-    fail(
-      "`membership` beside `arms` — a union's rows are its arms', each scoped by its own `where`.",
-    );
-  }
-  const filter = canonicalizeFilter(membership, filterable);
-  if (filter === undefined) {
-    fail(
-      "`membership` matches every row (an empty `and`) — omit it: a collection without one holds every row of `from`.",
-    );
-  }
-  return Object.freeze({ filter: filter!, filterable });
 }
 
 /**

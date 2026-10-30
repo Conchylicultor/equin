@@ -135,8 +135,8 @@ Manual check: `scripts/smoke.sh` (needs the dep installed).
     - `defineJob('sonata.transcription.conversation-status')`
     - `mcpTool('sonata_submit_transcription')`
   - Routes:
-    - `POST /api/sonata/transcription/prepare` — unpredicted (response)
-    - `POST /api/sonata/songs/:id/transcription/retry` — unpredicted (server-decided)
+    - `POST /api/sonata/transcription/prepare`
+    - `POST /api/sonata/songs/:id/transcription/retry`
 - Core:
   - Uses: `conversations/agent-thread.defineThreadResult`
   - Exports (types):

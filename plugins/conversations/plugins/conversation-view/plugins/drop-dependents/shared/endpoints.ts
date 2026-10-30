@@ -10,8 +10,4 @@ export const dropDependents = defineEndpoint({
     z.object({ kind: z.literal("kept"), reason: z.literal("active-sibling") }),
   ]),
   needsMachine: { feature: "Closing an agent's conversation" },
-  unpredicted: {
-    reason: "response",
-    why: "The response says whether the dependents were dropped (with a count) or kept because a sibling conversation is active, and the toast reads it.",
-  },
 });

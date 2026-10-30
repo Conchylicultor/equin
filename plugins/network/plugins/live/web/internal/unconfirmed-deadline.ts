@@ -1,4 +1,4 @@
-// The UNCONFIRMED deadline: a predicted write that has not confirmed within a
+// The UNCONFIRMED deadline: an optimistic op that has not confirmed within a
 // deadline files a CENSORED `confirm` latency sample.
 //
 // The `confirm` signal is emitted when a write confirms — so a write that NEVER
@@ -10,16 +10,15 @@
 // elapsed — which `debug/slow-ops` files like any slow confirm.
 //
 // It is a DEADLINE, not a poll: nothing is re-checked; the timer either is
-// cleared or fires once (precedent: health's wedge watchdog). Shared by every
-// prediction system (`optimistic-mutation`'s overlay, the predicted endpoint
-// effects), so they time out the same way.
+// cleared or fires once (precedent: health's wedge watchdog). Armed by
+// `optimistic-mutation`'s overlay, per op.
 
 import {
   clientLatencySink,
   type CensoredLatencySample,
 } from "@plugins/primitives/plugins/perfs/plugins/latency-signal/core";
 
-/** How long a predicted write may stay unconfirmed before it is reported. */
+/** How long an optimistic op may stay unconfirmed before it is reported. */
 export const UNCONFIRMED_MS = 10_000;
 
 /** A censored `confirm` sample — what an expired deadline emits. */

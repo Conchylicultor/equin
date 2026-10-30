@@ -5,7 +5,6 @@ import {
   useEndpointMutation,
   useFetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
-import { useLiveMutation } from "@plugins/network/plugins/live/web";
 import {
   addClaudeAccount,
   claudeAccountIds,
@@ -402,9 +401,9 @@ export function ClaudeAccountsSection({
   const [switchedTo, setSwitchedTo] = useState<string | null>(null);
   // The switch shows at once; what depends on it landing (the usage read of
   // the account switched to) runs on the server's answer (`switchTo`).
-  const selectAccount = useLiveMutation(selectClaudeAccount);
-  const removeAccount = useLiveMutation(removeClaudeAccount);
-  const autoSwitch = useLiveMutation(setClaudeAccountAutoSwitch);
+  const selectAccount = useEndpointMutation(selectClaudeAccount);
+  const removeAccount = useEndpointMutation(removeClaudeAccount);
+  const autoSwitch = useEndpointMutation(setClaudeAccountAutoSwitch);
   const refreshUsage = useEndpointMutation(refreshClaudeUsage);
   // Accounts Claude Code reported no plan limits for, with why.
   const [unreadable, setUnreadable] = useState<Record<string, string>>({});

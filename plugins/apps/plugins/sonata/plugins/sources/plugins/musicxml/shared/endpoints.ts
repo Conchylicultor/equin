@@ -16,10 +16,6 @@ export const createMusicXmlSong = defineEndpoint({
   route: "POST /api/sonata/songs/musicxml",
   body: z.object({ attachmentId: z.string() }),
   response: z.object({ id: z.string(), title: z.string() }),
-  unpredicted: {
-    reason: "server-minted-id",
-    why: "the server parses the upload, dedups by content hash and may return an existing song; the import opens it by id",
-  },
 });
 
 /**

@@ -1,9 +1,6 @@
 import type { ReactElement } from "react";
-import {
-  mapRow,
-  useLiveMutation,
-  useLiveRow,
-} from "@plugins/network/plugins/live/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { mapRow, useLiveRow } from "@plugins/network/plugins/live/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -44,12 +41,16 @@ function NoteField({
   taskId: string;
   note: string;
 }): ReactElement {
-  const save = useLiveMutation(setTriageNoteEndpoint);
+  const fetchEndpoint = useFetchEndpoint();
   const field = useEditableField({
     value: note,
     label: "Triage note",
-    onSave: (next) => {
-      save.mutate({ params: { taskId }, body: { note: next } });
+    onSave: async (next) => {
+      await fetchEndpoint(
+        setTriageNoteEndpoint,
+        { taskId },
+        { body: { note: next } },
+      );
     },
   });
   // The detail pane flushes every section's pending edit before it acts on the

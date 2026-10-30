@@ -13,10 +13,6 @@ export type ResetCompositionBody = z.infer<typeof ResetCompositionBodySchema>;
 
 export const resetCompositionData = defineEndpoint({
   route: "POST /api/build/serve/reset",
-  unpredicted: {
-    reason: "server-decided",
-    why: "wipes the composition's data directory and database on the machine",
-  },
   body: ResetCompositionBodySchema,
   response: z.object({ ok: z.boolean() }),
 });
@@ -169,10 +165,6 @@ export type ReclaimCompositionBody = z.infer<
  */
 export const reclaimCompositionNamespaces = defineEndpoint({
   route: "POST /api/build/serve/reclaim",
-  unpredicted: {
-    reason: "response",
-    why: "the caller renders the discriminated ReclaimOutcome from the answer",
-  },
   body: ReclaimCompositionBodySchema,
   response: z.object({
     results: z.array(

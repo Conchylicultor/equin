@@ -14,7 +14,6 @@ const health = defineEndpoint({
 });
 const ping = defineEndpoint({
   route: "POST /api/ping",
-  unpredicted: { reason: "response", why: "test fixture" },
   body: z.object({ n: z.number() }),
 });
 const stat = defineEndpoint({

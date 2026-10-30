@@ -1,9 +1,6 @@
 import { useCallback, useMemo } from "react";
-import {
-  mapRow,
-  useLiveMutation,
-  useLiveRow,
-} from "@plugins/network/plugins/live/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { mapRow, useLiveRow } from "@plugins/network/plugins/live/web";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import {
   launchDecisions,
@@ -34,11 +31,16 @@ export function useTaskApproval(
 export function useSetTaskApproval(): (
   taskId: string,
   approved: boolean,
-) => void {
-  const approval = useLiveMutation(taskApprovalEndpoint);
+) => Promise<void> {
+  const fetchEndpoint = useFetchEndpoint();
   return useCallback(
-    (taskId, approved) =>
-      approval.mutate({ params: { taskId }, body: { approved } }),
-    [approval],
+    async (taskId, approved) => {
+      await fetchEndpoint(
+        taskApprovalEndpoint,
+        { taskId },
+        { body: { approved } },
+      );
+    },
+    [fetchEndpoint],
   );
 }

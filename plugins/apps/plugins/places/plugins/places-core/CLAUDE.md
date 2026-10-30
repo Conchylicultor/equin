@@ -64,7 +64,6 @@ its own.
     - `infra/endpoints.useEndpointMutation`
     - `network/live.LiveRowResult`
     - `network/live.useLive`
-    - `network/live.useLiveMutation`
     - `network/live.useLiveRow`
     - `tag-tree/engine.useTagTree`
   - Exports (values):
@@ -122,19 +121,19 @@ its own.
     - `places.tags.all` (keyed)
     - `places.tags.all:rows` (keyed, point)
   - Routes:
-    - `POST /api/places/places` — unpredicted (response)
-    - `POST /api/places/custom-places` — unpredicted (server-minted-id)
-    - `PATCH /api/places/places/:id` — predicted
-    - `DELETE /api/places/places/:id` — predicted
-    - `POST /api/places/places/:id/icon` — unpredicted (server-decided)
+    - `POST /api/places/places`
+    - `POST /api/places/custom-places`
+    - `PATCH /api/places/places/:id`
+    - `DELETE /api/places/places/:id`
+    - `POST /api/places/places/:id/icon`
 - Core:
-  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tag-tree/engine` ×6
     - `fields` ×4
     - `integrations/google-maps/places-api` ×4
-    - `network/live` ×4
     - `fields/text/config` ×3
     - `ids` ×3
+    - `network/live` ×2
     - `packages/list-bound` ×2
     - `ui/icons/saved-names` ×2
     - `fields/date/config.dateField`

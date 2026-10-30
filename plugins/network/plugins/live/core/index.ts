@@ -113,7 +113,6 @@ export type {
   LiveGroupCodec,
   LiveGroupsDescriptor,
   LiveLookupCollection,
-  LiveMembership,
   LiveNoWindowCollection,
   LivePreload,
   LiveRowsCollection,
@@ -178,39 +177,6 @@ export type {
   LiveWindowBounds,
   LiveWindowParams,
 } from "./internal/query";
-export { orderScalar } from "./internal/order-value";
-export type { OrderableKeys, OrderableValue } from "./internal/order-value";
-// Predicted writes: what a write endpoint does to live data, declared on the
-// endpoint (`defineEndpoint({ …, effect: patchRow(…) })`); `readLiveEffect`
-// hands the payload to the predicted-write client.
-export {
-  applyRows,
-  choose,
-  effects,
-  patchRow,
-  patchValue,
-  patchWhere,
-  readLiveEffect,
-  readSubject,
-  removeRow,
-  removeWhere,
-  upsertRow,
-  upsertRows,
-  valueSubject,
-} from "./internal/predict";
-export type {
-  LiveEffect,
-  LiveEffectPart,
-  LiveLane,
-  PredictOptions,
-  PredictPatchTarget,
-  PredictTarget,
-  ResolvedLiveEffect,
-  ResolvedLiveTarget,
-  RowPatch,
-  TargetRow,
-  UpsertOptions,
-} from "./internal/predict";
 export {
   compilePagedValue,
   compileQueryValue,

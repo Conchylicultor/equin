@@ -86,19 +86,19 @@ curl -sX POST http://<ns>.localhost:9000/api/events-test/queue-saturate \
     - `defineTriggerEvent('events_test.pinged')`
   - Resources: `events-test.log` (push, notified, capped: EVENTS_TEST_LOG_WINDOW)
   - Routes:
-    - `POST /api/events-test/subscribe` — unpredicted (server-decided)
-    - `POST /api/events-test/emit` — unpredicted (server-decided)
-    - `POST /api/events-test/direct-enqueue` — unpredicted (server-decided)
+    - `POST /api/events-test/subscribe`
+    - `POST /api/events-test/emit`
+    - `POST /api/events-test/direct-enqueue`
     - `GET /api/events-test/log`
-    - `POST /api/events-test/reset` — unpredicted (server-decided)
-    - `DELETE /api/events-test/trigger/:id` — unpredicted (server-decided)
-    - `POST /api/events-test/delete-targeting` — unpredicted (server-decided)
+    - `POST /api/events-test/reset`
+    - `DELETE /api/events-test/trigger/:id`
+    - `POST /api/events-test/delete-targeting`
     - `GET /api/events-test/triggers`
     - `GET /api/events-test/wait-idle`
-    - `POST /api/events-test/serial-queue` — internal
-    - `POST /api/events-test/cron-dedup` — internal
-    - `POST /api/events-test/queue-saturate` — internal
-    - `POST /api/events-test/detached-sleep` — internal
+    - `POST /api/events-test/serial-queue`
+    - `POST /api/events-test/cron-dedup`
+    - `POST /api/events-test/queue-saturate`
+    - `POST /api/events-test/detached-sleep`
 - Machine:
   - Uses:
     - `infra/endpoints.machineHandler`
@@ -107,9 +107,9 @@ curl -sX POST http://<ns>.localhost:9000/api/events-test/queue-saturate \
     - `infra/jobs.UNSAFE_sweepStuckLocks`
   - Register: `defineJob('events_test.superseded')`
   - Routes:
-    - `POST /api/events-test/crash-recovery` — internal
-    - `POST /api/events-test/queue-lock-no-steal` — internal
-    - `POST /api/events-test/superseded` — internal
+    - `POST /api/events-test/crash-recovery`
+    - `POST /api/events-test/queue-lock-no-steal`
+    - `POST /api/events-test/superseded`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`

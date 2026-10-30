@@ -22,10 +22,6 @@ const CreateTodoBlockTaskBodySchema = z.object({
 
 export const createTodoBlockTask = defineEndpoint({
   route: "POST /api/todo-blocks/:blockId/task",
-  unpredicted: {
-    reason: "response",
-    why: "the caller uses the server-built prompt returned with the task id",
-  },
   body: CreateTodoBlockTaskBodySchema,
   response: z.object({ taskId: z.string(), prompt: z.string() }),
 });

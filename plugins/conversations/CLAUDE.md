@@ -121,7 +121,7 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
   - Routes:
     - `GET /api/conversations`
     - `GET /api/conversations/:id`
-    - `DELETE /api/conversations` — internal
+    - `DELETE /api/conversations`
     - `GET /api/conversations/:id/turns`
 - Web:
   - Uses:
@@ -148,12 +148,12 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `infra/endpoints.implementMachine`
     - `network/live.serveValue`
   - Routes:
-    - `POST /api/conversations` — unpredicted (server-minted-id)
-    - `POST /api/conversations/:id/turn` — unpredicted (response)
-    - `POST /api/conversations/:id/turns/:turnId/retry` — unpredicted (response)
-    - `POST /api/conversations/:id/turns/:turnId/withdraw` — unpredicted (response)
-    - `POST /api/conversations/:id/interrupt` — unpredicted (server-decided)
-    - `POST /api/conversations/:id/stop` — unpredicted (response)
+    - `POST /api/conversations`
+    - `POST /api/conversations/:id/turn`
+    - `POST /api/conversations/:id/turns/:turnId/retry`
+    - `POST /api/conversations/:id/turns/:turnId/withdraw`
+    - `POST /api/conversations/:id/interrupt`
+    - `POST /api/conversations/:id/stop`
 - Core:
   - Uses:
     - `config_v2.defineConfig`
@@ -166,13 +166,11 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `fields/int/config.intField`
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
-    - `network/live.patchRow`
     - `packages/list-bound.wholeList`
     - `primitives/pane.defineRoute`
     - `primitives/text-editor/paste-images.attachmentFileMarkdown`
     - `primitives/text-editor/paste-images.attachmentMarkdown`
     - `tasks/tasks-core.ConversationSchema`
-    - `tasks/tasks-core.conversationsEntityRef`
   - Exports (types):
     - `BackgroundWork`
     - `ContextCategory`
@@ -367,7 +365,7 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
           - **`history`** — Contributes the History list (a live source over the `conversations.history` collection) as the History source of the merged conversation-sidebar DataView.
           - **`queue`** — Contributes the priority Queue (pin/status group-by sections, task-group aggregation, and neighbor-based manual-order drag over the queue's live data/mutation layer) as the Queue source of the…
       - **`grouped`** — Registers the conversation-group id kind (`cgrp-…`) in the browser's id registry, the twin of the server registration. Conversation-group persistence (tables + addMemberToGroup) backing the improve…
-      - **`queue`** — Queue classification + reorder logic (classifyQueue / applyReorder) consumed by the DataView Queue tab. Ranks seeded once on creation (newest first); a user-set pin lifts a waiting task group into…
+      - **`queue`** — Queue classification (classifyQueue) consumed by the DataView Queue tab; a reorder is the server's (reorderQueue mints the rank). Ranks seeded once on creation (newest first); a user-set pin lifts a…
   - **`effort-provider`** — Registry mapping thinking-mode (effort) levels to Claude CLI delivery (--effort flag / --settings ultracode) and display metadata. Reusable EffortSelect picker.
   - **`hibernation`** — Records conversation selection so idle hibernation can reset the idle timer and transparently resume. Idle-conversation hibernation, portable half: the global hibernation config, and the viewed…
   - **`menu-bar-status`** — The agents' part of the menu-bar panel's status line (MenuBar.Status 'agents'): from useConversations(), partitioned like the agent manager's home — working or starting → 'N agents working', waiting…

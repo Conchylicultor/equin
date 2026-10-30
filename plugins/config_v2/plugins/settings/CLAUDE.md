@@ -90,17 +90,17 @@ renderer, which only the running app has.
   - Contributes:
     - `Pane.Register` "config-v2-detail"
     - `Pane.Register` "config-v2-nav"
-  - Uses: 48 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 47 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `config_v2/fields` ×4
     - `primitives/data-view` ×4
     - `primitives/live-state` ×4
     - `primitives/pane` ×4
     - `primitives/css/ui-kit` ×3
-    - `network/live` ×2
     - `apps-core/app-icon.AppIconView`
     - `apps-core.Apps`
     - `config_v2.useConfigRegistrations`
     - `infra/endpoints.useEndpointMutation`
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
@@ -146,10 +146,10 @@ renderer, which only the running app has.
     - `config_v2.setConfigByPath`
     - `tasks/task-category.TaskCategory`
   - Routes:
-    - `POST /api/config-v2/reset-field` — unpredicted (server-decided)
-    - `POST /api/config-v2/acknowledge-conflict` — unpredicted (server-decided)
-    - `POST /api/config-v2/delete-override` — unpredicted (server-decided)
-    - `POST /api/config-v2/merge-conflict` — unpredicted (response)
+    - `POST /api/config-v2/reset-field`
+    - `POST /api/config-v2/acknowledge-conflict`
+    - `POST /api/config-v2/delete-override`
+    - `POST /api/config-v2/merge-conflict`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`
   - Exports (values):

@@ -3,16 +3,14 @@ import {
   combineResources,
   mapResource,
 } from "@plugins/primitives/plugins/live-state/web";
-import {
-  mapRow,
-  useLiveMutation,
-  useLiveRow,
-} from "@plugins/network/plugins/live/web";
+import { mapRow, useLiveRow } from "@plugins/network/plugins/live/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { useTaskAttempts } from "@plugins/tasks/plugins/tasks-core/web";
 import type { LaunchBinding } from "@plugins/tasks/plugins/launch-options/web";
 import type { WorkspaceSpec } from "@plugins/conversations/plugins/workspace/core";
-import { deleteTaskWorkspace, putTaskWorkspace } from "../../shared/endpoints";
 import { taskWorkspaces } from "../../shared/schemas";
+import { setTaskWorkspaceRemote } from "./api";
 
 /**
  * Binds the control to an existing task's `tasks_ext_workspace` row.
@@ -29,15 +27,24 @@ export function useTaskWorkspaceBinding(
     row ? row.spec : null,
   );
   const attempts = useTaskAttempts(taskId);
-  const put = useLiveMutation(putTaskWorkspace);
-  const clear = useLiveMutation(deleteTaskWorkspace);
+  const fetchEndpoint = useFetchEndpoint();
+  const toast = useToast();
 
   const onChange = useCallback(
     (next: WorkspaceSpec | null) => {
-      if (next) put.mutate({ params: { taskId }, body: { spec: next } });
-      else clear.mutate({ params: { taskId } });
+      setTaskWorkspaceRemote(fetchEndpoint, taskId, next).catch(
+        (err: unknown) => {
+          toast({
+            type: "task",
+            category: "other",
+            title: "Failed to set workspace",
+            description: err instanceof Error ? err.message : String(err),
+            variant: "error",
+          });
+        },
+      );
     },
-    [taskId, put, clear],
+    [fetchEndpoint, taskId, toast],
   );
 
   return mapResource(

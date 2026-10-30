@@ -1,5 +1,5 @@
 import type React from "react";
-import { useLiveMutation } from "@plugins/network/plugins/live/web";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
   mapResource,
   type ResourceResult,
@@ -15,15 +15,15 @@ import { useStarredPageIds } from "./use-starred-ids";
  */
 export function useStar(pageId: string): ResourceResult<{
   isStarred: boolean;
-  toggle: (e: React.MouseEvent) => void;
+  toggle: (e: React.MouseEvent) => Promise<void>;
 }> {
   const starred = useStarredPageIds();
-  const { mutate } = useLiveMutation(putPageStarred);
+  const { mutateAsync } = useEndpointMutation(putPageStarred);
   return mapResource(starred, (ids) => {
     const isStarred = ids.has(pageId);
-    const toggle = (e: React.MouseEvent) => {
+    const toggle = async (e: React.MouseEvent) => {
       e.stopPropagation();
-      mutate({ params: { pageId }, body: { starred: !isStarred } });
+      await mutateAsync({ params: { pageId }, body: { starred: !isStarred } });
     };
     return { isStarred, toggle };
   });

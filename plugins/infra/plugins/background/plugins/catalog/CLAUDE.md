@@ -87,7 +87,7 @@ own. Plan: `research/2026-09-30-infra-background-activity-catalog.md`.
   - Resources:
     - `background.catalog` (push, notified, whole: the declared set — one entry per job, warm-up, timer, watcher and daemon the code declares (a few hundred), never one per run, whole: what one entry's provider says about it — a few labelled facts, whole: the events one job is bound to — its declared triggers, a handful)
     - `background.recent-runs` (push, notified)
-  - Routes: `POST /api/background/run-now` — unpredicted (server-decided)
+  - Routes: `POST /api/background/run-now`
 - Central:
   - Uses: `network/live.serveValue`
   - Exports (types):

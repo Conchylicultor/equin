@@ -155,7 +155,6 @@ caller**. Omitting `path` keeps the `ts` loader — correct only for `.ts`-only 
     - `ImportRef`
     - `MarkerCall`
     - `MarkerCallSpan`
-    - `RoutePrediction`
     - `ServerContributionKindDecl`
     - `StaticCallIdResult`
     - `StringFieldResult`

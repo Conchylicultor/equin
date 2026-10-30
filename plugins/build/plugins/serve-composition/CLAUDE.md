@@ -265,9 +265,9 @@ code, that is the bug this section exists to prevent.
     - `build.serve-owned` (invalidate, snapshot, whole: one per checkout that has served this composition — the delete confirmation names every one it will erase)
     - `build.serve-status` (push, notified)
   - Routes:
-    - `POST /api/build/serve/reset` — unpredicted (server-decided)
+    - `POST /api/build/serve/reset`
     - `GET /api/build/serve/status`
-    - `POST /api/build/serve/reclaim` — unpredicted (response)
+    - `POST /api/build/serve/reclaim`
 - Web:
   - Uses:
     - `infra/endpoints.useEndpointMutation`

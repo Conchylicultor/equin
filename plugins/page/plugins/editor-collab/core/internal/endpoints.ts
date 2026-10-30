@@ -10,10 +10,6 @@ import { defineEndpoint, blob } from "@plugins/infra/plugins/endpoints/core";
 // chokepoint. Idempotent: re-posting after a win returns the stored state.
 export const blockDocInit = defineEndpoint({
   route: "POST /api/blocks/:id/doc-init",
-  unpredicted: {
-    reason: "response",
-    why: "the provider adopts the winner's stored state returned by the first-writer-wins seed",
-  },
   body: blob("application/octet-stream"),
   response: z.object({
     /** The authoritative stored state (winner's), base64. */
@@ -30,9 +26,5 @@ export const blockDocInit = defineEndpoint({
 // response carries no body.
 export const blockDocUpdate = defineEndpoint({
   route: "POST /api/blocks/:id/doc-update",
-  unpredicted: {
-    reason: "server-decided",
-    why: "a CRDT merge; the local Y.Doc is already the optimism and a row patch cannot express it",
-  },
   body: blob("application/octet-stream"),
 });

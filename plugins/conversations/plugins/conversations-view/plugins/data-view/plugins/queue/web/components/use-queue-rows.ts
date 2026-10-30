@@ -1,6 +1,6 @@
 import { useLive } from "@plugins/network/plugins/live/web";
 import type { LiveRowsCollection } from "@plugins/network/plugins/live/core";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   conversationsActive,
@@ -11,7 +11,6 @@ import {
   combineResources,
   type ResourceReadiness,
 } from "@plugins/primitives/plugins/live-state/web";
-import { useOptimisticResource } from "@plugins/primitives/plugins/optimistic-mutation/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   useLivePagesPaging,
@@ -22,11 +21,10 @@ import {
   queueRanks,
   reorderQueue,
   type QueueData,
+  type ReorderQueueBody,
 } from "@plugins/conversations/plugins/conversations-view/plugins/queue/core";
 import {
-  applyReorder,
   classifyQueue,
-  type ReorderVars,
   type TaskGroup,
 } from "@plugins/conversations/plugins/conversations-view/plugins/queue/web";
 import { spawnFailureRows } from "@plugins/conversations/plugins/spawn-failure/core";
@@ -74,17 +72,9 @@ export type QueueRow = QueueConversation & {
   memberCount: number;
 };
 
-/**
- * The computed queue display, and the reorder that was made against it. The
- * dispatch is kept WITH the display it belongs to: while a live-set change
- * re-baselines the ranks read (pending again, for one round trip) the sidebar
- * keeps painting this display, and a drag made on it is an op against ranks
- * the user did see — so it goes through the same overlay, which replays it on
- * the new tuple's base once that lands.
- */
+/** The computed queue display. */
 type QueueDisplay = {
   rows: QueueRow[];
-  dispatchReorder: (vars: ReorderVars) => void;
 };
 
 /** The display shown, and the computation it was reconciled from. */
@@ -94,8 +84,7 @@ type HeldDisplay = { from: QueueDisplay; display: QueueDisplay };
  * Combines the queue's live resources — active + gone conversations (gone read
  * as live pages, so the Done section pages as the user scrolls, kept live
  * where it is on screen), tasks, and
- * the bounded POINT ranks (subscribed to the LIVE conversation id set, replayed
- * through the optimistic overlay) — runs the shared {@link classifyQueue}, and
+ * the bounded POINT ranks (subscribed to the LIVE conversation id set) — runs the shared {@link classifyQueue}, and
  * flattens the classification into one `QueueRow[]` in display order (Pinned,
  * Queue, Working, Lost, Unranked, Disconnected, Done).
  * Task-group members are emitted representative-first so the aggregate entry's key
@@ -105,7 +94,12 @@ type HeldDisplay = { from: QueueDisplay; display: QueueDisplay };
  */
 export function useQueueRows(view: ViewState): {
   rows: QueueRow[];
-  dispatchReorder: (vars: ReorderVars) => void;
+  /**
+   * Move a conversation's group next to another's. The server mints the rank
+   * (`reorderQueue`); the ranks read follows by push. Resolves once the server
+   * holds the move, so the list can hold the dropped row in place meanwhile.
+   */
+  dispatchReorder: (vars: ReorderQueueBody) => Promise<void>;
   /** The state of the reads behind `rows` — hand it to DataView's `readiness`. */
   readiness: ResourceReadiness;
   /** How the Done section pages — hand it to DataView's `paging`. */
@@ -176,23 +170,14 @@ export function useQueueRows(view: ViewState): {
   // set reads the empty set — a valid EMPTY point subscription (no query), never
   // surfaced because the gate stays pending until active settles. The id set
   // is encoded canonically (sorted, deduped), so its order does not matter.
-  const ranksResult = useOptimisticResource(
-    queueRanks,
-    { ids: liveIds ?? [] },
-    {
-      apply: applyReorder,
-      // Exact-ack confirmation: a point delta carries no snapshot watermark, so
-      // the reorder endpoint's returned `{ watermark }` is matched against the
-      // frames' ackTx via the tx-ack registry — no isConfirmedBy needed. A
-      // write that changes nothing in this id set is acked by a standalone
-      // frame, which the hook asks the server for on its own.
-      mutate: (vars: ReorderVars) =>
-        fetchEndpoint(reorderQueue, {}, { body: vars }),
-    },
+  const ranksResult = useLive(queueRanks, { ids: liveIds ?? [] });
+  const dispatchReorder = useCallback(
+    (vars: ReorderQueueBody) => fetchEndpoint(reorderQueue, {}, { body: vars }),
+    [fetchEndpoint],
   );
 
   // All-or-nothing gate over the five live resources, memoized on their STABLE
-  // result identities (each `useLive`/`useOptimisticResource` result is
+  // result identities (each `useLive` result is
   // referentially stable when its data/status is unchanged). This stability is
   // load-bearing: the retain-last set-during-render below relies on `computed`
   // being a stable object between renders, so it fires only on genuine changes and
@@ -207,10 +192,6 @@ export function useQueueRows(view: ViewState): {
       failures: failuresResult,
     });
     if (all.status === "loading" || all.status === "error") return null;
-    // Already settled per the combine above; this narrows the optimistic
-    // result to its `ready` arm, the one carrying `dispatch`.
-    if (ranksResult.status === "loading" || ranksResult.status === "error")
-      return null;
     const { active, gone, ranks, tasks, failures } = all.data;
 
     // Wrap the point ranks in the client-side `QueueData` shape so
@@ -326,7 +307,7 @@ export function useQueueRows(view: ViewState): {
     for (const conv of disconnected) emitFlat(conv, "disconnected");
     for (const conv of recentGone) emitFlat(conv, "done");
 
-    return { rows: out, dispatchReorder: ranksResult.dispatch };
+    return { rows: out };
   }, [activeResult, goneResult, ranksResult, tasksResult, failuresResult]);
 
   // The display actually shown, derived from the last settled `computed`:
@@ -356,7 +337,6 @@ export function useQueueRows(view: ViewState): {
       from: computed,
       display: {
         rows: reuseRows(held?.display.rows ?? null, computed.rows),
-        dispatchReorder: computed.dispatchReorder,
       },
     };
     setHeld(current);
@@ -392,7 +372,7 @@ export function useQueueRows(view: ViewState): {
 
   return {
     rows: display?.rows ?? [],
-    dispatchReorder: display?.dispatchReorder ?? noReorder,
+    dispatchReorder,
     readiness,
     paging,
   };
@@ -402,10 +382,3 @@ export function useQueueRows(view: ViewState): {
 const GONE_QUERY = {};
 // The fields every Done row shares a value of.
 const GONE_UNIFORM: readonly string[] = ["section"];
-
-// No display yet: nothing is on screen to drag, so there is nothing to reorder.
-function noReorder(): void {
-  throw new Error(
-    "useQueueRows: a reorder was dispatched before the queue rendered",
-  );
-}

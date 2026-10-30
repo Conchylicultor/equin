@@ -142,7 +142,7 @@ are real.
     - `chordVideoStatus`
     - `ensureVideoStatus`
   - Routes:
-    - `POST /api/chord/videos/:videoId/playback` — unpredicted (server-decided)
+    - `POST /api/chord/videos/:videoId/playback`
     - `GET /api/chord/videos/summary`
 - Core:
   - Uses:

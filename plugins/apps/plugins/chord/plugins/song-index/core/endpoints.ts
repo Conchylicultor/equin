@@ -29,10 +29,6 @@ import { ChordTokenSchema, type ChordToken } from "./token";
 export const ensureChordIndexEndpoint = defineEndpoint({
   route: "POST /api/chord/index/ensure",
   response: IndexStatusSchema,
-  unpredicted: {
-    reason: "server-decided",
-    why: "starts the index load, which the server runs; the gate shows its own pending and Retry from the mutation state",
-  },
 });
 
 export const ChordFeatureSchema = z.enum(CHORD_FEATURES);

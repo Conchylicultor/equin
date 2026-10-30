@@ -27,29 +27,17 @@ export type DeleteTargetingBody = z.infer<typeof DeleteTargetingBodySchema>;
 
 export const subscribeEventsTest = defineEndpoint({
   route: "POST /api/events-test/subscribe",
-  unpredicted: {
-    reason: "server-decided",
-    why: "test fixture view: the event queue decides what the subscription delivers",
-  },
   body: SubscribeBodySchema,
   response: z.object({ id: z.string() }),
 });
 
 export const emitEventsTest = defineEndpoint({
   route: "POST /api/events-test/emit",
-  unpredicted: {
-    reason: "server-decided",
-    why: "test fixture view: the event queue decides what the emit delivers",
-  },
   body: EmitBodySchema,
 });
 
 export const directEnqueueEventsTest = defineEndpoint({
   route: "POST /api/events-test/direct-enqueue",
-  unpredicted: {
-    reason: "server-decided",
-    why: "test fixture view: the job queue decides what the enqueue runs",
-  },
   body: DirectEnqueueBodySchema,
   response: z.object({ jobId: z.string() }),
 });
@@ -63,26 +51,14 @@ export const getEventsTestLog = defineEndpoint({
 
 export const resetEventsTest = defineEndpoint({
   route: "POST /api/events-test/reset",
-  unpredicted: {
-    reason: "server-decided",
-    why: "test fixture view: resets queue state the server owns",
-  },
 });
 
 export const deleteEventsTestTrigger = defineEndpoint({
   route: "DELETE /api/events-test/trigger/:id",
-  unpredicted: {
-    reason: "server-decided",
-    why: "test fixture view: the trigger registry the server owns decides the result",
-  },
 });
 
 export const deleteEventsTestTargeting = defineEndpoint({
   route: "POST /api/events-test/delete-targeting",
-  unpredicted: {
-    reason: "server-decided",
-    why: "test fixture view: the trigger registry the server owns decides the result",
-  },
   body: DeleteTargetingBodySchema,
 });
 

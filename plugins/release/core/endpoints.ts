@@ -41,10 +41,6 @@ export const STAGED_INTENT: ReleaseIntent = { kind: "staged" };
 // opposite of "the omitted case is byte-identical to today".
 export const triggerReleaseEndpoint = defineEndpoint({
   route: "POST /api/release",
-  unpredicted: {
-    reason: "server-decided",
-    why: "starts a release run whose build and publish the server decides",
-  },
   body: z.object({
     composition: z.string(),
     target: z.string(),
@@ -55,17 +51,9 @@ export const triggerReleaseEndpoint = defineEndpoint({
 // Start a local preview of a finished release artifact (spawns its `launch`).
 export const previewEndpoint = defineEndpoint({
   route: "POST /api/release/runs/:id/preview",
-  unpredicted: {
-    reason: "server-decided",
-    why: "spawns a preview process whose launch the server decides",
-  },
 });
 
 // Stop a running preview (kills the process group, removes its data dir).
 export const stopPreviewEndpoint = defineEndpoint({
   route: "POST /api/release/runs/:id/preview/stop",
-  unpredicted: {
-    reason: "server-decided",
-    why: "kills the preview process group on the machine",
-  },
 });

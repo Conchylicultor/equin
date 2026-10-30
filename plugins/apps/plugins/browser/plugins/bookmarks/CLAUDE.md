@@ -36,7 +36,6 @@ Bookmarks section reads the same collection).
     - `infra/endpoints.useEndpointMutation`
     - `network/live.LiveListResult`
     - `network/live.useLive`
-    - `network/live.useLiveMutation`
     - `primitives/bar.Bar`
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
@@ -75,8 +74,8 @@ Bookmarks section reads the same collection).
     - `browser-bookmarks:groups` (push)
     - `browser-bookmarks:rows` (keyed, point)
   - Routes:
-    - `POST /api/browser/bookmarks` — unpredicted (server-minted-id)
-    - `DELETE /api/browser/bookmarks/:id` — predicted
+    - `POST /api/browser/bookmarks`
+    - `DELETE /api/browser/bookmarks/:id`
 - Core:
   - Uses:
     - `fields.FieldsRecord`

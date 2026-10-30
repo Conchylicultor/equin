@@ -68,7 +68,7 @@ function DeleteTaskButton({ taskId }: { taskId: string }) {
   const handleDelete = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      patchTask(taskId, { drop: true });
+      void patchTask(taskId, { drop: true });
     },
     [taskId, patchTask],
   );

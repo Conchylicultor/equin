@@ -34,10 +34,6 @@ export const importWallpaperUrl = defineEndpoint({
     attribution: WallpaperAttributionSchema.optional(),
   }),
   response: SavedWallpaperSchema,
-  unpredicted: {
-    reason: "response",
-    why: "the server fetches and stores the image, and the picker writes config from the returned version",
-  },
 });
 
 /**
@@ -49,10 +45,6 @@ export const uploadWallpaper = defineEndpoint({
   route: "POST /api/wallpaper/upload",
   body: multipart(),
   response: SavedWallpaperSchema,
-  unpredicted: {
-    reason: "response",
-    why: "the uploaded image is stored by the server, and the picker writes config from the returned version and mime",
-  },
 });
 
 /**

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { liveValue, patchValue } from "@plugins/network/plugins/live/core";
+import { liveValue } from "@plugins/network/plugins/live/core";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 
 // Signing in to Claude from the app: one sign-in at a time on this computer,
@@ -103,10 +103,6 @@ export const claudeSignInFlow = liveValue("claude-sign-in.flow", {
  */
 export const startClaudeSignIn = defineEndpoint({
   route: "POST /api/claude-sign-in/start",
-  unpredicted: {
-    reason: "server-decided",
-    why: "the flow's state comes from Claude Code's own output, pushed through claude-sign-in.flow",
-  },
   body: z.object({ target: ClaudeSignInTargetSchema }),
   response: z.object({ id: z.string() }),
   needsMachine: NEEDS_MACHINE,
@@ -115,10 +111,6 @@ export const startClaudeSignIn = defineEndpoint({
 /** The code the sign-in page showed on another device, handed to Claude Code. */
 export const submitClaudeSignInCode = defineEndpoint({
   route: "POST /api/claude-sign-in/code",
-  unpredicted: {
-    reason: "precondition",
-    why: "refused (409) unless that run is still waiting; what the code does is Claude Code's answer",
-  },
   body: z.object({ id: z.string(), code: z.string().trim().min(1) }),
   needsMachine: NEEDS_MACHINE,
 });
@@ -126,14 +118,6 @@ export const submitClaudeSignInCode = defineEndpoint({
 /** Stop the run `id` (or dismiss its outcome): the flow reads idle again. */
 export const cancelClaudeSignIn = defineEndpoint({
   route: "POST /api/claude-sign-in/cancel",
-  effect: (on) =>
-    patchValue(
-      on,
-      claudeSignInFlow,
-      () => ({}),
-      (flow, { body }) =>
-        flow.kind !== "idle" && flow.id === body.id ? { kind: "idle" } : flow,
-    ),
   body: z.object({ id: z.string() }),
   needsMachine: NEEDS_MACHINE,
 });

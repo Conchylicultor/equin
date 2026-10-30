@@ -44,7 +44,9 @@ export function QueueSource({
       onMove: (id, dest) => {
         if (!dest.targetId || !dest.zone) return;
         if (dest.targetId === id) return;
-        dispatchReorder({
+        // The write's promise: the list holds the row where it was dropped
+        // until the ranks read moves it (the server mints the rank).
+        return dispatchReorder({
           conversationId: id,
           targetId: dest.targetId,
           zone: dest.zone,

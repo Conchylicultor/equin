@@ -25,10 +25,6 @@ export type PromoFilmSeedReport = z.infer<typeof PromoFilmSeedReportSchema>;
  */
 export const seedPromoFilm = defineEndpoint({
   route: "POST /api/promo-film/seed",
-  unpredicted: {
-    reason: "server-decided",
-    why: "writes the film's curated story into this instance's database and files on the machine",
-  },
   response: PromoFilmSeedReportSchema,
   needsMachine: { feature: "Seeding the showcase film's instance" },
 });

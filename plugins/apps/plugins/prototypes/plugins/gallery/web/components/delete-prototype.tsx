@@ -1,7 +1,8 @@
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
-import { useLive, useLiveMutation } from "@plugins/network/plugins/live/web";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
   useCombinedResources,
   matchResource,
@@ -30,17 +31,17 @@ const restoreIcon = symbol("restore-from-trash");
 // states are live rows, so nothing here removes the card by hand.
 
 /**
- * Delete prototype `name`; the card leaves the gallery at once (predicted).
- * Once the server has recorded it, a toast says so with Undo, and `onDeleted`
- * runs (never on a rejection — that is the transport's toast).
+ * Delete prototype `name`; once the server has recorded it, a toast says so
+ * with Undo, and `onDeleted` runs (never on a failure — that is the endpoint
+ * layer's error toast).
  */
 function useDeletePrototype(): (
   name: string,
   title: string,
   onDeleted?: () => void,
 ) => void {
+  const mutation = useEndpointMutation(deletePrototype);
   const { restore } = useRestorePrototype();
-  const mutation = useLiveMutation(deletePrototype);
   return (name, title, onDeleted) => {
     mutation.mutate(
       { params: { name } },
@@ -95,7 +96,7 @@ export function DeleteHeaderAction() {
   });
   const back = prototypeDetailPane.useBack();
   const deleteNow = useDeletePrototype();
-  const { restore } = useRestorePrototype();
+  const { pending, restore } = useRestorePrototype();
   const disabled = (
     <TitleActionButton icon={deleteIcon} label="Delete" disabled />
   );
@@ -119,6 +120,7 @@ export function DeleteHeaderAction() {
           <TitleActionButton
             icon={restoreIcon}
             label="Restore prototype"
+            loading={pending}
             onClick={() => restore(name)}
           />
         );

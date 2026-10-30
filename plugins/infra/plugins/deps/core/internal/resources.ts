@@ -25,10 +25,6 @@ export const depsStates = liveValue("deps.states", {
  */
 export const installDepEndpoint = defineEndpoint({
   route: "POST /api/deps/install",
-  unpredicted: {
-    reason: "server-decided",
-    why: "Downloads and installs a dependency; its progress and outcome are the server's, shown through the deps live value.",
-  },
   body: z.object({ id: z.string() }),
   response: z.object({ id: z.string() }),
 });
@@ -39,10 +35,6 @@ export const installDepEndpoint = defineEndpoint({
  */
 export const removeDepEndpoint = defineEndpoint({
   route: "POST /api/deps/remove",
-  unpredicted: {
-    reason: "response",
-    why: "the card shows the removed byte count (or that it was already absent) from the answer",
-  },
   body: z.object({ id: z.string() }),
   response: z.discriminatedUnion("kind", [
     z.object({ kind: z.literal("removed"), bytes: z.number().int() }),

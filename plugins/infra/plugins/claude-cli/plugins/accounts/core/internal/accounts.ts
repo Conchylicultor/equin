@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { liveValue, patchValue } from "@plugins/network/plugins/live/core";
+import { liveValue } from "@plugins/network/plugins/live/core";
 import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 
@@ -151,10 +151,6 @@ export const claudeAccounts = liveValue("claude-accounts", {
 
 export const addClaudeAccount = defineEndpoint({
   route: "POST /api/claude-accounts/add",
-  unpredicted: {
-    reason: "server-minted-id",
-    why: "the server mints the account id and addedAt and the card renders the stored account from the answer",
-  },
   body: z.object({
     name: z.string().trim().min(1),
     credential: ClaudeCredentialSchema,
@@ -165,43 +161,18 @@ export const addClaudeAccount = defineEndpoint({
 
 export const removeClaudeAccount = defineEndpoint({
   route: "POST /api/claude-accounts/remove",
-  effect: (on) =>
-    patchValue(
-      on,
-      claudeAccounts,
-      () => ({}),
-      (state, { body }) => ({
-        ...state,
-        accounts: state.accounts.filter((a) => a.id !== body.id),
-        active: state.active === body.id ? SYSTEM_ACCOUNT_ID : state.active,
-      }),
-    ),
   body: z.object({ id: z.string().min(1) }),
   needsMachine: { feature: "Switching Claude accounts" },
 });
 
 export const selectClaudeAccount = defineEndpoint({
   route: "POST /api/claude-accounts/select",
-  effect: (on) =>
-    patchValue(
-      on,
-      claudeAccounts,
-      () => ({}),
-      (state, { body }) => ({ ...state, active: body.id }),
-    ),
   body: z.object({ id: z.string().min(1) }),
   needsMachine: { feature: "Switching Claude accounts" },
 });
 
 export const setClaudeAccountAutoSwitch = defineEndpoint({
   route: "POST /api/claude-accounts/auto-switch",
-  effect: (on) =>
-    patchValue(
-      on,
-      claudeAccounts,
-      () => ({}),
-      (state, { body }) => ({ ...state, autoSwitch: body.enabled }),
-    ),
   body: z.object({ enabled: z.boolean() }),
   needsMachine: { feature: "Switching Claude accounts" },
 });

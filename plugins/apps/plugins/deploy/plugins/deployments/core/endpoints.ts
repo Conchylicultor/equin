@@ -1,8 +1,6 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { removeRow } from "@plugins/network/plugins/live/core";
 import { DeploymentSchema } from "./schemas";
-import { deployDeploymentsEntityRef } from "./deployment-entity";
 import { DeployRunSchema } from "./runs";
 
 /**
@@ -72,10 +70,6 @@ export const createDeployment = defineEndpoint({
   route: "POST /api/deploy/deployments",
   body: CreateDeploymentBodySchema,
   response: DeploymentSchema,
-  unpredicted: {
-    reason: "precondition",
-    why: "400 for a bad composition and 409 for a taken name or port, shown inline on the form",
-  },
 });
 
 export const getDeployment = defineEndpoint({
@@ -87,10 +81,6 @@ export const updateDeployment = defineEndpoint({
   route: "PATCH /api/deploy/deployments/:id",
   body: UpdateDeploymentBodySchema,
   response: DeploymentSchema,
-  unpredicted: {
-    reason: "precondition",
-    why: "400 for a malformed hostname and 409 for a port conflict decided in the database, shown on the field",
-  },
 });
 
 /**
@@ -101,8 +91,6 @@ export const updateDeployment = defineEndpoint({
  */
 export const deleteDeployment = defineEndpoint({
   route: "DELETE /api/deploy/deployments/:id",
-  effect: (on) =>
-    removeRow(on, deployDeploymentsEntityRef, ({ params }) => params.id),
 });
 
 /**
@@ -166,8 +154,4 @@ export const runDeployment = defineEndpoint({
   route: "POST /api/deploy/deployments/:id/run",
   body: RunDeploymentBodySchema,
   response: DeployRunSchema,
-  unpredicted: {
-    reason: "server-decided",
-    why: "spawns a deploy child process on the machine and 409s when the server is busy; the pending state prevents a double deploy",
-  },
 });

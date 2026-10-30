@@ -74,7 +74,7 @@ Swing (`meta.swing`) is read here but applied at playback only — see
     - `MusicXmlParseError`
   - Resources: `sonata.musicxml:rows` (keyed, point)
   - Routes:
-    - `POST /api/sonata/songs/musicxml` — unpredicted (server-minted-id)
+    - `POST /api/sonata/songs/musicxml`
     - `GET /api/sonata/songs/:id/musicxml/cover/:file`
 - Cross-plugin:
   - Uses tokens:

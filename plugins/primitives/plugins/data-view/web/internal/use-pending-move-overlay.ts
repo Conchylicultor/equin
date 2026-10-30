@@ -118,8 +118,8 @@ function indexRows<TRow>(
  * - `onMove` reads the row's producer rank as `baseline`, calls the real
  *   `onMove`, and — only when it returned a promise (a write in flight) —
  *   records `{ rank: dest.rank, baseline }`. A synchronous return means nothing
- *   is in flight: the producer already applied its order (the Queue's
- *   `useOptimisticResource`) or legitimately did nothing (a no-op drop), so
+ *   is in flight: the producer already applied its order or legitimately did
+ *   nothing (a no-op drop), so
  *   holding an overlay would only risk pinning a stale rank.
  * - `getRank` returns the pending rank for that row, so the section ordering
  *   renders the new order on the drop frame.

@@ -61,10 +61,6 @@ export const backgroundCentralRecentRuns = liveValue(
  */
 export const runBackgroundNowEndpoint = defineEndpoint({
   route: "POST /api/background/run-now",
-  unpredicted: {
-    reason: "server-decided",
-    why: "triggers a background job or automation whose run the server spawns and ids",
-  },
   body: z.object({ kind: z.string(), name: z.string() }),
   response: z.object({ ref: z.string() }),
 });

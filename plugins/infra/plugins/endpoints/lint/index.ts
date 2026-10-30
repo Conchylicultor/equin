@@ -1,5 +1,4 @@
 import fetchEndpointBindingName from "./fetch-endpoint-binding-name";
-import noEndpointEffectInternals from "./no-endpoint-effect-internals";
 import noRawEndpointCall from "./no-raw-endpoint-call";
 import noRawWebFetch from "./no-raw-web-fetch";
 import noVoidFetchEndpoint from "./no-void-fetch-endpoint";
@@ -9,10 +8,9 @@ export default {
   name: "endpoints",
   rules: {
     "fetch-endpoint-binding-name": fetchEndpointBindingName,
-    "no-endpoint-effect-internals": noEndpointEffectInternals,
     "no-raw-endpoint-call": noRawEndpointCall,
     "no-raw-web-fetch": noRawWebFetch,
     "no-void-fetch-endpoint": noVoidFetchEndpoint,
   },
-  noDebt: ["no-endpoint-effect-internals", "no-raw-web-fetch"],
+  noDebt: ["no-raw-web-fetch"],
 } satisfies LintContribution;

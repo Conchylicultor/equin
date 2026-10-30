@@ -153,8 +153,8 @@ the panel until it is given something to say.
     - `debug.worktree-cleanup.worktrees` (keyed, window, notified)
     - `debug.worktree-cleanup.worktrees:meta` (push, notified)
   - Routes:
-    - `POST /api/debug/worktrees/bulk-delete` — unpredicted (server-decided)
-    - `DELETE /api/debug/worktrees/:id` — unpredicted (server-decided)
+    - `POST /api/debug/worktrees/bulk-delete`
+    - `DELETE /api/debug/worktrees/:id`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted`

@@ -10,10 +10,6 @@ export type { EmitStatus } from "../core";
 
 export const startEmit = defineEndpoint({
   route: "POST /api/debug/live-state-emit/start",
-  unpredicted: {
-    reason: "response",
-    why: "the pane renders the emitter status the server returns",
-  },
   body: z.object({
     key: z.string(),
     rate: z.number().min(0.1).max(MAX_EMIT_RATE),
@@ -24,9 +20,5 @@ export const startEmit = defineEndpoint({
 
 export const stopEmit = defineEndpoint({
   route: "POST /api/debug/live-state-emit/stop",
-  unpredicted: {
-    reason: "response",
-    why: "the pane renders the emitter status the server returns",
-  },
   response: EmitStatusSchema,
 });

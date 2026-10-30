@@ -129,7 +129,7 @@ export function PlaceCard({
     .filter((t): t is PlaceTag => t !== undefined);
 
   const setTags = (next: string[]) =>
-    updatePlace.mutate({ params, body: { tags: next } });
+    updatePlace.mutateAsync({ params, body: { tags: next } });
   const name = placeName(place);
   // Google's rich facts once they are in; a custom place has none to wait for.
   const rich: PlaceRichDetails | null =
@@ -192,7 +192,7 @@ export function PlaceCard({
                   <PlaceTitleInput
                     place={place}
                     onCommit={(title) =>
-                      updatePlace.mutate({ params, body: { title } })
+                      updatePlace.mutateAsync({ params, body: { title } })
                     }
                   />
                   {place.title !== null && place.googlePlaceId !== null ? (
@@ -253,7 +253,7 @@ export function PlaceCard({
                         tags={tags}
                         on={on}
                         onToggle={() =>
-                          setTags(
+                          void setTags(
                             on
                               ? place.tags.filter((id) => id !== tag.id)
                               : [...place.tags, tag.id],
@@ -274,7 +274,7 @@ export function PlaceCard({
                       tinted
                       auto={place.autoTags.includes(t.id)}
                       onRemove={() =>
-                        setTags(place.tags.filter((id) => id !== t.id))
+                        void setTags(place.tags.filter((id) => id !== t.id))
                       }
                     />
                   ))}
@@ -285,7 +285,7 @@ export function PlaceCard({
                     onPick={(tagId) =>
                       // A tag replaces the ancestors of it the place carried:
                       // "Restaurants › French" says "Restaurants" already.
-                      setTags([
+                      void setTags([
                         ...place.tags.filter(
                           (id) => !isTagUnder(tagId, id, tags),
                         ),
@@ -298,7 +298,7 @@ export function PlaceCard({
               <NoteSlip
                 place={place}
                 onCommit={(note) =>
-                  updatePlace.mutate({ params, body: { note } })
+                  updatePlace.mutateAsync({ params, body: { note } })
                 }
               />
               <Stack gap="none">
@@ -342,10 +342,8 @@ export function PlaceCard({
                   description:
                     "It leaves your map, with its tags and note. Saving it again starts afresh.",
                   confirmLabel: "Delete place",
-                  // Predicted: the place leaves the map and the card closes
-                  // at once.
-                  onConfirm: () => {
-                    deletePlace.mutate({ params });
+                  onConfirm: async () => {
+                    await deletePlace.mutateAsync({ params });
                     onClose();
                   },
                 })
@@ -447,7 +445,7 @@ function NoteSlip({
   onCommit,
 }: {
   place: Place;
-  onCommit: (note: string) => void;
+  onCommit: (note: string) => Promise<unknown>;
 }): ReactNode {
   return (
     <Stack
@@ -469,7 +467,7 @@ function NoteSlip({
           className="min-h-0 resize-none border-transparent bg-transparent p-none shadow-none focus-visible:ring-0"
           onBlur={(e) => {
             const note = e.currentTarget.value;
-            if (note !== place.note) onCommit(note);
+            if (note !== place.note) void onCommit(note);
           }}
         />
       </Fill>
@@ -488,7 +486,7 @@ function PlaceTitleInput({
   onCommit,
 }: {
   place: Place;
-  onCommit: (title: string | null) => void;
+  onCommit: (title: string | null) => Promise<unknown>;
 }): ReactNode {
   const shown = placeName(place);
   const custom = isCustomPlace(place);
@@ -522,7 +520,7 @@ function PlaceTitleInput({
             e.currentTarget.value = shown;
             return;
           }
-          onCommit(next);
+          void onCommit(next);
           return;
         }
         // Google's own name (or nothing) is no title.
@@ -531,7 +529,7 @@ function PlaceTitleInput({
           e.currentTarget.value = shown;
           return;
         }
-        onCommit(title);
+        void onCommit(title);
       }}
     />
   );

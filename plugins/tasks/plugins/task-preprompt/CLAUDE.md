@@ -12,11 +12,12 @@
     - `conversations/preprompts.prepromptsConfig`
     - `conversations/preprompts.PrepromptSelect`
     - `conversations/preprompts.usePrepromptItems`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.LiveRowResult`
     - `network/live.mapRow`
-    - `network/live.useLiveMutation`
     - `network/live.useLiveRow`
     - `primitives/text-editor/composer/picker-pill.PickerPill`
+    - `shell/notifications.useToast`
     - `tasks/launch-options.TaskLaunch`
   - Exports (values): `useTaskPreprompt`
 - Server:
@@ -37,8 +38,8 @@
     - `tasksPreprompt`
   - Resources: `task-preprompts:rows` (keyed, point)
   - Routes:
-    - `PUT /api/task-preprompts/:taskId` — predicted
-    - `DELETE /api/task-preprompts/:taskId` — predicted
+    - `PUT /api/task-preprompts/:taskId`
+    - `DELETE /api/task-preprompts/:taskId`
 - Core:
   - Uses: `tasks/launch-options.defineLaunchOption`
   - Exports (values): `prepromptLaunchOption`

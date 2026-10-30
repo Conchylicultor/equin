@@ -117,7 +117,7 @@ export function TaskCard({
     setError(null);
     try {
       const task = await createTask();
-      binding.set({ taskId: task.id });
+      await binding.set({ taskId: task.id });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -168,12 +168,14 @@ export function TaskCard({
           getRequest={async () => {
             const task = await createTask();
             pendingTaskIdRef.current = task.id;
-            binding.set({ taskId: task.id });
+            await binding.set({ taskId: task.id });
             return { taskId: task.id, prompt: trimmed };
           }}
-          onLaunched={(conv) => {
+          onLaunched={async (conv) => {
             const taskId = pendingTaskIdRef.current;
-            if (taskId) binding.set({ taskId, launchedConvId: conv.id });
+            if (taskId) {
+              await binding.set({ taskId, launchedConvId: conv.id });
+            }
           }}
         />
       </Stack>

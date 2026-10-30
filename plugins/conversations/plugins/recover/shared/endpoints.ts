@@ -16,8 +16,4 @@ export const restoreBatch = defineEndpoint({
   body: RestoreBatchBodySchema,
   response: z.object({ results: z.array(RestoreResultSchema) }),
   needsMachine: { feature: "Restoring conversations" },
-  unpredicted: {
-    reason: "response",
-    why: "The per-conversation results (with their errors) are rendered in the recovery view.",
-  },
 });

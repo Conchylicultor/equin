@@ -3,7 +3,8 @@ import {
   combineResources,
   mapResource,
 } from "@plugins/primitives/plugins/live-state/web";
-import { mapRow, useLiveMutation } from "@plugins/network/plugins/live/web";
+import { mapRow } from "@plugins/network/plugins/live/web";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import type { ModelChoice } from "@plugins/conversations/plugins/model-provider/core";
 import {
   clearTaskAutoStart,
@@ -28,8 +29,8 @@ export function useTaskAutoStartBinding(
     row ? row.autoStartModel : null,
   );
   const attempts = useTaskAttempts(taskId);
-  const arm = useLiveMutation(setTaskAutoStart);
-  const disarm = useLiveMutation(clearTaskAutoStart);
+  const arm = useEndpointMutation(setTaskAutoStart);
+  const disarm = useEndpointMutation(clearTaskAutoStart);
 
   const onChange = useCallback(
     (next: ModelChoice | null) => {

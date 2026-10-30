@@ -7,7 +7,7 @@ import { sonataPlayerPane } from "@plugins/apps/plugins/sonata/plugins/library/w
 import { TransposeObserver } from "./components/transpose-observer";
 import { TransposeControl } from "./components/transpose-control";
 
-export { useSaveTranspose } from "./actions";
+export { saveTranspose } from "./actions";
 
 export default {
   description:

@@ -132,7 +132,7 @@ session chain are never written. Refused on main (403). Spawns nothing.
     - `tasks/tasks-core.moveConversationToAttempt`
     - `tasks/tasks-core.updateConversation`
   - Resources: `resources.debug` (invalidate, snapshot, whole: one per resource this backend registered — the declared resource keys, a few hundred, never the rows they serve, whole: the tables one resource reads or is reached through — a handful per resource, whole: one key per params-tuple some open tab subscribes to — what the user's tabs hold, never the data set, whole: the lists one value's schema reaches — a path per array or record it declares)
-  - Routes: `POST /api/debug/read-set/narrowing-fixture` — internal
+  - Routes: `POST /api/debug/read-set/narrowing-fixture`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`

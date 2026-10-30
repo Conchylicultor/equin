@@ -17,7 +17,6 @@ const getItem = defineEndpoint({
 
 const setItem = defineEndpoint({
   route: "POST /api/items/set",
-  unpredicted: { reason: "response", why: "test fixture" },
   body: z.object({ id: z.string() }),
 });
 

@@ -1,9 +1,5 @@
-import {
-  mapRow,
-  useLive,
-  useLiveMutation,
-  useLiveRow,
-} from "@plugins/network/plugins/live/web";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { mapRow, useLive, useLiveRow } from "@plugins/network/plugins/live/web";
 import {
   combineResources,
   mapResource,
@@ -112,11 +108,9 @@ export interface PageTagsEditor {
 }
 
 /**
- * The page's tags with the pending edits applied: `putPageTags` is a predicted
- * write, so a toggle repaints the chips at once and the PUT confirms when the
- * assignment row the server pushes back carries the same list (or, for `[]`,
- * when the row is gone). Writes to one page go out in order on that row's send
- * lane, so two quick toggles cannot land swapped.
+ * The page's tags and the vocabulary, editable: `setTagIds` sends the whole
+ * list (`putPageTags`), and the chips repaint when the assignment row the
+ * server pushes back carries it.
  */
 export function usePageTagsEditor(
   pageId: string,
@@ -125,7 +119,7 @@ export function usePageTagsEditor(
     useLiveRow(pageTagAssignments, pageId),
     (row): readonly string[] => row?.tagIds ?? [],
   );
-  const put = useLiveMutation(putPageTags, { label: "Page tags" });
+  const put = useEndpointMutation(putPageTags);
   const vocabulary = useTagVocabulary();
   return mapResource(
     combineResources({ tagIds, vocabulary }),

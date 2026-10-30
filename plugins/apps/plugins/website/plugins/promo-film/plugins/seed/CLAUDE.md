@@ -59,7 +59,7 @@ seed` → record, and get the same state. Design:
   - Uses:
     - `apps/prototypes/fixtures.readPrototypeFixtureDir`
     - `infra/endpoints.implementMachine`
-  - Routes: `POST /api/promo-film/seed` — unpredicted (server-decided)
+  - Routes: `POST /api/promo-film/seed`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`
   - Exports (types): `PromoFilmSeedReport`

@@ -24,7 +24,6 @@ import {
   getEndpointErrorMessage,
   useFetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
-import { useLiveMutation } from "@plugins/network/plugins/live/web";
 import {
   BASEMAP_STYLE_JSON,
   BROWSER_KEY_PATTERN,
@@ -73,18 +72,12 @@ function LiveMapSetupSteps({
 }: {
   config: Exclude<MapsBrowserConfigState, { kind: "loading" | "error" }>;
 }) {
-  // Predicted writes: the stored key reads the new state at once; a refusal is
-  // reported by the live write sink.
-  const setKey = useLiveMutation(setMapsBrowserConfig, {
-    label: "Browser key",
-  });
-  const clearKey = useLiveMutation(clearMapsBrowserConfig, {
-    label: "Browser key",
-  });
+  const fetchEndpoint = useFetchEndpoint();
   const saved = config.kind === "set";
   // A draft only exists once the user types; until then the inputs show what is
   // stored (the key is public config, so showing it back is fine).
   const [keyDraft, setKeyDraft] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const keyValue = keyDraft ?? (saved ? config.browserKey : "");
   const trimmedKey = keyValue.trim();
@@ -93,14 +86,28 @@ function LiveMapSetupSteps({
 
   const stepState: StepState = saved ? "done" : "active";
 
-  function handleSave() {
-    setKey.mutate({ body: { browserKey: trimmedKey } });
-    setKeyDraft(null);
+  async function handleSave() {
+    setSaveError(null);
+    try {
+      await fetchEndpoint(
+        setMapsBrowserConfig,
+        {},
+        { body: { browserKey: trimmedKey } },
+      );
+      setKeyDraft(null);
+    } catch (err) {
+      setSaveError(getEndpointErrorMessage(err));
+    }
   }
 
-  function handleClear() {
-    clearKey.mutate({});
-    setKeyDraft(null);
+  async function handleClear() {
+    setSaveError(null);
+    try {
+      await fetchEndpoint(clearMapsBrowserConfig, {});
+      setKeyDraft(null);
+    } catch (err) {
+      setSaveError(getEndpointErrorMessage(err));
+    }
   }
 
   // The pane body's one scroll viewport: the key steps plus the Map ID steps
@@ -200,6 +207,11 @@ function LiveMapSetupSteps({
               </Button>
             ) : null}
           </Stack>
+          {saveError ? (
+            <Text as="p" variant="caption" className="text-destructive">
+              {saveError}
+            </Text>
+          ) : null}
         </Stack>
 
         {saved ? (
@@ -236,7 +248,6 @@ function MapIdSetupSteps({
   browserKey: string;
 }) {
   const fetchEndpoint = useFetchEndpoint();
-  const clearId = useLiveMutation(clearMapsMapId, { label: "Map ID" });
   const [draft, setDraft] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   // Bumped by "Check again": a new key remounts the preview, a new map.
@@ -274,10 +285,14 @@ function MapIdSetupSteps({
     }
   }
 
-  function handleClear() {
+  async function handleClear() {
     setSaveError(null);
-    clearId.mutate({});
-    setDraft(null);
+    try {
+      await fetchEndpoint(clearMapsMapId, {});
+      setDraft(null);
+    } catch (err) {
+      setSaveError(getEndpointErrorMessage(err));
+    }
   }
 
   return (

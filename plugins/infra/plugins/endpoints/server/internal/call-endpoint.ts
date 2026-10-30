@@ -34,7 +34,6 @@ export async function callEndpoint<
   TResponse,
   TQuery,
 >(
-  // Any kind — a predicted one's effect is the browser's, ignored here.
   endpoint: AnyEndpointDef<Route, TParams, TBody, TResponse, TQuery>,
   params: TParams,
   opts: CallOpts<TBody, TQuery>,

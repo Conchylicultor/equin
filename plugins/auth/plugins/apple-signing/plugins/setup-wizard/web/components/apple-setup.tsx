@@ -8,7 +8,7 @@ import {
   ResourceErrorInline,
   useCombinedResources,
 } from "@plugins/primitives/plugins/live-state/web";
-import { useLive, useLiveMutation } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { configValues, setConfigField } from "@plugins/config_v2/core";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
 import { configSecretMeta } from "@plugins/fields/plugins/secret/plugins/config/core";
@@ -43,8 +43,7 @@ export function AppleSetup() {
   const [p8Pem, setP8Pem] = useState("");
   const [keyId, setKeyId] = useState("");
   const [issuerId, setIssuerId] = useState("");
-  // Predicted: the write shows at once; nothing pends.
-  const setField = useLiveMutation(setConfigField);
+  const [savingKey, setSavingKey] = useState(false);
 
   const registrations = useConfigRegistrations();
   const reg = registrations.find((r) => r.descriptor.name === "apple-signing");
@@ -123,11 +122,13 @@ export function AppleSetup() {
     }
   }
 
-  function handleSaveManualIdentity() {
-    if (!manualIdentity || setField.kind !== "available") return;
-    setField.mutate({
-      body: { storePath, key: "signingIdentity", value: manualIdentity },
-    });
+  async function handleSaveManualIdentity() {
+    if (!manualIdentity) return;
+    await fetchEndpoint(
+      setConfigField,
+      {},
+      { body: { storePath, key: "signingIdentity", value: manualIdentity } },
+    );
     setManualIdentity("");
   }
 
@@ -137,20 +138,34 @@ export function AppleSetup() {
     setP8Pem(await file.text());
   }
 
-  function handleSaveApiKey() {
-    if (setField.kind !== "available") return;
-    if (p8Pem)
-      setField.mutate({ body: { storePath, key: "ascApiKey", value: p8Pem } });
-    if (keyId)
-      setField.mutate({ body: { storePath, key: "ascKeyId", value: keyId } });
-    if (issuerId)
-      setField.mutate({
-        body: { storePath, key: "ascIssuerId", value: issuerId },
-      });
-    setP8Pem("");
-    setP8FileName("");
-    setKeyId("");
-    setIssuerId("");
+  async function handleSaveApiKey() {
+    setSavingKey(true);
+    try {
+      if (p8Pem)
+        await fetchEndpoint(
+          setConfigField,
+          {},
+          { body: { storePath, key: "ascApiKey", value: p8Pem } },
+        );
+      if (keyId)
+        await fetchEndpoint(
+          setConfigField,
+          {},
+          { body: { storePath, key: "ascKeyId", value: keyId } },
+        );
+      if (issuerId)
+        await fetchEndpoint(
+          setConfigField,
+          {},
+          { body: { storePath, key: "ascIssuerId", value: issuerId } },
+        );
+      setP8Pem("");
+      setP8FileName("");
+      setKeyId("");
+      setIssuerId("");
+    } finally {
+      setSavingKey(false);
+    }
   }
 
   return (
@@ -283,6 +298,7 @@ export function AppleSetup() {
                 />
                 <Button
                   variant="default"
+                  loading={savingKey}
                   disabled={!p8Pem && !keyId && !issuerId}
                   onClick={handleSaveApiKey}
                 >

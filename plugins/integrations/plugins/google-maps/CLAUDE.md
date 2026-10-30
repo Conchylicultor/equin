@@ -164,13 +164,13 @@ over:
   - Slots: `LiveMapSetup.MapIdPreview`
   - Slot contributors: `LiveMapSetup.MapIdPreview` ← `map.google`
   - Contributes: `Auth.Integration` "Live map"
-  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/setup-steps` ×10
     - `primitives/live-state` ×5
     - `auth` ×3
     - `infra/endpoints` ×2
-    - `network/live` ×2
     - `primitives/css/ui-kit` ×2
+    - `network/live.useLive`
     - `primitives/css/clip.Clip`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
@@ -207,15 +207,14 @@ over:
   - Register: `defineFileWatcher('google-maps.browser-config')`
   - Resources: `google-maps.browser-config` (push, notified)
   - Routes:
-    - `POST /api/google-maps/browser-config` — predicted
-    - `DELETE /api/google-maps/browser-config` — predicted
-    - `POST /api/google-maps/map-id` — unpredicted (precondition)
-    - `DELETE /api/google-maps/map-id` — predicted
+    - `POST /api/google-maps/browser-config`
+    - `DELETE /api/google-maps/browser-config`
+    - `POST /api/google-maps/map-id`
+    - `DELETE /api/google-maps/map-id`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
-    - `network/live.patchValue`
   - Exports (types):
     - `MapsBrowserConfigInput`
     - `MapsBrowserConfigValue`

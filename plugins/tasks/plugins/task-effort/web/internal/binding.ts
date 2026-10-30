@@ -1,24 +1,35 @@
 import { useCallback } from "react";
-import { mapRow, useLiveMutation } from "@plugins/network/plugins/live/web";
+import { mapRow } from "@plugins/network/plugins/live/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import type { EffortLevel } from "@plugins/conversations/plugins/effort-provider/core";
 import type { LaunchBinding } from "@plugins/tasks/plugins/launch-options/web";
-import { deleteTaskEffort, putTaskEffort } from "../../shared/endpoints";
 import { useTaskEffort } from "../hooks";
+import { setTaskEffortRemote } from "./api";
 
 /** Binds the control to an existing task's `tasks_ext_effort` row. */
 export function useTaskEffortBinding(
   taskId: string,
 ): LaunchBinding<EffortLevel | null> {
   const result = useTaskEffort(taskId);
-  const put = useLiveMutation(putTaskEffort);
-  const clear = useLiveMutation(deleteTaskEffort);
+  const fetchEndpoint = useFetchEndpoint();
+  const toast = useToast();
 
   const onChange = useCallback(
     (level: EffortLevel | null) => {
-      if (level) put.mutate({ params: { taskId }, body: { level } });
-      else clear.mutate({ params: { taskId } });
+      setTaskEffortRemote(fetchEndpoint, taskId, level).catch(
+        (err: unknown) => {
+          toast({
+            type: "task",
+            category: "other",
+            title: "Failed to set thinking mode",
+            description: err instanceof Error ? err.message : String(err),
+            variant: "error",
+          });
+        },
+      );
     },
-    [taskId, put, clear],
+    [taskId, fetchEndpoint, toast],
   );
 
   // An absent row is "no thinking mode chosen"; loading / error pass through.

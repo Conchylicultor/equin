@@ -1,10 +1,6 @@
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { sql } from "drizzle-orm";
-import { z } from "zod";
 import { defineHostService } from "@plugins/framework/plugins/server-core/core";
-import { executeOne } from "@plugins/database/plugins/sql-rows/core";
 import { isConnectionCapacityRefusal } from "@plugins/database/plugins/connection/core";
-import { ASSIGNED_XID_SQL, inCommitScope, noteCommit } from "./commit-capture";
 
 /**
  * The drizzle database every query in the app is written against.
@@ -125,11 +121,6 @@ const afterCommitQueues = new WeakMap<object, (() => void)[]>();
  * `db.transaction`, tracking each transaction it opens so `afterCommit` can
  * attach work to its commit. The callback, the config and the result pass
  * through untouched; a rollback (the callback throws) drops the queue.
- *
- * Inside a predicted write's commit capture (`commit-capture.ts`) it also
- * reads the transaction's xid after the callback, before the commit, and
- * attributes it to the handler once the commit succeeded — one extra
- * statement, only there.
  */
 function trackedTransaction(transaction: Db["transaction"]): Db["transaction"] {
   return async function <T>(
@@ -137,26 +128,15 @@ function trackedTransaction(transaction: Db["transaction"]): Db["transaction"] {
     config?: Parameters<Db["transaction"]>[1],
   ): Promise<T> {
     let queue: (() => void)[] = [];
-    let xid: string | null = null;
-    const captured = inCommitScope();
     const result = await transaction(async (tx) => {
       queue = [];
       afterCommitQueues.set(tx, queue);
       try {
-        const value = await callback(tx);
-        if (captured) {
-          ({ xid } = await executeOne(tx, {
-            query: sql.raw(ASSIGNED_XID_SQL),
-            row: z.object({ xid: z.string().nullable() }),
-            label: "commit capture",
-          }));
-        }
-        return value;
+        return await callback(tx);
       } finally {
         afterCommitQueues.delete(tx);
       }
     }, config);
-    noteCommit(xid);
     for (const fn of queue) queueMicrotask(fn);
     return result;
   };

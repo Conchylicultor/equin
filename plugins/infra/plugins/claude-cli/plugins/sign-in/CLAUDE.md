@@ -108,9 +108,9 @@ report (its output length only — never the output). Adjust
   - Contributes: `Core.Root` → `ClaudeSignInHost`
   - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×7
-    - `infra/endpoints` ×2
-    - `network/live` ×2
+    - `infra/endpoints` ×3
     - `infra/claude-cli/availability.useClaudeCodeStatus`
+    - `network/live.useLive`
     - `primitives/collapsible.useCollapsibleContext`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/fill.Fill`
@@ -140,14 +140,13 @@ report (its output length only — never the output). Adjust
     - `infra/endpoints.implementMachine`
     - `network/live.serveValue`
   - Routes:
-    - `POST /api/claude-sign-in/start` — unpredicted (server-decided)
-    - `POST /api/claude-sign-in/code` — unpredicted (precondition)
-    - `POST /api/claude-sign-in/cancel` — predicted
+    - `POST /api/claude-sign-in/start`
+    - `POST /api/claude-sign-in/code`
+    - `POST /api/claude-sign-in/cancel`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
-    - `network/live.patchValue`
   - Exports (types):
     - `ClaudeSignInFlow`
     - `ClaudeSignInMethod`

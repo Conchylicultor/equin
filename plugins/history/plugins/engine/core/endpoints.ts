@@ -16,9 +16,5 @@ export const listVersions = defineEndpoint({
 // then hand the chosen version's snapshot to the source's `restore`.
 export const restoreVersion = defineEndpoint({
   route: "POST /api/history/:sourceId/:entityId/versions/:versionId/restore",
-  unpredicted: {
-    reason: "server-decided",
-    why: "the source's restore decides the resulting entity state from a server-held snapshot",
-  },
   response: z.object({ ok: z.literal(true) }),
 });

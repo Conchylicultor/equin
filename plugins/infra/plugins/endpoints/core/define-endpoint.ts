@@ -5,19 +5,6 @@ import { extractMethod, extractPath } from "./route-params";
 import type { MachineFeature } from "./needs-machine";
 import type { AgentWrite } from "./agent-write";
 import type { EndpointAccess } from "@plugins/framework/plugins/principal/core";
-import {
-  EFFECT_ON,
-  type EffectOn,
-  type EndpointEffect,
-} from "./endpoint-effect";
-import {
-  PREDICTION_GAPS,
-  UNPREDICTED_REASONS,
-  type InternalDecl,
-  type PredictionGap,
-  type Unpredicted,
-  type UnpredictedReason,
-} from "./prediction";
 
 /** The methods a browser may send through `fetchEndpoint` / `useEndpointMutation`. */
 type WriteMethod = "POST" | "PUT" | "PATCH" | "DELETE";
@@ -140,6 +127,13 @@ interface EndpointContract<
 }
 
 /**
+ * A write no browser calls (`internal: { why }`): a server → central RPC, an
+ * e2e or CLI hook. `why` is required and non-empty. The definition is an
+ * {@link InternalEndpointDef}, which the browser's clients refuse (tsc).
+ */
+export type InternalDecl = { why: string };
+
+/**
  * A portable endpoint: served by every host's `server/` (`implement`). Its
  * `needsMachine` is absent, so a desktop-only {@link MachineEndpointDef} is not
  * one — not even through a variable typed `EndpointDef`, which would let a
@@ -153,15 +147,8 @@ export interface EndpointDef<
   TQuery,
 > extends EndpointContract<Route, TParams, TBody, TResponse, TQuery> {
   readonly needsMachine?: undefined;
-  /** Unpredicted: a {@link PredictedEndpointDef} is not one (see there). */
-  readonly effect?: undefined;
   /** Browser-callable: an {@link InternalEndpointDef} is not one (see there). */
   readonly internal?: undefined;
-  /**
-   * Why this write is not predicted (a reason, or a gap: debt) — metadata for
-   * the routes facet. Absent on a read and on a telemetry write.
-   */
-  readonly unpredicted?: Unpredicted;
 }
 
 /**
@@ -178,56 +165,16 @@ export interface MachineEndpointDef<
   TQuery,
 > extends EndpointContract<Route, TParams, TBody, TResponse, TQuery> {
   readonly needsMachine: MachineFeature;
-  /** Unpredicted: a {@link PredictedMachineEndpointDef} is not one. */
-  readonly effect?: undefined;
   /** Browser-callable: an {@link InternalMachineEndpointDef} is not one. */
   readonly internal?: undefined;
-  /** Why this write is not predicted — see {@link EndpointDef.unpredicted}. */
-  readonly unpredicted?: Unpredicted;
-}
-
-/**
- * A portable WRITE endpoint declared with its predicted effect
- * (`defineEndpoint({ …, effect })` — see {@link EndpointEffect}). Its one
- * browser client is `network/live`'s `useLiveMutation`, which shows the
- * effect at once and has no pending state: `useEndpointMutation` and
- * `FetchEndpoint` refuse it (tsc — their defs say `effect?: undefined`), so
- * no surface can await it behind a spinner. The server serves it like any
- * portable endpoint (`implement`), and off the page `callEndpoint` calls it.
- */
-export interface PredictedEndpointDef<
-  Route extends string,
-  TParams,
-  TBody,
-  TResponse,
-  TQuery,
-> extends EndpointContract<Route, TParams, TBody, TResponse, TQuery> {
-  readonly needsMachine?: undefined;
-  readonly effect: EndpointEffect<TParams, TBody>;
-  readonly internal?: undefined;
-  readonly unpredicted?: undefined;
-}
-
-/** {@link PredictedEndpointDef}'s desktop-only twin (`implementMachine`). */
-export interface PredictedMachineEndpointDef<
-  Route extends string,
-  TParams,
-  TBody,
-  TResponse,
-  TQuery,
-> extends EndpointContract<Route, TParams, TBody, TResponse, TQuery> {
-  readonly needsMachine: MachineFeature;
-  readonly effect: EndpointEffect<TParams, TBody>;
-  readonly internal?: undefined;
-  readonly unpredicted?: undefined;
 }
 
 /**
  * A portable WRITE endpoint no browser calls (`defineEndpoint({ …, internal:
  * { why } })`): a server → central RPC, a CLI or e2e hook. The browser's
- * clients — `FetchEndpoint`, `useEndpointMutation`, `readNdjson`,
- * `useLiveMutation` — refuse it (tsc: their defs say `internal?: undefined`).
- * `implement` serves it, `callEndpoint` and e2e flows call it.
+ * clients — `FetchEndpoint`, `useEndpointMutation`, `readNdjson` — refuse it
+ * (tsc: their defs say `internal?: undefined`). `implement` serves it,
+ * `callEndpoint` and e2e flows call it.
  */
 export interface InternalEndpointDef<
   Route extends string,
@@ -237,8 +184,6 @@ export interface InternalEndpointDef<
   TQuery,
 > extends EndpointContract<Route, TParams, TBody, TResponse, TQuery> {
   readonly needsMachine?: undefined;
-  readonly effect?: undefined;
-  readonly unpredicted?: undefined;
   readonly internal: InternalDecl;
 }
 
@@ -251,8 +196,6 @@ export interface InternalMachineEndpointDef<
   TQuery,
 > extends EndpointContract<Route, TParams, TBody, TResponse, TQuery> {
   readonly needsMachine: MachineFeature;
-  readonly effect?: undefined;
-  readonly unpredicted?: undefined;
   readonly internal: InternalDecl;
 }
 
@@ -266,57 +209,8 @@ export type AnyEndpointDef<
 > =
   | EndpointDef<Route, TParams, TBody, TResponse, TQuery>
   | MachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>
-  | PredictedEndpointDef<Route, TParams, TBody, TResponse, TQuery>
-  | PredictedMachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>
   | InternalEndpointDef<Route, TParams, TBody, TResponse, TQuery>
   | InternalMachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>;
-
-const contracts = new WeakMap<object, object>();
-
-/**
- * A predicted definition as its plain, unpredicted contract (the effect
- * stripped; one stable object per definition) — so `network/live`'s
- * predicted-write client sends it through the ordinary `FetchEndpoint` once
- * it has applied the effect. For `network/live` only (lint
- * `endpoints/no-endpoint-effect-internals`): anywhere else it is the escape
- * hatch back to an awaited, spinner-showing call the type split exists to
- * forbid.
- */
-export function endpointContractOf<
-  Route extends string,
-  TParams,
-  TBody,
-  TResponse,
-  TQuery,
->(
-  endpoint: PredictedMachineEndpointDef<
-    Route,
-    TParams,
-    TBody,
-    TResponse,
-    TQuery
-  >,
-): MachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>;
-export function endpointContractOf<
-  Route extends string,
-  TParams,
-  TBody,
-  TResponse,
-  TQuery,
->(
-  endpoint: PredictedEndpointDef<Route, TParams, TBody, TResponse, TQuery>,
-): EndpointDef<Route, TParams, TBody, TResponse, TQuery>;
-export function endpointContractOf(endpoint: {
-  readonly effect: unknown;
-}): object {
-  let contract = contracts.get(endpoint);
-  if (contract === undefined) {
-    const { effect: _effect, ...rest } = endpoint;
-    contract = Object.freeze(rest);
-    contracts.set(endpoint, contract);
-  }
-  return contract;
-}
 
 /** A body/response spec accepts a bare Zod schema (JSON) or an explicit codec. */
 type Spec<T> = z.ZodType<T> | Codec<T>;
@@ -368,152 +262,20 @@ type ContentAccess<Route extends string> = {
   item: keyof ExtractParams<Route> & string;
 };
 
-/**
- * The predicted effect a WRITE declares, built on the route's typed request
- * (`effect: (on) => patchRow(on, entity, ({ params }) => params.id, …)` —
- * see {@link EffectOn} for why a callback).
- */
-type EffectBuilder<Route extends string, B> = (
-  on: EffectOn<ExtractParams<Route>, SpecType<B>>,
-) => EndpointEffect<ExtractParams<Route>, SpecType<B>>;
-
 /** `T` on a write route, `never` on a read (a GET declaring it is a tsc error). */
 type OnWrite<Route extends string, T> = Route extends ReadRoute ? never : T;
 
-/**
- * The agent-write marker a write that decides its prediction may carry: only
- * `"agent-control"` — a telemetry write is the {@link TelemetryArm}, its
- * decision derived, never declared twice.
- */
-type DecidedAgentWrite<Route extends string> = OnWrite<Route, "agent-control">;
-
-// ── The decision: every write takes exactly ONE arm ──────────────────────────
-// (research/2026-10-28-global-endpoint-prediction-decision.md §1). Each arm
-// types the others' keys `?: never`, so none or two is a tsc error and the
-// decision has one spelling. A read takes none (`ReadArm`).
-
-/** Predicted: its one browser client is `useLiveMutation`. */
-type PredictedArm<Route extends string, B> = {
-  effect: OnWrite<Route, EffectBuilder<Route, B>>;
-  unpredicted?: never;
-  internal?: never;
-  agentWrite?: DecidedAgentWrite<Route>;
+/** The keys only a write may declare. */
+type WriteOptions<Route extends string> = {
+  /** See {@link AgentWrite}. */
+  agentWrite?: OnWrite<Route, AgentWrite>;
 };
 
-/** Not predicted, for a stated reason or a gap (debt) — see {@link Unpredicted}. */
-type UnpredictedArm<Route extends string> = {
-  unpredicted: OnWrite<Route, Unpredicted>;
-  effect?: never;
-  internal?: never;
-  agentWrite?: DecidedAgentWrite<Route>;
-};
-
-/** No browser client — see {@link InternalDecl}. */
-type InternalArm<Route extends string> = {
-  internal: OnWrite<Route, InternalDecl>;
-  effect?: never;
-  unpredicted?: never;
-  agentWrite?: DecidedAgentWrite<Route>;
-};
-
-/** A write of observability data: the decision is `agentWrite` itself. */
-type TelemetryArm = {
-  agentWrite: "telemetry";
-  effect?: never;
-  unpredicted?: never;
-  internal?: never;
-};
-
-/** A read decides nothing: it writes no live data. */
-type ReadArm = {
-  effect?: never;
-  unpredicted?: never;
-  internal?: never;
-  agentWrite?: never;
-};
-
-/** The arms the plain (`EndpointDef`) overloads take, per route. */
-type PlainArm<Route extends string> = Route extends ReadRoute
-  ? ReadArm
-  : UnpredictedArm<Route> | TelemetryArm;
-
-/**
- * What tsc prints when no overload matches: the last overload requires this
- * key, which nothing can supply (`never`), so its "property is missing"
- * error names what to declare.
- */
-type Undecided<Route extends string> = Route extends ReadRoute
-  ? {
-      "a read (GET / HEAD / OPTIONS) declares none of effect, unpredicted, internal, agentWrite": never;
-    }
-  : {
-      'a write declares EXACTLY ONE of: effect: (on) => …  |  unpredicted: { reason, why } or { gap }  |  internal: { why }  |  agentWrite: "telemetry" alone': never;
-    };
-
-/**
- * What tsc types a declaration that fits no overload as (error recovery
- * only — it is never returned): its kind keys are `any`, so it fits every
- * def kind and the declaration's own error is the only one, instead of a
- * cascade through every `implement` and client of it.
- */
-type UndecidedEndpointDef<
-  Route extends string,
-  TParams,
-  TBody,
-  TResponse,
-  TQuery,
-> = EndpointContract<Route, TParams, TBody, TResponse, TQuery> & {
-  readonly needsMachine: any;
-  readonly effect: any;
-  readonly internal: any;
-  readonly unpredicted: any;
-};
-
-/**
- * Never matches (its required key is `never`) — and FIRST on purpose: when a
- * declaration fits no overload, tsc types the call by the first one, so an
- * undecided declaration is an {@link UndecidedEndpointDef} and only its own
- * line errors (not every `implement` / client of it). Its twin LAST is the one
- * tsc reports.
- */
-export function defineEndpoint<
-  const Route extends string,
-  B extends Spec<unknown> = Spec<void>,
-  R extends Spec<unknown> = Spec<void>,
-  TQuery = void,
->(
-  opts: EndpointOptions<Route, B, R, TQuery> & {
-    needsMachine?: MachineFeature;
-    // Every decision key, loosely: so the one error left is the missing
-    // `Undecided` key — the sentence — and an `effect` callback is still typed.
-    effect?: EffectBuilder<Route, B>;
-    unpredicted?: Unpredicted;
-    internal?: InternalDecl;
-    agentWrite?: AgentWrite;
-  } & Undecided<Route>,
-): UndecidedEndpointDef<
-  Route,
-  ExtractParams<Route>,
-  SpecType<B>,
-  SpecType<R>,
-  TQuery
->;
 /**
  * Declare an endpoint. With `needsMachine: { feature }` it is desktop-only (a
  * `Machine…Def`, whose every client handles the "not available" answer —
- * tsc); without it, portable.
- *
- * A WRITE decides how its effect reaches the user — exactly one of:
- * - `effect: (on) => …` (built by `network/live`'s `patchRow` / `removeRow` /
- *   `applyRows` / `effects`, typed by this route) → a
- *   {@link PredictedEndpointDef}, sent only through `useLiveMutation`;
- * - `unpredicted: { reason, why }` (an {@link UnpredictedReason}) or
- *   `{ gap }` (a {@link PredictionGap}: debt) → an {@link EndpointDef};
- * - `internal: { why }` → an {@link InternalEndpointDef}, which no browser
- *   client takes;
- * - `agentWrite: "telemetry"` and none of the three → an {@link EndpointDef}.
- *
- * A read declares none of them. Past a cast, every violation throws here.
+ * tsc); without it, portable. A write with `internal: { why }` has no browser
+ * client (an `Internal…Def`).
  */
 export function defineEndpoint<
   const Route extends string,
@@ -522,37 +284,10 @@ export function defineEndpoint<
   TQuery = void,
 >(
   opts: EndpointOptions<Route, B, R, TQuery> &
-    PredictedArm<Route, B> & { needsMachine: MachineFeature },
-): PredictedMachineEndpointDef<
-  Route,
-  ExtractParams<Route>,
-  SpecType<B>,
-  SpecType<R>,
-  TQuery
->;
-export function defineEndpoint<
-  const Route extends string,
-  B extends Spec<unknown> = Spec<void>,
-  R extends Spec<unknown> = Spec<void>,
-  TQuery = void,
->(
-  opts: EndpointOptions<Route, B, R, TQuery> &
-    PredictedArm<Route, B> & { needsMachine?: undefined },
-): PredictedEndpointDef<
-  Route,
-  ExtractParams<Route>,
-  SpecType<B>,
-  SpecType<R>,
-  TQuery
->;
-export function defineEndpoint<
-  const Route extends string,
-  B extends Spec<unknown> = Spec<void>,
-  R extends Spec<unknown> = Spec<void>,
-  TQuery = void,
->(
-  opts: EndpointOptions<Route, B, R, TQuery> &
-    InternalArm<Route> & { needsMachine: MachineFeature },
+    WriteOptions<Route> & {
+      internal: OnWrite<Route, InternalDecl>;
+      needsMachine: MachineFeature;
+    },
 ): InternalMachineEndpointDef<
   Route,
   ExtractParams<Route>,
@@ -567,7 +302,10 @@ export function defineEndpoint<
   TQuery = void,
 >(
   opts: EndpointOptions<Route, B, R, TQuery> &
-    InternalArm<Route> & { needsMachine?: undefined },
+    WriteOptions<Route> & {
+      internal: OnWrite<Route, InternalDecl>;
+      needsMachine?: undefined;
+    },
 ): InternalEndpointDef<
   Route,
   ExtractParams<Route>,
@@ -582,7 +320,10 @@ export function defineEndpoint<
   TQuery = void,
 >(
   opts: EndpointOptions<Route, B, R, TQuery> &
-    PlainArm<Route> & { needsMachine: MachineFeature },
+    WriteOptions<Route> & {
+      internal?: undefined;
+      needsMachine: MachineFeature;
+    },
 ): MachineEndpointDef<
   Route,
   ExtractParams<Route>,
@@ -597,12 +338,8 @@ export function defineEndpoint<
   TQuery = void,
 >(
   opts: EndpointOptions<Route, B, R, TQuery> &
-    PlainArm<Route> & { needsMachine?: undefined },
+    WriteOptions<Route> & { internal?: undefined; needsMachine?: undefined },
 ): EndpointDef<Route, ExtractParams<Route>, SpecType<B>, SpecType<R>, TQuery>;
-/**
- * Never matches (its required key is `never`): the overload tsc reports when
- * a declaration fits none above, so the error names what to declare.
- */
 export function defineEndpoint<
   const Route extends string,
   B extends Spec<unknown> = Spec<void>,
@@ -611,30 +348,6 @@ export function defineEndpoint<
 >(
   opts: EndpointOptions<Route, B, R, TQuery> & {
     needsMachine?: MachineFeature;
-    // Every decision key, loosely: so the one error left is the missing
-    // `Undecided` key — the sentence — and an `effect` callback is still typed.
-    effect?: EffectBuilder<Route, B>;
-    unpredicted?: Unpredicted;
-    internal?: InternalDecl;
-    agentWrite?: AgentWrite;
-  } & Undecided<Route>,
-): UndecidedEndpointDef<
-  Route,
-  ExtractParams<Route>,
-  SpecType<B>,
-  SpecType<R>,
-  TQuery
->;
-export function defineEndpoint<
-  const Route extends string,
-  B extends Spec<unknown> = Spec<void>,
-  R extends Spec<unknown> = Spec<void>,
-  TQuery = void,
->(
-  opts: EndpointOptions<Route, B, R, TQuery> & {
-    needsMachine?: MachineFeature;
-    effect?: EffectBuilder<Route, B>;
-    unpredicted?: Unpredicted;
     internal?: InternalDecl;
     agentWrite?: AgentWrite;
   },
@@ -645,7 +358,7 @@ export function defineEndpoint<
   SpecType<R>,
   TQuery
 > {
-  const decision = resolveDecision(opts);
+  const internal = resolveInternal(opts);
   const bodyCodec = opts.body
     ? isCodec(opts.body)
       ? opts.body
@@ -673,18 +386,7 @@ export function defineEndpoint<
     ...(opts.needsMachine !== undefined
       ? { needsMachine: opts.needsMachine }
       : {}),
-    // Built once, here: the builder is pure, and `on` is a phantom.
-    ...(opts.effect !== undefined
-      ? {
-          effect: opts.effect(
-            EFFECT_ON as EffectOn<ExtractParams<Route>, SpecType<B>>,
-          ),
-        }
-      : {}),
-    ...(decision.kind === "unpredicted"
-      ? { unpredicted: decision.unpredicted }
-      : {}),
-    ...(decision.kind === "internal" ? { internal: decision.internal } : {}),
+    ...(internal !== undefined ? { internal } : {}),
   } as AnyEndpointDef<
     Route,
     ExtractParams<Route>,
@@ -694,121 +396,31 @@ export function defineEndpoint<
   >;
 }
 
-/** The decision keys a declaration may carry (one, on a write; none on a read). */
-const DECISION_KEYS = ["effect", "unpredicted", "internal"] as const;
-
-/** What a declaration decided, validated. */
-type Decision =
-  | { kind: "read" }
-  | { kind: "predicted" }
-  | { kind: "telemetry" }
-  | { kind: "unpredicted"; unpredicted: Unpredicted }
-  | { kind: "internal"; internal: InternalDecl };
-
 /**
- * The runtime backstop of the options union: tsc refuses all of this, so it
- * fires only on a declaration a cast got past tsc — and names the route and
- * what to declare.
+ * A declaration's `internal`, validated — the runtime backstop of what tsc
+ * refuses (a read declaring it), plus the non-empty `why`.
  */
-function resolveDecision(opts: {
+function resolveInternal(opts: {
   route: string;
-  effect?: unknown;
-  unpredicted?: unknown;
   internal?: unknown;
-  agentWrite?: unknown;
-}): Decision {
-  const { route } = opts;
-  const declared = DECISION_KEYS.filter((k) => opts[k] !== undefined);
+}): InternalDecl | undefined {
+  const { route, internal } = opts;
+  if (internal === undefined) return undefined;
   if (readMarkerOf(route) !== undefined) {
-    if (declared.length > 0) {
-      throw new Error(
-        `defineEndpoint(${route}): \`${declared.join("` / `")}\` on a read — only a write changes live data; a read declares none of effect / unpredicted / internal.`,
-      );
-    }
-    return { kind: "read" };
-  }
-  const telemetry = opts.agentWrite === "telemetry";
-  if (telemetry && declared.length > 0) {
     throw new Error(
-      `defineEndpoint(${route}): agentWrite: "telemetry" is the decision itself — drop \`${declared.join("` / `")}\`.`,
+      `defineEndpoint(${route}): \`internal\` on a read — only a write declares it.`,
     );
   }
-  if (declared.length > 1) {
-    throw new Error(
-      `defineEndpoint(${route}): declares \`${declared.join("` and `")}\` — a write declares exactly one of effect / unpredicted / internal.`,
-    );
-  }
-  const [arm] = declared;
-  if (arm === undefined) {
-    if (telemetry) return { kind: "telemetry" };
-    throw new Error(
-      `defineEndpoint(${route}): a write declares how its effect reaches the user — exactly one of \`effect: (on) => …\` (predicted), \`unpredicted: { reason, why }\` or \`{ gap }\`, \`internal: { why }\`, or \`agentWrite: "telemetry"\`.`,
-    );
-  }
-  if (arm === "effect") return { kind: "predicted" };
-  if (arm === "internal") {
-    return {
-      kind: "internal",
-      internal: { why: requireWhy(route, "internal", opts.internal) },
-    };
-  }
-  return { kind: "unpredicted", unpredicted: resolveUnpredicted(route, opts) };
-}
-
-function resolveUnpredicted(
-  route: string,
-  opts: { unpredicted?: unknown },
-): Unpredicted {
-  const value = opts.unpredicted;
-  if (typeof value !== "object" || value === null) {
-    throw new Error(
-      `defineEndpoint(${route}): unpredicted is { reason, why } or { gap } — got ${JSON.stringify(value)}`,
-    );
-  }
-  const { reason, why, gap } = value as Record<string, unknown>;
-  if (gap !== undefined) {
-    if (reason !== undefined || why !== undefined) {
-      throw new Error(
-        `defineEndpoint(${route}): unpredicted takes { reason, why } or { gap }, not both — a gap's reason is its PREDICTION_GAPS entry.`,
-      );
-    }
-    if (typeof gap !== "string" || !Object.hasOwn(PREDICTION_GAPS, gap)) {
-      throw new Error(
-        `defineEndpoint(${route}): unpredicted.gap ${JSON.stringify(gap)} is not a PredictionGap — one of ${Object.keys(PREDICTION_GAPS).join(", ")} (a closed gap's endpoints declare their effect now).`,
-      );
-    }
-    return { gap: gap as PredictionGap };
-  }
-  if (typeof reason !== "string" || !UNPREDICTED_REASONS.has(reason)) {
-    throw new Error(
-      `defineEndpoint(${route}): unpredicted.reason ${JSON.stringify(reason)} is not an UnpredictedReason — one of ${[...UNPREDICTED_REASONS].join(", ")}; or declare { gap } for debt.`,
-    );
-  }
-  return {
-    reason: reason as UnpredictedReason,
-    why: requireWhy(route, "unpredicted", value),
-  };
-}
-
-/**
- * A decision's `why`, required and non-empty — the review surface of the
- * decision, checked at declaration the way `access.public` is.
- */
-function requireWhy(
-  route: string,
-  key: "unpredicted" | "internal",
-  value: unknown,
-): string {
   const why =
-    typeof value === "object" && value !== null
-      ? (value as { why?: unknown }).why
+    typeof internal === "object" && internal !== null
+      ? (internal as { why?: unknown }).why
       : undefined;
   if (typeof why !== "string" || why.trim() === "") {
     throw new Error(
-      `defineEndpoint(${route}): ${key}.why needs a reason — ${key === "internal" ? "who calls it, if no browser does?" : "why is the effect not predicted?"}`,
+      `defineEndpoint(${route}): internal.why needs a reason — who calls it, if no browser does?`,
     );
   }
-  return why;
+  return { why };
 }
 
 /** A declaration's `access`, resolved: absent → `"owner"`. */

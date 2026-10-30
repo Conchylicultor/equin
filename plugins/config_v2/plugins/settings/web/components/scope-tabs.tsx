@@ -7,7 +7,8 @@ import {
   forkDescriptorScope,
 } from "@plugins/config_v2/core";
 import type { ConfigV2ConflictLocations } from "@plugins/config_v2/core";
-import { useLive, useLiveMutation } from "@plugins/network/plugins/live/web";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
@@ -145,7 +146,7 @@ function AddScopeButton({
   scopes: string[];
   onSelect: (scopeId: string | undefined) => void;
 }) {
-  const { mutate: fork } = useLiveMutation(forkDescriptorScope);
+  const { mutate: fork } = useEndpointMutation(forkDescriptorScope);
 
   const available = useMemo(() => {
     const taken = new Set(scopes.map((sid) => scopeAppId(sid)));

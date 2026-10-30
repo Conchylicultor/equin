@@ -102,7 +102,7 @@ of one video are independent entries.
   - Register: `defineSupervisedJob('audio-analysis.beat-features')`
   - Routes:
     - `GET /api/audio-analysis/beat-features/:videoId`
-    - `POST /api/audio-analysis/beat-features/:videoId` — internal
+    - `POST /api/audio-analysis/beat-features/:videoId`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`
   - Exports (types):

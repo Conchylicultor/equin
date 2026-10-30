@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
-import { useLiveMutation } from "@plugins/network/plugins/live/web";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Rigid } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -111,7 +111,7 @@ export function DangerZone({ deploymentId }: SectionProps): ReactNode {
 function DangerZoneBody({ deployment }: { deployment: Deployment }): ReactNode {
   // Predicted: the site leaves every read at once, so the dialog closes and
   // the index opens with it; a refusal is the rejection toast.
-  const remove = useLiveMutation(deleteDeployment);
+  const remove = useEndpointMutation(deleteDeployment);
   const openPane = useOpenPane();
   const name = deployment.hostnames[0] ?? deployment.compositionId;
   return (

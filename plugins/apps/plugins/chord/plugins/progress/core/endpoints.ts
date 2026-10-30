@@ -75,8 +75,4 @@ export const recordRoundEndpoint = defineEndpoint({
   route: "POST /api/chord/rounds",
   body: RecordRoundBodySchema,
   response: z.object({ roundId: z.string() }),
-  unpredicted: {
-    reason: "server-decided",
-    why: "Whether each answer is right is the server's (the Rare joker is judged against its catalog), and chord.progress is a rollup over the last answers per chord and today's rounds, which the browser does not hold — so the aggregate cannot be recomputed from the request.",
-  },
 });

@@ -17,7 +17,7 @@
     - `ui/icons.Icon`
 - Machine:
   - Uses: `infra/endpoints.implementMachine`
-  - Routes: `POST /api/conversations/:id/drop-dependents` — unpredicted (response)
+  - Routes: `POST /api/conversations/:id/drop-dependents`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
 - Shared:

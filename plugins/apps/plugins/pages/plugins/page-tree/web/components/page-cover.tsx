@@ -1,8 +1,9 @@
 import { useRef, useState } from "react";
 
-import { useLiveMutation, useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLiveRow } from "@plugins/network/plugins/live/web";
 import {
   useAssetSrc,
+  useEndpointMutation,
   type AssetSrc,
 } from "@plugins/infra/plugins/endpoints/web";
 import {
@@ -60,10 +61,10 @@ export function PageCover({ pageId }: { pageId: string }) {
 function PageCoverInner({ page, pageId }: { page: Block; pageId: string }) {
   const data = pageData(page);
   const cover = data.cover ?? null;
-  const update = useLiveMutation(updateBlock, { label: "Cover" });
+  const { mutateAsync } = useEndpointMutation(updateBlock);
 
-  const saveCover = (next: PageCover | null) => {
-    update.mutate({
+  const saveCover = async (next: PageCover | null) => {
+    await mutateAsync({
       params: { id: pageId },
       body: { data: { ...pageData(page), cover: next } },
     });
@@ -93,7 +94,7 @@ function ImageCover({
 }: {
   cover: ImageCoverValue;
   onPick: (cover: PageCover) => void;
-  onSave: (cover: PageCover | null) => void;
+  onSave: (cover: PageCover | null) => Promise<void>;
 }) {
   const asset = useAssetSrc(attachmentUrl(cover.attachmentId));
   if (asset.kind !== "ready") {
@@ -124,7 +125,7 @@ function LoadedImageCover({
   cover: ImageCoverValue;
   src: string;
   onPick: (cover: PageCover) => void;
-  onSave: (cover: PageCover | null) => void;
+  onSave: (cover: PageCover | null) => Promise<void>;
 }) {
   const image = useImageLoad(src);
   return (
@@ -163,7 +164,7 @@ function FilledCover({
 }: {
   band: CoverBand;
   onPick: (cover: PageCover) => void;
-  onSave: (cover: PageCover | null) => void;
+  onSave: (cover: PageCover | null) => Promise<void>;
 }) {
   const [repositioning, setRepositioning] = useState(false);
   const { cover } = band;
@@ -229,7 +230,7 @@ function FilledCover({
               icon={deleteIcon}
               label="Remove cover"
               variant="secondary"
-              onClick={() => onSave(null)}
+              onClick={() => void onSave(null)}
             />
           </Stack>
         </Pin>
@@ -257,7 +258,7 @@ function CoverImage({
   src: string;
   image: ImageLoadState;
   repositioning: boolean;
-  onSave: (cover: PageCover | null) => void;
+  onSave: (cover: PageCover | null) => Promise<void>;
   onDone: () => void;
 }) {
   const [localY, setLocalY] = useState(cover.positionY);
@@ -298,8 +299,8 @@ function CoverImage({
     }
   };
 
-  const save = () => {
-    onSave({ ...cover, positionY: localY });
+  const save = async () => {
+    await onSave({ ...cover, positionY: localY });
     onDone();
   };
 

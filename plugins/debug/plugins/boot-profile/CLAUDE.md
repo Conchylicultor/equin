@@ -131,7 +131,7 @@ unbounded.
     - `debug.boot-traces` (keyed, window)
     - `debug.boot-traces:groups` (push)
     - `debug.boot-traces:rows` (keyed, point)
-  - Routes: `POST /api/boot-traces` — telemetry
+  - Routes: `POST /api/boot-traces`
 - Core:
   - Uses:
     - `fields.FieldsRecord`

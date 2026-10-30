@@ -33,7 +33,7 @@
   - Resources: `runtime-profiler.profile` (invalidate, snapshot, whole: one per distinct label of the kind since the last reset — route patterns, resource keys, job names, never per-call values (those ride `variant`), capped: SLOWEST_CAP, whole: one per distinct parent label (an entry's class, never one run) this label ran under since the last reset, whole: one key per gate layer the entry waited on — the closed set of charging layers, a dozen or so)
   - Routes:
     - `GET /api/debug/profiling/runtime`
-    - `POST /api/debug/profiling/runtime/reset` — unpredicted (server-decided)
+    - `POST /api/debug/profiling/runtime/reset`
     - `GET /api/debug/profiling/flight-window`
 - Core:
   - Uses:

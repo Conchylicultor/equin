@@ -1,10 +1,9 @@
 import { defineReportSink } from "@plugins/primitives/plugins/report-sink/core";
 
 // The observation sinks of every client-side write that predicts its effect —
-// `optimistic-mutation`'s overlay ops, its detached lane writes, and the
-// predicted endpoint effects. They live here, below `optimistic-mutation`
-// (which imports `network/live`), so both prediction systems emit on ONE pair
-// of sinks and the `reports/*` collectors drain them once.
+// `optimistic-mutation`'s overlay ops and its detached lane writes. They live
+// here, below `optimistic-mutation` (which imports `network/live`), beside the
+// send lane they share, and the `reports/*` collectors drain them.
 
 /**
  * One optimistic surface's server-acked ops and the server's snapshots durably
@@ -79,8 +78,7 @@ export const optimisticRejectionSink =
  *   missing row). Keeping such an op rendered would show a state the server
  *   has definitively refused to hold, and park every newer same-target op
  *   behind it forever — so the op is REJECTED: dropped from the overlay and
- *   reported (`optimisticRejectionSink`). Shared by every prediction system
- *   (`optimistic-mutation`'s overlay, the predicted endpoint effects).
+ *   reported (`optimisticRejectionSink`).
  * - `transient` — 5xx (the server failed, not the op), 401 (an expired
  *   session; the same op succeeds after re-auth), 408 and 429 (timing, not
  *   content). The op keeps rendering under never-revert, as `error` + Retry.

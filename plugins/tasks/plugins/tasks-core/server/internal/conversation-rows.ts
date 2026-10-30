@@ -48,18 +48,24 @@ const owned = {
 
 /**
  * `conversations-active`: every live (not `done`) conversation but the
- * machine-spawned ones — its base membership is the declaration's
- * (`membership` in core, rendered by `serveCollection`), so the browser
- * re-checks a predicted row against the same predicate. A close is a
- * where-flip exit, a resume an entrant.
+ * machine-spawned ones. A close is a where-flip exit, a resume an entrant.
  */
-export const conversationsActiveServeOptions = owned;
+export const conversationsActiveServeOptions = {
+  ...owned,
+  where: and(
+    ne(_conversations.status, "done"),
+    ne(_conversations.kind, "system"),
+  )!,
+};
 
-/**
- * `conversations-system`: every live (not `done`) `system` conversation —
- * its membership declared in core like `conversations-active`'s.
- */
-export const conversationsSystemServeOptions = owned;
+/** `conversations-system`: every live (not `done`) `system` conversation. */
+export const conversationsSystemServeOptions = {
+  ...owned,
+  where: and(
+    eq(_conversations.kind, "system"),
+    ne(_conversations.status, "done"),
+  )!,
+};
 
 /**
  * `conversations-gone`: every ended (`done`, with an `endedAt`) conversation

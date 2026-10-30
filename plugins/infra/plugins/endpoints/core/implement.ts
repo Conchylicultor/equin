@@ -13,16 +13,10 @@ import type {
   AnyEndpointDef,
   EndpointDef,
   InternalEndpointDef,
-  PredictedEndpointDef,
 } from "./define-endpoint";
 import { agentWriteGate, type AgentWrite } from "./agent-write";
 import { registerRouteSlowThreshold } from "./slow-threshold";
 import { HttpError } from "./http-error";
-import {
-  captureCommits,
-  COMMITS_HEADER,
-  commitsHeaderValue,
-} from "./commit-capture";
 import { injectFrameAgent } from "@plugins/primitives/plugins/embed/plugins/frame/plugins/agent/core";
 
 export { HttpError };
@@ -65,8 +59,6 @@ export function implement<
 >(
   endpoint:
     | EndpointDef<Route, TParams, TBody, TResponse, TQuery>
-    // The server ignores a predicted effect: it is the browser's.
-    | PredictedEndpointDef<Route, TParams, TBody, TResponse, TQuery>
     // No browser calls it; the server serves it like any other.
     | InternalEndpointDef<Route, TParams, TBody, TResponse, TQuery>,
   handler: EndpointHandler<TParams, TBody, TResponse, TQuery>,
@@ -113,11 +105,6 @@ export function endpointHandler<
   // Main is read-only for agent sessions: refused before the body is even
   // decoded. `null` (decided once) everywhere it cannot refuse.
   const agentGate = agentWriteGate(_endpoint);
-  // A predicted write's handler runs under the host's commit capture, and its
-  // response names the transactions it committed (`COMMITS_HEADER`) — the ack
-  // the browser's overlay confirms an uncompared prediction against
-  // (`commit-capture.ts`). Read off the definition, so no handler opts in.
-  const predicted = _endpoint.effect !== undefined;
   return brand(
     _endpoint.access,
     async (req: Request, params: Record<string, string>) => {
@@ -160,25 +147,17 @@ export function endpointHandler<
         // of hiding outside the span. Deduped callers share one `result` object
         // (read-only JSON-safe data) and each encodes its own Response below.
         // Records in `finally`, so a throwing handler's duration is captured too.
-        let commits: readonly string[] = [];
         const result = await recordEntrySpan(
           "http",
           _endpoint.route,
           async () => {
-            const callHandler = async (): Promise<JsonCompat<TResponse>> =>
+            const runHandler = async (): Promise<JsonCompat<TResponse>> =>
               handler({
                 params: params as TParams,
                 body,
                 query,
                 req,
               });
-            const runHandler = predicted
-              ? async (): Promise<JsonCompat<TResponse>> => {
-                  const captured = await captureCommits(callHandler);
-                  commits = captured.commits;
-                  return captured.value;
-                }
-              : callHandler;
             const gated = gate
               ? () =>
                   gate.run(runHandler, {
@@ -197,15 +176,11 @@ export function endpointHandler<
         // void/undefined → 204. `null` is a value (a `.nullable()` response),
         // not an absence: it goes out as JSON `null` so the client decodes it
         // through the response schema — a 204 reads back as `undefined`.
-        const res =
-          result === undefined
+        return result === undefined
             ? new Response(null, { status: 204 })
             : _endpoint.responseCodec
               ? _endpoint.responseCodec.encodeResponse(result as TResponse)
-              : Response.json(result);
-        const stamped = commitsHeaderValue(commits);
-        if (stamped !== null) res.headers.set(COMMITS_HEADER, stamped);
-        return res;
+            : Response.json(result);
       } catch (err) {
         if (err instanceof HttpError) {
           return new Response(err.message, { status: err.status });

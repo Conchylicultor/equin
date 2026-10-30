@@ -409,8 +409,8 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
   - Slot contributors: 94 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `ConfigV2.WebRegister` ×94
   - Uses:
+    - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
-    - `network/live.useLiveMutation`
     - `primitives/dom/web-storage.defineStore`
     - `primitives/live-state.combineResources`
     - `primitives/live-state.foldResource`
@@ -497,9 +497,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `fields/list/config.ListFieldDef`
     - `fields/object/config.isObjectFieldDef`
     - `infra/endpoints.defineEndpoint`
-    - `network/live.effects`
     - `network/live.liveValue`
-    - `network/live.patchValue`
     - `packages/list-bound.wholeList`
     - `packages/list-bound.wholeRecord`
     - `primitives/rank.Rank`

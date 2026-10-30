@@ -97,10 +97,10 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
     - `attachments.bytes` (invalidate, immutable)
     - `attachments.file` (push)
   - Routes:
-    - `POST /api/attachments` — unpredicted (server-minted-id)
+    - `POST /api/attachments`
     - `GET /api/attachments/:id`
-    - `DELETE /api/attachments/:id` — internal
-    - `PUT /api/attachments/holds` — unpredicted (unobserved)
+    - `DELETE /api/attachments/:id`
+    - `PUT /api/attachments/holds`
 - Core:
   - Uses:
     - `infra/endpoints.blob`

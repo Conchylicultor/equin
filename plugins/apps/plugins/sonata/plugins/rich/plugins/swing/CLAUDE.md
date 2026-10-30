@@ -15,9 +15,10 @@
     - `apps/sonata/document` ×8
     - `config_v2` ×3
     - `primitives/css/ui-kit` ×3
-    - `network/live` ×2
     - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
+    - `infra/endpoints.useFetchEndpoint`
+    - `network/live.useLiveRow`
     - `primitives/css/fill.Fill`
     - `primitives/css/slider.Slider`
     - `primitives/css/spacing.Stack`
@@ -41,7 +42,7 @@
   - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_swing`)
   - Exports (values): `songSwing`
   - Resources: `sonata-swing:rows` (keyed, point)
-  - Routes: `POST /api/sonata/songs/:id/swing` — predicted
+  - Routes: `POST /api/sonata/songs/:id/swing`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --background`
@@ -61,6 +62,8 @@
     - `apps/sonata/pedal/lane`
     - `apps/sonata/piano-keyboard`
     - `apps/sonata/piano-roll`
+- Exemptions:
+  - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/actions.ts` (sanctioned)
 - Core:
   - Exports (types): `SwingStop`
   - Exports (values):

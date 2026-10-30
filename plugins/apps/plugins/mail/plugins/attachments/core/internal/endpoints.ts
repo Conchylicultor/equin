@@ -12,10 +12,6 @@ export const mailAttachmentDownloadEndpoint = defineEndpoint({
   route: "POST /api/mail/attachment",
   body: z.object({ attachmentRowId: z.string() }),
   response: z.object({ storedAttachmentId: z.string(), url: z.string() }),
-  unpredicted: {
-    reason: "response",
-    why: "the server downloads the bytes from Gmail and the surface uses the URL it returns",
-  },
 });
 
 /** Same-origin URL for a stored attachment blob (served by `infra/attachments`). */

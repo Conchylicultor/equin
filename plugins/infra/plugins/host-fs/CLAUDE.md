@@ -243,9 +243,9 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
     - `watchHostPath`
   - Routes:
     - `GET /api/host-fs/raw`
-    - `POST /api/host-fs/open` — unpredicted (server-decided)
-    - `POST /api/host-fs/extract` — unpredicted (server-decided)
-    - `POST /api/host-fs/move` — unpredicted (response)
+    - `POST /api/host-fs/open`
+    - `POST /api/host-fs/extract`
+    - `POST /api/host-fs/move`
 - Core:
   - Uses:
     - `framework/product-name.LEGACY_IDS`

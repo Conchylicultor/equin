@@ -3,7 +3,8 @@ import {
   mapResource,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
-import { useLive, useLiveMutation } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
   taskRows,
   TaskGraph,
@@ -23,18 +24,21 @@ export type TaskPatch = Partial<{
 }>;
 
 /**
- * Edit a task (title, description, drop, hold): the change shows at once
- * (`updateTask` is a predicted write), so there is nothing to await. The
- * returned function is stable.
+ * Edit a task (title, description, drop, hold). Resolves once the server
+ * holds the edit — the task's live rows follow by push — so a caller hands
+ * the promise to its control (a `Button` pends on it, an editable field
+ * settles on it). The returned function is stable.
  */
-export function usePatchTask(): (id: string, patch: TaskPatch) => void {
-  const update = useLiveMutation(updateTask);
+export function usePatchTask(): (
+  id: string,
+  patch: TaskPatch,
+) => Promise<void> {
+  const { mutateAsync } = useEndpointMutation(updateTask);
   return useCallback(
-    (id, patch) => update.mutate({ params: { id }, body: patch }),
-    [update],
+    (id, patch) => mutateAsync({ params: { id }, body: patch }).then(() => {}),
+    [mutateAsync],
   );
 }
-
 /**
  * One task out of the live task set — a resource result whose ready arm is the
  * task, or `null` when the set is known and holds no such task (or `id` is

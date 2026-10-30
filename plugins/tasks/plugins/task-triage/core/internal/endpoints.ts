@@ -1,12 +1,5 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import {
-  choose,
-  patchRow,
-  removeRow,
-  upsertRow,
-} from "@plugins/network/plugins/live/core";
-import { taskTriageNotes, taskTriageReads } from "./resources";
 import { TRIAGE_STATES } from "./vocabulary";
 
 /** What a triage request did. */
@@ -27,10 +20,6 @@ export type RequestTriageOutcome = z.infer<typeof RequestTriageOutcomeSchema>;
 export const runTriageEndpoint = defineEndpoint({
   route: "POST /api/tasks/:taskId/triage",
   response: RequestTriageOutcomeSchema,
-  unpredicted: {
-    reason: "server-decided",
-    why: "It queues an LLM triage run and the returned queued or unchanged outcome is what the button reflects.",
-  },
 });
 
 /**
@@ -40,15 +29,6 @@ export const runTriageEndpoint = defineEndpoint({
 export const answerTriageEndpoint = defineEndpoint({
   route: "PUT /api/tasks/:taskId/triage/answer",
   body: z.object({ answer: z.string().min(1).nullable() }),
-  // The card offers only the row's own answers on a row it holds, so the
-  // server's 400 / 404 cannot arise from it: the answer lands on the row.
-  effect: (on) =>
-    patchRow(
-      on,
-      taskTriageReads,
-      ({ params }) => params.taskId,
-      ({ body }) => ({ set: { answer: body.answer } }),
-    ),
 });
 
 /**
@@ -58,20 +38,4 @@ export const answerTriageEndpoint = defineEndpoint({
 export const setTriageNoteEndpoint = defineEndpoint({
   route: "PUT /api/tasks/:taskId/triage/note",
   body: z.object({ note: z.string() }),
-  // Blank deletes the note row, anything else upserts it (the server's rule).
-  effect: (on) =>
-    choose(on, ({ body }) => (body.note.trim() === "" ? "clear" : "set"), {
-      clear: removeRow(on, taskTriageNotes, ({ params }) => params.taskId),
-      set: upsertRow(
-        on,
-        taskTriageNotes,
-        ({ params }) => params.taskId,
-        (row, { params, body }) => ({
-          ...row,
-          taskId: params.taskId,
-          note: body.note,
-        }),
-        { set: ({ body }) => ({ note: body.note }) },
-      ),
-    }),
 });

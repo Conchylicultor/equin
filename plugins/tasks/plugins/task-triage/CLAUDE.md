@@ -81,10 +81,10 @@ risk, a context for the person, at most one one-click question. Design:
     - `ConfigV2.WebRegister` "config"
     - `DynamicEnum.Options` "Model"
   - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `network/live` ×5
+    - `network/live` ×4
+    - `infra/endpoints` ×3
     - `primitives/css/ui-kit` ×3
     - `primitives/live-state` ×3
-    - `infra/endpoints` ×2
     - `tasks/automations` ×2
     - `tasks/task-detail` ×2
     - `config_v2.ConfigV2`
@@ -163,9 +163,9 @@ risk, a context for the person, at most one one-click question. Design:
     - `task-triage.reads:groups` (push)
     - `task-triage.reads:rows` (keyed, point)
   - Routes:
-    - `POST /api/tasks/:taskId/triage` — unpredicted (server-decided)
-    - `PUT /api/tasks/:taskId/triage/answer` — predicted
-    - `PUT /api/tasks/:taskId/triage/note` — predicted
+    - `POST /api/tasks/:taskId/triage`
+    - `PUT /api/tasks/:taskId/triage/answer`
+    - `PUT /api/tasks/:taskId/triage/note`
 - Core:
   - Uses:
     - `fields.nullable`
@@ -175,11 +175,7 @@ risk, a context for the person, at most one one-click question. Design:
     - `fields/text/config.textField`
     - `infra/endpoints.defineEndpoint`
     - `infra/entity-extensions.defineExtensionShape`
-    - `network/live.choose`
     - `network/live.liveCollection`
-    - `network/live.patchRow`
-    - `network/live.removeRow`
-    - `network/live.upsertRow`
     - `packages/list-bound.wholeList`
     - `tasks/tasks-core.tasksEntityRef`
   - Exports (types):

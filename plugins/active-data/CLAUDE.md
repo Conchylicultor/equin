@@ -144,13 +144,14 @@ Behavior:
   - Contributes:
     - `MarkdownEnhancerSlot`
     - `InlineTextWalkerSlot`
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/markdown` ×6
     - `primitives/text-editor/inline-chip` ×5
     - `primitives/inline-text` ×4
-    - `network/live` ×2
+    - `infra/endpoints` ×2
     - `page/editor` ×2
     - `primitives/live-state` ×2
+    - `network/live.useLive`
     - `primitives/dom/copy-source-text.copiesAsText`
   - Exports (types):
     - `ActiveDataBindingHandle`
@@ -187,13 +188,12 @@ Behavior:
   - Exports (values): `_activeDataBindings`
   - Resources: `active-data.bindings` (push, whole: one conversation's widget bindings — a handful per assistant message; the table's key is the composite (conversationId, messageId, tag, occurrenceIndex), so no single-id :rows read fits)
   - Routes:
-    - `PUT /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex` — predicted
-    - `DELETE /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex` — predicted
+    - `PUT /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
+    - `DELETE /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
-    - `network/live.patchValue`
     - `packages/list-bound.wholeList`
   - Exports (types):
     - `ActiveDataBinding`

@@ -1,7 +1,5 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { patchRow } from "@plugins/network/plugins/live/core";
-import { songsEntityRef } from "@plugins/apps/plugins/sonata/plugins/library/core";
 
 /**
  * Create a chord-grid–backed song. Unlike MIDI (an imported, immutable file),
@@ -25,10 +23,6 @@ export const createChordGridSong = defineEndpoint({
   route: "POST /api/sonata/songs/chord-grid",
   body: CreateChordGridSongBodySchema,
   response: z.object({ id: z.string(), title: z.string() }),
-  unpredicted: {
-    reason: "server-minted-id",
-    why: "the shell opens the new song by the id the server mints",
-  },
 });
 
 /**
@@ -53,15 +47,4 @@ export const updateChordGridSong = defineEndpoint({
   route: "PUT /api/sonata/songs/:id/chord-grid",
   body: UpdateChordGridSongBodySchema,
   response: z.object({ ok: z.literal(true) }),
-  // The parent song's metrics show at once (the grid text itself is not a live
-  // row — the editor already holds it).
-  effect: (on) =>
-    patchRow(
-      on,
-      songsEntityRef,
-      ({ params }) => params.id,
-      ({ body }) => ({
-        set: { durationSec: body.durationSec, endBeat: body.endBeat },
-      }),
-    ),
 });

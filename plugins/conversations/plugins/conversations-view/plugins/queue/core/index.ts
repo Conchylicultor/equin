@@ -9,3 +9,4 @@ export {
   pinQueue,
 } from "./endpoints";
 export { queueShape } from "./resources";
+export type { ReorderQueueBody } from "./endpoints";

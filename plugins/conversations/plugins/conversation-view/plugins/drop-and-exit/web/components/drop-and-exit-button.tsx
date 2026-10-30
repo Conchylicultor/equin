@@ -1,6 +1,7 @@
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { DropdownMenuItem } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo } from "react";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
   conversationName,
   type Conversation as ConversationRecord,
@@ -14,7 +15,7 @@ import {
   useCombinedResources,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
-import { useLive, useLiveMutation } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
 import {
   attemptWork,
@@ -95,14 +96,22 @@ function DropAndExitEntry({
     id: conversation.id,
     name: conversationName(conversation),
   };
-  // A predicted write: the conversation reads closed at once (no
-  // "Dropping…" state). A close that dropped nothing says nothing — the user
-  // saw it happen; whether the task dropped is the server's answer, so its
-  // notification waits for it. A refusal is the rejection toast.
-  const close = useLiveMutation(dropAndExit, {
+  const close = useEndpointMutation(dropAndExit, {
+    // A close that dropped nothing says nothing: the user saw it happen.
     onSuccess: (data) => {
       if (data.dropped) toast(droppedNotification(subject));
     },
+    onError: (err) =>
+      toast({
+        type: "conversation",
+        category: "conversations",
+        title: `${landed ? "Complete" : "Drop"} & Close failed`,
+        description: "",
+        subjectId: subject.id,
+        subjectName: subject.name,
+        detail: err.message,
+        variant: "error",
+      }),
   });
 
   // Dropping the task only makes sense when this is the last active conversation
@@ -128,8 +137,10 @@ function DropAndExitEntry({
 
   // Closing stops the agent, which needs the computer: on a host without
   // it (the demo) the entry is disabled and says why.
+  const isPending = close.kind === "available" && close.isPending;
   const disabled =
     close.kind === "unavailable" ||
+    isPending ||
     live.status === "gone" ||
     live.status === "done" ||
     live.status === "starting";
@@ -137,12 +148,12 @@ function DropAndExitEntry({
   const { icon, label, variant } = landed
     ? {
         icon: checkCircleIcon,
-        label: "Complete & Close",
+        label: isPending ? "Completing…" : "Complete & Close",
         variant: "default" as const,
       }
     : {
         icon: deleteForeverIcon,
-        label: "Drop & Close",
+        label: isPending ? "Dropping…" : "Drop & Close",
         variant: "destructive" as const,
       };
 

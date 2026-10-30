@@ -458,13 +458,12 @@ navigation, so it starts from nothing remembered.
   - Uses: 89 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×9
     - `primitives/data-view` ×6
+    - `infra/endpoints` ×5
     - `primitives/collapsible` ×5
-    - `infra/endpoints` ×4
     - `hints` ×3
     - `primitives/embed/frame` ×3
     - `primitives/hover-reveal` ×3
     - `primitives/persistent-draft` ×3
-    - `network/live` ×2
     - `primitives/action-presentation` ×2
     - `primitives/css/spacing` ×2
     - `primitives/icon-button` ×2
@@ -474,6 +473,7 @@ navigation, so it starts from nothing remembered.
     - `primitives/slot-render` ×2
     - `apps-core/tabs.useAppLinkProps`
     - `apps/prototypes/state.usePrototypeState`
+    - `network/live.useLive`
     - `primitives/adaptive-bar.AdaptiveBar`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`

@@ -177,7 +177,7 @@ export function CloseAction({
       label="Close conversation"
       onClick={(e) => {
         e.stopPropagation();
-        onCloseConversation(row.id, e);
+        return onCloseConversation(row.id, e);
       }}
     />
   );

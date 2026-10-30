@@ -152,7 +152,7 @@ is drift repair, not a correctness dependency.
   - Resources:
     - `sonata.midi-folders.song-count` (push)
     - `sonata.midi-folders.status` (push, notified, whole: one entry per configured watched folder — a handful, user-authored)
-  - Routes: `POST /api/sonata/midi-folders/recheck` — unpredicted (response)
+  - Routes: `POST /api/sonata/midi-folders/recheck`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --background`

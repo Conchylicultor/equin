@@ -44,15 +44,14 @@ The Claude accounts agents can run on, and which one new agents launch on.
     - `readClaudeAccounts`
     - `selectClaudeAccountById`
   - Routes:
-    - `POST /api/claude-accounts/add` — unpredicted (server-minted-id)
-    - `POST /api/claude-accounts/remove` — predicted
-    - `POST /api/claude-accounts/select` — predicted
-    - `POST /api/claude-accounts/auto-switch` — predicted
+    - `POST /api/claude-accounts/add`
+    - `POST /api/claude-accounts/remove`
+    - `POST /api/claude-accounts/select`
+    - `POST /api/claude-accounts/auto-switch`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
-    - `network/live.patchValue`
     - `packages/list-bound.wholeList`
   - Exports (types):
     - `ClaudeAccount`

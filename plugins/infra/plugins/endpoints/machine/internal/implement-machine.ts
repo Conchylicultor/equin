@@ -5,7 +5,6 @@ import type {
 import type {
   InternalMachineEndpointDef,
   MachineEndpointDef,
-  PredictedMachineEndpointDef,
 } from "../../core/define-endpoint";
 import type { AgentWrite } from "../../core/agent-write";
 import type { EndpointAccess } from "@plugins/framework/plugins/principal/core";
@@ -31,8 +30,6 @@ export function implementMachine<
 >(
   endpoint:
     | MachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>
-    // The server ignores a predicted effect: it is the browser's.
-    | PredictedMachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>
     // No browser calls it; the machine half serves it like any other.
     | InternalMachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>,
   handler: EndpointHandler<TParams, TBody, TResponse, TQuery>,

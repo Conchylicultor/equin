@@ -60,7 +60,7 @@ Design: [`research/2026-09-15-page-agent-page-follow-ups.md`](../../../../../../
   - Contributes: `pageDetailPane.Actions` "page-author" → `PageKindControl`
   - Uses:
     - `apps/pages/page-tree.pageDetailPane`
-    - `network/live.useLiveMutation`
+    - `infra/endpoints.useEndpointMutation`
     - `network/live.useLiveRow`
     - `primitives/css/control-panel.ControlPanel`
     - `primitives/css/control-panel.ControlPanelPopover`

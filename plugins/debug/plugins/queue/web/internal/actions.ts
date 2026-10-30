@@ -2,7 +2,6 @@ import {
   EndpointError,
   useEndpointMutation,
 } from "@plugins/infra/plugins/endpoints/web";
-import { useLiveMutation } from "@plugins/network/plugins/live/web";
 import { cancelJob, retryJob } from "@plugins/infra/plugins/jobs/core";
 import {
   deleteTriggerEndpoint,
@@ -30,16 +29,16 @@ export function useQueueActions() {
   const retry = useEndpointMutation(retryJob);
   const cancel = useEndpointMutation(cancelJob);
   const runNow = useEndpointMutation(runBackgroundNowEndpoint);
-  const patchTrigger = useLiveMutation(patchTriggerEndpoint);
-  const deleteTrigger = useLiveMutation(deleteTriggerEndpoint);
+  const patchTrigger = useEndpointMutation(patchTriggerEndpoint);
+  const deleteTrigger = useEndpointMutation(deleteTriggerEndpoint);
   return {
     retryJob: (id: string) => settled(retry.mutateAsync({ params: { id } })),
     cancelJob: (id: string) => settled(cancel.mutateAsync({ params: { id } })),
     runJobNow: (name: string) =>
       settled(runNow.mutateAsync({ body: { kind: "job", name } })),
-    // Predicted: the trigger list shows the change at once, nothing to await.
     setTriggerEnabled: (id: string, enabled: boolean) =>
-      patchTrigger.mutate({ params: { id }, body: { enabled } }),
-    deleteTrigger: (id: string) => deleteTrigger.mutate({ params: { id } }),
+      settled(patchTrigger.mutateAsync({ params: { id }, body: { enabled } })),
+    deleteTrigger: (id: string) =>
+      settled(deleteTrigger.mutateAsync({ params: { id } })),
   };
 }

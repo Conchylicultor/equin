@@ -33,7 +33,7 @@
   - Exports (values): `recoveryPane`
 - Machine:
   - Uses: `infra/endpoints.implementMachine`
-  - Routes: `POST /api/conversations-recover/restore-batch` — unpredicted (response)
+  - Routes: `POST /api/conversations-recover/restore-batch`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted`

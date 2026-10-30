@@ -263,7 +263,7 @@ expandable JSON.
     - `debug.traces` (keyed, window)
     - `debug.traces:groups` (push)
     - `debug.traces:rows` (keyed, point)
-  - Routes: `POST /api/debug/trace/test-trigger` — internal
+  - Routes: `POST /api/debug/trace/test-trigger`
 - Core:
   - Uses:
     - `config_v2.defineConfig`

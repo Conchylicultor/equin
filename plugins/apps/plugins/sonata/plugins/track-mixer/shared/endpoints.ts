@@ -1,7 +1,5 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { patchValue } from "@plugins/network/plugins/live/core";
-import { trackViews } from "./resources";
 
 /**
  * Partial-patch upsert of one or more tracks' view overrides — the SAME patch
@@ -29,57 +27,9 @@ export const upsertTrackView = defineEndpoint({
     hidden: z.boolean().optional(),
     volume: z.number().min(0).max(2).optional(),
   }),
-  // The song's overrides are ONE value tuple `{ songId }`, so the write rides
-  // that tuple's send lane — the SAME lane as a reset, last writer wins in the
-  // order issued — and needs no named lane. Mirrors the server: a fresh row
-  // takes the column defaults, an existing one only the provided columns.
-  effect: (on) =>
-    patchValue(
-      on,
-      trackViews,
-      ({ params }) => ({ songId: params.songId }),
-      (rows, { params, body }) => {
-        const patch = {
-          ...(body.color === undefined ? {} : { color: body.color }),
-          ...(body.instrument === undefined
-            ? {}
-            : { instrument: body.instrument }),
-          ...(body.muted === undefined ? {} : { muted: body.muted }),
-          ...(body.hidden === undefined ? {} : { hidden: body.hidden }),
-          ...(body.volume === undefined ? {} : { volume: body.volume }),
-        };
-        const wanted = new Set(body.trackIds);
-        const next = rows.map((r) =>
-          wanted.has(r.trackId) ? { ...r, ...patch } : r,
-        );
-        const have = new Set(rows.map((r) => r.trackId));
-        for (const trackId of new Set(body.trackIds)) {
-          if (have.has(trackId)) continue;
-          next.push({
-            songId: params.songId as (typeof rows)[number]["songId"],
-            trackId,
-            color: null,
-            instrument: null,
-            muted: false,
-            hidden: false,
-            volume: 1,
-            ...patch,
-          });
-        }
-        return next;
-      },
-    ),
 });
 
 /** Reset a song to defaults by deleting all its persisted track overrides. */
 export const resetTrackView = defineEndpoint({
   route: "DELETE /api/sonata/songs/:songId/track-view",
-  // Deletes every row of the song: its one value tuple becomes empty.
-  effect: (on) =>
-    patchValue(
-      on,
-      trackViews,
-      ({ params }) => ({ songId: params.songId }),
-      () => [],
-    ),
 });

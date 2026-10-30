@@ -12,10 +12,6 @@ import { DeploySecretValueSchema } from "./schemas";
 export const setDeploySecretValue = defineEndpoint({
   route: "PUT /api/deploy-secrets/values/:key",
   body: z.object({ value: DeploySecretValueSchema }),
-  unpredicted: {
-    reason: "server-decided",
-    why: "the server fingerprints the secret and flips every deployment's grant to changed; the value is never echoed back",
-  },
 });
 
 /**
@@ -26,10 +22,6 @@ export const setDeploySecretValue = defineEndpoint({
 export const approveDeploySecret = defineEndpoint({
   route: "POST /api/deploy-secrets/deployments/:deploymentId/approve",
   body: z.object({ key: z.string(), fingerprint: z.string() }),
-  unpredicted: {
-    reason: "precondition",
-    why: "409 when the secret's fingerprint changed since the user saw it; never approved blind",
-  },
 });
 
 /**

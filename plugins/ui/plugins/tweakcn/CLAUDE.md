@@ -10,7 +10,7 @@
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `ui/theme-engine/saved-themes.saveTheme`
-  - Routes: `POST /api/tweakcn/themes` — unpredicted (server-decided)
+  - Routes: `POST /api/tweakcn/themes`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`

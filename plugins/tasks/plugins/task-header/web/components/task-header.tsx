@@ -46,13 +46,10 @@ export function TaskHeader({ taskId }: { taskId: string }) {
   const task = result.data;
   if (task === null) return null;
 
-  const toggleDrop = () => {
+  const toggleDrop = () =>
     patchTask(taskId, { drop: task.status !== "dropped" });
-  };
 
-  const toggleHold = () => {
-    patchTask(taskId, { hold: task.status !== "held" });
-  };
+  const toggleHold = () => patchTask(taskId, { hold: task.status !== "held" });
 
   return (
     <Stack gap="lg">

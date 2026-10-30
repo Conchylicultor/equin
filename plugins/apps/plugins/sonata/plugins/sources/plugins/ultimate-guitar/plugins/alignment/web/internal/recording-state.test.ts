@@ -52,7 +52,6 @@ function found(over: Partial<UgAlignmentRow>): LiveRowResult<UgAlignmentRow> {
   return {
     status: "ready",
     found: true,
-    pending: false,
     refetch,
     row: {
       songId: "s1",
@@ -79,10 +78,7 @@ describe("recordingState", () => {
 
   it("is no-video for a song without a row", () => {
     expect(
-      recordingState(
-        { status: "ready", found: false, pending: false, refetch },
-        tab,
-      ).kind,
+      recordingState({ status: "ready", found: false, refetch }, tab).kind,
     ).toBe("no-video");
   });
 

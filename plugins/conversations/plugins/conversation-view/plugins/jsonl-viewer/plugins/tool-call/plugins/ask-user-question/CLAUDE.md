@@ -190,7 +190,7 @@ ordinary `MarkerAnswerForm` renders with the old answer already in its draft.
     - `useSentAnswer`
 - Machine:
   - Uses: `infra/endpoints.implementMachine`
-  - Routes: `POST /api/conversations/:id/answer-question` — unpredicted (response)
+  - Routes: `POST /api/conversations/:id/answer-question`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --foreground`

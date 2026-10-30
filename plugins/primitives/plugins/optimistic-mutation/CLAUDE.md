@@ -6,6 +6,13 @@ of a collection declared `all: { by }`) immediate,
 snap-free optimistic updates that reconcile cleanly with the authoritative
 WebSocket push.
 
+**`apply` must not restate the server.** It is the SAME pure reducer the
+handler runs, imported from `core/` (the page editor's `applyBlockOp` — its
+one consumer), never a browser re-implementation of what the handler writes: a
+second spelling drifts (the Queue reorder's neighbour rule did, and was removed
+— `research/2026-10-30-global-remove-duplicated-optimistic-logic.md`). A write
+with no shared reducer is not optimistic: it renders pending until the push.
+
 ## Model: overlay / replay — and never-revert
 
 Pending local mutations live **outside** the TanStack cache, in React state
@@ -54,9 +61,8 @@ The primitive already asserted it, on its failed-op retry drain:
 …and enforced it there while leaving **first dispatch** racing. Dispatch, `retry`
 and the reconnect drain are now ONE mechanism: the **send lane** — which lives in
 `network/live/web` (`enqueueOnSendLane` / `resourceSendLaneKey`,
-`network/live/web/internal/send-lane.ts`), not here, so every prediction system
-(this overlay, its lane-only writes, the predicted endpoint effects) shares ONE
-module-level registry; this plugin's `web/internal/lane-writes.ts` holds only
+`network/live/web/internal/send-lane.ts`), not here, so this overlay and its
+lane-only writes share ONE module-level registry; this plugin's `web/internal/lane-writes.ts` holds only
 `enqueueResourceWrite` / `enqueueDetachedWrite` over it.
 
 - **Per `(resource.key, paramsKey)`, module-level** — NOT a per-hook ref: two
@@ -305,7 +311,7 @@ picks.dispatch(change);                  // the ready arm: data, serverData, err
 - **Failure model.** A rejected `mutate` is classified once, and only a
   PERMANENT rejection leaves the overlay:
   - **`rejected`** (`EndpointError` whose status `classifyRejection` — in
-    `network/live/web`, shared with the predicted endpoint effects — calls
+    `network/live/web` — calls
     `permanent`: any 4xx but 401 / 408 / 429): a FINAL verdict — the server will
     answer the same way however often the op is re-sent. Never-revert protects
     predictions whose outcome is UNKNOWN; this outcome is known, so keeping the
@@ -376,8 +382,7 @@ picks.dispatch(change);                  // the ready arm: data, serverData, err
     own write (undo→redo), not a lost race: the drop still happens, the
     `superseded` report is suppressed. Misclassification costs a mis-filed
     report and never a lost edit, which is where a heuristic belongs.
-- **`optimisticDivergenceReportSink`** (`network/live/web`, shared with the
-  predicted endpoint effects) is the sanctioned sink
+- **`optimisticDivergenceReportSink`** (`network/live/web`) is the sanctioned sink
   inversion, mirroring `error-boundary`'s `boundaryReportSink`: this primitive
   must not import `reports`, so `reports/plugins/optimistic-divergence` registers
   the handler at mount and files the report. The payload

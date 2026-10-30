@@ -16,13 +16,14 @@ import {
 import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { isEmbeddedDocument } from "@plugins/primitives/plugins/embed/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
-import { useLive, useLiveMutation } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { useTransport } from "@plugins/primitives/plugins/networking/web";
 import {
-  contentUrlOver,
   type ContentUrl,
+  contentUrlOver,
+  useEndpointMutation,
 } from "@plugins/infra/plugins/endpoints/web";
 import type { ContentPath } from "@plugins/infra/plugins/endpoints/core";
 import {
@@ -269,7 +270,7 @@ function DetailGate(props: PrototypeDetailProviderProps): ReactNode {
   // until the record loads: a pick can only be made on top of the picks the
   // user can see.
   const stored = useLive(prototypePicks, { name });
-  const { mutate: writePicks } = useLiveMutation(setPrototypePicks);
+  const { mutate: writePicks } = useEndpointMutation(setPrototypePicks);
   const writeShared = useCallback(
     (change: PicksChange) => writePicks({ params: { name }, body: change }),
     [writePicks, name],

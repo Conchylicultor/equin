@@ -13,14 +13,14 @@ The pages sidebar filters and groups by it with no tags code of its own.
 
 ## Plugin reference
 
-- Description: Page tags, web half: the vocabulary and per-page reads (usePageTags, usePageTagIndex, the optimistic usePageTagsEditor), the soft TagChip / TagDot, the read-only PageTagChips, and the TagPicker popover (search or create, toggle, and per-tag rename / recolor / delete). Shows a page's tags after its title on every page reference (sub-page rows, link blocks, backlinks), and presents the exposed `tags` field (options read live from the vocabulary) in every list whose rows are blocks. Page tags, server half: the page_tags vocabulary and the page_blocks_ext_tags assignments (one ordered tag-id list per tagged page), both served live; the vocabulary CRUD and per-page PUT endpoints; and the reads/writes other plugins use — loadPageTags (the <page-meta> header), resolveTagNames (name → tag, refusing unknown names unless created explicitly) and writeResolvedPageTags / setPageTags. A page's tags are exposed as the `tags` field of every list whose rows are blocks (LiveColumns.Expose).
+- Description: Page tags, web half: the vocabulary and per-page reads (usePageTags, usePageTagIndex, the editable usePageTagsEditor), the soft TagChip / TagDot, the read-only PageTagChips, and the TagPicker popover (search or create, toggle, and per-tag rename / recolor / delete). Shows a page's tags after its title on every page reference (sub-page rows, link blocks, backlinks), and presents the exposed `tags` field (options read live from the vocabulary) in every list whose rows are blocks. Page tags, server half: the page_tags vocabulary and the page_blocks_ext_tags assignments (one ordered tag-id list per tagged page), both served live; the vocabulary CRUD and per-page PUT endpoints; and the reads/writes other plugins use — loadPageTags (the <page-meta> header), resolveTagNames (name → tag, refusing unknown names unless created explicitly) and writeResolvedPageTags / setPageTags. A page's tags are exposed as the `tags` field of every list whose rows are blocks (LiveColumns.Expose).
 - Web:
   - Contributes:
     - `IdKinds.Kind` "tag"
     - `PageReference.Trailing` → `PageTagChips`
     - `FieldPresentation.Register` "exposure:page_blocks_ext_tags"
-  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `network/live` ×7
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live` ×6
     - `primitives/css/ui-kit` ×4
     - `primitives/live-state` ×4
     - `ids.IdKinds`
@@ -89,10 +89,10 @@ The pages sidebar filters and groups by it with no tags code of its own.
     - `page-tags.vocabulary` (keyed)
     - `page-tags.vocabulary:rows` (keyed, point)
   - Routes:
-    - `PUT /api/pages/:pageId/tags` — predicted
-    - `POST /api/page-tags` — unpredicted (server-minted-id)
-    - `PATCH /api/page-tags/:tagId` — predicted
-    - `DELETE /api/page-tags/:tagId` — predicted
+    - `PUT /api/pages/:pageId/tags`
+    - `POST /api/page-tags`
+    - `PATCH /api/page-tags/:tagId`
+    - `DELETE /api/page-tags/:tagId`
 - Core:
   - Uses:
     - `fields.FieldsRecord`

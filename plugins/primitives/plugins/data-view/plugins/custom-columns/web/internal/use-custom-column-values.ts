@@ -1,9 +1,10 @@
 import { useCallback, useMemo } from "react";
-import { useLive, useLiveMutation } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
   mapResource,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
   customColumnValues,
   setCustomColumnValue,
@@ -47,11 +48,11 @@ export function useCustomColumnValues(dataViewId: string): CustomColumnValues {
   return useMemo(() => mapResource(result, indexValues), [result]);
 }
 
-/** Upsert (or delete-on-empty) a single (predicted) custom-column cell value. */
+/** Upsert (or delete-on-empty) a single custom-column cell value. */
 export function useSetCustomColumnValue(): (
   args: SetCustomColumnValueBody,
 ) => void {
-  const { mutate } = useLiveMutation(setCustomColumnValue);
+  const { mutate } = useEndpointMutation(setCustomColumnValue);
   return useCallback((args) => mutate({ body: args }), [mutate]);
 }
 
@@ -59,6 +60,6 @@ export function useSetCustomColumnValue(): (
 export function useDeleteCustomColumnValues(): (
   args: DeleteCustomColumnValuesBody,
 ) => void {
-  const { mutate } = useLiveMutation(deleteCustomColumnValues);
+  const { mutate } = useEndpointMutation(deleteCustomColumnValues);
   return useCallback((args) => mutate({ body: args }), [mutate]);
 }

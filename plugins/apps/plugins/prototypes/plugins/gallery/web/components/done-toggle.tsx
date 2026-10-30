@@ -34,7 +34,7 @@ export function useDoneActive(row: PrototypeGalleryRow): boolean {
  * the gallery joins the states onto the list before it renders.
  */
 export function DoneCardAction({ row }: ItemActionProps<PrototypeGalleryRow>) {
-  const { setState } = useSetPrototypeState();
+  const { pending, setState } = useSetPrototypeState();
   return (
     <ControlSizeProvider size="sm">
       <IconButton
@@ -42,6 +42,7 @@ export function DoneCardAction({ row }: ItemActionProps<PrototypeGalleryRow>) {
         label={row.done ? "Done — mark as not done" : "Mark as done"}
         aria-pressed={row.done}
         variant="ghost"
+        loading={pending}
         className={row.done ? "text-primary-text" : undefined}
         onClick={(e) => {
           // The card's own click opens the prototype; ticking it must not.
@@ -62,7 +63,7 @@ export function DoneCardAction({ row }: ItemActionProps<PrototypeGalleryRow>) {
 export function DoneHeaderAction() {
   const { name } = usePrototypeDetail();
   const read = usePrototypeState(name);
-  const { setState } = useSetPrototypeState();
+  const { pending, setState } = useSetPrototypeState();
   if (read.status === "loading") {
     return (
       <TitleActionButton icon={checkCircleIcon} label="Mark as done" disabled />
@@ -86,6 +87,7 @@ export function DoneHeaderAction() {
       on={done}
       label={done ? "Done — click to reopen" : "Mark as done"}
       aria-pressed={done}
+      loading={pending}
       onClick={() => setState(name, { done: !done })}
     />
   );

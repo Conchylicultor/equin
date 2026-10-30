@@ -240,18 +240,19 @@ A round nothing was typed into reads exactly like the next one, so after
     - `chord.curriculum` (push, whole: the chords the learner turned on — a subset of the catalog's chords)
     - `chord.curriculum.loops` (invalidate, fixed)
   - Routes:
-    - `POST /api/chord/curriculum/chords` — predicted
-    - `POST /api/chord/curriculum/blanks` — predicted
-    - `POST /api/chord/curriculum/extras` — predicted
+    - `POST /api/chord/curriculum/chords`
+    - `POST /api/chord/curriculum/blanks`
+    - `POST /api/chord/curriculum/extras`
 - Web:
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/collapsible` ×4
     - `primitives/css/coords` ×3
     - `apps/chord/vocabulary` ×2
+    - `infra/endpoints` ×2
     - `music/chord-box` ×2
-    - `network/live` ×2
     - `primitives/hover-reveal` ×2
     - `primitives/persistent-draft` ×2
+    - `network/live.useLive`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
     - `primitives/css/fill.Fill`
@@ -265,6 +266,7 @@ A round nothing was typed into reads exactly like the next one, so after
     - `primitives/css/ui-kit.cn`
     - `primitives/css/yield.yieldClass`
     - `primitives/dom/web-storage.defineStore`
+    - `shell/toast.showToast`
     - `ui/icons.Icon`
   - Exports (types):
     - `ChipStanding`
@@ -295,7 +297,6 @@ A round nothing was typed into reads exactly like the next one, so after
     - `integrations/hooktheory.HookpadMode`
     - `integrations/hooktheory.HookpadModeSchema`
     - `network/live.liveValue`
-    - `network/live.patchValue`
     - `packages/list-bound.wholeList`
   - Exports (types):
     - `AskedBox`

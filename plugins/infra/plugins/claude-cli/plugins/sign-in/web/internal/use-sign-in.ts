@@ -1,5 +1,6 @@
-import { useLive, useLiveMutation } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
+  useEndpointMutation,
   useFetchEndpoint,
   useMachineAvailability,
 } from "@plugins/infra/plugins/endpoints/web";
@@ -36,7 +37,7 @@ export type ClaudeSignInActions =
 export function useClaudeSignInActions(): ClaudeSignInActions {
   const availability = useMachineAvailability(startClaudeSignIn);
   const fetchEndpoint = useFetchEndpoint();
-  const cancel = useLiveMutation(cancelClaudeSignIn);
+  const cancel = useEndpointMutation(cancelClaudeSignIn);
   if (!availability.available)
     return { kind: "unavailable", message: availability.message };
   if (cancel.kind === "unavailable")

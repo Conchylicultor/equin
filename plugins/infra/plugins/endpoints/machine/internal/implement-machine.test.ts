@@ -10,14 +10,12 @@ import { implementMachine, machineHandler } from "./implement-machine";
 
 const launch = defineEndpoint({
   route: "POST /api/launch",
-  unpredicted: { reason: "response", why: "test fixture" },
   response: z.object({ ok: z.boolean() }),
   needsMachine: { feature: "Launching an agent" },
 });
 
 const ping = defineEndpoint({
   route: "POST /api/ping",
-  unpredicted: { reason: "response", why: "test fixture" },
   response: z.object({ ok: z.boolean() }),
 });
 

@@ -15,9 +15,6 @@ import {
   type MachineFeature,
 } from "@plugins/infra/plugins/endpoints/core";
 import type { LiveUnavailable, MachineDecl, RefusalsDecl } from "./use-live";
-import { valueSubject } from "@plugins/network/plugins/live/core";
-import { predictValue, valueParamsKey } from "./predict-overlay";
-import { usePredictStore } from "./use-predicted";
 
 // The event-shaped read of a live value: ONE answer to a question an event
 // asks and its own `await` consumes (validate then act, read then confirm).
@@ -112,7 +109,6 @@ export interface LiveReader {
 export function useLiveReader(): LiveReader {
   const client = useNotificationsClient();
   const { machine } = useTransport();
-  const store = usePredictStore();
   return useMemo(() => {
     const read = (value: AnyValue, ...rest: unknown[]) => {
       const decl = readableValue(value, rest);
@@ -130,40 +126,16 @@ export function useLiveReader(): LiveReader {
               (arg ?? {}) as Record<string, string>,
               decl.optionalParams,
             );
-      const answer = client.readOnce(
+      return client.readOnce(
         decl.key,
         params,
         decl.origin,
         decl,
         decl.snapshot === true,
       );
-      if (decl.query !== undefined) return answer;
-      // An OBSERVED plain tuple answers from its pushed value — which a
-      // mounted `useLive` of it shows with the predicted writes still
-      // applying there folded in (`patchValue`); the reader answers the same.
-      // An unobserved tuple's HTTP answer has no holder deciding which ops it
-      // already shows, so it is the server's as read.
-      const subject = valueSubject(decl.key);
-      const paramsKey = valueParamsKey(params);
-      const tupleKey = `${decl.key}|${paramsKey}`;
-      return answer.then((a: { status: string; data?: unknown }) =>
-        a.status === "ready" && store.holding(subject, tupleKey)
-          ? {
-              ...a,
-              data: predictValue(
-                store.opsFor(subject),
-                tupleKey,
-                subject,
-                decl.key,
-                paramsKey,
-                a.data,
-              ),
-            }
-          : a,
-      );
     };
     return read as LiveReader;
-  }, [client, machine, store]);
+  }, [client, machine]);
 }
 
 /** A value declaration as the reader reads it, untyped. */

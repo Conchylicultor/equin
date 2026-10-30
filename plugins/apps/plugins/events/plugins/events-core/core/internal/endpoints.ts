@@ -1,7 +1,5 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { removeRow } from "@plugins/network/plugins/live/core";
-import { eventSourcesEntityRef } from "./entity-refs";
 import { EventSourceSchema } from "./schema";
 import { REFRESH_CADENCES } from "./vocab";
 
@@ -51,28 +49,16 @@ export const createEventSource = defineEndpoint({
   route: "POST /api/events/sources",
   body: CreateEventSourceBodySchema,
   response: EventSourceSchema,
-  unpredicted: {
-    reason: "precondition",
-    why: "the source config is validated per source type (400) and the dialog shows the error inline",
-  },
 });
 
 export const updateEventSource = defineEndpoint({
   route: "PATCH /api/events/sources/:id",
   body: UpdateEventSourceBodySchema,
   response: EventSourceSchema,
-  unpredicted: {
-    reason: "precondition",
-    why: "a supplied config replaces the stored one and is revalidated in full (400), shown inline under the settings form",
-  },
 });
 
 export const deleteEventSource = defineEndpoint({
   route: "DELETE /api/events/sources/:id",
-  // The source row leaves every read at once; its events and run history
-  // (deleted with it) arrive by push.
-  effect: (on) =>
-    removeRow(on, eventSourcesEntityRef, ({ params }) => params.id),
 });
 
 /**
@@ -103,10 +89,6 @@ export type RefreshSourceResult = z.infer<typeof RefreshSourceResultSchema>;
 export const refreshEventSourceNow = defineEndpoint({
   route: "POST /api/events/sources/:id/refresh",
   response: RefreshSourceResultSchema,
-  unpredicted: {
-    reason: "response",
-    why: "callers branch on the enqueued / already-running / skipped result and render it",
-  },
 });
 
 /**
@@ -135,8 +117,4 @@ export type RefreshAllResult = z.infer<typeof RefreshAllResultSchema>;
 export const refreshAllEventSources = defineEndpoint({
   route: "POST /api/events/sources/refresh-all",
   response: RefreshAllResultSchema,
-  unpredicted: {
-    reason: "response",
-    why: "the tally of enqueued, running and skipped sources is rendered",
-  },
 });

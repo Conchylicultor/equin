@@ -196,9 +196,9 @@ function PlacesSurface({
   const [pinPick, setPinPick] = useState<PinPick | null>(null);
   const { create: createTag } = useTagTreeActions(placeTagTree);
   const { mutateAsync: createCustomPlace } = useCreateCustomPlace();
-  const { mutate: updatePlace } = useUpdatePlace();
+  const { mutateAsync: updatePlace } = useUpdatePlace();
   const { mutateAsync: savePlace } = useSavePlace();
-  const { mutate: deletePlace } = useDeletePlace();
+  const { mutateAsync: deletePlace } = useDeletePlace();
 
   // The search bar: one query for both halves — the view's own search (your
   // places, and their pins) and Google's hits around the map's view.
@@ -381,7 +381,7 @@ function PlacesSurface({
         setPinPick(null);
         setDetail(null);
         setSelectedId(place.id);
-        updatePlace({ params: { id: place.id }, body: { location: at } });
+        void updatePlace({ params: { id: place.id }, body: { location: at } });
       };
     }
     const name = dropName(pinPick);
@@ -537,7 +537,7 @@ function PlacesSurface({
       description: `Tagged ${tagged.join(", ")}`,
       action: {
         label: "Undo",
-        onClick: () => deletePlace({ params: { id: place.id } }),
+        onClick: () => void deletePlace({ params: { id: place.id } }),
       },
     });
     return place;

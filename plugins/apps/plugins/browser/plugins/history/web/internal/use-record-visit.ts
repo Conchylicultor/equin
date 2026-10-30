@@ -1,8 +1,10 @@
-import { useLiveMutation } from "@plugins/network/plugins/live/web";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { postBrowserHistory } from "../../shared/endpoints";
 
-/** Records a browser visit. Predicted: `browserRecents` shows it at once. */
-export function useRecordVisit(): (url: string) => void {
-  const { mutate } = useLiveMutation(postBrowserHistory);
-  return (url: string) => mutate({ body: { url } });
+/** Records a browser visit. `browserRecents` updates via its WS push. */
+export function useRecordVisit(): (url: string) => Promise<void> {
+  const { mutateAsync } = useEndpointMutation(postBrowserHistory);
+  return async (url: string) => {
+    await mutateAsync({ body: { url } });
+  };
 }

@@ -18,7 +18,7 @@ export {
   type TrackMixerEntry,
 } from "./hooks";
 export { useTrackColorLook, type TrackColorLook } from "./palette";
-export { useTrackViewWrites, type TrackViewWrites } from "./actions";
+export { setTracksActive } from "./actions";
 
 export default {
   description:

@@ -22,10 +22,6 @@ export const claudeCodeStatus = liveValue("claude-code-status", {
  */
 export const recheckClaudeCode = defineEndpoint({
   route: "POST /api/claude-code/recheck",
-  unpredicted: {
-    reason: "server-decided",
-    why: "the answer is the result of re-probing Claude Code on the machine",
-  },
   response: ClaudeCodeStatusSchema,
   // It re-runs the probe on the computer.
   needsMachine: { feature: "Checking Claude Code" },

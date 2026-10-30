@@ -1,18 +1,15 @@
-import { useCallback } from "react";
-import { useLiveMutation } from "@plugins/network/plugins/live/web";
+import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import type { SwingOverride } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { setSwingEndpoint } from "../shared/endpoints";
 
-// Predicted write: the `swings` row shows the override at once (the loaded
-// song's setting is written alongside, `useWriteSongSetting(swingSetting)`) and
-// the server's row confirms it.
-export function useSaveSwing(): (
+// Fire-and-forget write: the UI never reads the response — the loaded song's
+// setting is written optimistically (`useWriteSongSetting(swingSetting)`) and
+// the `swings` row push reaffirms it. A genuine network failure still surfaces
+// loudly as an unhandled rejection.
+export function saveSwing(
+  fetchEndpoint: FetchEndpoint,
   songId: string,
   override: SwingOverride,
-) => void {
-  const { mutate } = useLiveMutation(setSwingEndpoint);
-  return useCallback(
-    (songId, override) => mutate({ params: { id: songId }, body: override }),
-    [mutate],
-  );
+): void {
+  void fetchEndpoint(setSwingEndpoint, { id: songId }, { body: override });
 }

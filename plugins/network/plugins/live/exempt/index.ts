@@ -29,11 +29,4 @@ export default [
     reason:
       "A measurement script run under bun, not a browser tab: it counts every frame the server sends each live tuple, so it speaks the wire protocol on its own raw socket (SharedWebSocket is a browser SharedWorker primitive).",
   },
-  {
-    rule: "endpoints/no-endpoint-effect-internals",
-    paths: ["core/internal/predict.ts", "web"],
-    kind: "sanctioned",
-    reason:
-      "The one client of a predicted endpoint: core's predict builders mint the effect (brandEndpointEffect) and read it back (endpointEffectPayload); web's useLiveMutation sends the write through its plain contract (endpointContractOf) once it has applied the effect.",
-  },
 ] satisfies Exemptions;

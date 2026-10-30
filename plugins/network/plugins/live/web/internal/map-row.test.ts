@@ -22,7 +22,6 @@ describe("mapRow", () => {
         status: "ready",
         found: true,
         row: { id: "a", level: 2 },
-        pending: false,
         refetch,
       },
       double,
@@ -32,7 +31,7 @@ describe("mapRow", () => {
 
   it("maps a settled miss through fn(null) — an absent row is an answer", () => {
     const r = mapRow<Row, number | string>(
-      { status: "ready", found: false, pending: false, refetch },
+      { status: "ready", found: false, refetch },
       double,
     );
     expect(r.status === "ready" && r.data).toBe("absent");

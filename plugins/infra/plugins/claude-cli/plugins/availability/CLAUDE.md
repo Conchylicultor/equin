@@ -106,7 +106,7 @@ constantly, and login state lives in the macOS Keychain anyway.
   - Uses:
     - `infra/endpoints.implementMachine`
     - `network/live.serveValue`
-  - Routes: `POST /api/claude-code/recheck` — unpredicted (server-decided)
+  - Routes: `POST /api/claude-code/recheck`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`

@@ -14,7 +14,6 @@
     - `infra/endpoints.useEndpointMutation`
     - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`
-    - `network/live.useLiveMutation`
     - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useResourceAcks`
     - `primitives/optimistic-mutation.useAwaitResourceWrite`
@@ -51,16 +50,15 @@
   - Exports (values): `saveTheme`
   - Resources: `saved-themes.list` (push, whole: every saved theme: the painter needs all of them resident to paint any selection, and the list grows only by a hand-made save or import (single digits in practice))
   - Routes:
-    - `POST /api/saved-themes` — unpredicted (server-minted-id)
-    - `PATCH /api/saved-themes/:id/fragment` — predicted
-    - `PATCH /api/saved-themes/:id/color-adjust` — predicted
-    - `PATCH /api/saved-themes/:id` — predicted
-    - `DELETE /api/saved-themes/:id` — unpredicted (precondition)
+    - `POST /api/saved-themes`
+    - `PATCH /api/saved-themes/:id/fragment`
+    - `PATCH /api/saved-themes/:id/color-adjust`
+    - `PATCH /api/saved-themes/:id`
+    - `DELETE /api/saved-themes/:id`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
-    - `network/live.patchValue`
     - `packages/list-bound.wholeList`
     - `ui/theme-engine.ColorAdjustmentSchema`
     - `ui/theme-engine.Theme`

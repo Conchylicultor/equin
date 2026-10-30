@@ -1,10 +1,6 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import {
-  ConversationSchema,
-  conversationsEntityRef,
-} from "@plugins/tasks/plugins/tasks-core/core";
-import { patchRow } from "@plugins/network/plugins/live/core";
+import { ConversationSchema } from "@plugins/tasks/plugins/tasks-core/core";
 import { ModelChoiceSchema } from "@plugins/conversations/plugins/model-provider/core";
 import { WorkspaceSpecSchema } from "@plugins/conversations/plugins/workspace/core";
 import {
@@ -103,10 +99,6 @@ export const createConversation = defineEndpoint({
   // slow-ops pipeline files a report — catching any re-introduced blocking work.
   slowThresholdMs: 1000,
   needsMachine: { feature: "Launching an agent" },
-  unpredicted: {
-    reason: "server-minted-id",
-    why: "The server spawns the agent and mints the conversation id, which the caller opens in a pane from the returned row.",
-  },
 });
 
 export const deleteConversation = defineEndpoint({
@@ -132,10 +124,6 @@ export const postConversationTurn = defineEndpoint({
     turnId: z.string(),
   }),
   needsMachine: { feature: "Sending a message to an agent" },
-  unpredicted: {
-    reason: "response",
-    why: "The answer carries the server-finalized text, the held flag and the ledger turn id, which the pending-turn echo store matches against the transcript.",
-  },
 });
 
 /**
@@ -146,10 +134,6 @@ export const retryConversationTurn = defineEndpoint({
   route: "POST /api/conversations/:id/turns/:turnId/retry",
   response: z.object({ turnId: z.string(), state: TurnStateSchema }),
   needsMachine: { feature: "Sending a message to an agent" },
-  unpredicted: {
-    reason: "response",
-    why: "The resulting ledger state (or a 409 when the turn is not failed) comes back and is what the delivery UI shows.",
-  },
 });
 
 /**
@@ -161,10 +145,6 @@ export const withdrawConversationTurn = defineEndpoint({
   route: "POST /api/conversations/:id/turns/:turnId/withdraw",
   response: z.object({ turnId: z.string(), state: TurnStateSchema }),
   needsMachine: { feature: "Sending a message to an agent" },
-  unpredicted: {
-    reason: "response",
-    why: "The returned ledger state is acknowledged before the client puts the withdrawn text back in the draft.",
-  },
 });
 
 /**
@@ -176,20 +156,12 @@ export const interruptConversationTurn = defineEndpoint({
   route: "POST /api/conversations/:id/interrupt",
   response: z.object({ ok: z.literal(true) }),
   needsMachine: { feature: "Sending a queued message now" },
-  unpredicted: {
-    reason: "server-decided",
-    why: "Whether the queued messages start is decided by the CLI process receiving the interrupt, not by the request.",
-  },
 });
 
 export const stopConversation = defineEndpoint({
   route: "POST /api/conversations/:id/stop",
   response: z.object({ ok: z.boolean(), rewindText: z.string().nullable() }),
   needsMachine: { feature: "Stopping an agent" },
-  unpredicted: {
-    reason: "response",
-    why: "The surface puts the returned rewindText back into the composer draft.",
-  },
 });
 
 const TurnSchema = z.object({
@@ -214,14 +186,4 @@ export const listConversationTurns = defineEndpoint({
  */
 export const closeConversation = defineEndpoint({
   route: "POST /api/conversations/:id/close",
-  effect: (on) =>
-    patchRow(
-      on,
-      conversationsEntityRef,
-      ({ params }) => params.id,
-      () => ({
-        set: { status: "done", workingOn: null },
-        approx: { endedAt: new Date() },
-      }),
-    ),
 });

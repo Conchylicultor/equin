@@ -1,9 +1,5 @@
-import {
-  mapRow,
-  useLive,
-  useLiveMutation,
-  useLiveRow,
-} from "@plugins/network/plugins/live/web";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { mapRow, useLive, useLiveRow } from "@plugins/network/plugins/live/web";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import {
   NO_PROTOTYPE_STATE,
@@ -33,14 +29,16 @@ export function usePrototypeState(
 
 /**
  * Apply one change (`{ done }`, `{ pinned }`, `{ tagId }`) to a prototype's
- * state. Predicted: every surface shows it at once, so there is no pending
- * state; a refused write is the rejection toast.
+ * state. A failed write surfaces through the endpoint layer's global error
+ * toast; every surface keeps showing the stored value (the live rows).
  */
 export function useSetPrototypeState(): {
+  pending: boolean;
   setState: (name: string, change: PrototypeStateChange) => void;
 } {
-  const mutation = useLiveMutation(setPrototypeState);
+  const mutation = useEndpointMutation(setPrototypeState);
   return {
+    pending: mutation.isPending,
     setState: (name, change) =>
       mutation.mutate({ params: { name }, body: change }),
   };

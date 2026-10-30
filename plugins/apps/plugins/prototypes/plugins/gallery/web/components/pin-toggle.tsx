@@ -35,7 +35,7 @@ export function usePinnedActive(row: PrototypeGalleryRow): boolean {
  * onto the list before it renders.
  */
 export function PinCardAction({ row }: ItemActionProps<PrototypeGalleryRow>) {
-  const { setState } = useSetPrototypeState();
+  const { pending, setState } = useSetPrototypeState();
   return (
     <ControlSizeProvider size="sm">
       <IconButton
@@ -44,6 +44,7 @@ export function PinCardAction({ row }: ItemActionProps<PrototypeGalleryRow>) {
         label={row.pinned ? "Pinned — unpin" : "Pin"}
         aria-pressed={row.pinned}
         variant="ghost"
+        loading={pending}
         className={row.pinned ? "text-primary-text" : undefined}
         onClick={(e) => {
           // The card's own click opens the prototype; pinning it must not.
@@ -64,7 +65,7 @@ export function PinCardAction({ row }: ItemActionProps<PrototypeGalleryRow>) {
 export function PinHeaderAction() {
   const { name } = usePrototypeDetail();
   const read = usePrototypeState(name);
-  const { setState } = useSetPrototypeState();
+  const { pending, setState } = useSetPrototypeState();
   if (read.status === "loading") {
     return <TitleActionButton icon={keepIcon} label="Pin" disabled />;
   }
@@ -86,6 +87,7 @@ export function PinHeaderAction() {
       on={pinned}
       label={pinned ? "Pinned — click to unpin" : "Pin"}
       aria-pressed={pinned}
+      loading={pending}
       onClick={() => setState(name, { pinned: !pinned })}
     />
   );

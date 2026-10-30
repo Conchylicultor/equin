@@ -127,7 +127,7 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/site-messages`.
     - `defineJob('site-messages.confirm')`
     - `defineJob('retention.site_messages')`
   - Routes:
-    - `POST /api/site-messages` — unpredicted (response)
+    - `POST /api/site-messages`
     - `GET /api/host-only/site-messages`
 - Core:
   - Uses:

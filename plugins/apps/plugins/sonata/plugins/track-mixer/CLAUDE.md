@@ -104,19 +104,21 @@ plus a per-song reset.
   - Contributes:
     - `SonataDocument.SongSetting` "track-view-sync" → `TrackViewObserver`
     - `Sonata.Section` "Tracks" → `TrackMixerPanel`
-  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/sonata/document` ×8
     - `primitives/css/text` ×3
-    - `network/live` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/ui-kit` ×2
     - `primitives/live-state` ×2
+    - `primitives/optimistic-mutation` ×2
     - `primitives/overlay/floating-action` ×2
     - `primitives/search` ×2
     - `apps/sonata/audio/instruments.SonataAudio`
     - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
     - `config_v2.useConfig`
+    - `infra/endpoints.useFetchEndpoint`
+    - `network/live.useLive`
     - `primitives/css/color-picker.SwatchGrid`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
@@ -133,15 +135,14 @@ plus a per-song reset.
   - Exports (types):
     - `TrackColorLook`
     - `TrackMixerEntry`
-    - `TrackViewWrites`
   - Exports (values):
+    - `setTracksActive`
     - `useHiddenTrackIds`
     - `useMutedTrackIds`
     - `useTrackColorLook`
     - `useTrackColorMap`
     - `useTrackInstrumentMap`
     - `useTrackMixerEntries`
-    - `useTrackViewWrites`
     - `useTrackVolumeMap`
 - Server:
   - Contributes: `resource.declare` "sonata-track-view"
@@ -156,8 +157,8 @@ plus a per-song reset.
   - Exports (values): `_trackView`
   - Resources: `sonata-track-view` (push, whole: one song's per-track view overrides — at most one row per track of that song)
   - Routes:
-    - `POST /api/sonata/songs/:songId/track-view` — predicted
-    - `DELETE /api/sonata/songs/:songId/track-view` — predicted
+    - `POST /api/sonata/songs/:songId/track-view`
+    - `DELETE /api/sonata/songs/:songId/track-view`
 - Core:
   - Uses:
     - `apps/sonata/library.songIdKind`

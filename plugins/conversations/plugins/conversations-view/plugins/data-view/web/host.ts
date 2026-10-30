@@ -18,8 +18,7 @@ export interface ConversationSidebarProps {
   activeId: string | null;
   /** Where a row goes: a link, so middle- / ⌘-click open it in a browser tab. */
   linkTo: (id: string) => LinkTarget;
-  /** Close a conversation — a predicted write: synchronous, nothing to await. */
-  onCloseConversation: (id: string, e: MouseEvent) => void;
+  onCloseConversation: (id: string, e: MouseEvent) => Promise<void>;
 }
 
 /**

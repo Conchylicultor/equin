@@ -42,7 +42,7 @@
     - `infra/worktree.ensureMainWorktreeRoot`
     - `network/live.serveValue`
   - Resources: `broadcasts.entries` (push, notified, whole: one hand-written broadcasts.json — the few messages a maintainer is broadcasting to stale worktrees, whole: a subset of the op kinds — a closed vocabulary of a handful)
-  - Routes: `PUT /api/debug/broadcasts` — unpredicted (response)
+  - Routes: `PUT /api/debug/broadcasts`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --background`

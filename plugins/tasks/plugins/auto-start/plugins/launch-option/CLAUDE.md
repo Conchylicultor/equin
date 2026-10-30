@@ -15,8 +15,8 @@ A sub-plugin rather than part of `auto-start` itself: applying the option means
     - `conversations/model-provider.ModelChoiceLabel`
     - `conversations/model-provider.ModelSelect`
     - `conversations/model-provider.useVisibleModels`
+    - `infra/endpoints.useEndpointMutation`
     - `network/live.mapRow`
-    - `network/live.useLiveMutation`
     - `primitives/live-state.combineResources`
     - `primitives/live-state.mapResource`
     - `primitives/text-editor/composer/picker-pill.PickerPill`

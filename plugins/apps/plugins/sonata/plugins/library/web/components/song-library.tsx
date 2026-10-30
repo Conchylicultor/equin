@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from "react";
-import { useLive, useLiveMutation } from "@plugins/network/plugins/live/web";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   DataView,
@@ -76,7 +77,7 @@ export function SongLibrary() {
   // Write-back for inline cell editing (title / composer) in the table view.
   // Predicted: the edited cell shows (and the window re-sorts) at once; a
   // refusal is the rejection toast.
-  const { mutate: saveSong } = useLiveMutation(updateSong);
+  const { mutate: saveSong } = useEndpointMutation(updateSong);
   const creators = useSourceCreators();
   // Every source's cover answer, folded per song (the library names none).
   const coverSources = Library.Cover.useContributions();

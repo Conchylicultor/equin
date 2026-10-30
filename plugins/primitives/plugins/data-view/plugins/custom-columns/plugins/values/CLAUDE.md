@@ -32,13 +32,12 @@ child names nothing of its parent.
   - Exports (values): `_dataViewCustomValues`
   - Resources: `data-view-custom-values` (push, whole: one DataView surface's custom-column cells, indexed client-side onto every rendered row; the key is the composite (dataViewId, rowKey, columnId), so no single-id :rows read fits)
   - Routes:
-    - `POST /api/data-view/custom-values` — predicted
-    - `POST /api/data-view/custom-values/delete-column` — predicted
+    - `POST /api/data-view/custom-values`
+    - `POST /api/data-view/custom-values/delete-column`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
-    - `network/live.patchValue`
     - `packages/list-bound.wholeList`
   - Exports (types):
     - `CustomColumnValueRow`

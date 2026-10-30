@@ -10,11 +10,12 @@
   - Uses:
     - `conversations/effort-provider.effortItems`
     - `conversations/effort-provider.EffortSelect`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.LiveRowResult`
     - `network/live.mapRow`
-    - `network/live.useLiveMutation`
     - `network/live.useLiveRow`
     - `primitives/text-editor/composer/picker-pill.PickerPill`
+    - `shell/notifications.useToast`
     - `tasks/launch-options.TaskLaunch`
   - Exports (values): `useTaskEffort`
 - Server:
@@ -35,8 +36,8 @@
     - `tasksEffort`
   - Resources: `task-efforts:rows` (keyed, point)
   - Routes:
-    - `PUT /api/task-efforts/:taskId` — predicted
-    - `DELETE /api/task-efforts/:taskId` — predicted
+    - `PUT /api/task-efforts/:taskId`
+    - `DELETE /api/task-efforts/:taskId`
 - Core:
   - Uses:
     - `conversations/effort-provider.EffortLevel`

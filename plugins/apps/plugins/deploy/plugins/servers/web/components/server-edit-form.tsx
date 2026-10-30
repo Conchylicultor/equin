@@ -1,4 +1,4 @@
-import { useLiveMutation } from "@plugins/network/plugins/live/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   useEditableField,
   type EditableField,
@@ -32,11 +32,9 @@ function fieldProps(field: EditableField<string>) {
  * No padding of its own: the section card supplies the body's inset.
  */
 export function ServerEditForm({ server }: { server: Server }) {
-  // Predicted: the edited field shows on every read at once; a refusal is
-  // the rejection toast, a transient failure the sync cloud's Retry.
-  const update = useLiveMutation(updateServer);
-  const save = (body: UpdateServerBody): void => {
-    update.mutate({ params: { id: server.id }, body });
+  const fetchEndpoint = useFetchEndpoint();
+  const save = async (body: UpdateServerBody): Promise<void> => {
+    await fetchEndpoint(updateServer, { id: server.id }, { body });
   };
 
   const name = useEditableField({

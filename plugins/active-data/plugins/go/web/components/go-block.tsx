@@ -98,7 +98,7 @@ function GoChecklist({ content, body }: { content: string; body: GoBody }) {
 
   const pick = (next: boolean[]) => {
     setLocal(next);
-    if (binding.enabled) binding.set({ picked: next });
+    if (binding.enabled) void binding.set({ picked: next });
   };
   const toggle = (i: number) => {
     if (picked) pick(picked.map((on, j) => (j === i ? !on : on)));

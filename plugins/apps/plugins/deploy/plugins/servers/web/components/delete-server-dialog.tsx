@@ -33,7 +33,7 @@ export function DeleteServerDialog({
 }: {
   server: Server;
   onCancel: () => void;
-  onConfirm: () => void;
+  onConfirm: () => Promise<void>;
 }): ReactElement {
   const comment = server.sshKey?.comment;
   const removeCommand =

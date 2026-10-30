@@ -101,8 +101,8 @@ verdict is loading, and the SSH-setup card seeds open.
     - `deploy.server-health:groups` (push)
     - `deploy.server-health:rows` (keyed, point)
   - Routes:
-    - `POST /api/deploy/servers/:id/ssh-check` — unpredicted (response)
-    - `POST /api/deploy/servers/:id/forget-host-key` — unpredicted (precondition)
+    - `POST /api/deploy/servers/:id/ssh-check`
+    - `POST /api/deploy/servers/:id/forget-host-key`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`

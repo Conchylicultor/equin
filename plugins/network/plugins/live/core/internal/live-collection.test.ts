@@ -1,10 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { z } from "zod";
+import type { z } from "zod";
 import { fieldsToZodObject } from "@plugins/fields/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
-import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
-import { rankValueField } from "@plugins/fields/plugins/rank/plugins/config/core";
 import { ResourceContractError } from "@plugins/packages/plugins/resource-protocol/core";
 import { resourceDescriptorByKey } from "@plugins/primitives/plugins/live-state/core";
 import {
@@ -106,54 +104,6 @@ describe("liveCollection — lookup-only (no default window)", () => {
       const arms = { discriminator: "n" } as const;
       // @ts-expect-error — nor on a union
       liveCollection("test.types.scroll-arms", { ...w, arms, scroll: true });
-    };
-    void _typesOnly;
-  });
-
-  test("types: an order names only fields the browser can re-sort by", () => {
-    // Never called — the assertions are the `@ts-expect-error`s. A predicted
-    // write re-sorts held rows by the read's order (`orderScalar`); a field
-    // holding an object it cannot compare is refused at the declaration.
-    const _typesOnly = () => {
-      const fields = {
-        ...F,
-        blob: jsonField({ label: "Blob", schema: z.object({ a: z.number() }) }),
-      };
-      const carry = { fields: { rank: rankValueField() } };
-      liveCollection("test.types.order-ok", {
-        fields,
-        carry,
-        id: "id",
-        // A value object whose toJSON() is its wire scalar orders.
-        sortable: ["n", "rank"],
-        default: { orderBy: [["rank", "asc"]], limit: 1 },
-        maxLimit: 2,
-      });
-      liveCollection("test.types.order-sortable", {
-        fields,
-        id: "id",
-        // @ts-expect-error — a JSON object is not orderable
-        sortable: ["blob"],
-        default: { orderBy: [["n", "asc"]], limit: 1 },
-        maxLimit: 2,
-      });
-      liveCollection("test.types.order-default", {
-        fields,
-        id: "id",
-        sortable: ["n"],
-        // @ts-expect-error — nor is it a default order
-        default: { orderBy: [["blob", "asc"]], limit: 1 },
-        maxLimit: 2,
-      });
-      liveCollection("test.types.order-all", {
-        fields,
-        id: "id",
-        all: {
-          // @ts-expect-error — nor a whole set's order
-          orderBy: [["blob", "asc"]],
-          unbounded: { reason: "a test set" },
-        },
-      });
     };
     void _typesOnly;
   });

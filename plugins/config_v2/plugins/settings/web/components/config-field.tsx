@@ -7,7 +7,6 @@ import {
 } from "@plugins/config_v2/plugins/fields/web";
 import type { FieldDef } from "@plugins/fields/core";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import { useLiveMutation } from "@plugins/network/plugins/live/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
@@ -86,7 +85,7 @@ export function ConfigField({
 
   // useEndpointMutation (not void fetchEndpoint) so a failed save/reset surfaces
   // via the global error toast instead of escaping as an unhandled rejection.
-  const { mutate: setField } = useLiveMutation(setConfigField);
+  const { mutate: setField } = useEndpointMutation(setConfigField);
   const { mutate: resetField } = useEndpointMutation(resetConfigField);
 
   // The write is predicted (`setConfigField`'s effect), so `value` already

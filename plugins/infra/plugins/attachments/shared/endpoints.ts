@@ -13,10 +13,6 @@ export const UploadedAttachmentSchema = z.object({
 
 export const uploadAttachment = defineEndpoint({
   route: "POST /api/attachments",
-  unpredicted: {
-    reason: "server-minted-id",
-    why: "the server mints the attachment id and the caller needs it to attach the upload",
-  },
   body: multipart(),
   response: UploadedAttachmentSchema,
 });
@@ -33,10 +29,6 @@ export const deleteAttachmentEndpoint = defineEndpoint({
 // releases the holder. Ids that no longer exist are ignored.
 export const holdAttachmentsEndpoint = defineEndpoint({
   route: "PUT /api/attachments/holds",
-  unpredicted: {
-    reason: "unobserved",
-    why: "a draft garbage-collection hold with no user-visible state; the server alone decides retention",
-  },
   body: z.object({
     holder: z.string().min(1),
     ids: z.array(z.string()),

@@ -176,7 +176,6 @@ non-surface mounts instead of crashing.
   - Imported by:
     - `apps-core/tab-surface`
     - `conversations/conversation-view/pending-turn`
-    - `network/live`
     - `page/editor`
     - `primitives/editable-field`
     - `primitives/optimistic-mutation`

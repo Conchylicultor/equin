@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { useLiveMutation } from "@plugins/network/plugins/live/web";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useAppLink } from "@plugins/apps-core/plugins/tabs/web";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import {
@@ -52,7 +52,7 @@ export const NotificationItemActions = defineItemActions<Notification>();
 export function DismissNotificationAction({
   row,
 }: ItemActionProps<Notification>): ReactElement {
-  const dismiss = useLiveMutation(dismissNotification);
+  const dismiss = useEndpointMutation(dismissNotification);
   return (
     <IconButton
       icon={dismissIcon}
@@ -121,8 +121,8 @@ export function NotificationsView(): ReactElement {
 
 /** The toolbar's bulk actions, over the WHOLE collection (the existing endpoints). */
 function BulkActions(): ReactElement {
-  const markAllRead = useLiveMutation(markAllNotificationsRead);
-  const dismissAll = useLiveMutation(dismissAllNotifications);
+  const markAllRead = useEndpointMutation(markAllNotificationsRead);
+  const dismissAll = useEndpointMutation(dismissAllNotifications);
   return (
     <Inline gap="xs">
       <Button

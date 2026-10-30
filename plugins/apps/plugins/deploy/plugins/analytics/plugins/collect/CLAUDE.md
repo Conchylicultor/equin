@@ -110,7 +110,7 @@ The dashboard's Events panel expands an event into these rows.
     - `defineJob('analytics.rollup')`
     - `defineJob('retention.analytics_visits')`
   - Routes:
-    - `POST /api/analytics/collect` — unpredicted (server-decided)
+    - `POST /api/analytics/collect`
     - `GET /api/host-only/analytics/query`
 - Web:
   - Uses:

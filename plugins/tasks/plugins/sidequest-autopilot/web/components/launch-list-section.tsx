@@ -3,7 +3,7 @@ import {
   EndpointError,
   useEndpointMutation,
 } from "@plugins/infra/plugins/endpoints/web";
-import { useLive, useLiveMutation } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
   combineResources,
   foldResource,
@@ -269,7 +269,7 @@ function LaunchListHeader({
 }): ReactElement {
   // Clearing the selection is what the answer is for: it runs once the
   // server has accepted the approval.
-  const decide = useLiveMutation(decideLaunchEndpoint, {
+  const decide = useEndpointMutation(decideLaunchEndpoint, {
     onSuccess: onApproved,
   });
   const left = Math.max(0, entry.maxLaunches - entry.launchedInBatch);
@@ -345,9 +345,9 @@ function RowLead({
 }
 
 function RowBody({ row }: { row: LaunchListRow }): ReactElement {
-  const decide = useLiveMutation(decideLaunchEndpoint);
+  const decide = useEndpointMutation(decideLaunchEndpoint);
   const setDecision = (decision: LaunchDecision | null) =>
-    decide.mutate({
+    decide.mutateAsync({
       params: { automationId: SIDEQUEST_AUTOPILOT_ID },
       body: { taskIds: [row.task.id], decision },
     });
@@ -408,13 +408,15 @@ function RowAction({
   setDecision,
 }: {
   row: LaunchListRow;
-  setDecision: (decision: LaunchDecision | null) => void;
+  setDecision: (decision: LaunchDecision | null) => Promise<unknown>;
 }): ReactElement | null {
   const patchTask = usePatchTask();
-  const stop = (run: () => void) => (e: { stopPropagation(): void }) => {
-    e.stopPropagation();
-    run();
-  };
+  // The write's promise goes back to the Button, which pends on it.
+  const stop =
+    (run: () => Promise<unknown>) => (e: { stopPropagation(): void }) => {
+      e.stopPropagation();
+      return run();
+    };
   switch (row.lane) {
     case "approved":
       return (
@@ -456,7 +458,7 @@ function RowAction({
  */
 function RowDetail({ row }: { row: LaunchListRow }): ReactElement {
   const run = useEndpointMutation(runTriageEndpoint);
-  const answer = useLiveMutation(answerTriageEndpoint);
+  const answer = useEndpointMutation(answerTriageEndpoint);
   const triage = row.triage;
   const r = row.result;
   const rerun = () =>

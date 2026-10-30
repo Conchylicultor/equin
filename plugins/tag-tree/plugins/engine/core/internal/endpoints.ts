@@ -30,10 +30,6 @@ export type CreateTagBody = z.infer<typeof CreateTagBodySchema>;
 /** Create a tag, last among its siblings. A sibling of the same name (case-insensitive) is a 400. */
 export const createTag = defineEndpoint({
   route: "POST /api/tag-trees/:tree/tags",
-  unpredicted: {
-    reason: "server-minted-id",
-    why: "the server mints the id and rank, and callers tag a place with the returned id",
-  },
   body: CreateTagBodySchema,
   response: z.object({ id: z.string() }),
 });
@@ -59,10 +55,6 @@ export type CreateTagPathResult = z.infer<typeof CreateTagPathResultSchema>;
  */
 export const createTagPath = defineEndpoint({
   route: "POST /api/tag-trees/:tree/paths",
-  unpredicted: {
-    reason: "response",
-    why: "the caller uses the returned id and created segments",
-  },
   body: CreateTagPathBodySchema,
   response: CreateTagPathResultSchema,
 });
@@ -82,10 +74,6 @@ export type UpdateTagBody = z.infer<typeof UpdateTagBodySchema>;
 /** Edit a tag in place. Its position changes only through {@link moveTag}. */
 export const updateTag = defineEndpoint({
   route: "PATCH /api/tag-trees/:tree/tags/:id",
-  unpredicted: {
-    reason: "precondition",
-    why: "A rename onto a sibling's name is a 400 the picker shows inline, and one endpoint serves every tree, so no single entity names the row.",
-  },
   body: UpdateTagBodySchema,
 });
 
@@ -104,10 +92,6 @@ export type MoveTagBody = z.infer<typeof MoveTagBodySchema>;
 /** Move a tag (reorder or re-parent). Under itself or a descendant is a 400. */
 export const moveTag = defineEndpoint({
   route: "POST /api/tag-trees/:tree/tags/:id/move",
-  unpredicted: {
-    reason: "server-decided",
-    why: "The server mints the rank over the parent's complete sibling set (the body is positional intent), a move under a descendant is a 400, and one endpoint serves every tree so no single collection names the rows.",
-  },
   body: MoveTagBodySchema,
 });
 
@@ -117,8 +101,4 @@ export const moveTag = defineEndpoint({
  */
 export const deleteTag = defineEndpoint({
   route: "DELETE /api/tag-trees/:tree/tags/:id",
-  unpredicted: {
-    reason: "server-decided",
-    why: "The server re-parents the tag's children (at its position) and every carrier in other plugins' tables, and one endpoint serves every tree so no single collection names the rows.",
-  },
 });

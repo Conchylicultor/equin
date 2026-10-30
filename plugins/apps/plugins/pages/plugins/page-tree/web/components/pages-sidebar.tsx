@@ -1,6 +1,9 @@
 import { useMemo } from "react";
-import { useLive, useLiveMutation } from "@plugins/network/plugins/live/web";
-import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import {
+  useEndpointMutation,
+  useFetchEndpoint,
+} from "@plugins/infra/plugins/endpoints/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
@@ -77,7 +80,7 @@ function inDocOrder(pages: readonly PagesTreeRow[]): PagesTreeRow[] {
  * `tags`), each presented by its owner; the sidebar names none of them.
  *
  * The title, the one field the sidebar computes itself: the page payload's
- * `title`, renamed in place (the tree's inline editor) by a predicted `updateBlock`.
+ * `title`, renamed in place (the tree's inline editor) by `updateBlock`.
  */
 function titleField(
   update: (id: string, data: PageData) => void,
@@ -111,7 +114,7 @@ const ICON_FIELD: FieldDef<PagesTreeRow> = {
 
 /** The sidebar's own fields, bound to the subtree's transport; stable per it. */
 function useSidebarExtraFields(): FieldDef<PagesTreeRow>[] {
-  const updateBlockData = useLiveMutation(updateBlock, { label: "Title" });
+  const updateBlockData = useEndpointMutation(updateBlock);
   return useMemo(
     () => [
       ICON_FIELD,

@@ -204,15 +204,15 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
     - `agents.roster:rows` (keyed, point)
   - Routes:
     - `GET /api/agents`
-    - `POST /api/agents` — unpredicted (server-minted-id)
+    - `POST /api/agents`
     - `GET /api/agents/:id`
-    - `PATCH /api/agents/:id` — unpredicted (precondition)
-    - `POST /api/agents/:id/move` — unpredicted (server-decided)
-    - `DELETE /api/agents/:id` — unpredicted (precondition)
+    - `PATCH /api/agents/:id`
+    - `POST /api/agents/:id/move`
+    - `DELETE /api/agents/:id`
     - `GET /api/agents/:id/launches`
 - Machine:
   - Uses: `infra/endpoints.implementMachine`
-  - Routes: `POST /api/agents/:id/launch` — unpredicted (server-decided)
+  - Routes: `POST /api/agents/:id/launch`
 - Core:
   - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/model-provider` ×3

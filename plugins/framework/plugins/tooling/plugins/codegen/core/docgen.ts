@@ -11,11 +11,6 @@ import {
   type DocFact,
 } from "@plugins/plugin-meta/plugins/facets/core";
 import { exemptionsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/exemptions/core";
-import {
-  predictionDebt,
-  renderPredictionDebt,
-  routesFacetDef,
-} from "@plugins/plugin-meta/plugins/facets/plugins/routes/core";
 import { UNDOCUMENTED_RUNTIME_FOLDERS } from "@plugins/framework/plugins/plugin-id/core";
 import { mainComposition, type MainComposition } from "./main-bundle";
 import { writeGenerated } from "./write-generated";
@@ -526,24 +521,13 @@ function renderCompactDocFromTree(tree: PluginTree, root: string): string {
 }
 
 function renderDetailsDocFromTree(tree: PluginTree, root: string): string {
-  const pluginsBody = renderTreeBody(
+  const body = renderTreeBody(
     tree.roots,
     root,
     "detail",
     tree.facets,
     mainComposition(tree, root),
   );
-  // Reverse index over every plugin's routes: the prediction debt, per gap.
-  const debt = renderPredictionDebt(
-    predictionDebt(
-      [...tree.byDir.values()].map((info) => ({
-        plugin: info.path,
-        data: getFacet(info, routesFacetDef),
-      })),
-    ),
-  );
-  const body =
-    debt.length === 0 ? pluginsBody : `${pluginsBody}\n${debt.join("\n")}\n`;
   return `${DETAILS_HEADER}${BEGIN}\n\n${body}\n${END}\n`;
 }
 

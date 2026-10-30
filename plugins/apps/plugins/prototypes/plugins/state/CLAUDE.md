@@ -87,9 +87,9 @@ move-to-trash delete may still run against the shared tree.
   - Contributes: `IdKinds.Kind` "prtag"
   - Uses:
     - `ids.IdKinds`
+    - `infra/endpoints.useEndpointMutation`
     - `network/live.mapRow`
     - `network/live.useLive`
-    - `network/live.useLiveMutation`
     - `network/live.useLiveRow`
   - Exports (values):
     - `usePrototypeState`
@@ -126,9 +126,9 @@ move-to-trash delete may still run against the shared tree.
     - `prototypes.tags.all` (keyed)
     - `prototypes.tags.all:rows` (keyed, point)
   - Routes:
-    - `PATCH /api/prototypes/:name/state` — predicted
-    - `DELETE /api/prototypes/:name` — predicted
-    - `POST /api/prototypes/:name/restore` — predicted
+    - `PATCH /api/prototypes/:name/state`
+    - `DELETE /api/prototypes/:name`
+    - `POST /api/prototypes/:name/restore`
 - Core:
   - Uses:
     - `apps/prototypes/files.protoIdKind`
@@ -141,8 +141,6 @@ move-to-trash delete may still run against the shared tree.
     - `infra/endpoints.defineEndpoint`
     - `infra/entities.entityRef`
     - `network/live.liveCollection`
-    - `network/live.patchRow`
-    - `network/live.upsertRow`
     - `tag-tree/engine.defineTagTree`
     - `tag-tree/engine.tagTreeEntityRef`
   - Exports (types):

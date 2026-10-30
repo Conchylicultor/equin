@@ -17,7 +17,6 @@ import {
   EndpointAgentWriteRefusedError,
   EndpointError,
   endpointRequest,
-  readCommitsHeader,
   readEndpointResponse,
   unavailableMessage,
 } from "../../core";
@@ -56,13 +55,6 @@ export type FetchOpts<TBody, TQuery> = EndpointRequestOpts<TBody, TQuery> & {
    * one the server dedupes) should ask for it.
    */
   retry?: FetchWithRetryOptions;
-  /**
-   * Handed the transaction ids a predicted write committed (the server's
-   * commit ack, `COMMITS_HEADER` — `[]` when it names none) on a 2xx, before
-   * the answer resolves. Read by `network/live`'s predicted-write client,
-   * which confirms an uncompared prediction against them.
-   */
-  onCommits?: (commits: readonly string[]) => void;
 };
 
 type Answer<TResponse> = EndpointAnswer<TResponse>;
@@ -157,9 +149,7 @@ async function request<Route extends string, TParams, TBody, TResponse, TQuery>(
     : await transport.fetch(path, init);
 
   try {
-    const answer = await readEndpointResponse(endpoint, res);
-    opts?.onCommits?.(readCommitsHeader(res));
-    return answer;
+    return await readEndpointResponse(endpoint, res);
   } catch (err) {
     // Reported only where the subtree's telemetry is (`transport.telemetry`):
     // a scope set to drop it raises nothing for the page's server to file.

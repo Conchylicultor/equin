@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { liveValue, patchValue } from "@plugins/network/plugins/live/core";
+import { liveValue } from "@plugins/network/plugins/live/core";
 import { wholeKeyedRecord } from "@plugins/packages/plugins/list-bound/core";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { isOptionName, isPickValue } from "./options";
@@ -92,12 +92,4 @@ export const setPrototypePicks = defineEndpoint({
   route: "PUT /api/prototypes/:name/picks",
   agentReverted: true,
   body: PicksChangeSchema,
-  // The same fold the store applies, over the picks the reader holds.
-  effect: (on) =>
-    patchValue(
-      on,
-      prototypePicks,
-      ({ params }) => ({ name: params.name }),
-      (picks, { body }) => applyPicksChange(picks, body),
-    ),
 });

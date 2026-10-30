@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import { useSonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/web";
-import { useLiveMutation } from "@plugins/network/plugins/live/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { recordPlay } from "../../shared/endpoints";
 
 /**
@@ -13,7 +13,7 @@ import { recordPlay } from "../../shared/endpoints";
  * song still loaded; loading it again — even the same one — re-arms it.
  */
 export function RecordPlayObserver() {
-  const { mutate: record } = useLiveMutation(recordPlay);
+  const fetchEndpoint = useFetchEndpoint();
   const { currentSongId, songLoadEpoch } = useSonataApp();
   const { isPlaying } = useSession();
   const prevPlaying = useRef(false);
@@ -24,9 +24,9 @@ export function RecordPlayObserver() {
     prevPlaying.current = isPlaying;
     if (started && currentSongId && recordedEpoch.current !== songLoadEpoch) {
       recordedEpoch.current = songLoadEpoch;
-      record({ params: { id: currentSongId } });
+      void fetchEndpoint(recordPlay, { id: currentSongId });
     }
-  }, [isPlaying, currentSongId, songLoadEpoch, record]);
+  }, [isPlaying, currentSongId, songLoadEpoch, fetchEndpoint]);
 
   return null;
 }

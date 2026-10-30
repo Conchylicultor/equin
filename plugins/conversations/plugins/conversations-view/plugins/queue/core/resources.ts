@@ -37,7 +37,7 @@ export type QueueData = z.infer<typeof QueueDataSchema>;
 
 // The queue rows, one per conversation that has been ranked. The sidebar reads
 // them as an explicit id set — the LIVE conversation ids it already tracks
-// (`conversations-active`), `useOptimisticResource(queueRanks, { ids }, …)` —
+// (`conversations-active`), `useLive(queueRanks, { ids })` —
 // so ranks cost O(live), ~26 rows, not O(2726). Rows key on `conversationId`
 // (the extension's key, whose column is the side-table's `parent_id` PK).
 // The window (rank order) has no reader yet; it is bounded like any window.

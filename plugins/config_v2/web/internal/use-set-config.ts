@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { useRawContributions } from "@plugins/framework/plugins/web-sdk/core";
-import { useLive, useLiveMutation } from "@plugins/network/plugins/live/web";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { configConflict, setConfigField } from "../../core";
 import type { ConfigDescriptor } from "../../core";
 import type { FieldsRecord } from "@plugins/fields/core";
@@ -16,7 +17,7 @@ export function useSetConfig<F extends FieldsRecord>(
   // Predicted (`setConfigField`'s effect): every read of the document shows the
   // write at once, and a refused write unwinds with the rejection toast.
   // Called before the throw below to keep hook order unconditional.
-  const { mutate } = useLiveMutation(setConfigField);
+  const { mutate } = useEndpointMutation(setConfigField);
   const preview = useConfigPreview();
   const reg = registrations.find((c) => c.descriptor === descriptor);
   const storePath = reg ? storePathOf(reg) : null;

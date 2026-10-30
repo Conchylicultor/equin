@@ -30,8 +30,6 @@ import type {
 } from "@plugins/network/plugins/live/core";
 import {
   isPointId,
-  readSubject,
-  valueSubject,
   type CollectionRow,
 } from "@plugins/network/plugins/live/core";
 import { useTransport } from "@plugins/primitives/plugins/networking/web";
@@ -48,23 +46,6 @@ import {
   type LiveValuePagesOptions,
 } from "./use-pages";
 import type { LivePagesQuery } from "./page-source";
-import {
-  predictRow,
-  predictRows,
-  predictValue,
-  rowPending,
-  valueParamsKey,
-  type PredictRow,
-  type PredictTuple,
-} from "./predict-overlay";
-import {
-  useHeldTuple,
-  usePredictedOps,
-  usePredictHolder,
-  usePredictStore,
-  usePredictValueHolder,
-} from "./use-predicted";
-import { entrantOf, predictOrderOf } from "./predict-reads";
 
 // The read half of a `liveCollection`. A consumer asks a QUERY — a window
 // (`where` / `orderBy` / `limit`), a grouping (`groupBy`) or an explicit id set
@@ -176,8 +157,8 @@ export type LiveScopedAllQuery<B extends string> = [B] extends [never]
 
 /**
  * One row by id: loading, failed, found, or determinately absent — `ready`
- * splits on `found`, and says whether a predicted write is still unconfirmed
- * on it (`pending`).
+ * splits on `found`. `pending` is the pre-`status` spelling (see
+ * `ResourceResult`), kept while the tree migrates.
  */
 export type LiveRowResult<Row> =
   | {
@@ -195,21 +176,11 @@ export type LiveRowResult<Row> =
       status: "ready";
       found: true;
       row: Row;
-      /**
-       * A predicted write (`useLiveMutation`) is applied to `row` that this
-       * read's server data has not confirmed yet.
-       */
-      pending: boolean;
       refetch: () => Promise<void>;
     }
   | {
       status: "ready";
       found: false;
-      /**
-       * A predicted write moved the row out of the collection (or removed
-       * it) and this read's server data has not confirmed it yet.
-       */
-      pending: boolean;
       refetch: () => Promise<void>;
     };
 
@@ -677,13 +648,10 @@ export function useLive<Row, F, S extends string>(
     case "value": {
       // `null` is the substrate's skip; `useResource` canonicalizes the params
       // (an absent optional one is one tuple however it is spelled).
-      const value = source as LiveValue<
-        unknown,
-        Record<string, string>,
-        LiveValueOrigin
-      >;
-      const params = query as Record<string, string> | null | undefined;
-      const read = usePredictedValue(value, params, useResource(value, params));
+      const read = useResource(
+        source as LiveValue<unknown, Record<string, string>, LiveValueOrigin>,
+        query as Record<string, string> | null | undefined,
+      );
       return isSnapshot(source!) ? useSnapshotRead(read) : read;
     }
     case "query-value-list":
@@ -698,7 +666,7 @@ export function useLive<Row, F, S extends string>(
       );
     case "all":
       return useAll(
-        source as LiveAllCollection<Row, string>,
+        (source as LiveAllCollection<Row, string>).all,
         (query ?? undefined) as AllQuery<Row> | undefined,
       );
     case "all-pages":
@@ -944,10 +912,9 @@ function useQueryValueList<T, Q, QIn>(
  * shared copy. One unconditional call either way (rules of hooks).
  */
 function useAll<Row>(
-  collection: LiveAllCollection<Row, string>,
+  all: LiveAllCollection<Row, string>["all"],
   query: AllQuery<Row> | undefined,
 ): ResourceResult<unknown> {
-  const { all } = collection;
   // A scoped set (`all: { by }`) is read by its scope, the whole set by none:
   // the overloads pair them, this holds the line for an untyped caller (the
   // server would refuse the tuple as a contract mismatch, far from here).
@@ -963,161 +930,7 @@ function useAll<Row>(
       `useLive("${all.key}"): \`where\` on a set declared without \`all.by\` — it has one tuple, the whole set.`,
     );
   }
-  // The predict overlay (`predict-overlay.ts`): while a predicted write is in
-  // flight on the collection's entity, the read is the WHOLE set (a selector
-  // reads predicted rows, so it is applied here, after the fold — the
-  // narrowing is the substrate's again once the ops are done); otherwise it
-  // is exactly the plain or selected read above.
-  const store = usePredictStore();
-  const subject = readSubject(collection);
-  const ops = usePredictedOps(store, subject);
-  const select = query?.select;
-  const touched = ops.length > 0;
-  const read = useResource(all, where, {
-    gate: true,
-    select: touched ? undefined : select,
-  });
-  const scopeJson = JSON.stringify(where ?? {});
-  const tupleKey = `${all.key}|${scopeJson}`;
-  // The tuple's server rows, held only while they are what `read` carries
-  // (a selected read's `data` is its slice).
-  const serverRows =
-    touched || select === undefined ? heldRows(read) : undefined;
-  const { membership, id: idField, rowKeys, row: rowSchema } = collection;
-  const allOrder = all.all.orderBy as
-    readonly (readonly [string, "asc" | "desc"])[] | undefined;
-  // An `all` set holds every row of its collection in its order — within
-  // its `by` scope, and its `membership` when it declares one — so an upsert
-  // belonging there enters it where it sorts: its scope fields must spell the
-  // tuple's params (a row lacking one is no entrant), and a declared
-  // `membership` must match. With no `membership`, every row of the scope
-  // belongs (`entrantOf` checks the membership when there is one).
-  const tuple = useMemo((): PredictTuple => {
-    const scope = JSON.parse(scopeJson) as Record<string, string>;
-    return {
-      tupleKey,
-      subject,
-      idField,
-      ...(membership === undefined ? {} : { membership }),
-      entrant: entrantOf({ rowKeys, row: rowSchema, membership }, (r) =>
-        Object.entries(scope).every(
-          ([k, v]) => r[k] !== undefined && r[k] !== null && String(r[k]) === v,
-        ),
-      ),
-      ...(predictOrderOf(rowKeys, allOrder) === undefined
-        ? {}
-        : { order: predictOrderOf(rowKeys, allOrder)! }),
-    };
-  }, [
-    tupleKey,
-    subject,
-    idField,
-    membership,
-    rowKeys,
-    rowSchema,
-    allOrder,
-    scopeJson,
-  ]);
-  const held = useHeldTuple(all, where ?? {});
-  usePredictHolder(store, ops, tuple, serverRows, held);
-  return useMemo((): ResourceResult<unknown> => {
-    if (!touched) return read;
-    const fold = (rows: readonly PredictRow[]): unknown => {
-      const predicted = predictRows(ops, tuple, rows);
-      return select === undefined
-        ? predicted
-        : select(predicted as unknown as Row[]);
-    };
-    switch (read.status) {
-      case "loading":
-        return read;
-      case "error":
-        return read.stale === undefined
-          ? read
-          : { ...read, stale: fold(read.stale as readonly PredictRow[]) };
-      case "ready": {
-        const data = fold(read.data as readonly PredictRow[]);
-        return data === read.data ? read : { ...read, data };
-      }
-    }
-  }, [touched, read, ops, tuple, select]);
-}
-
-/**
- * A value tuple's read with the predict overlay folded in (`patchValue`
- * targets of this tuple — keyed by the value's key and its canonical params,
- * the tuple `useResource` subscribes), and the read held as the tuple's
- * holder. Identity kept while no op touches the value.
- */
-function usePredictedValue(
-  value: LiveValue<unknown, Record<string, string>, LiveValueOrigin>,
-  params: Record<string, string> | null | undefined,
-  read: ResourceResult<unknown>,
-): ResourceResult<unknown> {
-  const store = usePredictStore();
-  const subject = params === null ? null : valueSubject(value.key);
-  const ops = usePredictedOps(store, subject);
-  const optional = (value as { optionalParams?: readonly string[] })
-    .optionalParams;
-  const canonicalJson =
-    params === null
-      ? null
-      : JSON.stringify(canonicalParams(params ?? {}, optional));
-  const canonical = useMemo(
-    () =>
-      canonicalJson === null
-        ? null
-        : (JSON.parse(canonicalJson) as Record<string, string>),
-    [canonicalJson],
-  );
-  const paramsKey = canonical === null ? "" : valueParamsKey(canonical);
-  const held = useHeldTuple(value, canonical);
-  const server = heldValueOf(read);
-  usePredictValueHolder(
-    store,
-    ops,
-    subject,
-    value.key,
-    paramsKey,
-    server,
-    held,
-  );
-  const { key } = value;
-  return useMemo((): ResourceResult<unknown> => {
-    if (subject === null || ops.length === 0) return read;
-    const fold = (v: unknown): unknown =>
-      predictValue(ops, `${key}|${paramsKey}`, subject, key, paramsKey, v);
-    switch (read.status) {
-      case "loading":
-        return read;
-      case "error": {
-        if (read.stale === undefined) return read;
-        const stale = fold(read.stale);
-        return stale === read.stale ? read : { ...read, stale };
-      }
-      case "ready": {
-        const data = fold(read.data);
-        return data === read.data ? read : { ...read, data };
-      }
-    }
-  }, [subject, ops, read, key, paramsKey]);
-}
-
-/** The server value a value read holds, for its predict holder — none while loading. */
-function heldValueOf(read: ResourceResult<unknown>): {
-  held: boolean;
-  data: unknown;
-} {
-  switch (read.status) {
-    case "loading":
-      return { held: false, data: undefined };
-    case "error":
-      return read.stale === undefined
-        ? { held: false, data: undefined }
-        : { held: true, data: read.stale };
-    case "ready":
-      return { held: true, data: read.data };
-  }
+  return useResource(all, where, { gate: true, select: query?.select });
 }
 
 /** What `useAll` reads: a scope (a scoped set's), a slice, both or neither. */
@@ -1296,84 +1109,8 @@ function useCollection<Row, F, S extends string>(
     }
   }, [growUnsettled, previous, current, limit, maxLimit, loadMore]);
 
-  // An id set (`:rows`) shows the predicted rows like `useLiveRow` does — a
-  // grouping's counts are the server's (never predicted).
-  const store = usePredictStore();
-  const subject = shape === null ? readSubject(collection) : null;
-  const ops = usePredictedOps(store, subject);
-  const idsTuple = subject === null ? null : `${collection.rows.key}|${idsKey}`;
-  const { membership, id: idField, rowKeys, row: rowSchema } = collection;
-  // An id set admits an upsert of one of its ids (a point read ignores
-  // window filters; the base membership still holds).
-  const tuple = useMemo((): PredictTuple | null => {
-    if (subject === null || idsTuple === null) return null;
-    const wanted = new Set(ids ?? []);
-    return {
-      tupleKey: idsTuple,
-      subject,
-      idField,
-      ...(membership === undefined ? {} : { membership }),
-      entrant: entrantOf({ rowKeys, row: rowSchema, membership }, (r) =>
-        wanted.has(String(r[idField])),
-      ),
-    };
-    // `ids` is read through `idsKey`, its canonical encoding.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subject, idsTuple, idField, membership, rowKeys, rowSchema]);
-  const held = useHeldTuple(
-    collection.rows,
-    idsKey === null || subject === null ? null : { ids: idsKey },
-  );
-  usePredictHolder(
-    store,
-    ops,
-    tuple,
-    subject === null ? undefined : heldRows(current),
-    held,
-  );
-  const ids_ = useMemo((): ResourceResult<Row[]> => {
-    const read = current as ResourceResult<Row[]>;
-    if (tuple === null || ops.length === 0) return read;
-    const fold = (rows: Row[]): Row[] =>
-      predictRows(
-        ops,
-        tuple,
-        rows as unknown as readonly PredictRow[],
-      ) as unknown as Row[];
-    switch (read.status) {
-      case "loading":
-        return read;
-      case "error": {
-        if (read.stale === undefined) return read;
-        const stale = fold(read.stale);
-        return stale === read.stale ? read : { ...read, stale };
-      }
-      case "ready": {
-        const data = fold(read.data);
-        return data === read.data ? read : { ...read, data };
-      }
-    }
-  }, [current, tuple, ops]);
-
-  if (shape === null) return ids_;
+  if (shape === null) return current as ResourceResult<Row[]>;
   return list;
-}
-
-/**
- * The server rows a read holds, for the predict overlay's holder: its value,
- * or — failed — the last one it held; `undefined` while it has none.
- */
-function heldRows(
-  read: ResourceResult<unknown>,
-): readonly PredictRow[] | undefined {
-  switch (read.status) {
-    case "loading":
-      return undefined;
-    case "error":
-      return read.stale as readonly PredictRow[] | undefined;
-    case "ready":
-      return read.data as readonly PredictRow[];
-  }
 }
 
 /**
@@ -1383,7 +1120,6 @@ function heldRows(
 const NO_ID: LiveRowResult<never> = {
   status: "ready",
   found: false,
-  pending: false,
   refetch: () => Promise.resolve(),
 };
 
@@ -1434,51 +1170,13 @@ export function useLiveRow<Row>(
     [idsKey],
   );
   const result = useResource(collection.rows, params);
-  // The predict overlay: the ops in flight on this collection's entity,
-  // folded over this tuple's server row, and this read held as a tuple of
-  // it (its data-change edge is what confirms an op here).
-  const store = usePredictStore();
-  const subject = readSubject(collection);
-  const ops = usePredictedOps(store, subject);
-  const tupleKey = idsKey === null ? null : `${collection.rows.key}|${idsKey}`;
-  const { membership, id: idField, rowKeys, row: rowSchema } = collection;
-  // A by-id read admits an upsert of its id: `found: false` turns `found`.
-  const tuple = useMemo(
-    (): PredictTuple | null =>
-      tupleKey === null || id === null
-        ? null
-        : {
-            tupleKey,
-            subject,
-            idField,
-            ...(membership === undefined ? {} : { membership }),
-            entrant: entrantOf(
-              { rowKeys, row: rowSchema, membership },
-              (r) => String(r[idField]) === id,
-            ),
-          },
-    [tupleKey, id, subject, idField, membership, rowKeys, rowSchema],
-  );
-  const held = useHeldTuple(collection.rows, params);
-  usePredictHolder(store, ops, tuple, heldRows(result), held);
   // The result keeps its identity until what it is built from changes, like
   // `useLive`'s list result: consumers memoize on it. `useResource`'s own
   // result changes only with its status / data / error / stale.
   return useMemo((): LiveRowResult<CollectionRow<Row>> | LiveUnavailable => {
     if (unavailableRead !== null) return unavailableRead;
     // Determinate without the server: no (carriable) id names no row.
-    if (absent || tuple === null || id === null) return NO_ID;
-    const predicted = (row: CollectionRow<Row> | undefined) =>
-      predictRow(ops, tuple, row as PredictRow | undefined) as
-        CollectionRow<Row> | undefined;
-    const pendingOn = (server: CollectionRow<Row> | undefined): boolean =>
-      rowPending(
-        ops,
-        tuple.tupleKey,
-        subject,
-        id,
-        server as PredictRow | undefined,
-      );
+    if (absent) return NO_ID;
     const { refetch } = result;
     switch (result.status) {
       case "loading":
@@ -1486,9 +1184,7 @@ export function useLiveRow<Row>(
       case "error": {
         // A one-id tuple's payload is `[row]` or `[]` — its stale one included.
         // Rows of a collection: the read's own (`CollectionRow`, type-only).
-        const stale = predicted(
-          result.stale?.[0] as CollectionRow<Row> | undefined,
-        );
+        const stale = result.stale?.[0] as CollectionRow<Row> | undefined;
         return stale === undefined
           ? { status: "error", error: result.error, refetch }
           : {
@@ -1499,18 +1195,11 @@ export function useLiveRow<Row>(
             };
       }
       case "ready": {
-        const server = result.data[0] as CollectionRow<Row> | undefined;
-        const row = predicted(server);
-        const pending = pendingOn(server);
+        const row = result.data[0] as CollectionRow<Row> | undefined;
         return row === undefined
-          ? {
-              status: "ready",
-              found: false,
-              pending: pending && server !== undefined,
-              refetch,
-            }
-          : { status: "ready", found: true, row, pending, refetch };
+          ? { status: "ready", found: false, refetch }
+          : { status: "ready", found: true, row, refetch };
       }
     }
-  }, [unavailableRead, absent, result, ops, tuple, subject, id]);
+  }, [unavailableRead, absent, result]);
 }

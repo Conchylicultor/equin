@@ -1,12 +1,9 @@
 import type { Ref, RefObject } from "react";
 import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
-import {
-  mapRow,
-  useLiveMutation,
-  useLiveRow,
-} from "@plugins/network/plugins/live/web";
+import { mapRow, useLiveRow } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
   pagesTree,
   pageData,
@@ -78,13 +75,13 @@ function PageHeaderInner({
 }) {
   const data = page ? pageData(page) : undefined;
   const hasCover = data?.cover != null;
-  const update = useLiveMutation(updateBlock, { label: "Title" });
+  const { mutateAsync } = useEndpointMutation(updateBlock);
 
   const title = useEditableField({
     value: data?.title ?? "",
-    onSave: (next) => {
+    onSave: async (next) => {
       if (!page) return;
-      update.mutate({
+      await mutateAsync({
         params: { id: pageId },
         body: { data: { ...pageData(page), title: next } },
       });

@@ -45,10 +45,6 @@ export type InvestigateResult = z.infer<typeof InvestigateResultSchema>;
 // host without the computer (the demo's worker) has neither.
 export const investigateReport = defineEndpoint({
   route: "POST /api/reports/:id/investigate",
-  unpredicted: {
-    reason: "server-decided",
-    why: "creates a task and launches an agent on the machine",
-  },
   response: InvestigateResultSchema,
   needsMachine: { feature: "Investigating a report" },
 });

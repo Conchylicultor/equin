@@ -11,11 +11,6 @@ import { conversationsQueue } from "./tables";
 // every `conversationCreated` ships a single-row delta to whatever tuple holds
 // that id (none until the live set includes it), never a full re-select.
 //
-// A reorder write that lands OUTSIDE the subscribed id set, or nets to zero,
-// still confirms the sidebar's optimistic op: the optimistic hook ASKS for
-// standalone ack frames on its tuple, and the reorder endpoint's returned
-// `{ watermark }` is the ack token. Nothing is declared here.
-//
 // There is deliberately NO dependency on the conversations resource: point
 // routing gives that structurally — a status tick does not write a rank row.
 // The `pinned` flag rides the same row because it is user-set state, not

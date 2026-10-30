@@ -16,8 +16,4 @@ export const rewindConversationEndpoint = defineEndpoint({
   body: RewindBodySchema,
   response: RewindOutcomeSchema,
   needsMachine: REWINDING,
-  unpredicted: {
-    reason: "server-decided",
-    why: "The rewind cuts the transcript and restores files on disk, and the outcome it returns is rendered.",
-  },
 });

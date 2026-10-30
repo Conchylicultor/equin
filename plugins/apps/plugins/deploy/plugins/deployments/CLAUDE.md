@@ -448,7 +448,7 @@ default, a left rail revealing each (`useRevealSection`).
     - `DeploymentDetail.Section` "Danger zone" → `DangerZone`
     - `DeploymentItemActions` "deploy" → `DeployAction`
     - `DeploymentItemActions` "delete" → `DeleteDeploymentAction`
-  - Uses: 83 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 82 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×14
     - `primitives/data-view` ×7
     - `primitives/live-state` ×6
@@ -456,7 +456,7 @@ default, a left rail revealing each (`useRevealSection`).
     - `apps/deploy/servers` ×5
     - `primitives/slot-render` ×4
     - `infra/endpoints` ×3
-    - `network/live` ×3
+    - `network/live` ×2
     - `primitives/app-shell` ×2
     - `primitives/css/badge` ×2
     - `primitives/css/spacing` ×2
@@ -562,11 +562,11 @@ default, a left rail revealing each (`useRevealSection`).
     - `deploy.runs` (push, notified, whole: one entry per deployment row — its most recent run, whole: one section id per refusing deploy gate — bounded by the installed DeployGates.Gate contributions)
   - Routes:
     - `GET /api/deploy/deployments`
-    - `POST /api/deploy/deployments` — unpredicted (precondition)
+    - `POST /api/deploy/deployments`
     - `GET /api/deploy/deployments/:id`
-    - `PATCH /api/deploy/deployments/:id` — unpredicted (precondition)
-    - `DELETE /api/deploy/deployments/:id` — predicted
-    - `POST /api/deploy/deployments/:id/run` — unpredicted (server-decided)
+    - `PATCH /api/deploy/deployments/:id`
+    - `DELETE /api/deploy/deployments/:id`
+    - `POST /api/deploy/deployments/:id/run`
 - Core:
   - Uses:
     - `apps/deploy/shell.deployIndexRoute`
@@ -585,7 +585,6 @@ default, a left rail revealing each (`useRevealSection`).
     - `network/live.liveCollection`
     - `network/live.LiveRowsCollection`
     - `network/live.liveValue`
-    - `network/live.removeRow`
     - `packages/list-bound.wholeList`
     - `packages/list-bound.wholeRecord`
     - `primitives/pane.defineRoute`

@@ -14,14 +14,18 @@ import { useFetchEndpoint } from "./fetch-endpoint";
 // The global mutation meta type (`suppressError`) is react-query's `Register`,
 // augmented in `./react-query-register.d.ts`.
 
-type MutationVariables<TParams, TBody> =
-  TParams extends Record<string, never>
-    ? TBody extends void
-      ? { params?: TParams; body?: never }
-      : { params?: TParams; body: TBody }
-    : TBody extends void
-      ? { params: TParams; body?: never }
-      : { params: TParams; body: TBody };
+// Never distributive (`[T] extends [U]`): a discriminated-union body is ONE
+// body (`{ body: A | B }`), not a union of requests a variable of the union
+// cannot be assigned to.
+type MutationVariables<TParams, TBody> = [TParams] extends [
+  Record<string, never>,
+]
+  ? [TBody] extends [void]
+    ? { params?: TParams; body?: never }
+    : { params?: TParams; body: TBody }
+  : [TBody] extends [void]
+    ? { params: TParams; body?: never }
+    : { params: TParams; body: TBody };
 
 type MutationOptions<TResponse> = {
   onSuccess?: (data: TResponse extends void ? void : TResponse) => void;
