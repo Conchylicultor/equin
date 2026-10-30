@@ -1,5 +1,5 @@
 import { and, eq, sql } from "drizzle-orm";
-import type { AnyPgColumn } from "drizzle-orm/pg-core";
+import type { AnyPgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { z } from "zod";
 import type { JobFactory } from "@plugins/infra/plugins/jobs/server";
 import { db } from "@plugins/database/server";
@@ -62,7 +62,26 @@ interface RowInsertSpec<P> {
   oneShot?: boolean;
 }
 
-async function insertTriggerRow<P>(spec: RowInsertSpec<P>): Promise<string> {
+/**
+ * A trigger as the row its event's table stores — the table it goes in and the
+ * values: the filter values, job name and serialized `with` config. The one
+ * spelling of a trigger row, for the single insert and the boot sync's batch.
+ */
+export function triggerRow<P, I>(
+  spec: TriggerSpec<P, I>,
+): { table: PgTable; values: Record<string, unknown> } {
+  return rowOf({
+    on: spec.on,
+    jobName: spec.do.name,
+    with: spec.with as Record<string, unknown>,
+    oneShot: spec.oneShot,
+  });
+}
+
+function rowOf<P>(spec: RowInsertSpec<P>): {
+  table: PgTable;
+  values: Record<string, unknown>;
+} {
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- forward-compat guard; more source kinds may be added
   if (spec.on.__kind !== "event") {
     throw new Error(
@@ -81,13 +100,17 @@ async function insertTriggerRow<P>(spec: RowInsertSpec<P>): Promise<string> {
   for (const key of Object.keys(def.filterColumns)) {
     values[key] = filter[key] ?? null;
   }
+  return { table: def.table, values };
+}
 
+async function insertTriggerRow<P>(spec: RowInsertSpec<P>): Promise<string> {
+  const { table, values } = rowOf(spec);
   const rows = await db
-    .insert(def.table)
+    .insert(table)
     .values(values)
     .returning({
       // biome-ignore lint/suspicious/noExplicitAny: dynamic id column access on untyped PgTable.
-      id: (def.table as any).id as AnyPgColumn,
+      id: (table as any).id as AnyPgColumn,
     });
 
   const row = rows[0];

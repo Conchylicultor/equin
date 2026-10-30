@@ -1,9 +1,11 @@
 import { prototypesFiles } from "@plugins/apps/plugins/prototypes/server";
-import type {
-  DataChange,
-  DataWatch,
+import {
+  splitRel,
+  type DataChange,
+  type DataWatch,
 } from "@plugins/infra/plugins/paths/plugins/data-files/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import { yieldMacrotask } from "@plugins/packages/plugins/macrotask-yield/core";
 import { protoIdKind } from "../../core";
@@ -44,8 +46,24 @@ function tracked<T>(work: Promise<T>): Promise<T> {
   });
 }
 
-/** The tree as of the last time it was looked at — see {@link readPrototypesSignature}. */
-let lastSignature = new Map<string, string>();
+/**
+ * The tree as of the last time it was looked at — see {@link readPrototypesSignature}.
+ * A promise because the boot baseline is read after the watch subscribes: a
+ * refresh awaits it, so the first comparison is against the real tree, never
+ * an empty map that would read every prototype as just added.
+ */
+let lastSignature: Promise<Map<string, string>> = Promise.resolve(new Map());
+
+/**
+ * The prototypes a tree change named while the boot baseline was being read
+ * (`"all"` for a rescan), or `null` outside that window. An edit landing
+ * after the subscribe but before its folder is listed is already IN the
+ * baseline, so the signature gate alone would read it as no change; the first
+ * refresh counts these as changed regardless. Handed over to
+ * {@link absorbedAtBoot} when the baseline settles.
+ */
+let seenDuringBaseline: Set<string> | "all" | null = null;
+let absorbedAtBoot: Set<string> | "all" | null = null;
 
 /**
  * Subscribe to "something under `prototypes/` changed".
@@ -83,10 +101,15 @@ export function onPrototypesChanged(
  * have actually changed.
  */
 async function refreshOnce(): Promise<void> {
+  const before = await lastSignature;
   const signature = await readPrototypesSignature();
-  const changed = changedPrototypes(lastSignature, signature);
+  const changed = withAbsorbed(
+    changedPrototypes(before, signature),
+    before,
+    signature,
+  );
   if (changed.length === 0) return;
-  lastSignature = signature;
+  lastSignature = Promise.resolve(signature);
 
   prototypesListServed.notify();
   // Only a prototype still on disk has a history to re-read: a removed one
@@ -106,6 +129,27 @@ async function refreshOnce(): Promise<void> {
     // moved (a prototype minted, adopted or deleted) re-reads the counts here.
     prototypeVersionCountsServed.notify();
   }
+}
+
+/**
+ * `changed` plus the prototypes a change named while the boot baseline was
+ * read (see {@link seenDuringBaseline}) — once, on the first refresh after it.
+ * Only names in either tree count: a path's first segment may be `_template`.
+ */
+function withAbsorbed(
+  changed: string[],
+  before: Map<string, string>,
+  after: Map<string, string>,
+): string[] {
+  const absorbed = absorbedAtBoot;
+  if (absorbed === null) return changed;
+  absorbedAtBoot = null;
+  const names =
+    absorbed === "all" ? [...before.keys(), ...after.keys()] : absorbed;
+  const out = new Set(changed);
+  for (const name of names)
+    if (before.has(name) || after.has(name)) out.add(name);
+  return [...out];
 }
 
 /** Re-read one prototype's history, for whoever is subscribed to it. */
@@ -137,7 +181,10 @@ function onTreeChange(change: DataChange): Promise<void> | undefined {
 function handleTreeChange(change: DataChange): Promise<void> | undefined {
   // The watch reported dropped events (`onLost`): re-derive everything —
   // through the same signature gate, so an unmoved tree costs a few stats.
-  if (change.kind === "rescan") return refreshes.run();
+  if (change.kind === "rescan") {
+    if (seenDuringBaseline !== null) seenDuringBaseline = "all";
+    return refreshes.run();
+  }
   let treeMoved = false;
   const recorded = new Set<string>();
   const picked = new Set<string>();
@@ -145,7 +192,12 @@ function handleTreeChange(change: DataChange): Promise<void> | undefined {
     const kind = classifyTreePath(path);
     if (kind.kind === "version-recorded") recorded.add(kind.id);
     else if (kind.kind === "picks-recorded") picked.add(kind.id);
-    else if (kind.kind === "tree") treeMoved = true;
+    else if (kind.kind === "tree") {
+      treeMoved = true;
+      const dirName = splitRel(path)[0];
+      if (dirName !== undefined && seenDuringBaseline instanceof Set)
+        seenDuringBaseline.add(dirName);
+    }
   }
   for (const id of recorded) notifyHistory(id);
   // Every recorded version moves one prototype's count; the counts are one
@@ -165,8 +217,18 @@ export async function startPrototypesWatcher(): Promise<void> {
   started = true;
 
   // The tree as it stands at boot is the baseline, so the first genuine edit is
-  // what re-broadcasts — not the first tick after start.
-  lastSignature = await readPrototypesSignature();
+  // what re-broadcasts — not the first tick after start. It is read AFTER the
+  // watch is live and not awaited here: `onReady` returns once subscribed (the
+  // read is one listing per prototype, each queued behind every other boot
+  // hook on the event loop — 2 s of wall at boot for ~20 ms of work). A refresh
+  // awaits the baseline before comparing, so it never compares against an
+  // empty map. An edit delivered while the baseline is read may already be in
+  // it, so the prototypes such a change names count as changed on the first
+  // refresh (`seenDuringBaseline`); and, read after the subscribe, no edit can
+  // land between the baseline and the watch unseen.
+  const baseline = Promise.withResolvers<Map<string, string>>();
+  lastSignature = baseline.promise;
+  seenDuringBaseline = new Set();
 
   // Every prototype that predates version history gets its `v0` — once; after
   // that this is a stat per prototype. Not awaited: boot need not wait on a few
@@ -176,7 +238,39 @@ export async function startPrototypesWatcher(): Promise<void> {
     tracked(adoptPrototypeHistories()),
   );
 
-  subscription = await prototypesFiles.watch(onTreeChange);
+  try {
+    subscription = await prototypesFiles.watch(onTreeChange);
+  } catch (err) {
+    started = false;
+    seenDuringBaseline = null;
+    baseline.resolve(new Map());
+    throw err;
+  }
+  baseline.resolve(
+    tracked(
+      runTracked("prototypes:baseline", () => readPrototypesSignature()).then(
+        (signature) => {
+          endBaselineWindow();
+          return signature;
+        },
+        (err: unknown) => {
+          // Loud, and not fatal to the watcher: with an empty baseline the
+          // next refresh re-derives the whole tree.
+          reportServerError({
+            message: `[prototypes] reading the tree's boot baseline failed: ${err instanceof Error ? err.message : String(err)}`,
+            errorType: "PrototypesBaselineFailed",
+          });
+          endBaselineWindow();
+          return new Map<string, string>();
+        },
+      ),
+    ),
+  );
+}
+
+function endBaselineWindow(): void {
+  absorbedAtBoot = seenDuringBaseline;
+  seenDuringBaseline = null;
 }
 
 /**
@@ -209,7 +303,9 @@ export async function settlePrototypesWatcher(): Promise<void> {
 export async function stopPrototypesWatcher(): Promise<void> {
   if (!started) return;
   started = false;
-  lastSignature = new Map();
+  lastSignature = Promise.resolve(new Map());
+  seenDuringBaseline = null;
+  absorbedAtBoot = null;
   if (subscription) {
     await subscription.dispose();
     subscription = null;

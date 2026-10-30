@@ -55,6 +55,7 @@ like `defineJob`.
   - Imported by:
     - `apps/pages/content-search`
     - `apps/places/places-core`
+    - `apps/prototypes/thumbnails`
     - `apps/sonata/sources/midi/folders`
     - `conversations/turn-ledger`
     - `infra/corpus-index`

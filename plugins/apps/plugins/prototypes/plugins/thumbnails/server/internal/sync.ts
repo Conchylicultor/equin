@@ -1,4 +1,5 @@
 import { listPrototypeNames } from "@plugins/apps/plugins/prototypes/plugins/files/server";
+import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import type { ThumbnailState } from "../../core";
 import { hasThumbnail } from "./cache";
 import { decideThumbnail } from "./decide";
@@ -33,6 +34,27 @@ export async function syncThumbnails(): Promise<void> {
   replaceThumbnailStates(next);
   await requestRenders(renderer, pending);
 }
+
+/**
+ * The boot reconcile, as a declared warm-up rather than a fire-and-forget in
+ * `onReady`: it reads and hashes every prototype's bytes (130 prototypes /
+ * 15 MB on the desktop: ~1.8 s standalone, half of it the pure-JS sha256;
+ * 3.6 s as a boot warm-up beside the rest of the drain), which on every
+ * backend's boot competed with the boot hooks and first requests. The drain
+ * runs it once the host has settled, under the executor's gate and slot.
+ * `worktree` scope: the state it rebuilds is this backend's own memory.
+ *
+ * Until it runs, a card has no state — the same as before any sync — and an
+ * edit in the meantime still re-decides its prototype (`onPrototypesChanged`).
+ */
+export const thumbnailsSyncWarmup = defineWarmup({
+  name: "prototype-thumbnails.sync",
+  description:
+    "Checks every prototype's gallery preview against its files and renders the ones that are missing or out of date.",
+  scope: "worktree",
+  budgetMs: 6000,
+  run: () => syncThumbnails(),
+});
 
 /**
  * Re-decide only the prototypes a tree change named (`onPrototypesChanged`

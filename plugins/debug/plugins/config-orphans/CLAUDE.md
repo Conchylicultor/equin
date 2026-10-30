@@ -42,6 +42,7 @@
   - Uses:
     - `config_v2.CONFIG_DIR`
     - `network/live.serveValue`
+  - Register: `defineWarmup('config-orphans.stranded')`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`

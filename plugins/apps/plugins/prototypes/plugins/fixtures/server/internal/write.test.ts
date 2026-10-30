@@ -121,6 +121,9 @@ const PROVIDERS: Entry[] = [
     ["apps/plugins/prototypes/plugins/thumbnails"],
   ),
   serverEntryFor("config_v2/plugins/browser-store", ["config_v2"]),
+  serverEntryFor("infra/plugins/warmup/plugins/sole-host", [
+    "infra/plugins/warmup",
+  ]),
 ];
 
 /** The repo's `config/`, read off disk: what a worker's bundled layer inlines. */

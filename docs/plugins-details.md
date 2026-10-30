@@ -7176,10 +7176,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/prototypes/files.onPrototypesChanged`
               - `infra/endpoints.rawEndpointHandler`
               - `infra/paths/data-files.defineFileRoot`
+              - `infra/warmup.defineWarmup`
               - `network/live.serveValue`
             - Exports (values):
               - `thumbnailCache`
               - `ThumbnailRenderer`
+            - Register: `defineWarmup('prototype-thumbnails.sync')`
             - Resources: `prototypes.thumbnails` (push, notified, whole: one state per prototype — bounded by the prototype list the gallery holds whole)
             - Routes: `GET /api/prototype-thumbs/:key`
           - Web:
@@ -21661,6 +21663,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `config_v2.CONFIG_DIR`
           - `network/live.serveValue`
+        - Register: `defineWarmup('config-orphans.stranded')`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --muted-foreground`
@@ -33195,6 +33198,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/pages/content-search`
           - `apps/places/places-core`
+          - `apps/prototypes/thumbnails`
           - `apps/sonata/sources/midi/folders`
           - `conversations/turn-ledger`
           - `infra/corpus-index`

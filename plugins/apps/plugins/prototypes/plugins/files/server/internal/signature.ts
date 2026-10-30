@@ -22,11 +22,18 @@ import { readFolderSignature } from "../../shared/folder-signature";
 export async function readPrototypesSignature(): Promise<Map<string, string>> {
   const dirNames = await listPrototypeDirNames(prototypesFiles);
 
+  // Every folder at once, not one after another: each listing is a few
+  // stats (~20 ms for the whole tree), but read in series each await queues
+  // behind whatever else holds the event loop — 2 s of wall on a main boot.
+  const read = await Promise.all(
+    dirNames.map(
+      async (dirName) =>
+        [dirName, await readFolderSignature(prototypesFiles, dirName)] as const,
+    ),
+  );
   const signature = new Map<string, string>();
-  for (const dirName of dirNames) {
-    const sig = await readFolderSignature(prototypesFiles, dirName);
+  for (const [dirName, sig] of read)
     if (sig !== null) signature.set(dirName, sig);
-  }
   return signature;
 }
 

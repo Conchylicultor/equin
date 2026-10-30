@@ -2,12 +2,12 @@ import {
   defineServerContribution,
   reportServerError,
 } from "@plugins/framework/plugins/server-core/core";
-import { notInArray } from "drizzle-orm";
-import type { AnyPgColumn } from "drizzle-orm/pg-core";
+import { inArray, notInArray } from "drizzle-orm";
+import type { AnyPgColumn, PgTable } from "drizzle-orm/pg-core";
 import { getAllRegisteredJobNames } from "@plugins/infra/plugins/jobs/server";
 import { db } from "@plugins/database/server";
 import { triggerTableRegistry } from "./registry";
-import { deleteTriggersFor, trigger } from "./trigger";
+import { triggerRow } from "./trigger";
 import type { TriggerSpec } from "./trigger";
 
 // biome-ignore lint/suspicious/noExplicitAny: type params erased at the contribution boundary
@@ -22,16 +22,38 @@ export const Trigger = defineServerContribution<TriggerSpec<any, any>>(
   },
 );
 
+/**
+ * Make the trigger tables hold exactly the declared triggers for every job a
+ * contribution binds: each such job's rows are replaced by its declared ones.
+ *
+ * One transaction, one DELETE and at most one INSERT per trigger table. It was
+ * one DELETE per table per job, then one INSERT per trigger — ~750 serial
+ * statements on a main boot (~900 ms of `onReady`), with a window between a
+ * job's delete and its re-insert in which its event fired into nothing.
+ */
 export async function syncTriggerContributions(): Promise<void> {
   const declared = Trigger.getContributions();
-  const seenJobs = new Set<string>();
+  if (declared.length === 0) return;
+  const jobNames = [...new Set(declared.map((t) => t.do.name))];
+
+  const rowsByTable = new Map<PgTable, Record<string, unknown>[]>();
   for (const t of declared) {
-    if (!seenJobs.has(t.do.name)) {
-      await deleteTriggersFor(t.do);
-      seenJobs.add(t.do.name);
-    }
-    await trigger(t);
+    const { table, values } = triggerRow(t);
+    const rows = rowsByTable.get(table);
+    if (rows) rows.push(values);
+    else rowsByTable.set(table, [values]);
   }
+
+  await db.transaction(async (tx) => {
+    for (const table of triggerTableRegistry.values()) {
+      // biome-ignore lint/suspicious/noExplicitAny: dynamic column access on base-columns.
+      const jobNameCol = (table as any).jobName as AnyPgColumn;
+      await tx.delete(table).where(inArray(jobNameCol, jobNames));
+    }
+    for (const [table, rows] of rowsByTable) {
+      await tx.insert(table).values(rows);
+    }
+  });
 }
 
 // A dangling trigger is a row whose `jobName` is not in the live job registry —

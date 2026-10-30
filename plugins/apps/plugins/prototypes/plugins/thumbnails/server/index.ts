@@ -5,7 +5,7 @@ import { onPrototypesChanged } from "@plugins/apps/plugins/prototypes/plugins/fi
 import { getPrototypeThumbnail } from "../core";
 import { handleThumbnail } from "./internal/serve-thumbnail";
 import { prototypeThumbnailsServed } from "./internal/state";
-import { syncChangedThumbnails, syncThumbnails } from "./internal/sync";
+import { syncChangedThumbnails, thumbnailsSyncWarmup } from "./internal/sync";
 
 // The renderer is the one thing a host brings: Chromium on the desktop (this
 // plugin's machine/ half), none in a browser host (`thumbnails/no-renderer`).
@@ -25,6 +25,10 @@ export default {
     ),
   },
   contributions: [...prototypeThumbnailsServed.declare],
+  // Reconciles once per boot, after the host settles: the cache survives
+  // restarts on the desktop (and is seeded in a browser host), so this
+  // usually confirms everything is already there.
+  register: [thumbnailsSyncWarmup],
   onReady: () => {
     // `files` owns `prototypes/` and already watches it; subscribing to the
     // signal it computes is what keeps a second watcher off the same tree.
@@ -34,12 +38,5 @@ export default {
         syncChangedThumbnails(changed),
       );
     });
-
-    // Reconcile once at boot: the cache survives restarts on the desktop (and
-    // is seeded in a browser host), so this is usually a few stats that
-    // confirm everything is already there. Fire-and-forget — a failure
-    // surfaces as an unhandled rejection (reports files it) rather than being
-    // swallowed into an invisible boot no-op.
-    void runTracked("prototype-thumbnails:sync", () => syncThumbnails());
   },
 } satisfies ServerPluginDefinition;

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ReportKind } from "@plugins/reports/server";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
+import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import type { ReportRow } from "@plugins/reports/server";
 import { auditUserConfigOrphans } from "./orphan-audit";
 
@@ -85,3 +86,19 @@ export async function reportStrandedConfig(): Promise<void> {
     data,
   });
 }
+
+/**
+ * The boot audit, as a declared warm-up rather than an `onAllReady` hook: it
+ * only files a report, so nothing waits on it — yet in `onAllReady` it held
+ * the barrier the warm-up drain starts after (~800 ms on a main boot). The
+ * drain still runs after every `onReady`, so the audit sees the full live
+ * config registry. `worktree` scope: the user layer it audits is this
+ * namespace's.
+ */
+export const strandedConfigWarmup = defineWarmup({
+  name: "config-orphans.stranded",
+  description:
+    "Checks whether any of your saved settings no longer apply, and reports them.",
+  scope: "worktree",
+  run: reportStrandedConfig,
+});

@@ -1058,7 +1058,7 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
         prototypeFixtureVersionFingerprint(p.versions.at(-1)!),
       ]),
     );
-    // The sync runs from onReady, fire-and-forget: wait for its answer.
+    // The sync is a warm-up, drained once the host settles: wait for its answer.
     const states = await until(async () => {
       const read = (await loadResourceByKey(
         "prototypes.thumbnails",

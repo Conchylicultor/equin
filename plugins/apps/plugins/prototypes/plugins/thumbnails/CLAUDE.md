@@ -202,10 +202,12 @@ Design: `research/2026-08-16-apps-prototype-gallery-thumbnails.md`.
     - `apps/prototypes/files.onPrototypesChanged`
     - `infra/endpoints.rawEndpointHandler`
     - `infra/paths/data-files.defineFileRoot`
+    - `infra/warmup.defineWarmup`
     - `network/live.serveValue`
   - Exports (values):
     - `thumbnailCache`
     - `ThumbnailRenderer`
+  - Register: `defineWarmup('prototype-thumbnails.sync')`
   - Resources: `prototypes.thumbnails` (push, notified, whole: one state per prototype — bounded by the prototype list the gallery holds whole)
   - Routes: `GET /api/prototype-thumbs/:key`
 - Web:
