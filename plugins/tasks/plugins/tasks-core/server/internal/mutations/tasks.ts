@@ -17,6 +17,7 @@ import { withTaskStatusChange } from "../status-scope";
 import {
   taskCreated,
   taskDescriptionChanged,
+  taskRefiled,
   taskTitleChanged,
 } from "../tables-events";
 import type { EmitTx } from "@plugins/infra/plugins/events/server";
@@ -200,8 +201,8 @@ async function updateTaskOn(
       return row;
     });
     if (!updated) return null;
-    if (dbPatch.folderId !== undefined)
-      await refreshEffectiveMandates([id], exec);
+    if (patch.folderId === null || typeof patch.folderId === "string")
+      await finishRefile(id, patch.folderId, exec);
     if (typeof patch.title === "string") {
       await taskTitleChanged.emit(
         { taskId: id, title: patch.title },
@@ -233,9 +234,8 @@ async function updateTaskOn(
  * re-file must not union): filing under a folder unions the clusters; filing
  * to the root keeps the mandate the task had under its folder — a root names
  * one (the CHECK) — copied as its own. Returns the columns the write sets.
- * After the write, the caller refreshes the subtree's effective mandates
- * ({@link refreshEffectiveMandates}). Shared by `updateTask` and the tree's
- * drag move, so no re-file path skips either half.
+ * After the write, the caller runs {@link finishRefile}. Shared by
+ * `updateTask` and the tree's drag move, so no re-file path skips either half.
  */
 export async function prepareRefile(
   id: string,
@@ -257,6 +257,24 @@ export async function prepareRefile(
   return own.rootTaskId === id
     ? { folderId }
     : { folderId, mandateRef: own.mandateId };
+}
+
+/**
+ * The part of a re-file run after its write, on the same executor: the
+ * subtree's effective mandates, then `tasks.refiled` (it commits or rolls back
+ * with the write) for what other plugins derive from the folder chain. The
+ * other half of {@link prepareRefile}; every re-file path runs both.
+ */
+export async function finishRefile(
+  id: string,
+  folderId: string | null,
+  exec: DbExecutor,
+): Promise<void> {
+  await refreshEffectiveMandates([id], exec);
+  await taskRefiled.emit(
+    { taskId: id, folderId },
+    exec === db ? undefined : { tx: exec as EmitTx },
+  );
 }
 
 /**

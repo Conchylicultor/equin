@@ -33,6 +33,7 @@ import {
   taskStatusChanged,
   taskTitleChanged,
   taskCreated,
+  taskRefiled,
   taskDescriptionChanged,
   conversationStatusChanged,
   conversationCreated,
@@ -180,9 +181,10 @@ export {
   setMandate,
   clearMandate,
   prepareRefile,
+  finishRefile,
 } from "./internal/mutations/tasks";
-// Every task's effective mandate (`tasks_ext_mandate`): a re-file path outside
-// `updateTask` refreshes its subtree after its write.
+// Every task's effective mandate (`tasks_ext_mandate`), kept by every write
+// that moves it (a re-file path outside `updateTask` runs `finishRefile`).
 export { refreshEffectiveMandates } from "./internal/mutations/mandate";
 export { tasksMandate } from "./internal/tables-mandate";
 export type {
@@ -239,6 +241,11 @@ export type { TaskStatusChangedPayload } from "./internal/tables-events";
 // Emitted once when a task row is created. Filterable by folderId.
 export { taskCreated, _taskCreatedTriggers } from "./internal/tables-events";
 export type { TaskCreatedPayload } from "./internal/tables-events";
+
+// Emitted when a task is re-filed (`finishRefile`): what its subtree inherits
+// down the folder chain may have moved. Filterable by taskId.
+export { taskRefiled, _taskRefiledTriggers } from "./internal/tables-events";
+export type { TaskRefiledPayload } from "./internal/tables-events";
 
 // Emitted at every write of a task's title (create, edit, the Haiku CAS
 // upgrade). Filterable by taskId.
@@ -336,6 +343,7 @@ export default {
     taskStatusChanged,
     taskTitleChanged,
     taskCreated,
+    taskRefiled,
     taskDescriptionChanged,
     conversationStatusChanged,
     conversationCreated,

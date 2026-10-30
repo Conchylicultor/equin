@@ -3,15 +3,17 @@ import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/c
 import { tasksEntityRef } from "@plugins/tasks/plugins/tasks-core/core";
 
 /**
- * Which tasks an agent manages: one row per task a live conversation of
- * ANOTHER task watches (an agent watching what it filed — `watch.children`),
- * in `tasks_ext_manager`. `managerTaskId` is the watching conversation's own
- * task. A task no other task's agent watches has no row: it is the person's
- * own.
+ * Which tasks an agent manages: one row per task under a live conversation
+ * watch of ANOTHER task — on the task itself (an agent watching what it filed,
+ * `watch.children`) or on an ancestor (a watch covers its subtree; a
+ * supervisor root's `watch.tree`), in `tasks_ext_manager`. `managerTaskId` is
+ * the nearest such watcher's own task, so when a sub-supervisor's conversation
+ * ends, what it managed goes up one level to the watch above it. A task no
+ * other task's agent watches has no row: it is the person's own.
  *
- * Derived from `task_watches`, never written by hand: the watch writes and the
- * watcher's conversation ending or coming back refresh it
- * (`server/internal/manager.ts`).
+ * Derived from `task_watches` and the folder chain, never written by hand: the
+ * watch writes, the watcher's conversation ending or coming back, and a task
+ * created or re-filed refresh it (`refreshTaskManagers`).
  *
  * It EXPOSES its presence to every list whose rows reach a task (the
  * conversation lists, the task list) as `managedBy` — `agent` where the task

@@ -225,6 +225,23 @@ export const watchOnConversationStatusJob = defineJob({
   },
 });
 
+export const watchOnTaskFiledJob = defineJob({
+  name: "watch.on-task-filed",
+  description:
+    "When a task is created or re-filed, re-derives which agent manages it and everything under it — a task is managed by the nearest live agent watch up its folder chain.",
+  hold: "instant",
+  input: z.object({}),
+  dedup: "none",
+  // `tasks.created` and `tasks.refiled` both carry the task's id.
+  event: z.object({ taskId: z.string() }).passthrough(),
+  // Not main-only: it rewrites a derived row from this DB's own watches and
+  // delivers nothing, like the status job's refresh.
+  run: async ({ event }) => {
+    if (!event) return;
+    await refreshTaskManagers(db, [event.taskId]);
+  },
+});
+
 export const watchOnConversationCreatedJob = defineJob({
   name: "watch.on-conversation-created",
   description:
@@ -261,7 +278,8 @@ export const watchManagersReconcileJob = defineJob({
   run: () => reconcileTaskManagers(),
 });
 
-/** Re-derive the manager of every task that has a row or an open watch. */
+/** Re-derive the manager of every task that has a row or sits under an open
+ * watch (each refresh covers its ids' subtrees). */
 async function reconcileTaskManagers(): Promise<void> {
   const managed = await db
     .select({ taskId: tasksManager.table.taskId })

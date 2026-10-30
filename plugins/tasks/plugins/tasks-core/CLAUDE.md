@@ -398,6 +398,7 @@ serves them.
     - `TaskCreatedPayload`
     - `TaskDescriptionChangedPayload`
     - `TaskListItem`
+    - `TaskRefiledPayload`
     - `TaskStatus`
     - `TaskStatusChangedPayload`
     - `TaskTitleChangedPayload`
@@ -412,6 +413,7 @@ serves them.
     - `_pushLandedTriggers`
     - `_taskCreatedTriggers`
     - `_taskDescriptionChangedTriggers`
+    - `_taskRefiledTriggers`
     - `_tasks`
     - `_taskStatusChangedTriggers`
     - `_taskTitleChangedTriggers`
@@ -442,6 +444,7 @@ serves them.
     - `dropTaskIfNoActiveSibling`
     - `dropTaskTreeIfNoActiveSibling`
     - `findNextRankInFolder`
+    - `finishRefile`
     - `getAttempt`
     - `getAttemptRow`
     - `getConversation`
@@ -489,6 +492,7 @@ serves them.
     - `taskDependsOn`
     - `taskDescriptionChanged`
     - `TaskListItemSchema`
+    - `taskRefiled`
     - `TaskSchema`
     - `tasksMandate`
     - `taskStatusChanged`
@@ -508,6 +512,7 @@ serves them.
     - `defineTriggerEvent('tasks.statusChanged')`
     - `defineTriggerEvent('tasks.titleChanged')`
     - `defineTriggerEvent('tasks.created')`
+    - `defineTriggerEvent('tasks.refiled')`
     - `defineTriggerEvent('tasks.descriptionChanged')`
     - `defineTriggerEvent('conversation.statusChanged')`
     - `defineTriggerEvent('conversation.created')`

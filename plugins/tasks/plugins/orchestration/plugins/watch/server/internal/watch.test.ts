@@ -524,50 +524,106 @@ describe("tree watch", () => {
 });
 
 describe("task managers", () => {
+  const managerOf = (tx: Tx) => async (taskId: string) =>
+    (await tasksManager.get(taskId, tx))?.managerTaskId ?? null;
+
   test("a task another task's live agent watches is managed by that task; its own agent, a code watcher, an ended watch and a done watcher manage nothing", async () => {
     const got = await worktreeDbScenario(async (tx) => {
-      const manager = async (taskId: string) =>
-        (await tasksManager.get(taskId, tx))?.managerTaskId ?? null;
+      const manager = managerOf(tx);
       const root = await task(tx, null);
+      const other = await task(tx, null);
       const child = await task(tx, root);
-      const rootConv = await conversation(tx, root, "waiting");
+      const otherConv = await conversation(tx, other, "waiting");
       const childConv = await conversation(tx, child, "working");
 
-      // The root's own agent watching its tree, the child's own agent and a
-      // code watcher on the child: nobody else's agent.
-      await takeOverTreeWatch(root, rootConv, tx);
+      // The child's own agent and a code watcher on the child: nobody
+      // else's agent.
       await watchTask(
         child,
         { kind: "conversation", conversationId: childConv },
         tx,
       );
       await watchTask(child, { kind: "code", handler: "h", key: "k" }, tx);
-      const unmanaged = [await manager(root), await manager(child)];
+      const unmanaged = await manager(child);
 
-      // The root's agent watches what it filed.
+      // Another task's agent watches it.
       const w = await watchTask(
         child,
-        { kind: "conversation", conversationId: rootConv },
+        { kind: "conversation", conversationId: otherConv },
         tx,
       );
       const managed = await manager(child);
 
       // Its conversation ending, then coming back (the status job's refresh).
-      await setStatus(tx, rootConv, "done");
+      await setStatus(tx, otherConv, "done");
       await refreshTaskManagers(tx, [child]);
       const watcherDone = await manager(child);
-      await setStatus(tx, rootConv, "waiting");
+      await setStatus(tx, otherConv, "waiting");
       await refreshTaskManagers(tx, [child]);
       const watcherBack = await manager(child);
 
       await endWatch(w.id, tx);
       const ended = await manager(child);
-      return { root, unmanaged, managed, watcherDone, watcherBack, ended };
+      return { other, unmanaged, managed, watcherDone, watcherBack, ended };
     });
-    expect(got.unmanaged).toEqual([null, null]);
-    expect(got.managed).toBe(got.root);
+    expect(got.unmanaged).toBeNull();
+    expect(got.managed).toBe(got.other);
     expect(got.watcherDone).toBeNull();
-    expect(got.watcherBack).toBe(got.root);
+    expect(got.watcherBack).toBe(got.other);
     expect(got.ended).toBeNull();
+  });
+
+  test("a supervisor root owns its whole tree: the nearest live watch above manages, and a sub-supervisor ending hands its tasks up one level", async () => {
+    const got = await worktreeDbScenario(async (tx) => {
+      const manager = managerOf(tx);
+      const root = await task(tx, null);
+      const sub = await task(tx, root);
+      const leaf = await task(tx, sub);
+      const rootConv = await conversation(tx, root, "waiting");
+      const subConv = await conversation(tx, sub, "working");
+      await conversation(tx, leaf, "waiting");
+
+      // The root's tree watch covers everything below it, but not the root.
+      await takeOverTreeWatch(root, rootConv, tx);
+      const tree = [
+        await manager(root),
+        await manager(sub),
+        await manager(leaf),
+      ];
+
+      // The sub-supervisor watches what it filed: the nearer watch wins.
+      await watchTask(
+        leaf,
+        { kind: "conversation", conversationId: subConv },
+        tx,
+      );
+      const nearer = await manager(leaf);
+
+      // The sub-supervisor's conversation ends: up one level.
+      await setStatus(tx, subConv, "done");
+      await refreshTaskManagers(tx, [leaf]);
+      const subDone = await manager(leaf);
+
+      // A task filed later under the tree (the created job's refresh).
+      const late = await task(tx, sub);
+      await refreshTaskManagers(tx, [late]);
+      const lateManager = await manager(late);
+
+      // The root's conversation ending releases the whole tree (the status
+      // job refreshes from the root's watch, covering its subtree).
+      await setStatus(tx, rootConv, "done");
+      await refreshTaskManagers(tx, [root]);
+      const released = [
+        await manager(sub),
+        await manager(leaf),
+        await manager(late),
+      ];
+      return { root, sub, tree, nearer, subDone, lateManager, released };
+    });
+    expect(got.tree).toEqual([null, got.root, got.root]);
+    expect(got.nearer).toBe(got.sub);
+    expect(got.subDone).toBe(got.root);
+    expect(got.lateManager).toBe(got.root);
+    expect(got.released).toEqual([null, null, null]);
   });
 });

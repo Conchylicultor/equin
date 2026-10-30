@@ -52,13 +52,17 @@ an agent (one `event` turn per batch) or code (a `WatchHandler`). Plan:
 - **Capability** — `watch.children: true` (core). `add_task` makes the caller
   watch each task it files when granted.
 
-- **Managed by** — `tasks_ext_manager` (`taskManagerShape`, core): a task
-  another task's live agent watches is managed by that task; one its own
-  agent watches (a tree watch on a root), or only code watches, is the
-  person's. Derived only by `refreshTaskManagers` — on every watch write, on
-  the watcher's conversation ending or coming back, and by
-  `watch.managers-reconcile` (startup warm-up + nightly; a cascade-deleted
-  watch runs no app code). Exposed as `managedBy` (Agent / You) in every list
+- **Managed by** — `tasks_ext_manager` (`taskManagerShape`, core): a task is
+  managed by the task of the nearest live agent watch up its folder chain (the
+  task itself first; the oldest on one task) whose watcher is not the task's
+  own agent — the same rule events route by. So a supervisor root owns its
+  whole tree, and when a sub-supervisor's conversation ends, the tasks it
+  managed go up one level. A root's own tree watch does not manage the root;
+  code watches manage nothing. Derived only by `refreshTaskManagers` (over
+  each given task's subtree) — on every watch write, on the watcher's
+  conversation ending or coming back, on `tasks.created` / `tasks.refiled`
+  (`watch.on-task-filed`), and by `watch.managers-reconcile` (startup warm-up
+  + nightly; a cascade-deleted watch runs no app code). Exposed as `managedBy` (Agent / You) in every list
   whose rows reach a task: a Queue view filtered `Managed by is You` shows
   only what no agent is looking after. `managerTaskId` itself is exposed too
   (hidden by default): the Queue draws a managed task beneath its manager's
@@ -92,6 +96,8 @@ it over the real tables with a fake agent.
     - `mandateCapability` "watch.tree"
     - `trigger` "watch.on-conversation-created"
     - `trigger` "watch.on-conversation-status"
+    - `trigger` "watch.on-task-filed"
+    - `trigger` "watch.on-task-filed"
     - `trigger` "watch.on-task-status"
   - Uses:
     - `conversations/stop-gate.StopWaiver`
@@ -151,6 +157,7 @@ it over the real tables with a fake agent.
     - `defineJob('watch.quiet')`
     - `defineJob('watch.deliver')`
     - `defineJob('watch.on-task-status')`
+    - `defineJob('watch.on-task-filed')`
     - `defineJob('watch.on-conversation-status')`
     - `defineJob('watch.on-conversation-created')`
     - `defineJob('watch.managers-reconcile')`

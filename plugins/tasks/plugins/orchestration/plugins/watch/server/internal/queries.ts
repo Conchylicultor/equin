@@ -127,12 +127,17 @@ const ManagerRow = z.object({
 });
 
 /**
- * Re-derive `tasks_ext_manager` for `taskIds`: a task is managed by the task
- * of the oldest live conversation watch ON it from a conversation of another
- * task (its own agent watching it — a tree watch on a root — manages nothing).
- * Writes only what changed, so a refresh that moves nothing sends no row diff.
- * Called on every watch write and when a watcher's conversation ends or comes
- * back — every input of {@link liveWatchSql}.
+ * Re-derive `tasks_ext_manager` for the subtrees rooted at `taskIds` (each
+ * task and everything filed under it). A task is managed by the task of the
+ * nearest live conversation watch up its folder chain — the task itself first,
+ * then its ancestors (a watch covers its whole subtree), the oldest on one
+ * task — never by its own agent (a tree watch on a root manages the tree below
+ * it, not the root). The same rule events route by ({@link nearestLiveWatch}):
+ * a sub-supervisor's conversation ending hands what it watched to the next
+ * live watch above, so a supervisor root owns its whole tree. Writes only what
+ * changed, so a refresh that moves nothing sends no row diff. Called on every
+ * watch write, when a watcher's conversation ends or comes back (every input
+ * of {@link liveWatchSql}), and when a task is created or re-filed (its chain).
  */
 export async function refreshTaskManagers(
   exec: DbExecutor,
@@ -142,26 +147,41 @@ export async function refreshTaskManagers(
   if (ids.length === 0) return;
   const derived = await executeRows(exec, {
     label: "watch task managers",
-    query: sql`SELECT t.id AS "taskId", (
-        SELECT a.task_id
-          FROM ${_taskWatches} w
-          JOIN ${_conversations} c ON c.id = w.watcher_conversation_id
-          JOIN ${_attempts} a ON a.id = c.attempt_id
-         WHERE w.task_id = t.id
-           AND ${liveWatchSql()}
-           AND a.task_id <> t.id
-         ORDER BY w.created_at, w.id
-         LIMIT 1) AS "managerTaskId"
-      FROM ${_tasks} t
-     WHERE t.id IN ${sqlList(ids)}`,
+    query: sql`WITH RECURSIVE sub(id) AS (
+          SELECT t.id FROM ${_tasks} t WHERE t.id IN ${sqlList(ids)}
+          UNION
+          SELECT c.id FROM ${_tasks} c JOIN sub ON c.folder_id = sub.id
+        ),
+        chain(task_id, id, folder_id, depth) AS (
+          SELECT t.id, t.id, t.folder_id, 0
+            FROM ${_tasks} t JOIN sub ON sub.id = t.id
+          UNION ALL
+          SELECT c.task_id, p.id, p.folder_id, c.depth + 1
+            FROM ${_tasks} p JOIN chain c ON p.id = c.folder_id
+           WHERE c.depth < 1000
+        )
+      SELECT sub.id AS "taskId", m."managerTaskId"
+        FROM sub
+        LEFT JOIN (
+          SELECT DISTINCT ON (c.task_id) c.task_id, a.task_id AS "managerTaskId"
+            FROM chain c
+            JOIN ${_taskWatches} w ON w.task_id = c.id
+            JOIN ${_conversations} wc ON wc.id = w.watcher_conversation_id
+            JOIN ${_attempts} a ON a.id = wc.attempt_id
+           WHERE ${liveWatchSql()}
+             AND a.task_id <> c.task_id
+           ORDER BY c.task_id, c.depth, w.created_at, w.id
+        ) m ON m.task_id = sub.id`,
     row: ManagerRow,
   });
+  const derivedIds = derived.map((r) => r.taskId);
+  if (derivedIds.length === 0) return;
   const current = new Map(
     (
       await exec
         .select()
         .from(tasksManager.table)
-        .where(inArray(tasksManager.table.taskId, ids))
+        .where(inArray(tasksManager.table.taskId, derivedIds))
     ).map((r) => [r.taskId, r.managerTaskId]),
   );
   for (const { taskId, managerTaskId } of derived) {

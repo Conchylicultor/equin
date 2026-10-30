@@ -61,6 +61,25 @@ export const { event: taskCreated, table: _taskCreatedTriggers } =
     },
   });
 
+export interface TaskRefiledPayload {
+  taskId: string;
+  folderId: string | null;
+  [key: string]: unknown;
+}
+
+// Emitted when a task is re-filed under another folder (or to the root), by
+// `finishRefile` — the step every re-file path runs after its write, on the
+// writing executor. Everything the task's folder chain decides for its subtree
+// (what it inherits from above) may have moved. Not on creation: a new task is
+// announced by `tasks.created`. Filterable by taskId.
+export const { event: taskRefiled, table: _taskRefiledTriggers } =
+  defineTriggerEvent<TaskRefiledPayload>({
+    name: "tasks.refiled",
+    filters: {
+      taskId: text("task_id"),
+    },
+  });
+
 export interface TaskTitleChangedPayload {
   taskId: string;
   title: string;

@@ -4,9 +4,9 @@ import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { rankAdjacentTo } from "@plugins/primitives/plugins/rank/server";
 import {
   _tasks,
+  finishRefile,
   isDescendant,
   prepareRefile,
-  refreshEffectiveMandates,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { moveTask } from "../../core";
 
@@ -67,13 +67,13 @@ export const handleMove = implement(moveTask, async ({ params, body }) => {
     // The re-file's other halves, on the same tx as the write: the cluster
     // union (at or before the edge write — the label must never lag behind
     // it), the mandate a task moved to the root keeps, then the subtree's
-    // effective mandates.
+    // effective mandates and `tasks.refiled`.
     const refile = await prepareRefile(params.id, body.folderId, tx);
     await tx
       .update(_tasks)
       .set({ ...refile, rank: rank.toJSON() })
       .where(eq(_tasks.id, params.id));
-    await refreshEffectiveMandates([params.id], tx);
+    await finishRefile(params.id, body.folderId, tx);
   });
 
   // No `tasks.statusChanged` emit: a task's status derives from its drop/hold

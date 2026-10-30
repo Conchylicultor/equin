@@ -51269,6 +51269,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `mandateCapability` "watch.tree"
               - `trigger` "watch.on-conversation-created"
               - `trigger` "watch.on-conversation-status"
+              - `trigger` "watch.on-task-filed"
+              - `trigger` "watch.on-task-filed"
               - `trigger` "watch.on-task-status"
             - Uses:
               - `conversations/stop-gate.StopWaiver`
@@ -51328,6 +51330,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `defineJob('watch.quiet')`
               - `defineJob('watch.deliver')`
               - `defineJob('watch.on-task-status')`
+              - `defineJob('watch.on-task-filed')`
               - `defineJob('watch.on-conversation-status')`
               - `defineJob('watch.on-conversation-created')`
               - `defineJob('watch.managers-reconcile')`
@@ -52586,6 +52589,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TaskCreatedPayload`
           - `TaskDescriptionChangedPayload`
           - `TaskListItem`
+          - `TaskRefiledPayload`
           - `TaskStatus`
           - `TaskStatusChangedPayload`
           - `TaskTitleChangedPayload`
@@ -52600,6 +52604,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `_pushLandedTriggers`
           - `_taskCreatedTriggers`
           - `_taskDescriptionChangedTriggers`
+          - `_taskRefiledTriggers`
           - `_tasks`
           - `_taskStatusChangedTriggers`
           - `_taskTitleChangedTriggers`
@@ -52630,6 +52635,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `dropTaskIfNoActiveSibling`
           - `dropTaskTreeIfNoActiveSibling`
           - `findNextRankInFolder`
+          - `finishRefile`
           - `getAttempt`
           - `getAttemptRow`
           - `getConversation`
@@ -52677,6 +52683,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskDependsOn`
           - `taskDescriptionChanged`
           - `TaskListItemSchema`
+          - `taskRefiled`
           - `TaskSchema`
           - `tasksMandate`
           - `taskStatusChanged`
@@ -52696,6 +52703,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineTriggerEvent('tasks.statusChanged')`
           - `defineTriggerEvent('tasks.titleChanged')`
           - `defineTriggerEvent('tasks.created')`
+          - `defineTriggerEvent('tasks.refiled')`
           - `defineTriggerEvent('tasks.descriptionChanged')`
           - `defineTriggerEvent('conversation.statusChanged')`
           - `defineTriggerEvent('conversation.created')`
