@@ -11285,6 +11285,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --foreground`
                   - `ui/tokens/color-palette --muted`
                   - `ui/tokens/color-palette --muted-foreground`
+                  - `ui/tokens/font-family --font-mono`
                   - `ui/tokens/font-family --font-sans`
                   - `ui/tokens/shape --radius`
                   - `ui/tokens/shape --spacing`

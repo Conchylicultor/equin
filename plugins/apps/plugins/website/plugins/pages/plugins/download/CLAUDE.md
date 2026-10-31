@@ -6,9 +6,10 @@ One install, offered two ways behind a tab: **For you**, the repository's
 `install.sh` as one `curl … | bash` command (with what it does folded under
 it), and **For your agent**, the same install as a prompt, copyable or opened
 straight into Claude Code / the Claude app through their deep links (the prompt
-is typed in; nothing runs until the reader presses Enter). Then "Once it is
-running" — open it, read the guide, press Improve — and one caveat: the apps
-were tuned for one person.
+is typed in; nothing runs until the reader presses Enter). Then the caveats as bullets —
+the first install builds every app (~15 minutes), and the apps were tuned
+for one person — and "Once it is running": open it, read the guide, press
+Improve.
 
 The command, the source link and the local app's address come from the shell's
 `core/site.ts`, never spelled here, so the page cannot offer one repository's
@@ -49,6 +50,7 @@ installer beside another's source. The installer's steps are written out in
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted`
     - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/font-family --font-mono`
     - `ui/tokens/font-family --font-sans`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`

@@ -62,7 +62,7 @@ const CLAUDE_APP_LINK = `claude://code/new?q=${PROMPT_QUERY}`;
 /**
  * The download page's body: one install, offered two ways — a command the
  * reader pastes into a terminal, or a prompt they hand to their own agent —
- * then what to do once it runs, and one honest caveat.
+ * then the caveats to know before installing, and what to do once it runs.
  *
  * Its column is narrower than the site's measure (820px): a code panel as wide
  * as the homepage's cards leaves the command stranded at one edge. It caps
@@ -84,8 +84,8 @@ export function DownloadInstall() {
           </Stack>
           {audience === "human" ? <ForYou /> : <ForYourAgent />}
         </Stack>
-        <DownloadNextSteps />
         <Disclaimer />
+        <DownloadNextSteps />
       </Stack>
     </WebsiteBand>
   );
@@ -108,7 +108,9 @@ function ForYou() {
         <CollapsibleTrigger className="text-muted-foreground hover:text-foreground">
           <Stack direction="row" gap="xs" align="center">
             <CollapsibleChevron />
-            <Text variant="body">What does it do?</Text>
+            <Text variant="body">
+              What does <code className="font-mono">install.sh</code> do?
+            </Text>
           </Stack>
         </CollapsibleTrigger>
         <CollapsibleContent>
@@ -164,10 +166,19 @@ function ForYourAgent() {
   );
 }
 
-/**
- * The one caveat a reader should know before installing: the apps come tuned
- * for the person who built them.
- */
+/** What a reader should know before installing: a bold lead, then the why. */
+const CAVEATS = [
+  {
+    lead: "Install can take a while (~15 mins),",
+    body: "as all apps get compiled. This part has not yet been optimized.",
+  },
+  {
+    lead: "You are stepping into someone else's OS.",
+    body: "The apps were tuned for one person's use, so not everything will be relevant to you yet. Later versions will split the personal parts out.",
+  },
+];
+
+/** The caveats, as bullets in one bordered note above what to do once it runs. */
 function Disclaimer() {
   return (
     <Stack
@@ -184,13 +195,23 @@ function Disclaimer() {
         aria-hidden
         className={cn("text-muted-foreground size-4", rigidClass())}
       />
-      <Text as="p" variant="caption" tone="muted">
-        <Text variant="caption" className="font-semibold text-muted-foreground">
-          You are stepping into someone else&apos;s OS.
-        </Text>{" "}
-        The apps were tuned for one person&apos;s use, so not everything will be
-        relevant to you yet. Later versions will split the personal parts out.
-      </Text>
+      <Stack
+        as="ul"
+        gap="sm"
+        className={cn("list-disc", insetClass({ l: "lg" }))}
+      >
+        {CAVEATS.map(({ lead, body }) => (
+          <Text as="li" key={lead} variant="caption" tone="muted">
+            <Text
+              variant="caption"
+              className="font-semibold text-muted-foreground"
+            >
+              {lead}
+            </Text>{" "}
+            {body}
+          </Text>
+        ))}
+      </Stack>
     </Stack>
   );
 }
