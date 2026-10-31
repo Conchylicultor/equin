@@ -1,4 +1,4 @@
-// @hash 8e6e7152c9d4
+// @hash d0cd4b052ac8
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -6,9 +6,21 @@
 //   Divider (rule): { "type": "divider", "id": "<unique-id>" } — a hairline rule between the items either side of it, turned to the slot's flow (flat in a column such as a sidebar's footer rows, upright in a row such as a toolbar).
 //   Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
 //   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
+// Arrange "items" for how this slot ACTUALLY renders — a sidebar is a
+// vertical list, a toolbar a horizontal bar, a pane a stack of blocks.
+// Look at the surface, then order for that reading direction.
+// Node forms:
+// Item: "<key>" (terse; <key> is "<pluginId>:<id>")
+// Hide: { "item": "<key>", "hidden": true }
+// Spacer (gap): { "type": "spacer", "id": "<unique-id>" } — grows to push every item after it to the far end of the row (title left, chips right); at most one per slot. Use it instead of a second slot.
+// Divider (rule): { "type": "divider", "id": "<unique-id>" } — a hairline rule between the items either side of it, turned to the slot's flow (flat in a column such as a sidebar's footer rows, upright in a row such as a toolbar).
+// Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+// Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
 // The top-layer stack, BOTTOM FIRST: each entry paints above the ones before
 // it, all above the popover layer and below z-max. Hint pointers sit under the
-// Ask card that triggered them; toasts above every floating card.
+// Ask card that triggered them; toasts above every floating card; a prototype
+// presentation covers them all; the armed element picker is the very top, so
+// anything on screen can be picked.
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -20,6 +32,8 @@
     "hints:hints",
     "hints.ask:ask",
     "screenshot.draw-on-app:draw",
-    "shell.toast:toast"
+    "shell.toast:toast",
+    "apps.prototypes.present:present",
+    "primitives.ui-context.element-picker:element-picker"
   ]
 }

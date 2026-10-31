@@ -12,6 +12,7 @@ import {
   markerAttrs,
   PluginMarkerMiddleware,
 } from "./internal/marker-middleware";
+import { PickerLayer } from "./internal/layer";
 
 export { ElementPicker } from "./components/element-picker";
 export type { ElementPickerProps } from "./components/element-picker";
@@ -21,6 +22,9 @@ export default {
   description:
     "Chrome-inspector-style element picker: <ElementPicker> arms a full-screen overlay, the user hovers and clicks any element, and onPick receives its <ui-context> metadata (plugin/slot lineage, selector, source). Also declares the <ui-context> inline chip, so whatever can make the token can display it, and stamps every slot contribution with its lineage while in the composition.",
   contributions: [
+    // The armed overlay's place on the top-layer stack: above every other
+    // surface, so anything on screen can be picked.
+    PickerLayer.contribution,
     // The ONE registration of the `<ui-context>` chip. It lives with the picker
     // because a plugin enters a composition only through an import: whoever can
     // make the token must be able to draw it, with or without active-data.

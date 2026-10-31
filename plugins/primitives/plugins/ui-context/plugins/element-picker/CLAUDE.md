@@ -105,10 +105,11 @@ every build — including a composition this plugin is not in.
 - Description: Chrome-inspector-style element picker: <ElementPicker> arms a full-screen overlay, the user hovers and clicks any element, and onPick receives its <ui-context> metadata (plugin/slot lineage, selector, source). Also declares the <ui-context> inline chip, so whatever can make the token can display it, and stamps every slot contribution with its lineage while in the composition.
 - Web:
   - Contributes:
+    - `ZStack.Layer` "The element picker's armed full-screen overlay"
     - `InlineChip.Tag` "ui-context" → `UiContextTag`
     - `SlotRender.ItemAttrs`
     - `SlotRender.ItemMiddleware`
-  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×5
     - `primitives/ui-context` ×5
     - `primitives/css/coords` ×3
@@ -121,6 +122,7 @@ every build — including a composition this plugin is not in.
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/text.Text`
     - `primitives/css/viewport-overlay.ViewportOverlay`
+    - `primitives/css/z-layers/stack.defineZLayer`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/overlay/tooltip.TooltipDoc`

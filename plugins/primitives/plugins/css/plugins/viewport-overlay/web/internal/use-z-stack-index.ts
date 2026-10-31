@@ -4,7 +4,10 @@ import {
   mapResource,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
-import { ZStack, type ZStackLayer } from "./slots";
+import {
+  ZStack,
+  type ZStackLayer,
+} from "@plugins/primitives/plugins/css/plugins/z-layers/plugins/stack/web";
 
 /**
  * The stack sits strictly between the generic portaled layers: above
@@ -14,7 +17,11 @@ const STACK_FLOOR = 50;
 const STACK_CEILING = 9999;
 
 /**
- * A declared layer's z-index: its position in the committed stack order, above
+ * A declared layer's z-index — private to this primitive on purpose:
+ * `ViewportOverlay` is the ONLY way to draw on a stack layer, so every surface
+ * on the stack gets the `PortalHost` that makes its own popups paint above it
+ * (a hand-rolled reader once forgot it, and a toast's Fix popover opened
+ * behind the toast). A layer's z-index: its position in the committed stack order, above
  * every popover. Only the ORDER is meaningful — a deferred tier loading more
  * layers shifts the numbers, never the order.
  *

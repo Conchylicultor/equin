@@ -1,4 +1,4 @@
-// @hash 8e6e7152c9d4
+// @hash d0cd4b052ac8
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,8 +7,10 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
+    "apps.prototypes.present:present",
     "hints:hints",
     "hints.ask:ask",
+    "primitives.ui-context.element-picker:element-picker",
     "screenshot.draw-on-app:draw",
     "shell.toast:toast"
   ]

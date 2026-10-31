@@ -28,11 +28,14 @@ transformed ancestor, so the overlay fills the actual viewport every time.
 </ViewportOverlay>
 ```
 
-- **`layer`** — `"popover"` (default, z-50) | `"max"` (z-9999) | a declared
-  stack layer (`ZStack.Layer`, [`z-layers/stack`](../z-layers/plugins/stack/CLAUDE.md))
-  for an app-wide surface above the popovers: its z-index comes from the
-  committed stack order, and its children are wrapped in `PortalHost` so popups
-  opened inside it draw above it, not on the popover layer beneath.
+- **`layer`** — `"popover"` (default, z-50) | a declared stack layer
+  (`ZStack.Layer`, [`z-layers/stack`](../z-layers/plugins/stack/CLAUDE.md)) for
+  an app-wide surface above the popovers: its z-index comes from the committed
+  stack order, and its children are wrapped in `PortalHost` so popups opened
+  inside it draw above it, not on the popover layer beneath. This primitive is
+  the stack's **only** reader (`web/internal/use-z-stack-index.ts`), so no
+  stack surface can exist without that host. There is no `"max"`: an app-wide
+  overlay is ordered on the stack, not above everything.
   Picks the named z-utility; never write a raw z-index.
 - **`className`** — extra classes for the overlay root (background, flex layout,
   pointer-events, …). The `fixed inset-0` + z-layer are baked in.
@@ -160,12 +163,14 @@ looks equivalent and silently discards the caller's.
   - Uses:
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.usePortalForwardedAttrs`
-    - `primitives/css/z-layers.PortaledLayer`
     - `primitives/css/z-layers.zLayerClass`
-    - `primitives/css/z-layers/stack.useZStackIndex`
+    - `primitives/css/z-layers/stack.ZStack`
     - `primitives/css/z-layers/stack.ZStackLayer`
     - `primitives/live-state.foldResource`
+    - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceResult`
     - `primitives/overlay/portal-host.PortalHost`
+    - `primitives/slot-render.useSlotOrder`
   - Exports (types):
     - `ViewportBlocker`
     - `ViewportBlockerReason`
@@ -194,6 +199,7 @@ looks equivalent and silently discards the caller's.
     - `primitives/ui-context/element-picker`
     - `reports/viewport-escape`
     - `screenshot/draw-on-app`
+    - `shell/toast`
 - Exemptions:
   - Exempted by: `primitives/css/ui-kit` (0 debt)
 

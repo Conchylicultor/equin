@@ -147,12 +147,13 @@ The routes live in `internal/routes.ts`, apart from the panes.
   - Slots: `prototypes-present.actions`
   - Slot contributors: `prototypes-present.actions` ← `primitives.pane`
   - Contributes:
+    - `ZStack.Layer` "A prototype's full-screen presentation"
     - `Pane.Register` "prototypes-present"
     - `PrototypeDetailWrap` → `PresentationHost`
     - `PrototypeFrameActions` "open-new-tab" → `OpenNewTabAction`
     - `PrototypeFrameActions` "full-screen" → `FullScreenAction`
     - `PrototypeCardActions` "open-new-tab" → `OpenCardNewTabAction`
-  - Uses: 56 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 57 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/prototypes/canvas` ×25
     - `primitives/css/ui-kit` ×3
     - `primitives/hover-reveal` ×2
@@ -167,6 +168,7 @@ The routes live in `internal/routes.ts`, apart from the panes.
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/css/viewport-overlay.ViewportOverlay`
+    - `primitives/css/z-layers/stack.defineZLayer`
     - `primitives/dom/element-size.useElementSize`
     - `primitives/dom/movable.Movable`
     - `primitives/embed/frame.FRAME_ACTIVITY_EVENT`

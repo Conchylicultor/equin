@@ -16,14 +16,19 @@ export const AskLayer = defineZLayer({ id: "ask", label: "The floating Ask equin
 // plugins/<you>/web/index.ts
 contributions: [AskLayer.contribution, …]
 
-// your host
+// your host — the ONLY way to draw on a layer
 <ViewportOverlay layer={AskLayer}>…</ViewportOverlay>
-// or, for a surface that positions itself (sonner) — a read, see Values:
-const z = useZStackIndex(AskLayer); // ResourceResult<number>
 ```
 
+A surface that positions itself (sonner's toast list) goes inside a
+click-through `<ViewportOverlay layer={…} className="pointer-events-none">` and
+leaves its own z-index `auto`, so the popups the layer hosts paint above it
+(`shell/toast`'s `ToasterHost`). There is no public z-index read: a hand-rolled
+reader once skipped the `PortalHost`, and a toast's Fix popover opened behind
+the toast.
+
 The handle and its contribution come from one call — there is no string or
-number spelling of a stack layer. `id` must be unique across the stack (`useZStackIndex`
+number spelling of a stack layer. `id` must be unique across the stack (the z-index read
 throws on a duplicate, and on a layer its plugin never contributed).
 
 ## Placing it — forced
@@ -39,7 +44,7 @@ net for the stale window, not a place to leave it.
 
 ## Values
 
-`useZStackIndex(layer)` = `50 + 1 + position`: strictly above `--z-popover`
+A layer's z-index (read inside `viewport-overlay`) = `50 + 1 + position`: strictly above `--z-popover`
 (50), below `--z-max` (9999). Only the order is meaningful.
 
 It is a read (`ResourceResult<number>`): the stack order is the slot's reorder
@@ -48,8 +53,8 @@ layout, which is `loading` until its config is known. A surface renders
 portal first mounts once the index is known, never toggled after (a failed
 refresh keeps the last-known index as `stale`, the same element). The
 not-on-stack / duplicate-id throws fire once the order is known.
-`ViewportOverlay` does this for its stack layers; the toast host does it for
-sonner, which loses no toast in the wait — sonner (>= 2.0.8) replays every
+`ViewportOverlay` does this for every stack layer; the toast host's sonner
+loses no toast in the wait — sonner (>= 2.0.8) replays every
 still-active toast to a `<Toaster>` when it subscribes (pinned by
 `shell/toast`'s `toast-ledger.test.tsx`).
 
@@ -61,31 +66,30 @@ Ask card), which would otherwise portal to `<body>` at 50 — under the card.
 
 ## Plugin reference
 
-- Description: The top-layer stack: app-wide surfaces declare their own z-layer (ZStack.Layer) in their own plugin, ordered by one committed reorder layout; useZStackIndex reads a layer's z-index.
+- Description: The top-layer stack: app-wide surfaces declare their own z-layer (ZStack.Layer) in their own plugin, ordered by one committed reorder layout; a layer is drawn only through ViewportOverlay (layer={…}), which reads its z-index and hosts its popups.
 - Web:
   - Slots: `ZStack.Layer`
   - Slot contributors:
+    - `ZStack.Layer` ← `apps.prototypes.present`
     - `ZStack.Layer` ← `hints`
     - `ZStack.Layer` ← `hints.ask`
+    - `ZStack.Layer` ← `primitives.ui-context.element-picker`
     - `ZStack.Layer` ← `screenshot.draw-on-app`
     - `ZStack.Layer` ← `shell.toast`
-  - Uses:
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceResult`
-    - `primitives/slot-render.defineOrderedSlot`
-    - `primitives/slot-render.useSlotOrder`
+  - Uses: `primitives/slot-render.defineOrderedSlot`
   - Exports (types):
     - `ZStackLayer`
     - `ZStackLayerDef`
   - Exports (values):
     - `defineZLayer`
-    - `useZStackIndex`
     - `ZStack`
 - Cross-plugin:
   - Imported by:
+    - `apps/prototypes/present`
     - `hints`
     - `hints/ask`
     - `primitives/css/viewport-overlay`
+    - `primitives/ui-context/element-picker`
     - `screenshot/draw-on-app`
     - `shell/toast`
 - Test helpers:

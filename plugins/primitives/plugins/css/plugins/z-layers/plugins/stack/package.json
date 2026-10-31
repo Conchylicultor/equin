@@ -1,6 +1,6 @@
 {
   "name": "@equin/plugin-primitives-css-z-layers-stack",
-  "description": "The top-layer stack: app-wide surfaces declare their own z-layer (ZStack.Layer) in their own plugin, ordered by one committed reorder layout; useZStackIndex reads a layer's z-index.",
+  "description": "The top-layer stack: app-wide surfaces declare their own z-layer (ZStack.Layer) in their own plugin, ordered by one committed reorder layout; a layer is drawn only through ViewportOverlay (layer={…}), which reads its z-index and hosts its popups.",
   "private": true,
   "version": "0.0.1"
 }

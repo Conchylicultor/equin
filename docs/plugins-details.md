@@ -7001,12 +7001,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Slots: `prototypes-present.actions`
             - Slot contributors: `prototypes-present.actions` ← `primitives.pane`
             - Contributes:
+              - `ZStack.Layer` "A prototype's full-screen presentation"
               - `Pane.Register` "prototypes-present"
               - `PrototypeDetailWrap` → `PresentationHost`
               - `PrototypeFrameActions` "open-new-tab" → `OpenNewTabAction`
               - `PrototypeFrameActions` "full-screen" → `FullScreenAction`
               - `PrototypeCardActions` "open-new-tab" → `OpenCardNewTabAction`
-            - Uses: 56 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md)
+            - Uses: 57 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md)
               - `apps/prototypes/canvas` ×25
               - `primitives/css/ui-kit` ×3
               - `primitives/hover-reveal` ×2
@@ -7021,6 +7022,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/surface.Surface`
               - `primitives/css/text.Text`
               - `primitives/css/viewport-overlay.ViewportOverlay`
+              - `primitives/css/z-layers/stack.defineZLayer`
               - `primitives/dom/element-size.useElementSize`
               - `primitives/dom/movable.Movable`
               - `primitives/embed/frame.FRAME_ACTIVITY_EVENT`
@@ -41827,12 +41829,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.usePortalForwardedAttrs`
-              - `primitives/css/z-layers.PortaledLayer`
               - `primitives/css/z-layers.zLayerClass`
-              - `primitives/css/z-layers/stack.useZStackIndex`
+              - `primitives/css/z-layers/stack.ZStack`
               - `primitives/css/z-layers/stack.ZStackLayer`
               - `primitives/live-state.foldResource`
+              - `primitives/live-state.mapResource`
+              - `primitives/live-state.ResourceResult`
               - `primitives/overlay/portal-host.PortalHost`
+              - `primitives/slot-render.useSlotOrder`
             - Exports (types):
               - `ViewportBlocker`
               - `ViewportBlockerReason`
@@ -41861,6 +41865,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/ui-context/element-picker`
               - `reports/viewport-escape`
               - `screenshot/draw-on-app`
+              - `shell/toast`
           - Exemptions:
             - Exempted by: `primitives/css/ui-kit` (0 debt)
         - **`working-dots`** — Three-dot working indicator with organic motion: <WorkingDots> varies each pass (duration, amplitude, lag) through smooth noise, carries the dots on springs with a faint overshoot and stretch, holds between passes with a breath, and cycles through every style (gooey, wave, leap, orbit, ring, glow). Alive to the pointer: the nearest dot reaches toward a pointer at the row, and a poke draws a varied reaction (scatter, hop, gulp, shiver, bolt, spin). Sized from the ambient ControlSize; pauses off screen; still under reduced motion. <WorkingText> is the label beside it: a highlight sweeping across the words, each new label sliding in.
@@ -41914,35 +41919,33 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Exports (types):
               - `InTreeLayer`
-              - `PortaledLayer`
               - `ZLayer`
             - Exports (values): `zLayerClass`
           - Plugins:
-            - **`stack`** — The top-layer stack: app-wide surfaces declare their own z-layer (ZStack.Layer) in their own plugin, ordered by one committed reorder layout; useZStackIndex reads a layer's z-index.
+            - **`stack`** — The top-layer stack: app-wide surfaces declare their own z-layer (ZStack.Layer) in their own plugin, ordered by one committed reorder layout; a layer is drawn only through ViewportOverlay (layer={…}), which reads its z-index and hosts its popups.
               - Web:
                 - Slots: `ZStack.Layer`
                 - Slot contributors:
+                  - `ZStack.Layer` ← `apps.prototypes.present`
                   - `ZStack.Layer` ← `hints`
                   - `ZStack.Layer` ← `hints.ask`
+                  - `ZStack.Layer` ← `primitives.ui-context.element-picker`
                   - `ZStack.Layer` ← `screenshot.draw-on-app`
                   - `ZStack.Layer` ← `shell.toast`
-                - Uses:
-                  - `primitives/live-state.mapResource`
-                  - `primitives/live-state.ResourceResult`
-                  - `primitives/slot-render.defineOrderedSlot`
-                  - `primitives/slot-render.useSlotOrder`
+                - Uses: `primitives/slot-render.defineOrderedSlot`
                 - Exports (types):
                   - `ZStackLayer`
                   - `ZStackLayerDef`
                 - Exports (values):
                   - `defineZLayer`
-                  - `useZStackIndex`
                   - `ZStack`
               - Cross-plugin:
                 - Imported by:
+                  - `apps/prototypes/present`
                   - `hints`
                   - `hints/ask`
                   - `primitives/css/viewport-overlay`
+                  - `primitives/ui-context/element-picker`
                   - `screenshot/draw-on-app`
                   - `shell/toast`
               - Test helpers:
@@ -44487,14 +44490,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/shadow --shadow`
-        - Imported by: 306 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Imported by: 304 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `apps` ×82
           - `conversations` ×50
           - `debug` ×29
           - `ui` ×25
           - `tasks` ×24
           - `page` ×16
-          - `primitives` ×16
+          - `primitives` ×15
           - `infra` ×9
           - `active-data` ×7
           - `build` ×7
@@ -44503,12 +44506,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core` ×3
           - `integrations` ×3
           - `review` ×3
-          - `shell` ×3
           - `audience` ×2
           - `config_v2` ×2
           - `framework` ×2
           - `hints` ×2
           - `reports` ×2
+          - `shell` ×2
           - `stats` ×2
           - `code-explorer/commit-detail`
           - `fields/secret/config`
@@ -45705,7 +45708,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/prototypes/present`
               - `primitives/css/ui-kit`
               - `primitives/css/viewport-overlay`
-              - `shell/toast`
           - Web:
             - Exports (values):
               - `PortalHost`
@@ -46804,9 +46806,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSlotOrder`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/density --control-height-sm`
-        - Imported by: 91 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
+        - Imported by: 92 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
           - `apps` ×31
-          - `primitives` ×14
+          - `primitives` ×15
           - `conversations` ×13
           - `ui` ×5
           - `apps-core` ×4
@@ -47687,10 +47689,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`element-picker`** — Chrome-inspector-style element picker: <ElementPicker> arms a full-screen overlay, the user hovers and clicks any element, and onPick receives its <ui-context> metadata (plugin/slot lineage, selector, source). Also declares the <ui-context> inline chip, so whatever can make the token can display it, and stamps every slot contribution with its lineage while in the composition.
           - Web:
             - Contributes:
+              - `ZStack.Layer` "The element picker's armed full-screen overlay"
               - `InlineChip.Tag` "ui-context" → `UiContextTag`
               - `SlotRender.ItemAttrs`
               - `SlotRender.ItemMiddleware`
-            - Uses: 32 symbols — full list in [`plugins/primitives/plugins/ui-context/plugins/element-picker/REFERENCE.md`](../plugins/primitives/plugins/ui-context/plugins/element-picker/REFERENCE.md)
+            - Uses: 33 symbols — full list in [`plugins/primitives/plugins/ui-context/plugins/element-picker/REFERENCE.md`](../plugins/primitives/plugins/ui-context/plugins/element-picker/REFERENCE.md)
               - `primitives/css/ui-kit` ×5
               - `primitives/ui-context` ×5
               - `primitives/css/coords` ×3
@@ -47703,6 +47706,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/text.Text`
               - `primitives/css/viewport-overlay.ViewportOverlay`
+              - `primitives/css/z-layers/stack.defineZLayer`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/overlay/popover.InlinePopover`
               - `primitives/overlay/tooltip.TooltipDoc`
@@ -50027,12 +50031,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/theme-boundary.Theme`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.ControlSizeProvider`
+          - `primitives/css/viewport-overlay.ViewportOverlay`
           - `primitives/css/z-layers/stack.defineZLayer`
-          - `primitives/css/z-layers/stack.useZStackIndex`
           - `primitives/dom/element-size.useElementSize`
           - `primitives/link-gesture.linkProps`
-          - `primitives/live-state.foldResource`
-          - `primitives/overlay/portal-host.PortalHost`
           - `primitives/select-scope.ContentScope`
           - `ui/icons.Icon`
         - Exports (types):

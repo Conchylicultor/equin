@@ -9,6 +9,7 @@ import {
   type FrameId,
 } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
 import { PresentBox } from "./present-box";
+import { PresentLayer } from "../internal/layer";
 import { PresentStage } from "./present-stage";
 
 /**
@@ -122,7 +123,7 @@ export function PresentOverlay({
 
   return (
     <ViewportOverlay
-      layer="max"
+      layer={PresentLayer}
       role="dialog"
       aria-modal="true"
       aria-label="Prototype presentation"

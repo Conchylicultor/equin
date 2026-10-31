@@ -806,14 +806,14 @@ Details:
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`
     - `ui/tokens/shadow --shadow`
-  - Imported by: 306 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 304 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×82
     - `conversations` ×50
     - `debug` ×29
     - `ui` ×25
     - `tasks` ×24
     - `page` ×16
-    - `primitives` ×16
+    - `primitives` ×15
     - `infra` ×9
     - `active-data` ×7
     - `build` ×7
@@ -822,12 +822,12 @@ Details:
     - `apps-core` ×3
     - `integrations` ×3
     - `review` ×3
-    - `shell` ×3
     - `audience` ×2
     - `config_v2` ×2
     - `framework` ×2
     - `hints` ×2
     - `reports` ×2
+    - `shell` ×2
     - `stats` ×2
     - `code-explorer/commit-detail`
     - `fields/secret/config`

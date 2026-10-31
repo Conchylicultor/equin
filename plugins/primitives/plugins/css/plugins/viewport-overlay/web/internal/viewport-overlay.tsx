@@ -5,17 +5,12 @@ import {
   usePortalForwardedAttrs,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
-import {
-  type PortaledLayer,
-  zLayerClass,
-} from "@plugins/primitives/plugins/css/plugins/z-layers/web";
-import {
-  useZStackIndex,
-  type ZStackLayer,
-} from "@plugins/primitives/plugins/css/plugins/z-layers/plugins/stack/web";
+import { zLayerClass } from "@plugins/primitives/plugins/css/plugins/z-layers/web";
+import type { ZStackLayer } from "@plugins/primitives/plugins/css/plugins/z-layers/plugins/stack/web";
 import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import { PortalHost } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
 import { useViewportEscape } from "./use-viewport-escape";
+import { useZStackIndex } from "./use-z-stack-index";
 
 // The viewport-fill recipe lives in a module const (not an inline className
 // literal) so the `no-adhoc-viewport-overlay` rule — which only harvests literals
@@ -39,11 +34,13 @@ interface OverlayBodyProps extends Passthrough<HTMLDivElement> {
 
 export interface ViewportOverlayProps extends OverlayBodyProps {
   /**
-   * Stacking layer. Defaults to "popover" (the documented portaled-layer). An
+   * Stacking layer. Defaults to "popover" (the documented portaled layer). An
    * app-wide surface that must paint above the popovers passes its own declared
-   * stack layer (`ZStack.Layer`, z-layers/stack) — never a generic one.
+   * stack layer (`ZStack.Layer`, z-layers/stack) — there is no generic layer
+   * above the popovers to reach for (`max` is not offered: a surface there
+   * would be ordered against nothing).
    */
-  layer?: PortaledLayer | ZStackLayer;
+  layer?: "popover" | ZStackLayer;
 }
 
 /**

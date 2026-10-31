@@ -9,6 +9,7 @@ import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
 import { collectLineage } from "@plugins/primitives/plugins/ui-context/web";
 import { isModHeld } from "@plugins/primitives/plugins/shortcuts/web";
+import { PickerLayer } from "../internal/layer";
 import { resolveTarget } from "../internal/resolve-target";
 
 interface Highlight {
@@ -112,7 +113,7 @@ export function PickerOverlay({
     // pointer-events:none so document.elementFromPoint returns the underlying
     // app element rather than this overlay.
     <ViewportOverlay
-      layer="max"
+      layer={PickerLayer}
       data-element-picker
       className="pointer-events-none"
     >

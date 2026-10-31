@@ -25,10 +25,13 @@ export type ZLayer = keyof typeof Z_LAYER_CLASS;
  *  in-pane floats, full-pane overlays. Out-stacked by every portaled layer. */
 export type InTreeLayer = "base" | "raised" | "nav" | "float" | "overlay";
 
-/** Generic portaled layers: `popover` (50) for every popup / lightbox,
- *  `max` (9999) for critical banners. An app-wide surface that must paint
- *  above the popovers declares its OWN layer on the stack instead
- *  (`z-layers/stack`: `ZStack.Layer`), ordered between these two. */
+/** Generic layers above the in-tree tier: `popover` (50) for every popup /
+ *  lightbox opened from the page, and `max` (9999) — the unconditional top for
+ *  what cannot wait for the stack's order (the boot-error banner) or must beat
+ *  an unbounded local count (the desktop's tab-drag ghost over its windows'
+ *  runtime z). An app-wide surface that must paint above the popovers declares
+ *  its OWN layer on the stack instead (`z-layers/stack`: `ZStack.Layer`),
+ *  ordered between these two and drawn only through `ViewportOverlay`. */
 export type PortaledLayer = "popover" | "max";
 
 // Compile-time guard: the two tiers must EXACTLY partition the ladder, so a new

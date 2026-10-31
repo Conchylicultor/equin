@@ -17,12 +17,10 @@
     - `primitives/css/theme-boundary.Theme`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.ControlSizeProvider`
+    - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/css/z-layers/stack.defineZLayer`
-    - `primitives/css/z-layers/stack.useZStackIndex`
     - `primitives/dom/element-size.useElementSize`
     - `primitives/link-gesture.linkProps`
-    - `primitives/live-state.foldResource`
-    - `primitives/overlay/portal-host.PortalHost`
     - `primitives/select-scope.ContentScope`
     - `ui/icons.Icon`
   - Exports (types):

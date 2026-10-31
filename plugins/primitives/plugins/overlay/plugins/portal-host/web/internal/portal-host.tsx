@@ -2,7 +2,6 @@ import {
   createContext,
   useContext,
   useRef,
-  type CSSProperties,
   type ReactNode,
   type RefObject,
 } from "react";
@@ -33,21 +32,17 @@ const PortalContainerContext =
 export function PortalHost({
   children,
   className,
-  style,
 }: {
   children: ReactNode;
   /** Classes for the host element — e.g. `pointer-events-auto` when the region
    *  is `pointer-events-none`, so the popups drawn into it stay clickable. */
   className?: string;
-  /** Inline style for the host element — e.g. a runtime z-index (a declared
-   *  stack layer's) when the host itself must paint above the region. */
-  style?: CSSProperties;
 }): ReactNode {
   const ref = useRef<HTMLDivElement>(null);
   return (
     <PortalContainerContext.Provider value={ref}>
       {children}
-      <div ref={ref} data-portal-host="" className={className} style={style} />
+      <div ref={ref} data-portal-host="" className={className} />
     </PortalContainerContext.Provider>
   );
 }
