@@ -55,6 +55,15 @@ const PROMOTABLE: ReadonlySet<FieldKind> = new Set([
   "identifier",
 ]);
 
+/** Where a title may be promoted from: the secondary slots, and `hidden` — a
+ *  shown field the view had no room for (an icon grid draws neither line 2
+ *  nor a trail, so its name would otherwise never be drawn). */
+const PROMOTABLE_FROM: ReadonlySet<Slot> = new Set([
+  "line2",
+  "trail",
+  "hidden",
+]);
+
 /**
  * THE placement engine: which slot each field is drawn in, and what gives way
  * first. Every view reads its answer; no view decides placement itself.
@@ -68,8 +77,10 @@ const PROMOTABLE: ReadonlySet<FieldKind> = new Set([
  *    a field takes the first matching rule whose slot the view draws and has
  *    room. A field no rule places trails (or is hidden, in a view without a
  *    trail).
- * 4. With no title, the first label / prose / identifier field drawn on
- *    line 2 or trailing is promoted.
+ * 4. With no title, the first shown label / prose / identifier field drawn on
+ *    line 2, trailing, or left undrawn for want of room (a view without
+ *    those slots — an icon grid) is promoted. A field the user hid stays
+ *    hidden.
  * 5. Priority: `emphasis` first, then by slot rank (`SLOT_RANK`), then the
  *    drawing order within the slot.
  */
@@ -191,7 +202,8 @@ export function resolvePlacement<TRow>({
   if (!used.get("title") && capacity("title") > 0) {
     const candidate = shown.find(
       (f) =>
-        (slotOf.get(f.id) === "line2" || slotOf.get(f.id) === "trail") &&
+        PROMOTABLE_FROM.has(slotOf.get(f.id)!) &&
+        userSlot.get(f.id) !== "hidden" &&
         PROMOTABLE.has(kinds.get(f.id)!) &&
         takes("title", f),
     );

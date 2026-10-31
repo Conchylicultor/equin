@@ -39,7 +39,7 @@ export const appIconIdentity = defineFieldIdentity<AppIcon>({
  */
 export const installedApp = rowKind("apps.installed-app", {
   fields: {
-    name: textField({ label: "Name" }),
+    name: textField({ label: "Name", primary: true }),
     icon: Object.freeze({
       ...jsonField({
         label: "Icon",

@@ -143,6 +143,22 @@ describe("resolvePlacement", () => {
     expect(p.notes).toContain("no title → path promoted");
   });
 
+  it("promotes a title the view had no room for (no line 2, no trail)", () => {
+    const ICONS: ViewSlots = {
+      lead: { capacity: 1, kinds: ["visual"] },
+      title: { capacity: 1 },
+    };
+    const fields = [f("name", "label"), f("icon", "visual")];
+    const { ids } = place(fields, {}, { slots: ICONS });
+    expect(ids.title).toEqual(["name"]);
+    expect(ids.lead).toEqual(["icon"]);
+    // A field the user hid stays hidden.
+    expect(
+      place(fields, {}, { slots: ICONS, properties: [{ id: "icon" }] }).ids
+        .title,
+    ).toEqual([]);
+  });
+
   it("hides `visible: false`, and an unlisted field under a Properties list", () => {
     expect(
       place([
