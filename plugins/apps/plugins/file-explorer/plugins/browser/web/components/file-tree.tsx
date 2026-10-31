@@ -212,6 +212,14 @@ const TYPE_GLYPH_FIELD: FieldDef<EntryRow> = {
   ),
 };
 
+/**
+ * The type glyph is the row's lead, pinned: under the record recipe a state
+ * leads ahead of a visual, so a contributed state field (a git badge, from a
+ * plugin's custom columns) would otherwise take the one lead slot — empty off
+ * a checkout — and push the glyph out to a trailing column.
+ */
+const TREE_PLACE = { [TYPE_GLYPH_FIELD.id]: "lead" } as const;
+
 /** The Kind column: what the entry is, in words ("PDF document", "Folder"). */
 const KIND_FIELD: FieldDef<EntryRow> = {
   id: "kind",
@@ -557,6 +565,7 @@ export function FileTree({
       rowDrop={rowDrop}
       rowActivation={rowActivation}
       onRowOpen={onOpen}
+      place={TREE_PLACE}
       emphasis={["size"]}
       viewOptions={{ table: tableOptions }}
       emptyState={emptyState}
