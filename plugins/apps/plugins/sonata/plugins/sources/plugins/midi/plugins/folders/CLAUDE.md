@@ -18,6 +18,13 @@ Two mechanisms keep the DB in sync with disk:
   Create/update enqueues `importMidiFileJob`; delete badges the song
   `sourceMissing`. Rebuilt whenever the `midi-folders` config changes (via
   `watchConfig`), so there is no polling.
+- **A file being written is not a failure.** A writer that fills the final
+  file in place (instead of renaming a finished temp file over it) fires
+  events before its bytes are complete. The job skips a 0-byte file, and a
+  failed import whose file's `(mtime, size)` moved since the read is
+  superseded: the write that moved it fired an update that enqueues the job
+  again. Only a failure on bytes that did not change (corrupt) propagates
+  and retries.
 - **Drift reconcile** (`reconcile.ts`) — catches what the watcher cannot: files
   that changed while the backend was down, and pre-existing files in a
   newly-added folder (the watcher emits no events for those). It runs at boot
