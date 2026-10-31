@@ -1,7 +1,7 @@
 # mcp/health
 
 The health report's **MCP server** row: is this backend's MCP server (the one
-the agents it launches connect to, `.mcp.json`'s `EQUIN_PARENT_HOST`)
+the agents it launches connect to, `.mcp.json`'s `EQUIN_PARENT_URL`)
 answering them?
 
 ## The signal (`infra/mcp` server, `mcp.health`)

@@ -13,13 +13,13 @@ export default [
     paths: ["core/namespace.test.ts"],
     kind: "sanctioned",
     reason:
-      "Pins that main's old address still resolves to it, so the legacy host stays a working alias.",
+      "Pins that main's old address is not a host: a labelled namespace's own name reaches nothing.",
   },
   {
     rule: "product-name:legacy-id",
     paths: ["core/namespace.test.ts"],
     kind: "sanctioned",
     reason:
-      "Pins that main's old address still resolves to it, so the legacy host stays a working alias.",
+      "Pins that main's old address is not a host: a labelled namespace's own name reaches nothing.",
   },
 ] satisfies Exemptions;

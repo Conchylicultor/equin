@@ -63,6 +63,14 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// A labelled namespace's own name is not an address: it is served only at
+	// its label. Refused before anything else reads the host, so no route —
+	// /gateway, a central path, the single-app fallback — answers on it.
+	if label, ok := labelledNamespaceHost(r.Host); ok {
+		http.Error(w, "equin gateway. This address is not served; use "+label+".localhost.", http.StatusNotFound)
+		return
+	}
+
 	worktreeName := parseWorktree(r.Host)
 
 	// /gateway/* is reserved on every host, including the no-subdomain root.
@@ -523,7 +531,21 @@ func parseWorktree(host string) string {
 	if target, ok := hostAliases[name]; ok {
 		return target
 	}
+	if _, ok := namespaceLabels[name]; ok {
+		return ""
+	}
 	return name
+}
+
+// labelledNamespaceHost reports whether a Host header names a labelled
+// namespace by its own name (`<ns>.localhost`), and the label it is served at.
+func labelledNamespaceHost(host string) (string, bool) {
+	h := hostOnly(host)
+	if !strings.HasSuffix(h, ".localhost") {
+		return "", false
+	}
+	label, ok := namespaceLabels[strings.TrimSuffix(h, ".localhost")]
+	return label, ok
 }
 
 // hostAliases maps an extra host label onto the namespace it serves:
@@ -537,6 +559,17 @@ func parseWorktree(host string) string {
 var hostAliases = map[string]string{
 	"equin": "singularity",
 }
+
+// namespaceLabels is hostAliases inverted: a namespace → the label it is served
+// at. A namespace in it is reachable ONLY at that label — its own name is not
+// a host (NAMESPACE_HOST_LABELS: the internal name is an id, never an address).
+var namespaceLabels = func() map[string]string {
+	m := make(map[string]string, len(hostAliases))
+	for label, ns := range hostAliases {
+		m[ns] = label
+	}
+	return m
+}()
 
 func isBackendPath(p string) bool {
 	return strings.HasPrefix(p, "/api/") || strings.HasPrefix(p, "/ws/")

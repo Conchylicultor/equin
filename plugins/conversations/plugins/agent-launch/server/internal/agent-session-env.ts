@@ -3,6 +3,7 @@ import {
   envEntries,
   envName,
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import { namespaceUrl } from "@plugins/infra/plugins/namespace/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 
 // What environment does an agent's shell start from? Every app-launched agent
@@ -35,7 +36,9 @@ import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
  * - `EQUIN_CONVERSATION_ID` — the conversation id the
  *   prepare-commit-msg hook stamps trailers from (and every hook command names
  *   its conversation by).
- * - `EQUIN_PARENT_HOST` — the host the agent's `.mcp.json` dials back to.
+ * - `EQUIN_PARENT_URL` — the launching backend's origin (`namespaceUrl`), which
+ *   the agent's `.mcp.json` and its hooks dial back to. A whole URL, never a
+ *   name to build a host from, so no file assembles an address by hand.
  * - `CLAUDE_CODE_DISABLE_AGENT_VIEW` — pins the Claude session to this agent
  *   process, so it can never migrate into Claude Code's background daemon and
  *   inherit whichever process first spawned that daemon (the Sep 9 misattributed
@@ -49,7 +52,7 @@ import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
  */
 export const AGENT_SESSION_DELIVERED_ENV: readonly string[] = [
   envName("CONVERSATION_ID"),
-  envName("PARENT_HOST"),
+  envName("PARENT_URL"),
   "CLAUDE_CODE_DISABLE_AGENT_VIEW",
   envName("GUARDS_ROOT"),
   envName("WORKSPACE_ROOT"),
@@ -61,9 +64,10 @@ export type AgentSessionEnv = Record<string, string>;
 /**
  * The `-e` values for `conversationId`'s session.
  *
- * EQUIN_PARENT_HOST must be a host the gateway actually routes, so it is
- * this backend's own declared runtime namespace rather than a caller-supplied
- * label; `runtimeNamespace()` throws when the process never declared one.
+ * EQUIN_PARENT_URL must be an address the gateway actually routes, so it is
+ * this backend's own declared runtime namespace's URL (`namespaceUrl`: its
+ * public host label, main → `equin`) rather than a caller-supplied one;
+ * `runtimeNamespace()` throws when the process never declared one.
  *
  * CLAUDE_CODE_DISABLE_AGENT_VIEW: Claude Code's agent view can otherwise move a
  * live session into its per-machine background daemon (`←` on an empty prompt,
@@ -81,7 +85,7 @@ export function agentSessionEnv(
   return {
     ...envEntries({
       CONVERSATION_ID: conversationId,
-      PARENT_HOST: runtimeNamespace(),
+      PARENT_URL: namespaceUrl(runtimeNamespace()),
       GUARDS_ROOT: roots.guardsRoot,
       WORKSPACE_ROOT: roots.workspaceRoot,
     }),

@@ -250,9 +250,10 @@ export const MAIN_WORKTREE_NAME: Namespace = namespaceFor(MAIN_COMPOSITION_ID, {
  * which read this table — so build output, e2e and agent-browser targets,
  * agents' MCP URLs and in-app links all say `equin` without naming it. The
  * namespace itself stays what `namespaceFor` minted (`LEGACY_IDS.mainNamespace`): its spec
- * dir, socket and database are internal identifiers, and its own name keeps
- * resolving as a host (`namespaceFromHost`), so the old address still opens
- * the app as a quiet alias.
+ * dir, socket and database are internal identifiers, and its own name is NOT
+ * a host: a labelled namespace is reachable only at its label (the gateway
+ * answers `<own name>.localhost` with a 404, and `namespaceFromHost` reads it
+ * as no namespace), so the old address is gone, not aliased.
  *
  * Exists to move the app off its old name gradually. Every place a namespace
  * is SHOWN reads it through `namespaceLabel`, and every place one is TYPED
@@ -439,7 +440,8 @@ export function isContentHost(host: string): boolean {
  * other AND with the gateway, one of them taking `host.split(".")[0]` — collapse
  * to one function. Returns `null` for the loopback hosts and anything not served
  * under `.localhost`, which is how "no namespace here" is spelled. A host alias
- * (`NAMESPACE_HOST_ALIASES`) reads back as the namespace it stands for.
+ * (`NAMESPACE_HOST_ALIASES`) reads back as the namespace it stands for; a
+ * labelled namespace's own name is not a host, so it reads back as `null`.
  */
 export function namespaceFromHost(host: string): Namespace | null {
   let h = host;
@@ -459,6 +461,30 @@ export function namespaceFromHost(host: string): Namespace | null {
   // A content host is never an app namespace — the gateway reads it first.
   if (isContentHost(h)) return null;
   const name = h.slice(0, -NAMESPACE_HOST_SUFFIX.length);
+  if (Object.hasOwn(NAMESPACE_HOST_LABELS, name)) return null;
   const resolved = resolveNamespaceAlias(name);
   return isNamespace(resolved) ? (resolved as Namespace) : null;
+}
+
+/**
+ * The origin a namespace URL handed over as text names (an agent's
+ * `EQUIN_PARENT_URL`, written by `namespaceUrl`): validated as an http origin
+ * on a namespace host with nothing after it, and returned as that origin.
+ * Throws on anything else — a hook must not dial an address it cannot vouch for.
+ */
+export function asNamespaceOrigin(raw: string): string {
+  if (!URL.canParse(raw)) {
+    throw new Error(`Not a namespace URL: "${raw}" does not parse as a URL.`);
+  }
+  const url = new URL(raw);
+  if (
+    url.protocol !== "http:" ||
+    url.origin !== raw.replace(/\/$/, "") ||
+    namespaceFromHost(url.host) === null
+  ) {
+    throw new Error(
+      `Not a namespace URL: "${raw}" — expected an origin like ${namespaceUrl(MAIN_WORKTREE_NAME)}.`,
+    );
+  }
+  return url.origin;
 }

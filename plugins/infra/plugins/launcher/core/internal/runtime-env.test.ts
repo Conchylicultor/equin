@@ -42,7 +42,7 @@ describe("pickRuntimeEnv", () => {
       HOME: "home-value",
       ...envEntries({
         CONVERSATION_ID: "conv-1",
-        PARENT_HOST: "http://equin.localhost:9000",
+        PARENT_URL: "http://equin.localhost:9000",
         BUILD_ID: "build-1",
         HOST_GRANT: "4",
       }),

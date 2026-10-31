@@ -52,14 +52,19 @@ name (`sonata.att-X`) names both halves, and a single label comes back as a
   under when it is not its own name (main → `equin`), read by `namespaceHost`
   so every address the app produces says it. `NAMESPACE_HOST_ALIASES` is its
   derived inverse (what `namespaceFromHost` and the gateway's `hostAliases`
-  resolve); the namespace's own name keeps resolving too, as the old address.
+  resolve). A labelled namespace's own name is NOT a host: the gateway answers
+  `<own name>.localhost` with a 404 naming the label, and `namespaceFromHost`
+  reads it as no namespace — the internal name is an id, never an address.
   `namespace:legacy-host` keeps that old address out of tracked files.
 - `namespaceLabel(ns)` / `resolveNamespaceAlias(name)` — the same table for
   people and agents: every place a namespace is SHOWN (the logs picker, the
   worktree-identity row) reads its label, so main reads `equin`; every place one
   is TYPED (`query_db`'s `database`, the profiling and queue-health tools'
   `worktree`, `./equin db fork`, a backfill's `--namespace`) resolves the label
-  back, while the namespace's own name keeps working.
+  back, while the namespace's own name keeps working as a typed name.
+- `asNamespaceOrigin(raw)` — reads a namespace URL handed over as text (an
+  agent's `EQUIN_PARENT_URL`, written by `namespaceUrl`) back as its origin,
+  throwing on anything that is not an http origin on a namespace host.
 - `NAMESPACE_RE` — the grammar. Every TypeScript caller imports it, boot
   included (`server-core/bin/select-registry.ts`): this module has zero imports
   and `paths/core` already reaches it, so naming it costs boot nothing. The only
@@ -101,6 +106,7 @@ Design: `research/2026-08-18-global-namespace-identity.md`.
     - `NamespaceParts`
   - Exports (values):
     - `asNamespace`
+    - `asNamespaceOrigin`
     - `BASE_EXCLUSIONS_ID`
     - `CONTENT_HOST_LABEL`
     - `CONTENT_ITEM_RE`

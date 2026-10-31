@@ -24,6 +24,7 @@ import {
   isContentReservedNamespace,
   namespaceHost,
   namespaceUrl,
+  asNamespaceOrigin,
   MAIN_COMPOSITION_ID,
   MAIN_WORKTREE_NAME,
   NAMESPACE_HOST_ALIASES,
@@ -180,10 +181,26 @@ test("namespaceFromHost round-trips namespaceHost and rejects the loopback hosts
   // A host alias reads back as the namespace it stands for, in any spelling.
   expect(namespaceFromHost("equin.localhost:9000")).toBe(MAIN_WORKTREE_NAME);
   expect(namespaceFromHost("EQUIN.localhost.")).toBe(MAIN_WORKTREE_NAME);
-  // The namespace's own name stays a host that reaches it (the legacy address).
-  expect(namespaceFromHost("singularity.localhost:9000")).toBe(
-    MAIN_WORKTREE_NAME,
+  // A labelled namespace's own name is not a host: only its label reaches it.
+  expect(namespaceFromHost("singularity.localhost:9000")).toBeNull();
+});
+
+test("a namespace URL handed over as text reads back as its origin", () => {
+  const main = namespaceUrl(MAIN_WORKTREE_NAME);
+  expect(asNamespaceOrigin(main)).toBe(main);
+  expect(asNamespaceOrigin(`${main}/`)).toBe(main);
+  expect(asNamespaceOrigin("http://att-x.localhost:9000")).toBe(
+    "http://att-x.localhost:9000",
   );
+  for (const bad of [
+    "equin",
+    `${main}/api/mcp`,
+    "https://equin.localhost:9000",
+    "http://evil.com:9000",
+    "http://singularity.localhost:9000",
+  ]) {
+    expect(() => asNamespaceOrigin(bad)).toThrow(/Not a namespace URL/);
+  }
 });
 
 test("a namespace is shown by its label and typed back by it", () => {

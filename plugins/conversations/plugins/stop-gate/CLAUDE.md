@@ -13,7 +13,7 @@ its next turn) waives the block.
   It runs `bin/stop-gate.ts`. The repo's own `.claude/settings.json` does not
   carry it: only app-launched agents are gated.
 - The script GETs `/api/conversations/:id/stop-gate` on the backend the agent
-  dials (`EQUIN_PARENT_HOST`) and, on `block`, prints
+  dials (`EQUIN_PARENT_URL`) and, on `block`, prints
   `{"decision":"block","reason":…}` — the CLI sends the agent back to work with
   the reason.
 - **One continuation per stop attempt.** When the hook's stdin says

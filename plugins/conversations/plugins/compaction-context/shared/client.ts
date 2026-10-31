@@ -4,10 +4,7 @@
 // every compaction, and it must load fast with whatever node_modules the
 // checkout has.
 
-import {
-  asNamespace,
-  namespaceUrl,
-} from "@plugins/infra/plugins/namespace/core";
+import { asNamespaceOrigin } from "@plugins/infra/plugins/namespace/core";
 
 /** The endpoint's path — the same string as core/endpoints.ts (tested). */
 export function compactionContextPath(conversationId: string): string {
@@ -15,11 +12,11 @@ export function compactionContextPath(conversationId: string): string {
 }
 
 /**
- * Where the hook reaches its backend: the namespace the agent's .mcp.json dials
- * too (`EQUIN_PARENT_HOST`). Throws on a value that is not one.
+ * Where the hook reaches its backend: the origin the agent's .mcp.json dials
+ * too (`EQUIN_PARENT_URL`). Throws on a value that is not one.
  */
-export function backendBaseUrl(parentHost: string): string {
-  return namespaceUrl(asNamespace(parentHost));
+export function backendBaseUrl(parentUrl: string): string {
+  return asNamespaceOrigin(parentUrl);
 }
 
 /** The backend answered, but not with the context: a bug, not a restart. */

@@ -33,7 +33,7 @@ create_new() {
   fi
 
   $TMUX -u new-session -d -s "$name" -c "$wt_path" \
-    "zsh -l -c 'export EQUIN_CONVERSATION_ID=$name EQUIN_PARENT_HOST=equin; $CLAUDE'"
+    "zsh -l -c 'export EQUIN_CONVERSATION_ID=$name EQUIN_PARENT_URL=http://equin.localhost:9000; $CLAUDE'"
   exec $TMUX -u attach -t "$name"
 }
 

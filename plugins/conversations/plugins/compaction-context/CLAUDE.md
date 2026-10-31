@@ -19,7 +19,7 @@ gate, believing them received, never re-sent them.
   `server/` half (the contribution and the endpoint) stays portable: a browser
   host can boot a contributor such as `page/annotations/agent-access`.
 - The script POSTs `/api/conversations/:id/compaction-context` on the backend the
-  agent dials (`EQUIN_PARENT_HOST`), retrying a backend mid-restart for
+  agent dials (`EQUIN_PARENT_URL`), retrying a backend mid-restart for
   40 s, and prints the answer as SessionStart's `additionalContext` — nothing
   when it is empty. A refusal or a backend gone for good is a non-blocking hook
   error (exit 1, stderr): the session goes on without it.

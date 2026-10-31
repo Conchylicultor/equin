@@ -67,6 +67,25 @@ func TestSubdomainBeatsDefaultNamespace(t *testing.T) {
 	}
 }
 
+// A labelled namespace's own name is not an address: every path on it — the
+// app, /api, /gateway — is a 404 naming the label, even with it as default.
+func TestLabelledNamespaceOwnNameIsNotServed(t *testing.T) {
+	p := newTestProxy(t, mainNamespace)
+	for _, path := range []string{"/", "/home", "/api/health/ready", "/gateway/worktrees"} {
+		rec := serve(p, mainNamespace+".localhost:9000", path)
+		if rec.Code != http.StatusNotFound {
+			t.Fatalf("%s: status = %d, want 404", path, rec.Code)
+		}
+		if !strings.Contains(rec.Body.String(), "use equin.localhost") {
+			t.Fatalf("%s: expected the label in the 404, got %q", path, rec.Body.String())
+		}
+	}
+	// Its label still reaches it (here: resolves, then misses the empty registry).
+	if rec := serve(p, "equin.localhost:9000", "/"); !strings.Contains(rec.Body.String(), "unknown worktree: "+mainNamespace) {
+		t.Fatalf("label should resolve to %s, got %q", mainNamespace, rec.Body.String())
+	}
+}
+
 // /gateway/* stays reserved on the subdomain-less host even with a default set.
 func TestGatewayAPIReservedUnderDefaultNamespace(t *testing.T) {
 	rec := serve(newTestProxy(t, "sonata"), "localhost:9000", "/gateway/worktrees")
@@ -311,6 +330,9 @@ func TestParseWorktree(t *testing.T) {
 		// A host alias resolves to the namespace it stands for.
 		{"equin.localhost:9000", mainNamespace},
 		{"EQUIN.localhost", mainNamespace},
+		// A labelled namespace's own name is not a host.
+		{mainNamespace + ".localhost:9000", ""},
+		{strings.ToUpper(mainNamespace) + ".localhost", ""},
 		// No namespace: loopback in every spelling, and non-.localhost hosts.
 		{"localhost:9000", ""},
 		{"localhost", ""},

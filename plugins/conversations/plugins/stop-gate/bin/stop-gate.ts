@@ -33,17 +33,17 @@ let stdin = "";
 for await (const chunk of process.stdin) stdin += String(chunk);
 
 const conversationId = readEnv("CONVERSATION_ID");
-const parentHost = readEnv("PARENT_HOST");
-if (!conversationId || !parentHost) {
+const parentUrl = readEnv("PARENT_URL");
+if (!conversationId || !parentUrl) {
   failOpen(
-    `${envName("CONVERSATION_ID")} / ${envName("PARENT_HOST")} are not set — not an app-launched agent`,
+    `${envName("CONVERSATION_ID")} / ${envName("PARENT_URL")} are not set — not an app-launched agent`,
   );
 }
 
 try {
   if (stopHookActive(stdin)) process.exit(0);
   const answer = await fetchStopGate({
-    baseUrl: backendBaseUrl(parentHost),
+    baseUrl: backendBaseUrl(parentUrl),
     conversationId,
   });
   const out = hookOutput(answer);

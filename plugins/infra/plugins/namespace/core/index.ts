@@ -7,6 +7,7 @@ export {
   namespaceHost,
   namespaceUrl,
   namespaceFromHost,
+  asNamespaceOrigin,
   contentUrl,
   isContentHost,
   isContentReservedNamespace,

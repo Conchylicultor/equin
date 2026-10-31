@@ -81,8 +81,14 @@ func (p *Proxy) serveContent(w http.ResponseWriter, r *http.Request, item string
 	name := label
 	if target, ok := hostAliases[label]; ok {
 		name = target
+	} else if _, ok := namespaceLabels[label]; ok {
+		// A labelled namespace's own name is not an address here either.
+		name = ""
 	}
-	wt := p.reg.Resolve(name)
+	var wt *Worktree
+	if name != "" {
+		wt = p.reg.Resolve(name)
+	}
 	if wt == nil {
 		writeContentRefusal(w, r, http.StatusNotFound, "unknown namespace: "+label)
 		return

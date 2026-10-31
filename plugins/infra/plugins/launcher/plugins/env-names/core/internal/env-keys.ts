@@ -83,8 +83,8 @@ export const RUNTIME_WITHHELD_ENV = {
     "agent-session identity; the agent launcher delivers it into that agent's own process environment, where the commit hook and op-log read it",
   TOOL_USE_ID:
     "the Bash tool call an e2e script was launched by; a PreToolUse guard exports it into that one command, never a backend's",
-  PARENT_HOST:
-    "the host an agent's MCP client dials back to; delivered into that agent's own process environment by the agent launcher",
+  PARENT_URL:
+    "the origin (namespaceUrl) an agent's MCP client and hooks dial back to; delivered into that agent's own process environment by the agent launcher",
   GUARDS_ROOT:
     "the checkout one agent's policy hooks run their guards from (guards/agent-policy); delivered into that agent's own process environment by the agent launcher",
   WORKSPACE_ROOT:

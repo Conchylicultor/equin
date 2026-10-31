@@ -26,10 +26,10 @@ function fail(message: string): never {
 }
 
 const conversationId = readEnv("CONVERSATION_ID");
-const parentHost = readEnv("PARENT_HOST");
-if (!conversationId || !parentHost) {
+const parentUrl = readEnv("PARENT_URL");
+if (!conversationId || !parentUrl) {
   fail(
-    `${envName("CONVERSATION_ID")} / ${envName("PARENT_HOST")} are not set — not an app-launched agent`,
+    `${envName("CONVERSATION_ID")} / ${envName("PARENT_URL")} are not set — not an app-launched agent`,
   );
 }
 
@@ -39,7 +39,7 @@ for await (const _ of process.stdin) void _;
 
 try {
   const context = await fetchCompactionContext({
-    baseUrl: backendBaseUrl(parentHost),
+    baseUrl: backendBaseUrl(parentUrl),
     conversationId,
   });
   const out = hookOutput(context);

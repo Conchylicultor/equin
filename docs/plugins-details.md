@@ -32308,6 +32308,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `NamespaceParts`
         - Exports (values):
           - `asNamespace`
+          - `asNamespaceOrigin`
           - `BASE_EXCLUSIONS_ID`
           - `CONTENT_HOST_LABEL`
           - `CONTENT_ITEM_RE`

@@ -64,7 +64,7 @@ describe("agentSessionLaunch", () => {
   const ENV: Record<string, string> = {
     ...envEntries({
       CONVERSATION_ID: "conv-test",
-      PARENT_HOST: "att-test-w6l1",
+      PARENT_URL: "http://att-test-w6l1.localhost:9000",
       GUARDS_ROOT: "/fixture/repo",
       WORKSPACE_ROOT: "/fixture/workspaces/att-test-w6l1",
     }),
@@ -159,7 +159,7 @@ async function runWrapper(
     // What the runtime delivers.
     ...envEntries({
       CONVERSATION_ID: "conv-test",
-      PARENT_HOST: "att-test-w6l1",
+      PARENT_URL: "http://att-test-w6l1.localhost:9000",
     }),
     CLAUDE_CODE_DISABLE_AGENT_VIEW: "1",
     // What a backend's ambient environment carries.
@@ -208,7 +208,9 @@ describe.each(LOGIN_SHELLS)("the wrapper, executed under %s", (loginShell) => {
 
     // The agent keeps what it was given...
     expect(res.stdout).toContain(`${envName("CONVERSATION_ID")}=conv-test`);
-    expect(res.stdout).toContain(`${envName("PARENT_HOST")}=att-test-w6l1`);
+    expect(res.stdout).toContain(
+      `${envName("PARENT_URL")}=http://att-test-w6l1.localhost:9000`,
+    );
     // ...including the toolchain on PATH, whatever the login profile does...
     expect(res.stdout).toMatch(/^PATH=.*\/fixture\/shims/m);
     // ...and nothing it was not.
