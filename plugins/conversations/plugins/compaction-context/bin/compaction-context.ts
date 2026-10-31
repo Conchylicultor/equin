@@ -15,6 +15,10 @@ import {
   readEnv,
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import {
+  asNamespace,
+  namespaceUrl,
+} from "@plugins/infra/plugins/namespace/core";
+import {
   backendBaseUrl,
   fetchCompactionContext,
   hookOutput,
@@ -26,7 +30,14 @@ function fail(message: string): never {
 }
 
 const conversationId = readEnv("CONVERSATION_ID");
-const parentUrl = readEnv("PARENT_URL");
+// TEMPORARY: an agent launched before EQUIN_PARENT_URL existed carries only
+// EQUIN_PARENT_HOST (a namespace), while this script is read from main's live
+// checkout. Delete with the PARENT_HOST key (env-names) once no running agent
+// has it.
+const legacyParentHost = readEnv("PARENT_HOST");
+const parentUrl =
+  readEnv("PARENT_URL") ||
+  (legacyParentHost ? namespaceUrl(asNamespace(legacyParentHost)) : undefined);
 if (!conversationId || !parentUrl) {
   fail(
     `${envName("CONVERSATION_ID")} / ${envName("PARENT_URL")} are not set — not an app-launched agent`,

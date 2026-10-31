@@ -85,6 +85,8 @@ export const RUNTIME_WITHHELD_ENV = {
     "the Bash tool call an e2e script was launched by; a PreToolUse guard exports it into that one command, never a backend's",
   PARENT_URL:
     "the origin (namespaceUrl) an agent's MCP client and hooks dial back to; delivered into that agent's own process environment by the agent launcher",
+  PARENT_HOST:
+    "TEMPORARY: the namespace an agent launched before EQUIN_PARENT_URL replaced it (dfa921078f, 2026-10-31) carries; read only by the stop-gate and compaction-context hooks as a fallback. Delete it, and their fallbacks, once no running agent has it (`ps -E -ax -o command | grep -c EQUIN_PARENT_HOST=` is 0)",
   GUARDS_ROOT:
     "the checkout one agent's policy hooks run their guards from (guards/agent-policy); delivered into that agent's own process environment by the agent launcher",
   WORKSPACE_ROOT:
