@@ -252,11 +252,18 @@ which the warm-up executor stamps on its `bg` span (`DEFAULT_WARMUP_BUDGET_MS`
 when it declares none — slow-ops is a warm-up's one judge). `resolveSlowThreshold` returns it ahead of every kind
 default — the work said how long it is expected to take, and judging it on a
 global knob (`loaderMs` for every `bg` span) filed reports against work that was
-on budget (`warmup:plugin-tree.trees`, budget 15 s, ~6 s; `task-title:generate`,
-a Haiku call bounded by its own 30 s timeout, judged on 2 s). Declare a model
-call's, fetch's or subprocess's bound by deriving it from the timeout constant
-it already passes, so the two cannot drift. Like `slowThresholdMs`, a budget
-below `perfFloorMs` is not honored.
+on budget (`task-title:generate`, a Haiku call of 2.8 s median, judged on 2 s).
+
+**A budget is the time the work is EXPECTED to take, never its give-up point.**
+A budget equal to the work's own timeout can never be overrun by a run that
+finished, so the report can't fire however close to the timeout runs drift — and
+the timeout itself is a failure, reported as one (thrown, or filed by the layer
+that owns it — claude-cli files every failed model call), never a slow success.
+Size it from measured runs (`task-title:generate`: 8 s over a 5.3 s p99, its
+timeout 30 s). And a budget is never raised to quiet a report: a warm-up that
+overruns the default is a cost to find and fix (`warmup:plugin-tree.trees`
+once declared 15 s over a ~6 s build and was silenced for 1,400 boots). Like
+`slowThresholdMs`, a budget below `perfFloorMs` is not honored.
 
 ## Slow jobs (the `job` kind)
 

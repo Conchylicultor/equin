@@ -1,4 +1,7 @@
-import { runClaudePrint } from "@plugins/infra/plugins/claude-cli/server";
+import {
+  ClaudeCliError,
+  runClaudePrint,
+} from "@plugins/infra/plugins/claude-cli/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { expandInlineTokenReferents } from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/server";
 import {
@@ -57,11 +60,14 @@ ${title}
   return parts.join("\n\n");
 }
 
-// The title model call's own bound — also the budget its background span
-// declares, so the slow-op monitor reports a title run only when it overran the
-// bound it was given, never for an on-budget Haiku call.
+// The title model call's give-up point: past it the call is a failure
+// (claude-cli files it as a report), not a slow success.
 const TITLE_TIMEOUT_MS = 30_000;
-const TITLE_SPAN = { budgetMs: TITLE_TIMEOUT_MS };
+// How long a title run is EXPECTED to take — a budget, not the give-up point,
+// so the slow-op monitor sees a run drifting towards the timeout. A Haiku title
+// call took 2.8 s median, 5.3 s p99, never over 10 s (467 successful calls on
+// main, 2026-10-17 → 31); the run around it adds a task read and two writes.
+const TITLE_SPAN = { budgetMs: 8_000 };
 
 /**
  * Both titles of a task, from one model call. `title`, when given, is the
@@ -103,9 +109,11 @@ async function generateAndStore(
   let answer: TitlesAnswer | undefined;
   try {
     answer = await generateTitles(description, { taskId });
-    // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
-    console.warn("[task-title] title generation fell back:", err);
+    // A failed model call (a timeout, a usage limit, a dead CLI) is already
+    // filed as a report by claude-cli, which knows Claude Code's own words; the
+    // task keeps its fallback title. Anything else is a bug here and throws.
+    if (!(err instanceof ClaudeCliError)) throw err;
   }
   const title = answer?.title ?? fallback;
   const short = answer?.short;
@@ -126,7 +134,9 @@ async function generateAndStore(
 // reached through `scheduleTaskTitleUpdate` in server/). Callers create the task with
 // `synthesiseTitleFallback(description)` so launching is instant; this then
 // upgrades the title in the background. The `onlyIfTitleIn` guard ensures we
-// never clobber a user edit that landed before Haiku returned.
+// never clobber a user edit that landed before Haiku returned. Nobody awaits
+// the run, so a throw is an unhandled rejection — filed as a report by the
+// reports engine's process hook, never swallowed here.
 export function scheduleTaskTitleUpdate(
   taskId: string,
   description: string,
@@ -136,22 +146,15 @@ export function scheduleTaskTitleUpdate(
   void runTracked(
     "task-title:generate",
     async () => {
-      try {
-        const generated = await generateAndStore(
-          taskId,
-          description,
-          fallbackTitle,
-        );
-        if (generated !== fallbackTitle) {
-          await updateTaskTitle(taskId, generated, [fallbackTitle]);
-        }
-        await updateConversationsTitleForTask(taskId, generated, [
-          fallbackTitle,
-        ]);
-        // eslint-disable-next-line promise-safety/no-bare-catch
-      } catch (err) {
-        console.warn("[task-title] scheduleTaskTitleUpdate failed:", err);
+      const generated = await generateAndStore(
+        taskId,
+        description,
+        fallbackTitle,
+      );
+      if (generated !== fallbackTitle) {
+        await updateTaskTitle(taskId, generated, [fallbackTitle]);
       }
+      await updateConversationsTitleForTask(taskId, generated, [fallbackTitle]);
     },
     TITLE_SPAN,
   );
@@ -164,25 +167,20 @@ export function scheduleTaskTitleUpgrade(taskId: string, text: string): void {
   void runTracked(
     "task-title:generate",
     async () => {
-      try {
-        const task = await getTask(taskId);
-        if (!task || !UNINFORMATIVE_TITLES.includes(task.title)) return;
+      const task = await getTask(taskId);
+      if (!task || !UNINFORMATIVE_TITLES.includes(task.title)) return;
 
-        const generated = await generateAndStore(
-          taskId,
-          text,
-          synthesiseTitleFallback(text),
-        );
-        await updateTaskTitle(taskId, generated, UNINFORMATIVE_TITLES);
-        await updateConversationsTitleForTask(
-          taskId,
-          generated,
-          UNINFORMATIVE_TITLES,
-        );
-        // eslint-disable-next-line promise-safety/no-bare-catch
-      } catch (err) {
-        console.warn("[task-title] scheduleTaskTitleUpgrade failed:", err);
-      }
+      const generated = await generateAndStore(
+        taskId,
+        text,
+        synthesiseTitleFallback(text),
+      );
+      await updateTaskTitle(taskId, generated, UNINFORMATIVE_TITLES);
+      await updateConversationsTitleForTask(
+        taskId,
+        generated,
+        UNINFORMATIVE_TITLES,
+      );
     },
     TITLE_SPAN,
   );

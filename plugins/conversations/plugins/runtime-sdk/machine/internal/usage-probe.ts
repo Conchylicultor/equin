@@ -25,6 +25,8 @@ import { claudeUsagePath } from "./paths";
 
 /** CLI start-up plus one HTTP read; a ceiling, not an estimate. */
 const USAGE_READ_TIMEOUT_MS = 60_000;
+/** How long a read is expected to take — the slow-op bar its span declares. */
+const USAGE_READ_BUDGET_MS = 5_000;
 
 async function readUsageReply(accountId: string): Promise<unknown> {
   const abortController = new AbortController();
@@ -120,8 +122,11 @@ export function startUsageOnProbe(): void {
           });
         }
       },
-      // The read's own timeout bounds it, so it is the bar the span declares.
-      { budgetMs: USAGE_READ_TIMEOUT_MS },
+      // What the read is EXPECTED to take (~1 s of CLI start-up plus one HTTP
+      // read), not its give-up point: a budget equal to the timeout could never
+      // be overrun by a run that finished. A timed-out read throws, and is
+      // reported above as the failure it is.
+      { budgetMs: USAGE_READ_BUDGET_MS },
     );
   });
 }

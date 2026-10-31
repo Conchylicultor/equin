@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, type Dirent } from "fs";
+import { existsSync, readdirSync, readFileSync } from "fs";
 import { readdir } from "fs/promises";
 import { dirname, join } from "path";
 import {
@@ -7,6 +7,11 @@ import {
   isTestCodePath,
 } from "@plugins/framework/plugins/plugin-id/core";
 import { maskSource } from "./mask-source";
+import {
+  currentFsSnapshot,
+  memoInSnapshot,
+  snapshotHas,
+} from "./snapshot-scope";
 import { markerCallSpans, type MarkerCallSpan } from "./find-marker-calls";
 
 // ── Types ──────────────────────────────────────────────────────────
@@ -16,64 +21,27 @@ export interface BarrelExport {
   kind: "type" | "value";
 }
 
-/**
- * Build-scoped, read-once in-memory filesystem snapshot.
- *
- * A facet-extraction pass over the whole plugin tree re-reads every source file
- * multiple times (once per file-walking facet) via synchronous `readFileSync` /
- * `readdirSync`, monopolizing the single event loop. When a snapshot is in
- * effect (see `runWithFsSnapshot`), `readIfExists` / `walkFiles` read from these
- * maps instead of disk — so the (still-synchronous) facet `extract()` functions
- * touch zero disk. The snapshot is built once, asynchronously and in parallel,
- * before the extract loop.
- *
- * - `files`: absolute path → file content. Only *existing* files are present.
- * - `dirs`:  absolute directory path → its `readdir(withFileTypes)` entries.
- *            Presence of a directory key means "this directory was scanned", so a
- *            path whose directory is keyed but whose file is absent resolves to
- *            `null` with no syscall.
- */
-export interface FsSnapshot {
-  files: Map<string, string>;
-  dirs: Map<string, Dirent[]>;
-}
-
 // ── Helpers ────────────────────────────────────────────────────────
 
-// Ambient snapshot, set synchronously around each (synchronous) facet
-// extract/relate call by `runWithFsSnapshot`. Build-time callers that invoke the
-// scanners directly (codegen/checks) never set it, so they keep the byte-for-byte
-// sync-disk behavior below.
-let activeSnapshot: FsSnapshot | null = null;
-
-/**
- * Run `fn` with `snapshot` as the ambient FS snapshot consulted by `readIfExists`
- * / `walkFiles`. `fn` MUST be synchronous (no `await`) — the ambient is restored
- * synchronously on return, so even interleaved concurrent builds never observe
- * each other's snapshot. Pass `null` to force the sync-disk path.
- */
-export function runWithFsSnapshot<T>(
-  snapshot: FsSnapshot | null,
-  fn: () => T,
-): T {
-  const prev = activeSnapshot;
-  activeSnapshot = snapshot;
-  try {
-    return fn();
-  } finally {
-    activeSnapshot = prev;
-  }
-}
-
 export function readIfExists(path: string): string | null {
-  if (activeSnapshot) {
-    const cached = activeSnapshot.files.get(path);
+  const snapshot = currentFsSnapshot();
+  if (snapshot) {
+    const cached = snapshot.files.get(path);
     if (cached !== undefined) return cached;
     // The directory was scanned but the file is absent → definitively null, no
     // syscall. Otherwise the directory is outside the snapshot's scope → disk.
-    if (activeSnapshot.dirs.has(dirname(path))) return null;
+    if (snapshot.dirs.has(dirname(path))) return null;
   }
   return existsSync(path) ? readFileSync(path, "utf8") : null;
+}
+
+/**
+ * `existsSync` for a scanner: answered from the ambient snapshot when it
+ * covers `path` (or the directory holding it), from disk otherwise — so a facet
+ * asking "has this plugin a `web/`?" for every plugin costs no syscall.
+ */
+export function pathExists(path: string): boolean {
+  return snapshotHas(path) ?? existsSync(path);
 }
 
 const transpilers = {
@@ -90,13 +58,18 @@ const transpilers = {
  * scans (barrels, `core/`, `shared/`, schema files).
  */
 export function stripTypes(src: string, path?: string): string {
-  const transpiler = path?.endsWith(".tsx") ? transpilers.tsx : transpilers.ts;
-  try {
-    return transpiler.transformSync(src);
-  } catch (err) {
-    if (!(err instanceof SyntaxError) && !(err instanceof TypeError)) throw err;
-    return src;
-  }
+  const loader = path?.endsWith(".tsx") ? "tsx" : "ts";
+  // A pure function of (loader, src): memoized for the ambient snapshot's
+  // build, where several facets strip the same file.
+  return memoInSnapshot(`stripTypes:${loader}`, src, (text) => {
+    try {
+      return transpilers[loader].transformSync(text);
+    } catch (err) {
+      if (!(err instanceof SyntaxError) && !(err instanceof TypeError))
+        throw err;
+      return text;
+    }
+  });
 }
 
 // ── Static string-literal reading ──────────────────────────────────
@@ -661,8 +634,12 @@ export function walkFiles(
   // not covered by the snapshot re-dispatches through `walkFiles`, which falls
   // back to disk for that subtree — so the result is identical to a pure-disk
   // walk regardless of snapshot coverage.
-  if (activeSnapshot) {
-    const entries = activeSnapshot.dirs.get(dir);
+  const snapshot = currentFsSnapshot();
+  if (snapshot) {
+    const entries = snapshot.dirs.get(dir);
+    // A dir the snapshot knows is absent (its parent was scanned, it is not
+    // there) holds no files — no `readdirSync` to find out.
+    if (!entries && snapshotHas(dir) === false) return;
     if (entries) {
       for (const e of entries) {
         const p = join(dir, e.name);

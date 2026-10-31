@@ -18,6 +18,8 @@
  * from whole untouched slices plus runs of spaces rather than per character.
  */
 
+import { memoInSnapshot } from "./snapshot-scope";
+
 /**
  * Keywords that may be immediately followed by a regex literal even though they
  * end in an identifier char (e.g. `return /x/`, `typeof /x/`). Without this set,
@@ -102,6 +104,16 @@ function spaces(k: number): string {
 
 export function maskSource(src: string, opts?: { strings?: boolean }): string {
   const maskStrings = opts?.strings ?? true;
+  // A pure function of (src, strings): memoized for the ambient snapshot's
+  // build, where every facet masks the same files again.
+  return memoInSnapshot(
+    maskStrings ? "maskSource:strings" : "maskSource:code",
+    src,
+    (text) => maskUncached(text, maskStrings),
+  );
+}
+
+function maskUncached(src: string, maskStrings: boolean): string {
   const n = src.length;
 
   // The output is src[0, copied) verbatim, then each masked span as spaces with

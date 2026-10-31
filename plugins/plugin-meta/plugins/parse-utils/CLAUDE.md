@@ -88,6 +88,16 @@ caller**. Omitting `path` keeps the `ts` loader — correct only for `.ts`-only 
 (barrels, `core/`, `shared/`, schema files). Any scan that walks a `web/` tree sees
 `.tsx` and must pass the path.
 
+## Inside a snapshot (`runWithFsSnapshot`)
+
+A faceted plugin-tree build runs every facet's scanners inside one in-memory
+snapshot of the source (`core/snapshot-scope.ts`). Within it, `readIfExists`,
+`walkFiles` and **`pathExists`** (use it instead of `existsSync` in a scanner)
+answer from memory — absence included, when the directory holding the path was
+scanned — and `maskSource` / `stripTypes` are memoized per input string for the
+snapshot's lifetime, since every facet masks the same files again. Outside a
+snapshot they read the disk and compute, unchanged.
+
 ## String / boolean field readers
 
 - **`readStringLiteral(src, at): StringLiteralResult`** — reads the string
@@ -176,6 +186,7 @@ caller**. Omitting `path` keeps the `ts` loader — correct only for `.ts`-only 
     - `parseServerContributionDeclarations`
     - `parseStaticCallId`
     - `parseStringField`
+    - `pathExists`
     - `readIfExists`
     - `readStaticCallId`
     - `readStringLiteral`

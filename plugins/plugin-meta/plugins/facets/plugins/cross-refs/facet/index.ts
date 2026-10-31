@@ -1,5 +1,4 @@
 import { dirname, join } from "path";
-import { existsSync } from "fs";
 import {
   createFacet,
   getFacet,
@@ -23,6 +22,7 @@ import {
   markerCallSpans,
   matchBracket,
   parseStaticCallId,
+  pathExists,
   type FsSnapshot,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { parse as parseJsonc } from "jsonc-parser";
@@ -132,7 +132,7 @@ function shippedSources(dir: string): SourceText[] {
   const out: SourceText[] = [];
   for (const rt of SHIPPED_RUNTIME_FOLDERS) {
     const rtDir = join(dir, rt);
-    if (!existsSync(rtDir)) continue;
+    if (!pathExists(rtDir)) continue;
     const files: string[] = [];
     walkFiles(rtDir, files, { css: true });
     for (const file of files)
@@ -282,12 +282,12 @@ export default createFacet<CrossRefsData>({
     const raw = emptyByRuntime<RawUse>();
     for (const rt of RUNTIME_FOLDERS) {
       const rtDir = join(ctx.dir, rt);
-      if (existsSync(rtDir)) raw[rt] = parseRawUses(rtDir);
+      if (pathExists(rtDir)) raw[rt] = parseRawUses(rtDir);
     }
     const coreDir = join(ctx.dir, "core");
     const webDir = join(ctx.dir, "web");
     const keyDefs: KeyRef[] = (
-      existsSync(coreDir) ? parseFieldTypeDefs(coreDir) : []
+      pathExists(coreDir) ? parseFieldTypeDefs(coreDir) : []
     ).map((key) => ({ space: "field-type", key }));
     // A definer uses its own type (anything holding a date field imports the
     // token it defines). Spelled field types are raw until relate() keeps the
@@ -295,7 +295,7 @@ export default createFacet<CrossRefsData>({
     const keyRefs: KeyRef[] = [...keyDefs];
     for (const rt of SHIPPED_RUNTIME_FOLDERS) {
       const rtDir = join(ctx.dir, rt);
-      if (!existsSync(rtDir)) continue;
+      if (!pathExists(rtDir)) continue;
       const files: string[] = [];
       walkFiles(rtDir, files);
       for (const f of files) {
@@ -310,12 +310,12 @@ export default createFacet<CrossRefsData>({
       apiUses: emptyByRuntime(),
       importedBy: [],
       raw,
-      tokenGroups: existsSync(coreDir) ? parseTokenGroups(coreDir) : [],
+      tokenGroups: pathExists(coreDir) ? parseTokenGroups(coreDir) : [],
       tokenUses: [],
       tokenUsedBy: [],
       keyDefs: sortKeyRefs(keyDefs),
       keyRefs,
-      rawDataViews: existsSync(webDir) ? parseDataViewIds(webDir) : [],
+      rawDataViews: pathExists(webDir) ? parseDataViewIds(webDir) : [],
     };
   },
 

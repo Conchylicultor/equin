@@ -39228,6 +39228,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `parseServerContributionDeclarations`
           - `parseStaticCallId`
           - `parseStringField`
+          - `pathExists`
           - `readIfExists`
           - `readStaticCallId`
           - `readStringLiteral`

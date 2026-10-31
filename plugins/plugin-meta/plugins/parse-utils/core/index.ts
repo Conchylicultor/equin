@@ -7,10 +7,10 @@ export {
   parseDefineGroup,
   parseStaticCallId,
   parseStringField,
+  pathExists,
   readIfExists,
   readStaticCallId,
   readStringLiteral,
-  runWithFsSnapshot,
   stripTypes,
   unresolvableCallIdMessage,
   walkFiles,
@@ -19,12 +19,13 @@ export {
 export type {
   BarrelExport,
   DefaultExportObject,
-  FsSnapshot,
   StaticCallIdResult,
   StringFieldResult,
   StringLiteralResult,
 } from "./helpers";
 export { maskSource } from "./mask-source";
+export { runWithFsSnapshot } from "./snapshot-scope";
+export type { FsSnapshot } from "./snapshot-scope";
 export { isPortableServerBarrel } from "./portable-barrel";
 export { endpointExports } from "./endpoint-exports";
 export type { EndpointExport } from "./endpoint-exports";

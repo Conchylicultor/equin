@@ -1,4 +1,3 @@
-import { existsSync } from "fs";
 import { join } from "path";
 import {
   createFacet,
@@ -8,6 +7,7 @@ import {
 import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { asPath } from "@plugins/framework/plugins/plugin-id/core";
 import {
+  pathExists,
   readIfExists,
   walkFiles,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
@@ -29,7 +29,7 @@ function lintNamespace(dir: string): string | undefined {
 /** Every check id declared under this plugin's `check/` folder. */
 function checkIds(dir: string): string[] {
   const checkDir = join(dir, "check");
-  if (!existsSync(checkDir)) return [];
+  if (!pathExists(checkDir)) return [];
   const files: string[] = [];
   walkFiles(checkDir, files);
   const ids = new Set<string>();

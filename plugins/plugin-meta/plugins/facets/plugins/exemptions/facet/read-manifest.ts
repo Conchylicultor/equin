@@ -1,5 +1,5 @@
-import { existsSync } from "fs";
 import { join } from "path";
+import { pathExists } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exempt/core";
 import type { DeclaredExemption } from "../core";
 
@@ -18,7 +18,7 @@ import type { DeclaredExemption } from "../core";
  */
 export function readManifest(dir: string): DeclaredExemption[] {
   const file = join(dir, "exempt", "index.ts");
-  if (!existsSync(file)) return [];
+  if (!pathExists(file)) return [];
   delete require.cache[require.resolve(file)];
   const mod = require(file) as { default?: Exemptions };
   return (mod.default ?? []).map((e) => ({
