@@ -9,6 +9,7 @@ import {
   getConversation,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { ConversationStatusSchema } from "@plugins/tasks/plugins/tasks-core/core";
+import { STUCK_TURN_WAITING_FOR } from "@plugins/conversations/core";
 import { mandateOf } from "@plugins/tasks/plugins/orchestration/plugins/mandate/server";
 
 /** A task of the tree, and the agent working on it: its latest conversation
@@ -123,6 +124,8 @@ function statusWords(c: NonNullable<TreeAgent["conversation"]>): string {
     case "working":
       return "working";
     case "waiting":
+      if (c.waitingFor === STUCK_TURN_WAITING_FOR)
+        return "stuck (alive, at rest, holding a turn it was handed but never started — its Claude Code looks wedged; a message only queues behind that turn)";
       if (c.waitingFor !== null) return "waiting on the user";
       return c.hibernated ? "idle (hibernated)" : "idle";
     case "gone":

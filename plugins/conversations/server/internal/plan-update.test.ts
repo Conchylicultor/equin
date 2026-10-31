@@ -4,12 +4,14 @@ import {
   planConversationUpdate,
   sessionCandidate,
   STARTING_TIMEOUT_MS,
+  STUCK_TURN_MS,
   type Liveness,
   type PlanContext,
   type PlanRow,
   type UpdatePlan,
 } from "./plan-update";
 import type { RuntimeInfo } from "./runtime";
+import { STUCK_TURN_WAITING_FOR } from "../../core/turn-gate";
 
 const NOW = Date.parse("2026-10-02T12:00:00Z");
 const SESSION = "a4ee9684-418d-4661-b372-2960760538a7";
@@ -52,7 +54,7 @@ function ctx(overrides: Partial<PlanContext> = {}): PlanContext {
     sessionAccepted: false,
     questionHold: null,
     lastSubmitAt: null,
-    turnPending: false,
+    pendingTurnSince: null,
     spawnInFlight: false,
     ...overrides,
   };
@@ -504,7 +506,8 @@ describe("liveStatusFor — a confirmed submit is evidence of work", () => {
       liveStatusFor(
         info({ statusWrittenAt: new Date(NOW - 50) }),
         SUBMIT,
-        false,
+        null,
+        NOW,
       ),
     ).toEqual({ status: "working", workingOn: "turn" });
   });
@@ -516,14 +519,15 @@ describe("liveStatusFor — a confirmed submit is evidence of work", () => {
       liveStatusFor(
         info({ statusWrittenAt: new Date(NOW + 12_000) }),
         SUBMIT,
-        false,
+        null,
+        NOW,
       ),
     ).toEqual({ status: "waiting" });
   });
 
   test("no status write to weigh (a dead agent, no event yet) — the submit overrides nothing", () => {
     expect(
-      liveStatusFor(info({ statusWrittenAt: null }), SUBMIT, false),
+      liveStatusFor(info({ statusWrittenAt: null }), SUBMIT, null, NOW),
     ).toEqual({
       status: "waiting",
     });
@@ -547,7 +551,7 @@ describe("liveStatusFor — a pending turn is work the agent will start on its o
     const plan = planConversationUpdate(
       row({ status: "starting", claudeSessionId: null }),
       live({ claudeSessionId: null, statusWrittenAt: new Date(NOW) }),
-      ctx({ turnPending: true }),
+      ctx({ pendingTurnSince: new Date(NOW) }),
     );
     expect(plan).toMatchObject({
       kind: "patch",
@@ -560,7 +564,7 @@ describe("liveStatusFor — a pending turn is work the agent will start on its o
       planConversationUpdate(
         row({ status: "working", workingOn: "turn" }),
         live({ statusWrittenAt: new Date(NOW) }),
-        ctx({ turnPending: true }),
+        ctx({ pendingTurnSince: new Date(NOW) }),
       ),
     ).toEqual({ kind: "noop" });
   });
@@ -570,7 +574,7 @@ describe("liveStatusFor — a pending turn is work the agent will start on its o
       planConversationUpdate(
         row({ status: "working", workingOn: "turn" }),
         live({ statusWrittenAt: new Date(NOW) }),
-        ctx({ turnPending: false }),
+        ctx({ pendingTurnSince: null }),
       ),
     ).toMatchObject({ kind: "patch", patch: { status: "waiting" } });
   });
@@ -580,11 +584,139 @@ describe("liveStatusFor — a pending turn is work the agent will start on its o
       planConversationUpdate(
         row({ status: "working", workingOn: "turn" }),
         live({ workingOn: "turn" }),
-        ctx({ turnPending: true, questionHold: "open" }),
+        ctx({ pendingTurnSince: new Date(NOW), questionHold: "open" }),
       ),
     ).toMatchObject({
       kind: "patch",
       patch: { status: "waiting", waitingFor: "question" },
     });
+  });
+});
+
+describe("liveStatusFor — a turn an idle agent never starts makes it stuck", () => {
+  const info = (o: Partial<RuntimeInfo>): RuntimeInfo =>
+    (live(o) as Extract<Liveness, { kind: "live" }>).info;
+  const REST = new Date(NOW - STUCK_TURN_MS);
+
+  test("at rest with it for the bound: stuck, since the later of the two", () => {
+    expect(
+      liveStatusFor(
+        info({ statusWrittenAt: REST }),
+        null,
+        new Date(NOW - 2 * STUCK_TURN_MS),
+        NOW,
+      ),
+    ).toEqual({ status: "stuck", since: REST });
+  });
+
+  test("just short of the bound: still working", () => {
+    expect(
+      liveStatusFor(
+        info({ statusWrittenAt: new Date(REST.getTime() + 1) }),
+        null,
+        REST,
+        NOW,
+      ),
+    ).toEqual({ status: "working", workingOn: "turn" });
+  });
+
+  test("a turn queued for an hour behind a long turn starts its clock when that turn ends", () => {
+    expect(
+      liveStatusFor(
+        info({ statusWrittenAt: new Date(NOW - 1_000) }),
+        null,
+        new Date(NOW - 3_600_000),
+        NOW,
+      ),
+    ).toEqual({ status: "working", workingOn: "turn" });
+  });
+
+  test("a running turn or background work is busy whatever the pending turn's age", () => {
+    expect(
+      liveStatusFor(
+        info({ workingOn: "turn", statusWrittenAt: REST }),
+        null,
+        REST,
+        NOW,
+      ),
+    ).toEqual({ status: "working", workingOn: "turn" });
+    expect(
+      liveStatusFor(
+        info({ workingOn: "background", statusWrittenAt: REST }),
+        null,
+        REST,
+        NOW,
+      ),
+    ).toEqual({ status: "working", workingOn: "background" });
+  });
+
+  test("the planner writes it as waiting on a stuck turn, and says so once", () => {
+    const plan = planConversationUpdate(
+      row({ status: "working", workingOn: "turn" }),
+      live({ statusWrittenAt: REST }),
+      ctx({ pendingTurnSince: REST }),
+    );
+    expect(plan).toEqual({
+      kind: "patch",
+      patch: {
+        status: "waiting",
+        waitingFor: STUCK_TURN_WAITING_FOR,
+      },
+      adoptedSessionId: null,
+      stuckSince: REST,
+    });
+    expect(
+      planConversationUpdate(
+        row({ status: "waiting", waitingFor: STUCK_TURN_WAITING_FOR }),
+        live({ statusWrittenAt: REST }),
+        ctx({ pendingTurnSince: REST }),
+      ),
+    ).toEqual({ kind: "noop" });
+  });
+
+  test("the turn starting at last ends it", () => {
+    expect(
+      planConversationUpdate(
+        row({ status: "waiting", waitingFor: STUCK_TURN_WAITING_FOR }),
+        live({ workingOn: "turn", statusWrittenAt: new Date(NOW) }),
+        ctx({ pendingTurnSince: null }),
+      ),
+    ).toEqual({
+      kind: "patch",
+      patch: { status: "working", workingOn: "turn", waitingFor: null },
+      adoptedSessionId: null,
+    });
+  });
+
+  test("the turn failing or dropped ends it: idle", () => {
+    expect(
+      planConversationUpdate(
+        row({ status: "waiting", waitingFor: STUCK_TURN_WAITING_FOR }),
+        live({ statusWrittenAt: REST }),
+        ctx({ pendingTurnSince: null }),
+      ),
+    ).toEqual({
+      kind: "patch",
+      patch: { waitingFor: null },
+      adoptedSessionId: null,
+    });
+  });
+
+  test("its process gone: the stuck mark settles with the hibernation", () => {
+    const stuck = row({
+      status: "waiting",
+      waitingFor: STUCK_TURN_WAITING_FOR,
+    });
+    expect(planConversationUpdate(stuck, ABSENT, ctx())).toEqual({
+      kind: "hibernate",
+      endTurn: true,
+    });
+    expect(
+      planConversationUpdate(
+        { ...stuck, hibernatedAt: new Date(NOW - 1_000) },
+        ABSENT,
+        ctx(),
+      ),
+    ).toMatchObject({ kind: "patch", patch: { waitingFor: null } });
   });
 });

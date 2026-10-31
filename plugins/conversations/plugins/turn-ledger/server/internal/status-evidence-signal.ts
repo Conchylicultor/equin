@@ -1,6 +1,6 @@
 // In-process signal: the ledger's evidence for a conversation's status moved —
 // the CLI confirmed submitting a turn, or a turn entered or left a pending
-// state (`conversationsWithPendingTurn`). The status reconciler listens, so the
+// state (`pendingTurnsSince`). The status reconciler listens, so the
 // `working` it derives from the ledger is written on the change's own arrival —
 // push, not the next sweep. Same shape as transcript-watcher's
 // `onSessionTranscriptWritten`.

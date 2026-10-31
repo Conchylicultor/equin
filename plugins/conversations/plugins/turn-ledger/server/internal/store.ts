@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray, lt, lte, max } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, lt, lte, max, min } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
 import {
@@ -390,27 +390,39 @@ function isPending(state: TurnState): boolean {
 
 /**
  * The conversations of `conversationIds` holding a turn their agent has not
- * started yet but will on its own ({@link PENDING_TURN_STATES}). The status
+ * started yet but will on its own ({@link PENDING_TURN_STATES}), each with
+ * when its oldest such turn entered that state (`updated_at`: every state
+ * change touches it) — the turn the agent must start first. The status
  * reconciler's evidence that an agent between turns is not at rest: its
  * launch prompt while its CLI boots, a turn queued behind a turn that just
- * ended — see `liveStatusFor`. A row leaving these states signals
- * `onStatusEvidence`, so the status follows it.
+ * ended — see `liveStatusFor`, which also reads the time: a turn an idle
+ * agent leaves unstarted for too long means the agent is stuck, not working.
+ * A row leaving these states signals `onStatusEvidence`, so the status
+ * follows it.
  */
-export async function conversationsWithPendingTurn(
+export async function pendingTurnsSince(
   conversationIds: readonly string[],
-  conn: Pick<NodePgDatabase, "selectDistinct"> = db,
-): Promise<Set<string>> {
-  if (conversationIds.length === 0) return new Set();
+  conn: Pick<NodePgDatabase, "select"> = db,
+): Promise<Map<string, Date>> {
+  if (conversationIds.length === 0) return new Map();
   const rows = await conn
-    .selectDistinct({ conversationId: _conversationTurns.conversationId })
+    .select({
+      conversationId: _conversationTurns.conversationId,
+      since: min(_conversationTurns.updatedAt),
+    })
     .from(_conversationTurns)
     .where(
       and(
         inArray(_conversationTurns.conversationId, [...conversationIds]),
         inArray(_conversationTurns.state, [...PENDING_TURN_STATES]),
       ),
-    );
-  return new Set(rows.map((row) => row.conversationId));
+    )
+    .groupBy(_conversationTurns.conversationId);
+  return new Map(
+    rows.flatMap((row) =>
+      row.since ? [[row.conversationId, row.since] as const] : [],
+    ),
+  );
 }
 
 /**

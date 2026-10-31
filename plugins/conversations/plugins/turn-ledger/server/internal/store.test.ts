@@ -36,7 +36,7 @@ import {
   acceptTurn,
   applyTurnEvent,
   confirmTurn,
-  conversationsWithPendingTurn,
+  pendingTurnsSince,
   dropTypedTurns,
   failOrphanedTypingTurns,
   getTurn,
@@ -492,10 +492,10 @@ describe("latestSubmitAt", () => {
   });
 });
 
-describe("conversationsWithPendingTurn", () => {
+describe("pendingTurnsSince", () => {
   test("a turn held, being sent or queued is pending until the agent starts it or it fails", async () => {
     const pending = async (id: string) =>
-      (await conversationsWithPendingTurn([id], conn)).has(id);
+      (await pendingTurnsSince([id], conn)).has(id);
     const starting = await seedConversation("starting");
     expect(await pending(starting)).toBe(false);
     await acceptTurn(starting, turn("launch"), conn);
@@ -516,6 +516,28 @@ describe("conversationsWithPendingTurn", () => {
     await dropTypedTurns(dropped, new Date(Date.now() + 1_000), conn);
     expect(await pending(dropped)).toBe(false);
   });
+
+  test("since: when the oldest pending turn entered its pending state", async () => {
+    const id = await seedConversation("waiting");
+    const first = await acceptTurn(id, turn("first"), conn);
+    const second = await acceptTurn(id, turn("second"), conn);
+    const since = async () => (await pendingTurnsSince([id], conn)).get(id);
+    const updatedAt = async (outcome: AcceptOutcome) =>
+      (await getTurn(sentId(outcome), conn))!.updatedAt;
+    const typed = await applyTurnEvent(sentId(first), { kind: "typed" }, conn);
+    expect(await since()).toEqual(
+      new Date(
+        Math.min(
+          typed.updatedAt.getTime(),
+          (await updatedAt(second)).getTime(),
+        ),
+      ),
+    );
+    await confirm(id, first);
+    expect(await since()).toEqual(await updatedAt(second));
+    await confirm(id, second);
+    expect(await since()).toBeUndefined();
+  });
 });
 
 describe("failOrphanedTypingTurns", () => {
@@ -531,7 +553,7 @@ describe("failOrphanedTypingTurns", () => {
     await failOrphanedTypingTurns(new Date(now), conn);
     expect((await getTurn(sentId(orphan), conn))?.state).toBe("failed");
     expect((await getTurn(sentId(fresh), conn))?.state).toBe("typing");
-    expect((await conversationsWithPendingTurn([id], conn)).has(id)).toBe(true);
+    expect((await pendingTurnsSince([id], conn)).has(id)).toBe(true);
   });
 });
 

@@ -6,6 +6,10 @@ import type { UpdateConversationPatch } from "@plugins/tasks/plugins/tasks-core/
 import { decideMissingProcessAction } from "./hibernation-decision";
 import type { RuntimeInfo } from "./runtime";
 import type { QuestionHold } from "./question-hold";
+import {
+  QUESTION_WAITING_FOR,
+  STUCK_TURN_WAITING_FOR,
+} from "../../core/turn-gate";
 
 // The status reconciler's decision, as a pure function of one conversation row
 // and what its runtime says about it. Everything with an effect — the DB writes,
@@ -26,6 +30,20 @@ import type { QuestionHold } from "./question-hold";
  * restart is how a launch came up 30 s after its row had been called gone.
  */
 export const STARTING_TIMEOUT_MS = 30_000;
+
+/**
+ * How long an agent at rest may hold a turn it was handed (turn ledger
+ * `typing` / `typed`) without starting it before it reads **stuck** rather
+ * than working. An idle CLI starts a queued turn at once, and a fresh one
+ * within seconds of booting (4–6 s measured; far more under host duress — the
+ * runtime's own unresponsive bound is the same 5 min). Past it, nothing the
+ * agent does will move the turn: its Claude Code process is wedged while
+ * alive, which neither its exit nor a new process's start (the events that
+ * release a pending turn) will ever say. A bound around the CLI — a process
+ * we do not control — not a timer on our own work; the minute status sweep
+ * is what notices it elapse.
+ */
+export const STUCK_TURN_MS = 5 * 60_000;
 
 /** The fields of a conversation row the decision reads. */
 export type PlanRow = Pick<
@@ -71,12 +89,13 @@ export interface PlanContext {
    */
   lastSubmitAt: Date | null;
   /**
-   * Whether the conversation holds a turn its agent has not started yet but
-   * will on its own (the turn ledger's `conversationsWithPendingTurn`: being
-   * sent, or queued in its CLI) — the launch prompt while the CLI boots,
-   * a turn queued behind the one that just ended.
+   * When the conversation's oldest turn its agent has not started yet but
+   * should on its own entered that state (the turn ledger's
+   * `pendingTurnsSince`: being sent, or queued in its CLI) — the launch prompt
+   * while the CLI boots, a turn queued behind the one that just ended — or
+   * null when it holds none.
    */
-  turnPending: boolean;
+  pendingTurnSince: Date | null;
   /**
    * Whether the conversation's `conversations.spawn` job is still coming —
    * queued, waiting out a retry, running, or suspended waiting on its
@@ -112,12 +131,23 @@ export type UpdatePlan =
       patch: UpdateConversationPatch;
       /** A new session id to append to the chain (behind the gate). */
       adoptedSessionId: string | null;
+      /**
+       * Set when this write makes the row stuck (it was not): since when its
+       * agent has rested holding the unstarted turn — the shell reports it.
+       */
+      stuckSince?: Date;
     };
 
-/** A live session's status, `workingOn` riding with `working`. */
+/**
+ * A live session's status, `workingOn` riding with `working`. `stuck` is
+ * written as `waiting` with `waitingFor` {@link STUCK_TURN_WAITING_FOR}: the
+ * agent will not move on its own, so it is not busy, and its state is in front
+ * of the user — not as an idle agent's finished work, but as a wedge to clear.
+ */
 export type LiveStatus =
   | { status: "working"; workingOn: ConversationWorkingOn }
-  | { status: "waiting" };
+  | { status: "waiting" }
+  | { status: "stuck"; since: Date };
 
 /**
  * Working on what the runtime says the agent is busy with — or on a turn when
@@ -126,24 +156,44 @@ export type LiveStatus =
  * - confirmed submitted after the runtime's last status write: an idle written
  *   BEFORE the submit is stale evidence; one written after it (the turn ended,
  *   or was interrupted) is current. Causal order, not a grace timer.
- * - pending (`turnPending`): handed to the agent, or about to be, and not
- *   started yet. The agent will start it with nobody doing anything, so it is
- *   not at rest — `waiting` would say its work is in front of the user, and
+ * - pending (`pendingTurnSince`): handed to the agent, or about to be, and
+ *   not started yet. The agent will start it with nobody doing anything, so it
+ *   is not at rest — `waiting` would say its work is in front of the user, and
  *   every reader of the status (a watch going quiet, list_agents) would act on
  *   that. The launch prompt while the CLI boots (seconds) and a turn queued
  *   behind the one that just ended are the gaps it closes.
+ *
+ * A pending turn is evidence of work only for so long. When it is the ONLY
+ * evidence — the runtime says the agent is at rest, no confirmed submit since
+ * — and the agent has been at rest with it for {@link STUCK_TURN_MS} (counted
+ * from the later of the runtime's last status write and the turn entering its
+ * pending state, so a turn queued for an hour behind a long turn starts its
+ * clock when that turn ends), the agent is `stuck`: an idle CLI that does not
+ * start a turn it holds will not start it later, and `working` would then be
+ * a claim nothing ever revokes.
  */
 export function liveStatusFor(
   info: RuntimeInfo,
   lastSubmitAt: Date | null,
-  turnPending: boolean,
+  pendingTurnSince: Date | null,
+  now: number,
 ): LiveStatus {
   const submittedSince =
     lastSubmitAt !== null &&
     info.statusWrittenAt !== null &&
     lastSubmitAt > info.statusWrittenAt;
-  if (submittedSince || turnPending)
-    return { status: "working", workingOn: "turn" };
+  if (submittedSince) return { status: "working", workingOn: "turn" };
+  if (pendingTurnSince !== null && info.workingOn !== "turn") {
+    const restingWithIt = Math.max(
+      pendingTurnSince.getTime(),
+      info.statusWrittenAt?.getTime() ?? 0,
+    );
+    if (now - restingWithIt < STUCK_TURN_MS)
+      return { status: "working", workingOn: "turn" };
+    // Background work still wakes it on its own: busy, as it says.
+    if (info.workingOn === null)
+      return { status: "stuck", since: new Date(restingWithIt) };
+  }
   if (info.workingOn !== null)
     return { status: "working", workingOn: info.workingOn };
   return { status: "waiting" };
@@ -244,9 +294,11 @@ function planLive(
 
   // A held question: the agent is blocked on it, whatever its turn state says.
   const heldOpen = ctx.questionHold === "open";
-  const desired: LiveStatus = heldOpen
+  const live: LiveStatus = heldOpen
     ? { status: "waiting" }
-    : liveStatusFor(info, ctx.lastSubmitAt, ctx.turnPending);
+    : liveStatusFor(info, ctx.lastSubmitAt, ctx.pendingTurnSince, ctx.now);
+  const desired =
+    live.status === "stuck" ? ({ status: "waiting" } as const) : live;
   const desiredWorkingOn =
     desired.status === "working" ? desired.workingOn : null;
   // Only adopt a new claudeSessionId once the shell's gate accepted it (a
@@ -258,7 +310,11 @@ function planLive(
   const statusChanged =
     desired.status !== row.status ||
     desiredWorkingOn !== (row.workingOn ?? null);
-  const desiredWaitingFor = heldOpen ? "question" : null;
+  const desiredWaitingFor = heldOpen
+    ? QUESTION_WAITING_FOR
+    : live.status === "stuck"
+      ? STUCK_TURN_WAITING_FOR
+      : null;
   const waitingForChanged =
     (desiredWaitingFor ?? null) !== (row.waitingFor ?? null);
   if (!sessionChanged && !statusChanged && !waitingForChanged)
@@ -275,6 +331,9 @@ function planLive(
     kind: "patch",
     patch,
     adoptedSessionId: sessionChanged ? desiredSessionId : null,
+    ...(live.status === "stuck" && row.waitingFor !== STUCK_TURN_WAITING_FOR
+      ? { stuckSince: live.since }
+      : {}),
   };
 }
 
@@ -312,7 +371,11 @@ function planAbsent(row: PlanRow, ctx: PlanContext): UpdatePlan {
   // one, so the row stays active and its worktree is untouched. This is the
   // reconciler's call, not `decideMissingProcessAction`'s, which stays blind to
   // status so it can never write `gone` from it.
-  const endTurn = row.status === "working";
+  //
+  // A stuck row (`waiting` on a turn its agent never started) settles the same
+  // way: with no process, nothing holds that turn any more.
+  const endTurn =
+    row.status === "working" || row.waitingFor === STUCK_TURN_WAITING_FOR;
   const action = decideMissingProcessAction(row, { onMain: ctx.onMain });
   switch (action) {
     case "hibernate":

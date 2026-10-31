@@ -10,7 +10,7 @@ export {
   acceptTurn,
   applyTurnEvent,
   confirmTurn,
-  conversationsWithPendingTurn,
+  pendingTurnsSince,
   dropTypedTurns,
   getTurn,
   hasHeldTurns,

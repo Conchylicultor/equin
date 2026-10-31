@@ -37,7 +37,7 @@ import {
   type UpdatePlan,
 } from "./plan-update";
 import {
-  conversationsWithPendingTurn,
+  pendingTurnsSince,
   latestSubmitAt,
   onStatusEvidence,
 } from "@plugins/conversations/plugins/turn-ledger/server";
@@ -231,7 +231,7 @@ async function planFor(
   live: LiveSnapshot,
   holds: ReadonlyMap<string, QuestionHold>,
   submits: ReadonlyMap<string, Date>,
-  pending: ReadonlySet<string>,
+  pending: ReadonlyMap<string, Date>,
 ): Promise<{ plan: UpdatePlan; liveness: Liveness }> {
   const liveness = livenessOf(row, live);
   const candidate = sessionCandidate(row, liveness);
@@ -245,7 +245,7 @@ async function planFor(
     sessionAccepted: gate === "accepted",
     questionHold: holds.get(row.id) ?? null,
     lastSubmitAt: submits.get(row.id) ?? null,
-    turnPending: pending.has(row.id),
+    pendingTurnSince: pending.get(row.id) ?? null,
     spawnInFlight: live.spawnsInFlight.has(row.id),
   });
   const rowStaysLive = plan.kind === "noop" || plan.kind === "patch";
@@ -333,6 +333,17 @@ async function apply(row: Conversation, plan: UpdatePlan): Promise<void> {
 
   await updateConversation(id, plan.patch);
 
+  // Its agent holds a turn it will not start: the status now says stuck, and
+  // the cause — a Claude Code wedged while alive — is worth an investigation.
+  if (plan.stuckSince) {
+    await recordReport({
+      kind: "conversation-stuck-turn",
+      source: "server-caught",
+      message: `${id}: its agent has rested since ${plan.stuckSince.toISOString()} holding a turn it never started`,
+      data: { conversationId: id, since: plan.stuckSince.toISOString() },
+    });
+  }
+
   // Leaving `starting` for a live status: deliver any turn the user sent while
   // it was starting (turns.ts). A row swept to gone/done keeps its held
   // turns for the Resume that respawns it. Enqueued AFTER the status write on purpose — the write is
@@ -378,7 +389,7 @@ async function reconcileRows(
   const [holds, submits, pending] = await Promise.all([
     reapQuestionHolds(ids).then(() => readQuestionHolds(ids)),
     latestSubmitAt(ids),
-    conversationsWithPendingTurn(ids),
+    pendingTurnsSince(ids),
   ]);
   for (const row of rows) {
     const { plan } = await planFor(row, live, holds, submits, pending);

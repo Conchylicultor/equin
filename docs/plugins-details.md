@@ -14244,6 +14244,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `report-kind` "auto-start-model-unavailable"
       - `report-kind` "claude-code-unavailable-at-spawn"
       - `report-kind` "conversation-spawn-failed"
+      - `report-kind` "conversation-stuck-turn"
       - `report-kind` "held-turn-undelivered"
       - `resource.declare` "conversations.context-usage"
       - `resource.declare` "conversations.partial-message"
@@ -14435,6 +14436,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `RewindPreviewSchema`
       - `RewindRefusalSchema`
       - `stopConversation`
+      - `STUCK_TURN_WAITING_FOR`
       - `SYSTEM_CATEGORY_ID`
       - `withdrawConversationTurn`
   - Cross-plugin:
@@ -15978,12 +15980,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `JsonlViewer.ContextRole`
               - `JsonlViewer.Overlay`
               - `JsonlViewer.TranscriptEnd`
-            - Slot contributors: 57 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Slot contributors: 58 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `JsonlViewer.ContextRole` ×31
               - `JsonlViewer.EventRenderer` ×18
               - `JsonlViewer.Overlay` ×4
               - `JsonlViewer.EventFilter` ×2
-              - `JsonlViewer.PendingPrompt` ← `conversations.question-relay`
+              - `JsonlViewer.PendingPrompt` ×2
               - `JsonlViewer.TranscriptEnd` ← `tasks.outcome-report`
             - Contributes:
               - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
@@ -16117,8 +16119,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density` ×5
               - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 46 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
-              - `conversations` ×44
+            - Imported by: 47 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+              - `conversations` ×45
               - `apps/places/places-map`
               - `tasks/outcome-report`
           - Exemptions:
@@ -18731,16 +18733,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens: `ui/tokens/shape --spacing`
           - Shared:
             - Exports (values): `selectionAnswersConfig`
-        - **`status`** — Displays the conversation status as a colored badge in the toolbar.
+        - **`status`** — Displays the conversation status as a colored badge in the toolbar, and names a stuck agent (one holding a message it never started) at the transcript's foot.
           - Web:
-            - Contributes: `conversationPane.Actions` "status" → `StatusBadge`
+            - Contributes:
+              - `conversationPane.Actions` "status" → `StatusBadge`
+              - `JsonlViewer.PendingPrompt` "stuck-turn" → `StuckTurnNotice`
             - Uses:
               - `conversations.useConversationById`
               - `conversations/conversation-view.conversationPane`
               - `conversations/conversation-view/header.HeaderChip`
+              - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
               - `conversations/conversation-view/pending-turn.useOptimisticConversationStatus`
               - `network/live.useLiveRow`
               - `primitives/css/badge.formatStatusLabel`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
               - `primitives/css/ui-kit.WithTooltip`
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/relative-time.formatRelativeTime`
@@ -18753,6 +18760,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --primary`
               - `ui/tokens/color-palette --primary-text`
               - `ui/tokens/color-palette --warning`
+              - `ui/tokens/density --space-xs`
         - **`tasks-panel`** — Toolbar button that toggles the task pane (tree + detail) for the conversation's task.
           - Web:
             - Contributes: `Conversation.ActionBar` → `TasksButton`
@@ -20125,7 +20133,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `acceptTurn`
           - `applyTurnEvent`
           - `confirmTurn`
-          - `conversationsWithPendingTurn`
           - `dropTypedTurns`
           - `getTurn`
           - `hasHeldTurns`
@@ -20134,6 +20141,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `latestSubmitAt`
           - `listHeldTurns`
           - `onStatusEvidence`
+          - `pendingTurnsSince`
           - `resolvePromptSubmit`
           - `returnHeldTurns`
           - `returnTurnByPromptUuid`
@@ -41298,9 +41306,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 422 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 423 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×108
-              - `conversations` ×64
+              - `conversations` ×65
               - `primitives` ×54
               - `debug` ×38
               - `ui` ×31
@@ -41541,9 +41549,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 408 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 409 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×111
-              - `conversations` ×74
+              - `conversations` ×75
               - `primitives` ×46
               - `debug` ×37
               - `page` ×24
@@ -54559,10 +54567,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 337 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 338 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `apps` ×71
               - `primitives` ×70
-              - `conversations` ×48
+              - `conversations` ×49
               - `debug` ×28
               - `page` ×21
               - `ui` ×18

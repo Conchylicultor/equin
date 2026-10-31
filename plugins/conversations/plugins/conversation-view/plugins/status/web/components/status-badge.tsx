@@ -4,7 +4,10 @@ import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core"
 import { formatStatusLabel } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { HeaderChip } from "@plugins/conversations/plugins/conversation-view/plugins/header/web";
 import { useOptimisticConversationStatus } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
-import type { ConversationEntry } from "@plugins/conversations/core";
+import {
+  STUCK_TURN_WAITING_FOR,
+  type ConversationEntry,
+} from "@plugins/conversations/core";
 import { useLiveRow } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { WithTooltip } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -26,6 +29,7 @@ const STATUS_CLASSES: Record<ConversationStatus, string> = {
 };
 
 const FAILED_CLASS = "bg-destructive/15 text-destructive border-destructive/30";
+const STUCK_CLASS = "bg-warning/15 text-warning border-warning/30";
 const UNKNOWN_CLASS =
   "bg-muted text-muted-foreground border-dashed border-border";
 
@@ -59,6 +63,18 @@ function StatusChip({ conversation }: { conversation: ConversationEntry }) {
       />
     );
   if (status === "gone") return <GoneChip conversationId={conversation.id} />;
+  // Alive and at rest, holding a turn it never started: not idle, not working.
+  if (
+    status === "waiting" &&
+    conversation.waitingFor === STUCK_TURN_WAITING_FOR
+  )
+    return (
+      <WithTooltip content="Its agent is alive and at rest, but has held a message it was handed for minutes without starting it — its Claude Code looks wedged. The message starts if it recovers.">
+        <span>
+          <HeaderChip colorClass={STUCK_CLASS}>Stuck</HeaderChip>
+        </span>
+      </WithTooltip>
+    );
   return (
     <HeaderChip colorClass={STATUS_CLASSES[status]}>
       {prettify(status)}

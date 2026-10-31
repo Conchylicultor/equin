@@ -170,9 +170,10 @@ resolved confirmation signals `onStatusEvidence`, which the reconciler subscribe
 to, so the status follows the confirmation's arrival. The browser's optimistic status stops at
 `accepted` — the server is the one writer of `working` from there.
 
-A **pending** turn is evidence too (`conversationsWithPendingTurn`: a row
+A **pending** turn is evidence too (`pendingTurnsSince`: a row
 `typing` or `typed` — one the agent will start with nobody doing anything
-more): a live agent holding one is `working`, never `waiting`. Without it the
+more — with when the oldest entered that state): a live agent holding one is
+`working`, never `waiting`. Without it the
 status read idle for the seconds a fresh agent's CLI boots with its launch
 prompt on its way, and at a turn's end with another queued behind it — and
 every reader (a watch going quiet, list_agents) took the agent to be at rest
@@ -185,6 +186,17 @@ pending state leaves only by an event, so a dead turn cannot keep an agent
 `exited`), and a backend boot fails every `typing` row its previous process
 was still sending (`failOrphanedTypingTurns`, the
 `turn-ledger.orphaned-typing` warm-up).
+
+A live agent that never starts a turn it holds has no such event: its Claude
+Code wedged while alive, and nothing exits or restarts. So the pending turn is
+evidence of work only for a bound (`STUCK_TURN_MS`, 5 min, in conversations'
+`plan-update.ts`): an agent the runtime says is at rest (no turn, no background
+work) that has rested that long holding one is **stuck** — `waiting` with
+`waitingFor: "stuck-turn"` (`STUCK_TURN_WAITING_FOR`), so it is not busy (a
+watch goes quiet, an automatic turn holds), `list_agents` and the header chip
+say Stuck, and a `conversation-stuck-turn` report asks why. The ledger row is
+untouched (still no timer here): the turn starting, failing or being dropped
+ends it through the same evidence signal.
 
 ## Stop and rewind: the turn taken back, by its transcript line
 
@@ -265,7 +277,6 @@ withdrawn).
     - `acceptTurn`
     - `applyTurnEvent`
     - `confirmTurn`
-    - `conversationsWithPendingTurn`
     - `dropTypedTurns`
     - `getTurn`
     - `hasHeldTurns`
@@ -274,6 +285,7 @@ withdrawn).
     - `latestSubmitAt`
     - `listHeldTurns`
     - `onStatusEvidence`
+    - `pendingTurnsSince`
     - `resolvePromptSubmit`
     - `returnHeldTurns`
     - `returnTurnByPromptUuid`

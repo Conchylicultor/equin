@@ -29,6 +29,7 @@ import {
   deliverHeldTurnsJob,
   heldTurnUndeliveredKind,
 } from "./internal/deliver-held-turns-job";
+import { conversationStuckTurnKind } from "./internal/stuck-turn-report";
 import {
   claudeCodeUnavailableAtSpawnKind,
   conversationSpawnFailedKind,
@@ -131,6 +132,7 @@ export default {
     claudeCodeUnavailableAtSpawnKind,
     autoStartModelUnavailableKind,
     heldTurnUndeliveredKind,
+    conversationStuckTurnKind,
   ],
   register: [
     maybeLaunchTaskJob,

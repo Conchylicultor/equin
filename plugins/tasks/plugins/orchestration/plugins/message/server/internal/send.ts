@@ -1,3 +1,4 @@
+import { STUCK_TURN_WAITING_FOR } from "@plugins/conversations/core";
 import type { TreeAgent, TreeAgents } from "./agents";
 
 /** What sending a message does outside the tree read: ports, so a test drives
@@ -111,6 +112,8 @@ export function renderOutcome(outcome: MessageOutcome): string {
     case "waiting":
     case "gone":
     case "done":
+      if (was.waitingFor === STUCK_TURN_WAITING_FOR)
+        return `Sent to ${conversationId}: it is stuck — it holds a turn it never started — so the message queues behind that turn and is read only once the agent moves again.`;
       return was.waitingFor !== null
         ? `Sent to ${conversationId}: it was waiting on the user, and takes your message instead.`
         : `Sent to ${conversationId}: it was idle, and starts on it now.`;
