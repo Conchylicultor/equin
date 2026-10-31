@@ -55,8 +55,11 @@ pub struct Pin {
 }
 
 impl Pin {
+    /// The panel of `namespace`, at the host it is handed out under (main:
+    /// `equin.localhost`, not its internal name).
     pub fn for_namespace(namespace: &str) -> Self {
-        let url = Url::parse(&format!("http://{namespace}.localhost:{}{PANEL_PATH}?embed=1", gateway::PORT))
+        let host = crate::cli::host_label(namespace);
+        let url = Url::parse(&format!("http://{host}.localhost:{}{PANEL_PATH}?embed=1", gateway::PORT))
             .expect("a validated namespace makes a valid URL");
         Pin { url }
     }
@@ -411,6 +414,10 @@ mod tests {
     fn the_panel_loads_its_page_and_nothing_else() {
         let pin = Pin::for_namespace("equin");
         assert_eq!(pin.url().as_str(), "http://equin.localhost:9000/home/menu-bar?embed=1");
+        assert_eq!(
+            Pin::for_namespace(crate::cli::MAIN_NAMESPACE).url().as_str(),
+            "http://equin.localhost:9000/home/menu-bar?embed=1"
+        );
         assert!(navigation_allowed(&pin, pin.url()));
         assert!(navigation_allowed(&pin, &u("tauri://localhost/index.html")));
         for refused in [

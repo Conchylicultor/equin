@@ -17,6 +17,7 @@ import {
   NAMESPACE_HOST_SUFFIX,
   NAMESPACE_LABEL_RE,
   NAMESPACE_MAX_BYTES,
+  MAIN_WORKTREE_NAME,
 } from "../core/namespace";
 
 /**
@@ -129,7 +130,7 @@ const noHandBuiltNamespaceUrlCheck: Check = {
 const grammarInSyncCheck: Check = {
   id: "namespace:grammar-in-sync",
   description:
-    "The gateway's Go copy of the namespace grammar, byte cap and host aliases must match the namespace plugin's",
+    "The gateway's Go copy of the namespace grammar, byte cap and host aliases, and the menu-bar helper's main host label, must match the namespace plugin's",
   async run() {
     const root = await getWorktreeRoot();
     // The label rule as it appears inside a regex literal, anchors stripped —
@@ -165,6 +166,13 @@ const grammarInSyncCheck: Check = {
         expect: `"${alias}": "${target}",`,
         what: `the host alias ${alias} → ${target} (hostAliases)`,
       })),
+      {
+        // The menu-bar helper loads main's panel (and points its app shims) at
+        // the host main is handed out under, not its internal name.
+        path: "plugins/menu-bar/rust/src/cli.rs",
+        expect: `MAIN_HOST_LABEL: &str = "${NAMESPACE_HOST_LABELS[MAIN_WORKTREE_NAME]}";`,
+        what: "main's host label (MAIN_HOST_LABEL)",
+      },
     ];
 
     const offenders: string[] = [];

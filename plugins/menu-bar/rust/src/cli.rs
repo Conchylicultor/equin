@@ -14,9 +14,19 @@ pub const USAGE: &str = "usage:
 /// the panel must refuse it before any load, so it need not exist.
 pub const PROBE_OTHER: &str = "equin-probe-elsewhere";
 
-/// The main checkout's namespace (`infra/namespace`'s MAIN_WORKTREE_NAME);
-/// `equin.localhost` is only a host alias of it, so the canonical host is used.
+/// The main checkout's namespace (`infra/namespace`'s MAIN_WORKTREE_NAME): an
+/// internal id (its database, socket, spec dir), never the address shown.
 pub const MAIN_NAMESPACE: &str = "singularity";
+
+/// The host label main is handed out under (`infra/namespace`'s
+/// NAMESPACE_HOST_LABELS) — KEEP IN SYNC, enforced by `namespace:grammar-in-sync`.
+pub const MAIN_HOST_LABEL: &str = "equin";
+
+/// The `.localhost` label a namespace is served at: its public host label when
+/// it has one (main → `equin`), else its own name — `namespaceHost`'s rule.
+pub fn host_label(namespace: &str) -> &str {
+    if namespace == MAIN_NAMESPACE { MAIN_HOST_LABEL } else { namespace }
+}
 
 #[derive(Debug, PartialEq)]
 pub enum Mode {
@@ -143,6 +153,12 @@ mod tests {
         );
         assert!(parse(&args(&["tray", "--namespace", "Evil.com"])).is_err());
         assert!(parse(&args(&["tray", "--bogus", "x"])).is_err());
+    }
+
+    #[test]
+    fn main_is_served_at_its_host_label() {
+        assert_eq!(host_label(MAIN_NAMESPACE), "equin");
+        assert_eq!(host_label("att-1-x"), "att-1-x");
     }
 
     #[test]
