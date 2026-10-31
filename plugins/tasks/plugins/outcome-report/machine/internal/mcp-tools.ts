@@ -1,7 +1,11 @@
 import { z } from "zod";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
-import { granted } from "@plugins/tasks/plugins/orchestration/plugins/mandate/server";
+import {
+  granted,
+  grantOf,
+} from "@plugins/tasks/plugins/orchestration/plugins/mandate/server";
+import { exitClean } from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
 import { reportRequired } from "@plugins/tasks/plugins/outcome-report/plugins/capability/core";
 import { getAttemptWork } from "@plugins/tasks/plugins/attempt-work/server";
 import { standingOf } from "@plugins/tasks/plugins/attempt-work/core";
@@ -11,6 +15,7 @@ import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/she
 import { taskOutcomeReports } from "../../server/internal/tables";
 import { outcomeReportSubmitted } from "../../server/internal/tables-events";
 import { OUTCOME_REPORT_TOOL as TOOL } from "./capability";
+import { nextStepAfterReport } from "./next-step";
 
 export const submitOutcomeReportTool = Mcp.tool({
   name: TOOL,
@@ -25,7 +30,7 @@ export const submitOutcomeReportTool = Mcp.tool({
 
 If the work needs ONE decision from the user (a design choice, a risky change you did not push), put it in \`question\` with up to six short one-click \`answers\`; the user's choice arrives as your next message. Otherwise make the call yourself and leave \`question\` out.
 
-Calling it again replaces the earlier report. Do not call \`exit_clean\` on your own: the conversation stays open for the user to review. Call it only when a person asks you to exit.`,
+Calling it again replaces the earlier report. Afterwards, follow your mandate's exit rule: it says whether you close the conversation with \`exit_clean\` or end your turn and leave it open for review.`,
   inputSchema: {
     body: z
       .string()
@@ -108,7 +113,12 @@ Calling it again replaces the earlier report. Do not call \`exit_clean\` on your
           text: JSON.stringify({
             ok: true,
             standing,
-            next: "Report saved. End your turn; do not close the conversation.",
+            // The mandate's exit rule, not a fixed instruction: a supervisor's
+            // worker closes itself, an automation's run stays open for review.
+            next: nextStepAfterReport(
+              await grantOf(exitClean, conversationId),
+              question !== undefined,
+            ),
           }),
         },
       ],
