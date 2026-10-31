@@ -14490,8 +14490,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AgentThreadSlots.StepLabel` "TodoWrite" → `TodoWriteStepLabel`
           - `AgentThreadSlots.StepLabel` "AskUserQuestion" → `AskUserQuestionStepLabel`
           - `AgentThreadSlots.StepLabel` "^(Agent|Task)$" → `AgentStepLabel`
-        - Uses: 64 symbols — full list in [`plugins/conversations/plugins/agent-thread/REFERENCE.md`](../plugins/conversations/plugins/agent-thread/REFERENCE.md)
-          - `conversations/conversation-view/pending-turn` ×9
+        - Uses: 65 symbols — full list in [`plugins/conversations/plugins/agent-thread/REFERENCE.md`](../plugins/conversations/plugins/agent-thread/REFERENCE.md)
+          - `conversations/conversation-view/pending-turn` ×10
           - `primitives/live-state` ×7
           - `conversations/conversation-view/jsonl-viewer` ×4
           - `conversations/conversation-view` ×4
@@ -15987,10 +15987,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
               - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
-            - Uses: 55 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Uses: 56 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `primitives/live-state` ×9
+              - `conversations/conversation-view/pending-turn` ×5
               - `primitives/dom/auto-scroll` ×5
-              - `conversations/conversation-view/pending-turn` ×4
               - `primitives/collapsible` ×4
               - `conversations/conversation-view/jsonl-viewer/row-actions` ×3
               - `primitives/css/ui-kit` ×2
@@ -18314,7 +18314,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `openAppAnchor`
               - `tryItHint`
-        - **`pending-turn`** — The single entry point for sending a turn from the browser (useSendConversationTurn, bound to the subtree's transport: mints the turn's ledger id, shows its echo at once, then runs its delivery), and the view of the server's turn ledger (conversations/turn-ledger): usePendingTurns merges a conversation's live ledger rows with this tab's sends whose row has not arrived, PendingTurnCard renders each by state (echo while held or being typed until the transcript holds its line, Retry + Copy to draft when it failed), and useOptimisticConversationStatus reads a conversation as working from the instant a turn is sent. Every surface (prompt input, template chips, Send/Queue/Go, Push & Close, AskUserQuestion answers) sends through it and differs only in its delivery. Contributes the turn-send-safety lint rule.
+        - **`pending-turn`** — The single entry point for sending a turn from the browser (useSendConversationTurn, bound to the subtree's transport: mints the turn's ledger id, shows its echo at once, then runs its delivery), and the view of the server's turn ledger (conversations/turn-ledger): usePendingTurns merges a conversation's live ledger rows with this tab's sends whose row has not arrived, PendingTurnCard renders each by state (echo while held or being typed until the transcript holds its line, Retry + Copy to draft when it failed), useSentTurnFollowKey is the transcript's followKey (moves only when the user sends a turn, never on an automatic event turn or a retiring echo), and useOptimisticConversationStatus reads a conversation as working from the instant a turn is sent. Every surface (prompt input, template chips, Send/Queue/Go, Push & Close, AskUserQuestion answers) sends through it and differs only in its delivery. Contributes the turn-send-safety lint rule.
           - Web:
             - Uses: 25 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/pending-turn/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/pending-turn/REFERENCE.md)
               - `infra/endpoints` ×5
@@ -18345,6 +18345,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useOptimisticConversationStatus`
               - `usePendingTurns`
               - `useSendConversationTurn`
+              - `useSentTurnFollowKey`
               - `useTurnAwaitingStart`
               - `useTurnRunning`
               - `useTurnSendAvailability`

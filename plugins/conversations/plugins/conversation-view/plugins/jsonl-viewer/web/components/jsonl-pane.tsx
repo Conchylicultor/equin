@@ -28,6 +28,7 @@ import { ConversationIdProvider } from "./conversation-id-context";
 import { TranscriptView } from "./transcript-view";
 import {
   usePendingTurns,
+  useSentTurnFollowKey,
   PendingTurnCard,
   type PendingTurn,
   type RenderEcho,
@@ -168,6 +169,7 @@ function JsonlPaneInner({
   // its error where the cards go, over the cards it last held.
   const pendingTurns =
     pending.status === "ready" ? pending.data : (pending.stale ?? []);
+  const followKey = useSentTurnFollowKey(pendingTurns);
 
   // Derive when "working" started: last event's timestamp, or now if none.
   // Seeded once per working transition (snapshot of the last event present at
@@ -219,10 +221,11 @@ function JsonlPaneInner({
       subject={CONVERSATION_SUBJECT}
       // The surface tab is appended by the view — name only the subject here.
       persistKey={`conversation-scroll:${conversation.id}`}
-      // The user sending a turn, NOT `isWorking`. A rising `isWorking` also
-      // fires when a background agent resumes on its own, which must not yank a
-      // reading user to the bottom.
-      followKey={pendingTurns.length}
+      // The user sending a turn, NOT `isWorking` nor the card count. A rising
+      // `isWorking` also fires when a background agent resumes on its own, and
+      // the count moves on every watched-task event turn and retiring echo —
+      // none of which may yank a reading user to the bottom.
+      followKey={followKey}
       dimmed={isGone}
       // A queued turn or a pending prompt already fills the empty pane; with
       // neither, it holds the starting indicator or the blank hint, centred.

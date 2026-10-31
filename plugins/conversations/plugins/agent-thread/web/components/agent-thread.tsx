@@ -20,6 +20,7 @@ import {
   useOptimisticConversationStatus,
   useTurnRunning,
   usePendingTurns,
+  useSentTurnFollowKey,
   type PendingTurn,
   type RenderEcho,
 } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
@@ -176,6 +177,7 @@ function LiveThread<D extends ThreadResultDef>({
   // cards it last held.
   const pendingTurns =
     pending.status === "ready" ? pending.data : (pending.stale ?? []);
+  const followKey = useSentTurnFollowKey(pendingTurns);
   const boxRef = useRef<HTMLDivElement>(null);
   const [onScreen, setOnScreen] = useState(false);
   useInView(boxRef, (entry) => setOnScreen(entry.isIntersecting));
@@ -209,7 +211,7 @@ function LiveThread<D extends ThreadResultDef>({
       renderResult={renderResult}
         {...(resultWords === undefined ? {} : { resultWords })}
         {...viewHeader}
-      followKey={pendingTurns.length}
+        followKey={followKey}
       trailing={
         <>
           {status !== "working" && waitingFor !== null && (

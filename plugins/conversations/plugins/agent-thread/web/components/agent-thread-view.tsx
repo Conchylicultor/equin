@@ -215,7 +215,7 @@ interface AgentThreadViewBaseProps<D extends ThreadResultDef> {
    */
   composer: ReactNode;
   /** Changing it re-follows the bottom — the user just sent a turn. */
-  followKey?: number;
+  followKey?: string;
   /**
    * How tall the thread is: `fill` (default) fills its container; `hug` sizes
    * to its content up to its PARENT element's max-height (inherited — the
