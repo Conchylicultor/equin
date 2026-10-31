@@ -53,6 +53,7 @@ import {
 import { createRequestHandler } from "@plugins/framework/plugins/http-router/core";
 import { unmatchedApiResponse } from "@plugins/infra/plugins/endpoints/core";
 import { PLUGINS_DIR, REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import { injectFrameAgent } from "@plugins/primitives/plugins/embed/plugins/frame/plugins/agent/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import {
   parsePrototypeTree,
@@ -340,7 +341,11 @@ describe.if(IN_CHILD)("writePrototypeFixture, after the host is up", () => {
           `/api/prototypes/${p.id}/versions/${version.sha}/index.html`,
         );
         expect(res.status).toBe(200);
-        expect(await res.text()).toBe(p.versions[n]!.files["index.html"]!);
+        // A content route's HTML carries the frame agent (content isolation):
+        // the author's bytes, with the agent injected once at the head.
+        expect(await res.text()).toBe(
+          injectFrameAgent(p.versions[n]!.files["index.html"]!),
+        );
       }
     }
     expect(await loadResourceByKey("prototypes.versionCounts", {})).toEqual(
