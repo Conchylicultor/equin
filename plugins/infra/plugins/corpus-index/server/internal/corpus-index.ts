@@ -61,7 +61,7 @@ export interface CorpusIndexSpec<TPartial> {
   scope: "host" | "worktree";
   /** Bump when `TPartial`'s shape changes ⇒ a version mismatch forces a full rebuild. */
   version: number;
-  /** Bounded parse/stat concurrency (defaults to {@link DEFAULT_CONCURRENCY}). */
+  /** Bounded readdir/stat/parse concurrency (defaults to {@link DEFAULT_CONCURRENCY}). */
   concurrency?: number;
 }
 
@@ -234,34 +234,41 @@ async function saveCorpusFile<TPartial>(
  * Collect every file under `roots` for which `match` is true, recursing into
  * subdirectories. ENOENT at any level is tolerated (a root or dir that vanished
  * mid-walk contributes nothing). Symlinks are not followed (only `isDirectory()`
- * entries are recursed) so the walk cannot loop.
+ * entries are recursed) so the walk cannot loop. The result is in depth-first
+ * dirent order, as a serial walk would list it.
+ *
+ * Directories are listed `concurrency` at a time, never one by one: each
+ * `readdir` is a thread-pool round-trip that does almost no work, so a serial
+ * walk is bound by the round-trips, not the listing. Walking `~/Downloads`
+ * (26k dirs, 112k entries) for Sonata's MIDI folders took 6–9 s serially —
+ * every main boot — and ~0.45 s with 8 in flight, for the same CPU. The gate
+ * wraps the `readdir` alone, never a subtree, so a directory waiting on its
+ * children holds no slot.
  */
-async function enumerate(
+export async function enumerate(
   roots: string[],
   match: (path: string) => boolean,
+  concurrency: number,
 ): Promise<string[]> {
-  const out: string[] = [];
-  const walk = async (dir: string): Promise<void> => {
+  const gate = createSemaphore(concurrency);
+  const walk = async (dir: string): Promise<string[]> => {
     let dirents;
     try {
-      dirents = await readdir(dir, { withFileTypes: true });
+      dirents = await gate.run(() => readdir(dir, { withFileTypes: true }));
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-      return;
+      return [];
     }
-    for (const d of dirents) {
-      const full = join(dir, d.name);
-      if (d.isDirectory()) {
-        await walk(full);
-      } else if (match(full)) {
-        out.push(full);
-      }
-    }
+    const found = await Promise.all(
+      dirents.map(async (d): Promise<string[]> => {
+        const full = join(dir, d.name);
+        if (d.isDirectory()) return await walk(full);
+        return match(full) ? [full] : [];
+      }),
+    );
+    return found.flat();
   };
-  for (const root of roots) {
-    await walk(root);
-  }
-  return out;
+  return (await Promise.all(roots.map(walk))).flat();
 }
 
 // ─── refresh (incremental) ──────────────────────────────────────────────────────
@@ -294,7 +301,7 @@ export async function refreshCorpus<TPartial>(
   index: CorpusFile<TPartial>,
   deps: RefreshDeps<TPartial>,
 ): Promise<RefreshResult> {
-  const paths = await enumerate(deps.roots, deps.match);
+  const paths = await enumerate(deps.roots, deps.match, deps.concurrency);
   const live = new Set(paths);
   const delta: CorpusDelta = {
     addedPaths: [],
@@ -353,7 +360,8 @@ export async function refreshCorpusPaths<TPartial>(
       continue;
     }
     if (st.isDirectory()) {
-      for (const p of await enumerate([path], deps.match)) files.add(p);
+      for (const p of await enumerate([path], deps.match, deps.concurrency))
+        files.add(p);
     } else if (deps.match(path)) {
       files.add(path);
     }

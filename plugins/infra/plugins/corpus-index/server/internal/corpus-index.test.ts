@@ -6,6 +6,7 @@ import {
   rm,
   writeFile,
   appendFile,
+  symlink,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -13,6 +14,7 @@ import {
   computePersist,
   createCorpusIndex,
   defineCorpusIndex,
+  enumerate,
   loadCorpusFile,
   refreshCorpus,
   refreshCorpusPaths,
@@ -174,6 +176,49 @@ test("computePersist: host scope persists only on main; worktree always persists
   expect(computePersist("host", false)).toBe(false); // host, non-main → no write
   expect(computePersist("worktree", true)).toBe(true);
   expect(computePersist("worktree", false)).toBe(true);
+});
+
+// ─── enumerate — the concurrent walk ─────────────────────────────────────────
+
+test("the concurrent walk lists every match in depth-first dirent order", async () => {
+  // Wider and deeper than the gate, so listings really overlap.
+  for (const d of ["c/x/y", "c/z", "d"]) {
+    await mkdir(join(corpusRoot, d), { recursive: true });
+  }
+  await writeFile(join(corpusRoot, "c", "x", "y", "deep.txt"), "");
+  await writeFile(join(corpusRoot, "c", "x", "mid.txt"), "");
+  await writeFile(join(corpusRoot, "c", "z", "side.txt"), "");
+  await writeFile(join(corpusRoot, "d", "last.txt"), "");
+  // A symlinked directory is not followed (it would list `a` twice).
+  await symlink(join(corpusRoot, "a"), join(corpusRoot, "d", "loop"));
+  const match = (p: string) => p.endsWith(".txt");
+
+  const serial = await enumerate([corpusRoot], match, 1);
+  const concurrent = await enumerate([corpusRoot], match, 3);
+
+  expect(concurrent).toEqual(serial);
+  expect(new Set(concurrent)).toEqual(
+    new Set(
+      [
+        "a/one.txt",
+        "a/two.txt",
+        "b/three.txt",
+        "c/x/mid.txt",
+        "c/x/y/deep.txt",
+        "c/z/side.txt",
+        "d/last.txt",
+      ].map((p) => join(corpusRoot, p)),
+    ),
+  );
+});
+
+test("the walk tolerates a missing root and lists the others", async () => {
+  const found = await enumerate(
+    [join(root, "gone"), corpusRoot],
+    (p) => p.endsWith(".txt"),
+    2,
+  );
+  expect(found.length).toBe(3);
 });
 
 // ─── Instance-level (createCorpusIndex) — markDirty, ensureFresh delta ────────
