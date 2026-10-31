@@ -266,9 +266,11 @@ The deploy posture mirrors `hermetic-build.ts`: **a shared prefix once, then a
 loop over targets.**
 
 ```
-per invocation:  preflight → resolve targets → lock → stage 1 (deps + every
-                 target's registry) → stage 2 (migrations + codegen) → format →
-                 validation → central → ONE verdict
+per invocation:  preflight → resolve targets → lock → Postgres + DB fork
+                 waits → ADMISSION (duress gate + ONE host CPU grant, held to
+                 the verdict) → stage 1 (deps + every target's registry) →
+                 stage 2 (migrations + codegen) → format → validation →
+                 central → ONE verdict
 per target:      marker → build+publish dist → DB → propagate config → spec →
                  restart → health probe → receipt
 ```
@@ -302,9 +304,9 @@ Three orderings that look incidental and are not:
   and both are load-bearing. FIRST, before anything else touches the namespace
   dir — a crash mid-build otherwise leaves a marker-less dir the collision guard
   refuses forever. AGAIN in the same breath as `spec.json`, because the claim
-  alone does not survive: a build spends most of its wall time parked on the host
-  CPU grant, and one namespace dir was removed underneath a waiting build
-  (2026-08-19), which recreated every other artifact at the end and came up live
+  alone does not survive: a build spends minutes between the two (it used to
+  spend them parked on the host CPU grant), and one namespace dir was removed
+  underneath a waiting build (2026-08-19), which recreated every other artifact at the end and came up live
   with no marker — unre-servable, unresettable, reported as not served. The write
   (`stampCompositionMarker`, `infra/worktree`) is atomic, idempotent and reads
   itself back, so the second call is a no-op when nothing went wrong and the

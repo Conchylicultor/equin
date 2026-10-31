@@ -36,6 +36,14 @@ the bulk work below default, and raise main's event-loop thread above it.
   and types into its pages). It lifts the WHOLE
   process for the async body, so everything else the process runs meanwhile
   is lifted too.
+- `leaveDarwinBackground()` — the permanent self-promotion: out of darwinbg
+  for the rest of the process's life, answering the state read back. Its one
+  caller is a serving backend once ready (server-core `bin/index.ts`): the
+  gateway spawns a background-started backend under `taskpolicy -b` and means
+  it to serve at default priority, but its `taskpolicy -B -p <pid>` promote is
+  a silent no-op (2026-10-31: every promoted worktree backend still darwinbg,
+  starved for 30–95 s behind the foreground grant holders), so the backend
+  does it itself and logs `[boot] scheduling tier once ready: …`.
 - `spawnInForeground(spawn)` — the same self-promotion around ONE
   **synchronous** spawn call: lift, call `spawn` (`Bun.spawn` forks before it
   returns), restore. darwinbg is inherited at spawn, so the child starts in
@@ -66,9 +74,10 @@ Escape hatch / A-B harness: `EQUIN_NO_SPAWN_PRIORITY=1` disables all
 demotion. Non-darwin falls back to `nice -n 10` (Linux) or no-op — fail-open,
 a spawn never breaks because the host lacks a priority tool.
 
-Do NOT demote a backend server process with this (the gateway owns backend
-process priority); this is for individual heavy spawns from within a backend
-or the CLI.
+Do NOT demote a backend server process with this (the gateway decides a
+backend's start priority; the backend itself leaves darwinbg once ready, the
+one thing the gateway cannot do from outside); this is for individual heavy
+spawns from within a backend or the CLI.
 
 Everything but `boostInteractiveQos` lives in `core/` (runtime-neutral Node +
 `bun:ffi` — never import from `web/`) so core-isolated runtimes can compose
@@ -90,6 +99,7 @@ re-exports what server consumers use (same-plugin re-export), and
   - Exports (values):
     - `backgroundArgv`
     - `backgroundPrefix`
+    - `leaveDarwinBackground`
     - `readDarwinBackground`
     - `spawnAtTier`
     - `spawnInForeground`
@@ -106,6 +116,7 @@ re-exports what server consumers use (same-plugin re-export), and
     - `backgroundArgv`
     - `backgroundPrefix`
     - `boostInteractiveQos`
+    - `leaveDarwinBackground`
     - `readDarwinBackground`
     - `withForegroundPriority`
 

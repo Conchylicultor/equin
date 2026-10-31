@@ -32,7 +32,10 @@ import {
 // The ACTIVE registry (which app is this backend?) and the on-disk plugins dir,
 // resolved once for both boot modes.
 import { serverEntries, machineEntries, hasCoreBarrel } from "./active-runtime";
-import { boostInteractiveQos } from "@plugins/packages/plugins/spawn-priority/server";
+import {
+  boostInteractiveQos,
+  leaveDarwinBackground,
+} from "@plugins/packages/plugins/spawn-priority/server";
 import {
   isMain,
   readServingSocket,
@@ -212,6 +215,20 @@ const ordered = await bootPluginGraph({
   beforeReadyBarrier: bindSocket,
 });
 markServerReady();
+
+// ── Leave darwinbg (every backend, once ready) ───────────────────
+// The gateway spawns a background-started backend under `taskpolicy -b` so its
+// boot burst cannot starve main, and means it to serve at default priority
+// once ready — but its `taskpolicy -B -p <pid>` promote changes nothing
+// (measured 2026-10-31: every promoted backend still darwinbg). Only the
+// process itself can leave darwinbg, so it does, here, and logs the state it
+// reads back. A browser-started backend and main were never demoted, and are
+// left untouched. Serve only: an `exec` child is background work and never
+// reaches this file.
+const tier = leaveDarwinBackground();
+console.log(
+  `[boot] scheduling tier once ready: ${tier.kind === "unsupported" ? `unsupported (${tier.reason})` : tier.kind}`,
+);
 
 // ── onReady → onAllReady ────────────────────────────────────────
 // The serving host's post-ready phases, shared with the browser host

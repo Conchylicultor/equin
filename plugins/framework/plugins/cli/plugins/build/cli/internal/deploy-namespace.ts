@@ -19,10 +19,7 @@ import {
 } from "@plugins/infra/plugins/namespace/core";
 import { configDir } from "@plugins/config_v2/data-dirs";
 import { applyPluginMoves } from "@plugins/plugin-meta/plugins/relocate/core";
-import type {
-  Lane,
-  Priority,
-} from "@plugins/infra/plugins/host/plugins/host-admission/core";
+import type { Grant } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { adaptiveTimeoutMs } from "@plugins/framework/plugins/cli/plugins/bootstrap/cli";
 import {
   SERVER_CORE_RELATIVE,
@@ -31,7 +28,6 @@ import {
 import {
   buildAndPublishWebDist,
   type ArtifactHooks,
-  type HeavyAdmission,
   type HeavyJob,
   type StepResult,
   type WebDistTarget,
@@ -95,12 +91,11 @@ export interface DeployNamespaceOptions {
   minify: boolean;
   /** The red agent-worktree frame — true for every target of a worktree build. */
   experimental: boolean;
-  lane: Lane;
-  priority: Priority;
   background: boolean;
-  /** Validation, shared with the frontend job's ONE host grant. First target only. */
+  /** Validation, spending the build's grant beside the frontend job. First target only. */
   companions: HeavyJob[];
-  admission: HeavyAdmission;
+  /** The build's ONE host CPU grant, held by the caller across every target. */
+  grant: Grant;
   /** `--no-restart`: publish the artifacts and leave the gateway alone. */
   restart: boolean;
   onSteps: (steps: StepResult[]) => void;
@@ -440,7 +435,7 @@ export async function deployNamespace(
   // caller swept its leftovers up front, through this same identity.
   const distTarget: WebDistTarget = { kind: "served", name: ns };
 
-  // The heavy section under ONE host CPU grant, then the atomic dist publish.
+  // The heavy section on the build's grant, then the atomic dist publish.
   const artifact = await buildAndPublishWebDist({
     root,
     webDir: opts.webDir,
@@ -460,11 +455,9 @@ export async function deployNamespace(
     // release path materializes real copies.
     materialize: false,
     experimental: opts.experimental,
-    lane: opts.lane,
-    priority: opts.priority,
     background: opts.background,
     companions: opts.companions,
-    admission: opts.admission,
+    grant: opts.grant,
     onSteps: opts.onSteps,
     hooks,
   });
@@ -550,10 +543,10 @@ export async function deployNamespace(
   console.log("Registering worktree...");
   // MARKER AGAIN, in the same breath as the spec. The spec write is the instant
   // the namespace becomes live, so it is also the instant its provenance has to
-  // be true — and between the claim above and here this build spent most of its
-  // wall time parked on the host CPU grant, during which the namespace dir is
-  // just a directory on a shared filesystem. One did get removed mid-wait
-  // (2026-08-19), and because every other artifact in the dir is written down
+  // be true — and between the claim above and here this build spent minutes in
+  // its heavy section (it once spent them parked on the host CPU grant), during
+  // which the namespace dir is just a directory on a shared filesystem. One did
+  // get removed mid-wait (2026-08-19), and because every other artifact in the dir is written down
   // here, the namespace came up live and served with no marker: unre-servable,
   // unresettable, reported as not served. The write is atomic, idempotent and
   // byte-identical to the claim, so when nothing went wrong this line does

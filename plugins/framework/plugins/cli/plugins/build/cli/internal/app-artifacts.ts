@@ -97,7 +97,7 @@ import {
  *            waitForWorktreeDatabase, build_runs row mint
  *   stage 2  generateAppSources         (migrations + manifest-level codegen)
  *   ----     build only: propagateConfigToUser
- *   stage 3  buildAndPublishWebDist     (host grant, heavy jobs, atomic publish)
+ *   stage 3  buildAndPublishWebDist     (heavy jobs on the grant, atomic publish)
  *
  * Out of scope — deploy concerns, deliberately left in each caller:
  *   - `waitForPg` / `waitForWorktreeDatabase` — live cluster readiness.
@@ -136,8 +136,14 @@ import {
  *     config, so the user layer never sees a half-seeded git layer. NB it mints
  *     `@review` markers into the checkout — today's behaviour for a release
  *     too, since a release reaches it through this same pipeline.
- *   - stage 3 LAST, under ONE host CPU grant covering every heavy child
- *     (checks, tsc, vite / web-artifacts). Nothing inside re-acquires host-wide.
+ *   - stage 3 LAST, its heavy children (checks, tsc, vite / web-artifacts)
+ *     spending units of the build's ONE host CPU grant. Nothing inside
+ *     re-acquires host-wide.
+ *
+ * ADMISSION: a caller takes the build's grant ONCE, through
+ * `withBuildAdmission`, right after `acquireArtifactLock` and before stage 1,
+ * and holds it — in the foreground — until its verdict. All three stages (and
+ * the caller's own steps between them) run inside it; see that function.
  *
  * ESM-FREEZE CONSTRAINT (inherited from regen-pipeline.ts): Bun's ESM cache
  * freezes a module on its first `import()`, and a later disk write cannot
@@ -225,14 +231,6 @@ export interface StepResult {
   durationMs: number;
   success: boolean;
 }
-
-/**
- * Returned from inside the host grant when the post-acquire duress re-check
- * fires: the heavy section did NOT run, and `withHostGrant`'s `finally` releases
- * the share on the way out — so the caller can release the gate and be admitted
- * again, alone. A `unique symbol` so it can never collide with a real `StepResult[]`.
- */
-const REQUEUE = Symbol("requeue");
 
 // One greppable line per measured build phase, e.g. "vite build: maxRSS 3.5 GB"
 // (console + build.log). The calibration input for host-admission's per-holder
@@ -812,8 +810,20 @@ export function webDistPath(target: WebDistTarget): string {
     : worktreeArtifacts.webDist(target.name);
 }
 
-/** How the heavy section is admitted: the duress gate, then the host grant. */
-export interface HeavyAdmission {
+/**
+ * How a build is admitted: the duress gate, then the host CPU grant — taken
+ * ONCE per build by {@link withBuildAdmission} and held until its verdict.
+ */
+export interface BuildAdmission {
+  /** The grant's lane: interactive for a main build or a release, else background. */
+  lane: Lane;
+  /**
+   * The grant's admission priority — `low` for a sidequest checkout, so the
+   * build takes a slot only while no main-track op is waiting (op-runtime's
+   * `opPriority`).
+   */
+  priority: Priority;
+  /** Whether the duress gate applies (op-runtime's `valveGates`). */
   gated: boolean;
   deps: ValveDeps;
   grantHooks?: GrantHooks;
@@ -824,6 +834,108 @@ export interface HeavyAdmission {
    * wait carries its cycle.
    */
   onRequeue?: (cycle: number) => void;
+}
+
+/**
+ * Returned from inside the host grant when the post-acquire duress re-check
+ * fires: `fn` did NOT run, and `withHostGrant`'s `finally` releases the share
+ * on the way out — so the caller can release the gate and be admitted again,
+ * alone. A `unique symbol` so it can never collide with a real result.
+ */
+const REQUEUE = Symbol("requeue");
+
+/**
+ * Admit a build — duress gate, then ONE host CPU grant — and run `fn` on that
+ * grant, released when `fn` settles. A build calls this once, right after its
+ * `.build.lock` and before stage 1, and hands the grant to everything after:
+ * stages 1–2, format, every target's stage 3, the deploy. `withHostGrant` lifts
+ * its holder out of darwinbg for the body, so the whole build runs in the
+ * foreground and NOTHING of it runs darwinbg beside its own lifted work — the
+ * ungranted prefix (install, migrations generate, manifests, plugin docs) used
+ * to, and under fleet load the foreground grant holders starved it from 16 s to
+ * 12 min while the build sat on nothing. The grant bounds what is lifted: at
+ * most the lane's slot window, the rest of the fleet stays darwinbg. See
+ * @plugins/infra/plugins/host/plugins/host-admission.
+ *
+ * Main (interactive) builds and releases take the interactive lane — its
+ * reserved floor is unreachable by agent work — agent builds the background
+ * lane. The grant's `units` are subdivided across everything the build fans out
+ * into (check subprocess, type-check workers, the artifact fleet); nothing
+ * re-acquires host-wide.
+ *
+ * Duress gate: a gated (background-lane, agent) build takes the host-wide
+ * agent-build gate BEFORE it queues for the grant — shared while the host is
+ * calm, alone (exclusive, in arrival order) while the duress latch is fresh, so
+ * a box in trouble runs one agent build at a time and the line always moves.
+ * No timeout. Interactive (main), push, and the detached auto-build are not
+ * gated. See op-runtime's admission-valve.ts and
+ * research/2026-10-21-cli-duress-admission-one-at-a-time-v2.md.
+ *
+ * Gate first, grant second: a build waiting at the gate holds no CPU slots,
+ * and a gate holder's only wait is for a grant, whose holders always finish.
+ * A build admitted SHARED can still sit in the grant queue while duress trips,
+ * and must not then start beside the others — so the re-check runs INSIDE the
+ * grant, the moment the slots are held. On a hit `fn` does not run, the share
+ * and the gate are released, and the build is admitted again — exclusively
+ * this time, which `mustRequeue` never re-checks, so the loop terminates. ONE
+ * grant spans every target, so a build never queues for a second grant while
+ * holding the gate or a first one — the deadlock a per-target acquire had to
+ * avoid cannot be written.
+ *
+ * The caller must not, inside `fn`, wait on work that itself needs a host grant
+ * (a backend job — the DB fork): every slot it would need may be held by builds
+ * waiting the same way. Such waits go before the admission.
+ */
+export async function withBuildAdmission<T>(
+  admission: BuildAdmission,
+  hooks: Pick<ArtifactHooks, "span" | "log">,
+  fn: (grant: Grant) => Promise<T>,
+): Promise<T> {
+  // Profile the full admission wait (gate holds + grant queueing, across
+  // requeues) — without a span this wait is an unexplained hole in the build
+  // Gantt (a contended build once sat here ~5 min, unattributed). The op
+  // record splits what this single span necessarily merges: one `host-grant`
+  // wait per requeue cycle, each distinct from the gate's.
+  const endGrantWait = hooks.span(
+    "acquireHostGrant",
+    "build:setup",
+    "wait for host CPU grant",
+  );
+  // The build's place at the gate, kept across requeues: a requeued build
+  // rejoins the line where it first arrived, not at the back.
+  let place: TicketPlace | undefined;
+  for (let cycle = 0; ;) {
+    const gate = await admitThroughGate(
+      { gated: admission.gated, place },
+      admission.deps,
+    );
+    place = gate?.place;
+    let result: { value: T } | typeof REQUEUE;
+    try {
+      result = await withHostGrant<{ value: T } | typeof REQUEUE>(
+        {
+          lane: admission.lane,
+          priority: admission.priority,
+          max: cpuBudget().B,
+          hooks: admission.grantHooks,
+        },
+        async (grant) => {
+          if (mustRequeue(gate, isUnderDuress())) return REQUEUE;
+          endGrantWait();
+          return { value: await fn(grant) };
+        },
+      );
+    } finally {
+      await gate?.release();
+    }
+    if (result !== REQUEUE) return result.value;
+    cycle++;
+    admission.onRequeue?.(cycle);
+    hooks.log(
+      `build admission: duress tripped while queued for the host grant — ` +
+        `released the grant, waiting to run alone (requeue #${cycle})...`,
+    );
+  }
 }
 
 export interface BuildWebDistOptions {
@@ -873,13 +985,6 @@ export interface BuildWebDistOptions {
    * true; every other producer of a dist is clean. See ./experimental-marker.ts.
    */
   experimental: boolean;
-  lane: Lane;
-  /**
-   * The host grant's admission priority — `low` for a sidequest checkout, so the
-   * build takes a slot only while no main-track op is waiting (op-runtime's
-   * `opPriority`).
-   */
-  priority: Priority;
   /** Demote heavy children (tsc, vite) to the background scheduling class. */
   background: boolean;
   /**
@@ -888,7 +993,12 @@ export interface BuildWebDistOptions {
    * as build's own array did.
    */
   companions: HeavyJob[];
-  admission: HeavyAdmission;
+  /**
+   * The build's ONE host CPU grant, taken by the caller through
+   * {@link withBuildAdmission} and held across every target — this section
+   * spends it and never acquires its own.
+   */
+  grant: Grant;
   /**
    * Fires the instant the heavy section completes — BEFORE the failure check
    * and before anything is published — with the same array the result carries.
@@ -900,8 +1010,8 @@ export interface BuildWebDistOptions {
 }
 
 /**
- * Stage 3 — the heavy section under ONE host CPU grant, then the atomic dist
- * publish.
+ * Stage 3 — the heavy section on the build's host CPU grant (`opts.grant`, held
+ * by the caller for the whole build), then the atomic dist publish.
  *
  * Validation (`companions`) and the frontend build are independent: checks read
  * source files, the frontend compiles into a staging dir. On failure the staging
@@ -1008,9 +1118,8 @@ export async function buildAndPublishWebDist(
     };
   };
 
-  // The heavy section itself: everything the host CPU grant covers (checks +
-  // tsc + the artifact fleet), running on the grant it is handed. Extracted so
-  // the acquire around it can be a retry loop (below) without the body moving.
+  // The heavy section itself: checks + tsc + the artifact fleet, spending the
+  // build's grant (`opts.grant`) — the caller's admission, never re-acquired.
   //
   // buildId identifies the RUN (the build_runs row, the log files, the profile)
   // and is written to dist/.build-id below. It is deliberately not in the bundle
@@ -1024,81 +1133,7 @@ export async function buildAndPublishWebDist(
     return await Promise.all(parallel);
   };
 
-  // Gate this heavy section (eslint + tsc + vite) behind a host CPU GRANT so
-  // concurrent builds across worktrees don't thrash the machine. A main build
-  // takes the interactive lane (its reserved floor is unreachable by agent
-  // work, so it's never blocked by agent builds); an agent build takes the
-  // background lane. The grant's `units` are subdivided across everything the
-  // build fans out into (type-check workers, tsc, vite) — nothing re-acquires
-  // host-wide. See @plugins/infra/plugins/host-admission.
-  //
-  // Duress gate: a background-lane (agent) build takes the host-wide agent-build
-  // gate BEFORE it queues for the grant — shared while the host is calm, alone
-  // (exclusive, in arrival order) while the duress latch is fresh, so a box in
-  // trouble runs one agent build at a time and the line always moves. No
-  // timeout. Interactive (main), push, and the detached auto-build are not
-  // gated. See op-runtime's admission-valve.ts and
-  // research/2026-10-21-cli-duress-admission-one-at-a-time-v2.md.
-  //
-  // Gate first, grant second: a build waiting at the gate holds no CPU slots,
-  // and a gate holder's only wait is for a grant, whose holders always finish.
-  // A build admitted SHARED can still sit in the grant queue while duress
-  // trips, and must not then start beside the others — so the re-check runs
-  // INSIDE the grant, the moment the slots are held. On a hit the closure
-  // returns REQUEUE, `withHostGrant`'s `finally` releases the share, the gate is
-  // released, and the build is admitted again — exclusively this time, which
-  // `mustRequeue` never re-checks, so the loop terminates. The gate is taken
-  // per heavy section (per target), never across targets: holding it while
-  // queuing for a second grant could deadlock against builds waiting for it.
-  const acquireAndRunHeavySection = async (): Promise<StepResult[]> => {
-    // Profile the full admission wait (gate holds + grant queueing, across
-    // requeues) — without a span this wait is an unexplained hole in the
-    // build Gantt (a contended build once sat here ~5 min, unattributed).
-    // The op record splits what this single span necessarily merges: one
-    // `host-grant` wait per requeue cycle, each distinct from the gate's.
-    const endGrantWait = hooks.span(
-      "acquireHostGrant",
-      "build:setup",
-      "wait for host CPU grant",
-    );
-    // The build's place at the gate, kept across requeues: a requeued build
-    // rejoins the line where it first arrived, not at the back.
-    let place: TicketPlace | undefined;
-    for (let cycle = 0; ;) {
-      const gate = await admitThroughGate(
-        { gated: opts.admission.gated, place },
-        opts.admission.deps,
-      );
-      place = gate?.place;
-      let result: StepResult[] | typeof REQUEUE;
-      try {
-        result = await withHostGrant<StepResult[] | typeof REQUEUE>(
-          {
-            lane: opts.lane,
-            priority: opts.priority,
-            max: cpuBudget().B,
-            hooks: opts.admission.grantHooks,
-          },
-          async (grant) => {
-            if (mustRequeue(gate, isUnderDuress())) return REQUEUE;
-            endGrantWait();
-            return await runHeavySection(grant);
-          },
-        );
-      } finally {
-        await gate?.release();
-      }
-      if (result !== REQUEUE) return result;
-      cycle++;
-      opts.admission.onRequeue?.(cycle);
-      hooks.log(
-        `build admission: duress tripped while queued for the host grant — ` +
-          `released the grant, waiting to run alone (requeue #${cycle})...`,
-      );
-    }
-  };
-
-  const steps = await acquireAndRunHeavySection();
+  const steps = await runHeavySection(opts.grant);
   opts.onSteps?.(steps);
 
   const failedLabels = steps.filter((r) => !r.success).map((r) => r.label);

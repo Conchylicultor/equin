@@ -65,7 +65,7 @@ nested gating without a flock or a marker file.
 
 ## The duress gate (`admission-valve.ts`)
 
-How an agent (background-lane) build is admitted to its heavy section. While the
+How an agent (background-lane) build is admitted. While the
 host duress latch is fresh, agent builds run **one at a time, in arrival order**;
 while calm, any number run together. There is no timeout: some build always
 holds the gate and finishes, so the line always moves.
@@ -74,8 +74,9 @@ holds the gate and finishes, so the line always moves.
   (`data-dirs/`): calm admission takes it **shared**, duress admission
   **exclusive** (granted once every running agent build has released it).
   Duress waiters queue for it in a `packages/ticket-line` FIFO.
-- Taken **before** the host CPU grant and released after the heavy section, per
-  target. The build re-checks duress once its grant is held: a build admitted
+- Taken **before** the host CPU grant, once per build right after its
+  `.build.lock`, and released with the grant at the verdict (build's
+  `withBuildAdmission`). The build re-checks duress once its grant is held: a build admitted
   shared that now sees duress releases grant and gate and is admitted again,
   exclusively (`mustRequeue`) — an exclusive admission is never re-checked, so the
   loop terminates.

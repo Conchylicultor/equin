@@ -92,8 +92,8 @@ charge. Rung 1 — inexpressible, not checked.
 **And the reservation was buying almost nothing.** Across every recorded
 `slow_op`, `worktree-mutate` has waited twice ever, `db-fork` once,
 `browser-fetch` and `layout-geometry` never. A representative `heavy-read` hold
-is 75 ms, while a build holds its grant across its whole heavy section (p50
-137 s, max 20 min). The box was permanently withholding 8.5 cores for the
+is 75 ms, while a build held its grant across its whole heavy section (p50
+137 s, max 20 min — and now holds it for its whole run). The box was permanently withholding 8.5 cores for the
 millisecond work and rationing the minute work.
 
 **But that reservation was, accidentally, doing memory admission's job.** `B`
@@ -194,7 +194,15 @@ promises. Two pools are laned: `cpu` and `type-check-worker`.
 
 Admission returns **tokens**, not permission. A build/check/push acquires ONE
 host share and subdivides it across everything it fans out into — nothing it
-spawns re-acquires host-wide:
+spawns re-acquires host-wide. A build takes it once, right after its
+`.build.lock`, and holds it for its **whole run** — install, codegen,
+migrations generate, format, every target's checks and frontend, the deploy and
+its health probe — until the verdict (`withBuildAdmission`, build's
+`app-artifacts.ts`). It used to cover only the heavy section; the ungranted
+prefix then ran darwinbg beside the lifted fleet, and under load the grant
+holders starved it (migrations generate 16 s → 12 min) while the build held
+nothing. Waits on work that itself needs a grant (the worktree DB fork, a
+backend job) run before the admission, never inside it:
 
 ```ts
 withHostGrant({ lane, max }, (grant) => { … })   // acquire, run, release
@@ -237,8 +245,9 @@ behind it (`research/2026-10-29-global-cpu-grant-holders-run-foreground.md`).
 Self-promotion is the only form that works from an agent session
 (`taskpolicy -B -p` from there is a silent no-op). Safe because the grant is
 the bound: at most the lane's slot window is lifted, and everything an agent
-runs outside a grant — its session, its backend, ungranted codegen — stays
-darwinbg.
+runs outside a grant — its session, its backend — stays darwinbg. An op takes
+its grant around ALL its CPU work, never around a part of it, so none of its own
+work runs darwinbg beside its lifted part.
 
 ### Weighted spend
 

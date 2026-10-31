@@ -32,7 +32,7 @@ import type { Lane } from "@plugins/infra/plugins/host/plugins/host-admission/co
 import { agentBuildGateDir } from "../data-dirs";
 import { buildProfilerStart } from "./profiler";
 
-// The duress gate — how an agent build is admitted to its heavy section
+// The duress gate — how an agent build is admitted (for its whole run)
 // (research/2026-10-21-cli-duress-admission-one-at-a-time-v2.md).
 //
 // While the host duress latch is fresh (the cluster sentinel declared "the box
@@ -100,7 +100,7 @@ export function valveGates(
 /** How a build holds the gate: beside other calm builds, or alone. */
 export type GateMode = "shared" | "exclusive";
 
-/** The gate, held across the heavy section. */
+/** The gate, held across the build (released with its grant). */
 export interface GateHold {
   readonly mode: GateMode;
   /** Idempotent. */
@@ -176,12 +176,12 @@ class DuressCleared extends Error {
 }
 
 /**
- * Admit a gated build to its heavy section: returns the gate, held, or `null`
+ * Admit a gated build: returns the gate, held, or `null`
  * when the build is not gated (nothing to hold). Blocks while duress keeps
  * another agent build running, in arrival order. Never times out.
  *
- * `place`: the build's place from an earlier admission of the same heavy
- * section (a requeue). Without it the build arrives now.
+ * `place`: the build's place from an earlier admission of the same build (a
+ * requeue). Without it the build arrives now.
  */
 export async function admitThroughGate(
   opts: { gated: boolean; place?: TicketPlace },

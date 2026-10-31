@@ -7,6 +7,7 @@
 
 export { backgroundArgv, backgroundPrefix } from "./internal/background";
 export {
+  leaveDarwinBackground,
   readDarwinBackground,
   spawnInForeground,
   withForegroundPriority,

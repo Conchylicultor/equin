@@ -107,6 +107,40 @@ export async function withForegroundPriority<T>(
 }
 
 /**
+ * Take THIS process out of darwinbg for the rest of its life, and answer the
+ * state it is in afterwards, read back (never trusted from the write).
+ *
+ * The permanent form of `withForegroundPriority`, for a process whose spawner
+ * meant it to leave darwinbg once its start-up burst is over but cannot do it
+ * from outside: the gateway spawns a background-started worktree backend under
+ * `taskpolicy -b` and "promotes" it once ready with `taskpolicy -B -p <pid>`,
+ * which exits 0 and changes nothing — measured 2026-10-31, every promoted
+ * backend still darwinbg. Left there, the backend starves behind the
+ * foreground CPU-grant holders (event-loop stalls of 30–95 s).
+ *
+ * Who may call it is the caller's contract, as for `withForegroundPriority`:
+ * its caller is a serving backend once ready (server-core's `bin`), the steady
+ * state the gateway intends for every backend. Never bulk work — that would
+ * lift it above the fleet it belongs to. A process already in the foreground,
+ * or a host with no darwinbg tier, is left untouched.
+ */
+export function leaveDarwinBackground(): DarwinBackground {
+  if (process.platform !== "darwin") {
+    return {
+      kind: "unsupported",
+      reason: `${process.platform} has no darwinbg tier`,
+    };
+  }
+  const { symbols, close } = libSystem();
+  try {
+    if (isDarwinBg(symbols)) setDarwinBg(symbols, false);
+    return isDarwinBg(symbols) ? { kind: "darwinbg" } : { kind: "foreground" };
+  } finally {
+    close();
+  }
+}
+
+/**
  * Run ONE synchronous spawn call with this process out of darwinbg, and put it
  * back before returning. darwinbg is inherited AT SPAWN, so the child (and its
  * whole subtree) starts in the foreground and stays there, while this process

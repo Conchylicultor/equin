@@ -1,6 +1,7 @@
 import { test, expect } from "bun:test";
 import { dlopen } from "bun:ffi";
 import {
+  leaveDarwinBackground,
   readDarwinBackground,
   spawnInForeground,
   withForegroundPriority,
@@ -117,3 +118,20 @@ test("spawnInForeground rejects an async spawn callback", () => {
     spawnInForeground(async () => 1),
   ).toThrow(/returned a promise/);
 });
+
+test.skipIf(!isDarwin)(
+  "leaveDarwinBackground leaves darwinbg for good and answers the read-back state",
+  () => {
+    const before = readDarwinBackground();
+    setSelfDarwinBg(true);
+    try {
+      expect(readDarwinBackground()).toEqual({ kind: "darwinbg" });
+      expect(leaveDarwinBackground()).toEqual({ kind: "foreground" });
+      expect(readDarwinBackground()).toEqual({ kind: "foreground" });
+      // Already in the foreground: untouched, same answer.
+      expect(leaveDarwinBackground()).toEqual({ kind: "foreground" });
+    } finally {
+      setSelfDarwinBg(before.kind === "darwinbg");
+    }
+  },
+);
