@@ -86,6 +86,10 @@
       "name": "@equin/plugin-active-data-event-source",
       "version": "0.0.1",
     },
+    "plugins/active-data/plugins/folder-link": {
+      "name": "@equin/plugin-active-data-folder-link",
+      "version": "0.0.1",
+    },
     "plugins/active-data/plugins/go": {
       "name": "@equin/plugin-active-data-go",
       "version": "0.0.1",
@@ -599,6 +603,10 @@
     },
     "plugins/apps/plugins/file-explorer/plugins/browser": {
       "name": "@equin/plugin-apps-file-explorer-browser",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/file-explorer/plugins/folder-peek": {
+      "name": "@equin/plugin-apps-file-explorer-folder-peek",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/file-explorer/plugins/git": {
@@ -7124,6 +7132,8 @@
 
     "@equin/plugin-active-data-event-source": ["@equin/plugin-active-data-event-source@workspace:plugins/active-data/plugins/event-source"],
 
+    "@equin/plugin-active-data-folder-link": ["@equin/plugin-active-data-folder-link@workspace:plugins/active-data/plugins/folder-link"],
+
     "@equin/plugin-active-data-go": ["@equin/plugin-active-data-go@workspace:plugins/active-data/plugins/go"],
 
     "@equin/plugin-active-data-id-chip": ["@equin/plugin-active-data-id-chip@workspace:plugins/active-data/plugins/id-chip"],
@@ -7371,6 +7381,8 @@
     "@equin/plugin-apps-file-explorer-attachment-preview": ["@equin/plugin-apps-file-explorer-attachment-preview@workspace:plugins/apps/plugins/file-explorer/plugins/attachment-preview"],
 
     "@equin/plugin-apps-file-explorer-browser": ["@equin/plugin-apps-file-explorer-browser@workspace:plugins/apps/plugins/file-explorer/plugins/browser"],
+
+    "@equin/plugin-apps-file-explorer-folder-peek": ["@equin/plugin-apps-file-explorer-folder-peek@workspace:plugins/apps/plugins/file-explorer/plugins/folder-peek"],
 
     "@equin/plugin-apps-file-explorer-git": ["@equin/plugin-apps-file-explorer-git@workspace:plugins/apps/plugins/file-explorer/plugins/git"],
 

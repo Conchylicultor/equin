@@ -11,6 +11,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Slots: `ActiveData.Tag`
     - Slot contributors:
       - `ActiveData.Tag` ← `active-data.commit-link`
+      - `ActiveData.Tag` ← `active-data.folder-link`
       - `ActiveData.Tag` ← `active-data.go`
       - `ActiveData.Tag` ← `active-data.plugin-link`
       - `ActiveData.Tag` ← `active-data.show-me`
@@ -84,6 +85,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Cross-plugin:
     - Imported by:
       - `active-data/commit-link`
+      - `active-data/folder-link`
       - `active-data/go`
       - `active-data/plugin-link`
       - `active-data/show-me`
@@ -219,6 +221,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database.db`
       - Core:
         - Exports (values): `EVENT_SOURCE_CHIP_SURFACES`
+    - **`folder-link`** — Renders folder paths in backtick-wrapped inline code (`~/Downloads/showcase/`, `/tmp/out`, a path relative to the host's checkout) as clickable chips that browse the folder in a Files side pane. Stats the path on the host and declines unless it is a folder.
+      - Web:
+        - Contributes: `ActiveData.Tag` "folder-link"
+        - Uses:
+          - `active-data.ActiveData`
+          - `active-data.claimed`
+          - `active-data.claimPending`
+          - `active-data.CodeClaim`
+          - `active-data.codeTag`
+          - `active-data.declined`
+          - `apps/file-explorer/folder-peek.useFolderPeekTarget`
+          - `network/live.useLive`
+          - `primitives/css/link-chip.LinkChip`
+          - `primitives/file-links.useFileLinksWorkspace`
+          - `ui/icons.Icon`
+      - Cross-plugin:
+        - Uses tokens: `ui/tokens/color-palette --muted-foreground`
     - **`go`** — Renders <go>…</go> in an agent's reply — a part of the answer the user can pick as their reply — as one tinted unit, [text | ▶]: ▶ sends it back as <go>…</go> (the agent reads the part of its answer the user picked), clicking the text puts it in the draft as an editable tinted region closed by a ✕. One line is inline wherever it is written; a multi-line block is a card with a ✎ / ▶ rail, its `- [ ]` lines pickable rows, or a table whose rows lead with `[ ]` / `[x]` a pickable table (only the picked items are sent — a row as a `- [x]` line of its first cell — and Reset restores the agent's picks). The user's sent message shows the accepted <go> in full, in the same tint.
       - Web:
         - Contributes:
@@ -4512,11 +4531,34 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-semibold`
             - Imported by:
               - `apps/file-explorer/attachment-preview`
+              - `apps/file-explorer/folder-peek`
               - `apps/file-explorer/git`
               - `apps/file-explorer/places`
               - `conversations/conversation-view/code/file-pane`
               - `conversations/conversation-view/explorer`
               - `plugin-meta/plugin-view/file-tree`
+        - **`folder-peek`** — A host folder browsed as a side pane through the Files browser (tree, path bar, Up, a file previewed beside it): the folder/<dir>[/<open file>] pane, homed in Files and opened beside any surface — useFolderPeekTarget(dir) is its link — with Expand opening Files at the pane's location.
+          - Web:
+            - Slots: `folderPeekPane.Actions`
+            - Slot contributors: `folderPeekPane.Actions` ← `primitives.pane`
+            - Contributes: `Pane.Register` "folder-peek"
+            - Uses:
+              - `apps/file-explorer/browser.FileBrowser`
+              - `apps/file-explorer/browser.locationOf`
+              - `apps/file-explorer/browser.locationParams`
+              - `apps/file-explorer/browser.LocationParams`
+              - `apps/file-explorer/browser.useLocationNavigator`
+              - `apps/file-explorer/browser.useOpenInFiles`
+              - `primitives/pane.defineRoute`
+              - `primitives/pane.Pane`
+              - `primitives/pane.PaneChrome`
+              - `primitives/pane.PaneExpandTarget`
+              - `primitives/pane.useOpenPane`
+            - Exports (values):
+              - `folderPeekPane`
+              - `useFolderPeekTarget`
+          - Cross-plugin:
+            - Imported by: `active-data/folder-link`
         - **`git`** — Git awareness for the file explorer: inside a git checkout the tree gains a git status badge (M / A / D / R / C / ?, a dot on a folder holding changes; pending until the status is known) and a Changed vs main filter field (client fields of the file-entry row kind, empty outside a checkout), ignored files hide behind a Show ignored files toggle, and a changed file's preview gets its git context (the Diff tab). Git awareness for the file explorer, server half: which checkout holds a folder (the file-explorer.git-checkout snapshot value, git rev-parse) and the checkout's status as the file-explorer.git-status live value — each path's status vs HEAD and vs the main merge-base, untracked and ignored folders collapsed — memoized behind a content signature and pushed from the shared checkout watch (infra/git/checkout-watch: working tree + git dir) while subscribed.
           - Web:
             - Contributes:
@@ -34755,14 +34797,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 312 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 313 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×83
           - `conversations` ×52
           - `debug` ×32
           - `tasks` ×31
           - `infra` ×21
           - `page` ×14
-          - `active-data` ×12
+          - `active-data` ×13
           - `primitives` ×11
           - `build` ×10
           - `stats` ×5
@@ -40863,8 +40905,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-medium`
               - `ui/tokens/type-scale --line-height-caption`
               - `ui/tokens/type-scale --line-height-label`
-            - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/css/plugins/link-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/link-chip/REFERENCE.md)
-              - `active-data` ×9
+            - Imported by: 32 plugins — full list in [`plugins/primitives/plugins/css/plugins/link-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/link-chip/REFERENCE.md)
+              - `active-data` ×10
               - `conversations` ×5
               - `debug` ×5
               - `apps` ×4
@@ -43646,6 +43688,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --primary-text`
           - `ui/tokens/font-family --font-mono`
         - Imported by:
+          - `active-data/folder-link`
           - `conversations`
           - `conversations/conversation-view`
           - `conversations/conversation-view/code/file-pane`
@@ -45764,9 +45807,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
         - Slots: `Pane.Register`
-        - Slot contributors: 94 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `Pane.Register` ×94
-        - Contributes: 124 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Slot contributors: 95 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `Pane.Register` ×95
+        - Contributes: 125 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `SlotRender.ListMiddleware`
           - `WebsiteHeader` "title" → `PaneTitleItem`
           - `accountPane.Actions` "title" → `PaneTitleItem`
@@ -45828,6 +45871,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `files-data.actions` "title" → `PaneTitleItem`
           - `filesAtPane.Actions` "title" → `PaneTitleItem`
           - `filesHomePane.Actions` "title" → `PaneTitleItem`
+          - `folderPeekPane.Actions` "title" → `PaneTitleItem`
           - `graphCanvasPane.Actions` "title" → `PaneTitleItem`
           - `healthMonitorPane.Actions` "title" → `PaneTitleItem`
           - `heapSnapshotPane.Actions` "title" → `PaneTitleItem`
@@ -46030,8 +46074,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-md`
           - `ui/tokens/shape --spacing`
-        - Imported by: 189 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `apps` ×70
+        - Imported by: 190 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `apps` ×71
           - `conversations` ×30
           - `debug` ×27
           - `active-data` ×10
@@ -48136,8 +48180,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 277 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×277
+    - Contributes: 278 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×278
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -48162,8 +48206,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 276 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×276
+    - Contributes: 277 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×277
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
@@ -53234,7 +53278,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 364 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 365 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×96
           - `conversations` ×57
           - `primitives` ×42
@@ -53243,7 +53287,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug` ×15
           - `tasks` ×9
           - `ui` ×8
-          - `active-data` ×5
+          - `active-data` ×6
           - `audience` ×4
           - `infra` ×4
           - `plugin-meta` ×4
@@ -54371,7 +54415,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 531 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 532 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×120
               - `conversations` ×89
               - `primitives` ×77
@@ -54382,7 +54426,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×16
               - `fields` ×13
               - `reports` ×13
-              - `active-data` ×7
+              - `active-data` ×8
               - `apps-core` ×6
               - `build` ×6
               - `reorder` ×6

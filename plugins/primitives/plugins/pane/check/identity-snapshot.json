@@ -451,6 +451,12 @@
       "parent": null
     },
     {
+      "paneId": "folder-peek",
+      "segment": "folder/:dir/:open?",
+      "appIndex": false,
+      "parent": null
+    },
+    {
       "paneId": "graph",
       "segment": "graph/:focusId?",
       "appIndex": false,

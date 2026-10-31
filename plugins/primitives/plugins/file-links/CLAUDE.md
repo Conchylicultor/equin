@@ -45,6 +45,7 @@ own worktree). The consumer that turns a workspace into a file-peek target is
     - `ui/tokens/color-palette --primary-text`
     - `ui/tokens/font-family --font-mono`
   - Imported by:
+    - `active-data/folder-link`
     - `conversations`
     - `conversations/conversation-view`
     - `conversations/conversation-view/code/file-pane`

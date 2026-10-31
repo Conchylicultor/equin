@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-file-explorer-folder-peek",
+  "description": "A host folder browsed as a side pane, beside any surface.",
+  "private": true,
+  "version": "0.0.1"
+}

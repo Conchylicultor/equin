@@ -18,6 +18,7 @@
 //   - apps/plugins/events/plugins/events-core: dependency closure (imported by an eager plugin)
 //   - apps/plugins/events/plugins/sources: dependency closure (imported by an eager plugin)
 //   - apps/plugins/file-explorer/plugins/browser: dependency closure (imported by an eager plugin)
+//   - apps/plugins/file-explorer/plugins/folder-peek: dependency closure (imported by an eager plugin)
 //   - apps/plugins/home/plugins/app-cards: dependency closure (imported by an eager plugin)
 //   - apps/plugins/home/plugins/new-app: dependency closure (imported by an eager plugin)
 //   - apps/plugins/home/plugins/tour: watched boot slot Core.Root

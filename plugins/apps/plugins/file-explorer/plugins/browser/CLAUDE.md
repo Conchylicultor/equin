@@ -128,6 +128,7 @@
     - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:
     - `apps/file-explorer/attachment-preview`
+    - `apps/file-explorer/folder-peek`
     - `apps/file-explorer/git`
     - `apps/file-explorer/places`
     - `conversations/conversation-view/code/file-pane`
