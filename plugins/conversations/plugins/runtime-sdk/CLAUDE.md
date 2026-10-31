@@ -54,6 +54,12 @@ agents without tmux, per-namespace paths, the Claude Code health row:
     gets `catchUpWithin(id, 5 s)` and a re-read, and one still behind is
     `{ kind: "unverified" }` — the reconciler then marks the conversation
     `statusUnverifiedSince` instead of planning from the stale projection.
+    An agent that holds its socket but does not answer `hello` within 10 s
+    (`AgentUnresponsiveError`) is `unverified` too — that conversation only,
+    never a throw of the whole `list()` (2026-10-30: one agent starved by host
+    duress made every sdk conversation unknown and filed a crash). A stretch
+    of misses past 5 min (`unresponsive.ts`, in memory) is reported once as
+    `sdk-agent-unresponsive`.
   - Catch-up (`consumer.ts`): each run is `runTracked("runtime-sdk:catch-up")`
     and watched by a one-shot deadline (`packages/deadline`, 30 s); past it,
     one `sdk-catch-up-overdue` report per run names the step it is parked in
@@ -241,6 +247,7 @@ Gotchas the spike hit:
     - `resource.declare` "runtime-sdk.error-stopped:rows"
     - `ConfigV2.Register` "runtime-sdk-auto-resume"
     - `trigger` "runtime-sdk.attempt-ended"
+    - `report-kind` "sdk-agent-unresponsive"
     - `report-kind` "sdk-catch-up-overdue"
     - `report-kind` "sdk-consumer-stalled"
     - `report-kind` "turn-unknown-id"

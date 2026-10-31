@@ -126,6 +126,54 @@ export const sdkCatchUpOverdueKind = ReportKind({
   },
 });
 
+const AgentUnresponsiveSchema = z.object({
+  conversationId: z.string(),
+  /** How long every `hello` has gone unanswered. */
+  elapsedMs: z.number(),
+  /** The latest miss, as the socket client said it. */
+  detail: z.string(),
+});
+type AgentUnresponsive = z.infer<typeof AgentUnresponsiveSchema>;
+
+/**
+ * `sdk-agent-unresponsive`: **an agent has not answered `hello` for minutes.**
+ * Its process holds the socket (the pid file names a live pid), but every
+ * probe times out or is cut off. One missed probe is not filed — under host
+ * duress a healthy agent misses the 10 s bound, and its conversation is
+ * marked unverified for that pass — only a stretch past the threshold, once.
+ */
+export const sdkAgentUnresponsiveKind = ReportKind({
+  kind: "sdk-agent-unresponsive",
+  schema: AgentUnresponsiveSchema,
+  fingerprint: (d: AgentUnresponsive) =>
+    `sdk-agent-unresponsive:${d.conversationId}`,
+  meta: {
+    tag: "[sdk-agent]",
+    notif: "An agent stopped answering",
+    variant: "error",
+  },
+  renderTask: (row: ReportRow) => {
+    const d = AgentUnresponsiveSchema.parse(row.data);
+    return {
+      title: `[sdk-agent] An agent has not answered for ${Math.round(d.elapsedMs / 60_000)} min: ${d.conversationId}`,
+      description: [
+        `Conversation \`${d.conversationId}\`'s agent process is running, but ` +
+          `it has not answered \`hello\` on its socket for ` +
+          `**${Math.round(d.elapsedMs / 1000)} s** (latest: ${d.detail}).`,
+        "",
+        "Until it answers, the conversation's status is shown as unverified " +
+          "(its last known status kept). Look at its `agent.log` and " +
+          "`events.jsonl` under `state/sdk-agents/<ns>/<id>/`, and `sample` " +
+          "its pid (`locks/sdk-agents/<ns>/<id>.pid`) to see where its event " +
+          "loop is held. If the host was in duress the whole time (Debug → " +
+          "Timeline), the agent was starved, not wedged.",
+        "",
+        ...occurrences(row),
+      ].join("\n"),
+    };
+  },
+});
+
 const MAX_TEXT = 2_000;
 const clip = (text: string) =>
   text.length > MAX_TEXT ? `${text.slice(0, MAX_TEXT)}…` : text;

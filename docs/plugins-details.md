@@ -19485,6 +19485,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "runtime-sdk.error-stopped:rows"
           - `ConfigV2.Register` "runtime-sdk-auto-resume"
           - `trigger` "runtime-sdk.attempt-ended"
+          - `report-kind` "sdk-agent-unresponsive"
           - `report-kind` "sdk-catch-up-overdue"
           - `report-kind` "sdk-consumer-stalled"
           - `report-kind` "turn-unknown-id"
