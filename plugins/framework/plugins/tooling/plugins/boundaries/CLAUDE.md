@@ -249,7 +249,7 @@ escape is a `sanctioned` exemption for a declaration desktop-only by policy.
     - `infra/deps/rust/cargo-updater` (1 debt)
     - `infra/events-test` (1 debt)
     - `infra/file-sink` (3 debt)
-    - `infra/file-watcher` (2 debt)
+    - `infra/file-watcher` (3 debt)
     - `infra/file-watcher/background-arm` (1 debt)
     - `infra/git/checkout-watch` (1 debt)
     - `infra/git/remotes` (2 debt)

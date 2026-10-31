@@ -21,6 +21,7 @@ import {
   type CorpusFile,
   type CorpusIndexEnv,
   type CorpusIndexSpec,
+  type CorpusJournal,
   type RefreshDeps,
 } from "./corpus-index";
 
@@ -253,6 +254,11 @@ function env(overrides: Partial<CorpusIndexEnv> = {}): CorpusIndexEnv {
     yieldMacrotask: () => new Promise<void>((r) => setImmediate(r)),
     startFileWatcher: async () => {},
     watcherRegistration: { register: () => {} },
+    // No journal by default: every full pass walks, as on a host without one.
+    journal: {
+      cursor: async () => ({ kind: "unsupported", reason: "test" }),
+      changesSince: async () => ({ kind: "unknown", reason: "test" }),
+    },
     ...overrides,
   };
 }
@@ -524,4 +530,125 @@ test("on main a watcher batch re-checks only what it named; a dropped-events rep
 
   await onLost!(); // the dropped-event backstop catches `two`
   expect(idx.entries().get(two)).toBe("two!");
+});
+
+// ─── boot catch-up from the journal ────────────────────────────────────────────
+// A fake journal: each cursor is a sequence number; `changesSince` answers the
+// paths `named` holds (or `unknown`), whatever the cursor.
+
+function fakeJournal(answer: () => string[] | "unknown"): CorpusJournal & {
+  replays: number;
+} {
+  let seq = 0;
+  const j = {
+    replays: 0,
+    cursor: async (root: string) => ({
+      kind: "cursor" as const,
+      cursor: {
+        root,
+        dev: 1,
+        ino: 1,
+        eventId: String(++seq),
+        takenAt: 0,
+        snapshot: "",
+      },
+    }),
+    changesSince: async () => {
+      j.replays++;
+      const a = answer();
+      return a === "unknown"
+        ? { kind: "unknown" as const, reason: "test" }
+        : { kind: "changes" as const, paths: a };
+    },
+  };
+  return j;
+}
+
+async function savedIndex(): Promise<CorpusFile<string>> {
+  return JSON.parse(await readFile(indexPath, "utf8")) as CorpusFile<string>;
+}
+
+test("a full walk saves one journal cursor per root with its result", async () => {
+  const idx = createCorpusIndex(
+    spec(),
+    env({ journal: fakeJournal(() => []) }),
+  );
+  await idx.ensureFresh();
+  expect((await savedIndex()).cursors?.map((c) => c.root)).toEqual([
+    corpusRoot,
+  ]);
+});
+
+test("the next process catches up from the journal, re-checking only what it names", async () => {
+  let named: string[] = [];
+  const journal = fakeJournal(() => named);
+  await createCorpusIndex(spec(), env({ journal })).ensureFresh();
+
+  // While no process ran: one file the journal names, one it does not (a
+  // walk would find both — the journal pass must not walk).
+  const named1 = join(corpusRoot, "a", "new.txt");
+  const unnamed = join(corpusRoot, "b", "unnamed.txt");
+  await writeFile(named1, "new");
+  await writeFile(unnamed, "x");
+  await appendFile(join(corpusRoot, "a", "one.txt"), "!");
+  named = [named1, join(corpusRoot, "a", "one.txt")];
+  parseCount.clear();
+
+  const next = createCorpusIndex(spec(), env({ journal }));
+  const delta = await next.ensureFresh();
+  expect(journal.replays).toBe(1);
+  expect(delta.addedPaths).toEqual([named1]);
+  expect(delta.modifiedPaths).toEqual([join(corpusRoot, "a", "one.txt")]);
+  expect(next.entries().has(unnamed)).toBe(false);
+  // The cursors advanced with the catch-up's result.
+  expect((await savedIndex()).cursors?.[0]?.eventId).toBe("2");
+
+  // A later full pass in the same process (markDirty) walks.
+  next.markDirty();
+  await next.ensureFresh();
+  expect(journal.replays).toBe(1);
+  expect(next.entries().has(unnamed)).toBe(true);
+});
+
+test("a journal that cannot vouch, or changed roots, mean a walk", async () => {
+  let answer: string[] | "unknown" = "unknown";
+  const journal = fakeJournal(() => answer);
+  await createCorpusIndex(spec(), env({ journal })).ensureFresh();
+  const later = join(corpusRoot, "b", "later.txt");
+  await writeFile(later, "later");
+
+  const unknown = createCorpusIndex(spec(), env({ journal }));
+  await unknown.ensureFresh();
+  expect(unknown.entries().has(later)).toBe(true);
+
+  answer = [];
+  const other = join(root, "other");
+  await mkdir(other);
+  await writeFile(join(other, "o.txt"), "o");
+  const widened = createCorpusIndex(
+    spec({ roots: [corpusRoot, other] }),
+    env({ journal }),
+  );
+  await widened.ensureFresh();
+  expect(widened.entries().has(join(other, "o.txt"))).toBe(true);
+});
+
+test("a backend that does not persist reads the saved cursors and leaves them", async () => {
+  let named: string[] = [];
+  const journal = fakeJournal(() => named);
+  await createCorpusIndex(
+    spec({ scope: "host" }),
+    env({ journal }),
+  ).ensureFresh();
+  const before = await savedIndex();
+
+  const added = join(corpusRoot, "a", "added.txt");
+  await writeFile(added, "added");
+  named = [added];
+  const worktree = createCorpusIndex(
+    spec({ scope: "host" }),
+    env({ journal, isMain: () => false }),
+  );
+  expect((await worktree.ensureFresh()).addedPaths).toEqual([added]);
+  expect(await savedIndex()).toEqual(before);
 });

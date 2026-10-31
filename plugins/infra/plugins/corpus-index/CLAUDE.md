@@ -39,6 +39,22 @@ const index = defineCorpusIndex<MyPartial>({
   is load-bearing, not convenience: `ensureFresh` short-circuits on
   `!dirty && isMain()`, and `dirty` is otherwise only re-set by `startWatcher()`'s
   onChange. See the "own your own watcher" pattern below.
+- **Boot catch-up reads the journal, not the disk.** Every full walk saves, in
+  the index file itself, one file-system journal cursor per root (file-watcher's
+  `journalCursor`, FSEvents on macOS) taken before the walk. A process's FIRST
+  full pass replays the journal from them (`journalChangesSince`) and re-checks
+  only the paths it names (`refreshCorpusPaths`) — O(changes since), where the
+  walk was O(corpus): `~/Downloads` for Sonata's MIDI folders is 26k dirs,
+  2.7–9 s per boot. Fail-closed: no cursor, a root added or dropped, a root on
+  another volume, symlinked or replaced, a cursor over 7 days old, a reset
+  journal or a dropped-events history ⇒
+  walk. Only that first pass: a later `markDirty()` or lost-events report
+  walks. A watcher batch's pass never advances the cursors (events still in a
+  debounce window at a crash would be skipped). A backend that does not persist
+  (a `host` index off main) replays main's saved cursors.
+  **Bump `version` when `match` or `parse` changes meaning**: a walk used to
+  repair that on the next boot; a journal catch-up re-checks only paths that
+  moved, so files that newly match would stay missing until a walk.
 - `startWatcher()` — main-only `@parcel/watcher` push freshness. A change batch
   re-checks **only the paths it named** (`refreshCorpusPaths`: a gone path drops
   its entries, a new directory is enumerated, a file goes through the
@@ -100,6 +116,11 @@ version-mismatch → rebuild.
 - Server:
   - Uses:
     - `infra/file-watcher.defineFileWatcher`
+    - `infra/file-watcher.journalChangesSince`
+    - `infra/file-watcher.journalCursor`
+    - `infra/file-watcher.JournalCursor`
+    - `infra/file-watcher.JournalCursorResult`
+    - `infra/file-watcher.JournalReplay`
     - `infra/host/host-read-pool.withHeavyReadSlot`
     - `infra/warmup.defineWarmup`
   - Exports (types):

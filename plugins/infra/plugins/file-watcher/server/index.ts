@@ -25,6 +25,12 @@ export type {
   FileWatcherStartOptions,
 } from "../shared/registry";
 export { WRITES_WHILE_OPEN_MAX_ENTRIES } from "../shared/engine";
+export { journalChangesSince, journalCursor } from "../shared/journal";
+export type {
+  JournalCursor,
+  JournalCursorResult,
+  JournalReplay,
+} from "../shared/journal";
 export type {
   FileWatcher,
   WatchReaction,

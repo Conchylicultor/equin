@@ -11,7 +11,14 @@ import { dirname, join } from "node:path";
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { withHeavyReadSlot } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
-import { defineFileWatcher } from "@plugins/infra/plugins/file-watcher/server";
+import {
+  defineFileWatcher,
+  journalChangesSince,
+  journalCursor,
+  type JournalCursor,
+  type JournalCursorResult,
+  type JournalReplay,
+} from "@plugins/infra/plugins/file-watcher/server";
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { yieldMacrotask } from "@plugins/packages/plugins/macrotask-yield/core";
@@ -163,6 +170,14 @@ interface CorpusEntry<TPartial> {
 export interface CorpusFile<TPartial> {
   version: number;
   files: Record<string, CorpusEntry<TPartial>>;
+  /**
+   * One file-system journal cursor per root, taken before the last full walk
+   * (or journal catch-up) whose result `files` holds: replaying the journal
+   * from them names everything that may have moved since. Saved in the same
+   * document as `files`, so the two cannot disagree. Absent ⇒ the next boot
+   * walks.
+   */
+  cursors?: JournalCursor[];
 }
 
 // Bounded parse concurrency: caps resident memory to ~K files' text at once
@@ -348,7 +363,9 @@ export async function refreshCorpusPaths<TPartial>(
     try {
       st = await stat(path);
     } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+      // ENOTDIR: a directory above it became a file — the path is gone too.
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code !== "ENOENT" && code !== "ENOTDIR") throw err;
       // Gone: the file itself, or a directory and everything under it.
       const prefix = `${path}/`;
       for (const known of Object.keys(index.files)) {
@@ -472,6 +489,60 @@ export interface CorpusIndexEnv {
   }) => Promise<void>;
   /** The declaration `startFileWatcher` opens (surfaced as `CorpusIndex.watcher`). */
   watcherRegistration: Registration;
+  /** The file-system journal (file-watcher's `journalCursor` / `journalChangesSince`). */
+  journal: CorpusJournal;
+}
+
+/** What the index asks of the file-system journal (injectable for tests). */
+export interface CorpusJournal {
+  cursor: (root: string) => Promise<JournalCursorResult>;
+  changesSince: (cursor: JournalCursor) => Promise<JournalReplay>;
+}
+
+// ─── boot catch-up from the journal ────────────────────────────────────────────
+
+/**
+ * The cursors to save with the pass about to run — one per root, taken BEFORE
+ * the pass, so a change landing during it is replayed again next time (the
+ * fingerprint gate makes a re-check free). `undefined` when a root has no
+ * journal: the next boot walks.
+ */
+async function takeCursors(
+  roots: string[],
+  journal: CorpusJournal,
+): Promise<JournalCursor[] | undefined> {
+  const cursors: JournalCursor[] = [];
+  for (const root of roots) {
+    const result = await journal.cursor(root);
+    if (result.kind === "unsupported") return undefined;
+    cursors.push(result.cursor);
+  }
+  return cursors;
+}
+
+/**
+ * Every path that may have moved under `roots` since the persisted index was
+ * true — read from the journal, not by walking — or `unknown` when the
+ * journal cannot vouch for all of it (no cursor, a root added or dropped
+ * since, or any root's replay unknown). Fail-closed: `unknown` ⇒ walk.
+ */
+async function replayJournal(
+  cursors: JournalCursor[] | undefined,
+  roots: string[],
+  journal: CorpusJournal,
+): Promise<JournalReplay> {
+  if (cursors === undefined)
+    return { kind: "unknown", reason: "no journal cursor saved" };
+  const byRoot = new Map(cursors.map((c) => [c.root, c]));
+  if (byRoot.size !== roots.length || roots.some((r) => !byRoot.has(r)))
+    return { kind: "unknown", reason: "the roots changed" };
+  const paths: string[] = [];
+  for (const root of roots) {
+    const replay = await journal.changesSince(byRoot.get(root)!);
+    if (replay.kind === "unknown") return replay;
+    paths.push(...replay.paths);
+  }
+  return { kind: "changes", paths };
 }
 
 /**
@@ -492,6 +563,11 @@ export function createCorpusIndex<TPartial>(
   // batch named since the last pass (empty ⇒ nothing moved, on main).
   let stale: "all" | Set<string> = "all";
   let refreshInflight: Promise<CorpusDelta> | null = null;
+  // Whether this process has done its first full pass. Only that one may be
+  // answered from the journal: it is the catch-up on what moved while no
+  // process watched. A later full pass (`markDirty`, a lost-events report)
+  // asks for a walk, and gets one.
+  let caughtUp = false;
   let watcherStarted = false;
   let watchArmed = false;
   const changeListeners = new Set<() => void>();
@@ -517,6 +593,53 @@ export function createCorpusIndex<TPartial>(
     yieldMacrotask: env.yieldMacrotask,
   });
 
+  /**
+   * The whole corpus, brought up to date: from the journal on the process's
+   * first pass when it can vouch for everything since the saved cursors (the
+   * paths it names go through the same targeted re-check a watcher batch
+   * does), by walking otherwise. Either way the cursors taken before the pass
+   * are saved with its result. A watcher batch's targeted pass never advances
+   * them: events still in a debounce window at a crash would be skipped.
+   */
+  async function fullPass(idx: CorpusFile<TPartial>): Promise<RefreshResult> {
+    const deps = refreshDeps();
+    const saved = idx.cursors;
+    // Only a persisting backend saves cursors; the others read the saved ones.
+    const next = deps.persist
+      ? await takeCursors(deps.roots, env.journal)
+      : saved;
+    const replay: JournalReplay = caughtUp
+      ? { kind: "unknown", reason: "a walk was asked for" }
+      : await replayJournal(saved, deps.roots, env.journal);
+    const setCursors = (c: JournalCursor[] | undefined): void => {
+      if (c === undefined) delete idx.cursors;
+      else idx.cursors = c;
+    };
+    // Set before the pass, so the save it makes when something moved carries
+    // them; put back if it fails, so the retry replays from the old ones.
+    setCursors(next);
+    let result: RefreshResult;
+    try {
+      result =
+        replay.kind === "changes"
+          ? await refreshCorpusPaths(idx, replay.paths, deps)
+          : await refreshCorpus(idx, deps);
+    } catch (err) {
+      setCursors(saved);
+      throw err;
+    }
+    caughtUp = true;
+    // A pass that moved nothing saved nothing: save the advanced cursors.
+    if (
+      deps.persist &&
+      !result.changed &&
+      JSON.stringify(next) !== JSON.stringify(saved)
+    ) {
+      await saveCorpusFile(deps.indexPath, idx);
+    }
+    return result;
+  }
+
   async function ensureFresh(): Promise<CorpusDelta> {
     index ??= await loadCorpusFile<TPartial>(spec.indexPath, spec.version);
     // Main clears `stale` after a refresh and relies on the watcher (or an
@@ -541,7 +664,7 @@ export function createCorpusIndex<TPartial>(
         // seconds while any agent was writing.
         const { addedPaths, modifiedPaths, removedPaths } =
           work === "all"
-            ? await refreshCorpus(index!, refreshDeps())
+            ? await fullPass(index!)
             : await refreshCorpusPaths(index!, work, refreshDeps());
         if (
           addedPaths.length + modifiedPaths.length + removedPaths.length >
@@ -677,6 +800,7 @@ export function defineCorpusIndex<TPartial>(
   });
   return createCorpusIndex(spec, {
     isMain,
+    journal: { cursor: journalCursor, changesSince: journalChangesSince },
     withSlot: withHeavyReadSlot,
     yieldMacrotask,
     watcherRegistration: watcher,

@@ -27416,7 +27416,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/deps/rust/cargo-updater` (1 debt)
               - `infra/events-test` (1 debt)
               - `infra/file-sink` (3 debt)
-              - `infra/file-watcher` (2 debt)
+              - `infra/file-watcher` (3 debt)
               - `infra/file-watcher/background-arm` (1 debt)
               - `infra/git/checkout-watch` (1 debt)
               - `infra/git/remotes` (2 debt)
@@ -29883,6 +29883,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Uses:
           - `infra/file-watcher.defineFileWatcher`
+          - `infra/file-watcher.journalChangesSince`
+          - `infra/file-watcher.journalCursor`
+          - `infra/file-watcher.JournalCursor`
+          - `infra/file-watcher.JournalCursorResult`
+          - `infra/file-watcher.JournalReplay`
           - `infra/host/host-read-pool.withHeavyReadSlot`
           - `infra/warmup.defineWarmup`
         - Exports (types):
@@ -30840,7 +30845,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `watcher-safety/no-direct-parcel-watcher` — `shared` (sanctioned)
           - `watcher-safety/no-raw-fs-watch` — `shared/engine.ts` (sanctioned)
-          - `boundaries/no-platform-api` — `server/internal/dir-hub.ts`, `shared/engine.ts` (debt)
+          - `boundaries/no-platform-api` — `server/internal/dir-hub.ts`, `shared/engine.ts`, `shared/journal.ts` (debt)
       - Server:
         - Exports (types):
           - `DirWatchRelease`
@@ -30854,6 +30859,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FileWatcherSnapshot`
           - `FileWatcherSpec`
           - `FileWatcherStartOptions`
+          - `JournalCursor`
+          - `JournalCursorResult`
+          - `JournalReplay`
           - `ServerFileWatcherSpec`
           - `WatcherBackend`
           - `WatchLost`
@@ -30863,6 +30871,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BATCH_SAMPLE_MAX`
           - `defineFileWatcher`
           - `fileWatcherRecentRuns`
+          - `journalChangesSince`
+          - `journalCursor`
           - `listFileWatchers`
           - `onWatcherActivity`
           - `WRITES_WHILE_OPEN_MAX_ENTRIES`

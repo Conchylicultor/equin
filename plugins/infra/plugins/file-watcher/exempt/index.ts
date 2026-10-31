@@ -17,7 +17,11 @@ export default [
   },
   {
     rule: "boundaries/no-platform-api",
-    paths: ["server/internal/dir-hub.ts", "shared/engine.ts"],
+    paths: [
+      "server/internal/dir-hub.ts",
+      "shared/engine.ts",
+      "shared/journal.ts",
+    ],
     kind: "debt",
     task: "task-1792338443-riwqev",
     reason: "not yet split into server/ + machine/",

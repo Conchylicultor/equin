@@ -118,6 +118,22 @@ own heartbeat.
 Plan and measurements:
 [`research/2026-10-25-infra-file-watcher-reconcile-to-onlost.md`](../../../../research/2026-10-25-infra-file-watcher-reconcile-to-onlost.md).
 
+## What changed while nobody watched: the journal
+
+A watch hears changes only while it runs. `journalCursor(root)` marks a point
+in the file-system journal (FSEvents' history, parcel's `writeSnapshot`);
+`journalChangesSince(cursor)` replays it — every path named under the root
+since, in time proportional to the changes (8–135 ms on `~/Downloads`, where
+walking it is 26k dirs). Both are fail-closed results, never a guess:
+`unsupported` / `unknown` when it is not FSEvents, the root is off the user's
+data volume (a share or drive may keep no journal), the root was replaced
+(device or inode) or reached through a symlink, the cursor is over 7 days
+old (parcel cannot tell a purged history from a quiet one), the journal's ids
+went back, or the history reports
+dropped events — the caller then walks. parcel itself returns `[]` for a
+missing snapshot file; the cursor carries its snapshot, so that cannot happen
+here. `infra/corpus-index` uses it for its boot catch-up.
+
 ## `depth: "children"`: a folder's own entries, and the folder going
 
 A `children` watch (what `acquireDirWatch({ scope: "children" })` opens when no
@@ -179,7 +195,7 @@ It rejects only when the parent cannot be watched.
   - Exempts itself from:
     - `watcher-safety/no-direct-parcel-watcher` — `shared` (sanctioned)
     - `watcher-safety/no-raw-fs-watch` — `shared/engine.ts` (sanctioned)
-    - `boundaries/no-platform-api` — `server/internal/dir-hub.ts`, `shared/engine.ts` (debt)
+    - `boundaries/no-platform-api` — `server/internal/dir-hub.ts`, `shared/engine.ts`, `shared/journal.ts` (debt)
 - Server:
   - Exports (types):
     - `DirWatchRelease`
@@ -193,6 +209,9 @@ It rejects only when the parent cannot be watched.
     - `FileWatcherSnapshot`
     - `FileWatcherSpec`
     - `FileWatcherStartOptions`
+    - `JournalCursor`
+    - `JournalCursorResult`
+    - `JournalReplay`
     - `ServerFileWatcherSpec`
     - `WatcherBackend`
     - `WatchLost`
@@ -202,6 +221,8 @@ It rejects only when the parent cannot be watched.
     - `BATCH_SAMPLE_MAX`
     - `defineFileWatcher`
     - `fileWatcherRecentRuns`
+    - `journalChangesSince`
+    - `journalCursor`
     - `listFileWatchers`
     - `onWatcherActivity`
     - `WRITES_WHILE_OPEN_MAX_ENTRIES`
