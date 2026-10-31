@@ -42,7 +42,9 @@ export { ease } from "./internal/easing";
 export { sample, shiftTrack } from "./internal/tracks";
 export { cuesInRange } from "./internal/cues";
 export { loadManifest } from "./internal/manifest";
+export type { CameraView } from "./internal/builders";
 export {
+  cameraMove,
   center,
   checkComposition,
   cropLift,
@@ -62,6 +64,7 @@ export {
   strip,
   text,
   typing,
+  viewWindow,
 } from "./internal/builders";
 export { runFilm } from "./internal/run";
 export type {

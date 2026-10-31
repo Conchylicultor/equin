@@ -38,6 +38,7 @@ import { isTargetOrigin, targetNamespace, unconsumedPage } from "./target";
 import { trackContextNetwork, waitForNetworkIdle } from "./network-idle";
 import { describeBootStall } from "./boot-diagnosis";
 import { ELEMENT_TIMEOUT_MS } from "./wait";
+import { withSteadyCaret } from "./steady-caret";
 
 export const DEFAULT_VIEWPORT = { width: 1400, height: 900 } as const;
 
@@ -76,6 +77,12 @@ export interface BrowserOptions {
    * to raster). See `launchChromium`'s `gpu`.
    */
   gpu?: boolean;
+  /**
+   * A steady (non-blinking) text caret: macOS's own setting, for a run that
+   * captures frames off the real clock, where a blinking caret flickers. See
+   * `steady-caret.ts`.
+   */
+  steadyCaret?: boolean;
 }
 
 export interface Session {
@@ -244,6 +251,20 @@ async function keepOriginHeadersOnTarget(
 export async function withBrowser<T>(
   fn: (h: Harness) => Promise<T>,
   opts: BrowserOptions = {},
+): Promise<T> {
+  if (opts.steadyCaret) {
+    if (arg("attach") !== undefined)
+      usage(
+        "this script needs a steady caret (withBrowser steadyCaret: true); --attach drives the agent browser, which is not launched that way.",
+      );
+    return withSteadyCaret(() => runBrowser(fn, opts));
+  }
+  return runBrowser(fn, opts);
+}
+
+async function runBrowser<T>(
+  fn: (h: Harness) => Promise<T>,
+  opts: BrowserOptions,
 ): Promise<T> {
   // PROVE THE DEPLOY FIRST — before the repair below, not after it, and that
   // order is the highest-value half of this whole check. `repairAgentWrites`

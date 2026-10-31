@@ -12,7 +12,7 @@
 //   --out <file.mp4>           output (default: the script's `out`, `-preview` before .mp4)
 //   plus the film's own variant flags (`flags`), and the harness's --headed / --url.
 
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
@@ -41,8 +41,13 @@ export interface FilmContext {
 export interface FilmScript {
   /** Names the work dir and the default stills dir. */
   name: string;
-  /** Full-render output path (`~` expands); a preview inserts `-preview` before the extension. */
-  out: string;
+  /**
+   * Output path (`~` expands): a fixed path (a preview inserts `-preview`
+   * before the extension), or a function of the render (a script that
+   * versions its outputs). Whatever it answers, a render never writes over an
+   * existing file: it refuses before rendering.
+   */
+  out: string | ((ctx: FilmContext) => string);
   /** The film's own boolean variant flags: name → what it changes. */
   flags?: Record<string, string>;
   build(ctx: FilmContext): Composition | Promise<Composition>;
@@ -53,6 +58,8 @@ const ENGINE_FLAGS = ["preview", "from", "to", "stills", "stills-out", "out"];
 const HARNESS_FLAGS = ["headed", "url", "composition", "no-record", "attach"];
 
 const expandHome = (p: string): string => p.replace(/^~(?=\/|$)/, HOME_DIR);
+
+const stillsRequested = (): boolean => arg("stills") !== undefined;
 
 export async function runFilm(script: FilmScript): Promise<void> {
   const declared = script.flags ?? {};
@@ -86,6 +93,32 @@ export async function runFilm(script: FilmScript): Promise<void> {
     },
   });
   checkComposition(comp);
+
+  const ctx: FilmContext = {
+    preview,
+    flag(name) {
+      if (!(name in declared))
+        throw new Error(
+          `film: flag --${name} is not declared in the script's flags`,
+        );
+      return flag(name);
+    },
+  };
+  const defaultOut =
+    typeof script.out === "function"
+      ? script.out(ctx)
+      : preview
+        ? script.out.replace(
+            /(\.[a-z0-9]+)?$/i,
+            (ext) => `-preview${ext || ".mp4"}`,
+          )
+        : script.out;
+  const out = expandHome(arg("out", defaultOut));
+  // A film is a version: a render never replaces one (no flag turns this off).
+  if (!stillsRequested() && existsSync(out))
+    usage(
+      `film: ${out} already exists — a render never writes over a film. Render to a new name (--out), or let the script pick its next version.`,
+    );
 
   const from = Number(arg("from", "0"));
   const to = Number(arg("to", String(comp.duration)));
@@ -202,13 +235,6 @@ export async function runFilm(script: FilmScript): Promise<void> {
       work,
     });
 
-    const defaultOut = preview
-      ? script.out.replace(
-          /(\.[a-z0-9]+)?$/i,
-          (ext) => `-preview${ext || ".mp4"}`,
-        )
-      : script.out;
-    const out = expandHome(arg("out", defaultOut));
     mkdirSync(dirname(out), { recursive: true });
     const width = Math.round(W * DPR);
     const height = Math.round(H * DPR);

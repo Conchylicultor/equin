@@ -9,7 +9,7 @@ import {
 } from "./ids";
 
 // The film's task list, as a tidy real user's would read: the conversation the
-// film opens (an agent that made a practice MIDI file and is waiting for a
+// film opens (an agent that found the recital piece's MIDI and is waiting for a
 // reply), two finished agent runs that landed, and two ideas filed for later.
 
 export const MIN = 60_000;
@@ -59,11 +59,11 @@ const run = (
 
 /** The conversation the film opens from the Piano page. */
 export const PRACTICE_FILE = run(1, {
-  task: "Practice file for the Minuet in G",
+  task: "Practice file for the Fantaisie-Impromptu",
   prompt:
-    "Make me a practice file for the first eight bars of the Minuet in G (both hands, a comfortable tempo) that I can open in Sonata, and add a few fingering notes for the tricky bars. My repertoire is on the Piano page.",
-  title: "Practice MIDI for the Minuet in G, bars 1–8",
-  shortTitle: "Minuet practice file",
+    "Find me a MIDI of my recital piece I can open in Sonata, and add practice notes for the hard passages. My repertoire is on the Piano page.",
+  title: "Practice MIDI for the Fantaisie-Impromptu",
+  shortTitle: "Fantaisie practice file",
   status: "waiting",
   model: OPUS,
   phase: "implementation",

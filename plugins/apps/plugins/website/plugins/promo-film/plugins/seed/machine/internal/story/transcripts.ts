@@ -1,11 +1,11 @@
-import { LEFT_HAND, MINUET, RIGHT_HAND, minuetScript } from "./minuet";
+import { PIECE } from "./piece";
 import { FILM_PAGE_IDS } from "./pages";
 import { type FilmRun, PRACTICE_FILE } from "./tasks";
 
 // Each run's session, as the turns Claude Code would have logged. The practice
-// file's session READS the Piano page through the real `read_page` tool at seed
-// (its exact result goes in), and writes the very files the seed puts in the
-// workspace — the script, the notes, and (by running the script) the MIDI file.
+// session READS the Piano page through the real `read_page` tool at seed (its
+// exact result goes in), fetches the public-domain MIDI the seed lays down in
+// the workspace (the committed fixture, byte for byte), and writes the notes.
 // The files sit in a folder (`practice/`), so the closing message names them
 // as paths the conversation renders as file chips.
 
@@ -16,32 +16,29 @@ export type Turn =
 
 /** The workspace files the practice session leaves, relative to its folder. */
 export const PRACTICE_FILES = {
-  script: "scripts/make-minuet.mjs",
   notes: "practice/notes.md",
-  midi: `practice/${MINUET.fileName}`,
+  midi: `practice/${PIECE.fileName}`,
 } as const;
 
 export const PRACTICE_NOTES = [
-  "# Minuet in G, bars 1–8",
+  `# ${PIECE.title}, practice notes`,
   "",
-  `The practice file is \`${MINUET.fileName}\`: right hand and left hand on separate tracks, 3/4 at ${MINUET.bpm} bpm. In Sonata, mute a track to practise one hand against the other.`,
+  `The score is \`${PIECE.fileName}\`, the Mutopia Project's public-domain edition: right hand and left hand on separate tracks. In Sonata, mute a track to practise one hand against the other, and slow the tempo down from 100%.`,
   "",
-  "## Fingering",
+  "## The hard parts",
   "",
-  "- **Bar 1:** start the D on 5, then 1-2-3-4 for G A B C, so the hand never moves.",
-  "- **Bar 3:** E on 5, then put the thumb on C and walk up: C 1, D 2, E 3, F♯ 4.",
-  "- **Bar 7:** F♯ on 2 makes G A B G fall under 1-2-3-1 with one thumb tuck.",
-  "- **Left hand:** keep the dotted halves held for their full three beats; the first beat of each bar carries the dance.",
+  "- **Bars 1–4:** the left hand's sextuplets alone first; the arpeggio is the whole engine of the piece.",
+  "- **Bars 5–12:** four right-hand sixteenths against six left-hand notes. Clap 4 against 6 before playing it; the hands only meet on each beat.",
+  "- **Bars 13–24:** keep the thumb light on the repeated G♯s; the melody is the top note of each group.",
+  "- **Largo (bar 43):** the famous melody. Sing it first, then let the left hand breathe under it.",
   "",
   "## Plan",
   "",
-  "1. Hands separately at 72, two clean run-throughs each.",
-  "2. Hands together at 72, then 80 (this week's goal).",
-  `3. Up to ${MINUET.bpm} once bar 3 is even.`,
+  "1. Hands separately at 60%, bars 1–12.",
+  "2. Hands together at 60%, then 75% (this week's goal).",
+  "3. The Largo section next week.",
   "",
 ].join("\n");
-
-const NOTE_COUNT = RIGHT_HAND.length + LEFT_HAND.length;
 
 /**
  * The practice session. `workspace` is its folder (the attempt's worktree
@@ -66,29 +63,20 @@ export function practiceTurns(
     },
     {
       kind: "assistant",
-      text: "It's the Minuet in G, BWV Anh. 114: bars 1–8 are the first phrase, in 3/4. I'll write the two hands out note by note in a small script and render the MIDI from it with @tonejs/midi, one track per hand, so you can mute either one in Sonata.",
-    },
-    {
-      kind: "tool",
-      name: "Write",
-      input: {
-        file_path: path(PRACTICE_FILES.script),
-        content: minuetScript(),
-      },
-      result: `File created successfully at: ${path(PRACTICE_FILES.script)}`,
+      text: `It's the ${PIECE.full}. The Mutopia Project has a public-domain edition of it with the two hands on separate tracks, so I'll fetch that rather than write it out.`,
     },
     {
       kind: "tool",
       name: "Bash",
       input: {
-        command: `cd ${workspace} && node ${PRACTICE_FILES.script}`,
-        description: "Render the practice MIDI file",
+        command: `mkdir -p ${workspace}/practice && curl -fsSL -o ${PRACTICE_FILES.midi} ${PIECE.source}`,
+        description: "Fetch the public-domain MIDI",
       },
-      result: `Wrote ${PRACTICE_FILES.midi}: ${NOTE_COUNT} notes, ${MINUET.bars} bars, ${MINUET.bpm} bpm`,
+      result: "",
     },
     {
       kind: "assistant",
-      text: "The file plays back correctly: both hands line up on every downbeat and bar 8 ends on the held A. Now the fingering notes, mostly for bars 3 and 7, where the right hand has to shift.",
+      text: "It plays back cleanly: two tracks, upper and lower, the full piece. Now the notes, mostly for the opening (4 against 6) and the Largo.",
     },
     {
       kind: "tool",
@@ -99,12 +87,12 @@ export function practiceTurns(
     {
       kind: "assistant",
       text: [
-        "Your practice file is ready.",
+        "Your practice material is ready.",
         "",
-        `- ${PRACTICE_FILES.midi}: bars 1–8, right and left hand on two tracks, 3/4 at ${MINUET.bpm} bpm. Open it in Sonata to play along or loop a bar.`,
-        `- ${PRACTICE_FILES.notes}: fingering for bars 1, 3 and 7, and a three-step plan up to tempo.`,
+        `- ${PRACTICE_FILES.midi}: the whole ${PIECE.title}, right and left hand on two tracks (public domain, ${PIECE.sourcePage}). Open it in Sonata to play along or loop a passage.`,
+        `- ${PRACTICE_FILES.notes}: what to practise in bars 1–24 and the Largo, and a three-step plan up to tempo.`,
         "",
-        "This week's goal on the Piano page is hands together at 80 bpm. Want me to make a second copy at 80 too?",
+        "This week's goal on the Piano page is hands together at 75%. Want me to make a slower practice copy too?",
       ].join("\n"),
       final: true,
     },

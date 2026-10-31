@@ -4,7 +4,7 @@
 
 The storyboard is the "Video" page (`block-7304a68b…`). The script is its agent page **Script v2** (`block-5742f007-c2f6-4f02-9453-42e908c1ca0f`), which is the source of truth for what is on screen and when. v1 (`website/promo-video`, never committed; reference copy in `/tmp/promo-v1-ref/`) was deleted: it told the story with headlines and slogans, cut between unrelated scenes, and used a cliché upbeat track. v2 is one continuous session (Pages → agent manager → files → Sonata → Deploy → Places, evolved in place, Circle created from there, zoomed out to the desktop, then the Mac), with no text except optional captions and the end card, and restrained music with deliberate silences.
 
-Outputs: `~/Downloads/showcase/equin-v0.mp4` and `~/Downloads/showcase/equin-v0-captions.mp4`, 1920×1080, 60 fps, AAC.
+Outputs: one new version per render pass, never an overwrite — `~/Downloads/showcase/equin-v<N>.mp4` and `~/Downloads/showcase/equin-v<N>-captions.mp4` (N one past the newest), 1920×1080, 60 fps, AAC.
 
 ## Layout
 
@@ -66,3 +66,23 @@ Recorded verbatim in spirit; future passes tune to these. To be mirrored on the 
 - **Create / prototype:** show the real transitions — visible clicks on mobile, on side-by-side. The slider UI must be the app's real one (its sweep may be scripted, the UI truthful).
 - **Sound:** SFX much more subtle; no whoosh on every transition (feels cheap).
 - **Music:** try a different track. Never stop the music to let Sonata's piano be heard — keep it running (duck at most).
+
+## As built (2026-10-30): one recorded session
+
+The still-based capture and scenes (`capture*.ts`, `intro`, `integrated`, `more-apps`, `evolving`, `create`, `render.ts`, `record-test.ts`) are gone. The app part is now the REAL app recorded on media/film's virtual clock, on the seeded `promo-film` composition (`promo-film/e2e/record.ts`, segments in `e2e/internal/segments.ts`), and `e2e/film.ts` renders from the recordings:
+
+- Segments join only where the session is continuous or at a deliberate cut (the app tour; the two time-lapses). Real speed everywhere except the time-lapses (5×) and Sonata's ~2 s sample-loading wait after the first Play (6×, a still picture).
+- The evolve's change is written into the Pages page during its time-lapse through the editor's own create-block endpoint (what the task's agent writes); the filed tasks are never launched (not main).
+- Invented: the desktop reveal (the prototype's last frame, aligned on the window's phone, gives way to the window's own pixels as the camera pulls back), the Mac, the iceberg, the open-source card and the end card (centred by layout: `calc-size()`).
+- The virtual clock now also drives `AudioContext.currentTime` (a player's playhead moves at film speed); Sonata's sound is captured separately in real time and placed on the playhead's start.
+- Music: one constant, `FILM_MUSIC` (`e2e/internal/music.ts`).
+
+## Second pass (2026-10-30): the Wish, several times; ending on the desktop
+
+Script: the Script v2 page; code: `promo-film/e2e/internal/segments.ts`. No Deploy, Mac or iceberg; the film ends on equin's desktop mode (a short open-source + end-card tail, `TAIL` in `internal/film.ts`).
+
+- The recital piece is Chopin's Fantaisie-Impromptu, Op. 66: the Mutopia Project's public-domain MIDI, committed in the seed's `data/music/` (the Rachmaninoff Prelude Op. 3 No. 2 on Mutopia is CC-BY-SA, not PD/CC0/CC-BY).
+- Sonata's Wish shows the Current key section through its real layout setting: the seed hides it (`hidden` in the section slot's config_v2 layout, user layer); the film's agent change is the Config pane's reset-field write.
+- The Lisbon Wish writes `place` blocks (Google ids, resolved by the page) and a `map` block through the editor's create-block endpoint. Places' cards show real photos because the seeded places are now Google places by id (details fetched at seed through the importer's path); before, they were custom places with no Google id, so the gallery had nothing to fetch a photo for.
+- Engine: `cameraMove` (focus/zoom keys that move the VIEW's edges, so a push-in never slides off its target mid-move — what cropped the Pick UI element pill) and a frameOn assertion; the clock starts a lazy image in view at once (else a recorder waiting for it before the capture deadlocks with the rendering step that would start it); the harness's `steadyCaret` (macOS's non-blinking caret setting for the headless shell) — a blinking caret runs on the real clock and flickered across virtual-clock frames.
+- Open: "expand the map into the Places app" is not on main yet (the join is the app launcher for now); a truthful "Circle appears in the Home gallery" needs Circle to exist as a real app plugin.

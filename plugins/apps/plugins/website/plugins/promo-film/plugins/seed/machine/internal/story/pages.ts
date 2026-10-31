@@ -27,19 +27,19 @@ export const FILM_PAGES: PageTreeFixture = [
       {
         id: filmBlockId(2),
         type: "text",
-        text: "Learning the Minuet in G for the spring recital: eight bars a week, slow first, then up to tempo.",
+        text: "Learning the Fantaisie-Impromptu for the spring recital: a section a week, slow first, then up to tempo.",
       },
       { id: filmBlockId(3), type: "heading-2", text: "This week" },
       {
         id: filmBlockId(4),
         type: "to-do",
-        text: "Bars 1–8, hands separately",
+        text: "Bars 1–12, hands separately",
         checked: true,
       },
       {
         id: filmBlockId(5),
         type: "to-do",
-        text: "Bars 1–8, hands together at 80 bpm",
+        text: "Bars 1–12, hands together at 75%",
         checked: false,
       },
       {
@@ -66,25 +66,25 @@ export const FILM_PAGES: PageTreeFixture = [
           {
             id: filmBlockId(11),
             type: "to-do",
-            text: "Minuet in G, BWV Anh. 114 (learning, recital piece)",
+            text: "Fantaisie-Impromptu, Op. 66 (learning, recital piece)",
             checked: false,
           },
           {
             id: filmBlockId(12),
             type: "to-do",
-            text: "Prelude in C major, BWV 846 (next)",
+            text: "Nocturne in E-flat major, Op. 9 No. 2 (next)",
             checked: false,
           },
           {
             id: filmBlockId(13),
             type: "to-do",
-            text: "Für Elise, first section",
+            text: "Prelude in C major, BWV 846",
             checked: true,
           },
           {
             id: filmBlockId(14),
             type: "text",
-            text: "Ms. Laurent: the minuet is a dance, keep the left hand light and the first beat of each bar a little stronger.",
+            text: "Ms. Laurent: let the left hand's sextuplets carry you, and keep the four-against-six even before you push the tempo.",
           },
         ],
       },
@@ -96,17 +96,17 @@ export const FILM_PAGES: PageTreeFixture = [
           {
             id: filmBlockId(21),
             type: "text",
-            text: "Mon: 25 min. Bars 1–4 right hand, the eighth notes in bar 3 are still uneven.",
+            text: "Mon: 35 min. Bars 1–4 left hand alone, the arpeggios are getting even.",
           },
           {
             id: filmBlockId(22),
             type: "text",
-            text: "Tue: 30 min. Bars 5–8 right hand, then left hand alone with the metronome at 72.",
+            text: "Tue: 40 min. Bars 5–8 right hand, then clapping 4 against 6 with the metronome.",
           },
           {
             id: filmBlockId(23),
             type: "text",
-            text: "Wed: 20 min. Hands together, bars 1–4 at 72. Bar 7 needs fingering.",
+            text: "Wed: 30 min. Hands together, bars 1–4 at 50%. Bar 7 needs fingering.",
           },
         ],
       },

@@ -20,7 +20,7 @@ import type {
   Vec2,
 } from "./composition";
 import type { SfxCue } from "./cues";
-import type { Easing } from "./easing";
+import { ease, type Easing } from "./easing";
 import { checkTrack, type Key, type Track, type Value } from "./tracks";
 
 type Opts<L> = Omit<L, "kind">;
@@ -403,5 +403,85 @@ export function frameOn(
     Math.min(b.x + b.width - hw, Math.max(b.x + hw, (x0 + x1) / 2)),
     Math.min(b.y + b.height - hh, Math.max(b.y + hh, (y0 + y1) / 2)),
   ];
+  // The guarantee, checked: the whole target (and its margin, wherever the
+  // bounds leave room for it) lies inside the view.
+  const view = viewWindow({ focus, zoom }, stage);
+  const eps = 1e-6;
+  if (
+    view.x > x0 + eps ||
+    view.y > y0 + eps ||
+    view.x + view.width < x1 - eps ||
+    view.y + view.height < y1 - eps
+  )
+    throw new Error(
+      `film: frameOn cannot show [${rectV(target).join(", ")}] + ${margin} px whole (view [${rectV(view).join(", ")}])`,
+    );
+  return { focus, zoom };
+}
+
+/** A camera framing: the point at the stage centre and the zoom. */
+export interface CameraView {
+  focus: Vec2;
+  zoom: number;
+}
+
+/** The world rect a view shows on a stage of `stage`'s size. */
+export function viewWindow(
+  v: CameraView,
+  stage: { width: number; height: number },
+): Rect {
+  const w = stage.width / v.zoom;
+  const h = stage.height / v.zoom;
+  return { x: v.focus[0] - w / 2, y: v.focus[1] - h / 2, width: w, height: h };
+}
+
+/**
+ * A camera move from `from` to `to` over [t0, t1] as focus and zoom keys,
+ * sampled at `hz`: the VIEW's edges travel (eased), not the focus and the
+ * zoom on their own. A push-in between a full view and a view framing a
+ * target then keeps the target in view on every frame — each in-between view
+ * is a blend of two views that both hold it — where moving the focus and the
+ * zoom separately slides the view inward mid-way and cuts a target near the
+ * edge. `keep` asserts that, sample by sample.
+ */
+export function cameraMove(
+  t0: number,
+  t1: number,
+  from: CameraView,
+  to: CameraView,
+  opts: {
+    stage: { width: number; height: number };
+    easing?: Easing;
+    hz?: number;
+    keep?: Rect;
+  },
+): { focus: Key<Vec2>[]; zoom: Key[] } {
+  const { stage, easing = "inOutCubic", hz = 60, keep } = opts;
+  const a = viewWindow(from, stage);
+  const b = viewWindow(to, stage);
+  const n = Math.max(1, Math.round((t1 - t0) * hz));
+  const focus: Key<Vec2>[] = [];
+  const zoom: Key[] = [];
+  for (let i = 0; i <= n; i++) {
+    const u = ease(easing, i / n);
+    const lerp = (p: number, q: number) => p + (q - p) * u;
+    const x0 = lerp(a.x, b.x);
+    const y0 = lerp(a.y, b.y);
+    const x1 = lerp(a.x + a.width, b.x + b.width);
+    const y1 = lerp(a.y + a.height, b.y + b.height);
+    const t = t0 + ((t1 - t0) * i) / n;
+    if (
+      keep &&
+      (keep.x < x0 - 1e-6 ||
+        keep.y < y0 - 1e-6 ||
+        keep.x + keep.width > x1 + 1e-6 ||
+        keep.y + keep.height > y1 + 1e-6)
+    )
+      throw new Error(
+        `film: at t=${t.toFixed(3)} the camera move cuts [${rectV(keep).join(", ")}] (view [${[x0, y0, x1 - x0, y1 - y0].map((v) => v.toFixed(1)).join(", ")}])`,
+      );
+    zoom.push([t, stage.width / (x1 - x0)]);
+    focus.push([t, [(x0 + x1) / 2, (y0 + y1) / 2]]);
+  }
   return { focus, zoom };
 }

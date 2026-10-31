@@ -1,5 +1,12 @@
 import { count, eq } from "drizzle-orm";
-import { setConfig } from "@plugins/config_v2/server";
+import {
+  getConfig,
+  getDescriptorByStorePath,
+  setConfig,
+  setConfigByPath,
+} from "@plugins/config_v2/server";
+import { getPlacesClient } from "@plugins/integrations/plugins/google-maps/server";
+import { placeDetails } from "@plugins/integrations/plugins/google-maps/plugins/places-api/server";
 import { systemOrigin } from "@plugins/infra/plugins/request-origin/core";
 import { experimentalMarksConfig } from "@plugins/framework/plugins/cli/plugins/build/plugins/experimental-marks/core";
 import { db } from "@plugins/database/server";
@@ -28,6 +35,8 @@ import { parseSavedSymbolName } from "@plugins/ui/plugins/icons/plugins/saved-na
 import { writeDeployFixture } from "@plugins/apps/plugins/deploy/plugins/fixtures/server";
 import {
   PROMO_FILM_COMPOSITION_ID,
+  SONATA_KEY_SECTION,
+  SONATA_SECTION_LAYOUT,
   type PromoFilmSeedReport,
 } from "../../core";
 import { filmTaskId } from "./story/ids";
@@ -71,10 +80,12 @@ export class PromoFilmSeedRefused extends Error {
  *    its push; then the backlog;
  * 4. the practice conversation's read of the Piano page, RUN through the real
  *    `read_page` tool as that conversation, and every session's transcript file;
- * 5. the saved places (the importer's own `replaceAllPlaces`, icons given);
+ * 5. the saved places: real Google places by id, their details fetched and
+ *    written as the importer does (`replaceAllPlaces`, icons given);
  * 6. the Deploy history (Deploy's fixture writer);
  * 7. the Circle prototype, present or written from the committed fixture;
- * 8. the Show experimental marks setting off: this instance is built from
+ * 8. Sonata's Current key section hidden (its slot layout's user layer);
+ * 9. the Show experimental marks setting off: this instance is built from
  *    worktree code, and the film must not show the red frame or the Wish banner.
  *
  * Refused unless this backend is the `promo-film` composition of its own
@@ -134,15 +145,19 @@ export async function seedPromoFilm(): Promise<PromoFilmSeedReport> {
     note("transcript", path);
   }
 
+  // The importer's path: every snapshot fetched BEFORE the write (one Place
+  // Details call per place, on the host's Places key), then one transaction.
+  const maps = await getPlacesClient();
+  if (!maps.ok)
+    throw new PromoFilmSeedRefused(
+      "the host has no Google Places key (Settings → Accounts → Google Maps): the film's places are real Google places, saved by id",
+    );
+  const snapshots = await Promise.all(
+    FILM_PLACES.map((p) => placeDetails(maps.client, p.googlePlaceId)),
+  );
   await replaceAllPlaces(
-    FILM_PLACES.map((p) => ({
-      place: {
-        kind: "custom" as const,
-        name: p.name,
-        address: p.address,
-        lat: p.lat,
-        lng: p.lng,
-      },
+    FILM_PLACES.map((p, i) => ({
+      place: { kind: "google" as const, snapshot: snapshots[i]! },
       tags: p.tags,
       note: p.note,
       createdAt: ago(p.savedDaysAgo * DAY),
@@ -155,6 +170,26 @@ export async function seedPromoFilm(): Promise<PromoFilmSeedReport> {
   note("deploy", `${FILM_DEPLOY.servers.length} server`);
 
   note("prototype", await ensureFilmPrototype());
+
+  // Sonata's Current key section starts hidden — its slot layout's own
+  // `hidden` flag, in the user layer — so the film's Wish can bring it back
+  // with the same config write an agent makes.
+  const section = getDescriptorByStorePath(SONATA_SECTION_LAYOUT);
+  if (!section)
+    throw new Error(`[promo-film seed] no config for ${SONATA_SECTION_LAYOUT}`);
+  const items = (getConfig(section) as { items: unknown[] }).items.map((n) =>
+    n === SONATA_KEY_SECTION ? { item: n, hidden: true } : n,
+  );
+  if (!items.some((n) => typeof n === "object" && n !== null && "hidden" in n))
+    throw new Error(
+      `[promo-film seed] ${SONATA_KEY_SECTION} is not in Sonata's section layout`,
+    );
+  await setConfigByPath(SONATA_SECTION_LAYOUT, "items", items, {
+    writer: systemOrigin(
+      "promo-film seed: Sonata's Current key section hidden",
+    ),
+  });
+  note("config", "Sonata's Current key section hidden");
 
   await setConfig(experimentalMarksConfig, "showExperimentalMarks", false, {
     writer: systemOrigin("promo-film seed: no experimental marks in the film"),

@@ -11389,7 +11389,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by:
                   - `apps/website/landing/layers`
                   - `apps/website/pages/apps`
-        - **`promo-film`** — The equin showcase film (script: the Video page's Script v2): staged captures of the real app as layered stills, the film's timeline and scenes over media/film, and its licensed music track.
+        - **`promo-film`** — The equin showcase film (script: the Video page's Script v2): the real app recorded as one continuous session on the seeded promo-film composition (e2e/record.ts), ending on equin's desktop mode, rendered over media/film with a short open-source and end-card tail (e2e/film.ts), and its music track.
           - Deps:
             - Uses:
               - `infra/deps.defineDep`
@@ -11409,9 +11409,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (types): `PromoFilmSeedReport`
                 - Exports (values):
                   - `FILM_SEEN_HINTS`
+                  - `LISBON_IDEAS`
                   - `PROMO_FILM_COMPOSITION_ID`
                   - `PromoFilmSeedReportSchema`
                   - `seedPromoFilm`
+                  - `SONATA_KEY_SECTION`
+                  - `SONATA_SECTION_LAYOUT`
               - Structure:
                 - Non-standard folders: `data/`
         - **`shell`** — App shell for the Website (equin public site). Registers the /website app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, and contributes the site's own theme (equin: palette, chart ramp, font), which the website app selects, plus the equin-document sub-theme (type scale, density, shape) every page wears and the equin-page-hero sub-theme an inner page's heading wears.

@@ -123,6 +123,47 @@ export function installClock(): void {
     },
   });
 
+  // ------------------------------------------------------ audio clock ----
+  // A player whose playhead follows `AudioContext.currentTime` (a sequencer,
+  // a piano roll) must move with the page's time, not the sound card's: in
+  // virtual mode a running context's time advances by exactly the virtual
+  // time stepped since the clock took it over, and stands still while the
+  // context is suspended. (What reaches the speakers is not the film's: a
+  // recording captures pictures, and a film places the sound itself.)
+  const ctTime = Object.getOwnPropertyDescriptor(
+    BaseAudioContext.prototype,
+    "currentTime",
+  )?.get;
+  if (ctTime) {
+    const anchors = new WeakMap<
+      BaseAudioContext,
+      { base: number; at: number; frozen: number | null }
+    >();
+    Object.defineProperty(BaseAudioContext.prototype, "currentTime", {
+      configurable: true,
+      get(this: BaseAudioContext): number {
+        const real = ctTime.call(this) as number;
+        // An offline context renders as fast as it can: its time is its own.
+        if (!isVirtual || !(this instanceof AudioContext)) return real;
+        let a = anchors.get(this);
+        if (!a) {
+          a = { base: real, at: vt, frozen: null };
+          anchors.set(this, a);
+        }
+        if (this.state !== "running") {
+          a.frozen ??= a.base + (vt - a.at) / 1000;
+          return a.frozen;
+        }
+        if (a.frozen !== null) {
+          a.base = a.frozen;
+          a.at = vt;
+          a.frozen = null;
+        }
+        return a.base + (vt - a.at) / 1000;
+      },
+    });
+  }
+
   // ----------------------------------------------------------- timers ----
   const timers = new Map<number, Timer>();
   let nextId = 1;
@@ -404,8 +445,13 @@ export function installClock(): void {
           r.right > 0 &&
           r.top < innerHeight &&
           r.left < innerWidth
-        )
+        ) {
+          // A lazy image in view starts loading at the browser's next
+          // rendering step — which, while the recorder waits for it before
+          // capturing, never comes: start it now, as that step would.
+          if (img.loading === "lazy") img.loading = "eager";
           images++;
+        }
       }
       return {
         awaitingReplyMs: lastSend > lastRecv ? now - lastSend : null,

@@ -25,7 +25,9 @@ seed` → record, and get the same state. Design:
 - **The demo owns its data, the apps own how it is written** (Lumen's recipe,
   `apps/website/demos/lumen`). The story is `machine/internal/story/`; each
   step goes through the app's writer — `writePageTree` (Pages),
-  `replaceAllPlaces` (Places, icons given so no Haiku pick runs),
+  `replaceAllPlaces` (Places: real Google places saved by id, their details
+  fetched first as the importer does — so the app shows Google's own photos;
+  icons given so no Haiku pick runs; the host's Places key is required),
   `writeDeployFixture` (`apps/deploy/fixtures`), `writePrototypeFixture`
   (Prototypes) — or the rows its own mutations write (tasks, attempts and
   conversations backdated as rows, as Lumen does).
@@ -35,10 +37,16 @@ seed` → record, and get the same state. Design:
   transcript watcher finds a session by id). Its `read_page` call is RUN
   through the real tool at seed. Its attempt's worktree is a real folder
   (`promoFilmWorkspaceDir`, `~/.equin/cache/promo-film/att-…/`) holding the
-  files the transcript writes: the script, the notes, and the practice MIDI
-  (`minuet-in-g.mid`, generated from the note data in `story/minuet.ts` —
-  public-domain music, no binary in the repo). Its file chips, the file
-  preview, Files and Sonata's "Open in Sonata" read those files.
+  files the transcript leaves: the notes, and the recital piece's MIDI
+  (`fantaisie-impromptu.mid` — Chopin's Fantaisie-Impromptu, the Mutopia
+  Project's public-domain edition, committed byte for byte in `data/music/`
+  and pinned by sha256 in `story/piece.ts`). Its file chips, the file preview,
+  Files and Sonata's "Open in Sonata" read those files.
+- **State the film changes, set here.** Sonata's Current key section starts
+  hidden (its section slot's layout, user layer — `SONATA_SECTION_LAYOUT` /
+  `SONATA_KEY_SECTION` in `core/`), so the film's Wish can show it with the
+  Config pane's own write. `LISBON_IDEAS` (core) are the places the film's
+  Lisbon Wish writes onto that page.
 - **The prototype is shared with main.** Prototype folders are host-global, so
   the seed never overwrites one: `data/` holds the Circle prototype
   (`proto-1792779833-4wgtuf`, both versions) as a Prototypes fixture; an absent
@@ -65,9 +73,12 @@ seed` → record, and get the same state. Design:
   - Exports (types): `PromoFilmSeedReport`
   - Exports (values):
     - `FILM_SEEN_HINTS`
+    - `LISBON_IDEAS`
     - `PROMO_FILM_COMPOSITION_ID`
     - `PromoFilmSeedReportSchema`
     - `seedPromoFilm`
+    - `SONATA_KEY_SECTION`
+    - `SONATA_SECTION_LAYOUT`
 - Structure:
   - Non-standard folders: `data/`
 

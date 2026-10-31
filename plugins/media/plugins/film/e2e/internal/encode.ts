@@ -22,7 +22,9 @@ export interface EncoderOptions {
 
 export function encoderArgs(o: EncoderOptions): string[] {
   return [
-    "-y",
+    // Never overwrite: a film is a version (runFilm refuses first; this makes
+    // the encoder itself unable to replace one).
+    "-n",
     "-hide_banner",
     "-loglevel",
     "error",

@@ -2,7 +2,7 @@ import { mkdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { promoFilmWorkspaceDir } from "../../data-dirs";
-import { minuetMidiBytes, minuetScript } from "./story/minuet";
+import { pieceMidiBytes } from "./story/piece";
 import { PRACTICE_FILES, PRACTICE_NOTES } from "./story/transcripts";
 import type { FilmRun } from "./story/tasks";
 
@@ -24,8 +24,8 @@ const BASE_FILES: readonly [string, string][] = [
  * checked out — so everything that measures an attempt from git (its edited
  * files, its standing against `main`) reads a real repository. The practice
  * run's agent is mid-conversation, so its files are uncommitted changes on
- * its branch: the script and the notes its transcript writes, and the MIDI
- * file running that script makes (generated from the same notes).
+ * its branch: the MIDI its transcript fetches (the committed public-domain
+ * fixture) and the notes it writes.
  */
 export async function writeWorkspace(
   runs: readonly FilmRun[],
@@ -41,9 +41,8 @@ export async function writeWorkspace(
     await git(dir, "checkout", "--quiet", "-b", run.attemptId);
   }
   return writeFiles(runWorkspace(practice), [
-    [PRACTICE_FILES.script, minuetScript()],
     [PRACTICE_FILES.notes, PRACTICE_NOTES],
-    [PRACTICE_FILES.midi, minuetMidiBytes()],
+    [PRACTICE_FILES.midi, pieceMidiBytes()],
   ]);
 }
 

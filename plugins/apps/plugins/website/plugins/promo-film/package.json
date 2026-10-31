@@ -1,6 +1,6 @@
 {
   "name": "@equin/plugin-apps-website-promo-film",
-  "description": "The equin showcase film (script: the Video page's Script v2): staged captures of the real app as layered stills, the film's timeline and scenes over media/film, and its licensed music track.",
+  "description": "The equin showcase film (script: the Video page's Script v2): the real app recorded as one continuous session on the seeded promo-film composition (e2e/record.ts), ending on equin's desktop mode, rendered over media/film with a short open-source and end-card tail (e2e/film.ts), and its music track.",
   "private": true,
   "version": "0.0.1"
 }
