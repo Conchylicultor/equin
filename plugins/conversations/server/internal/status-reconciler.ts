@@ -373,11 +373,13 @@ async function reconcileRows(
 ): Promise<void> {
   // Held questions first retire the ones whose holder died (the agent process
   // can die mid-question), then are read once for the whole batch.
+  // Independent reads, so they go together: one round trip, not four.
   const ids = rows.map((r) => r.id);
-  await reapQuestionHolds(ids);
-  const holds = await readQuestionHolds(ids);
-  const submits = await latestSubmitAt(ids);
-  const pending = await conversationsWithPendingTurn(ids);
+  const [holds, submits, pending] = await Promise.all([
+    reapQuestionHolds(ids).then(() => readQuestionHolds(ids)),
+    latestSubmitAt(ids),
+    conversationsWithPendingTurn(ids),
+  ]);
   for (const row of rows) {
     const { plan } = await planFor(row, live, holds, submits, pending);
     await apply(row, plan);
@@ -387,6 +389,10 @@ async function reconcileRows(
 /** Today's whole-world reconcile: every live session against every active row. */
 function reconcileAll(): Promise<void> {
   return reconcileGate.run(async () => {
+    // Every signal so far is answered by the reads below (rows and runtimes
+    // are both read after it), so a batch still pending would only repeat them.
+    pendingAll = false;
+    pendingIds.clear();
     const rows = await listConversationsForInfra();
     await reconcileRows(rows, await collectLive(rows));
   });
@@ -414,6 +420,11 @@ function reconcileIds(ids: readonly string[]): Promise<void> {
 const pendingIds = new Set<string>();
 let pendingAll = false;
 let draining = false;
+// Until the boot reconcile has run, signals only accumulate: the boot catch-up
+// signals every agent it applied lines for, and that one reconcile, reading
+// after them, answers them all — reconciled as they came, each would be done
+// twice, the boot reconcile waiting behind them at the gate.
+let booted = false;
 
 /**
  * Ask for `conversationIds` to be reconciled now — the same wake a runtime
@@ -430,7 +441,12 @@ function onSignal(signal: RuntimeSignal): void {
   } else {
     pendingAll = true;
   }
-  if (!draining) {
+  startDrain();
+}
+
+/** Drain the pending signals, unless a drain is already doing so (or boot has not reconciled yet). */
+function startDrain(): void {
+  if (booted && !draining) {
     draining = true;
     void runTracked("conversations:status-reconcile", () =>
       drain().catch((err: unknown) => {
@@ -485,7 +501,14 @@ export async function startStatusReconciler(): Promise<void> {
   onStatusEvidence((conversationId) => {
     onSignal({ conversationIds: [conversationId] });
   });
-  await reconcileAll();
+  try {
+    await reconcileAll();
+  } finally {
+    // Even when it threw (the hook fails loudly): signals must not be held
+    // for the process's lifetime. What arrived while it ran drains now.
+    booted = true;
+    startDrain();
+  }
 }
 
 // The missed-signal backstop, and the one path for the states that have no

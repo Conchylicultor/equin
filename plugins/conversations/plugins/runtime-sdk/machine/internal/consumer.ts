@@ -3,6 +3,7 @@ import { relative, sep } from "node:path";
 import type { RuntimeSignal } from "@plugins/conversations/server";
 import { defineFileWatcher } from "@plugins/infra/plugins/file-watcher/server";
 import { createKeyedCoalescer } from "@plugins/packages/plugins/coalesce/core";
+import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { withDeadline } from "@plugins/packages/plugins/deadline/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
@@ -37,7 +38,8 @@ import {
   writeProjection,
 } from "../../server/internal/rows";
 import { requestAutoResume } from "./auto-resume";
-import { readAgentEvents, type ReadPosition } from "./event-reader";
+import { readEventsAfter } from "./event-reader";
+import type { ReadPosition } from "../../server/internal/read-position";
 import { runningAgentIds } from "./agent-processes";
 import { agentReady } from "./partial-stream";
 import { agentEventsExist, agentEventsPath, ownAgentsRoot } from "./paths";
@@ -71,7 +73,10 @@ export const sdkEventsWatcher = defineFileWatcher({
   debounceMs: 10,
 });
 
-/** Where each agent's file was last read up to (lost on restart: the cursor replays). */
+/**
+ * Where each agent's file was last read up to by THIS process. A restart starts
+ * from the position stored with the cursor (`eventsPosition`).
+ */
 const positions = new Map<string, ReadPosition | null>();
 
 /**
@@ -235,8 +240,13 @@ async function catchUp(id: string, progress: CatchUpProgress): Promise<void> {
     return;
   }
   const path = agentEventsPath(id);
-  const read = readAgentEvents(path, positions.get(id) ?? null);
-  const { worktreePath: _path, ...projection } = row;
+  const { worktreePath: _path, eventsPosition, ...projection } = row;
+  // Where this process last stopped, else — the first catch-up since a
+  // restart — the position stored with the cursor: a restart reads what was
+  // appended while no backend ran, not every generation of the agent's
+  // history (hundreds of MB across the live agents, parsed on every boot).
+  const from = positions.has(id) ? (positions.get(id) ?? null) : eventsPosition;
+  const read = readEventsAfter(path, projection.cursorSeq, from);
   const { state, effects, gaps, malformed, stalls } = reduceEvents(
     projection,
     read.events,
@@ -287,7 +297,14 @@ async function catchUp(id: string, progress: CatchUpProgress): Promise<void> {
     await runEffect(id, effect);
   }
   progress.stage = "write-projection";
-  if (state.cursorSeq !== row.cursorSeq) await writeProjection(id, state);
+  // Also when only the position moved: an idle agent's first read after this
+  // column existed stores where its history ends, else every boot would read
+  // it all again until its next line.
+  if (
+    state.cursorSeq !== row.cursorSeq ||
+    !samePosition(read.position, eventsPosition)
+  )
+    await writeProjection(id, state, read.position);
   // A usage limit stopped it (written first: the job reads the row).
   if (
     state.stopError === USAGE_LIMIT_ERROR &&
@@ -307,6 +324,10 @@ async function catchUp(id: string, progress: CatchUpProgress): Promise<void> {
   for (const w of [...(waiters.get(id) ?? [])]) {
     if (w.until(state)) w.resolve(state);
   }
+}
+
+function samePosition(a: ReadPosition | null, b: ReadPosition | null): boolean {
+  return a?.ino === b?.ino && a?.offset === b?.offset;
 }
 
 const QuestionInputSchema = z.object({ questions: z.unknown() });
@@ -437,6 +458,9 @@ function agentOfPath(root: string, path: string): string | null {
   return file.startsWith(AGENT_EVENTS_FILE) ? id : null;
 }
 
+/** How many agents the boot catch-up brings up at once. */
+const BOOT_CATCH_UP_CONCURRENCY = 8;
+
 /**
  * Start consuming: the watch, the question-answer listener, then one catch-up
  * of every live sdk conversation (what happened while no backend was up) and
@@ -472,11 +496,20 @@ export async function startConsumer(
     ...(await liveSdkConversationIds()),
     ...(await runningAgentIds()),
   ]);
-  for (const id of atBoot) {
-    ours.add(id);
-    await catchUps.run(id);
-    await resyncOpenRequests(id);
-  }
+  // Agents are independent (a catch-up is one at a time per agent only), so
+  // they are brought up together, a few at once: one after another, a boot
+  // paid two round trips per agent in series, each queued behind the rest of
+  // the boot.
+  const gate = createSemaphore(BOOT_CATCH_UP_CONCURRENCY);
+  await Promise.all(
+    [...atBoot].map((id) =>
+      gate.run(async () => {
+        ours.add(id);
+        await catchUps.run(id);
+        await resyncOpenRequests(id);
+      }),
+    ),
+  );
   return async () => {
     unlisten();
     await watcher.stop();

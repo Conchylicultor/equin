@@ -7,6 +7,7 @@ import {
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { USAGE_LIMIT_ERROR } from "../../core";
 import { EMPTY_PROJECTION, type AgentProjection } from "./reducer";
+import type { ReadPosition } from "./read-position";
 import { sdkAgents } from "./tables";
 
 // The sdk runtime's reads and writes of this backend's DB.
@@ -114,6 +115,8 @@ export async function usageLimitStoppedConversations(): Promise<
 
 export interface AgentRow extends AgentProjection {
   worktreePath: string;
+  /** Where in the events file the cursor was read up to; null before the first write. */
+  eventsPosition: ReadPosition | null;
 }
 
 /** The agent's row, or null before its first `create`. */
@@ -163,6 +166,7 @@ export async function prepareAgentRow(
   }
   await sdkAgents.upsert(id, {
     ...EMPTY_PROJECTION,
+    eventsPosition: null,
     sessionId,
     worktreePath,
   });
@@ -176,12 +180,17 @@ export async function recordLaunchSession(
   await sdkAgents.update(id, { sessionId });
 }
 
-/** Write the projection after a batch of lines, cursor included, in one statement. */
+/**
+ * Write the projection after a batch of lines, cursor and the read position
+ * after its last line included, in one statement — so a restart reads on from
+ * exactly the line after the cursor.
+ */
 export async function writeProjection(
   id: string,
   state: AgentProjection,
+  eventsPosition: ReadPosition | null,
 ): Promise<void> {
-  await sdkAgents.update(id, state);
+  await sdkAgents.update(id, { ...state, eventsPosition });
 }
 
 /** The attempt conversation `id` belongs to. Throws for an unknown conversation. */

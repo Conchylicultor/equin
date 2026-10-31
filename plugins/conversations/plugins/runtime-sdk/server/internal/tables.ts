@@ -5,13 +5,17 @@ import { nullable } from "@plugins/fields/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { ReadPositionSchema } from "./read-position";
 
 // The `conversations_ext_sdk_agent` row: what this backend applied of one SDK
 // agent's events.jsonl (the cursor) and the projection it keeps of them
-// (reducer.ts's `AgentProjection`), plus where the agent runs. Written by the
+// (reducer.ts's `AgentProjection`), plus where the agent runs and where in its
+// events file the cursor was read up to (`eventsPosition`). Written by the
 // consumer in ONE upsert per batch of lines, so the cursor never moves past a
-// line whose projection was not written. Server-only: the status reconciler
+// line whose projection was not written, and the position never disagrees with
+// the cursor. Server-only: the status reconciler
 // reads it through the runtime's `inspect`, the web through the conversation
 // row it updates.
 const sdkAgentShape = defineExtensionShape({
@@ -19,6 +23,7 @@ const sdkAgentShape = defineExtensionShape({
   fields: {
     worktreePath: textField(),
     cursorSeq: intField(),
+    eventsPosition: nullable(jsonField({ schema: ReadPositionSchema })),
     sessionId: nullable(textField()),
     working: boolField(),
     backgroundTasks: intField(),

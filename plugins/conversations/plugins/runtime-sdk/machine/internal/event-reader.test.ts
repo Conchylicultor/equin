@@ -4,11 +4,12 @@ import {
   mkdtempSync,
   renameSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { readAgentEvents } from "./event-reader";
+import { readAgentEvents, readEventsAfter } from "./event-reader";
 
 let dir: string;
 let path: string;
@@ -91,5 +92,47 @@ describe("readAgentEvents", () => {
   test("an unreadable line throws, naming the file", () => {
     writeFileSync(path, "not json\n");
     expect(() => readAgentEvents(path, null)).toThrow(/events\.jsonl/);
+  });
+});
+
+describe("readEventsAfter", () => {
+  test("a stored position reads on from the line after its cursor", () => {
+    append(path, 1, 2);
+    const stored = readAgentEvents(path, null).position;
+    append(path, 3, 4);
+    expect(seqs(readEventsAfter(path, 2, stored))).toEqual([3, 4]);
+  });
+
+  test("nothing appended since: nothing to read", () => {
+    append(path, 1, 2);
+    const stored = readAgentEvents(path, null).position;
+    expect(seqs(readEventsAfter(path, 2, stored))).toEqual([]);
+  });
+
+  test("a position into other bytes (its first line is past the cursor): the whole family", () => {
+    append(path, 1, 2, 3);
+    const end = readAgentEvents(path, null).position!;
+    append(path, 4);
+    // The cursor only reached 1, yet the position says 3: it is not this cursor's.
+    expect(seqs(readEventsAfter(path, 1, end))).toEqual([1, 2, 3, 4]);
+  });
+
+  test("a position past the end of the file that has its inode: the whole family", () => {
+    append(path, 1);
+    const ino = statSync(path).ino;
+    // Same inode, rewritten shorter than the stored offset (an inode reused).
+    expect(seqs(readEventsAfter(path, 0, { ino, offset: 10_000 }))).toEqual([
+      1,
+    ]);
+  });
+
+  test("a position rotated past every kept generation reads what is left once", () => {
+    append(path, 1);
+    const stored = readAgentEvents(path, null).position;
+    for (const seq of [2, 3, 4]) {
+      rotate();
+      append(path, seq);
+    }
+    expect(seqs(readEventsAfter(path, 1, stored))).toEqual([2, 3, 4]);
   });
 });

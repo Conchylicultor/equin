@@ -1,6 +1,6 @@
 {
-  "id": "83662d2d-ddf5-4f51-a8b4-c91bc7a69db3",
-  "prevId": "9a7763a4-59ef-4505-8344-b5648e4e0471",
+  "id": "b02e4416-c2bf-4b1c-94cd-0cfc598ff989",
+  "prevId": "83662d2d-ddf5-4f51-a8b4-c91bc7a69db3",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -6921,6 +6921,12 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true
+        },
+        "events_position": {
+          "name": "events_position",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
         },
         "session_id": {
           "name": "session_id",

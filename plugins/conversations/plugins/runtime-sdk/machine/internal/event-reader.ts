@@ -1,5 +1,6 @@
 import { closeSync, fstatSync, openSync, readSync } from "node:fs";
 import { AgentEventSchema, type AgentEvent } from "../../core";
+import type { ReadPosition } from "../../server/internal/read-position";
 
 // Reading an agent's events.jsonl incrementally, across its rotations.
 //
@@ -12,19 +13,15 @@ import { AgentEventSchema, type AgentEvent } from "../../core";
 //     inode, read it on from the offset, then every newer generation and the
 //     live file whole;
 //   - no file has it (more rotations than `keep` happened in between, or the
-//     backend has no position yet) → read every generation and the live file
-//     whole, oldest first.
+//     backend has no position yet), or the file that has it is shorter than
+//     the offset (an inode reused by a new file) → read every generation and
+//     the live file whole, oldest first.
 // The seq cursor does the rest: lines at or below it are skipped (the reducer),
 // and a jump past it is reported as a gap there. Only complete lines are taken
 // — a line the agent is mid-way through appending is read next time.
 
 /** How many rotated generations the agent's sink keeps (`defineFileSink`'s default). */
 const SINK_KEEP = 3;
-
-export interface ReadPosition {
-  ino: number;
-  offset: number;
-}
 
 interface OpenFile {
   fd: number;
@@ -96,7 +93,9 @@ export function readAgentEvents(
     let start = 0;
     let startOffset = 0;
     if (position) {
-      const at = files.findIndex((f) => f?.ino === position.ino);
+      const at = files.findIndex(
+        (f) => f?.ino === position.ino && f.size >= position.offset,
+      );
       if (at >= 0) {
         start = at;
         startOffset = position.offset;
@@ -115,4 +114,23 @@ export function readAgentEvents(
   } finally {
     for (const f of files) if (f) closeSync(f.fd);
   }
+}
+
+/**
+ * The lines past `cursorSeq`, read on from `from` — the position stored with
+ * that cursor, or this process's own — when it holds them. A position the
+ * cursor was read up to starts at the line after it; one whose first line is
+ * further on named other bytes (the file replaced, an inode reused), so the
+ * whole family is read instead, as with no position at all, and a real gap is
+ * left for the reducer to report.
+ */
+export function readEventsAfter(
+  path: string,
+  cursorSeq: number,
+  from: ReadPosition | null,
+): { events: AgentEvent[]; position: ReadPosition | null } {
+  const read = readAgentEvents(path, from);
+  const first = read.events[0];
+  if (from === null || !first || first.seq <= cursorSeq + 1) return read;
+  return readAgentEvents(path, null);
 }
