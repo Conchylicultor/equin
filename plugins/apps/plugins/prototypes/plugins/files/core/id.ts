@@ -25,7 +25,8 @@ export const protoIdKind = defineIdKind({
   label: "Prototype",
 });
 
-// Word-guarded on both sides: `proto-1-abcdx` is not the id `proto-1-abcd`.
+// Word-guarded on both sides: `proto-1790000000-abcd123xy` holds no id — the
+// suffix is variable-length (4–8), so the guard stops it backtracking to one.
 // `matchAll` clones the regex, so this shared `g` instance keeps no state
 // across calls.
 const MENTIONED_ID_RE = new RegExp(

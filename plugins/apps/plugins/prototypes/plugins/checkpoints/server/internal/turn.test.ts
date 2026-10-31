@@ -173,8 +173,10 @@ describe("touchedPrototypeIds", () => {
   });
 
   test("a longer token is not read as an id", () => {
+    // Longer than ANY id, not just than A: recognition is the generic stamped
+    // body (a 4–8 char suffix, `plugins/ids`), so `${A}x` is itself an id.
     expect(
-      touchedPrototypeIds([call("Bash", { command: `echo ${A}x x${B}` })]),
+      touchedPrototypeIds([call("Bash", { command: `echo ${A}xxxxx x${B}` })]),
     ).toEqual([]);
   });
 });
