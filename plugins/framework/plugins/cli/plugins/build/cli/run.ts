@@ -19,6 +19,8 @@ import {
 } from "./internal/app-artifacts";
 import { resolveBuildTargets } from "./internal/build-targets";
 import { deployNamespace } from "./internal/deploy-namespace";
+import { namedBackendCommand } from "./internal/named-backend";
+import { checkoutBun } from "@plugins/packages/plugins/process-name/machine";
 import {
   hermeticFlagConflicts,
   runHermeticBuild,
@@ -1075,7 +1077,12 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
     // No `composition`: central is not an app. It is a singleton API
     // runtime with its own registry (`central.generated.ts`), which no
     // composition filters, so there is nothing for one to select.
-    writeWorktreeSpec({ name: "central", server: centralDir });
+    writeWorktreeSpec({
+      name: "central",
+      server: centralDir,
+      // Main's Bun (central runs main's code), never this checkout's.
+      command: namedBackendCommand("central", checkoutBun(mainRoot)),
+    });
   }
   endSpan();
 
@@ -1595,7 +1602,12 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   // — which the networking primitive does on its own.
   if (existsSync(join(centralDir, "bin", "index.ts"))) {
     // No `composition` — see the early central write above.
-    writeWorktreeSpec({ name: "central", server: centralDir });
+    writeWorktreeSpec({
+      name: "central",
+      server: centralDir,
+      // Main's Bun (central runs main's code), never this checkout's.
+      command: namedBackendCommand("central", checkoutBun(mainRoot)),
+    });
 
     // 6d. Restart central so it picks up freshly-merged main code. Only
     // done when building from main — agent worktrees never change central's

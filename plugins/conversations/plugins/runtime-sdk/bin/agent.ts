@@ -641,12 +641,14 @@ process.on("SIGTERM", () =>
 process.on("exit", removeExitFiles);
 
 /**
- * What the agent leaves only while it lives: the named claude (left in place it
- * would pin a Claude version the updater has since deleted; the next start
- * makes it again, same name), then the pid file — last.
+ * What the agent leaves only while it lives: the named claude and the named
+ * bun it runs on (left in place either would pin a version the updater has
+ * since deleted; the next start makes them again, same names), then the pid
+ * file — last.
  */
 function removeExitFiles(): void {
   if (options.namedClaudeBin) rmSync(options.namedClaudeBin, { force: true });
+  if (options.namedBun) rmSync(options.namedBun, { force: true });
   rmSync(pidPath, { force: true });
 }
 

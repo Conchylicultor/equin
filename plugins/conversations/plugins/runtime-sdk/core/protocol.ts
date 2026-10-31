@@ -264,16 +264,16 @@ const McpServerSchema = z.object({ type: z.literal("http"), url: z.string() });
 export const AgentLaunchOptionsSchema = z.preprocess(
   defaultLegacyFields,
   z.object({
-  cwd: z.string(),
-  /**
-   * The checkout whose guard scripts the launch's policy hooks run (the
-   * workspace's `LaunchFragment.guardsRoot`), delivered to the agent's
+    cwd: z.string(),
+    /**
+     * The checkout whose guard scripts the launch's policy hooks run (the
+     * workspace's `LaunchFragment.guardsRoot`), delivered to the agent's
      * environment as `EQUIN_GUARDS_ROOT`. Defaulted to `cwd` for an
      * options file written before launches named it (Oct 2026): its settings
      * carry no policy hooks, so the root only bounds the write guards, and its
      * cwd — the workspace itself — is that.
-   */
-  guardsRoot: z.string(),
+     */
+    guardsRoot: z.string(),
     /**
      * The Claude Code the SDK runs (`pathToClaudeCodeExecutable`): the Agent
      * SDK's bundled build (`bundledClaudeBin()`). Resolved by the backend at
@@ -281,66 +281,73 @@ export const AgentLaunchOptionsSchema = z.preprocess(
      * relaunched from an options file written for the computer's own `claude`
      * (before Oct 2026) moves onto the bundled build.
      */
-  claudeBin: z.string(),
-  /**
-   * The `disclaim-exec` helper (packages/spawn-disclaim) the agent runs
-   * `claudeBin` through, so macOS attributes claude's permission prompts to
-   * claude, not the gateway; null runs it directly. Resolved by the backend at
-   * every process start (`startAgentProcess`), never carried over from a
-   * previous launch. Defaulted for an options file written before it existed.
-   */
-  disclaimExec: z.string().nullable().default(null),
-  /**
-   * What the agent spawns in place of `claudeBin`: a hardlink to it named for
-   * the conversation (`<title> · <id>`), so a macOS permission prompt says
-   * which agent asks — and keeps that agent's grants its own. Null spawns
-   * `claudeBin`. Set with `disclaimExec`, at every start; the name is kept
-   * from the conversation's first start (`machine/internal/named-claude.ts`).
-   */
-  namedClaudeBin: z.string().nullable().default(null),
-  /** The CLI's `--model` value. */
-  model: z.string().nullable(),
-  /** The CLI's `--effort` value. */
-  effort: z.string().nullable(),
-  /** The one merged settings object (`--settings`). */
-  settings: z.record(z.string(), z.unknown()),
-  settingSources: z.array(z.enum(["user", "project", "local"])),
-  mcpServers: z.record(z.string(), McpServerSchema).nullable(),
-  strictMcpConfig: z.boolean(),
-  resume: z.string().nullable(),
-  /** With `resume`: keep the session only up to this message (a rewind). */
-  resumeAt: z.string().nullable(),
-  /** With `resumeAt`: the prompt uuid the rewind drops. */
-  resumeDropsTurn: z.string().nullable(),
-  fork: z.boolean(),
-  /**
-   * The session this launch runs under, decided before it starts — so the
-   * conversation knows its transcript at launch, as a tmux one does, not only
-   * once the first turn's `system/init` arrives. The resumed session itself,
-   * unless forking; otherwise a fresh id the agent hands the SDK
-   * (`sessionId`).
-   */
-  sessionId: z.string(),
-  /**
-   * The first turn, queued at start. In the file rather than sent over the
-   * socket so a launch retried after a crash never loses it: a running agent
-   * already took it, a new one takes it from here.
-   */
+    claudeBin: z.string(),
+    /**
+     * The `disclaim-exec` helper (packages/spawn-disclaim) the agent runs
+     * `claudeBin` through, so macOS attributes claude's permission prompts to
+     * claude, not the gateway; null runs it directly. Resolved by the backend at
+     * every process start (`startAgentProcess`), never carried over from a
+     * previous launch. Defaulted for an options file written before it existed.
+     */
+    disclaimExec: z.string().nullable().default(null),
+    /**
+     * What the agent spawns in place of `claudeBin`: a hardlink to it named for
+     * the conversation (`<title> · <id>`), so a macOS permission prompt says
+     * which agent asks — and keeps that agent's grants its own. Null spawns
+     * `claudeBin`. Set with `disclaimExec`, at every start; the name is kept
+     * from the conversation's first start (`machine/internal/named-claude.ts`).
+     */
+    namedClaudeBin: z.string().nullable().default(null),
+    /**
+     * The Bun this agent process runs on, hardlinked as `equin · agent · <id>`
+     * (packages/process-name) so Activity Monitor names it; null when the link
+     * was refused. Made at every start, removed by the agent when it exits.
+     */
+    namedBun: z.string().nullable().default(null),
+    /** The CLI's `--model` value. */
+    model: z.string().nullable(),
+    /** The CLI's `--effort` value. */
+    effort: z.string().nullable(),
+    /** The one merged settings object (`--settings`). */
+    settings: z.record(z.string(), z.unknown()),
+    settingSources: z.array(z.enum(["user", "project", "local"])),
+    mcpServers: z.record(z.string(), McpServerSchema).nullable(),
+    strictMcpConfig: z.boolean(),
+    resume: z.string().nullable(),
+    /** With `resume`: keep the session only up to this message (a rewind). */
+    resumeAt: z.string().nullable(),
+    /** With `resumeAt`: the prompt uuid the rewind drops. */
+    resumeDropsTurn: z.string().nullable(),
+    fork: z.boolean(),
+    /**
+     * The session this launch runs under, decided before it starts — so the
+     * conversation knows its transcript at launch, as a tmux one does, not only
+     * once the first turn's `system/init` arrives. The resumed session itself,
+     * unless forking; otherwise a fresh id the agent hands the SDK
+     * (`sessionId`).
+     */
+    sessionId: z.string(),
+    /**
+     * The first turn, queued at start. In the file rather than sent over the
+     * socket so a launch retried after a crash never loses it: a running agent
+     * already took it, a new one takes it from here.
+     */
     prompt: AgentLaunchPromptSchema.nullable(),
-  /**
-   * Added after Claude Code's own system prompt (`systemPrompt.append` on the
-   * `claude_code` preset), never in its place: the launch's instructions (a
-   * preprompt). Kept here, so a relaunch of the same agent (a rewind) keeps
-   * them. Defaulted for an options file written before the field existed —
-   * those sessions carry their instructions in the transcript instead.
-   */
-  appendSystemPrompt: z.string().nullable().default(null),
+    /**
+     * Added after Claude Code's own system prompt (`systemPrompt.append` on the
+     * `claude_code` preset), never in its place: the launch's instructions (a
+     * preprompt). Kept here, so a relaunch of the same agent (a rewind) keeps
+     * them. Defaulted for an options file written before the field existed —
+     * those sessions carry their instructions in the transcript instead.
+     */
+    appendSystemPrompt: z.string().nullable().default(null),
   }),
 );
 export type AgentLaunchOptions = z.infer<typeof AgentLaunchOptionsSchema>;
 
 /** The fields the backend resolves at each process start, never carried over. */
-export type AgentStartFields = "claudeBin" | "disclaimExec" | "namedClaudeBin";
+export type AgentStartFields =
+  "claudeBin" | "disclaimExec" | "namedClaudeBin" | "namedBun";
 
 /** What a launch asks for — everything but the per-start fields. */
 export type AgentLaunchIntent = Omit<AgentLaunchOptions, AgentStartFields>;

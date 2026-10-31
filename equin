@@ -7,12 +7,32 @@ cd "$(dirname "$0")"
 # before `exec`, printing nothing — every subcommand then looked like it had
 # failed on its own. Dependencies are now installed INSIDE the CLI, by the
 # bootstrap in bin/index.ts (ensureDeps), which can attribute its own failures.
-# Do not add a step above this line — except this one guard, which cannot fail
-# silently: with no Bun there is no CLI to report anything, and `exec` would say
+# Do not add a step above the exec — except the naming just before it, which
+# cannot abort (every command in it is a condition; a miss falls through to
+# plain `bun`), and this one guard, which cannot fail silently: with no Bun there is no CLI to report anything, and `exec` would say
 # only "bun: not found". The doctor names everything else that is missing too.
 command -v bun >/dev/null 2>&1 || {
   echo "equin: bun not found — nothing can run without it." >&2
   sh plugins/framework/plugins/cli/plugins/doctor/doctor.sh >&2
   exit 1
 }
+# The process's name in Activity Monitor: `equin · <verb> · <checkout>`, not
+# `bun` (packages/process-name). Run through a hardlink of the checkout's Bun,
+# which the CLI itself records (it knows the real binary behind mise's shim),
+# trusted only while its stamp is newer than mise.lock. Builtins only: on any
+# miss — none recorded, a toolchain change, a refused link — it is the plain
+# `bun` below, and that run records it again.
+names=node_modules/.cache/equin-bun
+case "${1:-}" in
+  "" | *[!a-z0-9-]*) verb=cli ;;
+  *) verb=$1 ;;
+esac
+named="$names/equin · $verb · ${PWD##*/}"
+if [ -f "$names/bun" ] && [ "$names/stamp" -nt mise.lock ]; then
+  if [ "$named" -ef "$names/bun" ] ||
+    { ln -f "$names/bun" "$named.$$" 2>/dev/null && mv -f "$named.$$" "$named"; }; then
+    exec "$named" plugins/framework/plugins/cli/bin/index.ts "$@"
+  fi
+  rm -f "$named.$$"
+fi
 exec bun plugins/framework/plugins/cli/bin/index.ts "$@"

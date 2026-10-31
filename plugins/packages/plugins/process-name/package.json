@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-packages-process-name",
+  "private": true,
+  "version": "0.0.1",
+  "description": "What a process is called in Activity Monitor and ps: processName(kind, id?) spells `equin · <kind> · <id>`, and linkNamedBinary hardlinks an executable under that name (same signed file, atomic swap), since macOS names a process by the file it executed and process.title changes nothing. Also owns the checkout's bun hardlink (checkoutBun), which `./equin` and the build name CLI ops and backends from."
+}

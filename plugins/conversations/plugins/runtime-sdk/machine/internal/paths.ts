@@ -52,10 +52,11 @@ export function agentOptionsPath(conversationId: string): string {
 }
 
 /**
- * Where the agent's conversation-named hardlink to claude lives (see
- * `named-claude.ts`): `<agent dir>/bin/`, holding at most that one file.
+ * Where the agent's conversation-named hardlinks live: to claude (see
+ * `named-claude.ts`) and to the bun the agent runs on (`startAgentProcess`) —
+ * `<agent dir>/bin/`, holding at most those two files.
  */
-export function agentClaudeLinkDir(conversationId: string): string {
+export function agentBinDir(conversationId: string): string {
   return join(agentDir(conversationId), "bin");
 }
 

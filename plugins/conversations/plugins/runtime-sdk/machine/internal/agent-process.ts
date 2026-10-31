@@ -42,7 +42,12 @@ import { readClaudeUsage } from "./claude-usage";
 import { resolveDisclaimExec } from "./disclaim";
 import { namedClaudeBin } from "./named-claude";
 import {
+  linkNamedBinary,
+  processName,
+} from "@plugins/packages/plugins/process-name/machine";
+import {
   AGENT_SCRIPT,
+  agentBinDir,
   agentDir,
   agentLogPath,
   agentOptionsPath,
@@ -175,19 +180,34 @@ export async function startAgentProcess(
     disclaimExec,
     previous: previousNamedClaudeBin(id),
   });
+  // This backend's own bun, by path (the login shell's PATH is the account's),
+  // under the conversation's name so Activity Monitor tells the agents apart.
+  const bun = linkNamedBinary({
+    bin: process.execPath,
+    dir: agentBinDir(id),
+    name: processName("agent", id),
+  });
+  if (bun.kind === "refused")
+    await recordReport({
+      kind: "crash",
+      source: "server-caught",
+      message: `SDK agent ${id}: could not hardlink bun into ${agentBinDir(id)} (${bun.code}), so Activity Monitor lists the agent as a bare \`bun\``,
+      data: { errorType: "SdkAgentBunLink", label: "runtime-sdk.process-name" },
+    });
+  const namedBun = bun.kind === "linked" ? bun.path : null;
   const options: AgentLaunchOptions = {
     ...intent,
     claudeBin,
     disclaimExec,
     namedClaudeBin: namedClaude,
+    namedBun,
   };
   writeFileSync(agentOptionsPath(id), JSON.stringify(options, null, 2));
   const account = chooseLaunchAccount();
   const command =
     backgroundPrefix() +
-    // This backend's own bun, by path: the login shell's PATH is the account's.
     [
-      process.execPath,
+      namedBun ?? process.execPath,
       AGENT_SCRIPT,
       "--dir",
       agentDir(id),

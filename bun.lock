@@ -4568,6 +4568,10 @@
       "name": "@equin/plugin-packages-partial-json",
       "version": "0.0.1",
     },
+    "plugins/packages/plugins/process-name": {
+      "name": "@equin/plugin-packages-process-name",
+      "version": "0.0.1",
+    },
     "plugins/packages/plugins/refcount-hub": {
       "name": "@equin/plugin-packages-refcount-hub",
       "version": "0.0.1",
@@ -9282,6 +9286,8 @@
     "@equin/plugin-packages-macrotask-yield": ["@equin/plugin-packages-macrotask-yield@workspace:plugins/packages/plugins/macrotask-yield"],
 
     "@equin/plugin-packages-partial-json": ["@equin/plugin-packages-partial-json@workspace:plugins/packages/plugins/partial-json"],
+
+    "@equin/plugin-packages-process-name": ["@equin/plugin-packages-process-name@workspace:plugins/packages/plugins/process-name"],
 
     "@equin/plugin-packages-refcount-hub": ["@equin/plugin-packages-refcount-hub@workspace:plugins/packages/plugins/refcount-hub"],
 

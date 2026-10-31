@@ -417,6 +417,12 @@ export const worktreeArtifacts = {
    */
   documentHead: (name: Namespace): string =>
     join(worktreeDataDir(name), "document-head.json"),
+  /**
+   * The Bun the gateway starts this namespace's backend with, hardlinked under
+   * the process's name (`bin/equin · server · <name>`, packages/process-name) —
+   * the spec's `command` points here, so the link lives and goes with it.
+   */
+  processNames: (name: Namespace): string => join(worktreeDataDir(name), "bin"),
   /** Build profiler spans. `build-profile.json` or `build-profile-<id>.json`. */
   buildProfile: (name: Namespace, buildId?: string): string =>
     join(

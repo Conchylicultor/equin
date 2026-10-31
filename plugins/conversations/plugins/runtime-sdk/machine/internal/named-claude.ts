@@ -1,9 +1,9 @@
-import { linkSync, mkdirSync, realpathSync, renameSync, rmSync } from "node:fs";
-import { basename, join } from "node:path";
+import { basename } from "node:path";
+import { linkNamedBinary } from "@plugins/packages/plugins/process-name/machine";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { conversationDisplayTitle } from "../../server/internal/rows";
 import { linkName } from "./link-name";
-import { agentClaudeLinkDir } from "./paths";
+import { agentBinDir } from "./paths";
 
 // The claude an agent spawns, named for its conversation. Run through
 // disclaim-exec, claude is its own responsible process, and macOS names a
@@ -37,28 +37,17 @@ export async function namedClaudeBin(opts: {
 }): Promise<string | null> {
   const { conversationId: id } = opts;
   if (opts.disclaimExec === null) return null;
-  const dir = agentClaudeLinkDir(id);
+  const dir = agentBinDir(id);
   const name = opts.previous
     ? basename(opts.previous)
     : linkName(await conversationDisplayTitle(id), id);
-  const path = join(dir, name);
-  const staging = join(dir, `.${process.pid}.tmp`);
-  mkdirSync(dir, { recursive: true });
-  rmSync(staging, { force: true });
-  try {
-    linkSync(realpathSync(opts.claudeBin), staging);
-  } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
-    if (code !== "EXDEV" && code !== "EPERM" && code !== "ENOTSUP") throw err;
-    await recordReport({
-      kind: "crash",
-      source: "server-caught",
-      message: `SDK agent ${id}: could not hardlink claude into ${dir} (${code}), so its macOS permission prompts name the claude binary's version instead of the conversation`,
-      data: { errorType: "SdkAgentClaudeLink", label: "runtime-sdk.disclaim" },
-    });
-    return null;
-  }
-  // Swapped in whole: a relaunch never sees the name missing or half-made.
-  renameSync(staging, path);
-  return path;
+  const linked = linkNamedBinary({ bin: opts.claudeBin, dir, name });
+  if (linked.kind === "linked") return linked.path;
+  await recordReport({
+    kind: "crash",
+    source: "server-caught",
+    message: `SDK agent ${id}: could not hardlink claude into ${dir} (${linked.code}), so its macOS permission prompts name the claude binary's version instead of the conversation`,
+    data: { errorType: "SdkAgentClaudeLink", label: "runtime-sdk.disclaim" },
+  });
+  return null;
 }

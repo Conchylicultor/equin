@@ -294,6 +294,8 @@ Gotchas the spike hit:
     - `infra/claude-cli/sdk.bundledClaudeBin`
     - `infra/endpoints.implementMachine`
     - `network/live.serveValue`
+    - `packages/process-name.linkNamedBinary`
+    - `packages/process-name.processName`
   - Register:
     - `defineFileWatcher('runtime-sdk.events')`
     - `defineDaemon('runtime-sdk.agent')`

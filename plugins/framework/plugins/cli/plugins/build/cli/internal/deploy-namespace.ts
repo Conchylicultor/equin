@@ -37,6 +37,7 @@ import {
   type WebDistTarget,
 } from "./app-artifacts";
 import type { BuildTarget } from "./build-targets";
+import { namedBackendCommand } from "./named-backend";
 
 /**
  * Deploy ONE namespace into the live dev cluster: the per-target half of
@@ -567,6 +568,8 @@ export async function deployNamespace(
     // checkout published, so writer and reader share one spelling.
     server: resolve(root, SERVER_CORE_RELATIVE),
     web: artifact.livePath,
+    // This build's own Bun, under the namespace's name.
+    command: namedBackendCommand(ns, process.execPath),
     // The `server` tree is this checkout's, shared with every namespace it
     // serves, so this is the only thing that tells the spawned backend WHICH
     // registry to load — the committed one for the main composition, the

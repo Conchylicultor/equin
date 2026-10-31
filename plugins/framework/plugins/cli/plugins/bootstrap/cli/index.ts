@@ -10,7 +10,7 @@
  * and `@plugins/*` aliases only. Enforced by `cli:bootstrap-package-free`, which
  * measures this closure with `Bun.build` so it cannot drift from what loads.
  *
- * That constraint is also WHY these five modules are here rather than in
+ * That constraint is also WHY these modules are here rather than in
  * `op-runtime`: they are already in the pre-install closure today
  * (`ensure-deps → checkout-lock → adaptive-timeout`), and `orphan-guard` / `reexec`
  * are reached directly by the bootstrap. Nothing else belongs here — a module
@@ -35,6 +35,7 @@ export { reexecAfterInstall, takeReexecBudget } from "./reexec";
 export type { ReexecBudget, ReexecOptions, ReexecOutcome } from "./reexec";
 
 export { lockedBunVersion, reexecUnderLockedBun } from "./locked-bun";
+export { recordCheckoutBun } from "./checkout-bun";
 export type { LockedBunOptions, LockedBunOutcome } from "./locked-bun";
 
 export {

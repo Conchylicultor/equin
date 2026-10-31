@@ -95,6 +95,7 @@ the build lock.
     - `installOrphanGuard`
     - `lockedBunVersion`
     - `ORPHAN_EXIT_CODE`
+    - `recordCheckoutBun`
     - `reexecAfterInstall`
     - `reexecUnderLockedBun`
     - `STAMP_REL`
