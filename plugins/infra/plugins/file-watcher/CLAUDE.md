@@ -118,6 +118,27 @@ own heartbeat.
 Plan and measurements:
 [`research/2026-10-25-infra-file-watcher-reconcile-to-onlost.md`](../../../../research/2026-10-25-infra-file-watcher-reconcile-to-onlost.md).
 
+## A new folder's entries: heard even when they came first
+
+parcel's kqueue (`writesWhileOpen` on macOS) and inotify (Linux) backends
+watch each directory on its own. They hear a new folder by diffing its
+parent, then watch that folder alone — never what is already inside it. An
+entry written into the folder before parcel's thread got to it (a folder moved
+in whole, or `mkdir` + write while the thread lags) is never watched: no
+`create`, no later write, no error (@parcel/watcher 2.6.0
+`KqueueBackend::compareDir`; inotify upstream #97 / #243, open). On 2026-10-31
+an SDK agent's `events.jsonl`, created 7 s after its folder on a loaded host,
+went unheard by main's consumer (`sdk-consumer-stalled`).
+
+So the engine (`shared/new-dirs.ts`), on those two backends, subscribes parcel
+to every folder a watch reports created — `subscribe` walks what it is given
+and watches every entry — then reports as `create` everything found inside
+(minus `ignore`, read the way parcel reads it). A path may be reported twice;
+consumers key by path. Cost: one more native subscription per folder created
+under the watch, until it is deleted or the watcher stops. FSEvents reports by
+path from one stream and needs none of it. Tests: the moved-in folder cases in
+`shared/engine.test.ts` (they fail without it).
+
 ## What changed while nobody watched: the journal
 
 A watch hears changes only while it runs. `journalCursor(root)` marks a point
@@ -195,7 +216,7 @@ It rejects only when the parent cannot be watched.
   - Exempts itself from:
     - `watcher-safety/no-direct-parcel-watcher` — `shared` (sanctioned)
     - `watcher-safety/no-raw-fs-watch` — `shared/engine.ts` (sanctioned)
-    - `boundaries/no-platform-api` — `server/internal/dir-hub.ts`, `shared/engine.ts`, `shared/journal.ts` (debt)
+    - `boundaries/no-platform-api` — `server/internal/dir-hub.ts`, `shared/engine.ts`, `shared/journal.ts`, `shared/new-dirs.ts` (debt)
 - Server:
   - Exports (types):
     - `DirWatchRelease`

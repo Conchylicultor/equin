@@ -27442,7 +27442,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/deps/rust/cargo-updater` (1 debt)
               - `infra/events-test` (1 debt)
               - `infra/file-sink` (3 debt)
-              - `infra/file-watcher` (3 debt)
+              - `infra/file-watcher` (4 debt)
               - `infra/file-watcher/background-arm` (1 debt)
               - `infra/git/checkout-watch` (1 debt)
               - `infra/git/remotes` (2 debt)
@@ -30871,7 +30871,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `watcher-safety/no-direct-parcel-watcher` — `shared` (sanctioned)
           - `watcher-safety/no-raw-fs-watch` — `shared/engine.ts` (sanctioned)
-          - `boundaries/no-platform-api` — `server/internal/dir-hub.ts`, `shared/engine.ts`, `shared/journal.ts` (debt)
+          - `boundaries/no-platform-api` — `server/internal/dir-hub.ts`, `shared/engine.ts`, `shared/journal.ts`, `shared/new-dirs.ts` (debt)
       - Server:
         - Exports (types):
           - `DirWatchRelease`

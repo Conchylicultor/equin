@@ -21,6 +21,7 @@ export default [
       "server/internal/dir-hub.ts",
       "shared/engine.ts",
       "shared/journal.ts",
+      "shared/new-dirs.ts",
     ],
     kind: "debt",
     task: "task-1792338443-riwqev",

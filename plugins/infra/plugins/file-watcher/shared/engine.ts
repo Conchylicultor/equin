@@ -8,6 +8,12 @@ import {
   createKeyedCoalescer,
 } from "@plugins/packages/plugins/coalesce/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import {
+  createNewDirWatches,
+  ignoreForSubdir,
+  ignoreMatcher,
+  type NewDirWatches,
+} from "./new-dirs";
 // Pure-JS wrapper: this import loads NO native code — `wrapper.js` only defines
 // functions that close over a `binding` passed in at call time. Safe to import
 // at module top-level (the native `.node` addon is still loaded lazily below).
@@ -321,20 +327,54 @@ export async function createFileWatcher(
 
   const parcelWatcher = depth === "subtree" ? await getParcelWatcher() : null;
 
+  const lost = (dir: string, error: unknown): void => {
+    console.error(`[file-watcher] error on ${dir}`, error);
+    losses?.trigger(dir, [error]);
+  };
+
+  const matchers = new Map(dirs.map((d) => [d, ignoreMatcher(d, ignore)]));
+  const ignoredUnder = (root: string): ((path: string) => boolean) => {
+    const matcher = matchers.get(root);
+    if (!matcher)
+      throw new Error(`[file-watcher] ${name}: ${root} is not a watched dir`);
+    return matcher;
+  };
+
+  // A backend that watches each directory on its own misses what a new
+  // directory already held when it got to it — see `new-dirs.ts`.
+  const backend = watcherBackend(writesWhileOpen, depth);
+  const newDirs: NewDirWatches | null =
+    parcelWatcher !== null && (backend === "kqueue" || backend === "inotify")
+      ? createNewDirWatches({
+          subscribe: (root, dir) =>
+            parcelWatcher.subscribe(dir, handlerFor(root), {
+              ...parcelOptions,
+              ignore: ignoreForSubdir(root, ignore),
+            }),
+          ignored: (root, path) => ignoredUnder(root)(path),
+          report: (_root, events) => take(events),
+          fail: lost,
+        })
+      : null;
+
+  /** One parcel subscription's callback, for a watch of `root` or a directory below it. */
+  function handlerFor(root: string): parcel.SubscribeCallback {
+    return parcelBatchHandler(
+      (events) => {
+        newDirs?.see(root, events);
+        take(events);
+      },
+      (error) => lost(root, error),
+    );
+  }
+
   for (const dir of dirs) {
     if (useKqueue) assertKqueueSized(dir);
     try {
       const sub =
         parcelWatcher === null
           ? await watchChildren(dir, take)
-          : await parcelWatcher.subscribe(
-              dir,
-              parcelBatchHandler(take, (error) => {
-                console.error(`[file-watcher] error on ${dir}`, error);
-                losses?.trigger(dir, [error]);
-              }),
-              parcelOptions,
-            );
+          : await parcelWatcher.subscribe(dir, handlerFor(dir), parcelOptions);
       subscriptions.push(sub);
     } catch (err: unknown) {
       console.error(`[file-watcher] failed to subscribe to ${dir}`, err);
@@ -354,6 +394,7 @@ export async function createFileWatcher(
         ceilingTimer = null;
       }
       pending = [];
+      await newDirs?.stop();
       await Promise.all(subscriptions.map((s) => s.unsubscribe()));
       subscriptions.length = 0;
     },
