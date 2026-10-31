@@ -10,6 +10,8 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { claudeAccounts } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
+import { useClaudeCodeStatus } from "@plugins/infra/plugins/claude-cli/plugins/availability/web";
+import { accountViews, activeAccountView } from "../internal/account-views";
 import {
   claudeUsage,
   viewUsageWindow,
@@ -66,16 +68,21 @@ export function UsageBar({
   );
 }
 
-function UsageMeter({
+export function UsageMeter({
   id,
   window,
   now,
+  account,
 }: {
   id: UsageWindowId;
   window: ClaudeUsageWindow;
   now: number;
+  /** Whose limit it is, named ahead of the label (the health row's glance). */
+  account?: string;
 }) {
-  const { label } = USAGE_WINDOWS[id];
+  const label = account
+    ? `${account} · ${USAGE_WINDOWS[id].label}`
+    : USAGE_WINDOWS[id].label;
   const view = viewUsageWindow(window, now);
   const fraction = view.kind === "current" ? Math.min(1, view.utilization) : 0;
   return (
@@ -118,6 +125,7 @@ export function ClaudeUsageGlance({ expanded }: GlanceProps) {
   const read = combineResources({
     usage: useLive(claudeUsage),
     accounts: useLive(claudeAccounts),
+    claude: useClaudeCodeStatus(),
   });
   // A minute's tick: "resets in" counts down, a passed reset shows as one.
   const now = useNow(60_000);
@@ -130,12 +138,16 @@ export function ClaudeUsageGlance({ expanded }: GlanceProps) {
     case "ready":
       break;
   }
-  const usage = read.data.usage.byAccount[read.data.accounts.active];
+  const { accounts, claude } = read.data;
+  const usage = read.data.usage.byAccount[accounts.active];
   if (!usage) return null;
   const { session, week } = usage;
+  const active = activeAccountView(accounts, accountViews(accounts, claude));
   return (
     <Stack gap="xs">
-      {week ? <UsageMeter id="week" window={week} now={now} /> : null}
+      {week ? (
+        <UsageMeter id="week" window={week} now={now} account={active.name} />
+      ) : null}
       {expanded && session ? (
         <UsageMeter id="session" window={session} now={now} />
       ) : null}

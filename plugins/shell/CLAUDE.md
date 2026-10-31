@@ -15,6 +15,7 @@
     - `Shell.Sidebar` ← `conversations.agents`
     - `Shell.Sidebar` ← `conversations.all-conversations`
     - `Shell.Sidebar` ← `conversations.conversations-view`
+    - `Shell.Sidebar` ← `conversations.runtime-sdk`
     - `Shell.Sidebar` ← `stats`
     - `Shell.Sidebar` ← `tasks.automations`
     - `Shell.Sidebar` ← `tasks.task-detail`
@@ -27,6 +28,7 @@
     - `conversations/agents`
     - `conversations/all-conversations`
     - `conversations/conversations-view`
+    - `conversations/runtime-sdk`
     - `stats`
     - `tasks/automations`
     - `tasks/task-detail`

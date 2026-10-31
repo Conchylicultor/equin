@@ -7,8 +7,6 @@ import {
 } from "@plugins/infra/plugins/endpoints/web";
 import {
   addClaudeAccount,
-  claudeAccountIds,
-  claudeAccountRefs,
   removeClaudeAccount,
   selectClaudeAccount,
   setClaudeAccountAutoSwitch,
@@ -50,7 +48,6 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
   autoResumeConfig,
-  launchAccount,
   limitReached,
   refreshClaudeUsage,
   roomiestAccount,
@@ -60,10 +57,17 @@ import {
   type ErrorStoppedConversation,
 } from "../../core";
 import { formatResets, USAGE_WINDOWS } from "../internal/claude-usage";
+import {
+  accountViews,
+  activeAccountView,
+  launchAccountView,
+  type AccountView,
+} from "../internal/account-views";
 import { UsageBar } from "./claude-usage-glance";
 import { ErrorStoppedBanner } from "./error-stopped";
 
-// The Claude Code row's accounts: which Claude account new agents launch on.
+// The Claude account menu's accounts (the agent manager's sidebar foot): which
+// Claude account new agents launch on.
 // Each account shows its weekly room only — the 5-hour session resets too
 // often to choose an account by. Picking one switches; agents already running
 // keep theirs until their process restarts. Adding or picking one reads its
@@ -77,39 +81,6 @@ const keyIcon = symbol("key");
 const removeIcon = symbol("close");
 
 const percent = (fraction: number) => `${Math.round(fraction * 100)}%`;
-
-interface AccountView {
-  id: string;
-  name: string;
-  detail: string;
-  /** Billed per use (an API key): no plan limits to read or show. */
-  metered: boolean;
-}
-
-/** The accounts in display order: the computer's own login first. */
-function accountViews(
-  accounts: ClaudeAccounts,
-  claude: ClaudeCodeStatus,
-): AccountView[] {
-  const login =
-    claude.kind === "ready"
-      ? (claude.email ?? claude.authMethod ?? "Claude Code's sign-in")
-      : "Claude Code's sign-in";
-  return [
-    {
-      id: SYSTEM_ACCOUNT_ID,
-      name: "This computer",
-      detail: login,
-      metered: false,
-    },
-    ...accounts.accounts.map((a) => ({
-      id: a.id,
-      name: a.name,
-      detail: a.kind === "api-key" ? "API key" : "Plan sign-in",
-      metered: a.kind === "api-key",
-    })),
-  ];
-}
 
 /**
  * Where this tab's own read of an account's limits stands: `reading` while it
@@ -378,7 +349,7 @@ function AddAccountMenu({
 }
 
 /**
- * The accounts section of the Claude Code row: every account with its weekly
+ * The accounts section of the account menu: every account with its weekly
  * room, the active one highlighted; a click switches. Plus the limit banner,
  * the conversations an API error stopped (with Resume all), adding an account and
  * the auto-switch toggle.
@@ -408,12 +379,7 @@ export function ClaudeAccountsSection({
   // Accounts Claude Code reported no plan limits for, with why.
   const [unreadable, setUnreadable] = useState<Record<string, string>>({});
   const views = accountViews(accounts, claude);
-  const active = views.find((v) => v.id === accounts.active);
-  if (!active) {
-    throw new Error(
-      `Claude accounts: the active account "${accounts.active}" is not one of ${claudeAccountIds(accounts).join(", ")}`,
-    );
-  }
+  const active = activeAccountView(accounts, views);
   // One computer behind all three: the row's inputs, read off it, are
   // already ready, so this is the transport's own verdict.
   if (selectAccount.kind === "unavailable") {
@@ -450,14 +416,7 @@ export function ClaudeAccountsSection({
       : { kind: "unreadable", reason };
   };
   // Where a resumed agent restarts: the launch's own choice.
-  const launchId = launchAccount({
-    accounts: claudeAccountRefs(accounts),
-    active: accounts.active,
-    autoSwitch: accounts.autoSwitch,
-    byAccount: usage.byAccount,
-    now,
-  });
-  const launchView = views.find((v) => v.id === launchId) ?? active;
+  const launchView = launchAccountView(accounts, views, usage, now);
   const closeAdding = () => setAdding(null);
   // A plan account signed in: read its limits at once.
   const onSignedIn = (id: string) => {

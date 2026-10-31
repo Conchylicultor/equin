@@ -139,13 +139,21 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   remedy, the run's panel heading the detail, "Signing in…" while it runs),
   and the agents running here and elsewhere
   (each other worktree as its task's chip, in the expanded detail), the
-  active Claude account's usage limits as meters (glance: the week collapsed,
-  the session too expanded; the row is `attention` while its limit is
-  reached), and the account picker (`components/claude-accounts.tsx`: every
-  account with its weekly room, Add account — sign in to another account in
-  the app (`AddClaudeAccountSignIn`) or use an API key —, remove / switch,
-  auto-switch, a
-  "Continue on …" banner when the active account is limited).
+  active Claude account's usage limits as meters, named by the account
+  (glance: the week collapsed, the session too expanded; the row is
+  `attention` while its limit is reached), the conversations an API error
+  stopped (Resume all), and **Manage accounts** — which opens the agent
+  manager and its account menu. The row lists no accounts itself.
+- The account menu lives in the agent manager's sidebar foot
+  (`components/claude-account-foot.tsx`, a `Shell.Sidebar` item placed last
+  in `config/shell/sidebar.jsonc`, under the filling conversation list): the
+  active account with its weekly quota; open, its session and week meters,
+  then the account picker (`components/claude-accounts.tsx`: every account
+  with its weekly room, Add account — sign in to another account in the app
+  (`AddClaudeAccountSignIn`) or use an API key —, remove / switch,
+  auto-switch, auto-resume, a "Continue on …" banner when the active account
+  is limited). Its open state is page-wide (`internal/account-menu.ts`) so
+  the health row can open it.
 - Claude accounts (`infra/claude-cli/accounts` owns the list and the tokens):
   `machine/internal/agent-process.ts` picks the launch account at every agent
   process start (`launchAccount`: the active one, or with auto-switch on and
@@ -206,19 +214,21 @@ Gotchas the spike hit:
 
 ## Plugin reference
 
-- Description: The health report's Claude Code row: Claude Code itself (critical while the computer is signed out, with the in-app Sign in — claude-cli/sign-in, 'Signing in…' while it runs — and Check again), the agent processes running — here, and in every other worktree (each as its task's chip) — the active Claude account's usage limits as meters (the week collapsed, the session too expanded; attention while its limit is reached), and the Claude account picker (each account's weekly room, add — signing in to another account in the app, or an API key — / remove / switch, auto-switch, auto-resume when a limit resets, Continue on another account when the active one is limited). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and its rewind anchor), the pure event reducer, and the mapping of a launch onto the agent's options file; the runtime-sdk.error-stopped collection (active conversations whose agent's turn an API error stopped — a usage limit, a server error, a lost connection — with the CLI's kind of failure); the auto-resume setting (Resume agents when their usage limit resets).
+- Description: The health report's Claude Code row: Claude Code itself (critical while the computer is signed out, with the in-app Sign in — claude-cli/sign-in, 'Signing in…' while it runs — and Check again), the agent processes running — here, and in every other worktree (each as its task's chip) — the active Claude account's usage limits as meters (named by the account; the week collapsed, the session too expanded; attention while its limit is reached), the conversations an API error stopped (Resume all), and Manage accounts. The agent manager's sidebar foot: the Claude account new agents launch on with its weekly quota, opening the account menu (its session and week meters; each account's weekly room, add — signing in to another account in the app, or an API key — / remove / switch, auto-switch, auto-resume when a limit resets, Continue on another account when the active one is limited). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and its rewind anchor), the pure event reducer, and the mapping of a launch onto the agent's options file; the runtime-sdk.error-stopped collection (active conversations whose agent's turn an API error stopped — a usage limit, a server error, a lost connection — with the CLI's kind of failure); the auto-resume setting (Resume agents when their usage limit resets).
 - Web:
   - Contributes:
     - `HealthReport.Row` "Claude Code" → `ClaudeCodeRowDetail`
+    - `Shell.Sidebar` "Claude account" → `ClaudeAccountFoot`
     - `ConfigV2.WebRegister` "runtime-sdk-auto-resume"
-  - Uses: 50 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×8
+  - Uses: 57 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×11
     - `infra/claude-cli/availability` ×4
     - `infra/claude-cli/sign-in` ×4
     - `infra/endpoints` ×4
     - `primitives/setup-steps` ×4
     - `config_v2` ×3
     - `primitives/data-view` ×3
+    - `apps-core/tabs` ×2
     - `primitives/live-state` ×2
     - `conversations/conversation-view.conversationPane`
     - `network/live.useLive`
@@ -233,10 +243,12 @@ Gotchas the spike hit:
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
+    - `primitives/overlay/popover.InlinePopover`
     - `primitives/pane.useOpenPane`
     - `primitives/relative-time.useNow`
     - `primitives/text-editor/inline-chip.renderInlineChip`
     - `shell/health-report.HealthReport`
+    - `shell.Shell`
     - `ui/icons.Icon`
 - Server:
   - Contributes:

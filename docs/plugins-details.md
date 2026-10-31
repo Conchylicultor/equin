@@ -12093,7 +12093,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceMode`
           - `useTabs`
       - Cross-plugin:
-        - Imported by: 40 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+        - Imported by: 41 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
           - `apps` ×11
           - `apps-core` ×9
           - `debug` ×7
@@ -12104,6 +12104,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data/song`
           - `build`
           - `config_v2/config-link`
+          - `conversations/runtime-sdk`
           - `menu-bar/app-grid`
           - `ui/theme-engine/quick-theme`
     - **`theme-scope`** — Theme-scope helpers: the single definition of the focused full-surface app's theme scope, which decides the :root token layer and the document's light/dark (useRootThemeScopeState: a state that keeps the not-registered-yet window apart from 'no app owns the surface'), and useAppSettingsScope — the app:<id> config scope per-app theme settings (variants) are read in: the nearest app theme boundary's (a pane's home app), else the focused app's.
@@ -19492,19 +19493,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CONVERSATION_RUNTIMES`
           - `ConversationRuntimeIdSchema`
           - `DEFAULT_CONVERSATION_RUNTIME`
-    - **`runtime-sdk`** — The health report's Claude Code row: Claude Code itself (critical while the computer is signed out, with the in-app Sign in — claude-cli/sign-in, 'Signing in…' while it runs — and Check again), the agent processes running — here, and in every other worktree (each as its task's chip) — the active Claude account's usage limits as meters (the week collapsed, the session too expanded; attention while its limit is reached), and the Claude account picker (each account's weekly room, add — signing in to another account in the app, or an API key — / remove / switch, auto-switch, auto-resume when a limit resets, Continue on another account when the active one is limited). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and its rewind anchor), the pure event reducer, and the mapping of a launch onto the agent's options file; the runtime-sdk.error-stopped collection (active conversations whose agent's turn an API error stopped — a usage limit, a server error, a lost connection — with the CLI's kind of failure); the auto-resume setting (Resume agents when their usage limit resets).
+    - **`runtime-sdk`** — The health report's Claude Code row: Claude Code itself (critical while the computer is signed out, with the in-app Sign in — claude-cli/sign-in, 'Signing in…' while it runs — and Check again), the agent processes running — here, and in every other worktree (each as its task's chip) — the active Claude account's usage limits as meters (named by the account; the week collapsed, the session too expanded; attention while its limit is reached), the conversations an API error stopped (Resume all), and Manage accounts. The agent manager's sidebar foot: the Claude account new agents launch on with its weekly quota, opening the account menu (its session and week meters; each account's weekly room, add — signing in to another account in the app, or an API key — / remove / switch, auto-switch, auto-resume when a limit resets, Continue on another account when the active one is limited). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and its rewind anchor), the pure event reducer, and the mapping of a launch onto the agent's options file; the runtime-sdk.error-stopped collection (active conversations whose agent's turn an API error stopped — a usage limit, a server error, a lost connection — with the CLI's kind of failure); the auto-resume setting (Resume agents when their usage limit resets).
       - Web:
         - Contributes:
           - `HealthReport.Row` "Claude Code" → `ClaudeCodeRowDetail`
+          - `Shell.Sidebar` "Claude account" → `ClaudeAccountFoot`
           - `ConfigV2.WebRegister` "runtime-sdk-auto-resume"
-        - Uses: 50 symbols — full list in [`plugins/conversations/plugins/runtime-sdk/REFERENCE.md`](../plugins/conversations/plugins/runtime-sdk/REFERENCE.md)
-          - `primitives/css/ui-kit` ×8
+        - Uses: 57 symbols — full list in [`plugins/conversations/plugins/runtime-sdk/REFERENCE.md`](../plugins/conversations/plugins/runtime-sdk/REFERENCE.md)
+          - `primitives/css/ui-kit` ×11
           - `infra/claude-cli/availability` ×4
           - `infra/claude-cli/sign-in` ×4
           - `infra/endpoints` ×4
           - `primitives/setup-steps` ×4
           - `config_v2` ×3
           - `primitives/data-view` ×3
+          - `apps-core/tabs` ×2
           - `primitives/live-state` ×2
           - `conversations/conversation-view.conversationPane`
           - `network/live.useLive`
@@ -19519,10 +19522,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/text.Text`
           - `primitives/icon-button.IconButton`
           - `primitives/loading.Loading`
+          - `primitives/overlay/popover.InlinePopover`
           - `primitives/pane.useOpenPane`
           - `primitives/relative-time.useNow`
           - `primitives/text-editor/inline-chip.renderInlineChip`
           - `shell/health-report.HealthReport`
+          - `shell.Shell`
           - `ui/icons.Icon`
       - Server:
         - Contributes:
@@ -45732,11 +45737,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlinePopoverProps`
             - Exports (values): `InlinePopover`
           - Cross-plugin:
-            - Imported by: 32 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md)
+            - Imported by: 33 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md)
               - `page` ×7
               - `apps` ×6
               - `primitives` ×6
-              - `conversations` ×4
+              - `conversations` ×5
               - `fields` ×2
               - `shell` ×2
               - `build`
@@ -49652,6 +49657,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Shell.Sidebar` ← `conversations.agents`
       - `Shell.Sidebar` ← `conversations.all-conversations`
       - `Shell.Sidebar` ← `conversations.conversations-view`
+      - `Shell.Sidebar` ← `conversations.runtime-sdk`
       - `Shell.Sidebar` ← `stats`
       - `Shell.Sidebar` ← `tasks.automations`
       - `Shell.Sidebar` ← `tasks.task-detail`
@@ -49664,6 +49670,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `conversations/agents`
       - `conversations/all-conversations`
       - `conversations/conversations-view`
+      - `conversations/runtime-sdk`
       - `stats`
       - `tasks/automations`
       - `tasks/task-detail`

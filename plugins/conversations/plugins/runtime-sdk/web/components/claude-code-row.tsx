@@ -15,8 +15,17 @@ import {
   type ClaudeCodeRowInputs,
 } from "../internal/claude-code-row";
 import { useClaudeCodeRowInputs } from "../internal/use-claude-code-row";
-import { ClaudeAccountsSection } from "./claude-accounts";
 import { useNow } from "@plugins/primitives/plugins/relative-time/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { useNavigate } from "@plugins/apps-core/plugins/tabs/web";
+import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
+import { requestAccountMenu } from "../internal/account-menu";
+import {
+  accountViews,
+  activeAccountView,
+  launchAccountView,
+} from "../internal/account-views";
+import { ErrorStoppedBanner } from "./error-stopped";
 
 // The Claude Code row's expanded detail: the versions and the agents, one line
 // each, then Claude Code's own note and where the other agents run. Collapsed,
@@ -94,10 +103,67 @@ function AgentsElsewhere({ agents }: { agents: AgentProcesses }) {
 }
 
 /**
- * The expanded row: the computer's sign-in while it runs, the Claude accounts,
- * the versions and the agents, Claude Code's own detail, then where the other
- * agents run.
+ * The account new agents launch on, and Manage accounts: the account menu
+ * itself lives in the agent manager's sidebar foot, which this opens.
  */
+function ActiveAccountLine({ inputs }: { inputs: ClaudeCodeRowInputs }) {
+  const go = useNavigate();
+  const views = accountViews(inputs.accounts, inputs.claude);
+  const active = activeAccountView(inputs.accounts, views);
+  return (
+    <Line className={rampClass("gap", "sm")}>
+      <Fill>
+        <Clip>
+          <GlanceLine label="Account" value={active.name} />
+        </Clip>
+      </Fill>
+      <Rigid>
+        <Button
+          variant="outline"
+          onClick={() => {
+            go(agentManagerApp.basePath);
+            requestAccountMenu();
+          }}
+        >
+          Manage accounts
+        </Button>
+      </Rigid>
+    </Line>
+  );
+}
+
+/**
+ * The expanded row: the computer's sign-in while it runs, the active account
+ * (Manage accounts opens the agent manager's account menu), the conversations
+ * an API error stopped, the versions and the agents, Claude Code's own detail,
+ * then where the other agents run.
+ */
+/** The conversations an API error stopped, with Resume all. */
+function StoppedBanner({
+  inputs,
+  now,
+}: {
+  inputs: ClaudeCodeRowInputs;
+  now: number;
+}) {
+  const { accounts, usage, claude, stopped } = inputs;
+  const launch = launchAccountView(
+    accounts,
+    accountViews(accounts, claude),
+    usage,
+    now,
+  );
+  return (
+    <ErrorStoppedBanner
+      stopped={stopped}
+      launchAccountId={launch.id}
+      launchAccountName={launch.name}
+      usage={usage}
+      now={now}
+    />
+  );
+}
+
 export function ClaudeCodeRowDetail() {
   const result = useClaudeCodeRowInputs();
   // A minute's tick: a reached limit's reset counts down, and passes.
@@ -106,13 +172,10 @@ export function ClaudeCodeRowDetail() {
     <Stack gap="sm">
       <ClaudeCodeSignInDetail />
       {result.status === "ready" ? (
-        <ClaudeAccountsSection
-          accounts={result.data.accounts}
-          usage={result.data.usage}
-          claude={result.data.claude}
-          stopped={result.data.stopped}
-          now={now}
-        />
+        <>
+          <ActiveAccountLine inputs={result.data} />
+          <StoppedBanner inputs={result.data} now={now} />
+        </>
       ) : null}
       {/* Not loaded (or not readable here): the summary already says so. */}
       {result.status === "ready" ? <VersionLines {...result.data} /> : null}

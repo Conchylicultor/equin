@@ -1,4 +1,4 @@
-// @hash def6387d68c5
+// @hash b6b84dda05d4
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -11,6 +11,7 @@
     "conversations.agents:agents",
     "conversations.all-conversations:all-conversations",
     "conversations.conversations-view:conversations",
+    "conversations.runtime-sdk:claude-account",
     "stats:stats",
     "tasks.automations:automations",
     "tasks.task-detail:tasks"
