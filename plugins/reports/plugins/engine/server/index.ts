@@ -23,7 +23,7 @@ export {
   uninvestigatedReportCounts,
   uninvestigatedReports,
 } from "./internal/uninvestigated";
-export { recordReport } from "./internal/record-report";
+export { recordReport, recordReportIncident } from "./internal/record-report";
 export { investigateReport } from "./internal/investigate";
 export type { RecordReportResult } from "./internal/record-report";
 export { recordReportDebounced } from "./internal/record-report-debounced";

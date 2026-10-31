@@ -31,5 +31,8 @@ export { slowOpConfig, CLIENT_SIGNAL_THRESHOLD } from "./config";
 export { MAX_CLIENT_SLOW_OP_ITEMS, MAX_SLOW_OP_MARKERS } from "./limits";
 export { clientSlowOpSink } from "./client-slow-op-sink";
 export type { ClientSlowOpSignal } from "./client-slow-op-sink";
-export { SlowOpReportPayloadSchema } from "./report-payload";
+export {
+  isLegacyBurstReport,
+  SlowOpReportPayloadSchema,
+} from "./report-payload";
 export type { SlowOpReportPayload } from "./report-payload";

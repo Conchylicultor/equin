@@ -33,10 +33,12 @@ export const SlowOpReportPayloadSchema = z.object({
   // engine admitted one). Stored in the jsonb `data` (no migration) so the
   // slow-op KindView / renderTask can deep-link the coherent-instant evidence.
   traceId: z.string().optional(),
-  // Present on a `burst` report (operation `burst`): several ops of this kind
-  // tripped in one batch — one incident — so ONE report stands for them all,
-  // carrying its slowest op's measurement. `operations` names the slowest few
-  // (`BURST_NAMED_CAP`), `count` all of them.
+  // Present when this op tripped beside others of its kind in one batch — one
+  // incident, which rang the bell once while each op kept its own report:
+  // `count` is every distinct op of the batch, `operations` its slowest few
+  // (`BURST_NAMED_CAP`). A row filed before that (operation `burst`, the
+  // retired `slow-op:<kind>:burst` fingerprint) stood for the whole batch,
+  // carrying its slowest op's numbers.
   burst: z
     .object({
       count: z.number(),
@@ -47,3 +49,16 @@ export const SlowOpReportPayloadSchema = z.object({
     .optional(),
 });
 export type SlowOpReportPayload = z.infer<typeof SlowOpReportPayloadSchema>;
+
+type BurstPayload = SlowOpReportPayload & {
+  burst: NonNullable<SlowOpReportPayload["burst"]>;
+};
+
+/**
+ * A row of the retired `slow-op:<kind>:burst` fingerprint: one report stood for
+ * a whole batch, carrying its slowest op's numbers. Kept so those rows still
+ * render; nothing files one now (each op files its own, the batch rings once).
+ */
+export function isLegacyBurstReport(d: SlowOpReportPayload): d is BurstPayload {
+  return d.operation === "burst" && d.burst !== undefined;
+}

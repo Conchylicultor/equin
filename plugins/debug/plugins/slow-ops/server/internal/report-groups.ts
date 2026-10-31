@@ -1,10 +1,7 @@
 import type { SlowOpReportPayload } from "../../core";
 import type { RecordSlowOpInput, SlowOpSource } from "./input";
 
-/** The operation a burst report is filed under: `slow-op:<kind>:burst`. */
-export const BURST_OPERATION = "burst";
-
-/** How many of a burst's ops its report names (slowest first). */
+/** How many of a burst's ops each member's report names (slowest first). */
 export const BURST_NAMED_CAP = 10;
 
 /** One report to file: its payload, source and one-line message. */
@@ -15,84 +12,58 @@ export interface SlowOpReport {
 }
 
 /**
- * A batch's admitted items → the reports they file: ONE per operationKind.
+ * A batch's admitted items → its incidents: ONE per operationKind, each the
+ * reports it files, slowest first — one per distinct operation (its slowest
+ * trip; one op tripping twice is still that op).
  *
  * A batch is one instant's evidence — a client batch is one tab's 250 ms
  * window, already sharing one trace per kind (`toRecordInputs`). Items of one
  * kind in it are one incident: a stalled socket delivers every pending update
- * late, a page boot settles every element late. (Counted over DISTINCT
- * operations: one op tripping twice is still that op's own report.) Filing each as its own
- * fingerprint turned one cause into N notifications (14 `update`s at 14:14:24
- * on main, 8 `element`s at 14:08:50, 2026-10-30). So a kind with one item files
- * its own report, as before; a kind with several files one `burst` report,
- * standing for its slowest item (whose trace, waits and duration it carries)
- * and naming the others. Rows are unaffected — every item still lands on its
- * own op's row.
+ * late, a page boot settles every element late. So the incident rings the bell
+ * once (`recordReportIncident`) — 14 `update`s at 14:14:24 on main used to be
+ * 14 notifications (2026-10-30). But each op keeps its OWN report
+ * (`slow-op:<kind>:<operation>`): filing a burst under one `burst` fingerprint
+ * merged unrelated incidents onto one row and left an op that only ever trips
+ * beside others with no report of its own. A member of a burst carries `burst`
+ * (the batch's count and slowest few), so its report says what tripped with it.
  *
- * Server spans reach the funnel one per batch, so they always file their own.
+ * Server spans reach the funnel one per batch, so each is its own incident.
  */
-export function reportsFor(
+export function incidentsFor(
   inputs: readonly RecordSlowOpInput[],
-): SlowOpReport[] {
-  const byKind = new Map<string, RecordSlowOpInput[]>();
+): SlowOpReport[][] {
+  const byKind = new Map<string, Map<string, RecordSlowOpInput>>();
   for (const input of inputs) {
-    const group = byKind.get(input.operationKind);
-    if (group) group.push(input);
-    else byKind.set(input.operationKind, [input]);
+    let byOp = byKind.get(input.operationKind);
+    if (!byOp) byKind.set(input.operationKind, (byOp = new Map()));
+    const seen = byOp.get(input.operation);
+    if (!seen || input.ownMs > seen.ownMs) byOp.set(input.operation, input);
   }
-  const reports: SlowOpReport[] = [];
-  for (const group of byKind.values()) {
-    // One entry per distinct operation — its slowest trip. The same op tripping
-    // twice in a batch (two tuples of one resource) is still that op, not a
-    // burst: it keeps its own fingerprint.
-    const byOp = new Map<string, RecordSlowOpInput>();
-    for (const input of group) {
-      const seen = byOp.get(input.operation);
-      if (!seen || input.ownMs > seen.ownMs) byOp.set(input.operation, input);
-    }
+  return [...byKind.values()].map((byOp) => {
     const sorted = [...byOp.values()].sort((a, b) => b.ownMs - a.ownMs);
-    const slowest = sorted[0]!;
-    if (sorted.length === 1) {
-      reports.push({
-        source: slowest.source,
-        data: payloadOf(slowest, slowest.operation),
-        message:
-          `${slowest.operationKind} ${slowest.operation} took ${took(slowest)}` +
-          ` (threshold ${slowest.thresholdMs}ms)`,
-      });
-      continue;
-    }
-    const named = sorted.slice(0, BURST_NAMED_CAP);
-    reports.push({
-      source: slowest.source,
-      data: {
-        ...payloadOf(slowest, BURST_OPERATION),
-        burst: {
-          count: sorted.length,
-          operations: named.map((i) => ({
-            operation: i.operation,
-            ownMs: Math.round(i.ownMs),
-          })),
-        },
-      },
+    const burst =
+      sorted.length > 1
+        ? {
+            count: sorted.length,
+            operations: sorted.slice(0, BURST_NAMED_CAP).map((i) => ({
+              operation: i.operation,
+              ownMs: Math.round(i.ownMs),
+            })),
+          }
+        : undefined;
+    return sorted.map((input) => ({
+      source: input.source,
+      data: { ...payloadOf(input), ...(burst && { burst }) },
       message:
-        `${slowest.operationKind} burst: ${sorted.length} ops at once, the ` +
-        `slowest ${slowest.operation} ${took(slowest)} ` +
-        `(threshold ${slowest.thresholdMs}ms) — ` +
-        named.map((i) => i.operation).join(", ") +
-        (sorted.length > named.length
-          ? `, +${sorted.length - named.length} more`
-          : ""),
-    });
-  }
-  return reports;
+        `${input.operationKind} ${input.operation} took ${took(input)}` +
+        ` (threshold ${input.thresholdMs}ms)` +
+        (burst ? ` — 1 of ${burst.count} at once` : ""),
+    }));
+  });
 }
 
-function payloadOf(
-  input: RecordSlowOpInput,
-  operation: string,
-): SlowOpReportPayload {
-  const { operationKind, durationMs, ownMs, thresholdMs } = input;
+function payloadOf(input: RecordSlowOpInput): SlowOpReportPayload {
+  const { operationKind, operation, durationMs, ownMs, thresholdMs } = input;
   return {
     operationKind,
     operation,

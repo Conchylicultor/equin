@@ -3,6 +3,7 @@ import type { ReportRow } from "@plugins/reports/server";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { traceDetailRoute } from "@plugins/debug/plugins/trace/plugins/engine/core";
 import {
+  isLegacyBurstReport,
   SlowOpReportPayloadSchema,
   type SlowOpReportPayload,
 } from "../../core";
@@ -36,9 +37,10 @@ export const slowOpKind = ReportKind({
     const coldStartSuffix = d.transportColdStart
       ? " — transport cold-start"
       : "";
-    const what = d.burst
+    const what = isLegacyBurstReport(d)
       ? `${d.operationKind} burst of ${d.burst.count} (slowest ${d.burst.operations[0]?.operation ?? "?"})`
-      : `${d.operationKind} ${d.operation}`;
+      : `${d.operationKind} ${d.operation}` +
+        (d.burst ? ` (1 of ${d.burst.count} at once)` : "");
     return {
       title: `[slow-op] ${what} — ${timeLabel(d)}${coldStartSuffix}`,
       description: renderDescription(row, d),
@@ -56,28 +58,39 @@ function timeLabel(d: SlowOpReportPayload): string {
 function renderDescription(row: ReportRow, d: SlowOpReportPayload): string {
   const lines: string[] = [];
   if (d.burst) {
+    const legacy = isLegacyBurstReport(d);
+    // The ops it tripped with: every named one but itself (a legacy row names
+    // the whole batch); the rest of the batch counted, not named.
+    const listed = legacy
+      ? d.burst.operations
+      : d.burst.operations.filter((o) => o.operation !== d.operation);
+    const unnamed = d.burst.count - (legacy ? 0 : 1) - listed.length;
     lines.push(
-      `${d.burst.count} \`${d.operationKind}\` operations exceeded their ` +
-        `slow-op threshold in the same instant (one batch) — one incident, so ` +
-        `one report. Its numbers are the slowest one's. Look for what they ` +
-        `share (the tab, its socket, its boot, a server stall) before any one ` +
-        `of them.`,
+      legacy
+        ? `${d.burst.count} \`${d.operationKind}\` operations exceeded their ` +
+            `slow-op threshold in the same instant (one batch), filed as one ` +
+            `report. Its numbers are the slowest one's.`
+        : `This op tripped with ${d.burst.count - 1} other ` +
+            `\`${d.operationKind}\` operation(s) in the same instant (one ` +
+            `batch) — likely one incident, which rang the bell once while each ` +
+            `op kept its own report. Look for what they share (the tab, its ` +
+            `socket, its boot, a server stall) before blaming this one; if it ` +
+            `trips alone too, it is slow on its own.`,
     );
     lines.push("");
     lines.push(
-      `**Operations (slowest first):** ` +
-        d.burst.operations
-          .map((o) => `\`${o.operation}\` ${o.ownMs}ms`)
-          .join(", ") +
-        (d.burst.count > d.burst.operations.length
-          ? `, +${d.burst.count - d.burst.operations.length} more`
-          : "") +
+      `**Tripped with (slowest first):** ` +
+        listed.map((o) => `\`${o.operation}\` ${o.ownMs}ms`).join(", ") +
+        (unnamed > 0 ? `, +${unnamed} more` : "") +
         ".",
     );
     lines.push("");
   }
+  const named = isLegacyBurstReport(d)
+    ? (d.burst.operations[0]?.operation ?? d.operation)
+    : d.operation;
   lines.push(
-    `The \`${d.operationKind}\` operation \`${d.burst?.operations[0]?.operation ?? d.operation}\` has been exceeding ` +
+    `The \`${d.operationKind}\` operation \`${named}\` has been exceeding ` +
       `its configured slow-op threshold of ${d.thresholdMs}ms.`,
   );
   lines.push("");

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { RecordSlowOpInput } from "./input";
-import { BURST_NAMED_CAP, BURST_OPERATION, reportsFor } from "./report-groups";
+import { BURST_NAMED_CAP, incidentsFor } from "./report-groups";
 
 const item = (
   operation: string,
@@ -16,13 +16,14 @@ const item = (
   ...over,
 });
 
-describe("reportsFor", () => {
-  test("a lone item files its own report, fingerprinted on its operation", () => {
-    const [report, ...rest] = reportsFor([
+describe("incidentsFor", () => {
+  test("a lone item is an incident of one report, fingerprinted on its operation", () => {
+    const [incident, ...rest] = incidentsFor([
       item("tasks", 1500, { traceId: "t1", waits: { transport: 1200 } }),
     ]);
     expect(rest).toEqual([]);
-    expect(report!.data).toEqual({
+    expect(incident).toHaveLength(1);
+    expect(incident![0]!.data).toEqual({
       operationKind: "update",
       operation: "tasks",
       durationMs: 1600,
@@ -31,61 +32,70 @@ describe("reportsFor", () => {
       waits: { transport: 1200 },
       traceId: "t1",
     });
-    expect(report!.message).toBe(
+    expect(incident![0]!.message).toBe(
       "update tasks took 1500ms of its own (1600ms wall) (threshold 1000ms)",
     );
   });
 
-  test("several items of one kind in a batch are ONE burst report, carrying the slowest", () => {
-    const reports = reportsFor([
+  test("several ops of one kind are ONE incident: each its own report, slowest first, each naming the batch", () => {
+    const incidents = incidentsFor([
       item("claude-accounts", 1475),
       item("edited-files", 1955, { traceId: "shared" }),
       item("sentinel.status", 1060),
     ]);
-    expect(reports).toHaveLength(1);
-    const d = reports[0]!.data;
-    expect(d.operation).toBe(BURST_OPERATION);
-    expect(d.ownMs).toBe(1955);
-    expect(d.traceId).toBe("shared");
-    expect(d.burst).toEqual({
+    expect(incidents).toHaveLength(1);
+    const reports = incidents[0]!;
+    expect(reports.map((r) => r.data.operation)).toEqual([
+      "edited-files",
+      "claude-accounts",
+      "sentinel.status",
+    ]);
+    expect(reports.map((r) => r.data.ownMs)).toEqual([1955, 1475, 1060]);
+    const burst = {
       count: 3,
       operations: [
         { operation: "edited-files", ownMs: 1955 },
         { operation: "claude-accounts", ownMs: 1475 },
         { operation: "sentinel.status", ownMs: 1060 },
       ],
-    });
+    };
+    for (const r of reports) expect(r.data.burst).toEqual(burst);
+    expect(reports[2]!.message).toEndWith(" — 1 of 3 at once");
   });
 
-  test("one op tripping twice in a batch keeps its own report (its slowest trip)", () => {
-    const reports = reportsFor([
+  test("one op tripping twice in a batch is one report (its slowest trip), not a burst", () => {
+    const incidents = incidentsFor([
       item("tasks", 1100, { detail: { variant: "a" } }),
       item("tasks", 1700, { detail: { variant: "b" } }),
     ]);
-    expect(reports).toHaveLength(1);
-    expect(reports[0]!.data.operation).toBe("tasks");
-    expect(reports[0]!.data.ownMs).toBe(1700);
-    expect(reports[0]!.data.burst).toBeUndefined();
+    expect(incidents).toHaveLength(1);
+    expect(incidents[0]).toHaveLength(1);
+    expect(incidents[0]![0]!.data.ownMs).toBe(1700);
+    expect(incidents[0]![0]!.data.burst).toBeUndefined();
   });
 
-  test("kinds are grouped apart: a lone element beside an update burst files its own", () => {
-    const reports = reportsFor([
+  test("kinds are separate incidents: a lone element beside an update burst", () => {
+    const incidents = incidentsFor([
       item("a", 1100),
       item("b", 1200),
       item("prototypes.list", 1300, { operationKind: "element" }),
     ]);
     expect(
-      reports.map((r) => `${r.data.operationKind}:${r.data.operation}`),
-    ).toEqual([`update:${BURST_OPERATION}`, "element:prototypes.list"]);
+      incidents.map((i) =>
+        i.map((r) => `${r.data.operationKind}:${r.data.operation}`),
+      ),
+    ).toEqual([["update:b", "update:a"], ["element:prototypes.list"]]);
+    expect(incidents[1]![0]!.data.burst).toBeUndefined();
   });
 
-  test("a burst names its slowest few and counts the rest", () => {
+  test("every op of a large burst files its own report; the payload names the slowest few", () => {
     const many = Array.from({ length: BURST_NAMED_CAP + 3 }, (_, i) =>
       item(`r${i}`, 1001 + i),
     );
-    const [report] = reportsFor(many);
-    expect(report!.data.burst!.count).toBe(BURST_NAMED_CAP + 3);
-    expect(report!.data.burst!.operations).toHaveLength(BURST_NAMED_CAP);
-    expect(report!.message).toEndWith(", +3 more");
+    const [incident] = incidentsFor(many);
+    expect(incident).toHaveLength(BURST_NAMED_CAP + 3);
+    const burst = incident![BURST_NAMED_CAP + 2]!.data.burst!;
+    expect(burst.count).toBe(BURST_NAMED_CAP + 3);
+    expect(burst.operations).toHaveLength(BURST_NAMED_CAP);
   });
 });

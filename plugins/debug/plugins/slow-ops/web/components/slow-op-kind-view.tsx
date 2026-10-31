@@ -5,7 +5,10 @@ import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web"
 import { useAppLink } from "@plugins/apps-core/plugins/tabs/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { traceDetailRoute } from "@plugins/debug/plugins/trace/plugins/engine/core";
-import { SlowOpReportPayloadSchema } from "@plugins/debug/plugins/slow-ops/core";
+import {
+  isLegacyBurstReport,
+  SlowOpReportPayloadSchema,
+} from "@plugins/debug/plugins/slow-ops/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -25,12 +28,17 @@ export function SlowOpKindView({ report }: { report: Report }) {
       <Badge variant="warning" mono>
         {d.operationKind}:{d.operation}
       </Badge>
-      {d.burst && (
-        <span>
-          {d.burst.count} ops at once, slowest{" "}
-          {d.burst.operations[0]?.operation}
-        </span>
-      )}
+      {d.burst &&
+        (isLegacyBurstReport(d) ? (
+          <span>
+            {d.burst.count} ops at once, slowest{" "}
+            {d.burst.operations[0]?.operation}
+          </span>
+        ) : (
+          <span className="text-muted-foreground">
+            1 of {d.burst.count} at once
+          </span>
+        ))}
       <span>— {Math.round(d.ownMs ?? d.durationMs)}ms</span>
       <span className="text-muted-foreground">
         (threshold {Math.round(d.thresholdMs)}ms)

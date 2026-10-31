@@ -5,7 +5,10 @@ import {
   runInBackgroundLane,
   runWithoutProfiling,
 } from "@plugins/infra/plugins/runtime-profiler/core";
-import { recordReport } from "@plugins/reports/plugins/engine/server";
+import {
+  recordReport,
+  recordReportIncident,
+} from "@plugins/reports/plugins/engine/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import {
   getContentionSnapshot,
@@ -19,7 +22,7 @@ import type { SlowOpMarker } from "../../core";
 import { foldSlowOpBatch, type FoldedBatch, type FoldItem } from "./fold-batch";
 import type { RecordSlowOpInput } from "./input";
 import { buildCallerUpsert, buildOpUpsert } from "./merge-sql";
-import { reportsFor } from "./report-groups";
+import { incidentsFor } from "./report-groups";
 import { slowOpCallersProducer, slowOpsProducer } from "./producer";
 
 export type { RecordSlowOpInput } from "./input";
@@ -177,12 +180,17 @@ export async function recordSlowOpBatch(
     );
   }
 
-  // Fire-and-forget the reports: one per op, except that a batch's several
-  // items of one kind are one incident and file ONE `burst` report
-  // (`reportsFor`). The fingerprint keys on (operationKind, operation); the
-  // message reflects the latest trip.
-  for (const report of reportsFor(admitted.map((a) => a.input)))
-    void recordReport({ kind: "slow-op", ...report });
+  // Fire-and-forget the reports: one per op, fingerprinted on
+  // (operationKind, operation), the message reflecting the latest trip. A
+  // batch's ops of one kind are one incident (`incidentsFor`): each files its
+  // own report, and the incident rings the bell once. Background lane: nobody
+  // waits on a report (recordReport declares the same for its own writes).
+  for (const incident of incidentsFor(admitted.map((a) => a.input)))
+    void runInBackgroundLane(() =>
+      recordReportIncident(
+        incident.map((report) => ({ kind: "slow-op", ...report })),
+      ),
+    );
 }
 
 // The durable write of a folded batch: ONE upsert per table, each through its

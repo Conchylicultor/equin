@@ -23,7 +23,9 @@ import {
   _reports,
   ReportKind,
   reportRecordedSignal,
+  type ReportKindSpec,
 } from "@plugins/reports/server";
+import { pickIncidentBell } from "./incident";
 import { createFanOutGate, type StormSummary } from "./fan-out";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
@@ -201,6 +203,76 @@ const fanOut = createFanOutGate({
 export async function recordReport(
   input: ReportInput,
 ): Promise<RecordReportResult> {
+  const filed = await fileReport(input);
+  if (filed.bell) ringBell(filed.bell, null);
+  return filed.result;
+}
+
+/**
+ * The reports ONE cause produced at one instant, most significant first: each
+ * lands on its OWN fingerprint — row, count, velocity, fan-out and shed exactly
+ * as `recordReport` — but the bell rings ONCE for the incident, not once per
+ * row (`pickIncidentBell`: the first never-seen report when there is one, so a
+ * new problem always surfaces; else the lead). Identity stays per problem, so
+ * unrelated incidents never share a row and a report that only ever co-occurs
+ * still has its own; only the alert is collapsed.
+ */
+export async function recordReportIncident(
+  inputs: readonly ReportInput[],
+): Promise<RecordReportResult[]> {
+  // Sequential: the order is the caller's significance order, and the fan-out
+  // budget is spent in it.
+  const filed: FiledReport[] = [];
+  for (const input of inputs) filed.push(await fileReport(input));
+  const ringing = filed.flatMap((f) => (f.bell ? [f.bell] : []));
+  // A noise row's bell is muted; it leads only an incident of noise.
+  const loud = ringing.filter((b) => !b.row.noise);
+  const bells = loud.length > 0 ? loud : ringing;
+  const pick = pickIncidentBell(
+    bells.map((b) => ({ isNew: b.row.count === 1 })),
+  );
+  if (pick) {
+    // The rows the incident wrote — a shed or collapsed member has none yet.
+    const reportIds = filed.flatMap((f) =>
+      f.result.outcome === "recorded" ? [f.result.reportId] : [],
+    );
+    ringBell(bells[pick.index]!, {
+      related: reportIds.length - 1,
+      fresh: pick.fresh,
+      reportIds,
+    });
+  }
+  return filed.map((f) => f.result);
+}
+
+// What ringing a recorded row's bell needs — everything the notification reads.
+interface Bell {
+  spec: ReportKindSpec;
+  row: typeof _reports.$inferSelect;
+  fingerprint: string;
+  staleOrigin: boolean;
+  clientId: string | null;
+  url: string | null;
+  buildId: string | null;
+}
+
+// One report through the row path: its result, and the bell it would ring
+// (null when it rings none — shed, collapsed or rate-limited).
+interface FiledReport {
+  result: RecordReportResult;
+  bell: Bell | null;
+}
+
+// The incident a bell rings for, when it stands for more than its own row.
+interface IncidentBell {
+  /** Reports filed with it that this one notification stands for. */
+  related: number;
+  /** How many of the incident's ringing reports were never seen before. */
+  fresh: number;
+  reportIds: string[];
+}
+
+async function fileReport(input: ReportInput): Promise<FiledReport> {
   const {
     kind,
     source,
@@ -254,7 +326,7 @@ export async function recordReport(
   // the report actually lands. The null result mirrors the no-row path.
   if (!spec.duressExempt) {
     const admitted = reportShed.admit({ input, fingerprint: fp });
-    if (!admitted.persist) return { outcome: "shed" };
+    if (!admitted.persist) return { result: { outcome: "shed" }, bell: null };
   }
 
   const worktree = runtimeNamespace();
@@ -274,7 +346,10 @@ export async function recordReport(
       fanOutPerWindow: spec.meta.fanOutPerWindow,
     });
     if (!admission.alert)
-      return { outcome: "collapsed", stormKind: STORM_KIND };
+      return {
+        result: { outcome: "collapsed", stormKind: STORM_KIND },
+        bell: null,
+      };
   }
 
   const limited = bumpWindowAndCheck(fp);
@@ -360,17 +435,51 @@ export async function recordReport(
     // 2 s window — so during a burst the pane and the bell deliberately
     // disagree.
     return {
-      outcome: "recorded",
-      reportId: row.id,
-      taskId: row.taskId,
-      rateLimited: true,
+      result: {
+        outcome: "recorded",
+        reportId: row.id,
+        taskId: row.taskId,
+        rateLimited: true,
+      },
+      bell: null,
     };
   }
 
+  return {
+    result: {
+      outcome: "recorded",
+      reportId: row.id,
+      taskId: row.taskId,
+      rateLimited: false,
+    },
+    bell: {
+      spec,
+      row,
+      fingerprint: fp,
+      staleOrigin,
+      clientId: clientId ?? null,
+      url: url ?? null,
+      buildId: buildId ?? null,
+    },
+  };
+}
+
+// Write a recorded row's bell notification — for itself alone, or for the
+// incident it leads.
+function ringBell(bell: Bell, incident: IncidentBell | null): void {
+  const { spec, row, staleOrigin, clientId, url, buildId } = bell;
+  const fp = bell.fingerprint;
   // Mirror a "[Stale tab]" marker into the bell so the notification itself reads
   // as benign version-skew at a glance.
   const stalePrefix = staleOrigin ? "[Stale tab] " : "";
-  const desc = `${stalePrefix}${row.message}`;
+  // An incident's count leads, so the 140-char clamp below never cuts it.
+  const incidentPrefix =
+    incident && incident.related > 0
+      ? `[+${incident.related} related` +
+        (incident.fresh > 0 ? `, ${incident.fresh} new` : "") +
+        "] "
+      : "";
+  const desc = `${stalePrefix}${incidentPrefix}${row.message}`;
   // The bell notification is always keyed by the stable report id — exactly one
   // row per fingerprint, which updates in place. That dedup key is what keeps
   // the bell at one row per distinct problem instead of one per
@@ -424,21 +533,17 @@ export async function recordReport(
           reportId: row.id,
           source: row.source,
           fingerprint: fp,
-          clientId: clientId ?? null,
+          clientId,
           // The raising page, so the bell can name the tab (its app) beside
           // whether it is still open.
-          clientUrl: url ?? null,
-          buildId: buildId ?? null,
+          clientUrl: url,
+          buildId,
+          // Every report the incident filed, this one included.
+          ...(incident && { incidentReportIds: incident.reportIds }),
         },
       }),
     ),
   );
-  return {
-    outcome: "recorded",
-    reportId: row.id,
-    taskId: row.taskId,
-    rateLimited: false,
-  };
 }
 
 // The validated, clamped, fingerprinted values recordReport computes before

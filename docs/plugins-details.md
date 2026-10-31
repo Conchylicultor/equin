@@ -23517,12 +23517,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `change-producer` "slow_ops"
           - `fork-data-exclusion` "slow_op_callers"
           - `fork-data-exclusion` "slow_ops"
-        - Uses: 25 symbols — full list in [`plugins/debug/plugins/slow-ops/REFERENCE.md`](../plugins/debug/plugins/slow-ops/REFERENCE.md)
+        - Uses: 26 symbols — full list in [`plugins/debug/plugins/slow-ops/REFERENCE.md`](../plugins/debug/plugins/slow-ops/REFERENCE.md)
           - `infra/jobs` ×4
           - `infra/entities` ×3
           - `config_v2` ×2
           - `infra/host/contention` ×2
           - `infra/host/duress/shed` ×2
+          - `reports/engine` ×2
           - `database/admin.ExcludeFromFork`
           - `database/change-feed.defineChangeProducer`
           - `database.db`
@@ -23533,7 +23534,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.serveCollection`
           - `primitives/log-channels/log-files.readChannelJsonAsync`
           - `primitives/log-channels.defineLogSink`
-          - `reports/engine.recordReport`
           - `reports.ReportKind`
         - DB schema: `plugins/debug/plugins/slow-ops/server/internal/tables.ts`
         - Exports (types): `RecordSlowOpInput`
@@ -23589,6 +23589,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CallerRefSchema`
           - `CLIENT_SIGNAL_THRESHOLD`
           - `clientSlowOpSink`
+          - `isLegacyBurstReport`
           - `loadSeverity`
           - `MAX_CLIENT_SLOW_OP_ITEMS`
           - `MAX_SLOW_OP_MARKERS`
@@ -48688,6 +48689,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports._reports`
           - `reports.reportInvestigationSink`
           - `reports.ReportKind`
+          - `reports.ReportKindSpec`
           - `reports.ReportNoiseInput`
           - `reports.ReportNoiseRule`
           - `reports.reportRecordedSignal`
@@ -48704,6 +48706,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `linkReportsToTask`
           - `recordReport`
           - `recordReportDebounced`
+          - `recordReportIncident`
           - `renderReportTask`
           - `uninvestigatedReportCounts`
           - `uninvestigatedReports`

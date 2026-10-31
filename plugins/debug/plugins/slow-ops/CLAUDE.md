@@ -149,14 +149,18 @@ only waited in the same cycle) and four client `update`s. Now:
   (`EXCLUDED_PHASES`, owner `server`); the update is judged on `server-notice +
   transport + client-apply`, and the server's delivery on the same 1000 ms bar. An `element` carries no server split on the wire, so
   it still counts the server's `sub` time.
-- **A batch's burst is one report** (`reportsFor`, `server/internal/report-groups.ts`).
-  A client batch (one tab's 250 ms window) with several items of one kind is
-  one incident — a stalled socket delivers every pending update late, a page
-  boot settles every element late — so it files ONE report, operation `burst`
-  (`slow-op:<kind>:burst`), carrying its slowest item's measurement and trace and
-  naming the rest (counted over distinct operations: one op tripping twice is
-  still its own report). Rows are unaffected: every item still lands on its own op's
-  row. Server spans reach the funnel one per batch, so each files its own.
+- **A batch's burst is one incident, not one report** (`incidentsFor`,
+  `server/internal/report-groups.ts`). A client batch (one tab's 250 ms window)
+  with several items of one kind is one incident — a stalled socket delivers
+  every pending update late, a page boot settles every element late — so it
+  rings the bell ONCE (`recordReportIncident`, reports/engine: the first
+  never-seen op's report if any, else the slowest's). Each distinct op still
+  files its OWN report (`slow-op:<kind>:<operation>`), carrying `burst` (the
+  batch's count and slowest few), so unrelated incidents never share a row and
+  an op that only ever trips beside others is still reported. (A one-fingerprint
+  `slow-op:<kind>:burst` report did both wrong; its old rows still render.)
+  Server spans reach the funnel one per batch, so each is its own incident.
+  Design: `research/2026-10-31-global-slow-op-burst-incident.md`.
 - **A warm-up is judged once**, here, on its `bg` span (against its declared
   `budgetMs` or `DEFAULT_WARMUP_BUDGET_MS`); boot-budget no longer judges its
   boot span.
@@ -331,12 +335,13 @@ bar).
     - `change-producer` "slow_ops"
     - `fork-data-exclusion` "slow_op_callers"
     - `fork-data-exclusion` "slow_ops"
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/jobs` ×4
     - `infra/entities` ×3
     - `config_v2` ×2
     - `infra/host/contention` ×2
     - `infra/host/duress/shed` ×2
+    - `reports/engine` ×2
     - `database/admin.ExcludeFromFork`
     - `database/change-feed.defineChangeProducer`
     - `database.db`
@@ -347,7 +352,6 @@ bar).
     - `network/live.serveCollection`
     - `primitives/log-channels/log-files.readChannelJsonAsync`
     - `primitives/log-channels.defineLogSink`
-    - `reports/engine.recordReport`
     - `reports.ReportKind`
   - DB schema: `plugins/debug/plugins/slow-ops/server/internal/tables.ts`
   - Exports (types): `RecordSlowOpInput`
@@ -403,6 +407,7 @@ bar).
     - `CallerRefSchema`
     - `CLIENT_SIGNAL_THRESHOLD`
     - `clientSlowOpSink`
+    - `isLegacyBurstReport`
     - `loadSeverity`
     - `MAX_CLIENT_SLOW_OP_ITEMS`
     - `MAX_SLOW_OP_MARKERS`

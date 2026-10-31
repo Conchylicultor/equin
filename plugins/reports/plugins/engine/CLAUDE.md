@@ -47,6 +47,20 @@ same shape as `meta.fanOutPerWindow`, and deliberately no spelling for "never".
 A dismissed row comes back unread on the next occurrence past the window;
 occurrences inside it only bump `count`.
 
+## One incident, one bell
+
+`recordReportIncident(inputs)` files reports one cause produced at one instant,
+most significant first. Each lands on its own fingerprint exactly as through
+`recordReport`: row, count, velocity, fan-out and shed. Then ONE notification
+rings for the incident instead of one per row. It is the first report whose row
+is new (never seen in this worktree) when there is one, so a new problem always
+alerts unread. Otherwise it is the lead (`pickIncidentBell`). Its description
+leads with `[+N related, M new]`, and its metadata lists every member
+(`incidentReportIds`). Identity stays per problem and only the alert is shared.
+So never merge co-occurring reports into one fingerprint to quiet the bell:
+that puts unrelated incidents on one row and hides the member that only ever
+co-occurs. First user: slow-ops' per-batch bursts.
+
 ## Every write goes through the producer
 
 `reports` has no change-feed trigger. A crash loop UPDATEs its hot row thousands
@@ -111,6 +125,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `reports._reports`
     - `reports.reportInvestigationSink`
     - `reports.ReportKind`
+    - `reports.ReportKindSpec`
     - `reports.ReportNoiseInput`
     - `reports.ReportNoiseRule`
     - `reports.reportRecordedSignal`
@@ -127,6 +142,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `linkReportsToTask`
     - `recordReport`
     - `recordReportDebounced`
+    - `recordReportIncident`
     - `renderReportTask`
     - `uninvestigatedReportCounts`
     - `uninvestigatedReports`
