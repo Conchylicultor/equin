@@ -165,7 +165,13 @@ function resolvesWithoutNodeModules(spec: string): boolean {
  * silent deletion of authored data; and they arrive through `paths/server`,
  * `checks/core` and `barrel-import/core`, which the CLI cannot stop importing
  * without losing the ability to run checks or resolve its own data dirs.
- * Reopening that is a separate task, not a hole in this one.
+ * Reopening that is a separate task, not a hole in this one. Its cost is not
+ * always benign: `lint/core` once imported `lint.generated.ts` statically, so
+ * `build` (through the codegen barrel) froze the previous entry list, and a
+ * new `lint/index.ts` was missing from the exempt rule-id union until a second
+ * build. A registry read in a regenerating process is therefore loaded at its
+ * first READ (`import()` inside the reader, as `checks/core` and `lint/core`
+ * do), never at module load.
  * `ui/icons/…/symbol-name-list.generated.ts` and `icon-picker/…/symbols-metadata.json`
  * are produced by hand-run scripts, never by a build stage, so no build run can
  * invalidate a frozen copy of them.

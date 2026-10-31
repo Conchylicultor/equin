@@ -138,7 +138,7 @@ test(
       // Not a vacuous equality: the fixture is a runnable cold tree, whose
       // every file needs every syntactic rule group (the result store is
       // empty) and whose typed parts only the worker can decide.
-      const everyGroup = [LINT_GROUP_BASE, ...lintContributionPaths()];
+      const everyGroup = [LINT_GROUP_BASE, ...(await lintContributionPaths())];
       const job = (rel: string) => ({
         file: join(root, rel),
         unit: "split" as const,

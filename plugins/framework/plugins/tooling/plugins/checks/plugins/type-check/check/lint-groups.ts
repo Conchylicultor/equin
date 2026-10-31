@@ -294,10 +294,10 @@ function body(files: Iterable<string>, view: RepoView): string {
  * `code` is the tree of the checkout the rules run FROM (`codeCheckoutRoot`) —
  * the same tree on a check run, the repo's own beside a test's fixture.
  */
-export function computeLintGroups(
+export async function computeLintGroups(
   view: RepoView,
   code: RepoView = view,
-): LintGroups {
+): Promise<LintGroups> {
   const closures = lintClosures(code);
 
   // The engine: the config builder's import closure and the worker (code),
@@ -316,7 +316,7 @@ export function computeLintGroups(
 
   const fps = new Map<string, string>();
   fps.set(LINT_GROUP_BASE, groupHash(`${LINT_GROUP_BASE}\n${engineFp}`));
-  for (const pluginPath of lintContributionPaths()) {
+  for (const pluginPath of await lintContributionPaths()) {
     const entry = `plugins/${pluginPath}/lint/index.ts`;
     const closure = closures.of(entry, engine);
     fps.set(

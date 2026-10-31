@@ -35,7 +35,7 @@ import {
   type FileCategory,
   type ResolvedExemption,
 } from "@plugins/framework/plugins/tooling/plugins/exempt/core";
-import { lintEntries } from "./lint.generated";
+import type { CollectedEntry } from "./lint.generated";
 import { LINT_SCOPE_EXCLUDE_GLOBS } from "./lint-scope-exceptions";
 import { createLintToolkit, type LintToolkit } from "./class-token-walk";
 import { readDeclaredUtilities } from "./declared-utilities";
@@ -167,12 +167,29 @@ export const LINT_CONFIG_SOURCE =
   "plugins/framework/plugins/tooling/plugins/lint/core/build-lint-config.ts";
 
 /**
+ * The lint registry (`lint.generated.ts`), evaluated at its first READ, never
+ * at this module's load. Stage 1 of `./equin build` / `regen-generated`
+ * rewrites the registry in the same process that later reads it (the exempt
+ * rule-id union, the type-check lint pass), and those processes load this
+ * module before stage 1 runs — through the codegen barrel. Bun freezes a module
+ * on its first evaluation and never re-reads it, so a static import here froze
+ * the PREVIOUS run's entry list: a newly-added `lint/index.ts` was missing from
+ * `ExemptableRuleId` until a second build (`exempt:rule-ids-in-sync` red).
+ * Every reader goes through this function and is called after stage 1, so the
+ * evaluation it triggers reads what stage 1 wrote — the same pattern as
+ * `checks/core`'s `check.generated.ts`.
+ */
+async function loadLintEntries(): Promise<CollectedEntry[]> {
+  return (await import("./lint.generated")).lintEntries;
+}
+
+/**
  * Every lint contribution's plugin path (`relPath` of its loaded form), without
  * loading any of them — what the type-check lint cache keys one rule group on
  * each.
  */
-export function lintContributionPaths(): string[] {
-  return lintEntries.map((e) => e.pluginPath);
+export async function lintContributionPaths(): Promise<string[]> {
+  return (await loadLintEntries()).map((e) => e.pluginPath);
 }
 
 /** A loaded contribution: the barrel, with its class rules built into `rules`. */
@@ -217,6 +234,7 @@ export async function loadLintContributions(
   root: string,
 ): Promise<LoadedLintContribution[]> {
   const toolkit = createLintToolkit(readDeclaredUtilities(root));
+  const lintEntries = await loadLintEntries();
   const results = await Promise.allSettled(lintEntries.map((e) => e.loader()));
   const contributions: LoadedLintContribution[] = [];
   const failures: string[] = [];

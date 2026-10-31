@@ -444,7 +444,7 @@ export async function openPreparation({
     realpathSync(codeRoot) === realpathSync(root)
       ? view
       : viewOfSnapshot(await readTreeSnapshot(codeRoot), {});
-  const groups = computeLintGroups(view, code);
+  const groups = await computeLintGroups(view, code);
   lap(`lint groups, ${groups.parsedFiles} files parsed`);
   // Which groups hold a type-aware rule is learned by loading every
   // contribution through the classifier the config builder registers rules
