@@ -68,6 +68,9 @@ itself) / `fileUrl(file)` — a renderer never branches on the source to read.
   is "equin can't read this file" with Allow access (System Settings → Files &
   Folders) and Check again, whichever renderer is selected — never a
   renderer's own reading of the failed load ("No preview", an empty image).
+  A host file that is not there (stat refused `missing`) is "File not found"
+  with its path, the same way; the stat is watched, so the renderer comes back
+  once the file appears.
 - `gitStatus` is context the host supplies; the diff renderer is offered only
   for a changed checkout file.
 

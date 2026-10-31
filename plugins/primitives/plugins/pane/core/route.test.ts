@@ -84,6 +84,25 @@ describe("route link builder", () => {
     );
   });
 
+  test("a wildcard value's empty parts survive the address bar's slash collapse", () => {
+    const file = defineRoute({ id: "file", segment: "f/:path*" });
+    // A `/` that would leave an empty part is encoded into its neighbour, so
+    // `normalizeRoutePath` has no `//` to collapse and the value round-trips
+    // (the matcher decodes each part and re-joins them with "/").
+    const cases: Array<[string, string]> = [
+      ["/srv/a.mp4", "/f/%2Fsrv/a.mp4"],
+      ["dir/", "/f/dir%2F"],
+      ["a//b", "/f/a/%2Fb"],
+      ["//a", "/f/%2F%2Fa"],
+    ];
+    for (const [value, url] of cases) {
+      expect(file.path({ path: value })).toBe(url);
+      expect(normalizeRoutePath(url)).toBe(url);
+      const parts = url.split("/").slice(2);
+      expect(parts.map((s) => decodeURIComponent(s)).join("/")).toBe(value);
+    }
+  });
+
   test("an empty segment contributes nothing — the appIndex shape", () => {
     // What an index pane's route looks like: it is reached at its app's bare
     // root and owns no URL fragment of its own.

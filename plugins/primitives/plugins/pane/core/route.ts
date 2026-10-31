@@ -180,6 +180,34 @@ export function defineApp(def: {
 // param (fail loud — matches buildRouteUrl).
 // ---------------------------------------------------------------------------
 
+/**
+ * A wildcard value's URL parts: split on `/`, each encoded — except a `/` that
+ * would leave an empty part (a leading or trailing one, or one of a run),
+ * which is encoded into its neighbour as `%2F`. The address bar collapses a
+ * `//` and drops an empty part (`normalizeRoutePath`), so an absolute path
+ * `/Users/x` written as `…//Users/x` would read back as `Users/x`; written as
+ * `%2FUsers/x` it decodes (per part, re-joined with `/`) to itself.
+ */
+function wildcardParts(val: string): string[] {
+  const out: string[] = [];
+  let carry = "";
+  const segments = val.split("/");
+  segments.forEach((seg, i) => {
+    if (seg === "") {
+      // The `/` after an empty part has no part of its own to separate.
+      // The `/` after an empty part rides the next part; a trailing one (no
+      // next part) rides the previous.
+      if (i < segments.length - 1) carry += "%2F";
+      else if (out.length > 0) out[out.length - 1] += "%2F";
+      return;
+    }
+    out.push(carry + encodeURIComponent(seg));
+    carry = "";
+  });
+  if (carry !== "") out.push(carry);
+  return out;
+}
+
 /** One `/`-separated part of a segment pattern, classified. */
 type SegmentPart =
   | { kind: "static"; text: string }
@@ -533,7 +561,7 @@ export function fillSegment(
       throw new MissingRouteParamError(part.name, segment);
     }
     if (part.kind === "wildcard") {
-      parts.push(...val.split("/").map(encodeURIComponent));
+      parts.push(...wildcardParts(val));
     } else {
       parts.push(encodeURIComponent(val));
     }
