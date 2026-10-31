@@ -13,6 +13,7 @@ import {
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { modelDisplayLabel } from "@plugins/conversations/plugins/model-provider/core";
+import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -102,13 +103,9 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the body from the ToolCallCard header inside its collapsible region; not a Stack-owned gap */}
       <Stack gap="sm" className="mt-2">
         {input.description && (
-          <Text
-            as="p"
-            variant="caption"
-            className="text-muted-foreground whitespace-pre-wrap"
-          >
-            {input.description}
-          </Text>
+          <div className="prose-xs text-caption text-muted-foreground">
+            <Markdown>{input.description}</Markdown>
+          </div>
         )}
         {taskId && (
           <LinkChip

@@ -17372,6 +17372,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                       - `primitives/live-state.foldResource`
+                      - `primitives/markdown.Markdown`
                       - `primitives/pane.useOpenPane`
                       - `tasks/task-detail.taskDetailPane`
                       - `tasks/task-status.StatusIcon`
@@ -17381,6 +17382,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/color-palette --muted-foreground`
                       - `ui/tokens/font-family --font-mono`
                       - `ui/tokens/shape --spacing`
+                      - `ui/tokens/type-scale --font-scale`
+                      - `ui/tokens/type-scale --font-size-caption`
+                      - `ui/tokens/type-scale --font-weight-normal`
+                      - `ui/tokens/type-scale --line-height-caption`
                 - **`agent`** — Renders Agent tool calls with subagent type, model badge, prompt (markdown), and report (markdown).
                   - Web:
                     - Slots: `agentReportPane.Actions`
@@ -44853,6 +44858,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/jsonl-viewer/request-shape`
           - `conversations/conversation-view/jsonl-viewer/subagents`
           - `conversations/conversation-view/jsonl-viewer/teammate-message`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
           - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
           - `conversations/conversation-view/jsonl-viewer/tool-call/web-search`
           - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
@@ -55067,10 +55073,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 229 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+            - Tokens used by: 230 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
               - `apps` ×60
               - `primitives` ×38
-              - `conversations` ×36
+              - `conversations` ×37
               - `debug` ×15
               - `plugin-meta` ×14
               - `page` ×12

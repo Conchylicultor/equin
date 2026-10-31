@@ -97,6 +97,7 @@ Design rationale lives in:
     - `conversations/conversation-view/jsonl-viewer/request-shape`
     - `conversations/conversation-view/jsonl-viewer/subagents`
     - `conversations/conversation-view/jsonl-viewer/teammate-message`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
     - `conversations/conversation-view/jsonl-viewer/tool-call/web-search`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
