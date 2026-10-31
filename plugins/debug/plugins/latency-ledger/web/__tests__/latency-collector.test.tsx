@@ -17,7 +17,7 @@ vi.mock("../internal/interaction-tracker", () => ({
 }));
 let pageHidden = false;
 vi.mock("@plugins/primitives/plugins/perfs/plugins/page-pauses/web", () => ({
-  pausesDuring: () => ({ hidden: pageHidden, stalledMs: 0 }),
+  pausesDuring: () => ({ hiddenMs: pageHidden ? 1 : 0, stalledMs: 0 }),
 }));
 
 const recordMock = vi.mocked(recordSample);

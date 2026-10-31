@@ -1,5 +1,6 @@
 import type { SlowOpReportPayload } from "../../core";
 import {
+  HIDDEN_LAYER,
   SLEEP_LAYER,
   STALL_LAYER,
   TRANSPORT_LAYER,
@@ -17,6 +18,8 @@ const WAIT_LAYER_HINTS: Readonly<Record<string, string>> = {
   [STALL_LAYER]:
     "The page's main thread was frozen — not counted against this op; the stall is filed on its own (main-thread-stall).",
   [SLEEP_LAYER]: "The machine was asleep — not counted against this op.",
+  [HIDDEN_LAYER]:
+    "The tab was hidden or frozen, where the browser throttles it — not counted against this op.",
   "throttle-hold":
     "The resource's own declared throttle held the change — by design, not counted against this op.",
   "flush-queue":

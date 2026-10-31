@@ -1,16 +1,11 @@
-import {
-  coveredMs,
-  overlapsAny,
-  pushBounded,
-  type Interval,
-} from "./intervals";
+import { coveredMs, pushBounded, type Interval } from "./intervals";
 
 // The page's pauses on the wall clock (epoch ms), recorded from module load:
 //
 // - HIDDEN: from a `visibilitychange` to hidden (or a Page Lifecycle `freeze`)
 //   until the page is visible (or `resume`d) again. A background tab's timers,
-//   frames and network callbacks are throttled, so any span overlapping one
-//   measures the browser, not the system.
+//   frames and network callbacks are throttled, so the time a span spent in
+//   one measures the browser, not the system.
 // - STALLED: a long animation frame of at least `STALL_MIN_MS` — a main thread
 //   frozen that long is reported on its own by `reports/main-thread-stall`
 //   (its `SLOW_OP_MIN_MS`, which must agree with this), so a span that merely
@@ -82,12 +77,16 @@ if (typeof document !== "undefined") {
 /** How the page was paused during one span of wall-clock time. */
 export interface PagePauses {
   /**
-   * Hidden or frozen at any point in the span (a stretch still in progress
-   * counts from its start): every number taken across it measures the
-   * browser's throttling, so a consumer drops it.
+   * ms of the span the page was hidden or frozen (union; a stretch still in
+   * progress counts from its start to the span's end). That time measures the
+   * browser's throttling, not the system, so a consumer takes it off.
    */
-  hidden: boolean;
-  /** ms of the span the main thread spent in stalls ≥ `STALL_MIN_MS` (union). */
+  hiddenMs: number;
+  /**
+   * ms of the span the main thread spent in stalls ≥ `STALL_MIN_MS`, outside
+   * the hidden time (union) — disjoint from `hiddenMs`, so the two add up to
+   * the span's whole paused time.
+   */
   stalledMs: number;
 }
 
@@ -97,10 +96,13 @@ export interface PagePauses {
  * after the frame (the slow-op queue asks at its flush, ~250 ms on).
  */
 export function pausesDuring(startMs: number, endMs: number): PagePauses {
+  const hiddenNow: Interval[] =
+    hiddenSince === null
+      ? hidden
+      : [...hidden, { startMs: hiddenSince, endMs }];
+  const hiddenMs = coveredMs(hiddenNow, startMs, endMs);
   return {
-    hidden:
-      (hiddenSince !== null && hiddenSince <= endMs) ||
-      overlapsAny(hidden, startMs, endMs),
-    stalledMs: coveredMs(stalls, startMs, endMs),
+    hiddenMs,
+    stalledMs: coveredMs([...hiddenNow, ...stalls], startMs, endMs) - hiddenMs,
   };
 }

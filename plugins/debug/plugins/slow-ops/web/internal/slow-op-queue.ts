@@ -25,8 +25,8 @@ const fetchEndpoint = fetchEndpointOver(pageTransport);
 // fails after that is dropped, loudly.
 //
 // One rule rides the flush: an item queued with its wall-clock window is
-// judged against the page's pauses inside it (`judgePagePauses`) — dropped when
-// the tab was hidden, its main-thread stalls taken off its own time. That is
+// judged against the page's pauses inside it (`judgePagePauses`) — the time the
+// tab was hidden and its main-thread stalls taken off its own time. That is
 // the only place late enough to ask: a long frame's entry is delivered after
 // the frame. Nothing else is filtered here. See "Own time" in ../../CLAUDE.md.
 

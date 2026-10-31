@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { coveredMs, overlapsAny, pushBounded } from "./intervals";
+import { coveredMs, pushBounded } from "./intervals";
 
 describe("coveredMs", () => {
   test("clips to the window and unions overlaps", () => {
@@ -13,13 +13,6 @@ describe("coveredMs", () => {
 
   test("nothing inside the window is 0", () => {
     expect(coveredMs([{ startMs: 0, endMs: 10 }], 20, 30)).toBe(0);
-  });
-});
-
-describe("overlapsAny", () => {
-  test("a touching interval overlaps; a disjoint one does not", () => {
-    expect(overlapsAny([{ startMs: 0, endMs: 10 }], 10, 20)).toBe(true);
-    expect(overlapsAny([{ startMs: 0, endMs: 9 }], 10, 20)).toBe(false);
   });
 });
 

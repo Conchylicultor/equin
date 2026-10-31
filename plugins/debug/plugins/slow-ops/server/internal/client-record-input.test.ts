@@ -117,6 +117,20 @@ describe("withoutSleep", () => {
     });
   });
 
+  test("a nap the tab was already hidden through is not taken off twice", () => {
+    // The browser took 90 s of hidden time off; only the 10 s beyond it come off.
+    const hidden = {
+      ...ended,
+      ownMs: 30_000,
+      waits: { "page-hidden": 90_000 },
+    };
+    expect(withoutSleep(hidden, () => 100_000)).toEqual({
+      ...hidden,
+      ownMs: 20_000,
+      waits: { "page-hidden": 90_000, sleep: 100_000 },
+    });
+  });
+
   test("cannot tell, or no end time: unchanged", () => {
     expect(withoutSleep(ended, () => null)).toBe(ended);
     const live = item();

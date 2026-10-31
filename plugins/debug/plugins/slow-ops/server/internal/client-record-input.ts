@@ -1,4 +1,8 @@
-import { SLEEP_LAYER, type SlowOpClientItem } from "../../shared/endpoints";
+import {
+  HIDDEN_LAYER,
+  SLEEP_LAYER,
+  type SlowOpClientItem,
+} from "../../shared/endpoints";
 import type { RecordSlowOpInput } from "./input";
 
 /**
@@ -39,6 +43,11 @@ export function toRecordInput(
  * overlap is charged to the `sleep` layer and off its own time → the item, or
  * null when it is no longer over its bar. `sleptMs` null (cannot tell) or 0
  * leaves it unchanged; so does an item with no `endedAt`.
+ *
+ * A nap usually hides the tab too (a closed lid), and the browser already took
+ * its `page-hidden` time off. The two cannot be placed against each other here,
+ * so only the sleep beyond the hidden time comes off: the excluded total is
+ * the larger of the two — never the same nap twice.
  */
 export function withoutSleep(
   item: SlowOpClientItem,
@@ -47,9 +56,10 @@ export function withoutSleep(
   if (item.endedAt === undefined) return item;
   const slept = sleptMs(item.endedAt - item.durationMs, item.endedAt);
   if (slept === null || slept <= 0) return item;
+  const beyondHidden = Math.round(slept) - (item.waits?.[HIDDEN_LAYER] ?? 0);
   const ownMs = Math.max(
     0,
-    (item.ownMs ?? item.durationMs) - Math.round(slept),
+    (item.ownMs ?? item.durationMs) - Math.max(0, beyondHidden),
   );
   if (ownMs <= item.thresholdMs) return null;
   return {

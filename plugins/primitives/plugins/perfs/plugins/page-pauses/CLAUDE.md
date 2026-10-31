@@ -4,8 +4,9 @@ Was the page paused while something was being timed?
 
 ```ts
 const p = pausesDuring(Date.now() - sample.totalMs, Date.now());
-if (p.hidden) return; // throttled: the number measures the browser
-const ownMs = sample.totalMs - p.stalledMs; // a stall is reported on its own
+// Hidden time is throttled (it measures the browser); a stall is reported on
+// its own. The two are disjoint, so they add up.
+const ownMs = sample.totalMs - p.hiddenMs - p.stalledMs;
 ```
 
 - **One owner.** Producers of client timings (live-state's `update`, the
@@ -15,11 +16,14 @@ const ownMs = sample.totalMs - p.stalledMs; // a stall is reported on its own
   and the `element` settle kept none.
 - **Hidden** covers `visibilitychange` → hidden and Page Lifecycle
   `freeze`, until visible / `resume` again. A page loaded hidden counts as
-  hidden since `performance.timeOrigin`. A stretch still in progress counts
-  from its start, so a span that ended just before the tab was hidden stays
-  visible even when it is asked about afterwards.
+  hidden since `performance.timeOrigin`. `hiddenMs` is how much of the span
+  was hidden (union), not whether: a slow op spanning a brief tab switch keeps
+  its visible part. A stretch still in progress counts from its start, so a
+  span that ended just before the tab was hidden stays visible even when it is
+  asked about afterwards.
 - **Stalled** is the union of long animation frames ≥ `STALL_MIN_MS`
-  (1000 ms) inside the span. That is the bar at which
+  (1000 ms) inside the span, outside its hidden time — disjoint from
+  `hiddenMs`, so a consumer subtracts both. That is the bar at which
   `reports/main-thread-stall` files a frozen main thread as its own `main-thread`
   slow-op (`STALL.SLOW_OP_MIN_MS`). The two must agree: a shorter frame is not
   reported anywhere, so it stays in the timed op. `longtask` is the fallback.
@@ -34,7 +38,7 @@ const ownMs = sample.totalMs - p.stalledMs; // a stall is reported on its own
 
 ## Plugin reference
 
-- Description: Was this page paused during a span of wall-clock time? pausesDuring(start, end): hidden or frozen at any point (visibilitychange, Page Lifecycle freeze), and how long its main thread was stalled inside it (long animation frames ≥ 1 s, the bar main-thread-stall files its own slow-op at) — the one record every client latency consumer reads instead of tracking visibility itself.
+- Description: Was this page paused during a span of wall-clock time? pausesDuring(start, end): how long it was hidden or frozen inside it (visibilitychange, Page Lifecycle freeze), and how long its main thread was stalled outside that (long animation frames ≥ 1 s, the bar main-thread-stall files its own slow-op at) — the one record every client latency consumer reads instead of tracking visibility itself.
 - Cross-plugin:
   - Imported by:
     - `debug/latency-ledger`

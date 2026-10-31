@@ -96,8 +96,8 @@ all or it is charged to the op that owns it:
 | An update's `server-deliver` (notify → send) | `EXCLUDED_PHASES` / `ownMsOf` | The server: exactly the window its `push deliver:<key>` span judges (and the loader or flush it waited on). |
 | An element's transport bring-up (`notifications-transport`) | `elementSlowOp` | The transport. It is filed once per page as `wait notifications-transport` (`transportSlowOp`). |
 | Main-thread stalls ≥ 1 s (`main-thread-stall`) | `judgePagePauses` at the queue's flush, via perfs/page-pauses | main-thread-stall, which files the frozen page as its own `main-thread` op. |
-| A hidden or frozen tab | The same | Nobody. The whole item is dropped, because throttling distorts every layer. |
-| Machine sleep (`sleep`) | `withoutSleep` in the client handler, over the item's `endedAt` window (machine-sleep's `sleptDuring`) | Nobody. A server span needs none: Bun's `performance.now()` stops while the machine sleeps (measured 2026-10-30). |
+| A hidden or frozen tab (`page-hidden`) | The same | Nobody. Only the hidden part is taken off — a throttled tab measures the browser — and the visible rest is still judged, so a slow op spanning a brief tab switch is still reported. |
+| Machine sleep (`sleep`) | `withoutSleep` in the client handler, over the item's `endedAt` window (machine-sleep's `sleptDuring`) | Nobody. Only the sleep beyond the item's `page-hidden` time comes off (a nap usually hides the tab, and the two cannot be placed against each other server-side), so one nap is never taken off twice. A server span needs none: Bun's `performance.now()` stops while the machine sleeps (measured 2026-10-30). |
 
 Why: the 2026-10-29 audit of main found reports blaming ops for time they
 spent not working:
@@ -218,10 +218,14 @@ through the pure `latencySlowOp` (`web/internal/latency-slow-op.ts`):
   compile without its knob. They stay **out of `perfFloorMs`**: that floor
   pre-filters server spans, which no client knob ever judges, so a client knob
   there would only lower the profiler floor for every server span.
-- **A sample the tab was hidden in is skipped**, judged at the queue's flush
-  from page-pauses over the sample's window (`[emit − totalMs, emit]`). No
-  producer tracks visibility. A throttled tab measures the browser, not the
-  system.
+- **The time a sample spent hidden is taken off its own time** (the
+  `page-hidden` layer), judged at the queue's flush from page-pauses over the
+  sample's window (`[emit − totalMs, emit]`). No producer tracks visibility. A
+  throttled tab measures the browser, not the system; the visible rest is
+  still the op's. The page's pauses are subtracted from own time as given:
+  they are not placed against the sample's own excluded phases (a
+  `throttle-hold` the tab was also hidden through comes off twice), an
+  accepted under-count.
 - **One sample per tab.** Each visible tab reports its own sample of the same
   change, so a row's count includes every tab; the route caller shows which
   surface each came from. Documented, not deduplicated.

@@ -29,15 +29,6 @@ export function coveredMs(
   return total;
 }
 
-/** Does any interval touch `[startMs, endMs]`? */
-export function overlapsAny(
-  intervals: readonly Interval[],
-  startMs: number,
-  endMs: number,
-): boolean {
-  return intervals.some((i) => i.startMs <= endMs && i.endMs >= startMs);
-}
-
 /** Append to a ring bounded at `cap`, dropping the oldest. */
 export function pushBounded<T>(ring: T[], item: T, cap: number): void {
   ring.push(item);

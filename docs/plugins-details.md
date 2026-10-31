@@ -46291,7 +46291,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ownMsOf`
               - `splitPhases`
               - `splitReachedPhases`
-        - **`page-pauses`** — Was this page paused during a span of wall-clock time? pausesDuring(start, end): hidden or frozen at any point (visibilitychange, Page Lifecycle freeze), and how long its main thread was stalled inside it (long animation frames ≥ 1 s, the bar main-thread-stall files its own slow-op at) — the one record every client latency consumer reads instead of tracking visibility itself.
+        - **`page-pauses`** — Was this page paused during a span of wall-clock time? pausesDuring(start, end): how long it was hidden or frozen inside it (visibilitychange, Page Lifecycle freeze), and how long its main thread was stalled outside that (long animation frames ≥ 1 s, the bar main-thread-stall files its own slow-op at) — the one record every client latency consumer reads instead of tracking visibility itself.
           - Cross-plugin:
             - Imported by:
               - `debug/latency-ledger`

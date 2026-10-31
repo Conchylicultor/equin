@@ -23,6 +23,11 @@ export const SLEEP_LAYER = "sleep";
 // main-thread-stall files as its own `main-thread` slow-op.
 export const STALL_LAYER = "main-thread-stall";
 
+// The layer a client span's hidden time is charged to: the tab was in the
+// background (or frozen), where its timers, frames and callbacks are
+// throttled, so that part measures the browser, not the system.
+export const HIDDEN_LAYER = "page-hidden";
+
 // One client-side slow-op signal. `operationKind` is "page-load", "element",
 // or a client latency signal from perfs/latency-signal ("update", "confirm",
 // …) — an open string, so a new signal needs no schema change here. A client
@@ -36,8 +41,9 @@ export const SlowOpClientItemSchema = z.object({
   durationMs: z.number(),
   // The operation's OWN time — `durationMs` minus what it did not spend
   // working: a declared hold (an update's `throttle-hold`), a wait charged to
-  // another op (`element`'s transport bring-up) and a main-thread stall the
-  // page was frozen in (`main-thread-stall`, filed on its own). Judged against
+  // another op (`element`'s transport bring-up), a main-thread stall the page
+  // was frozen in (`main-thread-stall`, filed on its own) and the time the tab
+  // was hidden (`page-hidden`). Judged against
   // `thresholdMs`; the excluded time stays visible in `waits`. Optional only
   // for a tab on an older bundle, whose items read as all own time.
   ownMs: z.number().optional(),
