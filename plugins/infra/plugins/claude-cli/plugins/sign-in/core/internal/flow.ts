@@ -52,8 +52,7 @@ export type ClaudeSignInTarget = z.infer<typeof ClaudeSignInTargetSchema>;
  * - `idle` — none running (never started, cancelled, or dismissed).
  * - `waiting` — Claude Code waits for the browser. `url` is the page it asked
  *   to open (null until it has); `manualUrl` the page for another device,
- *   which shows a code to paste back (null until printed — a new account's
- *   sign-in never prints one).
+ *   which shows a code to paste back (null until Claude Code shows it).
  * - `done` — signed in: the computer's login works, or the account was added.
  * - `failed` — Claude Code said why, or the app could not finish it.
  *

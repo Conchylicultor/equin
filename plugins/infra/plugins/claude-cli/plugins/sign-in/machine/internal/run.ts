@@ -10,7 +10,6 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import type { Subprocess } from "bun";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { HttpError } from "@plugins/infra/plugins/endpoints/core";
@@ -28,29 +27,57 @@ import {
   parseBrowserUrl,
   parseManualUrl,
   parseSetupToken,
+  readSetupTokenScreen,
   signInArgs,
 } from "./cli-output";
+import { createScreen, type Screen } from "./screen";
 import { currentSignInFlow, publishSignInFlow } from "./flow-state";
 
 // The computer's one sign-in: Claude Code's own `auth login` (the computer) or
 // `setup-token` (a new account), run as a child of this backend.
 //
-// Nothing is polled. Claude Code writes its output into a file and hands the
-// sign-in page to a $BROWSER shim that appends it to another, both in the
-// run's own folder; a watch of that folder re-reads them on every change.
-// The child's exit decides the outcome. Its stdout/stderr are file
-// descriptors, never pipes (`infra/spawn`'s wedge); only stdin is a pipe — a
-// write-only sink, no stream pull — for the code the user pastes.
+// Nothing is polled. Claude Code hands the sign-in page to a $BROWSER shim
+// that appends it to a file in the run's own folder; a watch of that folder
+// re-reads it on every change. The child's exit decides the outcome.
+//
+// - `auth login` writes plain text: its stdout/stderr are one file descriptor
+//   onto a file in the same folder, never a pipe (`infra/spawn`'s wedge), and
+//   only stdin is a pipe — a write-only sink, no stream pull — for the code
+//   the user pastes.
+// - `setup-token` is a terminal UI with no plain-text mode — without a
+//   terminal it shows nothing until it exits, and on an error it waits for
+//   Enter forever — so it runs under a pseudo-terminal whose output Bun pushes
+//   to a callback, drawn onto a terminal emulator (`screen.ts`) and read back
+//   as the text a person would see. Its retry prompt fails the run.
 
 const OUTPUT = "output";
 const HANDED = "browser-url";
 const SHIM = "browser.sh";
 
+/** Wide enough that no URL or token Claude Code draws is wrapped. */
+const SCREEN_SIZE = { cols: 1000, rows: 50 } as const;
+
+/** A running Claude Code, as the run drives it. */
+interface Child {
+  exited: Promise<number>;
+  /** Resolves once everything it wrote has been read. */
+  outputDone: Promise<void>;
+  kill(): void;
+  /** Let go of what reads it — once the run has ended. */
+  close(): void;
+  /** Type a line, as the user would. */
+  send(line: string): Promise<void>;
+}
+
 interface Run {
   id: string;
   target: ClaudeSignInTarget;
   dir: string;
-  child: Subprocess<"pipe", number, number> | null;
+  child: Child | null;
+  /** `setup-token`'s screen; `auth login` writes to the `output` file. */
+  screen: Screen | null;
+  /** The error `setup-token` stopped on, waiting for an Enter never sent. */
+  stuck: string | null;
   releaseWatch: (() => void | Promise<void>) | null;
 }
 
@@ -110,23 +137,108 @@ function readIfThere(path: string): string {
   }
 }
 
-/** Re-read what Claude Code has said so far, and publish it if it moved. */
+/** What Claude Code has said so far. */
+function readOutput(run: Run): string {
+  return run.screen ? run.screen.text() : readIfThere(join(run.dir, OUTPUT));
+}
+
+/**
+ * Re-read what Claude Code has said so far, and publish it if it moved. A
+ * `setup-token` on its retry prompt is stopped: its exit fails the run.
+ */
 function readProgress(run: Run): void {
   const flow = currentSignInFlow();
   if (running !== run || flow.kind !== "waiting" || flow.id !== run.id) return;
+  const output = readOutput(run);
+  if (run.screen && run.stuck === null) {
+    const screen = readSetupTokenScreen(output);
+    if (screen.kind === "stuck") {
+      run.stuck = screen.error;
+      run.child?.kill();
+      return;
+    }
+  }
   const url = parseBrowserUrl(readIfThere(join(run.dir, HANDED)));
-  const manualUrl =
-    run.target.kind === "computer"
-      ? parseManualUrl(readIfThere(join(run.dir, OUTPUT)))
-      : null;
+  const manualUrl = parseManualUrl(output);
   if (url !== flow.url || manualUrl !== flow.manualUrl)
     publish(run, { ...flow, url, manualUrl });
+}
+
+/** `auth login`: plain text into the run's `output` file, the code on stdin. */
+function spawnPlain(
+  args: string[],
+  dir: string,
+  env: Record<string, string | undefined>,
+): Child {
+  const out = openSync(join(dir, OUTPUT), "w", 0o600);
+  try {
+    const child = Bun.spawn([bundledClaudeBin(), ...args], {
+      cwd: dir,
+      env,
+      stdin: "pipe",
+      stdout: out,
+      stderr: out,
+    });
+    return {
+      exited: child.exited,
+      outputDone: Promise.resolve(),
+      kill: () => child.kill(),
+      close: () => {},
+      send: async (line) => {
+        await child.stdin.write(`${line}\n`);
+        await child.stdin.flush();
+      },
+    };
+  } finally {
+    closeSync(out);
+  }
+}
+
+/**
+ * `setup-token`: under a pseudo-terminal drawn onto `screen`, every write
+ * re-reading the run's progress. Its terminal queries (device attributes, the
+ * keyboard protocol) go unanswered, so it keeps to plain keys and a typed
+ * line is the line and Enter.
+ */
+function spawnOnScreen(
+  args: string[],
+  dir: string,
+  env: Record<string, string | undefined>,
+  screen: Screen,
+  onDrawn: () => void,
+): Child {
+  const closed = Promise.withResolvers<void>();
+  const child = Bun.spawn([bundledClaudeBin(), ...args], {
+    cwd: dir,
+    env,
+    terminal: {
+      ...SCREEN_SIZE,
+      data: (_terminal, bytes) => void screen.write(bytes).then(onDrawn),
+      exit: () => closed.resolve(),
+    },
+  });
+  const terminal = child.terminal;
+  if (!terminal) throw new Error("Bun.spawn gave setup-token no terminal");
+  return {
+    exited: child.exited,
+    outputDone: closed.promise.then(() => screen.drawn()),
+    kill: () => child.kill(),
+    close: () => {
+      terminal.close();
+      screen.dispose();
+    },
+    send: (line) => {
+      terminal.write(`${line}\r`);
+      return Promise.resolve();
+    },
+  };
 }
 
 /** Stop a run: its child, its watch, its folder. Idempotent. */
 async function endRun(run: Run): Promise<void> {
   if (running === run) running = null;
   run.child?.kill();
+  run.child?.close();
   const release = run.releaseWatch;
   run.releaseWatch = null;
   if (release) await release();
@@ -145,7 +257,15 @@ export async function startSignIn(target: ClaudeSignInTarget): Promise<string> {
   sweepOrphanedRuns(root);
   const dir = join(root, runDirName(id));
   mkdirSync(dir, { mode: 0o700 });
-  const run: Run = { id, target, dir, child: null, releaseWatch: null };
+  const run: Run = {
+    id,
+    target,
+    dir,
+    child: null,
+    screen: null,
+    stuck: null,
+    releaseWatch: null,
+  };
   running = run;
   publish(run, { kind: "waiting", id, target, url: null, manualUrl: null });
 
@@ -171,17 +291,13 @@ export async function startSignIn(target: ClaudeSignInTarget): Promise<string> {
   if (target.kind === "new-account")
     env.CLAUDE_CONFIG_DIR = join(dir, "config");
 
-  const out = openSync(join(dir, OUTPUT), "w", 0o600);
-  try {
-    run.child = Bun.spawn([bundledClaudeBin(), ...signInArgs(target)], {
-      cwd: dir,
-      env,
-      stdin: "pipe",
-      stdout: out,
-      stderr: out,
-    });
-  } finally {
-    closeSync(out);
+  const args = signInArgs(target);
+  if (target.kind === "new-account") {
+    const screen = createScreen(SCREEN_SIZE);
+    run.screen = screen;
+    run.child = spawnOnScreen(args, dir, env, screen, () => readProgress(run));
+  } else {
+    run.child = spawnPlain(args, dir, env);
   }
   const child = run.child;
   void runTracked("claude-sign-in.settle", () => settle(run, child));
@@ -191,21 +307,20 @@ export async function startSignIn(target: ClaudeSignInTarget): Promise<string> {
 }
 
 /** The run's outcome, once its Claude Code exits. */
-async function settle(
-  run: Run,
-  child: Subprocess<"pipe", number, number>,
-): Promise<void> {
+async function settle(run: Run, child: Child): Promise<void> {
   const exitCode = await child.exited;
   if (running !== run) return; // cancelled or replaced: already ended
-  const output = readIfThere(join(run.dir, OUTPUT));
+  await child.outputDone;
+  if (running !== run) return;
+  const output = readOutput(run);
   const { id, target } = run;
   try {
-    if (exitCode !== 0) {
+    if (run.stuck !== null || exitCode !== 0) {
       publish(run, {
         kind: "failed",
         id,
         target,
-        error: failureMessage(output, exitCode),
+        error: run.stuck ?? failureMessage(output, exitCode),
       });
       return;
     }
@@ -267,8 +382,7 @@ export async function submitSignInCode(
   const run = running;
   if (!run?.child || run.id !== id)
     throw new HttpError(409, "That sign-in is no longer running.");
-  await run.child.stdin.write(`${code}\n`);
-  await run.child.stdin.flush();
+  await run.child.send(code);
 }
 
 /** Stop the run `id`, or dismiss its outcome: the flow reads idle. */

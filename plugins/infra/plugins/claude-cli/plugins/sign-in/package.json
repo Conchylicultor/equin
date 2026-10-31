@@ -1,5 +1,8 @@
 {
   "name": "@equin/plugin-infra-claude-cli-sign-in",
   "private": true,
-  "version": "0.0.1"
+  "version": "0.0.1",
+  "dependencies": {
+    "@xterm/headless": "^6.0.0"
+  }
 }

@@ -9,7 +9,7 @@ import { claudeSignInFlowServed } from "./internal/served";
 
 export default {
   description:
-    "Signing in to Claude from the app, desktop-only half: runs Claude Code's own sign-in (auth login for the computer, setup-token for a new account — the bundled build, one run at a time, a new start cancelling the running one) as a child whose sign-in page is caught by a $BROWSER shim and whose output is read from a watched file (no polling), serves it as the claude-sign-in.flow push value (idle / waiting with the page and the page for another device / done / failed), and the start / code / cancel endpoints. A finished computer sign-in re-checks Claude Code (the health row flips); a new account's token goes straight into the accounts' secrets store, never shown.",
+    "Signing in to Claude from the app, desktop-only half: runs Claude Code's own sign-in (auth login for the computer, setup-token for a new account — the bundled build, one run at a time, a new start cancelling the running one) as a child whose sign-in page is caught by a $BROWSER shim and whose output is read live with no polling (auth login: a watched file; setup-token, a terminal UI: a pseudo-terminal replayed onto a terminal emulator, its retry prompt after an error failing the run instead of waiting forever), serves it as the claude-sign-in.flow push value (idle / waiting with the page and the page for another device / done / failed), and the start / code / cancel endpoints. A finished computer sign-in re-checks Claude Code (the health row flips); a new account's token goes straight into the accounts' secrets store, never shown.",
   httpRoutes: {
     [startClaudeSignIn.route]: handleStart,
     [submitClaudeSignInCode.route]: handleCode,

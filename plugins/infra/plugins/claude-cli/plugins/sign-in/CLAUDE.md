@@ -17,7 +17,7 @@ stands. Plan: `research/2026-10-29-global-bundled-claude-code.md` (Phase 3).
 - **`new-account`** — another Claude account agents can run on: `setup-token`
   (a Claude subscription only, so the target has no method), under a scratch
   `CLAUDE_CONFIG_DIR` in the run's folder so the computer's login is out of
-  reach. The printed token goes straight to `addClaudeAccountWithCredential`
+  reach, and under a pseudo-terminal (see below). The printed token goes straight to `addClaudeAccountWithCredential`
   (`accounts/machine` → the secrets store): never logged, never in the live
   value, never shown. An API key is still pasted (the Claude accounts'
   "Use an API key").
@@ -41,25 +41,42 @@ accountId? }` | `failed { id, target, error }`, a `needsMachine` push value
 served external + notified from the machine half's memory
 (`machine/internal/flow-state.ts`). No polling anywhere:
 
-- Claude Code's stdout and stderr are one **file descriptor** onto
-  `<run>/output` (never a pipe — `infra/spawn`'s wedge); `$BROWSER` is a shim
-  (`<run>/browser.sh`) that appends the page Claude Code asks to open to
-  `<run>/browser-url`. One `acquireDirWatch` on the run's folder re-reads both
-  on every change (`readProgress`), and the child's exit decides the outcome
-  (`settle`). Only stdin is a pipe — a write-only sink for the pasted code.
+- `$BROWSER` is a shim (`<run>/browser.sh`) that appends the page Claude Code
+  asks to open to `<run>/browser-url`. One `acquireDirWatch` on the run's
+  folder re-reads it on every change (`readProgress`), and the child's exit
+  decides the outcome (`settle`).
+- **`auth login`** writes plain text: its stdout and stderr are one **file
+  descriptor** onto `<run>/output` (never a pipe — `infra/spawn`'s wedge),
+  re-read by the same watch. Only stdin is a pipe — a write-only sink for the
+  pasted code.
+- **`setup-token`** is a terminal UI with no plain-text mode. Without a
+  terminal it shows nothing until it exits, and after a refused code it waits
+  on "Press Enter to retry." forever — while the browser shows success either
+  way (its localhost callback redirects before the token exchange). So it runs
+  under a **pseudo-terminal** (`Bun.spawn`'s `terminal`), whose output Bun
+  pushes to a callback; it draws as a diff (cursor moves over cells already
+  right), so the bytes are replayed onto a terminal emulator
+  (`machine/internal/screen.ts`, `@xterm/headless`, 1000 columns so nothing
+  wraps) and read back as the text a person would see. Every draw re-reads the
+  run; the retry prompt fails it with the error above it and stops the child.
+  The outcome waits for the terminal's end of output, so nothing drawn is
+  lost. A pasted code is typed (the line and Enter).
 - What the output means is `machine/internal/cli-output.ts`, pure and tested:
-  the arguments per target, the manual URL (`visit: <url>`), the handed URL,
-  the token, and a failure's message (Claude Code's last line, never its
-  paste prompt, any credential masked).
+  the arguments per target, the manual URL (`auth login`'s `visit: <url>`, or
+  the URL `setup-token` draws below "Use the url below to sign in"), the
+  handed URL, the token, `setup-token`'s retry prompt, and a failure's message
+  (Claude Code's last line, never its paste prompt, any credential masked).
+  `screen.test.ts` replays a recorded `setup-token` session that was refused.
 - Run folders are `cache/claude-sign-in/<pid>-<id>` (`data-dirs`), mode 0700,
   deleted when the run ends; a start sweeps folders whose backend is gone (one
   may hold a printed token).
 
 ### Open point: `setup-token`'s output
 
-`setup-token` prints nothing while it waits, and how it prints the token on
-success has not been observed yet (it needs one real sign-in). The parser takes
-the first `sk-ant-oat…` in the output; finding none fails the run with
+How `setup-token` draws the token on success has not been observed under the
+pseudo-terminal yet (it needs one real sign-in); from its source, it draws the
+token under "Your OAuth token (valid for …):" and exits 0 about 500 ms later.
+The parser takes the first `sk-ant-oat…` on the screen; finding none fails the run with
 "setup-token finished without printing a token." and files a server error
 report (its output length only — never the output). Adjust
 `parseSetupToken` once a real run is seen.
@@ -81,8 +98,8 @@ report (its output length only — never the output). Adjust
   dismissed or replaced.
 - **The panel** (`ClaudeSignInPanel`): waiting — "Finish signing in to Claude
   in your browser" (Anthropic Console for a Console sign-in), Cancel, *Open the
-  page again*, and *Signing in on another device?* (when Claude Code printed
-  one: the copyable page and a "Paste the code from the page" field +
+  page again*, and *Signing in on another device?* (when Claude Code shows
+  one — both commands do: the copyable page and a "Paste the code from the page" field +
   Continue); failed — Claude Code's words, Close, Try again.
 - **`ClaudeSignInHost`** (`Core.Root`): only the tab whose click started a
   run (`started-here.ts`) opens its page in the browser — once, when the URL
