@@ -301,6 +301,16 @@ This is the single most important coding principle:
 - **Collections of domain records are DataViews.** Rendering a homogeneous set of domain records (rows from DB / live-state / config) is a `data-view` surface (`views={["list"]}` minimum — search/filter/sort/groupBy/item-actions come free), never a hand-rolled `.map()` of `<Row>`. Another list of the same records — a trash, an archive, a history, a queue, rows hidden by default — is a `DataViewSwitcher` source in the same view bar, never a new pane behind a button. `Row`+map is only for transient chrome (menus, pickers, tab strips), annotated `// eslint-disable-next-line data-view/no-adhoc-row-list -- <reason>` (ESLint: `no-adhoc-row-list`). See `plugins/primitives/plugins/data-view/CLAUDE.md` and `research/2026-07-17-global-data-view-adoption-guardrail.md`.
 - **Fix the structural issue, not the specific instance.** When something breaks, take a step back and ask why it was possible in the first place. A targeted fix in one call site leaves the rest exposed.
 
+  **Beware fixes that hide the issue instead of fixing it** — the symptom goes away, the cause stays, and the next occurrence is harder to trace:
+
+  - **A deadline on a slow op** → find out why it is slow (trace to the origin — `perfs-investigation` skill).
+  - **A retry on a failing op** → find out why it fails; a retry turns a deterministic bug into a flaky one.
+  - **A cache over a slow path** → find out why the path is slow first. A cache is fine as a complement once the path itself is sound — never as the thing that hides why it is slow.
+  - **Raising a limit, cap or timeout because it got hit** → find out why the work grew past the bound.
+  - These are examples, not an exhaustive list — don't restrict yourself to them. The general rule is what matters: any fix that makes a symptom disappear without explaining its cause is suspect.
+
+  A deadline or retry is still right as a *bound* around something you don't control (a network peer, a third-party API) — never as the fix for your own code.
+
   **Structural fixes are ranked — take the highest rung that can express the constraint, even when it's more work or churns call sites:**
 
   1. **Inexpressible** — rethink the API, abstraction or mental model until the wrong thing has no spelling: drop the parameter, derive the value, take the data not the callback, delete the concept. Nothing left to enforce.
