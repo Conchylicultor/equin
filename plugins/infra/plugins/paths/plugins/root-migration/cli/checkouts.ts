@@ -1,9 +1,6 @@
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
-import {
-  listWorktreeEntries,
-  type WorktreeEntry,
-} from "@plugins/infra/plugins/worktree/server";
+import { listWorktreeEntries } from "@plugins/infra/plugins/worktree/server";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { StaleCheckout } from "./plan";
 
@@ -31,14 +28,23 @@ export const LAYOUT_RULE_MODULE =
 
 /**
  * Every checkout of the repo at `repoRoot` whose HEAD lacks the layout rule.
- * A bare entry and a prunable one (its directory is gone) run nothing.
+ * An entry whose HEAD is not written yet and a prunable one (its directory is
+ * gone) run nothing.
  */
 export async function staleCheckouts(
   repoRoot: AppPath,
 ): Promise<StaleCheckout[]> {
-  const entries = (await listWorktreeEntries(repoRoot)).filter(
-    (e): e is WorktreeEntry & { head: string } =>
-      e.head !== null && !e.prunable,
+  // A HEAD as git names it: a symbolic ref goes to `cat-file` as the ref
+  // itself (one shared ref store), a detached one as its commit.
+  const entries = (await listWorktreeEntries(repoRoot)).flatMap((e) =>
+    e.head === null || e.prunable
+      ? []
+      : [
+          {
+            path: e.path,
+            head: e.head.kind === "branch" ? e.head.ref : e.head.commit,
+          },
+        ],
   );
   const heads = [...new Set(entries.map((e) => e.head))];
   if (heads.length === 0) return [];

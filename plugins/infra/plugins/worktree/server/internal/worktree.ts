@@ -41,7 +41,7 @@ let cachedRepoRoot: AppPath | null = null;
 // `spawnCaptured` redirects to numeric temp-file fds, which removes both outright.
 // THESE ARE WEDGE-BREAKERS, NOT LATENCY POLICE, and they are deliberately far
 // looser than "a bit above p99". Every one of them is consumed by a `throw`, and
-// a false positive is expensive in both directions: `worktreeListPaths` treats a
+// a false positive is expensive in both directions: `listWorktreeEntries` treats a
 // failure as fatal precisely because absence must never be read as evidence
 // (see its docblock), and a false timeout on `worktree add` triggers the
 // destructive partial-checkout cleanup below. Being late to break a real wedge
@@ -54,6 +54,8 @@ let cachedRepoRoot: AppPath | null = null;
 // every parallel type-check worker at once on a saturated box. Starvation, not
 // slowness, is what these commands actually suffer, and starvation is unbounded
 // by the p99 of an idle box. So each value is ~2-3 orders of magnitude above p50.
+// Now bounds the one `rev-parse --git-common-dir` a listing starts with (the
+// list itself is read from the admin files) — the same starvation exposure.
 const LIST_TIMEOUT_MS = 60_000; // ~640x the 94 ms p50
 const ADD_TIMEOUT_MS = 600_000; // ~160x the 3.8 s p50; its false positive is the destructive one
 const PRUNE_TIMEOUT_MS = 60_000; // metadata-only, same starvation exposure as list
@@ -76,7 +78,7 @@ const MOVE_TIMEOUT_MS = 60_000; // a rename + admin-dir rewrite, same exposure a
 // throw site already knows for certain.
 //
 // `worktreePath` is the worktree the command was operating on where there is
-// one; `worktreeListPaths` reads repo-wide metadata and has none.
+// one; `commonGitDir` reads repo-wide metadata and has none.
 export class WorktreeGitTimeoutError extends Error {
   readonly command: string;
   readonly timeoutMs: number;
@@ -95,10 +97,16 @@ export class WorktreeGitTimeoutError extends Error {
   }
 }
 
-// One registered worktree, as `git worktree list --porcelain` describes it.
-// `locked` is the lock reason ("" for a bare `locked`), null when unlocked.
-// `head` is the commit checked out (null for a bare repo); `prunable` is git's
-// mark for a worktree whose directory is gone.
+// How a worktree's HEAD stands, read from its `HEAD` file: a symbolic ref
+// (`ref`, e.g. `refs/heads/main` — unresolved; a reader that needs the commit
+// asks git with it), or a detached commit. `null` while not written yet — an
+// add in progress, or one killed before it wrote it.
+export type WorktreeHead =
+  { kind: "branch"; ref: string } | { kind: "detached"; commit: string };
+
+// One registered worktree, as git's own admin files describe it.
+// `locked` is the lock reason ("" for a bare `locked`), null when unlocked;
+// `prunable` is git's mark for an unlocked worktree whose directory is gone.
 export interface WorktreeEntry {
   /**
    * Where git says the worktree is — anywhere its owner put it (a user's own
@@ -106,61 +114,83 @@ export interface WorktreeEntry {
    * it (`appCheckoutOf`) before a sync read.
    */
   path: string;
-  head: string | null;
-  detached: boolean;
+  head: WorktreeHead | null;
   locked: string | null;
   prunable: boolean;
 }
 
-// Parse `git worktree list --porcelain`: one blank-line-separated block per
-// worktree, in git's own order (the main worktree first).
-function parseWorktreePorcelain(stdout: string): WorktreeEntry[] {
-  const entries: WorktreeEntry[] = [];
-  let cur: WorktreeEntry | null = null;
-  for (const line of stdout.split("\n")) {
-    if (line.startsWith("worktree ")) {
-      cur = {
-        path: line.slice("worktree ".length).trim(),
-        head: null,
-        detached: false,
-        locked: null,
-        prunable: false,
-      };
-      entries.push(cur);
-    } else if (cur && line.startsWith("HEAD ")) {
-      cur.head = line.slice("HEAD ".length).trim();
-    } else if (cur && (line === "prunable" || line.startsWith("prunable "))) {
-      cur.prunable = true;
-    } else if (cur && line === "detached") {
-      cur.detached = true;
-    } else if (cur && (line === "locked" || line.startsWith("locked "))) {
-      cur.locked = line.slice("locked".length).trim();
-    }
+// Every worktree is read from its admin files (gitrepository-layout(5)), not
+// from `git worktree list`, and the reason is the race the lock functions below
+// describe: `worktree list` reads every entry's HEAD through its `commondir`
+// and dies ("fatal: failed to read .git/worktrees/<other>/commondir") on an
+// entry a concurrent `git worktree add` has created but not yet filled. The
+// mutate gate admits three adds at once, so a launch's spare claim, the crash
+// convergence, the prune and a removal's registration check all failed beside a
+// refill. Nothing here reads `commondir`.
+//
+// Throws on any read failure but the documented in-flight ones, rather than
+// reporting fewer entries: callers read ABSENCE from this list as meaning (in
+// removeWorktree, "nothing to unlock"), so a failure must never be mistaken for
+// evidence.
+
+// A file's text, or null when it does not exist (yet, or any more) or is still
+// empty — git creates each admin file before writing it.
+async function readAdminFile(path: string): Promise<string | null> {
+  try {
+    const text = (await readFile(path, "utf8")).trim();
+    return text === "" ? null : text;
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === "ENOENT" || code === "ENOTDIR") return null;
+    throw err;
   }
-  return entries;
 }
 
-// Every worktree git currently tracks. One parser for every `worktree list
-// --porcelain` reader, so "which worktrees does git know about" is answered the
-// same way everywhere.
-//
-// Throws on a nonzero exit rather than reporting an empty list: callers read
-// ABSENCE from this list as meaning, so a git failure that degraded to `[]`
-// would read as "git tracks nothing" — which in removeWorktree selects the
-// recursive-delete branch. A failure here must never be mistaken for evidence.
-//
-// The tightest bound in the file, because `removeWorktree` calls it from
-// INSIDE the mutate gate: a wedge here holds one of three host-wide slots while
-// doing nothing but reading metadata.
-async function worktreeListEntries(
-  argv: string[],
+// A lock is the file's existence; its text is the reason ("" for none).
+async function readLock(lockFile: string): Promise<string | null> {
+  try {
+    return (await readFile(lockFile, "utf8")).trim();
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === "ENOENT" || code === "ENOTDIR") return null;
+    throw err;
+  }
+}
+
+async function readHead(headFile: string): Promise<WorktreeHead | null> {
+  const text = await readAdminFile(headFile);
+  if (text === null) return null;
+  if (!text.startsWith("ref: ")) return { kind: "detached", commit: text };
+  const ref = text.slice("ref: ".length).trim();
+  // Under the reftable backend HEAD is this stub and the real HEAD lives in
+  // the reftable stack, which this reader does not parse — say so.
+  if (ref === "refs/heads/.invalid") {
+    throw new Error(
+      `${headFile} is the reftable stub: worktree listing reads the files ref backend only`,
+    );
+  }
+  return { kind: "branch", ref };
+}
+
+// The common git dir of the repo `cwd` (or the process cwd) is in — one
+// rev-parse, which reads this checkout's own `.git` only, never another
+// worktree's.
+async function commonGitDir(
+  cwd: string | undefined,
   signal?: AbortSignal,
-): Promise<WorktreeEntry[]> {
+): Promise<string> {
+  const argv = [
+    GIT,
+    ...(cwd === undefined ? [] : ["-C", cwd]),
+    "rev-parse",
+    "--path-format=absolute",
+    "--git-common-dir",
+  ];
   const r = await spawnCaptured(argv, { timeoutMs: LIST_TIMEOUT_MS, signal });
   if (r.timedOut) {
     throw new WorktreeGitTimeoutError({
       message:
-        `git worktree list did not finish within ${LIST_TIMEOUT_MS} ms and was killed ` +
+        `git rev-parse did not finish within ${LIST_TIMEOUT_MS} ms and was killed ` +
         `(it may run while a host-wide worktree-mutate slot is held): ${argv.join(" ")}`,
       command: argv.join(" "),
       timeoutMs: LIST_TIMEOUT_MS,
@@ -168,37 +198,78 @@ async function worktreeListEntries(
   }
   if (r.exitCode !== 0) {
     throw new Error(
-      `git worktree list failed (exit ${r.exitCode}): ${r.stderr.trim() || "<no stderr>"}`,
+      `git rev-parse --git-common-dir failed (exit ${r.exitCode}): ${r.stderr.trim() || "<no stderr>"}`,
     );
   }
-  return parseWorktreePorcelain(r.stdout);
+  return r.stdout.trim();
 }
 
-// The absolute paths git currently tracks as worktrees, in git's own order.
-async function worktreeListPaths(
-  argv: string[],
-  signal?: AbortSignal,
-): Promise<string[]> {
-  return (await worktreeListEntries(argv, signal)).map((e) => e.path);
+// The worktrees registered in the repo whose common git dir is `common`, in
+// git's own order: the main worktree first, then the linked ones by admin-dir
+// name.
+async function readWorktreeEntries(common: string): Promise<WorktreeEntry[]> {
+  // A bare repo has no main worktree to read; every repo this app drives is a
+  // checkout, whose common dir is its `.git`.
+  if (basename(common) !== ".git") {
+    throw new Error(
+      `${common} is not a checkout's .git dir (a bare repo, or a separate git dir): worktree listing reads checkouts only`,
+    );
+  }
+  const main: WorktreeEntry = {
+    path: dirname(common),
+    head: await readHead(join(common, "HEAD")),
+    locked: null,
+    prunable: false,
+  };
+  const adminRoot = join(common, "worktrees");
+  let ids: string[];
+  try {
+    ids = (await readdir(adminRoot)).sort();
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return [main];
+    throw err;
+  }
+  const linked = await Promise.all(
+    ids.map(async (id): Promise<WorktreeEntry | null> => {
+      const admin = join(adminRoot, id);
+      // Written first by an add (after `locked`): an entry without it is one
+      // mid-add or mid-prune — or a stray file — and names no worktree yet.
+      // git's own list passes it over the same way.
+      const gitdir = await readAdminFile(join(admin, "gitdir"));
+      if (gitdir === null) return null;
+      // Absolute, or relative to the admin dir under `worktree.useRelativePaths`.
+      const dotGit = resolve(admin, gitdir);
+      const lockedReason = await readLock(join(admin, "locked"));
+      return {
+        path: basename(dotGit) === ".git" ? dirname(dotGit) : dotGit,
+        head: await readHead(join(admin, "HEAD")),
+        locked: lockedReason,
+        prunable: lockedReason === null && !(await pathExists(dotGit)),
+      };
+    }),
+  );
+  return [main, ...linked.filter((e): e is WorktreeEntry => e !== null)];
 }
 
-/** Every worktree registered in `repoRoot`, with its HEAD shape and lock. */
-export function listWorktreeEntries(
+/** Every worktree registered in `repoRoot`, with its HEAD and lock. */
+export async function listWorktreeEntries(
   repoRoot: AppPath,
   signal?: AbortSignal,
 ): Promise<WorktreeEntry[]> {
-  return worktreeListEntries(
-    [GIT, "-C", repoRoot, "worktree", "list", "--porcelain"],
-    signal,
-  );
+  return readWorktreeEntries(await commonGitDir(repoRoot, signal));
 }
 
 /**
  * Every checkout git tracks on this machine, as absolute paths (the main
- * worktree first). Throws on a git failure, never an empty list.
+ * worktree first). Throws on a read failure, never an empty list.
  */
-export function listWorktreePaths(signal?: AbortSignal): Promise<string[]> {
-  return worktreeListPaths([GIT, "worktree", "list", "--porcelain"], signal);
+export async function listWorktreePaths(
+  signal?: AbortSignal,
+): Promise<string[]> {
+  const entries = await readWorktreeEntries(
+    await commonGitDir(undefined, signal),
+  );
+  return entries.map((e) => e.path);
 }
 
 // The main worktree root (parent of all `.claude/worktrees/*`), not the
@@ -208,12 +279,9 @@ export async function ensureMainWorktreeRoot(
   signal?: AbortSignal,
 ): Promise<AppPath> {
   if (cachedRepoRoot) return cachedRepoRoot;
-  const [mainPath] = await worktreeListPaths(
-    [GIT, "worktree", "list", "--porcelain"],
-    signal,
-  );
+  const [mainPath] = await listWorktreePaths(signal);
   if (!mainPath) throw new Error("Could not determine main worktree root");
-  // git's first entry is the main worktree: the checkout the app runs from.
+  // The first entry is the main worktree: the checkout the app runs from.
   cachedRepoRoot = asAppPath(mainPath);
   return cachedRepoRoot;
 }
@@ -863,7 +931,7 @@ export async function isUnfinishedCheckout(
   }
   const gitdir = /^gitdir: (.+)$/m.exec(gitFile)?.[1]?.trim();
   if (!gitdir || !isSpareName(basename(gitdir))) return false;
-  return entry.detached && entry.locked === null;
+  return entry.head?.kind === "detached" && entry.locked === null;
 }
 
 /** Where the checkout at a path stands — see {@link checkoutState}. */
@@ -1110,12 +1178,9 @@ export async function removeWorktree(
     // A dir can outlive its registration (a `git worktree prune` after the dir
     // was made unreachable, a repo re-clone); such a leftover has no lock to
     // release, and `git worktree unlock` on it fails with "is not a working tree".
-    const registered = (
-      await worktreeListPaths(
-        [GIT, "-C", repoRoot, "worktree", "list", "--porcelain"],
-        signal,
-      )
-    ).some((p) => p === wtPath);
+    const registered = (await listWorktreeEntries(repoRoot, signal)).some(
+      (e) => e.path === wtPath,
+    );
     if (registered) await unlockWorktreeForRemoval(repoRoot, wtPath, signal);
 
     let moved = false;

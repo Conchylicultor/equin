@@ -51,8 +51,18 @@ install: `setupWorktree`'s `existing` path minus the convergence).
   list of every worktree, reading each HEAD, and die ("failed to read
   …/commondir") on an admin dir a concurrent `git worktree add` is half-way
   through writing — the mutate gate admits three at once, so a claim's lock
-  failed beside a spare refill and left the checkout unlocked. `git worktree
-  list` dies the same way; it still throws there (loud, the job retries).
+  failed beside a spare refill and left the checkout unlocked.
+- **The list is its admin files, not a git command.** `listWorktreeEntries` /
+  `listWorktreePaths` read `.git/HEAD` and each `.git/worktrees/<id>/{gitdir,
+  HEAD, locked}` (one `rev-parse --git-common-dir` to find them): `git worktree
+  list` dies the same way on a half-written entry, which failed the claim's
+  spare lookup, `isUnfinishedCheckout`, the prune and `removeWorktree`'s
+  registration check beside a refill. An entry without `gitdir` yet is passed
+  over (as git does); one without `HEAD` yet is listed with `head: null`, its
+  `initializing` lock still read — crash convergence depends on it. `head` is
+  the HEAD file as written (a branch ref, unresolved, or a detached commit).
+  `git worktree add` / `move` / `switch` still enumerate every worktree and can
+  die the same way beside a concurrent add.
 - **Crash convergence.** A crash after `move` leaves the dir in place on a
   detached HEAD — before the switch, or inside it. The early return recognises
   it by `isUnfinishedCheckout`: admin dir `spare-*` (the move keeps it), HEAD
@@ -163,6 +173,7 @@ pid liveness.
     - `NamespaceClaimant`
     - `NamespaceProbe`
     - `WorktreeEntry`
+    - `WorktreeHead`
     - `WorktreeOp`
     - `WorktreeOpInfo`
     - `WorktreeOpMarker`

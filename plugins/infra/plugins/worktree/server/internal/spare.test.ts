@@ -56,6 +56,16 @@ const wtFor = (id: string) => join(gitWorktreesDir(repo), id);
 const noGate = <T>(fn: () => Promise<T>) => fn();
 const noInstall = async (): Promise<void> => {};
 
+// What a concurrent `git worktree add` leaves for a moment: its admin entry
+// with `commondir` created but not yet written.
+function plantHalfWrittenAdd(id: string): void {
+  const half = join(repo, ".git", "worktrees", id);
+  mkdirSync(half);
+  writeFileSync(join(half, "gitdir"), `${wtFor(id)}/.git\n`);
+  writeFileSync(join(half, "HEAD"), `${"0".repeat(40)}\n`);
+  writeFileSync(join(half, "commondir"), "");
+}
+
 async function lockOf(path: string): Promise<string | null | undefined> {
   return (await listWorktreeEntries(repo)).find((e) => e.path === path)?.locked;
 }
@@ -168,11 +178,7 @@ describe("spare claim", () => {
     // dies on it ("failed to read …/commondir") — 2026-11-02: a claim's
     // checkout was left unlocked while another add ran beside it.
     const spare = await createSpareIn(repo, noInstall);
-    const half = join(repo, ".git", "worktrees", "att-half");
-    mkdirSync(half);
-    writeFileSync(join(half, "gitdir"), `${wtFor("att-half")}/.git\n`);
-    writeFileSync(join(half, "HEAD"), `${"0".repeat(40)}\n`);
-    writeFileSync(join(half, "commondir"), "");
+    plantHalfWrittenAdd("att-half");
     const raced = await spawnCaptured(
       [GIT, "-C", repo, "worktree", "lock", spare, "--reason", "x"],
       { timeoutMs: 60_000 },
@@ -186,8 +192,69 @@ describe("spare claim", () => {
     expect(await lockWorktree(repo, wtFor("att-none"), "x")).toBe(
       "unregistered",
     );
-    rmSync(half, { recursive: true });
     expect(await lockOf(spare)).toBe("mine");
+  });
+
+  test("the list readers hold while another worktree's add is half-written", async () => {
+    // `git worktree list` dies on the same state as `lock` — and with it every
+    // reader of the list: a claim's spare lookup, the crash check, the prune,
+    // a removal's registration check.
+    const spare = await createSpareIn(repo, noInstall);
+    plantHalfWrittenAdd("att-half");
+    const raced = await spawnCaptured(
+      [GIT, "-C", repo, "worktree", "list", "--porcelain"],
+      { timeoutMs: 60_000 },
+    );
+    expect(raced.stderr).toContain("commondir");
+
+    expect((await listWorktreeEntries(repo)).map((e) => e.path)).toEqual([
+      repo,
+      wtFor("att-half"),
+      spare,
+    ]);
+    expect(await listReadySpares(repo)).toEqual([spare]);
+    expect(await isUnfinishedCheckout(repo, spare)).toBe(false);
+    expect(await checkoutState(repo, spare)).toBe("complete");
+    const noRemove = async (path: string): Promise<void> => {
+      throw new Error(`removed ${path}`);
+    };
+    expect(await pruneSparesIn(repo, Date.now(), noRemove)).toEqual([]);
+  });
+
+  test("the listing reads what `git worktree list` reports", async () => {
+    const spare = await createSpareIn(repo, noInstall);
+    const branch = wtFor("att-branch");
+    await git(repo, "worktree", "add", "-q", "-b", "b1", branch);
+    await git(repo, "worktree", "lock", branch);
+    const gone = wtFor("att-gone");
+    await git(repo, "worktree", "add", "-q", "--detach", gone);
+    rmSync(gone, { recursive: true });
+
+    const porcelain = await git(repo, "worktree", "list", "--porcelain");
+    const fromGit = porcelain.split("\n\n").map((block) => {
+      const lines = block.split("\n");
+      const field = (k: string) =>
+        lines.find((l) => l === k || l.startsWith(`${k} `));
+      const locked = field("locked");
+      return {
+        path: field("worktree")!.slice("worktree ".length),
+        head: lines.includes("detached")
+          ? field("HEAD")!.slice("HEAD ".length)
+          : field("branch")!.slice("branch ".length),
+        locked:
+          locked === undefined ? null : locked.slice("locked".length).trim(),
+        prunable: field("prunable") !== undefined,
+      };
+    });
+    const ours = (await listWorktreeEntries(repo)).map((e) => ({
+      path: e.path,
+      head: e.head?.kind === "branch" ? e.head.ref : e.head?.commit,
+      locked: e.locked,
+      prunable: e.prunable,
+    }));
+    expect(ours).toEqual(fromGit);
+    expect(ours.map((e) => e.path)).toEqual([repo, branch, gone, spare]);
+    expect(ours[1]!.locked).toBe("");
   });
 
   test("a spare made at an older main ends at the current main", async () => {

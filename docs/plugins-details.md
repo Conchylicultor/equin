@@ -33571,6 +33571,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `NamespaceClaimant`
           - `NamespaceProbe`
           - `WorktreeEntry`
+          - `WorktreeHead`
           - `WorktreeOp`
           - `WorktreeOpInfo`
           - `WorktreeOpMarker`

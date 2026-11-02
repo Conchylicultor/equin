@@ -5,6 +5,7 @@ export {
   listWorktreePaths,
   listWorktreeEntries,
   type WorktreeEntry,
+  type WorktreeHead,
   gitWorktreesDir,
   appCheckoutOf,
   worktreePathFor,

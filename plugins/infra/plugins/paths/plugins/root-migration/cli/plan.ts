@@ -24,7 +24,7 @@ export interface LiveAgent extends LiveWork {
 /** A checkout of this repo whose code predates the move (see `staleCheckouts`). */
 export interface StaleCheckout {
   path: string;
-  /** The commit it has checked out. */
+  /** What it has checked out: a branch ref (`refs/heads/…`), or a detached commit. */
   head: string;
 }
 
@@ -216,7 +216,10 @@ function describeKeptLinks(kept: KeptLinks): string {
   const { links, staleCheckouts } = kept;
   const sample = staleCheckouts
     .slice(0, STALE_SAMPLE)
-    .map((c) => `       - ${c.path} (at ${c.head.slice(0, 10)})`);
+    .map(
+      (c) =>
+        `       - ${c.path} (at ${c.head.startsWith("refs/") ? c.head : c.head.slice(0, 10)})`,
+    );
   const more = staleCheckouts.length - sample.length;
   return [
     `Keep ${links.join(" and ")} as ${links.length > 1 ? "links" : "a link"} to ${links.length > 1 ? "their" : "its"} new home: ${staleCheckouts.length} checkout(s) of this repo still run code from before the move, which uses the legacy name${links.length > 1 ? "s" : ""} unconditionally — without the link, the first command, hook, backend or agent from one would create a second, real data root that every start then refuses (DataRootSplitError).`,
