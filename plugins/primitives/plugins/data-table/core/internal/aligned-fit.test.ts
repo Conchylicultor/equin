@@ -34,4 +34,39 @@ describe("fitAlignedColumns", () => {
       ids(fitAlignedColumns([a, b], { budget: 250, gap: 0, minLabel: 100 })),
     ).toEqual(["a"]);
   });
+
+  test("stacked: the widest column counts, and gives way first only by dropOrder", () => {
+    // The widest kept (kind, 140) + one gap of 4 = 144; 144 + 160 = 304.
+    expect(
+      ids(
+        fitAlignedColumns(cols, {
+          budget: 304,
+          gap: 4,
+          minLabel: 160,
+          stacked: true,
+        }),
+      ),
+    ).toEqual(["kind", "modified", "size"]);
+    // One short: kind (dropOrder 1) goes, and the widest left (96) fits.
+    expect(
+      ids(
+        fitAlignedColumns(cols, {
+          budget: 303,
+          gap: 4,
+          minLabel: 160,
+          stacked: true,
+        }),
+      ),
+    ).toEqual(["modified", "size"]);
+    expect(
+      ids(
+        fitAlignedColumns(cols, {
+          budget: 200,
+          gap: 4,
+          minLabel: 160,
+          stacked: true,
+        }),
+      ),
+    ).toEqual([]);
+  });
 });

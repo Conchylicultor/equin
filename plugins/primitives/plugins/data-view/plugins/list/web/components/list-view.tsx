@@ -43,6 +43,7 @@ import {
   useItemActionZones,
   usePlacement,
   wearsTimeInk,
+  dropOrderOf,
   useResolveCell,
   useResolveCellEditor,
   useResolveOperatorSet,
@@ -188,8 +189,18 @@ interface ListRowConfig {
   trailingFields: FieldDef<unknown>[];
   /** Per trailing field: its slot's ref (measuring it for the column width),
    *  whether it presents as a chip (a chip starts its slot, anything else ends
-   *  it), and whether it wears the faint time ink (`wearsTimeInk`). */
-  trailingSlots: { ref: SlotRef; chip: boolean; timeInk: boolean }[];
+   *  it), whether it wears the faint time ink (`wearsTimeInk`), and whether it
+   *  is drawn — a field gives way, lowest priority first, rather than starve
+   *  the title (`useSlotWidths`). */
+  trailingSlots: {
+    ref: SlotRef;
+    chip: boolean;
+    timeInk: boolean;
+    shown: boolean;
+  }[];
+  /** The trailing cell's ref: measures the room the row's title and its
+   *  trailing fields share, for the fit above. */
+  trailingCellRef: SlotRef;
   /** Which terms of the row's run are chips (resolved once, per schema). */
   titleIsChip: boolean;
   subtitleIsChip: boolean[];
@@ -454,7 +465,12 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       subtitleFields,
       trailingFields,
       trailingTimeInk: trailingFields.map((f) =>
-        wearsTimeInk(f, slots.edge.includes(f) ? "edge" : "trail", placement),
+        wearsTimeInk(f, trailingSlotOf(slots, f), placement),
+      ),
+      // What gives way first when the row is narrow — the table's column
+      // drop order, so a field yields before the same fields in both.
+      trailingDropOrders: trailingFields.map((f) =>
+        dropOrderOf(f, trailingSlotOf(slots, f), placement),
       ),
       // What the view's presentation may elide: the row's terms, never its
       // title, its marks or its lead (the row's identity).
@@ -466,9 +482,15 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   // either (`ListViewOptions.lines`).
   const lines = options.lines ?? (terms.subtitleFields.length > 0 ? 2 : 1);
   // The trailing slots' shared widths, as CSS variables on the list root.
-  const { rootRef: slotRootRef, slotRef } = useSlotWidths(
+  const {
+    rootRef: slotRootRef,
+    slotRef,
+    cellRef: trailingCellRef,
+    shown: trailingShown,
+  } = useSlotWidths(
     terms.trailingFields.map((f) => f.id).join("\u0000"),
     terms.trailingFields.length,
+    { dropOrders: terms.trailingDropOrders, stacked: lines === 2 },
   );
   const trailingSlots = useMemo(
     () =>
@@ -476,8 +498,9 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
         ref: slotRef(i),
         chip: isChipField(f),
         timeInk: terms.trailingTimeInk[i]!,
+        shown: trailingShown[i] ?? true,
       })),
-    [terms, slotRef, isChipField],
+    [terms, slotRef, isChipField, trailingShown],
   );
   const config = useMemo<ListRowConfig>(() => {
     const { leadingField, thumbnail } = layout;
@@ -492,6 +515,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       subtitleFields,
       trailingFields,
       trailingSlots,
+      trailingCellRef,
       // Which terms of the row's run are chips. Resolved once per schema, so a
       // long list pays one lookup per field.
       titleIsChip: titleField != null && isChipField(titleField),
@@ -516,6 +540,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     layout,
     terms,
     trailingSlots,
+    trailingCellRef,
     primary,
     isChipField,
     resolveCell,
@@ -862,6 +887,7 @@ function TrailingSlots({
 }): ReactNode {
   return config.trailingFields.map((field, i) => {
     const slot = config.trailingSlots[i]!;
+    if (!slot.shown) return null;
     return (
       <Stack
         key={field.id}
@@ -926,9 +952,20 @@ function resolveListLeading(
   };
 }
 
+/** Which of the trailing slots a trailing field was placed in. */
+function trailingSlotOf(
+  slots: Placement<unknown>["slots"],
+  field: FieldDef<unknown>,
+): "trail" | "edge" {
+  return slots.edge.includes(field) ? "edge" : "trail";
+}
+
 // The trailing cell — the trail and edge fields plus the aggregate `×N` badge —
 // is identical in both row shapes, so it is written once. It is a rigid leaf:
-// it renders what it renders and never gives width back to the title. Only
+// it never shrinks into the title; instead its fields give way whole, lowest
+// priority first, once the title would fall below its floor (`useSlotWidths`
+// measures the room through the cell's ref — so the cell stays mounted, empty,
+// while every field has given way, to tell when they fit again). Only
 // its flush-right MECHANIC differs, which is why the class comes in from the
 // caller: the single-line shape puts an empty `<Fill>` ahead of it, the
 // stacked one keeps the `ml-auto` it has always used.
@@ -950,6 +987,7 @@ function renderTrailing(
 ): ReactNode {
   return (
     <Stack
+      ref={config.trailingCellRef}
       direction="row"
       gap="none"
       align="center"
@@ -989,14 +1027,17 @@ function renderStackedTrailing(
 ): ReactNode {
   return (
     <Stack
+      ref={config.trailingCellRef}
       gap="2xs"
       align="end"
       className={cn("ml-auto text-right", rigidClass())}
     >
       {config.trailingFields.map((field, i) =>
+        !config.trailingSlots[i]!.shown ||
         isElidedRead(presentation, field, row) ? null : (
           <span
             key={field.id}
+            ref={config.trailingSlots[i]!.ref}
             data-list-slot={field.id}
             className={cn(
               config.trailingSlots[i]!.timeInk && "text-list-time-ink",
@@ -1279,6 +1320,7 @@ function listRowNode(
           <Stack
             gap="none"
             className={clipClasses({ axis: "both", fill: false })}
+            data-list-body=""
           >
             {titleField || marks ? (
               <Line className="gap-xs">
@@ -1335,7 +1377,11 @@ function listRowNode(
         // the row) without inventing a shrink-priority primitive for it.
         <>
           {titleField ? (
-            <Text variant="label" className={cn("text-foreground", toneClass)}>
+            <Text
+              variant="label"
+              className={cn("text-foreground", toneClass)}
+              data-list-body=""
+            >
               {/* `display="inline"` here, not `"block"`: a block cell asks for
                   `w-full`, which in a flex line means the whole row rather
                   than the cell it means in the stacked shape. */}

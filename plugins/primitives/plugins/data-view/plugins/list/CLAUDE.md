@@ -86,7 +86,12 @@ CLAUDE.md, "Placement"):
   **aligned slot** (`use-slot-widths.ts`: the widest that slot has been on any
   row, as a CSS variable on the list root, grow-only, reset when the trailing
   field set changes), spaced by `listSlotGap`; the edge field is last, in
-  `listTimeInk`.
+  `listTimeInk`. The trailing cell never shrinks, so its fields **give way
+  whole** instead: measured on a row (the room from the title's start to the
+  line's end, the same whatever shows), they drop in the table's column drop
+  order (`dropOrderOf` → data-table's `fitAlignedColumns`, `stacked` for a
+  two-line row's column) until the title keeps 6rem. A dropped field's width
+  stays measured, so it comes back once the row is wide enough again.
 - **quiet terms, elided common values** — the body is wrapped in data-view's
   `FieldPresentationProvider` over the subtitle + trailing fields: chip-typed
   values draw `● label`, and a value ≥ 60% of the rows hold is left out (a
@@ -222,10 +227,11 @@ conditional hook.
 - Description: List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
 - Web:
   - Contributes: `DataViewSlots.View` "List" → `ListView`
-  - Uses: 69 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×47
+  - Uses: 71 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×48
     - `primitives/rank-reorder` ×3
     - `primitives/css/spacing` ×2
+    - `primitives/latest-ref` ×2
     - `primitives/collapsible.FoldMotion`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
@@ -239,7 +245,6 @@ conditional hook.
     - `primitives/css/ui-kit.cn`
     - `primitives/dom/element-size.useResizeObserverSet`
     - `primitives/icon-button.IconButton`
-    - `primitives/latest-ref.useEventCallback`
     - `primitives/link-gesture.activationProps`
     - `primitives/tree.TreeRowChrome`
     - `primitives/virtual-rows.VirtualRows`

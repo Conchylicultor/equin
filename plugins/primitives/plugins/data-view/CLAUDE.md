@@ -342,8 +342,9 @@ field type (kind)  →  recipe rules  →  surface `place`  →  user's Property
 - **Priority** (what gives way first when narrow, from last): `emphasis`, then
   the slot's rank (`SLOT_RANK`: title > lead > edge > afterTitle > line2 >
   trail), then drawing order in the slot — never the recipe's rule order.
-  Tables give `trail` / `edge` columns a drop order from it (`dropOrderOf`);
-  `lead` and `title` never drop.
+  Tables give `trail` / `edge` columns a drop order from it (`dropOrderOf`),
+  and the list drops its trailing fields in the same order when they would
+  starve the title; `lead` and `title` never drop.
 - **Form follows the slot** (`ViewSlots[slot].form` → `FieldCell context`):
   `glyph` in a lead draws a state's option as its icon / dot alone
   (`OptionGlyph`); `token` on a card's line; `cell` elsewhere.

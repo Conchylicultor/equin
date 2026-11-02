@@ -42962,10 +42962,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`list`** — List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
           - Web:
             - Contributes: `DataViewSlots.View` "List" → `ListView`
-            - Uses: 69 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md)
-              - `primitives/data-view` ×47
+            - Uses: 71 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md)
+              - `primitives/data-view` ×48
               - `primitives/rank-reorder` ×3
               - `primitives/css/spacing` ×2
+              - `primitives/latest-ref` ×2
               - `primitives/collapsible.FoldMotion`
               - `primitives/css/badge.Badge`
               - `primitives/css/center.Center`
@@ -42979,7 +42980,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.cn`
               - `primitives/dom/element-size.useResizeObserverSet`
               - `primitives/icon-button.IconButton`
-              - `primitives/latest-ref.useEventCallback`
               - `primitives/link-gesture.activationProps`
               - `primitives/tree.TreeRowChrome`
               - `primitives/virtual-rows.VirtualRows`
