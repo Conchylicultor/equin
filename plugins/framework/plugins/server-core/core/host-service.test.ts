@@ -5,16 +5,17 @@ import {
 } from "./contributions";
 import {
   assertHostServices,
-  clearHostServices,
   defineHostService,
   provideHostServicesUnbooted,
 } from "./host-service";
+import { isolateHostServices } from "./testing/host-services";
 
 // Services are declared once per process (module scope), and the assert checks
 // every declared one — so every test below provides for each of them except
 // the one it is about. Forget the services other modules (the `bun test`
-// preload's desktop providers) declared first, so they are not demanded here.
-clearHostServices();
+// preload's desktop providers) declared first, so they are not demanded here —
+// and get them back after, with this suite's own forgotten.
+isolateHostServices();
 const Clock = defineHostService<{ now(): number }>("test.clock");
 const Store = defineHostService<{ name: string }>("test.store");
 
@@ -28,10 +29,7 @@ const provider = (
 });
 
 beforeEach(() => clearCollectedContributions());
-afterAll(() => {
-  clearCollectedContributions();
-  clearHostServices();
-});
+afterAll(() => clearCollectedContributions());
 
 describe("defineHostService", () => {
   test("get() with no booted graph and no unbooted provider throws, naming it", () => {

@@ -185,10 +185,22 @@ export async function withHostServices<T>(
   }
 }
 
-/** Forget every declared service — test support (`core/testing`), so a suite's
- *  services do not leak into the next suite's boot asserts in one bun process. */
-export function clearHostServices(): void {
+/**
+ * Start from no declared service, and get back a function that puts the
+ * declared set back exactly as it was — the substrate of
+ * `isolateHostServices` (`core/testing`), which pairs the two around a suite.
+ * There is no bare clear: the services declared at module evaluation (the
+ * `bun test` preload's job queue, blob store, …) are declared once per
+ * process, so a set emptied and never restored stays empty for every later
+ * suite in the same bun process.
+ */
+export function isolateDeclaredHostServices(): () => void {
+  const snapshot = new Map(declared);
   declared.clear();
+  return () => {
+    declared.clear();
+    for (const [id, token] of snapshot) declared.set(id, token);
+  };
 }
 
 /**

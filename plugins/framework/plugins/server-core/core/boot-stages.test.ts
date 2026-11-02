@@ -12,12 +12,13 @@ import {
   runPostReadyPhases,
   runSettledPhase,
 } from "./boot-stages";
-import { clearHostServices } from "./host-service";
+import { isolateHostServices } from "./testing/host-services";
 import { clearCollectedContributions } from "./contributions";
 
 // The boot asserts every declared host service; the services the `bun test`
-// preload's desktop providers declared are not this suite's graph.
-clearHostServices();
+// preload's desktop providers declared are not this suite's graph. They come
+// back after, for the suites that run later in the same bun process.
+isolateHostServices();
 // This suite boots graphs in the shared bun process: forget them after, so the
 // next suite is back to "no graph booted" (its host services the preload's).
 afterAll(() => clearCollectedContributions());

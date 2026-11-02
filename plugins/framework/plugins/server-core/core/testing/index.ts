@@ -18,9 +18,10 @@ export { clearRelationBases } from "../resources";
 // collect resets it, so a later "read before collect" assertion still holds.
 export { clearCollectedContributions } from "../contributions";
 
-// Declared host services are process-global too: a suite that declares some
-// forgets them after, so the next suite's boot assert does not demand them.
-export { clearHostServices } from "../host-service";
+// Declared host services are process-global too: a suite that boots its own
+// graph (or declares services of its own) starts from none and gets the
+// process's back after, so neither side's services leak into the other's.
+export { isolateHostServices } from "./host-services";
 
 // A headless test process boots no graph, yet runs code that reads host
 // services (`db`, the job queue): the `bun test` preload names the desktop
