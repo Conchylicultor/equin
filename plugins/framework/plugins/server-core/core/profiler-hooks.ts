@@ -28,7 +28,7 @@ export interface RuntimeProfileView {
  * install asserts the two sets are equal at the type level, so they cannot drift.
  */
 export type ProfilerMeasureName =
-  "subscribers" | "frameChars" | "ids" | "sinceChangeMs";
+  "subscribers" | "frameChars" | "ids" | "sinceChangeMs" | "waitCount";
 
 /**
  * One loader entry's own table read-set as its span closes (`[]` included),

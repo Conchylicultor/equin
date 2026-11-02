@@ -71,6 +71,21 @@ import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core"
 // what the lane claimed inside it, and what remains is handed to `onSlowWait`
 // as the lane's queue — so one slow pass is filed once, by what made it slow,
 // not again by every delivery that waited for it to end.
+//
+// ## Queue residue: congestion made of many small waits
+//
+// A span is judged net of its gate waits, so every `queue` wait must be
+// reported against its gate somewhere. One wait past a bar is filed where it
+// happens (`chargeWait`). One a subscriber did not file is RESIDUE, carried
+// upward like a child's execution interval: kept on the innermost open entry,
+// offered as one wait (its sum, the entry its caller) when that entry closes,
+// and — still unfiled — handed to the nearest open ancestor
+// (`fileQueueResidue`). So 40 queries × 150 ms is one 6 s wait, filed once,
+// by the innermost entry it is slow for. Residue that leaves the top of its
+// chain unfiled (each request waited a little) lands in the gate's window
+// (`addGateWindow`): summed across independent ops for `GATE_WINDOW_MS` and
+// filed as the gate's own when the sum reaches a bar — a pool saturated by
+// many requests each under every bar.
 
 // `http` / `db` / `loader` are spans of real work. `sub` / `push` are *origin*
 // entries: the WS-subscription ack and the cascade/push flush that trigger a
@@ -138,12 +153,15 @@ export type SpanKind = (typeof SPAN_KINDS)[number];
  *   change notification's changed ids).
  * - `sinceChangeMs` — time from the Postgres trigger firing to this span
  *   (includes how long the writing transaction stayed open).
+ * - `waitCount` — how many queue waits a `wait <layer>` op filed by an entry's
+ *   residue is the sum of (see `SlowWait.waits`).
  */
 export const SPAN_MEASURES = [
   "subscribers",
   "frameChars",
   "ids",
   "sinceChangeMs",
+  "waitCount",
 ] as const;
 export type SpanMeasure = (typeof SPAN_MEASURES)[number];
 export type SpanMeasures = Partial<Record<SpanMeasure, number>>;
@@ -485,6 +503,38 @@ export { pushBand as __pushBand };
 // --- Injected ambient-context runtime ---
 
 /**
+ * One `queue` layer's unfiled residue on one entry (`EntryContext.queueTallies`):
+ * the summed waiter time of the waits it holds. Offered capped at the entry's
+ * union on the layer (`fileQueueResidue`): concurrent waiters overlap, and the
+ * entry was judged net of the union, never of more than its wall-clock.
+ */
+interface QueueTally {
+  ms: number;
+  waits: number;
+}
+
+function addResidue(
+  ctx: EntryContext,
+  layer: string,
+  ms: number,
+  waits: number,
+): void {
+  const tallies = (ctx.queueTallies ??= new Map());
+  const tally = tallies.get(layer);
+  if (tally) {
+    tally.ms += ms;
+    tally.waits += waits;
+  } else tallies.set(layer, { ms, waits });
+}
+
+/** `ctx` or its nearest ancestor still open (see `EntryContext.closed`). */
+function nearestOpen(ctx: EntryContext | undefined): EntryContext | undefined {
+  let a = ctx;
+  while (a && a.closed) a = a.parent;
+  return a;
+}
+
+/**
  * The mutable ambient entry context: the innermost enclosing entry's identity
  * plus its live parent chain and interval-union accumulators. A gate charges
  * its queue-wait here (via `chargeWait`) while the entry runs — into this
@@ -538,6 +588,12 @@ export interface EntryContext {
   childUnion: Track;
   /** Union of gate waits ∪ claims → `excludedMs`. */
   excludedUnion: Track;
+  /**
+   * Per `queue` layer: the unfiled queue waits charged while this entry was
+   * the innermost open one, plus the unfiled residue of entries that closed
+   * inside it. Lazily created. Offered by `fileQueueResidue` as it closes.
+   */
+  queueTallies?: Map<string, QueueTally>;
   /**
    * Per-claimant unions — time inside an enclosed span filed as its own slow
    * op (see `SlowSpanHandler`) → `claims`. Lazily created on the first claim.
@@ -826,13 +882,33 @@ export function onSlowSpan(
  */
 export type WaitKind = "queue" | "join";
 
-/** One `queue` wait at or past an `onSlowWait` floor. */
+/**
+ * One `queue` wait at or past an `onSlowWait` floor — or a sum of waits no
+ * subscriber filed one by one: an entry's queue RESIDUE on one gate (see
+ * `fileQueueResidue`), or a gate's WINDOW across independent ops (`window`),
+ * so congestion made of many small waits is reported against the gate even
+ * when no single wait reaches a bar.
+ */
 export interface SlowWait {
   /** The gate's layer name (`read-admit`, `db-acquire`, …). */
   layer: string;
   ms: number;
-  /** The innermost open entry that waited (a latency leaf: the leaf itself). */
+  /**
+   * The innermost open entry that waited (a latency leaf: the leaf itself); for
+   * a residue, the entry whose own time it was excluded from; for a window,
+   * the op that queued longest in it.
+   */
   caller: SpanRef;
+  /**
+   * A residue or window only: how many queue waits it is the sum of. Absent
+   * for a single wait.
+   */
+  waits?: number;
+  /**
+   * A gate window only: the length of the window the waits (each op's under
+   * every bar) were summed over (`GATE_WINDOW_MS`).
+   */
+  windowMs?: number;
   /**
    * The queue of a latency leaf (`LeafSpanOptions.queue`): staleness someone
    * sees, so a monitor may hold it to a latency bar rather than a work bar.
@@ -840,22 +916,35 @@ export interface SlowWait {
   latency?: true;
 }
 
-export type SlowWaitHandler = (wait: SlowWait) => void;
+/**
+ * A slow-wait subscriber: returns whether it FILED the wait. A filed wait is
+ * done; one no subscriber filed is carried on as residue and offered again,
+ * summed with others, by the entry around it (and at last the gate's window) —
+ * so a subscriber that observes without filing sees the same time again.
+ */
+export type SlowWaitHandler = (wait: SlowWait) => boolean;
 
 const slowWaitSubs: { thresholdMs: number; handler: SlowWaitHandler }[] = [];
+
+/**
+ * Hand a queue wait to every subscriber whose floor it reaches; true when one
+ * of them filed it.
+ */
+function notifySlowWait(wait: SlowWait): boolean {
+  let filed = false;
+  for (const sub of slowWaitSubs)
+    if (wait.ms >= sub.thresholdMs && sub.handler(wait)) filed = true;
+  return filed;
+}
 
 /**
  * Subscribe to `queue` waits of at least `thresholdMs` — the gate as the slow
  * op: a span is judged on its own time (its waits excluded), so the time it
  * queued is reported here, against the gate, instead. Called synchronously from
- * `chargeWait`; the handler must only schedule. Returns a disposer.
+ * `chargeWait` (one wait), as an entry closes (its residue — see
+ * `fileQueueResidue`) and from the gate's window (`addGateWindow`); the
+ * handler must only schedule. Returns a disposer.
  */
-/** Hand a queue wait to every subscriber whose floor it reaches. */
-function notifySlowWait(wait: SlowWait): void {
-  for (const sub of slowWaitSubs)
-    if (wait.ms >= sub.thresholdMs) sub.handler(wait);
-}
-
 export function onSlowWait(
   handler: SlowWaitHandler,
   opts: { thresholdMs: number },
@@ -1681,6 +1770,103 @@ export function recordSpan(
   }
 }
 
+/**
+ * Offer a closing entry's queue residue on each gate — the unfiled waits it
+ * holds, summed — to `onSlowWait`, the entry its caller. The entry was judged
+ * without that time, so it must be reported against the gate even when it is
+ * made of many waits each under every bar: 40 queries waiting 150 ms each on
+ * `db-acquire` are one 6 s `wait db-acquire`. Unfiled, the residue moves to
+ * the nearest open ancestor (nearest only, like a child's execution interval,
+ * so no wait is ever held by two entries — a detached child closing after its
+ * parent hands its own on, never the parent's), and from the top of the chain
+ * to the gate's window. Filed by the innermost entry it is slow for, once.
+ */
+function fileQueueResidue(ctx: EntryContext): void {
+  const tallies = ctx.queueTallies!;
+  ctx.queueTallies = undefined;
+  const caller: SpanRef = { kind: ctx.kind, label: ctx.label };
+  const outer = nearestOpen(ctx.parent);
+  for (const [layer, tally] of tallies) {
+    const { waits } = tally;
+    // Waits the entry overlapped (a fan-out's parallel loaders) cost it their
+    // union, which bounds the sum: 100 loaders each queued 100 ms over the same
+    // 100 ms are 100 ms of the flush, not 10 s.
+    const ms = Math.min(tally.ms, ctx.layerUnions.get(layer)?.unionMs ?? 0);
+    if (ms <= 0) continue;
+    if (notifySlowWait({ layer, ms, caller, waits })) continue;
+    if (outer) addResidue(outer, layer, ms, waits);
+    else addGateWindow(layer, ms, waits, caller);
+  }
+}
+
+/**
+ * How long a gate's window sums the residue of independent ops — a SUM here,
+ * each op having lost its own time. Long enough that a pool saturated by a
+ * steady stream of requests, each a little under every bar, adds up to one;
+ * short enough that scattered unrelated waits expire instead of adding up over
+ * hours into a report nobody felt. Fixed (tumbling), not sliding: a burst
+ * straddling two windows under the bar in each is not filed.
+ */
+const GATE_WINDOW_MS = 60_000;
+
+// Distinct callers a window keeps for naming its longest waiter; past it a
+// caller's waits still count, it just cannot be named.
+const GATE_WINDOW_CALLER_CAP = 64;
+
+interface GateWindow {
+  startMs: number;
+  ms: number;
+  waits: number;
+  /** Per caller (`kind label`): ms it queued in the window. */
+  callers: Map<string, { ref: SpanRef; ms: number }>;
+  /** The caller that queued longest so far (kept as each one grows). */
+  top: { ref: SpanRef; ms: number } | undefined;
+}
+
+/** Per queue layer: the residue of independent ops in its current window. */
+const gateWindows = new Map<string, GateWindow>();
+
+/**
+ * Sum a root's unfiled residue into its gate's window, and offer the window to
+ * `onSlowWait` as the gate's own wait — its caller the op that queued longest
+ * in it — every time it grows. Filed, the window starts over (the next one
+ * holds only time not yet reported); a window older than `GATE_WINDOW_MS` is
+ * dropped as the next residue arrives, its time below every bar.
+ */
+function addGateWindow(
+  layer: string,
+  ms: number,
+  waits: number,
+  caller: SpanRef,
+): void {
+  const t = now();
+  let w = gateWindows.get(layer);
+  if (!w || t - w.startMs > GATE_WINDOW_MS) {
+    w = { startMs: t, ms: 0, waits: 0, callers: new Map(), top: undefined };
+    gateWindows.set(layer, w);
+  }
+  w.ms += ms;
+  w.waits += waits;
+  const key = `${caller.kind} ${caller.label}`;
+  let entry = w.callers.get(key);
+  if (entry) entry.ms += ms;
+  else if (w.callers.size < GATE_WINDOW_CALLER_CAP) {
+    entry = { ref: caller, ms };
+    w.callers.set(key, entry);
+  }
+  if (entry && (!w.top || entry.ms > w.top.ms)) w.top = entry;
+  if (
+    notifySlowWait({
+      layer,
+      ms: w.ms,
+      caller: w.top?.ref ?? caller,
+      waits: w.waits,
+      windowMs: GATE_WINDOW_MS,
+    })
+  )
+    gateWindows.delete(layer);
+}
+
 // Cap the variant at MAX_VARIANT_LEN and drop empty parts, so an absent detail
 // is `undefined` rather than `{}` on every downstream surface.
 function capDetail(detail: SpanDetail | undefined): SpanDetail | undefined {
@@ -1723,7 +1909,9 @@ function capDetail(detail: SpanDetail | undefined): SpanDetail | undefined {
  * `kind` says what the caller was waiting FOR (see `WaitKind`): a `queue`
  * wait at or past an `onSlowWait` floor is handed to its subscribers as the
  * GATE's slowness, charged where it happens (once per wait — the per-ancestor
- * unions above would count it once per level).
+ * unions above would count it once per level). A queue wait no subscriber
+ * filed is residue, kept on the innermost open entry and offered again, summed,
+ * as it closes (`fileQueueResidue`).
  *
  * If no entry is active (context-less: jobs, pollers, migrations), fall back
  * to a standalone `db [layer]` span so the wait is never silently lost.
@@ -1742,8 +1930,14 @@ export function chargeWait(layer: string, ms: number, kind: WaitKind): void {
     record("db", `[${layer}]`, ms, nextSpanId++, null, null);
     return;
   }
-  if (kind === "queue")
-    notifySlowWait({ layer, ms, caller: { kind: cur.kind, label: cur.label } });
+  if (
+    kind === "queue" &&
+    !notifySlowWait({ layer, ms, caller: { kind: cur.kind, label: cur.label } })
+  ) {
+    const holder = nearestOpen(cur);
+    if (holder) addResidue(holder, layer, ms, 1);
+    else addGateWindow(layer, ms, 1, { kind: cur.kind, label: cur.label });
+  }
   const end = now();
   const start = end - ms;
   for (let a: EntryContext | undefined = cur; a; a = a.parent) {
@@ -2070,6 +2264,8 @@ export async function recordEntrySpan<T>(
       loaderReadSetSink?.(label, ctx.tables ?? NO_TABLES, ctx.tags);
       onReads?.(ctx.tables ?? NO_TABLES, ctx.tags);
     }
+    // Last: a subscriber it reaches can never cost the read-set handoff.
+    if (ctx.queueTallies) fileQueueResidue(ctx);
   }
 }
 
@@ -2147,5 +2343,6 @@ export function resetRuntimeProfile(): void {
   }
   flightRingHead = 0;
   laneClaims.clear();
+  gateWindows.clear();
   sinceMs = now();
 }

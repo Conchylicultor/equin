@@ -403,12 +403,15 @@ describe("onSlowWait — a queue wait is the gate's slowness", () => {
   test("fires once per queue wait at/over the floor, naming the innermost entry", async () => {
     const seen: Array<{ layer: string; ms: number; caller: string }> = [];
     const sub = onSlowWait(
-      (w) =>
+      (w) => {
         seen.push({
           layer: w.layer,
           ms: w.ms,
           caller: `${w.caller.kind}:${w.caller.label}`,
-        }),
+        });
+        // Filed: not offered again as either entry's residue.
+        return true;
+      },
       { thresholdMs: 20 },
     );
     try {
@@ -425,6 +428,186 @@ describe("onSlowWait — a queue wait is the gate's slowness", () => {
       sub.dispose();
     }
     expect(seen).toEqual([{ layer: "read-admit", ms: 30, caller: "loader:l" }]);
+  });
+});
+
+describe("queue residue — many small waits are reported against the gate", () => {
+  // A subscriber that files every wait past `bar`, the way slow-ops' install
+  // hook does.
+  function fileWaitsOver(bar: number, filed: string[]) {
+    return onSlowWait(
+      (w) => {
+        if (w.ms < bar) return false;
+        filed.push(
+          `${w.layer} ${w.ms} ${w.caller.kind}:${w.caller.label} ×${w.waits ?? 1}${w.windowMs === undefined ? "" : " window"}`,
+        );
+        return true;
+      },
+      { thresholdMs: 0 },
+    );
+  }
+  // `n` back-to-back queue waits of `ms` each on `layer`.
+  function waitsInARow(layer: string, n: number, ms: number) {
+    for (let i = 0; i < n; i++) {
+      fakeNow += ms;
+      chargeWait(layer, ms, "queue");
+    }
+  }
+
+  test("40 waits of 150 ms are one 6 s wait, filed once by the loader", async () => {
+    const filed: string[] = [];
+    const sub = fileWaitsOver(1000, filed);
+    try {
+      await recordEntrySpan("flush", "flushNotifies", async () => {
+        await recordEntrySpan("push", "p", async () => {
+          await recordEntrySpan("loader", "l", () => {
+            waitsInARow("db-acquire", 40, 150);
+          });
+        });
+      });
+    } finally {
+      sub.dispose();
+    }
+    expect(filed).toEqual(["db-acquire 6000 loader:l ×40"]);
+  });
+
+  test("a filed single wait is not filed again as residue", async () => {
+    const filed: string[] = [];
+    const sub = fileWaitsOver(1000, filed);
+    try {
+      await recordEntrySpan("sub", "s", async () => {
+        await recordEntrySpan("loader", "l", () => {
+          waitsInARow("db-acquire", 1, 1500);
+          waitsInARow("db-acquire", 3, 100);
+        });
+      });
+    } finally {
+      sub.dispose();
+    }
+    // The 300 ms left over is under the bar at every level.
+    expect(filed).toEqual(["db-acquire 1500 loader:l ×1"]);
+  });
+
+  test("residues each under the bar sum into the enclosing entry's", async () => {
+    const filed: string[] = [];
+    const sub = fileWaitsOver(1000, filed);
+    try {
+      await recordEntrySpan("flush", "flushNotifies", async () => {
+        for (const key of ["a", "b", "c"])
+          await recordEntrySpan("loader", key, () => {
+            waitsInARow("read-admit", 5, 100); // 500 ms each
+          });
+        // A filed loader's residue is not the flush's.
+        await recordEntrySpan("loader", "d", () => {
+          waitsInARow("read-admit", 12, 100);
+        });
+      });
+    } finally {
+      sub.dispose();
+    }
+    expect(filed).toEqual([
+      "read-admit 1200 loader:d ×12",
+      "read-admit 1500 flush:flushNotifies ×15",
+    ]);
+  });
+
+  test("a detached child closing after its parent files only its own waits", async () => {
+    const filed: string[] = [];
+    const sub = fileWaitsOver(1000, filed);
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    let child!: Promise<void>;
+    try {
+      await recordEntrySpan("push", "p", () => {
+        child = recordEntrySpan("loader", "detached", async () => {
+          waitsInARow("db-acquire", 8, 150); // 1200 ms, while p is open
+          await gate;
+        });
+        waitsInARow("db-acquire", 2, 100); // p's own 200 ms
+      });
+      release();
+      await child;
+    } finally {
+      sub.dispose();
+    }
+    // p's 200 ms is under the bar (and goes to the gate's window), the
+    // child's 1200 ms is filed once, by the child.
+    expect(filed).toEqual(["db-acquire 1200 loader:detached ×8"]);
+  });
+
+  test("parallel children's residues sum up to the parent's union", async () => {
+    const filed: string[] = [];
+    const sub = fileWaitsOver(1000, filed);
+    try {
+      await recordEntrySpan("flush", "flushNotifies", async () => {
+        // Two loaders waiting over the same interval: each lost its 600 ms.
+        let release!: () => void;
+        const admitted = new Promise<void>((r) => (release = r));
+        const queued = () => async () => {
+          await admitted;
+          chargeWait("read-admit", 600, "queue");
+        };
+        const a = recordEntrySpan("loader", "a", queued());
+        const b = recordEntrySpan("loader", "b", queued());
+        fakeNow = 600;
+        release();
+        await Promise.all([a, b]);
+        // The flush's own waits, after: 600 ms more of its timeline.
+        waitsInARow("read-admit", 6, 100);
+      });
+    } finally {
+      sub.dispose();
+    }
+    // 1800 ms summed, but the two loaders overlapped: 1200 ms of the flush.
+    expect(filed).toEqual(["read-admit 1200 flush:flushNotifies ×8"]);
+  });
+
+  test("independent ops each under the bar add up in the gate's window", async () => {
+    const filed: string[] = [];
+    const sub = fileWaitsOver(1000, filed);
+    try {
+      for (let i = 0; i < 12; i++)
+        await recordEntrySpan("http", i % 3 === 0 ? "GET /a" : "GET /b", () => {
+          waitsInARow("db-acquire", 1, 100);
+        });
+    } finally {
+      sub.dispose();
+    }
+    // Filed the moment the window reaches the bar, then started over: the
+    // 11th and 12th wait are the next window's.
+    expect(filed).toEqual(["db-acquire 1000 http:GET /b ×10 window"]);
+  });
+
+  test("a window's waits expire past GATE_WINDOW_MS", async () => {
+    const filed: string[] = [];
+    const sub = fileWaitsOver(1000, filed);
+    try {
+      for (let i = 0; i < 12; i++) {
+        fakeNow += 10_000; // 10 waits of 100 ms, but over 120 s
+        await recordEntrySpan("http", "GET /a", () => {
+          waitsInARow("db-acquire", 1, 100);
+        });
+      }
+    } finally {
+      sub.dispose();
+    }
+    expect(filed).toEqual([]);
+  });
+
+  test("a join wait is never residue", async () => {
+    const filed: string[] = [];
+    const sub = fileWaitsOver(1000, filed);
+    try {
+      await recordEntrySpan("loader", "l", () => {
+        for (let i = 0; i < 20; i++) {
+          fakeNow += 100;
+          chargeWait("read-coalesce", 100, "join");
+        }
+      });
+    } finally {
+      sub.dispose();
+    }
+    expect(filed).toEqual([]);
   });
 });
 
@@ -559,7 +742,13 @@ describe("lanes — a delivery queued behind an earlier flush pass", () => {
     );
   }
   function watchWaits(seen: SlowWait[]) {
-    return onSlowWait((w) => seen.push(w), { thresholdMs: 0 });
+    return onSlowWait(
+      (w) => {
+        seen.push(w);
+        return true;
+      },
+      { thresholdMs: 0 },
+    );
   }
 
   // Pass N runs 0 → 2100 holding `slow`; `x` turns stale at 300, waits for

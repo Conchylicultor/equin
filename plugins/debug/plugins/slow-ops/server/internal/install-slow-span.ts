@@ -116,17 +116,32 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
   // them. The profiler hands only `queue` waits here (a `join` is the run it
   // joined, which reports itself). A latency leaf's queue (a delivery waiting
   // for the flush lane) arrives already net of what the lane filed inside it.
-  // The bar per wait is `resolveWaitThreshold`; the floor is the lowest of them.
+  // Waits each under the bar arrive summed: as an entry's residue (`waits`
+  // set, the entry its caller — 40 queries × 150 ms on `db-acquire` is one 6 s
+  // wait), or, when every op waited a little, as the gate's window across
+  // independent ops (`windowMs` set, its longest waiter the caller). A wait
+  // returned unfiled comes back summed with others, so each is filed once. The
+  // bar per wait is `resolveWaitThreshold`; the floor is the lowest of them.
   waitDisposer = onSlowWait(
     (wait: SlowWait) => {
       const threshold = resolveWaitThreshold(wait, thresholds);
-      if (wait.ms < threshold) return;
+      if (wait.ms < threshold) return false;
+      const detail =
+        wait.waits === undefined
+          ? undefined
+          : {
+              // A window's sample says it is a sum across ops, not one op's.
+              ...(wait.windowMs !== undefined && {
+                variant: `across ops, ${wait.windowMs / 1000} s window`,
+              }),
+              measures: { waitCount: wait.waits },
+            };
       const trace = captureTrace({
         kind: WAIT_KIND,
         label: wait.layer,
         durationMs: wait.ms,
         thresholdMs: threshold,
-        detail: { caller: wait.caller },
+        detail: { caller: wait.caller, ...detail },
       });
       // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- observability write: recordSlowOp persists via its own background-lane/suppressed path; must stay profiler-invisible
       void recordSlowOp({
@@ -137,8 +152,10 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
         thresholdMs: threshold,
         source: "server-slow-op",
         caller: wait.caller,
+        detail,
         traceId: trace?.id,
       });
+      return true;
     },
     { thresholdMs: Math.min(thresholds.loaderMs, thresholds.updateMs) },
   );
