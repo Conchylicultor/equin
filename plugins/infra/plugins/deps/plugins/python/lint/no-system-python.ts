@@ -57,6 +57,14 @@ export default createRule({
   },
   defaultOptions: [],
   create(context) {
+    // One report per node: an argv head such as "/usr/bin/python3" is both a
+    // command word (ArrayExpression) and a shell-path literal (Literal).
+    const reported = new Set<TSESTree.Node>();
+    const report = (node: TSESTree.Node): void => {
+      if (reported.has(node)) return;
+      reported.add(node);
+      context.report({ node, messageId: "systemPython" });
+    };
     return {
       // An argv handed straight to a call: `spawnCaptured(["python3", "-m", …])`,
       // or a shell's `["sh", "-c", "python3 …"]`. A data array whose first entry
@@ -75,10 +83,7 @@ export default createRule({
         );
         const head = words[0];
         if (head !== null && head !== undefined && PYTHON_COMMAND.test(head)) {
-          context.report({
-            node: node.elements[0]!,
-            messageId: "systemPython",
-          });
+          report(node.elements[0]!);
           return;
         }
         const script = words.findIndex(
@@ -86,10 +91,7 @@ export default createRule({
         );
         const text = script === -1 ? null : words[script];
         if (text !== null && text !== undefined && PYTHON_SCRIPT.test(text)) {
-          context.report({
-            node: node.elements[script]!,
-            messageId: "systemPython",
-          });
+          report(node.elements[script]!);
         }
       },
       // A shell script or shebang: `exec python3 "$@"`, `#!/usr/bin/env python3`.
@@ -98,13 +100,13 @@ export default createRule({
           typeof node.value === "string" &&
           PYTHON_IN_SHELL.test(node.value)
         ) {
-          context.report({ node, messageId: "systemPython" });
+          report(node);
         }
       },
       TemplateLiteral(node) {
         const text = stringValue(node);
         if (text !== null && PYTHON_IN_SHELL.test(text)) {
-          context.report({ node, messageId: "systemPython" });
+          report(node);
         }
       },
     };

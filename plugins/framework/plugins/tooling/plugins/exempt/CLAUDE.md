@@ -101,7 +101,13 @@ One loader (`loadExemptions`), three consumers:
 
 Checks: `exempt:manifests-valid` (stale path, invalid manifest — escaping path,
 missing reason/task —, duplicate, unknown or closed rule, debt on a `noDebt`
-rule) and `exempt:rule-ids-in-sync` (the generated unions).
+rule, a lint exemption on a file ESLint never lints — `*.generated.ts`,
+`prototypes/**` — which suppresses nothing and which no unused-exemption report
+sees) and `exempt:rule-ids-in-sync` (the generated unions). That every lint
+exemption is actually honored — "off" in the IDE config, matched by the
+worker's index — is tested once for every manifest in lint/core's
+`exemptions-honored.test.ts`; a rule's own RuleTester suite never asserts its
+owner is silent (the rule names no owner, so it fires there).
 
 ## Finding exemptions
 

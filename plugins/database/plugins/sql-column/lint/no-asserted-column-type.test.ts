@@ -16,6 +16,11 @@
  * test at the foot of the file is what makes the paragraph true by construction
  * — a message arm the rule declares but no invalid case reaches is now a
  * failure, so a fourth arm cannot ship untested either.
+ *
+ * Who is exempt is not the rule's business: the owner's
+ * own files are silenced by its `exempt/index.ts`, tested for every manifest
+ * at once in lint/core's `exemptions-honored.test.ts`. Here the rule fires on
+ * them, which is what proves it carries no owner allowlist of its own.
  */
 
 import { expect, test } from "bun:test";
@@ -27,7 +32,7 @@ import {
 
 const ruleTester = createRuleTester();
 
-/** A file inside the owner directory, where the rule must stay silent. */
+/** A file inside the owner directory — exempted by its manifest, not the rule. */
 const OWNED =
   "plugins/database/plugins/sql-column/server/internal/parsed-text.ts";
 /** An ordinary consumer file, where it must fire. */
@@ -67,11 +72,6 @@ const cases: Cases = {
 
     // --- `$type` on something that is not a column builder at all. ---
     { code: "const c = someOther.$type<Foo>();" },
-
-    // --- The owner directory documents the banned forms in order to name them. ---
-    { code: 'const c = text("x").$type<"a" | "b">();', filename: OWNED },
-    { code: 'const c = text("x", { enum: ["a", "b"] });', filename: OWNED },
-    { code: 'const c = jsonb("x").$type<Foo>();', filename: OWNED },
   ],
   invalid: [
     // --- The assertion, in every shape the five real sites take. ---
@@ -120,6 +120,14 @@ const cases: Cases = {
     {
       code: 'const c = varchar("kind", { length: 8, enum: ["a", "b"] });',
       errors: [{ messageId: "enumColumnConfig" }],
+    },
+
+    // --- The owner directory names the banned forms; sql-column/exempt/index.ts
+    // silences it there, the rule does not. ---
+    {
+      code: 'const c = text("x").$type<"a" | "b">();',
+      filename: OWNED,
+      errors: [{ messageId: "assertedColumnType" }],
     },
 
     // --- Both spellings in one file are two separate reports. ---

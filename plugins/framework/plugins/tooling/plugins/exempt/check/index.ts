@@ -11,12 +11,14 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { listAllChecks } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import {
+  isLintScopeExcluded,
   lintRuleIds,
   loadLintContributions,
 } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import {
   describeExemption,
   exemptManifestPaths,
+  isLintRuleId,
   loadExemptions,
   ruleIdProblems,
   type ResolvedExemption,
@@ -67,6 +69,17 @@ async function manifestProblems(ctx: CheckContext): Promise<string[]> {
     }
   }
 
+  // A file ESLint never lints (codegen output, prototypes) gives a lint
+  // exemption nothing to suppress, and no unused-exemption report sees it:
+  // that report only runs on linted files.
+  for (const e of exemptions) {
+    if (isLintRuleId(e.rule) && isLintScopeExcluded(e.target)) {
+      problems.push(
+        `out of lint scope: ${e.manifest} exempts "${e.path}" from ${e.rule}, but ESLint never lints it (LINT_SCOPE_EXCLUDE_GLOBS) — the entry suppresses nothing — ${describeExemption(e)}`,
+      );
+    }
+  }
+
   const seen = new Map<string, ResolvedExemption>();
   for (const e of exemptions) {
     const key = `${e.rule}\0${e.target}`;
@@ -96,7 +109,7 @@ async function manifestProblems(ctx: CheckContext): Promise<string[]> {
 const manifestsValid: Check = {
   id: "exempt:manifests-valid",
   description:
-    "Every exempt/index.ts entry is valid: a reasoned (and, for debt, tasked) entry naming a live, non-closed rule (and, for debt, one not declared noDebt), for an existing path inside its own plugin, declared once",
+    "Every exempt/index.ts entry is valid: a reasoned (and, for debt, tasked) entry naming a live, non-closed rule (and, for debt, one not declared noDebt), for an existing path inside its own plugin (a linted one, for a lint rule), declared once",
   async run(ctx: CheckContext): Promise<CheckResult> {
     const problems = await manifestProblems(ctx);
     if (problems.length === 0) return { ok: true };

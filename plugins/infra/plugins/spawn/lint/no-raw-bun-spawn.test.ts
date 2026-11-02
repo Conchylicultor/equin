@@ -8,9 +8,9 @@
  * natively and stays valid, as does prose that merely mentions the token
  * inside a string.
  *
- * This test file itself lives under the spawn plugin dir (the in-rule owner
- * skip) AND matches the test-file ignore, so it is doubly exempt at lint time;
- * the RuleTester below runs the rule against synthetic filenames.
+ * The spawn plugin itself (where raw Bun.spawn IS the impl) is exempted by its
+ * own exempt/index.ts, honored for every manifest in lint/core's
+ * `exemptions-honored.test.ts` — the rule names no owner, so it fires there.
  */
 
 import rule from "./no-raw-bun-spawn";
@@ -28,13 +28,14 @@ ruleTester.run("no-raw-bun-spawn", rule, {
     { code: `await spawnCaptured(["git", "status"]);` },
     // Prose that merely mentions the token inside a string.
     { code: `const doc = "prefer spawnCaptured over a raw Bun.spawn call";` },
-    // The owner skip: inside the spawn plugin, raw Bun.spawn IS the impl.
+  ],
+  invalid: [
+    // Inside the spawn plugin: silenced by spawn/exempt/index.ts, not the rule.
     {
       code: `Bun.spawn(["echo", "hi"], { stdout: outFd });`,
       filename: "plugins/infra/plugins/spawn/core/internal/spawn-captured.ts",
+      errors: [{ messageId: "rawBunSpawn" }],
     },
-  ],
-  invalid: [
     // The plain call — including option-less (stdout defaults to "pipe").
     {
       code: `Bun.spawn(["git", "status"]);`,

@@ -4,8 +4,13 @@
  * Backend code must build every database connection through the connection
  * plugin, so each call carries a deadline. The rule flags `new Pool` /
  * `new Client` from "pg" in every import shape, and a `connectionString` handed
- * to graphile-worker (which would build its own raw pool) — outside the
- * connection plugin, tooling directories and tests.
+ * to graphile-worker (which would build its own raw pool) — skipping only
+ * `check/` and `lint/` directories itself. `cli`/`script` files and tests are
+ * the lint barrel's `outOfScope`, and the connection plugin is exempted by its
+ * own manifest. Who is exempt is not the rule's business: the owner's
+ * own files are silenced by its `exempt/index.ts`, tested for every manifest
+ * at once in lint/core's `exemptions-honored.test.ts`. Here the rule fires on
+ * them, which is what proves it carries no owner allowlist of its own.
  */
 
 import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
@@ -15,16 +20,16 @@ const ruleTester = createRuleTester();
 
 const BACKEND = "plugins/infra/plugins/jobs/server/internal/job-lock.ts";
 
-const EXEMPT_PATHS = [
-  "plugins/database/plugins/connection/server/internal/client.ts",
+/** The directories the rule skips itself (leaf folders, not file categories). */
+const SKIPPED_PATHS = [
   "plugins/database/plugins/migrations/check/internal/direct-db.ts",
-  "plugins/database/plugins/embedded/scripts/start.ts",
-  "plugins/database/plugins/admin/e2e/fork-bench.ts",
   "plugins/database/lint/no-pool-await-in-transaction.ts",
-  "plugins/page/plugins/editor/server/internal/page-forest.test.ts",
-  "plugins/database/plugins/query-deadline/web/__tests__/database-health-row.test.tsx",
-  "plugins/database/plugins/query-deadline/server/__tests__/helper.ts",
 ];
+
+const RAW = `import { Pool } from "pg";
+import { runMigrations } from "graphile-worker";
+new Pool({ connectionString: url });
+await runMigrations({ connectionString: url });`;
 
 ruleTester.run("no-raw-pg-connection", rule, {
   valid: [
@@ -68,20 +73,27 @@ await makeWorkerUtils({ pgPool: pool });`,
         filename: BACKEND,
         code: `import { quickAddJob } from "graphile-worker";
 someOtherRun({ connectionString: url });`,
-      },
-      // Exempt: the connection plugin itself, tooling directories, and tests.
-      ...EXEMPT_PATHS.map((filename) => ({
-        filename,
-        code: `import { Pool } from "pg";
-import { runMigrations } from "graphile-worker";
-new Pool({ connectionString: url });
-await runMigrations({ connectionString: url });`,
-      })),
-    ],
-    invalid: [
-      {
-        filename: BACKEND,
-        code: `import { Pool } from "pg";
+    },
+    // The rule's own skip: check/ and lint/ directories.
+    ...SKIPPED_PATHS.map((filename) => ({ filename, code: RAW })),
+  ],
+  invalid: [
+    // The connection plugin's own file: the rule fires there — its
+    // exempt/index.ts, not the rule, is what silences it.
+    {
+      filename: "plugins/database/plugins/connection/server/internal/client.ts",
+      code: RAW,
+      errors: [
+        { messageId: "rawPgConnection", data: { name: "Pool" } },
+        {
+          messageId: "graphileConnectionString",
+          data: { name: "runMigrations" },
+        },
+      ],
+    },
+    {
+      filename: BACKEND,
+      code: `import { Pool } from "pg";
 const pool = new Pool({ connectionString: url, max: 4 });`,
         errors: [{ messageId: "rawPgConnection", data: { name: "Pool" } }],
       },

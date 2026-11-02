@@ -1,7 +1,9 @@
 /**
  * Tests for `no-raw-worker`: `new Worker` (bare, via globalThis, computed) is
  * reported in server / central / shared code, while CLI, check, core and test
- * code — and the daemon primitive itself — are left alone.
+ * code are left alone. The daemon primitive itself is exempted by its own
+ * exempt/index.ts (honored for every manifest in lint/core's
+ * `exemptions-honored.test.ts`), so here the rule fires on it.
  */
 
 import rule from "./no-raw-worker";
@@ -28,18 +30,19 @@ ruleTester.run("no-raw-worker", rule, {
       code: `new Worker(url);`,
       filename: "/repo/plugins/foo/server/a.test.ts",
     },
-    // The primitive.
-    {
-      code: `new Worker(url);`,
-      filename:
-        "/repo/plugins/infra/plugins/spawn/plugins/daemon/server/internal/supervise.ts",
-    },
     // Look-alikes.
     { code: `new SharedWorker(url);`, filename: SERVER },
     { code: `new pool.Worker(url);`, filename: SERVER },
     { code: `Worker(url);`, filename: SERVER },
   ],
   invalid: [
+    // The primitive: silenced by daemon/exempt/index.ts, not by the rule.
+    {
+      code: `new Worker(url);`,
+      filename:
+        "/repo/plugins/infra/plugins/spawn/plugins/daemon/server/internal/supervise.ts",
+      errors: [{ messageId: "rawWorker" }],
+    },
     {
       code: `new Worker(url);`,
       filename: SERVER,

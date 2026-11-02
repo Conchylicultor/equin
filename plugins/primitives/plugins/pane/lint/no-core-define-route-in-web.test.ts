@@ -5,7 +5,9 @@
  * The rule pins ONE import path for `defineRoute` per runtime: a `web/` file
  * takes it from the pane WEB barrel (which re-exports it), everything else from
  * the pane CORE barrel. Every case sets `filename` explicitly — the runtime
- * folder IS the rule's input, so a case without one would test nothing.
+ * folder IS the rule's input, so a case without one would test nothing. The
+ * pane plugin's own tree is exempted by pane/exempt/index.ts (honored for every
+ * manifest in lint/core's `exemptions-honored.test.ts`), not by the rule.
  */
 
 import rule from "./no-core-define-route-in-web";
@@ -56,11 +58,6 @@ ruleTester.run("no-core-define-route-in-web", rule, {
       filename: WEB_FILE,
       code: `import { type defineRoute } from "@plugins/primitives/plugins/pane/core";`,
     },
-    // The owner's own tree: its jsdom suites drive the core barrel on purpose.
-    {
-      filename: OWNER_WEB_FILE,
-      code: `import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";`,
-    },
     // A same-named factory from an unrelated module is not this symbol.
     {
       filename: WEB_FILE,
@@ -82,6 +79,12 @@ ruleTester.run("no-core-define-route-in-web", rule, {
       },
     ],
     invalid: [
+    // The owner's own tree: the rule fires; its manifest silences it.
+    {
+      filename: OWNER_WEB_FILE,
+      code: `import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";`,
+      errors: [{ messageId: "wrongBarrel" }],
+    },
       // The shape this rule exists to remove: two pane imports in one web file.
       {
         filename: WEB_FILE,

@@ -84,7 +84,6 @@ items. Importing this barrel for an item would pull dnd-kit into that bundle.
   - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
   - Exempted by:
     - `page/editor` (0 debt)
-    - `plugin-meta/barrel-import` (0 debt)
     - `primitives/rank-reorder` (0 debt)
     - `primitives/sortable-list` (0 debt)
     - `primitives/tree` (0 debt)

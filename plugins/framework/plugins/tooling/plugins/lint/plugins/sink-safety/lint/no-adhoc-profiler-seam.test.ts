@@ -2,14 +2,15 @@
  * Tests for the `no-adhoc-profiler-seam` lint rule. Run with `bun test`.
  *
  * The rule bans importing the runtime-profiler observation seams (onSlowSpan /
- * captureFlightWindow / readGateGauges) from the profiler core barrel outside the
- * three sanctioned owners. The sibling pull APIs on the SAME barrel
+ * captureFlightWindow / readGateGauges) from the profiler core barrel. The
+ * sanctioned owners (slow-ops, trace/spans, stall-monitor, profiling/runtime, …)
+ * declare it in their own exempt/index.ts — honored for every manifest in
+ * lint/core's `exemptions-honored.test.ts`; the rule itself names none. The sibling pull APIs on the SAME barrel
  * (getRuntimeProfile, registerGateGauge) stay valid, as do type-only imports and
  * relative imports (the profiler's own internals).
  *
  * Fixtures embed the imports as RuleTester `code` STRINGS, so this test file's own
- * AST holds no real seam import — it is not self-flagged. Owner-directory
- * short-circuiting is exercised via the `filename` option.
+ * AST holds no real seam import — it is not self-flagged.
  */
 
 import rule from "./no-adhoc-profiler-seam";
@@ -33,34 +34,16 @@ ruleTester.run("no-adhoc-profiler-seam", rule, {
     { code: `import type { onSlowSpan } from "${CORE}";` },
     // Relative import (the profiler's own internals import via ./recorder).
     { code: `import { onSlowSpan } from "./recorder";` },
-    // An owner file may import the seam (slow-ops installs the one subscriber).
+  ],
+  invalid: [
+    // An owner's own file: the rule fires — slow-ops/exempt/index.ts is what
+    // silences it, so the rule carries no owner list to drift.
     {
       code: `import { onSlowSpan } from "${CORE}";`,
       filename:
         "/repo/plugins/debug/plugins/slow-ops/server/internal/install-slow-span.ts",
+      errors: [{ messageId: "adhocSeam" }],
     },
-    // Owner: the trace spans event class reads the flight window.
-    {
-      code: `import { captureFlightWindow } from "${CORE}";`,
-      filename:
-        "/repo/plugins/debug/plugins/trace/plugins/spans/server/internal/class.ts",
-    },
-    // Owner: stall-monitor reads the flight window at the trip instant for
-    // span-coverage evidence (same category as trace/spans).
-    {
-      code: `import { captureFlightWindow } from "${CORE}";`,
-      filename:
-        "/repo/plugins/debug/plugins/stall-monitor/server/internal/record-stall.ts",
-    },
-    // Owner: profiling/runtime serves the live flight window to the Debug →
-    // Profiling Gantt pane (the pull-read UI getRuntimeProfile cannot supply).
-    {
-      code: `import { captureFlightWindow } from "${CORE}";`,
-      filename:
-        "/repo/plugins/debug/plugins/profiling/plugins/runtime/server/internal/handle-flight-window.ts",
-    },
-  ],
-  invalid: [
     // A second onSlowSpan subscriber outside the owners.
     {
       code: `import { onSlowSpan } from "${CORE}";`,

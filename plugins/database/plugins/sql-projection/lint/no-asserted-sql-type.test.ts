@@ -14,7 +14,7 @@ import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lin
 
 const ruleTester = createRuleTester();
 
-/** A file inside the owner directory, where the rule must stay silent. */
+/** A file inside the owner directory — exempted by its manifest, not the rule. */
 const OWNED =
   "plugins/database/plugins/sql-projection/server/internal/decoders.ts";
 /** An ordinary consumer file, where it must fire. */
@@ -41,13 +41,16 @@ ruleTester.run("no-asserted-sql-type", rule, {
       // --- `.as<T>()` that has nothing to do with a drizzle SQL template. ---
       { code: "const a = builder.as<Foo>();" },
       { code: "const a = qb.select().from(t).as<Sub>('sub');" },
-      { code: "const a = notSql`x`.as<Foo>('y');" },
-
-      // --- The owner directory documents the banned form in order to name it. ---
-      { code: "const a = sql<boolean>`x`;", filename: OWNED },
-      { code: "const a = sql`x`.as<number>('n');", filename: OWNED },
-    ],
+    { code: "const a = notSql`x`.as<Foo>('y');" },
+  ],
     invalid: [
+    // --- The owner directory names the banned form; sql-projection's
+    // exempt/index.ts silences it there, the rule does not. ---
+    {
+      code: "const a = sql<boolean>`x`;",
+      filename: OWNED,
+      errors: [{ messageId: "assertedSqlType" }],
+    },
       // --- The type argument on the tag. ---
       {
         code: "const a = sql<boolean>`(x IS NULL)`.as('is_folder');",

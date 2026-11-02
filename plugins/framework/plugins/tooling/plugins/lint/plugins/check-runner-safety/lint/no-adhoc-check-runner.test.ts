@@ -2,7 +2,9 @@
  * Tests for the `no-adhoc-check-runner` lint rule. Run with `bun test`.
  *
  * The rule bans the VALUE import of `runChecks` from the checks core barrel
- * everywhere except the check command's own file. The sibling exports on the SAME
+ * everywhere. Its one sanctioned caller, the check command's own `cli/run.ts`,
+ * is exempted by cli/check's exempt/index.ts (honored for every manifest in
+ * lint/core's `exemptions-honored.test.ts`), not by the rule. The sibling exports on the SAME
  * barrel (`RunChecksOptions`, `listAllChecks`, `scopeOf`, `markBuildInProgress`)
  * stay valid, as do type-only imports.
  *
@@ -10,8 +12,7 @@
  * own AST holds no real `runChecks` import — it is not self-flagged (which matters
  * more here than for most rules: this one is opted into test files via
  * `enforceEverywhere`, because a suite that drives the runner writes to the same
- * global cache a later push reads). Owner short-circuiting is exercised via the
- * `filename` option.
+ * global cache a later push reads).
  */
 
 import rule from "./no-adhoc-check-runner";
@@ -27,16 +28,6 @@ const ARTIFACTS =
 
 ruleTester.run("no-adhoc-check-runner", rule, {
   valid: [
-    // The ONE sanctioned in-process caller: the check command's own action.
-    {
-      code: `import { runChecks } from "${CORE}"; runChecks(undefined, {});`,
-      filename: OWNER,
-    },
-    // The owner may also take the runner via a namespace import.
-    {
-      code: `import * as checks from "${CORE}"; checks.runChecks(undefined, {});`,
-      filename: OWNER,
-    },
     // Naming the options shape costs nothing — only invoking the runner does.
     {
       code: `import type { RunChecksOptions } from "${CORE}";`,
@@ -65,6 +56,13 @@ ruleTester.run("no-adhoc-check-runner", rule, {
     },
   ],
   invalid: [
+    // The check command's own file: the rule fires there too — its manifest,
+    // not the rule, sanctions it.
+    {
+      code: `import { runChecks } from "${CORE}"; runChecks(undefined, {});`,
+      filename: OWNER,
+      errors: [{ messageId: "adhocRunner" }],
+    },
     // build.ts — the caller whose contaminated process recorded a wrong
     // plugins-doc-in-sync PASS four times.
     {
