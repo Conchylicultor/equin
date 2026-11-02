@@ -36,6 +36,7 @@ import {
   makeClientView,
   type RecordedFrame,
 } from "./test-support";
+import { withFakeClock } from "./testing/fake-clock";
 import { defineRoutedTable } from "./testing/routed-fixture";
 
 const rowsSchema = z.array(z.object({ id: z.string(), n: z.number() }));
@@ -346,89 +347,91 @@ describe("scopedMembership — L2 persisted floor persist", () => {
     ]);
   });
 
-  test("a burst of scoped changes inside one window costs ONE floor persist of the latest value", async () => {
-    const log: string[] = [];
-    const { m, persistArgs } = persistedHarness(log, "xmin-42", 30);
-    m.table.set("a", { n: 1, where: true });
-    m.table.set("b", { n: 1, where: true });
-    await m.h.subscribe("rows");
-    await tick();
-    persistArgs.length = 0;
-    // Three changes, each drained on its own flush, all inside the 30 ms window.
-    m.update("a", (cell) => {
-      cell.n = 2;
-    });
-    await tick();
-    m.insert("c", 3);
-    await tick();
-    m.del("b");
-    await tick();
-    expect(persistArgs).toEqual([]); // the window has not fired yet
-    await new Promise((r) => setTimeout(r, 60));
-    expect(persistArgs).toHaveLength(1);
-    expect(persistArgs[0]!.mode).toBe("floor");
-    expect(persistArgs[0]!.wm).toBe("xmin-42");
-    expect(persistArgs[0]!.value).toEqual(m.members());
+  test("a burst of scoped changes inside one window costs ONE floor persist of the latest value", () =>
+    withFakeClock(async (clock) => {
+      const log: string[] = [];
+      const { m, persistArgs } = persistedHarness(log, "xmin-42", 30);
+      m.table.set("a", { n: 1, where: true });
+      m.table.set("b", { n: 1, where: true });
+      await m.h.subscribe("rows");
+      await tick();
+      persistArgs.length = 0;
+      // Three changes, each drained on its own flush, all inside the 30 ms window.
+      m.update("a", (cell) => {
+        cell.n = 2;
+      });
+      await clock.advance(10);
+      m.insert("c", 3);
+      await clock.advance(10);
+      m.del("b");
+      await clock.advance(9);
+      expect(persistArgs).toEqual([]); // the window has not fired yet
+      await clock.advance(1);
+      expect(persistArgs).toHaveLength(1);
+      expect(persistArgs[0]!.mode).toBe("floor");
+      expect(persistArgs[0]!.wm).toBe("xmin-42");
+      expect(persistArgs[0]!.value).toEqual(m.members());
 
-    // The window is fixed, not a debounce: a second burst after it fired
-    // arms a fresh one and costs exactly one more persist.
-    m.update("a", (cell) => {
-      cell.n = 4;
-    });
-    await tick();
-    m.insert("d", 5);
-    await tick();
-    expect(persistArgs).toHaveLength(1);
-    await new Promise((r) => setTimeout(r, 60));
-    expect(persistArgs).toHaveLength(2);
-    expect(persistArgs[1]!.mode).toBe("floor");
-    expect(persistArgs[1]!.value).toEqual(m.members());
-  });
+      // The window is fixed, not a debounce: a second burst after it fired
+      // arms a fresh one and costs exactly one more persist.
+      m.update("a", (cell) => {
+        cell.n = 4;
+      });
+      await clock.advance(10);
+      m.insert("d", 5);
+      await clock.advance(19);
+      expect(persistArgs).toHaveLength(1);
+      await clock.advance(1);
+      expect(persistArgs).toHaveLength(2);
+      expect(persistArgs[1]!.mode).toBe("floor");
+      expect(persistArgs[1]!.value).toEqual(m.members());
+    }));
 
-  test("a floor window elapsing while a replace is in flight writes no pre-replace value over it", async () => {
-    // The FULL drain awaits its replace BEFORE it rebuilds the snapshot, so a
-    // window left armed would fire mid-write, chain a floor link behind the
-    // replace, and write the OLD snapshot (at the OLD base floor) over it.
-    const persisted: Array<{ value: unknown; mode: string }> = [];
-    let blockReplace = false;
-    let release: (() => void) | undefined;
-    const m = membershipHarness({
-      shouldPersist: (k) => k === "rows",
-      persistWindowMs: 20,
-      captureWatermark: async () => "xmin-1",
-      persistSnapshot: async (_k, _pk, value, _w, meta) => {
-        if (meta.mode === "replace" && blockReplace) {
-          await new Promise<void>((r) => {
-            release = r;
-          });
-        }
-        persisted.push({ value, mode: meta.mode });
-      },
-    });
-    m.table.set("a", { n: 1, where: true });
-    await m.h.subscribe("rows");
-    await tick();
-    persisted.length = 0;
-    // A scoped change arms the 20 ms window …
-    m.update("a", (cell) => {
-      cell.n = 2;
-    });
-    await tick();
-    // … then a FULL recompute (of a value the snapshot does not hold yet)
-    // whose replace stalls well past the window.
-    blockReplace = true;
-    m.table.get("a")!.n = 3;
-    m.h.runtime.recomputeResource("rows");
-    await tick();
-    expect(release).toBeDefined();
-    await new Promise((r) => setTimeout(r, 50));
-    release!();
-    await tick();
-    await new Promise((r) => setTimeout(r, 40));
-    expect(persisted).toEqual([
-      { value: [{ id: "a", n: 3 }], mode: "replace" },
-    ]);
-  });
+  test("a floor window elapsing while a replace is in flight writes no pre-replace value over it", () =>
+    withFakeClock(async (clock) => {
+      // The FULL drain awaits its replace BEFORE it rebuilds the snapshot, so a
+      // window left armed would fire mid-write, chain a floor link behind the
+      // replace, and write the OLD snapshot (at the OLD base floor) over it.
+      const persisted: Array<{ value: unknown; mode: string }> = [];
+      let blockReplace = false;
+      let release: (() => void) | undefined;
+      const m = membershipHarness({
+        shouldPersist: (k) => k === "rows",
+        persistWindowMs: 20,
+        captureWatermark: async () => "xmin-1",
+        persistSnapshot: async (_k, _pk, value, _w, meta) => {
+          if (meta.mode === "replace" && blockReplace) {
+            await new Promise<void>((r) => {
+              release = r;
+            });
+          }
+          persisted.push({ value, mode: meta.mode });
+        },
+      });
+      m.table.set("a", { n: 1, where: true });
+      await m.h.subscribe("rows");
+      await tick();
+      persisted.length = 0;
+      // A scoped change arms the 20 ms window …
+      m.update("a", (cell) => {
+        cell.n = 2;
+      });
+      await tick();
+      // … then a FULL recompute (of a value the snapshot does not hold yet)
+      // whose replace stalls well past the window.
+      blockReplace = true;
+      m.table.get("a")!.n = 3;
+      m.h.runtime.recomputeResource("rows");
+      await tick();
+      expect(release).toBeDefined();
+      await clock.advance(50);
+      release!();
+      await tick();
+      await clock.advance(40);
+      expect(persisted).toEqual([
+        { value: [{ id: "a", n: 3 }], mode: "replace" },
+      ]);
+    }));
 
   test("a sub-ack seed under a scoped drain never leaves the base floor above the snapshot it wrote", async () => {
     // The drain writes `prev` + its refill over the sub-ack's seed, so the base
@@ -546,64 +549,66 @@ describe("scopedMembership — L2 persisted floor persist", () => {
     expect(cv.value).toEqual(full());
   });
 
-  test("a successful replace cancels an armed floor window", async () => {
-    const log: string[] = [];
-    const m = membershipHarness(
-      {
-        shouldPersist: (k) => k === "rows",
-        persistWindowMs: 30,
-        captureWatermark: async () => "xmin-1",
-        persistSnapshot: async (_k, _pk, _v, _w, meta) => {
-          log.push(`persist:${meta.mode}`);
+  test("a successful replace cancels an armed floor window", () =>
+    withFakeClock(async (clock) => {
+      const log: string[] = [];
+      const m = membershipHarness(
+        {
+          shouldPersist: (k) => k === "rows",
+          persistWindowMs: 30,
+          captureWatermark: async () => "xmin-1",
+          persistSnapshot: async (_k, _pk, _v, _w, meta) => {
+            log.push(`persist:${meta.mode}`);
+          },
         },
-      },
-      log,
-    );
-    m.table.set("a", { n: 1, where: true });
-    await m.h.subscribe("rows");
-    await tick();
-    log.length = 0;
-    // A scoped change arms the 30 ms window …
-    m.update("a", (cell) => {
-      cell.n = 2;
-    });
-    await tick();
-    expect(log).toEqual(["load:scoped"]);
-    // … and a FULL recompute replaces the row before it fires, cancelling it.
-    m.h.runtime.recomputeResource("rows");
-    await tick();
-    await new Promise((r) => setTimeout(r, 60));
-    expect(log.filter((l) => l.startsWith("persist"))).toEqual([
-      "persist:replace",
-    ]);
-  });
+        log,
+      );
+      m.table.set("a", { n: 1, where: true });
+      await m.h.subscribe("rows");
+      await tick();
+      log.length = 0;
+      // A scoped change arms the 30 ms window …
+      m.update("a", (cell) => {
+        cell.n = 2;
+      });
+      await tick();
+      expect(log).toEqual(["load:scoped"]);
+      // … and a FULL recompute replaces the row before it fires, cancelling it.
+      m.h.runtime.recomputeResource("rows");
+      await tick();
+      await clock.advance(60);
+      expect(log.filter((l) => l.startsWith("persist"))).toEqual([
+        "persist:replace",
+      ]);
+    }));
 
-  test("dropPendingPersists drops an armed window without writing it", async () => {
-    const log: string[] = [];
-    const persistArgs: unknown[] = [];
-    const m = membershipHarness(
-      {
-        shouldPersist: (k) => k === "rows",
-        persistWindowMs: 50,
-        captureWatermark: async () => "xmin-1",
-        persistSnapshot: async (_k, _pk, value) => {
-          persistArgs.push(value);
+  test("dropPendingPersists drops an armed window without writing it", () =>
+    withFakeClock(async (clock) => {
+      const log: string[] = [];
+      const persistArgs: unknown[] = [];
+      const m = membershipHarness(
+        {
+          shouldPersist: (k) => k === "rows",
+          persistWindowMs: 50,
+          captureWatermark: async () => "xmin-1",
+          persistSnapshot: async (_k, _pk, value) => {
+            persistArgs.push(value);
+          },
         },
-      },
-      log,
-    );
-    m.table.set("a", { n: 1, where: true });
-    await m.h.subscribe("rows");
-    await tick();
-    persistArgs.length = 0;
-    m.update("a", (cell) => {
-      cell.n = 2;
-    });
-    await tick(); // drained: the window is armed
-    expect(m.h.runtime.dropPendingPersists()).toBe(1);
-    await new Promise((r) => setTimeout(r, 80));
-    expect(persistArgs).toEqual([]);
-  });
+        log,
+      );
+      m.table.set("a", { n: 1, where: true });
+      await m.h.subscribe("rows");
+      await tick();
+      persistArgs.length = 0;
+      m.update("a", (cell) => {
+        cell.n = 2;
+      });
+      await tick(); // drained: the window is armed
+      expect(m.h.runtime.dropPendingPersists()).toBe(1);
+      await clock.advance(80);
+      expect(persistArgs).toEqual([]);
+    }));
 
   test("keptSnapshotValue serves the alias's current in-memory value", async () => {
     const log: string[] = [];

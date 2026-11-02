@@ -35,6 +35,7 @@ import {
   tick,
   makeClientView,
 } from "./test-support";
+import { withFakeClock } from "./testing/fake-clock";
 import {
   defineRoutedTable,
   feedChange,
@@ -162,51 +163,52 @@ describe("stale-flight refusal — the 2026-08-08 revert", () => {
     expect(h.framesFor(0).some((f) => f.version === base + 1)).toBe(true);
   });
 
-  test("a drain does NOT supersede a flight that started after its own notify (the floor is `notBefore`, not `never join`)", async () => {
-    // The floor refuses only flights OLDER than the notify. A flight that began
-    // after it cannot have missed the commit, so the drain joins it and the
-    // loader runs once — the property `notBefore` exists to preserve, and the
-    // reason the fix is a floor rather than "the push path never coalesces".
-    // Staged with a throttled entry inside its window (a first notify drained
-    // and opened it): the notify arms a timer instead of the immediate
-    // microtask flush, which opens the gap for a read flight to start between
-    // the notify and the drain.
-    const ctl = snapshotControllable<Rows>(PRE);
-    const supersedes: string[] = [];
-    const h = createHarness({
-      sockets: 2,
-      onStaleFlightSupersede: (key) => supersedes.push(key),
-    });
-    const r = h.runtime.defineExternalResource({
-      key: "d",
-      mode: "push",
-      schema: rowsSchema,
-      debounceMs: 30,
-      loader: ctl.loader,
-    });
-    await h.subscribe("d", {}, { socket: 0 });
-    r.notify(); // the leading edge: drains at once and opens the window
-    await tick();
-    const before = ctl.invocations;
+  test("a drain does NOT supersede a flight that started after its own notify (the floor is `notBefore`, not `never join`)", () =>
+    withFakeClock(async (clock) => {
+      // The floor refuses only flights OLDER than the notify. A flight that began
+      // after it cannot have missed the commit, so the drain joins it and the
+      // loader runs once — the property `notBefore` exists to preserve, and the
+      // reason the fix is a floor rather than "the push path never coalesces".
+      // Staged with a throttled entry inside its window (a first notify drained
+      // and opened it): the notify arms a timer instead of the immediate
+      // microtask flush, which opens the gap for a read flight to start between
+      // the notify and the drain.
+      const ctl = snapshotControllable<Rows>(PRE);
+      const supersedes: string[] = [];
+      const h = createHarness({
+        sockets: 2,
+        onStaleFlightSupersede: (key) => supersedes.push(key),
+      });
+      const r = h.runtime.defineExternalResource({
+        key: "d",
+        mode: "push",
+        schema: rowsSchema,
+        debounceMs: 30,
+        loader: ctl.loader,
+      });
+      await h.subscribe("d", {}, { socket: 0 });
+      r.notify(); // the leading edge: drains at once and opens the window
+      await tick();
+      const before = ctl.invocations;
 
-    ctl.setValue(POST);
-    r.notify(); // stamps lastNotifyAt; inside the window, the flush is deferred
-    ctl.block();
-    const parked = h.subscribe("d", {}, { socket: 1 }); // starts AFTER the notify
-    await tick();
-    expect(ctl.invocations).toBe(before + 1);
+      ctl.setValue(POST);
+      r.notify(); // stamps lastNotifyAt; inside the window, the flush is deferred
+      ctl.block();
+      const parked = h.subscribe("d", {}, { socket: 1 }); // starts AFTER the notify
+      await tick();
+      expect(ctl.invocations).toBe(before + 1);
 
-    await new Promise((res) => setTimeout(res, 50)); // the window's timer fires
-    expect(supersedes).toEqual([]); // the flight is fresh enough — joined
-    expect(ctl.invocations).toBe(before + 1); // exactly one loader run, shared
+      await clock.advance(50); // the window's timer fires
+      expect(supersedes).toEqual([]); // the flight is fresh enough — joined
+      expect(ctl.invocations).toBe(before + 1); // exactly one loader run, shared
 
-    ctl.release();
-    await parked;
-    await tick();
-    const cv = makeClientView();
-    cv.applyAll(h.framesFor(0));
-    expect(cv.value).toEqual(POST);
-  });
+      ctl.release();
+      await parked;
+      await tick();
+      const cv = makeClientView();
+      cv.applyAll(h.framesFor(0));
+      expect(cv.value).toEqual(POST);
+    }));
 
   test("per-tuple loader concurrency never exceeds 2 under supersession", async () => {
     // Supersession runs a second body rather than chaining behind the stale one,

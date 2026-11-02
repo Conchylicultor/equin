@@ -43,7 +43,20 @@ import type { ValuePatchWireOp } from "@plugins/packages/plugins/value-patch/cor
 
 // Next-macrotask yield: flushes all pending microtasks (the queued flush) AND any
 // loader promises so the WS sends have landed in the log before we assert.
-export const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
+// Under `withFakeClock` (`testing/fake-clock.ts`) `setTimeout` is faked and a
+// 0 ms timer would never fire, so the fake clock swaps in its own turn for the
+// test — the harness methods below await `tick()` too.
+let macrotask = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
+export const tick = (): Promise<void> => macrotask();
+
+/** Replace what `tick()` awaits; returns the restore. The fake clock's seam. */
+export function swapTick(next: () => Promise<void>): () => void {
+  const prev = macrotask;
+  macrotask = next;
+  return () => {
+    macrotask = prev;
+  };
+}
 
 /**
  * A fully-parsed WS frame as recorded off a fake socket. `seq` is a monotonic

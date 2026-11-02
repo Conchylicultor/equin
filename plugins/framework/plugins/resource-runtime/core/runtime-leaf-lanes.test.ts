@@ -12,6 +12,7 @@
 import { test, expect, describe } from "bun:test";
 import { z } from "zod";
 import { createHarness, controllable, tick } from "./test-support";
+import { withFakeClock } from "./testing/fake-clock";
 
 describe("leaf drain lanes", () => {
   test("a slow leaf's own notifies landing mid-lane drain once, after it settles, with the latest value", async () => {
@@ -145,30 +146,31 @@ describe("leaf drain lanes", () => {
     expect(h.pushesFor("s")).toHaveLength(1);
   });
 
-  test("a throttled leaf whose window opens while its lane is in flight drains once the lane settles", async () => {
-    const h = createHarness();
-    const slow = controllable(0);
-    const r = h.runtime.defineExternalResource({
-      key: "t",
-      mode: "push",
-      schema: z.number(),
-      debounceMs: 10,
-      loader: slow.loader,
-    });
-    await h.subscribe("t");
+  test("a throttled leaf whose window opens while its lane is in flight drains once the lane settles", () =>
+    withFakeClock(async (clock) => {
+      const h = createHarness();
+      const slow = controllable(0);
+      const r = h.runtime.defineExternalResource({
+        key: "t",
+        mode: "push",
+        schema: z.number(),
+        debounceMs: 10,
+        loader: slow.loader,
+      });
+      await h.subscribe("t");
 
-    slow.block();
-    slow.setValue(1);
-    r.notify();
-    await tick();
-    r.notify(); // inside the window: a timer releases it while the lane loads
-    await new Promise((res) => setTimeout(res, 30));
-    expect(h.pushesFor("t")).toHaveLength(0);
+      slow.block();
+      slow.setValue(1);
+      r.notify();
+      await tick();
+      r.notify(); // inside the window: a timer releases it while the lane loads
+      await clock.advance(30);
+      expect(h.pushesFor("t")).toHaveLength(0);
 
-    slow.setValue(2);
-    slow.release();
-    await tick();
-    await tick();
-    expect(h.pushesFor("t").at(-1)?.value).toBe(2);
-  });
+      slow.setValue(2);
+      slow.release();
+      await tick();
+      await tick();
+      expect(h.pushesFor("t").at(-1)?.value).toBe(2);
+    }));
 });

@@ -689,6 +689,13 @@ each `describe` / `test` name states what it pins (`runtime-*.test.ts`,
 - **`controllable()` resolves at RELEASE time** and cannot model a SELECT that
   already ran. Stale-flight tests must use `snapshotControllable()` (captures at
   invocation).
+- **A test of a timer window or a timing stamp runs on the fake clock**
+  (`withFakeClock` in `testing/fake-clock.ts`, imported relatively): Bun's fake
+  timers drive `setTimeout`, `performance.now()` and `Date.now()`, `tick()` turns
+  through `setImmediate`, and time moves only on `clock.advance(ms)`. Never wait
+  out a `debounceMs` / `persistWindowMs` with a real sleep — a loaded host lands
+  a "same window" step past the edge. Expected timings are then exact
+  (`toBe(40)`, not `> 30`).
 
 Load-bearing results:
 

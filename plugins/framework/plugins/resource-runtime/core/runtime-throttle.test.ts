@@ -12,163 +12,171 @@
  * Then: the window was trailing-only, so every change — an isolated one too —
  * waited the whole window (`app-usage.summary` delivered each once-a-minute
  * flush 2 s late, a slow `deliver:` span every time).
+ *
+ * Every window here runs on the fake clock (`testing/fake-clock.ts`): a test
+ * moves time only by `advance`, so a busy host cannot land a "same window"
+ * notify past the window's edge.
  */
 
 import { test, expect, describe } from "bun:test";
 import { z } from "zod";
 import { createHarness, tick } from "./test-support";
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+import { withFakeClock } from "./testing/fake-clock";
 
 describe("debounceMs holds", () => {
-  test("other resources flushing inside the window do not drain a throttled entry", async () => {
-    const h = createHarness();
-    let loads = 0;
-    const slow = h.runtime.defineExternalResource({
-      key: "throttled",
-      mode: "push",
-      schema: z.number(),
-      debounceMs: 60,
-      loader: () => ++loads,
-    });
-    const busy = h.runtime.defineExternalResource({
-      key: "busy",
-      mode: "push",
-      schema: z.number(),
-      loader: () => Date.now(),
-    });
-    await h.subscribe("throttled");
-    await h.subscribe("busy");
-    const afterSub = loads;
+  test("other resources flushing inside the window do not drain a throttled entry", () =>
+    withFakeClock(async (clock) => {
+      const h = createHarness();
+      let loads = 0;
+      const slow = h.runtime.defineExternalResource({
+        key: "throttled",
+        mode: "push",
+        schema: z.number(),
+        debounceMs: 60,
+        loader: () => ++loads,
+      });
+      let busyLoads = 0;
+      const busy = h.runtime.defineExternalResource({
+        key: "busy",
+        mode: "push",
+        schema: z.number(),
+        loader: () => ++busyLoads,
+      });
+      await h.subscribe("throttled");
+      await h.subscribe("busy");
+      const afterSub = loads;
 
-    // An isolated change drains at once (the leading edge).
-    slow.notify();
-    await tick();
-    expect(loads).toBe(afterSub + 1);
+      // An isolated change drains at once (the leading edge).
+      slow.notify();
+      await tick();
+      expect(loads).toBe(afterSub + 1);
 
-    // A busy server: an unrelated resource flushes on every tick, each beside
-    // a change to the throttled one — all inside the window the drain opened.
-    for (let i = 0; i < 10; i++) {
+      // A busy server: an unrelated resource flushes on every turn, each beside
+      // a change to the throttled one — all inside the window the drain opened.
+      for (let i = 0; i < 10; i++) {
+        slow.notify();
+        busy.notify();
+        await clock.advance(5);
+      }
+      expect(loads).toBe(afterSub + 1); // held — 50 of the 60 ms elapsed
+
+      await clock.advance(10);
+      expect(loads).toBe(afterSub + 2); // one trailing recompute for the burst
+      expect(h.pushesFor("throttled")).toHaveLength(2);
+
+      // That drain opened a fresh window: a change inside it waits it out.
       slow.notify();
       busy.notify();
+      await clock.advance(59);
+      expect(loads).toBe(afterSub + 2);
+      await clock.advance(1);
+      expect(loads).toBe(afterSub + 3);
+
+      // Quiet for longer than the window: the next change drains at once again.
+      await clock.advance(60);
+      slow.notify();
       await tick();
-    }
-    expect(loads).toBe(afterSub + 1); // held — the window has not elapsed
+      expect(loads).toBe(afterSub + 4);
+    }));
 
-    await sleep(100);
-    expect(loads).toBe(afterSub + 2); // one trailing recompute for the burst
-    expect(h.pushesFor("throttled")).toHaveLength(2);
+  test("a cascade into a throttled downstream waits for its window", () =>
+    withFakeClock(async (clock) => {
+      const h = createHarness();
+      let upLoads = 0;
+      const up = h.runtime.defineExternalResource({
+        key: "up",
+        mode: "push",
+        schema: z.number(),
+        loader: () => ++upLoads, // a change on every recompute
+      });
+      let downLoads = 0;
+      h.runtime.defineResource({
+        key: "down",
+        mode: "push",
+        schema: z.number(),
+        debounceMs: 60,
+        loader: () => ++downLoads,
+        dependsOn: [{ resource: up }],
+      });
+      await h.subscribe("up");
+      await h.subscribe("down");
+      const afterSub = downLoads;
 
-    // That drain opened a fresh window: a change inside it waits it out.
-    slow.notify();
-    busy.notify();
-    await tick();
-    expect(loads).toBe(afterSub + 2);
-    await sleep(100);
-    expect(loads).toBe(afterSub + 3);
-
-    // Quiet for longer than the window: the next change drains at once again.
-    await sleep(100);
-    slow.notify();
-    await tick();
-    expect(loads).toBe(afterSub + 4);
-  });
-
-  test("a cascade into a throttled downstream waits for its window", async () => {
-    const h = createHarness();
-    let upLoads = 0;
-    const up = h.runtime.defineExternalResource({
-      key: "up",
-      mode: "push",
-      schema: z.number(),
-      loader: () => ++upLoads, // a change on every recompute
-    });
-    let downLoads = 0;
-    h.runtime.defineResource({
-      key: "down",
-      mode: "push",
-      schema: z.number(),
-      debounceMs: 60,
-      loader: () => ++downLoads,
-      dependsOn: [{ resource: up }],
-    });
-    await h.subscribe("up");
-    await h.subscribe("down");
-    const afterSub = downLoads;
-
-    up.notify();
-    await tick();
-    expect(downLoads).toBe(afterSub + 1); // the first cascade: the leading edge
-
-    for (let i = 0; i < 5; i++) {
       up.notify();
       await tick();
-    }
-    expect(h.pushesFor("up").length).toBeGreaterThan(1);
-    expect(downLoads).toBe(afterSub + 1); // inside the window: held
+      expect(downLoads).toBe(afterSub + 1); // the first cascade: the leading edge
 
-    await sleep(100);
-    expect(downLoads).toBe(afterSub + 2);
-  });
+      for (let i = 0; i < 5; i++) {
+        up.notify();
+        await clock.advance(10);
+      }
+      expect(h.pushesFor("up").length).toBeGreaterThan(1);
+      expect(downLoads).toBe(afterSub + 1); // inside the window: held
 
-  test("a change landing while a window is due rides that drain", async () => {
-    const h = createHarness();
-    let loads = 0;
-    const r = h.runtime.defineExternalResource({
-      key: "t",
-      mode: "push",
-      schema: z.number(),
-      debounceMs: 20,
-      loader: () => ++loads,
-    });
-    const other = h.runtime.defineExternalResource({
-      key: "o",
-      mode: "push",
-      schema: z.number(),
-      loader: () => 0,
-    });
-    await h.subscribe("t");
-    await h.subscribe("o");
-    const afterSub = loads;
+      await clock.advance(10);
+      expect(downLoads).toBe(afterSub + 2);
+    }));
 
-    r.notify();
-    await tick();
-    expect(loads).toBe(afterSub + 1); // leading edge
-    // Batched notifies inside the window arm its remainder at the batch's exit.
-    await h.runtime.withNotifyBatch(async () => {
+  test("a change landing while a window is due rides that drain", () =>
+    withFakeClock(async (clock) => {
+      const h = createHarness();
+      let loads = 0;
+      const r = h.runtime.defineExternalResource({
+        key: "t",
+        mode: "push",
+        schema: z.number(),
+        debounceMs: 20,
+        loader: () => ++loads,
+      });
+      const other = h.runtime.defineExternalResource({
+        key: "o",
+        mode: "push",
+        schema: z.number(),
+        loader: () => 0,
+      });
+      await h.subscribe("t");
+      await h.subscribe("o");
+      const afterSub = loads;
+
       r.notify();
-      other.notify();
-    });
-    await tick();
-    expect(loads).toBe(afterSub + 1);
-    await sleep(40);
-    expect(loads).toBe(afterSub + 2);
-  });
+      await tick();
+      expect(loads).toBe(afterSub + 1); // leading edge
+      // Batched notifies inside the window arm its remainder at the batch's exit.
+      await h.runtime.withNotifyBatch(async () => {
+        r.notify();
+        other.notify();
+      });
+      await clock.advance(19);
+      expect(loads).toBe(afterSub + 1);
+      await clock.advance(1);
+      expect(loads).toBe(afterSub + 2);
+    }));
 
-  test("a held change's frame says how long the throttle held it (timing.holdMs)", async () => {
-    const h = createHarness();
-    const r = h.runtime.defineExternalResource({
-      key: "held",
-      mode: "push",
-      schema: z.number(),
-      debounceMs: 60,
-      loader: () => Date.now(),
-    });
-    await h.subscribe("held");
+  test("a held change's frame says how long the throttle held it (timing.holdMs)", () =>
+    withFakeClock(async (clock) => {
+      const h = createHarness();
+      let loads = 0;
+      const r = h.runtime.defineExternalResource({
+        key: "held",
+        mode: "push",
+        schema: z.number(),
+        debounceMs: 60,
+        loader: () => ++loads,
+      });
+      await h.subscribe("held");
 
-    r.notify(); // the leading edge: drains at once, held for nothing
-    await tick();
-    r.notify(); // inside the window the first drain opened: waits it out
-    await tick();
-    await sleep(100);
+      r.notify(); // the leading edge: drains at once, held for nothing
+      await clock.advance(20);
+      r.notify(); // inside the window the first drain opened: waits it out
+      await clock.advance(60);
 
-    const timings = h.pushesFor("held").map((f) => f.timing);
-    expect(timings).toHaveLength(2);
-    expect(timings[0]!.holdMs).toBeLessThan(5);
-    // Held for the rest of the 60 ms window — and the hold sits inside deliverMs.
-    expect(timings[1]!.holdMs).toBeGreaterThan(30);
-    expect(timings[1]!.deliverMs).toBeGreaterThanOrEqual(timings[1]!.holdMs);
-  });
+      const timings = h.pushesFor("held").map((f) => f.timing);
+      expect(timings).toHaveLength(2);
+      expect(timings[0]!.holdMs).toBe(0);
+      // Held for the rest of the 60 ms window — and the hold sits inside deliverMs.
+      expect(timings[1]!.holdMs).toBe(40);
+      expect(timings[1]!.deliverMs).toBeGreaterThanOrEqual(timings[1]!.holdMs);
+    }));
 
   test("an entry with no throttle is never held", async () => {
     const h = createHarness();
