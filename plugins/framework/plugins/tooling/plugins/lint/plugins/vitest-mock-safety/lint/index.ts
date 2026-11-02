@@ -8,4 +8,7 @@ export default {
     "partial-barrel-mock": partialBarrelMock,
     "no-hoisted-import-read": noHoistedImportRead,
   },
+  // Both rules exist for test files alone — the `test` category every
+  // contributed rule is off in by default.
+  enforceEverywhere: ["partial-barrel-mock", "no-hoisted-import-read"],
 } satisfies LintContribution;
