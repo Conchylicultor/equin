@@ -77,7 +77,7 @@ ruleTester.run("no-reactive-server-io", rule, {
         }`,
         errors: [error],
       },
-      // A row read (`useLive(c, { id })`), and a `.mutate` sink.
+    // A row read (`useLive(c, { id })`), and a `.mutate` sink.
       {
         code: `function C({ id }) {
           const task = useLive(tasks, { id });

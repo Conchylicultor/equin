@@ -89,6 +89,7 @@ export type ExemptableRuleId =
   | "live/no-legacy-resource-spelling"
   | "live/no-sentinel-param"
   | "live/visible-range-minter"
+  | "live/where-declared"
   | "loading/no-shadcn-skeleton"
   | "log-channels/no-console-log"
   | "marker-scan-safety/no-adhoc-binding-scan"
@@ -190,6 +191,7 @@ export type SanctionedOnlyRuleId =
   | "endpoints/no-raw-web-fetch"
   | "frame/no-raw-frame"
   | "live/no-endpoint-read"
+  | "live/where-declared"
   | "networking/no-page-transport"
   | "networking/no-request-guard-capability"
   | "user-path/no-unproven-claim";

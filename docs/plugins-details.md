@@ -139,7 +139,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data/id-chip.idChip`
           - `active-data/id-chip.rowReferent`
           - `build.buildDetailPane`
-          - `network/live.useLiveRow`
+          - `network/live.useLive`
           - `primitives/pane.useOpenPane`
       - Server:
         - Contributes:
@@ -183,7 +183,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-ui/item.ConversationItem`
           - `conversations/conversation-ui/item.convStatusDot`
           - `conversations/conversation-view.useConversationOpener`
-          - `network/live.useLiveRow`
+          - `network/live.useLive`
           - `primitives/css/link-chip.LinkChip`
           - `primitives/css/status-dot.StatusDot`
         - Exports (values): `ConvChip`
@@ -209,7 +209,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data/id-chip.idChip`
           - `active-data/id-chip.rowReferent`
           - `apps/events/sources.eventSourceDetailPane`
-          - `network/live.useLiveRow`
+          - `network/live.useLive`
           - `primitives/pane.useOpenPane`
       - Server:
         - Contributes:
@@ -341,7 +341,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/pages/page-tree.useBlockTargetLink`
           - `apps/pages/page-tree.useBlockTargetTitle`
           - `network/live.useLive`
-          - `network/live.useLiveRow`
           - `page/editor.PageIcon`
           - `primitives/css/link-chip.LinkChip`
           - `primitives/live-state.foldResource`
@@ -424,7 +423,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data/id-chip.idChip`
           - `active-data/id-chip.rowReferent`
           - `debug/reports.reportDetailPane`
-          - `network/live.useLiveRow`
+          - `network/live.useLive`
           - `primitives/pane.useOpenPane`
       - Server:
         - Contributes:
@@ -462,7 +461,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data/id-chip.idChip`
           - `active-data/id-chip.rowReferent`
           - `apps-core/tabs.useAppLink`
-          - `network/live.useLiveRow`
+          - `network/live.useLive`
       - Server:
         - Contributes:
           - `ids.referent` "song"
@@ -2069,7 +2068,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `apps-core/tabs.useAppLink`
               - `apps/deploy/deployments.DeploymentDetail`
-              - `network/live.useLiveRow`
+              - `network/live.useLive`
               - `plugin-meta/composition.useManifestItemByName`
               - `primitives/css/badge.Badge`
               - `primitives/css/cluster.Cluster`
@@ -2144,7 +2143,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/deploy/deployments.useBlockedReason`
                   - `infra/endpoints.useEndpointMutation`
                   - `network/live.useLive`
-                  - `network/live.useLiveRow`
                   - `primitives/icon-button.IconButton`
                   - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
         - **`deploy-secrets`** — readDeploySecret(decl) reads an approved deploy secret on the box, as a set/unset state, through the DeploySecretSource host service (the machine half reads the credential systemd decrypted into the service's credentials directory). The host-only GET /api/host-only/deploy-secrets answers set/unset per named key (never a value) — what ship's health gate asks of the running app.
@@ -2292,7 +2290,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DeploymentDetail.Section` "Danger zone" → `DangerZone`
               - `DeploymentItemActions` "deploy" → `DeployAction`
               - `DeploymentItemActions` "delete" → `DeleteDeploymentAction`
-            - Uses: 82 symbols — full list in [`plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md)
+            - Uses: 81 symbols — full list in [`plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md)
               - `primitives/css/ui-kit` ×14
               - `primitives/data-view` ×7
               - `primitives/live-state` ×6
@@ -2300,7 +2298,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/servers` ×5
               - `primitives/slot-render` ×4
               - `infra/endpoints` ×3
-              - `network/live` ×2
               - `primitives/app-shell` ×2
               - `primitives/css/badge` ×2
               - `primitives/css/spacing` ×2
@@ -2308,6 +2305,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/health.useServerHealth`
               - `apps/deploy/shell.Deploy`
               - `ids.IdKinds`
+              - `network/live.useLive`
               - `plugin-meta/composition.useManifestItems`
               - `primitives/copy-to-clipboard.CopyButton`
               - `primitives/css/bouncing-dots.BouncingDots`
@@ -2577,10 +2575,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ServerHeader.Meta` "platform" → `ServerHeaderPlatform`
               - `ServerHeader.Action` "check-now" → `CheckNowAction`
               - `Deploy.Sidebar` "Servers" → `ServersSidebarSection`
-            - Uses: 34 symbols — full list in [`plugins/apps/plugins/deploy/plugins/health/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/health/REFERENCE.md)
+            - Uses: 33 symbols — full list in [`plugins/apps/plugins/deploy/plugins/health/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/health/REFERENCE.md)
               - `apps/deploy/servers` ×6
               - `primitives/live-state` ×6
-              - `network/live` ×5
+              - `network/live` ×4
               - `primitives/css/ui-kit` ×4
               - `primitives/setup-steps` ×2
               - `apps/deploy/shell.Deploy`
@@ -2675,7 +2673,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Uses:
               - `network/live.LiveRowResult`
-              - `network/live.useLiveRow`
+              - `network/live.useLive`
               - `plugin-meta/composition.useCompositionIncludes`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
@@ -3707,7 +3705,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints.useEndpointMutation`
               - `network/live.LiveRowResult`
               - `network/live.useLive`
-              - `network/live.useLiveRow`
               - `primitives/live-state.ResourceResult`
             - Exports (values):
               - `EventSources`
@@ -5237,16 +5234,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Mail.Sidebar` "Search"
               - `Pane.Register` "mail-message"
               - `Pane.Register` "mail-search"
-            - Uses: 33 symbols — full list in [`plugins/apps/plugins/mail/plugins/search/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/search/REFERENCE.md)
+            - Uses: 32 symbols — full list in [`plugins/apps/plugins/mail/plugins/search/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/search/REFERENCE.md)
               - `primitives/pane` ×4
               - `apps/mail/threads` ×3
               - `integrations/gmail` ×3
               - `primitives/data-view` ×3
               - `primitives/live-state` ×3
-              - `network/live` ×2
               - `primitives/css/spacing` ×2
               - `apps/mail/shell.Mail`
               - `apps/mail/sync.MessageBodyState`
+              - `network/live.useLive`
               - `primitives/css/badge.Badge`
               - `primitives/css/center.Center`
               - `primitives/css/cluster.Cluster`
@@ -5599,7 +5596,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/pages/page-tree.pageDetailPane`
               - `history/dialog.VersionHistoryDialog`
               - `network/live.useLive`
-              - `network/live.useLiveRow`
               - `page/editor.BLOCK_INSET`
               - `page/editor.PageIcon`
               - `page/read-only-view.ReadOnlyBlocks`
@@ -5650,7 +5646,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `apps/pages/page-tree.pageDetailPane`
               - `infra/endpoints.useEndpointMutation`
-              - `network/live.useLiveRow`
+              - `network/live.useLive`
               - `primitives/css/control-panel.ControlPanel`
               - `primitives/css/control-panel.ControlPanelPopover`
               - `primitives/css/ui-kit.Button`
@@ -5764,17 +5760,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PageDetail.UnderTitle` "backlinks" → `BacklinksUnderTitle`
               - `PageTree.RowActions` "delete" → `DeletePageAction`
               - `PageTree.RowActions` "add-below" → `AddPageBelowAction`
-            - Uses: 83 symbols — full list in [`plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md)
+            - Uses: 82 symbols — full list in [`plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md)
               - `primitives/pane` ×9
               - `page/editor` ×7
               - `primitives/data-view` ×5
               - `infra/endpoints` ×4
               - `primitives/css/ui-kit` ×4
               - `primitives/overlay/image-viewer` ×4
-              - `network/live` ×3
               - `page/page-reference` ×3
               - `primitives/live-state` ×3
               - `apps/pages/shell` ×2
+              - `network/live` ×2
               - `primitives/breadcrumb` ×2
               - `primitives/collapsible` ×2
               - `primitives/css/control-panel` ×2
@@ -5858,7 +5854,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes: `TaskDetailSlots.Section` "Origin" → `PromptOriginSection`
             - Uses:
               - `apps/pages/page-tree.pageDetailPane`
-              - `network/live.useLiveRow`
+              - `network/live.useLive`
               - `page/prompt/link.usePromptTaskLink`
               - `primitives/css/cluster.Cluster`
               - `primitives/css/link-chip.LinkChip`
@@ -6122,7 +6118,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/places/places-core.usePlaces`
               - `network/live.mapRow`
               - `network/live.useLive`
-              - `network/live.useLiveRow`
               - `page/map.PageMap`
               - `primitives/icon-button.IconButton`
               - `primitives/link-gesture.activationProps`
@@ -6211,7 +6206,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints.useEndpointMutation`
               - `network/live.LiveRowResult`
               - `network/live.useLive`
-              - `network/live.useLiveRow`
               - `tag-tree/engine.useTagTree`
             - Exports (values):
               - `useCreateCustomPlace`
@@ -7179,7 +7173,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints.useEndpointMutation`
               - `network/live.mapRow`
               - `network/live.useLive`
-              - `network/live.useLiveRow`
             - Exports (values):
               - `usePrototypeState`
               - `usePrototypeStates`
@@ -7702,14 +7695,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Library.SongActions` "delete" → `DeleteSongAction`
               - `Pane.Register` "sonata-library"
               - `Pane.Register` "sonata-player"
-            - Uses: 93 symbols — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
+            - Uses: 92 symbols — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
               - `primitives/pane` ×13
               - `primitives/data-view` ×7
               - `apps/sonata/shell` ×6
-              - `network/live` ×6
               - `primitives/css/ui-kit` ×6
               - `primitives/live-state` ×6
               - `apps/sonata/player` ×5
+              - `network/live` ×5
               - `apps/sonata/document` ×4
               - `primitives/persistent-draft` ×3
               - `apps/sonata/view-options` ×2
@@ -8790,7 +8783,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/sonata/track-mixer.setTracksActive`
                   - `infra/endpoints.useEndpointMutation`
                   - `infra/endpoints.useFetchEndpoint`
-                  - `network/live.useLiveRow`
+                  - `network/live.useLive`
                   - `primitives/css/switch.Switch`
                   - `primitives/css/ui-kit.WithTooltip`
                   - `primitives/live-state.ResourceErrorInline`
@@ -8923,7 +8916,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/sonata/document.useFailSongSetting`
                   - `apps/sonata/document.useMountedSongId`
                   - `apps/sonata/document.useWriteSongSetting`
-                  - `network/live.useLiveRow`
+                  - `network/live.useLive`
                 - Exports (values): `saveKeyAutoDetect`
               - Server:
                 - Contributes: `resource.declare` "sonata-key-auto-detect:rows"
@@ -9018,7 +9011,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/control-panel` ×2
                   - `primitives/css/spacing` ×2
                   - `infra/endpoints.useEndpointMutation`
-                  - `network/live.useLiveRow`
+                  - `network/live.useLive`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/center.Center`
                   - `primitives/css/fill.Fill`
@@ -9080,7 +9073,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/sonata/session.useSession`
                   - `apps/sonata/shell.Sonata`
                   - `infra/endpoints.useFetchEndpoint`
-                  - `network/live.useLiveRow`
+                  - `network/live.useLive`
                   - `primitives/css/fill.Fill`
                   - `primitives/css/slider.Slider`
                   - `primitives/css/spacing.Stack`
@@ -9474,7 +9467,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `network/live.FieldPresentation`
                   - `network/live.mapRow`
                   - `network/live.useLive`
-                  - `network/live.useLiveRow`
                   - `primitives/css/line.Line`
                   - `primitives/css/rigid.rigidClass`
                   - `primitives/css/spacing.Stack`
@@ -9683,7 +9675,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/attachments.uploadAttachment`
                   - `network/live.mapRow`
                   - `network/live.useLive`
-                  - `network/live.useLiveRow`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.Button`
@@ -9736,10 +9727,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `Sonata.Effect` "ultimate-guitar-persist" → `UltimateGuitarPersistObserver`
                   - `FieldPresentation.Register` "exposure:sonata_songs_ext_ultimate_guitar"
                   - `Library.Cover` "ultimate-guitar"
-                - Uses: 46 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md)
+                - Uses: 45 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md)
                   - `primitives/css/ui-kit` ×6
-                  - `network/live` ×5
                   - `primitives/live-state` ×5
+                  - `network/live` ×4
                   - `apps/sonata/document` ×2
                   - `apps/sonata/library` ×2
                   - `apps/sonata/shell` ×2
@@ -10146,7 +10137,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints.useFetchEndpoint`
               - `network/live.FieldPresentation`
               - `network/live.mapRow`
-              - `network/live.useLiveRow`
+              - `network/live.useLive`
               - `primitives/css/inline.Inline`
               - `primitives/css/line.Line`
               - `primitives/css/spacing.Stack`
@@ -10245,7 +10236,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/library.sonataPlayerPane`
               - `apps/sonata/session.useSession`
               - `infra/endpoints.useFetchEndpoint`
-              - `network/live.useLiveRow`
+              - `network/live.useLive`
               - `primitives/css/center.Center`
               - `primitives/css/grid.Grid`
               - `primitives/css/pin.Pin`
@@ -10585,7 +10576,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `apps/studio/compositions/release.ReleaseDetail`
                       - `infra/endpoints.useEndpointMutation`
                       - `network/live.useLive`
-                      - `network/live.useLiveRow`
                       - `primitives/css/cluster.Cluster`
                       - `primitives/css/link-chip.LinkChip`
                       - `primitives/css/spacing.Stack`
@@ -10610,7 +10600,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Contributes: `ReleaseDetail.Section` "Info" → `ReleaseInfo`
                     - Uses:
                       - `apps/studio/compositions/release.ReleaseDetail`
-                      - `network/live.useLiveRow`
+                      - `network/live.useLive`
                       - `primitives/css/badge.Badge`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/status-dot.StatusDot`
@@ -10629,7 +10619,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Contributes: `ReleaseDetail.Section` "Logs" → `ReleaseLogSection`
                     - Uses:
                       - `apps/studio/compositions/release.ReleaseDetail`
-                      - `network/live.useLiveRow`
+                      - `network/live.useLive`
                       - `primitives/copy-to-clipboard.CopyButton`
                       - `primitives/css/fill.Fill`
                       - `primitives/css/line.Line`
@@ -13197,7 +13187,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.LiveRowResult`
           - `network/live.LiveUnavailable`
           - `network/live.useLive`
-          - `network/live.useLiveRow`
           - `primitives/launch/investigate.InvestigateAction`
           - `shell/notifications.Notifications`
     - **`build-info`** — Status, trigger, commit hash, and timing section in the build detail pane.
@@ -13207,7 +13196,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build.BuildDetailSlots`
           - `build/build-status.BuildStatusBadge`
           - `network/live.useLive`
-          - `network/live.useLiveRow`
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
           - `primitives/css/rigid.rigidClass`
@@ -14386,7 +14374,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Uses:
       - `network/live.mapRow`
       - `network/live.useLive`
-      - `network/live.useLiveRow`
       - `primitives/file-links.FileLinksWorkspaceProvider`
       - `primitives/live-state.foldResource`
       - `primitives/live-state.mapResource`
@@ -14711,7 +14698,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Item.Avatar` → `AgentAvatarRow`
           - `conversationPane.Actions` "agent-avatar" → `AgentAvatarTitlePrefix`
           - `Agents.AgentActions` "delete" → `DeleteAgentAction`
-        - Uses: 62 symbols — full list in [`plugins/conversations/plugins/agents/REFERENCE.md`](../plugins/conversations/plugins/agents/REFERENCE.md)
+        - Uses: 61 symbols — full list in [`plugins/conversations/plugins/agents/REFERENCE.md`](../plugins/conversations/plugins/agents/REFERENCE.md)
           - `primitives/pane` ×8
           - `primitives/data-view` ×5
           - `conversations/conversation-ui/item` ×4
@@ -14719,8 +14706,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/collapsible` ×4
           - `primitives/live-state` ×4
           - `infra/endpoints` ×3
-          - `network/live` ×3
           - `primitives/css/ui-kit` ×3
+          - `network/live` ×2
           - `primitives/css/spacing` ×2
           - `primitives/css/status-dot` ×2
           - `primitives/css/text` ×2
@@ -15130,7 +15117,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/preprompts.prepromptsConfig`
           - `conversations/preprompts.usePreprompt`
           - `network/live.LiveRowResult`
-          - `network/live.useLiveRow`
+          - `network/live.useLive`
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
           - `primitives/css/scroll.Scroll`
@@ -15185,7 +15172,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-ui/item.Item`
           - `conversations/conversation-view.conversationPane`
           - `network/live.LiveRowResult`
-          - `network/live.useLiveRow`
+          - `network/live.useLive`
           - `primitives/css/inline.Inline`
           - `primitives/live-state.ResourceErrorInline`
           - `ui/segmented-progress-bar.SegmentedProgressBar`
@@ -15375,7 +15362,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/jsonl-viewer.JsonlPane`
           - `conversations/hibernation.useMarkConversationViewed`
           - `conversations.useConversationById`
-          - `network/live.useLiveRow`
+          - `network/live.useLive`
           - `primitives/bar.Bar`
           - `primitives/css/center.Center`
           - `primitives/css/clip.Clip`
@@ -16191,7 +16178,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                   - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
                   - `infra/endpoints.useFetchEndpoint`
-                  - `network/live.useLiveRow`
+                  - `network/live.useLive`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.Button`
                   - `ui/icons.Icon`
@@ -17648,7 +17635,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses:
                       - `apps/pages/page-tree.pageDetailPane`
                       - `network/live.LiveRowResult`
-                      - `network/live.useLiveRow`
+                      - `network/live.useLive`
                       - `page/editor.PageIcon`
                       - `primitives/css/badge.Badge`
                       - `primitives/css/center.Center`
@@ -18214,7 +18201,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view.Conversation`
               - `infra/endpoints.useFetchEndpoint`
               - `network/live.LiveRowResult`
-              - `network/live.useLiveRow`
+              - `network/live.useLive`
               - `primitives/css/pin.Pin`
               - `primitives/css/spacing.Stack`
               - `primitives/css/status-dot.StatusDot`
@@ -18438,7 +18425,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations.useConversationById`
               - `conversations/conversation-view.conversationPane`
               - `infra/endpoints.useFetchEndpoint`
-              - `network/live.useLiveRow`
+              - `network/live.useLive`
               - `primitives/hover-reveal.hoverRevealTargetInAnchor`
               - `primitives/icon-button.IconButton`
               - `primitives/live-state.ResourceErrorInline`
@@ -18796,7 +18783,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/header.HeaderChip`
               - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
               - `conversations/conversation-view/pending-turn.useOptimisticConversationStatus`
-              - `network/live.useLiveRow`
+              - `network/live.useLive`
               - `primitives/css/badge.formatStatusLabel`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
@@ -18855,7 +18842,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `config_v2.ConfigV2`
               - `conversations/conversation-view.Conversation`
-              - `network/live.useLiveRow`
+              - `network/live.useLive`
               - `primitives/collapsible.CollapsibleChevron`
               - `primitives/collapsible.FoldMotion`
               - `primitives/collapsible.useCollapsible`
@@ -20352,7 +20339,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints.useFetchEndpoint`
               - `network/live.mapRow`
               - `network/live.useLive`
-              - `network/live.useLiveRow`
               - `primitives/css/ui-kit.Select`
               - `primitives/css/ui-kit.SelectContent`
               - `primitives/css/ui-kit.SelectItem`
@@ -21489,7 +21475,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/data-table` ×2
           - `apps/debug/shell.DebugApp`
           - `infra/endpoints.useEndpointMutation`
-          - `network/live.useLiveRow`
+          - `network/live.useLive`
           - `primitives/css/center.Center`
           - `primitives/css/column.Column`
           - `primitives/css/placeholder.Placeholder`
@@ -21766,7 +21752,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/claude-cli` ×2
           - `apps/debug/shell.DebugApp`
           - `conversations/model-provider.familyClass`
-          - `network/live.useLiveRow`
+          - `network/live.useLive`
           - `primitives/css/badge.Badge`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Inset`
@@ -22767,11 +22753,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `Profiling.Section` → `OpSection`
               - `Pane.Register` "debug-profiling-op-detail"
-            - Uses: 40 symbols — full list in [`plugins/debug/plugins/profiling/plugins/ops/REFERENCE.md`](../plugins/debug/plugins/profiling/plugins/ops/REFERENCE.md)
+            - Uses: 39 symbols — full list in [`plugins/debug/plugins/profiling/plugins/ops/REFERENCE.md`](../plugins/debug/plugins/profiling/plugins/ops/REFERENCE.md)
               - `debug/profiling` ×8
               - `debug/profiling/ops/op-gantt` ×6
               - `primitives/pane` ×4
-              - `network/live` ×2
               - `primitives/css/badge` ×2
               - `primitives/css/spacing` ×2
               - `primitives/css/text` ×2
@@ -22779,6 +22764,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations.useConversationTitleBySlug`
               - `debug/profiling/build.buildProfileDetailPane`
               - `infra/host/machine-sleep.useSleepNowForFold`
+              - `network/live.useLive`
               - `primitives/css/clip.Clip`
               - `primitives/css/cluster.Cluster`
               - `primitives/css/placeholder.Placeholder`
@@ -22949,11 +22935,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `trigger-actions` "enabled" → `TriggerEnabledAction`
           - `trigger-actions` "delete" → `DeleteTriggerAction`
           - `DebugApp.Sidebar` "Queue"
-        - Uses: 53 symbols — full list in [`plugins/debug/plugins/queue/REFERENCE.md`](../plugins/debug/plugins/queue/REFERENCE.md)
+        - Uses: 52 symbols — full list in [`plugins/debug/plugins/queue/REFERENCE.md`](../plugins/debug/plugins/queue/REFERENCE.md)
           - `primitives/pane` ×8
           - `primitives/live-state` ×6
-          - `network/live` ×5
           - `primitives/data-view` ×5
+          - `network/live` ×4
           - `infra/endpoints` ×2
           - `primitives/css/spacing` ×2
           - `primitives/css/ui-kit` ×2
@@ -23304,7 +23290,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/debug/shell.DebugApp`
           - `build.useStaleFrontend`
           - `infra/endpoints.useFetchEndpoint`
-          - `network/live.useLiveRow`
+          - `network/live.useLive`
           - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
           - `primitives/css/cluster.Cluster`
@@ -23737,7 +23723,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/pane` ×3
               - `apps-core/tabs.useAppLink`
               - `debug/trace/pane.SlowEvents`
-              - `network/live.useLiveRow`
+              - `network/live.useLive`
               - `primitives/css/badge.Badge`
               - `primitives/css/center.Center`
               - `primitives/css/link-chip.LinkChip`
@@ -24158,8 +24144,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "traces"
               - `SlowEvents.View` "Events" → `EventsView`
               - `DebugApp.Sidebar` "Slow Events"
-            - Uses: 33 symbols — full list in [`plugins/debug/plugins/trace/plugins/pane/REFERENCE.md`](../plugins/debug/plugins/trace/plugins/pane/REFERENCE.md)
-              - `network/live` ×5
+            - Uses: 32 symbols — full list in [`plugins/debug/plugins/trace/plugins/pane/REFERENCE.md`](../plugins/debug/plugins/trace/plugins/pane/REFERENCE.md)
+              - `network/live` ×4
               - `primitives/data-view` ×4
               - `debug/profiling` ×3
               - `primitives/live-state` ×3
@@ -28951,7 +28937,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/model-provider.useModelChoiceOptions`
           - `conversations.useConversation`
           - `fields/dynamic-enum/config.DynamicEnum`
-          - `network/live.useLiveRow`
+          - `network/live.useLive`
           - `primitives/css/badge.Badge`
           - `primitives/css/clip.clipClasses`
           - `primitives/css/column.Column`
@@ -34661,7 +34647,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`network`** — Umbrella for how data moves between the server and the browser: the live-resource API (declare a collection, query it, serve it) and, later, the live-state primitives it is built on.
   - Plugins:
-    - **`live`** — Unified live-resource API, read half: useLive (a collection's window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, grown by its limit, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), useLiveReader (the one read function beside useLive: one answer to one tuple of a liveValue, for a question an event asks and its own await consumes — its pushed value when observed, else one deduped HTTP read never written to the cache; refused / unavailable typed by the declaration), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple); every collection's window — and a key-range-paged liveValue — is read as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small — given a measured viewport (useLive(c, q, { viewport })) with no depth limit, the pages near it live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows, and without one every page live, capped at maxLimit rows; FieldPresentation.Register presents an owner's fields — an entity's own, an extension's exposed ones, a union arm's, a collection's own — with their cells, widths and live options in every list that reaches the owner, read by useFieldPresentations. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven — or from an external source with notify(); the serve call decides only the freshness, never the shape: every list's bound is the liveValue's own (its schema's list-bound markers), so a serve call takes no `unbounded`; pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a key-range-paged one — external only — is loaded one key range at a time, each answer checked against its range and minted its `$key`, notify(q) reaching every subscribed page and the per-question meta sibling, and sliceRange answers a range for a list held in memory) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a collection reaching an entity compiles at boot, folding every LiveColumns.Expose contribution of an extension exposing fields of it — and a `columnScope` collection every LiveColumns.Scoped set — into its rows' `$columns`; routed through the change feed, or — with `changes` — the same compiled SQL served off it, for a table its owner opted out) — or, `source: "external"`, from a source outside Postgres that answers window / rows / groups / count / all by hand (core's serveCollectionOn: every answer checked against the row schema, every window row's `$key` minted, notify() re-reading the subscribed tuples); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
+    - **`live`** — Unified live-resource API, read half: useLive (a collection's window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, grown by its limit, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — an explicit id set, or one row by id — `{ id }`: loading, failed, found, or determinately absent — all through one collection signature, so a wrong option errors on its own property), useLiveReader (the one read function beside useLive: one answer to one tuple of a liveValue, for a question an event asks and its own await consumes — its pushed value when observed, else one deduped HTTP read never written to the cache; refused / unavailable typed by the declaration), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple); every collection's window — and a key-range-paged liveValue — is read as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small — given a measured viewport (useLive(c, q, { viewport })) with no depth limit, the pages near it live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows, and without one every page live, capped at maxLimit rows; FieldPresentation.Register presents an owner's fields — an entity's own, an extension's exposed ones, a union arm's, a collection's own — with their cells, widths and live options in every list that reaches the owner, read by useFieldPresentations. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven — or from an external source with notify(); the serve call decides only the freshness, never the shape: every list's bound is the liveValue's own (its schema's list-bound markers), so a serve call takes no `unbounded`; pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a key-range-paged one — external only — is loaded one key range at a time, each answer checked against its range and minted its `$key`, notify(q) reaching every subscribed page and the per-question meta sibling, and sliceRange answers a range for a list held in memory) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a collection reaching an entity compiles at boot, folding every LiveColumns.Expose contribution of an extension exposing fields of it — and a `columnScope` collection every LiveColumns.Scoped set — into its rows' `$columns`; routed through the change feed, or — with `changes` — the same compiled SQL served off it, for a table its owner opted out) — or, `source: "external"`, from a source outside Postgres that answers window / rows / groups / count / all by hand (core's serveCollectionOn: every answer checked against the row schema, every window row's `$key` minted, notify() re-reading the subscribed tuples); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
       - Web:
         - Slots:
           - `FieldPresentation.Register`
@@ -34695,7 +34681,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveAnswer`
           - `LiveFieldOption`
           - `LiveFieldOptionsRead`
-          - `LiveIdsQuery`
           - `LiveListResult`
           - `LivePageError`
           - `LivePagePlaceholder`
@@ -34736,7 +34721,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useFieldPresentations`
           - `useLive`
           - `useLiveReader`
-          - `useLiveRow`
       - Server:
         - Uses: 39 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `infra/query-resource` ×35
@@ -34812,6 +34796,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ClientFieldsOwner`
           - `ClientFieldsOwnerRow`
           - `ClientFieldValue`
+          - `CollectionKindKey`
           - `CollectionRow`
           - `CompiledPagedValue`
           - `CompiledValue`
@@ -34894,6 +34879,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveHost`
           - `LiveHostSource`
           - `LiveHostSources`
+          - `LiveIdsQuery`
           - `LiveKeyCut`
           - `LiveKeyDirection`
           - `LiveKeyRange`
@@ -34926,9 +34912,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveRefusalsBrand`
           - `LiveRelated`
           - `LiveReservedColumn`
+          - `LiveRowQuery`
           - `LiveRowSchema`
           - `LiveRowsCollection`
           - `LiveRuntime`
+          - `LiveScopedAllQuery`
           - `LiveScopedColumns`
           - `LiveSnapshotBrand`
           - `LiveSortDirection`
@@ -34944,6 +34932,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveValueSpec`
           - `LiveWhere`
           - `LiveWhereObject`
+          - `LiveWhereOf`
           - `LiveWindowBounds`
           - `LiveWindowCodec`
           - `LiveWindowDescriptor`
@@ -34972,6 +34961,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WithContributedColumns`
         - Exports (values):
           - `clientFields`
+          - `COLLECTION_KIND_KEYS`
           - `compileExternalCollection`
           - `compilePagedValue`
           - `compileQueryValue`
@@ -34990,6 +34980,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LIVE_ROW_KEY`
           - `LIVE_ROW_KEY_MAX_BYTES`
           - `LIVE_SCOPED_KEY`
+          - `LIVE_WEB_HOOKS`
           - `liveArm`
           - `liveCollection`
           - `liveValue`
@@ -35032,7 +35023,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tag-tree/engine`
       - Exemptions:
         - Exempts itself from:
-          - `live/no-legacy-resource-spelling` — `.` (sanctioned)
+          - `live/no-legacy-resource-spelling` — `central/internal/serve-value.ts`, `server/internal/serve-collection.ts`, `server/internal/serve-off-feed.ts`, `server/internal/serve-union.ts`, `server/internal/serve-value.ts`, `web/internal/use-live.ts`, `web/internal/use-pages.ts` (sanctioned)
           - `live/no-endpoint-read` — `web` (sanctioned)
           - `no-db-backed-notify` — `server/internal/serve-off-feed.ts` (sanctioned)
           - `no-raw-websocket` — `e2e/narrowing.ts` (sanctioned)
@@ -35891,7 +35882,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `Editor.InsertAction` "Instructions page"
                 - Uses:
                   - `infra/endpoints.useFetchEndpoint`
-                  - `network/live.useLiveRow`
+                  - `network/live.useLive`
                   - `page/editor.Editor`
                   - `page/page-reference.PageReference`
                   - `page/page-reference.PageReferenceDecorationContribution`
@@ -36005,7 +35996,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `network/live.LiveRowResult`
                   - `network/live.mapRow`
                   - `network/live.useLive`
-                  - `network/live.useLiveRow`
                   - `primitives/css/cluster.Cluster`
                   - `primitives/css/fill.Fill`
                   - `primitives/css/line.Line`
@@ -37330,7 +37320,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/live-state` ×3
           - `primitives/text-editor/caret-trigger` ×3
           - `infra/endpoints.useFetchEndpoint`
-          - `network/live.useLiveRow`
+          - `network/live.useLive`
           - `page/page-reference.usePageNavigation`
           - `primitives/css/center.Center`
           - `primitives/css/link-chip.LinkChip`
@@ -37999,7 +37989,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live.LiveListResult`
               - `network/live.LiveRowResult`
               - `network/live.useLive`
-              - `network/live.useLiveRow`
             - Exports (types): `PromptTaskLink`
             - Exports (values):
               - `createPromptTask`
@@ -38239,8 +38228,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `IdKinds.Kind` "tag"
           - `PageReference.Trailing` → `PageTagChips`
           - `FieldPresentation.Register` "exposure:page_blocks_ext_tags"
-        - Uses: 31 symbols — full list in [`plugins/page/plugins/tags/REFERENCE.md`](../plugins/page/plugins/tags/REFERENCE.md)
-          - `network/live` ×6
+        - Uses: 30 symbols — full list in [`plugins/page/plugins/tags/REFERENCE.md`](../plugins/page/plugins/tags/REFERENCE.md)
+          - `network/live` ×5
           - `primitives/css/ui-kit` ×4
           - `primitives/live-state` ×4
           - `ids.IdKinds`
@@ -49610,7 +49599,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Uses:
       - `network/live.FieldPresentation`
       - `network/live.LiveRowResult`
-      - `network/live.useLiveRow`
+      - `network/live.useLive`
       - `primitives/css/badge.Badge`
       - `primitives/data-view.DataView`
       - `primitives/data-view.DataViewDensity`
@@ -51163,7 +51152,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/model-provider.useModelCatalog`
           - `infra/endpoints.useEndpointMutation`
           - `network/live.LiveRowResult`
-          - `network/live.useLiveRow`
+          - `network/live.useLive`
           - `primitives/css/badge.Badge`
           - `primitives/live-state.ResourceErrorInline`
           - `tasks/task-list.Tasks`
@@ -51290,10 +51279,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FieldPresentation.Register` "exposure:tasks_ext_launch_decision"
           - `FieldPresentation.Register` "exposure:tasks_ext_origin"
           - `Notifications.Action` "review-automation"
-        - Uses: 58 symbols — full list in [`plugins/tasks/plugins/automations/REFERENCE.md`](../plugins/tasks/plugins/automations/REFERENCE.md)
+        - Uses: 57 symbols — full list in [`plugins/tasks/plugins/automations/REFERENCE.md`](../plugins/tasks/plugins/automations/REFERENCE.md)
           - `primitives/css/ui-kit` ×7
-          - `network/live` ×6
           - `primitives/live-state` ×6
+          - `network/live` ×5
           - `primitives/pane` ×5
           - `primitives/data-view` ×4
           - `config_v2` ×3
@@ -51840,7 +51829,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/pending-turn.useOptimisticConversationStatus`
           - `conversations/conversation-view/pending-turn.useSendConversationTurn`
           - `conversations/conversation-view/pending-turn.useTurnSendAvailability`
-          - `network/live.useLiveRow`
+          - `network/live.useLive`
           - `primitives/css/badge.Badge`
           - `primitives/css/badge.BadgeVariant`
           - `primitives/css/card.Card`
@@ -52336,7 +52325,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.useFetchEndpoint`
           - `network/live.LiveRowResult`
           - `network/live.mapRow`
-          - `network/live.useLiveRow`
+          - `network/live.useLive`
           - `primitives/text-editor/composer/picker-pill.PickerPill`
           - `shell/notifications.useToast`
           - `tasks/launch-options.TaskLaunch`
@@ -52564,7 +52553,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.useFetchEndpoint`
           - `network/live.LiveRowResult`
           - `network/live.mapRow`
-          - `network/live.useLiveRow`
+          - `network/live.useLive`
           - `primitives/text-editor/composer/picker-pill.PickerPill`
           - `shell/notifications.useToast`
           - `tasks/launch-options.TaskLaunch`
@@ -52725,7 +52714,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Uses:
           - `network/live.LiveRowResult`
-          - `network/live.useLiveRow`
+          - `network/live.useLive`
         - Exports (types): `TaskShortTitle`
         - Exports (values): `useTaskShortTitle`
       - Core:
@@ -52766,7 +52755,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.FieldPresentation`
           - `network/live.mapRow`
           - `network/live.useLive`
-          - `network/live.useLiveRow`
           - `primitives/css/badge.Badge`
           - `primitives/live-state.ResourceErrorInline`
           - `primitives/loading.Loading`
@@ -52849,9 +52837,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.CollectionItemAction` "task-triage.reads:investigate" → `CollectionInvestigate`
           - `ConfigV2.WebRegister` "config"
           - `DynamicEnum.Options` "Model"
-        - Uses: 37 symbols — full list in [`plugins/tasks/plugins/task-triage/REFERENCE.md`](../plugins/tasks/plugins/task-triage/REFERENCE.md)
-          - `network/live` ×4
+        - Uses: 36 symbols — full list in [`plugins/tasks/plugins/task-triage/REFERENCE.md`](../plugins/tasks/plugins/task-triage/REFERENCE.md)
           - `infra/endpoints` ×3
+          - `network/live` ×3
           - `primitives/css/ui-kit` ×3
           - `primitives/live-state` ×3
           - `tasks/automations` ×2
