@@ -181,8 +181,11 @@ test("namespaceFromHost round-trips namespaceHost and rejects the loopback hosts
   // A host alias reads back as the namespace it stands for, in any spelling.
   expect(namespaceFromHost("equin.localhost:9000")).toBe(MAIN_WORKTREE_NAME);
   expect(namespaceFromHost("EQUIN.localhost.")).toBe(MAIN_WORKTREE_NAME);
-  // A labelled namespace's own name is not a host: only its label reaches it.
-  expect(namespaceFromHost("singularity.localhost:9000")).toBeNull();
+  // The namespace's own name stays a host that reaches it (the legacy address),
+  // until no running agent dials it (rename track, Step 9).
+  expect(namespaceFromHost("singularity.localhost:9000")).toBe(
+    MAIN_WORKTREE_NAME,
+  );
 });
 
 test("a namespace URL handed over as text reads back as its origin", () => {
@@ -197,7 +200,6 @@ test("a namespace URL handed over as text reads back as its origin", () => {
     `${main}/api/mcp`,
     "https://equin.localhost:9000",
     "http://evil.com:9000",
-    "http://singularity.localhost:9000",
   ]) {
     expect(() => asNamespaceOrigin(bad)).toThrow(/Not a namespace URL/);
   }

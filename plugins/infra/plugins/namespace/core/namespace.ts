@@ -250,10 +250,9 @@ export const MAIN_WORKTREE_NAME: Namespace = namespaceFor(MAIN_COMPOSITION_ID, {
  * which read this table — so build output, e2e and agent-browser targets,
  * agents' MCP URLs and in-app links all say `equin` without naming it. The
  * namespace itself stays what `namespaceFor` minted (`LEGACY_IDS.mainNamespace`): its spec
- * dir, socket and database are internal identifiers, and its own name is NOT
- * a host: a labelled namespace is reachable only at its label (the gateway
- * answers `<own name>.localhost` with a 404, and `namespaceFromHost` reads it
- * as no namespace), so the old address is gone, not aliased.
+ * dir, socket and database are internal identifiers, and its own name keeps
+ * resolving as a host (`namespaceFromHost`) only while agents launched before
+ * `EQUIN_PARENT_URL` still dial it — then it goes (rename track, Step 9).
  *
  * Exists to move the app off its old name gradually. Every place a namespace
  * is SHOWN reads it through `namespaceLabel`, and every place one is TYPED
@@ -440,8 +439,7 @@ export function isContentHost(host: string): boolean {
  * other AND with the gateway, one of them taking `host.split(".")[0]` — collapse
  * to one function. Returns `null` for the loopback hosts and anything not served
  * under `.localhost`, which is how "no namespace here" is spelled. A host alias
- * (`NAMESPACE_HOST_ALIASES`) reads back as the namespace it stands for; a
- * labelled namespace's own name is not a host, so it reads back as `null`.
+ * (`NAMESPACE_HOST_ALIASES`) reads back as the namespace it stands for.
  */
 export function namespaceFromHost(host: string): Namespace | null {
   let h = host;
@@ -461,7 +459,6 @@ export function namespaceFromHost(host: string): Namespace | null {
   // A content host is never an app namespace — the gateway reads it first.
   if (isContentHost(h)) return null;
   const name = h.slice(0, -NAMESPACE_HOST_SUFFIX.length);
-  if (Object.hasOwn(NAMESPACE_HOST_LABELS, name)) return null;
   const resolved = resolveNamespaceAlias(name);
   return isNamespace(resolved) ? (resolved as Namespace) : null;
 }

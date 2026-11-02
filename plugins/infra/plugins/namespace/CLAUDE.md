@@ -52,9 +52,8 @@ name (`sonata.att-X`) names both halves, and a single label comes back as a
   under when it is not its own name (main → `equin`), read by `namespaceHost`
   so every address the app produces says it. `NAMESPACE_HOST_ALIASES` is its
   derived inverse (what `namespaceFromHost` and the gateway's `hostAliases`
-  resolve). A labelled namespace's own name is NOT a host: the gateway answers
-  `<own name>.localhost` with a 404 naming the label, and `namespaceFromHost`
-  reads it as no namespace — the internal name is an id, never an address.
+  resolve); the namespace's own name keeps resolving too, as the old address,
+  only until no running agent launched before `EQUIN_PARENT_URL` dials it.
   `namespace:legacy-host` keeps that old address out of tracked files.
 - `namespaceLabel(ns)` / `resolveNamespaceAlias(name)` — the same table for
   people and agents: every place a namespace is SHOWN (the logs picker, the
