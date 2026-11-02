@@ -558,7 +558,9 @@ See `research/2026-09-29-global-scoped-change-routing.md`.
 Postgres** — the DB-backed half the resource-runtime fake-injection seam can't
 reach. It covers: NOTIFY delivery (`LISTEN live_state` → `parseLiveStatePayload`
 → `route`), first-connect-does-NOT-fullSweep vs reconnect-DOES-fullSweep (driven
-by a real socket drop via `pg_terminate_backend`), malformed-payload skip,
+by a real socket drop via `pg_terminate_backend`), an unparseable change payload
+(never dropped: logged, reported, and every covered table swept FULL, as on a
+reconnect — a routed cut then cannot advance a persisted alias past it),
 `stop()` teardown, and — with the real triggers installed — the end marker: one
 2000-statement transaction routed as ONE burst after its `live_state_end`, an
 xid-less NOTIFY still routed, a malformed end released by the deadline. Apart

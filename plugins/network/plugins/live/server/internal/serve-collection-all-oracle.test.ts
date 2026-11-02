@@ -289,6 +289,8 @@ beforeAll(async () => {
     persistSnapshot: async (_key, _pk, value, _watermark, meta) => {
       persists.push({ value, meta });
     },
+    // No cut is proven: every floor persist lowers, as the oracle expects.
+    routedCut: async () => ({ kind: "unproven", reason: "not under test" }),
   });
   const specs = compileCollection(collection, {
     from: items,

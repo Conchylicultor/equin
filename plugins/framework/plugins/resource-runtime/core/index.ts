@@ -22,6 +22,7 @@ export type {
   KeyedMembership,
   AliasMembership,
   PersistMeta,
+  RoutedCut,
   HandoffState,
   HandoffTuple,
   ResumeRecord,

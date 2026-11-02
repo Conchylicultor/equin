@@ -108,6 +108,7 @@ export type {
   HandoffState,
   ResumeRecord,
   PersistMeta,
+  RoutedCut,
   PersistedBase,
   SeedOutcome,
   PersistedValueCheck,

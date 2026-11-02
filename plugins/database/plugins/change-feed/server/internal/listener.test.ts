@@ -279,37 +279,33 @@ describe("change-feed listener (real DB + real NOTIFY)", () => {
     }
   });
 
-  test("malformed NOTIFY payload is skipped, listener survives", async () => {
+  test("an unparseable NOTIFY payload recomputes every reader (a FULL sweep), never dropped; the listener survives", async () => {
     const routed: FeedChange[] = [];
     const listener = createChangeFeedListener({
       listen: listenOnTestDb,
       route: (c) => routed.push(c),
-      coveredTables: () => ["demo"],
+      coveredTables: () => ["demo", "other"],
       livenessIntervalMs: QUIET_LIVENESS_MS,
     });
     listener.start();
     try {
       await waitForListen();
+      routed.length = 0;
 
       // Emit a malformed payload, then a real change on the SAME connection.
-      // NOTIFYs are ordered, so once the real change routes we know the malformed
-      // one was already processed-and-skipped (parseLiveStatePayload → null).
+      // NOTIFYs are ordered, so once the real change routes the malformed one
+      // was already handled: its change cannot be read, so every covered
+      // table is routed FULL (id-less) — the reconnect sweep's shape.
       await emitNotify("not json");
       await emitNotify(notifyPayload("demo", "I", ["c"]));
       await waitFor(
         () => findChange(routed, "demo", "I", ["c"]) !== undefined,
         "real change routed after malformed payload",
       );
-
-      // The malformed payload produced no routed entry — everything routed is a
-      // well-formed FeedChange.
-      expect(
-        routed.every(
-          (c) =>
-            (c.op === "I" || c.op === "U" || c.op === "D") &&
-            typeof c.table === "string",
-        ),
-      ).toBe(true);
+      expect(findChange(routed, "demo", "U", null)).toBeDefined();
+      expect(findChange(routed, "other", "U", null)).toBeDefined();
+      // The sweep came first, in delivery order.
+      expect(routed.at(-1)).toMatchObject({ table: "demo", op: "I" });
     } finally {
       await listener.stop();
     }

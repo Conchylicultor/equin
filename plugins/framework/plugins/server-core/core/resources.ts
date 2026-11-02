@@ -18,6 +18,7 @@ import type {
   ChangeSource as RtChangeSource,
   TableLayoutRequirement as RtTableLayoutRequirement,
   PersistMeta as RtPersistMeta,
+  RoutedCut as RtRoutedCut,
   PersistedBase as RtPersistedBase,
   SeedOutcome as RtSeedOutcome,
   PersistedValueCheck as RtPersistedValueCheck,
@@ -101,8 +102,10 @@ export type ReplayScope = RtReplayScope;
 export type ChangeSource = RtChangeSource;
 // One routed table's trigger layout (`routedTableRequirements`).
 export type TableLayoutRequirement = RtTableLayoutRequirement;
-/** How one L2 persist writes its row (replace / floor) — see `LiveStateSnapshotHooks`. */
+/** How one L2 persist writes its row (replace / floor / advance) — see `LiveStateSnapshotHooks`. */
 export type PersistMeta = RtPersistMeta;
+/** A routed-through cut, or why none was proven — see `LiveStateSnapshotHooks.routedCut`. */
+export type RoutedCut = RtRoutedCut;
 /** The L2 row a boot seed restores (`seedPersistedSnapshot`). */
 export type PersistedBase = RtPersistedBase;
 /** What a boot seed did with an L2 value (`seedPersistedSnapshot`; A30 refuses one that does not parse). */
@@ -284,7 +287,7 @@ export function assertServedReadsHaveWatermarkSource(): void {
 // never one of L2's. See research/2026-06-22-global-live-state-l2-persisted-materialization.md.
 export interface LiveStateSnapshotHooks {
   shouldPersist: (key: string) => boolean;
-  /** See `ResourceRuntimeOptions.persistSnapshot`: `meta.mode` is replace or floor. */
+  /** See `ResourceRuntimeOptions.persistSnapshot`: `meta.mode` is replace, floor or advance. */
   persistSnapshot: (
     key: string,
     paramsKey: string,
@@ -292,6 +295,8 @@ export interface LiveStateSnapshotHooks {
     watermark: string,
     meta: PersistMeta,
   ) => Promise<void>;
+  /** See `ResourceRuntimeOptions.routedCut`: what lets a floor persist advance. */
+  routedCut: () => Promise<RoutedCut>;
 }
 let liveStateSnapshotHooks: LiveStateSnapshotHooks | null = null;
 /**
@@ -591,6 +596,15 @@ const runtime = createResourceRuntime({
       meta,
     );
   },
+  // Reads the boot-injected holder at call time: before injection (and on
+  // central) no cut is proven, so no floor is advanced.
+  routedCut: () =>
+    liveStateSnapshotHooks === null
+      ? Promise.resolve({
+          kind: "unproven",
+          reason: "live-state-snapshot hooks not installed",
+        })
+      : liveStateSnapshotHooks.routedCut(),
   reportError: (ctx, err) => reportServerError(errorReport(ctx, err)),
   // Reads the boot-injected holder at call time (see `setEpochHandoffHooks`).
   resumeEpoch: (epoch) =>

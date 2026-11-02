@@ -228,7 +228,7 @@ so no change lands between check and copy.
 Pinned by `runtime-derive.test.ts` (incl. `makeClientView` convergence under random
 interleavings, routed and external windows).
 
-## L2 persists: replace and floor (`PersistMeta`)
+## L2 persists: replace, floor and advance (`PersistMeta`)
 
 `persistSnapshot` takes `{ mode, definition, guardTables }`; calls are serialized
 per (key, pk) (`persistChains`).
@@ -245,6 +245,26 @@ per (key, pk) (`persistChains`).
   - On fire, the value is rebuilt from the snapshot (`valueOfSnapshot`) and floored
     by the **base floor**.
   - L2 only LOWERS position (`LEAST`).
+- **`advance`** — a floor persist that RAISES the position to a routed cut
+  (`opts.routedCut`: every change below `cutXid` this runtime will be told of
+  has been routed — server: live-state-snapshot over change-feed's `feedCut`).
+  research/2026-10-30-global-boot-catch-up-per-key-floors.md, part B.
+  - The window takes the cut OFF the persist chain (`cutThenFloorPersist`; one
+    cut in flight, joined by every window firing meanwhile), then enqueues the
+    link. A replace or `dropPendingPersists` cancels a window waiting on its
+    cut, as it clears an armed timer.
+  - The link advances only when, in the same synchronous step that rebuilds
+    the value, the tuple is SETTLED (`advanceBlock`): snapshot and base floor,
+    no pending, not draining, no unapplied change, base floor ≤ cut — and the
+    entry routes every change (`advanceRefusal`: a persisted alias, routed, no
+    drift, no unfed / notified / tagged / follow read, no upstream, not
+    deferred / external). Otherwise it writes `floor`. Refusals are counted
+    per key in `_debug` (`advanceRefusals`, `advanceRefusal`, `lastAdvanceAt`).
+  - **Unapplied changes are tracked positively** (`appliedPendings`): a pending
+    a drain took and did not apply (its FULL fallback failed, a throw) marks
+    the tuple in `unprovenBases` when the drain settles; only a whole-read
+    rebuild (`markRebuilt`: FULL drain, sub-ack seed, boot seed) clears it.
+  - Pinned by `runtime-floor-advance.test.ts`.
 - **Base floor** (`baseFloors`, per pk, aliases only) = the watermark of the FULL
   read the snapshot was last rebuilt from (`drainMembershipFull`, sub-ack seed,
   `seedPersistedSnapshot`).
@@ -770,6 +790,7 @@ Out of reach at this seam (DB-backed harness instead):
     - `ResumeRecord`
     - `ResumeReplayOutcome`
     - `Route`
+    - `RoutedCut`
     - `RoutedRecomputeOn`
     - `RoutePlan`
     - `RouteVia`

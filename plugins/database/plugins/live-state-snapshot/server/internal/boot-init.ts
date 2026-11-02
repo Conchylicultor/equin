@@ -1,5 +1,6 @@
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
+  type RoutedCut,
   setLiveStateSnapshotHooks,
   seedRouteDrift,
   unboundedWindowKeys,
@@ -53,6 +54,9 @@ import { producedPersistReports } from "./produced-reports";
 // every persisted row is cleared before readiness flips, so boot-snapshot can
 // never serve a value computed from a drifted rollup as a first paint.
 //
+// `routedCut` is what lets a floor persist advance an alias's row position
+// (`./routed-cut`), installed with the persist hooks.
+//
 // A30: every persisted alias row whose value does not parse as its entry's
 // payload is cleared here too, before readiness flips, for the same reason.
 export async function initSnapshotSubsystem(
@@ -60,6 +64,7 @@ export async function initSnapshotSubsystem(
   produced: ReadonlySet<string>,
   relationBases: RelationBases,
   healedRollups: readonly string[],
+  routedCut: () => Promise<RoutedCut>,
 ): Promise<void> {
   try {
     // The code stamp every definition is written and expected under — first:
@@ -97,6 +102,7 @@ export async function initSnapshotSubsystem(
           definition: stampDefinition(meta.definition),
         });
       },
+      routedCut,
     });
     const exp = l2Expectation();
     // Sweep every row that is not USABLE before seeding the route drift bases or

@@ -77,6 +77,21 @@ function floor(
   });
 }
 
+// An ADVANCE persist (a floor persist the runtime proved settled under a routed cut).
+function advance(
+  key: string,
+  value: unknown,
+  cutXid: string,
+  guardTables: readonly string[],
+  definition: string | null = null,
+): Promise<void> {
+  return persistSnapshot(t.db, key, "{}", value, cutXid, {
+    mode: "advance",
+    definition,
+    guardTables,
+  });
+}
+
 // The usable-row expectation: these keys persisted, these definitions.
 function exp(
   persisted: readonly string[],
@@ -242,6 +257,52 @@ describe("persistSnapshot — floor", () => {
       "route_t",
     ]);
     expect(await compactTargets(t.db, e)).toEqual(["al"]);
+  });
+});
+
+describe("persistSnapshot — advance", () => {
+  test("on an existing row: writes the value, SETS the position to the cut (raised), keeps position_at and tables_read", async () => {
+    await replace("al", "{}", [1], "50", ["ta"], "d");
+    await advance("al", [1, 2], "90", ["route_t"], "d");
+    const row = await selectRow("al", "{}");
+    expect(row!.value).toEqual([1, 2]);
+    expect(row!.position).toBe("90"); // raised — never LEAST
+    expect(row!.tables_read).toEqual(["ta"]);
+    expect(row!.has_position_at).toBe(true); // still the replace's time
+    expect(row!.stamped).toBe(true);
+    // The compact job still rebuilds it hourly from a whole read: position_at
+    // is a replace's alone.
+    const e = exp(["al"], { al: "d" });
+    expect(await compactTargets(t.db, e)).toEqual([]);
+  });
+
+  test("a later plain floor persist lowers an advanced position again", async () => {
+    await replace("al", "{}", [1], "50", ["ta"], "d");
+    await advance("al", [1, 2], "90", ["route_t"], "d");
+    await floor("al", [1, 2, 3], "60", ["route_t"], "d");
+    const row = await selectRow("al", "{}");
+    expect(row!.value).toEqual([1, 2, 3]);
+    expect(row!.position).toBe("60");
+  });
+
+  test("on a missing row: inserts the cut, the guard tables and a NULL position_at", async () => {
+    await advance("fresh", [9], "77", ["r1"], "d");
+    const row = await selectRow("fresh", "{}");
+    expect(row!.position).toBe("77");
+    expect(row!.tables_read).toEqual(["r1"]);
+    expect(row!.has_position_at).toBe(false);
+    expect(row!.stamped).toBe(true);
+  });
+
+  test("over another definition's row: takes the guard tables and a NULL position_at, writes its own pair", async () => {
+    await replace("al", "{}", [1], "50", ["foreign_t"], "other-def");
+    await advance("al", [1, 2], "60", ["route_t"], "d");
+    const row = await selectRow("al", "{}");
+    expect(row!.value).toEqual([1, 2]);
+    expect(row!.position).toBe("60");
+    expect(row!.tables_read).toEqual(["route_t"]);
+    expect(row!.has_position_at).toBe(false);
+    expect(row!.definition).toBe("d");
   });
 });
 

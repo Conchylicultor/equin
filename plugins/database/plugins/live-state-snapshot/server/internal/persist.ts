@@ -84,7 +84,13 @@ export function usableRowSql(exp: L2Expectation): SQL {
 //    `position_at` and `tables_read` are kept, because neither a replace nor a
 //    read-set describes it. A missing row — or one this writer could not use
 //    (another definition's, or an older writer's) — gets the floor, a NULL
-//    `position_at` (the compact job then targets it) and `meta.guardTables`.
+//    `position_at` (the compact job then targets it) and `meta.guardTables`;
+//  - `advance` — `floor`, except the position is SET to `watermark`: a routed
+//    cut the runtime proved the value holds every change below (its `routedCut`).
+//    The pair (value, position) is this writer's own, so it is sound whatever
+//    position the row held — a hot swap's other backend writes its own pair.
+//    `position_at` stays a REPLACE's time: the compact job still rebuilds the
+//    key hourly from a whole read.
 //
 // Both write the definition and stamp `definition_at` with the same `now()` as
 // `persisted_at`, which is what makes the row usable (`usableRowSql`). `value`
@@ -99,7 +105,7 @@ export async function persistSnapshot(
 ): Promise<void> {
   const table = drizzleSql.raw(LIVE_STATE_SNAPSHOT_TABLE);
   const tablesArray = textArray(meta.guardTables);
-  if (meta.mode === "floor") {
+  if (meta.mode === "floor" || meta.mode === "advance") {
     // The stored row was not usable for THIS writer: another definition wrote
     // it (a hot swap), or a writer that predates `definition_at` upserted it
     // (C22). Its `tables_read` and `position_at` describe someone else's
@@ -128,7 +134,11 @@ export async function persistSnapshot(
       )
       ON CONFLICT (resource_key, params_key) DO UPDATE
         SET value = EXCLUDED.value,
-            position = LEAST(s.position, EXCLUDED.position),
+            position = ${
+              meta.mode === "advance"
+                ? drizzleSql`EXCLUDED.position`
+                : drizzleSql`LEAST(s.position, EXCLUDED.position)`
+            },
             tables_read = CASE WHEN ${foreignRow}
               THEN EXCLUDED.tables_read ELSE s.tables_read END,
             position_at = CASE WHEN ${foreignRow}

@@ -177,6 +177,7 @@ describe("setWatermarkSource", () => {
     setLiveStateSnapshotHooks({
       shouldPersist: () => false,
       persistSnapshot: async () => {},
+      routedCut: async () => ({ kind: "unproven", reason: "test" }),
     });
     setLiveStateSnapshotHooks(null);
     setWatermarkSource(async () => "4242");

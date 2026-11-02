@@ -445,6 +445,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `ResourceParams`
     - `ResourcePushObserver`
     - `ResumeRecord`
+    - `RoutedCut`
     - `RuntimeProfileView`
     - `SeedOutcome`
     - `ServerContribution`

@@ -15,6 +15,10 @@ import {
 import { db } from "@plugins/database/server";
 import { LIVE_STATE_SNAPSHOT_TABLE } from "@plugins/database/plugins/derived-views/core";
 import { initSnapshotSubsystem } from "./internal/boot-init";
+import {
+  awaitListeningForReplay,
+  bootRoutedCut,
+} from "./internal/boot-routed-cut";
 import { runBootCatchUp } from "./internal/boot-catch-up";
 import { healedRollups } from "./internal/healed-rollups";
 import { l2Expectation } from "./internal/expectation";
@@ -49,7 +53,7 @@ export {
 
 export default {
   description:
-    "L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, served only from a usable row (a key the runtime persists now, under its current definition, from a current writer). Two persist modes (a FULL recompute replaces; a persisted alias's trailing window lowers the floor), an hourly compact job, and a boot catch-up that seeds each persisted alias from its row and replays the changelog by scope — or, when history was pruned past the floor or a rollup was healed, recomputes every persisted key.",
+    "L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, served only from a usable row (a key the runtime persists now, under its current definition, from a current writer). Three persist modes (a FULL recompute replaces; a persisted alias's trailing window lowers the floor, or advances it to a routed cut once its snapshot is proven settled under one), an hourly compact job, and a boot catch-up that seeds each persisted alias from its row and replays the changelog by scope — or, when history was pruned past the floor or a rollup was healed, recomputes every persisted key.",
   loadBearing: false,
   portable: true,
   register: [liveStateChangelogPruneJob, liveStateCompactJob],
@@ -93,7 +97,13 @@ export default {
     // degradation below (whose catch would turn the throw into a disabled L2),
     // so a boot-order bug blocks boot, like A20 above.
     relationBases(LIVE_STATE_SNAPSHOT_TABLE);
-    await initSnapshotSubsystem(db, produced, relationBases, healed);
+    await initSnapshotSubsystem(
+      db,
+      produced,
+      relationBases,
+      healed,
+      bootRoutedCut.cut,
+    );
     // A6 (boot, static evidence): a key the runtime persists whose routes or
     // identity table name a produced table blocks boot. Outside the graceful
     // degradation above on purpose — it is a declaration bug, not a snapshot
@@ -123,12 +133,22 @@ export default {
     // (`routeChange`, table constants) → a dependsOn edge → its `onReady` fires
     // after change-feed's `onReady` (which calls `startListener()`). Do NOT
     // remove that import edge without re-establishing the ordering another way.
+    //
+    // `onReady` order makes it started, not established: wait for it (bounded),
+    // so the replay below reads only after every later commit is delivered —
+    // the condition under which a routed cut proves anything (`routedCut`).
+    // Without a session in time the replay still runs, as before, and no
+    // alias's floor is advanced in this process.
+    const listening = await awaitListeningForReplay();
     await runBootCatchUp(db, exp, {
       healedRollups: healedRollups(),
       aliasKeys: unboundedWindowKeys(),
       recompute: recomputeResource,
       seed: (key, value, base) => seedPersistedSnapshot(key, "{}", value, base),
     });
+    // Every change committed before the session is routed now (replayed, or
+    // its key recomputed from a whole read): cuts may be taken.
+    if (listening.kind === "listening") bootRoutedCut.caughtUp();
   },
   // Drop the armed trailing floor persists: their changes are in the
   // changelog and each row's floor still predates them, so the next boot's

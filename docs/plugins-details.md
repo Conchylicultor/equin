@@ -20951,7 +20951,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by: `conversations`
       - Core:
         - Exports (values): `FORKED_AT_SETTING`
-    - **`live-state-snapshot`** — L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, served only from a usable row (a key the runtime persists now, under its current definition, from a current writer). Two persist modes (a FULL recompute replaces; a persisted alias's trailing window lowers the floor), an hourly compact job, and a boot catch-up that seeds each persisted alias from its row and replays the changelog by scope — or, when history was pruned past the floor or a rollup was healed, recomputes every persisted key.
+    - **`live-state-snapshot`** — L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, served only from a usable row (a key the runtime persists now, under its current definition, from a current writer). Three persist modes (a FULL recompute replaces; a persisted alias's trailing window lowers the floor, or advances it to a routed cut once its snapshot is proven settled under one), an hourly compact job, and a boot catch-up that seeds each persisted alias from its row and replays the changelog by scope — or, when history was pruned past the floor or a rollup was healed, recomputes every persisted key.
       - Server:
         - Contributes:
           - `change-feed-changelog-retention` "live-state-snapshot's cold-boot catch-up replays the changelog; its hourly prune job (pruneChangelog) deletes the rows below the horizon no persisted snapshot needs"
@@ -20961,6 +20961,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `database.db`
           - `database/change-feed.ChangelogRetention`
+          - `database/change-feed.feedCut`
+          - `database/change-feed.feedListening`
           - `database/change-feed.producedTableNames`
           - `database/change-feed.readLayout`
           - `database/change-feed.relationBases`
@@ -27084,6 +27086,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ResumeRecord`
           - `ResumeReplayOutcome`
           - `Route`
+          - `RoutedCut`
           - `RoutedRecomputeOn`
           - `RoutePlan`
           - `RouteVia`
@@ -27194,6 +27197,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ResourceParams`
           - `ResourcePushObserver`
           - `ResumeRecord`
+          - `RoutedCut`
           - `RuntimeProfileView`
           - `SeedOutcome`
           - `ServerContribution`

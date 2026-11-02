@@ -265,6 +265,28 @@ describe("probeCatchUp + replayCatchUp", () => {
     expect(routed.map((c) => c.ids)).toEqual([["c"]]);
   });
 
+  test("an advanced alias row: the next boot replays from the cut — xid == cut in, xid == cut-1 out", async () => {
+    // A floor persist advanced the row to the cut 250 (the value holds every
+    // transaction below it): only what committed at or after it is replayed.
+    seeded.push("alias");
+    await persistSnapshot(t.db, "alias", "{}", [], "100", {
+      mode: "replace",
+      definition: null,
+      guardTables: ["ta"],
+    });
+    await persistSnapshot(t.db, "alias", "{}", [1], "250", {
+      mode: "advance",
+      definition: null,
+      guardTables: ["ta"],
+    });
+    await insertChangelog({ seq: 1, xid: "100", t: "ta", op: "U", ids: ["a"] });
+    await insertChangelog({ seq: 2, xid: "249", t: "ta", op: "U", ids: ["b"] });
+    await insertChangelog({ seq: 3, xid: "250", t: "ta", op: "U", ids: ["c"] });
+    const { routed, route } = recorder();
+    await runCatchUp(route);
+    expect(routed.map((c) => c.ids)).toEqual([["c"]]);
+  });
+
   test("every replayed row carries its xid and EVERY key's own floor, from the probe's one read", async () => {
     // Two keys at 100 and 300: the replay still reads from the oldest (100),
     // and hands the router each row's xid with both floors, so the router can

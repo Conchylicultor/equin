@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, served only from a usable row (a key the runtime persists now, under its current definition, from a current writer). Two persist modes (a FULL recompute replaces; a persisted alias's trailing window lowers the floor), an hourly compact job, and a boot catch-up that seeds each persisted alias from its row and replays the changelog by scope — or, when history was pruned past the floor or a rollup was healed, recomputes every persisted key.
+- Description: L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, served only from a usable row (a key the runtime persists now, under its current definition, from a current writer). Three persist modes (a FULL recompute replaces; a persisted alias's trailing window lowers the floor, or advances it to a routed cut once its snapshot is proven settled under one), an hourly compact job, and a boot catch-up that seeds each persisted alias from its row and replays the changelog by scope — or, when history was pruned past the floor or a rollup was healed, recomputes every persisted key.
 - Server:
   - Contributes:
     - `change-feed-changelog-retention` "live-state-snapshot's cold-boot catch-up replays the changelog; its hourly prune job (pruneChangelog) deletes the rows below the horizon no persisted snapshot needs"
@@ -14,6 +14,8 @@
   - Uses:
     - `database.db`
     - `database/change-feed.ChangelogRetention`
+    - `database/change-feed.feedCut`
+    - `database/change-feed.feedListening`
     - `database/change-feed.producedTableNames`
     - `database/change-feed.readLayout`
     - `database/change-feed.relationBases`
@@ -117,7 +119,7 @@ unusable row; the reads refuse them regardless.
 
 ## Persist modes
 
-The runtime's hook (`persistSnapshot(db, key, pk, value, watermark, meta)`) has two
+The runtime's hook (`persistSnapshot(db, key, pk, value, watermark, meta)`) has three
 modes (see resource-runtime's *L2 persists*):
 
 - **`replace`** (a FULL recompute) writes the value, `position` = the flight's
@@ -128,17 +130,36 @@ modes (see resource-runtime's *L2 persists*):
   `tables_read`; a missing row is inserted with the floor, `meta.guardTables` and a
   NULL `position_at` — and so is a row this writer could not use (another
   definition's, or an older writer's upsert), whose read-set and replace time are
-  someone else's: it is not re-validated with them under this definition.
+  someone else's: it is not re-validated with them under this definition;
+- **`advance`** (a floor persist the runtime proved settled under a routed
+  cut) is `floor`, except the position is SET to the cut (`watermark`), so it
+  rises. The (value, position) pair is this writer's own, sound whatever the
+  row held. `position_at` stays a replace's: the compact job keeps rebuilding
+  the key hourly from a whole read.
 
-The A6 guard (`./produced-guard`) judges `meta.guardTables` in both modes (C21) —
+**The routed cut (`internal/routed-cut.ts`).** The runtime's `routedCut` hook
+is change-feed's `feedCut` (every change below `cutXid` the LISTEN session
+delivered has been routed), refused (`unproven`) until `onReady`'s boot
+catch-up has routed the changelog — a session hears only what commits after
+it is up, so the changes before it reach the runtime only through the replay.
+`onReady` therefore waits (5 s) for the LISTEN session before the replay
+reads, and calls `caughtUp()` after `runBootCatchUp` returns; without a
+session in time (or a catch-up that throws) nothing is advanced in that
+process. A later session loss needs nothing here: the reconnect's FULL sweep
+leaves every reader unsettled until a whole read rebuilds it, and `feedCut`
+refuses with no session. The runtime side — when a tuple is settled under a
+cut — is resource-runtime's *L2 persists*.
+
+The A6 guard (`./produced-guard`) judges `meta.guardTables` in every mode (C21) —
 never an empty list, so a floor persist's first INSERT of a key reading a
 produced table is refused too.
 
 ## Compaction (`live-state-snapshot.compact`)
 
 Hourly at `:30` (offset from the changelog prune at `:00`), per worktree,
-singleton, `instant`. A floor persist never raises a row's position and an idle
-legacy key never re-persists, while catch-up and the prune both read the GLOBAL
+singleton, `instant`. Only an `advance` raises an alias row's position (and
+only once it is proven settled under a cut), an idle legacy key never
+re-persists, while catch-up and the prune both read the GLOBAL
 `min(position)` — so every persisted key without a usable row REPLACED in the last
 hour (`position_at`; a missing, unusable or floor-only row counts) is
 `recomputeResource`d here, which replaces its row with a fresh floor. It runs in
@@ -206,8 +227,9 @@ every other target (a subscribed non-persisted tuple, a key without a floor)
 gets every row, as before. Without it, one idle key (or an alias whose floor
 persists only `LEAST` the position) pinned the global floor up to an hour back,
 and every OTHER key re-derived that whole hour at each boot (median 9k rows on
-main). An alias's own floor still sits at its last FULL rebuild until the cut
-primitive raises it (follow-up: research/2026-10-30-global-boot-catch-up-per-key-floors.md, part B).
+main). An alias's own floor is raised past its last FULL rebuild by `advance`
+persists (research/2026-10-30-global-boot-catch-up-per-key-floors.md, part B),
+so its replay is only what came after its last settled cut.
 
 `onShutdown` drops the armed trailing floor persists (`dropPendingPersists`): their
 changes are in the changelog and each row's floor still predates them.
@@ -287,15 +309,16 @@ in the backend entry `server/index.ts` (hooks + catch-up) and in
 `internal/public-snapshots.ts` (the two barrel-exported consumers keep their
 `(keys) => …` shape).
 
-- `server/internal/persist.test.ts` — the persist SQL: both persist modes
+- `server/internal/persist.test.ts` — the persist SQL: every persist mode
   (replace in place; floor `LEAST`, kept `position_at` / `tables_read`, first
   INSERT, and a row another definition or
-  an older writer left taken over as a missing one), the `text[]` / jsonb round-trips,
+  an older writer left taken over as a missing one; advance SETs the position,
+  and a later floor lowers it again), the `text[]` / jsonb round-trips,
   the usable-row predicate on every read (a non-persisted key, another
   definition, the C22 old-shape upsert after a new-shape one), the compact
   targets, the boot sweep, `clearPersistedSnapshots` scoped delete.
 - `server/internal/catch-up.test.ts` — the cold-boot arithmetic with a recording
-  `route` spy: `probeCatchUp`'s verdict (`none` / `backstop` / `replay`, the floor
+  `route` spy (an advanced row replays from its cut: `== cut` in, `cut-1` out): `probeCatchUp`'s verdict (`none` / `backstop` / `replay`, the floor
   over usable rows only; an ordinary prune below the floor is no backstop), the
   prune horizon (recorded by the real prune, never lowered, seeded when missing), `xid >= floor` + `ORDER BY seq` replay, the floor
   boundary (`==` in, `-1` out), id-preserving replay (a `D`-with-ids keeps its ids

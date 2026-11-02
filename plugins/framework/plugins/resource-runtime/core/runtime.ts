@@ -1495,6 +1495,18 @@ interface RegistryEntry {
    * FULL rebuild sets one. Lifecycle identical to `snapshots`.
    */
   baseFloors?: Map<string, string>;
+  /**
+   * The pks of a persisted alias whose snapshot may MISS a change routed to
+   * it since its base: a drain took the tuple's pending and did not apply it
+   * (its FULL fallback failed, or it threw), routing a change to the entry
+   * threw, or the boot seed found a snapshot read before the catch-up
+   * (`markUnapplied`). The floor persist keeps the
+   * row's old floor for such a snapshot — catch-up replays what it missed —
+   * and never advances it (`advanceRefusal`). Cleared only by a rebuild from
+   * a whole read (`markRebuilt`: a FULL drain, a sub-ack seed, the L2 boot
+   * seed) and with the snapshot.
+   */
+  unprovenBases?: Set<string>;
   /** Upstream keys this entry listens to (for cycle detection). */
   upstreamKeys: string[];
   /**
@@ -1978,9 +1990,12 @@ export interface ResourceRuntimeOptions {
    *    floored by the snapshot's BASE floor (`RegistryEntry.baseFloors`): the
    *    row's position only ever LOWERS to it (`LEAST`), and `position_at` /
    *    `tables_read` are kept; a missing row is inserted with the floor and
-   *    `meta.guardTables` (the entry's route tables, or its read-set union).
+   *    `meta.guardTables` (the entry's route tables, or its read-set union);
+   *  - `advance` — a `floor` persist after a routed cut proved the snapshot
+   *    holds every change below `cutXid` (`routedCut`): the position is SET
+   *    to the cut, so the next boot replays only what came after it.
    *
-   * Both write `meta.definition` (A18). `meta.guardTables` is what the A6
+   * Every mode writes `meta.definition` (A18). `meta.guardTables` is what the A6
    * produced-table guard judges in either mode. server:
    * `INSERT … ON CONFLICT (resource_key, params_key) DO UPDATE`.
    */
@@ -1997,6 +2012,22 @@ export interface ResourceRuntimeOptions {
    * Default 2000. A test passes 0.
    */
   persistWindowMs?: number;
+  /**
+   * A routed-through cut, for raising a persisted alias's catch-up floor
+   * (`PersistMeta` mode `advance`): `cut` promises that every change of every
+   * transaction with an xid below `cutXid` that will ever reach this runtime
+   * through `routeTableChange` HAS reached it (routing is synchronous, so the
+   * pending it made exists) — the live ones, and every one committed before
+   * this process listened, which the boot catch-up replays to every tuple
+   * whose base it does not reflect (a snapshot read before the catch-up is
+   * judged by its row's floor, not its own: the boot seed marks it unproven
+   * instead — `seedPersistedSnapshot`). `unproven`
+   * (with why) whenever that cannot be shown; the floor persist then lowers
+   * the floor as before. server: live-state-snapshot over change-feed's
+   * `feedCut`, refused until its boot catch-up has routed; central / omitted:
+   * no floor is ever advanced.
+   */
+  routedCut?: () => Promise<RoutedCut>;
   /**
    * The epoch handoff's successor half: the record the backend that served
    * boot `epoch` wrote at its shutdown (`ResourceRuntime.handoffState`), or
@@ -2056,9 +2087,20 @@ export interface ResumeRecord {
   replay(route: (change: TableChange) => void): Promise<ResumeReplayOutcome>;
 }
 
+/** A routed-through cut, or why none could be proven — see `ResourceRuntimeOptions.routedCut`. */
+export type RoutedCut =
+  { kind: "cut"; cutXid: string } | { kind: "unproven"; reason: string };
+
 /** How one L2 persist writes its row — see `ResourceRuntimeOptions.persistSnapshot`. */
 export interface PersistMeta {
-  mode: "replace" | "floor";
+  /**
+   * `replace` / `floor` — see `persistSnapshot`. `advance`: a floor persist
+   * whose `watermark` is a routed cut (`routedCut`) the alias's snapshot was
+   * proven settled under — every change below it applied — so the row's
+   * position is SET to it (raised, not `LEAST`ed); `position_at` and
+   * `tables_read` are kept as in `floor`.
+   */
+  mode: "replace" | "floor" | "advance";
   /** The entry's L2 definition (its routed plan's `definition`), NULL when it has none. */
   definition: string | null;
   /**
@@ -5362,6 +5404,7 @@ export function createResourceRuntime(
     entry.snapshots?.delete(pk);
     entry.orderSigs?.delete(pk);
     entry.baseFloors?.delete(pk);
+    entry.unprovenBases?.delete(pk);
   }
 
   function keepsIdleSnapshot(entry: RegistryEntry): boolean {
@@ -5407,7 +5450,14 @@ export function createResourceRuntime(
   // (seeded from L2 at boot, moved by every replace).
   const persistStats = new Map<
     string,
-    { lastReplaceAt?: number; lastFloorAt?: number; l2PositionAt?: number }
+    {
+      lastReplaceAt?: number;
+      lastFloorAt?: number;
+      lastAdvanceAt?: number;
+      l2PositionAt?: number;
+      /** Why a floor persist did not advance the floor, by reason (`_debug`). */
+      advanceRefusals?: Map<string, number>;
+    }
   >();
   const persistSlot = (key: string, pk: string): string => `${key}\u0000${pk}`;
   const statsOf = (key: string) => {
@@ -5463,6 +5513,28 @@ export function createResourceRuntime(
     else (entry.baseFloors ??= new Map()).set(pk, watermark);
   }
 
+  // The snapshot was just rebuilt from a WHOLE read (a FULL drain, a sub-ack
+  // seed, the L2 boot seed): it misses no change routed before that read, so
+  // a change an earlier drain failed to apply no longer counts against it
+  // (`RegistryEntry.unprovenBases`).
+  function markRebuilt(entry: RegistryEntry, pk: string): void {
+    entry.unprovenBases?.delete(pk);
+  }
+
+  // The alias tuple's snapshot may miss a change that reached (or should have
+  // reached) it — never advance its floor until a whole read rebuilds it.
+  function markUnapplied(entry: RegistryEntry, pk: string): void {
+    if (!isUnboundedWindow(entry) || entry.snapshots?.has(pk) !== true) return;
+    (entry.unprovenBases ??= new Set()).add(pk);
+  }
+
+  // The pendings a drain APPLIED to their tuple's snapshot (a scoped refill
+  // written back, a FULL rebuild, a scoped pending that names nothing). Every
+  // other pending the drain took marks its alias tuple unproven when the drain
+  // settles (`drainEntry`) — positively tracked, so a failure path nobody
+  // thought of still counts as one.
+  const appliedPendings = new WeakSet<PendingNotify>();
+
   // A FULL recompute's persist: REPLACE the row (value, its flight's watermark,
   // the run's read-set, the definition). It cancels an armed floor window
   // SYNCHRONOUSLY, before it enqueues: the window's scoped changes committed
@@ -5488,6 +5560,8 @@ export function createResourceRuntime(
       clearTimeout(armed);
       armedFloors.delete(slot);
     }
+    const cancelledCut = cancelCuttingFloors(slot);
+    const cancelledWindow = armed !== undefined || cancelledCut;
     await enqueuePersist(entry, pk, async () => {
       try {
         await persist(entry.key, pk, value, watermark, {
@@ -5497,7 +5571,7 @@ export function createResourceRuntime(
         });
       } catch (err) {
         reportLoaderError(`snapshot persist failed for ${entry.key}`, err);
-        if (armed !== undefined) armFloorPersist(entry, pk);
+        if (cancelledWindow) armFloorPersist(entry, pk);
         return;
       }
       const st = statsOf(entry.key);
@@ -5517,10 +5591,143 @@ export function createResourceRuntime(
     if (armedFloors.has(slot)) return;
     const timer = setTimeout(() => {
       armedFloors.delete(slot);
-      void enqueuePersist(entry, pk, () => runFloorPersist(entry, pk));
+      if (opts.routedCut && advanceRefusal(entry) === null) {
+        cutThenFloorPersist(entry, pk, slot);
+      } else {
+        void enqueuePersist(entry, pk, () => runFloorPersist(entry, pk));
+      }
     }, persistWindowMs);
     (timer as { unref?: () => void }).unref?.();
     armedFloors.set(slot, timer);
+  }
+
+  // ── Advancing an alias's floor (research/2026-10-30-global-boot-catch-up-
+  // per-key-floors.md, part B) ──
+  //
+  // A floor persist can only LOWER the row's position: the snapshot's base is
+  // its last FULL read, and a scoped refill reads only its ids. So the
+  // position of an alias that changes all day sits at its last FULL rebuild
+  // (the hourly compact), and every boot re-routes that hour of its changes.
+  // It may be RAISED to a routed cut X (`routedCut`) when, AFTER the cut
+  // resolved, the tuple is SETTLED: a snapshot, a known base floor, no pending
+  // notify, not draining, and no change a drain took without applying
+  // (`unprovenBases`). Then every change below X was routed (the cut), each
+  // routed change either rebuilt the base or was applied to it (settled), so
+  // the value reconstructed in that same synchronous step reflects every
+  // transaction below X — exactly what a row's position claims. Any doubt —
+  // no cut, a tuple not settled, an entry whose changes do not all come
+  // through the router — writes the plain floor persist instead.
+
+  // The one cut in flight, joined by every floor window that fires while it
+  // runs: a later cut than needed is still a cut (the check runs after it).
+  let cutInFlight: Promise<RoutedCut> | null = null;
+  function takeCut(cut: () => Promise<RoutedCut>): Promise<RoutedCut> {
+    if (cutInFlight) return cutInFlight;
+    const flight = cut().then(
+      (c) => c,
+      (err: unknown): RoutedCut => ({
+        kind: "unproven",
+        reason: `the cut threw: ${String(err)}`,
+      }),
+    );
+    cutInFlight = flight;
+    void flight.then(() => {
+      if (cutInFlight === flight) cutInFlight = null;
+    });
+    return flight;
+  }
+
+  // The floor windows waiting on a cut, by slot. A replace (`persistReplace`)
+  // or a shutdown (`dropPendingPersists`) cancels one exactly as it clears an
+  // armed timer: the window's changes are in the replace's value (or the
+  // changelog), and a link enqueued after the replace could otherwise read the
+  // pre-replace snapshot before its drain rebuilds it.
+  const cuttingFloors = new Map<string, Set<{ cancelled: boolean }>>();
+  // Cancel every window of `slot` waiting on its cut; true when there was one.
+  function cancelCuttingFloors(slot: string): boolean {
+    const waiting = cuttingFloors.get(slot);
+    if (waiting === undefined) return false;
+    for (const w of waiting) w.cancelled = true;
+    cuttingFloors.delete(slot);
+    return true;
+  }
+
+  // Take a cut OFF the persist chain (a replace queued meanwhile never waits on
+  // it), then enqueue the floor link with it; the link judges the tuple when
+  // it runs, which is after the cut resolved.
+  function cutThenFloorPersist(
+    entry: RegistryEntry,
+    pk: string,
+    slot: string,
+  ): void {
+    const waiting = { cancelled: false };
+    let set = cuttingFloors.get(slot);
+    if (set === undefined) {
+      set = new Set();
+      cuttingFloors.set(slot, set);
+    }
+    set.add(waiting);
+    void takeCut(opts.routedCut!).then((cut) => {
+      const current = cuttingFloors.get(slot);
+      current?.delete(waiting);
+      if (current?.size === 0) cuttingFloors.delete(slot);
+      if (waiting.cancelled) return;
+      void enqueuePersist(entry, pk, () => runFloorPersist(entry, pk, cut));
+    });
+  }
+
+  // Why an entry's floor is never advanced (the first reason), or null: only a
+  // persisted alias, every change of which reaches it through the change
+  // feed's router — no drift (a read no route names), nothing unfed or
+  // notified in-process, no upstream, not deferred or external.
+  function advanceRefusal(entry: RegistryEntry): string | null {
+    const routing = entry.routing;
+    if (!isUnboundedWindow(entry) || !isPersisted(entry)) {
+      return "not-a-persisted-alias";
+    }
+    if (routing === undefined) return "unrouted";
+    if (deferred.has(entry.key)) return "deferred";
+    if (entry.externalSource) return "external";
+    if (entry.upstreamKeys.length > 0) return "upstream";
+    if (
+      routing.drifted.size > 0 ||
+      routing.driftBases.size > 0 ||
+      routing.seededDrift.size > 0
+    ) {
+      return "drift";
+    }
+    if (routing.unfed.size > 0) return "unfed-read";
+    if (routing.notified.size > 0) return "notified-read";
+    if (routing.tagged.size > 0) return "tagged-read";
+    if (routing.via.size > 0) return "follow-read";
+    return null;
+  }
+
+  // Why the tuple cannot take the cut right now (null: it is settled under
+  // it). Read in the same synchronous step as the value it gates.
+  function advanceBlock(
+    entry: RegistryEntry,
+    pk: string,
+    cut: RoutedCut,
+    floor: string,
+  ): string | null {
+    if (cut.kind !== "cut") return `unproven: ${cut.reason}`;
+    const refusal = advanceRefusal(entry);
+    if (refusal !== null) return refusal;
+    if (entry.pendingNotifies.has(pk)) return "pending";
+    if (entry.draining.has(pk)) return "draining";
+    if (entry.unprovenBases?.has(pk) === true) return "unapplied-change";
+    // A FULL rebuild that read after the cut was captured already stands on a
+    // newer base: the plain floor persist writes that one.
+    if (BigInt(cut.cutXid) < BigInt(floor)) return "base-above-cut";
+    return null;
+  }
+
+  function countAdvanceRefusal(key: string, reason: string): void {
+    // `unproven: <why>` counts under its kind; the why is in the log line.
+    const kind = reason.startsWith("unproven") ? "unproven" : reason;
+    const refusals = (statsOf(key).advanceRefusals ??= new Map());
+    refusals.set(kind, (refusals.get(kind) ?? 0) + 1);
   }
 
   // The tables a floor persist's A6 guard judges, and a first INSERT records:
@@ -5543,11 +5750,14 @@ export function createResourceRuntime(
 
   // One floor persist, run on the chain: the value is reconstructed from the
   // snapshot as it stands NOW (a replace queued ahead of it has already
-  // rebuilt it), floored by its base floor. Nothing to write without a
-  // snapshot, without a known floor, or once the key stopped persisting.
+  // rebuilt it), floored by its base floor — or, with a `cut` the tuple is
+  // settled under (`advanceBlock`, judged in this same synchronous step),
+  // ADVANCED to the cut. Nothing to write without a snapshot, without a known
+  // floor, or once the key stopped persisting.
   async function runFloorPersist(
     entry: RegistryEntry,
     pk: string,
+    cut?: RoutedCut,
   ): Promise<void> {
     const persist = opts.persistSnapshot;
     const snapshot = entry.snapshots?.get(pk);
@@ -5555,13 +5765,25 @@ export function createResourceRuntime(
     if (!persist || !snapshot || floor === undefined || !isPersisted(entry)) {
       return;
     }
+    const block =
+      cut === undefined ? null : advanceBlock(entry, pk, cut, floor);
+    const advance = cut?.kind === "cut" && block === null ? cut : null;
+    if (block !== null) countAdvanceRefusal(entry.key, block);
     try {
-      await persist(entry.key, pk, valueOfSnapshot(entry, snapshot), floor, {
-        mode: "floor",
-        definition: definitionOf(entry),
-        guardTables: floorGuardTables(entry),
-      });
-      statsOf(entry.key).lastFloorAt = Date.now();
+      await persist(
+        entry.key,
+        pk,
+        valueOfSnapshot(entry, snapshot),
+        advance ? advance.cutXid : floor,
+        {
+          mode: advance ? "advance" : "floor",
+          definition: definitionOf(entry),
+          guardTables: floorGuardTables(entry),
+        },
+      );
+      const st = statsOf(entry.key);
+      st.lastFloorAt = Date.now();
+      if (advance) st.lastAdvanceAt = st.lastFloorAt;
     } catch (err) {
       reportLoaderError(`snapshot persist failed for ${entry.key}`, err);
     }
@@ -6113,6 +6335,8 @@ export function createResourceRuntime(
     if (owns && valueComputed) {
       reseedOrderSigs(entry, params, value);
       setBaseFloor(entry, pk, flightWatermark);
+      markRebuilt(entry, pk);
+      appliedPendings.add(pendingEntry);
     }
   }
 
@@ -6147,6 +6371,7 @@ export function createResourceRuntime(
     // The base floor of `prev` — set in the same synchronous step as every
     // snapshot rebuild, so it describes exactly the base this drain diffs from.
     const prevBase = entry.baseFloors?.get(pk);
+    const prevUnproven = entry.unprovenBases?.has(pk) === true;
     const owner = snapshotOwner(entry, pk);
 
     // Refill only the requested (op-I ∪ op-U) ids — a pure DELETE runs NO loader.
@@ -6389,7 +6614,12 @@ export function createResourceRuntime(
     // higher position) would then skip the commits in between on catch-up.
     const rebasedUnder = snapshots.get(pk) !== prev;
     snapshots.set(pk, nextSnapshot);
-    if (rebasedUnder) setBaseFloor(entry, pk, prevBase);
+    if (rebasedUnder) {
+      setBaseFloor(entry, pk, prevBase);
+      // …and so is its proof: a change `prev` missed is still missing.
+      if (prevUnproven) markUnapplied(entry, pk);
+    }
+    appliedPendings.add(pendingEntry);
 
     // Maintain the order-signature map in lockstep with the snapshot: refilled
     // rows take their fresh signature, carried-over members keep the stored one,
@@ -6493,44 +6723,52 @@ export function createResourceRuntime(
         drainStartedAt - (p.enqueuedAt + (p.holdMs ?? 0)),
       );
     entry.pendingNotifies.clear();
-    const owedAcks = Array.from(entry.pendingAcks.values());
-    entry.pendingAcks.clear();
-    // The acks owed to skipped tuples (see `PendingAck`): folded into the
-    // tuple's real pending when this drain has one — its frame (or its own ack)
-    // then carries them — and otherwise sent right here, as a standalone ack,
-    // before any persisted or membership branch can see the tuple.
+    // From here every taken pending must end applied or mark its tuple
+    // (`markUnapplied`, in the `finally`) — a throw anywhere below included.
     const byPk = new Map<string, PendingNotify>();
-    for (const p of pending) byPk.set(paramsKey(p.params), p);
-    for (const owed of owedAcks) {
-      const real = byPk.get(paramsKey(owed.params));
-      if (!real) {
-        if (owed.overflow) recordAckOverflow(entry.key);
-        broadcastAck(
-          entry,
-          owed.params,
-          owed.overflow ? undefined : [...owed.xids],
-        );
-      } else if (owed.overflow) {
-        real.sourceTxOverflow = true;
-        real.sourceTx = undefined;
-      } else {
-        unionSourceTx(real, owed.xids);
-      }
-    }
-    for (const p of pending) {
-      if (p.sourceTxOverflow) recordAckOverflow(entry.key);
-    }
-    if (pending.length === 0) return;
-    // Mark the taken pks as draining until the whole drain settles (see
-    // `RegistryEntry.draining`): coarser than per-pk, which only ever makes the
-    // router deliver a value-role change it could have dropped — never the
-    // reverse.
-    for (const pk of byPk.keys()) entry.draining.add(pk);
     try {
+      const owedAcks = Array.from(entry.pendingAcks.values());
+      entry.pendingAcks.clear();
+      // The acks owed to skipped tuples (see `PendingAck`): folded into the
+      // tuple's real pending when this drain has one — its frame (or its own ack)
+      // then carries them — and otherwise sent right here, as a standalone ack,
+      // before any persisted or membership branch can see the tuple.
+      for (const p of pending) byPk.set(paramsKey(p.params), p);
+      for (const owed of owedAcks) {
+        const real = byPk.get(paramsKey(owed.params));
+        if (!real) {
+          if (owed.overflow) recordAckOverflow(entry.key);
+          broadcastAck(
+            entry,
+            owed.params,
+            owed.overflow ? undefined : [...owed.xids],
+          );
+        } else if (owed.overflow) {
+          real.sourceTxOverflow = true;
+          real.sourceTx = undefined;
+        } else {
+          unionSourceTx(real, owed.xids);
+        }
+      }
+      for (const p of pending) {
+        if (p.sourceTxOverflow) recordAckOverflow(entry.key);
+      }
+      if (pending.length === 0) return;
+      // Mark the taken pks as draining until the whole drain settles (see
+      // `RegistryEntry.draining`): coarser than per-pk, which only ever makes the
+      // router deliver a value-role change it could have dropped — never the
+      // reverse.
+      for (const pk of byPk.keys()) entry.draining.add(pk);
       await resolveReverseRoutes(entry, pending);
       await drainPendings(entry, pending);
     } finally {
       for (const pk of byPk.keys()) entry.draining.delete(pk);
+      // A pending taken and not applied (`appliedPendings`): the kept alias
+      // snapshot may miss its change, so its floor is never advanced past it
+      // until a whole read rebuilds it. Only a persisted alias advances.
+      for (const p of pending) {
+        if (!appliedPendings.has(p)) markUnapplied(entry, paramsKey(p.params));
+      }
     }
   }
 
@@ -6725,6 +6963,7 @@ export function createResourceRuntime(
         (pendingEntry.deleted?.size ?? 0) === 0
       ) {
         broadcastAckOnly(entry, pendingEntry);
+        appliedPendings.add(pendingEntry);
         continue;
       }
       // A membership entry (bounded window / point / the M5 alias) runs the
@@ -8057,6 +8296,7 @@ export function createResourceRuntime(
         // The new base's floor is the flight's own watermark (C19): the value
         // this snapshot now holds reflects every commit below it.
         setBaseFloor(entry, pk, watermark);
+        markRebuilt(entry, pk);
       }
     }
     // Stamp the etag the FLIGHT carried, not `freshEtag`. Three cases:
@@ -8855,6 +9095,13 @@ export function createResourceRuntime(
               definition: definitionOf(entry),
               lastReplaceAt: persistStats.get(entry.key)?.lastReplaceAt ?? null,
               lastFloorAt: persistStats.get(entry.key)?.lastFloorAt ?? null,
+              // The last floor persist that RAISED the row's position to a
+              // routed cut, and why the others did not (by reason).
+              lastAdvanceAt: persistStats.get(entry.key)?.lastAdvanceAt ?? null,
+              advanceRefusals: Object.fromEntries(
+                persistStats.get(entry.key)?.advanceRefusals ?? [],
+              ),
+              advanceRefusal: advanceRefusal(entry),
               l2PositionAt: l2PositionAt ?? null,
             }
           : {}),
@@ -9013,6 +9260,10 @@ export function createResourceRuntime(
           `routeTableChange failed for ${entry.key} (table "${change.table}")`,
           err,
         );
+        // The change may not have reached every tuple it should: none of the
+        // entry's kept snapshots can be proven to hold it.
+        for (const pk of entry.snapshots?.keys() ?? [])
+          markUnapplied(entry, pk);
       }
     }
   }
@@ -9473,6 +9724,12 @@ export function createResourceRuntime(
     const entry = registry.get(key);
     if (!entry || !isUnboundedWindow(entry)) return { kind: "skipped" };
     if (entry.snapshots?.get(paramsKey) !== undefined) {
+      // A snapshot read before this boot's catch-up (a sub-ack served before
+      // the LISTEN session was up): the replay judges the key by its ROW's
+      // floor, which another backend may have advanced past a commit this
+      // read never saw and no NOTIFY delivered — so its floor is never
+      // advanced until a whole read rebuilds it.
+      markUnapplied(entry, paramsKey);
       return { kind: "skipped" };
     }
     // A30: a persisted value is only a diff base if it is a value this entry
@@ -9486,6 +9743,7 @@ export function createResourceRuntime(
     // ONLY on the branch that actually seeded: the row's position is the floor
     // of exactly this value (C19). A skipped seed leaves the fresher base's.
     setBaseFloor(entry, paramsKey, base.position);
+    markRebuilt(entry, paramsKey);
     if (base.positionAt !== null) statsOf(key).l2PositionAt = base.positionAt;
     return { kind: "seeded" };
   }
@@ -9536,9 +9794,13 @@ export function createResourceRuntime(
   }
 
   function dropPendingPersists(): number {
-    const dropped = armedFloors.size;
+    let dropped = armedFloors.size;
     for (const timer of armedFloors.values()) clearTimeout(timer);
     armedFloors.clear();
+    for (const slot of [...cuttingFloors.keys()]) {
+      dropped += cuttingFloors.get(slot)!.size;
+      cancelCuttingFloors(slot);
+    }
     return dropped;
   }
 

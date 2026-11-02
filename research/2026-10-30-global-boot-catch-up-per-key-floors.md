@@ -118,6 +118,34 @@ A alone takes the replay from "every row since the global min" to each key's own
 relevant rows. On today's data that is about 440 + 214 + 80 + 55 + 13 rows routed to
 any key, against 22,328, and the refills coalesce per drain.
 
+### B as built (task-1793371800-7yfpjo)
+
+- `PersistMeta.mode` gains `advance`; the runtime option `routedCut()` answers
+  `{ kind: "cut", cutXid } | { kind: "unproven", reason }`.
+- **The cut is taken OFF the persist chain**, not inside the link (a replace
+  queued behind a link waiting on a cut would delay a FULL drain's frames by
+  the cut's round trip). A replace / shutdown cancels a window waiting on its
+  cut.
+- **"Settled" needed a fourth arm the design missed:** a drain whose FULL
+  fallback fails keeps the kept alias snapshot and consumes the pending, so
+  "no pending, not draining" alone would let a later window advance past a
+  change the snapshot never got. Tracked positively: every taken pending not
+  explicitly applied marks the tuple unproven until a whole-read rebuild.
+- **The boot window.** `feedCut` proves only what the LISTEN session heard; a
+  change committed before it reaches the runtime only through the catch-up
+  replay. live-state-snapshot refuses the cut until `runBootCatchUp` returned,
+  and its `onReady` now waits (5 s) for the session before the replay reads —
+  before, change-feed's `onReady` only STARTED it, so a commit between the
+  replay's read and the session could be routed by neither (pre-existing gap,
+  now closed on the normal path; a boot without a session in time advances
+  nothing).
+- No "no flight" arm: a FULL flight that has not landed leaves the current
+  snapshot (applied up to its routed changes) valid; when it lands it drains
+  under `draining` and rebuilds the base.
+- The compact job is unchanged (`position_at` stays a replace's), so each
+  alias is still rebuilt from a whole read hourly — the backstop for a scoped
+  refill bug, and for writes the changelog does not hold.
+
 ## Critical files
 
 - `plugins/framework/plugins/resource-runtime/core/runtime.ts`: `routeTableChange`, `routeEntryChange`, `routedTargets`, and a `ReplayScope` type (`core/routing.ts`).

@@ -188,7 +188,7 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
   }
 
   function onNotification(channel: string, payload: string): void {
-    if (!payload) return;
+    if (!payload && channel !== FEED_CHANNEL) return;
     if (channel === BARRIER_CHANNEL) {
       // Another process's cut (or one this listener no longer waits on — its
       // deadline passed) is not ours to answer; routing what is held is
@@ -230,11 +230,19 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
       ),
     );
     if (!change) {
-      // Defensive skip — a malformed payload must never crash the listener.
+      // A change we cannot read is a change we cannot route — never dropped:
+      // every reader recomputes FULL, as after a reconnect (a persisted
+      // alias's floor then cannot advance past it until a whole read). Must
+      // never crash the listener.
       log.publish(
-        `[change-feed] skipping unparseable payload: ${payload}`,
+        `[change-feed] unparseable payload — recomputing every reader: ${payload}`,
         "stderr",
       );
+      reportServerError({
+        message: `[change-feed] an unparseable change payload was received — every reader of every fed table recomputes FULL`,
+        errorType: "ChangeFeedPayloadError",
+      });
+      fullSweep();
       return;
     }
     burst.change(feedChange(change));
