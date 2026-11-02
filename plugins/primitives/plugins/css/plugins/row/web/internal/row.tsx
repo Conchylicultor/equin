@@ -119,6 +119,17 @@ export interface RowProps extends RowControlProps, Passthrough {
   indent?: number;
   /** Leading slot (icon / StatusDot / chevron), rendered before children. */
   icon?: React.ReactNode;
+  /**
+   * A leading slot that may hold a CONTROL (a disclosure toggle), drawn ahead of
+   * the row's own control rather than inside it — so a clickable row never nests
+   * it (a row with a `lead` takes the split path, like one with `actions`).
+   *
+   * Click-through: the slot's box ignores the pointer, so a press on anything in
+   * it that is not a control (an icon at rest) lands on the row's hit-area and
+   * activates the row like a press anywhere else on it. A control inside opts
+   * back in with `pointer-events-auto` (the tree's `TreeDisclosureToggle` does).
+   */
+  lead?: React.ReactNode;
   /** Trailing slot, rendered through the `row-actions` primitive; hover-revealed by default. */
   actions?: React.ReactNode;
   actionsAlwaysVisible?: boolean;
@@ -183,6 +194,7 @@ export function Row({
   bordered,
   indent,
   icon,
+  lead,
   actions,
   actionsAlwaysVisible,
   ref,
@@ -379,7 +391,16 @@ export function Row({
     </RowActions>
   ) : null;
 
-  // SPLIT PATH — an interactive row that also carries actions. The interactive
+  // The `lead` box: a plain inline-flex cell of the row's line, click-through
+  // (see `RowProps.lead`) so only the controls it holds take a press.
+  const leadCell =
+    lead != null ? (
+      <span className="pointer-events-none inline-flex shrink-0 items-center">
+        {lead}
+      </span>
+    ) : null;
+
+  // SPLIT PATH — an interactive row that also carries actions (or a `lead`). The interactive
   // element must be a SIBLING of the actions, never their ancestor, so we render
   // a non-interactive container and put the primary <button>/<a> beside the
   // actions. A full-bleed, aria-hidden hit-area child keeps the whole padded row
@@ -399,7 +420,7 @@ export function Row({
   // under costs nothing. `isolate` is load-bearing: it makes the container a
   // stacking context, without which the negative layer escapes to the nearest
   // one up the tree and sinks behind intervening backgrounds.
-  if (interactive && actions) {
+  if (interactive && (actions || leadCell)) {
     return (
       <Line
         as="div"
@@ -408,6 +429,7 @@ export function Row({
         style={rowStyle}
         {...boxProps}
       >
+        {leadCell}
         <Tag
           // The control bag is spread FIRST so every attribute below — the ones
           // `Row` owns because it owns the element — wins over a caller's. It
@@ -466,6 +488,7 @@ export function Row({
       className={chromeClass}
       style={rowStyle}
     >
+      {leadCell}
       {icon}
       {children}
       {actionsCluster}

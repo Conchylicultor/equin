@@ -47,6 +47,7 @@ import {
   RowControlsProvider,
   TreeChildPlaceholder,
   TreeDropZones,
+  TREE_ROW_GROUP,
   TreeLeading,
   TreeProvider,
   TreeRootAdd,
@@ -631,7 +632,7 @@ export function NestedTableView(
       },
       className: cn(
         // The named group the disclosure's hover reveal reads.
-        "group/tree-row",
+        TREE_ROW_GROUP,
         // A press-and-drag across rows is a row gesture (a selection, a
         // drag), never a text selection. An inline editor in the row is a
         // form control and keeps its own.

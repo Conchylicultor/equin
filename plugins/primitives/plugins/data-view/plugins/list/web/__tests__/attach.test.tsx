@@ -80,9 +80,8 @@ describe("data-view list: attached rows", () => {
     expect(rowEl("sup")).not.toBeNull();
     expect(rowEl("solo")).not.toBeNull();
     expect(rowEl("worker")).toBeNull();
-    expect(
-      screen.getByRole("button", { name: "Show 1 attached" }),
-    ).toBeTruthy();
+    // The tree's disclosure, in the row's lead — not in its action cluster.
+    expect(screen.getByRole("button", { name: "Expand" })).toBeTruthy();
   });
 
   it("open (defaultExpanded): the attached row is drawn beneath its parent, before the next top-level row", () => {
@@ -95,7 +94,7 @@ describe("data-view list: attached rows", () => {
 
   it("the disclosure writes its own expand key, never the row's", () => {
     const { changes } = renderList();
-    fireEvent.click(screen.getByRole("button", { name: "Show 1 attached" }));
+    fireEvent.click(screen.getByRole("button", { name: "Expand" }));
     expect(changes).toEqual([[{ id: "attach:sup", expanded: true }]]);
   });
 
@@ -123,6 +122,6 @@ describe("data-view list: attached rows", () => {
       el.getAttribute("data-row-key"),
     );
     expect(keys).toEqual(["sup", "worker", "solo"]);
-    expect(screen.queryByRole("button", { name: /attached/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Expand" })).toBeNull();
   });
 });

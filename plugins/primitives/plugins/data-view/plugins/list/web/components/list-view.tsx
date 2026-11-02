@@ -15,7 +15,11 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { TreeRowChrome } from "@plugins/primitives/plugins/tree/web";
+import {
+  TREE_ROW_GROUP,
+  TreeLeading,
+  TreeRowChrome,
+} from "@plugins/primitives/plugins/tree/web";
 import { FoldMotion } from "@plugins/primitives/plugins/collapsible/web";
 import {
   CoverFrame,
@@ -214,6 +218,13 @@ interface ListRowConfig {
   actionsAtRest: boolean;
   labelClassName: ((row: unknown) => ClassName | undefined) | undefined;
   detail: ListViewOptions<unknown>["detail"];
+  /** What the row's leading disclosure folds (`TreeLeading` in `Row`'s
+   *  `lead`, the tree's own disclosure in the icon's place): its attached
+   *  rows (`attach`, while any entry holds some), else its detail band;
+   *  `null` — no disclosure, the
+   *  glyph is a plain icon. Per list, so every row of it draws the same lead
+   *  (a column disclosure reserves its box on a row with nothing to fold). */
+  disclosure: "attach" | "detail" | null;
   rowActivation: DataViewRenderProps<unknown>["rowActivation"];
   rowTone: DataViewRenderProps<unknown>["rowTone"];
   revealed: ItemActionRender<unknown> | null;
@@ -420,11 +431,6 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       "data-view list: `detail` needs the default row chrome — a tree-chrome row is one label line",
     );
   }
-  if (attach && options.rowChrome === "tree") {
-    throw new Error(
-      "data-view list: `attach` needs the default row chrome — a tree-chrome row draws no disclosure for its attached rows",
-    );
-  }
   // The host hands a fresh `setExpanded` closure each render; only a click
   // calls it, so a stable identity keeps it out of the rows' memo key.
   const setExpanded = useEventCallback(props.setExpanded);
@@ -502,6 +508,12 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       })),
     [terms, slotRef, isChipField, trailingShown],
   );
+  // Whether any entry holds attached rows: only then do the rows lead with a
+  // disclosure — a column variant reserves its box on EVERY row, which a list
+  // with nothing to fold would pay for nothing.
+  const anyAttached = sections.some((s) =>
+    s.entries.some((e) => (e.children?.length ?? 0) > 0),
+  );
   const config = useMemo<ListRowConfig>(() => {
     const { leadingField, thumbnail } = layout;
     const { titleField, afterTitleFields, subtitleFields, trailingFields } =
@@ -529,6 +541,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       actionsAtRest,
       labelClassName,
       detail,
+      disclosure: anyAttached ? "attach" : detail ? "detail" : null,
       rowActivation,
       rowTone,
       revealed,
@@ -537,6 +550,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       onHover,
     };
   }, [
+    anyAttached,
     layout,
     terms,
     trailingSlots,
@@ -1133,6 +1147,7 @@ function renderTreeChromeRow(
   presentation: FieldPresentation,
 ): ReactNode {
   const { config, row, rowKey: key, aggregateCount } = props;
+  const { childCount, childrenOpen } = props;
   // An elided value is no cell at all here (no gap left for it).
   const cellFields = [
     ...config.afterTitleFields,
@@ -1146,8 +1161,15 @@ function renderTreeChromeRow(
     <TreeRowChrome
       rowKey={key}
       depth={0}
-      hasChildren={false}
-      isOpen={false}
+      // Its attached rows (`attach`) fold through the tree row's own
+      // disclosure, exactly as a nested row's children do.
+      hasChildren={childCount > 0}
+      isOpen={childrenOpen}
+      onToggle={() =>
+        config.setExpanded([
+          { id: attachExpandKey(key), expanded: !childrenOpen },
+        ])
+      }
       selected={props.selected}
       // `undefined` stays `undefined`: a non-activating row is no button.
       onSelect={
@@ -1223,6 +1245,43 @@ function listRowNode(
     row,
     hasChildren: props.hasChildren,
   });
+  const glyph = thumbnail ? (
+    // A rigid leaf: the frame keeps its size however tight the line is.
+    <CoverFrame
+      size="thumb"
+      content={thumbnail(row)}
+      className={rigidClass()}
+    />
+  ) : (
+    leadingSlot({
+      field: config.leadingField,
+      row,
+      resolveCell: config.resolveCell,
+      resolveEditor: config.resolveEditor,
+      form: "glyph",
+      own: undefined,
+    })
+  );
+  // The row's disclosure is the tree's: `TreeLeading` draws the theme's
+  // `Tree.Disclosure` variant around the glyph (merged: the chevron in the
+  // glyph's place on hover; column: a faint chevron box ahead of it), in
+  // `Row`'s `lead` — outside the row's own control, so the toggle is no
+  // nested button, and click-through, so a press on the glyph at rest still
+  // opens the row. It sits in no action cluster, so the cluster keeps its
+  // hover reveal.
+  const disclosure = config.disclosure;
+  const folds =
+    disclosure === "attach" ? childCount > 0 : disclosure === "detail";
+  const isOpen = disclosure === "attach" ? childrenOpen : open;
+  const toggle = (): void =>
+    config.setExpanded([
+      disclosure === "attach"
+        ? { id: attachExpandKey(key), expanded: !childrenOpen }
+        : { id: key, expanded: !open },
+    ]);
+  // A list with both `attach` and `detail` leads with the attached rows; the
+  // detail's toggle then stays a cluster action.
+  const detailInCluster = detail != null && disclosure !== "detail";
   const rowNode = (
     <Row
       // The row's identity on the DOM: what the DataView measures the rows
@@ -1231,10 +1290,12 @@ function listRowNode(
       selected={props.selected}
       // The surface's hovered row reads as hovered even when the pointer is
       // elsewhere (on its map pin): Row's own hover paint, held. A selected
-      // row keeps its selection tier.
-      className={
-        props.hovered && !props.selected ? ROW_HOVERED_CLASS : undefined
-      }
+      // row keeps its selection tier. A row drawing a disclosure is the named
+      // group its reveal reads.
+      className={cn(
+        props.hovered && !props.selected ? ROW_HOVERED_CLASS : undefined,
+        disclosure && TREE_ROW_GROUP,
+      )}
       {...hoverProps(config.onHover, key)}
       size={config.rowSize}
       // Straight through, `undefined` and all — NEVER `() => activate?.()`.
@@ -1244,66 +1305,37 @@ function listRowNode(
       // what lets its body hold a real control. A link row also gets its
       // middle- / ⌘-click (`Row` forwards the gesture handlers).
       {...activationProps(config.rowActivation?.(row))}
-      icon={
-        thumbnail ? (
-          // A rigid leaf: the frame keeps its size however tight the line is.
-          <CoverFrame
-            size="thumb"
-            content={thumbnail(row)}
-            className={rigidClass()}
+      icon={disclosure ? undefined : glyph}
+      lead={
+        disclosure ? (
+          <TreeLeading
+            depth={0}
+            hasChildren={folds}
+            isOpen={isOpen}
+            onToggle={toggle}
+            icon={glyph}
           />
-        ) : (
-          leadingSlot({
-            field: config.leadingField,
-            row,
-            resolveCell: config.resolveCell,
-            resolveEditor: config.resolveEditor,
-            form: "glyph",
-            own: undefined,
-          })
-        )
+        ) : undefined
       }
       actions={
-        detail || childCount > 0 ? (
+        detailInCluster ? (
           <>
-            {childCount > 0 ? (
-              <IconButton
-                icon={childrenOpen ? collapseIcon : expandIcon}
-                label={
-                  childrenOpen
-                    ? `Hide ${childCount} attached`
-                    : `Show ${childCount} attached`
-                }
-                aria-expanded={childrenOpen}
-                onClick={() =>
-                  config.setExpanded([
-                    { id: attachExpandKey(key), expanded: !childrenOpen },
-                  ])
-                }
-              />
-            ) : null}
-            {detail ? (
-              <IconButton
-                icon={open ? collapseIcon : expandIcon}
-                label={open ? "Hide details" : "Show details"}
-                aria-expanded={open}
-                onClick={() =>
-                  config.setExpanded([{ id: key, expanded: !open }])
-                }
-              />
-            ) : null}
+            <IconButton
+              icon={open ? collapseIcon : expandIcon}
+              label={open ? "Hide details" : "Show details"}
+              aria-expanded={open}
+              onClick={() => config.setExpanded([{ id: key, expanded: !open }])}
+            />
             {itemActionNodes}
           </>
         ) : (
           itemActionNodes
         )
       }
-      // The disclosure must be findable, so a row with detail or attached
-      // rows shows its cluster at rest — and so does every row of a list
-      // whose actions are its point (`actionsAtRest`).
-      actionsAlwaysVisible={
-        detail || childCount > 0 || config.actionsAtRest ? true : undefined
-      }
+      // Painted at rest only for a list whose actions are its point
+      // (`actionsAtRest`) — the disclosure lives in the lead, so it is
+      // findable without dragging the whole cluster out of its hover reveal.
+      actionsAlwaysVisible={config.actionsAtRest ? true : undefined}
     >
       {config.renderRow ? (
         config.renderRow(row)

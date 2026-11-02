@@ -702,8 +702,8 @@ interface DataViewAttachConfig<TRow> {
   (`subItemsSettingsFor("attach")`); a `DataViewSwitcher` source declares it
   statically (`subItems: "attach"`, asserted against its bundle).
 - **Drawing** (list): children indented under the row, outside its drag wrapper
-  — never a manual-order drag source or drop target. The disclosure is in the
-  row's cluster (shown at rest); open state is the expand map under
+  — never a manual-order drag source or drop target. The disclosure is the
+  tree's, in the row's glyph place (list CLAUDE.md, "Attached rows"); open state is the expand map under
   `attachExpandKey(key)` (never the row's own key, which `detail` uses), read
   through `attachedChildrenOpen` — which also opens a parent holding the
   selected row. Exclusive with `hierarchy` and a live `source` (tsc).

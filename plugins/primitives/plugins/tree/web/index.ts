@@ -23,7 +23,10 @@ export type {
   TreeModelContext,
 } from "./internal/use-tree-model";
 export { useTreeKeyboard } from "./internal/use-tree-keyboard";
-export { TreeDisclosureToggle } from "./internal/tree-disclosure-toggle";
+export {
+  TREE_ROW_GROUP,
+  TreeDisclosureToggle,
+} from "./internal/tree-disclosure-toggle";
 export type { TreeDisclosureToggleProps } from "./internal/tree-disclosure-toggle";
 export { Tree } from "./slots";
 export type { TreeDisclosureContribution } from "./slots";

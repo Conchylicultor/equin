@@ -49,8 +49,9 @@ export interface ListViewOptions<TRow> {
   labelClassName?: (row: TRow) => ClassName | undefined;
   /**
    * Per-row detail, shown UNDER the row when it is expanded. Present ⇒ every
-   * row carries a disclosure toggle in its action cluster (shown at rest, so
-   * it can be found), and an expanded row renders `detail(row)` in a band
+   * row leads with the tree's disclosure in its glyph's place (the theme's
+   * `Tree.Disclosure` variant; in the action cluster instead on a list that
+   * also has `attach`, whose rows the lead folds), and an expanded row renders `detail(row)` in a band
    * below it — a sibling of the row, never inside it, so the detail may hold
    * its own controls whatever the row's activation is. Which rows are open is
    * the view's expand map (per surface, view instance and row; per device),

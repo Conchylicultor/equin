@@ -148,10 +148,22 @@ Over a source with `attach` (data-view CLAUDE.md, "Attached rows") the list
 declares `nestsAttach`: each entry's `children` are drawn indented under it
 (`Inset l="lg"`, folding with `FoldMotion`), as siblings OUTSIDE the parent's
 `ManualOrderRow` — a child has no rank, no drop row, and is never a drag
-source. The parent's cluster gets a "Show / Hide N attached" disclosure (the
-cluster then shows at rest) writing `attachExpandKey(key)`; open state comes
-from `attachedChildrenOpen`. Default row chrome only (`rowChrome: "tree"`
-throws).
+source. The parent's disclosure writes `attachExpandKey(key)`; open state comes
+from `attachedChildrenOpen`.
+
+**The disclosure is the tree's, in the glyph's place — never in the action
+cluster.** A list holding attached rows (else one with `detail`) draws every
+row's leading glyph
+through the tree primitive's `TreeLeading` in `Row`'s `lead` slot, so the
+theme's `Tree.Disclosure` variant decides the look (merged: the chevron
+replaces the glyph on hover; column: a faint chevron box ahead of it), and the
+row carries `TREE_ROW_GROUP`, the named hover group the variants read. The
+`lead` is outside the row's own `<button>` (no nested control) and
+click-through (a press on the glyph at rest opens the row). The action cluster
+keeps its hover reveal: it used to hold the disclosure and was therefore
+painted at rest on every parent row, pin and `⋯` included. Under
+`rowChrome: "tree"` the attached rows fold through `TreeRowChrome`'s own
+disclosure.
 
 ## Grouping
 
@@ -227,9 +239,10 @@ conditional hook.
 - Description: List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
 - Web:
   - Contributes: `DataViewSlots.View` "List" → `ListView`
-  - Uses: 71 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 73 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×48
     - `primitives/rank-reorder` ×3
+    - `primitives/tree` ×3
     - `primitives/css/spacing` ×2
     - `primitives/latest-ref` ×2
     - `primitives/collapsible.FoldMotion`
@@ -246,7 +259,6 @@ conditional hook.
     - `primitives/dom/element-size.useResizeObserverSet`
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture.activationProps`
-    - `primitives/tree.TreeRowChrome`
     - `primitives/virtual-rows.VirtualRows`
   - Exports (types): `ListViewOptions`
 - Cross-plugin:

@@ -321,6 +321,7 @@ that layout — while row-fold moves rows with transform / clip / opacity.
     - `RowControlsProvider`
     - `SPRING_OPEN_MS`
     - `Tree`
+    - `TREE_ROW_GROUP`
     - `TreeChildPlaceholder`
     - `TreeColumnDisclosure`
     - `TreeDisclosureToggle`

@@ -12,6 +12,7 @@ import {
 import { TreeLeading } from "./tree-leading";
 import { treeRowGestures } from "./tree-row-gestures";
 import { treeRowIndentStyle } from "./tree-indent";
+import { TREE_ROW_GROUP } from "./tree-disclosure-toggle";
 
 export type TreeRowChromeProps = {
   /**
@@ -151,7 +152,8 @@ export function TreeRowChrome({
         // Row height, cell gap, lead inset and per-depth indent are density
         // tokens (`treeRowH`, `treeRowGap`, `treeRowPadStart`, `treeIndent`),
         // so a theme owns a tree's rhythm.
-        "group/tree-row min-h-tree-row gap-tree-row rounded-md px-xs py-xs text-body",
+        TREE_ROW_GROUP,
+        "min-h-tree-row gap-tree-row rounded-md px-xs py-xs text-body",
         // A press-and-drag across rows is a row gesture (a selection, a
         // drag), never a text selection; an inline editor inside the row is a
         // form control and keeps its own.

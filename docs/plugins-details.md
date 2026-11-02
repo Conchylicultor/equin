@@ -43018,9 +43018,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`list`** — List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
           - Web:
             - Contributes: `DataViewSlots.View` "List" → `ListView`
-            - Uses: 71 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md)
+            - Uses: 73 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md)
               - `primitives/data-view` ×48
               - `primitives/rank-reorder` ×3
+              - `primitives/tree` ×3
               - `primitives/css/spacing` ×2
               - `primitives/latest-ref` ×2
               - `primitives/collapsible.FoldMotion`
@@ -43037,7 +43038,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/dom/element-size.useResizeObserverSet`
               - `primitives/icon-button.IconButton`
               - `primitives/link-gesture.activationProps`
-              - `primitives/tree.TreeRowChrome`
               - `primitives/virtual-rows.VirtualRows`
             - Exports (types): `ListViewOptions`
           - Cross-plugin:
@@ -43079,9 +43079,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort, and nests its rows (a tree is a table with no columns) when the source has a hierarchy.
           - Web:
             - Contributes: `DataViewSlots.View` "Table" → `TableView`
-            - Uses: 84 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md)
+            - Uses: 85 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md)
               - `primitives/data-view` ×45
-              - `primitives/tree` ×17
+              - `primitives/tree` ×18
               - `primitives/data-table` ×7
               - `primitives/css/text` ×3
               - `primitives/rank-reorder` ×3
@@ -47803,6 +47803,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RowControlsProvider`
           - `SPRING_OPEN_MS`
           - `Tree`
+          - `TREE_ROW_GROUP`
           - `TreeChildPlaceholder`
           - `TreeColumnDisclosure`
           - `TreeDisclosureToggle`
