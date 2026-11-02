@@ -11,6 +11,10 @@ import {
 import { tmpdir } from "os";
 import { join } from "path";
 import {
+  type AppPath,
+  asAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   NULL_SNAPSHOT_ID,
   snapshotBodies,
 } from "@plugins/database/plugins/migrations/core";
@@ -21,9 +25,9 @@ const B = "22222222-2222-4222-8222-222222222222";
 const TA = "20260101_000000_aaaaaaaa__a";
 const TB = "20260102_000000_bbbbbbbb__b";
 
-let dir: string;
+let dir: AppPath;
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), "snapshot-files-"));
+  dir = asAppPath(mkdtempSync(join(tmpdir(), "snapshot-files-")));
   mkdirSync(join(dir, "meta"));
 });
 afterEach(() => rmSync(dir, { recursive: true, force: true }));

@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { LoginServiceId, LoginServiceJob } from "../../core";
 
 /**
@@ -23,7 +24,7 @@ export interface LoginService {
   /** When the manager starts the service on its own. */
   readonly startsAt: "login" | "boot";
   /** The job definition file this service writes. */
-  definitionPath(): string;
+  definitionPath(): AppPath;
   /** What the manager currently holds for the service. */
   state(): Promise<LoginServiceState>;
   /**
@@ -34,7 +35,7 @@ export interface LoginService {
    * 0600: a declared environment may carry credentials (the gateway's carries
    * OAuth client secrets).
    */
-  write(job: LoginServiceJob): { path: string; changed: boolean };
+  write(job: LoginServiceJob): { path: AppPath; changed: boolean };
   /**
    * Whether the written definition is exactly what `write(job)` would write —
    * asked without writing, for a running service whose definition must keep

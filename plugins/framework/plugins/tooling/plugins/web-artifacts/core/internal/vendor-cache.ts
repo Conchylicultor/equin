@@ -32,12 +32,21 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { basename, dirname, join } from "node:path";
+import {
+  appPathParent,
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { basename } from "node:path";
 import * as esbuild from "esbuild";
 import { sha256Hex } from "../hash";
 import { WEB_ARTIFACTS_DIR } from "./store";
 
-const VENDOR_RESOLUTIONS_DIR = join(WEB_ARTIFACTS_DIR, "vendor-resolutions");
+const VENDOR_RESOLUTIONS_DIR = joinAppPath(
+  WEB_ARTIFACTS_DIR,
+  "vendor-resolutions",
+);
 
 const VENDOR_CACHE_VERSION = 1;
 
@@ -59,13 +68,13 @@ export interface VendorResolutionCache {
 }
 
 /** The cache key of one request. `\0` cannot occur in either component. */
-export function vendorCacheKey(resolveDir: string, specifier: string): string {
+export function vendorCacheKey(resolveDir: AppPath, specifier: string): string {
   return `${resolveDir}\0${specifier}`;
 }
 
 /** The per-worktree cache file, alongside the vendor sets in the same data dir. */
-export function vendorCacheFile(root: string): string {
-  return join(VENDOR_RESOLUTIONS_DIR, `${basename(root)}.json`);
+export function vendorCacheFile(root: AppPath): AppPath {
+  return joinAppPath(VENDOR_RESOLUTIONS_DIR, `${basename(root)}.json`);
 }
 
 const gateMemo = new Map<string, string>();
@@ -75,7 +84,7 @@ const gateMemo = new Map<string, string>();
  * so the lockfile cannot move underneath it).
  */
 export function computeVendorCacheGate(opts: {
-  root: string;
+  root: AppPath;
   builderVersion: number;
   /** Builder own-source digest — the wrapper text is written in that source. */
   builderSource: string;
@@ -84,7 +93,7 @@ export function computeVendorCacheGate(opts: {
   const memoized = gateMemo.get(memoKey);
   if (memoized !== undefined) return memoized;
 
-  const lockFile = join(opts.root, "bun.lock");
+  const lockFile = joinAppPath(opts.root, "bun.lock");
   let lock: string;
   try {
     lock = readFileSync(lockFile, "utf8");
@@ -119,7 +128,7 @@ function emptyCache(gate: string): VendorResolutionCache {
  * wholesale — that IS the install/resolver invalidation.
  */
 export function loadVendorResolutionCache(
-  file: string,
+  file: AppPath,
   gate: string,
 ): VendorResolutionCache {
   let raw: string;
@@ -147,11 +156,14 @@ export function loadVendorResolutionCache(
 }
 
 export function saveVendorResolutionCache(
-  file: string,
+  file: AppPath,
   cache: VendorResolutionCache,
 ): void {
-  mkdirSync(dirname(file), { recursive: true });
-  const tmp = `${file}.${process.pid}.tmp`;
+  mkdirSync(appPathParent(file), { recursive: true });
+  const tmp = joinAppPath(
+    appPathParent(file),
+    `${basename(file)}.${process.pid}.tmp`,
+  );
   writeFileSync(tmp, JSON.stringify(cache));
   renameSync(tmp, file);
 }
@@ -164,7 +176,8 @@ export function validateVendorRecord(record: VendorResolutionRecord): boolean {
   for (const [file, [mtimeMs, size]] of Object.entries(record.files)) {
     let stat: ReturnType<typeof statSync>;
     try {
-      stat = statSync(file);
+      // A resolved file path recorded by this app in its own cache file.
+      stat = statSync(asAppPath(file));
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
       return false;

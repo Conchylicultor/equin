@@ -33,7 +33,6 @@
  * Usage: bun signal-origin.fixture.ts --mode <mode> --out <dir>
  */
 import { writeFileSync } from "node:fs";
-import { join } from "node:path";
 import { readyNow } from "@plugins/infra/plugins/deps/deps";
 import { signalOriginShim } from "../../deps";
 import {
@@ -41,6 +40,10 @@ import {
   readSignalOrigin,
   type SignalOriginArmResult,
 } from "./signal-origin";
+import {
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 const SIGTERM = 15;
 
@@ -53,8 +56,9 @@ function argValue(name: string): string {
 }
 
 const mode = argValue("--mode");
-const outDir = argValue("--out");
-const at = (name: string) => join(outDir, name);
+// --out is the test's own tmp dir, handed down by signal-origin.test.ts.
+const outDir = asAppPath(argValue("--out"));
+const at = (name: string) => joinAppPath(outDir, name);
 
 const shim = await readyNow(signalOriginShim);
 

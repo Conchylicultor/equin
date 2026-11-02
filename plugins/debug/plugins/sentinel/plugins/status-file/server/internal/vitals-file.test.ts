@@ -2,6 +2,11 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { SentinelVitalsRecord } from "../../core";
 import {
   readSentinelVitals,
@@ -9,9 +14,9 @@ import {
   writeSentinelVitals,
 } from "./vitals-file";
 
-const dirs: string[] = [];
-function newDir(): string {
-  const dir = mkdtempSync(join(tmpdir(), "sentinel-vitals-"));
+const dirs: AppPath[] = [];
+function newDir(): AppPath {
+  const dir = asAppPath(mkdtempSync(join(tmpdir(), "sentinel-vitals-")));
   dirs.push(dir);
   return dir;
 }
@@ -45,7 +50,7 @@ const RECORD: SentinelVitalsRecord = {
 describe("sentinel vitals file", () => {
   test("a written reading reads back whole, leaving no temp file", () => {
     // A directory that does not exist yet: the writer creates it.
-    const dir = join(newDir(), "sentinel");
+    const dir = joinAppPath(newDir(), "sentinel");
     writeSentinelVitals(dir, RECORD);
     expect(readSentinelVitals(dir)).toEqual({
       kind: "recorded",

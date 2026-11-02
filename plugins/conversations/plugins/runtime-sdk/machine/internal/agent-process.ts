@@ -1,3 +1,4 @@
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   closeSync,
   existsSync,
@@ -183,7 +184,7 @@ export async function startAgentProcess(
   // This backend's own bun, by path (the login shell's PATH is the account's),
   // under the conversation's name so Activity Monitor tells the agents apart.
   const bun = linkNamedBinary({
-    bin: process.execPath,
+    bin: asAppPath(process.execPath),
     dir: agentBinDir(id),
     name: processName("agent", id),
   });

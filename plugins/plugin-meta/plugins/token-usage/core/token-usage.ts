@@ -8,6 +8,7 @@ import {
   yieldMacrotask,
 } from "@plugins/packages/plugins/macrotask-yield/core";
 import { hash53 } from "@plugins/packages/plugins/string-hash/core";
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /** One source file's text and path (the path picks oxide's extractor by extension). */
 export interface SourceText {
@@ -47,7 +48,7 @@ function escapeRegExp(s: string): string {
 // tree build after the first in one process reuses the compiled candidates.
 const resolvers = new Map<string, Promise<Resolver>>();
 
-function resolverFor(root: string): Promise<Resolver> {
+function resolverFor(root: AppPath): Promise<Resolver> {
   const cssPath = join(root, APP_STYLESHEET_PATH);
   const css = readFileSync(cssPath, "utf8");
   const key = `${dirname(cssPath)}\0${hash53(css)}`;
@@ -82,7 +83,7 @@ function resolverFor(root: string): Promise<Resolver> {
  * generate CSS for too.
  */
 export async function tokenVarsUsedBy(
-  root: string,
+  root: AppPath,
   groups: readonly (readonly SourceText[])[],
 ): Promise<Set<string>[]> {
   const { design, byCandidate } = await resolverFor(root);

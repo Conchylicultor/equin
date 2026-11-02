@@ -33,6 +33,7 @@ import { contractNames, nameKey, WHOLE, type NameRec } from "./name-records";
 import type { RecordingResolver, ResolutionRecord } from "./name-resolve";
 import type { RepoView } from "./repo-view";
 import { isRepoPath, needsContract } from "./keys";
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 const sha256 = (s: string): string =>
   createHash("sha256").update(s).digest("hex");
@@ -590,7 +591,7 @@ export interface FileCheck {
  *   namespaces in one program and `$brand` in another, is `$brand` in both.
  */
 function declaringSpecOf(
-  root: string,
+  root: AppPath,
   program: ts.Program,
   sf: ts.SourceFile,
 ): (spec: string, path: readonly string[]) => DeclaringSpelling | undefined {
@@ -715,7 +716,7 @@ function declaringSpecOf(
  * `{ source; entityId; … }`), measured as order-only divergences.
  */
 export function checkFile(
-  root: string,
+  root: AppPath,
   program: ts.Program,
   sf: ts.SourceFile,
 ): FileCheck {

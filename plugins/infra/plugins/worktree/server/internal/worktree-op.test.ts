@@ -9,6 +9,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
+import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { worktreeDataDir } from "@plugins/infra/plugins/paths/server";
 import {
   asNamespace,
@@ -28,7 +29,7 @@ import {
 // a real worktree), writes under the real worktrees dir, and reaps the whole
 // slug dir in a finally.
 
-const opsDirOf = (slug: Namespace) => join(worktreeDataDir(slug), "ops");
+const opsDirOf = (slug: Namespace) => joinAppPath(worktreeDataDir(slug), "ops");
 
 async function withTempSlug(
   fn: (slug: Namespace) => Promise<void>,
@@ -43,7 +44,7 @@ async function withTempSlug(
 
 function writeRaw(slug: Namespace, file: string, data: unknown): string {
   mkdirSync(opsDirOf(slug), { recursive: true });
-  const path = join(opsDirOf(slug), file);
+  const path = joinAppPath(opsDirOf(slug), file);
   writeFileSync(path, typeof data === "string" ? data : JSON.stringify(data));
   return path;
 }
@@ -54,7 +55,7 @@ test("a held marker is one v2 file per op, read back live", async () => {
   await withTempSlug(async (slug) => {
     const marker = markWorktreeOpStart(slug, "build", "op-1");
     try {
-      expect(marker.path).toBe(join(opsDirOf(slug), "op-1.json"));
+      expect(marker.path).toBe(joinAppPath(opsDirOf(slug), "op-1.json"));
       const raw = JSON.parse(readFileSync(marker.path, "utf8")) as Record<
         string,
         unknown

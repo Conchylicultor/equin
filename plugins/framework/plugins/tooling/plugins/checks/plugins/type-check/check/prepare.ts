@@ -98,11 +98,15 @@ import {
   typedGroupFps,
 } from "./lint-groups";
 import { lintViolationLines } from "./lint-verdict";
+import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /** What the runner hands the session. Structured-cloned to the thread. */
 export interface PrepareInput {
   /** The worktree root. */
-  root: string;
+  root: AppPath;
   /**
    * The run's tree — the hash the runner took (`ctx.snapshot()`), the same
    * tree it recorded the outer read-set from. The thread loads the snapshot
@@ -251,7 +255,7 @@ const GIT_TIMEOUT_MS = 60_000;
  * not exist, not a failure. A hung git is one, and throws.
  */
 async function gitLine(
-  root: string,
+  root: AppPath,
   args: string[],
 ): Promise<string | undefined> {
   const out = await spawnCaptured(["git", ...args], {
@@ -266,7 +270,7 @@ async function gitLine(
   return line === "" ? undefined : line;
 }
 
-const treeOf = (root: string, rev: string): Promise<string | undefined> =>
+const treeOf = (root: AppPath, rev: string): Promise<string | undefined> =>
   gitLine(root, ["rev-parse", "--verify", "-q", `${rev}^{tree}`]);
 
 /**
@@ -278,7 +282,7 @@ const treeOf = (root: string, rev: string): Promise<string | undefined> =>
  * refused — the run takes the full path and says why.
  */
 async function chooseBase(
-  root: string,
+  root: AppPath,
   worktree: string,
   treeHash: string,
   bases: RunBaseStore,
@@ -443,7 +447,7 @@ export async function openPreparation({
   const code =
     realpathSync(codeRoot) === realpathSync(root)
       ? view
-      : viewOfSnapshot(await readTreeSnapshot(codeRoot), {});
+      : viewOfSnapshot(await readTreeSnapshot(asAppPath(codeRoot)), {});
   const groups = await computeLintGroups(view, code);
   lap(`lint groups, ${groups.parsedFiles} files parsed`);
   // Which groups hold a type-aware rule is learned by loading every

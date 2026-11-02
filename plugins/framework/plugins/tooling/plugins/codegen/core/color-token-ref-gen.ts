@@ -1,4 +1,8 @@
 import { writeGenerated } from "./write-generated";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { collectTokenGroups } from "./token-group-vars-gen";
 
 /**
@@ -52,12 +56,12 @@ const DOC = [
 ].join("\n");
 
 /** Path to the committed generated file. */
-export function colorTokenRefPath(root: string): string {
-  return `${root}/${COLOR_TOKEN_REF_REL_PATH}`;
+export function colorTokenRefPath(root: AppPath): AppPath {
+  return joinAppPath(root, COLOR_TOKEN_REF_REL_PATH);
 }
 
 /** Render the generated file contents in-memory (used by the in-sync check). */
-export async function renderColorTokenRef(root: string): Promise<string> {
+export async function renderColorTokenRef(root: AppPath): Promise<string> {
   const groups = await collectTokenGroups(root);
   const vars = new Set<string>();
   for (const id of COLOR_TOKEN_REF_GROUPS) {
@@ -84,7 +88,7 @@ export async function renderColorTokenRef(root: string): Promise<string> {
 
 /** Regenerate `color-token-ref.generated.ts` if it drifted. */
 export async function generateColorTokenRef(opts: {
-  root: string;
+  root: AppPath;
 }): Promise<void> {
   await writeGenerated({
     file: colorTokenRefPath(opts.root),

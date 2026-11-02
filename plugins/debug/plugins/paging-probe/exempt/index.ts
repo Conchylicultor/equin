@@ -22,4 +22,11 @@ export default [
     task: "task-1792338443-riwqev",
     reason: "not yet split into server/ + machine/",
   },
+  {
+    rule: "user-path/no-unproven-claim",
+    paths: ["server/internal/probe/entry.ts"],
+    kind: "sanctioned",
+    reason:
+      "The probe child's --out argv is the logs-dir path its own supervisor (probe-host.ts) built from the worktree data dir; the child cannot import the paths module without growing the heap it measures.",
+  },
 ] satisfies Exemptions;

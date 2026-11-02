@@ -13,6 +13,10 @@
  * `legacy-snapshots.json`, the tip body is written, and the per-migration
  * files are deleted.
  */
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { rmSync, writeFileSync } from "fs";
 import { join } from "path";
 import {
@@ -42,7 +46,7 @@ export interface SettledSnapshotFiles {
  * pick a side of.
  */
 export async function settleSnapshotFiles(
-  migrationsDir: string,
+  migrationsDir: AppPath,
   bodies: SnapshotBodies,
 ): Promise<SettledSnapshotFiles> {
   // The tip body first, while every legacy body is still on disk to copy from.
@@ -64,7 +68,7 @@ export async function settleSnapshotFiles(
   const entries = new Map(recorded ?? []);
   for (const file of files) {
     const tag = file.slice(0, -"_snapshot.json".length);
-    const head = readSnapshotHead(join(migrationsDir, "meta", file))!;
+    const head = readSnapshotHead(joinAppPath(migrationsDir, "meta", file))!;
     const prior = entries.get(tag);
     if (
       prior !== undefined &&
@@ -91,7 +95,7 @@ export async function settleSnapshotFiles(
  * is not published, and `published-migrations-immutable` pins the rest.
  */
 export function dropLegacyEntries(
-  migrationsDir: string,
+  migrationsDir: AppPath,
   tags: readonly string[],
 ): void {
   const recorded = readLegacySnapshots(migrationsDir);

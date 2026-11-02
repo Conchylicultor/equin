@@ -1,3 +1,8 @@
+import {
+  type AppPath,
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import {
   closeSync,
@@ -125,7 +130,7 @@ export function assertSupportedHost(): void {
  * opens a log — not a failure, so callers fall through to the next source;
  * every other read error propagates.
  */
-function readLogTail(path: string, lines: number): string | null {
+function readLogTail(path: AppPath, lines: number): string | null {
   let raw: string;
   try {
     raw = readFileSync(path, "utf-8");
@@ -169,8 +174,8 @@ function gatewayLogTail(): string {
  * spelled here — see `gatewayPidFileRelativeToRoot`'s docblock for why writing
  * it out a second time is how a preview's gateway becomes un-killable.
  */
-export function gatewayPidFile(root: string): string {
-  return join(root, gatewayPidFileRelativeToRoot());
+export function gatewayPidFile(root: AppPath): AppPath {
+  return joinAppPath(root, gatewayPidFileRelativeToRoot());
 }
 
 /**
@@ -182,7 +187,7 @@ export function gatewayPidFile(root: string): string {
  * used to be: that const froze the data root at first import, while the release
  * launcher sets it before importing anything path-dependent.
  */
-function pidFile(): string {
+function pidFile(): AppPath {
   return gatewayLocks.file(GATEWAY_PID_FILENAME);
 }
 
@@ -220,13 +225,16 @@ export async function isGatewayListening(port: number): Promise<boolean> {
   }
 }
 
-export function hasPgBouncerPackage(repoRoot: string): boolean {
+export function hasPgBouncerPackage(repoRoot: AppPath): boolean {
   return existsSync(
-    join(repoRoot, "plugins/database/plugins/pgbouncer/node_modules/@equin"),
+    joinAppPath(
+      repoRoot,
+      "plugins/database/plugins/pgbouncer/node_modules/@equin",
+    ),
   );
 }
 
-export function pgbouncerService(repoRoot: string) {
+export function pgbouncerService(repoRoot: AppPath) {
   return {
     name: "pgbouncer",
     start: [
@@ -246,7 +254,7 @@ export function pgbouncerConnection() {
 }
 
 export function ensureDatabaseConfig(
-  repoRoot: string,
+  repoRoot: AppPath,
   log: LogFn = noop,
 ): void {
   // Upgrade existing config: add pgbouncer service if packages are now installed.
@@ -277,7 +285,7 @@ export function ensureDatabaseConfig(
     return;
   }
 
-  const embeddedPkgDir = join(
+  const embeddedPkgDir = joinAppPath(
     repoRoot,
     "plugins/database/plugins/embedded/node_modules/@embedded-postgres",
   );
@@ -395,7 +403,7 @@ export function writeReleaseDatabaseConfig(
  * source. Throws when the bundle does not carry a gateway for this platform.
  */
 export async function bundledGateway(
-  bundleRoot: string,
+  bundleRoot: AppPath,
 ): Promise<Ready<BuildSource>> {
   const now = await readyNow(gatewayBinary, { root: bundleRoot });
   if (now.kind === "ready") return now.ready;
@@ -479,7 +487,7 @@ export function gatewayLaunchSpec(opts: GatewayLaunchOptions): {
   cwd: string;
   env: Record<string, string>;
   /** The raw stdout/stderr capture (Go panics, pre-slog crashes). */
-  stdioLog: string;
+  stdioLog: AppPath;
   logsDir: string;
 } {
   return {
@@ -806,7 +814,7 @@ export async function bootSelfContainedApp(opts: {
    * name the serving build. Omitted outside a release.
    */
   releaseIdentity?: ReleaseIdentity;
-  repoRoot: string;
+  repoRoot: AppPath;
   /**
    * Explicit backend spawn argv (e.g. `["<abs>/server"]` for a compiled
    * release). Threaded into spec.json; absent in dev, where the gateway
@@ -878,7 +886,7 @@ export async function bootSelfContainedApp(opts: {
 }
 
 /** Read a numeric PID from the first line of a pidfile; null if absent/invalid. */
-function readPidFile(path: string): number | null {
+function readPidFile(path: AppPath): number | null {
   let raw: string;
   try {
     raw = readFileSync(path, "utf-8");
@@ -945,7 +953,7 @@ const GATEWAY_STOP_TIMEOUT_MS = 10_000;
  * to rely on the pidfiles alone.
  */
 export async function teardownSelfContainedApp(
-  opts: { root: string; httpPort?: number; pgPort?: number },
+  opts: { root: AppPath; httpPort?: number; pgPort?: number },
   log: LogFn = noop,
 ): Promise<void> {
   const { root, httpPort, pgPort } = opts;
@@ -967,11 +975,11 @@ export async function teardownSelfContainedApp(
   if (httpPort !== undefined) killListenerOnPort(httpPort);
 
   // 2. PgBouncer.
-  const pgbPid = readPidFile(pgbouncerPidFileUnder(root));
+  const pgbPid = readPidFile(asAppPath(pgbouncerPidFileUnder(root)));
   if (pgbPid !== null) signalPid(pgbPid, "SIGTERM");
 
   // 3. Postgres — immediate shutdown; the cluster is thrown away.
-  const pgPid = readPidFile(pgPostmasterPidFile(root));
+  const pgPid = readPidFile(asAppPath(pgPostmasterPidFile(root)));
   if (pgPid !== null) signalPid(pgPid, "SIGQUIT");
   if (pgPort !== undefined) killListenerOnPort(pgPort);
 
@@ -988,8 +996,8 @@ export async function teardownSelfContainedApp(
  * this only forwards.
  */
 export function seedReleaseAssetMirror(opts: {
-  bundleRoot: string;
-  dataDir: string;
+  bundleRoot: AppPath;
+  dataDir: AppPath;
   log?: LogFn;
 }): void {
   seedAssetMirrorCache(opts);
@@ -1030,13 +1038,18 @@ export function seedReleaseAssetMirror(opts: {
  * convention, unrelated to the data root, so it stays spelled out.
  */
 export function propagateReleaseConfig(opts: {
-  bundleRoot: string;
-  dataDir: string;
+  bundleRoot: AppPath;
+  dataDir: AppPath;
   worktreeName: string;
   log?: LogFn;
 }): void {
-  const src = join(opts.bundleRoot, "config-seed", "config", opts.worktreeName);
-  const dest = join(
+  const src = joinAppPath(
+    opts.bundleRoot,
+    "config-seed",
+    "config",
+    opts.worktreeName,
+  );
+  const dest = joinAppPath(
     opts.dataDir,
     userConfigRelativeToRoot(),
     opts.worktreeName,

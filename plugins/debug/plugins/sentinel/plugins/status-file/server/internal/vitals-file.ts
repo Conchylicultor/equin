@@ -1,5 +1,8 @@
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { mkdirSync } from "node:fs";
-import { join } from "node:path";
 import {
   SentinelVitalsRecordSchema,
   type SentinelVitalsRecord,
@@ -12,8 +15,8 @@ import { readJsonFile, writeJsonAtomic } from "./json-file";
 
 export const VITALS_FILENAME = "vitals.json";
 
-export function vitalsFilePath(dir: string): string {
-  return join(dir, VITALS_FILENAME);
+export function vitalsFilePath(dir: AppPath): AppPath {
+  return joinAppPath(dir, VITALS_FILENAME);
 }
 
 /** What a vitals read found: no file yet, the reading, or why it cannot be read. */
@@ -22,7 +25,7 @@ export type SentinelVitalsRead =
   | { kind: "recorded"; vitals: SentinelVitalsRecord }
   | { kind: "unreadable"; reason: string };
 
-export function readSentinelVitals(dir: string): SentinelVitalsRead {
+export function readSentinelVitals(dir: AppPath): SentinelVitalsRead {
   const read = readJsonFile(vitalsFilePath(dir), SentinelVitalsRecordSchema);
   switch (read.kind) {
     case "none":
@@ -35,7 +38,7 @@ export function readSentinelVitals(dir: string): SentinelVitalsRead {
 
 /** Write one reading, write-then-rename. Throws on failure — the caller decides. */
 export function writeSentinelVitals(
-  dir: string,
+  dir: AppPath,
   record: SentinelVitalsRecord,
 ): void {
   mkdirSync(dir, { recursive: true });

@@ -1,6 +1,10 @@
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import {
+  joinAppPath,
+  type AppPath,
+  asAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
 import { parseArgv } from "../argv";
 import { defineGuard } from "../define-guard";
@@ -31,11 +35,11 @@ interface State {
 
 const EMPTY: State = { window: [], tripped: [] };
 
-function stateFile(sessionId: string): string {
-  return join(tmpdir(), `guard-poll-loop-${sessionId}.json`);
+function stateFile(sessionId: string): AppPath {
+  return joinAppPath(asAppPath(tmpdir()), `guard-poll-loop-${sessionId}.json`);
 }
 
-function loadState(path: string): State {
+function loadState(path: AppPath): State {
   if (!existsSync(path)) return { ...EMPTY };
   try {
     const parsed = JSON.parse(readFileSync(path, "utf8")) as Partial<State>;

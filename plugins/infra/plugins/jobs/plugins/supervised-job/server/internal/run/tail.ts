@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { closeSync, fstatSync, openSync, readSync } from "node:fs";
 
 /**
@@ -73,7 +74,7 @@ export interface TranscriptTail {
  * against a build log.
  */
 export function createTranscriptTail(opts: {
-  path: string;
+  path: AppPath;
   fromOffset: number;
   /** Publish complete lines, in order. Called with at least one line. */
   publish: (lines: readonly string[]) => void;

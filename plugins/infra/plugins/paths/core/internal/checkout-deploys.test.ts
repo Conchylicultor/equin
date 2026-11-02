@@ -17,6 +17,12 @@ import {
   asNamespace,
   MAIN_WORKTREE_NAME,
 } from "@plugins/infra/plugins/namespace/core";
+import {
+  appPathParent,
+  asAppPath,
+  type AppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { deploysForCheckout, resolveCheckoutDeploy } from "./checkout-deploys";
 import { SERVER_CORE_RELATIVE } from "./paths";
 
@@ -30,7 +36,7 @@ const fixtures: string[] = [];
 
 function fixture(): {
   /** A checkout root with a real `server-core` dir under it. */
-  checkout: (name: string) => string;
+  checkout: (name: string) => AppPath;
   /** Write `<ns>/spec.json`, verbatim when given a string. */
   register: (ns: string, spec: object | string) => string;
   /**
@@ -42,11 +48,11 @@ function fixture(): {
    * A symlink cycle is the one that needs no permissions and no mounts, so it
    * is the same failure everywhere the suite runs.
    */
-  loop: (name: string) => string;
+  loop: (name: string) => AppPath;
   /** The registry dir itself, for the entries that are not namespaces. */
   worktrees: string;
 } {
-  const dir = mkdtempSync(join(tmpdir(), "checkout-deploys-"));
+  const dir = asAppPath(mkdtempSync(join(tmpdir(), "checkout-deploys-")));
   fixtures.push(dir);
   setEnv("DIR", join(dir, "data"));
   // The registry layout is spelled here rather than taken from
@@ -55,7 +61,7 @@ function fixture(): {
   const worktrees = join(dir, "data", "worktrees");
   return {
     checkout: (name) => {
-      const root = join(dir, "checkouts", name);
+      const root = joinAppPath(dir, "checkouts", name);
       mkdirSync(join(root, SERVER_CORE_RELATIVE), { recursive: true });
       return root;
     },
@@ -69,7 +75,7 @@ function fixture(): {
       return path;
     },
     loop: (name) => {
-      const a = join(dir, `${name}-a`);
+      const a = joinAppPath(dir, `${name}-a`);
       const b = join(dir, `${name}-b`);
       symlinkSync(b, a);
       symlinkSync(a, b);
@@ -80,7 +86,7 @@ function fixture(): {
 }
 
 /** What a deploy of `root` writes into its spec's `server` field. */
-const serverOf = (root: string): string => join(root, SERVER_CORE_RELATIVE);
+const serverOf = (root: AppPath): string => join(root, SERVER_CORE_RELATIVE);
 
 /** Run `fn` with `console.warn` captured rather than printed. */
 function capturingWarnings<T>(fn: () => T): { result: T; warnings: string[] } {
@@ -255,7 +261,7 @@ describe("deploysForCheckout", () => {
     fx.register(MAIN_WORKTREE_NAME, { server: serverOf(real) });
     // The writer resolved `server` against git's toplevel; this reader comes in
     // through a symlink, as a `REPO_ROOT` derived from `import.meta.dir` can.
-    const linked = join(real, "..", "linked");
+    const linked = joinAppPath(appPathParent(real), "linked");
     symlinkSync(real, linked);
 
     expect(deploysForCheckout(linked).map((d) => d.namespace)).toEqual([

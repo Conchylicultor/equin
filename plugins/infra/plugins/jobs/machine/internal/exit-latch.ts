@@ -1,4 +1,5 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
+import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readFileSync, writeFileSync } from "node:fs";
 import { jobsStateDir } from "../../data-dirs";
 
@@ -14,7 +15,7 @@ import { jobsStateDir } from "../../data-dirs";
 export const LATCH_WINDOW_MS = 3_600_000;
 export const MAX_TRIPS_PER_WINDOW = 3;
 
-function latchFile(): string {
+function latchFile(): AppPath {
   return jobsStateDir.file(`${runtimeNamespace()}.json`);
 }
 

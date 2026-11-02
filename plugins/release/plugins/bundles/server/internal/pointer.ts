@@ -1,6 +1,9 @@
-import { join } from "node:path";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { compositionReleaseDir } from "./out-dir";
+import {
+  type AppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
  * The ONE directory ship looks in for a composition's bundles, resolved once.
@@ -27,7 +30,7 @@ import { compositionReleaseDir } from "./out-dir";
 export function bundleRoot(
   namespace: Namespace,
   composition: string,
-): { namespace: string; compDir: string } {
+): { namespace: string; compDir: AppPath } {
   return {
     namespace,
     compDir: compositionReleaseDir(namespace, composition, "web"),
@@ -56,6 +59,6 @@ export function isPointerName(entry: string): boolean {
 }
 
 /** Absolute path of the `latest-<platform>` pointer for a composition. */
-export function latestPointerPath(compDir: string, platform: string): string {
-  return join(compDir, latestPointerName(platform));
+export function latestPointerPath(compDir: AppPath, platform: string): AppPath {
+  return joinAppPath(compDir, latestPointerName(platform));
 }

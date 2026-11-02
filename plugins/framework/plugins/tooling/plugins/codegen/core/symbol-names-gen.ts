@@ -1,4 +1,8 @@
 import { renderSymbolNameFiles } from "@plugins/ui/plugins/icons/plugins/icon-sets/core";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { writeGenerated } from "./write-generated";
 
 /**
@@ -12,9 +16,9 @@ import { writeGenerated } from "./write-generated";
 export async function generateSymbolNames({
   root,
 }: {
-  root: string;
+  root: AppPath;
 }): Promise<void> {
   for (const { path, content } of renderSymbolNameFiles()) {
-    await writeGenerated({ file: `${root}/${path}`, content });
+    await writeGenerated({ file: joinAppPath(root, path), content });
   }
 }

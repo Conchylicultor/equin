@@ -1,4 +1,3 @@
-import { join } from "path";
 import {
   createFacet,
   type DocFact,
@@ -25,6 +24,10 @@ import {
   walkFiles,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { type SlotDef, slotsFacetDef } from "../core";
+import {
+  type AppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
  * Parse `defineRenderSlot(...)` / `defineMountSlot(...)` calls. Mirrors
@@ -273,11 +276,11 @@ function applyCompanions(
  * runtime has erased. A slot the parse can't reach (a factory's templated id)
  * simply has no static name.
  */
-function parseSlotsFromSource(dir: string, pluginId: string): SlotDef[] {
+function parseSlotsFromSource(dir: AppPath, pluginId: string): SlotDef[] {
   const slots: SlotDef[] = [];
   const seen = new Set<string>();
-  const files: string[] = [];
-  walkFiles(join(dir, "web"), files);
+  const files: AppPath[] = [];
+  walkFiles(joinAppPath(dir, "web"), files);
   const companionCalls: CompanionSlotCall[] = [];
   const maskedFiles: string[] = [];
 

@@ -1,13 +1,17 @@
 import { existsSync, readdirSync } from "fs";
 import { join } from "path";
+import {
+  type AppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
  * Walks all directories in the `plugins/<X>/plugins/<Y>/...` nesting pattern,
  * regardless of whether they have web/server/machine/central barrels.
  */
-function walkPluginTree(root: string): string[] {
-  const out: string[] = [];
-  function walk(dir: string, depth: number) {
+function walkPluginTree(root: AppPath): AppPath[] {
+  const out: AppPath[] = [];
+  function walk(dir: AppPath, depth: number) {
     if (depth > 10) return;
     if (dir !== root) out.push(dir);
     let entries;
@@ -19,10 +23,13 @@ function walkPluginTree(root: string): string[] {
     }
     for (const e of entries) {
       if (!e.isDirectory()) continue;
-      if (dir === root) walk(join(dir, e.name), depth + 1);
+      if (dir === root) walk(joinAppPath(dir, e.name), depth + 1);
       else if (e.name === "plugins") {
-        for (const c of readdirSync(join(dir, e.name), { withFileTypes: true })) {
-          if (c.isDirectory()) walk(join(dir, e.name, c.name), depth + 1);
+        for (const c of readdirSync(joinAppPath(dir, e.name), {
+          withFileTypes: true,
+        })) {
+          if (c.isDirectory())
+            walk(joinAppPath(dir, e.name, c.name), depth + 1);
         }
       }
     }
@@ -35,7 +42,7 @@ function walkPluginTree(root: string): string[] {
  * Plugin directories that have web/, server/, machine/ or central/ barrels.
  * Used by eslint.config.ts for lint rule discovery.
  */
-export function findPluginDirs(root: string): string[] {
+export function findPluginDirs(root: AppPath): AppPath[] {
   return walkPluginTree(root).filter(
     (dir) =>
       existsSync(join(dir, "web", "index.ts")) ||

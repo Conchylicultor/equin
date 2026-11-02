@@ -1,3 +1,7 @@
+import {
+  type AppPath,
+  asAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { existsSync } from "node:fs";
 import { userInfo } from "node:os";
 import { join } from "node:path";
@@ -58,9 +62,10 @@ async function assertLingering(): Promise<void> {
 }
 
 /** Where the user unit of `label` lives. */
-function systemdUnitPath(label: string): string {
+function systemdUnitPath(label: string): AppPath {
   const configHome = process.env.XDG_CONFIG_HOME || join(HOME_DIR, ".config");
-  return join(configHome, "systemd", "user", `${label}.service`);
+  // Where the app installs its own user unit.
+  return asAppPath(join(configHome, "systemd", "user", `${label}.service`));
 }
 
 function systemdService(id: LoginServiceId): LoginService {

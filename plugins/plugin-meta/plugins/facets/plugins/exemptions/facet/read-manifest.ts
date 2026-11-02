@@ -1,4 +1,7 @@
-import { join } from "path";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { pathExists } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exempt/core";
 import type { DeclaredExemption } from "../core";
@@ -16,8 +19,8 @@ import type { DeclaredExemption } from "../core";
  * module it cached at the first build — so an edited manifest would stay stale
  * until the server restarts.
  */
-export function readManifest(dir: string): DeclaredExemption[] {
-  const file = join(dir, "exempt", "index.ts");
+export function readManifest(dir: AppPath): DeclaredExemption[] {
+  const file = joinAppPath(dir, "exempt", "index.ts");
   if (!pathExists(file)) return [];
   delete require.cache[require.resolve(file)];
   const mod = require(file) as { default?: Exemptions };

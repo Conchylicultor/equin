@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
@@ -35,7 +36,7 @@ export interface SweepReport {
 export async function sweepDeps(args: {
   store: DepStore;
   deps: readonly Dep<DepSource>[];
-  checkouts: readonly string[];
+  checkouts: readonly AppPath[];
   now: Date;
   idleMs: number;
 }): Promise<SweepReport> {
@@ -104,7 +105,7 @@ function lastUsedAt(paths: ReturnType<typeof installPaths>): number {
  * sub-plugin).
  */
 export async function sweepUnusedDeps(args: {
-  checkouts: readonly string[];
+  checkouts: readonly AppPath[];
   now: Date;
 }): Promise<SweepReport> {
   return sweepDeps({

@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   closeSync,
   existsSync,
@@ -47,7 +48,7 @@ export interface EnsureOptions {
   /** Where progress lines go besides the install log (a job's transcript, the terminal). */
   log?: (line: string) => void;
   /** The checkout whose declaration to derive the identity from. Default: this one. */
-  root?: string;
+  root?: AppPath;
   /** Test seam: the cache and lock dirs. */
   store?: DepStore;
 }
@@ -95,7 +96,7 @@ export async function installInCache(
   dep: Dep<DepSource>,
   source: DepSource,
   exec: ExecContext,
-  opts: { root: string; store: DepStore; say: (line: string) => void },
+  opts: { root: AppPath; store: DepStore; say: (line: string) => void },
 ): Promise<{ identity: string; paths: InstallPaths }> {
   const { root, store, say } = opts;
   const { identity, inputs } = await sourceIdentity(source, root);
@@ -173,7 +174,7 @@ function readFrom(path: string, from: number): string {
 async function install(args: {
   dep: Dep<DepSource>;
   source: DepSource;
-  root: string;
+  root: AppPath;
   paths: InstallPaths;
   identity: string;
   inputs: Readonly<Record<string, string>>;
@@ -266,7 +267,7 @@ async function install(args: {
 /** Where `dep` stands at its current identity. Safe on a backend's event loop. */
 export async function depState(
   dep: Dep<DepSource>,
-  opts: { root?: string; store?: DepStore } = {},
+  opts: { root?: AppPath; store?: DepStore } = {},
 ): Promise<DepState> {
   const at = await locate(dep, opts);
   if (at.kind === "sealed") {
@@ -299,7 +300,7 @@ export type ReadyNow<S extends DepSource = DepSource> =
  */
 export async function readyNow<S extends DepSource>(
   dep: Dep<S>,
-  opts: { root?: string; store?: DepStore } = {},
+  opts: { root?: AppPath; store?: DepStore } = {},
 ): Promise<ReadyNow<S>> {
   const at = await locate(dep, opts);
   if (at.kind === "failed") return at.failed;
@@ -315,7 +316,7 @@ export async function readyNow<S extends DepSource>(
  */
 async function locate<S extends DepSource>(
   dep: Dep<S>,
-  opts: { root?: string; store?: DepStore },
+  opts: { root?: AppPath; store?: DepStore },
 ): Promise<
   | { kind: "located"; identity: string; paths: InstallPaths; state: DepState }
   | { kind: "sealed"; ready: Ready<S>; bytes: number }
@@ -368,7 +369,7 @@ export type RemoveOutcome =
  */
 export async function removeDep(
   dep: Dep<DepSource>,
-  opts: { root?: string; store?: DepStore } = {},
+  opts: { root?: AppPath; store?: DepStore } = {},
 ): Promise<RemoveOutcome> {
   const root = opts.root ?? REPO_ROOT;
   if (sealedLookup(dep, root).kind !== "unsealed") {

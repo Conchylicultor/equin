@@ -8,19 +8,24 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  type AppPath,
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { defineDep } from "./dep";
 import { releaseLock, tryLock } from "./lock";
 import { identityOf, installPaths, type DepStore } from "./store";
 import { SWEEP_IDLE_MS, sweepDeps } from "./sweep";
 
-let base: string;
+let base: AppPath;
 let store: DepStore;
 
 beforeEach(() => {
-  base = mkdtempSync(join(tmpdir(), "deps-sweep-"));
+  base = asAppPath(mkdtempSync(join(tmpdir(), "deps-sweep-")));
   store = {
-    cacheRoot: join(base, "cache"),
-    locksRoot: join(base, "locks"),
+    cacheRoot: joinAppPath(base, "cache"),
+    locksRoot: joinAppPath(base, "locks"),
   };
 });
 afterEach(() => rmSync(base, { recursive: true, force: true }));
@@ -76,7 +81,11 @@ test("keeps current and recently used identities, removes the rest unless locked
   const report = await sweepDeps({
     store,
     deps: [dep],
-    checkouts: ["/repo/main", "/repo/wt", "/repo/broken"],
+    checkouts: [
+      asAppPath("/repo/main"),
+      asAppPath("/repo/wt"),
+      asAppPath("/repo/broken"),
+    ],
     now: NOW,
     idleMs: SWEEP_IDLE_MS,
   });

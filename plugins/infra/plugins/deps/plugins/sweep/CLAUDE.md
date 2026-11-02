@@ -18,6 +18,7 @@ on-demand dependency but must stay free of the agent runtime (Sonata, through
 - Server:
   - Uses:
     - `infra/jobs.defineJob`
+    - `infra/worktree.appCheckoutOf`
     - `infra/worktree.listWorktreePaths`
     - `primitives/log-channels.Log`
   - Register: `defineJob('deps.sweep')`

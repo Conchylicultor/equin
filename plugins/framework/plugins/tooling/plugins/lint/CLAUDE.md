@@ -157,6 +157,8 @@ its disable does not cover. Parameters and imports have no in-file value.
     - `framework/tooling/exempt.NON_APP_FILE_CATEGORIES`
     - `framework/tooling/exempt.ResolvedExemption`
     - `framework/tooling/exempt.ruleIdProblems`
+    - `infra/host-fs/user-path.AppPath`
+    - `infra/host-fs/user-path.joinAppPath`
   - Exports (types):
     - `BuildLintConfigOptions`
     - `ClassRuleFactory`

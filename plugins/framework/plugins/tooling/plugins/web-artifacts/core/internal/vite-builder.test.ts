@@ -9,17 +9,22 @@ import {
   ownFolderBarrelPlugin,
   parseEmittedImports,
 } from "./vite-builder";
+import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // Regression: an artifact with internal dynamic imports code-splits into `.mjs`
 // chunks; their imports were once invisible (only `index.js` was scanned), so
 // specifiers imported only by a lazy chunk got no vendor/map entry and failed
 // at runtime ("Failed to resolve module specifier").
 describe("parseEmittedImports", () => {
-  let dir: string;
+  let dir: AppPath;
   afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
   test("scans .mjs chunks, records statics per file and dynamics as a union", async () => {
-    dir = mkdtempSync(join(tmpdir(), "web-artifacts-test-"));
+    dir = asAppPath(mkdtempSync(join(tmpdir(), "web-artifacts-test-")));
     writeFileSync(
       join(dir, "index.js"),
       `import { a } from "./chunk-abc.mjs";\nexport { a };\n`,
@@ -51,15 +56,15 @@ describe("parseEmittedImports", () => {
 // folder's barrel, so a symbol the barrel did not export type-checked green and
 // failed only at compose. Only the barrel spelling is routed now.
 describe("ownFolderBarrelPlugin", () => {
-  let dir: string;
+  let dir: AppPath;
   afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
   function setup(): {
     resolveId: (id: string, importer: string) => unknown;
-    pluginDir: string;
+    pluginDir: AppPath;
   } {
-    dir = mkdtempSync(join(tmpdir(), "web-artifacts-own-folder-"));
-    const pluginDir = join(dir, "plugins", "demo");
+    dir = asAppPath(mkdtempSync(join(tmpdir(), "web-artifacts-own-folder-")));
+    const pluginDir = joinAppPath(dir, "plugins", "demo");
     mkdirSync(join(pluginDir, "core"), { recursive: true });
     writeFileSync(join(pluginDir, "core", "index.ts"), "export {};\n");
     const plugin = ownFolderBarrelPlugin("demo", pluginDir, "web");
@@ -99,7 +104,7 @@ describe("assertCoEntriesOffHostPath (exhibits.js never on the boot path)", () =
   const coEntries = [
     {
       folder: "exhibits",
-      entryFile: "/p/exhibits/index.ts",
+      entryFile: asAppPath("/p/exhibits/index.ts"),
       specifier: "@plugins/p/exhibits",
     },
   ];
@@ -136,11 +141,11 @@ describe("assertCoEntriesOffHostPath (exhibits.js never on the boot path)", () =
 // A module worker resolves imports against its own URL — the page's import map
 // never reaches it — so a worker chunk must arrive fully bundled.
 describe("assertWorkersSelfContained", () => {
-  let dir: string;
+  let dir: AppPath;
   afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
-  function setup(workerSource: string): string {
-    dir = mkdtempSync(join(tmpdir(), "web-artifacts-worker-"));
+  function setup(workerSource: string): AppPath {
+    dir = asAppPath(mkdtempSync(join(tmpdir(), "web-artifacts-worker-")));
     mkdirSync(join(dir, "assets"));
     writeFileSync(join(dir, "index.js"), `import "@plugins/x/core";\n`);
     writeFileSync(join(dir, "assets", "w.worker-abc.js"), workerSource);
@@ -156,7 +161,7 @@ describe("assertWorkersSelfContained", () => {
   });
 
   test("an artifact with no worker passes", async () => {
-    dir = mkdtempSync(join(tmpdir(), "web-artifacts-worker-"));
+    dir = asAppPath(mkdtempSync(join(tmpdir(), "web-artifacts-worker-")));
     expect(
       await assertWorkersSelfContained({ dirName: "demo", outDir: dir }),
     ).toEqual([]);

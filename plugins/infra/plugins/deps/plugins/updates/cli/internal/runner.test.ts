@@ -2,17 +2,21 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  type AppPath,
+  asAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { GateResult } from "../../core/internal/compare";
 import type { Gates } from "./gates";
 import { runUpgrade } from "./runner";
 import type { Move, Updater } from "../../core/internal/updater";
 import type { Hold } from "../../core/internal/hold";
 
-let root: string;
+let root: AppPath;
 let syncs: string[];
 beforeEach(() => {
   syncs = [];
-  root = mkdtempSync(join(tmpdir(), "deps-runner-"));
+  root = asAppPath(mkdtempSync(join(tmpdir(), "deps-runner-")));
   writeFileSync(join(root, "fake.lock"), "pkg = 1\n");
 });
 afterEach(() => rmSync(root, { recursive: true, force: true }));

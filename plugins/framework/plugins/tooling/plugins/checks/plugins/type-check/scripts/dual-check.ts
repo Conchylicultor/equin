@@ -27,6 +27,7 @@
 // Manual and expensive: two program builds and a full check (minutes, ~15 GB).
 // No host admission — this is a measurement, run by hand.
 
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { writeFileSync } from "fs";
 import os from "os";
 import { join, resolve } from "path";
@@ -42,7 +43,7 @@ import { readCheckTree } from "../shared/repo-view";
 const WORKER = fileURLToPath(new URL("../shared/worker.ts", import.meta.url));
 
 const args = process.argv.slice(2);
-const root = args[0] ? resolve(args[0]) : undefined;
+const root = args[0] ? asAppPath(resolve(args[0])) : undefined;
 const jsonAt = args.indexOf("--json");
 const jsonOut = jsonAt >= 0 ? args[jsonAt + 1] : undefined;
 const modeAt = args.indexOf("--mode");

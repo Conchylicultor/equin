@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { ExecContext } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
 import type { DepUpdates } from "../../core";
 
@@ -12,7 +13,7 @@ export interface InstallContext {
    * The directory to fill. It does not exist yet (a partial one from an
    * interrupted install has been removed). The kind creates it.
    */
-  readonly dir: string;
+  readonly dir: AppPath;
   /** One line to the caller's log (a job transcript, the terminal). */
   readonly log: (line: string) => void;
   /**
@@ -85,7 +86,7 @@ export interface DepSource<K extends string = string> {
    * `ensureDep` fast path and every state read. An install that is no longer
    * intact reads as `absent` and is installed again. Omitted: always intact.
    */
-  isIntact?(dir: string): boolean;
+  isIntact?(dir: AppPath): boolean;
   /**
    * How the install is admitted to the host. Omitted: under the caller's
    * `exec.admit` (one background unit of `withHostGrant`), so a big install
@@ -250,14 +251,14 @@ export interface Ready<S extends DepSource = DepSource> {
   readonly [readyBrand]: true;
   readonly dep: Dep<S>;
   /** The installed payload (`<cache>/<id>/<identity>/env`). */
-  readonly dir: string;
+  readonly dir: AppPath;
   readonly identity: string;
 }
 
 /** The engine's one mint of a `Ready`. Not exported from the barrel. */
 export function mintReady<S extends DepSource>(
   dep: Dep<S>,
-  dir: string,
+  dir: AppPath,
   identity: string,
 ): Ready<S> {
   return { dep, dir, identity } as Ready<S>;

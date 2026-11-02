@@ -1,3 +1,4 @@
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readdirSync, readFileSync } from "fs";
 import { join, resolve } from "path";
 import {
@@ -70,7 +71,7 @@ const check: Check = {
     "journal entries, .sql files, legacy snapshot entries and snapshot headers cross-reference each other",
   async run() {
     const root = await getWorktreeRoot();
-    const dir = resolve(root, MIGRATIONS_DATA_DIR);
+    const dir = asAppPath(resolve(root, MIGRATIONS_DATA_DIR));
     const metaDir = join(dir, "meta");
 
     const journal = JSON.parse(readFileSync(join(metaDir, "_journal.json"), "utf8"));

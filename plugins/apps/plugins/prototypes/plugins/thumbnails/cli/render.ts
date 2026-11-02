@@ -1,3 +1,4 @@
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
@@ -33,7 +34,7 @@ export const renderThumbnailsAction: CliAction<
   const tree = resolve(treeArg);
   const out = resolve(opts.out);
   if (!existsSync(tree)) throw new Error(`no such prototypes tree: ${tree}`);
-  const mount = diskDirMount(tree);
+  const mount = diskDirMount(asAppPath(tree));
   const metas = await prototypeMetasIn(mount);
   if (metas.length === 0)
     throw new Error(`${tree} holds no prototype folder to render`);

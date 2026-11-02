@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { asNamespace } from "@plugins/infra/plugins/namespace/core";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
 import {
@@ -17,7 +18,7 @@ import {
  */
 export function namedBackendCommand(
   ns: string,
-  bun: string | null,
+  bun: AppPath | null,
 ): string[] | undefined {
   if (bun === null) return undefined;
   const linked = linkNamedBinary({

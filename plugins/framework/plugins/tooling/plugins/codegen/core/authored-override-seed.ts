@@ -1,5 +1,8 @@
 import { existsSync, readdirSync, readFileSync } from "fs";
-import { join } from "path";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { parse as parseJsonc } from "jsonc-parser";
 import {
   APP_SCOPE_DIR,
@@ -216,7 +219,7 @@ function catalogDelta(
  * when the file was rewritten.
  */
 async function remarkIfStale(opts: {
-  filePath: string;
+  filePath: AppPath;
   descriptor: ConfigDescriptor;
   originHash: string;
   originContent: unknown;
@@ -257,7 +260,7 @@ async function remarkIfStale(opts: {
  * re-deriving would miss every already-committed origin.
  */
 export async function applyAuthoredOverrideSeeding(opts: {
-  configDir: string;
+  configDir: AppPath;
   descriptorsByOriginRel: Map<string, ConfigDescriptor>;
 }): Promise<AuthoredOverrideSeedResult> {
   const { configDir } = opts;
@@ -274,7 +277,7 @@ export async function applyAuthoredOverrideSeeding(opts: {
       );
     }
 
-    const originPath = join(configDir, originRel);
+    const originPath = joinAppPath(configDir, originRel);
     if (!existsSync(originPath)) {
       // Discovery is shared with the origin generator, so by the time seeding
       // runs every live descriptor has its origin on disk. A gap means seeding
@@ -306,7 +309,7 @@ export async function applyAuthoredOverrideSeeding(opts: {
     const baseRel = owner.hier
       ? `${owner.hier}/${owner.name}.jsonc`
       : `${owner.name}.jsonc`;
-    const basePath = join(configDir, baseRel);
+    const basePath = joinAppPath(configDir, baseRel);
     if (!existsSync(basePath)) {
       if (isWorthAuthoring({ descriptor, originRel, originContent })) {
         await writeGenerated({
@@ -335,11 +338,11 @@ export async function applyAuthoredOverrideSeeding(opts: {
     // an existing one anchors its `// @hash` to the BASE origin (no scoped origin
     // is ever committed), so it goes stale on the same event and owes the same
     // review.
-    const appDir = join(configDir, owner.hier, APP_SCOPE_DIR);
+    const appDir = joinAppPath(configDir, owner.hier, APP_SCOPE_DIR);
     if (!existsSync(appDir)) continue;
     for (const entry of readdirSync(appDir, { withFileTypes: true })) {
       if (!entry.isDirectory()) continue;
-      const scopedPath = join(appDir, entry.name, `${owner.name}.jsonc`);
+      const scopedPath = joinAppPath(appDir, entry.name, `${owner.name}.jsonc`);
       if (!existsSync(scopedPath)) continue;
       if (
         await remarkIfStale({
@@ -364,10 +367,11 @@ export async function applyAuthoredOverrideSeeding(opts: {
  * see the deliberate omission from `regenerateManifestCodegen` (regen-pipeline.ts).
  */
 export async function seedAuthoredOverrides(opts: {
-  root: string;
+  root: AppPath;
 }): Promise<AuthoredOverrideSeedResult> {
   return await applyAuthoredOverrideSeeding({
-    configDir: join(opts.root, "config"),
+    // `root`: the checkout root the caller works in.
+    configDir: joinAppPath(opts.root, "config"),
     descriptorsByOriginRel: await loadConfigDescriptorsByOriginPath({
       root: opts.root,
     }),
@@ -380,8 +384,8 @@ export async function seedAuthoredOverrides(opts: {
  * `regen-generated` reads this: a marker in a tree about to be amended into a
  * landing commit means an unreviewed default is one `git add` away.
  */
-export function listReviewMarkedOverrides(opts: { root: string }): string[] {
-  const configDir = join(opts.root, "config");
+export function listReviewMarkedOverrides(opts: { root: AppPath }): string[] {
+  const configDir = joinAppPath(opts.root, "config");
   if (!existsSync(configDir)) return [];
   const onDisk: string[] = [];
   walkJsoncFiles(configDir, configDir, onDisk);
@@ -391,6 +395,6 @@ export function listReviewMarkedOverrides(opts: { root: string }): string[] {
       // `.ancestor` siblings are not authored, so they are not review surfaces.
       !rel.endsWith(".origin.jsonc") &&
       !rel.endsWith(".ancestor.jsonc") &&
-      hasReviewMarker(readFileSync(join(configDir, rel), "utf8")),
+      hasReviewMarker(readFileSync(joinAppPath(configDir, rel), "utf8")),
   );
 }

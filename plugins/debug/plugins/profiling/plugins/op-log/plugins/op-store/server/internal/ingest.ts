@@ -1,3 +1,7 @@
+import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { closeSync, fstatSync, openSync, readSync } from "node:fs";
 import type { OpLine } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
 import {
@@ -26,7 +30,7 @@ export const OP_LOG_ROTATIONS = 3;
 export interface DrainOptions {
   db: OpStoreDb;
   /** The live file; rotations are `${path}.1` … `${path}.${rotations}`. */
-  path: string;
+  path: AppPath;
   rotations?: number;
   seedBytes?: number;
   chunkBytes?: number;
@@ -42,7 +46,7 @@ interface OpenFile {
   stat: FileStat;
 }
 
-function openIfExists(path: string): OpenFile | null {
+function openIfExists(path: AppPath): OpenFile | null {
   let fd: number;
   try {
     fd = openSync(path, "r");
@@ -165,7 +169,9 @@ export async function drainOpLog(opts: DrainOptions): Promise<DrainResult> {
   const opened: (OpenFile | null)[] = [];
   try {
     for (let i = 0; i <= rotations; i++) {
-      opened.push(openIfExists(i === 0 ? opts.path : `${opts.path}.${i}`));
+      opened.push(
+        openIfExists(i === 0 ? opts.path : asAppPath(`${opts.path}.${i}`)),
+      );
     }
     const plan = planSegments(
       cursor,

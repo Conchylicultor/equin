@@ -1,3 +1,4 @@
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import {
@@ -92,7 +93,7 @@ export async function reconcileLoginService<S extends DepSource>(
   // The manager appends; truncate so the log holds this start's output. Its
   // folder may not exist yet (a declaration's first start), and neither
   // launchd nor systemd creates it — the job would fail to spawn.
-  mkdirSync(dirname(job.stdioLog), { recursive: true });
+  mkdirSync(asAppPath(dirname(job.stdioLog)), { recursive: true });
   writeFileSync(job.stdioLog, "");
   const pid = await service.load();
   return {

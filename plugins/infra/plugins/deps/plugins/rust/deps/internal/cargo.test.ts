@@ -10,6 +10,11 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  type AppPath,
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
 import {
   defineDep,
@@ -27,9 +32,9 @@ import {
 } from "./cargo";
 
 const exec = execContextForTests();
-let base: string;
-let root: string;
-let store: { cacheRoot: string; locksRoot: string };
+let base: AppPath;
+let root: AppPath;
+let store: { cacheRoot: AppPath; locksRoot: AppPath };
 /** Unique per test, so its dir in the shared cargo-target cache is its own. */
 let crate: string;
 
@@ -50,9 +55,12 @@ version = "0.1.0"
 `;
 
 beforeEach(() => {
-  base = mkdtempSync(join(tmpdir(), "deps-rust-test-"));
-  root = join(base, "repo");
-  store = { cacheRoot: join(base, "cache"), locksRoot: join(base, "locks") };
+  base = asAppPath(mkdtempSync(join(tmpdir(), "deps-rust-test-")));
+  root = joinAppPath(base, "repo");
+  store = {
+    cacheRoot: joinAppPath(base, "cache"),
+    locksRoot: joinAppPath(base, "locks"),
+  };
   crate = `plugins/rust-kind-test-${Math.random().toString(36).slice(2, 10)}/rust`;
   mkdirSync(join(root, crate, "src"), { recursive: true });
   expect(spawnSync("git", ["init", "-q", root]).status).toBe(0);
@@ -193,7 +201,7 @@ describe("cargoBuild", () => {
     const d = dep(cargoBuild({ crate, bin: "hello" }));
     const ready = await ensureDep(d, exec, { store, root });
     const bin = cargoBinary(ready);
-    expect(bin).toBe(join(ready.dir, "hello"));
+    expect(bin).toBe(joinAppPath(ready.dir, "hello"));
     const out = spawnSync(bin, []);
     expect(out.status).toBe(0);
     expect(out.stdout.toString()).toBe("hello from the rust kind\n");

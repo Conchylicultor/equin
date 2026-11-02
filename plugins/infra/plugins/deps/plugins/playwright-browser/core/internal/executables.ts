@@ -1,5 +1,9 @@
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { z } from "zod";
 
 /**
@@ -11,13 +15,20 @@ import { z } from "zod";
  */
 export const BROWSER_EXECUTABLES_FILE = "executables.json";
 
+/**
+ * An executable Playwright recorded inside this install's own browsers dir —
+ * the app's, by the install that wrote the record (a declared claim of
+ * `user-path/no-unproven-claim`).
+ */
+const RecordedExecutableSchema = z.string().transform((p) => asAppPath(p));
+
 export const BrowserExecutablesSchema = z.object({
   /** The `playwright-core` version that installed (and reported) them. */
   playwrightCore: z.string(),
   /** What a HEADED launch runs (`Google Chrome for Testing` on macOS). */
-  headed: z.string(),
+  headed: RecordedExecutableSchema,
   /** What a HEADLESS launch runs (`chrome-headless-shell`). */
-  headlessShell: z.string(),
+  headlessShell: RecordedExecutableSchema,
 });
 export type BrowserExecutables = z.infer<typeof BrowserExecutablesSchema>;
 
@@ -30,8 +41,10 @@ export type ReadBrowserExecutables =
  * is the kind's `isIntact`, which runs on every `ensureDep` fast path and
  * every state read.
  */
-export function readBrowserExecutables(envDir: string): ReadBrowserExecutables {
-  const file = join(envDir, BROWSER_EXECUTABLES_FILE);
+export function readBrowserExecutables(
+  envDir: AppPath,
+): ReadBrowserExecutables {
+  const file = joinAppPath(envDir, BROWSER_EXECUTABLES_FILE);
   let raw: string;
   try {
     raw = readFileSync(file, "utf8");

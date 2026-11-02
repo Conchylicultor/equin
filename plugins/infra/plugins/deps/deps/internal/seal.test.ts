@@ -9,6 +9,11 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  type AppPath,
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { execContextForTests } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core/testing";
 import {
   defineDep,
@@ -24,14 +29,17 @@ import { readSealedManifest, SEALED_MANIFEST } from "./sealed";
 import { identityOf, installPaths, type DepStore } from "./store";
 import { sweepDeps } from "./sweep";
 
-let base: string;
+let base: AppPath;
 let store: DepStore;
-let bundle: string;
+let bundle: AppPath;
 
 beforeEach(() => {
-  base = mkdtempSync(join(tmpdir(), "deps-seal-"));
-  store = { cacheRoot: join(base, "cache"), locksRoot: join(base, "locks") };
-  bundle = join(base, "bundle");
+  base = asAppPath(mkdtempSync(join(tmpdir(), "deps-seal-")));
+  store = {
+    cacheRoot: joinAppPath(base, "cache"),
+    locksRoot: joinAppPath(base, "locks"),
+  };
+  bundle = joinAppPath(base, "bundle");
 });
 afterEach(() => rmSync(base, { recursive: true, force: true }));
 
@@ -231,7 +239,7 @@ describe("a sealed root", () => {
     const before = { ...calls, install: [...calls.install] };
 
     const ready = await ensureDep(dep, exec, { root: bundle, store });
-    expect(ready.dir).toBe(join(bundle, "deps", dep.id));
+    expect(ready.dir).toBe(joinAppPath(bundle, "deps", dep.id));
     expect(ready.identity).toBe(sealed.identity);
     const now = await readyNow(dep, { root: bundle, store });
     expect(now.kind === "ready" && now.ready.dir).toBe(ready.dir);

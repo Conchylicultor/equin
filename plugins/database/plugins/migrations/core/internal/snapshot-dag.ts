@@ -15,9 +15,12 @@
  * research/2026-09-30-global-clone-migrations-published-set.md §3 and
  * research/2026-10-22-global-single-live-migration-snapshot.md.
  */
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readdir } from "fs/promises";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
-import { join } from "path";
 import {
   legacySnapshotFiles,
   legacySnapshotSql,
@@ -201,7 +204,7 @@ export function snapshotAncestors(dag: SnapshotDag, id: string): Set<string> {
  * is still a node (`migration-metadata-consistent` owns that orphan).
  */
 export async function readSnapshotNodes(
-  dataDir: string,
+  dataDir: AppPath,
 ): Promise<SnapshotNode[]> {
   const nodes: SnapshotNode[] = [];
   const legacy = readLegacySnapshots(dataDir);
@@ -216,7 +219,7 @@ export async function readSnapshotNodes(
   for (const file of legacySnapshotFiles(dataDir)) {
     const sql = legacySnapshotSql(file);
     if (legacy?.has(sql.slice(0, -".sql".length))) continue;
-    const head = readSnapshotHead(join(dataDir, "meta", file))!;
+    const head = readSnapshotHead(joinAppPath(dataDir, "meta", file))!;
     nodes.push({ file: sql, ...head, mergeParents: null, lineage: "legacy" });
   }
   // Every header read asynchronously, through a bounded gate: a blocking read
@@ -254,7 +257,7 @@ export type SchemaSnapshotState = { ok: true } | { ok: false; message: string };
  * problem (`analyzeSnapshotDag`), and the join rewrites the file anyway.
  */
 export function schemaSnapshotState(
-  dataDir: string,
+  dataDir: AppPath,
   dag: SnapshotDag,
 ): SchemaSnapshotState {
   if (dag.tips.length !== 1) return { ok: true };

@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
@@ -34,7 +35,7 @@ export async function publishDocumentHead(): Promise<void> {
 
 // Temp file + rename: the gateway reads the file on every shell request and
 // must never see half of one.
-function writeAtomic(file: string, text: string): void {
+function writeAtomic(file: AppPath, text: string): void {
   mkdirSync(dirname(file), { recursive: true });
   const tmp = `${file}.${process.pid}.tmp`;
   writeFileSync(tmp, text);

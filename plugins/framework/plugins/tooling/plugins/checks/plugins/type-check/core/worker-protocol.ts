@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 /**
  * The wire contract between a type-check worker process and whoever spawned it.
  *
@@ -162,7 +163,7 @@ export interface TscPredictionMiss {
 
 /** The job file handed to the worker as `argv[2]` (see `../shared/worker.ts`). */
 export interface TypeCheckWorkerJob {
-  root: string;
+  root: AppPath;
   name: string;
   tsconfigPath: string;
   tscMode: TscMode;

@@ -279,7 +279,11 @@ run everywhere.
     - `framework/product-name.LEGACY_IDS`
     - `framework/product-name.PRODUCT_NAME`
     - `framework/tooling/collected-dir.defineCollectedDir`
+    - `infra/host-fs/user-path.AppPath`
+    - `infra/host-fs/user-path.asAppPath`
+    - `infra/host-fs/user-path.joinAppPath`
     - `infra/launcher/env-names.readEnv`
+    - `infra/launcher/env-names.readEnvPath`
     - `infra/launcher/env-names.setEnv`
     - `infra/launcher/env-names.unsetEnv`
     - `infra/namespace.asNamespace`
@@ -377,6 +381,8 @@ run everywhere.
     - `paths:no-inlined-worktree-artifacts` — `.` (sanctioned)
     - `paths:data-root-not-joined` — `.` (sanctioned)
     - `boundaries/no-platform-api` — `core/internal/checkout-deploys.ts`, `core/internal/checkout-owner.ts`, `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/data-root-layout.ts`, `core/internal/data-dirs-manifest.ts`, `core/internal/paths.ts`, `core/internal/prune-artifacts.ts`, `core/internal/toolchain-pin.ts`, `core/internal/worktree-dirs.ts` (debt)
+    - `user-path/no-unproven-claim` — `core/internal/paths.ts`, `core/internal/data-root-layout.ts` (sanctioned)
+    - `user-path/no-unproven-claim` — `core/internal/checkout-deploys.ts` (sanctioned)
 - Server:
   - Exports (types):
     - `AppIdentity`

@@ -8,6 +8,11 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
+import {
+  type AppPath,
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { z } from "zod";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
@@ -23,7 +28,7 @@ import { uvEnv } from "./uv";
 // python3: on macOS that is an xcode-select shim, which pops the "install the
 // command line developer tools" dialog when run under a name it does not know
 // (`python`) or on a machine without the tools.
-let base: string;
+let base: AppPath;
 let ready: ReturnType<typeof makeReady>;
 
 function makeReady() {
@@ -35,7 +40,7 @@ function makeReady() {
     sizeHint: "",
     source: pythonEnv({ project: relative(REPO_ROOT, project) }),
   });
-  return readyForTests(dep, join(base, "env"), "test-identity");
+  return readyForTests(dep, joinAppPath(base, "env"), "test-identity");
 }
 
 /** `uv python <args>` under the python kind's own env (managed Pythons only). */
@@ -70,7 +75,7 @@ async function managedPython(): Promise<string> {
 }
 
 beforeAll(async () => {
-  base = mkdtempSync(join(tmpdir(), "run-python-"));
+  base = asAppPath(mkdtempSync(join(tmpdir(), "run-python-")));
   mkdirSync(join(base, "env", "bin"), { recursive: true });
   symlinkSync(await managedPython(), join(base, "env", "bin", "python"));
   const pkg = join(base, "project", "fixture");

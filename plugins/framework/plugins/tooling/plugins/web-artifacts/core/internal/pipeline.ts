@@ -5,8 +5,12 @@
 // `plan.ts`, shared with the `web-artifacts:map-in-sync` check.
 
 import { existsSync, readdirSync } from "node:fs";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import os from "node:os";
-import { basename, join } from "node:path";
+import { basename } from "node:path";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { loadBabelContributions } from "@plugins/framework/plugins/web-core/core";
 import { BUILDER_VERSION, WORKER_ONLY_KINDS } from "../constants";
@@ -78,9 +82,9 @@ import { composeDist } from "./compose";
 import { scanStagedModules } from "./staged-verify";
 
 export interface WebArtifactsPipelineOptions {
-  root: string;
+  root: AppPath;
   /** The build's staging dist dir (published atomically by the caller). */
-  stagingDir: string;
+  stagingDir: AppPath;
   minify: boolean;
   buildId: string;
   /**
@@ -158,8 +162,8 @@ async function runPipeline(
   lease: BuildLease,
 ): Promise<WebArtifactsPipelineResult> {
   const { root, log } = opts;
-  const pluginsRoot = join(root, "plugins");
-  const webSrcDir = join(root, WEB_CORE_REL, "web");
+  const pluginsRoot = joinAppPath(root, "plugins");
+  const webSrcDir = joinAppPath(root, WEB_CORE_REL, "web");
   const worktreeName = basename(root);
   // Every stage's wall time in the transcript too: a caller without profiler
   // spans (the hermetic build) still shows where a cold build spent it.
@@ -354,7 +358,7 @@ async function runPipeline(
       if (opts.vendors !== undefined) {
         const dest = vendorSetPath(opts.vendors.setHash);
         await lease.pin([dest]);
-        if (!existsSync(join(dest, "meta.json"))) {
+        if (!existsSync(joinAppPath(dest, "meta.json"))) {
           throw new Error(
             `vendors: the given set ${opts.vendors.setHash.slice(0, 12)} is not in the store (${dest})`,
           );
@@ -504,7 +508,7 @@ async function runPipeline(
     "artifacts:compose",
     "compose dist",
     async () => {
-      const links: Array<{ linkName: string; storePath: string }> = [];
+      const links: Array<{ linkName: string; storePath: AppPath }> = [];
       const staticImportsByUrl: Record<string, string[]> = {};
       const emitted: Array<{ importer: string; specifiers: string[] }> = [];
 
@@ -624,7 +628,7 @@ async function runPipeline(
       await precompressFiles(
         readdirSync(opts.stagingDir, { withFileTypes: true })
           .filter((d) => d.isFile())
-          .map((d) => join(opts.stagingDir, d.name)),
+          .map((d) => joinAppPath(opts.stagingDir, d.name)),
       );
       const unmappedDynamic = findUnmappedDynamicWarnings(
         dynamicOnly,

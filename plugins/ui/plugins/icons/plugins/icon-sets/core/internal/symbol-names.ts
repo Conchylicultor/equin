@@ -1,3 +1,7 @@
+import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { createHash } from "crypto";
 import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
@@ -43,9 +47,10 @@ export interface SymbolNameList {
 
 const HASH_RE = /\/\/ @inputs-hash ([a-f0-9]+)/;
 
-function packageDir(pkg: string): string {
-  return fileURLToPath(
-    new URL(".", import.meta.resolve(`${pkg}/package.json`)),
+function packageDir(pkg: string): AppPath {
+  // An icon package resolved from this app's own node_modules.
+  return asAppPath(
+    fileURLToPath(new URL(".", import.meta.resolve(`${pkg}/package.json`))),
   );
 }
 

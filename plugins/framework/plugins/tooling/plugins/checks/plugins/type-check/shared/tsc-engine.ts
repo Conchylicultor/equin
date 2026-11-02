@@ -8,6 +8,11 @@ import { join, relative } from "path";
 import ts from "typescript";
 import { sha256 } from "./keys";
 import { lockfileLintDigest } from "./lockfile";
+import {
+  type AppPath,
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 const rel = (root: string, abs: string): string =>
   relative(root, abs).split("\\").join("/");
@@ -29,7 +34,10 @@ export function formatDiagnostic(root: string, d: ts.Diagnostic): string {
  * into a dependency is dropped, so a dependency's own types move every key
  * through here), dependency patches, and this engine's own code.
  */
-export function tscEngineFp(root: string, options: ts.CompilerOptions): string {
+export function tscEngineFp(
+  root: AppPath,
+  options: ts.CompilerOptions,
+): string {
   const parts: string[] = [`typescript ${ts.version}`];
   parts.push(
     `options ${JSON.stringify(options, (_k, v: unknown) =>
@@ -48,14 +56,16 @@ export function tscEngineFp(root: string, options: ts.CompilerOptions): string {
   parts.push(
     `lock ${existsSync(lock) ? lockfileLintDigest(readFileSync(lock, "utf8")) : "-"}`,
   );
-  const patches = join(root, "patches");
+  const patches = joinAppPath(root, "patches");
   if (existsSync(patches)) {
     for (const entry of readdirSync(patches, {
       recursive: true,
       withFileTypes: true,
     })
       .filter((e) => e.isFile())
-      .map((e) => join(e.parentPath, e.name))
+      .map((e) =>
+        joinAppPath(patches, relative(patches, join(e.parentPath, e.name))),
+      )
       .sort()) {
       parts.push(
         `patch ${rel(root, entry)} ${sha256(readFileSync(entry, "utf8"))}`,
@@ -72,7 +82,7 @@ export function sourcesFp(files: readonly string[]): string {
     files
       .map(
         (own) =>
-          `source ${own} ${sha256(readFileSync(join(import.meta.dir, own), "utf8"))}`,
+          `source ${own} ${sha256(readFileSync(joinAppPath(asAppPath(import.meta.dir), own), "utf8"))}`,
       )
       .join("\n"),
   );
@@ -100,7 +110,10 @@ export function producerSources(): string[] {
     const f = stack.pop()!;
     if (seen.has(f)) continue;
     seen.add(f);
-    const text = readFileSync(join(import.meta.dir, f), "utf8");
+    const text = readFileSync(
+      joinAppPath(asAppPath(import.meta.dir), f),
+      "utf8",
+    );
     for (const imp of ts.preProcessFile(text, true, true).importedFiles) {
       const m = /^\.\/([^/]+?)(\.ts)?$/.exec(imp.fileName);
       if (m !== null) stack.push(`${m[1]}.ts`);

@@ -3,6 +3,7 @@ import {
   type PluginNode,
   type PluginTree,
 } from "./plugin-tree";
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 const structureTreeCache = new Map<string, Promise<PluginTree>>();
 
@@ -35,7 +36,7 @@ const structureTreeCache = new Map<string, Promise<PluginTree>>();
  * lint rule.
  */
 export function buildStructureTreeOnce(
-  pluginsRoot: string,
+  pluginsRoot: AppPath,
 ): Promise<PluginTree> {
   let cached = structureTreeCache.get(pluginsRoot);
   if (!cached) {

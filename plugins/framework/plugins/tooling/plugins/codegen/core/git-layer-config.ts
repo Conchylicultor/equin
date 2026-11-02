@@ -1,5 +1,8 @@
 import { existsSync, readFileSync } from "fs";
-import { join } from "path";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   computeHash,
   parseConfigFile,
@@ -24,7 +27,7 @@ import type { FieldsRecord } from "@plugins/fields/core";
  * missing one means the file was hand-edited or truncated. Silently accepting it
  * would let the reader compute a closure from half a config.
  */
-function strictReadOnlyFileConfigProxy(filePath: string): ConfigProxy {
+function strictReadOnlyFileConfigProxy(filePath: AppPath): ConfigProxy {
   return {
     read() {
       if (!existsSync(filePath)) return null;
@@ -75,7 +78,7 @@ function strictReadOnlyFileConfigProxy(filePath: string): ConfigProxy {
  */
 function nonStaleOriginProxy(
   descriptor: ConfigDescriptor,
-  filePath: string,
+  filePath: AppPath,
 ): ConfigProxy {
   if (descriptor.originDefaultsFrom !== "descriptor") {
     throw new Error(
@@ -116,15 +119,18 @@ function nonStaleOriginProxy(
  */
 export function readGitLayerConfig<F extends FieldsRecord>(
   descriptor: ConfigDescriptor<F, "descriptor">,
-  opts: { root: string; hierarchyPath: string },
+  opts: { root: AppPath; hierarchyPath: string },
 ): ConfigValues<F> {
-  const gitDir = join(opts.root, "config", opts.hierarchyPath);
+  // `root`: the checkout root the caller works in.
+  const gitDir = joinAppPath(opts.root, "config", opts.hierarchyPath);
   return readTypedConfig(
     descriptor,
     nonStaleOriginProxy(
       descriptor as ConfigDescriptor,
-      join(gitDir, `${descriptor.name}.origin.jsonc`),
+      joinAppPath(gitDir, `${descriptor.name}.origin.jsonc`),
     ),
-    strictReadOnlyFileConfigProxy(join(gitDir, `${descriptor.name}.jsonc`)),
+    strictReadOnlyFileConfigProxy(
+      joinAppPath(gitDir, `${descriptor.name}.jsonc`),
+    ),
   );
 }

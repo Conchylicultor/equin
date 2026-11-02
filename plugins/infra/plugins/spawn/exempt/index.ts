@@ -19,4 +19,10 @@ export default [
     task: "task-1792338443-riwqev",
     reason: "not yet split into server/ + machine/",
   },
+  {
+    rule: "user-path/no-unproven-claim",
+    paths: ["core/internal/git-roots.ts"],
+    kind: "sanctioned",
+    reason: "git's own answer for the checkout the app runs from.",
+  },
 ] satisfies Exemptions;

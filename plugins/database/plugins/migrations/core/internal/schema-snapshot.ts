@@ -31,6 +31,10 @@ import {
   snapshotLineage,
   type SnapshotLineage,
 } from "@plugins/database/plugins/migrations/plugins/phases/core";
+import {
+  type AppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /** The tip snapshot body, under `data/meta/`. */
 export const SCHEMA_SNAPSHOT_FILE = "schema.snapshot.json";
@@ -56,7 +60,7 @@ const HEAD_BYTES = 1024;
 const HEAD_RE = /^\{\s*"id":\s*"([^"]+)",\s*"prevId":\s*"([^"]+)"/;
 
 /** The first `HEAD_BYTES` of `path`, or null when it does not exist. */
-export function readStart(path: string): string | null {
+export function readStart(path: AppPath): string | null {
   let fd: number;
   try {
     fd = openSync(path, "r");
@@ -110,19 +114,19 @@ export function parseSnapshotHead(text: string, where: string): SnapshotHead {
 }
 
 /** The head of the snapshot at `path`, or null when the file does not exist. */
-export function readSnapshotHead(path: string): SnapshotHead | null {
+export function readSnapshotHead(path: AppPath): SnapshotHead | null {
   const start = readStart(path);
   return start === null ? null : parseSnapshotHead(start, path);
 }
 
 /** `data/meta/schema.snapshot.json` for `dataDir`. */
-export function schemaSnapshotPath(dataDir: string): string {
-  return join(dataDir, "meta", SCHEMA_SNAPSHOT_FILE);
+export function schemaSnapshotPath(dataDir: AppPath): AppPath {
+  return joinAppPath(dataDir, "meta", SCHEMA_SNAPSHOT_FILE);
 }
 
 /** `data/meta/legacy-snapshots.json` for `dataDir`. */
-export function legacySnapshotsPath(dataDir: string): string {
-  return join(dataDir, "meta", LEGACY_SNAPSHOTS_FILE);
+export function legacySnapshotsPath(dataDir: AppPath): AppPath {
+  return joinAppPath(dataDir, "meta", LEGACY_SNAPSHOTS_FILE);
 }
 
 /**
@@ -130,7 +134,7 @@ export function legacySnapshotsPath(dataDir: string): string {
  * tree from before the cutover, or a fresh repo). A malformed file throws.
  */
 export function readLegacySnapshots(
-  dataDir: string,
+  dataDir: AppPath,
 ): Map<string, SnapshotHead> | null {
   const path = legacySnapshotsPath(dataDir);
   if (!existsSync(path)) return null;
@@ -174,7 +178,7 @@ export function renderLegacySnapshots(
 }
 
 /** Every pre-cutover `<tag>_snapshot.json` still under `data/meta/`, sorted. */
-export function legacySnapshotFiles(dataDir: string): string[] {
+export function legacySnapshotFiles(dataDir: AppPath): string[] {
   const metaDir = join(dataDir, "meta");
   if (!existsSync(metaDir)) return [];
   return readdirSync(metaDir)
@@ -194,16 +198,16 @@ export function legacySnapshotFileOf(sql: string): string {
 
 /** The snapshot header of `data/<file>`, read from its first line; null when it has none. */
 export function readSnapshotLineage(
-  dataDir: string,
+  dataDir: AppPath,
   file: string,
 ): SnapshotLineage | null {
-  const start = readStart(join(dataDir, file));
+  const start = readStart(joinAppPath(dataDir, file));
   return start === null ? null : snapshotLineage(start);
 }
 
 /** `readSnapshotLineage`, read with `readStartAsync`. */
 export async function readSnapshotLineageAsync(
-  dataDir: string,
+  dataDir: AppPath,
   file: string,
 ): Promise<SnapshotLineage | null> {
   const start = await readStartAsync(join(dataDir, file));
@@ -216,13 +220,13 @@ export async function readSnapshotLineageAsync(
  * build folds it — a sibling `<tag>_snapshot.json`.
  */
 function isSchemaFile(
-  dataDir: string,
+  dataDir: AppPath,
   file: string,
   legacy: ReadonlyMap<string, SnapshotHead> | null,
 ): boolean {
   if (!file.endsWith(".sql")) return false;
   if (legacy?.has(file.slice(0, -".sql".length))) return true;
-  if (existsSync(join(dataDir, "meta", legacySnapshotFileOf(file))))
+  if (existsSync(joinAppPath(dataDir, "meta", legacySnapshotFileOf(file))))
     return true;
   return readSnapshotLineage(dataDir, file) !== null;
 }
@@ -232,12 +236,12 @@ function isSchemaFile(
  * and an adoption file are everything else. For a loop over `data/`, read the
  * whole set once with `schemaMigrationFiles`.
  */
-export function isSchemaMigration(dataDir: string, file: string): boolean {
+export function isSchemaMigration(dataDir: AppPath, file: string): boolean {
   return isSchemaFile(dataDir, file, readLegacySnapshots(dataDir));
 }
 
 /** Every `.sql` basename in `dataDir` that `isSchemaMigration` holds for. */
-export function schemaMigrationFiles(dataDir: string): Set<string> {
+export function schemaMigrationFiles(dataDir: AppPath): Set<string> {
   const legacy = readLegacySnapshots(dataDir);
   return new Set(
     readdirSync(dataDir).filter((f) => isSchemaFile(dataDir, f, legacy)),

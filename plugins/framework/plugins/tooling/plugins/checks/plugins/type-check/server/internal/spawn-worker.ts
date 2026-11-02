@@ -11,9 +11,13 @@
  * `Grant` lane, then the holder's grant units. The worker is spawned through
  * that slot, so it runs in the foreground. See ./worker-pool.ts.
  */
+import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { writeFileSync } from "fs";
 import os from "os";
-import { join } from "path";
 import { fileURLToPath } from "url";
 import type { Grant } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import type { ForegroundSlot } from "@plugins/infra/plugins/host/plugins/host-admission/server";
@@ -110,7 +114,7 @@ export interface TypeCheckWorkerRun {
  * checks an agent branch and is interactive.
  */
 export async function spawnTypeCheckWorker(opts: {
-  root: string;
+  root: AppPath;
   name: string;
   tsconfigPath: string;
   tscMode: TypeCheckWorkerJob["tscMode"];
@@ -187,7 +191,10 @@ async function spawnWorker(opts: {
   slot: ForegroundSlot;
 }): Promise<Omit<TypeCheckWorkerRun, "slotWaitMs">> {
   const { root, name, job, slot } = opts;
-  const jobPath = join(os.tmpdir(), `type-check-${name}-${process.pid}.json`);
+  const jobPath = joinAppPath(
+    asAppPath(os.tmpdir()),
+    `type-check-${name}-${process.pid}.json`,
+  );
   writeFileSync(jobPath, JSON.stringify(job));
   const startedAt = performance.now();
   const spawned = await slot.spawn([process.execPath, WORKER, jobPath], {

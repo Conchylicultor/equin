@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { resolve } from "node:path";
 import {
   MAIN_COMPOSITION_ID,
@@ -54,7 +55,7 @@ export class MainNamespaceCollisionError extends Error {
  * Async because the answer comes from git. `getMainRepoRoot` is memoized per
  * cwd, so repeated calls cost one spawn per process.
  */
-export async function checkoutRef(root: string): Promise<CheckoutRef> {
+export async function checkoutRef(root: AppPath): Promise<CheckoutRef> {
   const mainRoot = await getMainRepoRoot(root);
   const name = checkoutWorktreeName(root);
   if (resolve(root) !== resolve(mainRoot)) return { kind: "worktree", name };
@@ -85,7 +86,7 @@ export async function checkoutRef(root: string): Promise<CheckoutRef> {
  * serving it: a checkout that has never been built still has one. Ask
  * `resolveCheckoutDeploy(root)` when the question is what is actually deployed.
  */
-export async function checkoutNamespace(root: string): Promise<Namespace> {
+export async function checkoutNamespace(root: AppPath): Promise<Namespace> {
   return namespaceFor(MAIN_COMPOSITION_ID, await checkoutRef(root));
 }
 
@@ -96,7 +97,9 @@ export async function checkoutNamespace(root: string): Promise<Namespace> {
  * reclaim a dir whose checkout is gone even when no attempt row or composition
  * marker names it. One function, so an op cannot mint without stamping.
  */
-export async function actAsCheckoutNamespace(root: string): Promise<Namespace> {
+export async function actAsCheckoutNamespace(
+  root: AppPath,
+): Promise<Namespace> {
   const ns = await checkoutNamespace(root);
   stampCheckoutOwner(ns, root);
   return ns;

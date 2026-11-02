@@ -1,4 +1,4 @@
-import { join } from "node:path";
+import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { defineFileSink } from "@plugins/infra/plugins/file-sink/core";
 import { logsDir } from "./persist";
 
@@ -25,5 +25,5 @@ export const clientLogFamily = defineFileSink({
     "browser-supplied ids). Every <channel>.jsonl written by POST /api/logs/emit " +
     "shares this 128 MB × 3 rotation via openDynamicSink; this representative " +
     "entry makes the family enumerable/bounded in getFileSinks().",
-  path: () => join(logsDir(), "client-log.jsonl"),
+  path: () => joinAppPath(logsDir(), "client-log.jsonl"),
 });

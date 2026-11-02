@@ -17,6 +17,10 @@
  */
 
 import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   readEnv,
   setEnv,
   unsetEnv,
@@ -42,7 +46,7 @@ type Plan = Extract<Preparation, { finalize: unknown }>["plan"];
 // the TypeScript compiler is seconds on a loaded host.
 const TIMEOUT_MS = 60_000;
 
-let root = "";
+let root: AppPath = asAppPath("");
 let dataRoot = "";
 const priorDataRoot = readEnv("DIR");
 
@@ -76,7 +80,7 @@ beforeAll(async () => {
   // The stores are host-global; `EQUIN_DIR` points them at a temp root.
   dataRoot = mkdtempSync(join(tmpdir(), "type-check-records-data-"));
   setEnv("DIR", dataRoot);
-  root = mkdtempSync(join(tmpdir(), "type-check-records-"));
+  root = asAppPath(mkdtempSync(join(tmpdir(), "type-check-records-")));
   write(".gitignore", ".cache/\n");
   write(
     "tsconfig.json",

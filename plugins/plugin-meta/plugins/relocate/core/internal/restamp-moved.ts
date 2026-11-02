@@ -21,7 +21,11 @@
 // plugin reused — fails the comparison and is left to the usual staleness gates.
 
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { basename, dirname, join } from "node:path";
+import { basename, dirname } from "node:path";
+import {
+  type AppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { APP_SCOPE_DIR } from "@plugins/config_v2/core";
 import {
   configTextHash,
@@ -36,11 +40,11 @@ import { sameDocumentModuloOrder } from "./same-document";
 const ORIGIN_SUFFIX = ".origin.jsonc";
 
 /** Every committed origin under `configDir`, by `config/`-relative path → text. */
-export function snapshotConfigOrigins(configDir: string): Map<string, string> {
+export function snapshotConfigOrigins(configDir: AppPath): Map<string, string> {
   const out = new Map<string, string>();
   for (const rel of walkConfigFiles(configDir)) {
     if (rel.endsWith(ORIGIN_SUFFIX)) {
-      out.set(rel, readFileSync(join(configDir, rel), "utf8"));
+      out.set(rel, readFileSync(joinAppPath(configDir, rel), "utf8"));
     }
   }
   return out;
@@ -48,19 +52,19 @@ export function snapshotConfigOrigins(configDir: string): Map<string, string> {
 
 /** The overrides anchored to an origin: its base `<name>.jsonc` and every
  *  `@app/<id>/<name>.jsonc` scope (a scope anchors to the BASE origin). */
-function overridesOf(configDir: string, originRel: string): string[] {
+function overridesOf(configDir: AppPath, originRel: string): string[] {
   const dir = dirname(originRel);
   const name = basename(originRel, ORIGIN_SUFFIX);
   const at = (rel: string) => (dir === "." ? rel : `${dir}/${rel}`);
   const out = [at(`${name}.jsonc`)];
-  const scopes = join(configDir, at(APP_SCOPE_DIR));
+  const scopes = joinAppPath(configDir, at(APP_SCOPE_DIR));
   if (existsSync(scopes)) {
     for (const e of readdirSync(scopes, { withFileTypes: true })) {
       if (e.isDirectory())
         out.push(at(`${APP_SCOPE_DIR}/${e.name}/${name}.jsonc`));
     }
   }
-  return out.filter((rel) => existsSync(join(configDir, rel)));
+  return out.filter((rel) => existsSync(joinAppPath(configDir, rel)));
 }
 
 /**
@@ -70,15 +74,15 @@ function overridesOf(configDir: string, originRel: string): string[] {
  * Returns the re-stamped overrides, `config/`-relative, sorted.
  */
 export function restampMovedOverrides(opts: {
-  root: string;
+  root: AppPath;
   prior: ReadonlyMap<string, string>;
 }): string[] {
   const moves = readPluginMoves(opts.root);
   if (moves.length === 0) return [];
-  const configDir = join(opts.root, "config");
+  const configDir = joinAppPath(opts.root, "config");
   const restamped: string[] = [];
   for (const [rel, before] of opts.prior) {
-    const path = join(configDir, rel);
+    const path = joinAppPath(configDir, rel);
     if (!existsSync(path)) continue;
     const after = readFileSync(path, "utf8");
     const oldHash = configTextHash(before);
@@ -100,7 +104,7 @@ export function restampMovedOverrides(opts: {
       continue;
 
     for (const override of overridesOf(configDir, rel)) {
-      const file = join(configDir, override);
+      const file = joinAppPath(configDir, override);
       const text = readFileSync(file, "utf8");
       if (configTextHash(text) !== oldHash) continue;
       writeFileSync(file, withConfigTextHash(text, newHash));

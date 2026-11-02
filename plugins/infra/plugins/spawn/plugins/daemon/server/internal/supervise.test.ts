@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { defineDaemon } from "./define";
 import {
   daemonRecentRuns,
@@ -269,7 +270,7 @@ describe("pid files", () => {
 
   test("attach follows a pid file: absent → starting, live → running, dead → exited, new pid → restart", async () => {
     const dir = newTmpDir();
-    const pidFile = join(dir, "x.pid");
+    const pidFile = asAppPath(join(dir, "x.pid"));
     const inst = decl.attach({ pidFile });
     live.push(inst);
     expect(inst.state).toBe("starting");

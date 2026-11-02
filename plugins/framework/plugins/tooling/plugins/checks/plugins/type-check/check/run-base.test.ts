@@ -65,6 +65,7 @@ import {
   type Preparation,
   type ProgramOutcome,
 } from "./prepare";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 type Session = Extract<Preparation, { finalize: unknown }>;
 type Plan = Session["plan"];
@@ -73,7 +74,7 @@ type Plan = Session["plan"];
 // the TypeScript compiler is seconds on a loaded host, per data dir.
 const TIMEOUT_MS = 180_000;
 
-let root = "";
+let root = asAppPath("");
 let dataRoot = "";
 const scratch: string[] = [];
 const priorDataRoot = readEnv("DIR");
@@ -112,7 +113,7 @@ const MANIFEST = "plugins/search/exempt/index.ts";
 beforeAll(async () => {
   dataRoot = mkdtempSync(join(tmpdir(), "type-check-run-base-data-"));
   setEnv("DIR", dataRoot);
-  root = mkdtempSync(join(tmpdir(), "type-check-run-base-"));
+  root = asAppPath(mkdtempSync(join(tmpdir(), "type-check-run-base-")));
   write(".gitignore", ".cache/\n");
   write(
     "tsconfig.json",

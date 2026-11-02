@@ -8,8 +8,13 @@ import {
   readdirSync,
   rmdirSync,
 } from "fs";
+import {
+  appPathParent,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { randomUUID } from "crypto";
-import { dirname, join, relative } from "path";
+import { basename, dirname, join, relative } from "path";
 import { parse as parseJsonc } from "jsonc-parser";
 import { buildEnrichedTree } from "./enriched-tree";
 import {
@@ -69,7 +74,7 @@ function isConfigDescriptor(v: unknown): v is ConfigDescriptor {
   );
 }
 
-async function discoverConfigs(root: string): Promise<DiscoveredConfig[]> {
+async function discoverConfigs(root: AppPath): Promise<DiscoveredConfig[]> {
   const tree = await buildEnrichedTree(root);
   registerBarrelStubs(root);
 
@@ -89,7 +94,8 @@ async function discoverConfigs(root: string): Promise<DiscoveredConfig[]> {
     // portable config_v2 server half), exactly where
     // `config-v2:registrations-paired` looks.
     for (const runtime of SERVER_HALF_RUNTIMES) {
-      const barrelPath = join(node.dir, runtime, "index.ts");
+      // A plugin dir of this checkout's tree.
+      const barrelPath = joinAppPath(node.dir, runtime, "index.ts");
       if (!existsSync(barrelPath)) continue;
       results.push(...(await configsOfBarrel(barrelPath, node.id)));
     }
@@ -240,7 +246,7 @@ export function resolveOriginAnnotations(
  * processes resolve identical annotation comments.
  */
 export type OriginAnnotationsPreparer = (
-  root: string,
+  root: AppPath,
 ) => Promise<OriginAnnotationsProvider | undefined>;
 
 let defaultOriginAnnotationsPreparer: OriginAnnotationsPreparer | undefined;
@@ -299,7 +305,7 @@ export function resolveOriginDefaults(
  * identical defaults.
  */
 export type OriginDefaultsPreparer = (
-  root: string,
+  root: AppPath,
 ) => Promise<OriginDefaultsProvider | undefined>;
 
 let defaultOriginDefaultsPreparer: OriginDefaultsPreparer | undefined;
@@ -379,7 +385,7 @@ export function renderOriginJsonc(
 }
 
 export async function renderConfigOriginContent(opts: {
-  root: string;
+  root: AppPath;
   originAnnotations?: OriginAnnotationsProvider;
   originDefaults?: OriginDefaultsProvider;
 }): Promise<Map<string, string>> {
@@ -420,7 +426,7 @@ export async function renderConfigOriginContent(opts: {
  * {@link renderConfigOriginContent}, so the two maps zip by key.
  */
 export async function loadConfigDescriptorsByOriginPath(opts: {
-  root: string;
+  root: AppPath;
 }): Promise<Map<string, ConfigDescriptor>> {
   const configs = await discoverConfigs(opts.root);
   const result = new Map<string, ConfigDescriptor>();
@@ -432,23 +438,24 @@ export async function loadConfigDescriptorsByOriginPath(opts: {
 
 /** Every `*.jsonc` under `dir`, as paths relative to `baseDir` (forward slashes). */
 export function walkJsoncFiles(
-  dir: string,
-  baseDir: string,
+  dir: AppPath,
+  baseDir: AppPath,
   out: string[],
 ): void {
   if (!existsSync(dir)) return;
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const full = join(dir, entry.name);
+    const full = joinAppPath(dir, entry.name);
     if (entry.isDirectory()) walkJsoncFiles(full, baseDir, out);
     else if (entry.isFile() && entry.name.endsWith(".jsonc"))
       out.push(relative(baseDir, full).split("\\").join("/"));
   }
 }
 
-function removeEmptyDirs(dir: string, rootDir: string): void {
+function removeEmptyDirs(dir: AppPath, rootDir: AppPath): void {
   if (!existsSync(dir)) return;
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    if (entry.isDirectory()) removeEmptyDirs(join(dir, entry.name), rootDir);
+    if (entry.isDirectory())
+      removeEmptyDirs(joinAppPath(dir, entry.name), rootDir);
   }
   if (dir === rootDir) return;
   if (readdirSync(dir).length > 0) return;
@@ -515,7 +522,7 @@ function renderStrandedReport(stranded: readonly string[]): string {
  * tree exactly as it found it and can simply be re-run after the fix.
  */
 export function pruneOrphanedConfigFiles(opts: {
-  configDir: string;
+  configDir: AppPath;
   liveOriginRelPaths: Set<string>;
 }): string[] {
   if (!existsSync(opts.configDir)) return [];
@@ -545,25 +552,27 @@ export function pruneOrphanedConfigFiles(opts: {
   // Decide the whole batch before touching the disk.
   if (stranded.length > 0) throw new Error(renderStrandedReport(stranded));
 
-  for (const relPath of prunable) unlinkSync(join(opts.configDir, relPath));
+  for (const relPath of prunable)
+    unlinkSync(joinAppPath(opts.configDir, relPath));
 
   if (prunable.length > 0) removeEmptyDirs(opts.configDir, opts.configDir);
   return prunable;
 }
 
 export async function generateConfigOrigins(opts: {
-  root: string;
+  root: AppPath;
   originAnnotations?: OriginAnnotationsProvider;
   originDefaults?: OriginDefaultsProvider;
 }): Promise<void> {
   const rendered = await renderConfigOriginContent(opts);
-  const configDir = join(opts.root, "config");
+  // `root`: the checkout root the caller works in.
+  const configDir = joinAppPath(opts.root, "config");
 
   for (const [relPath, content] of rendered) {
     // `.jsonc` is not in the format allowlist, so the funnel returns these bytes
     // unchanged — routing through it anyway is what keeps one write idiom for
     // every generated artifact. It also creates the parent dir on the write path.
-    await writeGenerated({ file: join(configDir, relPath), content });
+    await writeGenerated({ file: joinAppPath(configDir, relPath), content });
   }
 
   // Prune anything whose descriptor disappeared, so removing a `defineConfig`
@@ -580,7 +589,7 @@ export async function generateConfigOrigins(opts: {
   }
 }
 
-export function fileConfigProxy(filePath: string): ConfigProxy {
+export function fileConfigProxy(filePath: AppPath): ConfigProxy {
   return {
     read() {
       if (!existsSync(filePath)) return null;
@@ -595,7 +604,10 @@ export function fileConfigProxy(filePath: string): ConfigProxy {
       let str = "";
       if (hash !== null) str += `// @hash ${hash}\n`;
       str += JSON.stringify(content, null, 2) + "\n";
-      const tmp = `${filePath}.tmp-${randomUUID()}`;
+      const tmp = joinAppPath(
+        appPathParent(filePath),
+        `${basename(filePath)}.tmp-${randomUUID()}`,
+      );
       try {
         mkdirSync(dirname(filePath), { recursive: true });
         writeFileSync(tmp, str, "utf-8");
@@ -640,25 +652,26 @@ export function fileConfigProxy(filePath: string): ConfigProxy {
 export function readEffectiveConfigFromDisk<F extends FieldsRecord>(
   descriptor: ConfigDescriptor<F>,
   opts: {
-    root: string;
-    userConfigDir: string;
+    root: AppPath;
+    userConfigDir: AppPath;
     hierarchyPath: string;
   },
 ): ConfigValues<F> {
-  const gitDir = join(opts.root, "config", opts.hierarchyPath);
+  const root = opts.root;
+  const gitDir = joinAppPath(root, "config", opts.hierarchyPath);
   const gitOrigin = fileConfigProxy(
-    join(gitDir, `${descriptor.name}.origin.jsonc`),
+    joinAppPath(gitDir, `${descriptor.name}.origin.jsonc`),
   );
   const gitOverwrites = fileConfigProxy(
-    join(gitDir, `${descriptor.name}.jsonc`),
+    joinAppPath(gitDir, `${descriptor.name}.jsonc`),
   );
 
-  const userDir = join(opts.userConfigDir, opts.hierarchyPath);
+  const userDir = joinAppPath(opts.userConfigDir, opts.hierarchyPath);
   const userOrigin = fileConfigProxy(
-    join(userDir, `${descriptor.name}.origin.jsonc`),
+    joinAppPath(userDir, `${descriptor.name}.origin.jsonc`),
   );
   const userOverwrites = fileConfigProxy(
-    join(userDir, `${descriptor.name}.jsonc`),
+    joinAppPath(userDir, `${descriptor.name}.jsonc`),
   );
 
   // The origin is the git-effective document — what `propagateConfigToUser`
@@ -695,11 +708,14 @@ export function readEffectiveConfigFromDisk<F extends FieldsRecord>(
  * and not a namespace: that path is the bundle's own layout, not the root's.
  */
 export async function propagateConfigToUser(opts: {
-  root: string;
-  userConfigDir: string;
+  root: AppPath;
+  userConfigDir: AppPath;
 }): Promise<{ migrations: AppliedConfigMigration[] }> {
-  const configs = await discoverConfigs(opts.root);
-  const { userConfigDir } = opts;
+  // The checkout root and the namespace's user-config dir (or the release
+  // bundle's staged one): both the app's own.
+  const root = opts.root;
+  const userConfigDir = opts.userConfigDir;
+  const configs = await discoverConfigs(root);
 
   // Saved values follow a config's shape change BEFORE propagation compares
   // them: replay every config migration this namespace has not applied yet.
@@ -708,15 +724,15 @@ export async function propagateConfigToUser(opts: {
 
   for (const { hierarchyPath, descriptor } of configs) {
     const gitOrigin = fileConfigProxy(
-      join(
-        opts.root,
+      joinAppPath(
+        root,
         "config",
         hierarchyPath,
         `${descriptor.name}.origin.jsonc`,
       ),
     );
     const gitOverwrites = fileConfigProxy(
-      join(opts.root, "config", hierarchyPath, `${descriptor.name}.jsonc`),
+      joinAppPath(root, "config", hierarchyPath, `${descriptor.name}.jsonc`),
     );
 
     // Per-app scoped overrides expressed in git: config/<hier>/@app/<id>/<name>.jsonc.
@@ -725,7 +741,7 @@ export async function propagateConfigToUser(opts: {
     // as the user scoped origin, mirroring the base layer — so a committed scope
     // reaches a fresh install. No scoped origin is ever committed (codegen has no
     // scoped defaults; the base origin is the hash anchor for the scoped override).
-    const gitAppDir = join(opts.root, "config", hierarchyPath, APP_SCOPE_DIR);
+    const gitAppDir = joinAppPath(root, "config", hierarchyPath, APP_SCOPE_DIR);
     const gitScopedDeltas = new Map<string, ConfigProxy>();
     if (existsSync(gitAppDir)) {
       for (const appEntry of readdirSync(gitAppDir, { withFileTypes: true })) {
@@ -733,7 +749,7 @@ export async function propagateConfigToUser(opts: {
         gitScopedDeltas.set(
           appEntry.name,
           fileConfigProxy(
-            join(gitAppDir, appEntry.name, `${descriptor.name}.jsonc`),
+            joinAppPath(gitAppDir, appEntry.name, `${descriptor.name}.jsonc`),
           ),
         );
       }
@@ -747,7 +763,8 @@ export async function propagateConfigToUser(opts: {
     const { conflicts } = propagateGitLayerDocument(
       storePath,
       gitLayer,
-      (ref) => fileConfigProxy(join(userConfigDir, configFileRelPath(ref))),
+      (ref) =>
+        fileConfigProxy(joinAppPath(userConfigDir, configFileRelPath(ref))),
     );
     for (const ref of conflicts) {
       const where = join(
@@ -768,7 +785,7 @@ export async function propagateConfigToUser(opts: {
     // (override reconciled or deleted out-of-band). Self-correcting cleanup so
     // the file never lingers and can't seed a stale merge base on a future
     // conflict.
-    const ancestorPath = join(
+    const ancestorPath = joinAppPath(
       userConfigDir,
       configFileRelPath({ storePath, file: "ancestor" }),
     );
@@ -781,15 +798,15 @@ export async function propagateConfigToUser(opts: {
     // truth (the base layer self-heals the same way via propagate). A runtime user
     // fork (a scoped override with no git backing) is per-user state, not stale
     // propagation, so it is preserved.
-    const userAppDir = join(userConfigDir, hierarchyPath, APP_SCOPE_DIR);
+    const userAppDir = joinAppPath(userConfigDir, hierarchyPath, APP_SCOPE_DIR);
     if (!existsSync(userAppDir)) continue;
     for (const appEntry of readdirSync(userAppDir, { withFileTypes: true })) {
       if (!appEntry.isDirectory()) continue;
       const appId = appEntry.name;
       if (gitScopedAppIds.has(appId)) continue;
-      const appDir = join(userAppDir, appId);
-      if (existsSync(join(appDir, `${descriptor.name}.jsonc`))) continue; // runtime fork — keep
-      const stalePropagatedOrigin = join(
+      const appDir = joinAppPath(userAppDir, appId);
+      if (existsSync(joinAppPath(appDir, `${descriptor.name}.jsonc`))) continue; // runtime fork — keep
+      const stalePropagatedOrigin = joinAppPath(
         appDir,
         `${descriptor.name}.origin.jsonc`,
       );

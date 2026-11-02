@@ -20,6 +20,7 @@
  * Loaded under Bun (the worker) and under a jiti carrying the `@plugins` alias
  * (`eslint.config.ts`), so `@plugins/*` imports resolve in both.
  */
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type TsEslintPlugin from "@typescript-eslint/eslint-plugin";
 import type TsEslintParser from "@typescript-eslint/parser";
 import type { ESLint, Linter } from "eslint";
@@ -231,7 +232,7 @@ function buildClassRules(
  * contribution silently stops enforcing its rules.
  */
 export async function loadLintContributions(
-  root: string,
+  root: AppPath,
 ): Promise<LoadedLintContribution[]> {
   const toolkit = createLintToolkit(readDeclaredUtilities(root));
   const lintEntries = await loadLintEntries();
@@ -408,7 +409,7 @@ export interface LintRuleSelection {
 
 export interface BuildLintConfigOptions {
   /** Repo root — anchors `tsconfigRootDir`. */
-  root: string;
+  root: AppPath;
   /** projectService (IDE/CLI) or a pre-built program set (type-check worker). */
   typeSource: ParserTypeSource;
   exemptions: LintExemptionMode;
@@ -747,7 +748,7 @@ function isRuleEntryOff(entry: Linter.RuleEntry): boolean {
  * `kind: "type-aware"` selection registers a rule.
  */
 export async function typeAwareLintGroups(
-  root: string,
+  root: AppPath,
 ): Promise<{ base: boolean; contributions: Set<string> }> {
   const [contributions, tsPlugin, reactHooks, builtinRules] = await Promise.all(
     [

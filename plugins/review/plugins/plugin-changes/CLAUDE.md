@@ -86,7 +86,6 @@ trees; no ledger read). Refused `missing` (a sha names no commit) and `no-base`
     - `infra/git/git-watcher.lastKnownMainSha`
     - `infra/host/host-read-pool.withHeavyReadSlot`
     - `infra/paths.GIT`
-    - `infra/paths.REPO_ROOT`
     - `network/live.serveValue`
     - `primitives/commit-list.runGit`
   - Resources:
@@ -133,7 +132,7 @@ trees; no ledger read). Refused `missing` (a sha names no commit) and `no-base`
     - `review/plugin-changes/api-changes`
     - `review/plugin-changes/file-changes`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/push-plugin-changes.ts`, `server/internal/main-plugins-dir.ts` (debt)
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/push-plugin-changes.ts` (debt)
 - Sub-plugins:
   - **`api-changes`** (excluded) — API surface diff section for per-plugin review cards.
   - **`file-changes`** (excluded) — File-level diff section for per-plugin review cards.

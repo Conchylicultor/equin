@@ -1,4 +1,7 @@
-import { join } from "path";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { loadLintContributions } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import type * as ChecksCore from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { writeGenerated } from "./write-generated";
@@ -49,7 +52,7 @@ interface ExemptRuleIdSets {
 
 /** The exemptable ids and their sanctioned-only subset, read off the live rules. */
 export async function collectExemptRuleIds(
-  root: string,
+  root: AppPath,
 ): Promise<ExemptRuleIdSets> {
   const { listAllChecks } = (await import(CHECKS_CORE)) as typeof ChecksCore;
   const [contributions, checks] = await Promise.all([
@@ -82,7 +85,7 @@ function renderUnion(ids: readonly string[]): string {
     : `\n${ids.map((id) => `  | ${JSON.stringify(id)}`).join("\n")}`;
 }
 
-export async function renderExemptRuleIds(root: string): Promise<string> {
+export async function renderExemptRuleIds(root: AppPath): Promise<string> {
   const { exemptable, sanctionedOnly } = await collectExemptRuleIds(root);
   return [
     `${HEADER}\n`,
@@ -94,14 +97,15 @@ export async function renderExemptRuleIds(root: string): Promise<string> {
   ].join("\n");
 }
 
-export function exemptRuleIdsPath(root: string): string {
-  return join(root, EXEMPT_RULE_IDS_REL_PATH);
+export function exemptRuleIdsPath(root: AppPath): AppPath {
+  // `root`: the checkout root the caller works in.
+  return joinAppPath(root, EXEMPT_RULE_IDS_REL_PATH);
 }
 
 export async function generateExemptRuleIds({
   root,
 }: {
-  root: string;
+  root: AppPath;
 }): Promise<void> {
   await writeGenerated({
     file: exemptRuleIdsPath(root),

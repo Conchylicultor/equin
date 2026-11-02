@@ -15,13 +15,18 @@ import { appendFileSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTranscriptTail } from "./tail";
+import {
+  type AppPath,
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 const dirs: string[] = [];
 
-function scratchFile(initial = ""): string {
-  const dir = mkdtempSync(join(tmpdir(), "sg-tail-"));
+function scratchFile(initial = ""): AppPath {
+  const dir = asAppPath(mkdtempSync(join(tmpdir(), "sg-tail-")));
   dirs.push(dir);
-  const path = join(dir, "run.log");
+  const path = joinAppPath(dir, "run.log");
   writeFileSync(path, initial);
   return path;
 }
@@ -32,7 +37,7 @@ afterEach(() => {
 });
 
 function tailInto(
-  path: string,
+  path: AppPath,
   opts?: { fromOffset?: number; ceilingBytes?: number },
 ): { lines: string[]; tail: ReturnType<typeof createTranscriptTail> } {
   const lines: string[] = [];
@@ -134,9 +139,9 @@ describe("createTranscriptTail", () => {
   });
 
   test("a missing transcript is not an error — nothing to publish yet", () => {
-    const dir = mkdtempSync(join(tmpdir(), "sg-tail-"));
+    const dir = asAppPath(mkdtempSync(join(tmpdir(), "sg-tail-")));
     dirs.push(dir);
-    const { lines, tail } = tailInto(join(dir, "never-written.log"));
+    const { lines, tail } = tailInto(joinAppPath(dir, "never-written.log"));
     expect(() => tail.pump()).not.toThrow();
     expect(lines).toEqual([]);
   });

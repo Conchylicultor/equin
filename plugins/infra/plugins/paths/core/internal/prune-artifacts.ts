@@ -1,5 +1,8 @@
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readdirSync, statSync, unlinkSync } from "node:fs";
-import { join } from "node:path";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import {
   RUN_TERMINAL_SUFFIX,
@@ -178,9 +181,9 @@ function isCrashedWriteTemp(
  * Delete one entry, tolerating the races inherent to concurrent readers/writers
  * (it vanished between the scan and the unlink) but loud on any other fs error.
  */
-function unlinkQuiet(dir: string, entry: string): void {
+function unlinkQuiet(dir: AppPath, entry: string): void {
   try {
-    unlinkSync(join(dir, entry));
+    unlinkSync(joinAppPath(dir, entry));
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
   }
@@ -200,7 +203,7 @@ function unlinkQuiet(dir: string, entry: string): void {
  * → skip) but loud on any other fs error, so a real problem still surfaces.
  */
 function pruneArtifactsInDir(
-  dir: string,
+  dir: AppPath,
   family: ArtifactFamily,
   keep: number,
 ): void {
@@ -224,7 +227,7 @@ function pruneArtifactsInDir(
     if (!id) continue;
     let mtimeMs: number;
     try {
-      mtimeMs = statSync(join(dir, entry)).mtimeMs;
+      mtimeMs = statSync(joinAppPath(dir, entry)).mtimeMs;
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === "ENOENT") continue;
       throw err;
@@ -245,7 +248,7 @@ function pruneArtifactsInDir(
 }
 
 /** Directory-scoped build prune, split out so it is testable against a throwaway dir. */
-export function pruneBuildArtifactsInDir(dir: string, keep: number): void {
+export function pruneBuildArtifactsInDir(dir: AppPath, keep: number): void {
   pruneArtifactsInDir(dir, BUILD_FAMILY, keep);
 }
 
@@ -259,14 +262,14 @@ export function pruneBuildArtifactsInDir(dir: string, keep: number): void {
  * files preserves the trap. (Removable once the fleet has turned over — nothing
  * writes it any more.)
  */
-export function pruneCheckArtifactsInDir(dir: string, keep: number): void {
+export function pruneCheckArtifactsInDir(dir: AppPath, keep: number): void {
   pruneArtifactsInDir(dir, CHECK_FAMILY, keep);
   unlinkQuiet(dir, LEGACY_CHECK_LOG);
 }
 
 /** Directory-scoped supervised-run prune, split out so it is testable against a throwaway dir. */
 export function pruneRunArtifactsInDir(
-  dir: string,
+  dir: AppPath,
   kindId: string,
   keep: number,
 ): void {
@@ -315,7 +318,7 @@ export function pruneWorktreeCheckArtifacts(
  * before the record became per-op — it would otherwise sit beside the per-run
  * files holding whichever run last finished.
  */
-export function pruneTestArtifactsInDir(dir: string, keep: number): void {
+export function pruneTestArtifactsInDir(dir: AppPath, keep: number): void {
   pruneArtifactsInDir(dir, TEST_FAMILY, keep);
   unlinkQuiet(dir, LEGACY_TEST_STATUS);
 }

@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 /**
  * Which session a login service belongs to — the one thing that differs
  * between the two kinds of per-user service this host runs:
@@ -38,7 +39,7 @@ export interface LoginServiceJob {
   /** The service's whole environment: nothing is inherited from whoever ran `start`. */
   env: Readonly<Record<string, string>>;
   /** stdout and stderr both land here (appended by the manager). */
-  stdioLog: string;
+  stdioLog: AppPath;
 }
 
 /** A per-user OS service as data: what both renderers and both managers take. */

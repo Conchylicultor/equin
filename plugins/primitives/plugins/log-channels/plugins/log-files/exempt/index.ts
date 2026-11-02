@@ -3,11 +3,7 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 export default [
   {
     rule: "boundaries/no-platform-api",
-    paths: [
-      "server/internal/channel-file.ts",
-      "server/internal/client-log-family.ts",
-      "server/internal/persist.ts",
-    ],
+    paths: ["server/internal/persist.ts"],
     kind: "debt",
     task: "task-1792338443-riwqev",
     reason:

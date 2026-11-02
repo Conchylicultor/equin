@@ -20,6 +20,10 @@ import {
   type SourceFile,
 } from "@plugins/framework/plugins/tooling/plugins/resource-vocabulary/core";
 import type { ResourceChanges, ResourceDef, ResourceFacetData } from "../core";
+import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // A resource's identity (`key`), keyed-ness and bounded membership are declared
 // at a DESCRIPTOR FACTORY call — `liveValue("key", …)`, `liveCollection("key",
@@ -313,8 +317,8 @@ export function parseRegisterCalls(
 }
 
 /** Read every file under `dir` as a `SourceFile`. */
-function readPluginSources(dir: string): SourceFile[] {
-  const paths: string[] = [];
+function readPluginSources(dir: AppPath): SourceFile[] {
+  const paths: AppPath[] = [];
   walkFiles(dir, paths);
   const files: SourceFile[] = [];
   for (const path of paths) {
@@ -345,7 +349,7 @@ export function parseResources(pluginDir: string): ResourceFacetData {
   );
   const centralPrefix = pluginDir + sep + "central" + sep;
 
-  const all = readPluginSources(pluginDir);
+  const all = readPluginSources(asAppPath(pluginDir));
   const serverSources = all.filter((f) =>
     backendPrefixes.some((prefix) => f.path.startsWith(prefix)),
   );
@@ -373,7 +377,7 @@ export function parseResources(pluginDir: string): ResourceFacetData {
     if (withoutRuntime === "") return null;
     const dir =
       repoRoot + sep + "plugins" + sep + withoutRuntime.split("/").join(sep);
-    const files = readPluginSources(dir);
+    const files = readPluginSources(asAppPath(dir));
     if (files.length === 0) return null;
     return (
       buildDescriptorIndex(files, {

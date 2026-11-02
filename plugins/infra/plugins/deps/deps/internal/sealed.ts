@@ -1,3 +1,7 @@
+import {
+  type AppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
@@ -65,10 +69,10 @@ export type SealedLookup<S extends DepSource> =
  */
 export function sealedLookup<S extends DepSource>(
   dep: Dep<S>,
-  root: string,
+  root: AppPath,
   host: DepTarget = hostTarget(),
 ): SealedLookup<S> {
-  const path = join(root, SEALED_MANIFEST);
+  const path = joinAppPath(root, SEALED_MANIFEST);
   if (!existsSync(path)) return { kind: "unsealed" };
   const manifest = readSealedManifest(path);
   const target = manifest.target as DepTarget;
@@ -89,7 +93,7 @@ export function sealedLookup<S extends DepSource>(
           : `${dep.id} is not sealed into this bundle (${root}), which has no source or toolchain to install it — only a declaration with \`bundle\` is`,
     };
   }
-  const dir = join(root, entry.dir);
+  const dir = joinAppPath(root, entry.dir);
   if (!existsSync(dir) || !(dep.source.isIntact?.(dir) ?? true)) {
     return {
       kind: "failed",

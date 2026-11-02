@@ -1,5 +1,4 @@
-import { existsSync } from "node:fs";
-import { cp, stat } from "node:fs/promises";
+import { access, cp, stat } from "node:fs/promises";
 import type { WorkspaceImpl } from "@plugins/conversations/plugins/workspace/server";
 import { databaseForkJob } from "@plugins/database/plugins/fork/server";
 import { configDir } from "@plugins/config_v2/data-dirs";
@@ -83,8 +82,8 @@ export const worktreeWorkspace: WorkspaceImpl<"worktree"> = {
   // Unchecked, resuming such a conversation boots the agent in the user's home
   // directory with a transcript full of repo-relative paths, and the only
   // symptom is a trust prompt for `~`.
-  checkResumable({ attemptId, path }) {
-    if (existsSync(path)) return { kind: "ok" };
+  async checkResumable({ attemptId, path }) {
+    if (await pathExistsAsync(path)) return { kind: "ok" };
     const branch = attemptBranchName(attemptId);
     return {
       kind: "missing",
@@ -111,4 +110,15 @@ async function forkConfigDir(targetWorktree: string): Promise<void> {
     return;
   }
   await cp(sourceDir, targetDir, { recursive: true });
+}
+
+/** Whether `path` exists, asked off the event loop (a conversation's stored path may sit anywhere). ENOENT is the only "no". */
+async function pathExistsAsync(path: string): Promise<boolean> {
+  try {
+    await access(path);
+    return true;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw err;
+  }
 }

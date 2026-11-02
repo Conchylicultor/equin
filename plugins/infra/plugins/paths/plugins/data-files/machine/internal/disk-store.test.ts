@@ -3,6 +3,11 @@ import { closeSync, mkdirSync, openSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { flockTry } from "@plugins/packages/plugins/flock/core";
 import { defineFileWatcher } from "@plugins/infra/plugins/file-watcher/server";
 import { systemOrigin } from "@plugins/infra/plugins/request-origin/core";
@@ -35,7 +40,7 @@ let watchers = 0;
 
 /** A disk provider over a fresh temp dir: each root a subdir named by its id. */
 async function diskHarness() {
-  const tmp = await mkdtemp(join(tmpdir(), "data-files-"));
+  const tmp = asAppPath(await mkdtemp(join(tmpdir(), "data-files-")));
   const bound = new Map<string, BoundRoot>();
   const store = createDiskDataFiles({
     lockWaitMs: 500,
@@ -53,7 +58,7 @@ async function diskHarness() {
                 extensions: watch.extensions && [...watch.extensions],
               });
         watcher?.register();
-        b = { dir: () => join(tmp, spec.id), watcher, ledger: null };
+        b = { dir: () => joinAppPath(tmp, spec.id), watcher, ledger: null };
         bound.set(spec.id, b);
       }
       return b;
@@ -67,13 +72,13 @@ async function diskHarness() {
 
 describeDataFilesConformance("disk", diskHarness);
 
-const temps: string[] = [];
+const temps: AppPath[] = [];
 afterAll(async () => {
   for (const t of temps) await rm(t, { recursive: true, force: true });
 });
 
 test("withLock takes <key>.lock inside the root, and gives up on a wedged holder", async () => {
-  const tmp = await mkdtemp(join(tmpdir(), "data-files-lock-"));
+  const tmp = asAppPath(await mkdtemp(join(tmpdir(), "data-files-lock-")));
   temps.push(tmp);
   const tree = diskTree({ dir: () => tmp, label: "test", lockWaitMs: 300 });
   mkdirSync(join(tmp, "_picks"), { recursive: true });
@@ -96,7 +101,7 @@ test("withLock takes <key>.lock inside the root, and gives up on a wedged holder
 });
 
 test("a write's temp file never shows in a listing", async () => {
-  const tmp = await mkdtemp(join(tmpdir(), "data-files-tmp-"));
+  const tmp = asAppPath(await mkdtemp(join(tmpdir(), "data-files-tmp-")));
   temps.push(tmp);
   const tree = diskTree({ dir: () => tmp, label: "test" });
   const w = { writer: systemOrigin("disk test") };
@@ -112,7 +117,7 @@ test("a write's temp file never shows in a listing", async () => {
 });
 
 test("a read's bytes are read: a remove after it cannot fail them", async () => {
-  const tmp = await mkdtemp(join(tmpdir(), "data-files-race-"));
+  const tmp = asAppPath(await mkdtemp(join(tmpdir(), "data-files-race-")));
   temps.push(tmp);
   const tree = diskTree({ dir: () => tmp, label: "test" });
   const w = { writer: systemOrigin("disk test") };
@@ -126,7 +131,7 @@ test("a read's bytes are read: a remove after it cannot fail them", async () => 
 });
 
 test("withLock's deadline covers the wait behind a holder in this process too", async () => {
-  const tmp = await mkdtemp(join(tmpdir(), "data-files-inproc-"));
+  const tmp = asAppPath(await mkdtemp(join(tmpdir(), "data-files-inproc-")));
   temps.push(tmp);
   const tree = diskTree({ dir: () => tmp, label: "test", lockWaitMs: 200 });
   const key = relPath("_history", "p-1");
@@ -155,7 +160,7 @@ test("withLock's deadline covers the wait behind a holder in this process too", 
 });
 
 test("a ledger entry restores by its one role, a role recorded before the root's included", async () => {
-  const tmp = await mkdtemp(join(tmpdir(), "data-files-ledger-"));
+  const tmp = asAppPath(await mkdtemp(join(tmpdir(), "data-files-ledger-")));
   temps.push(tmp);
   const file = join(tmp, "_picks", "p-1.json");
   await writeRawAtomic(file, '{"agent":true}');

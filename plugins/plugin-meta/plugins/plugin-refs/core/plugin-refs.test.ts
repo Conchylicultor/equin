@@ -2,6 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { repoFilesOver } from "@plugins/framework/plugins/tooling/core";
 import {
   scanCompositionManifestRefs,
@@ -277,7 +278,7 @@ describe("relative refs", () => {
 });
 
 describe("findPluginRefs over a fixture repo", () => {
-  const root = mkdtempSync(join(tmpdir(), "plugin-refs-"));
+  const root = asAppPath(mkdtempSync(join(tmpdir(), "plugin-refs-")));
   afterAll(() => rmSync(root, { recursive: true, force: true }));
 
   const files: Record<string, string> = {

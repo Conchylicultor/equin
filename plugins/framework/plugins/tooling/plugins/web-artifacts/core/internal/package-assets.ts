@@ -21,18 +21,17 @@ import {
   rmSync,
 } from "node:fs";
 import {
-  basename,
-  dirname,
-  extname,
-  isAbsolute,
-  join,
-  resolve,
-} from "node:path";
+  asAppPath,
+  appPathParent,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { join, basename, extname, isAbsolute } from "node:path";
 import type { Metafile } from "esbuild";
 import { sha256Hex } from "../hash";
 import { publishDir, WEB_ARTIFACTS_DIR, type CachePrunePolicy } from "./store";
 
-const ASSETS_ROOT = join(WEB_ARTIFACTS_DIR, "package-assets");
+const ASSETS_ROOT = joinAppPath(WEB_ARTIFACTS_DIR, "package-assets");
 
 // A literal `new URL("<relative>", import.meta.url)`.
 const URL_REF_RE =
@@ -69,27 +68,28 @@ export function isFileInput(inPath: string): boolean {
  * concurrent prune cannot remove it before it is hard-linked.
  */
 async function ensurePackageAsset(
-  file: string,
-  pin: (paths: readonly string[]) => Promise<void>,
-): Promise<string> {
-  const dir = join(
+  file: AppPath,
+  pin: (paths: readonly AppPath[]) => Promise<void>,
+): Promise<AppPath> {
+  const dir = joinAppPath(
     ASSETS_ROOT,
     `${sha256Hex(readFileSync(file)).slice(0, 16)}.${basename(file)}`,
   );
   await pin([dir]);
-  if (existsSync(join(dir, "meta.json"))) return join(dir, basename(file));
+  if (existsSync(joinAppPath(dir, "meta.json")))
+    return joinAppPath(dir, basename(file));
   mkdirSync(ASSETS_ROOT, { recursive: true });
-  const tmp = join(ASSETS_ROOT, `.tmp.${basename(dir)}.${process.pid}`);
+  const tmp = joinAppPath(ASSETS_ROOT, `.tmp.${basename(dir)}.${process.pid}`);
   rmSync(tmp, { recursive: true, force: true });
   mkdirSync(tmp, { recursive: true });
-  copyFileSync(file, join(tmp, basename(file)));
+  copyFileSync(file, joinAppPath(tmp, basename(file)));
   await publishDir({
     tmpDir: tmp,
     dest: dir,
     meta: { source: file },
-    isComplete: () => existsSync(join(dir, "meta.json")),
+    isComplete: () => existsSync(joinAppPath(dir, "meta.json")),
   });
-  return join(dir, basename(file));
+  return joinAppPath(dir, basename(file));
 }
 
 /**
@@ -102,37 +102,40 @@ async function ensurePackageAsset(
 export async function placePackageAssets(opts: {
   metafile: Metafile;
   /** The dir esbuild resolved the metafile's relative paths against. */
-  cwd: string;
+  cwd: AppPath;
   /** Pin an asset entry into the build's lease (`lease.ts`). */
-  pin: (paths: readonly string[]) => Promise<void>;
+  pin: (paths: readonly AppPath[]) => Promise<void>;
 }): Promise<Set<string>> {
   const placed = new Set<string>();
   const refsOf = new Map<string, string[]>();
   for (const [outPath, output] of Object.entries(opts.metafile.outputs)) {
     if (!outPath.endsWith(".js")) continue;
-    const outDir = dirname(resolve(opts.cwd, outPath));
+    // esbuild's metafile paths are relative to its cwd and climb out of it
+    // into the vendor cache it wrote: resolved, not joined under.
+    const outDir = appPathParent(asAppPath(join(opts.cwd, outPath)));
     for (const inPath of Object.keys(output.inputs)) {
       if (!inPath.includes("node_modules")) continue; // a virtual entry, repo code
       if (!isFileInput(inPath)) continue; // a disabled stub: no source to read
-      const input = resolve(opts.cwd, inPath);
+      const input = asAppPath(join(opts.cwd, inPath));
       let refs = refsOf.get(input);
       if (refs === undefined) {
         refs = urlAssetRefs(readFileSync(input, "utf8"));
         refsOf.set(input, refs);
       }
       for (const ref of refs) {
-        const asset = resolve(dirname(input), ref);
+        // A url() the package's own CSS names, relative to it.
+        const asset = asAppPath(join(appPathParent(input), ref));
         if (!existsSync(asset)) {
           throw new Error(
             `vendor assets: ${inPath} fetches ${ref} by URL, but ${asset} does not exist`,
           );
         }
-        const dest = resolve(outDir, ref);
+        const dest = joinAppPath(outDir, ref);
         if (placed.has(dest)) continue;
         const stored = await ensurePackageAsset(asset, opts.pin);
-        mkdirSync(dirname(dest), { recursive: true });
+        mkdirSync(appPathParent(dest), { recursive: true });
         linkSync(stored, dest);
-        for (const ext of [".br", ".gz"]) {
+        for (const ext of [".br", ".gz"] as const) {
           if (existsSync(`${stored}${ext}`))
             linkSync(`${stored}${ext}`, `${dest}${ext}`);
         }

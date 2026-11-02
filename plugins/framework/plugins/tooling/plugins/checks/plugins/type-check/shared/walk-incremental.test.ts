@@ -18,6 +18,7 @@
  * directory, and a run that throws writing no base.
  */
 
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   readEnv,
   setEnv,
@@ -88,7 +89,7 @@ const optionsFor = (root: string) =>
       lib: ["lib.es2022.d.ts"],
       types: [],
     },
-    root,
+    asAppPath(root),
   );
 
 function writeTree(
@@ -116,7 +117,7 @@ const viewOf = (
   tree: string,
 ): RepoView =>
   repoViewOver(
-    root,
+    asAppPath(root),
     tree,
     new Map(
       Object.entries(files).map(([f, text]) => [

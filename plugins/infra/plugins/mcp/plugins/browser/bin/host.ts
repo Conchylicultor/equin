@@ -1,3 +1,4 @@
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 /**
  * The agent-browser host: ONE detached process per machine owning the headless
  * Chromium every agent conversation drives — its contexts, tabs and their
@@ -50,7 +51,7 @@ import { runTool } from "./host-tools";
 
 const dir = agentBrowserDir.ensure();
 const file = (name: string) => agentBrowserDir.file(name);
-const codeId = hostCodeId(resolve(import.meta.dir, ".."));
+const codeId = hostCodeId(asAppPath(resolve(import.meta.dir, "..")));
 const startedAt = new Date().toISOString();
 
 // The singleton: whoever holds the lock is THE host. The kernel drops it when

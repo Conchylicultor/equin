@@ -3,10 +3,21 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 export default [
   {
     rule: "guard-path-safety/no-adhoc-path-resolve",
-    paths: ["core/guards/main-edits.ts", "core/guards/poll-loop.ts"],
+    paths: ["core/guards/main-edits.ts"],
     kind: "sanctioned",
     reason:
-      "None of these paths derive from a shell command's arguments: main-edits guards Write/Edit (a structured `file_path` the harness supplies), poll-loop builds its own per-session state file from `tmpdir()`. A guard that wants a path out of a command belongs in `core/argv.ts` instead.",
+      "This path does not derive from a shell command's arguments: main-edits guards Write/Edit (a structured `file_path` the harness supplies). A guard that wants a path out of a command belongs in `core/argv.ts` instead.",
+  },
+  {
+    rule: "user-path/no-sync-fs",
+    paths: [
+      "core/context.ts",
+      "core/git-target.ts",
+      "core/guards/poll-loop.ts",
+    ],
+    kind: "sanctioned",
+    reason:
+      "PreToolUse guard run in Claude Code's hook process, never a backend's JS thread: a stat of an agent-named path can stall only that one guard call.",
   },
   {
     rule: "python/no-system-python",

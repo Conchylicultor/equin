@@ -1,4 +1,7 @@
-import { existsSync } from "node:fs";
+import {
+  type AppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readdir, readFile, stat } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { GIT } from "@plugins/infra/plugins/paths/server";
@@ -14,6 +17,7 @@ import {
   listReadySpares,
   listWorktreeEntries,
   lockWorktree,
+  pathExists,
   removeWorktree,
 } from "./worktree";
 
@@ -48,11 +52,11 @@ const SPARE_MAX_AGE_MS = 24 * 60 * 60_000;
  * make a ready spare that is not installed. Tests pass their own.
  */
 export async function createSpareIn(
-  repoRoot: string,
+  repoRoot: AppPath,
   install: (path: string, signal?: AbortSignal) => Promise<void>,
   signal?: AbortSignal,
 ): Promise<string> {
-  const path = join(gitWorktreesDir(repoRoot), newSpareName());
+  const path = joinAppPath(gitWorktreesDir(repoRoot), newSpareName());
   await addCheckout(
     basename(path),
     repoRoot,
@@ -102,7 +106,7 @@ async function adminDirMtime(path: string): Promise<number | null> {
     throw err;
   }
   const gitdir = /^gitdir: (.+)$/m.exec(gitFile)?.[1]?.trim();
-  if (!gitdir || !existsSync(gitdir)) return null;
+  if (!gitdir || !(await pathExists(gitdir))) return null;
   return (await stat(gitdir)).mtimeMs;
 }
 
@@ -117,13 +121,13 @@ async function adminDirMtime(path: string): Promise<number | null> {
  * concurrent claimer can win — so the prune never removes a spare mid-claim.
  */
 export async function pruneSparesIn(
-  repoRoot: string,
+  repoRoot: AppPath,
   now: number,
   remove: (path: string) => Promise<void>,
   signal?: AbortSignal,
 ): Promise<string[]> {
   const dir = gitWorktreesDir(repoRoot);
-  if (!existsSync(dir)) return [];
+  if (!(await pathExists(dir))) return [];
   const names = (await readdir(dir)).filter(isSpareName);
   if (names.length === 0) return [];
   const entries = new Map(
@@ -131,7 +135,7 @@ export async function pruneSparesIn(
   );
   const removed: string[] = [];
   for (const name of names) {
-    const path = join(dir, name);
+    const path = joinAppPath(dir, name);
     const entry = entries.get(path);
     if (entry?.locked === SPARE_LOCK_REASON) {
       const createdAt = Number(name.split("-")[1]);

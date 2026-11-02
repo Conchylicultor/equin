@@ -9,6 +9,11 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   loadVendorResolutionCache,
   saveVendorResolutionCache,
   validateVendorRecord,
@@ -17,8 +22,8 @@ import {
   type VendorResolutionRecord,
 } from "./vendor-cache";
 
-function fixtureDir(): string {
-  return mkdtempSync(join(tmpdir(), "vendor-cache-test-"));
+function fixtureDir(): AppPath {
+  return asAppPath(mkdtempSync(join(tmpdir(), "vendor-cache-test-")));
 }
 
 /** A record whose read-set is the given files, stamped as they are right now. */
@@ -40,8 +45,8 @@ function recordOver(files: string[]): VendorResolutionRecord {
 describe("validateVendorRecord (the read-set hit rule)", () => {
   test("unchanged read-set ⇒ hit", () => {
     const dir = fixtureDir();
-    const entry = join(dir, "index.js");
-    const pj = join(dir, "package.json");
+    const entry = joinAppPath(dir, "index.js");
+    const pj = joinAppPath(dir, "package.json");
     writeFileSync(entry, "export const x = 1;");
     writeFileSync(pj, `{"version":"1.2.3","type":"module"}`);
 
@@ -50,7 +55,7 @@ describe("validateVendorRecord (the read-set hit rule)", () => {
 
   test("mtime change ⇒ miss (a touched file may be different bytes)", () => {
     const dir = fixtureDir();
-    const entry = join(dir, "index.js");
+    const entry = joinAppPath(dir, "index.js");
     writeFileSync(entry, "export const x = 1;");
     const record = recordOver([entry]);
 
@@ -61,7 +66,7 @@ describe("validateVendorRecord (the read-set hit rule)", () => {
 
   test("size change ⇒ miss", () => {
     const dir = fixtureDir();
-    const entry = join(dir, "index.js");
+    const entry = joinAppPath(dir, "index.js");
     writeFileSync(entry, "export const x = 1;");
     const record = recordOver([entry]);
 
@@ -75,7 +80,7 @@ describe("validateVendorRecord (the read-set hit rule)", () => {
 
   test("deleted file ⇒ miss, not a throw", () => {
     const dir = fixtureDir();
-    const entry = join(dir, "index.js");
+    const entry = joinAppPath(dir, "index.js");
     writeFileSync(entry, "export const x = 1;");
     const record = recordOver([entry]);
 
@@ -85,8 +90,8 @@ describe("validateVendorRecord (the read-set hit rule)", () => {
 
   test("every recorded file counts, not just the entry", () => {
     const dir = fixtureDir();
-    const entry = join(dir, "index.js");
-    const reexported = join(dir, "lib.js");
+    const entry = joinAppPath(dir, "index.js");
+    const reexported = joinAppPath(dir, "lib.js");
     writeFileSync(entry, "module.exports = require('./lib');");
     writeFileSync(reexported, "exports.a = 1;");
     const record = recordOver([entry, reexported]);
@@ -104,14 +109,16 @@ describe("load / save (the persisted cache)", () => {
     return {
       version: 1,
       gate,
-      records: { [vendorCacheKey("/repo/plugins/x", "react")]: record },
+      records: {
+        [vendorCacheKey(asAppPath("/repo/plugins/x"), "react")]: record,
+      },
     };
   }
 
   test("round-trips through the file", () => {
     const dir = fixtureDir();
-    const file = join(dir, "nested", "wt.json"); // save creates the dir
-    const entry = join(dir, "index.js");
+    const file = joinAppPath(dir, "nested", "wt.json"); // save creates the dir
+    const entry = joinAppPath(dir, "index.js");
     writeFileSync(entry, "export const x = 1;");
     const cache = cacheWith(recordOver([entry]));
 
@@ -121,14 +128,17 @@ describe("load / save (the persisted cache)", () => {
 
   test("absent file ⇒ empty cache at the current gate", () => {
     const dir = fixtureDir();
-    const loaded = loadVendorResolutionCache(join(dir, "missing.json"), gate);
+    const loaded = loadVendorResolutionCache(
+      joinAppPath(dir, "missing.json"),
+      gate,
+    );
     expect(loaded).toEqual({ version: 1, gate, records: {} });
   });
 
   test("a different gate drops every record", () => {
     const dir = fixtureDir();
-    const file = join(dir, "wt.json");
-    const entry = join(dir, "index.js");
+    const file = joinAppPath(dir, "wt.json");
+    const entry = joinAppPath(dir, "index.js");
     writeFileSync(entry, "export const x = 1;");
     saveVendorResolutionCache(file, cacheWith(recordOver([entry])));
 
@@ -140,7 +150,7 @@ describe("load / save (the persisted cache)", () => {
 
   test("unparseable file ⇒ empty cache", () => {
     const dir = fixtureDir();
-    const file = join(dir, "wt.json");
+    const file = joinAppPath(dir, "wt.json");
     writeFileSync(file, "{ not json");
     expect(loadVendorResolutionCache(file, gate)).toEqual({
       version: 1,
@@ -151,7 +161,7 @@ describe("load / save (the persisted cache)", () => {
 
   test("wrong version ⇒ empty cache", () => {
     const dir = fixtureDir();
-    const file = join(dir, "wt.json");
+    const file = joinAppPath(dir, "wt.json");
     writeFileSync(
       file,
       JSON.stringify({ version: 999, gate, records: { k: {} } }),
@@ -168,8 +178,8 @@ describe("vendorCacheKey", () => {
   test("the same specifier from two resolveDirs is two records", () => {
     // Under bun's isolated installs the same bare specifier resolves to
     // different copies depending on the importing plugin's dir.
-    expect(vendorCacheKey("/a", "react")).not.toBe(
-      vendorCacheKey("/b", "react"),
+    expect(vendorCacheKey(asAppPath("/a"), "react")).not.toBe(
+      vendorCacheKey(asAppPath("/b"), "react"),
     );
   });
 });

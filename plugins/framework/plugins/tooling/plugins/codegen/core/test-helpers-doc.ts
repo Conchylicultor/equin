@@ -1,5 +1,10 @@
 import { existsSync } from "fs";
-import { dirname, join } from "path";
+import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { join, dirname } from "path";
 import {
   RUNTIME_FOLDERS,
   TESTING_FOLDER,
@@ -39,16 +44,16 @@ export interface TestHelperBarrel {
 
 /** The plugin's testing barrels, in runtime order; empty when it publishes none. */
 export function collectTestHelpers(p: {
-  dir: string;
+  dir: AppPath;
   path: string;
 }): TestHelperBarrel[] {
   const out: TestHelperBarrel[] = [];
   for (const runtime of RUNTIME_FOLDERS) {
-    const barrelFile = join(p.dir, runtime, TESTING_FOLDER, "index.ts");
+    const barrelFile = joinAppPath(p.dir, runtime, TESTING_FOLDER, "index.ts");
     const raw = readIfExists(barrelFile);
     if (raw === null) continue;
     const masked = maskSource(raw);
-    const sources = reExportSources(raw, dirname(barrelFile));
+    const sources = reExportSources(raw, asAppPath(dirname(barrelFile)));
     const symbols = parseBarrelExports(masked);
     out.push({
       runtime,
@@ -97,13 +102,13 @@ export function renderTestHelpers(
  * Exported name → the file its `export { … } from "./x"` re-exports it from,
  * read through parse-utils' shared import scanner.
  */
-function reExportSources(raw: string, fromDir: string): Map<string, string> {
-  const out = new Map<string, string>();
+function reExportSources(raw: string, fromDir: AppPath): Map<string, AppPath> {
+  const out = new Map<string, AppPath>();
   for (const ref of findImports(raw)) {
     if (ref.keyword !== "export" || !ref.specifier.startsWith(".")) continue;
     const braces = /\{([^}]*)\}/.exec(ref.clause);
     if (!braces) continue;
-    const file = resolveModule(join(fromDir, ref.specifier));
+    const file = resolveModule(asAppPath(join(fromDir, ref.specifier)));
     if (file === undefined) continue;
     for (const item of braces[1]!.split(",")) {
       const s = item.trim().replace(/^type\s+/, "");
@@ -115,12 +120,12 @@ function reExportSources(raw: string, fromDir: string): Map<string, string> {
   return out;
 }
 
-function resolveModule(base: string): string | undefined {
+function resolveModule(base: AppPath): AppPath | undefined {
   for (const c of [
-    `${base}.ts`,
-    `${base}.tsx`,
-    join(base, "index.ts"),
-    join(base, "index.tsx"),
+    asAppPath(`${base}.ts`),
+    asAppPath(`${base}.tsx`),
+    joinAppPath(base, "index.ts"),
+    joinAppPath(base, "index.tsx"),
   ]) {
     if (existsSync(c)) return c;
   }

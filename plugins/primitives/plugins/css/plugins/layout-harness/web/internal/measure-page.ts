@@ -1,3 +1,4 @@
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 import { join, normalize } from "node:path";
 import { chromium, type Browser, type Page } from "playwright";
@@ -117,7 +118,7 @@ async function installedHeadlessChromium(): Promise<string> {
   const { dir } = z
     .object({ dir: z.string() })
     .parse(JSON.parse(res.stdout.trim().split("\n").at(-1) ?? ""));
-  const read = readBrowserExecutables(dir);
+  const read = readBrowserExecutables(asAppPath(dir));
   if (!read.ok) throw new Error(`chromium at ${dir}: ${read.reason}`);
   return read.executables.headlessShell;
 }

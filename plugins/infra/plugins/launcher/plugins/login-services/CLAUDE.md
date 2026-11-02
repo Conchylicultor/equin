@@ -177,6 +177,8 @@ folder needs only its boundary row, not a barrel's doc and shipping policy.
     - `unbundledExecutable`
 - Cross-plugin:
   - Imported by: `infra/launcher/gateway-drift`
+- Exemptions:
+  - Exempts itself from: `user-path/no-unproven-claim` — `machine/internal/launchd.ts`, `machine/internal/systemd.ts` (sanctioned)
 - Machine:
   - Exports (types):
     - `DefineLoginServiceSpec`

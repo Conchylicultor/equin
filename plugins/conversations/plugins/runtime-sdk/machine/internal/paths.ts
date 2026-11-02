@@ -1,5 +1,10 @@
-import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { existsSync } from "node:fs";
+import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { socketsDir } from "@plugins/infra/plugins/launcher/data-dirs";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import {
@@ -21,34 +26,39 @@ import { claudeUsageDir, sdkAgentPidsDir, sdkAgentsDir } from "../../data-dirs";
 // on a socket fails — but in the sockets dir, `agents/<ns>/<id>.sock`.
 
 /** The agent script beside THIS code — the checkout serving its backend. */
-export const AGENT_SCRIPT = join(import.meta.dir, "../../bin/agent.ts");
+export const AGENT_SCRIPT = asAppPath(
+  join(import.meta.dir, "../../bin/agent.ts"),
+);
 
 // macOS's sun_path is 104 bytes, NUL included.
 const MAX_SOCKET_PATH_BYTES = 103;
 
 /** This backend's agent directories: `state/sdk-agents/<ns>/`. */
-export function ownAgentsRoot(): string {
+export function ownAgentsRoot(): AppPath {
   return sdkAgentsDir.file(runtimeNamespace());
 }
 
-export function agentDir(conversationId: string): string {
-  return join(ownAgentsRoot(), conversationId);
+export function agentDir(conversationId: string): AppPath {
+  return joinAppPath(ownAgentsRoot(), conversationId);
 }
 
-export function agentEventsPath(conversationId: string): string {
-  return join(agentDir(conversationId), AGENT_EVENTS_FILE);
+export function agentEventsPath(conversationId: string): AppPath {
+  return joinAppPath(agentDir(conversationId), AGENT_EVENTS_FILE);
 }
 
 /** Whether any generation of the agent's events file (rotated ones included) is on disk. */
 export function agentEventsExist(conversationId: string): boolean {
   const path = agentEventsPath(conversationId);
-  return [path, `${path}.1`, `${path}.2`, `${path}.3`].some((p) =>
-    existsSync(p),
-  );
+  return [
+    path,
+    asAppPath(`${path}.1`),
+    asAppPath(`${path}.2`),
+    asAppPath(`${path}.3`),
+  ].some((p) => existsSync(p));
 }
 
-export function agentOptionsPath(conversationId: string): string {
-  return join(agentDir(conversationId), AGENT_OPTIONS_FILE);
+export function agentOptionsPath(conversationId: string): AppPath {
+  return joinAppPath(agentDir(conversationId), AGENT_OPTIONS_FILE);
 }
 
 /**
@@ -56,38 +66,38 @@ export function agentOptionsPath(conversationId: string): string {
  * `named-claude.ts`) and to the bun the agent runs on (`startAgentProcess`) —
  * `<agent dir>/bin/`, holding at most those two files.
  */
-export function agentBinDir(conversationId: string): string {
-  return join(agentDir(conversationId), "bin");
+export function agentBinDir(conversationId: string): AppPath {
+  return joinAppPath(agentDir(conversationId), "bin");
 }
 
 /** The agent process's stdout and stderr, appended across restarts. */
-export function agentLogPath(conversationId: string): string {
-  return join(agentDir(conversationId), "agent.log");
+export function agentLogPath(conversationId: string): AppPath {
+  return joinAppPath(agentDir(conversationId), "agent.log");
 }
 
 /** Every namespace's pid files: `locks/sdk-agents/`. */
-export function agentPidsRoot(): string {
+export function agentPidsRoot(): AppPath {
   return sdkAgentPidsDir.path;
 }
 
 /** This backend's pid files: `locks/sdk-agents/<ns>/`. */
-export function ownAgentPidsDir(): string {
-  return join(agentPidsRoot(), runtimeNamespace());
+export function ownAgentPidsDir(): AppPath {
+  return joinAppPath(agentPidsRoot(), runtimeNamespace());
 }
 
-export function agentPidPath(conversationId: string): string {
-  return join(ownAgentPidsDir(), `${conversationId}.pid`);
+export function agentPidPath(conversationId: string): AppPath {
+  return joinAppPath(ownAgentPidsDir(), `${conversationId}.pid`);
 }
 
 /**
  * The usage every agent on `accountId`, of every namespace, overwrites — the
  * limits are the Claude account's, so the path is machine-wide on purpose.
  */
-export function claudeUsagePath(accountId: string): string {
+export function claudeUsagePath(accountId: string): AppPath {
   return claudeUsageDir.file(claudeUsageFileName(accountId));
 }
 
-export function agentSocketPath(conversationId: string): string {
+export function agentSocketPath(conversationId: string): AppPath {
   const path = socketsDir.file(
     "agents",
     runtimeNamespace(),

@@ -1,3 +1,4 @@
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { existsSync, readdirSync, rmdirSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
@@ -164,7 +165,7 @@ const run: CliAction<[string, string], { dryRun?: boolean }> = async (
   if (from.id === to.id)
     refuse(`<from> and <to> are the same plugin (${from.id})`);
 
-  const tree = await buildStructureTreeOnce(join(root, "plugins"));
+  const tree = await buildStructureTreeOnce(asAppPath(join(root, "plugins")));
   const fromNode = [...tree.byDir.values()].find((n) => n.id === from.id);
   if (fromNode === undefined) refuse(`${from.dir} is not a plugin`);
 

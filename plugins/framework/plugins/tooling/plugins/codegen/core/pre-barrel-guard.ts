@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from "fs";
+import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { relative } from "path";
 import {
   preBarrelManifests,
@@ -18,7 +19,7 @@ import { formatGenerated } from "./write-generated";
  * let `generateConfigOrigins` silently prune freshly-authored overrides.
  */
 export async function assertPreBarrelManifestsFresh(
-  root: string,
+  root: AppPath,
 ): Promise<void> {
   const stale: { m: PreBarrelManifest; rel: string }[] = [];
   for (const m of preBarrelManifests) {

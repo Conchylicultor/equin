@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { dirname } from "path";
 import {
   formatIfFormattable,
@@ -62,7 +63,9 @@ export async function formatGenerated(bytes: SourceBytes): Promise<string> {
  * file)` slip created a file named after its own content and filled it with a
  * path. See {@link SourceBytes}.
  */
-export async function writeGenerated(bytes: SourceBytes): Promise<void> {
+export async function writeGenerated(
+  bytes: SourceBytes & { file: AppPath },
+): Promise<void> {
   const { file } = bytes;
   const next = await formatGenerated(bytes);
   const existing = existsSync(file) ? readFileSync(file, "utf8") : "";

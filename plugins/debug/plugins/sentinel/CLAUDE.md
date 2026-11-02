@@ -427,6 +427,7 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
   - Exempts itself from:
     - `detached-work-safety/no-raw-set-interval` — `server/internal/worker/entry.ts` (sanctioned)
     - `boundaries/no-platform-api` — `server/internal/status-resource.ts`, `server/internal/worker-host.ts`, `server/internal/worker/pg.ts`, `server/internal/worker/sample.ts` (debt)
+    - `user-path/no-unproven-claim` — `server/internal/worker/sample.ts` (sanctioned)
 - Sub-plugins:
   - **`machine-usage`** — The Machine watcher card's "Where it goes" block (MachineUsageBreakdown): the machine's CPU and memory as two bars split into your Chrome, agent ops, the agent browser and other, then one line per…
   - **`status-file`** — The machine watcher's (cluster sentinel's) host-global status files (one per watcher host, the newest claim reported): their schemas, the writer main's watcher host uses, the per-tick vitals file…

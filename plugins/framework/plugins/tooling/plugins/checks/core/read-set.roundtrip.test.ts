@@ -19,12 +19,16 @@ import { test, expect, beforeAll, afterAll } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "fs";
 import { tmpdir } from "os";
 import { join, dirname } from "path";
+import {
+  type AppPath,
+  asAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { grepCode, gitGrepList } from "./grep-code";
 import { withScanView } from "./scan-context";
 import { computeTreeHash } from "./tree-hash";
 import { loadTreeSnapshot, validate, type ReadSet, type QueryFact } from "./read-set";
 
-let root = "";
+let root!: AppPath;
 
 // A check-logic file under a CHECK_SOURCE_PREFIX (parse-utils), so its content
 // folds into the snapshot's checkSourceHash — the widened H0 coverage.
@@ -43,7 +47,7 @@ function write(rel: string, content: string): void {
 }
 
 beforeAll(async () => {
-  root = mkdtempSync(join(tmpdir(), "read-set-roundtrip-"));
+  root = asAppPath(mkdtempSync(join(tmpdir(), "read-set-roundtrip-")));
   // a.ts: the sole real `new WebSocket(` match. b.ts: an unrelated .ts (no
   // match). README.md: an unrelated non-.ts file. mask-source.ts: check-logic.
   write("a.ts", "foo();\nconst ws = new WebSocket(url);\n");

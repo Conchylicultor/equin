@@ -2,6 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   configFileRelPath,
   createMemoryConfigStore,
@@ -23,7 +24,7 @@ describe("propagateGitLayerDocument parity", () => {
       scopes: { pages: { a: 3, items: [{ id: "x" }] } },
     };
     const fileOf = (ref: ConfigFileRef) =>
-      jsoncConfigProxy(join(dir, configFileRelPath(ref)));
+      jsoncConfigProxy(asAppPath(join(dir, configFileRelPath(ref))));
     const OLD_HASH = "0123456789ab";
     // A user override in sync with the old origin: the transition captures it.
     fileOf({ storePath, file: "origin" }).write({ a: 1 }, OLD_HASH);

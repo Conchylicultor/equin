@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 /**
  * Vendors Google's Material Symbols metadata (category, tags, popularity per
  * icon) into `web/internal/symbols-metadata.json`, trimmed to the names the
@@ -9,7 +10,6 @@
  *
  * Usage: ./equin run plugins/primitives/plugins/icon-picker/scripts/gen-symbols-metadata.ts
  */
-import { join } from "path";
 import { z } from "zod";
 import { writeGenerated } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
@@ -76,7 +76,7 @@ const data: SymbolsMetadata = {
   icons,
 };
 await writeGenerated({
-  file: join(await getWorktreeRoot(), SYMBOLS_METADATA_REL_PATH),
+  file: joinAppPath(await getWorktreeRoot(), SYMBOLS_METADATA_REL_PATH),
   content: `${JSON.stringify(data)}\n`,
 });
 console.log(

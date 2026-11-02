@@ -6,6 +6,10 @@ import {
   readEnv,
   unsetEnv,
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { flockTry } from "./flock";
 
 // The PARENT_LIFELINE variable is what a parent hands its child the lifeline
@@ -29,8 +33,8 @@ export interface ParentLifeline {
  * non-blocking acquire cannot meet a competitor; failing it means the fd is
  * broken, and that throws rather than spawning an unguarded child.
  */
-export function holdParentLifeline(dir: string): ParentLifeline {
-  const path = join(dir, "lifeline");
+export function holdParentLifeline(dir: AppPath): ParentLifeline {
+  const path = joinAppPath(dir, "lifeline");
   writeFileSync(path, "");
   const fd = openSync(path, "r");
   if (!flockTry(fd)) {

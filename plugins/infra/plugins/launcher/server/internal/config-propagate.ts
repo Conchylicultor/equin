@@ -9,7 +9,13 @@ import {
   writeFileSync,
 } from "node:fs";
 import { randomUUID } from "node:crypto";
-import { dirname, join } from "node:path";
+import { basename, dirname } from "node:path";
+import {
+  type AppPath,
+  appPathParent,
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
  * Syncing a release bundle's resolved config origins onto a host's config dir.
@@ -50,15 +56,18 @@ const ANCESTOR_SUFFIX = ".ancestor.jsonc";
  * Refusing to boot a deployed app over a corrupt USER file would trade a
  * cosmetic loss for a downed site.
  */
-function hashHeaderOf(filePath: string): string | null {
+function hashHeaderOf(filePath: AppPath): string | null {
   if (!existsSync(filePath)) return null;
   return HASH_HEADER_RE.exec(readFileSync(filePath, "utf-8"))?.[1] ?? null;
 }
 
 /** Replace `filePath`'s bytes atomically, creating its directory. */
-function writeFileAtomic(filePath: string, bytes: string): void {
-  const tmp = `${filePath}.tmp-${randomUUID()}`;
-  mkdirSync(dirname(filePath), { recursive: true });
+function writeFileAtomic(filePath: AppPath, bytes: string): void {
+  const tmp = joinAppPath(
+    appPathParent(filePath),
+    `${basename(filePath)}.tmp-${randomUUID()}`,
+  );
+  mkdirSync(asAppPath(dirname(filePath)), { recursive: true });
   try {
     writeFileSync(tmp, bytes, "utf-8");
     renameSync(tmp, filePath);
@@ -74,9 +83,11 @@ function writeFileAtomic(filePath: string, bytes: string): void {
 }
 
 /** Every `*.origin.jsonc` under `dir`, as forward-slash paths relative to it. */
-function listOriginFiles(dir: string, rel = ""): string[] {
+function listOriginFiles(dir: AppPath, rel = ""): string[] {
   const out: string[] = [];
-  for (const entry of readdirSync(join(dir, rel), { withFileTypes: true })) {
+  for (const entry of readdirSync(joinAppPath(dir, rel), {
+    withFileTypes: true,
+  })) {
     const childRel = rel ? `${rel}/${entry.name}` : entry.name;
     if (entry.isDirectory()) out.push(...listOriginFiles(dir, childRel));
     else if (entry.name.endsWith(ORIGIN_SUFFIX)) out.push(childRel);
@@ -85,10 +96,10 @@ function listOriginFiles(dir: string, rel = ""): string[] {
 }
 
 /** Drop directories left empty by the prune, deepest first. */
-function removeEmptyDirsUnder(dir: string): void {
+function removeEmptyDirsUnder(dir: AppPath): void {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
-    const child = join(dir, entry.name);
+    const child = joinAppPath(dir, entry.name);
     removeEmptyDirsUnder(child);
     if (readdirSync(child).length === 0) rmdirSync(child);
   }
@@ -131,16 +142,16 @@ function removeEmptyDirsUnder(dir: string): void {
  * Returns what it did, for the caller's boot log.
  */
 export function propagateOriginLayer(
-  srcDir: string,
-  destDir: string,
+  srcDir: AppPath,
+  destDir: AppPath,
 ): { written: number; removed: number } {
   const shipped = new Set(listOriginFiles(srcDir));
   let written = 0;
 
   for (const rel of shipped) {
     const segments = rel.split("/");
-    const from = join(srcDir, ...segments);
-    const to = join(destDir, ...segments);
+    const from = joinAppPath(srcDir, ...segments);
+    const to = joinAppPath(destDir, ...segments);
     const bytes = readFileSync(from, "utf-8");
     if (existsSync(to) && readFileSync(to, "utf-8") === bytes) continue;
 
@@ -150,8 +161,10 @@ export function propagateOriginLayer(
     // make it stale (`override.hash !== newHash`). Idempotent for the reason it
     // is there — once the override is stale the hashes differ, so a later boot
     // never clobbers the true base with an intermediate origin.
-    const stem = to.slice(0, -ORIGIN_SUFFIX.length);
-    const overrideHash = hashHeaderOf(`${stem}.jsonc`);
+    const stem = basename(to, ORIGIN_SUFFIX);
+    const overrideHash = hashHeaderOf(
+      joinAppPath(asAppPath(dirname(to)), `${stem}.jsonc`),
+    );
     const oldOriginHash = hashHeaderOf(to);
     const newHash = HASH_HEADER_RE.exec(bytes)?.[1] ?? null;
     if (
@@ -159,7 +172,10 @@ export function propagateOriginLayer(
       oldOriginHash === overrideHash &&
       overrideHash !== newHash
     ) {
-      writeFileAtomic(`${stem}${ANCESTOR_SUFFIX}`, readFileSync(to, "utf-8"));
+      writeFileAtomic(
+        joinAppPath(asAppPath(dirname(to)), `${stem}${ANCESTOR_SUFFIX}`),
+        readFileSync(to, "utf-8"),
+      );
     }
 
     writeFileAtomic(to, bytes);
@@ -170,9 +186,17 @@ export function propagateOriginLayer(
   if (existsSync(destDir)) {
     for (const rel of listOriginFiles(destDir)) {
       if (shipped.has(rel)) continue;
-      const path = join(destDir, ...rel.split("/"));
+      const path = joinAppPath(destDir, ...rel.split("/"));
       // A runtime fork keeps its origin — see the note above.
-      if (existsSync(`${path.slice(0, -ORIGIN_SUFFIX.length)}.jsonc`)) continue;
+      if (
+        existsSync(
+          joinAppPath(
+            asAppPath(dirname(path)),
+            `${basename(path, ORIGIN_SUFFIX)}.jsonc`,
+          ),
+        )
+      )
+        continue;
       unlinkSync(path);
       removed++;
     }

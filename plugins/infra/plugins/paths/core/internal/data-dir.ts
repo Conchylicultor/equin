@@ -1,4 +1,8 @@
 import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   lstatSync,
   mkdirSync,
   renameSync,
@@ -200,11 +204,11 @@ export type DataDirInput = Omit<DataDirSpec, "kind"> & {
  */
 export interface DataDirArea {
   /** The absolute directory. A GETTER, like `DataDir.path`. */
-  readonly path: string;
+  readonly path: AppPath;
   /** A path INSIDE this area. */
-  file(...segments: string[]): string;
+  file(...segments: string[]): AppPath;
   /** `mkdir -p` the area, and return its path. */
-  ensure(): string;
+  ensure(): AppPath;
 }
 
 export interface DataDir {
@@ -213,11 +217,11 @@ export interface DataDir {
    * The absolute directory. A GETTER, resolved on every read — never a value
    * frozen at declaration time. See {@link dataRoot}.
    */
-  readonly path: string;
+  readonly path: AppPath;
   /** A path INSIDE this directory. The only sanctioned way to name a child. */
-  file(...segments: string[]): string;
+  file(...segments: string[]): AppPath;
   /** `mkdir -p` the directory, and return its path. */
-  ensure(): string;
+  ensure(): AppPath;
   /**
    * A named area inside this directory — ONE lowercase segment, validated like
    * a data-dir name. See {@link DataDirArea}.
@@ -265,7 +269,7 @@ const APP_DIR_RECLAIM_REASON =
  * build id. `defineDataDir` runs at consumer module eval, which is earlier
  * still, so freezing here would be strictly worse.
  */
-export function dataRoot(): string {
+export function dataRoot(): AppPath {
   return resolveDataRoot();
 }
 
@@ -305,7 +309,7 @@ export function relativeToDataRoot(
  * `what` names the thing being ensured in the error (`cache/check (owner …)`,
  * or an area of one).
  */
-function ensureDirectory(path: string, what: string): string {
+function ensureDirectory(path: AppPath, what: string): AppPath {
   // A `DataDir` names a DIRECTORY. Several entries at the root are loose
   // FILES today (`duress.latch`, `gateway.pid`, `push-holder.json`, the
   // `*.jsonl` sinks), and pointing a declaration's `legacyLocation` at one
@@ -341,17 +345,17 @@ function makeDataDir(spec: DataDirSpec): DataDir {
   const moves = spec.movedFrom ?? [];
 
   // Resolved per call, never closed over as a value — see `dataRoot()`.
-  const home = (): string =>
+  const home = (): AppPath =>
     spec.legacyLocation
-      ? join(dataRoot(), spec.legacyLocation.path)
-      : join(dataRoot(), spec.kind, spec.name);
+      ? joinAppPath(dataRoot(), spec.legacyLocation.path)
+      : joinAppPath(dataRoot(), spec.kind, spec.name);
 
   // Every path this declaration hands out goes through here, so a move is
   // honoured by `.path`, `.file()`, `.ensure()` and every `subdir()` handle
   // alike — there is no accessor that could read the new location early.
-  const resolveIn = (segments: readonly string[]): string => {
+  const resolveIn = (segments: readonly string[]): AppPath => {
     const base = home();
-    if (moves.length === 0) return join(base, ...segments);
+    if (moves.length === 0) return joinAppPath(base, ...segments);
 
     // The area a path falls in is its FIRST segment, normalised — so
     // `file("wallpaper", "a.jpg")` and `file("wallpaper/a.jpg")` agree.
@@ -360,27 +364,27 @@ function makeDataDir(spec: DataDirSpec): DataDir {
     const move =
       moves.find((m) => m.to !== undefined && m.to === parts[0]) ??
       moves.find((m) => m.to === undefined);
-    if (!move) return join(base, ...segments);
+    if (!move) return joinAppPath(base, ...segments);
 
-    const dest = move.to === undefined ? base : join(base, move.to);
-    const from = join(dataRoot(), move.from);
+    const dest = move.to === undefined ? base : joinAppPath(base, move.to);
+    const from = joinAppPath(dataRoot(), move.from);
     if (resolveMove(key, move, from, dest) === "new")
-      return join(base, ...segments);
+      return joinAppPath(base, ...segments);
     // Still at the old location: re-base what lies below the moved area.
     const below = move.to === undefined ? parts : parts.slice(1);
-    return join(from, ...below);
+    return joinAppPath(from, ...below);
   };
 
   const area = (name: string): DataDirArea => {
     assertAreaName(name, `${key}.subdir() name`);
     return {
-      get path(): string {
+      get path(): AppPath {
         return resolveIn([name]);
       },
-      file(...segments: string[]): string {
+      file(...segments: string[]): AppPath {
         return resolveIn([name, ...segments]);
       },
-      ensure(): string {
+      ensure(): AppPath {
         return ensureDirectory(
           resolveIn([name]),
           `${key} area "${name}" (owner ${spec.owner})`,
@@ -391,13 +395,13 @@ function makeDataDir(spec: DataDirSpec): DataDir {
 
   return {
     spec,
-    get path(): string {
+    get path(): AppPath {
       return resolveIn([]);
     },
-    file(...segments: string[]): string {
+    file(...segments: string[]): AppPath {
       return resolveIn(segments);
     },
-    ensure(): string {
+    ensure(): AppPath {
       return ensureDirectory(resolveIn([]), `${key} (owner ${spec.owner})`);
     },
     subdir: area,
@@ -425,7 +429,7 @@ type MoveState = "settled" | "pending" | "conflict";
  */
 const settledMoves = new Set<string>();
 
-function inspectMove(from: string, dest: string, key: string): MoveState {
+function inspectMove(from: AppPath, dest: AppPath, key: string): MoveState {
   const old = lstatSync(from, { throwIfNoEntry: false });
   // Absent: moved already (or a fresh root that never had it). A symlink: the
   // shim a previous move planted — the bytes are behind it, at the new spot.
@@ -438,7 +442,7 @@ function inspectMove(from: string, dest: string, key: string): MoveState {
   return lstatSync(dest, { throwIfNoEntry: false }) ? "conflict" : "pending";
 }
 
-function splitCopyError(key: string, from: string, dest: string): Error {
+function splitCopyError(key: string, from: AppPath, dest: AppPath): Error {
   return new Error(
     `[data-dir] SPLIT COPY: ${key} records that ${from} moved to ${dest}, and BOTH exist as real directories. ` +
       `Either side may hold the only copy of something, so nothing is chosen automatically and every read of ${key} fails until a human merges them: ` +
@@ -454,8 +458,8 @@ function splitCopyError(key: string, from: string, dest: string): Error {
 function resolveMove(
   key: string,
   move: MovedFrom,
-  from: string,
-  dest: string,
+  from: AppPath,
+  dest: AppPath,
 ): "new" | "old" {
   if (settledMoves.has(from)) return "new";
 
@@ -491,8 +495,8 @@ function errnoCode(err: unknown): string | undefined {
 function performMove(
   key: string,
   move: MovedFrom,
-  from: string,
-  dest: string,
+  from: AppPath,
+  dest: AppPath,
 ): void {
   // The destination's parent may not exist yet — `apps/desktop` on a root where
   // only `apps/wallpaper` ever did.

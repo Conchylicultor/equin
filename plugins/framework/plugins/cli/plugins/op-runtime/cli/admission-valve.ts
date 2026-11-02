@@ -1,3 +1,4 @@
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { closeSync, openSync, statSync, watch } from "node:fs";
 import { join } from "node:path";
@@ -439,7 +440,7 @@ export function createGateLocks(dir: GateDir): GateLocks {
     },
     arrive,
     joinLine: (place, signal) =>
-      createTicketLine(dir.file("line")).join({ place, signal }),
+      createTicketLine(asAppPath(dir.file("line"))).join({ place, signal }),
   };
 }
 

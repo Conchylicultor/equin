@@ -39,6 +39,12 @@ import {
   type TokenUse,
   crossRefsFacetDef,
 } from "../core";
+import {
+  appPathParent,
+  type AppPath,
+  joinAppPath,
+  asAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -47,8 +53,8 @@ import {
 // runtime here — that happens in relate(). `findImports` masks comments/regex/
 // strings and reads each specifier back by offset, so an import statement
 // written inside a string or comment never registers a phantom use.
-function parseRawUses(runtimeDir: string): RawUse[] {
-  const files: string[] = [];
+function parseRawUses(runtimeDir: AppPath): RawUse[] {
+  const files: AppPath[] = [];
   walkFiles(runtimeDir, files);
   const uses: RawUse[] = [];
   const seen = new Set<string>();
@@ -111,8 +117,8 @@ function parseRawUses(runtimeDir: string): RawUse[] {
 
 // The token groups a plugin declares: `defineTokenGroup` calls in its `core/`,
 // the folder a group's descriptor lives in (its `web/` registers it).
-function parseTokenGroups(coreDir: string): DeclaredTokenGroup[] {
-  const files: string[] = [];
+function parseTokenGroups(coreDir: AppPath): DeclaredTokenGroup[] {
+  const files: AppPath[] = [];
   walkFiles(coreDir, files);
   return files.flatMap((f) => tokenGroupsDeclaredIn(readIfExists(f) ?? "", f));
 }
@@ -128,12 +134,12 @@ const STYLED_RUNTIME_FOLDERS: ReadonlySet<RuntimeFolder> = new Set([
 // What the plugin's SHIPPED source styles with: every `.ts`/`.tsx`/`.css`
 // under the runtimes the deployed app runs — the same folders whose imports
 // are hard edges (`classifyEdges`).
-function shippedSources(dir: string): SourceText[] {
+function shippedSources(dir: AppPath): SourceText[] {
   const out: SourceText[] = [];
   for (const rt of SHIPPED_RUNTIME_FOLDERS) {
-    const rtDir = join(dir, rt);
+    const rtDir = joinAppPath(dir, rt);
     if (!pathExists(rtDir)) continue;
-    const files: string[] = [];
+    const files: AppPath[] = [];
     walkFiles(rtDir, files, { css: true });
     for (const file of files)
       out.push({
@@ -165,8 +171,8 @@ function literalMarkerIds(src: string, marker: string): string[] {
 }
 
 // The field types a plugin defines: `defineFieldType("<id>")` in its `core/`.
-function parseFieldTypeDefs(coreDir: string): string[] {
-  const files: string[] = [];
+function parseFieldTypeDefs(coreDir: AppPath): string[] {
+  const files: AppPath[] = [];
   walkFiles(coreDir, files);
   return files.flatMap((f) =>
     literalMarkerIds(readIfExists(f) ?? "", "defineFieldType"),
@@ -201,8 +207,8 @@ function spelledKeys(src: string): { fieldTypes: string[]; views: string[] } {
 
 // `defineDataView("<id>")` ids in the plugin's `web/` — whose authored config
 // rows name the view types the DataView shows.
-function parseDataViewIds(webDir: string): string[] {
-  const files: string[] = [];
+function parseDataViewIds(webDir: AppPath): string[] {
+  const files: AppPath[] = [];
   walkFiles(webDir, files);
   return files.flatMap((f) =>
     literalMarkerIds(readIfExists(f) ?? "", "defineDataView"),
@@ -216,7 +222,7 @@ function parseDataViewIds(webDir: string): string[] {
  * seeds one).
  */
 function authoredViewTypes(
-  repoRoot: string,
+  repoRoot: AppPath,
   pluginId: PluginId,
   dataViewId: string,
 ): string[] {
@@ -226,7 +232,7 @@ function authoredViewTypes(
     asPath(pluginId),
     `${dataViewId}.jsonc`,
   );
-  const text = readIfExists(file);
+  const text = readIfExists(asAppPath(file));
   if (text === null) return [];
   const doc = parseJsonc(text) as { views?: unknown } | undefined;
   if (!Array.isArray(doc?.views)) return [];
@@ -281,11 +287,11 @@ export default createFacet<CrossRefsData>({
   extract(ctx) {
     const raw = emptyByRuntime<RawUse>();
     for (const rt of RUNTIME_FOLDERS) {
-      const rtDir = join(ctx.dir, rt);
+      const rtDir = joinAppPath(ctx.dir, rt);
       if (pathExists(rtDir)) raw[rt] = parseRawUses(rtDir);
     }
-    const coreDir = join(ctx.dir, "core");
-    const webDir = join(ctx.dir, "web");
+    const coreDir = joinAppPath(ctx.dir, "core");
+    const webDir = joinAppPath(ctx.dir, "web");
     const keyDefs: KeyRef[] = (
       pathExists(coreDir) ? parseFieldTypeDefs(coreDir) : []
     ).map((key) => ({ space: "field-type", key }));
@@ -294,9 +300,9 @@ export default createFacet<CrossRefsData>({
     // defined ones; view types are final.
     const keyRefs: KeyRef[] = [...keyDefs];
     for (const rt of SHIPPED_RUNTIME_FOLDERS) {
-      const rtDir = join(ctx.dir, rt);
+      const rtDir = joinAppPath(ctx.dir, rt);
       if (!pathExists(rtDir)) continue;
-      const files: string[] = [];
+      const files: AppPath[] = [];
       walkFiles(rtDir, files);
       for (const f of files) {
         const spelled = spelledKeys(readIfExists(f) ?? "");
@@ -330,7 +336,10 @@ export default createFacet<CrossRefsData>({
     const sources = runWithFsSnapshot(fs, () =>
       nodes.map((node) => shippedSources(node.dir)),
     );
-    const used = await tokenVarsUsedBy(dirname(tree.pluginsRoot), sources);
+    const used = await tokenVarsUsedBy(
+      asAppPath(dirname(tree.pluginsRoot)),
+      sources,
+    );
     nodes.forEach((node, i) => {
       getFacet(node, crossRefsFacetDef)!.rawVars = [...used[i]!];
     });
@@ -421,7 +430,7 @@ export default createFacet<CrossRefsData>({
     for (const node of tree.byDir.values())
       for (const def of getFacet(node, crossRefsFacetDef)?.keyDefs ?? [])
         definedFieldTypes.add(def.key);
-    const repoRoot = dirname(tree.pluginsRoot);
+    const repoRoot = appPathParent(tree.pluginsRoot);
     for (const node of tree.byDir.values()) {
       const data = getFacet(node, crossRefsFacetDef);
       if (!data) continue;

@@ -11,6 +11,11 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
+import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
@@ -22,15 +27,17 @@ import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 // checkout is main, and the spec's checkout is matched by its real path.
 
 const ORIGINAL_ROOT = readEnv("DIR");
-const dirs: string[] = [];
+const dirs: AppPath[] = [];
 afterAll(() => {
   if (ORIGINAL_ROOT === undefined) unsetEnv("DIR");
   else setEnv("DIR", ORIGINAL_ROOT);
   for (const d of dirs) rmSync(d, { recursive: true, force: true });
 });
 
-function sandbox(): { dir: string; claimMain: (checkout: string) => void } {
-  const dir = realpathSync(mkdtempSync(join(tmpdir(), "checkout-ref-")));
+function sandbox(): { dir: AppPath; claimMain: (checkout: string) => void } {
+  const dir = asAppPath(
+    realpathSync(mkdtempSync(join(tmpdir(), "checkout-ref-"))),
+  );
   dirs.push(dir);
   setEnv("DIR", join(dir, "data"));
   return {
@@ -46,7 +53,7 @@ function sandbox(): { dir: string; claimMain: (checkout: string) => void } {
   };
 }
 
-async function repo(path: string): Promise<string> {
+async function repo(path: AppPath): Promise<AppPath> {
   mkdirSync(path, { recursive: true });
   await spawnExpectOk(["git", "init", "-q"], { cwd: path, timeoutMs: 30_000 });
   return path;
@@ -55,21 +62,21 @@ async function repo(path: string): Promise<string> {
 describe("checkoutRef", () => {
   test("a main checkout is main while nothing claims the main namespace", async () => {
     const { dir } = sandbox();
-    const root = await repo(join(dir, "fresh"));
+    const root = await repo(joinAppPath(dir, "fresh"));
     expect(await checkoutRef(root)).toEqual({ kind: "main" });
   });
 
   test("the checkout the main spec names is main", async () => {
     const { dir, claimMain } = sandbox();
-    const root = await repo(join(dir, "installed"));
+    const root = await repo(joinAppPath(dir, "installed"));
     claimMain(root);
     expect(await checkoutRef(root)).toEqual({ kind: "main" });
   });
 
   test("another repository's main checkout is named by its directory", async () => {
     const { dir, claimMain } = sandbox();
-    claimMain(await repo(join(dir, "installed")));
-    const clone = await repo(join(dir, "e2e-clone"));
+    claimMain(await repo(joinAppPath(dir, "installed")));
+    const clone = await repo(joinAppPath(dir, "e2e-clone"));
     expect(await checkoutRef(clone)).toEqual({
       kind: "worktree",
       name: "e2e-clone",
@@ -79,14 +86,14 @@ describe("checkoutRef", () => {
   test("a spec naming a checkout that no longer exists claims nothing", async () => {
     const { dir, claimMain } = sandbox();
     claimMain(join(dir, "moved-away"));
-    const root = await repo(join(dir, "here"));
+    const root = await repo(joinAppPath(dir, "here"));
     expect(await checkoutRef(root)).toEqual({ kind: "main" });
   });
 
   test("a second clone named like the main namespace is refused", async () => {
     const { dir, claimMain } = sandbox();
-    claimMain(await repo(join(dir, "installed")));
-    const clash = await repo(join(dir, "other", MAIN_WORKTREE_NAME));
+    claimMain(await repo(joinAppPath(dir, "installed")));
+    const clash = await repo(joinAppPath(dir, "other", MAIN_WORKTREE_NAME));
     let caught: unknown;
     try {
       await checkoutRef(clash);
@@ -101,7 +108,7 @@ describe("checkoutRef", () => {
     const ns = join(dir, "data", "worktrees", MAIN_WORKTREE_NAME);
     mkdirSync(ns, { recursive: true });
     writeFileSync(join(ns, "spec.json"), "{not json");
-    const root = await repo(join(dir, "any"));
+    const root = await repo(joinAppPath(dir, "any"));
     let caught: unknown;
     try {
       await checkoutRef(root);

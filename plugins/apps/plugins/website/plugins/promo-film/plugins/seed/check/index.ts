@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { prototypeFixtureThumbnailsCheck } from "@plugins/apps/plugins/prototypes/plugins/fixtures/machine";
 
 // The film's prototype fixture carries a gallery PNG per version, so the
@@ -7,6 +8,6 @@ import { prototypeFixtureThumbnailsCheck } from "@plugins/apps/plugins/prototype
 export default [
   prototypeFixtureThumbnailsCheck({
     id: "promo-film:prototype-thumbnails-in-sync",
-    dir: join(import.meta.dir, "..", "data"),
+    dir: asAppPath(join(import.meta.dir, "..", "data")),
   }),
 ];

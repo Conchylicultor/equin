@@ -23,7 +23,13 @@ import {
   realpathSync,
   statSync,
 } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import {
+  asAppPath,
+  appPathParent,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { join, relative } from "node:path";
 import {
   init as esLexerInit,
   parse as esLexerParse,
@@ -91,7 +97,7 @@ interface StagedLink {
  * scanner.
  */
 export async function scanStagedModules(opts: {
-  stagingDir: string;
+  stagingDir: AppPath;
   /** The composed map's `imports` record (specifier → URL). */
   imports: Record<string, string>;
 }): Promise<StagedScanResult> {
@@ -103,9 +109,9 @@ export async function scanStagedModules(opts: {
   const links: StagedLink[] = [];
   /** The registry artifact's own module — the importer of every web barrel. */
   let registryFile: string | null = null;
-  const artifactsDir = join(opts.stagingDir, "artifacts");
+  const artifactsDir = joinAppPath(opts.stagingDir, "artifacts");
   const realOf = (url: string): string | null => {
-    const abs = join(opts.stagingDir, url.slice(1));
+    const abs = joinAppPath(opts.stagingDir, url.slice(1));
     return existsSync(abs) ? realpathSync(abs) : null;
   };
 
@@ -113,9 +119,9 @@ export async function scanStagedModules(opts: {
   // A worker tree is a dir of links to artifacts (`worker-link.ts`); each is
   // scanned THROUGH the tree, so its relative imports resolve, and are joined
   // against their targets' exports, exactly as the worker resolves them.
-  const roots: Array<{ linkName: string; linkDir: string }> = [];
+  const roots: Array<{ linkName: string; linkDir: AppPath }> = [];
   for (const linkName of readdirSync(artifactsDir).sort()) {
-    const linkDir = join(artifactsDir, linkName);
+    const linkDir = joinAppPath(artifactsDir, linkName);
     // A linked copy is also linked at the top level (so pruners keep it); its
     // relative imports resolve only inside the tree, where it is scanned.
     if (linkName.endsWith(WORKER_LINKED_SUFFIX)) continue;
@@ -126,8 +132,8 @@ export async function scanStagedModules(opts: {
     for (const child of readdirSync(linkDir).sort()) {
       if (child === "meta.json") continue;
       roots.push({
-        linkName: join(linkName, child),
-        linkDir: join(linkDir, child),
+        linkName: `${linkName}/${child}`,
+        linkDir: joinAppPath(linkDir, child),
       });
     }
   }
@@ -150,8 +156,12 @@ export async function scanStagedModules(opts: {
     })) {
       if (!dirent.isFile()) continue;
       if (!dirent.name.endsWith(".js") && !dirent.name.endsWith(".mjs")) continue;
-      const abs = join(dirent.parentPath, dirent.name);
-      const distRel = join("artifacts", linkName, abs.slice(linkDir.length + 1));
+      const abs = joinAppPath(
+        linkDir,
+        relative(linkDir, dirent.parentPath),
+        dirent.name,
+      );
+      const distRel = `artifacts/${linkName}/${abs.slice(linkDir.length + 1)}`;
       const src = readFileSync(abs, "utf8");
       const [imports, exports] = esLexerParse(src, distRel);
       if (isRegistry && dirent.name === "index.js") registryFile ??= distRel;
@@ -167,7 +177,7 @@ export async function scanStagedModules(opts: {
         // A module the worker link spells to throw when loaded: nothing to resolve.
         if (spec.startsWith("data:")) continue;
         if (spec.startsWith("./") || spec.startsWith("../")) {
-          const targetAbs = resolve(dirname(abs), spec);
+          const targetAbs = asAppPath(join(appPathParent(abs), spec));
           if (existsSync(targetAbs) && statSync(targetAbs).isFile()) {
             target = realpathSync(targetAbs);
           } else {

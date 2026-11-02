@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   existsSync,
   mkdirSync,
@@ -147,7 +148,7 @@ function printGates(
 
 /** The files an updater may rewrite, as they are now (`null`: absent). */
 function snapshot(
-  root: string,
+  root: AppPath,
   files: readonly string[],
 ): Map<string, string | null> {
   const out = new Map<string, string | null>();
@@ -159,7 +160,7 @@ function snapshot(
 }
 
 function restore(
-  root: string,
+  root: AppPath,
   saved: ReadonlyMap<string, string | null>,
 ): void {
   for (const [rel, content] of saved) {
@@ -221,7 +222,7 @@ function firstLine(err: unknown): string {
  */
 export async function runUpgrade(args: {
   selection: readonly UpgradeSelection[];
-  root: string;
+  root: AppPath;
   receiptPath: string;
   gates: Gates;
   log: (line: string) => void;
@@ -283,7 +284,7 @@ export async function runUpgrade(args: {
 
 async function upgrade(args: {
   selection: readonly UpgradeSelection[];
-  root: string;
+  root: AppPath;
   receiptPath: string;
   gates: Gates;
   log: (line: string) => void;

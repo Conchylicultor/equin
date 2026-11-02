@@ -11,6 +11,7 @@
  * And: each file on a walk is parsed once, however many closures reach it.
  */
 
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { afterAll, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
@@ -37,7 +38,7 @@ function viewOf(
     writeFileSync(join(root, rel), text);
     if (rel in files) blobs.set(rel, gitBlobSha(Buffer.from(text), TREE));
   }
-  return repoViewOver(root, TREE, blobs);
+  return repoViewOver(asAppPath(root), TREE, blobs);
 }
 
 const sorted = (s: Set<string>): string[] => [...s].sort();

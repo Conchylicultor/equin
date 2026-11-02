@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
+import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
@@ -12,9 +17,9 @@ import {
 // The same cases as gateway/dataroot_test.go — the Go gateway resolves its
 // default root by the same rule, and the two must agree on every one.
 
-const homes: string[] = [];
-function home(): string {
-  const dir = mkdtempSync(join(tmpdir(), "data-root-layout-"));
+const homes: AppPath[] = [];
+function home(): AppPath {
+  const dir = asAppPath(mkdtempSync(join(tmpdir(), "data-root-layout-")));
   homes.push(dir);
   return dir;
 }
@@ -29,51 +34,51 @@ describe("readHomeDataRootLayout", () => {
     const h = home();
     expect(readHomeDataRootLayout(h)).toEqual({
       kind: "current",
-      root: join(h, DATA_DIR_NAME),
-      legacy: join(h, LEGACY),
+      root: joinAppPath(h, DATA_DIR_NAME),
+      legacy: joinAppPath(h, LEGACY),
       legacyLink: false,
     });
   });
 
   test("only the current root → the current root", () => {
     const h = home();
-    mkdirSync(join(h, DATA_DIR_NAME));
+    mkdirSync(joinAppPath(h, DATA_DIR_NAME));
     expect(readHomeDataRootLayout(h).kind).toBe("current");
   });
 
   test("only the legacy root → the legacy root (not yet migrated)", () => {
     const h = home();
-    mkdirSync(join(h, LEGACY));
+    mkdirSync(joinAppPath(h, LEGACY));
     expect(readHomeDataRootLayout(h)).toEqual({
       kind: "legacy",
-      root: join(h, LEGACY),
-      current: join(h, DATA_DIR_NAME),
+      root: joinAppPath(h, LEGACY),
+      current: joinAppPath(h, DATA_DIR_NAME),
     });
   });
 
   test("legacy a link to the current root → the current root, link noted", () => {
     const h = home();
-    mkdirSync(join(h, DATA_DIR_NAME));
-    symlinkSync(DATA_DIR_NAME, join(h, LEGACY));
+    mkdirSync(joinAppPath(h, DATA_DIR_NAME));
+    symlinkSync(DATA_DIR_NAME, joinAppPath(h, LEGACY));
     expect(readHomeDataRootLayout(h)).toEqual({
       kind: "current",
-      root: join(h, DATA_DIR_NAME),
-      legacy: join(h, LEGACY),
+      root: joinAppPath(h, DATA_DIR_NAME),
+      legacy: joinAppPath(h, LEGACY),
       legacyLink: true,
     });
   });
 
   test("legacy a link elsewhere (an external disk) → still the legacy root", () => {
     const h = home();
-    mkdirSync(join(h, "external"));
-    symlinkSync(join(h, "external"), join(h, LEGACY));
+    mkdirSync(joinAppPath(h, "external"));
+    symlinkSync(joinAppPath(h, "external"), joinAppPath(h, LEGACY));
     expect(readHomeDataRootLayout(h).kind).toBe("legacy");
   });
 
   test("both roots, separate → a split, loudly", () => {
     const h = home();
-    mkdirSync(join(h, LEGACY));
-    mkdirSync(join(h, DATA_DIR_NAME));
+    mkdirSync(joinAppPath(h, LEGACY));
+    mkdirSync(joinAppPath(h, DATA_DIR_NAME));
     expect(() => readHomeDataRootLayout(h)).toThrow(DataRootSplitError);
   });
 
@@ -82,7 +87,7 @@ describe("readHomeDataRootLayout", () => {
     // would read as a fresh install, so the legacy name keeps answering (and
     // fails loudly on its first read).
     const h = home();
-    symlinkSync(join(h, "gone"), join(h, LEGACY));
+    symlinkSync(joinAppPath(h, "gone"), joinAppPath(h, LEGACY));
     expect(readHomeDataRootLayout(h).kind).toBe("legacy");
   });
 });

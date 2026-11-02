@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { relative } from "node:path";
 import { configFileRelPath, configRawFile } from "../../core";
 import { serveValue } from "@plugins/network/plugins/live/machine";
 import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
@@ -11,6 +11,10 @@ import {
   hasConfigDocument,
   onDocumentChange,
 } from "@plugins/config_v2/server";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { CONFIG_DIR } from "./config-dir";
 import { userFilePath } from "./file-store";
 
@@ -23,20 +27,20 @@ import { userFilePath } from "./file-store";
 function gitLayerPaths(
   storePath: string,
   scopeId: string | undefined,
-): { gitOverridePath: string; gitOriginPath: string } {
+): { gitOverridePath: AppPath; gitOriginPath: AppPath } {
   return {
-    gitOverridePath: join(
+    gitOverridePath: joinAppPath(
       repoConfigDir(),
       configFileRelPath({ storePath, scopeId, file: "override" }),
     ),
-    gitOriginPath: join(
+    gitOriginPath: joinAppPath(
       repoConfigDir(),
       configFileRelPath({ storePath, file: "origin" }),
     ),
   };
 }
 
-function readRaw(path: string): string | null {
+function readRaw(path: AppPath): string | null {
   try {
     return readFileSync(path, "utf-8");
   } catch (err) {

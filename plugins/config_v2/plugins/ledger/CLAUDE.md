@@ -12,6 +12,8 @@
     - `config_v2.CONFIG_HASH_RE`
     - `config_v2.ConfigDescriptor`
     - `config_v2.JsonValue`
+    - `infra/host-fs/user-path.AppPath`
+    - `infra/host-fs/user-path.joinAppPath`
   - Exports (types):
     - `AppliedConfigMigration`
     - `ConfigLedgerEntry`

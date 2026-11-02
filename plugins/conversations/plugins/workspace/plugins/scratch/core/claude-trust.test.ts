@@ -1,3 +1,8 @@
+import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { afterAll, describe, expect, test } from "bun:test";
 import {
   mkdtempSync,
@@ -16,7 +21,7 @@ import {
 } from "./claude-trust";
 
 // Neutral fake paths under a temp dir: none of these is read as a directory.
-const BASE = mkdtempSync(join(tmpdir(), "claude-trust-test-"));
+const BASE = asAppPath(mkdtempSync(join(tmpdir(), "claude-trust-test-")));
 const HOME = join(BASE, "home");
 const ROOT = join(HOME, "data", "workspaces");
 const A = join(BASE, "a");
@@ -91,10 +96,10 @@ describe("isDirTrusted", () => {
 });
 
 describe("ensureDirTrusted / assertDirTrusted on a file", () => {
-  const dir = BASE;
+  const dir: AppPath = BASE;
 
   test("writes once, keeps the mode, and the assert then passes", () => {
-    const path = join(dir, "claude.json");
+    const path = joinAppPath(dir, "claude.json");
     writeFileSync(path, config({}), { mode: 0o600 });
     expect(() => assertDirTrusted(`${ROOT}/att-1`, path)).toThrow(
       "restart the backend",

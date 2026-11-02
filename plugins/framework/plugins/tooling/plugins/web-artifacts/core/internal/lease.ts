@@ -45,7 +45,11 @@ import {
   rmSync,
   symlinkSync,
 } from "node:fs";
-import { join } from "node:path";
+import {
+  appPathParent,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { randomBytes } from "node:crypto";
 import {
   flockRelease,
@@ -68,9 +72,9 @@ import { servedDistTargets } from "./served-dists";
 /** Where the store lock and the leases live (a test passes its own). */
 export interface LeaseLayout {
   /** The flock a pin takes shared and a prune exclusive. */
-  lockFile: string;
+  lockFile: AppPath;
   /** One dir per live build lease. */
-  leasesDir: string;
+  leasesDir: AppPath;
 }
 
 const DEFAULT_LAYOUT: LeaseLayout = {
@@ -90,7 +94,7 @@ async function withStoreLock<T>(
   mode: "shared" | "exclusive",
   fn: () => T,
 ): Promise<T> {
-  mkdirSync(join(layout.lockFile, ".."), { recursive: true });
+  mkdirSync(appPathParent(layout.lockFile), { recursive: true });
   const fd = openSync(layout.lockFile, "a");
   try {
     if (mode === "shared" ? flockTryShared(fd) : flockTry(fd)) {
@@ -121,7 +125,7 @@ export interface BuildLease {
    * the entry exists (or publish it) only AFTER this resolves. Concurrent
    * calls share one store-lock acquisition.
    */
-  pin(paths: readonly string[]): Promise<void>;
+  pin(paths: readonly AppPath[]): Promise<void>;
   /**
    * Drop the lease (idempotent): waits for any pin in flight, then removes the
    * lease dir under the shared store lock. Its entries are ordinary cache
@@ -138,16 +142,16 @@ export interface BuildLease {
 export function openBuildLease(
   layout: LeaseLayout = DEFAULT_LAYOUT,
 ): BuildLease {
-  const dir = join(
+  const dir = joinAppPath(
     layout.leasesDir,
     `${process.pid}-${randomBytes(6).toString("hex")}`,
   );
-  const pinned = new Set<string>();
+  const pinned = new Set<AppPath>();
   let ownerFd: number | null = null;
 
   const create = (): void => {
     mkdirSync(dir, { recursive: true });
-    const fd = openSync(join(dir, OWNER_LOCK), "a");
+    const fd = openSync(joinAppPath(dir, OWNER_LOCK), "a");
     if (!flockTry(fd)) {
       closeSync(fd);
       throw new Error(
@@ -159,13 +163,13 @@ export function openBuildLease(
 
   // One store-lock acquisition at a time for the whole lease: every pin that
   // lands while one is in flight folds into the ONE pending batch.
-  const pinner = createCoalescer<string>({
+  const pinner = createCoalescer<AppPath>({
     run: (paths) =>
       withStoreLock(layout, "shared", () => {
         if (ownerFd === null) create();
         for (const path of paths) {
           if (pinned.has(path)) continue;
-          symlinkSync(path, join(dir, String(pinned.size)));
+          symlinkSync(path, joinAppPath(dir, String(pinned.size)));
           pinned.add(path);
         }
       }),
@@ -204,7 +208,7 @@ export function openBuildLease(
  * Call ONLY under the exclusive store lock (a lease is created and released
  * under the shared one, so none is half-made or half-removed here).
  */
-export function liveLeaseTargets(leasesDir: string): Set<string> {
+export function liveLeaseTargets(leasesDir: AppPath): Set<string> {
   const targets = new Set<string>();
   let names: string[];
   try {
@@ -214,10 +218,10 @@ export function liveLeaseTargets(leasesDir: string): Set<string> {
     return targets;
   }
   for (const name of names) {
-    const dir = join(leasesDir, name);
+    const dir = joinAppPath(leasesDir, name);
     let fd: number | null;
     try {
-      fd = openSync(join(dir, OWNER_LOCK), "r");
+      fd = openSync(joinAppPath(dir, OWNER_LOCK), "r");
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
       fd = null; // no owner lock: the owner died mid-release
@@ -227,7 +231,7 @@ export function liveLeaseTargets(leasesDir: string): Set<string> {
         // Held: the owner is alive, and its pins are roots.
         for (const link of readdirSync(dir)) {
           if (link === OWNER_LOCK) continue;
-          targets.add(readlinkSync(join(dir, link)));
+          targets.add(readlinkSync(joinAppPath(dir, link)));
         }
         continue;
       }
@@ -248,7 +252,7 @@ export function liveLeaseTargets(leasesDir: string): Set<string> {
 export async function pruneWebArtifactCaches(
   opts: {
     layout?: LeaseLayout;
-    worktrees?: string;
+    worktrees?: AppPath;
     policies?: readonly CachePrunePolicy[];
   } = {},
 ): Promise<void> {

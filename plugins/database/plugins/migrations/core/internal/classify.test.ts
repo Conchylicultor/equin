@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { readFileSync } from "fs";
 import { join } from "path";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   classifyStatement,
   phaseStatements,
@@ -246,7 +247,7 @@ describe("phaseStatements", () => {
 // drizzle's real output shapes, including one-line `…;CREATE …` merges and the
 // DO $$ foreign-key form.
 describe("every schema migration on disk", () => {
-  const dataDir = join(import.meta.dir, "../../data");
+  const dataDir = asAppPath(join(import.meta.dir, "../../data"));
   const schemaFiles = [...schemaMigrationFiles(dataDir)].sort();
 
   // Files before this date include hand-edited schema migrations carrying DML

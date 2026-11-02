@@ -12,6 +12,11 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { flockRelease, flockTry } from "@plugins/packages/plugins/flock/core";
 import {
   liveLeaseTargets,
@@ -24,20 +29,20 @@ import { removeCacheEntry, type CachePrunePolicy } from "./store";
 const DAY = 24 * 60 * 60 * 1000;
 
 function fixture() {
-  const base = mkdtempSync(join(tmpdir(), "web-artifacts-lease-"));
-  const store = join(base, "store");
-  const worktrees = join(base, "worktrees"); // no dists: only leases are roots
+  const base = asAppPath(mkdtempSync(join(tmpdir(), "web-artifacts-lease-")));
+  const store = joinAppPath(base, "store");
+  const worktrees = joinAppPath(base, "worktrees"); // no dists: only leases are roots
   mkdirSync(store, { recursive: true });
   const layout: LeaseLayout = {
-    lockFile: join(base, "store.lock"),
-    leasesDir: join(base, "leases"),
+    lockFile: joinAppPath(base, "store.lock"),
+    leasesDir: joinAppPath(base, "leases"),
   };
   // Every entry is older than the prune's young-entry margin (1 min), so only
   // roots keep it: what a lease protects is never the margin's doing.
-  const entry = (name: string, ageMs: number): string => {
-    const p = join(store, name);
+  const entry = (name: string, ageMs: number): AppPath => {
+    const p = joinAppPath(store, name);
     mkdirSync(p);
-    writeFileSync(join(p, "meta.json"), "{}");
+    writeFileSync(joinAppPath(p, "meta.json"), "{}");
     const t = new Date(Date.now() - ageMs - 2 * 60 * 1000);
     utimesSync(p, t, t);
     return p;
@@ -73,7 +78,7 @@ describe("build lease", () => {
   test("an entry pinned before it is published is protected once it lands", async () => {
     const f = fixture();
     const lease = openBuildLease(f.layout);
-    const future = join(f.store, "future");
+    const future = joinAppPath(f.store, "future");
     await lease.pin([future]);
     f.entry("future", 0); // the publish, after the pin
     await f.prune();
@@ -88,7 +93,7 @@ describe("build lease", () => {
     expect(readdirSync(f.layout.leasesDir)).toHaveLength(1);
     await lease.release();
     expect(readdirSync(f.layout.leasesDir)).toHaveLength(0);
-    const outcome = await lease.pin([join(f.store, "b")]).then(
+    const outcome = await lease.pin([joinAppPath(f.store, "b")]).then(
       () => "pinned",
       (err: unknown) => String(err),
     );
@@ -98,10 +103,10 @@ describe("build lease", () => {
   test("a lease whose owner died (its lock is free) is reaped, its pins released", async () => {
     const f = fixture();
     const orphan = f.entry("orphan", 0);
-    const dead = join(f.layout.leasesDir, "12345-deadbeef");
+    const dead = joinAppPath(f.layout.leasesDir, "12345-deadbeef");
     mkdirSync(dead, { recursive: true });
-    writeFileSync(join(dead, "owner.lock"), "");
-    symlinkSync(orphan, join(dead, "0"));
+    writeFileSync(joinAppPath(dead, "owner.lock"), "");
+    symlinkSync(orphan, joinAppPath(dead, "0"));
     await f.prune();
     expect(existsSync(dead)).toBe(false);
     expect(existsSync(orphan)).toBe(false);
@@ -109,15 +114,15 @@ describe("build lease", () => {
 
   test("a live lease's pins are roots; a lease without an owner lock is dead", () => {
     const f = fixture();
-    const live = join(f.layout.leasesDir, "live");
+    const live = joinAppPath(f.layout.leasesDir, "live");
     mkdirSync(live, { recursive: true });
-    writeFileSync(join(live, "owner.lock"), "");
-    symlinkSync("/x/kept", join(live, "0"));
-    const fd = openSync(join(live, "owner.lock"), "r");
+    writeFileSync(joinAppPath(live, "owner.lock"), "");
+    symlinkSync("/x/kept", joinAppPath(live, "0"));
+    const fd = openSync(joinAppPath(live, "owner.lock"), "r");
     expect(flockTry(fd)).toBe(true); // the owner, alive
-    const noLock = join(f.layout.leasesDir, "nolock");
+    const noLock = joinAppPath(f.layout.leasesDir, "nolock");
     mkdirSync(noLock);
-    symlinkSync("/x/gone", join(noLock, "0"));
+    symlinkSync("/x/gone", joinAppPath(noLock, "0"));
     try {
       expect([...liveLeaseTargets(f.layout.leasesDir)]).toEqual(["/x/kept"]);
       expect(existsSync(live)).toBe(true);
@@ -180,9 +185,9 @@ describe("build lease under a contended store lock", () => {
     const leaseDirs = readdirSync(f.layout.leasesDir);
     expect(leaseDirs).toHaveLength(1);
     // One link per path, however the calls were batched.
-    expect(readdirSync(join(f.layout.leasesDir, ...leaseDirs))).toHaveLength(
-      targets.length + 1,
-    );
+    expect(
+      readdirSync(joinAppPath(f.layout.leasesDir, ...leaseDirs)),
+    ).toHaveLength(targets.length + 1);
     await f.prune();
     for (const t of targets) expect(existsSync(t)).toBe(true);
     await lease.release();
@@ -225,7 +230,7 @@ describe("removeCacheEntry", () => {
   test("EPERM / ENOENT from a concurrent remover that finished is tolerated", () => {
     const f = fixture();
     for (const code of ["EPERM", "ENOENT"]) {
-      const gone = join(f.store, `gone-${code}`);
+      const gone = joinAppPath(f.store, `gone-${code}`);
       expect(() =>
         removeCacheEntry(gone, () => {
           throw raced(code);
@@ -260,7 +265,7 @@ describe("removeCacheEntry", () => {
   test("any other error throws, even if the entry is gone", () => {
     const f = fixture();
     expect(() =>
-      removeCacheEntry(join(f.store, "nope"), () => {
+      removeCacheEntry(joinAppPath(f.store, "nope"), () => {
         throw raced("EACCES");
       }),
     ).toThrow(/EACCES/);

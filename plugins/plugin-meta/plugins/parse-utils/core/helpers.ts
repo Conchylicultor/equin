@@ -13,6 +13,10 @@ import {
   snapshotHas,
 } from "./snapshot-scope";
 import { markerCallSpans, type MarkerCallSpan } from "./find-marker-calls";
+import {
+  type AppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -23,7 +27,7 @@ export interface BarrelExport {
 
 // ── Helpers ────────────────────────────────────────────────────────
 
-export function readIfExists(path: string): string | null {
+export function readIfExists(path: AppPath): string | null {
   const snapshot = currentFsSnapshot();
   if (snapshot) {
     const cached = snapshot.files.get(path);
@@ -40,7 +44,7 @@ export function readIfExists(path: string): string | null {
  * covers `path` (or the directory holding it), from disk otherwise — so a facet
  * asking "has this plugin a `web/`?" for every plugin costs no syscall.
  */
-export function pathExists(path: string): boolean {
+export function pathExists(path: AppPath): boolean {
   return snapshotHas(path) ?? existsSync(path);
 }
 
@@ -625,8 +629,8 @@ function isSourceFile(name: string, css: boolean): boolean {
  * what a plugin styles with, not only what it imports.
  */
 export function walkFiles(
-  dir: string,
-  out: string[],
+  dir: AppPath,
+  out: AppPath[],
   opts?: { css?: boolean },
 ): void {
   const css = opts?.css ?? false;
@@ -642,7 +646,7 @@ export function walkFiles(
     if (!entries && snapshotHas(dir) === false) return;
     if (entries) {
       for (const e of entries) {
-        const p = join(dir, e.name);
+        const p = joinAppPath(dir, e.name);
         if (e.isDirectory()) {
           if (isSkippedWalkDir(e.name)) continue;
           walkFiles(p, out, opts);
@@ -663,7 +667,7 @@ export function walkFiles(
     return;
   }
   for (const e of entries) {
-    const p = join(dir, e.name);
+    const p = joinAppPath(dir, e.name);
     if (e.isDirectory()) {
       if (isSkippedWalkDir(e.name)) continue;
       walkFiles(p, out, opts);

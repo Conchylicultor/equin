@@ -63,6 +63,7 @@ import {
   type OpenedWalkBase,
   type WalkBaseStore,
 } from "./walk-base";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   canonicalDeclarations,
   formatDiagnostic,
@@ -646,11 +647,13 @@ async function run(job: Job): Promise<Result> {
 // research/2026-10-09-infra-spawn-children-die-with-parent.md).
 exitWithParent();
 
-const jobPath = process.argv[2];
-if (!jobPath) {
+const jobArg = process.argv[2];
+if (!jobArg) {
   console.error("type-check worker: missing job file argument");
   process.exit(2);
 }
+// The job file the spawning type-check wrote in its own temp dir.
+const jobPath = asAppPath(jobArg);
 const job = JSON.parse(readFileSync(jobPath, "utf8")) as Job;
 const result = await run(job);
 try {

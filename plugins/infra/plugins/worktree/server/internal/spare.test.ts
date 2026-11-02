@@ -22,10 +22,15 @@ import {
   listWorktreeEntries,
 } from "./worktree";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
+import {
+  type AppPath,
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // Every test runs against a throwaway repository — never the real checkout.
-let base: string;
-let repo: string;
+let base: AppPath;
+let repo: AppPath;
 
 async function git(cwd: string, ...args: string[]): Promise<string> {
   const r = await spawnCaptured([GIT, "-C", cwd, ...args], {
@@ -38,7 +43,7 @@ async function git(cwd: string, ...args: string[]): Promise<string> {
 }
 
 async function commit(file: string, content: string): Promise<string> {
-  writeFileSync(join(repo, file), content);
+  writeFileSync(joinAppPath(repo, file), content);
   await git(repo, "add", file);
   await git(repo, "commit", "-q", "-m", `write ${file}`);
   return git(repo, "rev-parse", "HEAD");
@@ -53,8 +58,8 @@ async function lockOf(path: string): Promise<string | null | undefined> {
 }
 
 beforeEach(async () => {
-  base = realpathSync(mkdtempSync(join(tmpdir(), "spare-test-")));
-  repo = join(base, "repo");
+  base = asAppPath(realpathSync(mkdtempSync(join(tmpdir(), "spare-test-"))));
+  repo = joinAppPath(base, "repo");
   const init = await spawnCaptured([GIT, "init", "-q", "-b", "main", repo], {
     timeoutMs: 60_000,
   });

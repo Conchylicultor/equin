@@ -1,3 +1,4 @@
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { refreshCheckoutBun } from "@plugins/packages/plugins/process-name/machine";
 
 /**
@@ -8,5 +9,5 @@ import { refreshCheckoutBun } from "@plugins/packages/plugins/process-name/machi
  * hardlink only leaves the name plain: nothing to report on every command.
  */
 export function recordCheckoutBun(): void {
-  refreshCheckoutBun(process.cwd(), process.execPath);
+  refreshCheckoutBun(asAppPath(process.cwd()), asAppPath(process.execPath));
 }

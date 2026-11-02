@@ -15,7 +15,10 @@ import {
   utimesSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { webArtifactsDir } from "../../data-dirs";
 import { precompressDir } from "./precompress";
 
@@ -81,8 +84,8 @@ export function artifactDirName(
   return `${slug}.${kind}.${inputsHash.slice(0, 16)}`;
 }
 
-export function artifactStorePath(dirName: string): string {
-  return join(STORE_DIR, dirName);
+export function artifactStorePath(dirName: string): AppPath {
+  return joinAppPath(STORE_DIR, dirName);
 }
 
 export function ensureStoreDirs(): void {
@@ -92,7 +95,7 @@ export function ensureStoreDirs(): void {
 
 /** True iff the artifact completed publishing (meta.json is written last). */
 export function hasArtifact(dirName: string): boolean {
-  return existsSync(join(artifactStorePath(dirName), "meta.json"));
+  return existsSync(joinAppPath(artifactStorePath(dirName), "meta.json"));
 }
 
 /**
@@ -133,7 +136,7 @@ export function listArtifacts(prefix: string): string[] {
 
 export function readArtifactMeta(dirName: string): ArtifactMeta {
   return JSON.parse(
-    readFileSync(join(artifactStorePath(dirName), "meta.json"), "utf8"),
+    readFileSync(joinAppPath(artifactStorePath(dirName), "meta.json"), "utf8"),
   ) as ArtifactMeta;
 }
 
@@ -158,8 +161,8 @@ export function touchArtifact(dirName: string): void {
  * `isComplete` confirms the winner really is a finished entry.
  */
 export async function publishDir(opts: {
-  tmpDir: string;
-  dest: string;
+  tmpDir: AppPath;
+  dest: AppPath;
   meta: unknown;
   isComplete: () => boolean;
   /**
@@ -170,7 +173,7 @@ export async function publishDir(opts: {
 }): Promise<void> {
   await precompressDir(opts.tmpDir, opts.precompressed);
   writeFileSync(
-    join(opts.tmpDir, "meta.json"),
+    joinAppPath(opts.tmpDir, "meta.json"),
     JSON.stringify(opts.meta, null, 2),
   );
   try {
@@ -187,7 +190,7 @@ export async function publishDir(opts: {
 /** Publish a freshly-built artifact dir into the store ({@link publishDir}). */
 export async function publishArtifact(
   dirName: string,
-  tmpDir: string,
+  tmpDir: AppPath,
   meta: ArtifactMeta,
 ): Promise<void> {
   await publishDir({
@@ -199,8 +202,8 @@ export async function publishArtifact(
 }
 
 /** A staging area for one artifact build, inside the store (same filesystem). */
-export function artifactTmpDir(dirName: string): string {
-  const tmp = join(STORE_DIR, `.tmp.${dirName}.${process.pid}`);
+export function artifactTmpDir(dirName: string): AppPath {
+  const tmp = joinAppPath(STORE_DIR, `.tmp.${dirName}.${process.pid}`);
   rmSync(tmp, { recursive: true, force: true });
   mkdirSync(tmp, { recursive: true });
   return tmp;
@@ -212,7 +215,7 @@ export function artifactTmpDir(dirName: string): string {
  * a root, never a victim and never counted (see {@link pruneCacheDir}).
  */
 export interface CachePrunePolicy {
-  root: string;
+  root: AppPath;
   /** Unreferenced entries older than this go (leftover `.tmp.*` dirs after an hour). */
   maxAgeMs: number;
   /** Past this many unreferenced entries, the oldest are trimmed… */
@@ -265,10 +268,10 @@ export function pruneCacheDir(
     return;
   }
   const now = Date.now();
-  const candidates: { path: string; mtimeMs: number }[] = [];
+  const candidates: { path: AppPath; mtimeMs: number }[] = [];
   let unjudged = 0;
   for (const name of names) {
-    const path = join(opts.root, name);
+    const path = joinAppPath(opts.root, name);
     if (opts.referenced.has(path)) continue;
     let mtimeMs: number;
     try {
@@ -297,7 +300,7 @@ export function pruneCacheDir(
 }
 
 /** True iff nothing (not even a dangling link) is at `path`. */
-function isGone(path: string): boolean {
+function isGone(path: AppPath): boolean {
   try {
     lstatSync(path);
     return false;
@@ -319,8 +322,8 @@ function isGone(path: string): boolean {
  * prune unlocked.)
  */
 export function removeCacheEntry(
-  path: string,
-  rm: (path: string) => void = (p) =>
+  path: AppPath,
+  rm: (path: AppPath) => void = (p) =>
     rmSync(p, { recursive: true, force: true }),
 ): void {
   for (let attempt = 0; ; attempt++) {
@@ -363,7 +366,7 @@ export interface FingerprintCache {
 const FINGERPRINT_CACHE_VERSION = 1;
 
 export function loadFingerprintCache(worktreeName: string): FingerprintCache {
-  const file = join(FINGERPRINTS_DIR, `${worktreeName}.json`);
+  const file = joinAppPath(FINGERPRINTS_DIR, `${worktreeName}.json`);
   let raw: string;
   try {
     raw = readFileSync(file, "utf8");
@@ -392,7 +395,7 @@ export function saveFingerprintCache(
   cache: FingerprintCache,
 ): void {
   ensureStoreDirs();
-  const file = join(FINGERPRINTS_DIR, `${worktreeName}.json`);
+  const file = joinAppPath(FINGERPRINTS_DIR, `${worktreeName}.json`);
   const tmp = `${file}.${process.pid}.tmp`;
   writeFileSync(tmp, JSON.stringify(cache));
   renameSync(tmp, file);

@@ -1,3 +1,7 @@
+import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
   appendFileSync,
@@ -12,10 +16,10 @@ import { join } from "node:path";
 import { readAgentEvents, readEventsAfter } from "./event-reader";
 
 let dir: string;
-let path: string;
+let path: AppPath;
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "sdk-events-"));
-  path = join(dir, "events.jsonl");
+  path = asAppPath(join(dir, "events.jsonl"));
 });
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
 

@@ -10,6 +10,10 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   computeHash,
   defineConfigMigration,
   type ConfigDescriptor,
@@ -20,10 +24,10 @@ import {
   applyConfigMigrations,
 } from "./config-migrations";
 
-let ns: string;
+let ns: AppPath;
 
 beforeEach(() => {
-  ns = join(mkdtempSync(join(tmpdir(), "config-migrations-")), "wt");
+  ns = asAppPath(join(mkdtempSync(join(tmpdir(), "config-migrations-")), "wt"));
   mkdirSync(ns, { recursive: true });
 });
 

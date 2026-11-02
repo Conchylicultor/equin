@@ -2,7 +2,8 @@
  * Tests for `user-path/no-sync-fs`. Typed RuleTester harness as in
  * `watcher-safety/no-detached-watch-reaction` — each case is a VIRTUAL file
  * under an inferred project (`tsconfig.case.json`, with `@types/node`), named
- * under a `server/` folder (backend code) or a `web/` one.
+ * under a `server/` or `core/` folder (runtime code) or a `cli/` one (out of
+ * scope).
  */
 
 import { describe, it, setDefaultTimeout } from "bun:test";
@@ -15,19 +16,27 @@ setDefaultTimeout(60_000);
 
 const LINT_DIR = new URL(".", import.meta.url).pathname.replace(/\/$/, "");
 const SERVER_CASE = "server/case.ts";
-const WEB_CASE = "web/case.ts";
+const CORE_CASE = "core/case.ts";
+const CLI_CASE = "cli/case.ts";
 
-/** The brand, spelled as `UserPathSchema` declares it. */
+/** The brands, spelled as `user-path/core` declares them. */
 const PRELUDE = `
 import type { z } from "zod";
-import { join, basename } from "node:path";
-import { readdirSync, realpathSync, existsSync, readFileSync } from "node:fs";
+import { join, resolve, dirname } from "node:path";
+import { tmpdir } from "node:os";
+import { readdirSync, realpathSync, existsSync, readFileSync, fstatSync, symlinkSync, writeFileSync } from "node:fs";
 import * as fs from "node:fs";
 import { readdir, realpath } from "node:fs/promises";
 type UserPath = string & z.$brand<"UserPath">;
+type AppPath = string & z.$brand<"AppPath">;
+declare function asAppPath(path: string): AppPath;
 declare const picked: UserPath;
 declare const config: { folders: { path: UserPath }[] };
-declare const APP_DIR: string;
+declare const APP_DIR: AppPath;
+declare const maybeApp: AppPath | undefined;
+declare const plain: string;
+declare const HOME_DIR: string;
+declare const body: { path: string };
 `;
 
 const at = (file: string) => `${LINT_DIR}/${file}`;
@@ -37,7 +46,7 @@ const valid = (code: string, file = SERVER_CASE) => ({
 });
 const invalid = (
   code: string,
-  messageIds: ("sync" | "widened")[],
+  messageIds: ("user" | "unproven")[],
   file = SERVER_CASE,
 ) => ({
   filename: at(file),
@@ -56,13 +65,14 @@ const ruleTester = new RuleTester({
       sourceType: "module",
       projectService: {
         defaultProject: "tsconfig.case.json",
-        allowDefaultProject: [SERVER_CASE, WEB_CASE],
+        allowDefaultProject: [SERVER_CASE, CORE_CASE, CLI_CASE],
       },
       tsconfigRootDir: LINT_DIR,
     },
   },
 });
 
+/* eslint-disable no-template-curly-in-string -- the cases ARE template literals */
 ruleTester.run(
   "no-sync-fs",
   rule as unknown as Parameters<RuleTester["run"]>[1],
@@ -70,50 +80,72 @@ ruleTester.run(
     valid: [
       // App-owned paths stay free to read synchronously.
       valid(`readdirSync(APP_DIR); readFileSync(join(APP_DIR, "x.json"));`),
-      // The async API on a user path.
       valid(
-        `async function f() { await readdir(picked); await realpath(join(picked, "a")); }`,
+        `function f(dir: AppPath, kind: "a" | "b", n: number) { readFileSync(join(dir, kind, \`\${n}.json\`)); }`,
       ),
-      // Library consumers and derivers are not widening.
-      valid(`console.log(picked); const n = basename(picked);`),
-      // A repo function that declares UserPath keeps the brand.
-      valid(`function probe(p: UserPath) { return p; } probe(picked);`),
-      // Returning it where the signature says UserPath.
-      valid(`function first(): UserPath { return config.folders[0]!.path; }`),
-      // Web code may show a user path as a string.
-      valid(`function label(s: string) { return s; } label(picked);`, WEB_CASE),
+      valid(`if (maybeApp) readdirSync(maybeApp);`),
+      valid(
+        'readFileSync(`${APP_DIR}/x.json`); existsSync(APP_DIR + ".lock");',
+      ),
+      valid(
+        `readFileSync("/etc/hosts"); readdirSync(join(import.meta.dir, "fixtures"));`,
+      ),
+      valid(`readdirSync(tmpdir()); readFileSync(resolve(APP_DIR, "a"));`),
+      valid(`const lock = join(APP_DIR, "x.lock"); existsSync(lock);`),
+      valid(`readdirSync(dirname(APP_DIR));`),
+      // A descriptor, a link's target text, file contents: not paths read.
+      valid(
+        `fstatSync(3); symlinkSync(plain, APP_DIR); writeFileSync(APP_DIR, plain);`,
+      ),
+      // The async API on any path.
+      valid(
+        `async function f() { await readdir(picked); await readdir(plain); await realpath(join(picked, "a")); }`,
+      ),
+      // A typed path is no-unproven-claim's to police, not this rule's.
+      valid(`existsSync(asAppPath(plain));`),
+      // Out of scope: a CLI file.
+      valid(`readdirSync(plain);`, CLI_CASE),
     ],
     invalid: [
-      invalid(`realpathSync(picked);`, ["sync"]),
-      invalid(`fs.readdirSync(picked);`, ["sync"]),
-      invalid(`realpathSync.native(picked);`, ["sync"]),
-      invalid(`readdirSync(picked satisfies string);`, ["sync"]),
-      invalid(`for (const f of config.folders) existsSync(f.path);`, ["sync"]),
-      invalid(`config.folders.map((f) => readdirSync(f.path));`, ["sync"]),
-      // Derived paths keep the taint.
-      invalid(`readdirSync(join(picked, "sub"));`, ["sync"]),
-      // eslint-disable-next-line no-template-curly-in-string -- the case IS a template literal
-      invalid("readdirSync(`${picked}/sub`);", ["sync"]),
-      invalid(`const sub = join(picked, "x"); readdirSync(sub);`, ["sync"]),
+      // A user-chosen path.
+      invalid(`realpathSync(picked);`, ["user"]),
+      invalid(`fs.readdirSync(picked);`, ["user"]),
+      invalid(`realpathSync.native(picked);`, ["user"]),
+      invalid(`for (const f of config.folders) existsSync(f.path);`, ["user"]),
+      invalid(`readdirSync(join(picked, "sub"));`, ["user"]),
+      invalid(`readdirSync(join(APP_DIR, picked));`, ["user"]),
+      invalid("readdirSync(`${picked}/sub`);", ["user"]),
       invalid(
         `async function f() { const real = await realpath(picked); readdirSync(real); }`,
-        ["sync"],
+        ["user"],
       ),
-      // Even in web code a sync call is reported.
-      invalid(`readdirSync(picked);`, ["sync"], WEB_CASE),
-      // Dropping the brand in backend code.
-      invalid(`function walk(dir: string) { return dir; } walk(picked);`, [
-        "widened",
+      // An unmarked path is not proven — the point of the allow-list.
+      invalid(`readdirSync(plain);`, ["unproven"]),
+      // A plain-string tail under an app root may climb out of it.
+      invalid(
+        `function f(dir: AppPath, name: string) { readFileSync(join(dir, name)); }`,
+        ["unproven"],
+      ),
+      invalid(
+        "function f(dir: AppPath, name: string) { readFileSync(`${dir}/${name}`); }",
+        ["unproven"],
+      ),
+      invalid(`readdirSync(APP_DIR + plain);`, ["unproven"]),
+      invalid("readdirSync(`/Volumes/${plain}`);", ["unproven"]),
+      invalid(`readFileSync(body.path);`, ["unproven"]),
+      invalid(`function walk(dir: string) { return readdirSync(dir); }`, [
+        "unproven",
       ]),
-      invalid(`const s: string = picked;`, ["widened"]),
-      invalid(
-        `function dirs(): string[] { return config.folders.map((f) => f.path); }`,
-        ["widened"],
-      ),
-      invalid(
-        `const deps: { folders: () => string[] } = { folders: () => config.folders.map((f) => f.path) };`,
-        ["widened"],
-      ),
+      invalid(`readdirSync(String(picked));`, ["unproven"]),
+      invalid(`readdirSync(resolve(APP_DIR, plain));`, ["unproven"]),
+      invalid("readdirSync(`${plain}/sub`);", ["unproven"]),
+      invalid(`readdirSync(join(HOME_DIR, plain));`, ["unproven"]),
+      invalid(`readdirSync(process.env.SOME_DIR!);`, ["unproven"]),
+      invalid(`readdirSync(plain ?? APP_DIR);`, ["unproven"]),
+      invalid(`writeFileSync(plain, "x");`, ["unproven"]),
+      // Core code runs on a backend's thread too.
+      invalid(`readdirSync(plain);`, ["unproven"], CORE_CASE),
     ],
   },
 );
+/* eslint-enable no-template-curly-in-string */

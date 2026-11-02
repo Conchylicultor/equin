@@ -8,6 +8,11 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 import {
   findPublishedMigrationViolations,
@@ -26,13 +31,13 @@ import {
 // reads refs, so how they got there does not matter, and nothing dials out.
 const GIT_ENV = ["GIT_CONFIG_GLOBAL", "GIT_CONFIG_NOSYSTEM"] as const;
 const saved = new Map<string, string | undefined>();
-let dir = "";
+let dir: AppPath = asAppPath("");
 
 beforeAll(() => {
   for (const k of GIT_ENV) saved.set(k, process.env[k]);
   process.env.GIT_CONFIG_GLOBAL = "/dev/null";
   process.env.GIT_CONFIG_NOSYSTEM = "1";
-  dir = mkdtempSync(join(tmpdir(), "published-migrations-"));
+  dir = asAppPath(mkdtempSync(join(tmpdir(), "published-migrations-")));
 });
 
 afterAll(() => {
@@ -43,7 +48,7 @@ afterAll(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-async function git(root: string, ...args: string[]): Promise<string> {
+async function git(root: AppPath, ...args: string[]): Promise<string> {
   const r = await spawnExpectOk(
     ["git", "-c", "user.name=t", "-c", "user.email=t@t", ...args],
     { cwd: root, timeoutMs: 60_000 },
@@ -52,8 +57,8 @@ async function git(root: string, ...args: string[]): Promise<string> {
 }
 
 let n = 0;
-async function repo(): Promise<string> {
-  const root = join(dir, `r${n++}`);
+async function repo(): Promise<AppPath> {
+  const root = joinAppPath(dir, `r${n++}`);
   await spawnExpectOk(["git", "init", "-q", "-b", "main", root], {
     timeoutMs: 60_000,
   });
@@ -62,20 +67,20 @@ async function repo(): Promise<string> {
   return root;
 }
 
-function write(root: string, rel: string, content: string): void {
+function write(root: AppPath, rel: string, content: string): void {
   const abs = join(root, rel);
   mkdirSync(dirname(abs), { recursive: true });
   writeFileSync(abs, content);
 }
 
-async function commit(root: string, msg: string): Promise<string> {
+async function commit(root: AppPath, msg: string): Promise<string> {
   await git(root, "add", "-A");
   await git(root, "commit", "-q", "--allow-empty", "-m", msg);
   return git(root, "rev-parse", "HEAD");
 }
 
 /** A schema migration (`.sql` + snapshot) with a correct filename sha8. */
-function migration(root: string, ts: string, slug: string): string {
+function migration(root: AppPath, ts: string, slug: string): string {
   const sql = `-- ${slug}\nCREATE TABLE "${slug}" ("id" text);\n`;
   const tag = `${ts}_${migrationContentHash(sql)}__${slug}`;
   write(root, `${MIGRATIONS_DATA_DIR}/${tag}.sql`, sql);
@@ -101,7 +106,7 @@ async function rejection(p: Promise<unknown>): Promise<Error> {
 }
 
 const sqlPath = (f: string) => `${MIGRATIONS_DATA_DIR}/${f}`;
-const setRef = (root: string, ref: string, sha: string) =>
+const setRef = (root: AppPath, ref: string, sha: string) =>
   git(root, "update-ref", ref, sha);
 
 describe("publishedMigrationRefs / publishedMigrationBasenames", () => {

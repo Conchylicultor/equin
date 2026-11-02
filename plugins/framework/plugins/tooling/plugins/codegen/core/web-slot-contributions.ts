@@ -1,5 +1,8 @@
 import { existsSync } from "fs";
-import { join } from "path";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
 import { importBarrel } from "@plugins/plugin-meta/plugins/barrel-import/core";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
@@ -22,7 +25,7 @@ export type WebSlotContribution = Record<string, unknown> & {
  * A stale slot id throws (resolved up front) instead of matching nothing.
  */
 export async function collectWebSlotContributions<S extends string>(
-  root: string,
+  root: AppPath,
   slotIds: Record<S, string>,
 ): Promise<Record<S, WebSlotContribution[]>> {
   const tree = await buildBarrelFreeTree(root);
@@ -41,7 +44,8 @@ export async function collectWebSlotContributions<S extends string>(
   ) as unknown as Record<S, WebSlotContribution[]>;
   for (const node of tree.byDir.values()) {
     if (!bundle.has(node.id)) continue;
-    const webIndex = join(node.dir, "web", "index.ts");
+    // A plugin dir of this checkout.
+    const webIndex = joinAppPath(node.dir, "web", "index.ts");
     if (!existsSync(webIndex)) continue;
     // An ESM-cache hit: the declaration pass above imported it.
     const mod = await importBarrel(webIndex);

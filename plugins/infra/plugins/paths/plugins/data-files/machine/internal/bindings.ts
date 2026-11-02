@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   defineServerContribution,
   type Registration,
@@ -169,6 +170,6 @@ export function diskMount(dataDir: DataDir): Mount {
  * `prototypes/`). The same disk operations as {@link diskMount}; no watch, no
  * ledger. Never for a data dir: that is a root, or `diskMount`.
  */
-export function diskDirMount(dir: string): Mount {
+export function diskDirMount(dir: AppPath): Mount {
   return diskTree({ dir: () => dir, label: `directory "${dir}"` });
 }

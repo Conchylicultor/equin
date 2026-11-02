@@ -26,6 +26,10 @@
  * except the closed set of historical files below that landed before it was
  * enforced and can never be renamed.
  */
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { createHash } from "crypto";
 import { readFile } from "fs/promises";
 import { join } from "path";
@@ -131,7 +135,7 @@ async function readIfPresent(abs: string): Promise<Uint8Array | null> {
  * violation names the published refs whose merge-base with HEAD holds the file.
  */
 export async function findPublishedMigrationViolations(
-  root: string,
+  root: AppPath,
 ): Promise<PublishedMigrationViolation[]> {
   // path + blob → refs. Keyed on the blob too: two bases disagreeing on a
   // file's content cannot both match the working tree, and each says which.
@@ -212,7 +216,7 @@ export async function findPublishedMigrationViolations(
     }
   }
   if (legacyExpected.size > 0) {
-    const now = readLegacySnapshots(join(root, MIGRATIONS_DATA_DIR));
+    const now = readLegacySnapshots(joinAppPath(root, MIGRATIONS_DATA_DIR));
     for (const [tag, byLineage] of legacyExpected) {
       const head = now?.get(tag);
       for (const [lineage, refs] of byLineage) {

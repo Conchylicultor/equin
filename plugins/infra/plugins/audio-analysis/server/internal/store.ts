@@ -1,5 +1,10 @@
+import {
+  type AppPath,
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { closeSync, existsSync, mkdirSync, openSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname } from "node:path";
 import { flockTry } from "@plugins/packages/plugins/flock/core";
 import {
   ANALYSIS_VERSION,
@@ -11,35 +16,35 @@ import { beatFeaturesCacheDir } from "../../data-dirs";
 /** One video's files under the cache, at one analysis version and settings. */
 export interface FeaturePaths {
   /** The version and settings' dir, `<cache>/v<N>/<settingsKey>`. */
-  dir: string;
+  dir: AppPath;
   /** The features — present means ready. */
-  ready: string;
+  ready: AppPath;
   /** `{since, phase, pid}` while an analysis holds `lock`. */
-  running: string;
+  running: AppPath;
   /** `{message, at, permanent}` after an analysis threw. */
-  failed: string;
+  failed: AppPath;
   /** The host flock one analysis of this video holds. */
-  lock: string;
+  lock: AppPath;
 }
 
 /** The cache root: the declared data dir, or a test's temp dir. */
-export function cacheRoot(dir?: string): string {
+export function cacheRoot(dir?: AppPath): AppPath {
   return dir ?? beatFeaturesCacheDir.path;
 }
 
 export function featurePaths(
-  root: string,
+  root: AppPath,
   videoId: string,
   settings: AnalysisSettings,
   version: number = ANALYSIS_VERSION,
 ): FeaturePaths {
-  const dir = join(root, `v${version}`, settingsKey(settings));
+  const dir = joinAppPath(root, `v${version}`, settingsKey(settings));
   return {
     dir,
-    ready: join(dir, `${videoId}.json`),
-    running: join(dir, `${videoId}.running.json`),
-    failed: join(dir, `${videoId}.failed.json`),
-    lock: join(dir, `${videoId}.lock`),
+    ready: joinAppPath(dir, `${videoId}.json`),
+    running: joinAppPath(dir, `${videoId}.running.json`),
+    failed: joinAppPath(dir, `${videoId}.failed.json`),
+    lock: joinAppPath(dir, `${videoId}.lock`),
   };
 }
 
@@ -48,8 +53,8 @@ export function featurePaths(
 // `running.json`, which reads as absent because nobody holds this.
 
 /** Take the lock without waiting: the held fd, or `null` when another holds it. */
-export function tryLock(path: string): number | null {
-  mkdirSync(dirname(path), { recursive: true });
+export function tryLock(path: AppPath): number | null {
+  mkdirSync(asAppPath(dirname(path)), { recursive: true });
   const fd = openSync(path, "a");
   if (flockTry(fd)) return fd;
   closeSync(fd);
@@ -70,7 +75,7 @@ const LOCK_RETRY_MS = 500;
  * short of the blocking call itself.
  */
 export async function waitLock(
-  path: string,
+  path: AppPath,
   onWait: () => void | Promise<void>,
 ): Promise<number> {
   const first = tryLock(path);
@@ -84,7 +89,7 @@ export async function waitLock(
 }
 
 /** Whether some process holds the lock now: take it for an instant, release. */
-export function isLockHeld(path: string): boolean {
+export function isLockHeld(path: AppPath): boolean {
   if (!existsSync(path)) return false;
   const fd = openSync(path, "a");
   try {

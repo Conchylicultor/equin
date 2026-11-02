@@ -17,6 +17,10 @@ import { _releaseRuns } from "./tables";
 import { releaseLog } from "./release-log";
 import { previews, releasePreviewsServed } from "./preview-state-resource";
 import { releaseRunIdKind } from "@plugins/release/plugins/bundles/core";
+import {
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
  * One release preview: a self-contained stack (gateway, backend, PgBouncer,
@@ -42,7 +46,7 @@ const PREVIEW_PG_PORT_FLOOR = 5500;
 // Where preview data roots live. Literal `/tmp` (NOT os.tmpdir(), the long
 // /var/folders/... path on macOS): the embedded PG/gateway open Unix sockets under
 // this root, capped at 104 bytes, so the prefix must be short.
-const PREVIEW_TMP_DIR = "/tmp";
+const PREVIEW_TMP_DIR = asAppPath("/tmp");
 const PREVIEW_DIR_PREFIX = "sgp-";
 
 /**
@@ -96,7 +100,9 @@ export async function startPreview(runId: string): Promise<void> {
 
   const port = await pickFreePort(PREVIEW_PORT_FLOOR);
   const pgPort = await pickFreePort(PREVIEW_PG_PORT_FLOOR);
-  const dataRoot = mkdtempSync(join(PREVIEW_TMP_DIR, PREVIEW_DIR_PREFIX));
+  const dataRoot = asAppPath(
+    mkdtempSync(join(PREVIEW_TMP_DIR, PREVIEW_DIR_PREFIX)),
+  );
 
   // The composition comes off a DB row, and a preview listens on its own port.
   const url = namespaceUrl(asNamespace(run.composition), "", port);
@@ -190,7 +196,7 @@ export async function reconcileOrphanPreviews(): Promise<void> {
     else throw err;
   }
   for (const name of dirs) {
-    const root = join(PREVIEW_TMP_DIR, name);
+    const root = joinAppPath(PREVIEW_TMP_DIR, name);
     if (activeRoots.has(root)) continue;
     // Ports unknown for an orphan dir — pidfile-based teardown suffices.
     await teardownSelfContainedApp({ root });

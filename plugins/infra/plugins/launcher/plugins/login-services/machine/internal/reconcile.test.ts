@@ -1,5 +1,9 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import {
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -21,7 +25,7 @@ import type { LoginService, LoginServiceState } from "./login-service";
 import type { MacosAppHost } from "./macos-app";
 import { reconcileLoginService, type ReconcilePolicy } from "./reconcile";
 
-const dir = mkdtempSync(join(tmpdir(), "login-service-reconcile-"));
+const dir = asAppPath(mkdtempSync(join(tmpdir(), "login-service-reconcile-")));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
 const helper = defineDep({
@@ -47,7 +51,7 @@ const decl = defineLoginService({
   executable: {
     name: "example",
     build: (ready) => ({
-      file: `${ready.dir}/bin`,
+      file: asAppPath(`${ready.dir}/bin`),
       identity: componentIdentity(helper.id, ready.identity),
     }),
   },
@@ -56,13 +60,21 @@ const decl = defineLoginService({
     cwd: ready.dir,
     env: {},
     // A folder that does not exist yet: the reconcile creates it.
-    stdioLog: join(dir, "logs", "example.log"),
+    stdioLog: joinAppPath(dir, "logs", "example.log"),
   }),
 });
 
 // Not a real install dir, so `holdDep` leaves the deps cache alone.
-const oldBuild = readyForTests(helper, "/cache/example-helper/old/env", "old");
-const newBuild = readyForTests(helper, "/cache/example-helper/new/env", "new");
+const oldBuild = readyForTests(
+  helper,
+  asAppPath("/cache/example-helper/old/env"),
+  "old",
+);
+const newBuild = readyForTests(
+  helper,
+  asAppPath("/cache/example-helper/new/env"),
+  "new",
+);
 
 // Far beyond any pid a kernel hands out: "gone" the moment it is asked.
 const DEAD_PID = 99_999_999;
@@ -90,7 +102,10 @@ function fakeService(registration: Registration, writtenFrom: typeof oldBuild) {
     registration === "loaded"
       ? { kind: "loaded", pid: DEAD_PID, lastExit: null }
       : { kind: "not-loaded" };
-  const definitionPath = join(dir, `${registration}-${Math.random()}.def`);
+  const definitionPath = joinAppPath(
+    dir,
+    `${registration}-${Math.random()}.def`,
+  );
   if (definition !== null) writeFileSync(definitionPath, definition);
 
   const service: LoginService = {
@@ -130,7 +145,7 @@ function fakeService(registration: Registration, writtenFrom: typeof oldBuild) {
 /** A host with no app bundle (Linux): the service runs its build where it is. */
 const unbundled: MacosAppHost = {
   platform: "linux",
-  bundle: "/nowhere/equin.app",
+  bundle: asAppPath("/nowhere/equin.app"),
   withLock: () => {
     throw new Error("nothing is installed off macOS");
   },
@@ -264,14 +279,14 @@ test("a (re)load truncates the stdio log, creating its folder", async () => {
 
 describe("reconcileLoginService — macOS (the equin app bundle)", () => {
   // Real build files, so the install copies something; signing is faked.
-  const builds = join(dir, "builds");
+  const builds = joinAppPath(dir, "builds");
   const build = (identity: string) => {
-    const env = join(builds, identity);
+    const env = joinAppPath(builds, identity);
     mkdirSync(env, { recursive: true });
     writeFileSync(join(env, "bin"), `binary ${identity}`);
     return readyForTests(helper, env, identity);
   };
-  const bundle = join(dir, "app", "equin.app");
+  const bundle = joinAppPath(dir, "app", "equin.app");
   const host: MacosAppHost = {
     platform: "darwin",
     bundle,

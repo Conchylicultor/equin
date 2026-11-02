@@ -5,6 +5,7 @@
 // tests that hold its purity cannot drift apart.
 
 import type ts from "typescript";
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
  * `base` (the parsed tsconfig's options) with declaration emit to `outDir`
@@ -13,7 +14,7 @@ import type ts from "typescript";
  */
 export function signatureEmitOptions(
   base: ts.CompilerOptions,
-  root: string,
+  root: AppPath,
 ): ts.CompilerOptions {
   return {
     ...base,

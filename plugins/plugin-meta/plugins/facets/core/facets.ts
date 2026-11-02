@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { SlotNaming } from "@plugins/framework/plugins/slot-declaration/core";
 import type { FsSnapshot } from "@plugins/plugin-meta/plugins/parse-utils/core";
 
@@ -7,7 +8,7 @@ export interface FacetDef<T> {
 }
 
 export interface ExtractContext {
-  dir: string;
+  dir: AppPath;
   /**
    * The plugin this extraction describes, as its dotted id.
    *

@@ -12,6 +12,10 @@ import { mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import {
+  type AppPath,
+  asAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   GitScanError,
   gitGrepList,
   grepCode,
@@ -20,10 +24,10 @@ import {
 import { withScanView } from "./scan-context";
 import { computeTreeHash } from "./tree-hash";
 
-let root = "";
+let root!: AppPath;
 
 beforeAll(async () => {
-  root = mkdtempSync(join(tmpdir(), "grep-code-test-"));
+  root = asAppPath(mkdtempSync(join(tmpdir(), "grep-code-test-")));
   const fixture = [
     "// new WebSocket(commented) should be ignored", // L1
     'const note = "new WebSocket(stringed) ignored too";', // L2

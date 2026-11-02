@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { SentinelStatus } from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
 import { createStatusWriter } from "@plugins/debug/plugins/sentinel/plugins/status-file/server";
 
@@ -12,7 +13,7 @@ export type DownStatus = Extract<SentinelStatus, { state: "down" }>;
  * swallow the one signal that must land.
  */
 export function createStatusSink(opts: {
-  dir: string;
+  dir: AppPath;
   pid?: number;
   claimedAt?: number;
   reportDown: (status: DownStatus) => void;

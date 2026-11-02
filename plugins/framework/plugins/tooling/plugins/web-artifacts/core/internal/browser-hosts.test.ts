@@ -9,11 +9,15 @@ import {
   type HostInputs,
   type HostInputsRecord,
 } from "./browser-hosts";
+import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 describe("hostInputsHash", () => {
-  let root: string;
+  let root: AppPath;
   beforeEach(() => {
-    root = mkdtempSync(join(tmpdir(), "browser-host-inputs-"));
+    root = asAppPath(mkdtempSync(join(tmpdir(), "browser-host-inputs-")));
     writeFileSync(join(root, "bun.lock"), "lock");
     mkdirSync(join(root, "src"));
     writeFileSync(join(root, "src/host.ts"), "host");
@@ -46,15 +50,15 @@ describe("hostInputsHash", () => {
 
 describe("matchHostRecord", () => {
   // Two checkouts of the same repo whose host graphs differ in one file.
-  let a: string;
-  let b: string;
-  const write = (root: string, rel: string, body: string) => {
+  let a: AppPath;
+  let b: AppPath;
+  const write = (root: AppPath, rel: string, body: string) => {
     mkdirSync(join(root, rel, ".."), { recursive: true });
     writeFileSync(join(root, rel), body);
   };
   beforeEach(() => {
-    a = mkdtempSync(join(tmpdir(), "browser-host-a-"));
-    b = mkdtempSync(join(tmpdir(), "browser-host-b-"));
+    a = asAppPath(mkdtempSync(join(tmpdir(), "browser-host-a-")));
+    b = asAppPath(mkdtempSync(join(tmpdir(), "browser-host-b-")));
     for (const root of [a, b]) {
       write(root, "bun.lock", "lock");
       write(root, "src/host.ts", "host");
@@ -68,7 +72,7 @@ describe("matchHostRecord", () => {
     rmSync(b, { recursive: true, force: true });
   });
 
-  const record = (root: string, inputs: HostInputs): HostInputsRecord => ({
+  const record = (root: AppPath, inputs: HostInputs): HostInputsRecord => ({
     ...inputs,
     inputsHash: hostInputsHash(root, inputs, "id")!,
   });

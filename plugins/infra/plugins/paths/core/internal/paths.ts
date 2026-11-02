@@ -1,6 +1,7 @@
 import { homedir } from "node:os";
 import {
   readEnv,
+  readEnvPath,
   setEnv,
   unsetEnv,
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
@@ -22,20 +23,19 @@ import {
   PRODUCT_NAME,
 } from "@plugins/framework/plugins/product-name/core";
 import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   readHomeDataRootLayout,
   type DataRootLayout,
 } from "./data-root-layout";
 
-export const REPO_ROOT = resolve(
-  import.meta.dir,
-  "..",
-  "..",
-  "..",
-  "..",
-  "..",
-  "..",
+export const REPO_ROOT = asAppPath(
+  resolve(import.meta.dir, "..", "..", "..", "..", "..", ".."),
 );
-export const PLUGINS_DIR = join(REPO_ROOT, "plugins");
+export const PLUGINS_DIR = joinAppPath(REPO_ROOT, "plugins");
 
 /**
  * The git-layer config tree (`config/<hier>/<name>.origin.jsonc`, overrides, and
@@ -51,8 +51,8 @@ export const PLUGINS_DIR = join(REPO_ROOT, "plugins");
  * is what retires `launch.ts`'s "do not statically import anything
  * path-dependent" ordering discipline.
  */
-export function repoConfigDir(): string {
-  return readEnv("REPO_CONFIG_DIR") ?? join(REPO_ROOT, "config");
+export function repoConfigDir(): AppPath {
+  return readEnvPath("REPO_CONFIG_DIR") ?? joinAppPath(REPO_ROOT, "config");
 }
 
 // The web-core plugin dir, relative to a checkout root. Used for the
@@ -226,7 +226,7 @@ export const HOME_DIR = resolve(homedir());
  * A function for that second reason, the same one that makes `webDistDir()` a
  * function and `DataDir.path` a getter. See `webDistDir`'s docblock below.
  */
-export function resolveDataRoot(): string {
+export function resolveDataRoot(): AppPath {
   return dataRootLayout().root;
 }
 
@@ -242,7 +242,7 @@ export function resolveDataRoot(): string {
  * for the reason in {@link resolveDataRoot}.
  */
 export function dataRootLayout(): DataRootLayout {
-  const dir = readEnv("DIR");
+  const dir = readEnvPath("DIR");
   if (dir !== undefined) return { kind: "custom", root: dir };
   homeLayout ??= readHomeDataRootLayout(HOME_DIR);
   return homeLayout;
@@ -260,16 +260,16 @@ let homeLayout: DataRootLayout | undefined;
  * install uses `~/.backups/equin`. A function for the same reason as
  * {@link dataRootLayout}.
  */
-export function backupsDir(): string {
+export function backupsDir(): AppPath {
   const dirs = backupsDirs();
   return dataRootLayout().kind === "legacy" ? dirs.legacy : dirs.current;
 }
 
 /** Both home-relative backups dirs, current first. */
-export function backupsDirs(): { current: string; legacy: string } {
+export function backupsDirs(): { current: AppPath; legacy: AppPath } {
   return {
-    current: join(HOME_DIR, ".backups", PRODUCT_NAME),
-    legacy: join(HOME_DIR, ".backups", LEGACY_IDS.backupsDirName),
+    current: asAppPath(join(HOME_DIR, ".backups", PRODUCT_NAME)),
+    legacy: asAppPath(join(HOME_DIR, ".backups", LEGACY_IDS.backupsDirName)),
   };
 }
 
@@ -299,13 +299,13 @@ export function backupsDirs(): { current: string; legacy: string } {
  * first imported, which is precisely the bug the eager `EQUIN_DIR` used
  * to carry.
  */
-export function worktreesDir(): string {
-  return join(resolveDataRoot(), "worktrees");
+export function worktreesDir(): AppPath {
+  return joinAppPath(resolveDataRoot(), "worktrees");
 }
 
 /** The per-worktree data dir: `<worktreesDir()>/<name>/`. */
-export function worktreeDataDir(name: Namespace): string {
-  return join(worktreesDir(), name);
+export function worktreeDataDir(name: Namespace): AppPath {
+  return joinAppPath(worktreesDir(), name);
 }
 
 /**
@@ -328,8 +328,8 @@ export function worktreeDataDir(name: Namespace): string {
  * cannot reference its own entries while it is being constructed; the public
  * spelling is `worktreeArtifacts.runsDir`.
  */
-function runsDirFor(name: Namespace): string {
-  return join(worktreeDataDir(name), "runs");
+function runsDirFor(name: Namespace): AppPath {
+  return joinAppPath(worktreeDataDir(name), "runs");
 }
 
 /**
@@ -404,8 +404,8 @@ export const worktreeArtifacts = {
    * `buildStatus`), and it has no `<id>` variant: a namespace has exactly one
    * spec, and the file's whole job is to be found at a fixed, watched path.
    */
-  spec: (name: Namespace): string =>
-    join(worktreeDataDir(name), WORKTREE_SPEC_FILE),
+  spec: (name: Namespace): AppPath =>
+    joinAppPath(worktreeDataDir(name), WORKTREE_SPEC_FILE),
   /**
    * The SPA shell's server-rendered `<head>` fragments, per app path:
    * `document-head.json`, `{ v: 1, entries: { "<basePath>" | "": html } }`.
@@ -415,29 +415,33 @@ export const worktreeArtifacts = {
    * cold backend never delays the page. Like `spec`, the gateway spells the
    * name again in Go. No `<id>` variant: one live answer per namespace.
    */
-  documentHead: (name: Namespace): string =>
-    join(worktreeDataDir(name), "document-head.json"),
+  documentHead: (name: Namespace): AppPath =>
+    joinAppPath(worktreeDataDir(name), "document-head.json"),
   /**
    * The Bun the gateway starts this namespace's backend with, hardlinked under
    * the process's name (`bin/equin · server · <name>`, packages/process-name) —
    * the spec's `command` points here, so the link lives and goes with it.
    */
-  processNames: (name: Namespace): string => join(worktreeDataDir(name), "bin"),
+  processNames: (name: Namespace): AppPath =>
+    joinAppPath(worktreeDataDir(name), "bin"),
   /** Build profiler spans. `build-profile.json` or `build-profile-<id>.json`. */
-  buildProfile: (name: Namespace, buildId?: string): string =>
-    join(
+  buildProfile: (name: Namespace, buildId?: string): AppPath =>
+    joinAppPath(
       worktreeDataDir(name),
       buildId ? `build-profile-${buildId}.json` : "build-profile.json",
     ),
   /** Structured build transcript. `build-logs.json` or `build-logs-<id>.json`. */
-  buildLogs: (name: Namespace, buildId?: string): string =>
-    join(
+  buildLogs: (name: Namespace, buildId?: string): AppPath =>
+    joinAppPath(
       worktreeDataDir(name),
       buildId ? `build-logs-${buildId}.json` : "build-logs.json",
     ),
   /** Human-readable build transcript. `build.log` or `build-<id>.log`. */
-  buildLogText: (name: Namespace, buildId?: string): string =>
-    join(worktreeDataDir(name), buildId ? `build-${buildId}.log` : "build.log"),
+  buildLogText: (name: Namespace, buildId?: string): AppPath =>
+    joinAppPath(
+      worktreeDataDir(name),
+      buildId ? `build-${buildId}.log` : "build.log",
+    ),
   /**
    * The deploy receipt: this worktree's LAST build, whatever became of it.
    *
@@ -449,8 +453,8 @@ export const worktreeArtifacts = {
    * `status: "running"` with a dead pid, and there is no older success for it to
    * be confused with. Do not add a `buildId` parameter.
    */
-  buildStatus: (name: Namespace): string =>
-    join(worktreeDataDir(name), "build-status.json"),
+  buildStatus: (name: Namespace): AppPath =>
+    joinAppPath(worktreeDataDir(name), "build-status.json"),
   /**
    * One `./equin test` run's record: which runners ran and which test
    * cases failed. `test-status-<opId>.json`, written when the run STARTS
@@ -462,25 +466,25 @@ export const worktreeArtifacts = {
    * what `await` and a joiner already hold, so the record is addressable by it.
    * Pruned to the newest {@link TEST_ARTIFACTS_RETENTION} by the test command.
    */
-  testStatus: (name: Namespace, opId: string): string =>
-    join(worktreeDataDir(name), `test-status-${opId}.json`),
+  testStatus: (name: Namespace, opId: string): AppPath =>
+    joinAppPath(worktreeDataDir(name), `test-status-${opId}.json`),
   /** One runner's JUnit report for one test run. `test-<opId>-<runner>.xml`. */
-  testReport: (name: Namespace, opId: string, runner: string): string =>
-    join(worktreeDataDir(name), `test-${opId}-${runner}.xml`),
+  testReport: (name: Namespace, opId: string, runner: string): AppPath =>
+    joinAppPath(worktreeDataDir(name), `test-${opId}-${runner}.xml`),
   /**
    * This checkout's LAST `./equin deps upgrade <updater>` — one updater named (or its alias
    * `toolchain upgrade`, for `mise`): what it moved, the failures before and
    * after, and the verdict. One fixed path per updater, written at start, like
    * `buildStatus`.
    */
-  depsUpgrade: (name: Namespace, updaterId: string): string =>
-    join(worktreeDataDir(name), `deps-upgrade-${updaterId}.json`),
+  depsUpgrade: (name: Namespace, updaterId: string): AppPath =>
+    joinAppPath(worktreeDataDir(name), `deps-upgrade-${updaterId}.json`),
   /**
    * This checkout's LAST `./equin deps upgrade` with no updater named —
    * every updater moved together, behind one baseline and one candidate run.
    */
-  depsUpgradeBatch: (name: Namespace): string =>
-    join(worktreeDataDir(name), "deps-upgrade.json"),
+  depsUpgradeBatch: (name: Namespace): AppPath =>
+    joinAppPath(worktreeDataDir(name), "deps-upgrade.json"),
   /**
    * One check run's full, untruncated transcript. ALWAYS id-keyed (like
    * `runTranscript`, unlike `buildStatus` directly above), and for a reason that
@@ -498,8 +502,8 @@ export const worktreeArtifacts = {
    * `opId` — never a fresh one: reusing it is what joins this file to the
    * `build-<id>.log` beside it and to the run's lines in `check-progress.jsonl`.
    */
-  checkLog: (name: Namespace, runId: string): string =>
-    join(worktreeDataDir(name), `check-${runId}.log`),
+  checkLog: (name: Namespace, runId: string): AppPath =>
+    joinAppPath(worktreeDataDir(name), `check-${runId}.log`),
   /**
    * DIRECTORY. The single-flight lock, leader and verdict files of this
    * checkout's coalescable direct ops (`check`, `test` — `withDirectOp`'s
@@ -509,13 +513,13 @@ export const worktreeArtifacts = {
    * artifact family's prune. Bounded by the set of distinct keys; reclaimed
    * with the worktree's data dir.
    */
-  opFlights: (name: Namespace): string =>
-    join(worktreeDataDir(name), "op-flights"),
+  opFlights: (name: Namespace): AppPath =>
+    joinAppPath(worktreeDataDir(name), "op-flights"),
   /**
    * DIRECTORY. Every supervised run's transcript and exit marker, for every
    * kind. See {@link runsDirFor} for why this family gets a directory of its own.
    */
-  runsDir: (name: Namespace): string => runsDirFor(name),
+  runsDir: (name: Namespace): AppPath => runsDirFor(name),
   /**
    * One supervised run's merged stdout+stderr transcript.
    *
@@ -525,8 +529,8 @@ export const worktreeArtifacts = {
    * spawned the child is alive. `<kindId>-<runId>.log` — `kindId` first so a
    * kind's runs sort together and its prune can name its own family by prefix.
    */
-  runTranscript: (name: Namespace, kindId: string, runId: string): string =>
-    join(runsDirFor(name), `${kindId}-${runId}${RUN_TRANSCRIPT_SUFFIX}`),
+  runTranscript: (name: Namespace, kindId: string, runId: string): AppPath =>
+    joinAppPath(runsDirFor(name), `${kindId}-${runId}${RUN_TRANSCRIPT_SUFFIX}`),
   /**
    * One supervised run's exit marker: the child's status, and nothing else.
    *
@@ -539,14 +543,15 @@ export const worktreeArtifacts = {
    * code: a timestamp the shell had to format would be a second thing to get
    * right, in `sh`, for no gain.
    */
-  runTerminal: (name: Namespace, kindId: string, runId: string): string =>
-    join(runsDirFor(name), `${kindId}-${runId}${RUN_TERMINAL_SUFFIX}`),
+  runTerminal: (name: Namespace, kindId: string, runId: string): AppPath =>
+    joinAppPath(runsDirFor(name), `${kindId}-${runId}${RUN_TERMINAL_SUFFIX}`),
   /**
    * DIRECTORY. The web dist SERVED for namespace `name` — the tree the gateway
    * points at for `<name>.localhost:9000`. `name` is a *namespace*: a worktree
    * slug (the main namespace, an agent branch) or an auto-served composition id.
    */
-  webDist: (name: Namespace): string => join(worktreeDataDir(name), "web"),
+  webDist: (name: Namespace): AppPath =>
+    joinAppPath(worktreeDataDir(name), "web"),
   /**
    * DIRECTORY. A release's scratch web dist — copied into the shippable bundle
    * and served by nobody. Keyed by the worktree that BUILT it (not a namespace:
@@ -556,8 +561,12 @@ export const worktreeArtifacts = {
    * The `asNamespace` below is not a namespace claim — it is the data dir's own
    * grammar. Every subdirectory of `worktrees/` obeys it, checkout name or not.
    */
-  releaseWebDist: (worktree: string, composition: string): string =>
-    join(worktreeDataDir(asNamespace(worktree)), "release-web", composition),
+  releaseWebDist: (worktree: string, composition: string): AppPath =>
+    joinAppPath(
+      worktreeDataDir(asNamespace(worktree)),
+      "release-web",
+      composition,
+    ),
   /**
    * What this namespace's checkout DECLARES under the data root — the
    * `${kind}/${name}` keys of its `defineDataDir` registry, plus the top-level
@@ -584,8 +593,8 @@ export const worktreeArtifacts = {
    * namespace, i.e. at the moment that namespace stops being able to write to
    * the root.
    */
-  dataDirs: (name: Namespace): string =>
-    join(worktreeDataDir(name), "data-dirs.json"),
+  dataDirs: (name: Namespace): AppPath =>
+    joinAppPath(worktreeDataDir(name), "data-dirs.json"),
   /**
    * Which checkout's CLI last acted as this namespace — `{ root }`, rewritten
    * by every op that mints the namespace from a checkout (`stampCheckoutOwner`).
@@ -593,8 +602,8 @@ export const worktreeArtifacts = {
    * composition marker owns: a second clone's main checkout, an e2e's temp
    * repo, a hand-made worktree.
    */
-  checkoutOwner: (name: Namespace): string =>
-    join(worktreeDataDir(name), "checkout.json"),
+  checkoutOwner: (name: Namespace): AppPath =>
+    joinAppPath(worktreeDataDir(name), "checkout.json"),
 } as const;
 
 /**
@@ -634,13 +643,17 @@ export const worktreeArtifacts = {
  * plausible stranger's dist for one that never was, or that serves a
  * composition instead.
  */
-export function webDistDir(): string {
-  return readEnv("WEB_DIST") ?? worktreeArtifacts.webDist(runtimeNamespace());
+export function webDistDir(): AppPath {
+  return (
+    readEnvPath("WEB_DIST") ?? worktreeArtifacts.webDist(runtimeNamespace())
+  );
 }
 
-export const CLAUDE_DIR = join(HOME_DIR, ".claude");
-export const CLAUDE_PROJECTS_DIR = join(HOME_DIR, ".claude", "projects");
-export const CLAUDE_SESSIONS_DIR = join(HOME_DIR, ".claude", "sessions");
+// Claude Code's own dirs under the home dir: app-owned by claim (a path
+// under home is wherever its segments say, so the lint cannot prove it).
+export const CLAUDE_DIR = asAppPath(join(HOME_DIR, ".claude"));
+export const CLAUDE_PROJECTS_DIR = joinAppPath(CLAUDE_DIR, "projects");
+export const CLAUDE_SESSIONS_DIR = joinAppPath(CLAUDE_DIR, "sessions");
 // Claude Code's user config file (beside `~/.claude/`, not in it): per-directory
 // state such as trust answers (`projects[<dir>].hasTrustDialogAccepted`).
-export const CLAUDE_USER_CONFIG = join(HOME_DIR, ".claude.json");
+export const CLAUDE_USER_CONFIG = asAppPath(join(HOME_DIR, ".claude.json"));

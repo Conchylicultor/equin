@@ -1,5 +1,8 @@
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { existsSync } from "node:fs";
-import { join } from "node:path";
 import { replaceElementText } from "@plugins/infra/plugins/html-decode/core";
 import {
   copyTree,
@@ -118,8 +121,12 @@ export async function mintPrototype(
  * Throws when the checkout has no template — a mint with nothing to copy has
  * no empty-but-fine answer to return.
  */
-async function templateDir(): Promise<string> {
-  const dir = join(await getWorktreeRoot(), "prototypes", TEMPLATE_DIR_NAME);
+async function templateDir(): Promise<AppPath> {
+  const dir = joinAppPath(
+    await getWorktreeRoot(),
+    "prototypes",
+    TEMPLATE_DIR_NAME,
+  );
   if (!existsSync(dir)) {
     throw new Error(`no prototype template to copy: ${dir} does not exist`);
   }

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { LoginServiceSpec } from "../../core";
 import { parseSystemdUserUnit, renderSystemdUserUnit } from "./systemd-unit";
 
@@ -15,7 +16,7 @@ const job: LoginServiceSpec = {
   ],
   cwd: "/h/me/repo",
   env: { PATH: "/shims:/usr/bin", HOME: "/h/me", Q: `a"b\\c 50% $x` },
-  stdioLog: "/h/me/logs/gateway-stdio.log",
+  stdioLog: asAppPath("/h/me/logs/gateway-stdio.log"),
 };
 
 describe("renderSystemdUserUnit", () => {
@@ -74,7 +75,7 @@ describe("renderSystemdUserUnit — the gateway's unit, byte for byte", () => {
         argv: ["/bin/gw", "-x"],
         cwd: "/h/me/repo",
         env: { Z: "1", A: "2" },
-        stdioLog: "/h/me/logs/gateway-stdio.log",
+        stdioLog: asAppPath("/h/me/logs/gateway-stdio.log"),
       }),
     ).toBe(`[Unit]
 Description=equin gateway (and through it Postgres, PgBouncer and every backend)

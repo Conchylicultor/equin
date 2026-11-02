@@ -1,7 +1,7 @@
 import { endpointPath } from "@plugins/infra/plugins/endpoints/core";
 import { mcpRequest } from "@plugins/infra/plugins/mcp/core";
 import { existsSync } from "node:fs";
-import { mkdir } from "node:fs/promises";
+import { access, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import {
   ScratchProfile,
@@ -75,8 +75,8 @@ export function createScratchWorkspace(deps: {
 
     // The dir is the only copy of the inputs the profile materialized, so a
     // reaped one cannot be rebuilt here — the message says why it is gone.
-    checkResumable({ path }) {
-      if (existsSync(path)) return { kind: "ok" };
+    async checkResumable({ path }) {
+      if (await pathExistsAsync(path)) return { kind: "ok" };
       return {
         kind: "missing",
         message:
@@ -108,3 +108,14 @@ export const scratchWorkspace = createScratchWorkspace({
   assertTrusted: (dir) => assertDirTrusted(dir),
   guardsRoot: launchingCheckoutGuards,
 });
+
+/** Whether `path` exists, asked off the event loop (a conversation's stored path may sit anywhere). ENOENT is the only "no". */
+async function pathExistsAsync(path: string): Promise<boolean> {
+  try {
+    await access(path);
+    return true;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw err;
+  }
+}

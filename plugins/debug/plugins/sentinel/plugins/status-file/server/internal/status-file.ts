@@ -1,5 +1,8 @@
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { mkdirSync, readdirSync, unlinkSync } from "node:fs";
-import { join } from "node:path";
 import {
   SentinelStatusRecordSchema,
   type SentinelStatus,
@@ -53,7 +56,7 @@ export function isPidAlive(pid: number): boolean {
 }
 
 /** Every host's status file in `dir`, by pid; `[]` when the dir does not exist. */
-function listStatusFiles(dir: string): { name: string; pid: number }[] {
+function listStatusFiles(dir: AppPath): { name: string; pid: number }[] {
   let names: string[];
   try {
     names = readdirSync(dir);
@@ -68,10 +71,13 @@ function listStatusFiles(dir: string): { name: string; pid: number }[] {
 }
 
 /** The newest-claimed host's record (ties: the higher pid), or why none can be named. */
-function readNewestRecord(dir: string): JsonFileRead<SentinelStatusRecord> {
+function readNewestRecord(dir: AppPath): JsonFileRead<SentinelStatusRecord> {
   let newest: SentinelStatusRecord | null = null;
   for (const file of listStatusFiles(dir)) {
-    const read = readJsonFile(join(dir, file.name), SentinelStatusRecordSchema);
+    const read = readJsonFile(
+      joinAppPath(dir, file.name),
+      SentinelStatusRecordSchema,
+    );
     // Gone between the listing and the read: a new host reclaimed a dead one's.
     if (read.kind === "none") continue;
     if (read.kind === "unreadable") {
@@ -93,7 +99,7 @@ function readNewestRecord(dir: string): JsonFileRead<SentinelStatusRecord> {
 
 /** What a backend serves: the newest host's status, and whether it is alive. */
 export function readSentinelWatch(
-  dir: string,
+  dir: AppPath,
   alive: (pid: number) => boolean = isPidAlive,
 ): SentinelWatch {
   const read = readNewestRecord(dir);
@@ -119,7 +125,7 @@ export function readSentinelWatch(
  * live hosts plus the last dead one's history until the next claim.
  */
 export function createStatusWriter(
-  dir: string,
+  dir: AppPath,
   opts: {
     pid?: number;
     claimedAt?: number;
@@ -146,9 +152,9 @@ export function createStatusWriter(
   };
 }
 
-function unlinkIfPresent(dir: string, name: string): void {
+function unlinkIfPresent(dir: AppPath, name: string): void {
   try {
-    unlinkSync(join(dir, name));
+    unlinkSync(joinAppPath(dir, name));
   } catch (err) {
     if (!isErrno(err, "ENOENT")) throw err;
   }

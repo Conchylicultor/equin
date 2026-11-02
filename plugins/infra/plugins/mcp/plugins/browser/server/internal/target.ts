@@ -1,3 +1,4 @@
+import { appCheckoutOf } from "@plugins/infra/plugins/worktree/server";
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { resolveCheckoutDeploy } from "@plugins/infra/plugins/paths/core";
 import { namespaceUrl } from "@plugins/infra/plugins/namespace/core";
@@ -16,7 +17,14 @@ export async function resolveTarget(
 ): Promise<HostTarget> {
   const conv = await getConversation(conversationId);
   if (!conv) throw new Error(`Unknown conversation "${conversationId}".`);
-  const resolution = resolveCheckoutDeploy(conv.worktreePath);
+  // The app's own checkout this conversation runs in, re-derived from the
+  // app's roots (a path read from a record is never trusted as an app path);
+  // a workspace that is no checkout of the app's has no deploy.
+  const checkout = await appCheckoutOf(conv.worktreePath);
+  const resolution =
+    checkout === null
+      ? ({ kind: "none" } as const)
+      : resolveCheckoutDeploy(checkout);
   if (resolution.kind === "none") {
     return { kind: "unbuilt", checkout: conv.worktreePath };
   }

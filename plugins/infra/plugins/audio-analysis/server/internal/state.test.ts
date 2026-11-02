@@ -14,6 +14,10 @@ import {
   type RunningFile,
 } from "./state";
 import { featurePaths, releaseLock, tryLock } from "./store";
+import {
+  type AppPath,
+  asAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 const fast: AnalysisSettings = { beatModel: "small0", chroma: "fast" };
 const full: AnalysisSettings = { beatModel: "final0", chroma: "full" };
@@ -116,10 +120,10 @@ describe("stateFromFiles", () => {
 });
 
 describe("readBeatFeatures", () => {
-  let root: string;
+  let root: AppPath;
   const id = "QDYfEBY9NM4";
   beforeEach(() => {
-    root = mkdtempSync(join(tmpdir(), "beat-features-"));
+    root = asAppPath(mkdtempSync(join(tmpdir(), "beat-features-")));
   });
   afterEach(() => rmSync(root, { recursive: true, force: true }));
 

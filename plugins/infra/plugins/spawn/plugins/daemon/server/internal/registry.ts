@@ -1,3 +1,4 @@
+import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readFileSync } from "node:fs";
 import {
   RECENT_RUNS_MAX,
@@ -144,7 +145,7 @@ export type DetachedLaunch = DaemonStartCommon & {
   env?: Record<string, string | undefined>;
   cwd?: string;
   /** Where the long-lived process writes its pid (first line). */
-  pidFile: string;
+  pidFile: AppPath;
 } & (
     | {
         /** Each line the bootstrap prints, while it runs. */
@@ -165,7 +166,7 @@ export type DetachedLaunch = DaemonStartCommon & {
 
 export interface AttachOptions extends DaemonStartCommon {
   /** The pid file of a process this backend did not start but depends on. */
-  pidFile: string;
+  pidFile: AppPath;
 }
 
 /** A live instance: its state, and the one way to end it. */
@@ -237,7 +238,7 @@ export interface DaemonInstanceInfo {
   spawnedAt: Date | null;
   restarts: number;
   lastExit: { at: Date; reason: string } | null;
-  pidFile: string | null;
+  pidFile: AppPath | null;
 }
 
 /** A declaration's state in this process, read by the catalog arm. */
@@ -366,7 +367,7 @@ export function claimInstance(
   state: DeclState,
   instance: string | undefined,
   arm: DaemonArm,
-  pidFile: string | null,
+  pidFile: AppPath | null,
 ): InstanceRec {
   const { name } = state.spec;
   if (declarations.get(name) !== state) {
@@ -499,7 +500,7 @@ export type PidFileRead =
   | { kind: "absent" }
   | { kind: "unreadable"; text: string };
 
-export function readPidFile(path: string): PidFileRead {
+export function readPidFile(path: AppPath): PidFileRead {
   let raw: string;
   try {
     raw = readFileSync(path, "utf-8");

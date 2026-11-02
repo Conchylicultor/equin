@@ -164,6 +164,8 @@ failure notice.
     - `MAX_VISIBILITY_KEYS`
 - Cross-plugin:
   - Imported by: `apps/deploy/site-messages/intake`
+- Exemptions:
+  - Exempts itself from: `user-path/no-unproven-claim` — `machine/internal/read-credential.ts` (sanctioned)
 - Sub-plugins:
   - **`approvals`** — Secrets section of a site's Settings (and the site page's banner while a secret waits on approval): every deploy secret its composition's closure declares as a DataView (key, requesting plugin…
 

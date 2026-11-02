@@ -6,6 +6,10 @@ import {
   executableEnv,
   unbundledExecutable,
 } from "@plugins/infra/plugins/launcher/plugins/login-services/core";
+import {
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { gatewayBinary, gatewayBuild } from "../../deps";
 import { gatewayLaunchSpec } from "./boot";
 import { gatewayServiceJob } from "./gateway-service";
@@ -13,7 +17,9 @@ import { LOOPBACK_BIND } from "./listen";
 
 describe("gatewayLaunchSpec", () => {
   // The installed gateway as the deps cache names it: a path per identity.
-  const dir = "/h/me/.equin/cache/deps/gateway-binary/0123456789abcdef/env";
+  const dir = asAppPath(
+    "/h/me/.equin/cache/deps/gateway-binary/0123456789abcdef/env",
+  );
   const ready = readyForTests(gatewayBinary, dir, "0123456789abcdef");
   const checkout = "/h/me/src/equin";
   const executable = unbundledExecutable(gatewayBuild(ready));
@@ -26,7 +32,7 @@ describe("gatewayLaunchSpec", () => {
   });
 
   test("runs the installed binary, from the checkout its children resolve their toolchain in", () => {
-    expect(builtFile(ready)).toBe(join(dir, "gateway"));
+    expect(builtFile(ready)).toBe(joinAppPath(dir, "gateway"));
     expect(spec.argv[0]).toBe(join(dir, "gateway"));
     expect(spec.cwd).toBe(checkout);
     expect(spec.argv).toContain("-child-env");

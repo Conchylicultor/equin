@@ -11,12 +11,17 @@
 // plus readlinks of each dist's `artifacts/` — bounded, and run once per build.
 
 import { readdirSync, readlinkSync, realpathSync } from "node:fs";
-import { basename, join } from "node:path";
+import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { basename } from "node:path";
 import { worktreesDir } from "@plugins/infra/plugins/paths/core";
 import { WORKER_TREE_PREFIX } from "../constants";
 
 /** Entries of `dir`; none when it does not exist (a concurrent reap races the scan). */
-function readdirOrEmpty(dir: string): string[] {
+function readdirOrEmpty(dir: AppPath): string[] {
   try {
     return readdirSync(dir);
   } catch (err) {
@@ -27,9 +32,10 @@ function readdirOrEmpty(dir: string): string[] {
 }
 
 /** The target of the symlink at `path`, or null when it is not one (or gone). */
-function readLinkOrNull(path: string): string | null {
+function readLinkOrNull(path: AppPath): AppPath | null {
   try {
-    return readlinkSync(path);
+    // A dist link the build wrote, pointing into the store.
+    return asAppPath(readlinkSync(path));
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
     if (code !== "ENOENT" && code !== "EINVAL") throw err; // EINVAL: not a link
@@ -43,27 +49,29 @@ function readLinkOrNull(path: string): string | null {
  * `.old.<pid>` mid-publish), plus release scratch dists under `release-web/`.
  * Symlinks are resolved and deduped, so a dist reached twice is scanned once.
  */
-function distRoots(worktrees: string): string[] {
-  const roots = new Set<string>();
-  const add = (path: string): void => {
+function distRoots(worktrees: AppPath): AppPath[] {
+  const roots = new Set<AppPath>();
+  const add = (path: AppPath): void => {
     try {
-      roots.add(realpathSync(path));
+      // The real location of a dist root under the worktrees dir.
+      roots.add(asAppPath(realpathSync(path)));
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err; // dangling / raced
     }
   };
   for (const ns of readdirOrEmpty(worktrees)) {
-    const nsDir = join(worktrees, ns);
+    const nsDir = joinAppPath(worktrees, ns);
     for (const name of readdirOrEmpty(nsDir)) {
       if (
         name === "web" ||
         (name.startsWith("web.") && !name.startsWith("web.swap."))
       ) {
-        add(join(nsDir, name));
+        add(joinAppPath(nsDir, name));
       }
     }
-    const releaseDir = join(nsDir, "release-web");
-    for (const name of readdirOrEmpty(releaseDir)) add(join(releaseDir, name));
+    const releaseDir = joinAppPath(nsDir, "release-web");
+    for (const name of readdirOrEmpty(releaseDir))
+      add(joinAppPath(releaseDir, name));
   }
   return [...roots];
 }
@@ -74,20 +82,20 @@ function distRoots(worktrees: string): string[] {
  * reference, and is skipped.
  */
 export function servedDistTargets(
-  worktrees: string = worktreesDir(),
+  worktrees: AppPath = worktreesDir(),
 ): ReadonlySet<string> {
   const targets = new Set<string>();
   for (const root of distRoots(worktrees)) {
-    const artifacts = join(root, "artifacts");
+    const artifacts = joinAppPath(root, "artifacts");
     for (const name of readdirOrEmpty(artifacts)) {
-      const target = readLinkOrNull(join(artifacts, name));
+      const target = readLinkOrNull(joinAppPath(artifacts, name));
       if (target === null) continue;
       targets.add(target);
       // A worker tree is itself a dir of links into the store: what it links
       // is served too.
       if (basename(target).startsWith(WORKER_TREE_PREFIX)) {
         for (const child of readdirOrEmpty(target)) {
-          const linked = readLinkOrNull(join(target, child));
+          const linked = readLinkOrNull(joinAppPath(target, child));
           if (linked !== null) targets.add(linked);
         }
       }

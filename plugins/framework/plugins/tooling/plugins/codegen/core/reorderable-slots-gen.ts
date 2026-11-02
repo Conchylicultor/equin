@@ -1,4 +1,7 @@
-import { join } from "path";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { writeGenerated } from "./write-generated";
 import { buildEnrichedTree } from "./enriched-tree";
 import {
@@ -89,7 +92,7 @@ interface ReorderableSlotsData {
  * same — one entry per declared id, sorted by slotId.
  */
 async function collectReorderableSlotSet(
-  root: string,
+  root: AppPath,
 ): Promise<ReorderableSlotEntry[]> {
   // The one declaration pass — shared with the orphan guard, which has already
   // proved every created slot is in it.
@@ -130,7 +133,7 @@ async function collectReorderableSlotSet(
  * is primed, which is what the facet read needs and the slot set alone does not.
  */
 async function collectReorderableSlots(
-  root: string,
+  root: AppPath,
 ): Promise<ReorderableSlotsData> {
   const tree = await buildEnrichedTree(root);
   // Drop catalog entries contributed by plugins the app's composition does not
@@ -219,13 +222,14 @@ function renderManifest(slots: ReorderableSlotEntry[]): string {
 }
 
 /** Path to the committed manifest file. */
-export function reorderableSlotsManifestPath(root: string): string {
-  return join(root, MANIFEST_REL_PATH);
+export function reorderableSlotsManifestPath(root: AppPath): AppPath {
+  // `root`: the checkout root the caller works in.
+  return joinAppPath(root, MANIFEST_REL_PATH);
 }
 
 /** Render the manifest file contents in-memory (used by the in-sync check). */
 export async function renderReorderableSlotsManifest(
-  root: string,
+  root: AppPath,
 ): Promise<string> {
   // Needs the declarations, hence the web barrels — but NOT the contribution
   // catalog, which is a facet read and lives in `collectReorderableSlots`.
@@ -264,7 +268,7 @@ function buildOriginAnnotationsProvider(
  * Returns a no-op for descriptors that aren't reorder directives (their slotId
  * isn't in the catalog) — keeping the provider generic.
  */
-setDefaultOriginAnnotationsPreparer(async (root: string) => {
+setDefaultOriginAnnotationsPreparer(async (root: AppPath) => {
   const { catalog } = await collectReorderableSlots(root);
   return buildOriginAnnotationsProvider(catalog);
 });
@@ -279,7 +283,7 @@ setDefaultOriginAnnotationsPreparer(async (root: string) => {
  * function). Returns `undefined` for descriptors whose slotId isn't in the
  * catalog, so non-reorder descriptors fall back to `descriptor.defaults`.
  */
-setDefaultOriginDefaultsPreparer(async (root: string) => {
+setDefaultOriginDefaultsPreparer(async (root: AppPath) => {
   const { catalog } = await collectReorderableSlots(root);
   return (descriptor: ConfigDescriptor, hierarchyPath: string) => {
     const items = catalog.get(`${hierarchyPath}/${descriptor.name}`);
@@ -289,7 +293,7 @@ setDefaultOriginDefaultsPreparer(async (root: string) => {
 
 /** Regenerate `reorderable-slots.generated.ts` if it drifted. */
 export async function generateReorderableSlots(opts: {
-  root: string;
+  root: AppPath;
 }): Promise<void> {
   await writeGenerated({
     file: reorderableSlotsManifestPath(opts.root),

@@ -1,4 +1,8 @@
 import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   afterAll,
   beforeAll,
   beforeEach,
@@ -35,14 +39,14 @@ import { handleEmit } from "../../server/internal/handle-emit";
 // one legitimate exception, so it resets first and puts the original back.
 const ORIGINAL_WORKTREE = runtimeNamespace();
 const worktree = `handle-emit-test-${process.pid}-${Math.random().toString(36).slice(2)}`;
-let latchDir: string;
+let latchDir: AppPath;
 let channelSeq = 0;
 
 beforeAll(() => {
   // The write path resolves the per-worktree logs dir from the runtime namespace.
   resetRuntimeNamespaceForTest();
   declareRuntimeNamespace(asNamespace(worktree));
-  latchDir = mkdtempSync(join(tmpdir(), "handle-emit-latch-"));
+  latchDir = asAppPath(mkdtempSync(join(tmpdir(), "handle-emit-latch-")));
   _setLatchDirForTests(latchDir);
 });
 

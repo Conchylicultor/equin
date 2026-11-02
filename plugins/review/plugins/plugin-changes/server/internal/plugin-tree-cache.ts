@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   buildPluginTree,
   type PluginTree,
@@ -27,7 +28,9 @@ const mainTreeMemo = createGitStateMemo<PluginTree>({
   name: "review.plugin-changes.main-tree",
 });
 
-export function getMainPluginTree(mainPluginsDir: string): Promise<PluginTree> {
+export function getMainPluginTree(
+  mainPluginsDir: AppPath,
+): Promise<PluginTree> {
   return mainTreeMemo.get(
     mainPluginsDir,
     async () =>
@@ -69,7 +72,7 @@ const worktreeTreeMemo = createGitStateMemo<PluginTree>({
 
 export function getWorktreePluginTree(
   worktreePath: string,
-  worktreePluginsDir: string,
+  worktreePluginsDir: AppPath,
 ): Promise<PluginTree> {
   return worktreeTreeMemo.get(
     worktreePath,

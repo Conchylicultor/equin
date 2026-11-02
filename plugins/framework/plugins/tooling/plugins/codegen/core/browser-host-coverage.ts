@@ -42,6 +42,7 @@
 // never both, or a scope call hidden in it would escape the endpoint arm.
 
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
+import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   importClosure,
   loadTypescript,
@@ -1140,11 +1141,13 @@ function topLevelColon(
  * `boundaries:portable-closure` makes of a portable barrel.
  */
 export async function serverBarrelBlockers(
-  root: string,
+  root: AppPath,
   repo: Pick<RepoFiles, "read">,
   barrel: string,
 ): Promise<string[]> {
-  const closure = await importClosure(root, barrel, { dynamicImports: "cut" });
+  const closure = await importClosure(root, barrel, {
+    dynamicImports: "cut",
+  }); // `root`: the checkout root the caller works in
   const ts = await loadTypescript();
   const own = barrel.replace(/server\/index\.ts$/, "");
   const blocked = new Set<string>();

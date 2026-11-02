@@ -3,6 +3,10 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   createStatusWriter,
   writeSentinelVitals,
 } from "@plugins/debug/plugins/sentinel/plugins/status-file/server";
@@ -13,9 +17,11 @@ import {
   resourcesForFile,
 } from "./status-resource";
 
-const dirs: string[] = [];
-function newDir(): string {
-  const dir = mkdtempSync(join(tmpdir(), "sentinel-status-resource-"));
+const dirs: AppPath[] = [];
+function newDir(): AppPath {
+  const dir = asAppPath(
+    mkdtempSync(join(tmpdir(), "sentinel-status-resource-")),
+  );
   dirs.push(dir);
   return dir;
 }

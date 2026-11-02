@@ -1,5 +1,8 @@
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { agentPolicySettings } from "@plugins/framework/plugins/tooling/plugins/guards/plugins/agent-policy/core";
 import { writeGenerated } from "./write-generated";
 
@@ -12,12 +15,13 @@ import { writeGenerated } from "./write-generated";
  */
 export const CLAUDE_SETTINGS_REL_PATH = ".claude/settings.json";
 
-export function claudeSettingsPath(root: string): string {
-  return join(root, CLAUDE_SETTINGS_REL_PATH);
+export function claudeSettingsPath(root: AppPath): AppPath {
+  // `root`: the checkout root the caller works in.
+  return joinAppPath(root, CLAUDE_SETTINGS_REL_PATH);
 }
 
 /** The settings file with its protection keys rewritten from the policy. */
-export function renderClaudeSettings(root: string): string {
+export function renderClaudeSettings(root: AppPath): string {
   const file = claudeSettingsPath(root);
   const current: Record<string, unknown> = existsSync(file)
     ? (JSON.parse(readFileSync(file, "utf8")) as Record<string, unknown>)
@@ -35,7 +39,7 @@ export function renderClaudeSettings(root: string): string {
 export async function generateClaudeSettings({
   root,
 }: {
-  root: string;
+  root: AppPath;
 }): Promise<void> {
   await writeGenerated({
     file: claudeSettingsPath(root),

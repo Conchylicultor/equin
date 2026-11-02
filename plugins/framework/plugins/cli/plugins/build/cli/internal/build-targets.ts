@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { readEffectiveConfigFromDisk } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import {
@@ -80,7 +81,7 @@ const COMPOSITIONS_HIERARCHY_PATH = asPath(
  * what must come from the filesystem.
  */
 export function readCheckoutCompositions(
-  root: string,
+  root: AppPath,
   checkout: CheckoutRef,
 ): CompositionManifestItem[] {
   const values = readEffectiveConfigFromDisk(compositionsConfig, {
@@ -119,7 +120,7 @@ export interface ResolvedBuildTargets {
  */
 export async function resolveBuildTargets(opts: {
   /** The checkout being built — its tree, its config, its namespaces. */
-  root: string;
+  root: AppPath;
   /** The ids from `--composition`; empty means "this checkout's own app". */
   requested: readonly string[];
   /** Which checkout `root` is, minted once by the caller. */

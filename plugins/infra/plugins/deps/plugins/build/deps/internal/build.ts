@@ -1,3 +1,7 @@
+import {
+  type AppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
@@ -265,6 +269,6 @@ function validate(
  * host's; a sealed bundle's payload is for the bundle's platform, which the
  * engine refuses to read anywhere but on that platform — so the two agree.
  */
-export function builtFile(ready: Ready<BuildSource>): string {
-  return join(ready.dir, ready.dep.source.output);
+export function builtFile(ready: Ready<BuildSource>): AppPath {
+  return joinAppPath(ready.dir, ready.dep.source.output);
 }

@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { existsSync } from "node:fs";
 import type { LoginServiceId } from "../../core";
 
@@ -8,7 +9,7 @@ import type { LoginServiceId } from "../../core";
  */
 export function bindInstalledLabel(
   id: LoginServiceId,
-  definitionPathOf: (label: string) => string,
+  definitionPathOf: (label: string) => AppPath,
 ): LoginServiceId {
   const installed = id.installedAs?.find((label) =>
     existsSync(definitionPathOf(label)),

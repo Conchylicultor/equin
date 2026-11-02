@@ -10,6 +10,11 @@ import {
 } from "fs";
 import { tmpdir } from "os";
 import { dirname, join } from "path";
+import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { stageDrizzleOut, UnjoinedSnapshotTipsError } from "./drizzle-stage";
 import {
   renderPhasedMigration,
@@ -17,11 +22,11 @@ import {
 } from "@plugins/database/plugins/migrations/plugins/phases/core";
 import { NULL_SNAPSHOT_ID } from "./snapshot-dag";
 
-let pluginDir: string;
-let data: string;
+let pluginDir: AppPath;
+let data: AppPath;
 beforeEach(() => {
-  pluginDir = mkdtempSync(join(tmpdir(), "drizzle-stage-"));
-  data = join(pluginDir, "data");
+  pluginDir = asAppPath(mkdtempSync(join(tmpdir(), "drizzle-stage-")));
+  data = joinAppPath(pluginDir, "data");
   mkdirSync(join(data, "meta"), { recursive: true });
   writeFileSync(join(data, "meta", "_journal.json"), '{"entries":[]}');
   writeFileSync(join(data, "meta", "_x_answers.json"), "{}");

@@ -39,7 +39,11 @@ import {
   renameSync,
   rmdirSync,
 } from "node:fs";
-import { dirname, join } from "node:path";
+import {
+  appPathParent,
+  type AppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   APP_SCOPE_DIR,
   committedDocument,
@@ -81,29 +85,29 @@ export interface AppliedMove {
 }
 
 /** Remove every empty dir under (and including) `dir`, deepest first. */
-function pruneEmptyDirs(dir: string): void {
+function pruneEmptyDirs(dir: AppPath): void {
   if (!existsSync(dir)) return;
   for (const e of readdirSync(dir, { withFileTypes: true })) {
-    if (e.isDirectory()) pruneEmptyDirs(join(dir, e.name));
+    if (e.isDirectory()) pruneEmptyDirs(joinAppPath(dir, e.name));
   }
   if (readdirSync(dir).length === 0) rmdirSync(dir);
 }
 
 function moveTree(
-  src: string,
-  dst: string,
+  src: AppPath,
+  dst: AppPath,
 ): { moved: string[]; kept: string[] } {
   const moved: string[] = [];
   const kept: string[] = [];
   if (!existsSync(src)) return { moved, kept };
   for (const rel of walkConfigFiles(src)) {
-    const to = join(dst, rel);
+    const to = joinAppPath(dst, rel);
     if (existsSync(to)) {
       kept.push(rel);
       continue;
     }
-    mkdirSync(dirname(to), { recursive: true });
-    renameSync(join(src, rel), to);
+    mkdirSync(appPathParent(to), { recursive: true });
+    renameSync(joinAppPath(src, rel), to);
     moved.push(rel);
   }
   pruneEmptyDirs(src);
@@ -128,14 +132,14 @@ export function rewriteKeys(
 }
 
 /** The checkout's `config/` as the committed layer propagation reads. */
-function repoCommittedFiles(configDir: string): CommittedFiles {
+function repoCommittedFiles(configDir: AppPath): CommittedFiles {
   return {
     read(ref) {
-      const file = join(configDir, configFileRelPath(ref));
+      const file = joinAppPath(configDir, configFileRelPath(ref));
       return existsSync(file) ? readFileSync(file, "utf8") : null;
     },
     appIds(storePath) {
-      const appDir = join(
+      const appDir = joinAppPath(
         configDir,
         storePathParts(storePath).hier,
         APP_SCOPE_DIR,
@@ -181,11 +185,11 @@ function upstreamAwareHash(
  * rerun resumes where it stopped.
  */
 export function applyPluginMoves(opts: {
-  root: string;
-  userConfigDir: string;
+  root: AppPath;
+  userConfigDir: AppPath;
 }): AppliedMove[] {
   const { root, userConfigDir } = opts;
-  const committed = repoCommittedFiles(join(root, "config"));
+  const committed = repoCommittedFiles(joinAppPath(root, "config"));
   return runConfigLedger({
     userConfigDir,
     markerFile: APPLIED_MOVES_FILE,
@@ -194,8 +198,8 @@ export function applyPluginMoves(opts: {
       key: pluginMoveKey(move),
       apply: (dir): AppliedMove => {
         const { moved, kept } = moveTree(
-          join(dir, asPath(move.from)),
-          join(dir, asPath(move.to)),
+          joinAppPath(userConfigDir, asPath(move.from)),
+          joinAppPath(userConfigDir, asPath(move.to)),
         );
         const rewritten = rewriteConfigFiles(dir, {
           rewrite: (f, text) => rewriteKeys(f, text, move),
@@ -209,11 +213,11 @@ export function applyPluginMoves(opts: {
 
 /** Namespaces under `configRoot` with user config still at `from`'s slash path. */
 export function namespacesHolding(
-  configRoot: string,
+  configRoot: AppPath,
   from: PluginMove["from"],
 ): string[] {
   if (!existsSync(configRoot)) return [];
   return readdirSync(configRoot)
-    .filter((ns) => existsSync(join(configRoot, ns, asPath(from))))
+    .filter((ns) => existsSync(joinAppPath(configRoot, ns, asPath(from))))
     .sort();
 }

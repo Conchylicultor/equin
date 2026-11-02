@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import {
   spawnCaptured,
@@ -90,7 +91,7 @@ async function isDirty(cwd: string): Promise<boolean> {
  * @param force regenerate without consulting the markers (see above).
  */
 export async function normalizeGeneratedArtifacts(
-  root: string,
+  root: AppPath,
   opts: { pushId?: string; force?: boolean } = {},
 ): Promise<void> {
   const markers = readMergeMarkers(root);

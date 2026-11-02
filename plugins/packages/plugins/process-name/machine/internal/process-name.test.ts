@@ -1,3 +1,8 @@
+import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { describe, expect, test } from "bun:test";
 import { mkdtempSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -10,8 +15,8 @@ import {
   refreshCheckoutBun,
 } from "./process-name";
 
-function fakeBin(dir: string, name = "bun"): string {
-  const path = join(dir, name);
+function fakeBin(dir: string, name = "bun"): AppPath {
+  const path = asAppPath(join(dir, name));
   writeFileSync(path, "#!/bin/sh\n", { mode: 0o755 });
   return path;
 }
@@ -31,10 +36,10 @@ describe("processName", () => {
 
 describe("linkNamedBinary", () => {
   test("the link is the same file, and a relink replaces it", () => {
-    const root = mkdtempSync(join(tmpdir(), "process-name-"));
+    const root = asAppPath(mkdtempSync(join(tmpdir(), "process-name-")));
     const first = fakeBin(root, "one");
     const second = fakeBin(root, "two");
-    const dir = join(root, "names");
+    const dir = asAppPath(join(root, "names"));
     const a = linkNamedBinary({ bin: first, dir, name: "equin · x" });
     if (a.kind !== "linked") throw new Error("not linked");
     expect(statSync(a.path).ino).toBe(statSync(first).ino);
@@ -47,15 +52,15 @@ describe("linkNamedBinary", () => {
 
 describe("checkout bun", () => {
   test("trusted only while its stamp is newer than mise.lock", () => {
-    const root = mkdtempSync(join(tmpdir(), "process-name-"));
+    const root = asAppPath(mkdtempSync(join(tmpdir(), "process-name-")));
     const bun = fakeBin(root);
     expect(checkoutBun(root)).toBeNull();
     const linked = refreshCheckoutBun(root, bun);
     expect(linked).toEqual({
       kind: "linked",
-      path: join(root, CHECKOUT_BUN_DIR, "bun"),
+      path: joinAppPath(root, CHECKOUT_BUN_DIR, "bun"),
     });
-    expect(checkoutBun(root)).toBe(join(root, CHECKOUT_BUN_DIR, "bun"));
+    expect(checkoutBun(root)).toBe(joinAppPath(root, CHECKOUT_BUN_DIR, "bun"));
 
     // The toolchain moved after the stamp: no longer trusted…
     writeFileSync(join(root, "mise.lock"), "");

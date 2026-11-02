@@ -1,3 +1,8 @@
+import {
+  type AppPath,
+  appPathParent,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 // Namespace ownership: who may claim `worktrees/<ns>/`, and the provenance
 // marker that records who did.
 //
@@ -25,7 +30,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { basename, join } from "node:path";
+import { basename } from "node:path";
 import {
   isNamespaceHostAlias,
   isContentReservedNamespace,
@@ -148,15 +153,19 @@ function branchExists(root: string, name: string): boolean {
  * it through the config registry. One prober, two suppliers.
  */
 export function probeNamespace(
-  root: string,
+  root: AppPath,
   ns: Namespace,
   compositionIds: ReadonlySet<string>,
 ): NamespaceProbe {
-  const specDir = join(worktreesDir(), ns);
+  const specDir = joinAppPath(worktreesDir(), ns);
   return {
     specDirExists: existsSync(specDir),
-    hasCompositionMarker: existsSync(join(specDir, COMPOSITION_MARKER_FILE)),
-    gitWorktreeDirExists: existsSync(join(root, ".claude", "worktrees", ns)),
+    hasCompositionMarker: existsSync(
+      joinAppPath(specDir, COMPOSITION_MARKER_FILE),
+    ),
+    gitWorktreeDirExists: existsSync(
+      joinAppPath(root, ".claude", "worktrees", ns),
+    ),
     branchExists: branchExists(root, ns),
     compositionIdExists: compositionIds.has(ns),
   };
@@ -199,10 +208,13 @@ export function stampCompositionMarker(
   ns: Namespace,
   marker: CompositionMarker,
 ): void {
-  const dir = join(worktreesDir(), ns);
-  const path = join(dir, COMPOSITION_MARKER_FILE);
+  const dir = joinAppPath(worktreesDir(), ns);
+  const path = joinAppPath(dir, COMPOSITION_MARKER_FILE);
   mkdirSync(dir, { recursive: true });
-  const tmp = `${path}.${process.pid}.tmp`;
+  const tmp = joinAppPath(
+    appPathParent(path),
+    `${basename(path)}.${process.pid}.tmp`,
+  );
   writeFileSync(tmp, JSON.stringify(marker, null, 2) + "\n");
   renameSync(tmp, path);
   const landed = readCompositionMarker(ns);
@@ -217,7 +229,7 @@ export function stampCompositionMarker(
 
 /** True when `worktrees/<ns>/composition.json` exists — the namespace is compose-serve-owned. */
 export function hasCompositionMarker(ns: Namespace): boolean {
-  return existsSync(join(worktreesDir(), ns, COMPOSITION_MARKER_FILE));
+  return existsSync(joinAppPath(worktreesDir(), ns, COMPOSITION_MARKER_FILE));
 }
 
 /**
@@ -226,7 +238,7 @@ export function hasCompositionMarker(ns: Namespace): boolean {
  * compose-serve-owned).
  */
 export function readCompositionMarker(ns: Namespace): CompositionMarker | null {
-  const path = join(worktreesDir(), ns, COMPOSITION_MARKER_FILE);
+  const path = joinAppPath(worktreesDir(), ns, COMPOSITION_MARKER_FILE);
   if (!existsSync(path)) return null;
   return JSON.parse(readFileSync(path, "utf8")) as CompositionMarker;
 }
@@ -242,7 +254,7 @@ export async function loadCompositionMarker(
   let text: string;
   try {
     text = await readFile(
-      join(worktreesDir(), ns, COMPOSITION_MARKER_FILE),
+      joinAppPath(worktreesDir(), ns, COMPOSITION_MARKER_FILE),
       "utf8",
     );
   } catch (err) {

@@ -6,7 +6,10 @@
 
 - Description: The app's own environment variables, declared by key (forwarded to the runtime tree or withheld from it, with why), and the one way to read and write them: readEnv / envEntries / setEnv / setEnvDefault / unsetEnv, each key named EQUIN_<key>. A leaf importing only framework/product-name, so every runtime and the lowest-level packages can import it.
 - Core:
-  - Uses: `framework/product-name.PRODUCT_NAME`
+  - Uses:
+    - `framework/product-name.PRODUCT_NAME`
+    - `infra/host-fs/user-path.AppPath`
+    - `infra/host-fs/user-path.asAppPath`
   - Exports (types): `EnvKey`
   - Exports (values):
     - `DECLARED_ENV_KEYS`
@@ -17,6 +20,7 @@
     - `envName`
     - `isDeclaredEnvName`
     - `readEnv`
+    - `readEnvPath`
     - `RUNTIME_FORWARDED_ENV`
     - `RUNTIME_FORWARDED_PREFIXES`
     - `setEnv`
@@ -34,6 +38,8 @@
     - `packages/flock`
     - `packages/spawn-disclaim`
     - `packages/spawn-priority`
+- Exemptions:
+  - Exempts itself from: `user-path/no-unproven-claim` — `core/internal/env.ts` (sanctioned)
 - Test helpers:
   - Core: `@plugins/infra/plugins/launcher/plugins/env-names/core/testing`
     - `withEnv` — Runs `fn` with `values` set in `process.env` (undefined = unset), then puts back exactly what was there before — the save / set / restore a test of an env reader needs.

@@ -2,6 +2,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
  * Locates the `mise` binary: PATH first, then its installer's default
@@ -13,7 +14,8 @@ import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
 export function findMiseBin(): string | null {
   const onPath = Bun.which("mise");
   if (onPath !== null) return onPath;
-  const installed = join(HOME_DIR, ".local", "bin", "mise");
+  // mise's own fixed install location under home — not a user-chosen path.
+  const installed = asAppPath(join(HOME_DIR, ".local", "bin", "mise"));
   return existsSync(installed) ? installed : null;
 }
 

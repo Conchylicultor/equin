@@ -62,7 +62,9 @@ in, which has no SDK form, is the sign-in plugin's sanctioned exemption).
     - `infra/claude-cli/availability`
     - `infra/claude-cli/sign-in`
 - Exemptions:
-  - Exempts itself from: `claude-sdk/no-direct-sdk-query` — `server/internal/session.ts` (sanctioned)
+  - Exempts itself from:
+    - `claude-sdk/no-direct-sdk-query` — `server/internal/session.ts` (sanctioned)
+    - `user-path/no-unproven-claim` — `machine/internal/bundled-bin.ts` (sanctioned)
   - Exempted by:
     - `infra/claude-cli/sdk` (0 debt)
     - `infra/claude-cli/sign-in` (0 debt)

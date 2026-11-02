@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 // The shared shape of a bounded-append file sink.
 //
 // `core/` here means RUNTIME-NEUTRAL NODE, not web-safe: the impl next door owns
@@ -26,7 +27,7 @@ export interface FileSinkSpec {
    * namespace) is still DECLARED at import, so `getFileSinks()` lists it — with
    * its description and bound — before it has written a line.
    */
-  path: string | (() => string);
+  path: AppPath | (() => AppPath);
   /** Rotate once the live file would exceed this. Defaults to 128 MB. */
   maxBytes?: number;
   /** How many rotated files to keep (`path.1` … `path.keep`). Defaults to 3. */
@@ -50,7 +51,7 @@ export interface RotateBound {
 export interface FileSink {
   id: string;
   /** The live file's absolute path (a lazy spec path is resolved on first read). */
-  readonly path: string;
+  readonly path: AppPath;
   description: string;
   bound: RotateBound;
   append(line: string): void;

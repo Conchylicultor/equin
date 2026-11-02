@@ -102,7 +102,7 @@ export interface WorkspaceImpl<K extends WorkspaceKind = WorkspaceKind> {
    * Whether a session can be resumed here. Side-effect free: a refusal must
    * leave the conversation exactly as it was.
    */
-  checkResumable(at: WorkspaceAt<SpecOf<K>>): Resumability;
+  checkResumable(at: WorkspaceAt<SpecOf<K>>): Promise<Resumability>;
 }
 
 const registry = new Map<WorkspaceKind, WorkspaceImpl>();

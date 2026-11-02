@@ -20,4 +20,11 @@ export default [
     task: "task-1792338443-riwqev",
     reason: "not yet split into server/ + machine/",
   },
+  {
+    rule: "user-path/no-unproven-claim",
+    paths: ["server/internal/worker/sample.ts"],
+    kind: "sanctioned",
+    reason:
+      "The home directory itself (its volume's free space), never a folder under it.",
+  },
 ] satisfies Exemptions;

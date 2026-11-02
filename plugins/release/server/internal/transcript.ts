@@ -4,6 +4,7 @@ import { basename } from "node:path";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
 import { releaseLogLineKey, type ReleaseLogLine } from "../../core/resources";
 import { RELEASE_RUN_KIND_ID } from "./kind-id";
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
  * Every line one release run wrote, read back from its transcript file, in
@@ -116,7 +117,7 @@ export function isReleaseRunId(releaseId: string): boolean {
  * that is not a single path segment is refused rather than resolved somewhere
  * else on disk (callers check `isReleaseRunId` first; this is the backstop).
  */
-export function releaseTranscriptPath(releaseId: string): string {
+export function releaseTranscriptPath(releaseId: string): AppPath {
   if (!isReleaseRunId(releaseId)) {
     throw new Error(`not a release run id: ${JSON.stringify(releaseId)}`);
   }

@@ -26,9 +26,12 @@ import {
   readFileSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
 import { parse as parseJsonc, type ParseError } from "jsonc-parser";
 import { z } from "zod";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   computeHash,
   CONFIG_HASH_RE,
@@ -39,12 +42,12 @@ const appliedSchema = z.object({ applied: z.array(z.string()) });
 
 /** Every file under `dir`, relative to it, forward-slash separated. */
 export function walkConfigFiles(
-  dir: string,
+  dir: AppPath,
   rel = "",
   out: string[] = [],
 ): string[] {
-  if (!existsSync(join(dir, rel))) return out;
-  for (const e of readdirSync(join(dir, rel), { withFileTypes: true })) {
+  if (!existsSync(joinAppPath(dir, rel))) return out;
+  for (const e of readdirSync(joinAppPath(dir, rel), { withFileTypes: true })) {
     const r = rel === "" ? e.name : `${rel}/${e.name}`;
     if (e.isDirectory()) walkConfigFiles(dir, r, out);
     else if (e.isFile()) out.push(r);
@@ -52,14 +55,14 @@ export function walkConfigFiles(
   return out;
 }
 
-function readApplied(file: string): Set<string> {
+function readApplied(file: AppPath): Set<string> {
   if (!existsSync(file)) return new Set();
   return new Set(
     appliedSchema.parse(JSON.parse(readFileSync(file, "utf8"))).applied,
   );
 }
 
-function writeApplied(file: string, applied: Set<string>): void {
+function writeApplied(file: AppPath, applied: Set<string>): void {
   writeFileSync(
     file,
     `${JSON.stringify({ applied: [...applied] }, null, 2)}\n`,
@@ -70,7 +73,7 @@ export interface ConfigLedgerEntry<R> {
   /** Stable, unique within the ledger — what the marker records. */
   readonly key: string;
   /** Rewrite the namespace dir; what it returns is reported back. */
-  apply(userConfigDir: string): R;
+  apply(userConfigDir: AppPath): R;
 }
 
 /**
@@ -81,14 +84,14 @@ export interface ConfigLedgerEntry<R> {
  * not `.jsonc`, so neither the config registry nor the orphan audit reads it.
  */
 export function runConfigLedger<R>(opts: {
-  userConfigDir: string;
+  userConfigDir: AppPath;
   markerFile: string;
   fresh: boolean;
   entries: readonly ConfigLedgerEntry<R>[];
 }): { key: string; result: R }[] {
   const { userConfigDir, markerFile, fresh, entries } = opts;
   mkdirSync(userConfigDir, { recursive: true });
-  const file = join(userConfigDir, markerFile);
+  const file = joinAppPath(userConfigDir, markerFile);
   const applied = readApplied(file);
   const out: { key: string; result: R }[] = [];
   for (const entry of entries) {
@@ -133,7 +136,7 @@ const isSnapshot = (f: string) =>
  * re-stamped with the new one. Returns the rewritten files, sorted.
  */
 export function rewriteConfigFiles(
-  dir: string,
+  dir: AppPath,
   opts: {
     select?: (rel: string) => boolean;
     rewrite: (rel: string, text: string) => string;
@@ -158,7 +161,7 @@ export function rewriteConfigFiles(
   for (const f of [...files].sort(
     (a, b) => Number(isSnapshot(b)) - Number(isSnapshot(a)),
   )) {
-    const text = readFileSync(join(dir, f), "utf8");
+    const text = readFileSync(joinAppPath(dir, f), "utf8");
     let out = opts.rewrite(f, text);
     const header = configTextHash(out);
     if (isSnapshot(f)) {
@@ -172,6 +175,6 @@ export function rewriteConfigFiles(
     }
     if (out !== text) next.set(f, out);
   }
-  for (const [f, text] of next) writeFileSync(join(dir, f), text);
+  for (const [f, text] of next) writeFileSync(joinAppPath(dir, f), text);
   return [...next.keys()].sort();
 }

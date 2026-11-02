@@ -1,4 +1,7 @@
-import { resolve } from "path";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   buildPluginTree,
   type PluginTree,
@@ -42,12 +45,12 @@ const enrichedTreeCache = new Map<string, Promise<PluginTree>>();
  * `declareSlotsFromBarrels` for why declaring over the full set would break
  * `config-v2:registrations-paired`.
  */
-export function buildEnrichedTree(root: string): Promise<PluginTree> {
+export function buildEnrichedTree(root: AppPath): Promise<PluginTree> {
   let cached = enrichedTreeCache.get(root);
   if (!cached) {
     cached = (async () => {
       await declareSlotsFromBarrels(root, "registry");
-      return buildPluginTree(resolve(root, "plugins"), { facets: true });
+      return buildPluginTree(joinAppPath(root, "plugins"), { facets: true });
     })();
     enrichedTreeCache.set(root, cached);
   }

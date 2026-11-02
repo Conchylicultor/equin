@@ -1,3 +1,4 @@
+import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { readyNow } from "@plugins/infra/plugins/deps/deps";
@@ -43,7 +44,10 @@ import { revertSessionWritesOn } from "../../shared/revert";
  * restarts.
  */
 
-const PLUGIN_DIR = join(PLUGINS_DIR, "infra/plugins/mcp/plugins/browser");
+const PLUGIN_DIR = joinAppPath(
+  PLUGINS_DIR,
+  "infra/plugins/mcp/plugins/browser",
+);
 const HOST_ENTRY = join(PLUGIN_DIR, "bin/host.ts");
 /** A launched host must say `ready` within this, or the launch failed. */
 const LAUNCH_MS = 30_000;

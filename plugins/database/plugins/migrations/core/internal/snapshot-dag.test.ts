@@ -3,6 +3,10 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   renderPhasedMigration,
   renderSnapshotHeader,
 } from "@plugins/database/plugins/migrations/plugins/phases/core";
@@ -130,9 +134,9 @@ describe("readSnapshotNodes / schemaSnapshotState", () => {
     claims: [],
     supersedes: null,
   });
-  let dir: string;
+  let dir: AppPath;
   beforeEach(() => {
-    dir = mkdtempSync(join(tmpdir(), "snapshot-dag-"));
+    dir = asAppPath(mkdtempSync(join(tmpdir(), "snapshot-dag-")));
     mkdirSync(join(dir, "meta"));
   });
   afterEach(() => rmSync(dir, { recursive: true, force: true }));

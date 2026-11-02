@@ -1,5 +1,8 @@
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
 import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/core";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import { parsePrototypeTree } from "@plugins/apps/plugins/prototypes/plugins/fixtures/core";
@@ -7,7 +10,7 @@ import { readPrototypeFixtureDir } from "@plugins/apps/plugins/prototypes/plugin
 import { writePrototypeFixture } from "@plugins/apps/plugins/prototypes/plugins/fixtures/server";
 
 /** The committed fixture: the Circle prototype the film's Create beat shows, with its history. */
-const FIXTURE_DIR = join(
+const FIXTURE_DIR = joinAppPath(
   PLUGINS_DIR,
   "apps/plugins/website/plugins/promo-film/plugins/seed/data",
 );
@@ -53,10 +56,10 @@ export async function ensureFilmPrototype(): Promise<string> {
 }
 
 /** A prototype folder's files (flat, text), as the fixture describes one. */
-function readFolder(dir: string): Record<string, string> {
+function readFolder(dir: AppPath): Record<string, string> {
   const files: Record<string, string> = {};
   for (const name of readdirSync(dir))
-    if (statSync(join(dir, name)).isFile())
-      files[name] = readFileSync(join(dir, name), "utf8");
+    if (statSync(joinAppPath(dir, name)).isFile())
+      files[name] = readFileSync(joinAppPath(dir, name), "utf8");
   return files;
 }

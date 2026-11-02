@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { CheckResult } from "@plugins/framework/plugins/tooling/core";
 import {
   pruneWorktreeCheckArtifacts,
@@ -356,7 +357,7 @@ export function verdictSection(lines: string[]): string[] {
 
 /** A run's transcript read back as its verdict section, or that it is gone. */
 export function readTranscriptVerdict(
-  path: string,
+  path: AppPath,
 ): { kind: "ok"; lines: string[] } | { kind: "missing" } {
   if (!existsSync(path)) return { kind: "missing" };
   const lines = readFileSync(path, "utf8").trimEnd().split("\n");

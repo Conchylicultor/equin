@@ -7,6 +7,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
+import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   asPluginId,
   type PluginId,
@@ -33,7 +34,7 @@ export function pluginMoveKey(m: PluginMove): string {
 }
 
 /** The ledger as committed in the checkout at `root`, in the order moves were made. */
-export function readPluginMoves(root: string): PluginMove[] {
+export function readPluginMoves(root: AppPath): PluginMove[] {
   const file = join(root, PLUGIN_MOVES_FILE);
   // The ledger ships with the plugin; a checkout without it predates it and
   // has no moves to replay.
@@ -45,7 +46,7 @@ export function readPluginMoves(root: string): PluginMove[] {
 
 /** Append one move to the ledger in the checkout at `root`. */
 export function appendPluginMove(
-  root: string,
+  root: AppPath,
   move: { from: PluginId; to: PluginId },
 ): PluginMove {
   const entry: PluginMove = { at: new Date().toISOString(), ...move };

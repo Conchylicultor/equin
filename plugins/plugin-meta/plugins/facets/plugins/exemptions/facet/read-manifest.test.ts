@@ -2,9 +2,13 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
+import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readManifest } from "./read-manifest";
 
-let dir: string | undefined;
+let dir: AppPath | undefined;
 
 afterEach(() => {
   if (dir !== undefined) rmSync(dir, { recursive: true, force: true });
@@ -20,7 +24,7 @@ function writeManifest(root: string, rule: string): void {
 
 describe("readManifest", () => {
   test("re-reads an edited manifest instead of the cached module", () => {
-    dir = mkdtempSync(join(tmpdir(), "exempt-manifest-"));
+    dir = asAppPath(mkdtempSync(join(tmpdir(), "exempt-manifest-")));
     mkdirSync(join(dir, "exempt"));
     writeManifest(dir, "first/rule");
     expect(readManifest(dir).map((e) => e.rule)).toEqual(["first/rule"]);
@@ -30,7 +34,7 @@ describe("readManifest", () => {
   });
 
   test("a plugin without a manifest declares nothing", () => {
-    dir = mkdtempSync(join(tmpdir(), "exempt-manifest-"));
+    dir = asAppPath(mkdtempSync(join(tmpdir(), "exempt-manifest-")));
     expect(readManifest(dir)).toEqual([]);
   });
 });

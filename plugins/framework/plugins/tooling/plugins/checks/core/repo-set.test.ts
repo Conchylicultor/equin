@@ -10,6 +10,10 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { dirname, join } from "path";
 import {
+  type AppPath,
+  asAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   loadRepoFiles,
   repoFilesOver,
 } from "@plugins/framework/plugins/tooling/core";
@@ -31,7 +35,7 @@ async function rejection(p: Promise<unknown>): Promise<Error> {
   throw new Error("expected the promise to reject, but it resolved");
 }
 
-let root = "";
+let root!: AppPath;
 
 // Sorted (code-unit order). `a-b.ts` ("-" < "/") and `a.ts` ("." < "/") sort
 // BEFORE the `a/` run, `a0.ts` ("0" is right after "/") right AFTER it — the
@@ -72,7 +76,7 @@ async function snapshot(): Promise<TreeSnapshot> {
 }
 
 beforeAll(async () => {
-  root = mkdtempSync(join(tmpdir(), "repo-set-"));
+  root = asAppPath(mkdtempSync(join(tmpdir(), "repo-set-")));
   write(".gitignore", "ignored/\n");
   for (const rel of [
     "README.md",
@@ -134,7 +138,9 @@ describe("runRepoFiles (the run's ctx.repo)", () => {
   });
 
   test("a failing fallback rejects — never an empty set", async () => {
-    const notARepo = mkdtempSync(join(tmpdir(), "repo-set-not-git-"));
+    const notARepo = asAppPath(
+      mkdtempSync(join(tmpdir(), "repo-set-not-git-")),
+    );
     try {
       const repo = runRepoFiles({
         loadSnapshot: () => Promise.resolve(null),

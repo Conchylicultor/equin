@@ -311,6 +311,10 @@ Key invariants:
     - `framework/product-name.LEGACY_IDS`
     - `framework/web-core.findViteContributions`
     - `framework/web-core.loadBabelContributions`
+    - `infra/host-fs/user-path.AppPath`
+    - `infra/host-fs/user-path.appPathParent`
+    - `infra/host-fs/user-path.asAppPath`
+    - `infra/host-fs/user-path.joinAppPath`
     - `infra/namespace.MAIN_COMPOSITION_ID`
     - `infra/paths.worktreesDir`
     - `packages/coalesce.createCoalescer`
@@ -362,7 +366,11 @@ Key invariants:
     - `framework/cli/build`
     - `framework/tooling/codegen`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/expected.ts`, `core/internal/global-css.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/own-files.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/tailwind-candidates.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts` (debt)
+  - Exempts itself from:
+    - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/expected.ts`, `core/internal/global-css.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/own-files.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/tailwind-candidates.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts` (debt)
+    - `user-path/no-unproven-claim` — `core/internal/identity.ts`, `core/internal/plan.ts`, `core/internal/vendors.ts` (sanctioned)
+    - `user-path/no-unproven-claim` — `core/internal/vendor-cache.ts` (sanctioned)
+    - `user-path/no-unproven-claim` — `core/internal/global-css.ts`, `core/internal/package-assets.ts`, `core/internal/staged-verify.ts` (sanctioned)
 - Cli:
   - Exports (types): `CarryForwardResult`
   - Exports (values): `carryForwardServedEntries`

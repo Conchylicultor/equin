@@ -30,7 +30,7 @@
  * its history) — a missing body is never stood in for.
  */
 import { existsSync, readFileSync } from "fs";
-import { join, relative } from "path";
+import { relative } from "path";
 import {
   spawnCaptured,
   spawnExpectOk,
@@ -48,6 +48,10 @@ import {
   schemaSnapshotPath,
 } from "./schema-snapshot";
 import type { Snapshot } from "./snapshot-merge";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
  * No source holds snapshot `id`'s body: not the working tree, not git (an
@@ -87,7 +91,7 @@ const GIT_TIMEOUT_MS = 120_000;
  * The resolver for the data dir `dataDir` of the git checkout at `root`.
  * Nothing is read until a body is asked for.
  */
-export function snapshotBodies(root: string, dataDir: string): SnapshotBodies {
+export function snapshotBodies(root: string, dataDir: AppPath): SnapshotBodies {
   const cache = new Map<string, string>();
   const dataRel = relative(root, dataDir);
   const repoPath = (rel: string) =>
@@ -253,7 +257,11 @@ export function snapshotBodies(root: string, dataDir: string): SnapshotBodies {
     const node = (await readSnapshotNodes(dataDir)).find((n) => n.id === id);
     if (node === undefined)
       throw new Error(`snapshot ${id} is not a node of the snapshot DAG`);
-    const legacyPath = join(dataDir, "meta", legacySnapshotFileOf(node.file));
+    const legacyPath = joinAppPath(
+      dataDir,
+      "meta",
+      legacySnapshotFileOf(node.file),
+    );
     let found: string | null = null;
     if (existsSync(legacyPath)) {
       const legacy = readFileSync(legacyPath, "utf8");

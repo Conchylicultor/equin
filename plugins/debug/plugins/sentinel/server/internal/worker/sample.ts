@@ -1,6 +1,10 @@
+import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import { statfsSync, statSync } from "node:fs";
-import { join } from "node:path";
 import { cpus, loadavg } from "node:os";
 import {
   HOME_DIR,
@@ -104,7 +108,7 @@ export function readBackendP99Rollup(): Record<string, number> {
   const names = listWorktreeDirs();
   const now = Date.now();
   for (const name of names) {
-    const file = join(worktreesDir(), name, "logs", "health.jsonl");
+    const file = joinAppPath(worktreesDir(), name, "logs", "health.jsonl");
     try {
       if (now - statSync(file).mtimeMs > ROLLUP_STALE_MS) continue;
     } catch (err) {
@@ -184,7 +188,7 @@ export function readHostCompressor(worktree: string): HostCompressorReading {
 export function readDisk(
   window: FreeSpacePoint[],
   log: Logger,
-  path: string = HOME_DIR,
+  path: AppPath = asAppPath(HOME_DIR),
 ): DiskReading | null {
   let fs: ReturnType<typeof statfsSync>;
   try {

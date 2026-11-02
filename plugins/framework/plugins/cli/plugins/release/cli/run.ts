@@ -1,3 +1,8 @@
+import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import {
@@ -272,7 +277,7 @@ function findDefineAppIconKey(node: PluginNode): SymbolName | null {
  * entry app's `defineApp({...})`. Fails loudly — never silently defaults.
  */
 async function resolveCompositionIconKey(opts: {
-  root: string;
+  root: AppPath;
   composition: string;
 }): Promise<SymbolName> {
   const { root, composition } = opts;
@@ -294,7 +299,7 @@ async function resolveCompositionIconKey(opts: {
     );
   }
 
-  const tree = await buildPluginTree(join(root, "plugins"), {
+  const tree = await buildPluginTree(joinAppPath(root, "plugins"), {
     skipBarrelImport: true,
   });
 
@@ -346,7 +351,7 @@ async function resolveCompositionIconKey(opts: {
 async function compile(opts: {
   entry: string;
   outfile: string;
-  root: string;
+  root: AppPath;
   platform: PlatformTag;
   // Every committed registry → the composition's filtered sibling
   // (`compositionRegistryRedirects`). Required, and applied to EVERY entrypoint:
@@ -400,7 +405,7 @@ async function compile(opts: {
  * instead — launch.ts points `EQUIN_SENTINEL_WORKER_JS` at this file.
  */
 async function bundleSentinelWorker(opts: {
-  root: string;
+  root: AppPath;
   outfile: string;
 }): Promise<void> {
   const { root, outfile } = opts;
@@ -510,7 +515,7 @@ function installedVersion(pkgDir: string, what: string): string {
  * ABI is tied to the `@parcel/watcher` the compiled backend bundles.)
  */
 async function stageForeignNatives(opts: {
-  root: string;
+  root: AppPath;
   tag: PlatformTag;
   hostTag: PlatformTag;
 }): Promise<string> {
@@ -621,7 +626,7 @@ async function stageForeignNatives(opts: {
  * — {@link assertStagedNativesComplete} is the arm that wants the throw.
  */
 function stagedNativesComplete(
-  root: string,
+  root: AppPath,
   tag: PlatformTag,
   dir: string,
 ): boolean {
@@ -638,7 +643,7 @@ function stagedNativesComplete(
  *  first one missing. The resolvers ARE the specification — see
  *  {@link stagedNativesComplete}. */
 function assertStagedNativesComplete(
-  root: string,
+  root: AppPath,
   tag: PlatformTag,
   dir: string,
 ): void {
@@ -651,7 +656,7 @@ function assertStagedNativesComplete(
 
 /** Resolve the embedded-postgres native dir for the target platform. */
 function embeddedNativeDir(
-  root: string,
+  root: AppPath,
   tag: PlatformTag,
   src: NativeSource,
 ): string {
@@ -677,7 +682,7 @@ function embeddedNativeDir(
 
 /** Resolve the PgBouncer native binary for the target platform. */
 function pgbouncerNativeBin(
-  root: string,
+  root: AppPath,
   tag: PlatformTag,
   src: NativeSource,
 ): string {
@@ -702,7 +707,7 @@ const PG_CLIENT_TOOLS = ["pg_dump", "pg_restore"] as const;
 
 /** Resolve the Postgres client tools' native bin dir for the target platform. */
 function pgClientNativeBinDir(
-  root: string,
+  root: AppPath,
   tag: PlatformTag,
   src: NativeSource,
 ): string {
@@ -727,7 +732,7 @@ function pgClientNativeBinDir(
 
 /** Resolve the @parcel/watcher prebuilt native .node for the target platform. */
 function parcelWatcherNativeNode(
-  root: string,
+  root: AppPath,
   tag: PlatformTag,
   src: NativeSource,
 ): string {
@@ -777,7 +782,7 @@ interface ReleaseOptions {
 type ReleaseSourceMode = "inner" | "pinned" | "in-place";
 
 async function releaseSourceMode(
-  root: string,
+  root: AppPath,
   provenance: GitProvenance,
 ): Promise<ReleaseSourceMode> {
   if (isReleaseCheckout(root)) return "inner";
@@ -805,9 +810,9 @@ async function releaseSourceMode(
  * with this process, and the next release's sweep removes it.
  */
 async function runPinnedRelease(args: {
-  root: string;
+  root: AppPath;
   sha: string;
-  out: string;
+  out: AppPath;
   opts: ReleaseOptions;
 }): Promise<number> {
   const { root, sha, out, opts } = args;
@@ -924,7 +929,7 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
   // same question the same way from the same checkout, so the writer and the
   // reader land on one directory.
   const out =
-    opts.out ??
+    (opts.out === undefined ? undefined : asAppPath(opts.out)) ??
     releaseOutDir(
       await checkoutNamespace(root),
       opts.composition,
@@ -1318,7 +1323,7 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
   console.log("  • resolved config defaults");
   await propagateConfigToUser({
     root,
-    userConfigDir: join(out, "config-seed", "config", opts.composition),
+    userConfigDir: joinAppPath(out, "config-seed", "config", opts.composition),
   });
 
   // ── 4. Tauri target: wrap the staged bundle in the desktop shell ─────
@@ -1371,7 +1376,7 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
   // host build and a cross-built candidate of the same composition no
   // longer overwrite each other.
   const compDir = dirname(out);
-  claimLatestPointer(compDir, runId, platform);
+  claimLatestPointer(asAppPath(compDir), runId, platform);
 
   // A run dir is a whole staged app; `~/.equin/state/releases/` has no
   // other retention. Runs a pointer names are never swept.
@@ -1379,7 +1384,7 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
   // this process runs inside a private checkout whose name is the run id, while
   // the run dirs being pruned are filed under the INVOKING checkout's namespace
   // — which only `out` still carries.
-  const pruned = pruneReleaseRunDirs(compDir);
+  const pruned = pruneReleaseRunDirs(asAppPath(compDir));
   if (pruned.removed.length > 0) {
     console.log(
       `\n[prune] Removed ${pruned.removed.length} old run dir(s): ${pruned.removed.join(", ")}`,
@@ -1407,7 +1412,7 @@ export default runRelease;
  */
 async function wrapTauri(opts: {
   stagedDir: string;
-  root: string;
+  root: AppPath;
   composition: string;
   dev: boolean;
   port: number;
@@ -1664,7 +1669,7 @@ async function packageMacDmg(opts: {
  */
 async function packStagedTree(opts: {
   stagedDir: string;
-  root: string;
+  root: AppPath;
   composition: string;
   target: string;
   platform: PlatformTag;

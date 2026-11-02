@@ -27,14 +27,19 @@ import { createSourceFileCache } from "./name-host";
 import { ProbeFs, RecordingResolver } from "./name-resolve";
 import { openNameStore } from "./name-store";
 import { openRepoView } from "./repo-view";
+import {
+  type AppPath,
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /** A batch, with what every batch of its set shares (`./batch-processes.ts`). */
 export interface BatchProcessJob extends BatchJob {
-  root: string;
+  root: AppPath;
   tree: TypeCheckTree;
   options: ts.CompilerOptions;
   /** Where this run's own `.d.ts` texts are, one file per hash. */
-  spool: string;
+  spool: AppPath;
   declRoots: string[];
   globals: string[];
   declScopes: [string, DeclScope][];
@@ -60,7 +65,7 @@ async function run(job: BatchProcessJob): Promise<BatchOutcome> {
       contractOf: (p) => {
         const h = job.contracts[p];
         if (h === undefined) throw missingEdge(p, job);
-        const spooled = join(job.spool, h);
+        const spooled = joinAppPath(job.spool, h);
         if (existsSync(spooled)) return readFileSync(spooled, "utf8");
         const text = store.readContract(h);
         if (text === undefined) throw new ContractMissing(p);
@@ -103,12 +108,15 @@ async function run(job: BatchProcessJob): Promise<BatchOutcome> {
 // worker dies, this must die too.
 exitWithParent();
 
-const jobPath = process.argv[2];
-if (!jobPath) {
+// The job file the spawning type-check wrote in its own spool dir.
+const jobArg = process.argv[2];
+if (!jobArg) {
   console.error("type-check batch: missing job file argument");
   process.exit(2);
 }
-const job = JSON.parse(readFileSync(jobPath, "utf8")) as BatchProcessJob;
+const job = JSON.parse(
+  readFileSync(asAppPath(jobArg), "utf8"),
+) as BatchProcessJob;
 const outcome = await run(job);
 // Synchronous, because the exit below follows at once.
 writeSync(1, JSON.stringify(outcome));

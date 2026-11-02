@@ -3,6 +3,10 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { callsFunction, measureManifestFreeze } from "./manifest-freeze";
+import {
+  type AppPath,
+  asAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
  * A miniature CLI with the real one's shape: a bootstrap that dynamically
@@ -63,13 +67,13 @@ const BASE: Record<string, string> = {
 const MANIFEST = "manifest.generated.ts";
 const REGISTRY = "lint.generated.ts";
 
-const roots: string[] = [];
+const roots: AppPath[] = [];
 afterEach(() => {
   for (const r of roots.splice(0)) rmSync(r, { recursive: true, force: true });
 });
 
-function fixture(overrides: Record<string, string> = {}): string {
-  const root = mkdtempSync(join(tmpdir(), "manifest-freeze-fx-"));
+function fixture(overrides: Record<string, string> = {}): AppPath {
+  const root = asAppPath(mkdtempSync(join(tmpdir(), "manifest-freeze-fx-")));
   roots.push(root);
   for (const [rel, content] of Object.entries({ ...BASE, ...overrides })) {
     mkdirSync(dirname(join(root, rel)), { recursive: true });
@@ -78,7 +82,7 @@ function fixture(overrides: Record<string, string> = {}): string {
   return root;
 }
 
-function measure(root: string) {
+function measure(root: AppPath) {
   return measureManifestFreeze({
     root,
     entry: "bin/index.ts",

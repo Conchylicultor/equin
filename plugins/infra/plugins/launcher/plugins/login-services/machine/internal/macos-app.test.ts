@@ -12,6 +12,11 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  type AppPath,
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   bundleOfExecutable,
   installedAppComponents,
   installServiceExecutable,
@@ -26,8 +31,8 @@ import {
   type InstalledComponent,
 } from "./macos-app-plist";
 
-let dir: string;
-let bundle: string;
+let dir: AppPath;
+let bundle: AppPath;
 let calls: string[];
 let signed: boolean;
 let failSign: boolean;
@@ -35,8 +40,8 @@ let running: () => string[];
 
 beforeEach(() => {
   // Real: running executables are reported by real path (/private/var/…).
-  dir = realpathSync(mkdtempSync(join(tmpdir(), "macos-app-")));
-  bundle = join(dir, "state", "equin.app");
+  dir = asAppPath(realpathSync(mkdtempSync(join(tmpdir(), "macos-app-"))));
+  bundle = joinAppPath(dir, "state", "equin.app");
   mkdirSync(join(dir, "state"));
   calls = [];
   signed = true;
@@ -72,12 +77,12 @@ function host(): MacosAppHost {
 }
 
 function build(name: string, content: string, icon?: string) {
-  const file = join(dir, "builds", name, content);
+  const file = joinAppPath(dir, "builds", name, content);
   mkdirSync(join(dir, "builds", name), { recursive: true });
   writeFileSync(file, content);
-  let iconPath: string | undefined;
+  let iconPath: AppPath | undefined;
   if (icon !== undefined) {
-    iconPath = join(dir, "builds", name, "icon.icns");
+    iconPath = joinAppPath(dir, "builds", name, "icon.icns");
     writeFileSync(iconPath, icon);
   }
   return {
@@ -102,12 +107,12 @@ async function rejection(p: Promise<unknown>): Promise<Error> {
 
 const gateway = { name: "gateway" };
 const tray = { name: "equin-desktop", main: true };
-const exe = (name: string) => join(bundle, "Contents", "MacOS", name);
+const exe = (name: string) => joinAppPath(bundle, "Contents", "MacOS", name);
 /** The swapped-out bundles beside the installed one. */
 const oldBundles = () =>
-  readdirSync(join(dir, "state"))
+  readdirSync(joinAppPath(dir, "state"))
     .filter((name) => name.startsWith("equin.app.old-"))
-    .map((name) => join(dir, "state", name));
+    .map((name) => joinAppPath(dir, "state", name));
 const plist = () =>
   readFileSync(join(bundle, "Contents", "Info.plist"), "utf8");
 

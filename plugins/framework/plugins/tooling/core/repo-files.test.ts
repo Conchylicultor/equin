@@ -7,6 +7,10 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { dirname, join } from "path";
+import {
+  type AppPath,
+  asAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { pathsUnder } from "./pathspec";
 import { loadRepoFiles } from "./repo-files";
 
@@ -24,7 +28,7 @@ async function rejection(p: Promise<unknown>): Promise<Error> {
   throw new Error("expected the promise to reject, but it resolved");
 }
 
-let root = "";
+let root!: AppPath;
 
 // Sorted (code-unit order). `a-b.ts` ("-" < "/") and `a.ts` ("." < "/") sort
 // BEFORE the `a/` run, `a0.ts` ("0" is right after "/") right AFTER it — the
@@ -57,7 +61,7 @@ function write(rel: string, content: string): void {
 }
 
 beforeAll(async () => {
-  root = mkdtempSync(join(tmpdir(), "repo-files-"));
+  root = asAppPath(mkdtempSync(join(tmpdir(), "repo-files-")));
   write(".gitignore", "ignored/\n");
   for (const rel of [
     "README.md",
@@ -132,7 +136,9 @@ describe("loadRepoFiles", () => {
   });
 
   test("a git failure throws — never an empty set", async () => {
-    const notARepo = mkdtempSync(join(tmpdir(), "repo-files-not-git-"));
+    const notARepo = asAppPath(
+      mkdtempSync(join(tmpdir(), "repo-files-not-git-")),
+    );
     try {
       expect((await rejection(loadRepoFiles(notARepo))).message).toContain(
         "git ls-files",

@@ -1,3 +1,4 @@
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { Dirent } from "node:fs";
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
@@ -90,7 +91,7 @@ const check: Check = {
       // The seed is held to the contract it seeds: nothing is shared, so it
       // reaches outside itself for nothing either.
       const folder = await readPrototypeFolder(
-        diskDirMount(prototypesDir),
+        diskDirMount(asAppPath(prototypesDir)),
         TEMPLATE,
         [],
       );

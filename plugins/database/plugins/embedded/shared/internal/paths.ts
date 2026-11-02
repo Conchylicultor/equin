@@ -1,4 +1,8 @@
 import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   envName,
   readEnv,
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
@@ -58,8 +62,8 @@ export const PG_LOG_FILE = join(PG_DIR, "postgres.log");
  * find a preview's PG (rooted at its `/tmp/sgp-XXXXXX` data dir, not this
  * process's own data root). `PG_PID_FILE` is the same path under the dev root.
  */
-export function pgPostmasterPidFile(root: string): string {
-  return join(root, "postgres", `data-pg${PG_MAJOR}`, "postmaster.pid");
+export function pgPostmasterPidFile(root: AppPath): AppPath {
+  return joinAppPath(root, "postgres", `data-pg${PG_MAJOR}`, "postmaster.pid");
 }
 
 // The same file under THIS process's data root — expressed through the declared

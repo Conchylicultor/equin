@@ -1,4 +1,3 @@
-import { join } from "path";
 import { isTestCodePath } from "@plugins/framework/plugins/plugin-id/core";
 import {
   createFacet,
@@ -18,6 +17,10 @@ import {
   walkFiles,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { type RouteDef, type RoutesData, routesFacetDef } from "../core";
+import {
+  type AppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 export default createFacet<RoutesData>({
   def: routesFacetDef,
@@ -31,9 +34,9 @@ export default createFacet<RoutesData>({
     //    cross-plugin) or `shared/` (plugin-private web+server). Scan both, or
     //    `[endpoint.route]` computed keys whose definition lives in `shared/`
     //    (e.g. notifications, crashes) get silently dropped.
-    const endpointFiles: string[] = [];
-    walkFiles(join(ctx.dir, "core"), endpointFiles);
-    walkFiles(join(ctx.dir, "shared"), endpointFiles);
+    const endpointFiles: AppPath[] = [];
+    walkFiles(joinAppPath(ctx.dir, "core"), endpointFiles);
+    walkFiles(joinAppPath(ctx.dir, "shared"), endpointFiles);
 
     const endpointRoutes = new Map<string, string>(); // exportName → routeString
     for (const file of endpointFiles) {
@@ -49,7 +52,7 @@ export default createFacet<RoutesData>({
 
     // ── For each runtime, scan the barrel for httpRoutes and wsRoutes ─────────
     for (const runtime of ["server", "machine", "central"] as const) {
-      const barrelPath = join(ctx.dir, runtime, "index.ts");
+      const barrelPath = joinAppPath(ctx.dir, runtime, "index.ts");
       const raw = readIfExists(barrelPath);
       if (!raw) continue;
       const src = stripTypes(raw);
@@ -189,10 +192,10 @@ const API_PREFIX_RE = /\/api\/([A-Za-z0-9_-]+)/g;
  * done in extract() so it runs inside the tree builder's time-sliced extract
  * loop: in relate() it was one ~2 s block over every file of every plugin.
  */
-function apiPrefixesUsedIn(dir: string): string[] {
-  const files: string[] = [];
+function apiPrefixesUsedIn(dir: AppPath): string[] {
+  const files: AppPath[] = [];
   for (const sub of ["web", "server", "machine", "central"]) {
-    walkFiles(join(dir, sub), files);
+    walkFiles(joinAppPath(dir, sub), files);
   }
   const hit = new Set<string>();
   for (const f of files) {

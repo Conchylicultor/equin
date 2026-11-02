@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
-import { listWorktreePaths } from "@plugins/infra/plugins/worktree/server";
+import {
+  appCheckoutOf,
+  listWorktreePaths,
+} from "@plugins/infra/plugins/worktree/server";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { sweepUnusedDeps } from "@plugins/infra/plugins/deps/deps";
 
@@ -23,8 +26,14 @@ export const depsSweepJob = defineJob({
   dedup: "singleton",
   schedule: { cron: "30 5 * * *" }, // daily at 05:30 UTC
   async run() {
+    // Only the app's own checkouts (main and its worktrees) are read: git
+    // lists any worktree of the repo, wherever its owner put it.
+    const listed = await listWorktreePaths();
+    const checkouts = (await Promise.all(listed.map(appCheckoutOf))).filter(
+      (c) => c !== null,
+    );
     const report = await sweepUnusedDeps({
-      checkouts: await listWorktreePaths(),
+      checkouts,
       now: new Date(),
     });
     log.publish(

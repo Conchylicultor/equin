@@ -23,6 +23,7 @@ import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { globPaths, pathsUnder } from "./pathspec";
 import type { RepoFiles } from "./types";
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // Wedge-breaker for a metadata-only git read, not a latency budget: what these
 // suffer under a saturated check run is starvation, not slowness. Same bound
@@ -75,7 +76,7 @@ export function assertRepoPath(
 }
 
 async function readWorkingTree(
-  root: string,
+  root: AppPath,
   path: string,
 ): Promise<string | null> {
   try {
@@ -97,7 +98,7 @@ async function readWorkingTree(
  * runner's tree snapshot); everyone else calls `loadRepoFiles`.
  */
 export function repoFilesOver(
-  root: string,
+  root: AppPath,
   sorted: readonly string[],
 ): RepoFiles {
   const paths = Object.freeze(sorted);
@@ -143,7 +144,7 @@ export function repoFilesOver(
  *
  * Throws on any git failure — never an empty set.
  */
-export async function loadRepoFiles(root: string): Promise<RepoFiles> {
+export async function loadRepoFiles(root: AppPath): Promise<RepoFiles> {
   const [present, deleted] = await Promise.all([
     lsFiles(root, ["--cached", "--others", "--exclude-standard"]),
     lsFiles(root, ["--deleted"]),

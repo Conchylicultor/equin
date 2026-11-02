@@ -1,4 +1,8 @@
 import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   existsSync,
   readdirSync,
   readFileSync,
@@ -184,7 +188,7 @@ export function answersSidecarName(tag: string): string {
  * JSON (lets JSON.parse throw).
  */
 export function readBranchLocalAnswers(
-  migrationsDir: string,
+  migrationsDir: AppPath,
   published: ReadonlySet<string>,
 ): Map<string, MigrationAnswer> {
   const map = new Map<string, MigrationAnswer>();
@@ -296,7 +300,7 @@ export interface GenerateMigrationResult {
  * (it runs outside every host grant — see the memory-dimension plan doc).
  */
 export async function generateMigration(opts: {
-  root: string;
+  root: AppPath;
   migrationName?: string;
   resetMigration?: boolean;
   customMigration?: boolean;
@@ -317,7 +321,7 @@ export async function generateMigration(opts: {
     process.exit(1);
   }
 
-  const migrationsDir = resolve(root, MIGRATIONS_DATA_DIR);
+  const migrationsDir = asAppPath(resolve(root, MIGRATIONS_DATA_DIR));
 
   // Every step below splits data/ into published (immutable) and this branch's
   // own. Read once, before anything is generated: the set is a property of the
@@ -424,7 +428,7 @@ export async function generateMigration(opts: {
   // two snapshots sharing a prevId, which every merged history has. What it
   // emits is moved into data/ right after it exits, so everything below sees
   // the files exactly where drizzle-kit used to write them.
-  const cwd = resolve(root, MIGRATIONS_PLUGIN_DIR);
+  const cwd = asAppPath(resolve(root, MIGRATIONS_PLUGIN_DIR));
   const stage = await stageDrizzleOut(cwd, migrationsDir);
 
   // The argv comes from the migrations plugin, which owns it: the binary name and
@@ -753,7 +757,7 @@ export async function generateMigration(opts: {
  * entry at all.
  */
 function rehashBranchLocalDataMigrations(
-  migrationsDir: string,
+  migrationsDir: AppPath,
   published: ReadonlySet<string>,
 ): void {
   const schema = schemaMigrationFiles(migrationsDir);
@@ -798,8 +802,8 @@ function rehashBranchLocalDataMigrations(
  * early return below and left a stale journal behind.
  */
 async function resetBranchLocalMigrations(
-  root: string,
-  migrationsDir: string,
+  root: AppPath,
+  migrationsDir: AppPath,
   published: ReadonlySet<string>,
 ): Promise<void> {
   const metaDir = join(migrationsDir, "meta");
@@ -847,8 +851,8 @@ async function resetBranchLocalMigrations(
 // Put back `meta/schema.snapshot.json` as it is at merge-base(HEAD, main), or
 // remove it when that commit has none (see resetBranchLocalMigrations).
 async function restorePublishedTip(
-  root: string,
-  migrationsDir: string,
+  root: AppPath,
+  migrationsDir: AppPath,
 ): Promise<void> {
   const git = async (args: string[]) => {
     const r = await spawnCaptured(["git", ...args], {
@@ -954,7 +958,7 @@ export function renameMigrations(migrationsDir: string): RenameResult {
  * published migration basenames (`publishedMigrationBasenames`).
  */
 export function phaseGeneratedMigrations(
-  migrationsDir: string,
+  migrationsDir: AppPath,
   published: ReadonlySet<string>,
   supersedes: Supersession | null,
   lineage: SnapshotLineage,
@@ -990,12 +994,12 @@ export function phaseGeneratedMigrations(
   writeFileSync(
     sqlPath,
     renderSnapshotHeader(lineage) +
-    renderPhasedMigration({
-      expand: renderStatements(phased.expand),
-      contract: renderStatements(phased.contract),
-      claims,
-      supersedes,
-    }),
+      renderPhasedMigration({
+        expand: renderStatements(phased.expand),
+        contract: renderStatements(phased.contract),
+        claims,
+        supersedes,
+      }),
   );
 }
 
@@ -1024,7 +1028,7 @@ export function freshSchemaMigration(migrationsDir: string): string | null {
 // already applied their delta, stamped after every migration on disk (it must
 // sort after what it adopts). Returns its file name.
 function writeAdoptionMigration(
-  migrationsDir: string,
+  migrationsDir: AppPath,
   adopts: readonly string[],
   supersedes: Supersession,
 ): string {
@@ -1058,7 +1062,7 @@ function warnUnsuperseded(prior: ResetPrior, reason: string): void {
  * keeps the migration), so there is none to remove or restore.
  */
 export function removeGeneratedFiles(
-  migrationsDir: string,
+  migrationsDir: AppPath,
   files: string[],
 ): void {
   const metaDir = join(migrationsDir, "meta");
@@ -1087,7 +1091,7 @@ export function removeGeneratedFiles(
  * function is exported and its name promises removal, nothing more.
  */
 function discardGenerated(migrationsDir: string, files: string[]): void {
-  removeGeneratedFiles(migrationsDir, files);
+  removeGeneratedFiles(asAppPath(migrationsDir), files);
   regenerateJournal(migrationsDir);
 }
 

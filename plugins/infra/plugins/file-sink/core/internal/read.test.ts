@@ -4,26 +4,31 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { defineFileSink } from "./file-sink";
 import { readJsonlTail, readTail } from "./read";
+import {
+  type AppPath,
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // Hermetic, mirroring file-sink.test.ts: every file lives in an isolated temp dir.
 // Sink ids must be unique (the registry is process-global, declared exactly once).
 
-let dir: string;
+let dir: AppPath;
 let counter = 0;
 function uniqueId(): string {
   return `read-sink-${process.pid}-${counter++}`;
 }
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), "file-sink-read-"));
+  dir = asAppPath(mkdtempSync(join(tmpdir(), "file-sink-read-")));
 });
 
 afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-function write(name: string, content: string): string {
-  const path = join(dir, name);
+function write(name: string, content: string): AppPath {
+  const path = joinAppPath(dir, name);
   writeFileSync(path, content);
   return path;
 }
@@ -54,7 +59,9 @@ describe("readTail", () => {
   });
 
   test("a missing file is `missing`, never an empty read", () => {
-    expect(readTail(join(dir, "nope.jsonl"))).toEqual({ kind: "missing" });
+    expect(readTail(joinAppPath(dir, "nope.jsonl"))).toEqual({
+      kind: "missing",
+    });
     // The distinction is load-bearing: a present-but-empty file IS a read.
     const empty = write("empty.jsonl", "");
     expect(readTail(empty)).toEqual({
@@ -81,7 +88,7 @@ describe("readTail", () => {
   });
 
   test("includeRotated stitches oldest-first across a forced rotation", () => {
-    const path = join(dir, "d.jsonl");
+    const path = joinAppPath(dir, "d.jsonl");
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
@@ -114,7 +121,7 @@ describe("readTail", () => {
     // The direct guard on the documented invariant: a batch rotates BETWEEN two
     // whole lines, so the reader stitches it back oldest-first with nothing torn
     // — the batch write is invisible to the reader.
-    const path = join(dir, "d2.jsonl");
+    const path = joinAppPath(dir, "d2.jsonl");
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
@@ -133,7 +140,7 @@ describe("readTail", () => {
   });
 
   test("includeRotated stops at the byte budget and flags the dropped history", () => {
-    const path = join(dir, "e.jsonl");
+    const path = joinAppPath(dir, "e.jsonl");
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
@@ -195,13 +202,15 @@ describe("readJsonlTail", () => {
   });
 
   test("a missing file is `missing`, never []", () => {
-    expect(readJsonlTail(join(dir, "nope.jsonl"))).toEqual({ kind: "missing" });
+    expect(readJsonlTail(joinAppPath(dir, "nope.jsonl"))).toEqual({
+      kind: "missing",
+    });
   });
 });
 
 describe("FileSink read methods", () => {
   test("sink.readTail / sink.readJsonlTail read the sink's own path", () => {
-    const path = join(dir, "i.jsonl");
+    const path = joinAppPath(dir, "i.jsonl");
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
@@ -221,7 +230,7 @@ describe("FileSink read methods", () => {
   });
 
   test("the read budget is the 8 MB default, NOT the sink's 128 MB bound", () => {
-    const path = join(dir, "j.jsonl");
+    const path = joinAppPath(dir, "j.jsonl");
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
@@ -239,7 +248,7 @@ describe("FileSink read methods", () => {
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
-      path: join(dir, "k.jsonl"),
+      path: joinAppPath(dir, "k.jsonl"),
     });
     expect(sink.readTail()).toEqual({ kind: "missing" });
   });

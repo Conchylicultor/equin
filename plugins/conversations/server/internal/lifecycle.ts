@@ -705,7 +705,7 @@ async function preflightResume(
       message: `Conversation ${row.id} has no saved Claude session to resume.`,
     };
   }
-  const resumable = Workspace.get(workspace.spec.kind).checkResumable(
+  const resumable = await Workspace.get(workspace.spec.kind).checkResumable(
     workspace,
   );
   if (resumable.kind === "missing") {

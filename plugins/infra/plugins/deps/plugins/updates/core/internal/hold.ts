@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 // The one hold model every updater shares: a release not to land yet, always
 // with a reason and always with a review deadline. Each updater keeps its holds
 // where its inputs are declared (npm: the package.json `dependencyPolicy`, mise:
@@ -134,7 +135,7 @@ export function holdProblems(
  */
 export async function reviewableHolds(
   updater: Updater,
-  root: string,
+  root: AppPath,
   now: Date,
 ): Promise<Hold[]> {
   const holds = await updater.holds.read(root);

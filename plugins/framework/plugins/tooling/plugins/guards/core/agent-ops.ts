@@ -1,6 +1,10 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import {
+  joinAppPath,
+  type AppPath,
+  asAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
  * Which subagent started which long op — the fact nothing else in the session
@@ -38,8 +42,8 @@ export interface StartedOp {
  */
 const TTL_MS = 6 * 60 * 60 * 1000;
 
-function stateFile(sessionId: string): string {
-  return join(tmpdir(), `guard-agent-ops-${sessionId}.json`);
+function stateFile(sessionId: string): AppPath {
+  return joinAppPath(asAppPath(tmpdir()), `guard-agent-ops-${sessionId}.json`);
 }
 
 function prune(entries: StartedOp[], now: number): StartedOp[] {

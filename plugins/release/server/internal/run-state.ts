@@ -16,6 +16,7 @@ import {
   type ReleaseEnding,
 } from "./release-outcome";
 import { releaseRunIdKind } from "@plugins/release/plugins/bundles/core";
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /** The index the claiming INSERT contends on — see `tables.ts`. */
 const INFLIGHT_UQ = "release_runs_inflight_uniq";
@@ -85,7 +86,7 @@ interface ReleaseManifest {
   commitDirty?: boolean;
 }
 
-function readManifest(out: string): ReleaseManifest | null {
+function readManifest(out: AppPath): ReleaseManifest | null {
   try {
     return JSON.parse(
       readFileSync(join(out, "RELEASE.json"), "utf-8"),

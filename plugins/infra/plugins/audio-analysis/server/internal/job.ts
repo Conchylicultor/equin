@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { rmSync } from "node:fs";
 import { z } from "zod";
 import { defineSupervisedJob } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
@@ -60,7 +61,7 @@ export const beatFeaturesJob = defineSupervisedJob({
  */
 export async function requestBeatFeatures(
   videoId: string,
-  opts: { force?: boolean; dir?: string } = {},
+  opts: { force?: boolean; dir?: AppPath } = {},
 ): Promise<BeatFeaturesState> {
   const id = VideoIdSchema.parse(videoId);
   const force = opts.force === true;

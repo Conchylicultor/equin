@@ -1,4 +1,3 @@
-import { join } from "path";
 import {
   createFacet,
   getFacet,
@@ -17,20 +16,24 @@ import {
   exemptionsFacetDef,
 } from "../core";
 import { readManifest } from "./read-manifest";
+import {
+  type AppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
 /** The ESLint namespace of this plugin's `lint/index.ts` contribution. */
-function lintNamespace(dir: string): string | undefined {
-  const src = readIfExists(join(dir, "lint", "index.ts"));
+function lintNamespace(dir: AppPath): string | undefined {
+  const src = readIfExists(joinAppPath(dir, "lint", "index.ts"));
   return src?.match(/\bname:\s*"([^"]+)"/)?.[1];
 }
 
 /** Every check id declared under this plugin's `check/` folder. */
-function checkIds(dir: string): string[] {
-  const checkDir = join(dir, "check");
+function checkIds(dir: AppPath): string[] {
+  const checkDir = joinAppPath(dir, "check");
   if (!pathExists(checkDir)) return [];
-  const files: string[] = [];
+  const files: AppPath[] = [];
   walkFiles(checkDir, files);
   const ids = new Set<string>();
   for (const f of files) {

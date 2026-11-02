@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   backoffPolicy,
   claimInstance,
@@ -333,7 +334,7 @@ export function spawnWorkerIn(
 function followPidFile(
   state: DeclState,
   rec: InstanceRec,
-  pidFile: string,
+  pidFile: AppPath,
   emit: (t: DaemonTransition) => void,
   /** Whether a not-yet-seen process may still be coming up. */
   stillBooting: (read: PidFileRead) => boolean,

@@ -1,3 +1,4 @@
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { join } from "node:path";
 import type {
   Check,
@@ -91,7 +92,7 @@ function barrelExportNames(specifier: string): Set<string> {
   const names = new Set<string>();
   const dir = join(REPO_ROOT, specifier.replace("@plugins/", "plugins/"));
   for (const file of ["index.ts", "resources.ts"]) {
-    const src = readIfExists(join(dir, file));
+    const src = readIfExists(asAppPath(join(dir, file)));
     if (src == null) continue;
     for (const e of parseBarrelExports(src)) names.add(e.name);
   }

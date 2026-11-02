@@ -33,6 +33,7 @@
 // import — and every lint decision is a function of the result keys compared
 // here.
 
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { setEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { cpSync, mkdirSync, rmSync, writeFileSync } from "fs";
 import os from "os";
@@ -73,7 +74,7 @@ if (!scratchArg || !from || !to || !data || !(BATCH.k >= 1)) {
   );
   process.exit(2);
 }
-const scratch = resolve(scratchArg);
+const scratch = asAppPath(resolve(scratchArg));
 const UNBOUNDED =
   "a validation replay run by hand: two checks per commit, owned by whoever started it";
 

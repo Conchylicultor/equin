@@ -2,22 +2,27 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { scanStagedModules } from "./staged-verify";
 
 describe("scanStagedModules (ground-truth scan of the staged dist)", () => {
-  let staging: string;
+  let staging: AppPath;
   afterEach(() => rmSync(staging, { recursive: true, force: true }));
 
   const artifact = (linkName: string, files: Record<string, string>): void => {
-    const dir = join(staging, "artifacts", linkName);
+    const dir = joinAppPath(staging, "artifacts", linkName);
     mkdirSync(dir, { recursive: true });
     for (const [name, content] of Object.entries(files)) {
-      writeFileSync(join(dir, name), content);
+      writeFileSync(joinAppPath(dir, name), content);
     }
   };
 
   test("verifies every staged file — chunks included — against the map", async () => {
-    staging = mkdtempSync(join(tmpdir(), "staged-verify-"));
+    staging = asAppPath(mkdtempSync(join(tmpdir(), "staged-verify-")));
     artifact("a.web.111", {
       "index.js": `import "./chunk-abc.mjs"; import "mapped-pkg";\n`,
       // The exact outage shape: a lazy chunk importing an unmapped bare spec.
@@ -51,7 +56,7 @@ describe("scanStagedModules (ground-truth scan of the staged dist)", () => {
   });
 
   test("a fully-mapped staged tree passes clean", async () => {
-    staging = mkdtempSync(join(tmpdir(), "staged-verify-"));
+    staging = asAppPath(mkdtempSync(join(tmpdir(), "staged-verify-")));
     artifact("a.web.111", {
       "index.js": `import "./chunk.mjs"; import "react";\n`,
       "chunk.mjs": `export const x = 1;\n`,
@@ -66,19 +71,19 @@ describe("scanStagedModules (ground-truth scan of the staged dist)", () => {
 });
 
 describe("scanStagedModules (link verification: names the target must export)", () => {
-  let staging: string;
+  let staging: AppPath;
   afterEach(() => rmSync(staging, { recursive: true, force: true }));
 
   const artifact = (linkName: string, files: Record<string, string>): void => {
-    const dir = join(staging, "artifacts", linkName);
+    const dir = joinAppPath(staging, "artifacts", linkName);
     mkdirSync(dir, { recursive: true });
     for (const [name, content] of Object.entries(files)) {
-      writeFileSync(join(dir, name), content);
+      writeFileSync(joinAppPath(dir, name), content);
     }
   };
 
   test("a named import the target does not export fails; the ones it does pass", async () => {
-    staging = mkdtempSync(join(tmpdir(), "staged-verify-"));
+    staging = asAppPath(mkdtempSync(join(tmpdir(), "staged-verify-")));
     artifact("a.web.111", {
       "index.js": `import { TaskRow, TaskList } from "@plugins/tasks/web";\nexport default {};\n`,
     });
@@ -95,7 +100,7 @@ describe("scanStagedModules (link verification: names the target must export)", 
   });
 
   test("a missing default, and a relative link into a sibling chunk, both fail", async () => {
-    staging = mkdtempSync(join(tmpdir(), "staged-verify-"));
+    staging = asAppPath(mkdtempSync(join(tmpdir(), "staged-verify-")));
     artifact("a.web.111", {
       "index.js": `import midi from "@tonejs/midi";\nimport { gone } from "./chunk.mjs";\nexport default {};\n`,
       "chunk.mjs": `export const here = 1;\n`,
@@ -114,7 +119,7 @@ describe("scanStagedModules (link verification: names the target must export)", 
   });
 
   test("namespace and dynamic imports are not name-checked", async () => {
-    staging = mkdtempSync(join(tmpdir(), "staged-verify-"));
+    staging = asAppPath(mkdtempSync(join(tmpdir(), "staged-verify-")));
     artifact("a.web.111", {
       "index.js":
         `import * as ns from "@plugins/tasks/web";\n` + // member access is dynamic
@@ -132,7 +137,7 @@ describe("scanStagedModules (link verification: names the target must export)", 
   });
 
   test("`export {…} from` re-exports never invent a phantom `default` requirement", async () => {
-    staging = mkdtempSync(join(tmpdir(), "staged-verify-"));
+    staging = asAppPath(mkdtempSync(join(tmpdir(), "staged-verify-")));
     // The lexer reports this in the IMPORTS array, d === -1 — see import-clause.ts.
     artifact("a.web.111", {
       "index.js": `export { TaskList } from "@plugins/tasks/web";\nexport default {};\n`,
@@ -148,7 +153,7 @@ describe("scanStagedModules (link verification: names the target must export)", 
   });
 
   test("an opaque (`export *`) target warns instead of failing", async () => {
-    staging = mkdtempSync(join(tmpdir(), "staged-verify-"));
+    staging = asAppPath(mkdtempSync(join(tmpdir(), "staged-verify-")));
     artifact("a.web.111", {
       "index.js": `import { Anything } from "@plugins/tasks/web";\nexport default {};\n`,
     });
@@ -167,7 +172,7 @@ describe("scanStagedModules (link verification: names the target must export)", 
   });
 
   test("a web barrel with no `default` export fails, blamed on the registry", async () => {
-    staging = mkdtempSync(join(tmpdir(), "staged-verify-"));
+    staging = asAppPath(mkdtempSync(join(tmpdir(), "staged-verify-")));
     artifact("composition-web-registry.registry.333", {
       "index.js": `export const load = () => import("@plugins/tasks/web");\n`,
     });
@@ -192,7 +197,7 @@ describe("scanStagedModules (link verification: names the target must export)", 
   });
 
   test("a fully-linked staged tree passes clean", async () => {
-    staging = mkdtempSync(join(tmpdir(), "staged-verify-"));
+    staging = asAppPath(mkdtempSync(join(tmpdir(), "staged-verify-")));
     artifact("a.web.111", {
       "index.js":
         `import { TaskList as t } from "@plugins/tasks/web";\n` +

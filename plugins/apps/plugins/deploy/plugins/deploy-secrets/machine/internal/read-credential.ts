@@ -1,5 +1,9 @@
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { DeploySecretValue } from "@plugins/apps/plugins/deploy/plugins/deploy-secrets/server";
 
 /**
@@ -8,9 +12,10 @@ import type { DeploySecretValue } from "@plugins/apps/plugins/deploy/plugins/dep
  * unit's main process — forwarded down the runtime tree as a host fact
  * (`launcher/core` `RUNTIME_HOST_ENV`). Undefined anywhere but a deployed box.
  */
-function credentialsDirectory(): string | undefined {
+function credentialsDirectory(): AppPath | undefined {
   const dir = process.env.CREDENTIALS_DIRECTORY;
-  return dir === undefined || dir === "" ? undefined : dir;
+  // systemd's own credentials dir, set for the unit: app-owned.
+  return dir === undefined || dir === "" ? undefined : asAppPath(dir);
 }
 
 /** The credential named `key`, as `DeploySecretSourceImpl.read` defines it. */
@@ -19,7 +24,7 @@ export function readCredential(key: string): DeploySecretValue {
   if (dir === undefined) return { kind: "unset" };
   let value: string;
   try {
-    value = readFileSync(join(dir, key), "utf8");
+    value = readFileSync(joinAppPath(dir, key), "utf8");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") {
       return { kind: "unset" };

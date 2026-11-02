@@ -1,3 +1,7 @@
+import {
+  type AppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
@@ -52,18 +56,18 @@ export function selectEvictions(
   return out;
 }
 
-function listFiles(dir: string): CacheFile[] {
+function listFiles(dir: AppPath): CacheFile[] {
   if (!existsSync(dir)) return [];
   return readdirSync(dir, { withFileTypes: true })
     .filter((d) => d.isFile())
     .map((d) => {
-      const st = statSync(join(dir, d.name));
+      const st = statSync(joinAppPath(dir, d.name));
       return { name: d.name, bytes: st.size, lastUsedMs: st.mtimeMs };
     });
 }
 
 export async function sweepResizedImages(args: {
-  dir: string;
+  dir: AppPath;
   nowMs: number;
   ttlMs?: number;
   capBytes?: number;

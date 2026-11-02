@@ -1,4 +1,9 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
+import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { dirname, join } from "path";
@@ -12,10 +17,10 @@ import type { JsonValue } from "@plugins/config_v2/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 
-let configDir: string;
+let configDir: AppPath;
 
 beforeEach(() => {
-  configDir = mkdtempSync(join(tmpdir(), "config-prune-"));
+  configDir = asAppPath(mkdtempSync(join(tmpdir(), "config-prune-")));
 });
 afterEach(() => {
   rmSync(configDir, { recursive: true, force: true });
@@ -244,7 +249,7 @@ function readEffective() {
     defineConfig({ name: "cfg", fields: twoFields }),
     {
       root: configDir,
-      userConfigDir: join(configDir, "user"),
+      userConfigDir: joinAppPath(configDir, "user"),
       hierarchyPath: "p",
     },
   );

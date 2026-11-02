@@ -56,6 +56,10 @@ import {
   writeFileSync,
 } from "fs";
 import { join } from "path";
+import {
+  type AppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { DataDir } from "@plugins/infra/plugins/paths/core";
 
 /** What a store needs of its data dir: its path, a child's path, and `mkdir -p`. */
@@ -184,7 +188,7 @@ export function openPassSet(
   const period = bounds.maxAgeMs / bounds.generations;
   // A genuinely unwritable home is a real fault and should surface loudly.
   dir.ensure();
-  const home = join(dir.path, LAYOUT_DIR);
+  const home = joinAppPath(dir.path, LAYOUT_DIR);
   const born = bornAt(dir, home, now());
   // Removal is bounded per open: what an open evicts is renamed aside (or, for
   // legacy entries, no longer probed) at once, and unlinked a budget at a time
@@ -192,7 +196,7 @@ export function openPassSet(
   // (~5.5 sys-CPU-s per 50k entries, measured).
   const budget = { left: options.removeBudget ?? REMOVE_PER_OPEN };
   dropExpired(home, Math.floor(now() / period), bounds, budget);
-  let legacy = !exists(join(home, LEGACY_SWEPT_FILE));
+  let legacy = !exists(joinAppPath(home, LEGACY_SWEPT_FILE));
   if (legacy && now() - born > bounds.maxAgeMs) {
     // Expired: never read again, whether or not this open finishes the sweep.
     legacy = false;
@@ -202,13 +206,13 @@ export function openPassSet(
   openStats.ms += performance.now() - t0;
 
   const current = (): number => Math.floor(now() / period);
-  const genFile = (gen: number, sha: string): string =>
-    join(home, `g${gen}`, `${sha}.json`);
+  const genFile = (gen: number, sha: string): AppPath =>
+    joinAppPath(home, `g${gen}`, `${sha}.json`);
   // Newest first: the current generation, the older ones in the window, then
   // the flat legacy entry while there may be one.
-  const locations = (sha: string): { path: string; gen: number | null }[] => {
+  const locations = (sha: string): { path: AppPath; gen: number | null }[] => {
     const cur = current();
-    const out: { path: string; gen: number | null }[] = [];
+    const out: { path: AppPath; gen: number | null }[] = [];
     for (let g = cur; g > cur - bounds.generations; g--) {
       out.push({ path: genFile(g, sha), gen: g });
     }
@@ -217,8 +221,8 @@ export function openPassSet(
   };
   // Run `write` against the current generation, creating it (and the layout
   // dir, should a test have removed the store under an open set) on ENOENT.
-  const inCurrent = (write: (gen: string) => void): void => {
-    const gen = join(home, `g${current()}`);
+  const inCurrent = (write: (gen: AppPath) => void): void => {
+    const gen = joinAppPath(home, `g${current()}`);
     try {
       write(gen);
     } catch (err) {
@@ -229,17 +233,17 @@ export function openPassSet(
   };
   // The generation's entry count, read and rewritten whole. Two writers at
   // once can lose an increment: a backstop's count may run a little low.
-  const counted = (gen: string): void => {
-    const file = join(gen, WRITES_FILE);
+  const counted = (gen: AppPath): void => {
+    const file = joinAppPath(gen, WRITES_FILE);
     writeFileSync(file, String(countIn(file) + 1));
   };
   // Hard-link an older generation's entry into the current one. False when
   // the source vanished (its generation dropped under us).
-  const promote = (from: string, sha: string): boolean => {
+  const promote = (from: AppPath, sha: string): boolean => {
     let linked = true;
     inCurrent((gen) => {
       try {
-        linkSync(from, join(gen, `${sha}.json`));
+        linkSync(from, joinAppPath(gen, `${sha}.json`));
         counted(gen);
       } catch (err) {
         const code = errCode(err);
@@ -257,7 +261,7 @@ export function openPassSet(
   };
   // Find the entry, promoting it when it is older than the current
   // generation. The path holding it now, or undefined.
-  const usedAt = (sha: string): string | undefined => {
+  const usedAt = (sha: string): AppPath | undefined => {
     const cur = current();
     for (const loc of locations(sha)) {
       if (!exists(loc.path)) continue;
@@ -294,9 +298,9 @@ export function openPassSet(
       const body = JSON.stringify({ ...detail, recordedAt: now() });
       inCurrent((gen) => {
         // Per writer: two processes recording one key never share a tmp file.
-        const tmp = join(gen, `.${sha.slice(0, 12)}-${process.pid}.tmp`);
+        const tmp = joinAppPath(gen, `.${sha.slice(0, 12)}-${process.pid}.tmp`);
         writeFileSync(tmp, body);
-        renameSync(tmp, join(gen, `${sha}.json`)); // atomic on the same filesystem
+        renameSync(tmp, joinAppPath(gen, `${sha}.json`)); // atomic on the same filesystem
         counted(gen);
       });
     },
@@ -306,7 +310,7 @@ export function openPassSet(
   };
 }
 
-function exists(path: string): boolean {
+function exists(path: AppPath): boolean {
   try {
     statSync(path);
     return true;
@@ -320,7 +324,7 @@ function exists(path: string): boolean {
 // atomically (a tmp file hard-linked into place, so a racing opener either
 // wins or reads a complete value). The creator also decides whether there
 // are legacy entries to keep reading: none, and the sweep is done already.
-function bornAt(dir: PassSetDir, home: string, now: number): number {
+function bornAt(dir: PassSetDir, home: AppPath, now: number): number {
   const file = join(home, BORN_FILE);
   try {
     return Number(readFileSync(file, "utf8"));
@@ -356,7 +360,7 @@ function hasLegacyEntry(dir: PassSetDir): boolean {
   }
 }
 
-function markLegacySwept(home: string): void {
+function markLegacySwept(home: AppPath): void {
   closeSync(openSync(join(home, LEGACY_SWEPT_FILE), "w"));
 }
 
@@ -368,7 +372,7 @@ interface Budget {
 // stops after what it removed, never lists the rest). True when the
 // directory held no more such entries.
 function drain(
-  dir: string,
+  dir: AppPath,
   budget: Budget,
   remove: (name: string) => boolean,
 ): boolean {
@@ -385,7 +389,7 @@ function drain(
       if (budget.left <= 0) return false;
       budget.left--;
       // A concurrent drainer may have taken it first.
-      rmSync(join(dir, e.name), { force: true });
+      rmSync(joinAppPath(dir, e.name), { force: true });
       if (e.name.endsWith(".json")) openStats.removed++;
     }
     return true;
@@ -397,7 +401,7 @@ function drain(
 // The flat layout, swept once ever, a budget at a time: every legacy entry
 // (and the old sweep's marker and stray tmp files). Marked swept once none
 // is left, so the opens after it list nothing.
-function sweepLegacy(dir: PassSetDir, home: string, budget: Budget): void {
+function sweepLegacy(dir: PassSetDir, home: AppPath, budget: Budget): void {
   const done = drain(
     dir.path,
     budget,
@@ -414,7 +418,7 @@ function sweepLegacy(dir: PassSetDir, home: string, budget: Budget): void {
 // current), then unlink what the budget allows of every dropped one. Lists
 // `generations/` only: a handful of names.
 function dropExpired(
-  home: string,
+  home: AppPath,
   cur: number,
   bounds: PassSetBounds,
   budget: Budget,
@@ -441,7 +445,7 @@ function dropExpired(
   }
   for (const name of trash) {
     if (name === "") continue; // a racing dropper took it
-    const dir = join(home, name);
+    const dir = joinAppPath(home, name);
     if (drain(dir, budget, () => true)) {
       try {
         rmdirSync(dir);
@@ -454,13 +458,13 @@ function dropExpired(
   }
 }
 
-function entriesIn(home: string, gen: number): number {
-  return countIn(join(home, `g${gen}`, WRITES_FILE));
+function entriesIn(home: AppPath, gen: number): number {
+  return countIn(joinAppPath(home, `g${gen}`, WRITES_FILE));
 }
 
 // A generation's write counter: 0 when absent, or when a racing write left
 // it empty (the backstop is approximate, never a reason to fail an open).
-function countIn(file: string): number {
+function countIn(file: AppPath): number {
   let text: string;
   try {
     text = readFileSync(file, "utf8");
@@ -475,10 +479,10 @@ function countIn(file: string): number {
 // Renamed aside — atomic, so a reader probing it sees the whole generation or
 // none of it — and returned by its trash name, for `dropExpired` to unlink a
 // budget at a time. "" when a racing dropper renamed it first.
-function dropGeneration(home: string, gen: number): string {
+function dropGeneration(home: AppPath, gen: number): string {
   const trash = `${TRASH_PREFIX}g${gen}-${process.pid}-${Math.random().toString(36).slice(2, 8)}`;
   try {
-    renameSync(join(home, `g${gen}`), join(home, trash));
+    renameSync(joinAppPath(home, `g${gen}`), joinAppPath(home, trash));
   } catch (err) {
     if (errCode(err) === "ENOENT") return "";
     throw err;

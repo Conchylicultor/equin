@@ -1,3 +1,4 @@
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { afterAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -19,20 +20,20 @@ afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
 describe("the catalog file", () => {
   test("absent reads as the baseline", () => {
-    const file = join(dir, "absent", "catalog.json");
+    const file = asAppPath(join(dir, "absent", "catalog.json"));
     expect(readCatalogFile(file)).toEqual({ kind: "absent" });
     expect(catalogFromFile(file)).toBe(BASELINE_MODELS);
   });
 
   test("an unreadable file throws rather than forgetting what it held", () => {
-    const file = join(dir, "bad.json");
+    const file = asAppPath(join(dir, "bad.json"));
     writeFileSync(file, '{"versions": "nope"}');
     expect(readCatalogFile(file).kind).toBe("invalid");
     expect(() => catalogFromFile(file)).toThrow(ModelCatalogUnreadableError);
   });
 
   test("a written catalog round-trips, into a directory that did not exist", async () => {
-    const file = join(dir, "rw", "catalog.json");
+    const file = asAppPath(join(dir, "rw", "catalog.json"));
     const catalog: ModelCatalog = {
       ...BASELINE_MODELS,
       versions: [

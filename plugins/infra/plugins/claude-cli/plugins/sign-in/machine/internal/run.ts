@@ -1,4 +1,9 @@
 import {
+  type AppPath,
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   chmodSync,
   closeSync,
   mkdirSync,
@@ -72,7 +77,7 @@ interface Child {
 interface Run {
   id: string;
   target: ClaudeSignInTarget;
-  dir: string;
+  dir: AppPath;
   child: Child | null;
   /** `setup-token`'s screen; `auth login` writes to the `output` file. */
   screen: Screen | null;
@@ -111,24 +116,24 @@ function isAlive(pid: number): boolean {
  * the data dir, so a live backend's runs are left alone (this one's own ended
  * runs removed their folders already).
  */
-function sweepOrphanedRuns(root: string): void {
+function sweepOrphanedRuns(root: AppPath): void {
   for (const name of readdirSync(root)) {
     const pid = Number(name.split("-", 1)[0]);
     if (Number.isInteger(pid) && pid > 0 && isAlive(pid)) continue;
-    rmSync(join(root, name), { recursive: true, force: true });
+    rmSync(joinAppPath(root, name), { recursive: true, force: true });
   }
 }
 
 /** The shim Claude Code runs instead of a browser: it records the page, opens nothing. */
-function writeBrowserShim(dir: string): string {
+function writeBrowserShim(dir: AppPath): string {
   const quoted = `'${join(dir, HANDED).replaceAll("'", `'\\''`)}'`;
-  const shim = join(dir, SHIM);
+  const shim = joinAppPath(dir, SHIM);
   writeFileSync(shim, `#!/bin/sh\nprintf '%s\\n' "$1" >> ${quoted}\n`);
   chmodSync(shim, 0o700);
   return shim;
 }
 
-function readIfThere(path: string): string {
+function readIfThere(path: AppPath): string {
   try {
     return readFileSync(path, "utf8");
   } catch (err) {
@@ -139,7 +144,9 @@ function readIfThere(path: string): string {
 
 /** What Claude Code has said so far. */
 function readOutput(run: Run): string {
-  return run.screen ? run.screen.text() : readIfThere(join(run.dir, OUTPUT));
+  return run.screen
+    ? run.screen.text()
+    : readIfThere(joinAppPath(run.dir, OUTPUT));
 }
 
 /**
@@ -158,7 +165,7 @@ function readProgress(run: Run): void {
       return;
     }
   }
-  const url = parseBrowserUrl(readIfThere(join(run.dir, HANDED)));
+  const url = parseBrowserUrl(readIfThere(joinAppPath(run.dir, HANDED)));
   const manualUrl = parseManualUrl(output);
   if (url !== flow.url || manualUrl !== flow.manualUrl)
     publish(run, { ...flow, url, manualUrl });
@@ -167,10 +174,10 @@ function readProgress(run: Run): void {
 /** `auth login`: plain text into the run's `output` file, the code on stdin. */
 function spawnPlain(
   args: string[],
-  dir: string,
+  dir: AppPath,
   env: Record<string, string | undefined>,
 ): Child {
-  const out = openSync(join(dir, OUTPUT), "w", 0o600);
+  const out = openSync(joinAppPath(dir, OUTPUT), "w", 0o600);
   try {
     const child = Bun.spawn([bundledClaudeBin(), ...args], {
       cwd: dir,
@@ -202,7 +209,7 @@ function spawnPlain(
  */
 function spawnOnScreen(
   args: string[],
-  dir: string,
+  dir: AppPath,
   env: Record<string, string | undefined>,
   screen: Screen,
   onDrawn: () => void,
@@ -253,9 +260,10 @@ async function endRun(run: Run): Promise<void> {
 export async function startSignIn(target: ClaudeSignInTarget): Promise<string> {
   if (running) await endRun(running);
   const id = crypto.randomUUID();
-  const root = realpathSync(claudeSignInDir.ensure());
+  // The real path of the app's own sign-in dir.
+  const root = asAppPath(realpathSync(claudeSignInDir.ensure()));
   sweepOrphanedRuns(root);
-  const dir = join(root, runDirName(id));
+  const dir = joinAppPath(root, runDirName(id));
   mkdirSync(dir, { mode: 0o700 });
   const run: Run = {
     id,

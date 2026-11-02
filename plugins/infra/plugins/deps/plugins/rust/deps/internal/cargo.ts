@@ -1,5 +1,9 @@
 import { chmodSync, copyFileSync, existsSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { runtimePath } from "@plugins/infra/plugins/launcher/core";
 import type { Ready } from "@plugins/infra/plugins/deps/deps";
 import {
@@ -197,6 +201,6 @@ function validate(spec: CargoBuildSpec): void {
 }
 
 /** The built binary of an installed crate — the copy in the deps cache, never the target dir's. */
-export function cargoBinary(ready: Ready<CargoSource>): string {
-  return join(ready.dir, ready.dep.source.binary);
+export function cargoBinary(ready: Ready<CargoSource>): AppPath {
+  return joinAppPath(ready.dir, ready.dep.source.binary);
 }

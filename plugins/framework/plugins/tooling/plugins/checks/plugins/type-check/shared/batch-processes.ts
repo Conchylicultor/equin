@@ -16,6 +16,11 @@ import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import type { TypeCheckTree } from "../core";
 import type { BatchJob, BatchOutcome, Batching } from "./batch-run";
 import type { BatchProcessJob } from "./batch-worker";
+import {
+  type AppPath,
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 const BATCH_WORKER = fileURLToPath(
   new URL("./batch-worker.ts", import.meta.url),
@@ -31,7 +36,7 @@ export interface BatchSpend {
 export function processBatches(opts: {
   k: number;
   width: number;
-  root: string;
+  root: AppPath;
   tree: TypeCheckTree;
   /** Added to as each batch process is reaped. */
   spend: BatchSpend;
@@ -39,7 +44,9 @@ export function processBatches(opts: {
   return {
     k: opts.k,
     open(ctx) {
-      const spool = mkdtempSync(join(os.tmpdir(), "type-check-batches-"));
+      const spool = asAppPath(
+        mkdtempSync(join(os.tmpdir(), "type-check-batches-")),
+      );
       const fixed = {
         root: opts.root,
         tree: opts.tree,
@@ -53,10 +60,10 @@ export function processBatches(opts: {
       return {
         width: opts.width,
         publish(hash, text) {
-          writeFileSync(join(spool, hash), text);
+          writeFileSync(joinAppPath(spool, hash), text);
         },
         async run(job: BatchJob): Promise<BatchOutcome> {
-          const jobPath = join(spool, `job-${job.index}.json`);
+          const jobPath = joinAppPath(spool, `job-${job.index}.json`);
           const full: BatchProcessJob = { ...fixed, ...job };
           writeFileSync(jobPath, JSON.stringify(full));
           const startedAt = performance.now();

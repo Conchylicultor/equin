@@ -58,6 +58,8 @@ Cost: one `flock-wait` child (~37 MB, `bun --smol`) per queued waiter.
 - Description: Crash-safe cross-process FIFO line: createTicketLine(dir).join() resolves once every caller that joined earlier has left, in arrival order — each ticket a flocked file named by the machine-wide monotonic clock, each waiter blocked (push-based, one flock-wait child) on the ticket just ahead of it, so a dead waiter's place frees itself.
 - Core:
   - Uses:
+    - `infra/host-fs/user-path.AppPath`
+    - `infra/host-fs/user-path.joinAppPath`
     - `packages/flock.flockTry`
     - `packages/flock.waitForFlock`
   - Exports (types):

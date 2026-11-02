@@ -1,3 +1,4 @@
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { dirname, join } from "path";
@@ -43,7 +44,7 @@ export async function createReadSetRepo(
   prefix: string,
   files: Readonly<Record<string, string>>,
 ): Promise<ReadSetRepo> {
-  const root = mkdtempSync(join(tmpdir(), prefix));
+  const root = asAppPath(mkdtempSync(join(tmpdir(), prefix)));
   const git = (...args: string[]) =>
     spawnExpectOk(["git", ...args], { cwd: root, timeoutMs: GIT_TIMEOUT_MS });
   const write = (rel: string, content: string): void => {

@@ -21,6 +21,7 @@
  * its lineage in its snapshot header, and its body becomes
  * `meta/schema.snapshot.json`.
  */
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { createHash } from "crypto";
 import { readdirSync, writeFileSync } from "fs";
 import { join } from "path";
@@ -124,7 +125,7 @@ function describeProblems(dag: SnapshotDag): string {
  * both sides changed the same path differently, listed with the resolution.
  */
 export async function joinSnapshotTips(
-  migrationsDir: string,
+  migrationsDir: AppPath,
   origins: ReadonlyMap<string, readonly string[]>,
   bodies: SnapshotBodies,
 ): Promise<JoinResult> {

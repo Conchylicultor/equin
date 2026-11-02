@@ -1,4 +1,5 @@
 import type { Check } from "@plugins/framework/plugins/tooling/core";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {
   buildRegistryGenContext,
@@ -23,7 +24,7 @@ const check: Check = {
     // graphs are the ones `plugins-registry-in-sync` derived, so taking them
     // here costs nothing and cannot disagree with what codegen emitted.
     const repo = await checkCtx.repo();
-    const ctx = await buildRegistryGenContext(repo.root, repo);
+    const ctx = await buildRegistryGenContext(asAppPath(repo.root), repo);
     const loaded = await loadConfigRegistrations(ctx);
     if (!loaded.ok) return loaded;
 

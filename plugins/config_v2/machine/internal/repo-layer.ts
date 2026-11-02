@@ -7,18 +7,26 @@ import {
   storePathParts,
 } from "../../core";
 import type { CommittedFiles, ConfigGitLayerImpl } from "../../core";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { repoConfigDir } from "@plugins/infra/plugins/paths/server";
 import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
 
 /** The checkout's `config/` (or a release's, `EQUIN_REPO_CONFIG_DIR`) as raw files. */
-function fsCommittedFiles(dir: string): CommittedFiles {
+function fsCommittedFiles(dir: AppPath): CommittedFiles {
   return {
     read(ref) {
-      const file = join(dir, configFileRelPath(ref));
+      const file = joinAppPath(dir, configFileRelPath(ref));
       return existsSync(file) ? readFileSync(file, "utf-8") : null;
     },
     appIds(storePath) {
-      const appDir = join(dir, storePathParts(storePath).hier, APP_SCOPE_DIR);
+      const appDir = joinAppPath(
+        dir,
+        storePathParts(storePath).hier,
+        APP_SCOPE_DIR,
+      );
       if (!existsSync(appDir)) return [];
       return readdirSync(appDir, { withFileTypes: true })
         .filter((e) => e.isDirectory())

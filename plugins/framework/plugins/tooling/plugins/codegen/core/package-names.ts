@@ -1,4 +1,5 @@
 import { readFile, writeFile } from "fs/promises";
+import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { join, relative } from "path";
 import { packageNameFor } from "@plugins/framework/plugins/plugin-id/core";
 import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
@@ -26,7 +27,7 @@ export async function syncPluginPackageNames({
   root,
   tree,
 }: {
-  root: string;
+  root: AppPath;
   tree: PluginTree;
 }): Promise<string[]> {
   const rewritten: string[] = [];

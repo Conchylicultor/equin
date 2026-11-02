@@ -9,7 +9,7 @@ import {
   statSync,
   unlinkSync,
 } from "node:fs";
-import { rm } from "node:fs/promises";
+import { realpath, rm } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import {
   MAIN_COMPOSITION_ID,
@@ -24,6 +24,11 @@ import {
 } from "@plugins/infra/plugins/worktree/server";
 import { findMiseBin } from "@plugins/toolchain/core";
 import { releaseCheckoutsDir } from "../../data-dirs";
+import {
+  type AppPath,
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // Bounds for every git child, mirroring `infra/worktree`'s values and for the
 // same reason: `add` and `remove` run while one of the host-wide
@@ -41,7 +46,7 @@ export interface ReleaseCheckout {
   /** The run id the checkout is named after (also its scratch namespace). */
   name: string;
   /** Absolute path of the checkout's root. */
-  root: string;
+  root: AppPath;
   /** What the sweep that opened this acquire did — the caller reports it. */
   swept: SweepResult;
   /**
@@ -69,10 +74,12 @@ export interface SweepResult {
  * Compared through `realpath` so a data root reached through a symlink (or
  * macOS's `/tmp` → `/private/tmp`) still matches.
  */
-export function isReleaseCheckout(root: string): boolean {
+export function isReleaseCheckout(root: AppPath): boolean {
   const abs = resolve(root);
   if (basename(abs).endsWith(".lock")) return false;
-  return realOrSelf(dirname(abs)) === realOrSelf(releaseCheckoutsDir.path);
+  return (
+    realOrSelf(asAppPath(dirname(abs))) === realOrSelf(releaseCheckoutsDir.path)
+  );
 }
 
 /**
@@ -86,7 +93,7 @@ export function isReleaseCheckout(root: string): boolean {
  * writes its artifacts under.
  */
 export async function acquireReleaseCheckout(opts: {
-  sourceRoot: string;
+  sourceRoot: AppPath;
   sha: string;
   name: string;
 }): Promise<ReleaseCheckout> {
@@ -172,7 +179,7 @@ export async function sweepLeakedReleaseCheckouts(
   }
 
   for (const name of [...names].sort()) {
-    const root = join(dir, name);
+    const root = joinAppPath(dir, name);
     const lockPath = lockPathFor(root);
     const fd = tryTakeLock(lockPath);
     if (fd === null) {
@@ -196,19 +203,19 @@ export async function sweepLeakedReleaseCheckouts(
 // ── internals ────────────────────────────────────────────────────────────────
 
 /** `<dir>/<name>`, refusing a name that is not a valid namespace label. */
-export function releaseCheckoutPath(name: string): string {
+export function releaseCheckoutPath(name: string): AppPath {
   // The scratch namespace IS the checkout's basename (a worktree checkout's
   // namespace for the main composition), so mint it here: this is the throw
   // for a name with a separator, a `..`, or anything else that is no label.
   namespaceFor(MAIN_COMPOSITION_ID, { kind: "worktree", name });
-  return join(releaseCheckoutsDir.path, name);
+  return joinAppPath(releaseCheckoutsDir.path, name);
 }
 
-function lockPathFor(root: string): string {
-  return `${root}.lock`;
+function lockPathFor(root: AppPath): AppPath {
+  return asAppPath(`${root}.lock`);
 }
 
-function realOrSelf(path: string): string {
+function realOrSelf(path: AppPath): string {
   try {
     return realpathSync(path);
   } catch (err) {
@@ -227,7 +234,7 @@ function realOrSelf(path: string): string {
  * nobody else can see. So a won flock only counts if the path still names the
  * inode we locked; otherwise it is dropped and reported as not taken.
  */
-function tryTakeLock(lockPath: string): number | null {
+function tryTakeLock(lockPath: AppPath): number | null {
   // "a", never "w": opening must not truncate anything a holder wrote.
   const fd = openSync(lockPath, "a");
   if (!flockTry(fd)) {
@@ -255,7 +262,7 @@ function tryTakeLock(lockPath: string): number | null {
  * file in the instant between our open and our flock) — retried a few times,
  * then a loud failure.
  */
-function takeOwnLock(lockPath: string): number {
+function takeOwnLock(lockPath: AppPath): number {
   for (let attempt = 0; attempt < 3; attempt++) {
     const fd = tryTakeLock(lockPath);
     if (fd !== null) return fd;
@@ -267,7 +274,7 @@ function takeOwnLock(lockPath: string): number {
 }
 
 /** Unlink the lock file (while still holding it), then release and close. */
-function dropLock(lockPath: string, fd: number): void {
+function dropLock(lockPath: AppPath, fd: number): void {
   try {
     unlinkSync(lockPath);
   } catch (err) {
@@ -289,7 +296,7 @@ function dropLock(lockPath: string, fd: number): void {
  */
 async function addCheckout(
   repoRoot: string,
-  root: string,
+  root: AppPath,
   sha: string,
 ): Promise<void> {
   const argv = [GIT, "-C", repoRoot, "worktree", "add", "--detach", root, sha];
@@ -319,7 +326,7 @@ async function addCheckout(
 }
 
 /** The checkout really is at `sha` — the whole point of pinning. */
-async function assertCheckoutAt(root: string, sha: string): Promise<void> {
+async function assertCheckoutAt(root: AppPath, sha: string): Promise<void> {
   const r = await spawnCaptured([GIT, "-C", root, "rev-parse", "HEAD"], {
     timeoutMs: REV_PARSE_TIMEOUT_MS,
   });
@@ -343,7 +350,7 @@ async function assertCheckoutAt(root: string, sha: string): Promise<void> {
  * works. A trust that RAN and failed is printed, never swallowed — if the
  * build then fails on an untrusted config, the reason is on screen.
  */
-async function trustMiseConfig(root: string): Promise<void> {
+async function trustMiseConfig(root: AppPath): Promise<void> {
   const bin = findMiseBin();
   if (bin === null) return;
   const r = await spawnCaptured([bin, "trust", join(root, "mise.toml")], {
@@ -358,7 +365,7 @@ async function trustMiseConfig(root: string): Promise<void> {
 }
 
 /** Throws unless `root` is a direct child of the release-checkouts dir. */
-function assertReleaseCheckoutPath(root: string): void {
+function assertReleaseCheckoutPath(root: AppPath): void {
   if (!isReleaseCheckout(root)) {
     throw new Error(
       `refusing to remove ${root}: not a direct child of ${releaseCheckoutsDir.path}`,
@@ -377,7 +384,7 @@ function assertReleaseCheckoutPath(root: string): void {
  */
 export async function removeCheckoutArtifacts(
   repoRoot: string,
-  root: string,
+  root: AppPath,
 ): Promise<void> {
   assertReleaseCheckoutPath(root);
   const name = basename(root);
@@ -439,11 +446,27 @@ async function isRegistered(repoRoot: string, root: string): Promise<boolean> {
       `git worktree list failed (exit ${r.exitCode}): ${r.stderr.trim() || "<no stderr>"}`,
     );
   }
-  const target = realOrSelf(root);
-  return r.stdout
-    .split("\n")
-    .filter((l) => l.startsWith("worktree "))
-    .some((l) => realOrSelf(l.slice("worktree ".length).trim()) === target);
+  // Async: git lists every worktree of the repo, wherever its owner put one
+  // (a user's folder included), so their real paths are never read on the
+  // JS thread.
+  const target = await realOrSelfAsync(root);
+  const listed = await Promise.all(
+    r.stdout
+      .split("\n")
+      .filter((l) => l.startsWith("worktree "))
+      .map((l) => realOrSelfAsync(l.slice("worktree ".length).trim())),
+  );
+  return listed.includes(target);
+}
+
+/** {@link realOrSelf}, asked off the JS thread for a path git listed. */
+async function realOrSelfAsync(path: string): Promise<string> {
+  try {
+    return await realpath(path);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return resolve(path);
+    throw err;
+  }
 }
 
 /**

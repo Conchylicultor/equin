@@ -1,3 +1,4 @@
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -17,9 +18,9 @@ import {
 
 describeHistoryContract("git", async () => {
   const root = await mkdtemp(join(tmpdir(), "prototype-history-"));
-  const files = diskDirMount(root);
+  const files = diskDirMount(asAppPath(root));
   return {
-    history: openGitHistoryStore({ dir: () => root, files }),
+    history: openGitHistoryStore({ dir: () => asAppPath(root), files }),
     files,
     format: GIT_HISTORY_FORMAT,
     dispose: () => rm(root, { recursive: true, force: true }),
@@ -33,7 +34,10 @@ let store: GitHistoryStore;
 
 beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), "prototype-history-git-"));
-  store = openGitHistoryStore({ dir: () => root, files: diskDirMount(root) });
+  store = openGitHistoryStore({
+    dir: () => asAppPath(root),
+    files: diskDirMount(asAppPath(root)),
+  });
 });
 
 afterEach(async () => {

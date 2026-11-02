@@ -1,7 +1,11 @@
 import { existsSync, readdirSync, realpathSync, rmSync } from "node:fs";
-import { basename, join } from "node:path";
+import { basename } from "node:path";
 import { isPointerName } from "./pointer";
 import { releaseRunIdKind } from "../../core/internal/run-id";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
  * What a sweep did. A batch outcome, so a partial reclaim is still reportable —
@@ -47,14 +51,14 @@ function runIdMs(runId: string): number {
  * import it. With `keep = 3` a preview would have to be running against the 4th
  * newest run of the same composition to be hit.
  */
-export function pruneReleaseRunDirs(compDir: string, keep = 3): PruneResult {
+export function pruneReleaseRunDirs(compDir: AppPath, keep = 3): PruneResult {
   if (!existsSync(compDir)) return { removed: [], kept: [] };
 
   const entries = readdirSync(compDir);
   const pinned = new Set<string>();
   for (const name of entries.filter(isPointerName)) {
     try {
-      pinned.add(basename(realpathSync(join(compDir, name))));
+      pinned.add(basename(realpathSync(joinAppPath(compDir, name))));
     } catch (err) {
       // A dangling pointer pins nothing — the run it named is already gone.
       if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
@@ -72,7 +76,7 @@ export function pruneReleaseRunDirs(compDir: string, keep = 3): PruneResult {
       kept.push(runId);
       continue;
     }
-    rmSync(join(compDir, runId), { recursive: true, force: true });
+    rmSync(joinAppPath(compDir, runId), { recursive: true, force: true });
     removed.push(runId);
   }
   return { removed, kept };

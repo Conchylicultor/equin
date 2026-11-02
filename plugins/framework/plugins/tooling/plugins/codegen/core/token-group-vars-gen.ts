@@ -1,6 +1,10 @@
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { existsSync } from "fs";
-import { join, relative } from "path";
+import { relative } from "path";
 import { writeGenerated } from "./write-generated";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
 import { declareSlotsFromBarrels } from "./slot-declaration-guard";
@@ -80,7 +84,7 @@ const collectCache = new Map<
  * data). The committed file remains only a reviewable, in-sync-guarded snapshot.
  */
 export async function collectTokenGroupVars(
-  root: string,
+  root: AppPath,
 ): Promise<Record<string, string[]>> {
   const groups = await collectTokenGroups(root);
   return Object.fromEntries(
@@ -94,7 +98,7 @@ export async function collectTokenGroupVars(
  * beyond its var (an enumerated token's `values`).
  */
 export function collectTokenGroups(
-  root: string,
+  root: AppPath,
 ): Promise<Record<string, CollectedTokenGroup>> {
   let cached = collectCache.get(root);
   if (!cached) {
@@ -108,7 +112,7 @@ export function collectTokenGroups(
 }
 
 async function collectTokenGroupsUncached(
-  root: string,
+  root: AppPath,
 ): Promise<Record<string, CollectedTokenGroup>> {
   const tree = await buildBarrelFreeTree(root);
   registerBarrelStubs(root);
@@ -126,7 +130,8 @@ async function collectTokenGroupsUncached(
 
   const byGroup: Record<string, CollectedTokenGroup> = {};
   for (const node of tree.byDir.values()) {
-    const webIndex = join(node.dir, "web", "index.ts");
+    // A plugin dir of this checkout.
+    const webIndex = joinAppPath(node.dir, "web", "index.ts");
     if (!existsSync(webIndex)) continue;
     let mod: Record<string, unknown>;
     try {
@@ -188,13 +193,14 @@ function renderManifest(byGroup: Record<string, string[]>): string {
 }
 
 /** Path to the committed manifest file. */
-export function tokenGroupVarsManifestPath(root: string): string {
-  return join(root, MANIFEST_REL_PATH);
+export function tokenGroupVarsManifestPath(root: AppPath): AppPath {
+  // `root`: the checkout root the caller works in.
+  return joinAppPath(root, MANIFEST_REL_PATH);
 }
 
 /** Render the manifest file contents in-memory (used by the in-sync check). */
 export async function renderTokenGroupVarsManifest(
-  root: string,
+  root: AppPath,
 ): Promise<string> {
   const byGroup = await collectTokenGroupVars(root);
   return renderManifest(byGroup);
@@ -202,7 +208,7 @@ export async function renderTokenGroupVarsManifest(
 
 /** Regenerate `token-group-vars.generated.ts` if it drifted. */
 export async function generateTokenGroupVars(opts: {
-  root: string;
+  root: AppPath;
 }): Promise<void> {
   await writeGenerated({
     file: tokenGroupVarsManifestPath(opts.root),

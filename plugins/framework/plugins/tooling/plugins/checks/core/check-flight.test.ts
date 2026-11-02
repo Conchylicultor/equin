@@ -2,6 +2,10 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  type AppPath,
+  asAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type {
   Check,
   CheckResult,
@@ -20,9 +24,9 @@ import type { CheckObservation, CheckOutcome } from "./thrown-outcome";
 // per open file description, so two fds in one process contend exactly like
 // two processes, and a join waits through a real `flock-wait` child.
 
-let dir: string;
+let dir: AppPath;
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), "check-flight-"));
+  dir = asAppPath(mkdtempSync(join(tmpdir(), "check-flight-")));
 });
 afterEach(() => {
   rmSync(dir, { recursive: true, force: true });

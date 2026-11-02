@@ -10,8 +10,12 @@ import {
   statSync,
   writeFileSync,
 } from "fs";
-import { dirname, join } from "path";
 import { flockTry } from "@plugins/packages/plugins/flock/core";
+import {
+  type AppPath,
+  appPathParent,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { checkCacheDir } from "../data-dirs";
 import type { ReadSet } from "./read-set";
 
@@ -53,7 +57,7 @@ const FLIGHTS_SUBDIR = "flights";
  * `(check, sig, treeHash)`. A subdirectory, so its files are never read as
  * cache entries by `prune()`'s `.json` pass.
  */
-export function checkFlightDir(): string {
+export function checkFlightDir(): AppPath {
   return checkCacheDir.file(FLIGHTS_SUBDIR);
 }
 
@@ -82,8 +86,11 @@ function sha256(s: string): string {
  * same-filesystem (hence atomic) by construction rather than by the cache dir
  * happening to be the parent.
  */
-function publishAtomic(file: string, contents: string): void {
-  const tmp = join(dirname(file), `.${process.pid}-${randomUUID()}.tmp`);
+function publishAtomic(file: AppPath, contents: string): void {
+  const tmp = joinAppPath(
+    appPathParent(file),
+    `.${process.pid}-${randomUUID()}.tmp`,
+  );
   try {
     writeFileSync(tmp, contents);
     // Atomic: readers see either the previous file or this complete one, never a
@@ -131,13 +138,13 @@ const CACHE_KEY_VERSION = "v2";
  * slot kinds route through here, so "bump one and forget the other" has no
  * spelling.
  */
-function slotName(parts: string[], suffix: string): string {
+function slotName(parts: string[], suffix: string): AppPath {
   return checkCacheDir.file(
     `${sha256([CACHE_KEY_VERSION, ...parts].join(":"))}${suffix}`,
   );
 }
 
-function entryFile(checkId: string, treeHash: string, sig: string): string {
+function entryFile(checkId: string, treeHash: string, sig: string): AppPath {
   return slotName([treeHash, checkId, sha256(sig)], ".json");
 }
 
@@ -147,7 +154,7 @@ function entryFile(checkId: string, treeHash: string, sig: string): string {
 // serves the monotonic-forward push-rebase path. Suffixed `.readset.json` so it
 // still ends in `.json` and is swept by the same `prune()` as the legacy slots,
 // while never colliding with a legacy `${sha256(key)}.json` name.
-function readSetFile(checkId: string, sig: string): string {
+function readSetFile(checkId: string, sig: string): AppPath {
   return slotName([checkId, sha256(sig)], ".readset.json");
 }
 
@@ -257,7 +264,7 @@ function prune(): void {
   writeFileSync(checkCacheDir.file(MARKER_FILE), "");
   sweepOrphanTemps(all, now);
   sweepIdleFlights(now);
-  const live: { path: string; mtimeMs: number }[] = [];
+  const live: { path: AppPath; mtimeMs: number }[] = [];
   for (const name of names) {
     const path = checkCacheDir.file(name);
     let mtimeMs: number;
@@ -306,7 +313,7 @@ function sweepIdleFlights(now: number): void {
   }
   const mtimeOf = (name: string): number | null => {
     try {
-      return statSync(join(dir, name)).mtimeMs;
+      return statSync(joinAppPath(dir, name)).mtimeMs;
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
       return null; // vanished underneath us
@@ -317,7 +324,7 @@ function sweepIdleFlights(now: number): void {
     if (name.includes(".tmp.")) {
       const mtimeMs = mtimeOf(name);
       if (mtimeMs !== null && now - mtimeMs > TEMP_ORPHAN_MS)
-        rmSync(join(dir, name), { force: true });
+        rmSync(joinAppPath(dir, name), { force: true });
       continue;
     }
     const key = name.split(".")[0] ?? name;
@@ -329,15 +336,15 @@ function sweepIdleFlights(now: number): void {
     const lock = `${key}.lock`;
     if (!files.includes(lock)) {
       // A leader/verdict whose lock is gone: no run can be using it.
-      for (const f of files) rmSync(join(dir, f), { force: true });
+      for (const f of files) rmSync(joinAppPath(dir, f), { force: true });
       continue;
     }
-    const fd = openSync(join(dir, lock), "a");
+    const fd = openSync(joinAppPath(dir, lock), "a");
     try {
       if (!flockTry(fd)) continue; // a run holds it: in use, not idle
       for (const f of files)
-        if (f !== lock) rmSync(join(dir, f), { force: true });
-      rmSync(join(dir, lock), { force: true });
+        if (f !== lock) rmSync(joinAppPath(dir, f), { force: true });
+      rmSync(joinAppPath(dir, lock), { force: true });
     } finally {
       closeSync(fd);
     }

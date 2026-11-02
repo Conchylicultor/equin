@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { basename } from "node:path";
 import {
   defineFileWatcher,
@@ -83,7 +84,7 @@ export const sentinelStatusServed = serveValue(sentinelStatus, {
  * writer as the watcher running now (same pid, still alive).
  */
 export function readVitalsValue(
-  dir: string = sentinelStatusDir.path,
+  dir: AppPath = sentinelStatusDir.path,
   alive?: (pid: number) => boolean,
 ): SentinelVitals {
   const read = readSentinelVitals(dir);

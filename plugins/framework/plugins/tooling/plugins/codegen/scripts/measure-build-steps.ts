@@ -27,6 +27,7 @@
  * a run touched are listed (and a dirty `git status` is a finding to report).
  */
 import { statSync, writeFileSync } from "fs";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { join, resolve } from "path";
 import {
   getWorktreeRoot,
@@ -112,7 +113,8 @@ async function step<T>(
   return out;
 }
 
-const root = await getWorktreeRoot();
+// The worktree root of the checkout this script runs in.
+const root = asAppPath(await getWorktreeRoot());
 
 async function trackedMtimes(): Promise<Map<string, number>> {
   const r = await spawnCaptured(["git", "ls-files", "-z"], {
@@ -225,8 +227,8 @@ if (order === "migrations-only") {
   await step(
     "drizzle-kit generate (staged, discarded)",
     async () => {
-      const cwd = resolve(root, MIGRATIONS_PLUGIN_DIR);
-      const stage = await stageDrizzleOut(cwd, resolve(cwd, "data"));
+      const cwd = asAppPath(resolve(root, MIGRATIONS_PLUGIN_DIR));
+      const stage = await stageDrizzleOut(cwd, asAppPath(resolve(cwd, "data")));
       try {
         const r = await spawnCaptured(
           drizzleGenerateArgv({

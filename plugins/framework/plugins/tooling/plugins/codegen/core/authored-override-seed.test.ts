@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -15,10 +19,10 @@ import {
   listReviewMarkedOverrides,
 } from "./authored-override-seed";
 
-let configDir: string;
+let configDir: AppPath;
 
 beforeEach(() => {
-  configDir = mkdtempSync(join(tmpdir(), "authored-seed-"));
+  configDir = asAppPath(mkdtempSync(join(tmpdir(), "authored-seed-")));
 });
 afterEach(() => {
   rmSync(configDir, { recursive: true, force: true });
@@ -298,7 +302,7 @@ test("a scoped @app delta anchors to the BASE origin: re-marked, never seeded", 
 });
 
 test("listReviewMarkedOverrides reports marked overrides and ignores origins", () => {
-  const root = mkdtempSync(join(tmpdir(), "authored-seed-root-"));
+  const root = asAppPath(mkdtempSync(join(tmpdir(), "authored-seed-root-")));
   const cfg = join(root, "config");
   mkdirSync(join(cfg, "apps/pages/shell"), { recursive: true });
   writeFileSync(

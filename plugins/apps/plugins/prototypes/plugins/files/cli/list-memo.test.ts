@@ -1,3 +1,4 @@
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdir, mkdtemp, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -26,7 +27,7 @@ afterEach(async () => {
 });
 
 async function list(memo: PrototypeMetaMemo) {
-  const mount = diskDirMount(dir);
+  const mount = diskDirMount(asAppPath(dir));
   const memoized = await listPrototypeMetas(mount, memo);
   expect(memoized).toEqual(await listPrototypeMetas(mount));
   return memoized;

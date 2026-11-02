@@ -171,6 +171,7 @@ export type ExemptableRuleId =
   | "ui-kit/no-button-shadow"
   | "ui-kit/no-groupless-dropdown-menu-label"
   | "user-path/no-sync-fs"
+  | "user-path/no-unproven-claim"
   | "viewport-overlay/no-adhoc-viewport-overlay"
   | "watcher-safety/no-detached-watch-reaction"
   | "watcher-safety/no-direct-parcel-watcher"
@@ -186,7 +187,8 @@ export type SanctionedOnlyRuleId =
   | "frame/no-raw-frame"
   | "live/no-endpoint-read"
   | "networking/no-page-transport"
-  | "networking/no-request-guard-capability";
+  | "networking/no-request-guard-capability"
+  | "user-path/no-unproven-claim";
 
 /** What a `kind: "debt"` exemption may name. */
 export type DebtableRuleId = Exclude<ExemptableRuleId, SanctionedOnlyRuleId>;

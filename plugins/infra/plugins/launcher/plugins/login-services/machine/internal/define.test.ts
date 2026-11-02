@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { defineDep } from "@plugins/infra/plugins/deps/deps";
 import { readyForTests } from "@plugins/infra/plugins/deps/deps/testing";
 import { componentIdentity, unbundledExecutable } from "../../core";
@@ -34,7 +35,7 @@ const decl = defineLoginService({
   executable: {
     name: "example",
     build: (ready) => ({
-      file: `${ready.dir}/bin`,
+      file: asAppPath(`${ready.dir}/bin`),
       identity: componentIdentity(helper.id, ready.identity),
     }),
   },
@@ -42,7 +43,7 @@ const decl = defineLoginService({
     argv: [executable, "tray"],
     cwd: ready.dir,
     env: { HOME: "/h/me" },
-    stdioLog: "/h/me/logs/example.log",
+    stdioLog: asAppPath("/h/me/logs/example.log"),
   }),
 });
 
@@ -56,7 +57,7 @@ describe("defineLoginService", () => {
   });
 
   test("the job is the declaration's description plus what spec computes from the install", () => {
-    const ready = readyForTests(helper, "/cache/x/env", "x");
+    const ready = readyForTests(helper, asAppPath("/cache/x/env"), "x");
     expect(
       loginServiceJob(
         decl,
@@ -68,12 +69,12 @@ describe("defineLoginService", () => {
       argv: ["/cache/x/env/bin", "tray"],
       cwd: "/cache/x/env",
       env: { HOME: "/h/me" },
-      stdioLog: "/h/me/logs/example.log",
+      stdioLog: asAppPath("/h/me/logs/example.log"),
     });
   });
 
   test("a bundled executable runs from its path, its build named in the environment", () => {
-    const ready = readyForTests(helper, "/cache/x/env", "x");
+    const ready = readyForTests(helper, asAppPath("/cache/x/env"), "x");
     const job = loginServiceJob(decl, ready, {
       path: "/app/equin.app/Contents/MacOS/example",
       identity: "example-helper@x",

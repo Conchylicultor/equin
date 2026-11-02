@@ -26,6 +26,11 @@ import {
 } from "@plugins/packages/plugins/macrotask-yield/core";
 import { buildFsSnapshot } from "./fs-snapshot";
 import { parsePluginBarrel, type BarrelMeta } from "./barrel-meta";
+import {
+  appPathParent,
+  type AppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 async function readIfExistsAsync(path: string): Promise<string | null> {
   try {
@@ -41,7 +46,7 @@ async function readIfExistsAsync(path: string): Promise<string | null> {
 export type Runtime = "web" | "server" | "machine" | "central";
 
 export interface PluginNode {
-  dir: string;
+  dir: AppPath;
   path: string;
   name: string;
   id: PluginId;
@@ -56,7 +61,7 @@ export interface PluginNode {
 }
 
 export interface PluginTree {
-  pluginsRoot: string;
+  pluginsRoot: AppPath;
   byDir: Map<string, PluginNode>;
   byPath: Map<string, PluginNode>;
   roots: PluginNode[];
@@ -122,7 +127,7 @@ function isWalkable(name: string): boolean {
  * specific marker file like package.json), so a freshly authored, not-yet-
  * committed plugin — whose real `.ts` files count as content — is still found.
  */
-async function hasPluginContent(dir: string): Promise<boolean> {
+async function hasPluginContent(dir: AppPath): Promise<boolean> {
   let entries;
   try {
     entries = await readdir(dir, { withFileTypes: true });
@@ -135,7 +140,7 @@ async function hasPluginContent(dir: string): Promise<boolean> {
     if (
       e.isDirectory() &&
       isWalkable(e.name) &&
-      (await hasPluginContent(join(dir, e.name)))
+      (await hasPluginContent(joinAppPath(dir, e.name)))
     ) {
       return true;
     }
@@ -143,9 +148,9 @@ async function hasPluginContent(dir: string): Promise<boolean> {
   return false;
 }
 
-async function findAllPluginDirs(pluginsRoot: string): Promise<string[]> {
-  const out: string[] = [];
-  async function walk(dir: string, depth: number): Promise<void> {
+async function findAllPluginDirs(pluginsRoot: AppPath): Promise<AppPath[]> {
+  const out: AppPath[] = [];
+  async function walk(dir: AppPath, depth: number): Promise<void> {
     if (depth > 10) return;
     // Purely positional: any directory visited here (other than the root itself)
     // sits at a plugin position, so it is a plugin — provided it actually holds
@@ -164,16 +169,16 @@ async function findAllPluginDirs(pluginsRoot: string): Promise<string[]> {
       if (!e.isDirectory()) continue;
       if (!isWalkable(e.name)) continue;
       if (dir === pluginsRoot) {
-        subWalks.push(walk(join(dir, e.name), depth + 1));
+        subWalks.push(walk(joinAppPath(dir, e.name), depth + 1));
       } else if (e.name === "plugins") {
-        const sub = join(dir, e.name);
+        const sub = joinAppPath(dir, e.name);
         subWalks.push(
           readdir(sub, { withFileTypes: true })
             .then((childEntries) =>
               Promise.all(
                 childEntries
                   .filter((c) => c.isDirectory() && isWalkable(c.name))
-                  .map((c) => walk(join(sub, c.name), depth + 1)),
+                  .map((c) => walk(joinAppPath(sub, c.name), depth + 1)),
               ),
             )
             .then(() => undefined)
@@ -194,12 +199,12 @@ async function findAllPluginDirs(pluginsRoot: string): Promise<string[]> {
 
 interface CollectedPlugin {
   node: PluginNode;
-  parentDir: string | null;
+  parentDir: AppPath | null;
 }
 
 async function collectCoreFields(
-  dir: string,
-  pluginsRoot: string,
+  dir: AppPath,
+  pluginsRoot: AppPath,
 ): Promise<CollectedPlugin> {
   const [webIndex, serverIndex, machineIndex, centralIndex, pkgSrc] =
     await Promise.all([
@@ -270,9 +275,9 @@ async function collectCoreFields(
 
   const rel = relative(pluginsRoot, dir);
   const segs = rel.split(/[\\/]+/);
-  let parentDir: string | null = null;
+  let parentDir: AppPath | null = null;
   if (segs.length >= 3 && segs[segs.length - 2] === "plugins") {
-    parentDir = join(pluginsRoot, ...segs.slice(0, segs.length - 2));
+    parentDir = joinAppPath(pluginsRoot, ...segs.slice(0, segs.length - 2));
   }
 
   const path = rel.split("\\").join("/");
@@ -311,7 +316,7 @@ function computeIds(nodes: PluginNode[], parentId: string): void {
 }
 
 export async function buildPluginTree(
-  pluginsRoot: string,
+  pluginsRoot: AppPath,
   opts?: { skipBarrelImport?: boolean; facets?: boolean },
 ): Promise<PluginTree> {
   // Step 1: find all plugin directories (async fs walk — does not block event loop)
@@ -321,7 +326,7 @@ export async function buildPluginTree(
   // Step 2: collect core fields for each plugin (async parallel reads)
   const byDir = new Map<string, PluginNode>();
   const byPath = new Map<string, PluginNode>();
-  const parentDirs = new Map<string, string | null>();
+  const parentDirs = new Map<string, AppPath | null>();
 
   const collected = await Promise.all(
     dirs.map((d) => collectCoreFields(d, pluginsRoot)),
@@ -340,7 +345,7 @@ export async function buildPluginTree(
       const rel = relative(pluginsRoot, parent);
       const segs = rel.split(/[\\/]+/);
       if (segs.length >= 3 && segs[segs.length - 2] === "plugins") {
-        parent = join(pluginsRoot, ...segs.slice(0, segs.length - 2));
+        parent = joinAppPath(pluginsRoot, ...segs.slice(0, segs.length - 2));
       } else {
         parent = null;
       }
@@ -425,7 +430,7 @@ export async function buildPluginTree(
     // snapshot build runs in parallel with the (async) facet-module load.
     const [facets, fsSnapshot] = await Promise.all([
       loadFacets(),
-      buildFsSnapshot(join(pluginsRoot, ".."), dirs),
+      buildFsSnapshot(appPathParent(pluginsRoot), dirs),
     ]);
     tree.facets = facets;
 

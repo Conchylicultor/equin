@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   defineFileWatcher,
   type FileWatcher,
@@ -7,7 +8,7 @@ import { notifyModelCatalogChanged } from "@plugins/conversations/plugins/model-
 import { modelCatalogDir } from "../../data-dirs";
 import { catalogFromFile, writeCatalogFile } from "./catalog-file";
 
-function catalogFile(): string {
+function catalogFile(): AppPath {
   return modelCatalogDir.file("catalog.json");
 }
 

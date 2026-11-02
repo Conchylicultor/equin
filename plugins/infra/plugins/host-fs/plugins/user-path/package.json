@@ -1,6 +1,6 @@
 {
   "name": "@equin/plugin-infra-host-fs-user-path",
-  "description": "UserPath: a host path the user (or their config) chose — branded where it enters (a dirPathField value, a host-fs request), and the type-aware lint rule that keeps a synchronous fs call off it, so a macOS Files & Folders prompt can never freeze a backend's JS thread.",
+  "description": "Which host paths a synchronous fs call may touch: AppPath (a path the app owns — its data dirs, its checkout; the only kind a sync fs call in runtime code may take) and UserPath (one the user or their config chose), with the type-aware lint that refuses a sync fs call on any path not proven app-owned — so a macOS Files & Folders prompt can never freeze a backend's JS thread, whether or not anyone marked the user's path.",
   "private": true,
   "version": "0.0.1"
 }

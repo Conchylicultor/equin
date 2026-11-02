@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 // Reclaiming ONE namespace: the second half of what `reapAttempt` used to do
 // inline, split out so it can be asked for by name.
 //
@@ -51,7 +52,7 @@ export class NamespaceReclaimError extends Error {
  * checkout.
  */
 type CheckoutRoot =
-  { known: true; root: string } | { known: false; reason: string };
+  { known: true; root: AppPath } | { known: false; reason: string };
 
 async function checkoutRootFor(
   marker: CompositionMarker,

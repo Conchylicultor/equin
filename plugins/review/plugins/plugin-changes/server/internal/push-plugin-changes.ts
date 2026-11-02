@@ -1,3 +1,8 @@
+import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { join } from "node:path";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -23,8 +28,12 @@ const EXTRACT_TIMEOUT_MS = 60_000;
 // `git archive -o <file>` then `tar -xf <file>`, never `git archive | tar -x`
 // through `Bun.spawn`: Bun relays a child-to-child pipe through JS and can drop
 // the stream's tail when the writer exits (the same loss that broke the DB fork).
-async function extractPluginsAtSha(sha: string): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), `review-${sha.slice(0, 8)}-`));
+async function extractPluginsAtSha(sha: string): Promise<AppPath> {
+  const dir = asAppPath(
+    await mkdtemp(
+      joinAppPath(asAppPath(tmpdir()), `review-${sha.slice(0, 8)}-`),
+    ),
+  );
   const mainRoot = await getMainRoot();
   const archivePath = join(dir, "plugins.tar");
   const opts = { timeoutMs: EXTRACT_TIMEOUT_MS };
@@ -99,11 +108,11 @@ async function loadPushPluginChanges(
       // load per tuple among its readers, and the heavy-read slot caps how many
       // run at once, so just build both trees inside the one slot.
       const [headTree, baseTree] = await Promise.all([
-        buildPluginTree(join(headDir, "plugins"), {
+        buildPluginTree(joinAppPath(headDir, "plugins"), {
           skipBarrelImport: true,
           facets: true,
         }),
-        buildPluginTree(join(baseDir, "plugins"), {
+        buildPluginTree(joinAppPath(baseDir, "plugins"), {
           skipBarrelImport: true,
           facets: true,
         }),

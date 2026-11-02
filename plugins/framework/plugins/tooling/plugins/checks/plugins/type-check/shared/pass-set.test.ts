@@ -1,6 +1,10 @@
 // The generation store: what an open costs, how long an entry lives, and
 // what a hit in an older generation does — on a fake clock over a temp dir.
 
+import {
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { afterAll, expect, test } from "bun:test";
 import {
   existsSync,
@@ -35,11 +39,11 @@ afterAll(() => {
 });
 
 function tempDir(): PassSetDir {
-  const path = mkdtempSync(join(tmpdir(), "pass-set-"));
+  const path = asAppPath(mkdtempSync(join(tmpdir(), "pass-set-")));
   dirs.push(path);
   return {
     path,
-    file: (...segments: string[]) => join(path, ...segments),
+    file: (...segments: string[]) => joinAppPath(path, ...segments),
     ensure: () => {
       mkdirSync(path, { recursive: true });
       return path;

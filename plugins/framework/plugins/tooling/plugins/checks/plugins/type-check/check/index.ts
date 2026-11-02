@@ -51,6 +51,7 @@ import {
 import { recordOuterReadSet } from "./outer-read-set";
 import { openPrepareThread } from "./prepare-thread";
 import type { ProgramOutcome } from "./prepare";
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /** The worker's output plus what the parent measured about its process. */
 interface WorkerResult extends TypeCheckWorkerResult {
@@ -62,7 +63,7 @@ interface WorkerResult extends TypeCheckWorkerResult {
 }
 
 async function runWorker(
-  root: string,
+  root: AppPath,
   program: TscProgram,
   lint: Pick<
     TypeCheckWorkerJob,

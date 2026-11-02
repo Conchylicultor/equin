@@ -1,6 +1,18 @@
-import { existsSync } from "node:fs";
-import { mkdir, readdir, readFile, rename, rm } from "node:fs/promises";
-import { basename, dirname, join } from "node:path";
+import {
+  type AppPath,
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
+  access,
+  mkdir,
+  readdir,
+  readFile,
+  realpath,
+  rename,
+  rm,
+} from "node:fs/promises";
+import { basename, dirname, join, resolve } from "node:path";
 import { asNamespace } from "@plugins/infra/plugins/namespace/core";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import {
@@ -14,7 +26,7 @@ import { withWorktreeMutateSlot } from "./mutate-gate";
 import { isSpareName, SPARE_LOCK_REASON } from "./spare-name";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
-let cachedRepoRoot: string | null = null;
+let cachedRepoRoot: AppPath | null = null;
 
 // Every git subprocess in this file is bounded, because every one of them can be
 // reached while the host-wide `worktree-mutate` flock is held: an unbounded child
@@ -90,6 +102,11 @@ export class WorktreeGitTimeoutError extends Error {
 // `head` is the commit checked out (null for a bare repo); `prunable` is git's
 // mark for a worktree whose directory is gone.
 export interface WorktreeEntry {
+  /**
+   * Where git says the worktree is — anywhere its owner put it (a user's own
+   * folder included), so NOT an `AppPath`: an app checkout is re-derived from
+   * it (`appCheckoutOf`) before a sync read.
+   */
   path: string;
   head: string | null;
   detached: boolean;
@@ -169,7 +186,7 @@ async function worktreeListPaths(
 
 /** Every worktree registered in `repoRoot`, with its HEAD shape and lock. */
 export function listWorktreeEntries(
-  repoRoot: string,
+  repoRoot: AppPath,
   signal?: AbortSignal,
 ): Promise<WorktreeEntry[]> {
   return worktreeListEntries(
@@ -191,28 +208,67 @@ export function listWorktreePaths(signal?: AbortSignal): Promise<string[]> {
 // when the server runs inside a worktree.
 export async function ensureMainWorktreeRoot(
   signal?: AbortSignal,
-): Promise<string> {
+): Promise<AppPath> {
   if (cachedRepoRoot) return cachedRepoRoot;
   const [mainPath] = await worktreeListPaths(
     [GIT, "worktree", "list", "--porcelain"],
     signal,
   );
   if (!mainPath) throw new Error("Could not determine main worktree root");
-  cachedRepoRoot = mainPath;
+  // git's first entry is the main worktree: the checkout the app runs from.
+  cachedRepoRoot = asAppPath(mainPath);
   return cachedRepoRoot;
+}
+
+/**
+ * Whether `path` exists, asked without blocking the event loop. ENOENT is the
+ * only "no"; any other error (a permission refusal, a bad path) propagates.
+ */
+export async function pathExists(path: string): Promise<boolean> {
+  try {
+    await access(path);
+    return true;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw err;
+  }
 }
 
 // The parent dir every agent worktree lives directly under. The single
 // definition that both `worktreePathFor` (construction) and
 // `isCanonicalWorktreePath` (validation) derive from, so the two can never
 // disagree about where worktrees live.
-export function gitWorktreesDir(repoRoot: string): string {
-  return join(repoRoot, ".claude", "worktrees");
+export function gitWorktreesDir(repoRoot: AppPath): AppPath {
+  return joinAppPath(repoRoot, ".claude", "worktrees");
 }
 
-export async function worktreePathFor(id: string): Promise<string> {
+export async function worktreePathFor(id: string): Promise<AppPath> {
   const root = await ensureMainWorktreeRoot();
-  return join(gitWorktreesDir(root), id);
+  return joinAppPath(gitWorktreesDir(root), id);
+}
+
+/**
+ * The app's own checkout a stored path names — the main checkout, or an agent
+ * worktree directly under `<root>/.claude/worktrees/` — re-derived from the
+ * app's own roots, so a sync read of it reads a path the app made; `null` for
+ * any other path (a scratch workspace, a hand-made checkout), which is no
+ * checkout of the app's.
+ */
+export async function appCheckoutOf(path: string): Promise<AppPath | null> {
+  const root = await ensureMainWorktreeRoot();
+  // As git spells it: resolved (no trailing slash), then real (`/var` →
+  // `/private/var`, a symlinked home), read off the JS thread.
+  const lexical = resolve(path);
+  const real = await realpath(lexical).catch((err: unknown) => {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return lexical;
+    throw err;
+  });
+  for (const candidate of new Set([lexical, real])) {
+    if (candidate === root) return root;
+    if (isCanonicalWorktreePath(candidate, root))
+      return worktreePathFor(basename(candidate));
+  }
+  return null;
 }
 
 // The inverse of `worktreePathFor`: a real agent worktree always lives as a
@@ -222,7 +278,7 @@ export async function worktreePathFor(id: string): Promise<string> {
 // `git worktree remove`.
 export function isCanonicalWorktreePath(
   path: string,
-  repoRoot: string,
+  repoRoot: AppPath,
 ): boolean {
   return dirname(path) === gitWorktreesDir(repoRoot);
 }
@@ -235,7 +291,7 @@ const WORKTREE_LOCK_REASON = LEGACY_IDS.worktreeLockReason;
 // read: an agent checkout logs a failed lock (see `ensureWorktreeLocked`), a
 // spare throws (its lock IS its readiness).
 export function lockWorktree(
-  repoRoot: string,
+  repoRoot: AppPath,
   wtPath: string,
   reason: string,
   signal?: AbortSignal,
@@ -272,7 +328,7 @@ export function lockWorktree(
  * worktree, which is merely the exposure we have lived with until now.
  */
 async function ensureWorktreeLocked(
-  repoRoot: string,
+  repoRoot: AppPath,
   wtPath: string,
   signal?: AbortSignal,
 ): Promise<void> {
@@ -288,8 +344,8 @@ async function ensureWorktreeLocked(
 // Where a removed checkout goes before its files are deleted: a sibling of
 // `.claude/worktrees/`, so on the same volume (the rename is atomic and instant)
 // and outside the directory every checkout scanner enumerates.
-export function worktreeTrashDir(repoRoot: string): string {
-  return join(repoRoot, ".claude", "worktree-trash");
+export function worktreeTrashDir(repoRoot: AppPath): AppPath {
+  return joinAppPath(repoRoot, ".claude", "worktree-trash");
 }
 
 // How long a trash entry is left to the removal that created it. Past this, the
@@ -368,7 +424,7 @@ export async function emptyWorktreeTrash(now: number): Promise<number> {
  * this call quietly deciding the lock did not matter.
  */
 async function unlockWorktreeForRemoval(
-  repoRoot: string,
+  repoRoot: AppPath,
   wtPath: string,
   signal?: AbortSignal,
 ): Promise<void> {
@@ -403,7 +459,7 @@ async function unlockWorktreeForRemoval(
  * exists" would check out a ref we never confirmed.
  */
 async function attemptBranchExists(
-  repoRoot: string,
+  repoRoot: AppPath,
   id: string,
   signal?: AbortSignal,
 ): Promise<boolean> {
@@ -467,7 +523,7 @@ export function checkoutGit(cwd: string): string[] {
  */
 async function discardPartialCheckout(
   label: string,
-  repoRoot: string,
+  repoRoot: AppPath,
   wtPath: string,
 ): Promise<void> {
   // A killed add still carries git's own `ADD_IN_PROGRESS_LOCK`, and `prune`
@@ -510,7 +566,7 @@ async function discardPartialCheckout(
  */
 export async function addCheckout(
   label: string,
-  repoRoot: string,
+  repoRoot: AppPath,
   wtPath: string,
   rest: string[],
   signal?: AbortSignal,
@@ -540,7 +596,7 @@ export async function addCheckout(
   // swallowed-failure bug this replaces: the old code awaited `.exited` and
   // ignored `exitCode`). A nonzero exit where the dir now exists is a benign
   // "already exists" race (a concurrent creator won) — treat it as success.
-  if (r.exitCode !== 0 && !existsSync(wtPath)) {
+  if (r.exitCode !== 0 && !(await pathExists(wtPath))) {
     throw new Error(
       `git worktree add for ${label} failed (exit ${r.exitCode}): ${r.stderr.trim() || "<no stderr>"}`,
     );
@@ -554,19 +610,20 @@ export async function addCheckout(
  * spare is never listed.
  */
 export async function listReadySpares(
-  repoRoot: string,
+  repoRoot: AppPath,
   signal?: AbortSignal,
 ): Promise<string[]> {
   const dir = gitWorktreesDir(repoRoot);
-  return (await listWorktreeEntries(repoRoot, signal))
-    .filter(
-      (e) =>
-        dirname(e.path) === dir &&
-        isSpareName(basename(e.path)) &&
-        e.locked === SPARE_LOCK_REASON &&
-        existsSync(e.path),
-    )
-    .map((e) => e.path)
+  const candidates = (await listWorktreeEntries(repoRoot, signal)).filter(
+    (e) =>
+      dirname(e.path) === dir &&
+      isSpareName(basename(e.path)) &&
+      e.locked === SPARE_LOCK_REASON,
+  );
+  const present = await Promise.all(candidates.map((e) => pathExists(e.path)));
+  return candidates
+    .filter((_, i) => present[i])
+    .map((e) => joinAppPath(dir, basename(e.path)))
     .sort((a, b) => spareCreatedAt(a) - spareCreatedAt(b));
 }
 
@@ -590,7 +647,7 @@ function spareCreatedAt(path: string): number {
  * re-checked-out instead (`convergeExistingCheckout`).
  */
 async function switchToAttemptBranch(
-  repoRoot: string,
+  repoRoot: AppPath,
   id: string,
   wtPath: string,
   signal?: AbortSignal,
@@ -640,7 +697,7 @@ async function switchToAttemptBranch(
  * can land. The loser tries the next spare.
  */
 async function claimSpare(
-  repoRoot: string,
+  repoRoot: AppPath,
   id: string,
   wtPath: string,
   signal?: AbortSignal,
@@ -678,7 +735,7 @@ async function claimSpare(
     if (moved.exitCode !== 0) {
       // A lost race leaves the spare gone. One still standing failed for
       // another reason: say so, and leave it to the prune (it is unlocked now).
-      if (existsSync(spare)) {
+      if (await pathExists(spare)) {
         console.warn(
           `[worktree] could not move spare ${spare} to ${wtPath} ` +
             `(exit ${moved.exitCode}): ${moved.stderr.trim() || "<no stderr>"} — falling back`,
@@ -717,7 +774,7 @@ export const ADD_IN_PROGRESS_LOCK = "initializing";
  *   is locked.
  */
 export async function isUnfinishedCheckout(
-  repoRoot: string,
+  repoRoot: AppPath,
   wtPath: string,
   signal?: AbortSignal,
 ): Promise<boolean> {
@@ -752,11 +809,11 @@ export type CheckoutState = "absent" | "unfinished" | "complete";
  * be writing — only the child converges.
  */
 export async function checkoutState(
-  repoRoot: string,
+  repoRoot: AppPath,
   wtPath: string,
   signal?: AbortSignal,
 ): Promise<CheckoutState> {
-  if (!existsSync(wtPath)) return "absent";
+  if (!(await pathExists(wtPath))) return "absent";
   return (await isUnfinishedCheckout(repoRoot, wtPath, signal))
     ? "unfinished"
     : "complete";
@@ -787,7 +844,7 @@ export type CheckoutSource = "spare" | "fresh";
  * can run against any repository.
  */
 export async function checkoutAttempt(
-  repoRoot: string,
+  repoRoot: AppPath,
   id: string,
   wtPath: string,
   signal?: AbortSignal,
@@ -834,7 +891,7 @@ export interface WorktreeSetup {
  * they take the gate; `gate` is `withWorktreeMutateSlot` in production.
  */
 export async function convergeExistingCheckout(
-  repoRoot: string,
+  repoRoot: AppPath,
   id: string,
   wtPath: string,
   gate: <T>(fn: () => Promise<T>) => Promise<T>,
@@ -891,7 +948,7 @@ export async function setupWorktree(
   // and every pre-lock worktree takes, so making it the place the lock is
   // guaranteed means a checkout cannot stay unlocked just because it predates
   // this code or something released its lock.
-  if (existsSync(wtPath)) {
+  if (await pathExists(wtPath)) {
     const setup = await convergeExistingCheckout(
       repoRoot,
       id,
@@ -989,11 +1046,11 @@ export async function removeWorktree(
         [GIT, "-C", repoRoot, "worktree", "list", "--porcelain"],
         signal,
       )
-    ).includes(wtPath);
+    ).some((p) => p === wtPath);
     if (registered) await unlockWorktreeForRemoval(repoRoot, wtPath, signal);
 
     let moved = false;
-    if (existsSync(wtPath)) {
+    if (await pathExists(wtPath)) {
       await mkdir(trashDir, { recursive: true });
       await rename(wtPath, trashPath);
       moved = true;

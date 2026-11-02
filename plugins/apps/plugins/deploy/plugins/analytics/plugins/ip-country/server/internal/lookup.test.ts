@@ -2,6 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { createIpCountryLookup } from "./lookup";
 import { snapshotNeedsRefresh } from "./refresh";
 import { buildSnapshot } from "./snapshot";
@@ -17,7 +18,7 @@ async function writeSnapshot(path: string, csv: string): Promise<void> {
 
 describe("createIpCountryLookup", () => {
   test("unavailable with no file, found once one is written and reloaded", async () => {
-    const path = join(dir, "a.bin");
+    const path = asAppPath(join(dir, "a.bin"));
     const lookup = createIpCountryLookup(() => path);
     expect(lookup.lookup("2.1.1.1")).toEqual({ kind: "unavailable" });
 
@@ -30,7 +31,7 @@ describe("createIpCountryLookup", () => {
   });
 
   test("reload picks up a replaced file", async () => {
-    const path = join(dir, "b.bin");
+    const path = asAppPath(join(dir, "b.bin"));
     await writeSnapshot(path, "2.0.0.0,2.255.255.255,FR\n");
     const lookup = createIpCountryLookup(() => path);
     expect(lookup.lookup("2.1.1.1")).toEqual({ kind: "found", country: "FR" });
@@ -42,7 +43,7 @@ describe("createIpCountryLookup", () => {
   });
 
   test("a corrupt file throws on every lookup until reloaded", async () => {
-    const path = join(dir, "c.bin");
+    const path = asAppPath(join(dir, "c.bin"));
     writeFileSync(path, "not a snapshot");
     const lookup = createIpCountryLookup(() => path);
     expect(() => lookup.lookup("2.1.1.1")).toThrow(/not a readable snapshot/);

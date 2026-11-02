@@ -5,6 +5,11 @@ import { dirname, join, relative, resolve } from "node:path";
 import type { BunPlugin } from "bun";
 import type TS from "typescript";
 import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
+import {
+  type AppPath,
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 const TSCONFIG_BASE = "tsconfig.base.json";
 
@@ -27,7 +32,7 @@ export function loadTypescript(): Promise<typeof TS> {
  * alias never silently becomes an "external package" below and drops a whole
  * subtree out of the measured closure.
  */
-function aliasSpecifiers(root: string): {
+function aliasSpecifiers(root: AppPath): {
   prefixes: string[];
   exact: string[];
 } {
@@ -322,7 +327,7 @@ function newClosureRecord(): ClosureRecord {
  * external imports (an importer of `""`).
  */
 function closurePlugin(
-  root: string,
+  root: AppPath,
   entry: string,
   opts: { dynamicImports: DynamicImportPolicy },
   record: ClosureRecord,
@@ -330,7 +335,7 @@ function closurePlugin(
   const { prefixes, exact } = aliasSpecifiers(root);
   const { external, loaded, commandRuns, edges } = record;
   const scans = new Map<string, CommandRunScan>();
-  const scanOf = async (file: string): Promise<CommandRunScan> => {
+  const scanOf = async (file: AppPath): Promise<CommandRunScan> => {
     let scan = scans.get(file);
     if (scan === undefined) {
       scan = await scanCommandRuns(file, readFileSync(file, "utf8"));
@@ -348,7 +353,9 @@ function closurePlugin(
           if (opts.dynamicImports === "cut") {
             return { path: spec, external: true };
           }
-          const scan = await scanOf(args.importer);
+          // A module the bundler parsed from the app's entry graph (a
+          // hoisted or linked dependency may sit outside `root`).
+          const scan = await scanOf(asAppPath(args.importer));
           const commands = scan.runs.get(spec);
           if (commands !== undefined && !scan.other.has(spec)) {
             commandRuns.push({
@@ -460,18 +467,18 @@ function chainThrough(
  * keep in sync.
  */
 export async function importClosure(
-  givenRoot: string,
+  givenRoot: AppPath,
   entry: string,
   opts: { dynamicImports: DynamicImportPolicy },
 ): Promise<ImportClosure> {
   // The bundler reports REAL paths (macOS's `/var` is `/private/var`), so a
   // root spelled through a symlink would re-root every module as `../…` and
   // match nothing. Measure against the real spelling.
-  const root = realpathSync(givenRoot);
+  const root = asAppPath(realpathSync(givenRoot));
   const record = newClosureRecord();
   const { external, loaded, commandRuns, edges } = record;
 
-  const out = mkdtempSync(join(tmpdir(), "cli-import-closure-"));
+  const out = asAppPath(mkdtempSync(join(tmpdir(), "cli-import-closure-")));
   try {
     const result = await Bun.build({
       entrypoints: [join(root, entry)],
@@ -493,7 +500,7 @@ export async function importClosure(
       );
     }
     const sources = (
-      JSON.parse(readFileSync(join(out, mapFile), "utf8")) as {
+      JSON.parse(readFileSync(joinAppPath(out, mapFile), "utf8")) as {
         sources: string[];
       }
     ).sources;
@@ -581,7 +588,7 @@ export interface UnionImportClosure {
  * time.
  */
 export async function importClosures(
-  givenRoot: string,
+  givenRoot: AppPath,
   entries: readonly string[],
   opts: { dynamicImports: DynamicImportPolicy },
 ): Promise<UnionImportClosure> {
@@ -590,7 +597,7 @@ export async function importClosures(
       "importClosures was handed no entrypoint — a union of nothing is a caller bug, not an empty closure.",
     );
   }
-  const root = realpathSync(givenRoot);
+  const root = asAppPath(realpathSync(givenRoot));
   const record = newClosureRecord();
   const { loaded, edges } = record;
   const result = await Bun.build({

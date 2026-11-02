@@ -7,7 +7,6 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
 import {
   flockTry,
   flockTryShared,
@@ -20,6 +19,10 @@ import {
   type TicketLine,
 } from "@plugins/packages/plugins/ticket-line/core";
 import type { DataDir } from "@plugins/infra/plugins/paths/core";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 // Cross-process twin of `createSemaphore` (the in-process counter+queue gate in
@@ -309,7 +312,7 @@ export interface HostSemaphore {
 export interface RepoLockDir {
   readonly kind: "repo-lock";
   /** Absolute `git rev-parse --git-common-dir`. */
-  readonly gitCommonDir: string;
+  readonly gitCommonDir: AppPath;
   /** One lowercase-kebab segment, e.g. `push`. */
   readonly name: string;
 }
@@ -317,7 +320,7 @@ export interface RepoLockDir {
 /** The three things the gate reads off its slot directory, whichever kind. */
 function slotAccess(slots: DataDir | RepoLockDir): {
   spec: { name: string };
-  file(rel: string): string;
+  file(rel: string): AppPath;
   ensure(): void;
 } {
   if ("kind" in slots && slots.kind === "repo-lock") {
@@ -326,10 +329,14 @@ function slotAccess(slots: DataDir | RepoLockDir): {
         `createHostSemaphore: repo-lock name must be one lowercase-kebab segment, got ${JSON.stringify(slots.name)}`,
       );
     }
-    const dir = join(slots.gitCommonDir, LEGACY_IDS.gitLockDir, slots.name);
+    const dir = joinAppPath(
+      slots.gitCommonDir,
+      LEGACY_IDS.gitLockDir,
+      slots.name,
+    );
     return {
       spec: { name: `${slots.name} (${slots.gitCommonDir})` },
-      file: (rel) => join(dir, rel),
+      file: (rel) => joinAppPath(dir, rel),
       ensure: () => {
         mkdirSync(dir, { recursive: true });
       },

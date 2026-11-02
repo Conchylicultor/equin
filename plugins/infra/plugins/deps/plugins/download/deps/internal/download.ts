@@ -7,6 +7,10 @@ import {
   rmSync,
 } from "node:fs";
 import { join } from "node:path";
+import {
+  type AppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type {
   DepSource,
   InstallContext,
@@ -200,7 +204,7 @@ function validate(
 export function downloadedFile(
   ready: Ready<DownloadSource>,
   name: string,
-): string {
+): AppPath {
   const source = ready.dep.source;
   const names = source.derive?.outputs ?? source.files.map((f) => f.name);
   if (!names.includes(name)) {
@@ -208,5 +212,5 @@ export function downloadedFile(
       `${ready.dep.id} has no file ${JSON.stringify(name)}; it holds ${names.join(", ")}`,
     );
   }
-  return join(ready.dir, name);
+  return joinAppPath(ready.dir, name);
 }

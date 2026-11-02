@@ -10,6 +10,7 @@ import {
   loadLintContributions,
 } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import { LINT_GROUP_ALL, LINT_GROUP_BASE, type RawLintMessage } from "../core";
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /** What to lint of one file: its unit, its stale syntactic groups, its typed groups. */
 export interface LintSpec {
@@ -49,7 +50,7 @@ export interface LintEngine {
   ): Promise<Map<string, LintOut>>;
 }
 
-export function createLintEngine(root: string): LintEngine {
+export function createLintEngine(root: AppPath): LintEngine {
   // A rule id's namespace is its contribution's `name`; anything else (the
   // config builder's own typescript-eslint / react-hooks / core rules) and a
   // null id (the linter itself: a parse failure) belong to the base group.

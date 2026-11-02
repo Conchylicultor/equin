@@ -10,6 +10,7 @@
 
 import { createHash } from "node:crypto";
 import { readFileSync, statSync } from "node:fs";
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
  * `absolute path -> sha256 hex of its bytes`, shared for one run.
@@ -18,7 +19,7 @@ import { readFileSync, statSync } from "node:fs";
  * invariant beyond "these are hashes of these paths", and every consumer reads
  * it through {@link hashFileCached}.
  */
-export type ContentHashMemo = Map<string, string>;
+export type ContentHashMemo = Map<AppPath, string>;
 
 /**
  * sha256 of a file's BYTES; `"-"` for a path that is absent or unreadable.
@@ -30,7 +31,7 @@ export type ContentHashMemo = Map<string, string>;
  * hex digest gives. Anything other than a missing/unreachable path (a bad fd,
  * an I/O error) is a real fault and propagates.
  */
-export function hashFileBytes(abs: string): string {
+export function hashFileBytes(abs: AppPath): string {
   try {
     if (!statSync(abs).isFile()) return "-";
     return createHash("sha256").update(readFileSync(abs)).digest("hex");
@@ -42,7 +43,7 @@ export function hashFileBytes(abs: string): string {
 }
 
 /** {@link hashFileBytes}, reading each path at most once per memo. */
-export function hashFileCached(memo: ContentHashMemo, abs: string): string {
+export function hashFileCached(memo: ContentHashMemo, abs: AppPath): string {
   let h = memo.get(abs);
   if (h === undefined) memo.set(abs, (h = hashFileBytes(abs)));
   return h;

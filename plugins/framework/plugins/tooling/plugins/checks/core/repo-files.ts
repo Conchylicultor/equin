@@ -10,6 +10,7 @@
 // one), with in-memory `under`/`has`, async bounded reads, and read-set
 // recording for an input-keyed check.
 
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
 
 /**
@@ -20,6 +21,6 @@ import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
  *
  * In a check, use `ctx.repo()`. Throws on any git failure.
  */
-export async function listRepoFiles(root: string): Promise<string[]> {
+export async function listRepoFiles(root: AppPath): Promise<string[]> {
   return [...(await loadRepoFiles(root)).all()];
 }

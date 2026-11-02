@@ -1,3 +1,7 @@
+import {
+  type AppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -132,7 +136,7 @@ async function fetchTagDate(repo: string, tag: string): Promise<string> {
   }
 }
 
-async function planNow(root: string): Promise<{
+async function planNow(root: AppPath): Promise<{
   plan: Plan;
   ws: Workspace;
   packuments: Map<string, Packument>;
@@ -161,13 +165,13 @@ async function planNow(root: string): Promise<{
 
 /** Rewrite one dependency's spec in every package.json that declares it. */
 function rewriteSpecs(
-  root: string,
+  root: AppPath,
   ws: Workspace,
   name: string,
   spec: (old: Workspace["declared"][number]) => string,
 ): void {
   for (const d of ws.declared.filter((x) => x.name === name)) {
-    const path = join(root, d.manifest);
+    const path = joinAppPath(root, d.manifest);
     const text = readFileSync(path, "utf8");
     const from = `${JSON.stringify(d.name)}: ${JSON.stringify(d.raw)}`;
     if (!text.includes(from))
@@ -183,7 +187,7 @@ function rewriteSpecs(
 }
 
 async function bunInstall(
-  root: string,
+  root: AppPath,
   log: (line: string) => void,
 ): Promise<void> {
   log("  bun install");
@@ -200,15 +204,18 @@ async function bunInstall(
 }
 
 async function regenGenerated(
-  root: string,
+  root: AppPath,
   log: (line: string) => void,
 ): Promise<void> {
   log("  ./equin regen-generated");
-  const regen = await spawnCaptured([join(root, CLI_NAME), "regen-generated"], {
-    cwd: root,
-    timeoutMs: 20 * MINUTE,
-    mergeStderr: true,
-  });
+  const regen = await spawnCaptured(
+    [joinAppPath(root, CLI_NAME), "regen-generated"],
+    {
+      cwd: root,
+      timeoutMs: 20 * MINUTE,
+      mergeStderr: true,
+    },
+  );
   if (regen.exitCode !== 0)
     throw new Error(
       `regen-generated failed (exit ${regen.exitCode}):\n${regen.stdout.trim().split("\n").slice(-30).join("\n")}`,

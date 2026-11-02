@@ -1,4 +1,8 @@
 import {
+  type AppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   mkdirSync,
   readFileSync,
   statSync,
@@ -6,7 +10,6 @@ import {
   utimesSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
 import { duressLatchDir } from "../../data-dirs";
 
 // Host-global duress latch: a single sentinel process (the Phase-B cluster
@@ -37,7 +40,7 @@ export interface DuressLatch {
 // Null ⇒ the declared `locks/duress` directory. Only a test overrides it, and
 // it is resolved per call rather than frozen at module eval, because
 // `DataDir.path` is a getter over an env-overridable root (see its docblock).
-let latchDirOverride: string | null = null;
+let latchDirOverride: AppPath | null = null;
 let now: () => number = Date.now;
 let memo: { value: boolean; at: number } | null = null;
 let episodeMemo: { value: number | null; at: number } | null = null;
@@ -47,12 +50,12 @@ function invalidateMemos(): void {
   episodeMemo = null;
 }
 
-function latchDir(): string {
+function latchDir(): AppPath {
   return latchDirOverride ?? duressLatchDir.path;
 }
 
-function latchPath(): string {
-  return join(latchDir(), LATCH_FILENAME);
+function latchPath(): AppPath {
+  return joinAppPath(latchDir(), LATCH_FILENAME);
 }
 
 function isEnoent(err: unknown): boolean {
@@ -176,7 +179,7 @@ export function readFreshDuress(): DuressLatch | null {
 }
 
 /** Point the latch at a temp dir. Pass null to restore the declared dir. */
-export function _setLatchDirForTests(dir: string | null): void {
+export function _setLatchDirForTests(dir: AppPath | null): void {
   latchDirOverride = dir;
   invalidateMemos();
 }

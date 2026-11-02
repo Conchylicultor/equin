@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 /**
  * An updater: how one kind of pinned input moves to newer releases — the mise
  * toolchain (`mise.lock`), every `python/` project's `uv.lock`, later
@@ -107,28 +108,28 @@ export interface Updater {
    * before the move and puts them back (then calls `sync`) on any outcome
    * that lands nothing; on `partial` they hold exactly the landed moves.
    */
-  files(root: string): Promise<readonly string[]>;
+  files(root: AppPath): Promise<readonly string[]>;
   /**
    * Work before planning that is part of the upgrade but has no lock entry (mise
    * updates itself). Returns notes recorded on the receipt.
    */
   prepare?(
-    root: string,
+    root: AppPath,
     log: (line: string) => void,
   ): Promise<Readonly<Record<string, string>>>;
   /**
    * The scheduled, read-only question asked on main: is anything newer (and not
    * held)? Installs nothing, moves nothing.
    */
-  detect(root: string): Promise<Outdated[]>;
+  detect(root: AppPath): Promise<Outdated[]>;
   /**
    * The exact moves an upgrade would make now, restricted to `only` (names this
    * updater knows; an unknown one throws). Read-only.
    */
-  plan(root: string, only: readonly string[] | undefined): Promise<Move[]>;
+  plan(root: AppPath, only: readonly string[] | undefined): Promise<Move[]>;
   /** Make the moves in `root`'s files. Throws on any failure. */
   apply(
-    root: string,
+    root: AppPath,
     moves: readonly Move[],
     log: (line: string) => void,
   ): Promise<void>;
@@ -140,9 +141,12 @@ export interface Updater {
    * updater whose installs live side by side, keyed by the lock, has nothing
    * to do — and says why.
    */
-  sync(root: string, log: (line: string) => void): Promise<void>;
+  sync(root: AppPath, log: (line: string) => void): Promise<void>;
   /** The smoke tests the moved inputs must pass, run before and after the move. */
-  smoke(root: string, moves: readonly Move[]): Promise<readonly UpdaterSmoke[]>;
+  smoke(
+    root: AppPath,
+    moves: readonly Move[],
+  ): Promise<readonly UpdaterSmoke[]>;
   /** Where this updater's holds (releases skipped on purpose) live, and what they are. */
   readonly holds: {
     /** Repo-relative file the agent adds a hold to, or where to find them. */
@@ -152,6 +156,6 @@ export interface Updater {
      * read it before planning (`reviewableHolds`): a hold set past its bound
      * throws, and a lapsed one is work the upgrade must do first.
      */
-    read(root: string): Promise<readonly Hold[]>;
+    read(root: AppPath): Promise<readonly Hold[]>;
   };
 }

@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { dlopen } from "bun:ffi";
 import { closeSync, openSync } from "node:fs";
 import {
@@ -28,7 +29,7 @@ const LOCK_NB = 4;
 // separate fd in the SAME process (the worktree-op marker test pins that). Open in append mode so a probe never
 // truncates a lock file a holder may be using; a non-zero flock return means
 // EWOULDBLOCK ⇒ someone else holds it.
-function slotHeld(slotPath: string): boolean {
+function slotHeld(slotPath: AppPath): boolean {
   let fd: number;
   try {
     fd = openSync(slotPath, "a");

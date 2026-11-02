@@ -16,6 +16,10 @@
 // crashed run are swept per target dir by `sweepDistLeftovers` at the start of
 // each build.
 
+import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { existsSync, lstatSync } from "fs";
 import {
   mkdir,
@@ -66,8 +70,8 @@ export function distNames(dir: string, pid: number = process.pid): DistNames {
 export function distStagingPath(
   dir: string,
   pid: number = process.pid,
-): string {
-  return distNames(dir, pid).stagingPath;
+): AppPath {
+  return asAppPath(distNames(dir, pid).stagingPath);
 }
 
 /**

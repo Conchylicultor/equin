@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -13,10 +17,10 @@ import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import { LEGEND_MARKER } from "@plugins/config_v2/core/testing";
 import { applyOverrideLegends } from "./override-legend-stamp";
 
-let configDir: string;
+let configDir: AppPath;
 
 beforeEach(() => {
-  configDir = mkdtempSync(join(tmpdir(), "override-legend-"));
+  configDir = asAppPath(mkdtempSync(join(tmpdir(), "override-legend-")));
 });
 afterEach(() => {
   rmSync(configDir, { recursive: true, force: true });

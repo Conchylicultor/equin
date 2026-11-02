@@ -1,5 +1,11 @@
+import {
+  type AppPath,
+  appPathParent,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { closeSync, fstatSync, openSync, readSync } from "node:fs";
 import { open } from "node:fs/promises";
+import { basename } from "node:path";
 
 // The bounded READ counterpart of `append()`. Lifted from
 // log-channels/server/internal/persist.ts's `readTail` (a positioned
@@ -47,8 +53,8 @@ export type JsonlTailResult<T> =
   | { kind: "missing" }
   | { kind: "read"; records: T[]; truncated: boolean; filesRead: number };
 
-function rotationPath(path: string, n: number): string {
-  return path + "." + String(n);
+function rotationPath(path: AppPath, n: number): AppPath {
+  return joinAppPath(appPathParent(path), `${basename(path)}.${n}`);
 }
 
 interface FileChunk {
@@ -64,7 +70,7 @@ interface FileChunk {
  * Returns `null` for a missing file; every other fs error rethrows (a permission
  * error or a bad fd is a real bug, not an empty file).
  */
-function readLastBytes(file: string, budget: number): FileChunk | null {
+function readLastBytes(file: AppPath, budget: number): FileChunk | null {
   let fd: number;
   try {
     fd = openSync(file, "r");
@@ -91,7 +97,7 @@ function readLastBytes(file: string, budget: number): FileChunk | null {
 
 /** {@link readLastBytes} without blocking the event loop. */
 async function readLastBytesAsync(
-  file: string,
+  file: AppPath,
   budget: number,
 ): Promise<FileChunk | null> {
   let handle;
@@ -146,7 +152,7 @@ function splitLines(text: string): string[] {
  * files reproduces the original line stream exactly — no line needs rejoining
  * across a file boundary.
  */
-export function readTail(path: string, opts: TailOptions = {}): TailResult {
+export function readTail(path: AppPath, opts: TailOptions = {}): TailResult {
   const budget = opts.maxBytes ?? DEFAULT_MAX_BYTES;
   const includeRotated = opts.includeRotated ?? false;
 
@@ -185,7 +191,7 @@ export function readTail(path: string, opts: TailOptions = {}): TailResult {
  * (a live-resource loader) where a synchronous read freezes everything else.
  */
 export async function readTailAsync(
-  path: string,
+  path: AppPath,
   opts: TailOptions = {},
 ): Promise<TailResult> {
   const budget = opts.maxBytes ?? DEFAULT_MAX_BYTES;
@@ -273,13 +279,16 @@ function assembleTail(
  * `node:path`. `T` is an unchecked assertion; a caller that needs a guarantee
  * validates (e.g. `safeParse`) on top.
  */
-export function readJsonlTail<T>(path: string, opts: TailOptions = {}): JsonlTailResult<T> {
+export function readJsonlTail<T>(
+  path: AppPath,
+  opts: TailOptions = {},
+): JsonlTailResult<T> {
   return parseJsonlTail<T>(readTail(path, opts));
 }
 
 /** {@link readJsonlTail} without blocking the event loop (see {@link readTailAsync}). */
 export async function readJsonlTailAsync<T>(
-  path: string,
+  path: AppPath,
   opts: TailOptions = {},
 ): Promise<JsonlTailResult<T>> {
   return parseJsonlTail<T>(await readTailAsync(path, opts));

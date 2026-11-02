@@ -3,6 +3,10 @@ import { createContext } from "../context";
 import type { Verdict } from "../types";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
 import { bunScriptGuard } from "./bun-script";
+import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 function verdict(command: string, cwd = REPO_ROOT): Verdict {
@@ -13,11 +17,11 @@ function verdict(command: string, cwd = REPO_ROOT): Verdict {
 }
 
 /** Not let through as typed: denied, or rewritten to `./equin run`. */
-const blocks = (command: string, cwd?: string) => {
+const blocks = (command: string, cwd?: AppPath) => {
   const kind = verdict(command, cwd).kind;
   return kind === "deny" || kind === "rewrite";
 };
-const rewritten = (command: string, cwd?: string) => {
+const rewritten = (command: string, cwd?: AppPath) => {
   const v = verdict(command, cwd);
   return v.kind === "rewrite" ? v.patch.command : undefined;
 };
@@ -106,7 +110,7 @@ describe("bun-script guard", () => {
     // A scratch workspace has no checkout above it to walk into, and no
     // `./equin run` for the hint to name.
     test("relative script from a non-checkout cwd", () => {
-      expect(blocks("bun x.ts", "/tmp")).toBe(false);
+      expect(blocks("bun x.ts", asAppPath("/tmp"))).toBe(false);
     });
 
     test("absolute script outside a checkout, from inside one", () => {

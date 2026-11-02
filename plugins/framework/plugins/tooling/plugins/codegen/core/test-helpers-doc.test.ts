@@ -1,4 +1,8 @@
 import { afterAll, describe, expect, test } from "bun:test";
+import {
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { dirname, join } from "path";
@@ -8,7 +12,7 @@ import {
   renderTestHelpers,
 } from "./test-helpers-doc";
 
-const root = mkdtempSync(join(tmpdir(), "test-helpers-doc-"));
+const root = asAppPath(mkdtempSync(join(tmpdir(), "test-helpers-doc-")));
 afterAll(() => rmSync(root, { recursive: true, force: true }));
 
 function write(rel: string, content: string): void {
@@ -32,7 +36,7 @@ describe("collectTestHelpers", () => {
     write("db/web/testing/fake.tsx", `/** A fake. */\nexport class Fake {}\n`);
 
     const barrels = collectTestHelpers({
-      dir: join(root, "db"),
+      dir: joinAppPath(root, "db"),
       path: "x/plugins/db",
     });
     expect(barrels).toEqual([
@@ -69,7 +73,7 @@ describe("collectTestHelpers", () => {
   test("a plugin without a testing barrel renders nothing", () => {
     write("plain/server/index.ts", `export const x = 1;\n`);
     const barrels = collectTestHelpers({
-      dir: join(root, "plain"),
+      dir: joinAppPath(root, "plain"),
       path: "plain",
     });
     expect(barrels).toEqual([]);

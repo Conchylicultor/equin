@@ -1,5 +1,5 @@
+import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { existsSync } from "fs";
-import { join } from "path";
 import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { findImports } from "@plugins/plugin-meta/plugins/parse-utils/core";
@@ -97,7 +97,7 @@ export function createBoundaryCheck(config: BoundaryConfig): Check {
       "Zone-DAG boundary rules: runtime isolation + zone-level default-deny import restrictions",
     async run(ctx: CheckContext): Promise<CheckResult> {
       const root = await getWorktreeRoot();
-      const pluginsRoot = join(root, "plugins");
+      const pluginsRoot = joinAppPath(root, "plugins");
 
       const pluginTree = existsSync(pluginsRoot)
         ? await buildStructureTreeOnce(pluginsRoot)

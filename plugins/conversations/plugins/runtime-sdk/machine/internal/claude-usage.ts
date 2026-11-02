@@ -1,11 +1,15 @@
 import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   mkdirSync,
   readdirSync,
   readFileSync,
   renameSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname } from "node:path";
 import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
 import { serveValue } from "@plugins/network/plugins/live/machine";
 import {
@@ -28,7 +32,7 @@ export function readClaudeUsage(): ClaudeUsageRead {
     if (!id) continue;
     let text: string;
     try {
-      text = readFileSync(join(dir, name), "utf8");
+      text = readFileSync(joinAppPath(dir, name), "utf8");
     } catch (err) {
       // Replaced between the listing and the read: the watch reads it again.
       if ((err as NodeJS.ErrnoException).code === "ENOENT") continue;
@@ -44,7 +48,7 @@ export function readClaudeUsage(): ClaudeUsageRead {
  * sees half of it — what an on-demand read records (the agent writes the same
  * way from its own process, `bin/agent.ts`).
  */
-export function writeClaudeUsageFile(path: string, usage: ClaudeUsage): void {
+export function writeClaudeUsageFile(path: AppPath, usage: ClaudeUsage): void {
   mkdirSync(dirname(path), { recursive: true });
   const tmp = `${path}.${process.pid}.tmp`;
   writeFileSync(tmp, JSON.stringify(usage));

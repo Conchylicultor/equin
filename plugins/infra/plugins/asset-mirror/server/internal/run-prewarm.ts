@@ -1,3 +1,8 @@
+import {
+  type AppPath,
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { AssetMirrorPrewarm } from "../../core";
@@ -9,10 +14,10 @@ import { mirrorFetchToDisk } from "./fetch-to-disk";
 // literal pointing at the maybe-absent file) so tsc never tries to resolve the
 // gitignored module, and gated on `existsSync` so a plain build no-ops without a
 // caught import error — mirrors `server-core/bin/plugins-active.ts`.
-function compositionRegistryPath(composition: string): string {
-  return join(
-    import.meta.dir,
-    `../../core/prewarm.composition.${composition}.generated.ts`,
+function compositionRegistryPath(composition: string): AppPath {
+  return joinAppPath(
+    asAppPath(join(import.meta.dir, "../../core")),
+    `prewarm.composition.${composition}.generated.ts`,
   );
 }
 

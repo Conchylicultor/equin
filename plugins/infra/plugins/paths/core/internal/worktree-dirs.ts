@@ -1,3 +1,7 @@
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readdirSync, statSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
@@ -12,7 +16,7 @@ export function listWorktreeDirs(): string[] {
 }
 
 // Parameterized on dir only so the co-located test can run against a temp dir.
-export function listDirNames(dir: string): string[] {
+export function listDirNames(dir: AppPath): string[] {
   let names: string[];
   try {
     names = readdirSync(dir);
@@ -24,7 +28,7 @@ export function listDirNames(dir: string): string[] {
   for (const name of names) {
     let isDir = false;
     try {
-      isDir = statSync(join(dir, name)).isDirectory();
+      isDir = statSync(joinAppPath(dir, name)).isDirectory();
     } catch (err) {
       // A worktree dir can vanish mid-scan (concurrent reap); treat as absent.
       if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;

@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { existsSync } from "fs";
 import { join, relative } from "path";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
@@ -32,7 +33,7 @@ export type DeclaredSchemaInputsResult =
 // this repo declares both — so it fails rather than dry-running a layer that
 // tests nothing.
 export async function declaredSchemaInputs(
-  root: string,
+  root: AppPath,
 ): Promise<DeclaredSchemaInputsResult> {
   const ctx = await buildRegistryGenContext(root);
   registerBarrelStubs(root);

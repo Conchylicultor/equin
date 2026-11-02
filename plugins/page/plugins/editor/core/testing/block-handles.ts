@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
 import { existsSync } from "fs";
 import { join } from "path";
@@ -44,7 +45,7 @@ export const WEB_BLOCK_FRAME_SLOT = "page.editor.block-frame"; // Editor.BlockFr
  * check's reporting.
  */
 export async function resolveBlockSlots(
-  root: string,
+  root: AppPath,
 ): Promise<
   | { ok: true; block: SlotHandle; frame: SlotHandle }
   | { ok: false; message: string }

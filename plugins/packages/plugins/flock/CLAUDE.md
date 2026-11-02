@@ -69,6 +69,8 @@ coalescing; `checkout-lock.ts` builds a size-1 mutex.
 - Description: Kernel advisory file locking: flockTry/flockRelease over libc flock(2), and waitForFlock — a push-based blocking acquire run in a child so the event loop never freezes. The one lock ownership the kernel releases on process death (SIGKILL included) and that consults no pid.
 - Core:
   - Uses:
+    - `infra/host-fs/user-path.AppPath`
+    - `infra/host-fs/user-path.joinAppPath`
     - `infra/launcher/env-names.envEntries`
     - `infra/launcher/env-names.readEnv`
     - `infra/launcher/env-names.unsetEnv`

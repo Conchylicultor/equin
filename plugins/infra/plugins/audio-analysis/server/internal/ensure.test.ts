@@ -10,6 +10,10 @@ import {
 } from "../../core";
 import { ensureBeatFeatures, type EnsurePhase } from "./ensure";
 import { cacheRoot, featurePaths, releaseLock, tryLock } from "./store";
+import {
+  type AppPath,
+  asAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // The fetch → install → analyse path downloads audio and installs a ≈1 GB
 // env, so only the paths that end on the cache are exercised here.
@@ -36,9 +40,9 @@ const features: BeatFeatures = {
 };
 
 describe("ensureBeatFeatures onPhase", () => {
-  let dir: string;
+  let dir: AppPath;
   beforeEach(() => {
-    dir = mkdtempSync(join(tmpdir(), "audio-analysis-ensure-"));
+    dir = asAppPath(mkdtempSync(join(tmpdir(), "audio-analysis-ensure-")));
   });
   afterEach(() => {
     rmSync(dir, { recursive: true, force: true });

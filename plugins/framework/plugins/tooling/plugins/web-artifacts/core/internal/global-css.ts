@@ -31,19 +31,25 @@ import {
   utimesSync,
   writeFileSync,
 } from "node:fs";
+import {
+  appPathParent,
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { join } from "node:path";
 import type { Plugin as VitePlugin } from "vite";
 import { BUILDER_VERSION, packageNameOf } from "../constants";
 import { computeIdentityHash, sha256Hex } from "../hash";
 import { packageVersion } from "./identity";
 import { publishDir, WEB_ARTIFACTS_DIR, type CachePrunePolicy } from "./store";
 
-const CSS_ROOT = join(WEB_ARTIFACTS_DIR, "css");
+const CSS_ROOT = joinAppPath(WEB_ARTIFACTS_DIR, "css");
 
 /** Path of the global stylesheet source (the monolith's `main.tsx` import). */
-export function globalCssSource(pluginsRoot: string): string {
-  return join(
+export function globalCssSource(pluginsRoot: AppPath): AppPath {
+  return joinAppPath(
     pluginsRoot,
     "primitives/plugins/css/plugins/ui-kit/web/theme/app.css",
   );
@@ -84,7 +90,7 @@ export function unionCandidates(
 
 /** The global stylesheet's cache key, over the candidate union and what the compile reads. */
 export function computeGlobalCssKey(opts: {
-  pluginsRoot: string;
+  pluginsRoot: AppPath;
   minify: boolean;
   candidates: readonly string[];
 }): string {
@@ -106,14 +112,14 @@ export function computeGlobalCssKey(opts: {
   for (const spec of parseCssImports(appCss)) {
     if (spec.startsWith(".")) {
       record[`import:${spec}`] = sha256Hex(
-        readFileSync(resolve(dirname(appCssFile), spec)),
+        readFileSync(asAppPath(join(appPathParent(appCssFile), spec))),
       );
     } else {
       // A package stylesheet (`tailwindcss`, `shadcn/tailwind.css`, fontsource
       // families): its resolved version pins the content.
       record[`import:${spec}`] = packageVersion(
         packageNameOf(spec),
-        dirname(appCssFile),
+        appPathParent(appCssFile),
       );
     }
   }
@@ -135,8 +141,8 @@ function compiledCssPlugin(id: string, css: string): VitePlugin {
 }
 
 /** The cache entry for the global stylesheet keyed `key` (what a build pins). */
-export function cssCacheDir(key: string): string {
-  return join(CSS_ROOT, `css.${key.slice(0, 16)}`);
+export function cssCacheDir(key: string): AppPath {
+  return joinAppPath(CSS_ROOT, `css.${key.slice(0, 16)}`);
 }
 
 interface CssCacheMeta {
@@ -146,16 +152,16 @@ interface CssCacheMeta {
 
 /** True iff the global stylesheet for `key` is already in the cache. */
 export function hasGlobalCssCache(key: string): boolean {
-  return existsSync(join(cssCacheDir(key), "meta.json"));
+  return existsSync(joinAppPath(cssCacheDir(key), "meta.json"));
 }
 
 /** Copy every cached asset (stylesheet + fonts) into the staging dist. */
-function installAssets(cacheDir: string, stagingDir: string): void {
-  const assetsDest = join(stagingDir, "assets");
+function installAssets(cacheDir: AppPath, stagingDir: AppPath): void {
+  const assetsDest = joinAppPath(stagingDir, "assets");
   mkdirSync(assetsDest, { recursive: true });
   for (const name of readdirSync(cacheDir)) {
     if (name === "meta.json") continue;
-    cpSync(join(cacheDir, name), join(assetsDest, name));
+    cpSync(joinAppPath(cacheDir, name), joinAppPath(assetsDest, name));
   }
 }
 
@@ -165,15 +171,15 @@ function installAssets(cacheDir: string, stagingDir: string): void {
  * dist. Returns the stylesheet href.
  */
 export async function ensureGlobalCss(opts: {
-  repoRoot: string;
-  pluginsRoot: string;
-  stagingDir: string;
+  repoRoot: AppPath;
+  pluginsRoot: AppPath;
+  stagingDir: AppPath;
   minify: boolean;
   key: string;
   candidates: readonly string[];
 }): Promise<{ href: string; cached: boolean }> {
   const cacheDir = cssCacheDir(opts.key);
-  const metaFile = join(cacheDir, "meta.json");
+  const metaFile = joinAppPath(cacheDir, "meta.json");
   if (existsSync(metaFile)) {
     const meta = JSON.parse(readFileSync(metaFile, "utf8")) as CssCacheMeta;
     const now = new Date();
@@ -189,7 +195,7 @@ export async function ensureGlobalCss(opts: {
   ]);
   const appCssFile = globalCssSource(opts.pluginsRoot);
   const compiler = await compile(readFileSync(appCssFile, "utf8"), {
-    base: dirname(appCssFile),
+    base: appPathParent(appCssFile),
     from: appCssFile,
     shouldRewriteUrls: true,
     onDependency: () => {},
@@ -199,12 +205,15 @@ export async function ensureGlobalCss(opts: {
   const compiled = optimize(compiler.build([...opts.candidates]), {
     minify: false,
   }).code;
-  const compiledId = join(dirname(appCssFile), "__global.compiled.css");
+  const compiledId = joinAppPath(
+    appPathParent(appCssFile),
+    "__global.compiled.css",
+  );
 
-  const workDir = mkdtempSync(join(tmpdir(), "web-artifacts-css-"));
-  const outDir = join(workDir, "out");
+  const workDir = asAppPath(mkdtempSync(join(tmpdir(), "web-artifacts-css-")));
+  const outDir = joinAppPath(workDir, "out");
   try {
-    const entry = join(workDir, "entry.js");
+    const entry = joinAppPath(workDir, "entry.js");
     writeFileSync(entry, `import ${JSON.stringify(compiledId)};\n`);
 
     // vite turns the compiled CSS's `url()`s into hashed assets and minifies.
@@ -225,9 +234,9 @@ export async function ensureGlobalCss(opts: {
 
     // Publish into the cache atomically (publishDir: sidecars, meta.json last,
     // rename), then install into staging from the emitted output.
-    const assetsSrc = join(outDir, "assets");
+    const assetsSrc = joinAppPath(outDir, "assets");
     mkdirSync(CSS_ROOT, { recursive: true });
-    const tmpDest = join(
+    const tmpDest = joinAppPath(
       CSS_ROOT,
       `.tmp.${opts.key.slice(0, 16)}.${process.pid}`,
     );
@@ -236,7 +245,7 @@ export async function ensureGlobalCss(opts: {
     let cssName: string | null = null;
     for (const name of readdirSync(assetsSrc)) {
       if (name.endsWith(".js")) continue; // the empty entry chunk
-      cpSync(join(assetsSrc, name), join(tmpDest, name));
+      cpSync(joinAppPath(assetsSrc, name), joinAppPath(tmpDest, name));
       if (name.endsWith(".css")) {
         if (cssName !== null) {
           throw new Error(

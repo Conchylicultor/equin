@@ -1,4 +1,8 @@
 import { readFile } from "fs/promises";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { join, relative } from "path";
 import { writeGenerated } from "./write-generated";
 import {
@@ -111,7 +115,9 @@ export interface DataViewEntry {
  * manifest it feeds is imported by plugin barrels at module-load, so it has to
  * be regenerated BEFORE the first barrel import freezes the ESM cache.
  */
-export async function collectDataViews(root: string): Promise<DataViewEntry[]> {
+export async function collectDataViews(
+  root: AppPath,
+): Promise<DataViewEntry[]> {
   const tree = await buildBarrelFreeTree(root);
   // A plugin the app's composition does not bundle never registers its data-view
   // descriptor at runtime (its barrel is omitted from the registry), so emitting
@@ -167,18 +173,21 @@ function renderManifest(entries: DataViewEntry[]): string {
 }
 
 /** Path to the committed manifest file. */
-export function dataViewsManifestPath(root: string): string {
-  return join(root, MANIFEST_REL_PATH);
+export function dataViewsManifestPath(root: AppPath): AppPath {
+  // `root`: the checkout root the caller works in.
+  return joinAppPath(root, MANIFEST_REL_PATH);
 }
 
 /** Render the manifest file contents in-memory (used by the in-sync check). */
-export async function renderDataViewsManifest(root: string): Promise<string> {
+export async function renderDataViewsManifest(root: AppPath): Promise<string> {
   const entries = await collectDataViews(root);
   return renderManifest(entries);
 }
 
 /** Regenerate `data-views.generated.ts` if it drifted. */
-export async function generateDataViews(opts: { root: string }): Promise<void> {
+export async function generateDataViews(opts: {
+  root: AppPath;
+}): Promise<void> {
   await writeGenerated({
     file: dataViewsManifestPath(opts.root),
     content: await renderDataViewsManifest(opts.root),

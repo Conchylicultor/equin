@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { APP_SCOPE_DIR, type ConfigDescriptor } from "@plugins/config_v2/core";
 import {
   configTextHash,
@@ -30,7 +31,7 @@ function escapeRe(s: string): string {
  * saved config yet records them all without running.
  */
 export function applyConfigMigrations(opts: {
-  userConfigDir: string;
+  userConfigDir: AppPath;
   configs: readonly { hierarchyPath: string; descriptor: ConfigDescriptor }[];
 }): AppliedConfigMigration[] {
   const { userConfigDir, configs } = opts;
@@ -43,7 +44,7 @@ export function applyConfigMigrations(opts: {
     );
     return (descriptor.migrations ?? []).map((migration) => ({
       key: `${hierarchyPath}/${descriptor.name}:${migration.id}`,
-      apply: (dir: string): string[] =>
+      apply: (dir: AppPath): string[] =>
         rewriteConfigFiles(dir, {
           select: (rel) => files.test(rel),
           rewrite: (rel, text) => {

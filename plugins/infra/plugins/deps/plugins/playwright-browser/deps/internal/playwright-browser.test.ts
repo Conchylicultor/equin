@@ -9,6 +9,11 @@ import {
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import {
+  type AppPath,
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   defineDep,
   ensureDep,
   readyNow,
@@ -30,9 +35,9 @@ import {
 // whole install path runs with no network.
 const KIND_REL = relative(REPO_ROOT, resolve(import.meta.dir, "../.."));
 
-let base: string;
-let root: string;
-let store: { cacheRoot: string; locksRoot: string };
+let base: AppPath;
+let root: AppPath;
+let store: { cacheRoot: AppPath; locksRoot: AppPath };
 const exec = execContextForTests();
 
 function writeFakePlaywright(coreVersion: string): void {
@@ -76,9 +81,14 @@ function writeFakePlaywright(coreVersion: string): void {
 }
 
 beforeEach(() => {
-  base = mkdtempSync(join(tmpdir(), "deps-playwright-browser-test-"));
-  root = join(base, "repo");
-  store = { cacheRoot: join(base, "cache"), locksRoot: join(base, "locks") };
+  base = asAppPath(
+    mkdtempSync(join(tmpdir(), "deps-playwright-browser-test-")),
+  );
+  root = joinAppPath(base, "repo");
+  store = {
+    cacheRoot: joinAppPath(base, "cache"),
+    locksRoot: joinAppPath(base, "locks"),
+  };
   mkdirSync(join(root, KIND_REL), { recursive: true });
   writeFakePlaywright("1.2.3");
 });

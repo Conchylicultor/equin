@@ -1,3 +1,4 @@
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { writeFileSync } from "node:fs";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
@@ -383,7 +384,7 @@ async function adoptGatewayLaunch(
   // the next `start` moves the hold to a newer build. (On macOS the bundle is
   // a copy; the hold only keeps the build it was made from.)
   holdDep(gateway, "machine-gateway");
-  ensureDatabaseConfig(launch.cwd, console.log);
+  ensureDatabaseConfig(asAppPath(launch.cwd), console.log);
   console.log(
     launch.bindHost === null
       ? `Binding the gateway to every interface (${envName("LISTEN")}=:${DEV_GATEWAY_PORT})`

@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { relative } from "node:path";
 import type { Check } from "@plugins/framework/plugins/tooling/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
@@ -12,7 +13,7 @@ const RENDER_SCRIPT =
   "plugins/apps/plugins/prototypes/plugins/fixtures/scripts/render-fixture-thumbnails.ts";
 
 /** The command that re-renders the thumbnails of the fixture at `dir`. */
-export function renderFixtureThumbnailsCommand(dir: string): string {
+export function renderFixtureThumbnailsCommand(dir: AppPath): string {
   return `./equin run ${RENDER_SCRIPT} --fixture ${relative(REPO_ROOT, dir)}`;
 }
 
@@ -38,7 +39,7 @@ export function renderFixtureThumbnailsCommand(dir: string): string {
  */
 export function prototypeFixtureThumbnailsCheck(opts: {
   id: string;
-  dir: string;
+  dir: AppPath;
 }): Check {
   const where = relative(REPO_ROOT, opts.dir);
   return {

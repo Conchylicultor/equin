@@ -1,6 +1,9 @@
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { rm } from "node:fs/promises";
-import { join } from "node:path";
 import { metaPath, releaseLockVideo, tryLockVideo } from "./cache";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -71,14 +74,14 @@ const ENTRY_FILE =
  * `locks/` dir is not an entry). Each entry's lock is probed: taken for the
  * instant of the test and released.
  */
-export function listEntries(dir: string): CacheEntry[] {
+export function listEntries(dir: AppPath): CacheEntry[] {
   if (!existsSync(dir)) return [];
   const byId = new Map<string, CacheEntry>();
   for (const dirent of readdirSync(dir, { withFileTypes: true })) {
     if (!dirent.isFile()) continue;
     const videoId = ENTRY_FILE.exec(dirent.name)?.[1];
     if (videoId === undefined) continue;
-    const stat = statSync(join(dir, dirent.name));
+    const stat = statSync(joinAppPath(dir, dirent.name));
     const entry = byId.get(videoId) ?? {
       videoId,
       files: [],
@@ -112,7 +115,7 @@ export interface SweepReport {
  * download that starts meanwhile is never cut from under.
  */
 export async function sweepYouTubeAudio(args: {
-  dir: string;
+  dir: AppPath;
   nowMs: number;
   ttlMs?: number;
   capBytes?: number;
@@ -141,7 +144,7 @@ export async function sweepYouTubeAudio(args: {
         ...entry.files.filter((f) => f !== `${entry.videoId}.json`),
       ];
       for (const file of ordered)
-        await rm(join(args.dir, file), { force: true });
+        await rm(joinAppPath(args.dir, file), { force: true });
     } finally {
       releaseLockVideo(fd);
     }

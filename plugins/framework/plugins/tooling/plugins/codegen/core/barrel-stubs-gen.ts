@@ -1,5 +1,8 @@
 import { existsSync, readFileSync } from "fs";
-import { join } from "path";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { writeGenerated } from "./write-generated";
 import {
   AUTO_STUB_PACKAGES,
@@ -18,12 +21,12 @@ const HEADER = [
   "// The `barrel-stubs-in-sync` check fails on drift.",
 ].join("\n");
 
-function resolveDtsEntry(root: string, entry: AutoStubEntry): string {
+function resolveDtsEntry(root: AppPath, entry: AutoStubEntry): AppPath {
   const base = entry.resolveFrom
-    ? join(root, entry.resolveFrom, "node_modules")
-    : join(root, "node_modules");
+    ? joinAppPath(root, entry.resolveFrom, "node_modules")
+    : joinAppPath(root, "node_modules");
 
-  const pkgJsonPath = join(base, entry.pkg, "package.json");
+  const pkgJsonPath = joinAppPath(base, entry.pkg, "package.json");
   if (!existsSync(pkgJsonPath)) {
     throw new Error(
       `[barrel-stubs-gen] Cannot find ${entry.pkg}/package.json in ${base}`,
@@ -35,9 +38,10 @@ function resolveDtsEntry(root: string, entry: AutoStubEntry): string {
     unknown
   >;
 
-  if (typeof pkg.types === "string") return join(base, entry.pkg, pkg.types);
+  if (typeof pkg.types === "string")
+    return joinAppPath(base, entry.pkg, pkg.types);
   if (typeof pkg.typings === "string")
-    return join(base, entry.pkg, pkg.typings);
+    return joinAppPath(base, entry.pkg, pkg.typings);
 
   throw new Error(
     `[barrel-stubs-gen] Cannot resolve .d.ts entry for ${entry.pkg}: no types/typings field in package.json`,
@@ -126,11 +130,13 @@ function renderPackageStub(pkg: string, exportNames: string[]): string {
   ].join("\n");
 }
 
-export function renderBarrelStubs({ root }: { root: string }): string {
+export function renderBarrelStubs({ root }: { root: AppPath }): string {
   const stubs: string[] = [];
+  // `root`: the checkout root the caller works in.
+  const appRoot = root;
 
   for (const entry of AUTO_STUB_PACKAGES) {
-    const dtsPath = resolveDtsEntry(root, entry);
+    const dtsPath = resolveDtsEntry(appRoot, entry);
     const src = readFileSync(dtsPath, "utf8");
     const names = extractExportNames(src, entry.pkg, dtsPath);
     if (names.length === 0) {
@@ -172,14 +178,15 @@ export function renderBarrelStubs({ root }: { root: string }): string {
   return body;
 }
 
-export function barrelStubsPath(root: string): string {
-  return join(root, GENERATED_PATH);
+export function barrelStubsPath(root: AppPath): AppPath {
+  // `root`: the checkout root the caller works in.
+  return joinAppPath(root, GENERATED_PATH);
 }
 
 export async function generateBarrelStubs({
   root,
 }: {
-  root: string;
+  root: AppPath;
 }): Promise<void> {
   await writeGenerated({
     file: barrelStubsPath(root),

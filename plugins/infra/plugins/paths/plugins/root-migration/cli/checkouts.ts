@@ -4,6 +4,7 @@ import {
   listWorktreeEntries,
   type WorktreeEntry,
 } from "@plugins/infra/plugins/worktree/server";
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { StaleCheckout } from "./plan";
 
 // Which checkouts of this repo could still run code from before the move — the
@@ -33,7 +34,7 @@ export const LAYOUT_RULE_MODULE =
  * A bare entry and a prunable one (its directory is gone) run nothing.
  */
 export async function staleCheckouts(
-  repoRoot: string,
+  repoRoot: AppPath,
 ): Promise<StaleCheckout[]> {
   const entries = (await listWorktreeEntries(repoRoot)).filter(
     (e): e is WorktreeEntry & { head: string } =>

@@ -36,6 +36,7 @@
 // a read-set is only ever CONSUMED through `validate`, which re-derives every
 // fact from the fresh snapshot.
 
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { createHash } from "node:crypto";
 import {
   globPaths,
@@ -155,7 +156,7 @@ export interface TreeSnapshot extends GitTreeSnapshot {
 }
 
 async function gitStdout(
-  root: string,
+  root: AppPath,
   args: string[],
 ): Promise<{ code: number; bytes: Uint8Array }> {
   const result = await spawnCaptured(["git", ...args], {
@@ -171,7 +172,7 @@ async function gitStdout(
  * uncached rather than risking a bogus view.
  */
 export async function loadTreeSnapshot(
-  root: string,
+  root: AppPath,
   treeHash: string,
 ): Promise<TreeSnapshot | null> {
   try {
@@ -217,7 +218,7 @@ export async function loadTreeSnapshot(
  * which no such reader can do anything sound with.
  */
 export async function readTreeSnapshot(
-  root: string,
+  root: AppPath,
   treeHash?: string,
 ): Promise<TreeSnapshot> {
   const hash = treeHash ?? (await computeTreeHash(root));
@@ -315,7 +316,7 @@ export function computeCheckSourceHash(snapshot: TreeSnapshot): string {
 }
 
 function buildSnapshot(
-  root: string,
+  root: AppPath,
   treeHash: string,
   blobSha: Map<string, string>,
 ): TreeSnapshot {

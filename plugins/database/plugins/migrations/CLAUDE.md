@@ -597,6 +597,8 @@ only agreement that matters.
   - Uses:
     - `database/migrations/phases.snapshotLineage`
     - `database/migrations/phases.SnapshotLineage`
+    - `infra/host-fs/user-path.AppPath`
+    - `infra/host-fs/user-path.joinAppPath`
     - `infra/spawn.spawnCaptured`
     - `infra/spawn.spawnExpectOk`
     - `packages/semaphore.createSemaphore`

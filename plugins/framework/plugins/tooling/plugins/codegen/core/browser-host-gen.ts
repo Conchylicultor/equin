@@ -31,6 +31,7 @@
 // lacking a scoped plugin renders less (see `renderBrowserHostScope`).
 
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
+import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { importClosures } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
 import {
   asFsPath,
@@ -590,11 +591,11 @@ export async function generateBrowserHosts(
       `${name}: write`,
       async () => {
         await writeGenerated({
-          file: `${ctx.root}/${host.generated}`,
+          file: joinAppPath(ctx.root, host.generated),
           content: await renderBrowserHost(ctx, graph),
         });
         await writeGenerated({
-          file: `${ctx.root}/${host.scopeGenerated}`,
+          file: joinAppPath(ctx.root, host.scopeGenerated),
           content: renderBrowserHostScope(host, graph),
         });
       },

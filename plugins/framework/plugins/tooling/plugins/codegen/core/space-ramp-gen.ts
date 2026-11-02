@@ -1,5 +1,8 @@
 import { readFileSync } from "fs";
-import { join } from "path";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { writeGenerated } from "./write-generated";
 import { appCssPath, collectUtilityDecls } from "./app-css-utilities";
 
@@ -214,18 +217,21 @@ function renderManifest(ramp: RampDecl): string {
 }
 
 /** Path to the committed generated manifest file. */
-export function spaceRampManifestPath(root: string): string {
-  return join(root, MANIFEST_REL_PATH);
+export function spaceRampManifestPath(root: AppPath): AppPath {
+  // `root`: the checkout root the caller works in.
+  return joinAppPath(root, MANIFEST_REL_PATH);
 }
 
 /** Render the manifest file contents in-memory (used by the in-sync check). */
-export function renderSpaceRamp(root: string): string {
+export function renderSpaceRamp(root: AppPath): string {
   const css = readFileSync(appCssPath(root), "utf8");
   return renderManifest(parseSpaceRamp(css));
 }
 
 /** Regenerate `ramp.generated.ts` if it drifted. */
-export async function generateSpaceRamp(opts: { root: string }): Promise<void> {
+export async function generateSpaceRamp(opts: {
+  root: AppPath;
+}): Promise<void> {
   await writeGenerated({
     file: spaceRampManifestPath(opts.root),
     content: renderSpaceRamp(opts.root),

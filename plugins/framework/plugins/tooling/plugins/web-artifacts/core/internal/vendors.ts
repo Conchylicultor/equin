@@ -22,7 +22,13 @@ import {
   statSync,
   utimesSync,
 } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import {
+  appPathParent,
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { join, relative } from "node:path";
 import { init as cjsInit, parse as cjsParse } from "cjs-module-lexer";
 import { init as esInit, parse as esParse } from "es-module-lexer/minimal";
 import * as esbuild from "esbuild";
@@ -38,12 +44,12 @@ import {
   vendorCacheKey,
 } from "./vendor-cache";
 
-const VENDORS_ROOT = join(WEB_ARTIFACTS_DIR, "vendors");
+const VENDORS_ROOT = joinAppPath(WEB_ARTIFACTS_DIR, "vendors");
 
 export interface VendorSpecRequest {
   specifier: string;
   /** A directory that can resolve the specifier (an importing plugin's dir). */
-  resolveDir: string;
+  resolveDir: AppPath;
 }
 
 export interface VendorSetMeta {
@@ -68,14 +74,14 @@ const IDENT_RE = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 class ReadSet {
   readonly files: Record<string, [number, number]> = {};
 
-  record(file: string): void {
+  record(file: AppPath): void {
     const stat = statSync(file);
     this.files[file] = [stat.mtimeMs, stat.size];
   }
 }
 
 /** One specifier's outcome: its entry file, or why the resolver produced none. */
-type SpecResolution = { path: string } | { error: string | null };
+type SpecResolution = { path: AppPath } | { error: string | null };
 
 /**
  * Resolve a GROUP of bare specifiers sharing one `resolveDir` to their entry
@@ -90,10 +96,10 @@ type SpecResolution = { path: string } | { error: string | null };
  */
 async function resolveSpecs(
   specs: string[],
-  resolveDir: string,
+  resolveDir: AppPath,
 ): Promise<Map<string, SpecResolution>> {
   const wanted = new Set(specs);
-  const paths = new Map<string, string>();
+  const paths = new Map<string, AppPath>();
   const errors = new Map<string, string>();
   await esbuild.build({
     stdin: {
@@ -116,7 +122,8 @@ async function resolveSpecs(
               kind: args.kind,
               pluginData: "probe",
             });
-            if (r.path) paths.set(args.path, r.path);
+            // A file esbuild resolved from this app's own install.
+            if (r.path) paths.set(args.path, asAppPath(r.path));
             const errorText = r.errors.map((e) => e.text).join("; ");
             if (errorText) errors.set(args.path, errorText);
             return { external: true };
@@ -137,12 +144,12 @@ async function resolveSpecs(
 }
 
 function nearestPackageJson(
-  file: string,
+  file: AppPath,
   reads: ReadSet,
-): { dir: string; version: string; type?: string } {
-  let dir = dirname(file);
-  while (dir !== dirname(dir)) {
-    const pj = join(dir, "package.json");
+): { dir: AppPath; version: string; type?: string } {
+  let dir = appPathParent(file);
+  while (dir !== appPathParent(dir)) {
+    const pj = joinAppPath(dir, "package.json");
     if (existsSync(pj)) {
       const parsed = JSON.parse(readFileSync(pj, "utf8")) as {
         version?: string;
@@ -155,7 +162,7 @@ function nearestPackageJson(
         return { dir, version: parsed.version, type: parsed.type };
       }
     }
-    dir = dirname(dir);
+    dir = appPathParent(dir);
   }
   throw new Error(`vendor: no package.json with a version above ${file}`);
 }
@@ -167,7 +174,7 @@ function nearestPackageJson(
  * Node's package.json rule would misread it as CJS); nearest package.json
  * `type` only as the tiebreaker for syntax-less files (e.g. UMD).
  */
-function moduleFormatOf(file: string, reads: ReadSet): "esm" | "cjs" {
+function moduleFormatOf(file: AppPath, reads: ReadSet): "esm" | "cjs" {
   if (file.endsWith(".mjs") || file.endsWith(".mts")) return "esm";
   if (file.endsWith(".cjs") || file.endsWith(".cts")) return "cjs";
   try {
@@ -184,23 +191,23 @@ function moduleFormatOf(file: string, reads: ReadSet): "esm" | "cjs" {
     if (!(err instanceof Error)) throw err;
     // Lexer choked (exotic syntax) — fall through to the package.json rule.
   }
-  let dir = dirname(file);
-  while (dir !== dirname(dir)) {
-    const pj = join(dir, "package.json");
+  let dir = appPathParent(file);
+  while (dir !== appPathParent(dir)) {
+    const pj = joinAppPath(dir, "package.json");
     if (existsSync(pj)) {
       // Nearest package.json governs (Node semantics): absent "type" ⇒ CJS.
       const parsed = JSON.parse(readFileSync(pj, "utf8")) as { type?: string };
       reads.record(pj);
       return parsed.type === "module" ? "esm" : "cjs";
     }
-    dir = dirname(dir);
+    dir = appPathParent(dir);
   }
   return "cjs";
 }
 
 /** Enumerate a CJS module's named exports, following relative re-export chains. */
 function cjsNamedExports(
-  file: string,
+  file: AppPath,
   reads: ReadSet,
   seen = new Set<string>(),
 ): Set<string> {
@@ -212,12 +219,12 @@ function cjsNamedExports(
   const names = new Set(exports);
   for (const re of reexports) {
     if (!re.startsWith(".")) continue; // bare re-export target: names unknowable statically
-    let target = join(dirname(file), re);
+    let target = asAppPath(join(appPathParent(file), re));
     for (const cand of [
       target,
-      `${target}.js`,
-      `${target}.cjs`,
-      join(target, "index.js"),
+      asAppPath(join(appPathParent(file), `${re}.js`)),
+      asAppPath(join(appPathParent(file), `${re}.cjs`)),
+      joinAppPath(target, "index.js"),
     ]) {
       if (existsSync(cand) && statSync(cand).isFile()) {
         target = cand;
@@ -234,7 +241,7 @@ function cjsNamedExports(
 }
 
 async function esmHasDefaultExport(
-  file: string,
+  file: AppPath,
   reads: ReadSet,
 ): Promise<boolean> {
   await esInit();
@@ -251,7 +258,7 @@ export function vendorEntryFileName(spec: string): string {
 
 interface ResolvedVendor {
   spec: string;
-  resolveDir: string;
+  resolveDir: AppPath;
   entryFile: string;
   version: string;
   cjs: boolean;
@@ -267,7 +274,7 @@ export interface VendorResolveStats {
 
 async function resolveVendors(
   requests: VendorSpecRequest[],
-  opts: { root: string; builderVersion: number; builderSource: string },
+  opts: { root: AppPath; builderVersion: number; builderSource: string },
 ): Promise<{ resolved: ResolvedVendor[]; stats: VendorResolveStats }> {
   const startedMs = Date.now();
   await cjsInit();
@@ -311,7 +318,7 @@ async function resolveVendors(
 
   // One esbuild build per distinct resolveDir, groups overlapped: the cost is
   // filesystem latency, so running them concurrently is the right shape.
-  const specsByDir = new Map<string, Set<string>>();
+  const specsByDir = new Map<AppPath, Set<string>>();
   for (const req of misses) {
     let specs = specsByDir.get(req.resolveDir);
     if (specs === undefined) {
@@ -320,7 +327,7 @@ async function resolveVendors(
     }
     specs.add(req.specifier);
   }
-  const groups = new Map<string, Map<string, SpecResolution>>();
+  const groups = new Map<AppPath, Map<string, SpecResolution>>();
   await Promise.all(
     [...specsByDir].map(async ([resolveDir, specs]) => {
       groups.set(resolveDir, await resolveSpecs([...specs], resolveDir));
@@ -407,8 +414,8 @@ export function vendorSetDirName(setHash: string): string {
   return `set.${setHash.slice(0, 16)}`;
 }
 
-export function vendorSetPath(setHash: string): string {
-  return join(VENDORS_ROOT, vendorSetDirName(setHash));
+export function vendorSetPath(setHash: string): AppPath {
+  return joinAppPath(VENDORS_ROOT, vendorSetDirName(setHash));
 }
 
 /**
@@ -424,7 +431,7 @@ export async function resolveVendorSet(opts: {
   /** Builder own-source digest — vendor semantics live in this plugin's code. */
   builderSource: string;
   /** Repo root — names the worktree's resolution cache and gates it on `bun.lock`. */
-  root: string;
+  root: AppPath;
 }): Promise<{
   resolved: ResolvedVendor[];
   setHash: string;
@@ -449,7 +456,7 @@ export async function resolveVendorSet(opts: {
 
 /** Read a vendor set's stored meta, or null when the set is not in the store. */
 export function readVendorSetMeta(setHash: string): VendorSetMeta | null {
-  const metaFile = join(vendorSetPath(setHash), "meta.json");
+  const metaFile = joinAppPath(vendorSetPath(setHash), "meta.json");
   if (!existsSync(metaFile)) return null;
   return JSON.parse(readFileSync(metaFile, "utf8")) as VendorSetMeta;
 }
@@ -464,14 +471,14 @@ export async function ensureVendorSet(opts: {
   minify: boolean;
   builderVersion: number;
   builderSource: string;
-  root: string;
+  root: AppPath;
   /** Pin the set into the build's lease before it is read or published (`lease.ts`). */
-  pin: (paths: readonly string[]) => Promise<void>;
+  pin: (paths: readonly AppPath[]) => Promise<void>;
 }): Promise<{ meta: VendorSetMeta; stats: VendorResolveStats }> {
   const { resolved, setHash, stats } = await resolveVendorSet(opts);
   const dest = vendorSetPath(setHash);
   await opts.pin([dest]);
-  const metaFile = join(dest, "meta.json");
+  const metaFile = joinAppPath(dest, "meta.json");
   if (existsSync(metaFile)) {
     const now = new Date();
     utimesSync(dest, now, now);
@@ -482,7 +489,7 @@ export async function ensureVendorSet(opts: {
   }
 
   mkdirSync(VENDORS_ROOT, { recursive: true });
-  const tmpDir = join(
+  const tmpDir = joinAppPath(
     VENDORS_ROOT,
     `.tmp.${setHash.slice(0, 16)}.${process.pid}`,
   );
@@ -542,7 +549,7 @@ export async function ensureVendorSet(opts: {
   // beside the outputs that fetch them, already compressed.
   const precompressed = await placePackageAssets({
     metafile: result.metafile,
-    cwd: process.cwd(),
+    cwd: asAppPath(process.cwd()), // the process dir esbuild resolves against
     pin: opts.pin,
   });
 
@@ -554,7 +561,11 @@ export async function ensureVendorSet(opts: {
     withFileTypes: true,
   })) {
     if (!dirent.isFile() || !dirent.name.endsWith(".js")) continue;
-    const abs = join(dirent.parentPath, dirent.name);
+    const abs = joinAppPath(
+      tmpDir,
+      relative(tmpDir, dirent.parentPath),
+      dirent.name,
+    );
     const rel = relative(tmpDir, abs);
     const [fileImports] = esParse(readFileSync(abs, "utf8"), rel);
     imports[rel] = [
@@ -577,7 +588,7 @@ export async function ensureVendorSet(opts: {
     tmpDir,
     dest,
     meta,
-    isComplete: () => existsSync(join(dest, "meta.json")),
+    isComplete: () => existsSync(joinAppPath(dest, "meta.json")),
     precompressed,
   });
   return { meta, stats };

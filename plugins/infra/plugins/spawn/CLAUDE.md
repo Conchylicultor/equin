@@ -229,6 +229,8 @@ presence only — **no re-exports**; import from `core/`.
 - Description: Wedge-proof child-process primitive: spawnCaptured/spawnExpectOk capture stdout/stderr via temp-file fds (no piped stdio, so bun 1.3.13's exit-during-stream-pull race has nothing to wedge), spawnPassthrough inherits the parent's streams, and getWorktreeRoot/getMainRepoRoot are the memoized canonical git-root helpers. Node-only (no db/jobs) so a CLI process can import it; the spawn-safety lint rule routes every raw Bun.spawn here.
 - Core:
   - Uses:
+    - `infra/host-fs/user-path.AppPath`
+    - `infra/host-fs/user-path.asAppPath`
     - `packages/flock.holdParentLifeline`
     - `packages/spawn-priority.spawnAtTier`
   - Exports (types):
@@ -264,6 +266,7 @@ presence only — **no re-exports**; import from `core/`.
   - Exempts itself from:
     - `spawn-safety/no-raw-bun-spawn` — `.` (sanctioned)
     - `boundaries/no-platform-api` — `core/internal/git-roots.ts`, `core/internal/spawn-captured.ts`, `core/internal/spawn-passthrough.ts` (debt)
+    - `user-path/no-unproven-claim` — `core/internal/git-roots.ts` (sanctioned)
   - Exempted by:
     - `framework/cli/migrations` (0 debt)
     - `framework/tooling/checks/bun-runtime` (0 debt)

@@ -39,4 +39,18 @@ export default [
     task: "task-1792338443-riwqev",
     reason: "not yet split into server/ + machine/",
   },
+  {
+    rule: "user-path/no-unproven-claim",
+    paths: ["core/internal/paths.ts", "core/internal/data-root-layout.ts"],
+    kind: "sanctioned",
+    reason:
+      "The app's fixed dirs under the home dir — the data root (and its legacy name), the local backups dir and Claude Code's own dir and config file — spelled once here: a home-relative path is wherever its segments say, so these are the claims every AppPath under them rests on.",
+  },
+  {
+    rule: "user-path/no-unproven-claim",
+    paths: ["core/internal/checkout-deploys.ts"],
+    kind: "sanctioned",
+    reason:
+      "A namespace's spec.json (written by `./equin build`) names the checkout that published it: a checkout of this repo, which the app runs from.",
+  },
 ] satisfies Exemptions;

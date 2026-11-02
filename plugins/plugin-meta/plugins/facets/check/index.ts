@@ -9,6 +9,10 @@ import {
   registerBarrelStubs,
   importBarrel,
 } from "@plugins/plugin-meta/plugins/barrel-import/core";
+import {
+  appPathParent,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -46,12 +50,12 @@ const check: Check = {
     "Every facet from loadFacets() has a render contributor in each web render slot (diff, detail, contributions) with a matching facet id",
   async run() {
     const root = await getWorktreeRoot();
-    const pluginsRoot = join(root, "plugins");
+    const pluginsRoot = joinAppPath(root, "plugins");
     const facetIds = (await loadFacets()).map((f) => f.def.id).sort();
     const facetIdSet = new Set(facetIds);
 
     const tree = await buildStructureTreeOnce(pluginsRoot);
-    registerBarrelStubs(join(pluginsRoot, ".."));
+    registerBarrelStubs(appPathParent(pluginsRoot));
 
     // This check imports web barrels ITSELF (the tree above is structure-only),
     // so it must also declare their slots: a contribution names its slot by

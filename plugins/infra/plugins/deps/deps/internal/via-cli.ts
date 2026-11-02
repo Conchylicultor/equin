@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 import { join } from "node:path";
 import {
@@ -36,7 +37,7 @@ const INSTALL_TIMEOUT_MS = 30 * 60_000;
  */
 export async function ensureDepViaCli<S extends DepSource>(
   dep: Dep<S>,
-  opts: { stdio: "inherit" | "capture"; grant: Grant | null; root?: string },
+  opts: { stdio: "inherit" | "capture"; grant: Grant | null; root?: AppPath },
 ): Promise<Ready<S>> {
   const root = opts.root ?? REPO_ROOT;
   const before = await readyNow(dep, { root });

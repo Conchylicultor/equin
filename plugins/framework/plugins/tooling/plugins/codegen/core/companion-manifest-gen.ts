@@ -1,4 +1,7 @@
-import { join } from "path";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { collectCompanionSlots } from "@plugins/plugin-meta/plugins/closure/core";
 import type { CompanionSlot } from "@plugins/plugin-meta/plugins/closure/core";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
@@ -83,12 +86,13 @@ function renderManifest(slots: readonly CompanionSlot[]): string {
 }
 
 /** Path to the committed manifest file. */
-export function companionManifestPath(root: string): string {
-  return join(root, MANIFEST_REL_PATH);
+export function companionManifestPath(root: AppPath): AppPath {
+  // `root`: the checkout root the caller works in.
+  return joinAppPath(root, MANIFEST_REL_PATH);
 }
 
 /** Render the manifest file contents in-memory (used by the in-sync check). */
-export async function renderCompanionManifest(root: string): Promise<string> {
+export async function renderCompanionManifest(root: AppPath): Promise<string> {
   // The web-sdk's manifest: web slots only. A server kind's companions are
   // held to their owner by the closure edge and by the owner itself at boot.
   return renderManifest(

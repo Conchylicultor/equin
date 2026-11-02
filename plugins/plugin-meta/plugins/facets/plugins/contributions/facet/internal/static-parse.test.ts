@@ -2,6 +2,10 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import {
   findCalls,
@@ -252,8 +256,8 @@ describe("server companions", () => {
     for (const r of roots) rmSync(r, { recursive: true, force: true });
   });
   /** A throwaway plugin dir holding `files` (plugin-relative path → source). */
-  const pluginDir = (files: Record<string, string>): string => {
-    const root = mkdtempSync(join(tmpdir(), "server-companions-"));
+  const pluginDir = (files: Record<string, string>): AppPath => {
+    const root = asAppPath(mkdtempSync(join(tmpdir(), "server-companions-")));
     roots.push(root);
     for (const [rel, src] of Object.entries(files)) {
       mkdirSync(dirname(join(root, rel)), { recursive: true });

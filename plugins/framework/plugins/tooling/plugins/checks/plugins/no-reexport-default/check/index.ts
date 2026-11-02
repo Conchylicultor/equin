@@ -1,3 +1,4 @@
+import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { join, relative, sep } from "path";
 import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
@@ -21,7 +22,7 @@ const check: Check = {
     "Every plugin barrel (web|server|machine|central)/index.ts must use inline `export default { ... } satisfies *PluginDefinition` — no re-exports, no missing defaults",
   async run(ctx: CheckContext) {
     const root = await getWorktreeRoot();
-    const pluginsRoot = join(root, "plugins");
+    const pluginsRoot = joinAppPath(root, "plugins");
 
     const repo = await ctx.repo();
     if (repo.under("plugins").length === 0) return { ok: true };

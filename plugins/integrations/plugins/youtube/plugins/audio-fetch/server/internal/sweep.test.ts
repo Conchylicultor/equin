@@ -1,3 +1,7 @@
+import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
   existsSync,
@@ -104,9 +108,9 @@ describe("selectEvictions", () => {
 });
 
 describe("sweepYouTubeAudio on a directory", () => {
-  let dir: string;
+  let dir: AppPath;
   beforeEach(() => {
-    dir = mkdtempSync(join(tmpdir(), "youtube-audio-sweep-"));
+    dir = asAppPath(mkdtempSync(join(tmpdir(), "youtube-audio-sweep-")));
   });
   afterEach(() => rmSync(dir, { recursive: true, force: true }));
 

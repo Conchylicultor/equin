@@ -9,20 +9,25 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  type AppPath,
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { execContextForTests } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core/testing";
 import { defineDep, type DepSource, type InstallContext } from "./dep";
 import { depState, ensureDep, readyNow, removeDep } from "./ensure";
 import { releaseLock, tryLock } from "./lock";
 import { identityOf, installPaths, type DepStore } from "./store";
 
-let base: string;
+let base: AppPath;
 let store: DepStore;
 
 beforeEach(() => {
-  base = mkdtempSync(join(tmpdir(), "deps-test-"));
+  base = asAppPath(mkdtempSync(join(tmpdir(), "deps-test-")));
   store = {
-    cacheRoot: join(base, "cache"),
-    locksRoot: join(base, "locks"),
+    cacheRoot: joinAppPath(base, "cache"),
+    locksRoot: joinAppPath(base, "locks"),
   };
 });
 afterEach(() => rmSync(base, { recursive: true, force: true }));
@@ -135,7 +140,7 @@ describe("ensureDep", () => {
     const box = { version: "1", installs: 0 };
     const source = {
       ...fakeSource(box),
-      isIntact: (dir: string) => existsSync(join(dir, "payload.txt")),
+      isIntact: (dir: AppPath) => existsSync(join(dir, "payload.txt")),
     };
     const dep = defineDep({
       id: "fragile",
@@ -341,7 +346,7 @@ describe("readyNow", () => {
       sizeHint: "",
       source: {
         ...fakeSource(box),
-        isIntact: (dir: string) => existsSync(join(dir, "payload.txt")),
+        isIntact: (dir: AppPath) => existsSync(join(dir, "payload.txt")),
       },
       updates: { none: "a test fixture" },
     });

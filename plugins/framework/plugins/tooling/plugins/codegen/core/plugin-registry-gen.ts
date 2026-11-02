@@ -1,4 +1,8 @@
 import { readdirSync, readFileSync } from "fs";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { COMPOSITION_SPECIFIERS } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/core";
 import { join, resolve } from "path";
 import { type PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
@@ -42,7 +46,7 @@ import { readListed, timeSlicer } from "./scan-pacing";
 import { writeGenerated } from "./write-generated";
 
 export interface DiscoveredCollectedDir extends CollectedDirDef {
-  ownerDir: string;
+  ownerDir: AppPath;
 }
 
 const HEADER = [
@@ -151,10 +155,10 @@ const isPluginFolder = (name: string): name is PluginFolder =>
  * typed marker already makes that a tsc error; this covers the untyped copy.
  */
 function collectedDirsFrom(
-  root: string,
+  root: AppPath,
   sources: Iterable<CollectedDirCandidate & { text: string }>,
 ): DiscoveredCollectedDir[] {
-  const pluginsRoot = resolve(root, "plugins");
+  const pluginsRoot = joinAppPath(root, "plugins");
   const out: DiscoveredCollectedDir[] = [];
   for (const { rel, pluginPath, text } of sources) {
     // Fast-path: skip files that can't contain the marker. Correctness still
@@ -176,7 +180,7 @@ function collectedDirsFrom(
         dir,
         membership: membershipOf(rel, call.argsText.slice(arg[0].length)),
         _brand: "CollectedDirDef",
-        ownerDir: join(pluginsRoot, pluginPath),
+        ownerDir: joinAppPath(pluginsRoot, pluginPath),
       });
     }
   }
@@ -206,7 +210,7 @@ export async function discoverCollectedDirsIn(
 // `listRepoFiles` uses, for the same reason.
 const GIT_TIMEOUT_MS = 60_000;
 
-function lsFilesSync(root: string, args: string[]): string[] {
+function lsFilesSync(root: AppPath, args: string[]): string[] {
   const result = Bun.spawnSync(["git", "ls-files", "-z", ...args], {
     cwd: root,
     stdout: "pipe",
@@ -230,7 +234,7 @@ function lsFilesSync(root: string, args: string[]): string[] {
  * universe (tracked + untracked-not-ignored, minus index entries whose file is
  * gone), listed synchronously for the callers that cannot await.
  */
-function listPluginFilesSync(root: string): string[] {
+function listPluginFilesSync(root: AppPath): string[] {
   const present = lsFilesSync(root, [
     "--cached",
     "--others",
@@ -249,7 +253,7 @@ function listPluginFilesSync(root: string): string[] {
  * instead of a directory walk, then a read of each candidate. Nothing on a
  * check pass's shared thread should call it: checks hold a file set already.
  */
-export function discoverCollectedDirs(root: string): DiscoveredCollectedDir[] {
+export function discoverCollectedDirs(root: AppPath): DiscoveredCollectedDir[] {
   const files = listPluginFilesSync(root);
   const listed = new Set(files);
   const candidates = collectedDirCandidates(files, (rel) => listed.has(rel));
@@ -257,7 +261,8 @@ export function discoverCollectedDirs(root: string): DiscoveredCollectedDir[] {
     root,
     candidates.map((c) => ({
       ...c,
-      text: readFileSync(join(root, c.rel), "utf8"),
+      // `root`: the checkout root the caller works in.
+      text: readFileSync(joinAppPath(root, c.rel), "utf8"),
     })),
   );
 }
@@ -284,7 +289,7 @@ export async function standardPluginDirsIn(
 }
 
 /** The standard plugin folder names, for callers that cannot await. */
-export function standardPluginDirs(root: string): Set<string> {
+export function standardPluginDirs(root: AppPath): Set<string> {
   discoverCollectedDirs(root); // throws on an undeclared name
   return new Set(STANDARD_DIRS);
 }
@@ -301,7 +306,7 @@ const snapshotStandardDirs = new WeakMap<FsSnapshot, Set<string>>();
  * root whose `plugins/` the snapshot covers.
  */
 export function standardPluginDirsFromSnapshot(
-  root: string,
+  root: AppPath,
   fs: FsSnapshot,
 ): Set<string> {
   const cached = snapshotStandardDirs.get(fs);
@@ -356,7 +361,7 @@ function hasDefaultExport(text: string): boolean {
 // redundant build structurally impossible: the renderer literally cannot trigger
 // a tree walk.
 export interface RegistryGenContext {
-  root: string;
+  root: AppPath;
   tree: PluginTree;
   // The cross-plugin edge graph of exactly this `tree`, classified once. Held
   // here so the composition resolution below, and the checks that take a ctx,
@@ -451,7 +456,7 @@ const contextsByRepo = new WeakMap<RepoFiles, Promise<RegistryGenContext>>();
  * gets its own ctx and every read it makes is recorded.)
  */
 export function buildRegistryGenContext(
-  root: string,
+  root: AppPath,
   repo?: RepoFiles,
 ): Promise<RegistryGenContext> {
   if (repo === undefined) return buildContext(root, undefined);
@@ -469,7 +474,7 @@ export function buildRegistryGenContext(
 }
 
 async function buildContext(
-  root: string,
+  root: AppPath,
   repo: RepoFiles | undefined,
 ): Promise<RegistryGenContext> {
   const tree = await buildBarrelFreeTree(root);
@@ -964,12 +969,12 @@ export function committedRegistryBundle(
     : ctx.mainBundle;
 }
 
-export function collectedDirRegistryPath(def: DiscoveredCollectedDir): string {
-  return join(def.ownerDir, "core", `${def.dir}.generated.ts`);
+export function collectedDirRegistryPath(def: DiscoveredCollectedDir): AppPath {
+  return joinAppPath(def.ownerDir, "core", `${def.dir}.generated.ts`);
 }
 
 export async function generatePluginRegistry(opts: {
-  root: string;
+  root: AppPath;
   // Optional prebuilt context so the pipeline can share ONE tree walk between the
   // registry and eager-tier generators (both are pure functions of the same
   // barrel-free tree). Built here when absent so standalone callers still work.
@@ -1039,9 +1044,13 @@ const COMPOSITION_RUNTIME_DIRS = new Set([
 export function collectedDirNamedCompositionRegistryPath(
   def: DiscoveredCollectedDir,
   name: string,
-): string {
+): AppPath {
   assertCompositionName(name);
-  return join(def.ownerDir, "core", compositionRegistryFileName(def.dir, name));
+  return joinAppPath(
+    def.ownerDir,
+    "core",
+    compositionRegistryFileName(def.dir, name),
+  );
 }
 
 /**
@@ -1094,7 +1103,7 @@ export function compositionRegistryPath(
  * files (`compositionRegistryFileName`).
  */
 export function compositionRegistryRedirects(
-  root: string,
+  root: AppPath,
   composition: string,
 ): { committed: string; filtered: string }[] {
   if (composition === MAIN_COMPOSITION_ID) return [];
@@ -1110,7 +1119,7 @@ export function compositionRegistryRedirects(
  * the composition, as opposed to the code that imports them.
  */
 export function compositionFilteredRegistries(
-  root: string,
+  root: AppPath,
 ): { def: DiscoveredCollectedDir; committed: string }[] {
   return discoverCollectedDirs(root)
     .filter((def) => COMPOSITION_RUNTIME_DIRS.has(def.dir))
@@ -1118,7 +1127,7 @@ export function compositionFilteredRegistries(
 }
 
 export async function generateCompositionRegistry(opts: {
-  root: string;
+  root: AppPath;
   bundle: Set<string>;
   /**
    * The composition id these registries belong to. REQUIRED: every filtered
@@ -1183,12 +1192,13 @@ export function parseNamedCompositionRegistryFileName(
  * `core/` directories is the only way to see them.
  */
 export function listNamedCompositionRegistries(
-  root: string,
+  root: AppPath,
 ): Array<{ dir: string; name: string; file: string }> {
   const out: Array<{ dir: string; name: string; file: string }> = [];
   for (const def of discoverCollectedDirs(root)) {
     if (!COMPOSITION_RUNTIME_DIRS.has(def.dir)) continue;
-    const coreDir = join(def.ownerDir, "core");
+    // The plugin dir of a collected dir of this checkout.
+    const coreDir = joinAppPath(def.ownerDir, "core");
     let entries;
     try {
       entries = readdirSync(coreDir, { withFileTypes: true });

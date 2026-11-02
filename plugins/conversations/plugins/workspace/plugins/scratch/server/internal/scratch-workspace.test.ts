@@ -68,8 +68,8 @@ describe("scratchWorkspace.prepare", () => {
 });
 
 describe("scratchWorkspace.checkResumable", () => {
-  test("a gone dir is refused with its own message", () => {
-    const resumable = scratchWorkspace.checkResumable({
+  test("a gone dir is refused with its own message", async () => {
+    const resumable = await scratchWorkspace.checkResumable({
       attemptId: "att-gone",
       path: join(tmp, "att-gone"),
       spec: { kind: "scratch", profile: "test.scratch", input: {} },

@@ -1,4 +1,4 @@
-import { basename, join, relative } from "path";
+import { basename, relative } from "path";
 import {
   createFacet,
   getFacet,
@@ -23,6 +23,11 @@ import {
   walkFiles,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { type DbSchemaFacetData, dbSchemaFacetDef } from "../core";
+import {
+  asAppPath,
+  type AppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -94,7 +99,7 @@ interface RawExtRef {
 // table variable, the second a string literal name.
 const EXTENSION_ARGS_RE = /^\s*([A-Za-z_$][\w$]*)\s*,\s*"([^"]+)"/;
 
-function parseEntityExtensionCalls(dbFiles: string[]): RawExtRef[] {
+function parseEntityExtensionCalls(dbFiles: AppPath[]): RawExtRef[] {
   const out: RawExtRef[] = [];
   for (const f of dbFiles) {
     const raw = readIfExists(f);
@@ -214,8 +219,8 @@ export function parseEntityRefNames(
 // barrel) resolves it in `relate` — every ref any plugin declared in `extract`.
 const allRefNames = new Map<string, string>();
 
-function collectRefNames(pluginDir: string): Map<string, string> {
-  const files: string[] = [];
+function collectRefNames(pluginDir: AppPath): Map<string, string> {
+  const files: AppPath[] = [];
   walkFiles(pluginDir, files);
   const local = new Map<string, string>();
   for (const f of files) {
@@ -228,7 +233,7 @@ function collectRefNames(pluginDir: string): Map<string, string> {
 }
 
 function parseTableNamesFromDbFiles(
-  dbFiles: string[],
+  dbFiles: AppPath[],
   refNames: ReadonlyMap<string, string>,
 ): Map<string, string> {
   const out = new Map<string, string>();
@@ -244,9 +249,9 @@ function parseTableNamesFromDbFiles(
 // source and what is not (test code, sub-plugin trees, `node_modules`). A
 // private walker here once listed a `server/testing/` harness as DB schema,
 // because its file name contained "schema".
-function findDbFiles(pluginDir: string): string[] {
-  const files: string[] = [];
-  walkFiles(join(pluginDir, "server"), files);
+function findDbFiles(pluginDir: AppPath): AppPath[] {
+  const files: AppPath[] = [];
+  walkFiles(joinAppPath(pluginDir, "server"), files);
   return files
     .filter((full) => {
       const name = basename(full);
@@ -290,7 +295,10 @@ export default createFacet<DbSchemaFacetData>({
     for (const node of tree.byDir.values()) {
       const d = getFacet(node, dbSchemaFacetDef);
       if (!d) continue;
-      const tableMap = parseTableNamesFromDbFiles(d.dbFiles, allRefNames);
+      const tableMap = parseTableNamesFromDbFiles(
+        d.dbFiles.map(asAppPath),
+        allRefNames,
+      );
       d.tables = [...tableMap.entries()].map(([varName, name]) => ({
         name,
         varName,
@@ -310,7 +318,9 @@ export default createFacet<DbSchemaFacetData>({
     for (const node of tree.byDir.values()) {
       const data = getFacet(node, dbSchemaFacetDef);
       if (!data) continue;
-      for (const ref of parseEntityExtensionCalls(data.dbFiles)) {
+      for (const ref of parseEntityExtensionCalls(
+        data.dbFiles.map(asAppPath),
+      )) {
         // A defineExtension parent is always a cross-plugin barrel import.
         if (!ref.parentModule.startsWith("@plugins/")) continue;
         const r = resolvePluginSpecifier(tree, ref.parentModule);

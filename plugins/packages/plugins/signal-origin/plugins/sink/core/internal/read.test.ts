@@ -2,6 +2,10 @@ import { describe, expect, test } from "bun:test";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readSignalOriginLinesFrom } from "./read";
 
 function line(buildId: string, signal: string): string {
@@ -15,8 +19,10 @@ function line(buildId: string, signal: string): string {
   });
 }
 
-function fixtureFile(): string {
-  return join(mkdtempSync(join(tmpdir(), "signal-origin-")), "signal-origin.jsonl");
+function fixtureFile(): AppPath {
+  return asAppPath(
+    join(mkdtempSync(join(tmpdir(), "signal-origin-")), "signal-origin.jsonl"),
+  );
 }
 
 describe("readSignalOriginLines", () => {

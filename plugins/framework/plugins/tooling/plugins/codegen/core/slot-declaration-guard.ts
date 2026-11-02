@@ -1,5 +1,9 @@
 import { existsSync } from "fs";
-import { join, relative } from "path";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { relative } from "path";
 import {
   importBarrel,
   registerBarrelStubs,
@@ -80,7 +84,7 @@ import { buildBarrelFreeTree } from "./barrel-free-tree";
 const declaredByScopeAndRoot = new Map<string, Promise<SlotNaming>>();
 
 export function declareSlotsFromBarrels(
-  root: string,
+  root: AppPath,
   scope: SlotScope,
 ): Promise<SlotNaming> {
   const key = `${scope}\0${root}`;
@@ -93,7 +97,7 @@ export function declareSlotsFromBarrels(
 }
 
 async function runDeclarationPass(
-  root: string,
+  root: AppPath,
   scope: SlotScope,
 ): Promise<SlotNaming> {
   const tree = await buildBarrelFreeTree(root);
@@ -116,7 +120,8 @@ async function runDeclarationPass(
     // exist, and skipping the IMPORT (not just the declaration) is what keeps
     // the created-set free of ownerless slots the orphan guard would misread.
     if (bundle !== null && !bundle.has(node.id)) continue;
-    const barrelPath = join(node.dir, "web", "index.ts");
+    // A plugin dir of this checkout.
+    const barrelPath = joinAppPath(node.dir, "web", "index.ts");
     if (!existsSync(barrelPath)) continue;
     const mod = await importBarrel(barrelPath);
     const sources = declaredSlotSources(mod);
@@ -127,8 +132,8 @@ async function runDeclarationPass(
   // web-sdk has no `web/index.ts` — it IS the web runtime — and declares its own
   // root slots on its core barrel, which `buildPluginTree` also treats as its
   // web module. Same seed, so the two passes see the same set.
-  const seedDir = join(root, "plugins/framework/plugins/web-sdk");
-  const seedBarrel = join(seedDir, "core", "index.ts");
+  const seedDir = joinAppPath(root, "plugins/framework/plugins/web-sdk");
+  const seedBarrel = joinAppPath(seedDir, "core", "index.ts");
   const seedNode = tree.byDir.get(seedDir);
   if (seedNode && existsSync(seedBarrel)) {
     const sources = declaredSlotSources(await importBarrel(seedBarrel));
@@ -174,7 +179,7 @@ async function runDeclarationPass(
  * prevent. Re-enabling a plugin puts its slots back in the created-set and the
  * guard names any it forgot; that is the whole coverage story.
  */
-export async function assertSlotsDeclared(root: string): Promise<void> {
+export async function assertSlotsDeclared(root: AppPath): Promise<void> {
   // Runs (and memoizes) the registry declaration pass; the stamps it writes are
   // what the guard reads back off each created slot.
   await declareSlotsFromBarrels(root, "registry");
@@ -192,7 +197,7 @@ export async function assertSlotsDeclared(root: string): Promise<void> {
  * no key to look one up by. The directories that constructed slots are still
  * exactly where an author has to go, so that is what the report names.
  */
-async function slotBearingDirs(root: string): Promise<string[]> {
+async function slotBearingDirs(root: AppPath): Promise<string[]> {
   const tree = await buildBarrelFreeTree(root);
   const dirs: string[] = [];
   for (const node of tree.byDir.values()) {
@@ -203,7 +208,7 @@ async function slotBearingDirs(root: string): Promise<string[]> {
 }
 
 async function renderOrphanReport(
-  root: string,
+  root: AppPath,
   orphans: readonly SlotHandle[],
 ): Promise<string> {
   const byKind = new Map<string, number>();

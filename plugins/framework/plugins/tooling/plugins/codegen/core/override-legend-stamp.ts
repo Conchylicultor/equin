@@ -1,5 +1,8 @@
 import { existsSync, readdirSync, readFileSync } from "fs";
-import { join } from "path";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   APP_SCOPE_DIR,
   configFileOwner,
@@ -28,7 +31,7 @@ import { writeGenerated } from "./write-generated";
  * reports it by name.
  */
 export async function applyOverrideLegends(opts: {
-  configDir: string;
+  configDir: AppPath;
   descriptorsByOriginRel: Map<string, ConfigDescriptor>;
 }): Promise<string[]> {
   const stamped: string[] = [];
@@ -44,7 +47,7 @@ export async function applyOverrideLegends(opts: {
     const candidates = [
       owner.hier ? `${owner.hier}/${owner.name}.jsonc` : `${owner.name}.jsonc`,
     ];
-    const appDir = join(opts.configDir, owner.hier, APP_SCOPE_DIR);
+    const appDir = joinAppPath(opts.configDir, owner.hier, APP_SCOPE_DIR);
     if (existsSync(appDir)) {
       for (const entry of readdirSync(appDir, { withFileTypes: true })) {
         if (!entry.isDirectory()) continue;
@@ -54,7 +57,7 @@ export async function applyOverrideLegends(opts: {
       }
     }
     for (const rel of candidates) {
-      const file = join(opts.configDir, rel);
+      const file = joinAppPath(opts.configDir, rel);
       if (!existsSync(file)) continue;
       const raw = readFileSync(file, "utf8");
       if (!raw.startsWith("// @hash ")) continue;
@@ -69,10 +72,11 @@ export async function applyOverrideLegends(opts: {
 
 /** Re-stamp every override legend under `<root>/config`. */
 export async function stampOverrideLegends(opts: {
-  root: string;
+  root: AppPath;
 }): Promise<void> {
   await applyOverrideLegends({
-    configDir: join(opts.root, "config"),
+    // `root`: the checkout root the caller works in.
+    configDir: joinAppPath(opts.root, "config"),
     descriptorsByOriginRel: await loadConfigDescriptorsByOriginPath({
       root: opts.root,
     }),

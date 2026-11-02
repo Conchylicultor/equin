@@ -11,9 +11,14 @@ import {
   planBrowserHosts,
   type BrowserHostPlan,
 } from "./browser-hosts";
+import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname } from "node:path";
 import {
   BROWSER_HOST_ENTRY_KIND,
   FORCED_VENDOR_SPECS,
@@ -69,7 +74,7 @@ export interface FleetSource {
   webEntries: RegistryEntryRecord[];
   deferredPaths: ReadonlySet<string>;
   /** The registry module the registry artifact is built from (absolute path). */
-  registryFile: string;
+  registryFile: AppPath;
   /**
    * Store slug for the registry artifact. The `@composition-web-registry`
    * import-map alias stays FIXED across sources (it is the seam the entry
@@ -80,13 +85,13 @@ export interface FleetSource {
 }
 
 /** The committed full registry — the source every plain build plans from. */
-export async function defaultFleetSource(root: string): Promise<FleetSource> {
-  const registryFile = join(root, WEB_SDK_CORE_REL, "web.generated.ts");
+export async function defaultFleetSource(root: AppPath): Promise<FleetSource> {
+  const registryFile = joinAppPath(root, WEB_SDK_CORE_REL, "web.generated.ts");
   const { webEntries } = (await import(registryFile)) as {
     webEntries: RegistryEntryRecord[];
   };
   const { DEFERRED_PLUGIN_PATHS } = (await import(
-    join(root, WEB_SDK_CORE_REL, "web-tiers.generated.ts")
+    joinAppPath(root, WEB_SDK_CORE_REL, "web-tiers.generated.ts")
   )) as { DEFERRED_PLUGIN_PATHS: ReadonlySet<string> };
   return {
     webEntries,
@@ -118,11 +123,11 @@ export async function defaultFleetSource(root: string): Promise<FleetSource> {
  * a plain `build` and an explicit main-composition build produce the same artifact.
  */
 export async function compositionFleetSource(opts: {
-  root: string;
+  root: AppPath;
   name: string;
 }): Promise<FleetSource> {
   if (opts.name === MAIN_COMPOSITION_ID) return defaultFleetSource(opts.root);
-  const registryFile = join(
+  const registryFile = joinAppPath(
     opts.root,
     WEB_SDK_CORE_REL,
     `web.composition.${opts.name}.generated.ts`,
@@ -137,7 +142,7 @@ export async function compositionFleetSource(opts: {
     webEntries: RegistryEntryRecord[];
   };
   const { DEFERRED_PLUGIN_PATHS } = (await import(
-    join(opts.root, WEB_SDK_CORE_REL, "web-tiers.generated.ts")
+    joinAppPath(opts.root, WEB_SDK_CORE_REL, "web-tiers.generated.ts")
   )) as { DEFERRED_PLUGIN_PATHS: ReadonlySet<string> };
   return {
     webEntries,
@@ -154,7 +159,7 @@ export interface PlannedTarget extends ArtifactBuildTarget {
 export interface RegistryTargetPlan {
   dirName: string;
   inputsHash: string;
-  registryFile: string;
+  registryFile: AppPath;
   needsBuild: boolean;
 }
 
@@ -187,10 +192,10 @@ export function artifactUrl(dirName: string): string {
 export function coEntriesFor(
   kind: ArtifactKind,
   pluginPath: string,
-  pluginDir: string,
+  pluginDir: AppPath,
 ): CoEntry[] {
   return cobuiltFoldersOf(kind).flatMap((folder) => {
-    const entryFile = join(pluginDir, folder, "index.ts");
+    const entryFile = joinAppPath(pluginDir, folder, "index.ts");
     return existsSync(entryFile)
       ? [{ folder, entryFile, specifier: `@plugins/${pluginPath}/${folder}` }]
       : [];
@@ -230,15 +235,15 @@ export function eagerWebTargets(
  * store writes — the caller owns cache persistence and store mutation.
  */
 export async function planFleet(opts: {
-  root: string;
+  root: AppPath;
   minify: boolean;
   cache: FingerprintCache;
   /** Which registry + entry set to plan; defaults to the committed full registry. */
   source?: FleetSource;
 }): Promise<FleetPlan> {
   const { root, cache } = opts;
-  const pluginsRoot = join(root, "plugins");
-  const webSrcDir = join(root, WEB_CORE_REL, "web");
+  const pluginsRoot = joinAppPath(root, "plugins");
+  const webSrcDir = joinAppPath(root, WEB_CORE_REL, "web");
 
   const source = opts.source ?? (await defaultFleetSource(root));
   const { webEntries, registryFile } = source;
@@ -252,11 +257,13 @@ export async function planFleet(opts: {
   const target = async (
     kind: ArtifactKind,
     pluginPath: string | null,
-    entryFile: string,
+    entryFile: AppPath,
     specifier: string | null,
   ): Promise<PlannedTarget> => {
     const slug = pluginPath ? pluginIdOf(pluginPath) : "web-core";
-    const pluginDir = pluginPath ? join(pluginsRoot, pluginPath) : webSrcDir;
+    const pluginDir = pluginPath
+      ? joinAppPath(pluginsRoot, pluginPath)
+      : webSrcDir;
     const { ownHash, globRoots } = await ownHashFor({
       cacheKey: `${pluginPath ?? "__entry"}|${kind}`,
       pluginDir,
@@ -292,7 +299,7 @@ export async function planFleet(opts: {
       target(
         "web",
         e.pluginPath,
-        join(pluginsRoot, e.pluginPath, "web", "index.ts"),
+        joinAppPath(pluginsRoot, e.pluginPath, "web", "index.ts"),
         `@plugins/${e.pluginPath}/web`,
       ),
     ),
@@ -300,7 +307,7 @@ export async function planFleet(opts: {
   const entryTarget = await target(
     "entry",
     null,
-    join(webSrcDir, "main.tsx"),
+    joinAppPath(webSrcDir, "main.tsx"),
     null,
   );
 
@@ -380,7 +387,7 @@ export function closureSpecsOf(meta: ArtifactMeta): string[] {
  * missing artifact is the caller's verdict).
  */
 export async function resolveBarrelClosure(opts: {
-  pluginsRoot: string;
+  pluginsRoot: AppPath;
   identityHash: string;
   cache: FingerprintCache;
   servedSpecs: ReadonlySet<string | null>;
@@ -408,8 +415,8 @@ export async function resolveBarrelClosure(opts: {
         const slash = rel.lastIndexOf("/");
         const pluginPath = rel.slice(0, slash);
         const kind = rel.slice(slash + 1);
-        const pluginDir = join(opts.pluginsRoot, pluginPath);
-        const barrelFile = join(pluginDir, kind, "index.ts");
+        const pluginDir = joinAppPath(opts.pluginsRoot, pluginPath);
+        const barrelFile = joinAppPath(pluginDir, kind, "index.ts");
         if (slash <= 0 || !existsSync(barrelFile)) {
           throw new Error(
             `artifact closure: emitted static import "${spec}" is not a folder barrel ` +
@@ -445,16 +452,16 @@ export async function resolveBarrelClosure(opts: {
  * files, plus `shared/` and the glob roots they declare, are its address).
  */
 export async function planBarrelTarget(opts: {
-  pluginsRoot: string;
+  pluginsRoot: AppPath;
   pluginPath: string;
   kind: ArtifactKind;
-  entryFile: string;
+  entryFile: AppPath;
   specifier: string | null;
   identityHash: string;
   cache: FingerprintCache;
 }): Promise<PlannedTarget> {
   const { pluginPath, kind } = opts;
-  const pluginDir = join(opts.pluginsRoot, pluginPath);
+  const pluginDir = joinAppPath(opts.pluginsRoot, pluginPath);
   const { ownHash, globRoots } = await ownHashFor({
     cacheKey: `${pluginPath}|${kind}`,
     pluginDir,
@@ -490,7 +497,7 @@ export async function planBarrelTarget(opts: {
  * Returns the entry and the targets this closure added.
  */
 export async function planHostClosure(opts: {
-  pluginsRoot: string;
+  pluginsRoot: AppPath;
   host: BrowserHostPlan;
   identityHash: string;
   cache: FingerprintCache;
@@ -525,7 +532,7 @@ export async function planHostClosure(opts: {
  * specifier is its own. Throws when a co-built folder has no host barrel —
  * `exhibits/` without `web/` has nothing to be co-built into.
  */
-export function hostSpecOf(spec: string, pluginsRoot: string): string {
+export function hostSpecOf(spec: string, pluginsRoot: AppPath): string {
   const rel = spec.slice("@plugins/".length);
   const slash = rel.lastIndexOf("/");
   if (slash <= 0) return spec;
@@ -533,7 +540,7 @@ export function hostSpecOf(spec: string, pluginsRoot: string): string {
   const folder = rel.slice(slash + 1);
   const host = cobuildHostOf(folder);
   if (host === null) return spec;
-  const hostBarrel = join(pluginsRoot, pluginPath, host, "index.ts");
+  const hostBarrel = joinAppPath(pluginsRoot, pluginPath, host, "index.ts");
   if (!existsSync(hostBarrel)) {
     throw new Error(
       `artifact closure: "${spec}" is imported, but plugins/${pluginPath} has ${folder}/ ` +
@@ -541,10 +548,10 @@ export function hostSpecOf(spec: string, pluginsRoot: string): string {
         `of its plugin's ${host} artifact, so a plugin contributing one must have a ${host}/ barrel.`,
     );
   }
-  if (!existsSync(join(pluginsRoot, pluginPath, folder, "index.ts"))) {
+  if (!existsSync(joinAppPath(pluginsRoot, pluginPath, folder, "index.ts"))) {
     throw new Error(
       `artifact closure: emitted import "${spec}" is not a folder barrel ` +
-        `(expected ${join(pluginsRoot, pluginPath, folder, "index.ts")}).`,
+        `(expected ${joinAppPath(pluginsRoot, pluginPath, folder, "index.ts")}).`,
     );
   }
   return `@plugins/${pluginPath}/${host}`;
@@ -557,20 +564,20 @@ export function hostSpecOf(spec: string, pluginsRoot: string): string {
  * resolve under bun's isolated installs), plus the forced always-vendored specs.
  */
 export async function collectVendorRequests(opts: {
-  root: string;
-  pluginsRoot: string;
+  root: AppPath;
+  pluginsRoot: AppPath;
   /** web + core-closure + entry targets (NOT the registry). */
   targets: PlannedTarget[];
   metaOf: (dirName: string) => ArtifactMeta;
 }): Promise<VendorSpecRequest[]> {
-  const requests = new Map<string, string>();
+  const requests = new Map<string, AppPath>();
   for (const t of [...opts.targets].sort((a, b) =>
     a.dirName < b.dirName ? -1 : 1,
   )) {
     const meta = opts.metaOf(t.dirName);
     const dir = t.pluginPath
-      ? join(opts.pluginsRoot, t.pluginPath)
-      : join(opts.root, WEB_CORE_REL);
+      ? joinAppPath(opts.pluginsRoot, t.pluginPath)
+      : joinAppPath(opts.root, WEB_CORE_REL);
     for (const spec of [...allStaticImports(meta), ...meta.dynamicImports]) {
       if (isBareSpecifier(spec) && !requests.has(spec)) requests.set(spec, dir);
     }
@@ -581,8 +588,12 @@ export async function collectVendorRequests(opts: {
       // react-dom package dir, not the repo root, under isolated installs.
       if (spec === "scheduler") {
         const { createRequire } = await import("node:module");
-        const req = createRequire(join(opts.root, "package.json"));
-        requests.set(spec, join(req.resolve("react-dom/package.json"), ".."));
+        const req = createRequire(joinAppPath(opts.root, "package.json"));
+        // The react-dom package dir of this app's own install.
+        requests.set(
+          spec,
+          asAppPath(dirname(req.resolve("react-dom/package.json"))),
+        );
       } else {
         requests.set(spec, opts.root);
       }

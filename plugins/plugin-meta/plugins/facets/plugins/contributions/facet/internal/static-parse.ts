@@ -19,6 +19,11 @@ import type {
   ServerCompanionKind,
   SourceRef,
 } from "../../core";
+import {
+  asAppPath,
+  type AppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -408,11 +413,11 @@ export function routeDeclarationsIn(src: string): RouteDeclaration[] {
  * cross-plugin half is joined in `relate()`; this only ever reports what this
  * plugin itself declares.
  */
-export function parseRouteDeclarations(pluginDir: string): RouteDeclaration[] {
+export function parseRouteDeclarations(pluginDir: AppPath): RouteDeclaration[] {
   const out: RouteDeclaration[] = [];
-  const files: string[] = [];
+  const files: AppPath[] = [];
   for (const runtime of ["core", "shared", "web"]) {
-    walkFiles(join(pluginDir, runtime), files);
+    walkFiles(joinAppPath(pluginDir, runtime), files);
   }
   for (const f of files) {
     const src = readIfExists(f);
@@ -524,10 +529,10 @@ export function paneDeclarationsIn(
 }
 
 /** Every `Pane.define()` in one plugin's `web/`. Panes live nowhere else. */
-export function parsePaneDeclarations(pluginDir: string): PaneDeclaration[] {
+export function parsePaneDeclarations(pluginDir: AppPath): PaneDeclaration[] {
   const out: PaneDeclaration[] = [];
-  const files: string[] = [];
-  walkFiles(join(pluginDir, "web"), files);
+  const files: AppPath[] = [];
+  walkFiles(joinAppPath(pluginDir, "web"), files);
   for (const f of files) {
     const src = readIfExists(f);
     if (src) out.push(...paneDeclarationsIn(src, f));
@@ -545,12 +550,12 @@ export function parsePaneDeclarations(pluginDir: string): PaneDeclaration[] {
  * a browser host never boots, and nothing needs one — declare it in `server/`.
  */
 export function parseServerCompanionKinds(
-  pluginDir: string,
+  pluginDir: AppPath,
 ): ServerCompanionKind[] {
   const out: ServerCompanionKind[] = [];
   for (const runtime of ["server", "machine"] as const) {
-    const files: string[] = [];
-    walkFiles(join(pluginDir, runtime), files);
+    const files: AppPath[] = [];
+    walkFiles(joinAppPath(pluginDir, runtime), files);
     for (const f of files) {
       const src = readIfExists(f);
       if (!src) continue;
@@ -576,7 +581,7 @@ export function parseServerCompanionKinds(
  * binding the kind is declared under.
  */
 function companionCallsIn(
-  file: string,
+  file: AppPath,
 ): { callee: string; token: SourceRef | null }[] {
   const src = readIfExists(file);
   if (!src) return [];
@@ -617,14 +622,14 @@ function companionCallsIn(
 export function parseServerCompanions(
   pluginDir: string,
 ): ServerCompanionContribution[] {
-  const machine = join(pluginDir, "machine", "index.ts");
+  const machine = asAppPath(join(pluginDir, "machine", "index.ts"));
   const strayed = companionCallsIn(machine);
   if (strayed.length > 0)
     throw new Error(
       `${machine}: \`${strayed[0]!.callee}({ companion: true })\` in \`machine/\` — a companion is contributed ` +
         "from the plugin's portable `server/index.ts`: a browser host boots its owner but never a `machine/` half.",
     );
-  const file = join(pluginDir, "server", "index.ts");
+  const file = asAppPath(join(pluginDir, "server", "index.ts"));
   return companionCallsIn(file).map(({ callee, token }) => {
     if (token === null)
       throw new Error(

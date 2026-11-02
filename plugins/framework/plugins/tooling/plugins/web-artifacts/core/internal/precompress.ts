@@ -5,9 +5,12 @@
 // `serveStaticFile`), never compresses a file per request.
 
 import { readdirSync, statSync } from "node:fs";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readFile, writeFile } from "node:fs/promises";
 import { availableParallelism } from "node:os";
-import { join } from "node:path";
 import { promisify } from "node:util";
 import { brotliCompress, constants, gzip } from "node:zlib";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
@@ -60,7 +63,7 @@ export function isCompressible(name: string): boolean {
   return COMPRESSIBLE.has(extOf(name));
 }
 
-async function compressFile(file: string): Promise<void> {
+async function compressFile(file: AppPath): Promise<void> {
   const bytes = await readFile(file);
   const [br, gzipped] = await Promise.all([
     brotli(bytes, {
@@ -81,7 +84,7 @@ async function compressFile(file: string): Promise<void> {
  * on files before they become visible — a store tmp dir before its rename, a
  * staging dist before its swap — so no reader ever sees one without them.
  */
-export async function precompressFiles(files: string[]): Promise<void> {
+export async function precompressFiles(files: AppPath[]): Promise<void> {
   const due = files.filter(
     (f) => isCompressible(f) && statSync(f).size >= MIN_BYTES,
   );
@@ -96,13 +99,13 @@ export async function precompressFiles(files: string[]): Promise<void> {
  * in place, on each tree publish.
  */
 export async function precompressDir(
-  dir: string,
+  dir: AppPath,
   precompressed: ReadonlySet<string> = new Set(),
 ): Promise<void> {
-  const files: string[] = [];
-  const walk = (d: string): void => {
+  const files: AppPath[] = [];
+  const walk = (d: AppPath): void => {
     for (const dirent of readdirSync(d, { withFileTypes: true })) {
-      const path = join(d, dirent.name);
+      const path = joinAppPath(d, dirent.name);
       if (dirent.isDirectory()) walk(path);
       else if (dirent.isFile() && !precompressed.has(path)) files.push(path);
     }

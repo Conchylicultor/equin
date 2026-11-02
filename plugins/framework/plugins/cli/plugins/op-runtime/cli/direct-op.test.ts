@@ -1,4 +1,5 @@
 import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { describe, expect, test } from "bun:test";
 import type {
   Grant,
@@ -130,7 +131,7 @@ function makeHarness(
       events.push(`marker:${op}:publish`);
       let released = false;
       return {
-        path: "/dev/null",
+        path: asAppPath("/dev/null"),
         release: () => {
           if (released) return;
           released = true;

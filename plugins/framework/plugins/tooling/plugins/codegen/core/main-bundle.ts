@@ -4,6 +4,7 @@ import {
   resolveComposition,
   type EdgeGraph,
 } from "@plugins/plugin-meta/plugins/closure/core";
+import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   compositionsConfig,
   manifestItemToManifest,
@@ -38,7 +39,7 @@ const COMPOSITION_PLUGIN_ID = asPluginId("plugin-meta.composition");
  * is refused for main's row) and which would be silently inert if it did.
  */
 export function readCompositionManifestsFromDisk(
-  root: string,
+  root: AppPath,
 ): CompositionManifestItem[] {
   return readGitLayerConfig(compositionsConfig, {
     root,
@@ -82,7 +83,7 @@ export interface MainComposition {
  */
 export function resolveMainComposition(
   graph: EdgeGraph,
-  root: string,
+  root: AppPath,
 ): MainComposition {
   const items = readCompositionManifestsFromDisk(root);
   const mainItem = items.find((m) => m.id === MAIN_COMPOSITION_ID);
@@ -131,12 +132,12 @@ export function resolveMainComposition(
  *  have no other use for the edge graph. */
 export function mainComposition(
   tree: PluginTree,
-  root: string,
+  root: AppPath,
 ): MainComposition {
   return resolveMainComposition(classifyEdges(tree), root);
 }
 
 /** Just the membership set — the common ask (`bundle.has(id)` = "in the app"). */
-export function mainBundle(tree: PluginTree, root: string): Set<PluginId> {
+export function mainBundle(tree: PluginTree, root: AppPath): Set<PluginId> {
   return mainComposition(tree, root).bundle;
 }

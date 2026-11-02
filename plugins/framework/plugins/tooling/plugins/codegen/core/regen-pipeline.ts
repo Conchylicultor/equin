@@ -1,4 +1,5 @@
 import { setPreBarrelImportGuard } from "@plugins/plugin-meta/plugins/barrel-import/core";
+import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { generateBarrelStubs } from "./barrel-stubs-gen";
 import { generateBrowserHosts } from "./browser-host-gen";
 import { generateConfigOrigins } from "./config-origin-gen";
@@ -71,7 +72,7 @@ export type CodegenStep = (
 const runInline: CodegenStep = (_id, _label, run) => run();
 
 export interface RegenCodegenOptions {
-  root: string;
+  root: AppPath;
   /** Optional per-step wrapper (build threads its profiler through this). */
   onStep?: CodegenStep;
 }

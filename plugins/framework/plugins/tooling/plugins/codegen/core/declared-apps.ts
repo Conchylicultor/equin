@@ -1,5 +1,8 @@
 import { existsSync, readdirSync, readFileSync } from "fs";
-import { join } from "path";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   isTestCodePath,
   type PluginId,
@@ -51,14 +54,14 @@ export function readDefineApp(node: PluginNode): DeclaredApp | null {
  * having walked the tree.
  */
 export function readDefineAppIn(
-  pluginDir: string,
+  pluginDir: AppPath,
   plugin: PluginId,
 ): DeclaredApp | null {
-  const coreDir = join(pluginDir, "core");
+  const coreDir = joinAppPath(pluginDir, "core");
   if (!existsSync(coreDir)) return null;
   for (const f of readdirSync(coreDir).sort()) {
     if (!f.endsWith(".ts") || isTestCodePath([f])) continue;
-    const file = join(coreDir, f);
+    const file = joinAppPath(coreDir, f);
     // Genuine calls only — a `defineApp(…)` in a comment or string never counts —
     // with an object-literal argument (not the `function defineApp(def: …)`
     // declaration itself).

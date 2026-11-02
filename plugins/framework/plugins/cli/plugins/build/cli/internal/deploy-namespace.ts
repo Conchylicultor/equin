@@ -1,3 +1,7 @@
+import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import os from "node:os";
 import { join, resolve } from "node:path";
 import { z } from "zod";
@@ -80,7 +84,7 @@ export type DeployNamespaceResult =
 export interface DeployNamespaceOptions {
   target: BuildTarget;
   /** The checkout being built. */
-  root: string;
+  root: AppPath;
   /** Only ever the `.build.lock`'s home — see `BuildWebDistOptions.webDir`. */
   webDir: string;
   buildId: string;
@@ -562,7 +566,7 @@ export async function deployNamespace(
     server: resolve(root, SERVER_CORE_RELATIVE),
     web: artifact.livePath,
     // This build's own Bun, under the namespace's name.
-    command: namedBackendCommand(ns, process.execPath),
+    command: namedBackendCommand(ns, asAppPath(process.execPath)),
     // The `server` tree is this checkout's, shared with every namespace it
     // serves, so this is the only thing that tells the spawned backend WHICH
     // registry to load — the committed one for the main composition, the

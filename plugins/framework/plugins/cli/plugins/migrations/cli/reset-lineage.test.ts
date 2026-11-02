@@ -11,6 +11,10 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import {
+  type AppPath,
+  asAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   NULL_SNAPSHOT_ID,
   SCHEMA_SNAPSHOT_FILE,
   type Snapshot,
@@ -41,9 +45,9 @@ const BASE = "20260101_000000_0a0a0a0a__base";
 const O1 = "20261020_110000_38bc8c97__add_c1";
 const O2 = "20261020_114900_f09303fa__add_c2";
 
-let dir: string;
+let dir: AppPath;
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), "reset-lineage-"));
+  dir = asAppPath(mkdtempSync(join(tmpdir(), "reset-lineage-")));
   mkdirSync(join(dir, "meta"));
 });
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
@@ -55,7 +59,7 @@ let bodies: ReturnType<typeof snapshotBodies>;
 beforeEach(() => {
   bodies = snapshotBodies(dir, dir);
 });
-const readResetPrior = (d: string, published: ReadonlySet<string>) =>
+const readResetPrior = (d: AppPath, published: ReadonlySet<string>) =>
   readPrior(d, published, bodies);
 const resetLineage = (
   d: string,

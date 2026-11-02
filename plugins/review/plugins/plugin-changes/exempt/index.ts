@@ -3,10 +3,7 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 export default [
   {
     rule: "boundaries/no-platform-api",
-    paths: [
-      "server/internal/push-plugin-changes.ts",
-      "server/internal/main-plugins-dir.ts",
-    ],
+    paths: ["server/internal/push-plugin-changes.ts"],
     kind: "debt",
     task: "task-1792338443-riwqev",
     reason: "not yet split into server/ + machine/",

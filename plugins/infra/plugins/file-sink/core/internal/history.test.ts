@@ -5,12 +5,17 @@ import { join } from "node:path";
 import { defineFileSink } from "./file-sink";
 import type { FileSink } from "./types";
 import { historyCutAt, readHistory, statHistory } from "./history";
+import {
+  type AppPath,
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
-let dir: string;
+let dir: AppPath;
 let n = 0;
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), "file-sink-history-"));
+  dir = asAppPath(mkdtempSync(join(tmpdir(), "file-sink-history-")));
 });
 afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
@@ -24,7 +29,7 @@ function rotatingSink(): FileSink {
   return defineFileSink({
     id: `history-test-${n++}`,
     description: "test",
-    path: join(dir, "h.jsonl"),
+    path: joinAppPath(dir, "h.jsonl"),
     maxBytes: line(0).length * 4 + 4,
     keep: 3,
   });
@@ -91,7 +96,7 @@ describe("readHistory", () => {
   });
 
   test("an unterminated tail (an append in flight) is not a line", async () => {
-    const path = join(dir, "t.jsonl");
+    const path = joinAppPath(dir, "t.jsonl");
     appendFileSync(path, `${line(0)}\n${line(1)}\n{"t":3,"li`);
     const page = await readHistory(path, {
       before: null,
@@ -120,9 +125,9 @@ describe("readHistory", () => {
   });
 
   test("a missing history reads as no lines", async () => {
-    expect(await statHistory(join(dir, "none.jsonl"))).toEqual([]);
+    expect(await statHistory(joinAppPath(dir, "none.jsonl"))).toEqual([]);
     expect(
-      await readHistory(join(dir, "none.jsonl"), {
+      await readHistory(joinAppPath(dir, "none.jsonl"), {
         before: null,
         notBefore: null,
         limit: 5,

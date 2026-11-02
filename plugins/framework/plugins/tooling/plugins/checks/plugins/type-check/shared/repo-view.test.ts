@@ -12,6 +12,10 @@
  *   5. a file whose bytes changed after the tree was taken cannot be read.
  */
 
+import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import {
   mkdirSync,
@@ -31,7 +35,7 @@ import {
   type ReadCheckTree,
 } from "./repo-view";
 
-let root = "";
+let root: AppPath = asAppPath("");
 
 function write(rel: string, content: string): void {
   const abs = join(root, rel);
@@ -65,7 +69,7 @@ const OPTIONS: ts.CompilerOptions = {
 
 beforeAll(async () => {
   // The real path: tsc names files by it, and so does the view.
-  root = realpathSync(mkdtempSync(join(tmpdir(), "repo-view-")));
+  root = asAppPath(realpathSync(mkdtempSync(join(tmpdir(), "repo-view-"))));
   write(
     "tsconfig.json",
     JSON.stringify({

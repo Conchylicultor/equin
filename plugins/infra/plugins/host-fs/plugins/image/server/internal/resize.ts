@@ -1,8 +1,11 @@
+import {
+  type AppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync } from "node:fs";
 import { rename, stat, utimes, writeFile } from "node:fs/promises";
 import { cpus } from "node:os";
-import { join } from "node:path";
 import sharp from "sharp";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import {
@@ -43,9 +46,9 @@ function cacheKey(file: Opened, edge: ResizedEdge): string {
     .digest("hex");
 }
 
-function cached(dir: string, key: string): Copy | null {
+function cached(dir: AppPath, key: string): Copy | null {
   for (const type of ["image/jpeg", "image/webp"] as const) {
-    const file = join(dir, `${key}.${EXT[type]}`);
+    const file = joinAppPath(dir, `${key}.${EXT[type]}`);
     if (existsSync(file)) return { file, type };
   }
   return null;
@@ -79,7 +82,7 @@ export async function resizeBytes(
 class UndecodableImageError extends Error {}
 
 async function build(
-  dir: string,
+  dir: AppPath,
   file: Opened,
   edge: ResizedEdge,
   key: string,
@@ -99,8 +102,8 @@ async function build(
       throw err;
     }
     mkdirSync(dir, { recursive: true });
-    const target = join(dir, `${key}.${EXT[out.type]}`);
-    const tmp = join(dir, `.tmp-${key}-${process.pid}`);
+    const target = joinAppPath(dir, `${key}.${EXT[out.type]}`);
+    const tmp = joinAppPath(dir, `.tmp-${key}-${process.pid}`);
     await writeFile(tmp, out.data);
     await rename(tmp, target);
     return { file: target, type: out.type };
@@ -118,7 +121,7 @@ async function touch(file: string): Promise<void> {
  * `GET /api/host-fs/image/resized?path&edge&v` — a raw handler: the response is
  * image bytes with their own status and headers.
  */
-export function makeResizedHandler(dir: () => string) {
+export function makeResizedHandler(dir: () => AppPath) {
   return async function handleResized(req: Request): Promise<Response> {
     const params = new URL(req.url, "http://localhost").searchParams;
     const raw = params.get("path");

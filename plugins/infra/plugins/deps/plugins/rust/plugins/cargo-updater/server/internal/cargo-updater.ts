@@ -1,3 +1,7 @@
+import {
+  type AppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { z } from "zod";
@@ -55,7 +59,7 @@ interface Crate {
 }
 
 /** Every `rust/` crate in the checkout with a lock (tracked, or new and not ignored). */
-export async function cargoCrates(root: string): Promise<Crate[]> {
+export async function cargoCrates(root: AppPath): Promise<Crate[]> {
   const result = await spawnCaptured(
     [
       "git",
@@ -207,7 +211,7 @@ async function crateReleases(pkg: string): Promise<CrateRelease[]> {
 }
 
 async function cargo(
-  root: string,
+  root: AppPath,
   args: readonly string[],
   timeoutMs: number,
 ): Promise<string> {
@@ -226,8 +230,8 @@ async function cargo(
   return result.stdout;
 }
 
-const manifest = (root: string, crate: Crate): string =>
-  join(root, crate.dir, "Cargo.toml");
+const manifest = (root: AppPath, crate: Crate): string =>
+  joinAppPath(root, crate.dir, "Cargo.toml");
 
 /**
  * A move's name: `<plugin>:<crate>`, or `<plugin>:<crate>@<from>` when the
@@ -258,13 +262,13 @@ interface CrateRow {
 
 /** What one crate's lock could move to, every row with its `from`. */
 async function detectCrate(
-  root: string,
+  root: AppPath,
   crate: Crate,
   cutoff: string,
   today: string,
 ): Promise<CrateRow[]> {
   const lock = parseCargoLock(
-    readFileSync(join(root, crate.dir, "Cargo.lock"), "utf8"),
+    readFileSync(joinAppPath(root, crate.dir, "Cargo.lock"), "utf8"),
   );
   const fromCratesIo = new Set(
     lock
@@ -420,7 +424,7 @@ export function cargoRowFates(
 
 /** A crate's rows with each movable one probed: blocked rows marked, units set. */
 async function analyzeCrate(
-  root: string,
+  root: AppPath,
   crate: Crate,
   cutoff: string,
   today: string,
@@ -493,7 +497,7 @@ async function analyzeCrate(
 
 /** Every crate's analyzed rows, under one cooldown cutoff. */
 async function analyze(
-  root: string,
+  root: AppPath,
 ): Promise<Array<{ outdated: Outdated; unit: string | undefined }>> {
   const now = new Date();
   const cutoff = cargoCutoff(now);
@@ -573,7 +577,7 @@ export const cargoUpdater: Updater = {
     for (const crate of await cargoCrates(root)) {
       const mine = moves.filter((m) => m.name.startsWith(`${crate.label}:`));
       if (mine.length === 0) continue;
-      const lockPath = join(root, crate.dir, "Cargo.lock");
+      const lockPath = joinAppPath(root, crate.dir, "Cargo.lock");
       for (const m of mine) {
         if (m.from === null) {
           throw new Error(`cargo move ${m.name} has no current release`);

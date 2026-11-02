@@ -1,4 +1,4 @@
-import { join } from "node:path";
+import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   defineFileSink,
   sanitizeChannel,
@@ -39,7 +39,8 @@ export function channelFileSink(channel: {
     sink = defineFileSink({
       id: channel.id,
       description: channel.description,
-      path: () => join(logsDir(), sanitizeChannel(channel.id) + ".jsonl"),
+      path: () =>
+        joinAppPath(logsDir(), sanitizeChannel(channel.id) + ".jsonl"),
     });
     sinks.set(channel.id, sink);
   }

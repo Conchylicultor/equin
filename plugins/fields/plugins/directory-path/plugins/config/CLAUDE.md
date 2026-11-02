@@ -34,7 +34,6 @@ from the slot owner (`@plugins/config_v2/plugins/fields/web`).
     - `fields/directory-path.directoryPathFieldType`
     - `infra/host-fs/user-path.asUserPath`
     - `infra/host-fs/user-path.UserPath`
-    - `infra/host-fs/user-path.UserPathSchema`
   - Exports (types): `DirPathFieldDef`
   - Exports (values):
     - `dirPathField`

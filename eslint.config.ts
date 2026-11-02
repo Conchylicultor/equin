@@ -1,3 +1,4 @@
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 /**
  * Repo ESLint config — for the editor/IDE integration and ad-hoc `bunx eslint`.
  *
@@ -44,7 +45,7 @@ const { buildLintConfig } = await jiti.import<{
 // Annotated so the declaration emitter can name the export through eslint's
 // public types rather than a non-portable path into `@eslint/core` (TS2883).
 const config: Linter.Config[] = await buildLintConfig({
-  root: here,
+  root: asAppPath(here),
   typeSource: { projectService: true },
   exemptions: "config-off",
 });

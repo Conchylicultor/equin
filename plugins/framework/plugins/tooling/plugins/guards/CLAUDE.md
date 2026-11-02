@@ -239,6 +239,9 @@ can blind or deafen all of them at once.
     - `framework/tooling/collected-dir.loadCollectedDir`
     - `framework/tooling/guards/refusal-format.joinRefusal`
     - `framework/tooling/guards/refusal-format.REFUSAL_HEADER`
+    - `infra/host-fs/user-path.AppPath`
+    - `infra/host-fs/user-path.asAppPath`
+    - `infra/host-fs/user-path.joinAppPath`
     - `infra/launcher/env-names.envName`
     - `infra/launcher/env-names.readEnv`
     - `infra/namespace.asNamespace`
@@ -293,7 +296,8 @@ can blind or deafen all of them at once.
     - `framework/tooling/e2e-harness`
 - Exemptions:
   - Exempts itself from:
-    - `guard-path-safety/no-adhoc-path-resolve` — `core/guards/main-edits.ts`, `core/guards/poll-loop.ts` (sanctioned)
+    - `guard-path-safety/no-adhoc-path-resolve` — `core/guards/main-edits.ts` (sanctioned)
+    - `user-path/no-sync-fs` — `core/context.ts`, `core/git-target.ts`, `core/guards/poll-loop.ts` (sanctioned)
     - `python/no-system-python` — `core` (sanctioned)
     - `boundaries/no-platform-api` — `core/agent-ops.ts`, `core/argv.ts`, `core/context.ts`, `core/git-target.ts`, `core/informed-once.ts`, `core/guards/git-diff-main.ts`, `core/guards/main-edits.ts`, `core/guards/poll-loop.ts`, `core/parse-shell.ts`, `core/stop-guard.ts` (debt)
 - Sub-plugins:

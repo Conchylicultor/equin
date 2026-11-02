@@ -46,9 +46,9 @@ describe("distNames (path arithmetic)", () => {
     const names = distNames("/home/u/.equin/worktrees/sonata/web", 7);
     expect(names.parent).toBe("/home/u/.equin/worktrees/sonata");
     expect(names.releaseName).toBe("web.live.7");
-    expect(distStagingPath("/home/u/.equin/worktrees/sonata/web", 7)).toBe(
-      "/home/u/.equin/worktrees/sonata/web.staging.7",
-    );
+    expect<string>(
+      distStagingPath("/home/u/.equin/worktrees/sonata/web", 7),
+    ).toBe("/home/u/.equin/worktrees/sonata/web.staging.7");
   });
 });
 

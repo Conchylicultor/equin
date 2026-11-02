@@ -1,4 +1,8 @@
 import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   closeSync,
   existsSync,
   mkdirSync,
@@ -8,7 +12,7 @@ import {
   utimesSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname } from "node:path";
 import { z } from "zod";
 import { flockTry } from "@plugins/packages/plugins/flock/core";
 
@@ -31,30 +35,30 @@ export const AudioMetaSchema = z.object({
 });
 export type AudioMeta = z.infer<typeof AudioMetaSchema>;
 
-export function metaPath(dir: string, videoId: string): string {
-  return join(dir, `${videoId}.json`);
+export function metaPath(dir: AppPath, videoId: string): AppPath {
+  return joinAppPath(dir, `${videoId}.json`);
 }
 
-export function lockPath(dir: string, videoId: string): string {
-  return join(dir, "locks", `${videoId}.lock`);
+export function lockPath(dir: AppPath, videoId: string): AppPath {
+  return joinAppPath(dir, "locks", `${videoId}.lock`);
 }
 
 export type CacheLookup =
-  { kind: "hit"; audioPath: string; meta: AudioMeta } | { kind: "miss" };
+  { kind: "hit"; audioPath: AppPath; meta: AudioMeta } | { kind: "miss" };
 
 /**
  * The cached audio of `videoId`, if both files are there. A hit touches both,
  * so the sweep's "last used" is the last read, not the download.
  */
 export function lookupCached(
-  dir: string,
+  dir: AppPath,
   videoId: string,
   now = new Date(),
 ): CacheLookup {
   const path = metaPath(dir, videoId);
   if (!existsSync(path)) return { kind: "miss" };
   const meta = AudioMetaSchema.parse(JSON.parse(readFileSync(path, "utf8")));
-  const audioPath = join(dir, meta.file);
+  const audioPath = joinAppPath(dir, meta.file);
   // Metadata without its audio (removed by hand): download it again.
   if (!existsSync(audioPath)) return { kind: "miss" };
   utimesSync(audioPath, now, now);
@@ -63,7 +67,11 @@ export function lookupCached(
 }
 
 /** Write the metadata temp-then-rename: a reader sees the whole file or none. */
-export function writeMeta(dir: string, videoId: string, meta: AudioMeta): void {
+export function writeMeta(
+  dir: AppPath,
+  videoId: string,
+  meta: AudioMeta,
+): void {
   const path = metaPath(dir, videoId);
   const tmp = `${path}.tmp-${process.pid}`;
   writeFileSync(tmp, JSON.stringify(AudioMetaSchema.parse(meta)));
@@ -71,7 +79,7 @@ export function writeMeta(dir: string, videoId: string, meta: AudioMeta): void {
 }
 
 /** Take a video's host flock without waiting: the held fd, or `null` when another holds it. */
-export function tryLockVideo(dir: string, videoId: string): number | null {
+export function tryLockVideo(dir: AppPath, videoId: string): number | null {
   const path = lockPath(dir, videoId);
   mkdirSync(dirname(path), { recursive: true });
   const fd = openSync(path, "a");
@@ -89,7 +97,7 @@ const LOCK_RETRY_MS = 500;
  * non-blocking by design, so the wait re-tries it, as `infra/deps` does.
  */
 export async function waitLockVideo(
-  dir: string,
+  dir: AppPath,
   videoId: string,
   onWait: () => void,
 ): Promise<number> {

@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { basename } from "node:path";
 import { linkNamedBinary } from "@plugins/packages/plugins/process-name/machine";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
@@ -31,7 +32,7 @@ import { agentBinDir } from "./paths";
  */
 export async function namedClaudeBin(opts: {
   conversationId: string;
-  claudeBin: string;
+  claudeBin: AppPath;
   disclaimExec: string | null;
   previous: string | null;
 }): Promise<string | null> {

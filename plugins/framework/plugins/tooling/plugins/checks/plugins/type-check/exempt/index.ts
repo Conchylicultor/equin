@@ -27,6 +27,13 @@ export default [
     reason: "not yet split into server/ + machine/",
   },
   {
+    rule: "user-path/no-unproven-claim",
+    paths: ["shared/worker.ts", "shared/batch-worker.ts"],
+    kind: "sanctioned",
+    reason:
+      "the job file the spawning type-check wrote, passed by argv to this worker process",
+  },
+  {
     rule: "check-thread-safety/no-blocking-check-work",
     paths: ["check/import-graph.ts"],
     kind: "debt",

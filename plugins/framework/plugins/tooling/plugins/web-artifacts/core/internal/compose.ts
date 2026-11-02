@@ -12,7 +12,10 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   buildImportMap,
   findUnmappedSpecifiers,
@@ -22,9 +25,9 @@ import { sha256Hex } from "../hash";
 import { COMMIT_GLOBAL, GRAPH_GLOBAL } from "./vite-builder";
 
 export interface ComposeOptions {
-  stagingDir: string;
+  stagingDir: AppPath;
   /** web-core/web dir (index.html + public/). */
-  webSrcDir: string;
+  webSrcDir: AppPath;
   /** The run that produced this dist — recorded in the manifest, never served. */
   buildId: string;
   /**
@@ -37,7 +40,7 @@ export interface ComposeOptions {
   minify: boolean;
   cssHref: string;
   /** dist/artifacts/<linkName> → store dir symlinks. */
-  links: Array<{ linkName: string; storePath: string }>;
+  links: Array<{ linkName: string; storePath: AppPath }>;
   /**
    * COPY each store dir into `dist/artifacts/<linkName>` instead of symlinking
    * it, making the dist self-contained (no reference to
@@ -158,7 +161,7 @@ export function composeDist(opts: ComposeOptions): {
   mkdirSync(stagingDir, { recursive: true });
 
   // 1. Static shell files (icons, …) from web-core's public/.
-  const publicDir = join(opts.webSrcDir, "public");
+  const publicDir = joinAppPath(opts.webSrcDir, "public");
   if (existsSync(publicDir)) {
     cpSync(publicDir, stagingDir, { recursive: true });
   }
@@ -179,10 +182,10 @@ export function composeDist(opts: ComposeOptions): {
 
   // 3. Symlink artifacts from the shared store — or copy them, when the dist
   // must outlive the store it was composed from (see `materialize`).
-  const artifactsDir = join(stagingDir, "artifacts");
+  const artifactsDir = joinAppPath(stagingDir, "artifacts");
   mkdirSync(artifactsDir, { recursive: true });
   for (const link of opts.links) {
-    const dest = join(artifactsDir, link.linkName);
+    const dest = joinAppPath(artifactsDir, link.linkName);
     if (opts.materialize) {
       // A worker tree is a dir of links into the store: copy what they name.
       cpSync(link.storePath, dest, { recursive: true, dereference: true });
@@ -205,7 +208,10 @@ export function composeDist(opts: ComposeOptions): {
   // Read BEFORE the graph hash, which covers the source shell: its inline
   // scripts are code the tab runs and keeps, and they belong to no URL, so
   // nothing else in the digest would move when one of them changes.
-  const htmlSrc = readFileSync(join(opts.webSrcDir, "index.html"), "utf8");
+  const htmlSrc = readFileSync(
+    joinAppPath(opts.webSrcDir, "index.html"),
+    "utf8",
+  );
   const graphHash = computeGraphHash({
     htmlSrc,
     importMap,
@@ -241,7 +247,7 @@ export function composeDist(opts: ComposeOptions): {
       MAIN_SCRIPT_TAG,
       `<script type="module" src="${opts.entryUrl}"></script>`,
     );
-  writeFileSync(join(stagingDir, "index.html"), html);
+  writeFileSync(joinAppPath(stagingDir, "index.html"), html);
 
   // 6. HARD verification: every URL the page will request must resolve to a
   // real file through the staged tree (following the store symlinks).
@@ -253,7 +259,7 @@ export function composeDist(opts: ComposeOptions): {
   ]);
   const missing: string[] = [];
   for (const url of urls) {
-    const file = join(stagingDir, url.replace(/^\//, ""));
+    const file = joinAppPath(stagingDir, url.replace(/^\//, ""));
     if (!existsSync(file) || !statSync(file).isFile()) missing.push(url);
   }
   if (missing.length > 0) {
@@ -267,7 +273,7 @@ export function composeDist(opts: ComposeOptions): {
   // 7. Manifest — doubles as the marker the web-artifacts checks detect a
   // composed dist by; its absence means nothing was ever composed here.
   writeFileSync(
-    join(stagingDir, ".web-artifacts.json"),
+    joinAppPath(stagingDir, ".web-artifacts.json"),
     JSON.stringify(
       {
         buildId: opts.buildId,

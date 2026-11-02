@@ -6,9 +6,12 @@ import {
   renameSync,
   rmSync,
 } from "node:fs";
-import { join } from "node:path";
 import { dlopen } from "bun:ffi";
 import { flockTry, waitForFlock } from "@plugins/packages/plugins/flock/core";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // A first-come-first-served line across processes, built from nothing but files
 // and kernel flocks — so a waiter that dies (SIGKILL, OOM) leaves the line by
@@ -134,7 +137,7 @@ function ticketName(place: TicketPlace): string {
 }
 
 /** Live tickets in `dir`, oldest first. Unowned ones are reaped on the way. */
-function liveTickets(dir: string, before?: string): string[] {
+function liveTickets(dir: AppPath, before?: string): string[] {
   let names: string[];
   try {
     names = readdirSync(dir);
@@ -145,7 +148,7 @@ function liveTickets(dir: string, before?: string): string[] {
   const live: string[] = [];
   for (const name of names.filter((n) => TICKET.test(n)).sort()) {
     if (before !== undefined && name >= before) break;
-    if (isLive(join(dir, name))) live.push(name);
+    if (isLive(joinAppPath(dir, name))) live.push(name);
   }
   return live;
 }
@@ -154,7 +157,7 @@ function liveTickets(dir: string, before?: string): string[] {
  * Is a ticket held by its owner? A lock we can take means nobody holds it: the
  * owner left (between its unlink and its close) or died — reap the file.
  */
-function isLive(path: string): boolean {
+function isLive(path: AppPath): boolean {
   let fd: number;
   try {
     fd = openSync(path, "r");
@@ -175,7 +178,7 @@ function isLive(path: string): boolean {
  * A FIFO line whose tickets live in `dir` (created on first join). Every
  * process naming the same directory shares the line.
  */
-export function createTicketLine(dir: string): TicketLine {
+export function createTicketLine(dir: AppPath): TicketLine {
   return {
     isEmpty: () => liveTickets(dir).length === 0,
 
@@ -186,8 +189,8 @@ export function createTicketLine(dir: string): TicketLine {
 
       const place = opts.place ?? arrive();
       const name = ticketName(place);
-      const path = join(dir, name);
-      const tmp = join(dir, `.${name}.tmp`);
+      const path = joinAppPath(dir, name);
+      const tmp = joinAppPath(dir, `.${name}.tmp`);
       const fd = openSync(tmp, "wx");
       if (!flockTry(fd)) {
         closeSync(fd);
@@ -215,7 +218,7 @@ export function createTicketLine(dir: string): TicketLine {
           const ahead = liveTickets(dir, name);
           const predecessor = ahead.at(-1);
           if (predecessor === undefined) return ticket;
-          const predecessorPath = join(dir, predecessor);
+          const predecessorPath = joinAppPath(dir, predecessor);
           // Granted when the ticket ahead leaves or its owner dies. The child
           // opens the path for writing, so a ticket that left in the meantime is
           // recreated empty and granted at once — reap it either way and look

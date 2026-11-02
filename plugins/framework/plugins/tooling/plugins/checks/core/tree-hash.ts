@@ -2,6 +2,11 @@ import { copyFileSync, existsSync, mkdtempSync, rmSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import {
+  type AppPath,
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // Looser than the metadata-read bound used elsewhere in the check tree,
 // because `add -A` + `write-tree` below genuinely walk the whole working tree:
@@ -11,7 +16,7 @@ import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 const TREE_HASH_TIMEOUT_MS = 180_000;
 
 async function git(
-  root: string,
+  root: AppPath,
   args: string[],
   env?: Record<string, string>,
 ): Promise<{ code: number; stdout: string }> {
@@ -33,11 +38,11 @@ async function git(
  * Fail-open: returns null if git is unavailable or any step fails — callers
  * then run uncached. The cache must never block or break a check run.
  */
-export async function computeTreeHash(root: string): Promise<string | null> {
-  let tmpDir: string | undefined;
+export async function computeTreeHash(root: AppPath): Promise<string | null> {
+  let tmpDir: AppPath | undefined;
   try {
-    tmpDir = mkdtempSync(join(tmpdir(), "sing-treehash-"));
-    const tmpIndex = join(tmpDir, "index");
+    tmpDir = asAppPath(mkdtempSync(join(tmpdir(), "sing-treehash-")));
+    const tmpIndex = joinAppPath(tmpDir, "index");
     const env = { ...process.env, GIT_INDEX_FILE: tmpIndex };
 
     // Seed from the real index to inherit its stat cache (avoids a full content
@@ -48,8 +53,8 @@ export async function computeTreeHash(root: string): Promise<string | null> {
     // from `HEAD` instead gave nothing — a tree read carries no stat info — and
     // failed outright on an unborn branch.)
     const rel = (await git(root, ["rev-parse", "--git-path", "index"])).stdout;
-    const realIndex = rel ? join(root, rel) : "";
-    if (realIndex && existsSync(realIndex)) {
+    const realIndex = rel ? joinAppPath(root, rel) : null;
+    if (realIndex !== null && existsSync(realIndex)) {
       copyFileSync(realIndex, tmpIndex);
       // Refresh stat info against the seeded index (cheap); errors are benign.
       await git(root, ["update-index", "-q", "--refresh"], env);

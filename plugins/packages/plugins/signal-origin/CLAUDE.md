@@ -97,7 +97,9 @@ name their sender.
 - Cross-plugin:
   - Imported by: `build/build-termination`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/signal-origin.fixture.ts`, `server/internal/signal-origin.ts` (debt)
+  - Exempts itself from:
+    - `boundaries/no-platform-api` — `server/internal/signal-origin.fixture.ts`, `server/internal/signal-origin.ts` (debt)
+    - `user-path/no-unproven-claim` — `server/internal/signal-origin.fixture.ts` (sanctioned)
 - Server:
   - Exports (types): `SignalOriginArmResult`
   - Exports (values):

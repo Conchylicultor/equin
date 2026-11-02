@@ -12,14 +12,18 @@ import { dirname, join } from "node:path";
 import { computeHash, type JsonValue } from "@plugins/config_v2/core";
 import { APPLIED_MOVES_FILE, applyPluginMoves } from "./apply-moves";
 import { PLUGIN_MOVES_FILE } from "./ledger";
+import {
+  type AppPath,
+  asAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
-let root: string;
-let ns: string;
+let root: AppPath;
+let ns: AppPath;
 
 beforeEach(() => {
   const base = mkdtempSync(join(tmpdir(), "plugin-moves-"));
-  root = join(base, "repo");
-  ns = join(base, "config", "wt");
+  root = asAppPath(join(base, "repo"));
+  ns = asAppPath(join(base, "config", "wt"));
   mkdirSync(dirname(join(root, PLUGIN_MOVES_FILE)), { recursive: true });
   mkdirSync(ns, { recursive: true });
 });
@@ -189,7 +193,7 @@ describe("applyPluginMoves", () => {
 
   test("a namespace created after the move records it without moving anything", () => {
     ledger([MOVE]);
-    const fresh = join(dirname(ns), "new-wt");
+    const fresh = asAppPath(join(dirname(ns), "new-wt"));
 
     expect(applyPluginMoves({ root, userConfigDir: fresh })).toEqual([]);
     expect(

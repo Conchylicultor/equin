@@ -1,5 +1,9 @@
 import { existsSync, statSync } from "node:fs";
 import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   mkdir,
   mkdtemp,
   readdir,
@@ -79,7 +83,7 @@ export interface GitHistoryStoreOptions {
    * The prototypes tree's directory, absolute — read per call (the data root
    * is env-overridable; the tests pass a temp dir).
    */
-  dir: () => string;
+  dir: () => AppPath;
   /**
    * The same tree as a mount — what the per-repo lock is taken through, so
    * every process locks the one `_history/<id>.lock`.
@@ -91,13 +95,17 @@ export interface GitHistoryStoreOptions {
 export function openGitHistoryStore(
   opts: GitHistoryStoreOptions,
 ): GitHistoryStore {
-  const historyDirAbs = (): string => join(opts.dir(), HISTORY_DIR_NAME);
+  const historyDirAbs = (): AppPath =>
+    joinAppPath(opts.dir(), HISTORY_DIR_NAME);
   // Each path helper validates the id itself, so no path is built from one
   // that is not a minted id.
-  const folderOf = (id: string): string =>
-    join(opts.dir(), assertPrototypeId(id));
-  const repoOf = (id: string): string =>
-    join(historyDirAbs(), `${assertPrototypeId(id)}.${GIT_HISTORY_FORMAT}`);
+  const folderOf = (id: string): AppPath =>
+    joinAppPath(opts.dir(), assertPrototypeId(id));
+  const repoOf = (id: string): AppPath =>
+    joinAppPath(
+      historyDirAbs(),
+      `${assertPrototypeId(id)}.${GIT_HISTORY_FORMAT}`,
+    );
   const withRepoLock = <T>(id: string, fn: () => Promise<T>): Promise<T> =>
     opts.files.withLock(relPath(HISTORY_DIR_NAME, assertPrototypeId(id)), fn);
   const gitOf = (id: string): HistoryGit =>
@@ -516,6 +524,6 @@ function isErrnoCode(err: unknown, code: string): boolean {
   return err instanceof Error && (err as NodeJS.ErrnoException).code === code;
 }
 
-function isDirectory(path: string): boolean {
+function isDirectory(path: AppPath): boolean {
   return statSync(path, { throwIfNoEntry: false })?.isDirectory() ?? false;
 }

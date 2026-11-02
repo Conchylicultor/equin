@@ -4,21 +4,15 @@ export default [
   {
     rule: "boundaries/no-platform-api",
     paths: [
-      "core/app-css-utilities.ts",
-      "core/app-declarations-gen.ts",
       "core/authored-override-seed.ts",
-      "core/barrel-free-tree.ts",
       "core/barrel-stubs-gen.ts",
       "core/claude-settings-gen.ts",
-      "core/companion-manifest-gen.ts",
       "core/config-origin-gen.ts",
       "core/custom-utilities-gen.ts",
       "core/data-views-gen.ts",
       "core/declared-apps.ts",
       "core/docgen.ts",
       "core/eager-tier-gen.ts",
-      "core/enriched-tree.ts",
-      "core/exempt-rule-ids-gen.ts",
       "core/fields-eager-gen.ts",
       "core/git-layer-config.ts",
       "core/icon-manifest-gen.ts",
@@ -27,11 +21,9 @@ export default [
       "core/package-names.ts",
       "core/plugin-registry-gen.ts",
       "core/pre-barrel-guard.ts",
-      "core/reorderable-slots-gen.ts",
       "core/slot-declaration-guard.ts",
       "core/space-ramp-gen.ts",
       "core/test-helpers-doc.ts",
-      "core/theme-declarations-gen.ts",
       "core/token-group-vars-gen.ts",
       "core/web-slot-contributions.ts",
       "core/write-generated.ts",
@@ -46,5 +38,12 @@ export default [
     kind: "sanctioned",
     reason:
       "Token-in-string: the browser-host coverage guard finds a raw `/api/<prefix>` URL a scoped page builds by hand, which lives inside a string literal (passed to fetch, or an element's src) with no enclosing marker call — a full mask would erase it. Comments are still masked, and only a literal STARTING with `/api/` counts, so a route string or prose naming one is no URL.",
+  },
+  {
+    rule: "user-path/no-unproven-claim",
+    paths: ["core/test-helpers-doc.ts"],
+    kind: "sanctioned",
+    reason:
+      "a relative import specifier read from a testing barrel of the checkout's own plugins, resolved against the barrel that names it",
   },
 ] satisfies Exemptions;

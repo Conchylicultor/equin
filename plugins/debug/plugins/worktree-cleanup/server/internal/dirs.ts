@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
@@ -39,7 +40,7 @@ export interface WorktreeDirIndex {
 // One readdir answers "does this dir exist" for every id at once, which is what
 // lets the reaper classify thousands of attempt rows without a stat each.
 export async function readWorktreeDirIndex(
-  root: string,
+  root: AppPath,
 ): Promise<WorktreeDirIndex> {
   const dir = gitWorktreesDir(root);
   try {
@@ -60,7 +61,7 @@ export async function readWorktreeDirIndex(
 // Canonical-shaped worktree dirs actually present on disk. Delegates to
 // `readWorktreeDirIndex` so the UI list handler and the reaper share one
 // enumeration and can never disagree about what is on disk.
-export async function readWorktreeDirs(root: string): Promise<WorktreeDir[]> {
+export async function readWorktreeDirs(root: AppPath): Promise<WorktreeDir[]> {
   return (await readWorktreeDirIndex(root)).canonical;
 }
 

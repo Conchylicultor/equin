@@ -209,6 +209,7 @@ nor closed under it. Bounded, because the host cannot see the script end.
     - `infra/mcp.McpToolCallContext`
     - `infra/spawn/daemon.DaemonInstance`
     - `infra/spawn/daemon.defineDaemon`
+    - `infra/worktree.appCheckoutOf`
     - `network/live.serveValue`
     - `tasks/tasks-core.conversationStatusChanged`
     - `tasks/tasks-core.getConversation`

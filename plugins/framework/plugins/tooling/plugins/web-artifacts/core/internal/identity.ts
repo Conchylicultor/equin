@@ -5,9 +5,14 @@
 // consumers, so their version is an input of every artifact).
 
 import { createRequire } from "node:module";
+import {
+  appPathParent,
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import { findViteContributions } from "@plugins/framework/plugins/web-core/core";
 import { BUILDER_VERSION, INLINE_PACKAGES } from "../constants";
 import { computeIdentityHash, computeOwnHash, sha256Hex } from "../hash";
@@ -24,11 +29,12 @@ const require = createRequire(import.meta.url);
  * One small `package.json` read per call — not the whole-tree walk
  * `listOwnFiles`/`builderSourceDigest` do below — so it stays sync.
  */
-export function packageVersion(pkg: string, fromDir?: string): string {
+export function packageVersion(pkg: string, fromDir?: AppPath): string {
   const resolver = fromDir
-    ? createRequire(join(fromDir, "package.json"))
+    ? createRequire(joinAppPath(fromDir, "package.json"))
     : require;
-  const pj = resolver.resolve(`${pkg}/package.json`);
+  // The package.json of a package this app's own install resolved.
+  const pj = asAppPath(resolver.resolve(`${pkg}/package.json`));
   return (JSON.parse(readFileSync(pj, "utf8")) as { version: string }).version;
 }
 
@@ -52,9 +58,9 @@ const WEB_ARTIFACTS_REL = "framework/plugins/tooling/plugins/web-artifacts";
  * `BUILDER_VERSION` is only a forced-bump lever, never a thing to remember.
  */
 export async function builderSourceDigest(
-  pluginsRoot: string,
+  pluginsRoot: AppPath,
 ): Promise<string> {
-  const pluginDir = join(pluginsRoot, WEB_ARTIFACTS_REL);
+  const pluginDir = joinAppPath(pluginsRoot, WEB_ARTIFACTS_REL);
   const absFiles = await listOwnFiles(pluginDir, "core");
   if (absFiles.length === 0) {
     throw new Error(
@@ -74,8 +80,8 @@ export async function builderSourceDigest(
  * pins the transform package version, e.g. `babel-plugin-react-compiler`).
  */
 export async function computeBuilderIdentity(opts: {
-  repoRoot: string;
-  pluginsRoot: string;
+  repoRoot: AppPath;
+  pluginsRoot: AppPath;
   minify: boolean;
 }): Promise<BuilderIdentity> {
   // Versions come from package.json reads (require.resolve), NOT module
@@ -98,7 +104,10 @@ export async function computeBuilderIdentity(opts: {
   for (const file of await findViteContributions(opts.pluginsRoot)) {
     const rel = file.slice(opts.pluginsRoot.length + 1);
     let digest = sha256Hex(await readFile(file));
-    const pkgJson = join(file, "..", "..", "package.json");
+    const pkgJson = joinAppPath(
+      appPathParent(appPathParent(joinAppPath(opts.pluginsRoot, rel))),
+      "package.json",
+    );
     try {
       digest = sha256Hex(digest + (await readFile(pkgJson, "utf8")));
     } catch (err) {

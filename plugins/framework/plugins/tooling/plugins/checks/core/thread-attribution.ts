@@ -1,4 +1,5 @@
 import { realpathSync } from "node:fs";
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
 import {
   frameKey,
@@ -53,7 +54,7 @@ export type ThreadOwner =
  * of a checkout reached through a symlink into "outside the repo" — no check
  * would ever own a sample, and nothing would say so.
  */
-export function repoRoots(root: string = REPO_ROOT): string[] {
+export function repoRoots(root: AppPath = REPO_ROOT): string[] {
   const real = realpathSync(root);
   return real === root ? [root] : [root, real];
 }

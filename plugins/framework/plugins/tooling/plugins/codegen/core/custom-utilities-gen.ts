@@ -1,5 +1,8 @@
 import { readFileSync } from "fs";
-import { join } from "path";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { writeGenerated } from "./write-generated";
 import { appCssPath, collectUtilityDecls } from "./app-css-utilities";
 
@@ -392,12 +395,13 @@ function renderManifest(entries: RegistryEntry[]): string {
 }
 
 /** Path to the committed generated manifest file. */
-export function customUtilitiesManifestPath(root: string): string {
-  return join(root, MANIFEST_REL_PATH);
+export function customUtilitiesManifestPath(root: AppPath): AppPath {
+  // `root`: the checkout root the caller works in.
+  return joinAppPath(root, MANIFEST_REL_PATH);
 }
 
 /** Render the manifest file contents in-memory (used by the in-sync check). */
-export function renderCustomUtilities(root: string): string {
+export function renderCustomUtilities(root: AppPath): string {
   const css = readFileSync(appCssPath(root), "utf8");
   const entries = parseCustomUtilities(css);
   return renderManifest(entries);
@@ -405,7 +409,7 @@ export function renderCustomUtilities(root: string): string {
 
 /** Regenerate `custom-utilities.generated.ts` if it drifted. */
 export async function generateCustomUtilities(opts: {
-  root: string;
+  root: AppPath;
 }): Promise<void> {
   await writeGenerated({
     file: customUtilitiesManifestPath(opts.root),

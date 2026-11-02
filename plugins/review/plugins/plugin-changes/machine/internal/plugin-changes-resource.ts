@@ -1,4 +1,5 @@
-import { join } from "node:path";
+import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { appCheckoutOf } from "@plugins/infra/plugins/worktree/server";
 import { serveValue } from "@plugins/network/plugins/live/server";
 import { refHeadServed } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
 import {
@@ -34,7 +35,12 @@ async function computeWorktreePluginChanges(
     getMainPluginsDir(),
   ]);
 
-  const worktreePluginsDir = join(worktreePath, "plugins");
+  // The attempt's checkout, re-derived from the app's roots rather than
+  // trusted from the stored row; a workspace that is no checkout of the
+  // app's (a scratch dir) has no plugins to compare.
+  const checkout = await appCheckoutOf(worktreePath);
+  if (checkout === null) return { plugins: [] };
+  const worktreePluginsDir = joinAppPath(checkout, "plugins");
   // Each side is memoized on its own cheap signature (main → main sha, worktree
   // → edited-files content signature) and owns its withHeavyReadSlot internally, so an
   // unchanged side is a pure hit that takes no slot. Steady-state recomputes

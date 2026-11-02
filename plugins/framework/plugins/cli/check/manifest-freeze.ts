@@ -10,12 +10,13 @@ import {
   type ImportClosure,
   type UnionImportClosure,
 } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /** How many module reads one measurement holds open at once. */
 const READ_CONCURRENCY = 32;
 
 export interface ManifestFreezeInput {
-  root: string;
+  root: AppPath;
   /** The CLI's one entrypoint, repo-relative (`bin/index.ts`). */
   entry: string;
   /** Repo-relative manifest path → manifest id, so a hit can name itself. */

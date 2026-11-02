@@ -10,6 +10,11 @@
  */
 
 import { createSourceScans } from "./browser-host-coverage";
+import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { test, expect, afterAll } from "bun:test";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "fs";
 import { tmpdir } from "os";
@@ -58,7 +63,7 @@ function memRepo(
   const paths = Object.keys(files).sort();
   const reads: string[] = [];
   return {
-    root,
+    root: asAppPath(root),
     reads,
     all: () => paths,
     has: (p) => Object.hasOwn(files, p),
@@ -73,8 +78,8 @@ function memRepo(
 }
 
 /** A fresh git repository holding `files` untracked (so `--others` lists them). */
-function gitFixture(files: Record<string, string>): string {
-  const root = mkdtempSync(join(tmpdir(), "collected-dir-git-"));
+function gitFixture(files: Record<string, string>): AppPath {
+  const root = asAppPath(mkdtempSync(join(tmpdir(), "collected-dir-git-")));
   afterAll(() => rmSync(root, { recursive: true, force: true }));
   const init = Bun.spawnSync(["git", "init", "-q"], { cwd: root });
   if (init.exitCode !== 0) throw new Error(init.stderr.toString());
@@ -163,7 +168,7 @@ test("discovery reads only core files at a plugin position whose core has a barr
   const defs = await discoverCollectedDirsIn(repo);
   expect(sortedDirs(defs)).toEqual(["check", "facet", "lint"]);
   expect(defs.find((d) => d.dir === "lint")?.ownerDir).toBe(
-    "/repo/plugins/outer/plugins/inner",
+    asAppPath("/repo/plugins/outer/plugins/inner"),
   );
   // Nothing outside the candidates was opened.
   expect(repo.reads.sort()).toEqual(
@@ -221,7 +226,7 @@ test("an undeclared collected-dir name throws, naming the file", async () => {
     ),
     dirs: new Map(),
   };
-  expect(() => standardPluginDirsFromSnapshot("/repo", fs)).toThrow(
+  expect(() => standardPluginDirsFromSnapshot(asAppPath("/repo"), fs)).toThrow(
     /not a plugin folder/,
   );
 });
@@ -236,7 +241,7 @@ test("the sync front lists the same universe from git: untracked counts, gitigno
 });
 
 test("the snapshot front answers from a tree build's snapshot alone", () => {
-  const root = "/repo";
+  const root = asAppPath("/repo");
   const fs = {
     files: new Map([
       [`${root}/plugins/sdk/core/index.ts`, 'defineCollectedDir("check");'],
@@ -263,11 +268,13 @@ test("per-name registry path renders and round-trips through parse", () => {
     dir: "web",
     membership: "composition",
     _brand: "CollectedDirDef",
-    ownerDir: "/repo/plugins/framework/plugins/web-sdk",
+    ownerDir: asAppPath("/repo/plugins/framework/plugins/web-sdk"),
   };
   const file = collectedDirNamedCompositionRegistryPath(def, "sonata");
   expect(file).toBe(
-    "/repo/plugins/framework/plugins/web-sdk/core/web.composition.sonata.generated.ts",
+    asAppPath(
+      "/repo/plugins/framework/plugins/web-sdk/core/web.composition.sonata.generated.ts",
+    ),
   );
   expect(
     parseNamedCompositionRegistryFileName(
@@ -297,7 +304,7 @@ test("the main composition resolves to the committed registry, every other to a 
     dir: "server",
     membership: "composition",
     _brand: "CollectedDirDef",
-    ownerDir: "/repo/plugins/framework/plugins/server-core",
+    ownerDir: asAppPath("/repo/plugins/framework/plugins/server-core"),
   };
   expect(compositionRegistryPath(def, MAIN_COMPOSITION_ID)).toBe(
     "/repo/plugins/framework/plugins/server-core/core/server.generated.ts",
@@ -387,9 +394,9 @@ test("listNamedCompositionRegistries finds per-name files, skipping singletons",
 //     loader's topo-sort.
 
 /** A `PluginNode` with only the fields the entry collector reads set meaningfully. */
-function fakeNode(pluginsRoot: string, path: string): PluginNode {
+function fakeNode(pluginsRoot: AppPath, path: string): PluginNode {
   return {
-    dir: join(pluginsRoot, path),
+    dir: joinAppPath(pluginsRoot as AppPath, path),
     path,
     name: path.split("/").at(-1)!,
     id: asPluginId(
@@ -425,8 +432,8 @@ function bundleFixture(): {
   ctx: RegistryGenContext;
   def: DiscoveredCollectedDir;
 } {
-  const fixtureRoot = "/fixture";
-  const pluginsRoot = join(fixtureRoot, "plugins");
+  const fixtureRoot = asAppPath("/fixture");
+  const pluginsRoot = joinAppPath(fixtureRoot, "plugins");
   const repo = memRepo(fixtureRoot, {
     [pj("alpha/web/index.ts")]: "export default { name: 'alpha' };\n",
     [pj("beta/web/index.ts")]:
@@ -562,8 +569,8 @@ function machineFixture(): {
   ctx: RegistryGenContext;
   def: DiscoveredCollectedDir;
 } {
-  const fixtureRoot = "/fixture";
-  const pluginsRoot = join(fixtureRoot, "plugins");
+  const fixtureRoot = asAppPath("/fixture");
+  const pluginsRoot = joinAppPath(fixtureRoot, "plugins");
   const repo = memRepo(fixtureRoot, {
     [pj("alpha/server/index.ts")]: "export default {};\n",
     [pj("alpha/machine/index.ts")]: "export default {};\n",

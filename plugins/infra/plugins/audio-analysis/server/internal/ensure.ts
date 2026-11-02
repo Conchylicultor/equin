@@ -1,3 +1,7 @@
+import {
+  type AppPath,
+  asAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { z } from "zod";
@@ -63,11 +67,11 @@ export interface EnsureBeatFeaturesOptions {
   /** Where the beat tracker runs. Default: the configured device. */
   device?: AnalysisDevice;
   /** Test seam: the cache root. */
-  dir?: string;
+  dir?: AppPath;
 }
 
-function writeJsonAtomic(path: string, value: unknown): void {
-  const tmp = `${path}.tmp-${process.pid}`;
+function writeJsonAtomic(path: AppPath, value: unknown): void {
+  const tmp = asAppPath(`${path}.tmp-${process.pid}`);
   writeFileSync(tmp, `${JSON.stringify(value)}\n`);
   renameSync(tmp, path);
 }
@@ -155,7 +159,7 @@ async function analyse(
     writeJsonAtomic(paths.running, running);
     await onPhase?.(p);
   };
-  const tmp = `${paths.ready}.tmp-${process.pid}`;
+  const tmp = asAppPath(`${paths.ready}.tmp-${process.pid}`);
   try {
     await phase("fetching");
     const audio = await fetchYouTubeAudio(id, exec, { log: say });

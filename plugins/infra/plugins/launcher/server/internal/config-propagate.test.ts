@@ -10,6 +10,10 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import {
+  type AppPath,
+  asAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { propagateOriginLayer } from "./config-propagate";
 
 // Hermetic: a bundle seed dir and a host config dir, both under a temp root.
@@ -18,13 +22,13 @@ import { propagateOriginLayer } from "./config-propagate";
 // are parameters rather than derived here.
 
 let root: string;
-let seed: string;
-let host: string;
+let seed: AppPath;
+let host: AppPath;
 
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), "release-config-"));
-  seed = join(root, "seed");
-  host = join(root, "host");
+  seed = asAppPath(join(root, "seed"));
+  host = asAppPath(join(root, "host"));
   mkdirSync(seed, { recursive: true });
   mkdirSync(host, { recursive: true });
 });

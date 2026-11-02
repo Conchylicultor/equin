@@ -1,4 +1,4 @@
-import { join, relative } from "path";
+import { relative } from "path";
 import {
   createFacet,
   type DocFact,
@@ -9,6 +9,10 @@ import {
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { deploySecretsFacetDef, type DeploySecretsData } from "../core";
 import { extractDeploySecrets } from "./extract";
+import {
+  type AppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
  * The deploy secrets a plugin declares in its `core/` — where a box-side
@@ -19,8 +23,8 @@ export default createFacet<DeploySecretsData>({
   def: deploySecretsFacetDef,
 
   extract(ctx) {
-    const files: string[] = [];
-    walkFiles(join(ctx.dir, "core"), files);
+    const files: AppPath[] = [];
+    walkFiles(joinAppPath(ctx.dir, "core"), files);
     const declared = files.flatMap((f) => {
       const src = readIfExists(f);
       return src === null

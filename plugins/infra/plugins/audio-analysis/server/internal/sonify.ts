@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { z } from "zod";
 import { ensureDep } from "@plugins/infra/plugins/deps/deps";
 import { runPython } from "@plugins/infra/plugins/deps/plugins/python/deps";
@@ -20,7 +21,7 @@ export async function sonifyBeatFeatures(
   exec: ExecContext,
   opts: {
     log?: (line: string) => void;
-    dir?: string;
+    dir?: AppPath;
     settings?: AnalysisSettings;
   } = {},
 ): Promise<void> {

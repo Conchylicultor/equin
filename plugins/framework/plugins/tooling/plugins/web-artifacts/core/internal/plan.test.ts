@@ -2,6 +2,11 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  appPathParent,
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { buildImportMap } from "../import-map";
 import {
   artifactUrl,
@@ -26,7 +31,7 @@ function target(
     ...partial,
     kind: "web",
     pluginPath: "x",
-    entryFile: "/x/web/index.ts",
+    entryFile: asAppPath("/x/web/index.ts"),
     inputsHash: "0".repeat(64),
     globRoots: [],
     coEntries: [],
@@ -69,7 +74,7 @@ describe("composeMapEntries (the expected-map assembly shared with compose)", ()
       coEntries: [
         {
           folder: "exhibits",
-          entryFile: "/x/exhibits/index.ts",
+          entryFile: asAppPath("/x/exhibits/index.ts"),
           specifier: "@plugins/tasks/exhibits",
         },
       ],
@@ -209,12 +214,15 @@ describe("eagerWebTargets (the preload-seed selection, a pure membership test)",
 });
 
 describe("planFleet with an injected fleet source", () => {
-  const repoRoot = join(import.meta.dir, "../".repeat(8));
-  const tmp = mkdtempSync(join(tmpdir(), "fleet-source-test-"));
+  const repoRoot = asAppPath(join(import.meta.dir, "../".repeat(8)));
+  const tmp = asAppPath(mkdtempSync(join(tmpdir(), "fleet-source-test-")));
   afterAll(() => rmSync(tmp, { recursive: true, force: true }));
 
   test("plans targets from the source's entries and slugs the registry per source", async () => {
-    const registryFile = join(tmp, "web.composition.testcomp.generated.ts");
+    const registryFile = joinAppPath(
+      tmp,
+      "web.composition.testcomp.generated.ts",
+    );
     writeFileSync(registryFile, "export const webEntries = [];\n");
 
     const deferredPaths = new Set(["some/deferred/path"]);
@@ -241,7 +249,7 @@ describe("planFleet with an injected fleet source", () => {
   });
 
   test("the registry store name is a pure function of source content + slug", async () => {
-    const registryFile = join(tmp, "web.composition.other.generated.ts");
+    const registryFile = joinAppPath(tmp, "web.composition.other.generated.ts");
     writeFileSync(registryFile, "export const webEntries = [];\n");
     const source = {
       webEntries: [],
@@ -275,11 +283,11 @@ describe("plan identity helpers", () => {
 });
 
 describe("co-built folders (exhibits/ is a second entry of the web artifact)", () => {
-  const tmp = mkdtempSync(join(tmpdir(), "cobuilt-test-"));
+  const tmp = asAppPath(mkdtempSync(join(tmpdir(), "cobuilt-test-")));
   afterAll(() => rmSync(tmp, { recursive: true, force: true }));
   const barrel = (rel: string, body = "export default 1;\n"): void => {
-    mkdirSync(join(tmp, rel, ".."), { recursive: true });
-    writeFileSync(join(tmp, rel), body);
+    mkdirSync(appPathParent(joinAppPath(tmp, rel)), { recursive: true });
+    writeFileSync(joinAppPath(tmp, rel), body);
   };
   barrel("both/web/index.ts");
   barrel("both/exhibits/index.ts");
@@ -287,16 +295,18 @@ describe("co-built folders (exhibits/ is a second entry of the web artifact)", (
   barrel("orphan/exhibits/index.ts");
 
   test("a web target carries one co-entry per co-built barrel present", () => {
-    expect(coEntriesFor("web", "both", join(tmp, "both"))).toEqual([
+    expect(coEntriesFor("web", "both", joinAppPath(tmp, "both"))).toEqual([
       {
         folder: "exhibits",
-        entryFile: join(tmp, "both/exhibits/index.ts"),
+        entryFile: joinAppPath(tmp, "both/exhibits/index.ts"),
         specifier: "@plugins/both/exhibits",
       },
     ]);
-    expect(coEntriesFor("web", "webonly", join(tmp, "webonly"))).toEqual([]);
+    expect(coEntriesFor("web", "webonly", joinAppPath(tmp, "webonly"))).toEqual(
+      [],
+    );
     // Only the host kind carries them.
-    expect(coEntriesFor("core", "both", join(tmp, "both"))).toEqual([]);
+    expect(coEntriesFor("core", "both", joinAppPath(tmp, "both"))).toEqual([]);
   });
 
   test("a co-built specifier names its host's artifact; others name their own", () => {

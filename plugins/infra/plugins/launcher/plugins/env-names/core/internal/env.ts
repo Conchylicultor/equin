@@ -1,6 +1,10 @@
 // Reading and writing the app's own environment variables, by key: each key's
 // one name is `envName(key)` (`env-keys.ts`), so code never spells a full name.
 
+import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { envName, type EnvKey } from "./env-keys";
 
 type Env = Record<string, string | undefined>;
@@ -28,6 +32,20 @@ export function readEnv(
   env: Readonly<Env> = ambientEnv(),
 ): string | undefined {
   return env[envName(key)];
+}
+
+/**
+ * {@link readEnv} of a key whose value is a path the app chose: its data root,
+ * a dist, a release's vendored tree — set by the launcher or the release
+ * bundle for the processes it starts. App-owned by that claim (declared for
+ * `user-path/no-unproven-claim` once, here), so a sync fs call may take it.
+ */
+export function readEnvPath(
+  key: EnvKey,
+  env: Readonly<Env> = ambientEnv(),
+): AppPath | undefined {
+  const value = readEnv(key, env);
+  return value === undefined ? undefined : asAppPath(value);
 }
 
 /**

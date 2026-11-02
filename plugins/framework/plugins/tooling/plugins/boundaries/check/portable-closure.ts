@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type {
   Check,
   CheckResult,
@@ -53,7 +54,7 @@ export interface Offender {
  * run's barrels, whose closures overlap heavily (one parse per module).
  */
 export async function platformOffenders(
-  root: string,
+  root: AppPath,
   barrel: string,
   read: (path: string) => Promise<string | null>,
   needs: Map<string, string[]>,

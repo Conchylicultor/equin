@@ -5,6 +5,7 @@ import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import type { ExtractContext } from "@plugins/plugin-meta/plugins/facets/core";
 import type { ContributionsFacetData } from "../core";
 import contributionsFacet from "./index";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // These tests replace a guard that no longer exists. The facet used to throw
 // when it was handed barrels in a process where no slot-declaration pass had
@@ -23,7 +24,7 @@ import contributionsFacet from "./index";
 // A plugin dir that cannot exist, so the static half of `extract` reads no files
 // and the tests stay hermetic — no tree build, no barrel imports, no disk.
 const ctx = (imported: ExtractContext["imported"]): ExtractContext => ({
-  dir: "/nonexistent/plugin-dir-for-slot-naming-test",
+  dir: asAppPath("/nonexistent/plugin-dir-for-slot-naming-test"),
   pluginId: "slot.naming.test",
   imported,
 });

@@ -162,6 +162,7 @@ pid liveness.
     - `WorktreeSpec`
   - Exports (values):
     - `adoptCompleteCheckout`
+    - `appCheckoutOf`
     - `checkoutState`
     - `countReadySpares`
     - `createSpareWorktree`
@@ -193,29 +194,21 @@ pid liveness.
     - `worktreePathFor`
     - `writeWorktreeSpec`
 - Cross-plugin:
-  - Imported by:
+  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra` ×6
+    - `debug` ×5
+    - `tasks` ×3
     - `backup/sources/databases`
     - `build/serve-composition`
     - `code-explorer`
     - `conversations/workspace/worktree`
-    - `debug/broadcasts`
-    - `debug/memory`
-    - `debug/profiling/op-log`
-    - `debug/profiling/op-log/op-store`
-    - `debug/worktree-cleanup`
-    - `infra/deps/sweep`
-    - `infra/git/git-watcher`
-    - `infra/launcher`
-    - `infra/worktree/reclaim`
-    - `infra/worktree/spare-pool`
     - `plugin-meta/plugin-health`
     - `release/source-checkout`
     - `stats/cost`
-    - `tasks/attempt-work`
-    - `tasks/task-triage`
-    - `tasks/tasks-core`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/composition-namespace.ts`, `server/internal/install-checkout.ts`, `server/internal/spare-name.ts`, `server/internal/spare.ts`, `server/internal/spec.ts`, `server/internal/worktree-op.ts`, `server/internal/worktree.ts` (debt)
+  - Exempts itself from:
+    - `boundaries/no-platform-api` — `server/internal/composition-namespace.ts`, `server/internal/install-checkout.ts`, `server/internal/spare-name.ts`, `server/internal/spare.ts`, `server/internal/spec.ts`, `server/internal/worktree-op.ts`, `server/internal/worktree.ts` (debt)
+    - `user-path/no-unproven-claim` — `server/internal/worktree.ts` (sanctioned)
 - Core:
   - Exports (types):
     - `OpKind`

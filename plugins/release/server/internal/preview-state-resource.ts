@@ -1,6 +1,7 @@
 import { serveValue } from "@plugins/network/plugins/live/server";
 import type { DaemonInstance } from "@plugins/infra/plugins/spawn/plugins/daemon/server";
 import { releasePreviews, type Preview } from "../../core/resources";
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // The in-memory preview registry, keyed by runId. The server projects this into
 // the `release.previews` value (a `Record<runId, Preview>`); the preview
@@ -15,7 +16,7 @@ export interface PreviewEntry {
   // (EQUIN_PG_PORT). Kept so teardown can backstop-kill the PG listener.
   pgPort: number;
   url: string;
-  dataRoot: string;
+  dataRoot: AppPath;
   status: "running" | "stopped";
 }
 

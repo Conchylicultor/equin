@@ -1,3 +1,7 @@
+import {
+  type AppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { z } from "zod";
@@ -51,7 +55,7 @@ interface UvProject {
 }
 
 /** Every `python/` project in the checkout (tracked, or new and not ignored). */
-export async function uvProjects(root: string): Promise<UvProject[]> {
+export async function uvProjects(root: AppPath): Promise<UvProject[]> {
   const result = await spawnCaptured(
     [
       "git",
@@ -180,7 +184,7 @@ export function newestCpython(
 }
 
 /** Every CPython build this checkout's uv can download for this machine. */
-async function cpythonDownloads(root: string): Promise<CpythonDownload[]> {
+async function cpythonDownloads(root: AppPath): Promise<CpythonDownload[]> {
   const argv = [
     "uv",
     "python",
@@ -203,15 +207,21 @@ async function cpythonDownloads(root: string): Promise<CpythonDownload[]> {
   return parseCpythonDownloads(result.stdout);
 }
 
-const pythonVersionFile = (root: string, project: UvProject): string =>
-  join(root, project.dir, ".python-version");
+const pythonVersionFile = (root: AppPath, project: UvProject): AppPath =>
+  joinAppPath(root, project.dir, ".python-version");
 
 async function uvLock(
-  root: string,
+  root: AppPath,
   project: UvProject,
   args: readonly string[],
 ): Promise<string> {
-  const argv = ["uv", "lock", "--project", join(root, project.dir), ...args];
+  const argv = [
+    "uv",
+    "lock",
+    "--project",
+    joinAppPath(root, project.dir),
+    ...args,
+  ];
   const result = await spawnCaptured(argv, {
     cwd: root,
     env: uvEnv(),
@@ -402,7 +412,7 @@ export const uvUpdater: Updater = {
       log(`  uv lock ${project.dir} (${mine.map((m) => m.name).join(", ")})`);
       await uvLock(root, project, ["--exclude-newer", cutoff, ...pins]);
       const locked = parseUvLockVersions(
-        readFileSync(join(root, project.dir, "uv.lock"), "utf8"),
+        readFileSync(joinAppPath(root, project.dir, "uv.lock"), "utf8"),
       );
       for (const m of mine) {
         const pkg = m.name.slice(project.label.length + 1);

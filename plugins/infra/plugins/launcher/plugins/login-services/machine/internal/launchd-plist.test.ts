@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -19,7 +20,7 @@ const job: LoginServiceSpec = {
   ],
   cwd: "/h/me/.equin/cache/deps/gateway-binary/abc/env",
   env: { PATH: "/shims:/usr/bin", HOME: "/h/me", Q: `a&b<c>"d"` },
-  stdioLog: "/h/me/logs/gateway-stdio.log",
+  stdioLog: asAppPath("/h/me/logs/gateway-stdio.log"),
 };
 
 describe("renderLaunchAgentPlist", () => {
@@ -70,7 +71,7 @@ describe("renderLaunchAgentPlist — the gateway's job, byte for byte", () => {
         argv: ["/bin/gw", "-x"],
         cwd: "/h/me/repo",
         env: { Z: "1", A: "2" },
-        stdioLog: "/h/me/logs/gateway-stdio.log",
+        stdioLog: asAppPath("/h/me/logs/gateway-stdio.log"),
       }),
     ).toBe(`<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

@@ -9,26 +9,11 @@
   - Contributes: `updater` "mise"
   - Uses: `infra/deps/updates.UpdaterDeclare`
 - Core:
-  - Uses:
-    - `infra/deps/updates.heldBy`
-    - `infra/deps/updates.heldWaiting`
-    - `infra/deps/updates.Move`
-    - `infra/deps/updates.Outdated`
-    - `infra/deps/updates.Updater`
-    - `infra/deps/updates.utcDay`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `toolchain` ×12
+    - `infra/deps/updates` ×6
+    - `infra/host-fs/user-path` ×2
     - `infra/spawn.spawnCaptured`
-    - `toolchain.addLockedTool`
-    - `toolchain.compareVersions`
-    - `toolchain.HOLDS`
-    - `toolchain.HOLDS_FILE`
-    - `toolchain.isExactRelease`
-    - `toolchain.lockProblems`
-    - `toolchain.miseBin`
-    - `toolchain.parseMiseLock`
-    - `toolchain.parseMiseToolRequests`
-    - `toolchain.setLockedVersion`
-    - `toolchain.TOOLS`
-    - `toolchain.upgradeTarget`
   - Exports (values):
     - `installLockedToolchain`
     - `miseUpdater`

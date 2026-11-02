@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { appendFileSync, readFileSync, unlinkSync } from "node:fs";
 import { reportsBufferDir } from "@plugins/reports/data-dirs";
@@ -18,7 +19,7 @@ import type { ReportSource } from "@plugins/reports/core";
 // backend) read back as the `crash` kind, so nothing about the existing path
 // changed.
 
-function bufferFile(): string {
+function bufferFile(): AppPath {
   return reportsBufferDir.file(`${runtimeNamespace()}.jsonl`);
 }
 

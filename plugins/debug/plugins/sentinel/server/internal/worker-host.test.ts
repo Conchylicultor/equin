@@ -3,6 +3,10 @@ import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { pathToFileURL } from "node:url";
 import type { SentinelStatus } from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
 import type { DetectorThresholds } from "./detector";
@@ -53,9 +57,9 @@ const testDaemon = defineDaemon({
 });
 testDaemon.register();
 
-const tmpDirs: string[] = [];
-function newTmpDir(prefix: string): string {
-  const dir = mkdtempSync(join(tmpdir(), prefix));
+const tmpDirs: AppPath[] = [];
+function newTmpDir(prefix: string): AppPath {
+  const dir = asAppPath(mkdtempSync(join(tmpdir(), prefix)));
   tmpDirs.push(dir);
   return dir;
 }
@@ -72,7 +76,7 @@ interface Rig {
   statuses: SentinelStatus[];
   reports: DownStatus[];
   logs: string[];
-  statusDir: string;
+  statusDir: AppPath;
   waitForState(
     state: SentinelStatus["state"],
     timeoutMs?: number,

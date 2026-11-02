@@ -1,4 +1,8 @@
 import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   chmodSync,
   copyFileSync,
   mkdirSync,
@@ -75,8 +79,10 @@ async function assembleMacos(ctx: BuildContext, built: string): Promise<void> {
 }
 
 /** The app icon of an installed macOS build (see {@link assembleMacos}); null on Linux. */
-export function menuBarHelperIcon(ready: Ready<CargoSource>): string | null {
-  return process.platform === "darwin" ? join(ready.dir, MACOS, ICON) : null;
+export function menuBarHelperIcon(ready: Ready<CargoSource>): AppPath | null {
+  return process.platform === "darwin"
+    ? joinAppPath(ready.dir, MACOS, ICON)
+    : null;
 }
 
 /**

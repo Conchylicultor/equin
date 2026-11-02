@@ -21,6 +21,10 @@
 // The flat store's prune is copied here as it was, the baseline.
 
 import {
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   mkdirSync,
   mkdtempSync,
   readdirSync,
@@ -140,14 +144,17 @@ function buildGenerations(dir: string, n: number, now: number): void {
   }
 }
 
-const passSetDir = (path: string): PassSetDir => ({
-  path,
-  file: (...s: string[]) => join(path, ...s),
-  ensure: () => {
-    mkdirSync(path, { recursive: true });
-    return path;
-  },
-});
+const passSetDir = (raw: string): PassSetDir => {
+  const path = asAppPath(raw);
+  return {
+    path,
+    file: (...s: string[]) => joinAppPath(path, ...s),
+    ensure: () => {
+      mkdirSync(path, { recursive: true });
+      return path;
+    },
+  };
+};
 
 const fmt = (c: Cost): string =>
   `${(c.user + c.sys).toFixed(3)} CPU-s (user ${c.user.toFixed(3)}, sys ${c.sys.toFixed(3)}), wall ${c.wall.toFixed(3)} s`;

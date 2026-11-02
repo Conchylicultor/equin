@@ -1,8 +1,11 @@
 import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   runtimeNamespace,
   isMain,
 } from "@plugins/infra/plugins/runtime-identity/core";
-import { join } from "node:path";
 import { readFileSync, statSync, writeFileSync } from "node:fs";
 import { monitorEventLoopDelay, PerformanceObserver } from "node:perf_hooks";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
@@ -106,8 +109,12 @@ let stallArmed = false;
 // Exact machine-sleep measurement between ticks (see SLEPT_MIN_MS).
 let sleepMeter: SleepMeter | null = null;
 
-function healthFilePath(): string {
-  return join(worktreeDataDir(runtimeNamespace()), "logs", "health.jsonl");
+function healthFilePath(): AppPath {
+  return joinAppPath(
+    worktreeDataDir(runtimeNamespace()),
+    "logs",
+    "health.jsonl",
+  );
 }
 
 // Keep the JSONL bounded without a job: trim to the newest half once it grows

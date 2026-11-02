@@ -1,3 +1,7 @@
+import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
@@ -49,13 +53,14 @@ export class BundledClaudeMissingError extends Error {
  * Throws {@link BundledClaudeMissingError} when it is absent: a broken install
  * (or an unsupported platform), never a state for the user to fix.
  */
-export function bundledClaudeBin(): string {
+export function bundledClaudeBin(): AppPath {
   const requireFromSdk = createRequire(fileURLToPath(import.meta.resolve(SDK)));
   const tried = bundledClaudePackages(process.platform, process.arch, isMusl());
   for (const spec of tried) {
-    let path: string;
+    let path: AppPath;
     try {
-      path = requireFromSdk.resolve(spec);
+      // Resolved from the SDK package this app installed.
+      path = asAppPath(requireFromSdk.resolve(spec));
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === "MODULE_NOT_FOUND") continue;
       throw err;

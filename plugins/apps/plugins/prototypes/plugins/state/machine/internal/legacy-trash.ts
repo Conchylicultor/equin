@@ -1,5 +1,8 @@
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { existsSync, readdirSync, renameSync, statSync } from "node:fs";
-import { join } from "node:path";
 import { sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
@@ -31,13 +34,13 @@ const TRASH_DIR = "_trash";
  * once, so two folders under one is a broken assumption, never something to
  * overwrite.
  */
-export async function adoptLegacyTrash(root: string): Promise<void> {
-  const trash = join(root, TRASH_DIR);
+export async function adoptLegacyTrash(root: AppPath): Promise<void> {
+  const trash = joinAppPath(root, TRASH_DIR);
   if (!existsSync(trash)) return;
   for (const entry of readdirSync(trash, { withFileTypes: true })) {
     if (!entry.isDirectory() || !protoIdKind.is(entry.name)) continue;
-    const from = join(trash, entry.name);
-    const to = join(root, entry.name);
+    const from = joinAppPath(trash, entry.name);
+    const to = joinAppPath(root, entry.name);
     if (existsSync(to)) {
       throw new Error(
         `prototype ${entry.name} is both in the old trash (${from}) and live (${to}); move one aside by hand`,

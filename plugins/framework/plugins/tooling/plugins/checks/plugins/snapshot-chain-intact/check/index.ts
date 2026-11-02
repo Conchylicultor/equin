@@ -1,3 +1,7 @@
+import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { resolve } from "path";
 // The DAG's edges (prevId + merge-node parents) and the published set are the
 // migrations plugin's: the CLI's tip join reads the same definitions, so this
@@ -33,8 +37,8 @@ type Check = {
  * consolidates it into the one migration whose body is committed as the tip.
  */
 async function unresolvableBodies(
-  root: string,
-  dataDir: string,
+  root: AppPath,
+  dataDir: AppPath,
   dag: SnapshotDag,
   published: ReadonlySet<string>,
 ): Promise<string[]> {
@@ -135,7 +139,7 @@ const check: Check = {
   },
   async run() {
     const root = await getWorktreeRoot();
-    const dataDir = resolve(root, MIGRATIONS_DATA_DIR);
+    const dataDir = asAppPath(resolve(root, MIGRATIONS_DATA_DIR));
     const dag = analyzeSnapshotDag(await readSnapshotNodes(dataDir));
     const first = dag.problems[0];
     if (!first) {

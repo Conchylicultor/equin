@@ -1,3 +1,7 @@
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { join } from "node:path";
 import { pgClusterDir } from "@plugins/database/plugins/embedded/data-dirs";
@@ -28,8 +32,8 @@ export const PGBOUNCER_LOG_FILE = join(PG_DIR, "pgbouncer.log");
  * process's own data root). `PGBOUNCER_PID_FILE` is the same path under the dev
  * root.
  */
-export function pgbouncerPidFileUnder(root: string): string {
-  return join(root, "postgres", "pgbouncer.pid");
+export function pgbouncerPidFileUnder(root: AppPath): AppPath {
+  return joinAppPath(root, "postgres", "pgbouncer.pid");
 }
 
 // The same file under THIS process's data root — through the declared cluster

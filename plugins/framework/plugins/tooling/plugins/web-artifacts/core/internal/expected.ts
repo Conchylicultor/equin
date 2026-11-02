@@ -6,7 +6,11 @@
 // been composed from the current tree — reported as `missing-artifacts` rather
 // than a URL diff, since the closure can't even be completed without the metas.
 
-import { basename, join } from "node:path";
+import { basename } from "node:path";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { BUILDER_VERSION } from "../constants";
 import { buildImportMap } from "../import-map";
 import { hostWorkerSpecifier, type BrowserHostPlan } from "./browser-hosts";
@@ -94,7 +98,7 @@ export type ExpectedComposition =
 
 /** The expected fleet's targets and metas, stopping at store misses. */
 export async function planExpectedFleet(opts: {
-  root: string;
+  root: AppPath;
   minify: boolean;
   /** Which registry + entry set to plan; defaults to the committed full registry. */
   source?: FleetSource;
@@ -107,7 +111,7 @@ export async function planExpectedFleet(opts: {
   missing: string[];
   builderSource: string;
 }> {
-  const pluginsRoot = join(opts.root, "plugins");
+  const pluginsRoot = joinAppPath(opts.root, "plugins");
   const cache = loadFingerprintCache(basename(opts.root));
   const plan = await planFleet({
     root: opts.root,
@@ -180,7 +184,7 @@ export async function planExpectedFleet(opts: {
 
 /** The exact import map + entry URL the current tree composes. */
 export async function computeExpectedComposition(opts: {
-  root: string;
+  root: AppPath;
   minify: boolean;
 }): Promise<ExpectedComposition> {
   const fleet = await planExpectedFleet(opts);
@@ -190,7 +194,7 @@ export async function computeExpectedComposition(opts: {
 
   const requests = await collectVendorRequests({
     root: opts.root,
-    pluginsRoot: join(opts.root, "plugins"),
+    pluginsRoot: joinAppPath(opts.root, "plugins"),
     targets: fleet.targets,
     metaOf: (dirName) => fleet.metas.get(dirName)!,
   });
@@ -231,7 +235,7 @@ export async function computeExpectedComposition(opts: {
  * which means the full fleet has not been built from this tree yet.
  */
 export async function readFleetVendorMeta(opts: {
-  root: string;
+  root: AppPath;
   minify: boolean;
 }): Promise<VendorSetMeta> {
   const fleet = await planExpectedFleet(opts);
@@ -244,7 +248,7 @@ export async function readFleetVendorMeta(opts: {
   }
   const requests = await collectVendorRequests({
     root: opts.root,
-    pluginsRoot: join(opts.root, "plugins"),
+    pluginsRoot: joinAppPath(opts.root, "plugins"),
     targets: fleet.targets,
     metaOf: (dirName) => fleet.metas.get(dirName)!,
   });

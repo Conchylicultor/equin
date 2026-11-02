@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { cp, stat, mkdir } from "node:fs/promises";
 import { join } from "node:path";
+import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { getConfig } from "@plugins/config_v2/server";
 import { CLAUDE_PROJECTS_DIR } from "@plugins/infra/plugins/paths/server";
 import type { BackupSourceReport } from "@plugins/backup/core";
@@ -46,7 +47,7 @@ export async function assembleProjectMemory(
     if (!projectName) continue;
     if (!seen.has(projectName)) {
       seen.add(projectName);
-      const memoryDir = join(CLAUDE_PROJECTS_DIR, projectName, "memory");
+      const memoryDir = joinAppPath(CLAUDE_PROJECTS_DIR, projectName, "memory");
       if (existsSync(memoryDir)) {
         // Use encoded project name to avoid collisions (replace slashes with underscores)
         const encodedName = projectName.replace(/\//g, "_");

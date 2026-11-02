@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   closeSync,
   existsSync,
@@ -80,7 +81,7 @@ export function logTail(path: string, lines = DEP_LOG_TAIL_LINES): string[] {
  */
 export function readInstallState(
   paths: InstallPaths,
-  isIntact: (dir: string) => boolean,
+  isIntact: (dir: AppPath) => boolean,
 ): DepState {
   if (existsSync(paths.ready) && isIntact(paths.env)) {
     const ready = readJson(paths.ready, ReadyFileSchema);

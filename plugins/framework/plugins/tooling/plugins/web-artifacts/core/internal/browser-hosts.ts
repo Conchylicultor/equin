@@ -30,6 +30,10 @@
 
 import { createHash } from "node:crypto";
 import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   existsSync,
   readdirSync,
   readFileSync,
@@ -37,7 +41,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join, relative, sep } from "node:path";
+import { dirname, relative, sep } from "node:path";
 import type { Plugin as VitePlugin } from "vite";
 import {
   BROWSER_HOST_SPECIFIER_PREFIX,
@@ -71,7 +75,7 @@ const FRAMES_SW_ENTRY_REL =
   "plugins/framework/plugins/browser-server/web/frames-sw.ts";
 
 /** Where a host's declaration lives inside its plugin. */
-const HOST_ENTRY_REL = join("bin", "browser-host.ts");
+const HOST_ENTRY_REL = "bin/browser-host.ts";
 
 /**
  * A host's input record, published INSIDE its store dir beside `meta.json`:
@@ -88,7 +92,7 @@ export interface BrowserHostPlan {
   hostSource: string;
   /** `@browser-host/<pluginPath>` */
   specifier: string;
-  entryFile: string;
+  entryFile: AppPath;
   /** The store dir of the current tree's host, when one is stored. */
   dirName: string | null;
   needsBuild: boolean;
@@ -137,7 +141,7 @@ export function hostModuleSource(pluginPath: string): string {
  * recorded lists (one per stored build) reads each file once.
  */
 export function hostInputsHasher(
-  root: string,
+  root: AppPath,
   identityHash: string,
 ): (inputs: HostInputs) => string | null {
   const digest = (bytes: Buffer | string) =>
@@ -149,7 +153,7 @@ export function hostInputsHasher(
   const fileDigest = (rel: string): string | null => {
     let d = fileDigests.get(rel);
     if (d === undefined) {
-      const abs = join(root, rel);
+      const abs = joinAppPath(root, rel);
       d = existsSync(abs) ? digest(readFileSync(abs)) : null;
       fileDigests.set(rel, d);
     }
@@ -158,7 +162,7 @@ export function hostInputsHasher(
   const dirListing = (dir: string): string => {
     let l = dirListings.get(dir);
     if (l === undefined) {
-      l = readdirSync(join(root, dir)).sort().join("\0");
+      l = readdirSync(joinAppPath(root, dir)).sort().join("\0");
       dirListings.set(dir, l);
     }
     return l;
@@ -166,7 +170,7 @@ export function hostInputsHasher(
   const globListing = (rel: string): string => {
     let l = globListings.get(rel);
     if (l === undefined) {
-      const abs = join(root, rel);
+      const abs = joinAppPath(root, rel);
       l = existsSync(abs)
         ? (readdirSync(abs, { recursive: true }) as string[])
             .map((n) => n.split(sep).join("/"))
@@ -178,7 +182,7 @@ export function hostInputsHasher(
     return l;
   };
   return ({ files, globRoots }) => {
-    lockDigest ??= digest(readFileSync(join(root, "bun.lock")));
+    lockDigest ??= digest(readFileSync(joinAppPath(root, "bun.lock")));
     const h = createHash("sha256");
     h.update(`identity\t${identityHash}\n`);
     h.update(`lock\t${lockDigest}\n`);
@@ -201,7 +205,7 @@ export function hostInputsHasher(
 
 /** One-shot {@link hostInputsHasher}. */
 export function hostInputsHash(
-  root: string,
+  root: AppPath,
   inputs: HostInputs,
   identityHash: string,
 ): string | null {
@@ -231,7 +235,7 @@ function* storedHostRecords(
 ): Generator<HostInputsRecord & { dirName: string }> {
   const slug = slugOf(pluginPath);
   for (const dirName of listArtifacts(`${slug}.browser-host.`)) {
-    const file = join(artifactStorePath(dirName), HOST_INPUTS_FILE);
+    const file = joinAppPath(artifactStorePath(dirName), HOST_INPUTS_FILE);
     let text: string;
     try {
       text = readFileSync(file, "utf8");
@@ -265,13 +269,18 @@ function hostIdentity(identityHash: string, hostSource: string): string {
  * tree still hashes to, or to build when none does.
  */
 export function planBrowserHosts(opts: {
-  root: string;
+  root: AppPath;
   pluginPaths: readonly string[];
   identityHash: string;
 }): BrowserHostPlan[] {
   const plans: BrowserHostPlan[] = [];
   for (const pluginPath of opts.pluginPaths) {
-    const entryFile = join(opts.root, "plugins", pluginPath, HOST_ENTRY_REL);
+    const entryFile = joinAppPath(
+      opts.root,
+      "plugins",
+      pluginPath,
+      HOST_ENTRY_REL,
+    );
     if (!existsSync(entryFile)) continue;
     const hostSource = hostModuleSource(pluginPath);
     const match = matchHostRecord(
@@ -292,7 +301,7 @@ export function planBrowserHosts(opts: {
 }
 
 /** Records every repo module the worker bundle loads, and the static bases of their globs. */
-function moduleRecorder(root: string): {
+function moduleRecorder(root: AppPath): {
   plugin: VitePlugin;
   inputs: () => HostInputs;
 } {
@@ -308,10 +317,12 @@ function moduleRecorder(root: string): {
           const rel = relative(root, path);
           if (rel.startsWith("..") || rel.split(sep).includes("node_modules"))
             continue;
-          if (!existsSync(path) || !statSync(path).isFile()) continue;
+          // Under the root (checked above), so it is the app's own file.
+          const abs = joinAppPath(root, rel);
+          if (!existsSync(abs) || !statSync(abs).isFile()) continue;
           files.add(rel);
-          if (!/\.[cm]?[jt]sx?$/.test(path)) continue;
-          const source = readFileSync(path, "utf8");
+          if (!/\.[cm]?[jt]sx?$/.test(abs)) continue;
+          const source = readFileSync(abs, "utf8");
           if (!source.includes("import.meta.glob")) continue;
           for (const g of globRootsOf(root, rel, source)) globRoots.add(g);
         }
@@ -331,13 +342,13 @@ const EXTERNALIZED_RE =
  * Build one host (or reuse it) and return its store dir. Logs the bundle size.
  */
 export async function ensureBrowserHost(opts: {
-  root: string;
+  root: AppPath;
   plan: BrowserHostPlan;
   identityHash: string;
   minify: boolean;
   log: (line: string) => void;
   /** Pin an entry into the build's lease before it is read or published (`lease.ts`). */
-  pin: (paths: readonly string[]) => Promise<void>;
+  pin: (paths: readonly AppPath[]) => Promise<void>;
 }): Promise<string> {
   const { root, plan } = opts;
   if (!plan.needsBuild && plan.dirName !== null) {
@@ -373,7 +384,7 @@ export async function ensureBrowserHost(opts: {
       customLogger: logger,
       root,
       publicDir: false,
-      resolve: { alias: { "@plugins": join(root, "plugins") } },
+      resolve: { alias: { "@plugins": joinAppPath(root, "plugins") } },
       define: { "process.env.NODE_ENV": JSON.stringify("production") },
       plugins: [recorder.plugin],
       build: {
@@ -384,7 +395,7 @@ export async function ensureBrowserHost(opts: {
         modulePreload: false,
         reportCompressedSize: false,
         rolldownOptions: {
-          input: { "frames-sw": join(root, FRAMES_SW_ENTRY_REL) },
+          input: { "frames-sw": joinAppPath(root, FRAMES_SW_ENTRY_REL) },
           output: {
             format: "iife",
             entryFileNames: FRAMES_SW_FILE,
@@ -398,7 +409,7 @@ export async function ensureBrowserHost(opts: {
         `the frame-serving Service Worker reaches Node builtins from repo code:\n  ${offenders.join("\n  ")}`,
       );
     }
-    writeFileSync(join(tmpDir, BROWSER_HOST_FILE), plan.hostSource);
+    writeFileSync(joinAppPath(tmpDir, BROWSER_HOST_FILE), plan.hostSource);
     const inputs = recorder.inputs();
     const { files } = inputs;
     if (files.length === 0) {
@@ -417,7 +428,7 @@ export async function ensureBrowserHost(opts: {
     const dirName = artifactDirName(slug, "browser-host", hash);
     let bytes = 0;
     for (const f of readdirSync(tmpDir, { recursive: true }) as string[]) {
-      const st = statSync(join(tmpDir, f));
+      const st = statSync(joinAppPath(tmpDir, f));
       if (st.isFile()) bytes += st.size;
     }
     const meta: ArtifactMeta = {
@@ -436,7 +447,7 @@ export async function ensureBrowserHost(opts: {
     // The record rides inside the artifact dir, published with it: immutable,
     // keyed by the address it hashes to, gone when the artifact is pruned.
     writeFileSync(
-      join(tmpDir, HOST_INPUTS_FILE),
+      joinAppPath(tmpDir, HOST_INPUTS_FILE),
       JSON.stringify({
         inputsHash: hash,
         ...inputs,

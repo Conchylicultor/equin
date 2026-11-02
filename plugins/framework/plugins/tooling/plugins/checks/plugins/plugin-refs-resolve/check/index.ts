@@ -1,4 +1,4 @@
-import { join } from "path";
+import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type {
   Check,
   CheckContext,
@@ -31,7 +31,9 @@ const check: Check = {
     "plugin paths (literals, @plugins specifiers) and dot ids (compositions manifest, reorder overrides, asPluginId, runtimeExceptions) resolve to a real plugin",
   async run(ctx: CheckContext): Promise<CheckResult> {
     const repo = await ctx.repo();
-    const tree = await buildStructureTreeOnce(join(repo.root, "plugins"));
+    const tree = await buildStructureTreeOnce(
+      joinAppPath(repo.root, "plugins"),
+    );
     const pathSet = new Set([...tree.byPath.keys()].map((p) => `plugins/${p}`));
     const idSet = new Set([...tree.byDir.values()].map((n) => n.id as string));
 

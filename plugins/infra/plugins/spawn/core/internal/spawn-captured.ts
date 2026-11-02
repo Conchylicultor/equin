@@ -1,3 +1,4 @@
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   closeSync,
   mkdtempSync,
@@ -110,7 +111,7 @@ export async function spawnCaptured(
   // Before any side effect — the tmpdir AND the child. A caller that has already
   // been abandoned must not launch a fresh subprocess only to kill it a tick later.
   signal?.throwIfAborted();
-  const dir = mkdtempSync(join(tmpdir(), "sg-spawn-"));
+  const dir = asAppPath(mkdtempSync(join(tmpdir(), "sg-spawn-")));
   try {
     const outPath = join(dir, "out");
     const errPath = join(dir, "err");

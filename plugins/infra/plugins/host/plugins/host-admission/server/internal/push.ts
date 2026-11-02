@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { createHostSemaphore } from "@plugins/packages/plugins/host-semaphore/server";
 import type { AcquireHooks } from "@plugins/packages/plugins/host-semaphore/server";
 import { defineHostPool } from "./pool";
@@ -28,7 +29,7 @@ export interface RepoPushLock {
 }
 
 // One handle per repository per process, like the pool registry.
-const repoLocks = new Map<string, RepoPushLock>();
+const repoLocks = new Map<AppPath, RepoPushLock>();
 
 /**
  * The push mutex of a repository that is NOT the one this machine's main app is
@@ -40,7 +41,7 @@ const repoLocks = new Map<string, RepoPushLock>();
  *
  * Declared here, beside `pushPool`, so every push mutex comes from this plugin.
  */
-export function repoPushLock(gitCommonDir: string): RepoPushLock {
+export function repoPushLock(gitCommonDir: AppPath): RepoPushLock {
   const hit = repoLocks.get(gitCommonDir);
   if (hit) return hit;
   const sem = createHostSemaphore({

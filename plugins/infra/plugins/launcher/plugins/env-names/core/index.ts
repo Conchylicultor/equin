@@ -12,6 +12,7 @@ export type { EnvKey } from "./internal/env-keys";
 export {
   envEntries,
   readEnv,
+  readEnvPath,
   setEnv,
   setEnvDefault,
   unsetEnv,

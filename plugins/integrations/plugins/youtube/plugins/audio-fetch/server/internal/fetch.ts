@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { basename, dirname } from "node:path";
 import { z } from "zod";
 import { ensureDep } from "@plugins/infra/plugins/deps/deps";
@@ -160,7 +161,7 @@ export interface FetchOptions {
   /** Progress lines: the dep install's and yt-dlp's. */
   log?: (line: string) => void;
   /** Test seam: the cache dir. Default: the declared `cache/youtube-audio`. */
-  dir?: string;
+  dir?: AppPath;
 }
 
 function toAudio(path: string, meta: AudioMeta): YouTubeAudio {

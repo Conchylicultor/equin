@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readFileSync } from "node:fs";
 import { mkdir, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
@@ -17,7 +18,7 @@ export type CatalogFileRead =
   | { kind: "invalid"; error: string };
 
 /** Read the catalog file. Synchronous: it is a few KB, and the launch path needs it without an await. */
-export function readCatalogFile(file: string): CatalogFileRead {
+export function readCatalogFile(file: AppPath): CatalogFileRead {
   let text: string;
   try {
     text = readFileSync(file, "utf8");
@@ -59,7 +60,7 @@ export class ModelCatalogUnreadableError extends Error {
 }
 
 /** The catalog a file holds: the baseline while there is none, a throw while it is unreadable. */
-export function catalogFromFile(file: string): ModelCatalog {
+export function catalogFromFile(file: AppPath): ModelCatalog {
   const read = readCatalogFile(file);
   switch (read.kind) {
     case "absent":
@@ -78,7 +79,7 @@ export function catalogFromFile(file: string): ModelCatalog {
  * lock is needed to keep two writers from losing each other's update.
  */
 export async function writeCatalogFile(
-  file: string,
+  file: AppPath,
   catalog: ModelCatalog,
 ): Promise<void> {
   await mkdir(dirname(file), { recursive: true });

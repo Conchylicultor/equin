@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { stat } from "node:fs/promises";
 import { basename, dirname } from "node:path";
 import { serveValue } from "@plugins/network/plugins/live/machine";
 import {
@@ -160,7 +160,10 @@ export const shellOutputServed = serveValue(shellOutput, {
       // Unknown shell, or its directory is already gone: nothing to watch, and
       // the loader answers `unknown-shell` / `gone` on its own. The memo entry
       // the loader cached for this room still lives exactly as long as the room.
-      if (target.kind === "unknown" || !existsSync(dirname(target.path))) {
+      if (
+        target.kind === "unknown" ||
+        !(await dirExists(dirname(target.path)))
+      ) {
         return () => outputMemo.evict(key);
       }
       const outputFile = target.path;
@@ -190,3 +193,14 @@ export const shellOutputServed = serveValue(shellOutput, {
     },
   },
 });
+
+/** Whether `dir` exists, asked off the event loop (the path came out of a transcript). ENOENT is the only "no". */
+async function dirExists(dir: string): Promise<boolean> {
+  try {
+    await stat(dir);
+    return true;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw err;
+  }
+}

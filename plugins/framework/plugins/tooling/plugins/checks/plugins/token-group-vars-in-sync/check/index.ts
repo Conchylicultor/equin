@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { existsSync, readFileSync } from "fs";
 import { relative } from "path";
 import {
@@ -24,7 +25,7 @@ type Check = { id: string; description: string; run(): Promise<CheckResult> };
  * closure edge to the token's plugin; if it drifted, a bundle would silently
  * lose the group its members paint with.
  */
-async function staticOwnershipProblems(root: string): Promise<string[]> {
+async function staticOwnershipProblems(root: AppPath): Promise<string[]> {
   const [imported, tree] = await Promise.all([
     collectTokenGroupVars(root),
     buildBarrelFreeTree(root),

@@ -157,6 +157,8 @@ snapshot they read the disk and compute, unchanged.
     - `framework/plugin-id.isTestCodePath`
     - `framework/plugin-id.TESTING_FOLDER`
     - `framework/plugin-id.TESTS_DIR`
+    - `infra/host-fs/user-path.AppPath`
+    - `infra/host-fs/user-path.joinAppPath`
   - Exports (types):
     - `BarrelExport`
     - `DefaultExportObject`

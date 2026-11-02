@@ -15,6 +15,11 @@ import {
   latestPointerName,
   latestPointerPath,
 } from "./pointer";
+import {
+  type AppPath,
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
  * Resolve which bundle to ship for `(composition, platform)`.
@@ -59,9 +64,9 @@ export function resolveBundle(opts: {
     };
   }
 
-  let runDir: string;
+  let runDir: AppPath;
   if (opts.release !== undefined) {
-    runDir = join(compDir, opts.release);
+    runDir = joinAppPath(compDir, opts.release);
     if (!existsSync(runDir)) {
       return {
         ok: false,
@@ -88,7 +93,8 @@ export function resolveBundle(opts: {
         },
       };
     }
-    runDir = realpathSync(pointerPath);
+    // The real path of the pointer symlink under the composition dir.
+    runDir = asAppPath(realpathSync(pointerPath));
   }
 
   const manifestPath = join(runDir, "RELEASE.json");
@@ -144,7 +150,7 @@ export function resolveBundle(opts: {
   }
 
   const binaryName = bundleBinaryName(composition, platform);
-  const localPath = join(runDir, "dist", binaryName);
+  const localPath = joinAppPath(runDir, "dist", binaryName);
   if (!existsSync(localPath)) {
     return { ok: false, refusal: { kind: "not-packed", localPath } };
   }
@@ -188,12 +194,12 @@ export function bundleSignature(opts: {
   if (!existsSync(compDir)) return "no-releases";
   const pointerPath = latestPointerPath(compDir, platform);
   if (!existsSync(pointerPath)) return "no-pointer";
-  const runDir = realpathSync(pointerPath);
-  const manifest = statSync(join(runDir, "RELEASE.json"), {
+  const runDir = asAppPath(realpathSync(pointerPath));
+  const manifest = statSync(joinAppPath(runDir, "RELEASE.json"), {
     throwIfNoEntry: false,
   });
   const packed = existsSync(
-    join(runDir, "dist", bundleBinaryName(composition, platform)),
+    joinAppPath(runDir, "dist", bundleBinaryName(composition, platform)),
   );
   return [
     runDir,

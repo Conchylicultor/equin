@@ -1,3 +1,4 @@
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -26,7 +27,7 @@ export async function spawnPassthrough(
   // The same two guarantees `spawnCaptured` gives: the child is SIGTERMed if
   // we exit first (live-children), and dies on its own if we are SIGKILLed and
   // it called `exitWithParent()` (the lifeline, in a dir private to this spawn).
-  const dir = mkdtempSync(join(tmpdir(), "sg-spawn-"));
+  const dir = asAppPath(mkdtempSync(join(tmpdir(), "sg-spawn-")));
   try {
     const lifeline = holdParentLifeline(dir);
     try {

@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { ipCountryCache } from "../../data-dirs";
 import { loadSnapshot, lookupIn, type Snapshot } from "./snapshot";
 
@@ -38,7 +39,7 @@ type Held =
  * re-read on each request.
  */
 export function createIpCountryLookup(
-  snapshotPath: () => string,
+  snapshotPath: () => AppPath,
 ): IpCountryLookup {
   let held: Held = { kind: "unread" };
   const read = (): Held => {
@@ -71,7 +72,7 @@ export function createIpCountryLookup(
 }
 
 /** The snapshot file inside the machine-wide cache dir. */
-export function defaultSnapshotPath(): string {
+export function defaultSnapshotPath(): AppPath {
   return ipCountryCache.file("ip-country.bin");
 }
 

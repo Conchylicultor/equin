@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 /**
  * One program of the equin app — on macOS an executable inside the ONE
@@ -19,9 +20,9 @@ export interface AppComponent {
 /** One build of an {@link AppComponent}: what installing it copies, and which build that is. */
 export interface ComponentBuild {
   /** The built executable (in the deps cache). */
-  readonly file: string;
+  readonly file: AppPath;
   /** An `.icns` the bundle wears, when this component brings the app's icon. */
-  readonly icon?: string;
+  readonly icon?: AppPath;
   /** Which build: {@link componentIdentity} of its dependency. */
   readonly identity: string;
 }

@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { z } from "zod";
@@ -84,7 +85,7 @@ async function readIfExists<T>(
  */
 export async function readBeatFeatures(
   videoId: string,
-  opts: { dir?: string; settings?: AnalysisSettings } = {},
+  opts: { dir?: AppPath; settings?: AnalysisSettings } = {},
 ): Promise<BeatFeaturesState> {
   const settings = opts.settings ?? configuredAnalysis().settings;
   const paths = featurePaths(cacheRoot(opts.dir), videoId, settings);

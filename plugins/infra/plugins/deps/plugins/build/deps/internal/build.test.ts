@@ -10,6 +10,11 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  type AppPath,
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   defineDep,
   depState,
   ensureDep,
@@ -18,14 +23,17 @@ import {
 import { execContextForTests } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core/testing";
 import { build, builtFile, type BuildContext } from "./build";
 
-let root: string;
-let store: { cacheRoot: string; locksRoot: string };
+let root: AppPath;
+let store: { cacheRoot: AppPath; locksRoot: AppPath };
 const exec = execContextForTests();
 
 beforeEach(() => {
-  const base = mkdtempSync(join(tmpdir(), "deps-build-test-"));
-  root = join(base, "repo");
-  store = { cacheRoot: join(base, "cache"), locksRoot: join(base, "locks") };
+  const base = asAppPath(mkdtempSync(join(tmpdir(), "deps-build-test-")));
+  root = joinAppPath(base, "repo");
+  store = {
+    cacheRoot: joinAppPath(base, "cache"),
+    locksRoot: joinAppPath(base, "locks"),
+  };
   mkdirSync(join(root, "native"), { recursive: true });
   // A real repo: the kind lists its inputs with `git ls-files` (untracked
   // files count, so nothing needs committing).
@@ -63,7 +71,7 @@ describe("build", () => {
       build({ inputs: ["native/**"], tool, output: "out.bin", run: concat }),
     );
     const ready = await ensureDep(d, exec, { store, root });
-    expect(builtFile(ready)).toBe(join(ready.dir, "out.bin"));
+    expect(builtFile(ready)).toBe(joinAppPath(ready.dir, "out.bin"));
     expect(readFileSync(builtFile(ready), "utf8")).toBe("int a;\n");
 
     // The output is what "intact" means: losing it reads as absent.
@@ -264,7 +272,7 @@ describe("targets", () => {
       `${host.platform}/${host.arch}`,
     );
 
-    const dir = join(root, "..", "sealed-env");
+    const dir = asAppPath(join(root, "..", "sealed-env"));
     await targeted.source.install({
       root,
       dir,

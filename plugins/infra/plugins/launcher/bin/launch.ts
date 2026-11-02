@@ -1,3 +1,4 @@
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 /**
  * Release launcher — the compiled `launch` binary, the artifact's entrypoint.
  *
@@ -188,8 +189,8 @@ async function main(): Promise<void> {
   // literal cross-plugin dynamic import — so the launcher owns the boot step and
   // delegates the copy mechanics + dirname to asset-mirror.
   seedReleaseAssetMirror({
-    bundleRoot,
-    dataDir: readEnv("DIR")!,
+    bundleRoot: asAppPath(bundleRoot),
+    dataDir: asAppPath(readEnv("DIR")!),
     log: console.log,
   });
 
@@ -201,8 +202,8 @@ async function main(): Promise<void> {
   // config-dir.ts reads (EQUIN_DIR/config/<worktree>). Runs before the
   // gateway spawns the backend, so CONFIG_DIR is current on first read.
   propagateReleaseConfig({
-    bundleRoot,
-    dataDir: readEnv("DIR")!,
+    bundleRoot: asAppPath(bundleRoot),
+    dataDir: asAppPath(readEnv("DIR")!),
     worktreeName: name,
     log: console.log,
   });
@@ -211,7 +212,7 @@ async function main(): Promise<void> {
     name,
     // Sealed into the bundle by `release` (deps.sealed.json): read, never
     // built — this host has no Go toolchain and no source.
-    gateway: await bundledGateway(bundleRoot),
+    gateway: await bundledGateway(asAppPath(bundleRoot)),
     // Which build is serving, for /api/health to report — see setReleaseIdentity.
     // `runId` is absent on a bundle built outside a tracked release run.
     releaseIdentity: { runId: manifest.runId ?? null, composition: name },
@@ -234,7 +235,7 @@ async function main(): Promise<void> {
       .split(",")
       .map((h) => h.trim())
       .filter((h) => h !== ""),
-    repoRoot: bundleRoot,
+    repoRoot: asAppPath(bundleRoot),
     log: console.log,
   });
 
@@ -266,7 +267,10 @@ async function main(): Promise<void> {
     if (stopping) return; // A second SIGTERM must not race the first teardown.
     stopping = true;
     console.log(`\n${reason} — shutting down...`);
-    await teardownSelfContainedApp({ root, httpPort: port }, console.log);
+    await teardownSelfContainedApp(
+      { root: asAppPath(root), httpPort: port },
+      console.log,
+    );
     process.exit(code);
   }
 

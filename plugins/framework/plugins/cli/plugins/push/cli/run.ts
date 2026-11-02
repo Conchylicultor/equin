@@ -1,4 +1,8 @@
 import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   envEntries,
   readEnv,
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
@@ -317,16 +321,16 @@ async function runRebasedChecks(
   return result.ok;
 }
 
-async function getWorktreeRoot(): Promise<string> {
+async function getWorktreeRoot(): Promise<AppPath> {
   const stdout = await run(["git", "rev-parse", "--show-toplevel"]);
   if (!stdout) {
     console.error("Not in a git repository");
     process.exit(1);
   }
-  return stdout;
+  return asAppPath(stdout);
 }
 
-async function getMainWorktree(): Promise<string> {
+async function getMainWorktree(): Promise<AppPath> {
   const stdout = await run(["git", "worktree", "list", "--porcelain"]);
   // First worktree listed is always the main one
   const match = stdout.match(/^worktree (.+)$/m);
@@ -334,7 +338,7 @@ async function getMainWorktree(): Promise<string> {
     console.error("Could not determine main worktree");
     process.exit(1);
   }
-  return match[1]!;
+  return asAppPath(match[1]!);
 }
 
 const nulList = (out: string): string[] => out.split("\0").filter(Boolean);
@@ -415,9 +419,9 @@ async function assertNoMainCollision(
  * common dir, and a push that would cross repositories stops before the lock.
  */
 async function assertLandsOnOwnRepository(
-  root: string,
-  mainWorktree: string,
-): Promise<string> {
+  root: AppPath,
+  mainWorktree: AppPath,
+): Promise<AppPath> {
   const inherited = ["GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR"].filter(
     (name) => process.env[name] !== undefined,
   );
@@ -444,7 +448,7 @@ async function assertLandsOnOwnRepository(
     );
     process.exit(1);
   }
-  return ours;
+  return asAppPath(ours);
 }
 
 async function getCurrentBranch(): Promise<string> {
@@ -475,8 +479,8 @@ type PushLock = Pick<typeof pushPool, "run">;
  *   real pushes behind it, nor waits behind them.
  */
 async function pushLockFor(
-  mainWorktree: string,
-  gitCommonDir: string,
+  mainWorktree: AppPath,
+  gitCommonDir: AppPath,
 ): Promise<PushLock> {
   if ((await checkoutRef(mainWorktree)).kind === "main") return pushPool;
   return repoPushLock(gitCommonDir);

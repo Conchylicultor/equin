@@ -11,6 +11,11 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  type AppPath,
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { pathToFileURL } from "node:url";
 import {
   defineDep,
@@ -21,16 +26,19 @@ import {
 import { execContextForTests } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core/testing";
 import { download, downloadedFile } from "./download";
 
-let base: string;
-let store: { cacheRoot: string; locksRoot: string };
+let base: AppPath;
+let store: { cacheRoot: AppPath; locksRoot: AppPath };
 let url: string;
 const BODY = "a,b\n1,2\n";
 const SHA = createHash("sha256").update(BODY).digest("hex");
 const exec = execContextForTests();
 
 beforeEach(() => {
-  base = mkdtempSync(join(tmpdir(), "deps-download-test-"));
-  store = { cacheRoot: join(base, "cache"), locksRoot: join(base, "locks") };
+  base = asAppPath(mkdtempSync(join(tmpdir(), "deps-download-test-")));
+  store = {
+    cacheRoot: joinAppPath(base, "cache"),
+    locksRoot: joinAppPath(base, "locks"),
+  };
   const src = join(base, "upstream.csv");
   writeFileSync(src, BODY);
   // curl reads file:// URLs, so the kind's real fetch runs with no network.

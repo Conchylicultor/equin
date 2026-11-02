@@ -28,6 +28,11 @@
 
 import { createHash } from "node:crypto";
 import {
+  appPathParent,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   linkSync,
   mkdirSync,
   readdirSync,
@@ -35,7 +40,7 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { basename, dirname, join, relative, sep } from "node:path";
+import { basename, relative, sep } from "node:path";
 import { init as esInit, parse as esParse } from "es-module-lexer/minimal";
 import { isBrowserHostSpecifier } from "../browser-host-specifier";
 import { COMPOSITION_SPECIFIERS } from "../composition-modules";
@@ -183,11 +188,11 @@ export async function ensureWorkerLinked(opts: {
     withFileTypes: true,
   })) {
     if (!dirent.isFile()) continue;
-    const abs = join(dirent.parentPath, dirent.name);
+    const abs = joinAppPath(src, relative(src, dirent.parentPath), dirent.name);
     const rel = relative(src, abs);
     if (rel === "meta.json" || SIDECAR_RE.test(rel)) continue;
-    const dest = join(tmp, rel);
-    mkdirSync(dirname(dest), { recursive: true });
+    const dest = joinAppPath(tmp, rel);
+    mkdirSync(appPathParent(dest), { recursive: true });
     // The tree root, seen from this file: one `..` per dir level plus the
     // artifact's own link dir.
     const up = "../".repeat(rel.split(sep).length);
@@ -212,7 +217,10 @@ export async function ensureWorkerLinked(opts: {
     linkSync(abs, dest);
     for (const ext of [".br", ".gz"]) {
       try {
-        linkSync(`${abs}${ext}`, `${dest}${ext}`);
+        linkSync(
+          joinAppPath(src, `${rel}${ext}`),
+          joinAppPath(tmp, `${rel}${ext}`),
+        );
         precompressed.add(dest);
       } catch (err) {
         if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
@@ -233,7 +241,7 @@ export async function ensureWorkerLinked(opts: {
 export interface WorkerTree {
   dirName: string;
   /** link name → absolute store path */
-  links: Record<string, string>;
+  links: Record<string, AppPath>;
 }
 
 /**
@@ -242,9 +250,9 @@ export interface WorkerTree {
  */
 export function workerTreeOf(opts: {
   linked: ReadonlyArray<{ linkName: string; linkedDirName: string }>;
-  vendorSetDir: string;
+  vendorSetDir: AppPath;
 }): WorkerTree {
-  const links: Record<string, string> = {};
+  const links: Record<string, AppPath> = {};
   for (const { linkName, linkedDirName } of opts.linked) {
     const target = artifactStorePath(linkedDirName);
     if (links[linkName] !== undefined && links[linkName] !== target) {
@@ -266,14 +274,14 @@ export function workerTreeOf(opts: {
 }
 
 /** Ensure the tree's store entry exists (a dir of symlinks); return its path. */
-export async function ensureWorkerTree(tree: WorkerTree): Promise<string> {
+export async function ensureWorkerTree(tree: WorkerTree): Promise<AppPath> {
   if (hasArtifact(tree.dirName)) {
     touchArtifact(tree.dirName);
     return artifactStorePath(tree.dirName);
   }
   const tmp = artifactTmpDir(tree.dirName);
   for (const [name, target] of Object.entries(tree.links)) {
-    symlinkSync(target, join(tmp, name));
+    symlinkSync(target, joinAppPath(tmp, name));
   }
   await publishDir({
     tmpDir: tmp,

@@ -1,3 +1,4 @@
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   envName,
   readEnv,
@@ -68,7 +69,9 @@ const run: CliAction<
   // declaration — reached on every `./equin` invocation — may import no
   // server barrel. The option's help text states the default so it stays
   // discoverable from `serve-app --help`.
-  const repoRoot = opts.repoRoot ?? REPO_ROOT;
+  const repoRoot =
+    (opts.repoRoot === undefined ? undefined : asAppPath(opts.repoRoot)) ??
+    REPO_ROOT;
   const server = opts.server ?? resolve(repoRoot, SERVER_CORE_RELATIVE);
 
   await bootSelfContainedApp({

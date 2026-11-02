@@ -13,10 +13,14 @@ import {
   writeFileSync,
 } from "node:fs";
 import {
+  appPathParent,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   basename,
   dirname,
   isAbsolute,
-  join,
   relative,
   resolve,
   sep,
@@ -40,8 +44,8 @@ import { artifactTmpDir, publishArtifact } from "./store";
 import { tailwindCandidatesOf } from "./tailwind-candidates";
 
 export interface BuilderCtx {
-  repoRoot: string;
-  pluginsRoot: string;
+  repoRoot: AppPath;
+  pluginsRoot: AppPath;
   babelPlugins: BabelPluginItem[];
   minify: boolean;
 }
@@ -55,7 +59,7 @@ export interface ArtifactBuildTarget {
   pluginPath: string | null;
   /** The import-map specifier this artifact will serve (null for entry). */
   specifier: string | null;
-  entryFile: string;
+  entryFile: AppPath;
   inputsHash: string;
   /**
    * Absolute static bases of the own files' `import.meta.glob` patterns
@@ -77,7 +81,7 @@ export interface CoEntry {
   /** The plugin folder (`exhibits`) — also the emitted file's name, `<folder>.js`. */
   folder: string;
   /** Absolute path of the folder's barrel. */
-  entryFile: string;
+  entryFile: AppPath;
   /** The import-map specifier served by `<folder>.js` (`@plugins/<p>/<folder>`). */
   specifier: string;
 }
@@ -195,7 +199,7 @@ function isBarrelPath(below: readonly string[]): boolean {
  */
 export function ownFolderBarrelPlugin(
   pluginPath: string,
-  pluginDir: string,
+  pluginDir: AppPath,
   kind: string,
 ): VitePlugin {
   const inlinedRoots = inlinedRootsFor(kind);
@@ -231,7 +235,7 @@ export function ownFolderBarrelPlugin(
             `${folder}/index.ts (lint: runtime-isolation/no-deep-own-folder-import).`,
         );
       }
-      if (!existsSync(join(pluginDir, folder, "index.ts"))) {
+      if (!existsSync(joinAppPath(pluginDir, folder, "index.ts"))) {
         throw new Error(
           `web-artifact ${pluginPath} (kind "${kind}"): ${importer} imports "${id}", which ` +
             `lands in the plugin's own "${folder}/" — a folder this artifact neither inlines ` +
@@ -341,16 +345,19 @@ function cssInjectionSnippet(css: string, dirName: string): string {
  */
 export async function assertWorkersSelfContained(opts: {
   dirName: string;
-  outDir: string;
+  outDir: AppPath;
 }): Promise<string[]> {
-  const dir = join(opts.outDir, WORKER_ASSETS_DIR);
+  const dir = joinAppPath(opts.outDir, WORKER_ASSETS_DIR);
   if (!existsSync(dir)) return [];
   await esLexerInit();
   const workers: string[] = [];
   for (const name of readdirSync(dir).sort()) {
     if (!name.endsWith(".js")) continue;
     const rel = `${WORKER_ASSETS_DIR}/${name}`;
-    const [imports] = esLexerParse(readFileSync(join(dir, name), "utf8"), rel);
+    const [imports] = esLexerParse(
+      readFileSync(joinAppPath(dir, name), "utf8"),
+      rel,
+    );
     const specs = imports.map((imp) => imp.n ?? "<dynamic expression>");
     if (specs.length > 0) {
       throw new Error(
@@ -373,7 +380,7 @@ export async function assertWorkersSelfContained(opts: {
  * Statics are recorded PER FILE so the preload BFS walks real static edges and
  * never eagerly preloads a lazy chunk's dependencies.
  */
-export async function parseEmittedImports(outDir: string): Promise<{
+export async function parseEmittedImports(outDir: AppPath): Promise<{
   staticImportsByFile: Record<string, string[]>;
   dynamicImports: string[];
 }> {
@@ -382,7 +389,7 @@ export async function parseEmittedImports(outDir: string): Promise<{
   const dynamicImports = new Set<string>();
   for (const name of readdirSync(outDir).sort()) {
     if (!name.endsWith(".js") && !name.endsWith(".mjs")) continue;
-    const code = readFileSync(join(outDir, name), "utf8");
+    const code = readFileSync(joinAppPath(outDir, name), "utf8");
     const [imports] = esLexerParse(code, name);
     const statics = new Set<string>();
     for (const imp of imports) {
@@ -418,8 +425,8 @@ export async function buildArtifact(
   // `planFleet` passes to `ownHashFor`, so `hashedRootsFor` answers identically
   // for both and the audit checks the roots the address really hashed.
   const pluginDir = target.pluginPath
-    ? join(ctx.pluginsRoot, target.pluginPath)
-    : dirname(target.entryFile);
+    ? joinAppPath(ctx.pluginsRoot, target.pluginPath)
+    : appPathParent(target.entryFile);
   const hashedRoots = [
     ...hashedRootsFor(pluginDir, target.kind),
     ...target.globRoots,
@@ -513,7 +520,7 @@ export async function buildArtifact(
       );
 
     for (const file of ["index.js", ...target.coEntries.map(coEntryFileName)]) {
-      if (!existsSync(join(tmpDir, file))) {
+      if (!existsSync(joinAppPath(tmpDir, file))) {
         throw new Error(`vite build of ${target.dirName} emitted no ${file}`);
       }
     }
@@ -534,7 +541,7 @@ export async function buildArtifact(
     await artifactSourcemaps({
       label: target.dirName,
       files: readdirSync(tmpDir),
-      read: (name) => readFileSync(join(tmpDir, name), "utf8"),
+      read: (name) => readFileSync(joinAppPath(tmpDir, name), "utf8"),
     });
     const meta: ArtifactMeta = {
       specifier: target.specifier,
@@ -570,7 +577,7 @@ export async function buildArtifact(
 export async function buildRegistryArtifact(opts: {
   dirName: string;
   inputsHash: string;
-  registryFile: string;
+  registryFile: AppPath;
   minify: boolean;
 }): Promise<ArtifactMeta> {
   const { transform } = await import("esbuild");
@@ -586,10 +593,10 @@ export async function buildRegistryArtifact(opts: {
       sourcefile: basename(m.file),
     });
     writeFileSync(
-      join(tmpDir, m.out),
+      joinAppPath(tmpDir, m.out),
       `${result.code}\n//# sourceMappingURL=${m.out}.map\n`,
     );
-    writeFileSync(join(tmpDir, `${m.out}.map`), result.map);
+    writeFileSync(joinAppPath(tmpDir, `${m.out}.map`), result.map);
   }
   const { staticImportsByFile, dynamicImports } =
     await parseEmittedImports(tmpDir);

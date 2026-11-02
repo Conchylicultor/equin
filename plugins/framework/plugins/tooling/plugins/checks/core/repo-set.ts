@@ -11,6 +11,7 @@
 // snapshot as the set's source — so a check enumerates exactly the files its
 // key hashed — and read-set recording for an input-keyed check.
 
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   assertRepoPath,
   loadRepoFiles,
@@ -100,7 +101,7 @@ export function recordingRepo(
  */
 export function runRepoFiles(source: {
   loadSnapshot: () => Promise<TreeSnapshot | null>;
-  root: () => Promise<string>;
+  root: () => Promise<AppPath>;
 }): () => Promise<RepoFiles> {
   const load = async (): Promise<RepoFiles> => {
     const snapshot = await source.loadSnapshot();

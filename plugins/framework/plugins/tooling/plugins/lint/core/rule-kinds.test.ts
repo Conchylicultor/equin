@@ -5,6 +5,7 @@
 
 import { describe, expect, it } from "bun:test";
 import { join } from "path";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { Linter } from "eslint";
 import {
   buildLintConfig,
@@ -14,7 +15,7 @@ import {
 } from "./build-lint-config";
 
 // This file's location, seven folders down from the repo root.
-const ROOT = join(import.meta.dir, "../../../../../../..");
+const ROOT = asAppPath(join(import.meta.dir, "../../../../../../.."));
 const BUTTON_SAFETY =
   "framework/plugins/tooling/plugins/lint/plugins/button-safety";
 // A web file of a real plugin (a fake plugin path fails plugin-refs-resolve),

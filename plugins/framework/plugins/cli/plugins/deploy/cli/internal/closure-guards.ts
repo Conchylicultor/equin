@@ -6,7 +6,7 @@
  * reason `assertClosureSafe` states: hostnames are runtime data a repo check
  * cannot see, and the guard should fire when the exposure is actually created.
  */
-import { join } from "node:path";
+import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   REPO_ROOT,
   checkoutNamespace,
@@ -83,7 +83,7 @@ async function loadClosureContext(): Promise<ClosureContext> {
     userConfigDir: configDir.file(await checkoutNamespace(REPO_ROOT)),
     hierarchyPath: COMPOSITIONS_HIERARCHY_PATH,
   });
-  const tree = await buildPluginTree(join(REPO_ROOT, "plugins"), {
+  const tree = await buildPluginTree(joinAppPath(REPO_ROOT, "plugins"), {
     skipBarrelImport: true,
     facets: true,
   });

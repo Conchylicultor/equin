@@ -7,6 +7,7 @@ import {
   workerFileOf,
   workerTreeOf,
 } from "./worker-link";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 beforeAll(async () => {
   await esInit();
@@ -103,17 +104,19 @@ describe("workerTreeOf", () => {
   ];
 
   test("is named by its links: same links, same tree; one artifact changed, a new tree", () => {
-    const one = workerTreeOf({ linked, vendorSetDir: "/v/set.aa" });
+    const one = workerTreeOf({ linked, vendorSetDir: asAppPath("/v/set.aa") });
     expect(
-      workerTreeOf({ linked: [...linked].reverse(), vendorSetDir: "/v/set.aa" })
-        .dirName,
+      workerTreeOf({
+        linked: [...linked].reverse(),
+        vendorSetDir: asAppPath("/v/set.aa"),
+      }).dirName,
     ).toBe(one.dirName);
     const changed = workerTreeOf({
       linked: [
         linked[0]!,
         { linkName: "b.core", linkedDirName: "b.core.3333.worker" },
       ],
-      vendorSetDir: "/v/set.aa",
+      vendorSetDir: asAppPath("/v/set.aa"),
     });
     expect(changed.dirName).not.toBe(one.dirName);
     expect(Object.keys(one.links)).toEqual(["_vendor", "a.server", "b.core"]);
@@ -126,7 +129,7 @@ describe("workerTreeOf", () => {
           ...linked,
           { linkName: "a.server", linkedDirName: "a.server.9999.worker" },
         ],
-        vendorSetDir: "/v/set.aa",
+        vendorSetDir: asAppPath("/v/set.aa"),
       }),
     ).toThrow(/names two artifacts/);
   });

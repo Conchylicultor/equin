@@ -1,3 +1,7 @@
+import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 /**
  * The ingester and reconciler against a real throwaway Postgres (the REAL
  * migration chain) and a temp-dir op log: rotation between drains, a partial
@@ -143,7 +147,7 @@ const line = (x: OpLine) => JSON.stringify(x) + "\n";
 
 let t: TestDb;
 let dir: string;
-let path: string;
+let path: AppPath;
 
 async function row(opId: string) {
   const [r] = await t.db
@@ -169,7 +173,7 @@ beforeEach(async () => {
   await t.db.execute(sql`DELETE FROM op_log_ops`);
   await t.db.execute(sql`DELETE FROM op_log_ingest_cursor`);
   dir = mkdtempSync(join(tmpdir(), "op-store-"));
-  path = join(dir, "op-log.jsonl");
+  path = asAppPath(join(dir, "op-log.jsonl"));
 });
 
 describe("drainOpLog", () => {

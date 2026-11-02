@@ -1,7 +1,11 @@
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { writeFileSync } from "node:fs";
 import { isPlatformApi } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
 import { rm } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { resolve } from "node:path";
 import {
   generateCompositionRegistry,
   listNamedCompositionRegistries,
@@ -342,7 +346,7 @@ export function assertKnownCompositions(ids: readonly string[]): void {
  * compositions) each composition's filtered registries.
  */
 export async function prepareCompositionSources(opts: {
-  root: string;
+  root: AppPath;
   /**
    * The manifest DOCUMENT `compositions` is resolved against, and the document
    * `extends` references resolve within. Supplied by the caller because the two
@@ -485,7 +489,7 @@ export async function prepareCompositionSources(opts: {
     // ONE tree walk for N compositions — the whole reason the list is variadic.
     // The walk is the expensive part (every plugin dir, faceted); resolving a
     // closure against an already-built tree is cheap.
-    const tree = await buildPluginTree(join(root, "plugins"), {
+    const tree = await buildPluginTree(joinAppPath(root, "plugins"), {
       skipBarrelImport: true,
       facets: true,
     });
@@ -522,7 +526,7 @@ export async function prepareCompositionSources(opts: {
  * `release` depends on the exit code — see the module docblock.
  */
 export async function generateAppSources(opts: {
-  root: string;
+  root: AppPath;
   migration: {
     name?: string;
     reset?: boolean;
@@ -564,7 +568,7 @@ export async function generateAppSources(opts: {
   hooks.log("Generating plugins doc...");
   // The origins as committed, before codegen regenerates them: the base a
   // plugin move's re-stamp compares the regenerated ones against (4b'').
-  const priorOrigins = snapshotConfigOrigins(join(root, "config"));
+  const priorOrigins = snapshotConfigOrigins(joinAppPath(root, "config"));
   await regenerateManifestCodegen({ root, onStep: codegenStep });
 
   // 4b''. A plugin move re-roots reorder keys in committed overrides, but the
@@ -622,7 +626,7 @@ export async function generateAppSources(opts: {
  * which is also the only place that can notice it came out empty.
  */
 export async function fastValidationJobs(opts: {
-  root: string;
+  root: AppPath;
   /**
    * The run these checks belong to. Adopted by the spawned check pass, which
    * derives `check-<runId>.log` from it — the caller does not spell a path, and
@@ -804,7 +808,7 @@ export type WebDistTarget =
  * It takes no checkout path at all — a build's `webDir` is the `.build.lock`'s
  * home and nothing else.
  */
-export function webDistPath(target: WebDistTarget): string {
+export function webDistPath(target: WebDistTarget): AppPath {
   return target.kind === "release"
     ? worktreeArtifacts.releaseWebDist(target.worktree, target.composition)
     : worktreeArtifacts.webDist(target.name);
@@ -939,7 +943,7 @@ export async function withBuildAdmission<T>(
 }
 
 export interface BuildWebDistOptions {
-  root: string;
+  root: AppPath;
   /**
    * The web-core dir, used for ONE thing: the `.build.lock` beside it
    * (`acquireArtifactLock`). The lock is per-checkout by necessity — it guards

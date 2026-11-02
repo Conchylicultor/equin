@@ -1,5 +1,8 @@
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readFileSync } from "fs";
-import { join } from "path";
 
 /**
  * Which custom `@utility` classes exist — the one stylesheet fact a class rule
@@ -36,8 +39,8 @@ export const LINT_DATA_FILES: readonly string[] = [APP_CSS_REL_PATH];
  * as codegen's `collectUtilityDecls` (`codegen/core/app-css-utilities.ts`),
  * which this file cannot import: lint core loads under jiti.
  */
-export function readDeclaredUtilities(root: string): ReadonlySet<string> {
-  const css = readFileSync(join(root, APP_CSS_REL_PATH), "utf8");
+export function readDeclaredUtilities(root: AppPath): ReadonlySet<string> {
+  const css = readFileSync(joinAppPath(root, APP_CSS_REL_PATH), "utf8");
   const code = css.replace(/\/\*[\s\S]*?\*\//g, "");
   const names = new Set<string>();
   for (const m of code.matchAll(/@utility\s+([\w-]+)/g)) names.add(m[1]!);
@@ -57,6 +60,6 @@ export function readDeclaredUtilities(root: string): ReadonlySet<string> {
  * result — 6 of its 11 changes on main in the week to 2026-10-15 left the set
  * alone.
  */
-export function lintDataKey(root: string): string {
+export function lintDataKey(root: AppPath): string {
   return [...readDeclaredUtilities(root)].sort().join("\n");
 }

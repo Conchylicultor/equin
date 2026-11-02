@@ -19,6 +19,7 @@
  * such literal in source resolves to a real plugin, and these are synthetic.
  */
 
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { test, expect, beforeAll, afterAll } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "fs";
 import { tmpdir } from "os";
@@ -53,7 +54,7 @@ const IGNORES = ".cache/\ndist/\ndist.*/\nnode_modules/\ntest-results/\n";
 
 /** Run R11 over `foo` exactly as `run()` does, against the repo's live state. */
 async function violationsForFoo(): Promise<string[]> {
-  const repo = repoTree(await listRepoFiles(root));
+  const repo = repoTree(await listRepoFiles(asAppPath(root)));
   return collectUnknownDirViolations({
     pluginRelPath: "foo",
     allPluginRelPaths: ["foo", "foo/plugins/bar"],
@@ -101,7 +102,7 @@ test("a gitignored directory holding .ts inside a plugin raises no unknown-dir",
 });
 
 test("the gitignored directories are invisible to the tree, not merely unflagged", async () => {
-  const repo = repoTree(await listRepoFiles(root));
+  const repo = repoTree(await listRepoFiles(asAppPath(root)));
   const subdirs = [...repo.subdirs(pj("foo"))].sort();
   expect(subdirs).toEqual([".claude", "migrations", "plugins", "web"]);
   expect(repo.containsTsFiles(pj("foo/dist"))).toBe(false);
@@ -127,7 +128,7 @@ test("an unrecognized directory holding visible TypeScript IS flagged", async ()
 test("dot-directories are excluded on meaning, even when tracked", async () => {
   // `.claude/` holds a tracked .ts and is not gitignored — only the rule's own
   // dot-name rule keeps it out.
-  const repo = repoTree(await listRepoFiles(root));
+  const repo = repoTree(await listRepoFiles(asAppPath(root)));
   expect(repo.containsTsFiles(pj("foo/.claude"))).toBe(true);
   expect(
     collectUnknownDirViolations({
@@ -140,7 +141,7 @@ test("dot-directories are excluded on meaning, even when tracked", async () => {
 });
 
 test("an unrecognized directory holding no TypeScript is not flagged", async () => {
-  const repo = repoTree(await listRepoFiles(root));
+  const repo = repoTree(await listRepoFiles(asAppPath(root)));
   expect(repo.subdirs(pj("foo")).has("migrations")).toBe(true);
   expect(repo.containsTsFiles(pj("foo/migrations"))).toBe(false);
   expect(await violationsForFoo()).not.toContain(pj("foo/migrations/"));

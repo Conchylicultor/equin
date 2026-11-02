@@ -1,3 +1,8 @@
+import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { closeSync, openSync } from "node:fs";
 import {
   link,
@@ -83,7 +88,7 @@ const inProcess = createKeyedMutex();
  * in another — then {@link LockBusyError}.
  */
 export async function withFileLock<T>(
-  lockPath: string,
+  lockPath: AppPath,
   key: string,
   waitMs: number,
   fn: () => Promise<T>,
@@ -147,7 +152,7 @@ export async function writeRawAtomic(
 
 export interface DiskTreeOptions {
   /** The tree's directory, absolute — read on every operation, never frozen. */
-  dir: () => string;
+  dir: () => AppPath;
   /** How the tree names itself in errors (a root id, a data dir). */
   label: string;
   lockWaitMs?: number;
@@ -160,7 +165,8 @@ export interface DiskTreeOptions {
  */
 export function diskTree(opts: DiskTreeOptions): Mount {
   const lockWaitMs = opts.lockWaitMs ?? LOCK_WAIT_MS;
-  const abs = (path: RelPath): string => join(opts.dir(), ...splitRel(path));
+  const abs = (path: RelPath): AppPath =>
+    joinAppPath(opts.dir(), ...splitRel(path));
   const fail = (operation: string, path: RelPath, why: string): never => {
     throw new Error(
       `[data-files] ${operation} of "${path}" in ${opts.label}: ${why}`,
@@ -297,7 +303,7 @@ export function diskTree(opts: DiskTreeOptions): Mount {
     withLock(key, fn) {
       notRoot("withLock", key);
       return withFileLock(
-        `${abs(key)}.lock`,
+        asAppPath(`${abs(key)}.lock`),
         `${opts.label}:${key}`,
         lockWaitMs,
         fn,

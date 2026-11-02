@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readyNow } from "@plugins/infra/plugins/deps/deps";
 import { requestDep } from "@plugins/infra/plugins/deps/server";
 import { chromium } from "@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/deps";
@@ -35,7 +36,10 @@ import {
  * (`bin/host.ts`), which is why tabs survive this backend's restarts.
  */
 
-const PLUGIN_DIR = join(PLUGINS_DIR, "apps/plugins/browser/plugins/engine");
+const PLUGIN_DIR = joinAppPath(
+  PLUGINS_DIR,
+  "apps/plugins/browser/plugins/engine",
+);
 const HOST_ENTRY = join(PLUGIN_DIR, "bin/host.ts");
 /** A launched host must say `ready` within this, or the launch failed. */
 const LAUNCH_MS = 30_000;

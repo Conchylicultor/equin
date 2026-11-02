@@ -1,5 +1,10 @@
+import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { resolve } from "node:path";
 import {
   MAIN_COMPOSITION_ID,
   MAIN_WORKTREE_NAME,
@@ -84,7 +89,7 @@ type SpecRead =
   | { kind: "malformed"; reason: string }
   | { kind: "deploy"; server: string; composition: string };
 
-function readDeploySpec(path: string): SpecRead {
+function readDeploySpec(path: AppPath): SpecRead {
   let text: string;
   try {
     text = readFileSync(path, "utf8");
@@ -152,7 +157,7 @@ function readDeploySpec(path: string): SpecRead {
  * real fault and throws — which is right for the caller's OWN root, and wrong
  * for a path that came out of somebody else's spec: see `comparableSpecPath`.
  */
-function comparablePath(path: string): string {
+function comparablePath(path: AppPath): string {
   try {
     return realpathSync(path);
   } catch (err) {
@@ -180,7 +185,7 @@ function comparablePath(path: string): string {
  * the same rule as the first.
  */
 function comparableSpecPath(
-  path: string,
+  path: AppPath,
 ): { kind: "path"; path: string } | { kind: "fault"; reason: string } {
   try {
     return { kind: "path", path: comparablePath(path) };
@@ -222,8 +227,8 @@ interface CheckoutScan {
  * @throws when specs could not be read AND nothing matched — see the decision
  *   below, which is deliberately made after the whole scan.
  */
-function scanCheckout(root: string): CheckoutScan {
-  const ours = comparablePath(join(root, SERVER_CORE_RELATIVE));
+function scanCheckout(root: AppPath): CheckoutScan {
+  const ours = comparablePath(joinAppPath(root, SERVER_CORE_RELATIVE));
   const deploys: CheckoutDeploy[] = [];
   const malformed: string[] = [];
   let scanned = 0;
@@ -238,7 +243,8 @@ function scanCheckout(root: string): CheckoutScan {
       malformed.push(`${path}: ${read.reason}`);
       continue;
     }
-    const server = comparableSpecPath(read.server);
+    // The server dir a spec the app wrote names: app-owned by that claim.
+    const server = comparableSpecPath(asAppPath(read.server));
     if (server.kind === "fault") {
       malformed.push(`${path}: ${server.reason}`);
       continue;
@@ -291,7 +297,7 @@ function scanCheckout(root: string): CheckoutScan {
  *
  * @throws when specs could not be used AND nothing matched — see `scanCheckout`.
  */
-export function deploysForCheckout(root: string): CheckoutDeploy[] {
+export function deploysForCheckout(root: AppPath): CheckoutDeploy[] {
   return scanCheckout(root).deploys;
 }
 
@@ -304,7 +310,7 @@ export function deploysForCheckout(root: string): CheckoutDeploy[] {
  * built from — the case a basename gets silently wrong.
  */
 export function resolveCheckoutDeploy(
-  root: string,
+  root: AppPath,
   composition?: string,
 ): CheckoutDeployResolution {
   const { deploys, scanned } = scanCheckout(root);
@@ -372,12 +378,13 @@ export function mainNamespaceOwner(): MainNamespaceOwner {
         `server ${read.server}, which is not a checkout's ${SERVER_CORE_RELATIVE}.`,
     );
   }
-  const checkoutRoot = server.slice(0, -suffix.length);
+  // The checkout a spec the app wrote names: app-owned by that claim.
+  const checkoutRoot = asAppPath(server.slice(0, -suffix.length));
   if (!existsSync(checkoutRoot)) return { kind: "unclaimed" };
   return { kind: "claimed", checkoutRoot: comparablePath(checkoutRoot) };
 }
 
 /** `root`'s comparable identity, for matching against {@link mainNamespaceOwner}. */
-export function comparableCheckoutPath(root: string): string {
+export function comparableCheckoutPath(root: AppPath): string {
   return comparablePath(root);
 }

@@ -1,3 +1,4 @@
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 /**
  * What a reset (`--reset-migration`, push's `regen-migrations`) replaces, and
  * whether the migration it regenerates may say so — the generator half of
@@ -105,8 +106,8 @@ export async function readResetPrior(
   const deleted: DeletedMigration[] = [];
   const own = new Map<string, SnapshotNode>();
   let mergeNode: string | null = null;
-  const nodes = (await readSnapshotNodes(migrationsDir)).sort((a, b) =>
-    a.file.localeCompare(b.file),
+  const nodes = (await readSnapshotNodes(asAppPath(migrationsDir))).sort(
+    (a, b) => a.file.localeCompare(b.file),
   );
   for (const n of nodes) {
     const m = NEW_FORMAT.exec(n.file);
@@ -265,7 +266,7 @@ export async function resetLineage(
     };
   }
 
-  const nodes = await readSnapshotNodes(migrationsDir);
+  const nodes = await readSnapshotNodes(asAppPath(migrationsDir));
   const isNode = (id: string) => nodes.some((n) => n.id === id);
   if (!isNode(prior.schema.baseId) || !isNode(fresh.prevId as string))
     return {
@@ -350,7 +351,7 @@ export async function resetAdoption(
     return { kind: "none", reason: prior.schema.reason };
   const { tip: ours, baseId } = prior.schema;
 
-  const nodes = await readSnapshotNodes(migrationsDir);
+  const nodes = await readSnapshotNodes(asAppPath(migrationsDir));
   const dag = analyzeSnapshotDag(nodes);
   const baseNode = dag.byId.get(baseId);
   if (baseNode === undefined)

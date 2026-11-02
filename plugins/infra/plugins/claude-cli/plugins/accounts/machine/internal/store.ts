@@ -1,3 +1,7 @@
+import {
+  type AppPath,
+  asAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readFileSync, renameSync, writeFileSync } from "node:fs";
 import {
   claudeCredentialKind,
@@ -20,7 +24,7 @@ import {
 
 const ACCOUNTS_FILE = "accounts.json";
 
-function claudeAccountsPath(): string {
+function claudeAccountsPath(): AppPath {
   return claudeAccountsDir.file(ACCOUNTS_FILE);
 }
 
@@ -40,7 +44,7 @@ export function readClaudeAccounts(): ClaudeAccounts {
 function writeClaudeAccounts(state: ClaudeAccounts): void {
   claudeAccountsDir.ensure();
   const path = claudeAccountsPath();
-  const tmp = `${path}.${process.pid}.tmp`;
+  const tmp = asAppPath(`${path}.${process.pid}.tmp`);
   writeFileSync(tmp, JSON.stringify(state, null, 2));
   renameSync(tmp, path);
 }

@@ -32,7 +32,7 @@
 
 import { createHash } from "crypto";
 import { readdirSync, readFileSync, statSync } from "fs";
-import { dirname, join, relative } from "path";
+import { dirname, relative } from "path";
 import ts from "typescript";
 import { readTreeSnapshot } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import type { GitTreeSnapshot } from "@plugins/framework/plugins/tooling/core";
@@ -40,6 +40,10 @@ import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 // Through the barrel: the worker imports it the same way.
 import type { TypeCheckTree } from "../core";
 import { isRepoPath } from "./keys";
+import {
+  type AppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // A wedge-breaker for one metadata read, not a latency budget.
 const GIT_TIMEOUT_MS = 60_000;
@@ -55,7 +59,7 @@ export interface DirEntries {
 
 /** The repo as the check sees it: the tree ∪ the overlay. In memory, but `readText`. */
 export interface RepoView {
-  readonly root: string;
+  readonly root: AppPath;
   readonly treeHash: string;
   /** The gitignored program roots, with their versions. */
   readonly overlay: Readonly<Record<string, string>>;
@@ -106,7 +110,7 @@ function decode(bytes: Uint8Array): string {
  * caller — `openRepoView` reads it out of git; a test hands it a fixture's.
  */
 export function repoViewOver(
-  root: string,
+  root: AppPath,
   treeHash: string,
   blobs: ReadonlyMap<string, string>,
   overlay: Readonly<Record<string, string>> = {},
@@ -157,7 +161,7 @@ export function repoViewOver(
           `type-check: ${path} is not in the checked tree ${treeHash} (nor its overlay)`,
         );
       }
-      const bytes = readFileSync(join(root, path));
+      const bytes = readFileSync(joinAppPath(root, path));
       if (gitBlobSha(bytes, treeHash) !== version) {
         throw new Error(
           `type-check: ${path} changed on disk after the check took its tree (${treeHash}) — its bytes no longer hash to its version. Re-run the check once the tree is quiet.`,
@@ -188,7 +192,7 @@ export function viewOfSnapshot(
 
 /** The view of `tree` over `root`: its snapshot, read out of git, plus its overlay. */
 export async function openRepoView(
-  root: string,
+  root: AppPath,
   tree: TypeCheckTree,
 ): Promise<RepoView> {
   return viewOfSnapshot(
@@ -325,7 +329,7 @@ export type ParsedTsconfig =
  * through `readFile`. `roots` are the include-expansion, repo-relative.
  */
 function parseTsconfig(
-  root: string,
+  root: AppPath,
   tsconfigPath: string,
   entries: (absDir: string) => {
     files: readonly string[];
@@ -419,7 +423,7 @@ interface Ignored {
  * that git does not descend — what keeps this cheap — and is read further only
  * if the tsconfig expansion walks into it (`readCheckTree`).
  */
-async function listIgnored(root: string): Promise<Ignored> {
+async function listIgnored(root: AppPath): Promise<Ignored> {
   const out = await spawnCaptured(
     [
       "git",
@@ -448,7 +452,7 @@ async function listIgnored(root: string): Promise<Ignored> {
 }
 
 /** A directory's entries on the real disk (inside an ignored directory). */
-function diskEntries(abs: string): {
+function diskEntries(abs: AppPath): {
   files: readonly string[];
   directories: readonly string[];
 } {
@@ -467,7 +471,7 @@ function diskEntries(abs: string): {
     let isDir = d.isDirectory();
     if (d.isSymbolicLink()) {
       try {
-        const s = statSync(join(abs, d.name));
+        const s = statSync(joinAppPath(abs, d.name));
         isFile = s.isFile();
         isDir = s.isDirectory();
       } catch (err) {
@@ -500,7 +504,7 @@ export interface ReadCheckTree {
  * excluded one (`node_modules`, `dist*`) and a dot-directory are never entered.
  */
 export async function readCheckTree(
-  root: string,
+  root: AppPath,
   tsconfigPath: string,
   treeHash?: string,
 ): Promise<ReadCheckTree> {
@@ -535,7 +539,7 @@ export async function readCheckTree(
   const entries = (abs: string) => {
     const r = rel(root, abs);
     if (!isRepoPath(r)) return { files: [], directories: [] };
-    if (r !== "" && underIgnored(r)) return diskEntries(abs);
+    if (r !== "" && underIgnored(r)) return diskEntries(joinAppPath(root, r));
     const e = tree.entries(r);
     const extra = ignoredIn.get(r);
     if (extra === undefined) return { files: e.files, directories: e.dirs };
@@ -558,7 +562,10 @@ export async function readCheckTree(
   if (config.kind === "parsed") {
     for (const r of config.roots) {
       if (tree.isFile(r)) continue;
-      overlay[r] = gitBlobSha(readFileSync(join(root, r)), snapshot.treeHash);
+      overlay[r] = gitBlobSha(
+        readFileSync(joinAppPath(root, r)),
+        snapshot.treeHash,
+      );
     }
   }
   const view = viewOfSnapshot(snapshot, overlay);

@@ -1,5 +1,8 @@
-import { join } from "path";
 import { APP_STYLESHEET_PATH } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
  * The one parser for app.css's `@utility` surface, shared by every generator
@@ -16,8 +19,9 @@ import { APP_STYLESHEET_PATH } from "@plugins/primitives/plugins/css/plugins/ui-
  */
 
 /** Path to the app.css source every derived manifest reads. */
-export function appCssPath(root: string): string {
-  return join(root, APP_STYLESHEET_PATH);
+export function appCssPath(root: AppPath): AppPath {
+  // `root`: the checkout root the caller works in.
+  return joinAppPath(root, APP_STYLESHEET_PATH);
 }
 
 /**

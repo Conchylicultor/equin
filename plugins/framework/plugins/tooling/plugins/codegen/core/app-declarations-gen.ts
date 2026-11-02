@@ -1,4 +1,7 @@
-import { join } from "path";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { collectWebSlotContributions } from "./web-slot-contributions";
 
 /**
@@ -46,7 +49,7 @@ interface ProjectedApp {
   launch: "tab" | "surface";
 }
 
-async function collectAppDeclarations(root: string): Promise<ProjectedApp[]> {
+async function collectAppDeclarations(root: AppPath): Promise<ProjectedApp[]> {
   const { apps } = await collectWebSlotContributions(root, SLOT_IDS);
   return apps
     .map((c): ProjectedApp => {
@@ -80,13 +83,14 @@ function renderManifest(apps: readonly ProjectedApp[]): string {
 }
 
 /** Path to the committed manifest file. */
-export function appDeclarationsManifestPath(root: string): string {
-  return join(root, MANIFEST_REL_PATH);
+export function appDeclarationsManifestPath(root: AppPath): AppPath {
+  // `root`: the checkout root the caller works in.
+  return joinAppPath(root, MANIFEST_REL_PATH);
 }
 
 /** Render the manifest file contents in-memory (used by the in-sync check). */
 export async function renderAppDeclarationsManifest(
-  root: string,
+  root: AppPath,
 ): Promise<string> {
   return renderManifest(await collectAppDeclarations(root));
 }

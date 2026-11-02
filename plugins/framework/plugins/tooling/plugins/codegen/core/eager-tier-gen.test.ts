@@ -8,6 +8,10 @@
  */
 
 import { createSourceScans } from "./browser-host-coverage";
+import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { test, expect, describe } from "bun:test";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {
@@ -331,7 +335,7 @@ describe("preloadedKeysIn", () => {
 });
 
 /** A `RepoFiles` over an in-memory `{ path: text }` map. */
-function memRepo(root: string, files: Record<string, string>): RepoFiles {
+function memRepo(root: AppPath, files: Record<string, string>): RepoFiles {
   const paths = Object.keys(files).sort();
   return {
     root,
@@ -346,7 +350,7 @@ function memRepo(root: string, files: Record<string, string>): RepoFiles {
 
 function node(pluginsRoot: string, path: string): PluginNode {
   return {
-    dir: `${pluginsRoot}/${path}`,
+    dir: asAppPath(`${pluginsRoot}/${path}`),
     path,
     name: path.split("/").at(-1)!,
     id: asPluginId(
@@ -374,11 +378,11 @@ describe("the scan over a file set", () => {
   const APP = "apps/plugins/mail/plugins";
 
   async function render(files: Record<string, string>, paths: string[]) {
-    const root = "/fixture";
+    const root = asAppPath("/fixture");
     const repo = memRepo(root, files);
     const nodes = paths.map((p) => node(`${root}/plugins`, p));
     const tree = {
-      pluginsRoot: `${root}/plugins`,
+      pluginsRoot: asAppPath(`${root}/plugins`),
       byDir: new Map(nodes.map((n) => [n.dir, n])),
       byPath: new Map(nodes.map((n) => [n.path, n])),
       roots: nodes,

@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   mkdirSync,
   readFileSync,
@@ -190,7 +191,7 @@ function listNamespaces(): string[] {
  * namespace dir pointing at a file would otherwise crash the whole audit over
  * one namespace's oddity.
  */
-function statManifest(path: string): ReturnType<typeof statSync> | undefined {
+function statManifest(path: AppPath): ReturnType<typeof statSync> | undefined {
   try {
     const st = statSync(path);
     return st.isFile() ? st : undefined;

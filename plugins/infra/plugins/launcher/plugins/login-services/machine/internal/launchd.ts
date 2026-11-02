@@ -1,3 +1,7 @@
+import {
+  type AppPath,
+  asAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { join } from "node:path";
 import {
   spawnCaptured,
@@ -47,8 +51,9 @@ function domain(): string {
 }
 
 /** Where the LaunchAgent plist of `label` lives. */
-function launchdPlistPath(label: string): string {
-  return join(HOME_DIR, "Library", "LaunchAgents", `${label}.plist`);
+function launchdPlistPath(label: string): AppPath {
+  // A fixed place under home the app itself installs into.
+  return asAppPath(join(HOME_DIR, "Library", "LaunchAgents", `${label}.plist`));
 }
 
 function launchdService(id: LoginServiceId): LoginService {

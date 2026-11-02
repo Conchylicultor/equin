@@ -1,5 +1,6 @@
 import { rmSync, symlinkSync } from "node:fs";
 import { latestPointerPath } from "./pointer";
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
  * Point `latest-<platform>` at `runId`.
@@ -13,7 +14,11 @@ import { latestPointerPath } from "./pointer";
  * Relative target (`runId`, not the absolute dir) so the whole
  * `<comp>-<target>/` tree stays relocatable.
  */
-export function claimLatestPointer(compDir: string, runId: string, platform: string): string {
+export function claimLatestPointer(
+  compDir: AppPath,
+  runId: string,
+  platform: string,
+): AppPath {
   const pointer = latestPointerPath(compDir, platform);
   rmSync(pointer, { force: true });
   symlinkSync(runId, pointer);

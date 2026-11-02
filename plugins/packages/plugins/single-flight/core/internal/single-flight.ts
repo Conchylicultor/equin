@@ -8,13 +8,16 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
 import { z } from "zod";
 import {
   flockTry,
   waitForFlock,
   type HeldFlock,
 } from "@plugins/packages/plugins/flock/core";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /** Who ran (or is running) a flight's work. */
 export interface FlightLeader {
@@ -50,7 +53,7 @@ export interface SingleFlightOptions<V> {
    * `.verdict.json` (the last published verdict). Created if missing. Every
    * process that must coalesce has to name the same directory.
    */
-  dir: string;
+  dir: AppPath;
   /**
    * What makes two requests "the same work". Callers that pass equal keys
    * coalesce; anything that changes the answer (the inputs' content hash, the
@@ -200,20 +203,20 @@ export async function tryLead<V, R>(
 }
 
 /** Create `dir` and name the key's three files in it. */
-function flightFiles(dir: string, key: string): FlightFiles {
+function flightFiles(dir: AppPath, key: string): FlightFiles {
   mkdirSync(dir, { recursive: true });
-  const base = join(dir, createHash("sha256").update(key).digest("hex"));
+  const hash = createHash("sha256").update(key).digest("hex");
   return {
-    lock: `${base}.lock`,
-    leader: `${base}.leader.json`,
-    verdict: `${base}.verdict.json`,
+    lock: joinAppPath(dir, `${hash}.lock`),
+    leader: joinAppPath(dir, `${hash}.leader.json`),
+    verdict: joinAppPath(dir, `${hash}.verdict.json`),
   };
 }
 
 interface FlightFiles {
-  lock: string;
-  leader: string;
-  verdict: string;
+  lock: AppPath;
+  leader: AppPath;
+  verdict: AppPath;
 }
 
 async function runLead<V, R>(
@@ -270,14 +273,14 @@ function fdHold(fd: number): HeldFlock {
 }
 
 /** Temp file + rename, so a reader sees the old file or the new one, never half. */
-function writeAtomic(path: string, value: unknown): void {
+function writeAtomic(path: AppPath, value: unknown): void {
   const tmp = `${path}.tmp.${process.pid}`;
   writeFileSync(tmp, JSON.stringify(value));
   renameSync(tmp, path);
 }
 
 function readJson(
-  path: string,
+  path: AppPath,
 ): { kind: "absent" } | { kind: "json"; value: unknown } {
   let raw: string;
   try {
@@ -304,7 +307,7 @@ function readJson(
  * "a verdict in a shape this version does not know" both mean the same thing to
  * a joiner — nothing it may adopt — and both compare as "no nonce".
  */
-function readEnvelope(path: string): Envelope | null {
+function readEnvelope(path: AppPath): Envelope | null {
   const read = readJson(path);
   if (read.kind === "absent") return null;
   const parsed = EnvelopeSchema.safeParse(read.value);
@@ -316,7 +319,7 @@ function readEnvelope(path: string): Envelope | null {
  * unreadable, or the pid it names is gone (a leader that died before removing
  * it) — the lock held now is then someone who has not recorded itself yet.
  */
-function readLeader(path: string): FlightLeader | null {
+function readLeader(path: AppPath): FlightLeader | null {
   const read = readJson(path);
   if (read.kind === "absent") return null;
   const parsed = LeaderSchema.safeParse(read.value);

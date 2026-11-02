@@ -9,20 +9,25 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { defineFileSink, getFileSinks, openDynamicSink } from "./file-sink";
+import {
+  type AppPath,
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // Hermetic: every sink writes into an isolated temp dir. The registry is
 // process-global (a sink is declared exactly once), so each test uses a UNIQUE id
 // to avoid cross-test collisions. `defineFileSink` takes an explicit maxBytes/keep
 // so rotation is forced with a tiny cap instead of writing 128 MB.
 
-let dir: string;
+let dir: AppPath;
 let counter = 0;
 function uniqueId(): string {
   return `test-sink-${process.pid}-${counter++}`;
 }
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), "file-sink-"));
+  dir = asAppPath(mkdtempSync(join(tmpdir(), "file-sink-")));
 });
 
 afterEach(() => {
@@ -37,7 +42,7 @@ function rotatedFiles(base: string): string[] {
 
 describe("defineFileSink rotation", () => {
   test("appends under the cap without rotating", () => {
-    const path = join(dir, "a.jsonl");
+    const path = joinAppPath(dir, "a.jsonl");
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
@@ -56,7 +61,7 @@ describe("defineFileSink rotation", () => {
   });
 
   test("rotates once the cap is crossed and keeps the live file small", () => {
-    const path = join(dir, "b.jsonl");
+    const path = joinAppPath(dir, "b.jsonl");
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
@@ -77,7 +82,7 @@ describe("defineFileSink rotation", () => {
   });
 
   test("keeps at most `keep` rotated files; oldest is unlinked (window shifts .1→.2→.3)", () => {
-    const path = join(dir, "c.jsonl");
+    const path = joinAppPath(dir, "c.jsonl");
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
@@ -105,7 +110,7 @@ describe("defineFileSink rotation", () => {
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
-      path: join(dir, "f.jsonl"),
+      path: joinAppPath(dir, "f.jsonl"),
     });
     expect(sink.bound).toEqual({
       kind: "rotate",
@@ -122,7 +127,7 @@ describe("appendAll", () => {
   // would be more fragile than the test is worth.
 
   test("writes a whole batch under the cap in order, into one file", () => {
-    const path = join(dir, "ba.jsonl");
+    const path = joinAppPath(dir, "ba.jsonl");
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
@@ -139,8 +144,8 @@ describe("appendAll", () => {
   test("an empty batch creates neither the file nor its directory", () => {
     // Asking for nothing must not bring a file — or a whole dir tree — into
     // existence as a side effect.
-    const nested = join(dir, "nope", "deeper");
-    const path = join(nested, "bb.jsonl");
+    const nested = joinAppPath(dir, "nope", "deeper");
+    const path = joinAppPath(nested, "bb.jsonl");
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
@@ -152,13 +157,13 @@ describe("appendAll", () => {
 
     expect(existsSync(path)).toBe(false);
     expect(existsSync(nested)).toBe(false);
-    expect(existsSync(join(dir, "nope"))).toBe(false);
+    expect(existsSync(joinAppPath(dir, "nope"))).toBe(false);
   });
 
   test("a batch crossing the cap splits BETWEEN lines, never inside one", () => {
     // The invariant every reader depends on: rotation happens between two whole
     // lines, so `.1` followed by the live file reads back as the input verbatim.
-    const path = join(dir, "bc.jsonl");
+    const path = joinAppPath(dir, "bc.jsonl");
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
@@ -185,7 +190,7 @@ describe("appendAll", () => {
   });
 
   test("the gate is `>`, not `>=`: exactly maxBytes does not rotate", () => {
-    const exact = join(dir, "bd.jsonl");
+    const exact = joinAppPath(dir, "bd.jsonl");
     const exactSink = defineFileSink({
       id: uniqueId(),
       description: "t",
@@ -198,7 +203,7 @@ describe("appendAll", () => {
     expect(readFileSync(exact, "utf8")).toBe("aaa\naaa\naaa\n");
 
     // One byte less of budget and the same batch must rotate.
-    const over = join(dir, "be.jsonl");
+    const over = joinAppPath(dir, "be.jsonl");
     const overSink = defineFileSink({
       id: uniqueId(),
       description: "t",
@@ -214,7 +219,7 @@ describe("appendAll", () => {
   test("a batch far past maxBytes × (keep + 1) still respects `keep`", () => {
     // Several rotations inside the ONE call; `keep` stays a hard cap and the live
     // file holds the batch's tail.
-    const path = join(dir, "bf.jsonl");
+    const path = joinAppPath(dir, "bf.jsonl");
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
@@ -242,7 +247,7 @@ describe("appendAll", () => {
   });
 
   test("a single line larger than maxBytes is written whole, after its predecessors", () => {
-    const path = join(dir, "bg.jsonl");
+    const path = joinAppPath(dir, "bg.jsonl");
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
@@ -262,7 +267,7 @@ describe("appendAll", () => {
   test("an oversized line into an empty file burns no rotation slot", () => {
     // Deliberate difference from the old per-line gate: rotating first would
     // evict real history to make room for a line that overflows either way.
-    const path = join(dir, "bh.jsonl");
+    const path = joinAppPath(dir, "bh.jsonl");
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
@@ -280,8 +285,8 @@ describe("appendAll", () => {
   test("appendAll(lines) is byte-identical to looping append(line)", () => {
     // The anti-drift test: if the two forms are ever re-split into two size
     // gates, this is what fails.
-    const loopPath = join(dir, "bi.jsonl");
-    const batchPath = join(dir, "bj.jsonl");
+    const loopPath = joinAppPath(dir, "bi.jsonl");
+    const batchPath = joinAppPath(dir, "bj.jsonl");
     const opts = { maxBytes: 12, keep: 3 } as const;
     const loopSink = defineFileSink({
       id: uniqueId(),
@@ -314,7 +319,7 @@ describe("appendAll", () => {
     // The mkdir moved from "before every write" to "on the write's ENOENT", so
     // the self-healing has to survive the move: a worktree teardown that removes
     // the logs dir must not wedge a sink that is still being written to.
-    const path = join(dir, "bk.jsonl");
+    const path = joinAppPath(dir, "bk.jsonl");
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
@@ -337,13 +342,13 @@ describe("defineFileSink / getFileSinks registry", () => {
     defineFileSink({
       id,
       description: "t",
-      path: join(dir, "d.jsonl"),
+      path: joinAppPath(dir, "d.jsonl"),
     });
     expect(() =>
       defineFileSink({
         id,
         description: "t",
-        path: join(dir, "d2.jsonl"),
+        path: joinAppPath(dir, "d2.jsonl"),
       }),
     ).toThrow(/already defined/);
   });
@@ -353,7 +358,7 @@ describe("defineFileSink / getFileSinks registry", () => {
     const sink = defineFileSink({
       id,
       description: "t",
-      path: join(dir, "e.jsonl"),
+      path: joinAppPath(dir, "e.jsonl"),
     });
     const first = getFileSinks() as Map<string, unknown>;
     first.delete(id);
@@ -370,10 +375,10 @@ describe("openDynamicSink", () => {
     const before = getFileSinks().size;
     const sink = openDynamicSink(dir, "weird/name!");
     // Path-traversal-safe: every non-[A-Za-z0-9_-] char becomes "_".
-    expect(sink.path).toBe(join(dir, "weird_name_.jsonl"));
+    expect(sink.path).toBe(joinAppPath(dir, "weird_name_.jsonl"));
 
     sink.append("x");
-    expect(existsSync(join(dir, "weird_name_.jsonl"))).toBe(true);
+    expect(existsSync(joinAppPath(dir, "weird_name_.jsonl"))).toBe(true);
     // A dynamic sink is covered by one family bound, not the registry.
     expect(getFileSinks().size).toBe(before);
   });

@@ -1,3 +1,4 @@
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readdirSync, readFileSync } from "fs";
 import { join } from "path";
 import {
@@ -29,7 +30,7 @@ type Check = {
   cacheSignature?(): string | null | Promise<string | null>;
 };
 
-const DATA_DIR = join(import.meta.dir, "..", "data");
+const DATA_DIR = asAppPath(join(import.meta.dir, "..", "data"));
 
 const MIGRATION_RE = /^(\d{8})_(\d{6})_([0-9a-f]{8})__(.+)\.sql$/;
 

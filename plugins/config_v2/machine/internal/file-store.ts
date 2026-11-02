@@ -5,7 +5,6 @@ import {
   statSync,
   unlinkSync,
 } from "node:fs";
-import { join } from "node:path";
 import {
   APP_SCOPE_DIR,
   appScopeId,
@@ -25,18 +24,22 @@ import {
   type AgentWriteLedgerEntry,
   type FileSnapshot,
 } from "@plugins/infra/plugins/request-origin/plugins/agent-write-ledger/server";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { CONFIG_DIR } from "./config-dir";
 import { configFilesWatcherArmed, watchFileChange } from "./config-watcher";
 import { configLedgerDocument, configLedgerKey } from "./config-ledger-key";
 import { jsoncConfigProxy, writeRawAtomic } from "./jsonc-proxy";
 
 /** Where a user-layer file lives on this machine. */
-export function userFilePath(ref: ConfigFileRef): string {
-  return join(CONFIG_DIR, configFileRelPath(ref));
+export function userFilePath(ref: ConfigFileRef): AppPath {
+  return joinAppPath(CONFIG_DIR, configFileRelPath(ref));
 }
 
 /** The trio of files a document is made of, for the agent-write ledger. */
-function trioPaths(doc: ConfigDocRef): Record<ConfigDocumentFile, string> {
+function trioPaths(doc: ConfigDocRef): Record<ConfigDocumentFile, AppPath> {
   const path = (file: ConfigDocumentFile) => userFilePath({ ...doc, file });
   return {
     origin: path("origin"),
@@ -64,7 +67,7 @@ const configWriteLedger = defineAgentWriteLedger<ConfigDocumentFile>({
 });
 
 /** Put one captured file back: exact bytes, or gone if it did not exist. */
-function restoreFile(path: string, snapshot: FileSnapshot): void {
+function restoreFile(path: AppPath, snapshot: FileSnapshot): void {
   if (snapshot.present) {
     writeRawAtomic(path, snapshot.bytes);
     return;
@@ -83,10 +86,11 @@ function restoreFile(path: string, snapshot: FileSnapshot): void {
 async function applyRestore(
   entry: AgentWriteLedgerEntry<ConfigDocumentFile>,
 ): Promise<void> {
-  restoreFile(entry.paths.origin, entry.before.origin);
-  restoreFile(entry.paths.override, entry.before.override);
-  restoreFile(entry.paths.ancestor, entry.before.ancestor);
   const { storePath, scopeId } = configLedgerDocument(entry.key);
+  // The same paths `trioPaths` recorded, rebuilt so they stay proven app-owned.
+  for (const file of ["origin", "override", "ancestor"] as const) {
+    restoreFile(userFilePath({ storePath, scopeId, file }), entry.before[file]);
+  }
   await reloadConfigDocument(storePath, scopeId);
 }
 
@@ -99,7 +103,7 @@ async function applyRestore(
 // header and is therefore byte-length-identical (and can land in the same
 // millisecond) as the file it replaced. mtime-ns + size then cover in-place
 // writes from an external editor.
-function fileStamp(path: string): string {
+function fileStamp(path: AppPath): string {
   const st = statSync(path, { bigint: true, throwIfNoEntry: false });
   if (!st) return "-";
   return `${st.ino}:${st.mtimeNs}:${st.size}`;
@@ -121,7 +125,7 @@ export const fileConfigStore: ConfigStoreImpl = {
   // Every scope with a directory under the hierarchy's `@app/`. A missing
   // `@app` dir → [].
   scopes(storePath) {
-    const appDir = join(
+    const appDir = joinAppPath(
       CONFIG_DIR,
       storePathParts(storePath).hier,
       APP_SCOPE_DIR,
@@ -132,7 +136,7 @@ export const fileConfigStore: ConfigStoreImpl = {
       .map((e) => appScopeId(e.name));
   },
   dropScope(storePath, scopeId) {
-    const dir = join(
+    const dir = joinAppPath(
       CONFIG_DIR,
       storePathParts(storePath).hier,
       scopeSegment(scopeId),

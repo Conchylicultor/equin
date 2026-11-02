@@ -1,5 +1,9 @@
 import { join } from "path";
 import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   isTestCodePath,
   TESTS_DIR,
   TESTING_FOLDER,
@@ -530,8 +534,9 @@ async function scanEagerTierInputs(
 }
 
 /** Path to the committed manifest file. */
-export function eagerTierManifestPath(root: string): string {
-  return join(root, MANIFEST_REL_PATH);
+export function eagerTierManifestPath(root: AppPath): AppPath {
+  // `root`: the checkout root the caller works in.
+  return joinAppPath(root, MANIFEST_REL_PATH);
 }
 
 /**
@@ -539,7 +544,7 @@ export function eagerTierManifestPath(root: string): string {
  * THROW the reachability error. Builds its own context when none is supplied.
  */
 export async function renderEagerTierManifest(
-  root: string,
+  root: AppPath,
   ctx?: RegistryGenContext,
 ): Promise<string> {
   const resolvedCtx = ctx ?? (await buildRegistryGenContext(root));
@@ -549,7 +554,7 @@ export async function renderEagerTierManifest(
 
 /** Regenerate `web-tiers.generated.ts` if it drifted. */
 export async function generateEagerTier(opts: {
-  root: string;
+  root: AppPath;
   ctx?: RegistryGenContext;
 }): Promise<void> {
   await writeGenerated({

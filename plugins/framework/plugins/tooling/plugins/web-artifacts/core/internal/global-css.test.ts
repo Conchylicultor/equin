@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   computeGlobalCssKey,
   parseCssImports,
@@ -50,7 +51,7 @@ describe("unionCandidates", () => {
 });
 
 describe("computeGlobalCssKey", () => {
-  const pluginsRoot = join(import.meta.dir, "../../../../../../..");
+  const pluginsRoot = asAppPath(join(import.meta.dir, "../../../../../../.."));
   const key = (candidates: string[]) =>
     computeGlobalCssKey({ pluginsRoot, minify: true, candidates });
 

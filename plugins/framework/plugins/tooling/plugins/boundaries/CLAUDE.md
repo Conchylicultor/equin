@@ -125,6 +125,7 @@ escape is a `sanctioned` exemption for a declaration desktop-only by policy.
     - `framework/plugin-id.RUNTIME_FOLDERS`
     - `framework/plugin-id.TESTING_FOLDER`
     - `framework/plugin-id.VERIFYING_FOLDERS`
+    - `infra/host-fs/user-path.joinAppPath`
     - `infra/spawn.getWorktreeRoot`
     - `packages/macrotask-yield.yieldMacrotask`
     - `plugin-meta/parse-utils.findImports`
@@ -232,7 +233,7 @@ escape is a `sanctioned` exemption for a declaration desktop-only by policy.
     - `framework/tooling/boundaries` (2 debt)
     - `framework/tooling/checks` (11 debt)
     - `framework/tooling/checks/type-check` (17 debt)
-    - `framework/tooling/codegen` (31 debt)
+    - `framework/tooling/codegen` (23 debt)
     - `framework/tooling/format` (5 debt)
     - `framework/tooling/guards` (10 debt)
     - `framework/tooling/import-closure` (1 debt)
@@ -294,13 +295,13 @@ escape is a `sanctioned` exemption for a declaration desktop-only by policy.
     - `primitives/commit-list` (1 debt)
     - `primitives/css/layout-harness` (2 debt)
     - `primitives/icon-picker` (1 debt)
-    - `primitives/log-channels/log-files` (3 debt)
+    - `primitives/log-channels/log-files` (1 debt)
     - `release` (4 debt)
-    - `release/bundles` (5 debt)
+    - `release/bundles` (3 debt)
     - `release/source-checkout` (1 debt)
     - `reports/engine` (1 debt)
     - `reports/outbox` (2 debt)
-    - `review/plugin-changes` (2 debt)
+    - `review/plugin-changes` (1 debt)
     - `stats/cost` (3 debt)
     - `toolchain` (1 debt)
     - `ui/icons/icon-sets` (1 debt)

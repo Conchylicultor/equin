@@ -1,6 +1,10 @@
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { relative } from "node:path";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /** The folders whose source the host process runs (`machine/` is the backend's). */
 const HOST_SOURCE_DIRS = ["bin", "shared", "core"] as const;
@@ -13,13 +17,13 @@ const HOST_SOURCE_DIRS = ["bin", "shared", "core"] as const;
  * open tab. Imports into other plugins are not hashed; a change there that
  * alters the wire bumps `ENGINE_PROTOCOL` instead.
  */
-export function hostCodeId(pluginDir: string): string {
+export function hostCodeId(pluginDir: AppPath): string {
   const hash = createHash("sha256");
   for (const dir of HOST_SOURCE_DIRS) {
-    const root = join(pluginDir, dir);
+    const root = joinAppPath(pluginDir, dir);
     const files = readdirSync(root, { recursive: true, withFileTypes: true })
       .filter((e) => e.isFile() && /\.tsx?$/.test(e.name))
-      .map((e) => join(e.parentPath, e.name))
+      .map((e) => joinAppPath(root, relative(root, e.parentPath), e.name))
       .sort();
     for (const file of files) {
       hash.update(relative(pluginDir, file));

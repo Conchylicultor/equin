@@ -13,6 +13,10 @@
  */
 
 import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   readEnv,
   setEnv,
   unsetEnv,
@@ -34,7 +38,7 @@ import { openPrepareThread } from "./prepare-thread";
 // on a loaded host — well past bun's 5 s default.
 const TIMEOUT_MS = 60_000;
 
-let root = "";
+let root: AppPath = asAppPath("");
 
 function write(rel: string, content: string): void {
   const abs = join(root, rel);
@@ -63,7 +67,7 @@ const PROGRAM = "repo";
 
 let dataRoot = "";
 /** A real directory that is NOT a git checkout — the failing-root case below. */
-let notARepo = "";
+let notARepo: AppPath = asAppPath("");
 const priorDataRoot = readEnv("DIR");
 
 beforeAll(async () => {
@@ -77,9 +81,11 @@ beforeAll(async () => {
   // set before any worker is spawned so the thread inherits it too.
   dataRoot = mkdtempSync(join(tmpdir(), "type-check-prepare-thread-data-"));
   setEnv("DIR", dataRoot);
-  notARepo = mkdtempSync(join(tmpdir(), "type-check-prepare-thread-norepo-"));
+  notARepo = asAppPath(
+    mkdtempSync(join(tmpdir(), "type-check-prepare-thread-norepo-")),
+  );
 
-  root = mkdtempSync(join(tmpdir(), "type-check-prepare-thread-"));
+  root = asAppPath(mkdtempSync(join(tmpdir(), "type-check-prepare-thread-")));
   write(
     "tsconfig.json",
     JSON.stringify({ compilerOptions: { strict: true }, include: ["src"] }),

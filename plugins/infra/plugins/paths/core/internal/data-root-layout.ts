@@ -1,6 +1,10 @@
 import { lstatSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   LEGACY_IDS,
   PRODUCT_NAME,
 } from "@plugins/framework/plugins/product-name/core";
@@ -24,14 +28,14 @@ import {
 /** The data root's dir name under the home dir: `.equin`. */
 export const DATA_DIR_NAME = `.${PRODUCT_NAME}`;
 
-/** Both home-relative roots, current first. */
+/** Both home-relative roots, current first — the app's own dirs by claim. */
 export function homeDataRoots(home: string): {
-  current: string;
-  legacy: string;
+  current: AppPath;
+  legacy: AppPath;
 } {
   return {
-    current: join(home, DATA_DIR_NAME),
-    legacy: join(home, LEGACY_IDS.dataDirName),
+    current: asAppPath(join(home, DATA_DIR_NAME)),
+    legacy: asAppPath(join(home, LEGACY_IDS.dataDirName)),
   };
 }
 
@@ -47,15 +51,15 @@ export type RootEntry =
 
 export type DataRootLayout =
   /** The environment names the root (a release bundle, a preview, a VM). */
-  | { kind: "custom"; root: string }
+  | { kind: "custom"; root: AppPath }
   /** An install not yet migrated: the root is the legacy dir. */
-  | { kind: "legacy"; root: string; current: string }
+  | { kind: "legacy"; root: AppPath; current: AppPath }
   /**
    * The current root. `legacyLink` is true while the legacy name is still a
    * link to it — the migration's own safety net, left only when its leftover
    * scan was not clean.
    */
-  | { kind: "current"; root: string; legacy: string; legacyLink: boolean };
+  | { kind: "current"; root: AppPath; legacy: AppPath; legacyLink: boolean };
 
 /**
  * Both names hold separate data: a legacy root that is not a link to the
@@ -87,7 +91,7 @@ export class DataRootSplitError extends Error {
  *   which is a split and throws.
  */
 export function decideDataRootLayout(
-  roots: { current: string; legacy: string },
+  roots: { current: AppPath; legacy: AppPath },
   entries: { current: RootEntry; legacy: RootEntry },
 ): DataRootLayout {
   const { current, legacy } = entries;
@@ -124,7 +128,7 @@ export function decideDataRootLayout(
 }
 
 /** What sits at `path`, read without following a final link. */
-export function readRootEntry(path: string): RootEntry {
+export function readRootEntry(path: AppPath): RootEntry {
   let isLink: boolean;
   try {
     isLink = lstatSync(path).isSymbolicLink();

@@ -28,6 +28,7 @@
  *      lints each file in its batch.
  */
 
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { afterAll, expect, setDefaultTimeout, test } from "bun:test";
 import {
   mkdirSync,
@@ -88,7 +89,7 @@ const optionsFor = (root: string, extra: ts.CompilerOptions = {}) =>
       noUnusedLocals: true,
       ...extra,
     },
-    root,
+    asAppPath(root),
   );
 
 /** Write `files` under `root`, deleting the ones `previous` had and `files` does not. */
@@ -117,7 +118,7 @@ const TREE = "0".repeat(40);
  */
 const viewOf = (root: string, files: Record<string, string>): RepoView =>
   repoViewOver(
-    root,
+    asAppPath(root),
     TREE,
     new Map(
       Object.entries(files)

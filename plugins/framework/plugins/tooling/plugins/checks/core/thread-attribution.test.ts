@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   mkdirSync,
   mkdtempSync,
@@ -189,8 +190,8 @@ describe("repoRoots", () => {
     const link = join(scratch, "link");
     mkdirSync(real);
     symlinkSync(real, link);
-    expect(repoRoots(link)).toEqual([link, real]);
-    expect(repoRoots(real)).toEqual([real]);
+    expect(repoRoots(asAppPath(link))).toEqual([link, real]);
+    expect(repoRoots(asAppPath(real))).toEqual([real]);
   });
 });
 

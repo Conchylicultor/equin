@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 import { foldMergeParents, mergeNodeSnapshotText } from "./merge-node";
 import {
@@ -99,7 +100,7 @@ describe("snapshotBodies", () => {
     await git("add", "-A");
     await git("commit", "-q", "-m", "c");
 
-    const bodies = snapshotBodies(root, join(root, DATA));
+    const bodies = snapshotBodies(root, asAppPath(join(root, DATA)));
     expect(await bodies.text(C)).toBe(body(C, B, "c"));
     expect(await bodies.text(B)).toBe(body(B, A, "b"));
     expect(await bodies.text(A)).toBe(body(A, NULL_SNAPSHOT_ID, "a"));
@@ -112,7 +113,7 @@ describe("snapshotBodies", () => {
       renderSnapshotHeader({ id: W, parents: [C] }) + empty,
     );
     write("meta/schema.snapshot.json", body(C, B, "c"));
-    const fresh = snapshotBodies(root, join(root, DATA));
+    const fresh = snapshotBodies(root, asAppPath(join(root, DATA)));
     const missing = await fresh.text(W).catch((e: unknown) => e);
     expect(missing).toBeInstanceOf(MissingSnapshotBodyError);
     expect((missing as Error).message).toContain(`no body for snapshot ${W}`);
@@ -161,7 +162,7 @@ describe("snapshotBodies: a body a rebase rewrote away", () => {
     await gitIn(repo, "add", "-A");
     await gitIn(repo, "commit", "-q", "--amend", "-m", "own (rebased)");
 
-    const bodies = snapshotBodies(repo, join(repo, DATA));
+    const bodies = snapshotBodies(repo, asAppPath(join(repo, DATA)));
     expect(await bodies.text(R)).toBe(body(R, A, "r"));
   });
 });
@@ -205,7 +206,7 @@ describe("snapshotBodies: a merge node's body is never needed in git", () => {
           .replace('"prevId": ""', `"prevId": "${prevId}"`),
       );
     await gitIn(root, "init", "-q", "-b", "main", repo);
-    const dataDir = join(repo, DATA);
+    const dataDir = asAppPath(join(repo, DATA));
 
     migration("20260101_000000_aaaaaaaa__base", A, [NULL_SNAPSHOT_ID]);
     tip(A, NULL_SNAPSHOT_ID, "base");

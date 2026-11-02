@@ -1,5 +1,8 @@
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
 import {
   pidAlive,
@@ -22,7 +25,7 @@ import { agentPidsRoot } from "./paths";
 
 const PID_SUFFIX = ".pid";
 
-function entries(dir: string): string[] {
+function entries(dir: AppPath): string[] {
   try {
     return readdirSync(dir);
   } catch (err) {
@@ -34,12 +37,12 @@ function entries(dir: string): string[] {
 /** `namespace`'s agents whose pid file names a live pid. */
 function liveAgents(
   namespace: string,
-): { id: string; pid: number; path: string }[] {
-  const dir = join(agentPidsRoot(), namespace);
+): { id: string; pid: number; path: AppPath }[] {
+  const dir = joinAppPath(agentPidsRoot(), namespace);
   return entries(dir)
     .filter((name) => name.endsWith(PID_SUFFIX))
     .flatMap((name) => {
-      const path = join(dir, name);
+      const path = joinAppPath(dir, name);
       const read = readPidFile(path);
       return read.kind === "pid" && pidAlive(read.pid)
         ? [{ id: name.slice(0, -PID_SUFFIX.length), pid: read.pid, path }]
@@ -52,7 +55,7 @@ function liveAgents(
  * started before pid files named it, or one that exited since its liveness
  * was read (its file is gone: the next recount drops it).
  */
-function agentAccount(pidFile: string): string | null {
+function agentAccount(pidFile: AppPath): string | null {
   let text: string;
   try {
     text = readFileSync(pidFile, "utf8");

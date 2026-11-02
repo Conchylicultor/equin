@@ -15,6 +15,12 @@ import {
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import {
+  type AppPath,
+  appPathParent,
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   codeSignature,
   rcodesign,
   registerApp,
@@ -77,15 +83,15 @@ import {
 export interface MacosAppHost {
   readonly platform: NodeJS.Platform;
   /** `equin.app`'s path. */
-  readonly bundle: string;
+  readonly bundle: AppPath;
   /** Run `fn` holding the machine-wide lock on the bundle. */
   withLock<T>(fn: () => Promise<T>): Promise<T>;
   /** Sign the staged bundle in place, as {@link APP_BUNDLE_ID}. */
-  sign(staging: string): Promise<void>;
+  sign(staging: AppPath): Promise<void>;
   /** Whether the installed bundle is signed by this machine's identity. */
-  isSigned(bundle: string): Promise<boolean>;
+  isSigned(bundle: AppPath): Promise<boolean>;
   /** Register the bundle with LaunchServices (`tccutil` and Settings resolve it through it). */
-  register(bundle: string): Promise<void>;
+  register(bundle: AppPath): Promise<void>;
   /** The real path of every executable a running process of this user was started from. */
   executablesInUse(): Promise<string[]>;
 }
@@ -150,15 +156,15 @@ async function runningExecutables(): Promise<string[]> {
 }
 
 /** Where `component`'s executable lives inside the bundle. */
-export function appExecutablePath(bundle: string, name: string): string {
-  return join(bundle, "Contents", "MacOS", name);
+export function appExecutablePath(bundle: AppPath, name: string): AppPath {
+  return joinAppPath(bundle, "Contents", "MacOS", name);
 }
 
 /** The bundle that holds the executable at `path`, or null when it is not inside `bundle`. */
 export function bundleOfExecutable(
-  bundle: string,
+  bundle: AppPath,
   path: string,
-): string | null {
+): AppPath | null {
   return dirname(path) === join(bundle, "Contents", "MacOS") ? bundle : null;
 }
 
@@ -182,9 +188,9 @@ export function plannedServiceExecutable(
 
 /** The components the installed bundle records, or null when there is none (or it is not ours). */
 export function installedAppComponents(
-  bundle: string,
+  bundle: AppPath,
 ): InstalledComponent[] | null {
-  const plist = join(bundle, "Contents", "Info.plist");
+  const plist = joinAppPath(bundle, "Contents", "Info.plist");
   if (!existsSync(plist)) return null;
   return readAppComponents(readFileSync(plist, "utf8"));
 }
@@ -227,22 +233,29 @@ export async function installServiceExecutable(
       return planned;
     }
 
-    const staging = `${host.bundle}.staging-${process.pid}-${randomBytes(4).toString("hex")}`;
-    const old = `${host.bundle}.old-${process.pid}-${randomBytes(4).toString("hex")}`;
+    const staging = joinAppPath(
+      appPathParent(host.bundle),
+      `${basename(host.bundle)}.staging-${process.pid}-${randomBytes(4).toString("hex")}`,
+    );
+    const old = joinAppPath(
+      appPathParent(host.bundle),
+      `${basename(host.bundle)}.old-${process.pid}-${randomBytes(4).toString("hex")}`,
+    );
     try {
       // A bundle that is not ours (no record) is rebuilt, never merged into.
       if (installed !== null) cpSync(host.bundle, staging, { recursive: true });
-      const contents = join(staging, "Contents");
-      mkdirSync(join(contents, "MacOS"), { recursive: true });
-      mkdirSync(join(contents, "Resources"), { recursive: true });
+      const contents = joinAppPath(staging, "Contents");
+      mkdirSync(joinAppPath(contents, "MacOS"), { recursive: true });
+      mkdirSync(joinAppPath(contents, "Resources"), { recursive: true });
       const executable = appExecutablePath(staging, component.name);
       rmSync(executable, { force: true });
+      // A build from the deps cache.
       copyFileSync(build.file, executable);
       chmodSync(executable, 0o755);
       if (build.icon !== undefined) {
         copyFileSync(
           build.icon,
-          join(contents, "Resources", `${ICON_NAME}.icns`),
+          joinAppPath(contents, "Resources", `${ICON_NAME}.icns`),
         );
       }
       const components = [
@@ -250,7 +263,7 @@ export async function installServiceExecutable(
         entry,
       ];
       writeFileSync(
-        join(contents, "Info.plist"),
+        joinAppPath(contents, "Info.plist"),
         renderAppInfoPlist(components),
       );
       await host.sign(staging);
@@ -281,11 +294,11 @@ async function sweepOldBundles(
   host: MacosAppHost,
   log: (line: string) => void,
 ): Promise<void> {
-  const parent = dirname(host.bundle);
+  const parent = asAppPath(dirname(host.bundle));
   const prefix = `${basename(host.bundle)}.old-`;
   const old = readdirSync(parent)
     .filter((name) => name.startsWith(prefix))
-    .map((name) => join(parent, name));
+    .map((name) => joinAppPath(parent, name));
   if (old.length === 0) return;
   const running = await host.executablesInUse();
   for (const dir of old) {

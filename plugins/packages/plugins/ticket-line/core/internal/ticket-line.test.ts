@@ -2,6 +2,10 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { arrive, createTicketLine, type Ticket } from "./ticket-line";
 
 // The line is cross-process by construction (flocks are per open file
@@ -11,9 +15,9 @@ import { arrive, createTicketLine, type Ticket } from "./ticket-line";
 
 const MODULE = join(import.meta.dir, "ticket-line.ts");
 
-let dir: string;
+let dir: AppPath;
 beforeEach(() => {
-  dir = join(mkdtempSync(join(tmpdir(), "ticket-line-")), "line");
+  dir = asAppPath(join(mkdtempSync(join(tmpdir(), "ticket-line-")), "line"));
 });
 afterEach(() => {
   rmSync(join(dir, ".."), { recursive: true, force: true });

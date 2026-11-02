@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 /**
  * Vendors the Seti file-type glyphs (jesseweed/seti-ui, MIT) as an Iconify set.
  *
@@ -67,12 +68,12 @@ try {
   }
   const set = buildSetiSet(icons);
 
-  const jsonPath = join(root, SETI_JSON_REL_PATH);
+  const jsonPath = joinAppPath(root, SETI_JSON_REL_PATH);
   await mkdir(dirname(jsonPath), { recursive: true });
   await writeFile(jsonPath, `${JSON.stringify(set, null, 1)}\n`);
   await writeFile(join(root, SETI_LICENSE_REL_PATH), license);
   await writeGenerated({
-    file: join(root, SETI_NAMES_REL_PATH),
+    file: joinAppPath(root, SETI_NAMES_REL_PATH),
     content: renderSetiNames(Object.keys(set.icons)),
   });
   console.log(

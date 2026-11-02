@@ -7,15 +7,20 @@ import {
   unlinkSync,
 } from "node:fs";
 import { randomUUID } from "node:crypto";
-import { dirname } from "node:path";
+import { basename, dirname } from "node:path";
 import { parseConfigFile, stringifyConfigValue } from "../../core";
 import type { ConfigProxy } from "../../core";
 import type { JsonValue } from "../../core";
+import {
+  appPathParent,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // This is the full read/write proxy used by the running server. Build-time
 // checks that need a read-only variant without a server runtime define their
 // own fs-backed proxy inline — core can't host fs code (it is browser-bundled).
-export function jsoncConfigProxy(filePath: string): ConfigProxy {
+export function jsoncConfigProxy(filePath: AppPath): ConfigProxy {
   return {
     read() {
       if (!existsSync(filePath)) return null;
@@ -30,7 +35,10 @@ export function jsoncConfigProxy(filePath: string): ConfigProxy {
       let str = "";
       if (hash !== null) str += `// @hash ${hash}\n`;
       str += stringifyConfigValue(content) + "\n";
-      const tmp = `${filePath}.tmp-${randomUUID()}`;
+      const tmp = joinAppPath(
+        appPathParent(filePath),
+        `${basename(filePath)}.tmp-${randomUUID()}`,
+      );
       try {
         mkdirSync(dirname(filePath), { recursive: true });
         writeFileSync(tmp, str, "utf-8");
@@ -60,8 +68,11 @@ export function jsoncConfigProxy(filePath: string): ConfigProxy {
  * legend come back byte-identical, where re-serialising a parsed document would
  * drop the comments and could produce a file the reader rejects as corrupt.
  */
-export function writeRawAtomic(filePath: string, bytes: string): void {
-  const tmp = `${filePath}.tmp-${randomUUID()}`;
+export function writeRawAtomic(filePath: AppPath, bytes: string): void {
+  const tmp = joinAppPath(
+    appPathParent(filePath),
+    `${basename(filePath)}.tmp-${randomUUID()}`,
+  );
   try {
     mkdirSync(dirname(filePath), { recursive: true });
     writeFileSync(tmp, bytes, "utf-8");
@@ -78,6 +89,6 @@ export function writeRawAtomic(filePath: string, bytes: string): void {
 }
 
 /** Exact bytes of `filePath`, or `null` when it does not exist. */
-export function readRawOrNull(filePath: string): string | null {
+export function readRawOrNull(filePath: AppPath): string | null {
   return existsSync(filePath) ? readFileSync(filePath, "utf-8") : null;
 }

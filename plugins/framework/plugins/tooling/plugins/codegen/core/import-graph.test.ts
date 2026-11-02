@@ -5,6 +5,7 @@
  */
 
 import { test, expect } from "bun:test";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   globPaths,
   type RepoFiles,
@@ -23,7 +24,7 @@ function memRepo(
   const paths = Object.keys(files).sort();
   const reads: string[] = [];
   return {
-    root,
+    root: asAppPath(root),
     reads,
     all: () => paths,
     // As the run's file set does: a malformed path is a caller bug, not a miss.

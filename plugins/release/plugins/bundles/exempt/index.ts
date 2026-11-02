@@ -5,8 +5,6 @@ export default [
     rule: "boundaries/no-platform-api",
     paths: [
       "server/internal/claim-pointer.ts",
-      "server/internal/out-dir.ts",
-      "server/internal/pointer.ts",
       "server/internal/prune.ts",
       "server/internal/resolve-bundle.ts",
     ],

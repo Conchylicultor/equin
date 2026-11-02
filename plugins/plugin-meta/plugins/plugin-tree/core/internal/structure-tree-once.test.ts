@@ -3,9 +3,10 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { buildStructureTreeOnce } from "./structure-tree-once";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 const dir = mkdtempSync(join(tmpdir(), "structure-tree-once-"));
-const pluginsRoot = join(dir, "plugins");
+const pluginsRoot = asAppPath(join(dir, "plugins"));
 mkdirSync(join(pluginsRoot, "a", "plugins", "b"), { recursive: true });
 writeFileSync(join(pluginsRoot, "a", "package.json"), "{}");
 writeFileSync(join(pluginsRoot, "a", "plugins", "b", "package.json"), "{}");

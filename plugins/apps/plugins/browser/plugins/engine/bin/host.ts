@@ -25,6 +25,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { flockTry } from "@plugins/packages/plugins/flock/core";
 import { withForegroundPriority } from "@plugins/packages/plugins/spawn-priority/core";
 import { browserDir } from "@plugins/apps/plugins/browser/data-dirs";
@@ -58,7 +59,7 @@ function argValue(name: string): string {
 const launchedBy = argValue("--launched-by");
 const dir = browserEngineDir.ensure();
 const file = (name: string) => browserEngineDir.file(name);
-const codeId = hostCodeId(resolve(import.meta.dir, ".."));
+const codeId = hostCodeId(asAppPath(resolve(import.meta.dir, "..")));
 const startedAt = new Date().toISOString();
 
 // The singleton: whoever holds the lock is THE host. The kernel drops it when

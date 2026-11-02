@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { existsSync, readFileSync } from "node:fs";
 import { codeSignature } from "@plugins/infra/plugins/codesign/deps";
 import { readyNow } from "@plugins/infra/plugins/deps/deps";
@@ -140,7 +141,7 @@ export async function checkGatewayDrift(): Promise<GatewayDrift> {
  */
 async function describeBinary(
   installedBinary: string,
-  repoRoot: string,
+  repoRoot: AppPath,
   app: MacosAppHost,
 ): Promise<string | null> {
   const now = await readyNow(gatewayBinary, { root: repoRoot });

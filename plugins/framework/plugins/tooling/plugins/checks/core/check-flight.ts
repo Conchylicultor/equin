@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { z } from "zod";
 import type {
   Check,
@@ -72,7 +73,7 @@ type SharedCheckVerdict = z.infer<typeof SharedCheckVerdictSchema>;
 export interface CheckFlightArgs {
   check: Check;
   /** The flight directory (`checkFlightDir()`), host-global like the cache. */
-  dir: string;
+  dir: AppPath;
   /** Everything the verdict is a function of: the cache key's three parts. */
   sig: string;
   treeHash: string;

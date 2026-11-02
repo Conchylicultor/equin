@@ -383,11 +383,12 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
 
 - Description: Check runner and built-in checks for ./equin check
 - Core:
-  - Uses: 54 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 58 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/tooling` ×10
     - `framework/tooling/exempt` ×7
     - `reports/check-thread-stall` ×7
     - `infra/stack-sampler` ×5
+    - `infra/host-fs/user-path` ×4
     - `infra/launcher/env-names` ×3
     - `infra/paths` ×3
     - `infra/spawn` ×3

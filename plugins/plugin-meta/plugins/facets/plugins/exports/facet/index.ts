@@ -1,4 +1,3 @@
-import { join } from "path";
 import {
   createFacet,
   getFacet,
@@ -20,13 +19,14 @@ import {
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { crossRefsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/cross-refs/core";
 import { type ExportedSymbol, type ExportsData, exportsFacetDef } from "../core";
+import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 export default createFacet<ExportsData>({
   def: exportsFacetDef,
 
   extract(ctx) {
     const parse = (runtime: RuntimeFolder): ExportedSymbol[] => {
-      const raw = readIfExists(join(ctx.dir, runtime, "index.ts"));
+      const raw = readIfExists(joinAppPath(ctx.dir, runtime, "index.ts"));
       if (!raw) return [];
       // Fully mask comments/regex/strings (parseBarrelExports reads only
       // export-name identifiers, never a string value) so neither a commented-out

@@ -21,6 +21,7 @@ import {
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   buildSnapshot,
   createIpCountryLookup,
@@ -113,7 +114,7 @@ const host = "equin.dev";
 beforeAll(async () => {
   // A DB-IP snapshot fixture: A's address is in France, B's is reserved (ZZ),
   // C's is in no range at all.
-  const snapshotPath = join(snapshotDir, "ip-country.bin");
+  const snapshotPath = asAppPath(join(snapshotDir, "ip-country.bin"));
   writeFileSync(
     snapshotPath,
     await buildSnapshot(

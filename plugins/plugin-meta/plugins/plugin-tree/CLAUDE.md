@@ -77,27 +77,15 @@ dynamic value.
     - `defineWarmup('plugin-tree.trees')`
     - `defineFileWatcher('plugin-tree.plugins-dir')`
 - Core:
-  - Uses:
-    - `framework/plugin-id.asPluginId`
-    - `framework/plugin-id.isTestCodePath`
-    - `framework/plugin-id.PLUGIN_MANIFEST_KEY`
-    - `framework/plugin-id.PluginId`
-    - `framework/plugin-id.TESTING_FOLDER`
-    - `framework/plugin-id.TESTS_DIR`
-    - `framework/slot-declaration.declaredSlotSources`
-    - `framework/slot-declaration.declarePluginSlots`
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `framework/plugin-id` ×6
+    - `plugin-meta/parse-utils` ×4
+    - `infra/host-fs/user-path` ×3
+    - `plugin-meta/facets` ×3
+    - `framework/slot-declaration` ×2
+    - `packages/macrotask-yield` ×2
+    - `plugin-meta/barrel-import` ×2
     - `framework/tooling.loadRepoFiles`
-    - `packages/macrotask-yield.createTimeSlicer`
-    - `packages/macrotask-yield.yieldMacrotask`
-    - `plugin-meta/barrel-import.importBarrel`
-    - `plugin-meta/barrel-import.registerBarrelStubs`
-    - `plugin-meta/facets.Facet`
-    - `plugin-meta/facets.loadFacets`
-    - `plugin-meta/facets.setFacet`
-    - `plugin-meta/parse-utils.defaultExportObjectBody`
-    - `plugin-meta/parse-utils.parseBoolField`
-    - `plugin-meta/parse-utils.parseStringField`
-    - `plugin-meta/parse-utils.runWithFsSnapshot`
   - Exports (types):
     - `PluginNode`
     - `PluginTree`

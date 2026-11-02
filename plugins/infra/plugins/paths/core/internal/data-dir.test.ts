@@ -14,6 +14,11 @@ import {
   readlinkSync,
   writeFileSync,
 } from "node:fs";
+import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -96,15 +101,25 @@ test("an invalid name throws", () => {
 test("path resolves lazily against the CURRENT data-root variable, not the one at declaration", () => {
   setEnv("DIR", "/tmp/root-a");
   const dir = defineDataDir(spec("lazy-fixture"));
-  expect(dir.path).toBe(join("/tmp/root-a", "cache", "lazy-fixture"));
+  expect(dir.path).toBe(
+    joinAppPath(asAppPath("/tmp/root-a"), "cache", "lazy-fixture"),
+  );
 
   // The launcher's move: the root changes AFTER the declaration ran.
   setEnv("DIR", "/tmp/root-b");
-  expect(dir.path).toBe(join("/tmp/root-b", "cache", "lazy-fixture"));
-  expect(dir.file("sub", "f.json")).toBe(
-    join("/tmp/root-b", "cache", "lazy-fixture", "sub", "f.json"),
+  expect(dir.path).toBe(
+    joinAppPath(asAppPath("/tmp/root-b"), "cache", "lazy-fixture"),
   );
-  expect(dataRoot()).toBe("/tmp/root-b");
+  expect(dir.file("sub", "f.json")).toBe(
+    joinAppPath(
+      asAppPath("/tmp/root-b"),
+      "cache",
+      "lazy-fixture",
+      "sub",
+      "f.json",
+    ),
+  );
+  expect(dataRoot()).toBe(asAppPath("/tmp/root-b"));
 });
 
 test("legacyLocation resolves relative to the root, outside its kind", () => {
@@ -117,10 +132,10 @@ test("legacyLocation resolves relative to the root, outside its kind", () => {
       reason: "moving it needs cluster downtime",
     },
   });
-  expect(dir.path).toBe(join("/tmp/root-c", "postgres"));
+  expect(dir.path).toBe(joinAppPath(asAppPath("/tmp/root-c"), "postgres"));
   // Still lazy — the override is a relative segment, never a frozen absolute.
   setEnv("DIR", "/tmp/root-d");
-  expect(dir.path).toBe(join("/tmp/root-d", "postgres"));
+  expect(dir.path).toBe(joinAppPath(asAppPath("/tmp/root-d"), "postgres"));
 });
 
 test("getDataDirs returns a copy, keyed by kind/name", () => {
@@ -132,12 +147,12 @@ test("getDataDirs returns a copy, keyed by kind/name", () => {
 });
 
 test("ensure() creates the directory and returns it", () => {
-  const root = mkdtempSync(join(tmpdir(), "data-dir-ensure-"));
+  const root = asAppPath(mkdtempSync(join(tmpdir(), "data-dir-ensure-")));
   setEnv("DIR", root);
   const dir = defineDataDir(spec("ensure-fixture"));
-  expect(dir.ensure()).toBe(join(root, "cache", "ensure-fixture"));
+  expect(dir.ensure()).toBe(joinAppPath(root, "cache", "ensure-fixture"));
   // Idempotent: a second call on an existing directory is a no-op, not a throw.
-  expect(dir.ensure()).toBe(join(root, "cache", "ensure-fixture"));
+  expect(dir.ensure()).toBe(joinAppPath(root, "cache", "ensure-fixture"));
 });
 
 test("ensure() throws when the target exists and is NOT a directory", () => {
@@ -146,9 +161,9 @@ test("ensure() throws when the target exists and is NOT a directory", () => {
   // declaration's `legacyLocation` at one of those would otherwise try to mkdir
   // over the file, and the owner's next write would fail with EISDIR far from
   // the declaration that caused it.
-  const root = mkdtempSync(join(tmpdir(), "data-dir-notdir-"));
-  mkdirSync(join(root, "logs"), { recursive: true });
-  writeFileSync(join(root, "some.latch"), "held");
+  const root = asAppPath(mkdtempSync(join(tmpdir(), "data-dir-notdir-")));
+  mkdirSync(joinAppPath(root, "logs"), { recursive: true });
+  writeFileSync(joinAppPath(root, "some.latch"), "held");
   setEnv("DIR", root);
 
   const dir = defineDataDir({
@@ -184,7 +199,9 @@ test("defineAppDataDir derives the name from the app id, under apps/, never recl
   expect(dir.spec.kind).toBe("apps");
   expect(dir.spec.name).toBe("fixture-app-derive");
   expect(dir.spec.reclaim.kind).toBe("never");
-  expect(dir.path).toBe(join("/tmp/root-app", "apps", "fixture-app-derive"));
+  expect(dir.path).toBe(
+    joinAppPath(asAppPath("/tmp/root-app"), "apps", "fixture-app-derive"),
+  );
   expect(getDataDirs().get("apps/fixture-app-derive")).toBe(dir);
 });
 
@@ -231,16 +248,18 @@ test("defineDataDir refuses the apps kind — a type error, and a throw for a ca
 // ── subdir: an area inside a declared dir ────────────────────────────────────
 
 test("subdir() names an area inside the dir: path, file() and ensure()", () => {
-  const root = mkdtempSync(join(tmpdir(), "data-dir-subdir-"));
+  const root = asAppPath(mkdtempSync(join(tmpdir(), "data-dir-subdir-")));
   setEnv("DIR", root);
   const dir = defineAppDataDir(
     { id: "fixture-subdir-app" },
     appOpts("apps/fixture-subdir-app"),
   );
   const area = dir.subdir("history");
-  const expected = join(root, "apps", "fixture-subdir-app", "history");
+  const expected = joinAppPath(root, "apps", "fixture-subdir-app", "history");
   expect(area.path).toBe(expected);
-  expect(area.file("p1", "log.json")).toBe(join(expected, "p1", "log.json"));
+  expect(area.file("p1", "log.json")).toBe(
+    joinAppPath(expected, "p1", "log.json"),
+  );
   expect(area.ensure()).toBe(expected);
   expect(lstatSync(expected).isDirectory()).toBe(true);
   // Not a declaration: the registry holds the app dir and nothing more.
@@ -254,7 +273,7 @@ test("subdir() rejects anything but one lowercase segment", () => {
 });
 
 test("an area's ensure() shares the not-a-directory guard", () => {
-  const root = mkdtempSync(join(tmpdir(), "data-dir-area-notdir-"));
+  const root = asAppPath(mkdtempSync(join(tmpdir(), "data-dir-area-notdir-")));
   setEnv("DIR", root);
   const dir = defineDataDir(spec("area-notdir"));
   mkdirSync(dir.path, { recursive: true });
@@ -279,8 +298,10 @@ function asMover(): void {
   setEnv("RELEASE", "1");
 }
 
-function freshRoot(label: string): string {
-  const root = mkdtempSync(join(tmpdir(), `data-dir-move-${label}-`));
+function freshRoot(label: string): AppPath {
+  const root = asAppPath(
+    mkdtempSync(join(tmpdir(), `data-dir-move-${label}-`)),
+  );
   setEnv("DIR", root);
   return root;
 }
@@ -294,15 +315,15 @@ test("movedFrom on a fresh root (neither location exists) resolves to the new lo
     reclaim: { kind: "never", reason: "test" },
     movedFrom: [{ from: "apps/move-fresh-old" }],
   });
-  expect(dir.path).toBe(join(root, "state", "move-fresh"));
-  expect(existsSync(join(root, "apps", "move-fresh-old"))).toBe(false);
+  expect(dir.path).toBe(joinAppPath(root, "state", "move-fresh"));
+  expect(existsSync(joinAppPath(root, "apps", "move-fresh-old"))).toBe(false);
 });
 
 test("a pending move, in a process that may not move, resolves to the OLD location and moves nothing", () => {
   const root = freshRoot("pending-ordinary");
-  const old = join(root, "apps", "move-pending-old");
+  const old = joinAppPath(root, "apps", "move-pending-old");
   mkdirSync(old, { recursive: true });
-  writeFileSync(join(old, "a.bin"), "bytes");
+  writeFileSync(joinAppPath(old, "a.bin"), "bytes");
   asOrdinaryProcess();
 
   const dir = defineDataDir({
@@ -312,23 +333,23 @@ test("a pending move, in a process that may not move, resolves to the OLD locati
     movedFrom: [{ from: "apps/move-pending-old" }],
   });
   expect(dir.path).toBe(old);
-  expect(dir.file("a.bin")).toBe(join(old, "a.bin"));
+  expect(dir.file("a.bin")).toBe(joinAppPath(old, "a.bin"));
   expect(dir.ensure()).toBe(old);
-  expect(dir.subdir("sub").path).toBe(join(old, "sub"));
+  expect(dir.subdir("sub").path).toBe(joinAppPath(old, "sub"));
   // Nothing moved, nothing created at the new spot.
   expect(lstatSync(old).isDirectory()).toBe(true);
-  expect(existsSync(join(root, "state", "move-pending"))).toBe(false);
+  expect(existsSync(joinAppPath(root, "state", "move-pending"))).toBe(false);
 
   // Not memoized: the moment the move happens elsewhere, reads follow it.
   asMover();
-  expect(dir.path).toBe(join(root, "state", "move-pending"));
+  expect(dir.path).toBe(joinAppPath(root, "state", "move-pending"));
 });
 
 test("a pending move, in the process that may move, renames and plants a relative symlink — once", () => {
   const root = freshRoot("pending-mover");
-  const old = join(root, "apps", "move-mover-old");
+  const old = joinAppPath(root, "apps", "move-mover-old");
   mkdirSync(old, { recursive: true });
-  writeFileSync(join(old, "a.bin"), "bytes");
+  writeFileSync(joinAppPath(old, "a.bin"), "bytes");
   asMover();
 
   const dir = defineDataDir({
@@ -337,24 +358,26 @@ test("a pending move, in the process that may move, renames and plants a relativ
     reclaim: { kind: "never", reason: "test" },
     movedFrom: [{ from: "apps/move-mover-old" }],
   });
-  const dest = join(root, "state", "move-mover");
+  const dest = joinAppPath(root, "state", "move-mover");
   expect(dir.path).toBe(dest);
-  expect(readFileSync(join(dest, "a.bin"), "utf8")).toBe("bytes");
+  expect(readFileSync(joinAppPath(dest, "a.bin"), "utf8")).toBe("bytes");
   expect(lstatSync(old).isSymbolicLink()).toBe(true);
   expect(readlinkSync(old)).toBe(join("..", "state", "move-mover"));
   // The old path now reaches the same bytes — what an older checkout reads.
-  expect(readFileSync(join(old, "a.bin"), "utf8")).toBe("bytes");
+  expect(readFileSync(joinAppPath(old, "a.bin"), "utf8")).toBe("bytes");
 
   // A second resolution is a no-op, in this process or any other.
-  expect(dir.file("a.bin")).toBe(join(dest, "a.bin"));
+  expect(dir.file("a.bin")).toBe(joinAppPath(dest, "a.bin"));
   asOrdinaryProcess();
   expect(dir.path).toBe(dest);
 });
 
 test("a split copy (old is a real dir AND the destination exists) throws, for every process", () => {
   const root = freshRoot("conflict");
-  mkdirSync(join(root, "apps", "move-conflict-old"), { recursive: true });
-  mkdirSync(join(root, "state", "move-conflict"), { recursive: true });
+  mkdirSync(joinAppPath(root, "apps", "move-conflict-old"), {
+    recursive: true,
+  });
+  mkdirSync(joinAppPath(root, "state", "move-conflict"), { recursive: true });
   const dir = defineDataDir({
     ...spec("move-conflict"),
     kind: "state",
@@ -366,16 +389,16 @@ test("a split copy (old is a real dir AND the destination exists) throws, for ev
   asMover();
   expect(() => dir.ensure()).toThrow(/SPLIT COPY/);
   // And nothing was touched trying.
-  expect(lstatSync(join(root, "apps", "move-conflict-old")).isDirectory()).toBe(
-    true,
-  );
+  expect(
+    lstatSync(joinAppPath(root, "apps", "move-conflict-old")).isDirectory(),
+  ).toBe(true);
 });
 
 test("an area move (`to`) redirects only that area, and creates the destination's parent", () => {
   const root = freshRoot("area");
-  const old = join(root, "apps", "fixture-old-wallpaper");
+  const old = joinAppPath(root, "apps", "fixture-old-wallpaper");
   mkdirSync(old, { recursive: true });
-  writeFileSync(join(old, "w.jpg"), "pixels");
+  writeFileSync(joinAppPath(old, "w.jpg"), "pixels");
   const desktop = defineAppDataDir(
     { id: "fixture-area-desktop" },
     {
@@ -383,22 +406,24 @@ test("an area move (`to`) redirects only that area, and creates the destination'
       movedFrom: [{ from: "apps/fixture-old-wallpaper", to: "wallpaper" }],
     },
   );
-  const home = join(root, "apps", "fixture-area-desktop");
+  const home = joinAppPath(root, "apps", "fixture-area-desktop");
 
   asOrdinaryProcess();
   // The dir itself and every OTHER area are the new location from day one…
   expect(desktop.path).toBe(home);
-  expect(desktop.file("other", "x")).toBe(join(home, "other", "x"));
+  expect(desktop.file("other", "x")).toBe(joinAppPath(home, "other", "x"));
   // …while the moved area still reads its bytes where they are.
   expect(desktop.subdir("wallpaper").path).toBe(old);
-  expect(desktop.file("wallpaper", "w.jpg")).toBe(join(old, "w.jpg"));
-  expect(desktop.file("wallpaper/w.jpg")).toBe(join(old, "w.jpg"));
+  expect(desktop.file("wallpaper", "w.jpg")).toBe(joinAppPath(old, "w.jpg"));
+  expect(desktop.file("wallpaper/w.jpg")).toBe(joinAppPath(old, "w.jpg"));
   expect(existsSync(home)).toBe(false);
 
   asMover();
   const area = desktop.subdir("wallpaper");
-  expect(area.file("w.jpg")).toBe(join(home, "wallpaper", "w.jpg"));
-  expect(readFileSync(join(home, "wallpaper", "w.jpg"), "utf8")).toBe("pixels");
+  expect(area.file("w.jpg")).toBe(joinAppPath(home, "wallpaper", "w.jpg"));
+  expect(readFileSync(joinAppPath(home, "wallpaper", "w.jpg"), "utf8")).toBe(
+    "pixels",
+  );
   expect(readlinkSync(old)).toBe(join("fixture-area-desktop", "wallpaper"));
 });
 
@@ -411,21 +436,21 @@ test("a settled move is memoized per data root; a different root is inspected af
     reclaim: { kind: "never", reason: "test" },
     movedFrom: [{ from: "apps/move-memo-old" }],
   });
-  expect(dir.path).toBe(join(first, "state", "move-memo")); // fresh ⇒ settled
+  expect(dir.path).toBe(joinAppPath(first, "state", "move-memo")); // fresh ⇒ settled
 
   // Once settled on this root, reads no longer stat the old location at all —
   // even a split copy appearing later is not re-inspected here (the audit and a
   // restart see it; the steady-state read path pays nothing).
-  mkdirSync(join(first, "apps", "move-memo-old"), { recursive: true });
-  mkdirSync(join(first, "state", "move-memo"), { recursive: true });
-  expect(dir.path).toBe(join(first, "state", "move-memo"));
+  mkdirSync(joinAppPath(first, "apps", "move-memo-old"), { recursive: true });
+  mkdirSync(joinAppPath(first, "state", "move-memo"), { recursive: true });
+  expect(dir.path).toBe(joinAppPath(first, "state", "move-memo"));
 
   // A different root has its own answer: pending there, so an ordinary process
   // reads the old location.
   const second = freshRoot("memo-b");
-  mkdirSync(join(second, "apps", "move-memo-old"), { recursive: true });
+  mkdirSync(joinAppPath(second, "apps", "move-memo-old"), { recursive: true });
   asOrdinaryProcess();
-  expect(dir.path).toBe(join(second, "apps", "move-memo-old"));
+  expect(dir.path).toBe(joinAppPath(second, "apps", "move-memo-old"));
 });
 
 test("only the host singleton running merged code may move shared data", () => {

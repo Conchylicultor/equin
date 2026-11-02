@@ -10,14 +10,19 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { PLUGIN_MOVES_FILE } from "./ledger";
 import { restampMovedOverrides, snapshotConfigOrigins } from "./restamp-moved";
+import {
+  type AppPath,
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
-const roots: string[] = [];
+const roots: AppPath[] = [];
 afterEach(() => {
   for (const r of roots.splice(0)) rmSync(r, { recursive: true, force: true });
 });
 
-function checkout(files: Record<string, string>): string {
-  const root = mkdtempSync(join(tmpdir(), "restamp-moved-"));
+function checkout(files: Record<string, string>): AppPath {
+  const root = asAppPath(mkdtempSync(join(tmpdir(), "restamp-moved-")));
   roots.push(root);
   const all = {
     [PLUGIN_MOVES_FILE]: JSON.stringify([
@@ -32,12 +37,12 @@ function checkout(files: Record<string, string>): string {
   return root;
 }
 
-const read = (root: string, rel: string) =>
+const read = (root: AppPath, rel: string) =>
   readFileSync(join(root, "config", rel), "utf8");
 
 /** Snapshot, "regenerate" `origin` to `next`, re-stamp. */
-function run(root: string, next: string): string[] {
-  const prior = snapshotConfigOrigins(join(root, "config"));
+function run(root: AppPath, next: string): string[] {
+  const prior = snapshotConfigOrigins(joinAppPath(root, "config"));
   writeFileSync(join(root, "config", "s/item.origin.jsonc"), next);
   return restampMovedOverrides({ root, prior });
 }

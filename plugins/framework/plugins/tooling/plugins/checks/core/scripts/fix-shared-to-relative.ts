@@ -8,6 +8,7 @@
  *   ./equin run plugins/framework/plugins/tooling/plugins/checks/core/scripts/fix-shared-to-relative.ts --dry-run # preview only
  */
 
+import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   existsSync,
   readFileSync,
@@ -58,7 +59,7 @@ function pluginForPath(relFile: string, pluginSet: Set<string>): string | null {
 
 const dryRun = process.argv.includes("--dry-run");
 const root = await getWorktreeRoot();
-const pluginsRoot = join(root, "plugins");
+const pluginsRoot = joinAppPath(root, "plugins");
 const tree = await buildStructureTreeOnce(pluginsRoot);
 const pluginSet = new Set(Array.from(tree.byDir.values()).map((n) => n.path));
 

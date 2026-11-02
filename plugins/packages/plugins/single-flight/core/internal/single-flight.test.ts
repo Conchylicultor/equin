@@ -3,6 +3,10 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { tryLead } from "./single-flight";
 
 // Every scenario here is CROSS-PROCESS, so it is driven with real child
@@ -121,11 +125,11 @@ async function joiners(n: number, key: string): Promise<Child[]> {
   return out;
 }
 
-let dir: string;
+let dir: AppPath;
 let runsFile: string;
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), "single-flight-test-"));
+  dir = asAppPath(mkdtempSync(join(tmpdir(), "single-flight-test-")));
   runsFile = join(dir, "runs.log");
   writeFileSync(runsFile, "");
 });

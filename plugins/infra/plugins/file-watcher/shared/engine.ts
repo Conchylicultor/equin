@@ -1,6 +1,6 @@
 import type * as parcel from "@parcel/watcher";
-import { type FSWatcher, readdirSync, watch as fsWatch } from "node:fs";
-import { stat } from "node:fs/promises";
+import { type FSWatcher, watch as fsWatch } from "node:fs";
+import { readdir, stat } from "node:fs/promises";
 import { basename, dirname, extname, join } from "node:path";
 import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import {
@@ -169,12 +169,12 @@ export const WRITES_WHILE_OPEN_MAX_ENTRIES = 5_000;
  * counted recursively. Stops walking at the first entry past the ceiling, so a
  * huge tree costs no more than the ceiling to reject.
  */
-function assertKqueueSized(dir: string): void {
+async function assertKqueueSized(dir: string): Promise<void> {
   let count = 0;
   const stack = [dir];
   while (stack.length > 0) {
     const current = stack.pop() as string;
-    for (const entry of readdirSync(current, { withFileTypes: true })) {
+    for (const entry of await readdir(current, { withFileTypes: true })) {
       count += 1;
       if (count > WRITES_WHILE_OPEN_MAX_ENTRIES) {
         throw new Error(
@@ -369,7 +369,7 @@ export async function createFileWatcher(
   }
 
   for (const dir of dirs) {
-    if (useKqueue) assertKqueueSized(dir);
+    if (useKqueue) await assertKqueueSized(dir);
     try {
       const sub =
         parcelWatcher === null

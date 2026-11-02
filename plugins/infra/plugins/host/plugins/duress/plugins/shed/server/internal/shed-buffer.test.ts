@@ -17,6 +17,10 @@ import {
   type ShedConfigValues,
   type ShedSummary,
 } from "./shed-buffer";
+import {
+  type AppPath,
+  asAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 interface Item {
   key: string;
@@ -32,14 +36,14 @@ const cfg = (over: Partial<ShedConfigValues> = {}): ShedConfigValues => ({
   ...over,
 });
 
-let dir: string;
+let dir: AppPath;
 let t: number;
 // Captured one-shot flush callbacks + the delays they were armed with.
 let armedFlushes: (() => Promise<void>)[] = [];
 let armedDelays: number[] = [];
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), "duress-shed-"));
+  dir = asAppPath(mkdtempSync(join(tmpdir(), "duress-shed-")));
   _setLatchDirForTests(dir);
   t = Date.now();
   _setClockForTests(() => t);

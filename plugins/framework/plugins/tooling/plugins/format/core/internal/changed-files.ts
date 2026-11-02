@@ -9,8 +9,11 @@
 // server-only so it is unreachable from here).
 
 import { existsSync } from "fs";
-import { join } from "path";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import {
+  type AppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { ChangedFile } from "./line-scope";
 import { COUPLED_FORMAT_SETS, isFormattable } from "./prettier";
 
@@ -84,12 +87,12 @@ function parseNameStatusZ(out: string): Map<string, string | null> {
  * Returns every member of a touched set: they are formatted whole, since a set
  * held byte-identical cannot be formatted line by line, each by its own diff.
  */
-function expandCoupledSets(root: string, files: Set<string>): string[] {
+function expandCoupledSets(root: AppPath, files: Set<string>): string[] {
   const members: string[] = [];
   for (const set of COUPLED_FORMAT_SETS) {
     if (!set.some((member) => files.has(member))) continue;
     for (const member of set) {
-      if (existsSync(join(root, member))) {
+      if (existsSync(joinAppPath(root, member))) {
         files.add(member);
         members.push(member);
       }
@@ -110,7 +113,7 @@ function expandCoupledSets(root: string, files: Set<string>): string[] {
  * untracked files.
  */
 export async function listChangedFormattableFiles(
-  root: string,
+  root: AppPath,
 ): Promise<ChangedFile[]> {
   // A git failure here must NOT be conflated with "no merge-base": a
   // manufactured fallback ref (or an absorbed empty diff) would silently format

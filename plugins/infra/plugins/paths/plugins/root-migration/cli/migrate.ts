@@ -8,6 +8,11 @@ import {
   symlinkSync,
   unlinkSync,
 } from "node:fs";
+import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { basename, dirname, join, relative } from "node:path";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
@@ -84,7 +89,7 @@ export default run;
 
 function readLayout(): MigrationFacts["layout"] {
   const dir = readEnv("DIR");
-  if (dir !== undefined) return { kind: "custom", root: dir };
+  if (dir !== undefined) return { kind: "custom", root: asAppPath(dir) };
   try {
     return readHomeDataRootLayout(HOME_DIR);
   } catch (err) {
@@ -112,12 +117,12 @@ function liveAgents(): LiveAgent[] {
   const root = sdkAgentPidsDir.path;
   if (!existsSync(root)) return [];
   return readdirSync(root).flatMap((namespace) => {
-    const dir = join(root, namespace);
+    const dir = joinAppPath(root, namespace);
     if (!lstatSync(dir).isDirectory()) return [];
     return readdirSync(dir)
       .filter((name) => name.endsWith(".pid"))
       .flatMap((name) => {
-        const read = readPidFile(join(dir, name));
+        const read = readPidFile(joinAppPath(dir, name));
         return read.kind === "pid" && pidAlive(read.pid)
           ? [
               {
@@ -190,7 +195,7 @@ async function equin(checkout: string, ...args: string[]): Promise<void> {
 /** Signal the process a pid file names and wait for it to be gone (up to `ms`). */
 async function stopByPidFile(
   what: string,
-  pidFile: string,
+  pidFile: AppPath,
   signal: NodeJS.Signals,
   ms: number,
 ): Promise<void> {
@@ -311,7 +316,7 @@ async function applyStopped(
   }
   await stopByPidFile(
     "PgBouncer",
-    pgbouncerPidFileUnder(oldRoot),
+    asAppPath(pgbouncerPidFileUnder(oldRoot)),
     "SIGTERM",
     30_000,
   );
@@ -319,7 +324,7 @@ async function applyStopped(
   // checkpoint, no crash recovery at the next start (SIGQUIT would need one).
   await stopByPidFile(
     "Postgres",
-    pgPostmasterPidFile(oldRoot),
+    asAppPath(pgPostmasterPidFile(oldRoot)),
     "SIGINT",
     10 * 60_000,
   );

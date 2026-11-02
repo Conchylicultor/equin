@@ -1,3 +1,4 @@
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
 import {
@@ -39,7 +40,7 @@ let fileOf: (id: string) => string;
 
 beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), "prototype-picks-"));
-  mount = diskDirMount(root);
+  mount = diskDirMount(asAppPath(root));
   store = openPicksStore(mount);
   fileOf = (id) => join(root, store.fileOf(id));
 });

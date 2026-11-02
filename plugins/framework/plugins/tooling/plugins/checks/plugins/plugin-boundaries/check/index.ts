@@ -1,3 +1,4 @@
+import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { existsSync } from "fs";
 import { dirname, join, relative, resolve, sep } from "path";
 import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
@@ -95,7 +96,7 @@ const check: Check = {
     if (view) recordBoundaryReadSet(view);
 
     const root = await getWorktreeRoot();
-    const pluginsRoot = join(root, "plugins");
+    const pluginsRoot = joinAppPath(root, "plugins");
     if (!existsSync(pluginsRoot)) return { ok: true };
 
     // ONE shared file-set read per run, from the run itself — never a private

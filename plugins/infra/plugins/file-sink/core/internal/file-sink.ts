@@ -1,11 +1,17 @@
 import {
+  type AppPath,
+  appPathParent,
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   appendFileSync,
   mkdirSync,
   renameSync,
   statSync,
   unlinkSync,
 } from "node:fs";
-import { dirname, join } from "node:path";
+import { basename, dirname } from "node:path";
 // Relative sibling import, not the `@plugins/infra/plugins/file-sink/core` alias:
 // this file now lives INSIDE that barrel's plugin, so the alias form would cycle
 // back through the barrel that re-exports it.
@@ -38,11 +44,11 @@ export function sanitizeChannel(name: string): string {
 // Rotated files are named `path.N` — the numeric suffix is appended AFTER the
 // full live path (so a `foo.jsonl` live file rotates to `foo.jsonl.1`, and a
 // `endsWith(".jsonl")` listing filter naturally excludes the rotations).
-function rotationPath(path: string, n: number): string {
-  return path + "." + String(n);
+function rotationPath(path: AppPath, n: number): AppPath {
+  return joinAppPath(appPathParent(path), `${basename(path)}.${n}`);
 }
 
-function unlinkIfExists(path: string): void {
+function unlinkIfExists(path: AppPath): void {
   try {
     unlinkSync(path);
   } catch (err) {
@@ -50,7 +56,7 @@ function unlinkIfExists(path: string): void {
   }
 }
 
-function renameIfExists(from: string, to: string): void {
+function renameIfExists(from: AppPath, to: AppPath): void {
   try {
     renameSync(from, to);
   } catch (err) {
@@ -62,7 +68,7 @@ function renameIfExists(from: string, to: string): void {
 // at most `keep` rotated files survive; the next appendFileSync recreates a fresh
 // live file. renameSync is atomic within a dir; ENOENT is tolerated on every slot
 // (a rotation slot may not exist yet), but any other error rethrows.
-function rotateFile(path: string, keep: number): void {
+function rotateFile(path: AppPath, keep: number): void {
   // Drop the oldest rotation first, then shift .(K-1)→.K … .1→.2, then live→.1.
   unlinkIfExists(rotationPath(path, keep));
   for (let i = keep - 1; i >= 1; i--) {
@@ -75,12 +81,12 @@ function rotateFile(path: string, keep: number): void {
 // We gate on this in-memory per-file counter rather than a `statSync` on every
 // append — a stat per line would double the syscall cost on this synchronous hot
 // path. Process-global so repeated `append`s to the same path stay cheap.
-const fileBytes = new Map<string, number>();
+const fileBytes = new Map<AppPath, number>();
 
 // The live file's current size: the in-memory counter, seeded from disk the first
 // time this process touches the path. A file that isn't there yet is 0 bytes;
 // anything other than ENOENT is a real error and rethrows.
-function currentSize(path: string): number {
+function currentSize(path: AppPath): number {
   const known = fileBytes.get(path);
   if (known !== undefined) return known;
   try {
@@ -99,12 +105,12 @@ function currentSize(path: string): number {
 // state, which is every write after the first. Deliberately NOT memoized with a
 // Set of already-ensured dirs: that caches a belief about the world which a
 // worktree teardown can falsify. A second ENOENT rethrows — loud.
-function writeAppend(path: string, payload: string): void {
+function writeAppend(path: AppPath, payload: string): void {
   try {
     appendFileSync(path, payload);
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-    mkdirSync(dirname(path), { recursive: true });
+    mkdirSync(asAppPath(dirname(path)), { recursive: true });
     appendFileSync(path, payload);
   }
 }
@@ -138,7 +144,7 @@ function writeAppend(path: string, payload: string): void {
 //     the line is oversized either way, so the choice is whether to also lose a
 //     rotation.
 function appendLines(
-  path: string,
+  path: AppPath,
   lines: readonly string[],
   maxBytes: number,
   keep: number,
@@ -180,22 +186,22 @@ function appendLines(
 function makeSink(
   id: string,
   description: string,
-  pathSpec: string | (() => string),
+  pathSpec: AppPath | (() => AppPath),
   maxBytes: number,
   keep: number,
 ): FileSink {
   const bound: RotateBound = { kind: "rotate", maxBytes, keep };
   // A lazy path is resolved once, on first use, and kept (see FileSinkSpec.path).
-  let resolved: string | null = typeof pathSpec === "string" ? pathSpec : null;
-  const pathOf = (): string => {
+  let resolved: AppPath | null = typeof pathSpec === "string" ? pathSpec : null;
+  const pathOf = (): AppPath => {
     if (resolved === null && typeof pathSpec === "function")
       resolved = pathSpec();
-    return resolved as string;
+    return resolved as AppPath;
   };
   return {
     id,
     description,
-    get path(): string {
+    get path(): AppPath {
       return pathOf();
     },
     bound,
@@ -260,8 +266,8 @@ export function getFileSinks(): ReadonlyMap<string, FileSink> {
  * bound (registered once by the log-channels plugin), so registering each dynamic
  * id would be an unbounded registry, not a bounded one.
  */
-export function openDynamicSink(dir: string, name: string): FileSink {
-  const path = join(dir, sanitizeChannel(name) + ".jsonl");
+export function openDynamicSink(dir: AppPath, name: string): FileSink {
+  const path = joinAppPath(dir, sanitizeChannel(name) + ".jsonl");
   return makeSink(
     name,
     "A dynamic sink of an open-ended family",

@@ -8,6 +8,11 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { pruneCacheDir } from "./store";
 import { servedDistTargets } from "./served-dists";
 
@@ -15,23 +20,23 @@ const MINUTE = 60 * 1000;
 const DAY = 24 * 60 * 60 * 1000;
 
 function fixture() {
-  const base = mkdtempSync(join(tmpdir(), "served-dists-"));
-  const store = join(base, "store");
-  const worktrees = join(base, "worktrees");
+  const base = asAppPath(mkdtempSync(join(tmpdir(), "served-dists-")));
+  const store = joinAppPath(base, "store");
+  const worktrees = joinAppPath(base, "worktrees");
   mkdirSync(store, { recursive: true });
   // A served dist: ns/web -> ns/web.live.1, linking store entries.
-  const live = join(worktrees, "ns", "web.live.1");
-  mkdirSync(join(live, "artifacts"), { recursive: true });
-  symlinkSync("web.live.1", join(worktrees, "ns", "web"));
-  const entry = (name: string, ageMs: number): string => {
-    const p = join(store, name);
+  const live = joinAppPath(worktrees, "ns", "web.live.1");
+  mkdirSync(joinAppPath(live, "artifacts"), { recursive: true });
+  symlinkSync("web.live.1", joinAppPath(worktrees, "ns", "web"));
+  const entry = (name: string, ageMs: number): AppPath => {
+    const p = joinAppPath(store, name);
     mkdirSync(p);
     const t = new Date(Date.now() - ageMs);
     utimesSync(p, t, t);
     return p;
   };
-  const link = (name: string, target: string): void =>
-    symlinkSync(target, join(live, "artifacts", name));
+  const link = (name: string, target: AppPath): void =>
+    symlinkSync(target, joinAppPath(live, "artifacts", name));
   return { store, worktrees, entry, link };
 }
 
@@ -44,7 +49,9 @@ describe("servedDistTargets", () => {
   });
 
   test("no worktrees dir yields nothing", () => {
-    expect(servedDistTargets(join(tmpdir(), "no-such-dir-xyz")).size).toBe(0);
+    expect(
+      servedDistTargets(asAppPath(join(tmpdir(), "no-such-dir-xyz"))).size,
+    ).toBe(0);
   });
 });
 

@@ -1,12 +1,13 @@
 import { describe, expect, test } from "bun:test";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { describePlan, planRootMigration, type MigrationFacts } from "./plan";
 
 const H = "/home/u";
-const LEGACY = `${H}/.old`;
-const CURRENT = `${H}/.equin`;
+const LEGACY = asAppPath(`${H}/.old`);
+const CURRENT = asAppPath(`${H}/.equin`);
 const BACKUPS = {
-  legacy: `${H}/.backups/old`,
-  current: `${H}/.backups/equin`,
+  legacy: asAppPath(`${H}/.backups/old`),
+  current: asAppPath(`${H}/.backups/equin`),
   legacyExists: false,
   legacyIsLink: false,
   currentExists: false,
@@ -221,8 +222,9 @@ describe("planRootMigration", () => {
         .kind,
     ).toBe("refuse");
     expect(
-      planRootMigration(facts({ layout: { kind: "custom", root: "/tmp/x" } }))
-        .kind,
+      planRootMigration(
+        facts({ layout: { kind: "custom", root: asAppPath("/tmp/x") } }),
+      ).kind,
     ).toBe("refuse");
   });
 });

@@ -1,3 +1,7 @@
+import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { closeSync, fstatSync, openSync, readSync } from "node:fs";
 import { AgentEventSchema, type AgentEvent } from "../../core";
 import type { ReadPosition } from "../../server/internal/read-position";
@@ -29,7 +33,7 @@ interface OpenFile {
   size: number;
 }
 
-function openIfExists(path: string): OpenFile | null {
+function openIfExists(path: AppPath): OpenFile | null {
   let fd: number;
   try {
     fd = openSync(path, "r");
@@ -79,12 +83,14 @@ function parseLine(path: string, line: string): AgentEvent {
  * (null: from the oldest generation), and where the read stopped.
  */
 export function readAgentEvents(
-  path: string,
+  path: AppPath,
   position: ReadPosition | null,
 ): { events: AgentEvent[]; position: ReadPosition | null } {
   // Oldest first: <path>.keep … <path>.1, then the live file.
-  const paths = [
-    ...Array.from({ length: SINK_KEEP }, (_, i) => `${path}.${SINK_KEEP - i}`),
+  const paths: AppPath[] = [
+    ...Array.from({ length: SINK_KEEP }, (_, i) =>
+      asAppPath(`${path}.${SINK_KEEP - i}`),
+    ),
     path,
   ];
   const files = paths.map(openIfExists);
@@ -125,7 +131,7 @@ export function readAgentEvents(
  * left for the reducer to report.
  */
 export function readEventsAfter(
-  path: string,
+  path: AppPath,
   cursorSeq: number,
   from: ReadPosition | null,
 ): { events: AgentEvent[]; position: ReadPosition | null } {

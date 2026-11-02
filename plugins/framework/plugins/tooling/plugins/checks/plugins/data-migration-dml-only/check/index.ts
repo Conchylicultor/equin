@@ -1,3 +1,4 @@
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readdirSync, readFileSync } from "fs";
 import { join, resolve } from "path";
 // The splitter is the migrations plugin's: the phaser, fork-schema-drift and
@@ -27,7 +28,7 @@ const check: Check = {
     "data migrations (every migration but a schema one) contain only DML (no schema changes)",
   async run() {
     const root = await getWorktreeRoot();
-    const dir = resolve(root, MIGRATIONS_DATA_DIR);
+    const dir = asAppPath(resolve(root, MIGRATIONS_DATA_DIR));
     const schema = schemaMigrationFiles(dir);
 
     const offenders: { file: string; statement: string }[] = [];

@@ -1,6 +1,11 @@
+import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { existsSync, realpathSync } from "node:fs";
 import { mkdir, unlink } from "node:fs/promises";
-import { join, sep } from "node:path";
+import { sep } from "node:path";
 import type {
   FileWatcher,
   FileWatcherDecl,
@@ -34,7 +39,7 @@ export type LedgerFile = "file";
 /** Where one root lives on this machine, and what the provider runs over it. */
 export interface BoundRoot {
   /** The absolute directory — a getter over the data dir, never frozen. */
-  readonly dir: () => string;
+  readonly dir: () => AppPath;
   /** The declared watcher over it, registered — present iff the root declares `watch`. */
   readonly watcher: FileWatcherDecl | null;
   /** The agent-write ledger over `spec.ledger.under` — present iff the root declares one. */
@@ -69,8 +74,8 @@ export function createDiskDataFiles(opts: DiskDataFilesOptions): DataFilesImpl {
       label: `root "${spec.id}"`,
       lockWaitMs: opts.lockWaitMs,
     });
-    const absOf = (path: RelPath): string =>
-      join(binding().dir(), ...splitRel(path));
+    const absOf = (path: RelPath): AppPath =>
+      joinAppPath(binding().dir(), ...splitRel(path));
     const watch = rootWatch(spec, binding);
 
     /** The ledger recording `writer`'s change to `path`, or null when none applies. */
@@ -153,8 +158,8 @@ export function createDiskDataFiles(opts: DiskDataFilesOptions): DataFilesImpl {
 }
 
 /** The real path of a directory, or the path itself before it exists. */
-function realDir(dir: string): string {
-  return existsSync(dir) ? realpathSync(dir) : dir;
+function realDir(dir: AppPath): AppPath {
+  return existsSync(dir) ? asAppPath(realpathSync(dir)) : dir;
 }
 
 /**

@@ -14,6 +14,11 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  type AppPath,
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { WriteOrigin } from "@plugins/infra/plugins/request-origin/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import {
@@ -34,7 +39,9 @@ import {
 const ORIGINAL_DATA_ROOT = readEnv("DIR");
 const dataRoot = mkdtempSync(join(tmpdir(), "agent-write-ledger-root-"));
 setEnv("DIR", dataRoot);
-const files = mkdtempSync(join(tmpdir(), "agent-write-ledger-files-"));
+const files = asAppPath(
+  mkdtempSync(join(tmpdir(), "agent-write-ledger-files-")),
+);
 
 afterAll(() => {
   if (ORIGINAL_DATA_ROOT === undefined) unsetEnv("DIR");
@@ -53,10 +60,10 @@ const E2E = { scope: "prefix", prefix: "e2e:" } as const;
 type Role = "main" | "side";
 
 /** A fresh pair of domain file paths (neither exists yet). */
-function pathsFor(name: string): Record<Role, string> {
+function pathsFor(name: string): Record<Role, AppPath> {
   return {
-    main: join(files, `${name}.main.json`),
-    side: join(files, `${name}.side.json`),
+    main: joinAppPath(files, `${name}.main.json`),
+    side: joinAppPath(files, `${name}.side.json`),
   };
 }
 

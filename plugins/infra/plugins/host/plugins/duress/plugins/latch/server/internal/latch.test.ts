@@ -22,10 +22,14 @@ import {
   refreshDuress,
   setDuress,
 } from "./latch";
+import {
+  type AppPath,
+  asAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
-let dir: string;
+let dir: AppPath;
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), "duress-"));
+  dir = asAppPath(mkdtempSync(join(tmpdir(), "duress-")));
   _setLatchDirForTests(dir);
 });
 afterEach(() => {

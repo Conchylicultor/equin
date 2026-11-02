@@ -1,4 +1,7 @@
-import { resolve } from "path";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   buildPluginTree,
   type PluginTree,
@@ -21,10 +24,10 @@ const barrelFreeTreeCache = new Map<string, Promise<PluginTree>>();
  * Keeping this tier free of the other two is what lets the enriched tree depend
  * on the declaration pass without closing an import cycle.
  */
-export function buildBarrelFreeTree(root: string): Promise<PluginTree> {
+export function buildBarrelFreeTree(root: AppPath): Promise<PluginTree> {
   let cached = barrelFreeTreeCache.get(root);
   if (!cached) {
-    cached = buildPluginTree(resolve(root, "plugins"), {
+    cached = buildPluginTree(joinAppPath(root, "plugins"), {
       skipBarrelImport: true,
       facets: true,
     });

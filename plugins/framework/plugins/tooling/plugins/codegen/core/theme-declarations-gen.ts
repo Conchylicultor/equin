@@ -1,4 +1,7 @@
-import { join } from "path";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   collectWebSlotContributions,
   type WebSlotContribution,
@@ -49,7 +52,7 @@ const MANIFEST_HEADER = [
 ].join("\n");
 
 async function collectThemeDeclarations(
-  root: string,
+  root: AppPath,
 ): Promise<Record<Section, unknown[]>> {
   const found = await collectWebSlotContributions(root, SLOT_IDS);
   const out = {} as Record<Section, unknown[]>;
@@ -107,13 +110,14 @@ function renderManifest(data: Record<Section, unknown[]>): string {
 }
 
 /** Path to the committed manifest file. */
-export function themeDeclarationsManifestPath(root: string): string {
-  return join(root, MANIFEST_REL_PATH);
+export function themeDeclarationsManifestPath(root: AppPath): AppPath {
+  // `root`: the checkout root the caller works in.
+  return joinAppPath(root, MANIFEST_REL_PATH);
 }
 
 /** Render the manifest file contents in-memory (used by the in-sync check). */
 export async function renderThemeDeclarationsManifest(
-  root: string,
+  root: AppPath,
 ): Promise<string> {
   return renderManifest(await collectThemeDeclarations(root));
 }

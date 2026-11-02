@@ -1,4 +1,8 @@
 import { dirname, resolve } from "node:path";
+import {
+  type AppPath,
+  asAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { spawnExpectOk } from "./spawn-captured";
 
 // Memoized per resolved cwd: one git spawn per process instead of one per
@@ -6,8 +10,8 @@ import { spawnExpectOk } from "./spawn-captured";
 // so concurrent first callers share a single spawn. A rejection stays cached —
 // "not a git repo" is a property of the cwd, and every caller must keep
 // failing loudly rather than half of them racing a retry.
-const worktreeRootMemo = new Map<string, Promise<string>>();
-const mainRepoRootMemo = new Map<string, Promise<string>>();
+const worktreeRootMemo = new Map<string, Promise<AppPath>>();
+const mainRepoRootMemo = new Map<string, Promise<AppPath>>();
 
 /**
  * Wedge-breaker for the two `git rev-parse` reads below, not latency policing.
@@ -26,10 +30,10 @@ const mainRepoRootMemo = new Map<string, Promise<string>>();
 const GIT_ROOT_TIMEOUT_MS = 60_000;
 
 function memoized(
-  memo: Map<string, Promise<string>>,
+  memo: Map<string, Promise<AppPath>>,
   cwd: string | undefined,
-  compute: (base: string) => Promise<string>,
-): Promise<string> {
+  compute: (base: string) => Promise<AppPath>,
+): Promise<AppPath> {
   const base = resolve(cwd ?? process.cwd());
   const hit = memo.get(base);
   if (hit) return hit;
@@ -43,7 +47,7 @@ function memoized(
  * `git rev-parse --show-toplevel`. THROWS (SpawnFailedError) outside a git
  * repo; the old per-file copies absorbed that to `""`, a latent path bug.
  */
-export function getWorktreeRoot(cwd?: string): Promise<string> {
+export function getWorktreeRoot(cwd?: string): Promise<AppPath> {
   return memoized(worktreeRootMemo, cwd, async (base) => {
     const result = await spawnExpectOk(
       ["git", "rev-parse", "--show-toplevel"],
@@ -52,7 +56,8 @@ export function getWorktreeRoot(cwd?: string): Promise<string> {
         timeoutMs: GIT_ROOT_TIMEOUT_MS,
       },
     );
-    return result.stdout.trim();
+    // A git checkout of this app (root of the repo the process runs in).
+    return asAppPath(result.stdout.trim());
   });
 }
 
@@ -61,7 +66,7 @@ export function getWorktreeRoot(cwd?: string): Promise<string> {
  * `cwd` is inside a linked worktree — `dirname(resolve(git rev-parse
  * --git-common-dir))`. THROWS outside a git repo, like `getWorktreeRoot`.
  */
-export function getMainRepoRoot(cwd?: string): Promise<string> {
+export function getMainRepoRoot(cwd?: string): Promise<AppPath> {
   return memoized(mainRepoRootMemo, cwd, async (base) => {
     const result = await spawnExpectOk(
       ["git", "rev-parse", "--git-common-dir"],
@@ -71,6 +76,6 @@ export function getMainRepoRoot(cwd?: string): Promise<string> {
       },
     );
     // In a worktree this is absolute; in main it may be ".git" (cwd-relative).
-    return dirname(resolve(base, result.stdout.trim()));
+    return asAppPath(dirname(resolve(base, result.stdout.trim())));
   });
 }

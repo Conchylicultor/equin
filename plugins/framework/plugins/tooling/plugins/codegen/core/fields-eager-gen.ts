@@ -1,5 +1,8 @@
 import { existsSync, readFileSync } from "fs";
-import { join, resolve } from "path";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { writeGenerated } from "./write-generated";
 import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
@@ -54,7 +57,7 @@ const MANIFEST_HEADER = [
 // `fields/plugins/<type>/plugins/storage`.
 const CAPABILITY_RE = /^fields\/plugins\/[^/]+\/plugins\/storage$/;
 
-function hasDefaultExport(file: string): boolean {
+function hasDefaultExport(file: AppPath): boolean {
   // Mask comments/regex/strings so a commented-out or string-embedded `export
   // default` can't make an entryless barrel look like an entry. This is a pure
   // code-construct detector — the string interior is never read back.
@@ -71,13 +74,14 @@ function hasDefaultExport(file: string): boolean {
  * export. Sorted for deterministic output.
  */
 export async function collectFieldEagerBarrels(
-  root: string,
+  root: AppPath,
 ): Promise<string[]> {
-  const tree = await buildStructureTreeOnce(resolve(root, "plugins"));
+  const tree = await buildStructureTreeOnce(joinAppPath(root, "plugins"));
   const specifiers: string[] = [];
   for (const node of tree.byDir.values()) {
     if (!CAPABILITY_RE.test(node.path)) continue;
-    const barrel = join(node.dir, "server", "index.ts");
+    // A plugin dir of this checkout.
+    const barrel = joinAppPath(node.dir, "server", "index.ts");
     if (!existsSync(barrel) || !hasDefaultExport(barrel)) continue;
     specifiers.push(`@plugins/${node.path}/server`);
   }
@@ -92,18 +96,21 @@ function renderManifest(specifiers: string[]): string {
 }
 
 /** Path to the committed manifest file. */
-export function fieldsEagerManifestPath(root: string): string {
-  return join(root, MANIFEST_REL_PATH);
+export function fieldsEagerManifestPath(root: AppPath): AppPath {
+  // `root`: the checkout root the caller works in.
+  return joinAppPath(root, MANIFEST_REL_PATH);
 }
 
 /** Render the manifest file contents in-memory (used by the in-sync check). */
-export async function renderFieldsEagerManifest(root: string): Promise<string> {
+export async function renderFieldsEagerManifest(
+  root: AppPath,
+): Promise<string> {
   return renderManifest(await collectFieldEagerBarrels(root));
 }
 
 /** Regenerate `eager.generated.ts` if it drifted. */
 export async function generateFieldsEager(opts: {
-  root: string;
+  root: AppPath;
 }): Promise<void> {
   await writeGenerated({
     file: fieldsEagerManifestPath(opts.root),

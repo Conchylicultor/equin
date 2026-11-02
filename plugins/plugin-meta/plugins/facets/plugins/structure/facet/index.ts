@@ -1,6 +1,6 @@
 import { PLUGIN_MANIFEST_KEY } from "@plugins/framework/plugins/plugin-id/core";
 import { readdirSync, type Dirent } from "fs";
-import { dirname, join } from "path";
+import { dirname } from "path";
 import {
   createFacet,
   type DocFact,
@@ -12,6 +12,11 @@ import {
   type FsSnapshot,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { type StructureFacetData, structureFacetDef } from "../core";
+import {
+  type AppPath,
+  joinAppPath,
+  asAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // Classifying folders needs the repo's standard-folder set. It is answered from
 // the tree build's own in-memory snapshot (`ctx.fs`), which already holds every
@@ -27,7 +32,7 @@ function standardDirs(fs: FsSnapshot | undefined): Set<string> {
       "structure facet: extract ran without the tree build's FS snapshot, so it cannot classify folders.",
     );
   }
-  return standardPluginDirsFromSnapshot(dirname(PLUGINS_DIR), fs);
+  return standardPluginDirsFromSnapshot(asAppPath(dirname(PLUGINS_DIR)), fs);
 }
 
 /** Read a directory's entries, yielding [] if it is unreadable. */
@@ -53,8 +58,8 @@ function isIgnoredDir(name: string): boolean {
 }
 
 /** Self-declared SPA/CLI bootstrap root (`package.json` `equin.compositionRoot`). */
-function readCompositionRoot(dir: string): boolean {
-  const src = readIfExists(join(dir, "package.json"));
+function readCompositionRoot(dir: AppPath): boolean {
+  const src = readIfExists(joinAppPath(dir, "package.json"));
   if (!src) return false;
   try {
     return JSON.parse(src)[PLUGIN_MANIFEST_KEY]?.compositionRoot === true;

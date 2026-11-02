@@ -1,5 +1,9 @@
+import {
+  type AppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { cpSync, existsSync, mkdirSync, rmSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname } from "node:path";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
 import type { ExecContext } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
 import {
@@ -20,7 +24,7 @@ import { defaultStore, type DepStore } from "./store";
 
 /** What {@link sealDep} did with one dependency. */
 export type SealOutcome =
-  | { kind: "sealed"; identity: string; dir: string; bytes: number }
+  | { kind: "sealed"; identity: string; dir: AppPath; bytes: number }
   /** An optional dependency the kind cannot produce for this target. */
   | { kind: "left-out"; reason: string };
 
@@ -43,10 +47,10 @@ export async function sealDep(
   dep: Dep<DepSource>,
   opts: {
     target: DepTarget;
-    outDir: string;
+    outDir: AppPath;
     exec: ExecContext;
     /** The checkout to build from. Default: this one. */
-    root?: string;
+    root?: AppPath;
     log?: (line: string) => void;
     /** Test seam: the cache and lock dirs. */
     store?: DepStore;
@@ -82,7 +86,7 @@ export async function sealDep(
     say,
   });
   const rel = sealedPayloadDir(dep.id);
-  const dir = join(outDir, rel);
+  const dir = joinAppPath(outDir, rel);
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dirname(dir), { recursive: true });
   cpSync(paths.env, dir, { recursive: true, verbatimSymlinks: true });
@@ -95,11 +99,11 @@ export async function sealDep(
 }
 
 function updateManifest(
-  outDir: string,
+  outDir: AppPath,
   target: DepTarget,
   edit: (m: SealedManifest) => void,
 ): void {
-  const path = join(outDir, SEALED_MANIFEST);
+  const path = joinAppPath(outDir, SEALED_MANIFEST);
   const manifest: SealedManifest = existsSync(path)
     ? readSealedManifest(path)
     : {

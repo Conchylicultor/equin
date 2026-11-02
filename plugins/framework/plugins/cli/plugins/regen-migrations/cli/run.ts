@@ -12,6 +12,7 @@ import {
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { generateMigration } from "@plugins/framework/plugins/cli/plugins/migrations/cli";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // Each migration filename embeds the sha256 prefix of its SQL content
 // (see renameMigrations in migrations.ts). If the on-disk content of a
@@ -22,7 +23,7 @@ async function assertNoHandEditedBranchLocalMigrations(
 ): Promise<void> {
   const migrationsDir = resolve(root, MIGRATIONS_DATA_DIR);
   const published = await publishedMigrationBasenames(root);
-  const schema = schemaMigrationFiles(migrationsDir);
+  const schema = schemaMigrationFiles(asAppPath(migrationsDir));
   const offenders: { file: string; expected: string; actual: string }[] = [];
   for (const f of readdirSync(migrationsDir)) {
     if (!f.endsWith(".sql")) continue;
@@ -64,7 +65,7 @@ async function assertNoHandEditedBranchLocalMigrations(
 // honest: the journal is derived from the `.sql` files on disk, so a deleted
 // migration would otherwise just quietly lose its row.
 async function assertPublishedMigrationsIntact(root: string): Promise<void> {
-  const violations = await findPublishedMigrationViolations(root);
+  const violations = await findPublishedMigrationViolations(asAppPath(root));
   if (violations.length === 0) return;
   console.error(
     `Published migration file(s) changed in the working tree:\n${formatPublishedMigrationViolations(violations)}\n`,

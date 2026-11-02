@@ -1,3 +1,7 @@
+import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
   mkdirSync,
@@ -46,10 +50,10 @@ const savedRow = {
   view: { type: "tree", filterScope: "roots", expandOnActivate: true },
 };
 
-let ns: string;
+let ns: AppPath;
 
 beforeEach(() => {
-  ns = join(mkdtempSync(join(tmpdir(), "saved-tree-row-")), "wt");
+  ns = asAppPath(join(mkdtempSync(join(tmpdir(), "saved-tree-row-")), "wt"));
   const file = join(ns, REL);
   mkdirSync(dirname(file), { recursive: true });
   const doc: JsonValue = { views: [savedRow] };

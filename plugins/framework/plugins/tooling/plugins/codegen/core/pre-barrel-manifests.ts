@@ -2,6 +2,7 @@ import {
   dataViewsManifestPath,
   renderDataViewsManifest,
 } from "./data-views-gen";
+import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { writeGenerated } from "./write-generated";
 import {
   reorderableSlotsManifestPath,
@@ -73,8 +74,8 @@ import {
  */
 export interface PreBarrelManifest {
   id: string;
-  path: (root: string) => string;
-  render: (root: string) => string | Promise<string>;
+  path: (root: AppPath) => AppPath;
+  render: (root: AppPath) => string | Promise<string>;
 }
 
 export const preBarrelManifests: readonly PreBarrelManifest[] = [
@@ -186,7 +187,7 @@ export const postWebManifests: readonly PreBarrelManifest[] = [
  */
 export async function writePreBarrelManifest(
   m: PreBarrelManifest,
-  root: string,
+  root: AppPath,
 ): Promise<void> {
   await writeGenerated({ file: m.path(root), content: await m.render(root) });
 }

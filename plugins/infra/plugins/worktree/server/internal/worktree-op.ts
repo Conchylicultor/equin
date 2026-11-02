@@ -1,4 +1,8 @@
 import {
+  type AppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   closeSync,
   type Dirent,
   mkdirSync,
@@ -8,7 +12,6 @@ import {
   writeSync,
 } from "node:fs";
 import { type FileHandle, open, readdir, stat } from "node:fs/promises";
-import { join } from "node:path";
 import { flockTry } from "@plugins/packages/plugins/flock/server";
 import {
   worktreesDir,
@@ -59,12 +62,12 @@ export interface WorktreeOpInfo {
 // Op markers are keyed by the same slug the spec dir carries, and a slug reaches
 // here from a marker file or a directory listing — so this, the one place a slug
 // becomes a path, is where it is validated back into a namespace.
-function opsDir(slug: string): string {
-  return join(worktreeDataDir(asNamespace(slug)), "ops");
+function opsDir(slug: string): AppPath {
+  return joinAppPath(worktreeDataDir(asNamespace(slug)), "ops");
 }
 
-function opFile(slug: string, opId: string): string {
-  return join(opsDir(slug), `${opId}.json`);
+function opFile(slug: string, opId: string): AppPath {
+  return joinAppPath(opsDir(slug), `${opId}.json`);
 }
 
 // A marker in the making: written, locked, then renamed into place. Readers
@@ -77,7 +80,7 @@ const STALE_TMP_MS = 60_000;
 
 /** The held marker of one running op. */
 export interface WorktreeOpMarker {
-  readonly path: string;
+  readonly path: AppPath;
   /**
    * Unlink the marker and drop its lock. Call it AFTER the op's terminal event
    * is in the op log: a reader that sees the marker gone must find the verdict
@@ -108,7 +111,10 @@ export function markWorktreeOpStart(
   const dir = opsDir(slug);
   mkdirSync(dir, { recursive: true });
   const path = opFile(slug, opId);
-  const tmp = `${path}.${process.pid}${TMP_SUFFIX}`;
+  const tmp = joinAppPath(
+    opsDir(slug),
+    `${opId}.json.${process.pid}${TMP_SUFFIX}`,
+  );
   const fd = openSync(tmp, "w");
   try {
     if (!flockTry(fd))
@@ -198,7 +204,7 @@ type Probe =
 // the answer. Legacy (`<kind>.json`, written by a CLI from before per-op
 // markers): its pid. ASYNC so a scan yields the event loop (open/read run on the
 // libuv threadpool); the flock itself is a non-blocking syscall.
-async function probeMarker(slug: string, path: string): Promise<Probe> {
+async function probeMarker(slug: string, path: AppPath): Promise<Probe> {
   let handle: FileHandle;
   try {
     handle = await open(path, "r");
@@ -240,7 +246,7 @@ async function probeMarker(slug: string, path: string): Promise<Probe> {
   }
 }
 
-async function reapIfStaleTmp(path: string): Promise<void> {
+async function reapIfStaleTmp(path: AppPath): Promise<void> {
   try {
     const s = await stat(path);
     if (Date.now() - s.mtimeMs > STALE_TMP_MS) rmSync(path, { force: true });
@@ -281,7 +287,7 @@ export async function listWorktreeOps(slug: string): Promise<WorktreeOpInfo[]> {
   }
   const probes = await Promise.all(
     files.map(async (f): Promise<Probe> => {
-      const path = join(dir, f);
+      const path = joinAppPath(dir, f);
       if (f.endsWith(TMP_SUFFIX)) {
         await reapIfStaleTmp(path);
         return { kind: "absent" };

@@ -39,6 +39,7 @@ import {
   parseServerCompanions,
   sourceRef,
 } from "./internal/static-parse";
+import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 export default createFacet<ContributionsFacetData>({
   def: contributionsFacetDef,
@@ -54,7 +55,7 @@ export default createFacet<ContributionsFacetData>({
     const panes = parsePaneDeclarations(ctx.dir);
     const routes = parseRouteDeclarations(ctx.dir);
     const paneRefs: Record<string, SourceRef> = {};
-    const webIndex = readIfExists(join(ctx.dir, "web", "index.ts"));
+    const webIndex = readIfExists(joinAppPath(ctx.dir, "web", "index.ts"));
     if (webIndex) {
       // Mask the source FULLY (comments/regex AND string interiors blanked) and
       // locate the block + each call over the mask, then read the real slot

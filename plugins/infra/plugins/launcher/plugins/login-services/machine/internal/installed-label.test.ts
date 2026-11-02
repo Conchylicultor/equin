@@ -1,15 +1,19 @@
 import { afterEach, expect, test } from "bun:test";
+import {
+  type AppPath,
+  asAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { bindInstalledLabel } from "./installed-label";
 
 const dirs: string[] = [];
-function definitions(installed: string[]): (label: string) => string {
+function definitions(installed: string[]): (label: string) => AppPath {
   const dir = mkdtempSync(join(tmpdir(), "installed-label-"));
   dirs.push(dir);
   for (const label of installed) writeFileSync(join(dir, label), "");
-  return (label) => join(dir, label);
+  return (label) => asAppPath(join(dir, label));
 }
 afterEach(() => {
   for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true });

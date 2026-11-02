@@ -17,6 +17,7 @@
  * such literal in source resolves to a real plugin, and these are synthetic.
  */
 
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { test, expect, beforeAll, afterAll } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "fs";
 import { tmpdir } from "os";
@@ -53,7 +54,7 @@ const NODE_MODULES_SOURCE = pj("foo/node_modules/dep/index.ts");
 const OUTSIDE_SOURCE = "cli/main.ts";
 
 async function sources(): Promise<string[]> {
-  return selectSourceFiles(await listRepoFiles(root));
+  return selectSourceFiles(await listRepoFiles(asAppPath(root)));
 }
 
 beforeAll(async () => {

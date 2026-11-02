@@ -1,3 +1,7 @@
+import {
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { resolve } from "path";
 // Reach the config reader through the database CORE barrel, not admin/server:
 // the admin pool module's worktree connection string needs this process's runtime
@@ -42,8 +46,8 @@ const check: Check = {
   description: "plugin schema files match committed migration files",
   async run() {
     const root = await getWorktreeRoot();
-    const migrationsPluginDir = resolve(root, MIGRATIONS_PLUGIN_DIR);
-    const committed = resolve(migrationsPluginDir, "data");
+    const migrationsPluginDir = asAppPath(resolve(root, MIGRATIONS_PLUGIN_DIR));
+    const committed = joinAppPath(migrationsPluginDir, "data");
 
     let stage: Awaited<ReturnType<typeof stageDrizzleOut>>;
     try {

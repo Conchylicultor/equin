@@ -4,6 +4,7 @@ import type {
   FileCategory,
   ResolvedExemption,
 } from "@plugins/framework/plugins/tooling/plugins/exempt/core";
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
  * What every check is handed when run. `grant` is the host CPU admission the
@@ -120,7 +121,7 @@ export interface CheckExemptions {
  */
 export interface GitTreeSnapshot {
   /** Absolute worktree root. */
-  readonly root: string;
+  readonly root: AppPath;
   /** The git tree object hash (`git write-tree` of the working tree). */
   readonly treeHash: string;
   /** Every blob path, repo-relative, in `Array.prototype.sort()` order. Frozen. */
@@ -144,7 +145,7 @@ export interface GitTreeSnapshot {
  */
 export interface RepoFiles {
   /** Absolute worktree root. */
-  readonly root: string;
+  readonly root: AppPath;
   /**
    * Every file path, repo-relative, sorted (`Array.prototype.sort()` order).
    * For an input-keyed check this records a whole-tree membership fact —

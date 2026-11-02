@@ -1,3 +1,8 @@
+import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -9,10 +14,10 @@ import { listChannelsInDir, readTail } from "./persist";
 // cover rotation/keep/dup-id), so here we only exercise the READ path — seeding
 // fixture files directly on disk with the `{t,stream,line}` JSONL envelope.
 
-let dir: string;
+let dir: AppPath;
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), "log-read-"));
+  dir = asAppPath(mkdtempSync(join(tmpdir(), "log-read-")));
 });
 
 afterEach(() => {
@@ -37,7 +42,7 @@ describe("listChannelsInDir", () => {
   });
 
   test("returns [] for a missing dir (ENOENT), not an error", () => {
-    expect(listChannelsInDir(join(dir, "does-not-exist"))).toEqual([]);
+    expect(listChannelsInDir(joinAppPath(dir, "does-not-exist"))).toEqual([]);
   });
 });
 
@@ -47,7 +52,7 @@ describe("readTail", () => {
       "channel.jsonl",
       Array.from({ length: 10 }, (_, i) => envelope(i)),
     );
-    const entries = readTail(join(dir, "channel.jsonl"), 3);
+    const entries = readTail(joinAppPath(dir, "channel.jsonl"), 3);
     expect(entries?.map((e) => e.line)).toEqual(["line-7", "line-8", "line-9"]);
   });
 
@@ -56,11 +61,11 @@ describe("readTail", () => {
       join(dir, "channel.jsonl"),
       envelope(1) + "\n" + envelope(2) + "\n" + "{not-json" + "\n",
     );
-    const entries = readTail(join(dir, "channel.jsonl"), 10);
+    const entries = readTail(joinAppPath(dir, "channel.jsonl"), 10);
     expect(entries?.map((e) => e.line)).toEqual(["line-1", "line-2"]);
   });
 
   test("missing file returns null (ENOENT), not an empty success", () => {
-    expect(readTail(join(dir, "does-not-exist.jsonl"), 5)).toBeNull();
+    expect(readTail(joinAppPath(dir, "does-not-exist.jsonl"), 5)).toBeNull();
   });
 });

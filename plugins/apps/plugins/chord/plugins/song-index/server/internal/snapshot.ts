@@ -10,6 +10,7 @@ import { createReadStream } from "node:fs";
 import { createGunzip, gunzipSync, gzipSync } from "node:zlib";
 import { JSONParser } from "@streamparser/json";
 import { z } from "zod";
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { flockTry } from "@plugins/packages/plugins/flock/core";
 import { chordDir } from "@plugins/apps/plugins/chord/data-dirs";
 import { ensureDep, readyNow } from "@plugins/infra/plugins/deps/deps";
@@ -37,7 +38,7 @@ export const songIndexArea = chordDir.subdir("song-index");
  */
 export const SNAPSHOT_NAME = `sheetsage-${SHEETSAGE_DUMP_FILES.processed.sha256.slice(0, 12)}-${SHEETSAGE_DUMP_FILES.raw.sha256.slice(0, 12)}-v${SNAPSHOT_FORMAT_VERSION}`;
 
-export function snapshotPath(): string {
+export function snapshotPath(): AppPath {
   return songIndexArea.file(`${SNAPSHOT_NAME}.ndjson.gz`);
 }
 
@@ -64,7 +65,7 @@ export type SnapshotHooks = {
  * the next one. (`flockTry` is non-blocking by design — a blocking `flock` would
  * freeze the event loop — so the wait re-tries it, as the build lock does.)
  */
-export async function ensureSnapshot(hooks: SnapshotHooks): Promise<string> {
+export async function ensureSnapshot(hooks: SnapshotHooks): Promise<AppPath> {
   const path = snapshotPath();
   if (existsSync(path)) return path;
 
@@ -149,9 +150,9 @@ export type SnapshotBuildReport = {
  * the longest string a runtime holds — so it is streamed one entry at a time.
  */
 export async function buildSnapshot(args: {
-  processedPath: string;
-  rawPath: string;
-  outPath: string;
+  processedPath: AppPath;
+  rawPath: AppPath;
+  outPath: AppPath;
   log: (line: string) => void;
 }): Promise<SnapshotBuildReport> {
   const started = Date.now();
@@ -287,7 +288,7 @@ export function snapshotLine(
 
 /** The file's non-empty lines with their numbers, gunzipped in one go (8.7 MB → 115 MB). */
 function* snapshotTextLines(
-  path: string,
+  path: AppPath,
 ): Generator<{ lineNo: number; text: string }> {
   const text = gunzipSync(readFileSync(path)).toString("utf8");
   let lineNo = 0;
@@ -316,7 +317,7 @@ function lineError(
  * Every line of a snapshot, parsed. The whole file is small (8.7 MB gzipped),
  * so it is read in one go; a line that does not parse throws naming its number.
  */
-export function* readSnapshot(path: string): Generator<SnapshotLine> {
+export function* readSnapshot(path: AppPath): Generator<SnapshotLine> {
   for (const { lineNo, text } of snapshotTextLines(path)) {
     const parsed = SnapshotLineSchema.safeParse(JSON.parse(text));
     if (!parsed.success)
@@ -343,7 +344,7 @@ const SnapshotHeadSchema = z.object({
 export type SnapshotHead = z.infer<typeof SnapshotHeadSchema>;
 
 /** Every line's head, in file order. Agrees with `readSnapshot` line for line. */
-export function* readSnapshotHeads(path: string): Generator<SnapshotHead> {
+export function* readSnapshotHeads(path: AppPath): Generator<SnapshotHead> {
   for (const { lineNo, text } of snapshotTextLines(path)) {
     const parsed = SnapshotHeadSchema.safeParse(JSON.parse(text));
     if (!parsed.success) {

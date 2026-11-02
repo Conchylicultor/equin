@@ -1,7 +1,10 @@
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { z } from "zod";
 import { closeSync, fstatSync, openSync, readdirSync, readSync } from "node:fs";
 import { open } from "node:fs/promises";
-import { join } from "node:path";
 import { sanitizeChannel } from "@plugins/infra/plugins/file-sink/core";
 import { worktreeDataDir } from "@plugins/infra/plugins/paths/server";
 import { asNamespace } from "@plugins/infra/plugins/namespace/core";
@@ -17,8 +20,8 @@ export type LogStream = "stdout" | "stderr";
 
 // The read path takes an ARBITRARY caller-supplied name (an MCP argument, a
 // report row), so this — the one place a name becomes a path — is its boundary.
-export function logsDirFor(worktree: string): string {
-  return join(worktreeDataDir(asNamespace(worktree)), "logs");
+export function logsDirFor(worktree: string): AppPath {
+  return joinAppPath(worktreeDataDir(asNamespace(worktree)), "logs");
 }
 
 // Resolve THIS process's logs dir, from the runtime namespace it declared at its
@@ -26,8 +29,8 @@ export function logsDirFor(worktree: string): string {
 // worktree to write into is a bug, not a fallback. Shared by the write path
 // (defineLogSink / the client ingress family) and unused by the read path (which
 // takes an explicit worktree).
-export function logsDir(): string {
-  return join(worktreeDataDir(runtimeNamespace()), "logs");
+export function logsDir(): AppPath {
+  return joinAppPath(worktreeDataDir(runtimeNamespace()), "logs");
 }
 
 // Max bytes a tail read pulls off disk via a positioned read, so even a full
@@ -39,7 +42,7 @@ const READ_TAIL_BYTES = 8 * 1024 * 1024;
 // reading another worktree's files just works — like query_db reaching any
 // worktree DB.
 
-export function listChannelsInDir(dir: string): string[] {
+export function listChannelsInDir(dir: AppPath): string[] {
   let names: string[];
   try {
     names = readdirSync(dir);
@@ -75,7 +78,7 @@ function tryParseEntry(
 // stitched in: `tail` is a recent-lines request and rotated files are cold; the
 // live file's tail is the contract.
 export function readTail(
-  file: string,
+  file: AppPath,
   tail: number,
 ): { t: number; stream?: LogStream; line: string }[] | null {
   let fd: number;
@@ -128,7 +131,7 @@ function parseTail(
 // loader re-reading many files), where a sync read would freeze every other
 // loader, socket send and request for its whole duration.
 export async function readTailAsync(
-  file: string,
+  file: AppPath,
   tail: number,
 ): Promise<{ t: number; stream?: LogStream; line: string }[] | null> {
   let handle: Awaited<ReturnType<typeof open>>;
@@ -168,8 +171,8 @@ export function readChannelEntries(
   return readTail(channelFile(worktree, channel), tail);
 }
 
-function channelFile(worktree: string, channel: string): string {
-  return join(logsDirFor(worktree), sanitizeChannel(channel) + ".jsonl");
+function channelFile(worktree: string, channel: string): AppPath {
+  return joinAppPath(logsDirFor(worktree), sanitizeChannel(channel) + ".jsonl");
 }
 
 // Read a channel whose payload lines are each a JSON object of type `T`: unwrap

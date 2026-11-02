@@ -94,6 +94,8 @@ verdict re-run, a stale verdict never adopted, different keys in parallel.
 - Description: Cross-process single-flight: singleFlight(opts, lead) lets N processes asking for the same keyed work at once run it once — the first takes a kernel flock and leads, the rest wait on the lock push-based (waitForFlock) and adopt the verdict it publishes, re-leading only when no adoptable verdict from a run in flight since they arrived exists.
 - Core:
   - Uses:
+    - `infra/host-fs/user-path.AppPath`
+    - `infra/host-fs/user-path.joinAppPath`
     - `packages/flock.flockTry`
     - `packages/flock.HeldFlock`
     - `packages/flock.waitForFlock`

@@ -7,7 +7,10 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
 
 // macOS names a process by the FILE it executed (`p_comm`, what Activity
@@ -41,7 +44,7 @@ export function processName(kind: string, id?: string): string {
 }
 
 export type NamedBinary =
-  | { kind: "linked"; path: string }
+  | { kind: "linked"; path: AppPath }
   /** The filesystem refused the link (another volume, no permission): run `bin` itself. */
   | { kind: "refused"; code: string };
 
@@ -54,12 +57,12 @@ const REFUSALS = new Set(["EXDEV", "EPERM", "ENOTSUP", "EACCES"]);
  * finds it missing or half-made, and a relink after an upgrade reaches it.
  */
 export function linkNamedBinary(opts: {
-  bin: string;
-  dir: string;
+  bin: AppPath;
+  dir: AppPath;
   name: string;
 }): NamedBinary {
-  const path = join(opts.dir, opts.name);
-  const staging = join(opts.dir, `.${String(process.pid)}.tmp`);
+  const path = joinAppPath(opts.dir, opts.name);
+  const staging = joinAppPath(opts.dir, `.${String(process.pid)}.tmp`);
   mkdirSync(opts.dir, { recursive: true });
   rmSync(staging, { force: true });
   try {
@@ -89,13 +92,13 @@ export const CHECKOUT_BUN_DIR = "node_modules/.cache/equin-bun";
  * a toolchain change is followed: that run goes through the shim, unnamed, and
  * lands here again.
  */
-export function refreshCheckoutBun(root: string, bin: string): NamedBinary {
-  const dir = join(root, CHECKOUT_BUN_DIR);
+export function refreshCheckoutBun(root: AppPath, bin: AppPath): NamedBinary {
+  const dir = joinAppPath(root, CHECKOUT_BUN_DIR);
   const current = checkoutBun(root);
   if (current !== null && statIno(current) === statIno(bin))
     return { kind: "linked", path: current };
   const linked = linkNamedBinary({ bin, dir, name: "bun" });
-  if (linked.kind === "linked") writeFileSync(join(dir, "stamp"), "");
+  if (linked.kind === "linked") writeFileSync(joinAppPath(dir, "stamp"), "");
   return linked;
 }
 
@@ -104,16 +107,17 @@ export function refreshCheckoutBun(root: string, bin: string): NamedBinary {
  * newer), or null — none recorded yet, or the toolchain moved since. The same
  * test the `./equin` script makes.
  */
-export function checkoutBun(root: string): string | null {
-  const dir = join(root, CHECKOUT_BUN_DIR);
-  const bun = join(dir, "bun");
+export function checkoutBun(root: AppPath): AppPath | null {
+  const dir = joinAppPath(root, CHECKOUT_BUN_DIR);
+  const bun = joinAppPath(dir, "bun");
   if (statIno(bun) === null) return null;
-  return mtimeOf(join(dir, "stamp")) > mtimeOf(join(root, "mise.lock"))
+  return mtimeOf(joinAppPath(dir, "stamp")) >
+    mtimeOf(joinAppPath(root, "mise.lock"))
     ? bun
     : null;
 }
 
-function statIno(path: string): number | null {
+function statIno(path: AppPath): number | null {
   try {
     return statSync(path).ino;
   } catch (err) {
@@ -123,7 +127,7 @@ function statIno(path: string): number | null {
 }
 
 /** A missing file is older than everything. */
-function mtimeOf(path: string): number {
+function mtimeOf(path: AppPath): number {
   try {
     return statSync(path).mtimeMs;
   } catch (err) {

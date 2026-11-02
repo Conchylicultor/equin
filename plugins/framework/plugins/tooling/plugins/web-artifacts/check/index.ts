@@ -37,6 +37,10 @@
 
 import { createHash } from "node:crypto";
 import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   existsSync,
   readdirSync,
   readFileSync,
@@ -53,6 +57,12 @@ import type {
 } from "@plugins/framework/plugins/tooling/core";
 import { isBuildInProgress } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
+
+/** This checkout's root (a git toplevel the app resolved itself). */
+async function worktreeRoot(): Promise<AppPath> {
+  return asAppPath(await getWorktreeRoot());
+}
+
 import {
   type CheckoutDeploy,
   resolveCheckoutDeploy,
@@ -113,7 +123,7 @@ type DeployedDist =
  * naming the checkout behind it. It is synchronous and git-free, so
  * `cacheSignature()` can still call it.
  */
-function deployedDist(root: string): DeployedDist {
+function deployedDist(root: AppPath): DeployedDist {
   const resolved = resolveCheckoutDeploy(root);
   return resolved.kind === "resolved"
     ? {
@@ -187,7 +197,7 @@ const mapInSync: Check = {
     if (isBuildInProgress()) return null;
     // The memoized async root, not a `spawnSync` of git: a blocking spawn here
     // held the check runner's shared thread for ~1 s under load.
-    const dist = deployedDist(await getWorktreeRoot());
+    const dist = deployedDist(await worktreeRoot());
     // No deploy ⇒ a real failure below, and for the same reason as a missing
     // marker: the fix is a build, which registers a namespace without moving the
     // tree hash the runner keys on, so a cached verdict would outlive it.
@@ -208,7 +218,7 @@ const mapInSync: Check = {
     // that changes source. Push/standalone runs verify for real.
     if (isBuildInProgress()) return { ok: true };
 
-    const root = await getWorktreeRoot();
+    const root = await worktreeRoot();
     const dist = deployedDist(root);
     // Nothing is registered to this checkout's backend, so there is no dist —
     // not an empty one at a known path, none at all. Naming a path here would
@@ -400,7 +410,7 @@ const noVendoredStateInlined: Check = {
   async run(): Promise<CheckResult> {
     if (!existsSync(WEB_ARTIFACTS_STORE_DIR)) return { ok: true }; // nothing composed yet
 
-    const root = await getWorktreeRoot();
+    const root = await worktreeRoot();
     // The marker is read for ONE field — how the deployed dist was minified — so
     // that the fleet planned here matches the artifacts the store actually
     // holds. No deploy means no marker to read, which lands on the same default

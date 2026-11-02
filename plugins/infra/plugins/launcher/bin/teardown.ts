@@ -1,3 +1,4 @@
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 /**
  * Release teardown — the compiled `teardown` binary, the bundle's stop entrypoint.
  *
@@ -74,7 +75,7 @@ async function main(): Promise<void> {
 
   await teardownSelfContainedApp(
     {
-      root: dataRoot,
+      root: asAppPath(dataRoot),
       // Already validated by resolveListenAddress, which throws on a bad value
       // rather than handing back one to re-check here.
       httpPort,

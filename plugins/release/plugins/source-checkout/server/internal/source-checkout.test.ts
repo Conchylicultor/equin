@@ -17,6 +17,10 @@ import {
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { worktreeDataDir } from "@plugins/infra/plugins/paths/server";
+import {
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { asNamespace } from "@plugins/infra/plugins/namespace/core";
 import { flockTry } from "@plugins/packages/plugins/flock/core";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
@@ -36,7 +40,9 @@ import {
 const ORIGINAL_DATA_ROOT = readEnv("DIR");
 const dataRoot = mkdtempSync(join(tmpdir(), "release-source-checkout-root-"));
 setEnv("DIR", dataRoot);
-const repo = mkdtempSync(join(tmpdir(), "release-source-checkout-repo-"));
+const repo = asAppPath(
+  mkdtempSync(join(tmpdir(), "release-source-checkout-repo-")),
+);
 
 /** The rejection message of `promise`; fails the test when it resolves. */
 async function rejectionOf(promise: Promise<unknown>): Promise<string> {
@@ -98,7 +104,7 @@ describe("acquireReleaseCheckout", () => {
     });
     try {
       expect(checkout.root).toBe(
-        join(releaseCheckoutsDir.path, "release-1-acquire"),
+        joinAppPath(releaseCheckoutsDir.path, "release-1-acquire"),
       );
       expect(readFileSync(join(checkout.root, "file.txt"), "utf8")).toBe(
         "first\n",
@@ -194,10 +200,10 @@ describe("dispose", () => {
   });
 
   test("refuses to remove a path outside the release-checkouts dir", async () => {
-    const outside = mkdtempSync(
-      join(tmpdir(), "release-source-checkout-outside-"),
+    const outside = asAppPath(
+      mkdtempSync(join(tmpdir(), "release-source-checkout-outside-")),
     );
-    const victim = join(outside, "release-5-victim");
+    const victim = joinAppPath(outside, "release-5-victim");
     mkdirSync(victim);
     writeFileSync(join(victim, "keep.txt"), "keep");
     try {
@@ -205,7 +211,11 @@ describe("dispose", () => {
         /refusing to remove/,
       );
       // A nested path under the dir is not a direct child either.
-      const nested = join(releaseCheckoutsDir.path, "release-5-a", "sub");
+      const nested = joinAppPath(
+        releaseCheckoutsDir.path,
+        "release-5-a",
+        "sub",
+      );
       expect(await rejectionOf(removeCheckoutArtifacts(repo, nested))).toMatch(
         /refusing to remove/,
       );
@@ -228,7 +238,7 @@ describe("sweepLeakedReleaseCheckouts", () => {
     try {
       // A leaked checkout: created, registered, lock file present, no holder —
       // what a SIGKILLed release leaves behind.
-      const leaked = join(releaseCheckoutsDir.path, "release-6-leaked");
+      const leaked = joinAppPath(releaseCheckoutsDir.path, "release-6-leaked");
       await git("worktree", "add", "-q", "--detach", leaked, secondSha);
       writeFileSync(`${leaked}.lock`, "");
       const leakedScratch = worktreeDataDir(asNamespace("release-6-leaked"));

@@ -6,6 +6,10 @@ import {
   utimesSync,
   writeFileSync,
 } from "node:fs";
+import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -13,14 +17,14 @@ import {
   pruneCheckArtifactsInDir,
 } from "./prune-artifacts";
 
-const dirs: string[] = [];
+const dirs: AppPath[] = [];
 afterEach(() => {
   for (const dir of dirs.splice(0))
     rmSync(dir, { recursive: true, force: true });
 });
 
-function seed(files: Array<{ name: string; ageMs: number }>): string {
-  const dir = mkdtempSync(join(tmpdir(), "prune-build-artifacts-"));
+function seed(files: Array<{ name: string; ageMs: number }>): AppPath {
+  const dir = asAppPath(mkdtempSync(join(tmpdir(), "prune-build-artifacts-")));
   dirs.push(dir);
   const now = Date.now();
   for (const f of files) {
@@ -115,7 +119,7 @@ describe("pruneBuildArtifactsInDir", () => {
 
   test("no-ops on a missing dir", () => {
     expect(() =>
-      pruneBuildArtifactsInDir(join(tmpdir(), "nope-xyz-123"), 5),
+      pruneBuildArtifactsInDir(asAppPath(join(tmpdir(), "nope-xyz-123")), 5),
     ).not.toThrow();
   });
 
@@ -206,7 +210,7 @@ describe("pruneCheckArtifactsInDir", () => {
 
   test("no-ops on a missing dir", () => {
     expect(() =>
-      pruneCheckArtifactsInDir(join(tmpdir(), "nope-xyz-789"), 5),
+      pruneCheckArtifactsInDir(asAppPath(join(tmpdir(), "nope-xyz-789")), 5),
     ).not.toThrow();
   });
 });

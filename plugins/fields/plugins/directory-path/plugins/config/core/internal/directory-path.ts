@@ -1,10 +1,17 @@
 import { type FieldDef, type FieldMeta, pickMeta } from "@plugins/fields/core";
 import { directoryPathFieldType } from "@plugins/fields/plugins/directory-path/core";
+import { z } from "zod";
 import {
-  UserPathSchema,
   asUserPath,
   type UserPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+
+/**
+ * A folder the user picked, read from config: a string, branded on the way in.
+ * (`z.string().brand()` would carry the brand on its `_zod.output` only, not
+ * the `ZodType<T>` output a field schema is typed by.)
+ */
+const UserPathSchema = z.string().transform(asUserPath);
 
 export interface DirPathFieldDef extends FieldDef<UserPath> {
   readonly type: typeof directoryPathFieldType;

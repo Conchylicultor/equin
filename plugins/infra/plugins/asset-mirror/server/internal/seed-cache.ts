@@ -1,5 +1,8 @@
 import { existsSync, mkdirSync, readdirSync, copyFileSync } from "node:fs";
-import { join } from "node:path";
+import {
+  type AppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { assetMirrorRelativeToRoot } from "../../data-dirs";
 
 /** The bundle subdir this primitive owns, and the name the release pipeline
@@ -27,24 +30,24 @@ const ASSET_MIRROR_BUNDLE_SUBDIR = "asset-mirror";
  * serving mirror requests.
  */
 export function seedAssetMirrorCache(opts: {
-  bundleRoot: string;
-  dataDir: string;
+  bundleRoot: AppPath;
+  dataDir: AppPath;
   log?: (m: string) => void;
 }): void {
   const { bundleRoot, dataDir } = opts;
   const log = opts.log ?? (() => {});
 
-  const src = join(bundleRoot, ASSET_MIRROR_BUNDLE_SUBDIR);
+  const src = joinAppPath(bundleRoot, ASSET_MIRROR_BUNDLE_SUBDIR);
   if (!existsSync(src)) return;
 
-  const dest = join(dataDir, assetMirrorRelativeToRoot());
+  const dest = joinAppPath(dataDir, assetMirrorRelativeToRoot());
   let copied = 0;
 
-  const walk = (from: string, to: string): void => {
+  const walk = (from: AppPath, to: AppPath): void => {
     mkdirSync(to, { recursive: true });
     for (const entry of readdirSync(from, { withFileTypes: true })) {
-      const fromPath = join(from, entry.name);
-      const toPath = join(to, entry.name);
+      const fromPath = joinAppPath(from, entry.name);
+      const toPath = joinAppPath(to, entry.name);
       if (entry.isDirectory()) {
         walk(fromPath, toPath);
       } else if (entry.isFile() && !existsSync(toPath)) {

@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 // The standalone twin-probe entry — spawned as its own child process (NOT a
 // Worker: a worker would share main's address space and phys_footprint ledger,
 // so it could never be an independent paging victim). One process per variant;
@@ -181,6 +182,8 @@ function timedGc(): number {
 // Main loop
 // ---------------------------------------------------------------------------
 const args = parseProbeArgs(process.argv.slice(2));
+// The supervisor (probe-host.ts) passes its own logs-dir path on argv.
+const outPath = args.outPath as AppPath;
 if (args.boostQos) boostQos();
 if (args.variant !== "lean") allocateHeap(args.fatSizeMb);
 
@@ -195,7 +198,7 @@ let consecutiveWriteFailures = 0;
 
 function writeSample(sample: ProbeSample): void {
   try {
-    appendFileSync(args.outPath, JSON.stringify(sample) + "\n");
+    appendFileSync(outPath, JSON.stringify(sample) + "\n");
     consecutiveWriteFailures = 0;
   } catch (err) {
     consecutiveWriteFailures += 1;

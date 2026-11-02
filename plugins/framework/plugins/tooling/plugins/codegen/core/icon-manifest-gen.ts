@@ -1,5 +1,9 @@
 import { readFile } from "fs/promises";
-import { join, relative } from "path";
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { relative } from "path";
 import {
   findImports,
   lineAt,
@@ -109,7 +113,9 @@ export function scanIconNames(src: string, displayPath: string): IconManifest {
 }
 
 /** Every icon name the repo draws, scanned from source now (not read from the generated file). */
-export async function collectIconManifest(root: string): Promise<IconManifest> {
+export async function collectIconManifest(
+  root: AppPath,
+): Promise<IconManifest> {
   const symbols = new Set<string>();
   const brands = new Set<string>();
   const seti = new Set<string>();
@@ -165,10 +171,11 @@ function renderIconManifestContent(manifest: IconManifest): string {
   ].join("\n");
 }
 
-export function iconManifestPath(root: string): string {
-  return join(root, MANIFEST_REL_PATH);
+export function iconManifestPath(root: AppPath): AppPath {
+  // `root`: the checkout root the caller works in.
+  return joinAppPath(root, MANIFEST_REL_PATH);
 }
 
-export async function renderIconManifest(root: string): Promise<string> {
+export async function renderIconManifest(root: AppPath): Promise<string> {
   return renderIconManifestContent(await collectIconManifest(root));
 }

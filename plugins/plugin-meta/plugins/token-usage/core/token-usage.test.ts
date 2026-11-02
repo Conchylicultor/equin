@@ -1,9 +1,10 @@
 import { test, expect } from "bun:test";
 import { join } from "path";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { tokenGroupsDeclaredIn } from "./token-groups";
 import { tokenVarsUsedBy } from "./token-usage";
 
-const root = join(import.meta.dir, "../../../../..");
+const root = asAppPath(join(import.meta.dir, "../../../../.."));
 
 test("Tailwind classes resolve to the vars the shipped stylesheet reads", async () => {
   const [vars] = await tokenVarsUsedBy(root, [

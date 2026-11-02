@@ -1,4 +1,9 @@
 #!/usr/bin/env bun
+import {
+  asAppPath,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 // One SDK agent process: a conversation's Claude Code session, run headless
 // through the Agent SDK instead of typed into the interactive UI.
 //
@@ -81,9 +86,9 @@ if (
   throw new Error(
     "agent: --dir, --socket, --pid-file, --account and --usage-file are required",
   );
-const dir = args.dir;
+const dir = asAppPath(args.dir);
 mkdirSync(dir, { recursive: true });
-const eventsPath = join(dir, AGENT_EVENTS_FILE);
+const eventsPath = joinAppPath(dir, AGENT_EVENTS_FILE);
 const socketPath = args.socket;
 mkdirSync(dirname(socketPath), { recursive: true });
 const pidPath = args["pid-file"];
@@ -102,7 +107,7 @@ const sessionEnv = await claudeSessionEnv(args.account, process.env);
 // Resumes numbering from the file (or, right after a rotation, its newest
 // generation), so a restarted agent keeps the sequence gap-free for readers
 // holding a cursor.
-function lastSeqIn(path: string): number | null {
+function lastSeqIn(path: AppPath): number | null {
   let text: string;
   try {
     text = readFileSync(path, "utf8");
@@ -121,7 +126,7 @@ function lastSeqIn(path: string): number | null {
   }
   return null;
 }
-let seq = lastSeqIn(eventsPath) ?? lastSeqIn(`${eventsPath}.1`) ?? 0;
+let seq = lastSeqIn(eventsPath) ?? lastSeqIn(asAppPath(`${eventsPath}.1`)) ?? 0;
 // A bounded sink (rotates at 128 MB, keeps 3). The backend's reader reads the
 // rotated generations before the live file, so rotation and replay agree.
 const events = defineFileSink({

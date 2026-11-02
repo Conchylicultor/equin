@@ -16,6 +16,7 @@ import {
 import { formatOffThread } from "./format-thread";
 import { formatInScope, type ChangedFile } from "./line-scope";
 import { formatSource, type SourceBytes } from "./prettier";
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
  * Read → format in scope → compare. NEVER writes. Returns the paths (relative
@@ -151,7 +152,7 @@ export async function findDisplacedDirectives(
  * idempotent and per-file, so partial progress needs no rollback.
  */
 export async function formatChangedSources(opts: {
-  root: string;
+  root: AppPath;
   log?: (line: string) => void;
 }): Promise<{ formatted: string[] }> {
   const { root, log } = opts;

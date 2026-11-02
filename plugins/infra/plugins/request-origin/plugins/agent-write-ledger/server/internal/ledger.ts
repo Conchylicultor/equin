@@ -1,3 +1,9 @@
+import {
+  type AppPath,
+  appPathParent,
+  asAppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 /**
  * Pre-write snapshots of every file an agent-origin request overwrote, so the
  * e2e harness can put them back.
@@ -45,7 +51,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { randomUUID } from "node:crypto";
-import { dirname } from "node:path";
+import { basename, dirname } from "node:path";
 import { z } from "zod";
 import {
   UNREVERTED_WRITE_HEADER,
@@ -75,7 +81,7 @@ export interface AgentWriteLedgerEntry<K extends string> {
    * own registration to still exist (a config descriptor may have been renamed
    * or removed between the run and the revert).
    */
-  paths: Record<K, string>;
+  paths: Record<K, AppPath>;
   /** As they stood BEFORE the first agent write. What a revert restores. */
   before: Record<K, FileSnapshot>;
   /**
@@ -130,7 +136,7 @@ export interface AgentWriteLedger<K extends string> {
   record(
     writer: WriteOrigin,
     key: string,
-    paths: Record<K, string>,
+    paths: Record<K, AppPath>,
     operation: string,
   ): void;
   /**
@@ -185,17 +191,17 @@ interface LedgerFile<K extends string> {
   entries: Record<string, AgentWriteLedgerEntry<K>>;
 }
 
-function readOrNull(path: string): string | null {
+function readOrNull(path: AppPath): string | null {
   return existsSync(path) ? readFileSync(path, "utf-8") : null;
 }
 
-function snapshotFile(path: string): FileSnapshot {
+function snapshotFile(path: AppPath): FileSnapshot {
   const bytes = readOrNull(path);
   return bytes === null ? { present: false } : { present: true, bytes };
 }
 
 function snapshotAll<K extends string>(
-  paths: Record<K, string>,
+  paths: Record<K, AppPath>,
 ): Record<K, FileSnapshot> {
   const out = {} as Record<K, FileSnapshot>;
   for (const role of Object.keys(paths) as K[])
@@ -231,8 +237,8 @@ export function defineAgentWriteLedger<K extends string>(
   // Resolved on first use, not here: declaring a ledger must not require a
   // runtime namespace, so a CLI or test that merely IMPORTS an owner module
   // does not throw. Memoized so the file always agrees with `cached` below.
-  let file: string | undefined;
-  const ledgerFile = (): string =>
+  let file: AppPath | undefined;
+  const ledgerFile = (): AppPath =>
     (file ??= agentWriteLedgerDir.file(runtimeNamespace(), `${id}.json`));
 
   let cached: LedgerFile<K> | undefined;
@@ -287,9 +293,12 @@ export function defineAgentWriteLedger<K extends string>(
    */
   function persist(ledger: LedgerFile<K>): void {
     const path = ledgerFile();
-    const tmp = `${path}.tmp-${randomUUID()}`;
+    const tmp = joinAppPath(
+      appPathParent(path),
+      `${basename(path)}.tmp-${randomUUID()}`,
+    );
     try {
-      mkdirSync(dirname(path), { recursive: true });
+      mkdirSync(asAppPath(dirname(path)), { recursive: true });
       writeFileSync(tmp, JSON.stringify(ledger, null, 2), "utf-8");
       renameSync(tmp, path);
     } catch (err) {

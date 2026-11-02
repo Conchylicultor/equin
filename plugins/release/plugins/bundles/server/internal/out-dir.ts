@@ -1,10 +1,13 @@
-import { join } from "node:path";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { releasesDir } from "../../data-dirs";
 import {
   releaseRunIdKind,
   type ReleaseRunId,
 } from "../../core/internal/run-id";
+import {
+  type AppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
  * A fresh release run id — `releaseRunIdKind.mint()`, `release-<s>-<6>`. The
@@ -28,7 +31,7 @@ export function compositionReleaseDir(
   namespace: string,
   composition: string,
   target: string,
-): string {
+): AppPath {
   return releasesDir.file(namespace, `${composition}-${target}`);
 }
 
@@ -60,6 +63,9 @@ export function releaseOutDir(
   composition: string,
   target: string,
   runId: string,
-): string {
-  return join(compositionReleaseDir(namespace, composition, target), runId);
+): AppPath {
+  return joinAppPath(
+    compositionReleaseDir(namespace, composition, target),
+    runId,
+  );
 }

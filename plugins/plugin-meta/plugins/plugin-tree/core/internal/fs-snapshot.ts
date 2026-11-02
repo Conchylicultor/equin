@@ -8,6 +8,7 @@ import {
   TESTING_FOLDER,
 } from "@plugins/framework/plugins/plugin-id/core";
 import type { FsSnapshot } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
  * Build-scoped, read-once, parallel in-memory FS snapshot for facet extraction.
@@ -65,8 +66,8 @@ function shouldRead(name: string): boolean {
 }
 
 export async function buildFsSnapshot(
-  root: string,
-  pluginDirs: string[],
+  root: AppPath,
+  pluginDirs: AppPath[],
 ): Promise<FsSnapshot> {
   const repo = await loadRepoFiles(root);
   const inRepo = (p: string) => repo.has(relative(root, p));

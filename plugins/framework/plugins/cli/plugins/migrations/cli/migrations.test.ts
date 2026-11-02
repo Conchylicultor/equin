@@ -7,6 +7,10 @@ import {
   writeFileSync,
 } from "fs";
 import { tmpdir } from "os";
+import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { join } from "path";
 import {
   journalEntriesForSqlFiles,
@@ -293,8 +297,8 @@ describe("phaseGeneratedMigrations", () => {
     parents: ["11111111-1111-4111-8111-111111111111"],
   };
 
-  function withDataDir(run: (dir: string) => void): void {
-    const dir = mkdtempSync(join(tmpdir(), "sing-phase-"));
+  function withDataDir(run: (dir: AppPath) => void): void {
+    const dir = asAppPath(mkdtempSync(join(tmpdir(), "sing-phase-")));
     try {
       mkdirSync(join(dir, "meta"));
       run(dir);

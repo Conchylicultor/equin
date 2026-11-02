@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { youtubeVideoId } from "@plugins/integrations/plugins/youtube/core";
@@ -44,7 +45,7 @@ export type LoadResult = {
  * is its own transaction, so a section and its windows land together.
  */
 export async function loadSections(args: {
-  snapshotPath: string;
+  snapshotPath: AppPath;
   scope: LoadScope;
   log: (line: string) => void;
   onProgress: (done: number, total: number) => Promise<void>;

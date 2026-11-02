@@ -10,6 +10,10 @@ import {
 import { tmpdir } from "os";
 import { join } from "path";
 import {
+  type AppPath,
+  asAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
   analyzeSnapshotDag,
   migrationContentHash,
   NULL_SNAPSHOT_ID,
@@ -37,9 +41,9 @@ const P1 = uid(2);
 const U1 = uid(3);
 const P2 = uid(4);
 
-let dir: string;
+let dir: AppPath;
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), "snapshot-join-"));
+  dir = asAppPath(mkdtempSync(join(tmpdir(), "snapshot-join-")));
   mkdirSync(join(dir, "meta"));
 });
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
@@ -48,7 +52,7 @@ afterEach(() => rmSync(dir, { recursive: true, force: true }));
 // disk, so every body resolves from the working tree (no git needed); the node
 // the join writes is the new shape — a headed .sql and meta/schema.snapshot.json.
 const joinSnapshotTips = (
-  migrationsDir: string,
+  migrationsDir: AppPath,
   origins: ReadonlyMap<string, readonly string[]>,
 ) => joinWith(migrationsDir, origins, snapshotBodies(dir, migrationsDir));
 const TIP = () => join(dir, "meta", "schema.snapshot.json");

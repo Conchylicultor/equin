@@ -29,4 +29,33 @@ export default [
     task: "task-1792338443-riwqev",
     reason: "not yet split into server/ + machine/",
   },
+  {
+    rule: "user-path/no-unproven-claim",
+    paths: [
+      "core/internal/identity.ts",
+      "core/internal/plan.ts",
+      "core/internal/vendors.ts",
+    ],
+    kind: "sanctioned",
+    reason:
+      "a package file resolved from the checkout's own node_modules install (and, in vendors.ts, a re-export specifier such a package names, resolved against it)",
+  },
+  {
+    rule: "user-path/no-unproven-claim",
+    paths: ["core/internal/vendor-cache.ts"],
+    kind: "sanctioned",
+    reason:
+      "paths this cache recorded itself when it built the vendor, under the checkout",
+  },
+  {
+    rule: "user-path/no-unproven-claim",
+    paths: [
+      "core/internal/global-css.ts",
+      "core/internal/package-assets.ts",
+      "core/internal/staged-verify.ts",
+    ],
+    kind: "sanctioned",
+    reason:
+      "a relative import / url() specifier read from the checkout's own sources or its node_modules packages, resolved against the file that names it — or a path of the metafile esbuild wrote for the app's own vendor build, relative to its cwd",
+  },
 ] satisfies Exemptions;

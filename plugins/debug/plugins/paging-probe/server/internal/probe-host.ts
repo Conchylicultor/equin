@@ -1,3 +1,7 @@
+import {
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
@@ -44,12 +48,12 @@ function probeEntryPath(): string {
   return join(import.meta.dir, "probe", "entry.ts");
 }
 
-function logsDir(): string {
-  return join(worktreeDataDir(runtimeNamespace()), "logs");
+function logsDir(): AppPath {
+  return joinAppPath(worktreeDataDir(runtimeNamespace()), "logs");
 }
 
-function outPathFor(variant: ProbeVariant): string {
-  return join(logsDir(), `paging-probe-${variant}.jsonl`);
+function outPathFor(variant: ProbeVariant): AppPath {
+  return joinAppPath(logsDir(), `paging-probe-${variant}.jsonl`);
 }
 
 function argvFor(variant: ProbeVariant): string[] {

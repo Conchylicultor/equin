@@ -1,5 +1,8 @@
+import {
+  type AppPath,
+  joinAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
 import { z } from "zod";
 import {
   HOLDS,
@@ -43,13 +46,15 @@ function miseVersion(output: string): string {
   return output.trim().split(/\s+/)[0] ?? "";
 }
 
-function readRequests(root: string): Map<string, string> {
-  return parseMiseToolRequests(readFileSync(join(root, "mise.toml"), "utf8"));
+function readRequests(root: AppPath): Map<string, string> {
+  return parseMiseToolRequests(
+    readFileSync(joinAppPath(root, "mise.toml"), "utf8"),
+  );
 }
 
 /** Tools `mise.toml` declares that the lock does not record yet: first locks. */
 function newlyDeclared(
-  root: string,
+  root: AppPath,
   locked: ReadonlyMap<string, readonly string[]>,
 ): Set<string> {
   return new Set(
@@ -66,11 +71,13 @@ function newlyDeclared(
  * tool `mise.toml` has just started declaring may have no lock entry yet (the
  * upgrade records its first one). Throws naming every problem.
  */
-function assertSound(root: string): {
+function assertSound(root: AppPath): {
   locked: Map<string, string[]>;
   fresh: Set<string>;
 } {
-  const locked = parseMiseLock(readFileSync(join(root, "mise.lock"), "utf8"));
+  const locked = parseMiseLock(
+    readFileSync(joinAppPath(root, "mise.lock"), "utf8"),
+  );
   const fresh = newlyDeclared(root, locked);
   const problems = lockProblems(readRequests(root), locked, {
     holds: HOLDS,
@@ -179,7 +186,7 @@ export const miseUpdater: Updater = {
   // Install side by side (nothing is uninstalled: main and every other
   // worktree keep running their own locked releases), then record them.
   async apply(root, moves, log) {
-    const lockPath = join(root, "mise.lock");
+    const lockPath = joinAppPath(root, "mise.lock");
     let nextLock = readFileSync(lockPath, "utf8");
     for (const { name, from, to } of moves) {
       log(`  installing ${name}@${to}`);

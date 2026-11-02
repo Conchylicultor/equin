@@ -1,6 +1,10 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import {
+  joinAppPath,
+  type AppPath,
+  asAppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
  * Which `once` guards (`Guard.once`) each agent of a session has already been
@@ -11,8 +15,11 @@ import { join } from "node:path";
  * transcript search would re-send the hint to a subagent on every call.
  * Session-scoped in tmpdir like `agent-ops`: worthless once the session ends.
  */
-function stateFile(sessionId: string): string {
-  return join(tmpdir(), `guard-informed-once-${sessionId}.json`);
+function stateFile(sessionId: string): AppPath {
+  return joinAppPath(
+    asAppPath(tmpdir()),
+    `guard-informed-once-${sessionId}.json`,
+  );
 }
 
 function read(sessionId: string): string[] {
