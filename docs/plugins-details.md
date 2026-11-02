@@ -36910,8 +36910,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `collectBlockHandles` — Every registered block handle, with the plugin id that declared it.
           - `loadBlockHandles` — The real block handles, or a THROW.
           - `resolveBlockSlots` — The two web block SLOT OBJECTS, resolved once per call from the declaration pass that named them, so every loop that reads a block contribution compares by IDENTITY instead of against an id string.
+          - `rng` — Mulberry32 — deterministic, so a failure is reproducible from its seed.
+          - `roundTripCorpus`
+          - `ungeneratedBlockTypes` — Registered block types the corpus never generates — empty when it covers them all.
           - `WEB_BLOCK_FRAME_SLOT`
           - `WEB_BLOCK_SLOT`
+          - Types: `BlockGenerator`, `RoundTripCorpus`
     - **`editor-collab`** — Per-block content-CRDT server (content-agnostic): the page_block_docs state store, the per-block lookup-only live collection (page-block-doc:rows), the per-page block-docs set the page editor reads (page-block-docs, one tuple per page), the first-writer-wins doc-init seed, and the doc-update Yjs merge endpoint.
       - Server:
         - Contributes:

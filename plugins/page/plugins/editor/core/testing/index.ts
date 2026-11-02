@@ -5,3 +5,10 @@ export {
   collectBlockHandles,
   loadBlockHandles,
 } from "./block-handles";
+export {
+  rng,
+  roundTripCorpus,
+  ungeneratedBlockTypes,
+  type BlockGenerator,
+  type RoundTripCorpus,
+} from "./round-trip-corpus";
