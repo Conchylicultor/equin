@@ -65,6 +65,7 @@ describe("agentSessionLaunch", () => {
     ...envEntries({
       CONVERSATION_ID: "conv-test",
       PARENT_URL: "http://att-test-w6l1.localhost:9000",
+      PARENT_HOST: "att-test-w6l1",
       GUARDS_ROOT: "/fixture/repo",
       WORKSPACE_ROOT: "/fixture/workspaces/att-test-w6l1",
     }),
@@ -160,6 +161,7 @@ async function runWrapper(
     ...envEntries({
       CONVERSATION_ID: "conv-test",
       PARENT_URL: "http://att-test-w6l1.localhost:9000",
+      PARENT_HOST: "att-test-w6l1",
     }),
     CLAUDE_CODE_DISABLE_AGENT_VIEW: "1",
     // What a backend's ambient environment carries.

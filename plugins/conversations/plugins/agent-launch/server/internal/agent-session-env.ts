@@ -3,7 +3,10 @@ import {
   envEntries,
   envName,
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
-import { namespaceUrl } from "@plugins/infra/plugins/namespace/core";
+import {
+  namespaceLabel,
+  namespaceUrl,
+} from "@plugins/infra/plugins/namespace/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 
 // What environment does an agent's shell start from? Every app-launched agent
@@ -39,6 +42,11 @@ import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
  * - `EQUIN_PARENT_URL` — the launching backend's origin (`namespaceUrl`), which
  *   the agent's `.mcp.json` and its hooks dial back to. A whole URL, never a
  *   name to build a host from, so no file assembles an address by hand.
+ * - `EQUIN_PARENT_HOST` — TEMPORARY: the same backend's host LABEL
+ *   (`namespaceLabel`, main → `equin`), for a worktree branched before
+ *   `EQUIN_PARENT_URL` whose `.mcp.json` still builds
+ *   `http://${EQUIN_PARENT_HOST}.localhost:9000`. Delete with its env-names key
+ *   once no checkout's `.mcp.json` names it (rename track, Step 9).
  * - `CLAUDE_CODE_DISABLE_AGENT_VIEW` — pins the Claude session to this agent
  *   process, so it can never migrate into Claude Code's background daemon and
  *   inherit whichever process first spawned that daemon (the Sep 9 misattributed
@@ -53,6 +61,7 @@ import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 export const AGENT_SESSION_DELIVERED_ENV: readonly string[] = [
   envName("CONVERSATION_ID"),
   envName("PARENT_URL"),
+  envName("PARENT_HOST"),
   "CLAUDE_CODE_DISABLE_AGENT_VIEW",
   envName("GUARDS_ROOT"),
   envName("WORKSPACE_ROOT"),
@@ -86,6 +95,7 @@ export function agentSessionEnv(
     ...envEntries({
       CONVERSATION_ID: conversationId,
       PARENT_URL: namespaceUrl(runtimeNamespace()),
+      PARENT_HOST: namespaceLabel(runtimeNamespace()),
       GUARDS_ROOT: roots.guardsRoot,
       WORKSPACE_ROOT: roots.workspaceRoot,
     }),
