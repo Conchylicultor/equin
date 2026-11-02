@@ -3,7 +3,6 @@ import { Editor } from "@plugins/page/plugins/editor/server";
 import { fileBlock } from "../core";
 
 export default {
-  portable: true,
   description:
     "File block type: registers its `data` schema (attachment) at the server write boundary.",
   contributions: [Editor.BlockData(fileBlock)],

@@ -88,7 +88,6 @@ export default {
   description:
     "Durable background jobs primitive: plugins declare jobs via defineJob and enqueue via job.enqueue, onto the host's job queue (JobQueue — graphile-worker on the desktop).",
   loadBearing: true,
-  portable: true,
   httpRoutes: {
     [listDeadJobs.route]: handleListDeadJobs,
     [retryJob.route]: handleRetryJob,

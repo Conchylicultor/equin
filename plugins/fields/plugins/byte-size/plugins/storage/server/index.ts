@@ -4,7 +4,6 @@ import { byteSizeFieldType } from "@plugins/fields/plugins/byte-size/core";
 import { build } from "./internal/storage";
 
 export default {
-  portable: true,
   description:
     "Byte size field type: DB storage capability — maps to a Postgres double precision column.",
   contributions: [Fields.Storage({ type: byteSizeFieldType, build })],

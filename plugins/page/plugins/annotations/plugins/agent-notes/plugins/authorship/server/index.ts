@@ -8,7 +8,6 @@ export { _pageBlocksAgentAuthors } from "./internal/tables";
 export { recordAgentNotesAuthor } from "./internal/mutations";
 
 export default {
-  portable: true,
   description:
     "Owns page_blocks_agent_authors: which conversations wrote into an agent-notes card. A race-free (block, conversation) link table, the recordAgentNotesAuthor stamp any writer calls, and the per-card live read behind the card's provenance popover; a copied block keeps its authors. Its growth bound is the cascade to page_blocks, checked at boot (markCascadeBounded).",
   contributions: [

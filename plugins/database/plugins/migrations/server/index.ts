@@ -24,5 +24,4 @@ export type { MigrationSourceImpl } from "./internal/source";
 
 export default {
   description: "DDL lifecycle: migration runner and SQL files.",
-  portable: true,
 } satisfies ServerPluginDefinition;

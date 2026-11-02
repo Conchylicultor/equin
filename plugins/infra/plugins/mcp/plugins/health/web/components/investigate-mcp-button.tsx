@@ -20,7 +20,12 @@ export function InvestigateMcpButton() {
   const result = useLive(mcpHealth);
   // The row reads the same value: it is not failing (so this is not drawn)
   // until the value is ready, and an unreadable one makes the row unknown.
-  if (result.status === "loading" || result.status === "error") return null;
+  if (
+    result.status === "loading" ||
+    result.status === "error" ||
+    result.status === "unavailable"
+  )
+    return null;
   const health = result.data;
   const lines = [
     ...(health.requests.kind === "failing"

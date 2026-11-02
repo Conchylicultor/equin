@@ -32,9 +32,9 @@ pane per tool (`/debug/mcp-tools/tool/<name>`).
     - `Pane.Register` "debug-mcp-tool"
     - `Pane.Register` "debug-mcp-tools"
     - `DebugApp.Sidebar` "MCP tools"
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/live-state` ×6
     - `primitives/pane` ×6
-    - `primitives/live-state` ×5
     - `primitives/data-view` ×3
     - `primitives/css/spacing` ×2
     - `apps/debug/shell.DebugApp`

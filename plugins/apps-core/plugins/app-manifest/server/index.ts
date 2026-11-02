@@ -10,5 +10,4 @@ export default {
     [getAppManifest.route]: handleAppManifest,
   },
   contributions: [appManifestDocumentHead],
-  portable: true,
 } satisfies ServerPluginDefinition;

@@ -13,5 +13,4 @@ export default {
   // One config_v2 directive descriptor per reorderable slot, registered under
   // the slot's DEFINING plugin (via `pluginId`).
   contributions: reorderConfigRegistrations,
-  portable: true,
 } satisfies ServerPluginDefinition;

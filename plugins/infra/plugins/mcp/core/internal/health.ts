@@ -45,4 +45,7 @@ export const McpHealthSchema = z.object({
 export type McpHealth = z.infer<typeof McpHealthSchema>;
 
 /** The MCP server's health on this backend, pushed when it changes. */
-export const mcpHealth = liveValue("mcp.health", { schema: McpHealthSchema });
+export const mcpHealth = liveValue("mcp.health", {
+  schema: McpHealthSchema,
+  needsMachine: { feature: "The MCP server's health" },
+});

@@ -9,8 +9,9 @@
 // (`deriveBrowserHostGraph`):
 //
 // - the roots: every plugin of the composition's bundle whose server barrel is
-//   `portable: true`, plus every portable server barrel the host's own entry
-//   (`bin/browser-host.ts` — its seed) loads;
+//   portable (`serverPortabilityOf`: nothing its static closure loads needs
+//   the computer — derived, never declared), plus every portable server
+//   barrel the host's own entry (`bin/browser-host.ts` — its seed) loads;
 // - the providers: the portable server barrels a `base-exclusions` negative
 //   names (no desktop ships them) that provide a host service the graph
 //   declares, added to a fixpoint — exactly one per service;
@@ -42,19 +43,22 @@ import {
   resolveComposition,
 } from "@plugins/plugin-meta/plugins/closure/core";
 import { manifestItemToManifest } from "@plugins/plugin-meta/plugins/composition/core";
-import { isPortableServerBarrel } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import {
+  hostServicesByName,
+  parseHostServiceDeclarations,
+  providedServiceNames,
+  type HostServiceDecl,
+} from "@plugins/plugin-meta/plugins/parse-utils/core";
+import {
+  serverPortabilityOf,
+  type ServerPortability,
+} from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
 import {
   resolveHostCoverage,
   serverBarrelBlockers,
   type HostRead,
 } from "./browser-host-coverage";
-import {
-  baseExclusionServerBarrels,
-  hostServicesByName,
-  parseHostServiceDeclarations,
-  providedServiceNames,
-  type HostServiceDecl,
-} from "./host-services";
+import { baseExclusionServerBarrels } from "./host-services";
 import { readCompositionManifestsFromDisk } from "./main-bundle";
 import {
   resolveRegistryHome,
@@ -143,6 +147,12 @@ export interface HostGraphInputs {
   candidateBarrels: readonly string[];
   read(path: string): Promise<string | null>;
   /**
+   * Which server barrels are portable, and why one is not
+   * (`serverPortabilityOf`) — an input like {@link closure}, so a test
+   * injects it.
+   */
+  portability: Pick<ServerPortability, "isPortable" | "offenders">;
+  /**
    * The union closure of `entries` (in order), measured at once — the
    * derivation asks once for the entry, then once per fixpoint round for the
    * members no earlier closure reached.
@@ -214,8 +224,8 @@ export async function resolveHostGraph(
     }
     return text;
   };
-  const portable = async (barrel: string): Promise<boolean> =>
-    isPortableServerBarrel(await source(barrel));
+  const portable = (barrel: string): boolean =>
+    inputs.portability.isPortable(barrel);
 
   // Every module the graph's code loads, with the closure that first reached
   // it — whose chain to it is asked for only when the guard fails on it.
@@ -244,12 +254,12 @@ export async function resolveHostGraph(
 
   const members = new Set<string>();
   for (const barrel of inputs.bundleBarrels) {
-    if (await portable(barrel)) members.add(barrel);
+    if (portable(barrel)) members.add(barrel);
   }
   // The entry's own imports (its seed) are roots by rule.
   await absorb([entry]);
   for (const module of [...reached.keys()].sort()) {
-    if (SERVER_BARREL_RE.test(module) && (await portable(module))) {
+    if (SERVER_BARREL_RE.test(module) && portable(module)) {
       members.add(module);
     }
   }
@@ -273,7 +283,7 @@ export async function resolveHostGraph(
 
   const candidates: { barrel: string; provides: string[] }[] = [];
   for (const barrel of inputs.candidateBarrels) {
-    if (!(await portable(barrel))) continue;
+    if (!portable(barrel)) continue;
     candidates.push({
       barrel,
       provides: providedServiceNames(await source(barrel)),
@@ -318,8 +328,15 @@ export async function resolveHostGraph(
     a.localeCompare(b),
   )) {
     if (!SERVER_BARREL_RE.test(module) || members.has(module)) continue;
+    const why = portable(module)
+      ? "portable, but neither in the composition nor a provider"
+      : `not portable: ${inputs.portability
+          .offenders(module)
+          .slice(0, 3)
+          .map((o) => `${o.module} needs ${o.needs.join(", ")}`)
+          .join("; ")}`;
     problems.push(
-      `the graph loads ${module}, which is not in it (${(await portable(module)) ? "portable, but neither in the composition nor a provider" : "not portable"})\n      via ${closure.importChain(module).join(" → ")}`,
+      `the graph loads ${module}, which is not in it (${why})\n      via ${closure.importChain(module).join(" → ")}`,
     );
   }
   if (problems.length > 0) {
@@ -377,7 +394,8 @@ async function deriveUncached(
     webPlugins: graph.webPlugins,
     bundle: graph.bundle,
     sources: await ctx.sourceScans(),
-    blockers: (barrel) => serverBarrelBlockers(ctx.root, repo, barrel),
+    blockers: async (barrel) =>
+      serverBarrelBlockers(await serverPortabilityOf(repo), barrel),
   });
   return { ...graph, reads };
 }
@@ -439,6 +457,7 @@ async function inferUncached(
       repo.has(p),
     ),
     read: (path) => repo.read(path),
+    portability: await serverPortabilityOf(repo),
     // What the bundler loads from these modules, as the bundle will.
     closure: (entries) =>
       importClosures(ctx.root, entries, { dynamicImports: "cut" }),

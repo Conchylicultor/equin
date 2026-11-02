@@ -1,7 +1,7 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { IdKinds } from "@plugins/ids/server";
 import { songIdKind } from "../core";
-import { deleteSong, updateSong } from "../core/endpoints";
+import { deleteSong, updateSong } from "../core";
 import { handleDeleteSong } from "./internal/handle-delete-song";
 import { handleUpdateSong } from "./internal/handle-update-song";
 import { songLibraryServed } from "./internal/resources";

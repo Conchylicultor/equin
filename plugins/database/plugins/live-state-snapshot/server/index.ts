@@ -55,7 +55,6 @@ export default {
   description:
     "L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, served only from a usable row (a key the runtime persists now, under its current definition, from a current writer). Three persist modes (a FULL recompute replaces; a persisted alias's trailing window lowers the floor, or advances it to a routed cut once its snapshot is proven settled under one), an hourly compact job, and a boot catch-up that seeds each persisted alias from its row and replays the changelog by scope — or, when history was pruned past the floor or a rollup was healed, recomputes every persisted key.",
   loadBearing: false,
-  portable: true,
   register: [liveStateChangelogPruneJob, liveStateCompactJob],
   // A companion of change-feed: the changelog it writes is bounded only by the
   // prune job above, and this plugin imports change-feed, so change-feed

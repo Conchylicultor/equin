@@ -10,7 +10,7 @@ The DB half of custom columns: per-row VALUES keyed by
 - `setCustomColumnValue` (upsert, delete on empty) and `deleteCustomColumnValues`
   (one column across a surface).
 
-`server/` is `portable: true`: it touches only the DB, so it runs in the browser
+`server/` is portable: it touches only the DB, so it runs in the browser
 host too (the `/demo` worker). The column DEFINITIONS are config
 (`customColumnDefs`, the scoped set, the settings UI) and stay in the parent
 `custom-columns` plugin, which imports this one — never the reverse, so this

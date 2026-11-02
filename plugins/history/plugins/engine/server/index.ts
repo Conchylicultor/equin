@@ -16,7 +16,6 @@ export { recordVersion, deleteVersions } from "./internal/record-version";
 export { _entityVersions } from "./internal/tables";
 
 export default {
-  portable: true,
   description:
     "Domain-agnostic versioning substrate: the entity_versions table, a defineHistorySource registry, time-bucketed recordVersion + deleteVersions, the live history.versions timeline and history.version value, and the restore (plus an e2e-only list) endpoints, and the 30-day retention sweep (its growth bound).",
   register: [entityVersionsRetention],

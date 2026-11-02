@@ -8,7 +8,9 @@ import {
 import {
   foldResource,
   matchResource,
+  type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import {
   Inset,
   Stack,
@@ -63,6 +65,24 @@ export function ToolsView({
   linkTo: (tool: McpCatalogTool) => LinkTarget;
 }): ReactElement {
   const result = useLive(mcpCatalog);
+  // The MCP server is the computer's: a host without it says so.
+  if (result.status === "unavailable") {
+    return <Placeholder tone="muted">{result.message}</Placeholder>;
+  }
+  return (
+    <ToolsList result={result} selectedName={selectedName} linkTo={linkTo} />
+  );
+}
+
+function ToolsList({
+  result,
+  selectedName,
+  linkTo,
+}: {
+  result: ResourceResult<McpCatalog>;
+  selectedName: string | undefined;
+  linkTo: (tool: McpCatalogTool) => LinkTarget;
+}): ReactElement {
   const tools = foldResource(result, {
     loading: () => NO_TOOLS,
     error: () => NO_TOOLS,

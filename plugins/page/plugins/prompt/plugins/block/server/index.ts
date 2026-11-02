@@ -3,7 +3,6 @@ import { Editor } from "@plugins/page/plugins/editor/server";
 import { promptBlock } from "../core";
 
 export default {
-  portable: true,
   description:
     "Prompt block type: registers its `data` schema (plain block text) at the server write boundary.",
   contributions: [Editor.BlockData(promptBlock)],

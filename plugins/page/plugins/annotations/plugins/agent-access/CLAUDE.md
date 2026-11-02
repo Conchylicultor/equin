@@ -30,7 +30,7 @@ the two sections below reverse what they reverse. Design:
 ## Two halves: portable `pageTools`, MCP tools on the machine
 
 The tools' behaviour is plain functions in the **portable** `server/` half
-(`server/internal/page-tools.ts`, `portable: true`), exported as
+(`server/internal/page-tools.ts`, portable), exported as
 
 ```ts
 pageTools.read({ block_id }, { conversationId })

@@ -20,7 +20,7 @@
  */
 
 import { beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { sql } from "drizzle-orm";
 import type {
@@ -28,11 +28,7 @@ import type {
   StoredPicks,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import type { ThumbnailState } from "@plugins/apps/plugins/prototypes/plugins/thumbnails/core";
-import {
-  committedDocument,
-  committedFilesFromMap,
-} from "@plugins/config_v2/core";
-import { ConfigGitLayer } from "@plugins/config_v2/server";
+import { diskConfigGitLayer } from "@plugins/config_v2/server/testing";
 import { db } from "@plugins/database/server";
 import {
   isMigrationFileName,
@@ -127,34 +123,14 @@ const PROVIDERS: Entry[] = [
   ]),
 ];
 
-/** The repo's `config/`, read off disk: what a worker's bundled layer inlines. */
-function diskConfigFiles(): Map<string, string> {
-  const dir = join(REPO_ROOT, "config");
-  const files = new Map<string, string>();
-  for (const rel of readdirSync(dir, { recursive: true }) as string[]) {
-    if (!rel.endsWith(".jsonc") || !statSync(join(dir, rel)).isFile()) continue;
-    files.set(rel, readFileSync(join(dir, rel), "utf8"));
-  }
-  return files;
-}
 const diskGitLayer: Entry = {
   pluginPath: `${SUBJECT}/boot-test-config`,
   id: "apps.prototypes.fixtures.boot-test-config",
-  loader: async () => {
-    const committedFiles = committedFilesFromMap(diskConfigFiles());
-    return {
-      default: {
-        portable: true,
-        contributions: [
-          ConfigGitLayer.provide({
-            document: (storePath) =>
-              committedDocument(storePath, committedFiles),
-            watch: () => Promise.resolve(() => {}),
-          }),
-        ],
-      } satisfies ServerPluginDefinition,
-    };
-  },
+  loader: async () => ({
+    default: {
+      contributions: [diskConfigGitLayer()],
+    } satisfies ServerPluginDefinition,
+  }),
   dependsOn: ["config_v2"],
 };
 
@@ -165,7 +141,6 @@ const migrationSource: Entry = {
   id: "apps.prototypes.fixtures.boot-test-migrations",
   loader: async () => ({
     default: {
-      portable: true,
       contributions: [
         MigrationSource.provide({
           list: () =>

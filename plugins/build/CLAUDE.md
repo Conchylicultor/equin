@@ -25,7 +25,7 @@ from one read. Read `plugins/deployment/CLAUDE.md` before touching any of it.
 
 ## Two halves: what every host serves, and what runs builds
 
-`server/` is **portable** (`portable: true`): the build-run id kind, the build
+`server/` is **portable**: the build-run id kind, the build
 config (`ConfigV2.Register`), the Build task category and the `build.history`
 collection — reads a host without the computer (the in-browser demo) serves on
 its own database. Everything that RUNS a build is `machine/`: the Build and

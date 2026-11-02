@@ -42,7 +42,7 @@
 
 ## Portable: every host with a database runs it
 
-The server half is `portable: true`, like `change-feed`: the desktop's backend
+The server half is portable, like `change-feed`: the desktop's backend
 runs it on the Postgres cluster, a browser host's worker (the demo) on PGlite —
 the same persist hooks, the same boot catch-up and the same hourly prune and
 compact jobs (the worker's in-process job queue fires their schedules). So the

@@ -14,7 +14,6 @@ export type ExemptableRuleId =
   | "bar/no-adhoc-bar"
   | "boundaries/no-platform-api"
   | "boundaries:machine-portable-declaration"
-  | "boundaries:portable-closure"
   | "bun-safety/no-declare-identifier"
   | "button-safety/no-async-raw-button"
   | "button-safety/no-redundant-cursor-pointer"

@@ -14,5 +14,4 @@ export default {
     ConfigV2.Register({ descriptor: appColorModeConfig }),
     themeDocumentHead,
   ],
-  portable: true,
 } satisfies ServerPluginDefinition;

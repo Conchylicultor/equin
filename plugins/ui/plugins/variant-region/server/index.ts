@@ -2,6 +2,4 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 
 export { variantRegionServerContribution } from "./define-variant-region-server";
 
-export default {
-  portable: true,
-} satisfies ServerPluginDefinition;
+export default {} satisfies ServerPluginDefinition;

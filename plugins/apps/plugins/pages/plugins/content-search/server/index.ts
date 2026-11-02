@@ -13,7 +13,6 @@ import {
 export { backfillPagesSearchJob } from "./internal/backfill-job";
 
 export default {
-  portable: true,
   description:
     "Pages full-text search consumer: indexes pages into the search engine, reindexing on blocksChanged, with the backfill job that seeds existing pages (enqueued at boot by a warm-up, so pages that predate the index — or drifted — become searchable).",
   // The warm-up enqueues the seed scan off the serving-critical boot path (see

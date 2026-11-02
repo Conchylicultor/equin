@@ -47,8 +47,11 @@ automation and the outcome-report card with it), `stats.**` and the file
 explorer — and adds Prototypes back (`apps.prototypes.**`: its files are a
 `data-files` root, memory in the worker; the prototype chips stay negated by the
 agent-manager profile). Its web plugins are the scope the demo page renders in
-(`web-sdk`'s `<PluginScope>`) and its portable server barrels the worker's
-graph, both derived by codegen (`browser-host-gen.ts`). Everything a plugin in
+(`web-sdk`'s `<PluginScope>`) and its portable server barrels (portability
+derived from each barrel's closure, `serverPortabilityOf`) the worker's graph,
+both derived by codegen (`browser-host-gen.ts`). A plugin portable by its
+imports but meaningless without the computer is excluded here — there is no
+per-plugin opt-out. Everything a plugin in
 this scope reads, calls or registers must be served by the worker's graph or
 declared `needsMachine` (config has no such escape) — the browser-host coverage
 guard (`browser-host-coverage.ts`) fails `build` and `push` otherwise, and

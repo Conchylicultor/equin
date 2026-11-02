@@ -2,7 +2,7 @@
 
 ## Portable: every host with a database runs it
 
-The server half is `portable: true`: the desktop's backend runs it on the
+The server half is portable: the desktop's backend runs it on the
 Postgres cluster, a browser host's worker (the demo) on PGlite — same plpgsql,
 same fingerprints, same boot invariants, same consumer (burst router, end-marker
 ordering, `routeChange`, reconnect policy). The one thing that differs per host

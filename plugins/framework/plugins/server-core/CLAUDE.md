@@ -32,8 +32,10 @@ there, not in a composition root, unless it is genuinely serve-only.
 - **`browser`** — the portable graph in a page's Web Worker
   (`core/browser-host.ts`, `bootBrowserHost({ entries, seed? })`, called from a
   plugin's `bin/browser-host.ts`). A SERVING host like `serve`, minus the
-  socket: the shared sequence, then it asserts every booted plugin declares
-  `portable: true` (plugins' own `wsRoutes` are not served — the page's
+  socket: the shared sequence (no per-plugin portability assert: the graph is
+  portable by construction — codegen admits only server barrels whose static
+  closure needs nothing of the computer, `boundaries/core`'s
+  `serverPortabilityOf`; plugins' own `wsRoutes` are not served — the page's
   transport opens any socket but `/ws/notifications` inert), runs the same
   post-ready phases as `serve` — event trigger sync, the change feed's
   LISTEN, the in-process job queue, watchers and schedules, so a write
@@ -203,16 +205,27 @@ composition boots two. Today's services: `database.driver`,
 `attachments.blobs`, `tasks-core.push-ledger`,
 `conversations.transcript-source`, `model-provider.catalog-source`,
 `task-title.generator`, `config-v2.store`, `config-v2.git-layer`,
-`host-account.source`, `warmup.host` (each declared
+`host-account.source`, `warmup.host`, `secrets.store` (each declared
 `export const X = defineHostService<…>("<id>")`).
 
 - **Placement is checked** (`check/`, `host-services:provider-placement`):
   every service has exactly one `machine/` provider; a service declared in a
   portable `server/` barrel (one a browser host can reach) also has exactly one
   browser candidate — a portable `server/` barrel a `base-exclusions` negative
-  names — and no portable `server/` barrel provides a service outside those
-  negatives. A service declared in a non-portable barrel needs no browser
-  candidate until that barrel turns portable.
+  names — no portable `server/` barrel provides a service outside those
+  negatives, and every negated `server/` barrel that provides a service is
+  portable (else the check names what in its closure needs the computer).
+- **A service only `machine/` provides makes its declarer non-portable.**
+  Portability is derived (`serverPortabilityOf`, `boundaries/core`), and one of
+  its rules is this: a module declaring a service that no portable `server/`
+  barrel provides needs the computer, so every server barrel loading it is not
+  portable — the service is a computer-only API reached through a seam
+  (`infra/claude-cli/accounts`' `ActiveClaudeAccount`,
+  `apps/deploy/deploy-secrets`' `DeploySecretSource`, `infra/secrets`'
+  `SecretStore` — central's store, so everything reading a secret stays off
+  a browser host). Give it a browser
+  provider (a portable `server/` sub-plugin a `base-exclusions` negative names)
+  and its declarers turn portable by themselves.
 - **A browser host's providers are derived, not listed.** Its graph is inferred
   from the composition it names (`codegen/core/browser-host-gen.ts`): the
   composition's portable server barrels, plus — to a fixpoint — the negated

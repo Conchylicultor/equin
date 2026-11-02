@@ -29,7 +29,6 @@ export type {
 } from "./internal/serve";
 
 export default {
-  portable: true,
   description:
     "Tag-tree engine (server): defineTagTreeTable builds a tree's table from its ref, serveTagTree + the TagTrees.Tree contribution register a tree with its carriers, and the ONE /api/tag-trees/:tree endpoint set writes any registered tree under a table lock — create (unique sibling names, appended rank), create path, update, move (positional intent, cycles refused) and delete (children lifted to the parent at the tag's position, carriers rewritten).",
   httpRoutes: {

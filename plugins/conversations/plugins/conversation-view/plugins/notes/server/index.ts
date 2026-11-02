@@ -6,7 +6,6 @@ import { upsertNote, deleteNote } from "../shared/endpoints";
 export { conversationNotes } from "./internal/tables";
 
 export default {
-  portable: true,
   description: "Per-conversation free-form notes, auto-saved to the server.",
   contributions: [...conversationNoteRowsServed.declare],
   httpRoutes: {

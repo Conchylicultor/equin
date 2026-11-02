@@ -28,5 +28,4 @@ export default {
   httpRoutes: {
     [clearConversationCategory.route]: handleClearCategory,
   },
-  portable: true,
 } satisfies ServerPluginDefinition;

@@ -20,5 +20,4 @@ export default {
     IdKinds.Kind({ kind: filterNodeIdKind }),
     ...dataViewConfigRegistrations,
   ],
-  portable: true,
 } satisfies ServerPluginDefinition;

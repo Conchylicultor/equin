@@ -6,5 +6,4 @@ export default {
   description:
     "Model ids, families and choices: the id grammar every concrete version follows (flag, label and family derive from the id alone), the catalog shape and its pure readers (resolveModel, choiceHint, selectableChoices), and the model-provider config.",
   contributions: [ConfigV2.Register({ descriptor: modelProviderConfig })],
-  portable: true,
 } satisfies ServerPluginDefinition;

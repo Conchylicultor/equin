@@ -13,7 +13,6 @@ export type {
 } from "./internal/persistence";
 
 export default {
-  portable: true,
   httpRoutes: {
     [emitLogs.route]: handleEmit,
   },

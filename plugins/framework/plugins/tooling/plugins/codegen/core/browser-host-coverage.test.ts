@@ -81,7 +81,7 @@ export const greetingServed = serveValue(greeting, { source: "external", changes
 `;
 const SERVER_BARREL = `import { ping } from "../core";
 import { handlePing } from "./internal/ping";
-export default { portable: true, httpRoutes: { [ping.route]: handlePing } };
+export default { httpRoutes: { [ping.route]: handlePing } };
 `;
 
 const BASE: Record<string, string> = {
@@ -292,7 +292,7 @@ describe("resolveHostCoverage", () => {
           inputs({
             ...BASE,
             [pj("app/server/index.ts")]:
-              `import { ping } from "../core";\nexport default { portable: true, httpRoutes: { [ping.route]: h, ${key}: h } };`,
+              `import { ping } from "../core";\nexport default { httpRoutes: { [ping.route]: h, ${key}: h } };`,
             [pj("app/web/view.tsx")]:
               `import { ping } from "@plugins/app/core";\nuse(ping);`,
           }),
@@ -308,7 +308,7 @@ describe("resolveHostCoverage", () => {
           inputs({
             ...BASE,
             [pj("app/server/index.ts")]:
-              `import { ping } from "../core";\nexport default { portable: true, httpRoutes: { [ping.route]: h, ${entry} } };`,
+              `import { ping } from "../core";\nexport default { httpRoutes: { [ping.route]: h, ${entry} } };`,
           }),
         ),
       );
@@ -319,7 +319,7 @@ describe("resolveHostCoverage", () => {
         inputs({
           ...BASE,
           [pj("app/server/index.ts")]:
-            "const routes = {};\nexport default { portable: true, httpRoutes: routes };",
+            "const routes = {};\nexport default { httpRoutes: routes };",
         }),
       ),
     );
@@ -346,7 +346,7 @@ describe("resolveHostCoverage", () => {
       inputs({
         ...BASE,
         [pj("app/server/index.ts")]:
-          `import { ping } from "../core";\nexport default { portable: true, httpRoutes: { [ping.route]: wrap<Req, Res>((r) => r.n >= 1 ? a : b), "GET /api/app/x": wrap<Map<string, number>>(h) } };`,
+          `import { ping } from "../core";\nexport default { httpRoutes: { [ping.route]: wrap<Req, Res>((r) => r.n >= 1 ? a : b), "GET /api/app/x": wrap<Map<string, number>>(h) } };`,
         [pj("app/web/view.tsx")]:
           `import { ping } from "@plugins/app/core";\nuse(ping);\nfetch("/api/app/x");`,
       }),
@@ -361,7 +361,7 @@ describe("resolveHostCoverage", () => {
         [pj("app/core/extra.ts")]:
           `import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";\nexport const lit = defineEndpoint({ route: "GET /api/lit/x" });`,
         [pj("app/server/index.ts")]:
-          `import { ping } from "../core";\nexport default { portable: true, httpRoutes: { [ping.route]: h, "GET /api/lit/x": h, 'GET /api/lit/y': h } };`,
+          `import { ping } from "../core";\nexport default { httpRoutes: { [ping.route]: h, "GET /api/lit/x": h, 'GET /api/lit/y': h } };`,
         [pj("app/web/view.tsx")]:
           `import { lit } from "../core/extra";\nuse(lit);\nfetch("/api/lit/y");`,
       }),

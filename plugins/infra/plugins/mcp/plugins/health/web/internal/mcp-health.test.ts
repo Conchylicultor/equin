@@ -16,6 +16,12 @@ const ready = (data: Partial<McpHealth>) =>
   });
 
 describe("mcpVerdict", () => {
+  test("a host without the computer is not applicable", () => {
+    expect(mcpVerdict({ status: "unavailable", message: "Not here." })).toEqual(
+      { state: "not-applicable", summary: "Not here." },
+    );
+  });
+
   test("loading is unknown, never ok", () => {
     expect(mcpVerdict({ status: "loading", refetch })).toEqual({
       state: "unknown",

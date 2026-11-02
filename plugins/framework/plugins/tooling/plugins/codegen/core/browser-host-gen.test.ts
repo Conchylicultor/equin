@@ -111,14 +111,19 @@ const at = (plugin: string, rest: string): string =>
   `plugins/${plugin}/${rest}`;
 const barrel = (p: string): string => at(p, "server/index.ts");
 const portable = (provides = ""): string =>
-  `export default { portable: true, contributions: [${provides}] };`;
+  `export default { contributions: [${provides}] };`;
 const ENTRY = at("host", "bin/browser-host.ts");
 
-/** A fixture repo: files by path, and each module's static closure. */
+/**
+ * A fixture repo: files by path, each module's static closure, and the
+ * barrels that are NOT portable, each with what its closure needs (every
+ * other barrel is portable — portability is injected, as derived).
+ */
 function inputs(
   files: Record<string, string>,
   closures: Record<string, string[]>,
   over: Partial<HostGraphInputs> = {},
+  nonPortable: Record<string, string> = {},
 ): HostGraphInputs {
   return {
     label: "fixture",
@@ -126,6 +131,10 @@ function inputs(
     bundleBarrels: [],
     candidateBarrels: [],
     read: async (path) => files[path] ?? null,
+    portability: {
+      isPortable: (b) => !(b in nonPortable),
+      offenders: (b) => [{ module: b, needs: [nonPortable[b]!], chain: [b] }],
+    },
     closure: async (entries): Promise<HostClosure> => {
       const of = (e: string): string[] => [e, ...(closures[e] ?? [])];
       return {
@@ -199,10 +208,11 @@ describe("resolveHostGraph", () => {
         },
         { [barrel("app")]: [barrel("disk")] },
         { bundleBarrels: [barrel("app"), barrel("disk")] },
+        { [barrel("disk")]: "node:fs" },
       ),
     );
     expect(await rejection(run)).toContain(
-      `the graph loads ${barrel("disk")}, which is not in it (not portable)\n      via ${barrel("app")} → ${barrel("disk")}`,
+      `the graph loads ${barrel("disk")}, which is not in it (not portable: ${barrel("disk")} needs node:fs)\n      via ${barrel("app")} → ${barrel("disk")}`,
     );
   });
 

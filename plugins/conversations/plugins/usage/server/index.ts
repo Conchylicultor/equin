@@ -8,7 +8,6 @@ export {
 } from "./internal/tables";
 
 export default {
-  portable: true,
   description:
     "Per-conversation usage — cost, tokens and launched sub-agents — stored in conversations_ext_usage and exposed to every conversation list (LiveColumns.Expose). Counting it from the transcripts is the machine half's.",
   contributions: [

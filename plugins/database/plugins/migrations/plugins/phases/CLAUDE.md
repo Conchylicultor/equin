@@ -7,7 +7,7 @@ a migration (`framework/cli/migrations`), the runner that applies it
 header comment of `core/internal/phases.ts`.
 
 It is a leaf of its own, not part of `migrations/core`, because the runner is
-portable (`portable: true`, booted by the browser host) and reaches its own
+portable (booted by the browser host) and reaches its own
 plugin's code only through barrels: `migrations/core` also carries the drizzle
 CLI and snapshot tooling, which need the computer.
 

@@ -1,6 +1,6 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { serveValue } from "@plugins/network/plugins/live/server";
+import { serveValue } from "@plugins/network/plugins/live/machine";
 import { mcpCatalog, type McpCatalog } from "../../core";
 import { mountTool, newMcpServer } from "./handle-mcp";
 import {
@@ -9,7 +9,7 @@ import {
   registry,
   scopeRegistry,
   toolDeclaredIn,
-} from "./registry";
+} from "../../server/internal/registry";
 
 /** Nothing reaches a handler from the catalog's listing; this only fills the
  * context argument `mountTool` binds. */

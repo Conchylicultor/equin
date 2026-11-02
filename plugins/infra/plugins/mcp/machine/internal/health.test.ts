@@ -9,8 +9,8 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { setErrorReporter } from "@plugins/framework/plugins/server-core/core";
 import { handleMcpRequest } from "./handle-mcp";
 import { currentMcpHealth, resetMcpHealth } from "./health";
-import { Mcp } from "./mcp";
-import { registry, scopeRegistry } from "./registry";
+import { Mcp } from "../../server";
+import { registry, scopeRegistry } from "../../server/internal/registry";
 
 function listTools(): Promise<Response> {
   return handleMcpRequest(

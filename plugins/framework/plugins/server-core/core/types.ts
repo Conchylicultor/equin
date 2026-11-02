@@ -210,28 +210,17 @@ export interface ServerPluginDefinition {
    */
   onShutdown?: () => void | Promise<void>;
   contributions?: import("./contributions").ServerContribution[];
-  /**
-   * "This plugin's server closure runs on every host": its `server/index.ts`
-   * statically reaches no platform API (a Node builtin, `bun`, `pg`, graphile,
-   * a native watcher), measured transitively by `boundaries:portable-closure`.
-   * The browser host loads only plugins that declare it.
-   *
-   * Transitional: once no `server/` file carries a `boundaries/no-platform-api`
-   * debt exemption, every server barrel is portable and the flag is deleted.
-   */
-  portable?: true;
 }
 
 /**
  * The authored shape of a plugin's `machine/` barrel — its desktop-only half,
  * booted in the same graph as the server entries as the node
  * `<pluginPath>#machine` (after its own server half). It is a server plugin in
- * every way but two: it cannot claim `portable` (it is the code that is not),
- * and its `httpRoutes` take only `MachineHttpHandler`s.
+ * every way but one: its `httpRoutes` take only `MachineHttpHandler`s.
  */
 export type MachinePluginDefinition = Omit<
   ServerPluginDefinition,
-  "httpRoutes" | "portable"
+  "httpRoutes"
 > & {
   httpRoutes?: HttpRoutes<MachineHttpHandler>;
 };

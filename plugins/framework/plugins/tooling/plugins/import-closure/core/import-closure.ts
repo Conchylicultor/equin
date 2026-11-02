@@ -401,6 +401,27 @@ function closurePlugin(
 }
 
 /**
+ * The children `node` (absolute) asked for, each specifier resolved the way the
+ * bundler resolved it (absolute paths). Resolved on first ask and kept in
+ * `resolved`, so a closure's chains and children share one resolution per
+ * importer.
+ */
+function resolvedChildren(
+  edges: ReadonlyMap<string, ReadonlySet<string>>,
+  node: string,
+  resolved: Map<string, string[]>,
+): string[] {
+  let children = resolved.get(node);
+  if (children === undefined) {
+    children = [...(edges.get(node) ?? [])].map((spec) =>
+      Bun.resolveSync(spec, dirname(node)),
+    );
+    resolved.set(node, children);
+  }
+  return children;
+}
+
+/**
  * The shortest chain from `entry` to `module` over the recorded `edges` (both
  * ends included, repo-relative), or null when `module` is not reached from
  * `entry`. Each edge's specifier is re-resolved here, so only a caller that
@@ -420,14 +441,7 @@ function chainThrough(
   const queue = [start];
   for (const node of queue) {
     if (parent.has(goal)) break;
-    let children = resolved.get(node);
-    if (children === undefined) {
-      children = [...(edges.get(node) ?? [])].map((spec) =>
-        Bun.resolveSync(spec, dirname(node)),
-      );
-      resolved.set(node, children);
-    }
-    for (const child of children) {
+    for (const child of resolvedChildren(edges, node, resolved)) {
       if (parent.has(child)) continue;
       parent.set(child, node);
       queue.push(child);
@@ -566,6 +580,15 @@ export interface UnionImportClosure {
    * Throws for a module no entrypoint reaches.
    */
   importChain: (module: string) => string[];
+  /**
+   * The modules `module` statically imports (repo-relative, sorted, each one
+   * in {@link modules}): its out-edges in the build's graph, resolved the way
+   * the bundler resolved them. Resolved lazily on first ask and memoized, as
+   * the chains are, so a caller walking the whole graph (a reverse taint)
+   * pays one resolution per importer. Throws for a module outside
+   * {@link modules}.
+   */
+  children: (module: string) => string[];
 }
 
 /**
@@ -605,9 +628,11 @@ export async function importClosures(
     target: "bun",
     plugins: [closurePlugin(root, entries[0]!, opts, record)],
   });
+  // Hundreds of entrypoints: a message names the count and the first few.
+  const entriesNamed = `${entries.length} entrypoint(s) (${entries.slice(0, 3).join(", ")}${entries.length > 3 ? ", …" : ""})`;
   if (!result.success) {
     throw new Error(
-      `Bun.build could not compute the import closure of ${entries.join(", ")}:\n` +
+      `Bun.build could not compute the import closure of ${entriesNamed}:\n` +
         result.logs.map((l) => `  ${String(l)}`).join("\n"),
     );
   }
@@ -626,11 +651,38 @@ export async function importClosures(
       if (chain !== null) return chain;
     }
     throw new Error(
-      `No import chain from any of ${entries.join(", ")} to ${module} through the recorded edges` +
+      `No import chain from any of the ${entriesNamed} to ${module} through the recorded edges` +
         (loaded.has(module)
           ? ", although the bundler loaded it — the edge record is incomplete."
           : ": it is not in this closure at all."),
     );
   };
-  return { modules: loaded, importChain };
+  const relChildren = new Map<string, string[]>();
+  const children = (module: string): string[] => {
+    let out = relChildren.get(module);
+    if (out !== undefined) return out;
+    if (!loaded.has(module)) {
+      throw new Error(
+        `children(${module}): it is not in the closure of ${entries.length} entrypoint(s) — the bundler never loaded it.`,
+      );
+    }
+    out = [
+      ...new Set(
+        resolvedChildren(edges, join(root, module), resolved).map((c) =>
+          relative(root, c),
+        ),
+      ),
+    ].sort();
+    // The bundler loaded every in-repo edge it was asked for, so a child it
+    // never loaded means this resolution and the bundler's disagree.
+    const unloaded = out.filter((c) => !loaded.has(c));
+    if (unloaded.length > 0) {
+      throw new Error(
+        `children(${module}) resolves to ${unloaded.join(", ")}, which the bundler never loaded — the edge record and the build disagree.`,
+      );
+    }
+    relChildren.set(module, out);
+    return out;
+  };
+  return { modules: loaded, importChain, children };
 }

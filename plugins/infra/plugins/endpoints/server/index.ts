@@ -4,7 +4,6 @@ export { implement, rawEndpointHandler, HttpError } from "../core";
 export { callEndpoint } from "./internal/call-endpoint";
 
 export default {
-  portable: true,
   description:
     "Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; callEndpoint() calls one from off the page (a backend, the CLI) through its contract; useFetchEndpoint / useEndpointMutation consume it on the client.",
   loadBearing: true,

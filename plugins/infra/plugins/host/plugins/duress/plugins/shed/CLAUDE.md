@@ -8,7 +8,7 @@ first-N per cascade key, the bounds, the lazy flush — is in the parent
 [`duress`](../../CLAUDE.md) CLAUDE.md ("The shed engine").
 
 A sub-plugin of its own so the parent's `server/` barrel is register-only and
-`portable: true`: the engine reads the latch (`plugins/latch`, the host's
+Portable: the engine reads the latch (`plugins/latch`, the host's
 filesystem), which no browser host has, while the duress config it is tuned by
 must be registered in every host whose page can show it. The engine reads
 that config through the parent's `readDuressConfig` (`duress/server`): a

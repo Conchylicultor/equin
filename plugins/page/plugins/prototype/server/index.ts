@@ -6,9 +6,6 @@ import { resolvePrototypeTitles } from "./internal/annotations";
 export default {
   description:
     "Prototype block type: registers its `data` schema (the prototype id and the frame size) at the server write boundary, and supplies the prototype's `<title>` to the `<prototype>` tag an agent reads.",
-  // Its one read (the title) goes through prototypes' portable `files` server,
-  // so it runs wherever pages do — a browser host included.
-  portable: true,
   contributions: [
     Editor.BlockData(prototypeBlock),
     // The read-only `title` on `<prototype id="…" title="…"/>`.

@@ -85,7 +85,6 @@ export default {
   // PROTOTYPES_DIR_DISPLAY the way every other message here does.
   description:
     "Serves the prototypes tree (the app's prototypesFiles root over the `apps/prototypes` data dir — the computer's disk on the desktop, memory in a browser host) on every host: the raw files and recorded versions' files (picked options ?<option>=<value> stamped onto a document's <html>: data-* for a choice, a --<name> custom property for a color), the list + version live-state resources, a watch over the tree that auto-reloads open iframes on a real edit, the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the root's ledger), and each prototype's version history through the PrototypeHistoryStore host service (the per-prototype history resource, restore, and checkpointPrototype). Minting a prototype from the checkout's template is its machine/ half's.",
-  portable: true,
   httpRoutes: {
     [listPrototypes.route]: handleList,
     [restorePrototypeVersion.route]: handleRestoreVersion,

@@ -121,7 +121,7 @@ Settings → Config): `enabled`, `persistFirstN` (3), `bufferMaxEntries` (2000),
   plus `_setShedConfigForTests` / `_setFlushTimerForTests`. Consumers import
   `@plugins/infra/plugins/host/plugins/duress/plugins/shed/server`. A
   sub-plugin so this parent's `server/` barrel holds only the config
-  registration and is `portable: true`: the engine reads the latch (the host's
+  registration and is portable: the engine reads the latch (the host's
   filesystem), while the config must be served by every host whose page
   registers it — a browser host's worker included (the browser-host coverage
   guard's config arm, run by `config-v2:registrations-paired`).

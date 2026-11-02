@@ -8,7 +8,6 @@ import { applyGroupJob } from "./internal/apply-group-job";
 export { _improvePendingGroups } from "./internal/tables";
 
 export default {
-  portable: true,
   description:
     'Task category of the Wish toolbar button. Files tasks stamped "Wishes" via the shared task-draft-form primitive.',
   register: [applyGroupJob],

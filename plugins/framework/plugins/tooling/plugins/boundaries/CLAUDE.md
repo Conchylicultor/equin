@@ -88,8 +88,8 @@ readings use it:
 
 - `isPlatformApi(specifier)`: an import of a Node builtin, `bun`, `pg`,
   graphile, a native watcher. Read per file by the `boundaries/no-platform-api`
-  lint (forbidden folders), and per closure module by
-  `boundaries:portable-closure`.
+  lint (forbidden folders), and per closure module by the server-portability
+  derivation (below).
 - `platformValueUsesIn(ts, fileName, source)`: the host-only VALUES a module
   uses, which no import names. That covers a platform global read as a value
   (`Buffer.from`, `z.instanceof(Buffer)`, `opts.defer ?? setImmediate`,
@@ -99,11 +99,50 @@ readings use it:
   `process.env.NODE_ENV` and the guarded `.unref?.()` never count. The caller
   passes the `typescript` module (import-closure's `loadTypescript`), so the
   file stays import-free for jiti. It binds only what a portable closure
-  loads: `boundaries:portable-closure`, and codegen's browser-host blockers.
-  The per-file lint does not read it, because a non-portable `server/` file
-  may use `process` freely.
+  loads (the derivation below). The per-file lint does not read it, because a
+  non-portable `server/` file may use `process` freely.
 
-`boundaries:machine-portable-declaration` reads the same matcher the other way
+## Server portability is derived (`core/portability.ts`)
+
+Whether a server barrel can run on a host without the computer (a page's
+worker) is a fact of its static import closure, never a flag a plugin writes.
+`serverPortabilityOf(repo)` answers it for every `server/index.ts` at once:
+ONE `importClosures` build over all of them (dynamic imports cut), then a
+reverse BFS over the reversed edges (`UnionImportClosure.children`) from the
+modules that need the computer. A module needs it when it:
+
+1. imports a platform API at runtime (`isPlatformApi`; `import type` and an
+   all-`type` binding list erase — `loadsAtRuntime`);
+2. uses a host-only value (`platformValueUsesIn`, run only on a module whose
+   text names a platform global or `unref` — `mayUsePlatformValue`);
+3. declares a host service no portable `server/` barrel provides — a
+   computer-only API behind a seam. Whether a provider is portable depends on
+   the same taint, so this is a monotone fixpoint (taint, then the declarers
+   of services left without an untainted provider, re-propagate, until
+   stable). That a portable provider sits in a `base-exclusions` negative is
+   `host-services:provider-placement`'s rule.
+
+`offenders(barrel)` explains a non-portable barrel: the frontier modules that
+need the computer (one per plugin outside its own), each with what it needs and
+the shortest chain from the barrel; never empty. The answer is one shared
+promise per `RepoFiles` (a `WeakMap`), so codegen's browser-host derivation,
+its coverage guard's messages, `host-services:provider-placement` and
+`boundaries:portable-own-barrels` share one build per process. Readers:
+the browser host's graph roots and providers (codegen), the coverage guard's
+"why not portable" (`serverBarrelBlockers`), provider placement, and the
+own-barrel rule below. Pinned by `core/portability.test.ts` (a fixture tree:
+cycle, type-only and dynamic imports, a host global, the chain, rule 3).
+
+`boundaries:portable-own-barrels` holds a portable barrel's `server/` files to
+importing their own plugin's other folders through the barrel (`../core`,
+never `../core/x`): the browser host loads each folder as its barrel artifact.
+
+`scripts/measure-derived-portability.ts` (`./equin run …`) prints the union
+build's size and time, the derivation's cost, and the barrels made
+non-portable by rule 3 alone.
+
+`boundaries:machine-portable-declaration` reads the same matcher (rules 1 and 2,
+`platformOffenders`, per module) the other way
 round: a `machine/` module that declares a retention (`defineRetention`,
 `markCascadeBounded`) or a warm-up (`defineWarmup`) must have a closure that
 reaches a platform API. Those declarations are portable — every host runs
@@ -125,16 +164,27 @@ escape is a `sanctioned` exemption for a declaration desktop-only by policy.
     - `framework/plugin-id.RUNTIME_FOLDERS`
     - `framework/plugin-id.TESTING_FOLDER`
     - `framework/plugin-id.VERIFYING_FOLDERS`
+    - `framework/tooling/import-closure.importClosure`
+    - `framework/tooling/import-closure.importClosures`
+    - `framework/tooling/import-closure.loadTypescript`
+    - `framework/tooling/import-closure.UnionImportClosure`
     - `infra/host-fs/user-path.joinAppPath`
     - `infra/spawn.getWorktreeRoot`
     - `packages/macrotask-yield.yieldMacrotask`
     - `plugin-meta/parse-utils.findImports`
+    - `plugin-meta/parse-utils.HostServiceDecl`
+    - `plugin-meta/parse-utils.hostServicesByName`
+    - `plugin-meta/parse-utils.ImportRef`
+    - `plugin-meta/parse-utils.parseHostServiceDeclarations`
+    - `plugin-meta/parse-utils.providedServiceNames`
     - `plugin-meta/plugin-tree.buildStructureTreeOnce`
   - Exports (types):
     - `AllowEdge`
     - `BoundaryConfig`
     - `DenyEdge`
     - `Edge`
+    - `Offender`
+    - `ServerPortability`
     - `ZoneDefinition`
   - Exports (values):
     - `allow`
@@ -147,6 +197,7 @@ escape is a `sanctioned` exemption for a declaration desktop-only by policy.
     - `parseRuntimeException`
     - `platformValueUsesIn`
     - `runtimeNames`
+    - `serverPortabilityOf`
     - `zone`
 - Cross-plugin:
   - Imported by:

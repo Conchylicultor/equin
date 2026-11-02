@@ -29,7 +29,6 @@ export { getReportTitle } from "./internal/get-report-title";
 export default {
   description:
     "The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).",
-  portable: true,
   contributions: [
     IdKinds.Kind({ kind: reportIdKind }),
     // `reports.list`: the Reports DataView's window, the detail pane's by-id

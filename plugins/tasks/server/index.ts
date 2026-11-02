@@ -33,7 +33,6 @@ import {
 export { armTaskAutoStart } from "./internal/arm-auto-start";
 
 export default {
-  portable: true,
   description:
     "Nested tasks with attempts linking to conversations: the task CRUD, chain, dependency and auto-start routes, portable (arming a task wakes the launcher through the tasks.autoStartArmed trigger event). Launching, the repo info, the add_task MCP tool and the auto-start catch-up are the machine half's.",
   httpRoutes: {

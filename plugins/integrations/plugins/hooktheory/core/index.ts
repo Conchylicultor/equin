@@ -50,6 +50,7 @@ export {
   HooktheoryNotSignedInError,
   HooktheoryProviderUnavailableError,
 } from "./internal/errors";
+export { parseOrThrow } from "./internal/parse";
 export {
   trendNodesEndpoint,
   trendSongsEndpoint,

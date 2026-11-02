@@ -8,7 +8,6 @@ export { conversationProgress } from "./internal/tables";
 export { markProgressPushedJob } from "./internal/push-job";
 
 export default {
-  portable: true,
   description:
     "Tracks each conversation through four phases (research → design → implementation → pushed): serves the per-conversation progress row and marks every conversation of an attempt pushed when its work lands. The git heuristic that classifies the first three phases runs in the machine half.",
   contributions: [

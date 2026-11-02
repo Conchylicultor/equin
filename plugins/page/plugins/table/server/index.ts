@@ -3,7 +3,6 @@ import { Editor } from "@plugins/page/plugins/editor/server";
 import { tableBlock } from "../core";
 
 export default {
-  portable: true,
   description:
     "Table block type: registers its `data` schema (column alignment, header cells, body rows) at the server write boundary.",
   contributions: [Editor.BlockData(tableBlock)],

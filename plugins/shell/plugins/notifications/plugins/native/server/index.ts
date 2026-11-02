@@ -6,5 +6,4 @@ export default {
   description:
     "Registers the native-notifications config (enabled, off by default) so the menu-bar panel's switch persists.",
   contributions: [ConfigV2.Register({ descriptor: nativeNotificationsConfig })],
-  portable: true,
 } satisfies ServerPluginDefinition;

@@ -28,10 +28,10 @@ A plugin with `bin/browser-host.composition.ts`
 (`export const hostComposition = "<name>";`, read by regex, never evaluated)
 declares a browser host. `deriveBrowserHostGraph` infers its worker graph from
 that composition, the way the desktop boots every plugin of its own: the
-bundle's `portable: true` server barrels (`isPortableServerBarrel`,
-`parse-utils`), the portable barrels `bin/browser-host.ts` loads, and — to a
-fixpoint — the `base-exclusions`-negated portable barrel providing each host
-service the graph's code declares (`core/host-services.ts`; exactly one, else
+bundle's portable server barrels, the portable barrels `bin/browser-host.ts`
+loads, and — to a fixpoint — the `base-exclusions`-negated portable barrel
+providing each host service the graph's code declares (`core/host-services.ts`,
+the text parsers in `parse-utils`; exactly one, else
 it throws naming the service and candidates). Negatives are never flipped, so
 a negated plugin providing nothing (`review/plugin-changes`) stays out. Every
 server barrel the graph's code reaches must be in it, or it throws with the
@@ -41,6 +41,18 @@ entry, then one per fixpoint round over only the members no earlier closure
 reached — an import chain is computed only when reporting a failure. Emitted as
 `bin/browser-host.generated.ts` (`hostEntries`, `hostProviders`), held by
 `plugins-registry-in-sync`; the rule is pinned by `core/browser-host-gen.test.ts`.
+
+**Portability is derived, never declared.** "Portable" is
+`serverPortabilityOf(repo)` (`boundaries/core/portability.ts`): a server
+barrel whose static closure loads no module that imports a platform API, uses
+a host-only value, or declares a host service no portable `server/` barrel
+provides — one union build over every server barrel, shared per snapshot
+(`resolveHostGraph` takes it as its `portability` input, so a test injects
+it). There is no per-plugin flag and no opt-out: a plugin joins or leaves the
+worker when its closure changes, which shows up as a diff of the committed
+`bin/browser-host.generated.ts` in the same change. A barrel portable by its
+imports but desktop by meaning moves its desktop part to `machine/`, or its
+composition leaves it out.
 
 Derived once per snapshot: `inferBrowserHostGraph` / `deriveBrowserHostGraph`
 are memoized on the `RegistryGenContext` (`browserHostGraphs`), so its four
@@ -123,8 +135,9 @@ fetcher (`useFetchEndpoint`, a `FetchEndpoint`, `useEndpointMutation`) — a mod
 Each failure names the key or route, the declaration's file, up to three
 readers (file:line), every plugin in the repo serving it and why that one is
 outside the graph: desktop-only `machine/`, central, not in the composition,
-or not portable — with the non-portable barrels it reaches (import chain) and
-its own modules that need the computer (`serverBarrelBlockers`). The reads it
+or not portable — with the modules of its closure that need the computer and
+the import chain to each (`serverBarrelBlockers`, over `serverPortabilityOf`'s
+`offenders`; never empty). The reads it
 found are emitted as `hostReads` in the page side's
 `core/browser-host.generated.ts`; the owner's boot test holds the booted
 graph's `Resource.Declare` set to them. Pinned by
@@ -146,8 +159,8 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
 
 - Description: Plugin doc generation and registry codegen
 - Core:
-  - Uses: 118 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `plugin-meta/parse-utils` ×17
+  - Uses: 119 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `plugin-meta/parse-utils` ×20
     - `config_v2` ×15
     - `framework/plugin-id` ×14
     - `framework/tooling/resource-vocabulary` ×10
@@ -158,7 +171,6 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `infra/host-fs/user-path` ×4
     - `plugin-meta/plugin-tree` ×4
     - `framework/slot-declaration` ×3
-    - `framework/tooling/import-closure` ×3
     - `config_v2/ledger` ×2
     - `framework/tooling/boundaries` ×2
     - `framework/tooling/format` ×2
@@ -168,6 +180,7 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `packages/resource-protocol` ×2
     - `fields/reorder-tree.REORDER_NODE_LEGEND`
     - `framework/tooling/guards/agent-policy.agentPolicySettings`
+    - `framework/tooling/import-closure.importClosures`
     - `framework/tooling/lint.loadLintContributions`
     - `framework/tooling/web-artifacts.COMPOSITION_SPECIFIERS`
     - `packages/semaphore.createSemaphore`
@@ -190,7 +203,6 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `HostConfigRegistration`
     - `HostContributionBarrel`
     - `HostRead`
-    - `HostServiceDecl`
     - `InferredBrowserHostGraph`
     - `MainComposition`
     - `OriginAnnotationsPreparer`
@@ -269,7 +281,6 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `generateReorderableSlots`
     - `generateSpaceRamp`
     - `generateTokenGroupVars`
-    - `hostServicesByName`
     - `iconManifestPath`
     - `inferBrowserHostGraph`
     - `isAppContent`
@@ -279,7 +290,6 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `mainBundle`
     - `mainComposition`
     - `parseCustomUtilities`
-    - `parseHostServiceDeclarations`
     - `parseNamedCompositionRegistryFileName`
     - `parseSpaceRamp`
     - `pluginClaudeMdPath`
@@ -289,7 +299,6 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `postWebManifests`
     - `preBarrelManifests`
     - `propagateConfigToUser`
-    - `providedServiceNames`
     - `readCompositionManifestsFromDisk`
     - `readDeclaredApps`
     - `readDefineApp`

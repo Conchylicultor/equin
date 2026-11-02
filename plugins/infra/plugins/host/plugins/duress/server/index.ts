@@ -14,5 +14,4 @@ export default {
   description:
     "Host-global duress: registers the shed engine's config (enabled, persist-first-N, buffer caps, flush delay). The latch file (a mtime-leased latch the cluster sentinel sets while the box is in trouble, read via the cheap synchronous isUnderDuress()) is the latch sub-plugin, the shed engine (per-episode first-N persistence, a bounded buffer, flush-on-clear replay) the shed sub-plugin.",
   contributions: [ConfigV2.Register({ descriptor: duressConfig })],
-  portable: true,
 } satisfies ServerPluginDefinition;

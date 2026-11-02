@@ -1,9 +1,4 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { rawEndpointHandler } from "@plugins/infra/plugins/endpoints/server";
-import { mcpCatalogServed } from "./internal/catalog";
-import { handleMcpRequest } from "./internal/handle-mcp";
-import { mcpHealthServed } from "./internal/health";
-import { mcpRequest } from "../core";
 
 export { Mcp } from "./internal/mcp";
 export type {
@@ -18,10 +13,5 @@ export type {
 
 export default {
   description:
-    "HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool, and serves the mcp.catalog live value: every tool, instructions section and the scope resolver with the plugin that declared each, each tool's input schema as tools/list sends it; and the mcp.health push value: the latest request's outcome (failing on a throw or a 5xx) and every per-connection contribution whose latest run threw.",
-  loadBearing: true,
-  httpRoutes: {
-    [mcpRequest.route]: rawEndpointHandler(mcpRequest, handleMcpRequest),
-  },
-  contributions: [...mcpCatalogServed.declare, ...mcpHealthServed.declare],
+    "The MCP contribution API, SDK-free: Mcp.tool / Mcp.instructions / Mcp.scope register a tool, a server-instructions section or THE scope resolver into the in-process registry the desktop half (machine/) serves over HTTP — so a plugin contributing to the MCP server stays portable.",
 } satisfies ServerPluginDefinition;

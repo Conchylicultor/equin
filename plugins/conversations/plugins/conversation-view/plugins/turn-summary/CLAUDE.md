@@ -16,7 +16,7 @@ A persistent global trigger on `conversationTurnCompleted` (contributed by this 
 
 ## Boundary notes
 
-- **Server / machine split.** `server/` is `portable: true`: the extension table and the live read, so a browser host (the demo) serves the row from its own DB. `machine/` holds what needs the computer — the Haiku job (Claude CLI), the turn-completed trigger, and the config registration (config is not portable yet).
+- **Server / machine split.** `server/` is portable: the extension table and the live read, so a browser host (the demo) serves the row from its own DB. `machine/` holds what needs the computer — the Haiku job (Claude CLI), the turn-completed trigger, and the config registration (config is not portable yet).
 - Storage is plugin-owned (the `conversations_ext_turn_summary` entity extension of `_conversations`, cascade-deleted with it). One row per conversation, replaced on every new assistant turn.
 - The live read is `turnSummaryRows` (`core/internal/schemas.ts`), a lookup-only `liveCollection` keyed on `conversationId` (the extension's primary key), minting `turn-summaries:rows` alone and served by `serveCollection(turnSummaryRows, { from: turnSummaries })` from the extension handle. The card reads `useLiveRow(turnSummaryRows, conversation.id)` and renders nothing while pending or when `found: false` (no summary yet). The `:rows` point routing sends a new summary only to that conversation's card.
 - Rendering goes through the new `Conversation.AbovePromptInput` slot on the conversation-view host. Other plugins can contribute banners to the same slot.

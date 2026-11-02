@@ -15,7 +15,6 @@ export type { TrashExecutor } from "./internal/record-entry";
 export { _trashEntries } from "./internal/tables";
 
 export default {
-  portable: true,
   description:
     "Generic trash primitive: the trash_entries operation ledger, a defineTrashSource registry, list/restore/purge endpoints, the trash-entries live collection (filterable by source) and the 30-day purge sweep (a nightly retention job running each source's purge before the ledger rows go) — so user content is soft-deleted (restorable) instead of hard-deleted, and FK cascades fire only at purge.",
   register: [trashPurge],

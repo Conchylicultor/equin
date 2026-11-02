@@ -25,7 +25,6 @@ export {
 } from "./internal/jsonl-events-resource";
 
 export default {
-  portable: true,
   description:
     "Streams a conversation's transcript as structured events via the paged jsonl-events resource (newest first; a change ships the rows it touched), read from the host's TranscriptSource (Claude's JSONL session log on the desktop), and serves its images by key.",
   contributions: [

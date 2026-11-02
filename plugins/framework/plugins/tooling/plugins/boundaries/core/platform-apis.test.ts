@@ -5,6 +5,7 @@ import { join } from "node:path";
 import ts from "typescript";
 import {
   isPlatformApi,
+  mayUsePlatformValue,
   NODE_BUILTIN_ROOTS,
   platformValueUsesIn,
 } from "./platform-apis";
@@ -102,6 +103,9 @@ describe("platformValueUsesIn", () => {
     ],
   ])("%s uses %p", (src, expected) => {
     expect(usesIn(src)).toEqual(expected);
+    // The text prefilter gates the AST pass (moduleNeeds): a use it misses
+    // would never be parsed, so it must say "maybe" for every real use.
+    expect(mayUsePlatformValue(src)).toBe(true);
   });
 
   test.each([
@@ -130,15 +134,15 @@ describe("platformValueUsesIn", () => {
   });
 
   test("a type-only import binds no value", () => {
-    expect(
-      usesIn('import type { Buffer } from "./b";\nBuffer.from(x);'),
-    ).toEqual(["global Buffer"]);
+    const src = 'import type { Buffer } from "./b";\nBuffer.from(x);';
+    expect(usesIn(src)).toEqual(["global Buffer"]);
+    expect(mayUsePlatformValue(src)).toBe(true);
   });
 
   test("a .tsx module parses as TSX", () => {
-    expect(
-      usesIn("const e = <div onClick={() => setImmediate(f)} />;", "x.tsx"),
-    ).toEqual(["global setImmediate"]);
+    const src = "const e = <div onClick={() => setImmediate(f)} />;";
+    expect(usesIn(src, "x.tsx")).toEqual(["global setImmediate"]);
+    expect(mayUsePlatformValue(src)).toBe(true);
   });
 
   // Real modules that use these names safely: they must stay clean.

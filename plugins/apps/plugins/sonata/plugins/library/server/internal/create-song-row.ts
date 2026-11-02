@@ -1,5 +1,5 @@
 import { db } from "@plugins/database/server";
-import { songIdKind, type SongId } from "../../core/id-kind";
+import { songIdKind, type SongId } from "../../core";
 import { _songs } from "./tables";
 
 export interface CreateSongRowInput {

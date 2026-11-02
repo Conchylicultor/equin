@@ -1,4 +1,4 @@
-import type { McpScope, McpTool } from "./mcp";
+import type { McpScope, McpTool } from "../../server";
 
 /**
  * The tools a scope allows, before any tool's own `when`. Pure. A profile

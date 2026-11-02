@@ -14,5 +14,4 @@ export default {
     [deleteCustomColumnValues.route]: handleDeleteCustomColumnValues,
   },
   contributions: [...customColumnValuesServed.declare],
-  portable: true,
 } satisfies ServerPluginDefinition;

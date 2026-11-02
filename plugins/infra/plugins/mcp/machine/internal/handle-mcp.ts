@@ -8,9 +8,9 @@ import {
 } from "./instructions";
 import { MCP_SERVER_NAME } from "../../core";
 import { runContribution } from "./isolate";
-import type { McpTool, McpToolCallContext, McpToolContext } from "./mcp";
+import type { McpTool, McpToolCallContext, McpToolContext } from "../../server";
 import { recordMcpRequest } from "./health";
-import { registry, scopeRegistry } from "./registry";
+import { registry, scopeRegistry } from "../../server/internal/registry";
 import { toolsInScope } from "./scope";
 
 /**
@@ -111,7 +111,6 @@ async function answerMcpRequest(
   try {
     return await transport.handleRequest(req);
   } finally {
-    // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- trivial fire-and-forget I/O cleanup (closing the MCP server in finally)
     void server.close();
   }
 }

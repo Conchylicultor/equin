@@ -11,3 +11,5 @@ export { boundaryRulesCheck } from "./boundary-rules-check";
 export { runtimeNames } from "./runtimes";
 export { compositionRoots } from "./composition-roots";
 export { isPlatformApi, platformValueUsesIn } from "./platform-apis";
+export { serverPortabilityOf } from "./portability";
+export type { Offender, ServerPortability } from "./portability";

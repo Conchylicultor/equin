@@ -26,7 +26,12 @@ export type {
 export { maskSource } from "./mask-source";
 export { runWithFsSnapshot } from "./snapshot-scope";
 export type { FsSnapshot } from "./snapshot-scope";
-export { isPortableServerBarrel } from "./portable-barrel";
+export {
+  hostServicesByName,
+  parseHostServiceDeclarations,
+  providedServiceNames,
+} from "./host-services";
+export type { HostServiceDecl } from "./host-services";
 export { endpointExports } from "./endpoint-exports";
 export type { EndpointExport } from "./endpoint-exports";
 export { findMarkerCalls, markerCallSpans, lineAt } from "./find-marker-calls";

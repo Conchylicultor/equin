@@ -4,6 +4,18 @@ HTTP MCP server at `POST /api/mcp/:conversationId`. Every request builds a
 fresh, stateless `McpServer`; the conversation id from the URL is the context
 (`McpToolContext`) handed to every contribution.
 
+## Two halves
+
+- `server/` — the contribution API only (`Mcp.tool` / `Mcp.instructions` /
+  `Mcp.scope`, the types, the in-process registry). SDK-free, so a plugin that
+  contributes a tool or a section stays portable (a browser host registers its
+  contributions into a registry nothing serves).
+- `machine/` — everything that answers agents: the `POST /api/mcp/:conversationId`
+  route (`@modelcontextprotocol/sdk`), the `mcp.catalog` and `mcp.health` values.
+  All three are declared `needsMachine` — agents run on the computer — so the
+  SDK (and ajv) never reach a browser host's bundle, and a host without the
+  computer shows Debug → MCP tools and the health row as not available here.
+
 ## Contributing
 
 Both factories return a `Registration` token that goes in the plugin's server
@@ -30,7 +42,7 @@ Both factories return a `Registration` token that goes in the plugin's server
   `conversations/workspace/scratch` (inverted so this plugin knows nothing of
   conversations). A profile scope sees exactly its `tools` (an unknown or
   foreign-reserved name throws) and gets no server instructions; `when` still
-  applies on top. Pure filter: `server/internal/scope.ts`.
+  applies on top. Pure filter: `machine/internal/scope.ts`.
 - `Mcp.instructions({ id, render })` — a section of the server instructions.
   `render(ctx)` returns the section text, or `null` to contribute nothing for
   that conversation.
@@ -40,7 +52,7 @@ Both factories return a `Registration` token that goes in the plugin's server
 `mcp.catalog` (core, a `liveValue` fixed for the process) lists every tool,
 instructions section and the scope resolver with the plugin that declared each
 (recorded via `registeringPlugin()` at register time). Each tool's input schema
-is read off a real `tools/list` over an in-memory client (`server/internal/catalog.ts`),
+is read off a real `tools/list` over an in-memory client (`machine/internal/catalog.ts`),
 through the same `mountTool` the request path uses — so it is exactly what
 agents receive. Shown by Debug → MCP tools (`debug/mcp-tools`).
 
@@ -62,7 +74,7 @@ client sees them at connect (Claude Code connects once per conversation).
 
 Every per-connection contribution callback — an instructions `render`, a
 `liveDescription`, a `when` gate — runs through `runContribution`
-(`server/internal/isolate.ts`): a throw stays that contribution's failure, never
+(`machine/internal/isolate.ts`): a throw stays that contribution's failure, never
 the connection's. It is reported (server log + a `crash` report via
 server-core's `reportServerError`) and rendered where the contribution would
 have been:
@@ -85,15 +97,12 @@ and without it no tool set can be computed.
 
 ## Plugin reference
 
-- Description: HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool, and serves the mcp.catalog live value: every tool, instructions section and the scope resolver with the plugin that declared each, each tool's input schema as tools/list sends it; and the mcp.health push value: the latest request's outcome (failing on a throw or a 5xx) and every per-connection contribution whose latest run threw.
+- Description: The MCP contribution API, SDK-free: Mcp.tool / Mcp.instructions / Mcp.scope register a tool, a server-instructions section or THE scope resolver into the in-process registry the desktop half (machine/) serves over HTTP — so a plugin contributing to the MCP server stays portable.
 - Load-bearing: yes
 - Server:
   - Contributes:
     - `resource.declare` "mcp.catalog"
     - `resource.declare` "mcp.health"
-  - Uses:
-    - `infra/endpoints.rawEndpointHandler`
-    - `network/live.serveValue`
   - Exports (types):
     - `McpInstructions`
     - `McpScope`
@@ -106,6 +115,10 @@ and without it no tool set can be computed.
   - Resources:
     - `mcp.catalog` (push, fixed, whole: every Mcp.tool the code registers — fixed for the process, a hundred or so, whole: every Mcp.instructions section the code registers — fixed for the process, a handful, whole: the scratch profiles a tool is reserved for — one or two, whole: one JSON Schema object's top-level keywords (type, properties, required, …) — a handful)
     - `mcp.health` (push, notified, capped: MCP_HEALTH_MAX_DEGRADED)
+- Machine:
+  - Uses:
+    - `infra/endpoints.machineHandler`
+    - `network/live.serveValue`
   - Routes: `POST /api/mcp/:conversationId`
 - Core:
   - Uses:

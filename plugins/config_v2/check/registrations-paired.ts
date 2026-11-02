@@ -8,6 +8,7 @@ import {
   resolveHostConfigCoverage,
   serverBarrelBlockers,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { serverPortabilityOf } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
 import {
   loadConfigRegistrations,
   type ConfigRegistration,
@@ -88,7 +89,7 @@ const check: Check = {
         serverOnly.length > 0 &&
           "For each server-only storePath, add ConfigV2.WebRegister({ descriptor }) (with the same pluginId override if used) to the defining plugin's web/index.ts contributions[].",
         hostGaps.length > 0 &&
-          "For each storePath a browser host does not serve, make the registering `server/` barrel `portable: true` (its closure must pass `boundaries:portable-closure`), or move its `ConfigV2.Register` from `machine/` into the plugin's portable `server/` barrel.",
+          "For each storePath a browser host does not serve, make the registering `server/` barrel portable (move what needs the computer — each blocker above, with its chain — out of its closure into `machine/`), or move its `ConfigV2.Register` from `machine/` into the plugin's portable `server/` barrel.",
       ]
         .filter(Boolean)
         .join(" "),
@@ -118,7 +119,8 @@ async function hostConfigGaps(
         webPlugins: graph.webPlugins,
         bundle: graph.bundle,
         registrations,
-        blockers: (barrel) => serverBarrelBlockers(ctx.root, repo, barrel),
+        blockers: async (barrel) =>
+          serverBarrelBlockers(await serverPortabilityOf(repo), barrel),
       })),
     );
   }

@@ -7,8 +7,8 @@
  *
  * Plain data, read by two consumers that must agree: the
  * `boundaries/no-platform-api` lint rule (one file's own imports) and the
- * `boundaries:portable-closure` check (every module a portable server barrel
- * loads). It imports nothing at run time, so a lint rule can load it under
+ * server-portability derivation (`./portability.ts`: every module a server
+ * barrel loads). It imports nothing at run time, so a lint rule can load it under
  * jiti: the value-use pass below takes the `typescript` module as an argument
  * (callers load it lazily — import-closure's `loadTypescript`).
  */
@@ -131,6 +131,18 @@ const PLATFORM_GLOBALS: ReadonlySet<string> = new Set([
   "setImmediate",
   "require",
 ]);
+
+/**
+ * Whether `source`'s text could hold a host-only value use — it names a
+ * platform global or `unref` anywhere (strings and comments included). A cheap
+ * superset of {@link platformValueUsesIn}'s answer, so a caller scanning
+ * thousands of modules parses only the ones that may hold one.
+ */
+export function mayUsePlatformValue(source: string): boolean {
+  if (source.includes("unref")) return true;
+  for (const name of PLATFORM_GLOBALS) if (source.includes(name)) return true;
+  return false;
+}
 
 /**
  * The host-only VALUE uses in one module's source, each as a label

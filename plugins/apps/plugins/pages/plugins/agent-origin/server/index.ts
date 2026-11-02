@@ -8,7 +8,6 @@ import { agentPagesSweep } from "./internal/sweep";
 export { pageBlocksOrigin } from "./internal/tables";
 
 export default {
-  portable: true,
   description:
     "Agent-origin provenance for pages (page_blocks_ext_origin): a create-hook contributor stamps every page written by an automated session (the origin header set to agent) with the script that minted it, the marker's presence is exposed as the `origin` field (agent | user) of every list whose rows are blocks — the Pages sidebar's Private / Scratch sections — and a 24h retention sweep trashes the marked pages.",
   // The sweep declares `schedule` — the jobs host seeds its cron item at

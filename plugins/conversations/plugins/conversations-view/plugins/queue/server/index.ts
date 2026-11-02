@@ -42,7 +42,6 @@ export {
 } from "./internal/queue-ranks";
 
 export default {
-  portable: true,
   description:
     "Stable-rank global queue. Ranks seeded once on creation (newest first). A user-set pin lifts a conversation's task group into its own section at the top.",
   contributions: [

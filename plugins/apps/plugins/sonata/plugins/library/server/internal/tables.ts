@@ -2,7 +2,7 @@ import {
   defineEntity,
   defaultNow,
 } from "@plugins/infra/plugins/entities/server";
-import { songsEntityRef } from "../../core/schemas";
+import { songsEntityRef } from "../../core";
 
 // Physical table — **source-agnostic** generic metadata only. Per-source raw
 // (MIDI attachment, chord-grid JSON, …) lives in each source plugin's own

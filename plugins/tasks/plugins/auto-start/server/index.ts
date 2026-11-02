@@ -20,7 +20,6 @@ export {
 export type { TaskAutoStartArmedPayload } from "./internal/tables-events";
 
 export default {
-  portable: true,
   description:
     "Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart, and the tasks.autoStartArmed trigger event whatever launches agents subscribes to, and a host-scoped boot warm-up that clears leftover markers from already-dropped tasks.",
   contributions: [

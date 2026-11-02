@@ -1,7 +1,7 @@
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
-import type { McpToolContext } from "./mcp";
+import type { McpToolContext } from "../../server";
 import { runContribution } from "./isolate";
-import { instructionsRegistry } from "./registry";
+import { instructionsRegistry } from "../../server/internal/registry";
 
 /**
  * The JSON-RPC messages a POST body holds (one, or a batch). Reads a clone so

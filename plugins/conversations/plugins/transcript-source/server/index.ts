@@ -32,7 +32,6 @@ export {
 } from "./internal/chain-follows";
 
 export default {
-  portable: true,
   description:
     "A conversation's transcript as a host service: TranscriptSource (its events, a signature that moves with them, and a watch), with the Claude Code JSONL parser every provider runs. The desktop's provider reads the session files (transcript-watcher#machine); a host without them provides its own (plugins/memory).",
 } satisfies ServerPluginDefinition;

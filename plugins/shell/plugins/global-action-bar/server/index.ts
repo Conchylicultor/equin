@@ -6,5 +6,4 @@ export default {
   description:
     "Shared cross-app action set: registers the action-bar config so the bar's enabled toggle persists.",
   contributions: [ConfigV2.Register({ descriptor: actionBarConfig })],
-  portable: true,
 } satisfies ServerPluginDefinition;

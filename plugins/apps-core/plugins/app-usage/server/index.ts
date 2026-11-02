@@ -7,7 +7,6 @@ import { appUsageRetention } from "./internal/retention";
 export { _appUsageDaily } from "./internal/tables";
 
 export default {
-  portable: true,
   description:
     "Owns app_usage_daily: per (local day, app) opens and active milliseconds, added to by one batched upsert from the browser tracker's flush endpoint, served as the live per-app summary (7-day and all-time); swept after two years by a nightly retention job.",
   register: [appUsageRetention],

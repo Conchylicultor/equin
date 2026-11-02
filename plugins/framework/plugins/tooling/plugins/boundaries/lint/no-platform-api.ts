@@ -23,9 +23,9 @@ import { isPlatformApi } from "../core/platform-apis";
  *
  * Exemptable per file (`tooling/exempt`): the code that has not been split into
  * `server/` + `machine/` yet carries a `debt` exemption naming its task, so a
- * NEW platform import elsewhere in the same plugin still fails. A plugin whose
- * whole server closure is portable says so with `portable: true`, which the
- * `boundaries:portable-closure` check proves transitively.
+ * NEW platform import elsewhere in the same plugin still fails. Whether a
+ * server barrel's whole closure is portable is derived transitively, not
+ * declared (`core/portability.ts`, `serverPortabilityOf`).
  */
 
 const createRule = lintRuleCreator(import.meta.url);

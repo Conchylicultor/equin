@@ -307,7 +307,6 @@ export {
 export type { DropTaskTreeResult } from "./internal/mutations/cross-table";
 
 export default {
-  portable: true,
   description:
     "Schema + repository layer for the tasks/attempts/conversations FK cluster.",
   loadBearing: true,

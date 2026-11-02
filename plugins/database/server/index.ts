@@ -49,7 +49,6 @@ export default {
   description:
     "Core database infrastructure: the app's `db` over the host's DatabaseDriver, DB readiness and the boot schema layer.",
   loadBearing: true,
-  portable: true,
   // Blocking: every other plugin's `onReady` (and incoming requests) must see a
   // migrated, warm DB. Running this in the `onReadyBlocking` barrier makes that
   // guarantee real and lets the gateway hold the hot-swap until the schema layer

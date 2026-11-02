@@ -67,7 +67,6 @@ export type { FieldStorageProvider } from "./internal/field-storage-providers";
 export default {
   description:
     "Typed JSONC config handles for server plugins: the registry over the user-layer store (the ConfigStore host service) and the committed layer (ConfigGitLayer), its live values and the scope routes.",
-  portable: true,
   contributions: [
     ...configValuesServed.declare,
     ...configGitValuesServed.declare,

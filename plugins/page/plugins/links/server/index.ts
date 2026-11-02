@@ -26,7 +26,6 @@ export { loadBacklinkSources } from "./internal/backlink-sources";
 export type { BacklinkSource } from "./internal/backlink-sources";
 
 export default {
-  portable: true,
   description:
     "Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource, and the boot backfill (a warm-up enqueuing a job that reindexes every live page's outgoing links, off the serving-critical boot path).",
   // The steady-state reindex trigger's job, and the boot backfill's job and

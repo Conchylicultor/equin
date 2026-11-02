@@ -35,7 +35,6 @@ export {
 } from "./internal/provider-rules";
 
 export default {
-  portable: true,
   description:
     "Data files: the files app-owned data dirs hold, on whatever host runs — the DataFiles host service (the computer's disk on the desktop, memory in a browser host) behind defineFileRoot, a root declared by the plugin owning the data dir: list / stat / read / write (atomic) / remove / rename (never replacing) / withLock / watch over validated relative paths, every miss a typed result and every mutation naming its writer. A root declared `browse` (and watched) is readable by a generic browser on every host: data-files.roots, data-files.list (a folder's entries, paged by name), data-files.stat, data-files.text (on demand), each pushed from the root's watch while read, and GET /api/data-files/:root/raw (a file, inert).",
   httpRoutes: {

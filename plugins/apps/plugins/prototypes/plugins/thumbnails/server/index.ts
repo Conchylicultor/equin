@@ -17,7 +17,6 @@ export { thumbnailCache } from "./internal/roots";
 export default {
   description:
     "Rendered PNG previews for the prototypes gallery, on every host: the content-addressed cache (the thumbnailCache file root), the fingerprint sync driven by the files watcher, the push state resource the cards read and the immutable serving route. Rendering is the ThumbnailRenderer host service's — a host without one answers a cache miss as `unavailable`.",
-  portable: true,
   httpRoutes: {
     [getPrototypeThumbnail.route]: rawEndpointHandler(
       getPrototypeThumbnail,

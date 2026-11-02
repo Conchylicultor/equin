@@ -30,7 +30,7 @@ the full instruction text.
 
 ## Boundary notes
 
-`server/` is `portable: true` (the extension table, the live read, the
+`server/` is portable (the extension table, the live read, the
 saved-icon source), so a browser host serves the snapshot from its own DB. It
 resolves nothing from config: the launch resolves the task's preprompt (through
 the preprompts library and task-preprompt) and passes the item in.

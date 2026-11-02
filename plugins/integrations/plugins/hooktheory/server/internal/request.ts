@@ -9,7 +9,7 @@ import {
   HooktheoryNotSignedInError,
   HooktheoryProviderUnavailableError,
 } from "../../core";
-import { parseOrThrow } from "../../core/internal/parse";
+import { parseOrThrow } from "../../core";
 
 /** Hooktheory's JSON error envelope: `{ name, message, code, status }`. */
 const ErrorEnvelopeSchema = z.object({ message: z.string().min(1) });

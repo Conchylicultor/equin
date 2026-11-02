@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { expr } from "@plugins/infra/plugins/query-resource/core";
 import { serveCollection } from "@plugins/network/plugins/live/server";
-import { songLibrary } from "../../core/resources";
+import { songLibrary } from "../../core";
 import { _songs } from "./tables";
 
 // The song library, served off `sonata_songs`. Its rows reach the songs

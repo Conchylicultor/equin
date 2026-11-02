@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import type { SongId } from "../../core/id-kind";
+import type { SongId } from "../../core";
 import { _songs } from "./tables";
 
 export interface UpdateSongMetaInput {

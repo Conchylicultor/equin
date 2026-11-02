@@ -9,5 +9,4 @@ export default {
   description:
     "Server registration of the Open app config (new tab or pane on plain click).",
   contributions: [ConfigV2.Register({ descriptor: openAppConfig })],
-  portable: true,
 } satisfies ServerPluginDefinition;

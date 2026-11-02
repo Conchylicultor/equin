@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { ConfigV2 } from "@plugins/config_v2/server";
-import { pitchLayoutConfig } from "../core/config";
+import { pitchLayoutConfig } from "../core";
 
 // Server runtime exists solely to register the pitch-layout config descriptor —
 // config_v2 reads back undefined unless the descriptor is registered on BOTH

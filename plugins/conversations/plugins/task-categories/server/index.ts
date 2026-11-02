@@ -6,7 +6,6 @@ import {
 } from "@plugins/conversations/core";
 
 export default {
-  portable: true,
   description:
     "The task categories a conversation's own task is filed under (Conversations, System), registered from a portable barrel so every host labels them — the browser host included, which does not boot the conversations server barrel that files them.",
   contributions: [

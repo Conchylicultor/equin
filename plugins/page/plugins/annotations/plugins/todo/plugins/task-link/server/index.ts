@@ -11,7 +11,6 @@ export { ensureTodoTask } from "./internal/mutations";
 export { todoTasksServed } from "./internal/resource";
 
 export default {
-  portable: true,
   description:
     "Owns page_blocks_ext_todo_task: the ONE task a TODO card dispatches agents onto. The block-keyed link table (its primary key IS the one-task-per-card rule), the per-card live read, the idempotent dispatch endpoint that composes the agent's prompt, and the markdown provider that emits the card's task_id/status to read_page. Its growth bound is the cascade to page_blocks, checked at boot (markCascadeBounded).",
   contributions: [

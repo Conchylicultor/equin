@@ -172,7 +172,10 @@ plus a per-song reset.
     - `ids.idKindField`
     - `infra/entities.entityRef`
   - Exports (types): `TrackViewRow`
-  - Exports (values): `TrackViewRowSchema`
+  - Exports (values):
+    - `trackViewEntityRef`
+    - `TrackViewRowSchema`
+    - `trackViewServerFields`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`

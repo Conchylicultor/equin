@@ -22,7 +22,6 @@ export {
 } from "./internal/delivery";
 
 export default {
-  portable: true,
   description:
     "Instructions: registers the card's `data` schema ({ global? }) at the server write boundary, and owns page_instructions_deliveries — which instructions each conversation has received, at which content hash — with the scope queries (instructionsInScope, globalInstructions) and the render-hash-compare delivery helpers the agent-facing page tools and the MCP connect-time instructions consume. Portable, so every host writes the card and runs the deliveries' nightly retention sweep (older than 30 days, per worktree DB).",
   register: [instructionsDeliveriesRetention],

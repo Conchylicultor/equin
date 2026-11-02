@@ -22,5 +22,4 @@ export default {
       subscribe: (onChange) => onConfigDirChange(onChange),
     }),
   ],
-  portable: true,
 } satisfies ServerPluginDefinition;

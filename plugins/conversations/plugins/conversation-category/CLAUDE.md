@@ -90,7 +90,7 @@ a catch-all say so in the category's hint: *"if unsure, pick Other"*.
 
 ## Portable and machine halves
 
-`server/` is `portable: true` — it runs in the browser host too (the `/demo`
+`server/` is portable — it runs in the browser host too (the `/demo`
 worker): the table, the `conversation-categories` collection, `getItemMap`, and
 the clear route (a pure DB write). Everything that reads the categories config
 (file-backed, so desktop-only until config is portable) or needs the computer is

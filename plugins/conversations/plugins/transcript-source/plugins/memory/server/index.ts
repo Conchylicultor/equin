@@ -7,6 +7,5 @@ export { writeTranscript } from "./internal/memory-transcripts";
 export default {
   description:
     "Transcripts in memory: provides the TranscriptSource host service for a host without Claude Code's session files (the browser composition), from JSONL text written to it. Never booted by the desktop.",
-  portable: true,
   contributions: [TranscriptSource.provide(memoryTranscripts)],
 } satisfies ServerPluginDefinition;

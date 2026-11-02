@@ -105,15 +105,13 @@ export async function bootBrowserHost(
     coreBarrel: () => null,
   });
 
-  // The build proves the bundle reaches no platform module; this names the
-  // claim per plugin, so a graph that boots a plugin nobody declared portable
-  // fails here rather than at its first platform call.
-  const unportable = ordered.filter((p) => p.portable !== true);
-  if (unportable.length > 0) {
-    throw new Error(
-      `[browser-host] these plugins do not declare \`portable: true\`, so the browser cannot boot them: ${unportable.map((p) => p.id).join(", ")}`,
-    );
-  }
+  // No per-plugin check here: the graph is portable by construction — codegen
+  // admits only server barrels whose static closure needs nothing of the
+  // computer (`serverPortabilityOf`, boundaries/core). The bundle's own
+  // backstop, `assertPortableArtifacts` (web-artifacts' worker link), rejects
+  // a platform import specifier but cannot see a host-only VALUE (`Buffer`,
+  // `process`, an unguarded `.unref()`): those are guarded by the derivation
+  // alone, as before.
   // A plugin's own socket routes (`wsRoutes`, e.g. a log tail) are not served:
   // the page reaches this host through HTTP and the live-state socket only, and
   // its transport opens every other socket path inert (as it does central's).

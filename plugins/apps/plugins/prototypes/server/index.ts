@@ -9,7 +9,6 @@ export { prototypesFiles } from "./internal/roots";
 export default {
   description:
     "The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under. Declares the app's data dir as the prototypesFiles file root (watched, its _picks ledgered).",
-  portable: true,
   contributions: [
     TaskCategory({ id: PROTOTYPES_CATEGORY_ID, label: "Prototypes", order: 9 }),
   ],

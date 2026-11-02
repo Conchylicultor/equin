@@ -223,7 +223,7 @@ ends it through the same evidence signal.
   learns them): a confirmation that names no row of this conversation.
 - `turn-unverified` is **retired** (`machine/internal/report-kinds.ts`):
   nothing files it, it stays registered while old rows remain. The server half
-  is `portable: true` (the demo's browser worker serves `turn-ledger.turns`
+  is portable (the demo's browser worker serves `turn-ledger.turns`
   over PGlite), so it files no report itself.
 
 ## Reading it from the web

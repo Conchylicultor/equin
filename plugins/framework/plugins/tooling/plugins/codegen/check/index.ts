@@ -20,6 +20,7 @@ import {
   serverBarrelBlockers,
   type HostContributionBarrel,
 } from "../core";
+import { serverPortabilityOf } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
 import {
   parseServerContributionDeclarations,
   type ServerContributionKindDecl,
@@ -105,7 +106,8 @@ const check: Check = {
           webPlugins: graph.webPlugins,
           barrels,
           kinds,
-          blockers: (barrel) => serverBarrelBlockers(repo.root, repo, barrel),
+          blockers: async (barrel) =>
+            serverBarrelBlockers(await serverPortabilityOf(repo), barrel),
         })),
       );
     }
@@ -113,7 +115,7 @@ const check: Check = {
     return {
       ok: false,
       message: `${problems.length} scoped plugin(s) contribute to kinds a browser host's graph reads from a \`server/\` barrel the host does not boot — the host would answer without the contribution:\n  - ${problems.join("\n  - ")}`,
-      hint: "Make the contributing `server/` barrel `portable: true` (its closure must pass `boundaries:portable-closure`), or move the contribution into a portable `server/` half and the rest into `machine/`. A kind whose contributions never shape what a host serves declares `absentOnHost: { reason }` on its `defineServerContribution`.",
+      hint: "Make the contributing `server/` barrel portable — move what needs the computer (each blocker above, with its chain) out of its closure into `machine/` — or move the contribution into a portable `server/` half and the rest into `machine/`. A kind whose contributions never shape what a host serves declares `absentOnHost: { reason }` on its `defineServerContribution`.",
     };
   },
 };

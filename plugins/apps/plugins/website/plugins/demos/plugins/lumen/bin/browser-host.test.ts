@@ -60,6 +60,7 @@ import {
 import { unmatchedApiResponse } from "@plugins/infra/plugins/endpoints/core";
 import { PLUGINS_DIR, REPO_ROOT } from "@plugins/infra/plugins/paths/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import { injectFrameAgent } from "@plugins/primitives/plugins/embed/plugins/frame/plugins/agent/core";
 import {
   isMigrationFileName,
   migrationsFrom,
@@ -167,7 +168,6 @@ const diskMigrations: Entry = {
   id: "apps.website.demos.lumen.boot-test-migrations",
   loader: async () => ({
     default: {
-      portable: true,
       contributions: [
         MigrationSource.provide({
           list: () =>
@@ -203,7 +203,6 @@ const diskGitLayer: Entry = {
   id: "apps.website.demos.lumen.boot-test-config",
   loader: async () => ({
     default: {
-      portable: true,
       contributions: [
         ConfigGitLayer.provide({
           document: (storePath) => committedDocument(storePath, committedFiles),
@@ -296,8 +295,8 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
     }
     const graph = hostEntries.filter((e) => !swapped.has(e.pluginPath));
     expect(graph).toHaveLength(hostEntries.length - swapped.size);
-    // The worker's own boot (`./browser-host.ts`): browser mode, every plugin
-    // asserted portable, the resource key set closed.
+    // The worker's own boot (`./browser-host.ts`): browser mode over a graph
+    // portable by construction (derived at build), the resource key set closed.
     host = await bootBrowserHost({
       entries: [...graph, ...Object.values(SWAPS)],
       seed: () => seed(diskDemoPrototypes()),
@@ -1021,7 +1020,11 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
         `/api/prototypes/${p.id}/versions/${first.sha}/index.html`,
       );
       expect(res.status).toBe(200);
-      expect(await res.text()).toBe(p.versions[0]!.files["index.html"] ?? "");
+      // A content route's HTML carries the frame agent (content isolation):
+      // the author's bytes, with the agent injected once at the head.
+      expect(await res.text()).toBe(
+        injectFrameAgent(p.versions[0]!.files["index.html"] ?? ""),
+      );
     }
     const counts = (await loadResourceByKey(
       "prototypes.versionCounts",

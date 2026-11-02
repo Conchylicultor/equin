@@ -40,7 +40,10 @@ function McpToolsBody(): ReactElement {
 }
 
 function useResolveTool({ name }: { name: string }): ResolveResult {
-  return resolveFrom(useCatalogTool(name), (tool) => tool !== null);
+  const result = useCatalogTool(name);
+  // A host without the computer: the body says the catalog is not here.
+  if (result.status === "unavailable") return { status: "found" };
+  return resolveFrom(result, (tool) => tool !== null);
 }
 
 // Detail (/debug/mcp-tools/tool/<name>): one tool — where it is declared, who

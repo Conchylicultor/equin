@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { McpTool } from "./mcp";
+import type { McpTool } from "../../server";
 import { toolsInScope } from "./scope";
 
 function tool(name: string, profiles?: readonly string[]): McpTool {

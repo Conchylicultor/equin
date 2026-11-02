@@ -4,5 +4,4 @@ import { tabBarConfig } from "../core";
 
 export default {
   contributions: [ConfigV2.Register({ descriptor: tabBarConfig })],
-  portable: true,
 } satisfies ServerPluginDefinition;

@@ -39,6 +39,9 @@ import { createServer, type Socket } from "node:net";
 import type { Readable, Writable } from "node:stream";
 import { defineFileSink } from "@plugins/infra/plugins/file-sink/core";
 import { SAMPLE } from "@plugins/infra/plugins/paths/server";
+import { provideHostServicesUnbooted } from "@plugins/framework/plugins/server-core/core";
+import { SecretStore } from "@plugins/infra/plugins/secrets/server";
+import { centralSecretStore } from "@plugins/infra/plugins/secrets/cli";
 import { basename, dirname, join } from "node:path";
 import { parseArgs } from "node:util";
 import { ZodError, z } from "zod";
@@ -101,6 +104,9 @@ const options = AgentLaunchOptionsSchema.parse(
 // store, so it never sits in an argv, the options file or the login shell's
 // environment. Only Claude Code's own process gets it (the session below); the
 // system account adds nothing — Claude Code's own login.
+// This process boots no graph, so it names the one host service it reads
+// itself: the secrets store, central's (an added account's token).
+provideHostServicesUnbooted([SecretStore.provide(centralSecretStore)]);
 const sessionEnv = await claudeSessionEnv(args.account, process.env);
 
 // ── events.jsonl ──────────────────────────────────────────────────────────

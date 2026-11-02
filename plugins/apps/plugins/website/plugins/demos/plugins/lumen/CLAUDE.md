@@ -95,7 +95,8 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   those plugins.
 - **The graph is inferred, never listed** (`codegen/core/browser-host-gen.ts`,
   generated into `bin/browser-host.generated.ts`): every plugin of the
-  composition whose server barrel is `portable: true`, the portable barrels
+  composition whose server barrel is portable (derived from its static
+  closure, `serverPortabilityOf` — no flag), the portable barrels
   `bin/browser-host.ts` loads (the seed's imports), and one provider per host
   service from the `base-exclusions` negatives (`hostProviders`). A portable
   barrel reaching a non-portable one fails codegen, naming the import chain.
@@ -104,7 +105,7 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   (file:line), the serving plugin and why it is outside the graph (desktop-only
   `machine/`, not in the composition, or the non-portable barrels and
   computer-bound modules that keep it out). Make the plugin that serves it
-  portable (its server barrel `portable: true`, the computer-bound code in
+  portable (the computer-bound code of its server closure moved to
   `machine/`) — it then joins the graph by itself — and seed its rows; a read
   or endpoint that needs the computer is declared `needsMachine` and reads
   `unavailable` here (e.g. `attempt-work`, measured from git).
@@ -114,7 +115,7 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
 The app needs a fixture writer — a portable plugin under the app,
 `apps/<app>/plugins/fixtures`: its `core` the fixture's type (a pure
 description of "some <things>" in the app's own terms, ids the caller's) and
-its `server` (`portable: true`) a writer that goes through the app's real write
+its `server` (portable: nothing in its closure needs the computer) a writer that goes through the app's real write
 path — the same mutations a user's edit makes, deriving nothing itself. Write
 one if the app has none (`apps/pages/plugins/fixtures` is the model). Then:
 

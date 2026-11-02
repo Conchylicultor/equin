@@ -3,7 +3,6 @@ import { ConversationArtifactExtractor } from "@plugins/conversations/plugins/co
 import { SKILL_KIND, extractSkills } from "../core";
 
 export default {
-  portable: true,
   description:
     "Server half of the skill artifact kind: its pure extractor, run over the whole transcript by the artifacts host.",
   contributions: [

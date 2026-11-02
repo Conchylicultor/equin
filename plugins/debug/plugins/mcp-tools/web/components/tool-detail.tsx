@@ -3,6 +3,7 @@ import {
   ResourceErrorInline,
   mapResource,
   type ResourceResult,
+  type ResourceUnavailable,
 } from "@plugins/primitives/plugins/live-state/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -29,10 +30,11 @@ import {
 } from "../internal/present";
 import { ToolBadges, pluginPath } from "./tools-view";
 
-/** One tool of the live catalog: loading, failed, absent, or the tool. */
+/** One tool of the live catalog: unavailable (a host without the computer),
+ * loading, failed, absent, or the tool. */
 export function useCatalogTool(
   name: string,
-): ResourceResult<McpCatalogTool | null> {
+): ResourceResult<McpCatalogTool | null> | ResourceUnavailable {
   return mapResource(
     useLive(mcpCatalog),
     (catalog) => catalog.tools.find((t) => t.name === name) ?? null,
@@ -43,6 +45,8 @@ export function useCatalogTool(
 export function ToolDetail({ name }: { name: string }): ReactElement {
   const result = useCatalogTool(name);
   switch (result.status) {
+    case "unavailable":
+      return <Placeholder tone="muted">{result.message}</Placeholder>;
     case "loading":
       return <Loading variant="rows" />;
     case "error":

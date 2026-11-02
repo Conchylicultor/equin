@@ -3,7 +3,7 @@ import {
   defaultNow,
 } from "@plugins/infra/plugins/entities/server";
 import { _songs } from "@plugins/apps/plugins/sonata/plugins/library/server";
-import { trackViewEntityRef, trackViewServerFields } from "../../core/schemas";
+import { trackViewEntityRef, trackViewServerFields } from "../../core";
 
 /**
  * Per-(song, track) view override. 1:many over a song (one row per track), so

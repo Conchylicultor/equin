@@ -1,4 +1,4 @@
-import { serveValue } from "@plugins/network/plugins/live/server";
+import { serveValue } from "@plugins/network/plugins/live/machine";
 import {
   MCP_HEALTH_MAX_DEGRADED,
   mcpHealth,

@@ -7,7 +7,6 @@ import { extractInlinePageLinks } from "./internal/extract-inline-links";
 import { resolvePageLinkReferent } from "./internal/referent";
 
 export default {
-  portable: true,
   description:
     "Backlinks extractor for inline `[[page:<pageId>]]` page links embedded in any block's text.",
   contributions: [

@@ -10,8 +10,8 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { setErrorReporter } from "@plugins/framework/plugins/server-core/core";
 import { handleMcpRequest } from "./handle-mcp";
-import { Mcp, type McpToolContext } from "./mcp";
-import { instructionsRegistry, registry } from "./registry";
+import { Mcp, type McpToolContext } from "../../server";
+import { instructionsRegistry, registry } from "../../server/internal/registry";
 
 const CONVERSATION = "conv-test";
 

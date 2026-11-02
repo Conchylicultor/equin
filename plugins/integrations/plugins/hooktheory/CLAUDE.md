@@ -210,6 +210,7 @@ nothing calls it in a loop yet.
     - `HooktheoryNotSignedInError`
     - `HooktheoryProviderUnavailableError`
     - `HooktheorySectionNotFoundError`
+    - `parseOrThrow`
     - `ProgressionParamSchema`
     - `ProgressionSchema`
     - `sectionFromHookpadDoc`

@@ -1,9 +1,6 @@
 import { callEndpoint } from "@plugins/infra/plugins/endpoints/server";
 import { EndpointError } from "@plugins/infra/plugins/endpoints/core";
-import type {
-  SecretMetadata,
-  SecretRef,
-} from "@plugins/infra/plugins/secrets/core";
+import type { SecretStoreImpl } from "@plugins/infra/plugins/secrets/server";
 import {
   secretsDelete,
   secretsGet,
@@ -58,51 +55,51 @@ function isCentralOffline(err: EndpointError): boolean {
   );
 }
 
-export async function getSecret(ref: SecretRef): Promise<string | undefined> {
-  const { value } = await toCentral(() =>
-    callEndpoint(secretsGet, {}, { origin: CENTRAL_ORIGIN, body: ref }),
-  );
-  return value ?? undefined;
-}
-
-export async function setSecret(ref: SecretRef, value: string): Promise<void> {
-  await toCentral(() =>
-    callEndpoint(
-      secretsSet,
-      {},
-      { origin: CENTRAL_ORIGIN, body: { ...ref, value } },
-    ),
-  );
-}
-
-export async function deleteSecret(ref: SecretRef): Promise<void> {
-  await toCentral(() =>
-    callEndpoint(secretsDelete, {}, { origin: CENTRAL_ORIGIN, body: ref }),
-  );
-}
-
-export async function hasSecret(ref: SecretRef): Promise<boolean> {
-  const { has } = await toCentral(() =>
-    callEndpoint(secretsHas, {}, { origin: CENTRAL_ORIGIN, body: ref }),
-  );
-  return has;
-}
-
-export async function getSecretMetadata(
-  ref: SecretRef,
-): Promise<SecretMetadata> {
-  return toCentral(() =>
-    callEndpoint(secretsMeta, {}, { origin: CENTRAL_ORIGIN, body: ref }),
-  );
-}
-
-export async function listKeysInNamespace(namespace: string): Promise<string[]> {
-  const { keys } = await toCentral(() =>
-    callEndpoint(
-      secretsList,
-      {},
-      { origin: CENTRAL_ORIGIN, body: { namespace } },
-    ),
-  );
-  return keys;
-}
+/**
+ * The secrets store on the computer: central's encrypted store, reached over
+ * HTTP through the gateway (central's `/api/secrets/*` routes answer on every
+ * host name). Central unreachable is `SecretsMainOfflineError`.
+ */
+export const centralSecretStore: SecretStoreImpl = {
+  async get(ref) {
+    const { value } = await toCentral(() =>
+      callEndpoint(secretsGet, {}, { origin: CENTRAL_ORIGIN, body: ref }),
+    );
+    return value ?? undefined;
+  },
+  async set(ref, value) {
+    await toCentral(() =>
+      callEndpoint(
+        secretsSet,
+        {},
+        { origin: CENTRAL_ORIGIN, body: { ...ref, value } },
+      ),
+    );
+  },
+  async delete(ref) {
+    await toCentral(() =>
+      callEndpoint(secretsDelete, {}, { origin: CENTRAL_ORIGIN, body: ref }),
+    );
+  },
+  async has(ref) {
+    const { has } = await toCentral(() =>
+      callEndpoint(secretsHas, {}, { origin: CENTRAL_ORIGIN, body: ref }),
+    );
+    return has;
+  },
+  metadata(ref) {
+    return toCentral(() =>
+      callEndpoint(secretsMeta, {}, { origin: CENTRAL_ORIGIN, body: ref }),
+    );
+  },
+  async listKeys(namespace) {
+    const { keys } = await toCentral(() =>
+      callEndpoint(
+        secretsList,
+        {},
+        { origin: CENTRAL_ORIGIN, body: { namespace } },
+      ),
+    );
+    return keys;
+  },
+};

@@ -8,5 +8,4 @@ export default {
   description:
     "Registers the Developer mode config and reads the user's audience on the server (getAudience).",
   contributions: [ConfigV2.Register({ descriptor: audienceConfig })],
-  portable: true,
 } satisfies ServerPluginDefinition;

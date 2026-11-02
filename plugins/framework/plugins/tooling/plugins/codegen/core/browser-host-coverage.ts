@@ -42,15 +42,7 @@
 // never both, or a scope call hidden in it would escape the endpoint arm.
 
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
-import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import {
-  importClosure,
-  loadTypescript,
-} from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
-import {
-  isPlatformApi,
-  platformValueUsesIn,
-} from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
+import type { ServerPortability } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
 import {
   asFsPath,
   isTestCodePath,
@@ -60,7 +52,6 @@ import {
   endpointExports,
   findImports,
   findMarkerCalls,
-  isPortableServerBarrel,
   lineAt,
   markerCallSpans,
   maskSource,
@@ -104,9 +95,10 @@ export interface HostCoverageInputs {
   /** The run's file set, as the snapshot's scan reads it (`createSourceScans`, held on the ctx). */
   sources: SourceScans;
   /**
-   * What keeps a non-portable server barrel outside the graph: the
-   * non-portable barrels it reaches and its own modules that need the
-   * computer. Asked only to explain a failure.
+   * What keeps a non-portable server barrel outside the graph: the modules
+   * of its closure that need the computer, each with its chain
+   * ({@link serverBarrelBlockers}). Never empty. Asked only to explain a
+   * failure.
    */
   blockers(barrel: string): Promise<string[]>;
 }
@@ -137,9 +129,6 @@ function locate(path: string): { plugin: string; folder: string } | null {
 }
 
 const dotId = (plugin: string): string => plugin.split("/plugins/").join(".");
-
-const SERVER_BARREL_RE =
-  /^plugins\/((?:[^/]+\/plugins\/)*[^/]+)\/server\/index\.ts$/;
 
 const BACKEND_FOLDERS = ["server", "machine", "central"] as const;
 
@@ -745,7 +734,7 @@ export async function resolveHostCoverage(
 
   if (problems.length > 0) {
     throw new Error(
-      `${label}: ${problems.length} declaration(s) the scoped page uses have no answer on the host — each must be served by a graph member's \`server/\` (make the serving barrel \`portable: true\`, or split what it serves into a portable \`server/\` half) or declare \`needsMachine\`:\n  - ${problems.join("\n  - ")}`,
+      `${label}: ${problems.length} declaration(s) the scoped page uses have no answer on the host — each must be served by a graph member's \`server/\` (make the serving barrel portable by moving what needs the computer out of its closure into \`machine/\`, or split what it serves into a portable \`server/\` half) or declare \`needsMachine\`:\n  - ${problems.join("\n  - ")}`,
     );
   }
   return {
@@ -1133,52 +1122,23 @@ function topLevelColon(
 // ── Explaining a gap ──────────────────────────────────────────────────────
 
 /**
- * What keeps the non-portable server `barrel` out of a browser host, read off
- * its static closure: the non-portable server barrels it reaches first (each
- * with its import chain — a frontier: one reached only through another is not
- * named), and its own plugin's modules that need the computer (the platform
- * APIs they import, the host-only values they use) — the reading
- * `boundaries:portable-closure` makes of a portable barrel.
+ * What keeps the non-portable server `barrel` out of a browser host: the
+ * modules of its static closure that need the computer (the platform APIs
+ * they import, the host-only values they use, the host services no portable
+ * `server/` barrel provides), each with its import chain — the frontier
+ * `serverPortabilityOf`'s `offenders` names. Never empty: a barrel with
+ * nothing to name is portable, and `offenders` throws for it.
  */
-export async function serverBarrelBlockers(
-  root: AppPath,
-  repo: Pick<RepoFiles, "read">,
+export function serverBarrelBlockers(
+  portability: Pick<ServerPortability, "offenders">,
   barrel: string,
-): Promise<string[]> {
-  const closure = await importClosure(root, barrel, {
-    dynamicImports: "cut",
-  }); // `root`: the checkout root the caller works in
-  const ts = await loadTypescript();
-  const own = barrel.replace(/server\/index\.ts$/, "");
-  const blocked = new Set<string>();
-  for (const module of closure.modules) {
-    if (module === barrel || !SERVER_BARREL_RE.test(module)) continue;
-    const src = await repo.read(module);
-    if (src !== null && !isPortableServerBarrel(src)) blocked.add(module);
-  }
-  const out: string[] = [];
-  for (const module of [...blocked].sort()) {
-    const chain = closure.importChain(module);
-    if (chain.slice(1, -1).some((m) => blocked.has(m))) continue;
-    out.push(
-      `${locate(module)!.plugin}/server is not portable (via ${chain.join(" → ")})`,
+): string[] {
+  return portability
+    .offenders(barrel)
+    .map(
+      (o) =>
+        `${o.module} needs ${o.needs.join(", ")} (via ${o.chain.join(" → ")})`,
     );
-  }
-  for (const module of [...closure.modules].sort()) {
-    if (!module.startsWith(`${own}server/`)) continue;
-    const src = await repo.read(module);
-    if (src === null) continue;
-    const needs = [
-      ...new Set(
-        findImports(src)
-          .filter((ref) => !ref.typeOnly && isPlatformApi(ref.specifier))
-          .map((ref) => ref.specifier),
-      ),
-      ...platformValueUsesIn(ts, module, src),
-    ];
-    if (needs.length > 0) out.push(`${module} needs ${needs.join(", ")}`);
-  }
-  return out;
 }
 
 /** Where something is served, anywhere in the repo. */
@@ -1280,9 +1240,7 @@ async function whyOutside(
     return `served by ${where}, which is not in the composition`;
   }
   const blockers = await inputs.blockers(site.file);
-  return blockers.length === 0
-    ? `served by ${where}, which is not \`portable: true\` (nothing in its closure needs the computer: flip it)`
-    : `served by ${where}, which is not portable: ${blockers.slice(0, 4).join("; ")}${blockers.length > 4 ? ` (+${blockers.length - 4} more)` : ""}`;
+  return `served by ${where}, which is not portable: ${blockers.slice(0, 4).join("; ")}${blockers.length > 4 ? ` (+${blockers.length - 4} more)` : ""}`;
 }
 
 // ── The config arm ────────────────────────────────────────────────────────
@@ -1446,10 +1404,7 @@ export async function resolveHostContributionCoverage(
     }
     if (gaps.length === 0) continue;
     const blockers = await inputs.blockers(b.barrel);
-    const why =
-      blockers.length === 0
-        ? "it is not `portable: true` (nothing in its closure needs the computer: flip it)"
-        : `it is not portable: ${blockers.slice(0, 4).join("; ")}${blockers.length > 4 ? ` (+${blockers.length - 4} more)` : ""}`;
+    const why = `it is not portable: ${blockers.slice(0, 4).join("; ")}${blockers.length > 4 ? ` (+${blockers.length - 4} more)` : ""}`;
     problems.push(
       `${inputs.label}: ${b.plugin}/server contributes to kinds a graph member reads, but the host does not boot it — ${why}\n      ${gaps.join("\n      ")}`,
     );

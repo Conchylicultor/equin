@@ -11,7 +11,7 @@ scratch profile provides. Design:
   `WORKSPACE_KINDS` (what each kind offers), `WorkspaceSpecSchema`, and the
   capability reads (`hasCapability`, `assertCapability` for a server git read's
   boundary, `workspaceAllows` for a web slot host).
-- `server/` — **portable** (`portable: true`): it runs on every host, the
+- `server/` — **portable**: it runs on every host, the
   demo's in-browser server included.
   - The open set: `ScratchProfile.define(defineScratchProfile({…}))`, and
     `workspaceOfConversation` for a profile's MCP tools.

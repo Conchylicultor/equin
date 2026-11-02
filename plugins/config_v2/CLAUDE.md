@@ -626,6 +626,8 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
 - Exemptions:
   - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/config-registrations.ts`, `check/overrides-authored.ts` (debt)
 - Test helpers:
+  - Server: `@plugins/config_v2/server/testing`
+    - `diskConfigGitLayer` — The committed config layer a browser host bundles (`config_v2/bundled-layer`, which reads it through vite's `import.meta.glob` — absent under `bun test`), provided from the same files read off disk: for a suite booting a portable graph without the computer.
   - Core: `@plugins/config_v2/core/testing`
     - `LEGEND_MARKER` — The build-owned `// @legend` block of a committed config override: a descriptor's `overrideLegend` lines, stamped directly under the `// @hash` header so whoever opens the file to hand-edit it sees how to write its values — for a reorder slot, that a spacer node exists and what it does.
 - Sub-plugins:

@@ -10,5 +10,4 @@ export default {
   description:
     "Library of named instruction snippets added to a task's agent system prompt, after Claude Code's own, as a <special_instructions> block.",
   contributions: [ConfigV2.Register({ descriptor: prepromptsConfig })],
-  portable: true,
 } satisfies ServerPluginDefinition;

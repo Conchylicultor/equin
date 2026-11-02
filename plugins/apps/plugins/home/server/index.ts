@@ -5,7 +5,6 @@ import { APPS_CATEGORY_ID } from "../core";
 export default {
   description:
     "The Apps task category: the category tasks filed from the Home app's cards, such as building a new app, are grouped under.",
-  portable: true,
   contributions: [
     TaskCategory({ id: APPS_CATEGORY_ID, label: "Apps", order: 11 }),
   ],

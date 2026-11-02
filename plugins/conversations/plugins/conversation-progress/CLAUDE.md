@@ -1,7 +1,7 @@
 # conversation-progress
 
 Four-phase progress (research → design → implementation → pushed) per
-conversation. `server/` is `portable: true`: the extension table, the live
+conversation. `server/` is portable: the extension table, the live
 read, and the `pushLanded` → pushed job, so a browser host serves the row from
 its own DB. The git heuristic (`classifyProgressJob`, on
 `conversationTurnCompleted`) needs the worktree and lives in `machine/`.

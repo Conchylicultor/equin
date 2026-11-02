@@ -2,7 +2,7 @@
 
 ## Portable, but for the launch
 
-`server/` is portable (`portable: true`): the roster, the launches and every
+`server/` is portable: the roster, the launches and every
 CRUD / move route run on any host, the in-browser server included, reading the
 model catalog through `ModelCatalogSource` (`getModelCatalog()`). The launch —
 `launchAgent`, which files the launch's task and starts a conversation, so

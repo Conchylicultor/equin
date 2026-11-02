@@ -9,7 +9,8 @@
  * extractor, the text and to-do blocks, Pages' content search and history),
  * the providers of a host without the computer, and the committed migration
  * history read off disk. Booted through `bootBrowserHost` — the browser host's
- * own boot: every plugin asserted portable, then the post-ready phases (the
+ * own boot (the graph portable by construction — derived from its closure,
+ * nothing asserted at boot), then the post-ready phases (the
  * events' trigger sync, the in-process queue's start, the change feed's
  * LISTEN), then the settled phase (the boot warm-ups, awaited) — so a write runs its effects exactly as it does in the demo's
  * worker. `settleJobQueue` then runs the queue dry, the snapshot's 4 s
@@ -45,7 +46,8 @@ import {
   migrationsFrom,
   MigrationSource,
 } from "@plugins/database/plugins/migrations/server";
-import { isPortableServerBarrel } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
+import { serverPortabilityOf } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
 import { blockIdKind } from "@plugins/page/plugins/editor/core";
 import { pageLinkToken } from "@plugins/page/plugins/inline-page-link/core";
 import { loadBacklinkSources } from "@plugins/page/plugins/links/server";
@@ -103,7 +105,6 @@ const migrationSource: Entry = {
   id: "apps.pages.fixtures.boot-test-migrations",
   loader: async () => ({
     default: {
-      portable: true,
       contributions: [
         MigrationSource.provide({
           list: () =>
@@ -124,17 +125,17 @@ const migrationSource: Entry = {
 
 /**
  * The portable `dependsOn` closure of `roots` in the app's server registry:
- * only edges to `portable: true` server barrels are followed — the graph a
- * browser host boots (`browser-host-gen` keeps each entry's registry edges to
- * its graph the same way; its build guard proves the portable code loads no
- * other barrel). A root that is not portable fails loudly.
+ * only edges to portable server barrels (derived from their closures,
+ * `serverPortabilityOf`) are followed — the graph a browser host boots
+ * (`browser-host-gen` keeps each entry's registry edges to its graph the same
+ * way; its build guard proves the portable code loads no other barrel). A
+ * root that is not portable fails loudly.
  */
-function portableClosureOf(roots: string[]): Entry[] {
+async function portableClosureOf(roots: string[]): Promise<Entry[]> {
   const byPath = new Map(serverEntries.map((e) => [e.pluginPath, e]));
+  const portability = await serverPortabilityOf(await loadRepoFiles(REPO_ROOT));
   const isPortable = (path: string) =>
-    isPortableServerBarrel(
-      readFileSync(join(PLUGINS_DIR, path, "server", "index.ts"), "utf8"),
-    );
+    portability.isPortable(`plugins/${path}/server/index.ts`);
   for (const root of roots) {
     if (!isPortable(root)) throw new Error(`${root} is not portable`);
   }
@@ -235,7 +236,7 @@ describe.if(IN_CHILD)("writePageTree on a portable host", () => {
   beforeAll(async () => {
     const host = await bootBrowserHost({
       entries: [
-        ...portableClosureOf([SUBJECT, ...CONSUMERS, ...HOST]),
+        ...(await portableClosureOf([SUBJECT, ...CONSUMERS, ...HOST])),
         ...PROVIDERS,
         migrationSource,
       ],

@@ -43,7 +43,6 @@ export { nextAgentRankUnder } from "./internal/rank";
 export default {
   description:
     "Named agent definitions that launch conversations: the agents roster and launches (tables, live collections, CRUD and move routes), portable; the launch route itself is the desktop-only machine half.",
-  portable: true,
   httpRoutes: {
     [listAgents.route]: handleList,
     [createAgent.route]: handleCreate,

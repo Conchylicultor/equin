@@ -1,7 +1,11 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import {
+  EVENTS_CATEGORY_ID,
   createEventSource,
   deleteEventSource,
+  eventIdKind,
+  eventRunIdKind,
+  eventSourceIdKind,
   getEventSource,
   listEventSources,
   refreshAllEventSources,
@@ -24,8 +28,6 @@ import {
 } from "./internal/resources";
 import { IdKinds } from "@plugins/ids/server";
 import { TaskCategory } from "@plugins/tasks/plugins/task-category/server";
-import { EVENTS_CATEGORY_ID } from "../core/internal/task-category";
-import { eventSourceIdKind, eventIdKind, eventRunIdKind } from "../core";
 
 // The physical tables, the source-type registry, the repo functions, and the
 // refresh seam — everything the `refresh` engine, `event-list`, and `sources`

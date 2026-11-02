@@ -21,7 +21,6 @@ export type { RecordNotificationInput } from "./internal/record-notification";
 export { setMutedByMetadata } from "./internal/reclassify-muted";
 
 export default {
-  portable: true,
   description:
     "Persistent bell-button notifications backed by the DB (the fork exclusion of its table is the machine half's).",
   contributions: [

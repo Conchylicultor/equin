@@ -7,7 +7,7 @@ Encrypted-at-rest key-value primitive. Consumers: `auth` (OAuth tokens / API key
 - **Storage lives on the central runtime.** `~/.equin/state/secrets/secrets.json.enc` (AES-256-GCM) is read and written by the singleton `central` backend (gateway-supervised, headless). Worktree backends never touch the file.
 - **OS keychain for the master key, file fallback; the file on Linux.** macOS / Windows: `@napi-rs/keyring` (Keychain / Credential Manager), falling back to `~/.equin/state/secrets/.key` (mode 0600) when the native module is missing or fails at runtime. Linux: that file only, by design — the keyring's Linux backends are the Secret Service (absent or locked on a headless server) and the kernel keyring (gone at reboot), so the key would differ between boots. Either way the key is cached in-memory after first read.
 - **The key source is sticky.** A keychain with no entry defers to a `.key` an earlier fallback wrote, and no path mints a new key while `secrets.json.enc` exists — it throws `SecretsKeychainLockedError` instead, since a fresh key could never read that blob and the next write would replace every secret.
-- **Worktrees call central over HTTP via the gateway.** `getSecret`/`setSecret`/`deleteSecret`/`hasSecret`/`getSecretMetadata`/`listKeysInNamespace` POST JSON to `http://localhost:9000/api/secrets/*`. The gateway routes those prefixes to `central` regardless of host (see `~/.equin/state/gateway/central-routes.json`). The previous unix-socket RPC and `~/.equin/secrets.sock` are gone.
+- **Worktrees call central over HTTP via the gateway.** `getSecret`/`setSecret`/`deleteSecret`/`hasSecret`/`getSecretMetadata`/`listKeysInNamespace` (`server/`) go through the `SecretStore` host service (`secrets.store`); its one provider is the `machine/` half (`centralSecretStore`), which POSTs JSON to `http://localhost:9000/api/secrets/*`. No browser host provides it, so — portability rule 3 (`boundaries/core`) — `infra/secrets/server` and every server barrel loading it are not portable and never boot in a browser host (where `localhost:9000` would be the visitor's own machine). A process that runs this code without booting a graph (the agent process, `./equin deploy`) names the provider itself: `provideHostServicesUnbooted([SecretStore.provide(centralSecretStore)])`, `centralSecretStore` from `infra/secrets/cli` (a `bin/` cannot import `machine/`). The gateway routes those prefixes to `central` regardless of host (see `~/.equin/state/gateway/central-routes.json`). The previous unix-socket RPC and `~/.equin/secrets.sock` are gone.
 - **Boot is in central's `onReady`.** Central's plugin definition (`plugins/infra/plugins/secrets/central/index.ts`) loads the keychain, hydrates the encrypted blob, and runs the legacy `~/.equin/state/auth/tokens.json.enc` migration before the HTTP handlers are reachable. The server-side `ready` promise resolves immediately — there's nothing to wait for in-process.
 
 ## Namespaces
@@ -28,7 +28,7 @@ await setSecret({ namespace: "my-plugin", key: "api-key" }, "sk-…");
 const v = await getSecret({ namespace: "my-plugin", key: "api-key" }); // "sk-…"
 ```
 
-The server-side barrel is a thin HTTP client; every call hits central through the gateway. `getSecretMetadata` returns `{ set: boolean, updatedAt?: number }` without ever exposing the value — use it when all you need is a "configured?" bit.
+The server-side barrel is a thin facade over the `SecretStore` host service; on the computer every call hits central through the gateway. `getSecretMetadata` returns `{ set: boolean, updatedAt?: number }` without ever exposing the value — use it when all you need is a "configured?" bit.
 
 If central is unreachable (gateway down, central crash-looped, manifest not yet loaded) the call throws `SecretsMainOfflineError` after one quick retry.
 
@@ -50,13 +50,14 @@ On central's first boot after upgrade, `migrateLegacyAuthTokens` decrypts `~/.eq
 
 ## Plugin reference
 
-- Description: Encrypted key-value primitive. AES-256-GCM blob at ~/.equin/state/secrets/secrets.json.enc with the master key in the OS keychain (fallback to the .key beside it). Hosted on the central runtime; consumers (auth, config) call /api/secrets/* via the gateway.
+- Description: The secrets API every backend calls (getSecret / setSecret / deleteSecret / hasSecret / getSecretMetadata / listKeysInNamespace), through the SecretStore host service (secrets.store) — provided on the computer by the machine half, a client of central's store. No browser host provides it, so nothing that reads secrets runs in one. Encrypted key-value primitive. AES-256-GCM blob at ~/.equin/state/secrets/secrets.json.enc with the master key in the OS keychain (fallback to the .key beside it). Hosted on the central runtime; consumers (auth, config) call /api/secrets/* via the gateway.
 - Load-bearing: yes
 - Server:
-  - Uses: `infra/endpoints.callEndpoint`
+  - Contributes: `host-service:secrets.store` "secrets.store"
   - Exports (types):
     - `SecretMetadata`
     - `SecretRef`
+    - `SecretStoreImpl`
   - Exports (values):
     - `deleteSecret`
     - `getSecret`
@@ -67,6 +68,7 @@ On central's first boot after upgrade, `migrateLegacyAuthTokens` decrypts `~/.eq
     - `SecretsError`
     - `SecretsKeychainLockedError`
     - `SecretsMainOfflineError`
+    - `SecretStore`
     - `setSecret`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`
@@ -93,6 +95,8 @@ On central's first boot after upgrade, `migrateLegacyAuthTokens` decrypts `~/.eq
     - `infra/claude-cli/accounts`
 - Exemptions:
   - Exempts itself from: `paths:no-hardcoded-paths` — `central/index.ts` (sanctioned)
+- Machine:
+  - Exports (values): `centralSecretStore`
 - Central:
   - Exports (types):
     - `SecretMetadata`
@@ -114,5 +118,7 @@ On central's first boot after upgrade, `migrateLegacyAuthTokens` decrypts `~/.eq
     - `POST /api/secrets/has`
     - `POST /api/secrets/meta`
     - `POST /api/secrets/list`
+- Cli:
+  - Exports (values): `centralSecretStore`
 
 <!-- AUTOGENERATED:END -->

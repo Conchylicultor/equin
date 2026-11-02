@@ -291,12 +291,6 @@ export type {
   HostContributionBarrel,
   HostRead,
 } from "./browser-host-coverage";
-// Host services read statically — the browser-host derivation's reading,
+// The browser-host providers' plugins (the `base-exclusions` negatives),
 // shared with `host-services:provider-placement`.
-export {
-  baseExclusionServerBarrels,
-  hostServicesByName,
-  parseHostServiceDeclarations,
-  providedServiceNames,
-} from "./host-services";
-export type { HostServiceDecl } from "./host-services";
+export { baseExclusionServerBarrels } from "./host-services";

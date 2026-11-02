@@ -1,6 +1,5 @@
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { updateSong } from "../../core/endpoints";
-import { songIdKind } from "../../core/id-kind";
+import { songIdKind, updateSong } from "../../core";
 import { updateSongMeta } from "./update-song-meta";
 
 /**

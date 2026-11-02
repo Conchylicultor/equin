@@ -4,7 +4,6 @@ import { ordinalFieldType } from "@plugins/fields/plugins/ordinal/core";
 import { build } from "./internal/storage";
 
 export default {
-  portable: true,
   description:
     "Ordinal field type: DB storage capability — maps to a Postgres integer column.",
   contributions: [Fields.Storage({ type: ordinalFieldType, build })],

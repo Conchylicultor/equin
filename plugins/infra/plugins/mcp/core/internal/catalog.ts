@@ -66,6 +66,7 @@ export type McpCatalog = z.infer<typeof McpCatalogSchema>;
  */
 export const mcpCatalog = liveValue("mcp.catalog", {
   schema: McpCatalogSchema,
+  needsMachine: { feature: "The MCP tool catalog" },
 });
 
 /** The name the MCP server announces itself under at `initialize`. */

@@ -1,10 +1,15 @@
-import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import type {
+  ResourceResult,
+  ResourceUnavailable,
+} from "@plugins/primitives/plugins/live-state/web";
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
 import type { McpHealth } from "@plugins/infra/plugins/mcp/core";
 
 /**
  * The MCP server row's verdict, from what its own requests saw (`mcp.health`).
  *
+ * - `unavailable` (a host without the computer, where no agent connects) →
+ *   `not-applicable` with the sentence saying so;
  * - still loading → `unknown`, no summary ("Checking…"), never `ok`;
  * - the latest request failed → `critical`: agents launched from here have
  *   no equin tools (not even `flag_raise` to say so);
@@ -13,7 +18,12 @@ import type { McpHealth } from "@plugins/infra/plugins/mcp/core";
  * - otherwise `ok` — including before any agent connected, since a server
  *   nothing has asked has nothing wrong to report.
  */
-export function mcpVerdict(result: ResourceResult<McpHealth>): HealthStatus {
+export function mcpVerdict(
+  result: ResourceResult<McpHealth> | ResourceUnavailable,
+): HealthStatus {
+  if (result.status === "unavailable") {
+    return { state: "not-applicable", summary: result.message };
+  }
   if (result.status === "loading") return { state: "unknown" };
   if (result.status === "error") {
     return {

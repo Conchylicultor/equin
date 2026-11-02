@@ -44,6 +44,9 @@ import {
 import { isPlatformTag, type PlatformTag } from "@plugins/release/core";
 import { assertCompositionName } from "@plugins/plugin-meta/plugins/composition/core";
 import { callEndpoint } from "@plugins/infra/plugins/endpoints/server";
+import { provideHostServicesUnbooted } from "@plugins/framework/plugins/server-core/core";
+import { SecretStore } from "@plugins/infra/plugins/secrets/server";
+import { centralSecretStore } from "@plugins/infra/plugins/secrets/machine";
 import { EndpointError } from "@plugins/infra/plugins/endpoints/core";
 
 // ── Budgets ───────────────────────────────────────────────────────────────────
@@ -285,6 +288,9 @@ export async function resolveTarget(opts: {
     );
   }
 
+  // A CLI process boots no graph: it names the host service the key is read
+  // through itself — the secrets store, central's.
+  provideHostServicesUnbooted([SecretStore.provide(centralSecretStore)]);
   const secret = await getServerSshPrivateKey(server.id);
   if (!secret.configured) {
     refuse(

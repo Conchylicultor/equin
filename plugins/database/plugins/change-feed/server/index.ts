@@ -87,11 +87,6 @@ export type {
 export default {
   description:
     "L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations structurally impossible and out-of-process writes visible. A table written only by this backend at high rate may instead declare an in-process change producer (defineChangeProducer): no trigger, its `mutate` owns the write and routes the returned ids, coalesced at the source and volatile.",
-  // Runs on every host with a database: the desktop's backend, and a browser
-  // host's worker on PGlite. The one part that differs per host — opening the
-  // LISTEN session — is the host's `DatabaseDriver.listen`; the changelog's
-  // fork exclusion (forking is the desktop's) is `./machine`.
-  portable: true,
   // Triggers are deterministic, data-less DDL rebuilt from the live schema on
   // every boot (like derived-views), NOT a migration. This runs in the blocking
   // barrier so the feed's triggers exist before any traffic — and the listener

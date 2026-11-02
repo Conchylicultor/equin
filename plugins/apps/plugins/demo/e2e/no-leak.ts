@@ -442,7 +442,11 @@ await withBrowser(async (h) => {
   const draft = page.locator('[aria-placeholder="Describe the task…"]');
   await draft.click();
   await page.keyboard.type("A prerequisite drafted in the demo");
-  await page.getByRole("button", { name: /^Launch/ }).click();
+  // The draft form's submit ("Launch ⌘↵"), not a row's or the form's own
+  // "Launch <model>" launch control.
+  await page
+    .getByRole("button", { name: /^Launch( \d+ tasks)?\s*⌘↵$/ })
+    .click();
   await page.waitForTimeout(1_500);
   r.note(
     `after add prerequisite: ${(await workerLog(page)).slice(-3).join(" · ")}`,

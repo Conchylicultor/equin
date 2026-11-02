@@ -15,7 +15,10 @@ returns:
 `importClosures(root, entries, { dynamicImports })` measures several
 entrypoints in ONE build and returns only the union of their `modules`, with
 `importChain(module)` from the first entrypoint reaching it — the same chain
-that entrypoint's own `importClosure` names. Use it when only the union matters
+that entrypoint's own `importClosure` names, and `children(module)` — the
+modules it statically imports, the build's own edges (resolved lazily,
+memoized, shared with the chains) — so a caller can walk the whole graph (the
+server-portability derivation's reverse taint). Use it when only the union matters
 (the browser-host derivation: 110 member barrels, one build each, was the whole
 cost of the guard); `live` and `external` stay per-entrypoint readings.
 
@@ -53,7 +56,9 @@ never import this plugin back.
     - `importClosures`
     - `loadTypescript`
 - Cross-plugin:
-  - Imported by: `framework/tooling/codegen`
+  - Imported by:
+    - `framework/tooling/boundaries`
+    - `framework/tooling/codegen`
 - Exemptions:
   - Exempts itself from:
     - `boundaries/no-platform-api` — `core/import-closure.ts` (debt)

@@ -10,7 +10,6 @@ import { BUILD_CATEGORY_ID } from "../core";
 export default {
   description:
     "Build, portable half: the build-run id kind, the build config, the Build task category and the build.history collection over build_runs — what a host without the computer serves too. Running builds (the jobs, the routes, the auto-build reconcile) is build/machine.",
-  portable: true,
   contributions: [
     IdKinds.Kind({ kind: buildRunIdKind }),
     ConfigV2.Register({ descriptor: buildConfig }),

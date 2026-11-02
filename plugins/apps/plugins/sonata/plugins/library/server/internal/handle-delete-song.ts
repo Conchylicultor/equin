@@ -1,8 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { deleteSong } from "../../core/endpoints";
-import { songIdKind } from "../../core/id-kind";
+import { deleteSong, songIdKind } from "../../core";
 import { _songs } from "./tables";
 
 export const handleDeleteSong = implement(deleteSong, async ({ params }) => {

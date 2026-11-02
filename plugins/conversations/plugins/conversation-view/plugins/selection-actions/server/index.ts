@@ -6,5 +6,4 @@ export default {
   description:
     "Registers the selection quick-answer list (Go, Explain, …) for Settings → Config.",
   contributions: [ConfigV2.Register({ descriptor: selectionAnswersConfig })],
-  portable: true,
 } satisfies ServerPluginDefinition;

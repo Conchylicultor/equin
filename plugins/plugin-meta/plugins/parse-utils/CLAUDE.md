@@ -164,6 +164,7 @@ snapshot they read the disk and compute, unchanged.
     - `DefaultExportObject`
     - `EndpointExport`
     - `FsSnapshot`
+    - `HostServiceDecl`
     - `ImportRef`
     - `MarkerCall`
     - `MarkerCallSpan`
@@ -177,7 +178,7 @@ snapshot they read the disk and compute, unchanged.
     - `findImports`
     - `findMarkerCalls`
     - `hasField`
-    - `isPortableServerBarrel`
+    - `hostServicesByName`
     - `lineAt`
     - `markerCallSpans`
     - `maskSource`
@@ -185,10 +186,12 @@ snapshot they read the disk and compute, unchanged.
     - `parseBarrelExports`
     - `parseBoolField`
     - `parseDefineGroup`
+    - `parseHostServiceDeclarations`
     - `parseServerContributionDeclarations`
     - `parseStaticCallId`
     - `parseStringField`
     - `pathExists`
+    - `providedServiceNames`
     - `readIfExists`
     - `readStaticCallId`
     - `readStringLiteral`

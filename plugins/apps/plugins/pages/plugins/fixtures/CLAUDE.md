@@ -26,7 +26,7 @@ the app's; the data is never here (a demo owns its own pages — e.g.
   derivations in place before it goes on settles the queue
   (`settleJobQueue`, `infra/jobs/in-process`), which also fast-forwards the
   history's 4 s debounce.
-- **Portable** (`server` is `portable: true`), so it joins a browser host's
+- **Portable** (nothing in its `server` closure needs the computer), so it joins a browser host's
   graph through the seed's import. Its test
   (`server/internal/write-page-tree.test.ts`) boots the writer's closure plus
   those consumers through `bootBrowserHost` on PGlite, writes a small tree,

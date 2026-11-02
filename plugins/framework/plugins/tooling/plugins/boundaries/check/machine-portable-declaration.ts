@@ -5,7 +5,7 @@ import type {
 import { isTestCodePath } from "@plugins/framework/plugins/plugin-id/core";
 import { findImports } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-import { loadsAtRuntime, platformOffenders } from "./portable-closure";
+import { loadsAtRuntime, platformOffenders } from "../core/portability";
 
 const MACHINE_PORTABLE_DECLARATION = "boundaries:machine-portable-declaration";
 
@@ -99,7 +99,7 @@ export async function misplacedMachineDeclarations(
  * Read per declaring module, not per barrel, so a machine half that holds both
  * a real platform job and a portable sweep is still caught: each declaring
  * module's static closure (`importClosure`, dynamic imports cut) is scanned
- * with `boundaries:portable-closure`'s matcher, and a module whose closure is
+ * with the server-portability matcher (rules 1 and 2 of `core/portability.ts`), and a module whose closure is
  * clean is reported.
  *
  * Exemptable per module, for a declaration that is desktop-only by policy
@@ -139,7 +139,7 @@ export const machinePortableDeclarationCheck: Check = {
       message: failures.join("\n  "),
       hint:
         "It declares a portable retention / warm-up; it runs on every host — move it to the plugin's " +
-        "server/ half (register it from server/index.ts, which must be `portable: true`). If it is " +
+        "server/ half (register it from server/index.ts, whose closure must stay portable — nothing in it needing the computer). If it is " +
         "desktop-only by policy, declare a sanctioned exemption with the reason.",
     };
   },

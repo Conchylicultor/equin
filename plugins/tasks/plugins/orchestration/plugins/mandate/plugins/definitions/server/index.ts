@@ -11,7 +11,6 @@ export type {
 } from "./internal/contribution";
 
 export default {
-  portable: true,
   description:
     "The named-mandate registry: MandateDefinitions.Definition (what one named mandate grants) and MandateDefinitions.Source (a runtime family of them — one per automation), read at every resolution through mandateDefinitionEntries, and the mandate.definitions value (every named mandate's id and label).",
   contributions: [...mandateDefinitionsServed.declare],

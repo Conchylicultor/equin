@@ -2,17 +2,11 @@ import type {
   Check,
   CheckResult,
 } from "@plugins/framework/plugins/tooling/core";
-import {
-  findImports,
-  isPortableServerBarrel,
-} from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { findImports } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { isTestCodePath } from "@plugins/framework/plugins/plugin-id/core";
+import { serverPortabilityOf } from "../core/portability";
 
 const PORTABLE_OWN_BARRELS = "boundaries:portable-own-barrels";
-
-// A plugin's server barrel, at any nesting depth.
-const SERVER_BARREL_RE =
-  /^plugins\/[^/]+(?:\/plugins\/[^/]+)*\/server\/index\.ts$/;
 
 /** Own folders a deep import may enter: inlined into the server artifact, or not own. */
 const OPEN_FOLDERS = new Set(["server", "shared", "plugins", "node_modules"]);
@@ -72,18 +66,20 @@ export function deepOwnTarget(
  * deep import means the barrel in the browser while `tsc` reads the file. The
  * same rule `runtime-isolation/no-deep-own-folder-import` holds for `web/`,
  * `core/`, `shared/` and `exhibits/`, here for the server files of every
- * plugin claiming `portable: true` (a lint rule cannot see the claim: it lives
- * in another file). The builder throws on the same import as the backstop.
+ * plugin whose server barrel is portable (`serverPortabilityOf` — a fact of
+ * the whole closure, which a per-file lint rule cannot see). The builder
+ * throws on the same import as the backstop.
  */
 export const portableOwnBarrelsCheck: Check = {
   id: PORTABLE_OWN_BARRELS,
   description:
-    "in a plugin whose server barrel declares `portable: true`, `server/` files reach the plugin's other folders only through their barrels (`../core`, never `../core/x`) — the browser host loads each as its barrel artifact",
+    "in a plugin whose server barrel is portable (derived from its closure), `server/` files reach the plugin's other folders only through their barrels (`../core`, never `../core/x`) — the browser host loads each as its barrel artifact",
   async run(ctx): Promise<CheckResult> {
     const repo = await ctx.repo();
+    const portability = await serverPortabilityOf(repo);
     const offenders: string[] = [];
-    for (const barrel of repo.all().filter((p) => SERVER_BARREL_RE.test(p))) {
-      if (!isPortableServerBarrel((await repo.read(barrel)) ?? "")) continue;
+    for (const barrel of portability.barrels) {
+      if (!portability.isPortable(barrel)) continue;
       const serverDir = barrel.slice(0, -"/index.ts".length);
       const pluginDir = serverDir.slice(0, -"/server".length);
       for (const file of repo.under(serverDir)) {
