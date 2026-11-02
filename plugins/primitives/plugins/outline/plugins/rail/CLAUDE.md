@@ -55,6 +55,11 @@ below (read while the panel is open). Clipping them does not shrink
 `FloatingAction`'s hover hitbox — it follows the trigger's size only while the
 panel is closed, so it holds still under the pointer while the panel morphs.
 
+The fold **animates** (a `1fr → 0fr` grid track, in step with the list's
+max-height), it does not snap. Snapped, closing put the whole stack back in one
+frame while the list was still full height and opaque: the panel grew by the
+stack's height for a frame, flashing outline rows below the open panel's edge.
+
 ## The `footer` slot is a full-width, centered row
 
 The rail owns that slot's layout, not the consumer. A footer that takes the
@@ -138,6 +143,7 @@ closed panel `inert` and fades it out rather than unmounting it.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/yield.yieldClass`
     - `primitives/dom/element-size.useElementSize`
     - `primitives/dom/scroll-reveal.revealElement`
     - `primitives/dom/scroll-reveal.useRevealOnActive`

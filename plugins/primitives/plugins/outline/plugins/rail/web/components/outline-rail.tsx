@@ -5,6 +5,7 @@ import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import {
   FloatingAction,
@@ -159,15 +160,27 @@ function OutlineRailBody({
             // `FloatingAction`'s hover hitbox: the hitbox follows the trigger
             // only while the panel is closed, so it holds still under the
             // pointer while the panel morphs.)
-            <Clip className="group-data-open/fa:max-h-0">
-              <DashStack
-                entries={entries}
-                activeId={activeId}
-                activeIndex={activeIndex}
-                capacity={capacity}
-                onJump={jump}
-              />
-            </Clip>
+            //
+            // The fold ANIMATES, in step with the list's own max-height below:
+            // snapped, closing put the whole dash stack back in one frame while
+            // the list was still full height and opaque, so the panel briefly
+            // grew by the stack's height and showed outline rows past the open
+            // panel's bottom edge. A `1fr → 0fr` grid track folds the stack
+            // from its own height, which no class can name.
+            <div
+              // eslint-disable-next-line layout/no-adhoc-layout -- the fold is a one-row grid whose track animates 1fr → 0fr, so the dash stack folds from its own height with none restated here; no layout primitive owns an animatable track
+              className="grid grid-rows-[1fr] transition-[grid-template-rows] duration-200 ease-out group-data-open/fa:grid-rows-[0fr]"
+            >
+              <Clip className={yieldClass("y")}>
+                <DashStack
+                  entries={entries}
+                  activeId={activeId}
+                  activeIndex={activeIndex}
+                  capacity={capacity}
+                  onJump={jump}
+                />
+              </Clip>
+            </div>
           }
         >
           {/* The panel's collapsed height must be the dash stack's, so the list
