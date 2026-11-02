@@ -109,6 +109,15 @@ responsible process); agents disclaim (`packages/spawn-disclaim`).
   copied to a staging directory, the executable (and icon) replaced, the plist
   rewritten, the copy signed and verified, then swapped in whole. A running
   component keeps its own executable until its reload.
+- **The swapped-out bundle is kept** (`equin.app.old-*`) while a running
+  process was started from it, and deleted by the first install that finds
+  nothing running from it (`sweepOldBundles`: one `lsof -d txt`, on every
+  install, a no-op one included — main's boot installs, so a gateway restart
+  frees its copy). Deleting it under the gateway broke every backend's
+  Downloads read: tccd identifies a process by the file it runs, and with the
+  file gone it logs `proc_pidpath_audittoken() failed from PID[…]: No such
+  file or directory` and refuses the grant — minutes later, once its cache
+  expires (2026-10-31).
 - **A stable path**, not the per-build deps cache: components rebuild on their
   own, and a menu-bar rebuild must not restart the gateway. Never under `/tmp`:
   LaunchServices disables a bundle there (no Settings row, `tccutil` fails).
@@ -116,7 +125,8 @@ responsible process); agents disclaim (`packages/spawn-disclaim`).
   launchd running any executable inside the bundle — main or not, each with its
   own LaunchAgent — is charged to the bundle; a grant survives the bundle moving
   and being re-signed; a running process and its new children keep their grants
-  after the re-signed bundle is swapped in under them.
+  after the re-signed bundle is swapped in under them — while the file it runs
+  still exists (the spike measured 30–40 s, inside tccd's cache; see above).
 - **Main's boot** has no `ExecContext`, so it waits for `rcodesign` through
   `deps` (`requestDep` + `readyNow`) like the service's own build, and signs
   with the installed tool (`RcodesignTool`).

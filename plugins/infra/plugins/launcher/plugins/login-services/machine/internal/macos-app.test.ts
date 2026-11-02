@@ -5,6 +5,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -30,14 +31,17 @@ let bundle: string;
 let calls: string[];
 let signed: boolean;
 let failSign: boolean;
+let running: () => string[];
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), "macos-app-"));
+  // Real: running executables are reported by real path (/private/var/…).
+  dir = realpathSync(mkdtempSync(join(tmpdir(), "macos-app-")));
   bundle = join(dir, "state", "equin.app");
   mkdirSync(join(dir, "state"));
   calls = [];
   signed = true;
   failSign = false;
+  running = () => [];
 });
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
@@ -59,6 +63,10 @@ function host(): MacosAppHost {
     isSigned: async () => signed,
     register: async (path) => {
       calls.push(`register ${path}`);
+    },
+    executablesInUse: async () => {
+      calls.push("lsof");
+      return running();
     },
   };
 }
@@ -95,6 +103,11 @@ async function rejection(p: Promise<unknown>): Promise<Error> {
 const gateway = { name: "gateway" };
 const tray = { name: "equin-desktop", main: true };
 const exe = (name: string) => join(bundle, "Contents", "MacOS", name);
+/** The swapped-out bundles beside the installed one. */
+const oldBundles = () =>
+  readdirSync(join(dir, "state"))
+    .filter((name) => name.startsWith("equin.app.old-"))
+    .map((name) => join(dir, "state", name));
 const plist = () =>
   readFileSync(join(bundle, "Contents", "Info.plist"), "utf8");
 
@@ -211,7 +224,7 @@ describe("installServiceExecutable", () => {
     calls = [];
     signed = false;
     await installServiceExecutable(host(), gateway, build("gw", "1"), () => {});
-    expect(calls).toEqual(["lock", "sign", `register ${bundle}`]);
+    expect(calls).toEqual(["lock", "sign", `register ${bundle}`, "lsof"]);
   });
 
   test("a new build replaces the executable", async () => {
@@ -219,6 +232,41 @@ describe("installServiceExecutable", () => {
     await installServiceExecutable(host(), gateway, build("gw", "2"), () => {});
     expect(readFileSync(exe("gateway"), "utf8")).toBe("2");
     expect(installedAppComponents(bundle)?.[0]?.identity).toBe("gw-dep@2");
+  });
+
+  test("the swapped-out bundle is kept while a process runs from it, then removed", async () => {
+    await installServiceExecutable(host(), gateway, build("gw", "1"), () => {});
+    // The gateway keeps running the file it was started from, which the next
+    // swap renames into the first old copy.
+    let startedFrom: string | undefined;
+    running = () => {
+      startedFrom ??= join(oldBundles()[0]!, "Contents", "MacOS", "gateway");
+      return ["/usr/lib/dyld", startedFrom];
+    };
+    await installServiceExecutable(host(), tray, build("mb", "1"), () => {});
+    const old = oldBundles();
+    expect(old).toHaveLength(1);
+    expect(readFileSync(startedFrom!, "utf8")).toBe("1");
+
+    // Another swap: only the copy in use is kept.
+    await installServiceExecutable(host(), tray, build("mb", "2"), () => {});
+    expect(oldBundles()).toEqual(old);
+    // A no-op install sweeps too.
+    await installServiceExecutable(host(), tray, build("mb", "2"), () => {});
+    expect(oldBundles()).toEqual(old);
+
+    // The gateway restarted from the new bundle: the next install removes it.
+    running = () => [exe("gateway")];
+    await installServiceExecutable(host(), tray, build("mb", "2"), () => {});
+    expect(readdirSync(join(dir, "state"))).toEqual(["equin.app"]);
+  });
+
+  test("a swap whose old bundle nothing runs leaves none behind", async () => {
+    await installServiceExecutable(host(), gateway, build("gw", "1"), () => {});
+    calls = [];
+    await installServiceExecutable(host(), gateway, build("gw", "2"), () => {});
+    expect(calls).toEqual(["lock", "sign", `register ${bundle}`, "lsof"]);
+    expect(readdirSync(join(dir, "state"))).toEqual(["equin.app"]);
   });
 
   test("a failed signature leaves the installed bundle as it was", async () => {

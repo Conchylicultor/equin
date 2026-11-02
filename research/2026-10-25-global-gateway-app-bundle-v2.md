@@ -174,3 +174,8 @@ Where the code differs from the plan above:
   - Even so, the running process and the children it spawns afterwards keep their Downloads
     grant, measured over 30–40 s. This was tested both ways: a main executable running while
     a non-main one changed, and a non-main one running while the main one changed.
+  - **Correction (2026-11-02):** that holds only while the old executable still exists. The
+    installer deleted the swapped-out bundle, and minutes later (once tccd's cache expired) the
+    gateway lost Downloads: `proc_pidpath_audittoken() failed from PID[…]: No such file or
+    directory`. The installer now keeps an old bundle until nothing runs from it
+    (`login-services/CLAUDE.md`).

@@ -5,12 +5,15 @@ import {
   cpSync,
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join } from "node:path";
+import { tmpdir } from "node:os";
+import { basename, dirname, join } from "node:path";
 import {
   codeSignature,
   rcodesign,
@@ -19,6 +22,7 @@ import {
   type RcodesignTool,
 } from "@plugins/infra/plugins/codesign/deps";
 import type { Dep } from "@plugins/infra/plugins/deps/deps";
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { waitForFlock } from "@plugins/packages/plugins/flock/core";
 import {
   unbundledExecutable,
@@ -48,13 +52,23 @@ import {
  * any other, each with its own LaunchAgent — is charged to the bundle; the
  * grant survives the bundle moving and being re-signed, and swapping a
  * re-signed bundle under a running executable keeps its grants (and its new
- * children's). A bundle under `/tmp` is disabled by LaunchServices.
+ * children's) — while the executable it runs still exists (see below). A
+ * bundle under `/tmp` is disabled by LaunchServices.
  *
  * At a stable path, not in the per-build deps cache: the components rebuild
  * independently (a menu-bar rebuild must not restart the gateway), and macOS
  * wants one app. Installing a component copies its build in, re-signs the
  * whole bundle in a staging copy and swaps it in whole; the job's environment
  * names the build (`executableEnv`), so only that component's job changes.
+ *
+ * The bundle swapped out is kept, as `equin.app.old-*`, while a process still
+ * runs an executable from it: macOS identifies a process by the file it runs,
+ * and once that file is deleted tccd cannot (`proc_pidpath_audittoken() …
+ * No such file or directory`), so every grant charged to it — the gateway's
+ * Downloads, and so every backend's — is refused. That shows only once tccd's
+ * cache expires, minutes after the swap. Every install sweeps the kept
+ * bundles nothing runs from any more ({@link sweepOldBundles}); main's boot
+ * installs on every boot, so a gateway restart frees its old bundle.
  *
  * Linux has no bundle: a service runs its build where it was built.
  */
@@ -72,6 +86,8 @@ export interface MacosAppHost {
   isSigned(bundle: string): Promise<boolean>;
   /** Register the bundle with LaunchServices (`tccutil` and Settings resolve it through it). */
   register(bundle: string): Promise<void>;
+  /** The real path of every executable a running process of this user was started from. */
+  executablesInUse(): Promise<string[]>;
 }
 
 /**
@@ -107,7 +123,30 @@ export function machineMacosAppHost(
       return (await codeSignature(path, APP_BUNDLE_ID)) === "signed";
     },
     register: (path) => registerApp(path),
+    executablesInUse: runningExecutables,
   };
+}
+
+/** No `lsof` over every process takes longer than this (measured: under 1 s). */
+const LSOF_TIMEOUT_MS = 30_000;
+
+/** Every running process's executable (lsof's `txt` descriptors), by real path. */
+async function runningExecutables(): Promise<string[]> {
+  const argv = ["lsof", "-d", "txt", "-F", "n"];
+  const result = await spawnCaptured(argv, {
+    cwd: tmpdir(),
+    env: { ...process.env },
+    timeoutMs: LSOF_TIMEOUT_MS,
+  });
+  if (result.timedOut || result.exitCode !== 0) {
+    throw new Error(
+      `\`${argv.join(" ")}\` ${result.timedOut ? `did not finish within ${LSOF_TIMEOUT_MS / 1000}s` : `failed (exit ${result.exitCode}): ${result.stderr.trim() || "(no output)"}`} — cannot tell which old equin.app bundles are still running`,
+    );
+  }
+  return result.stdout
+    .split("\n")
+    .filter((line) => line.startsWith("n"))
+    .map((line) => line.slice(1));
 }
 
 /** Where `component`'s executable lives inside the bundle. */
@@ -184,6 +223,7 @@ export async function installServiceExecutable(
       sameComponent(current, entry) &&
       (await host.isSigned(host.bundle))
     ) {
+      await sweepOldBundles(host, log);
       return planned;
     }
 
@@ -224,12 +264,40 @@ export async function installServiceExecutable(
       }
     } finally {
       rmSync(staging, { recursive: true, force: true });
-      rmSync(old, { recursive: true, force: true });
     }
     await host.register(host.bundle);
     log(`Installed ${component.name} (${build.identity}) into ${host.bundle}`);
+    await sweepOldBundles(host, log);
     return planned;
   });
+}
+
+/**
+ * Delete every swapped-out bundle (`equin.app.old-*`, beside the bundle) no
+ * running process was started from; keep the rest until a later install.
+ * Under the bundle lock, so no swap is renaming one meanwhile.
+ */
+async function sweepOldBundles(
+  host: MacosAppHost,
+  log: (line: string) => void,
+): Promise<void> {
+  const parent = dirname(host.bundle);
+  const prefix = `${basename(host.bundle)}.old-`;
+  const old = readdirSync(parent)
+    .filter((name) => name.startsWith(prefix))
+    .map((name) => join(parent, name));
+  if (old.length === 0) return;
+  const running = await host.executablesInUse();
+  for (const dir of old) {
+    const real = `${realpathSync(dir)}/`;
+    const users = running.filter((path) => path.startsWith(real));
+    if (users.length > 0) {
+      log(`Kept ${dir}: still running ${users.join(", ")}`);
+    } else {
+      rmSync(dir, { recursive: true, force: true });
+      log(`Removed ${dir}: nothing runs from it any more`);
+    }
+  }
 }
 
 function sameComponent(a: InstalledComponent, b: InstalledComponent): boolean {

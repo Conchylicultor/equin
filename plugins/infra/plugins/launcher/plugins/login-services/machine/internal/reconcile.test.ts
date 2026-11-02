@@ -143,6 +143,9 @@ const unbundled: MacosAppHost = {
   register: () => {
     throw new Error("nothing is registered off macOS");
   },
+  executablesInUse: () => {
+    throw new Error("nothing is swapped off macOS");
+  },
 };
 
 const run = (
@@ -276,6 +279,7 @@ describe("reconcileLoginService — macOS (the equin app bundle)", () => {
     sign: async () => {},
     isSigned: async () => true,
     register: async () => {},
+    executablesInUse: async () => [],
   };
   const reconcile = (service: LoginService, ready: ReturnType<typeof build>) =>
     reconcileLoginService(service, decl, ready, "follow", {
