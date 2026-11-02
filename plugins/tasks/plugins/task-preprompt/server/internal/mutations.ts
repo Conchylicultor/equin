@@ -1,3 +1,4 @@
+import { resolvePrepromptItem } from "@plugins/conversations/plugins/preprompts/server";
 import { tasksPreprompt } from "./tables";
 
 export async function getTaskPreprompt(taskId: string) {
@@ -19,12 +20,16 @@ export async function setTaskPreprompt(
 }
 
 // Snapshot a source task's preprompt onto a destination task. Used when an agent
-// spawns a subtask so it inherits the spawning agent's system prompt. No-op when
-// the source has no preprompt (the subtask simply gets none).
+// spawns a subtask so it inherits the spawning agent's system prompt — only when
+// that preprompt opts in (its `inherit` toggle, off by default). No-op when the
+// source has no preprompt, or one that does not opt in, or one that no longer
+// resolves (the subtask simply gets none).
 export async function inheritTaskPreprompt(
   fromTaskId: string,
   toTaskId: string,
 ): Promise<void> {
   const source = await getTaskPreprompt(fromTaskId);
-  if (source) await setTaskPreprompt(toTaskId, source.prepromptId);
+  if (!source) return;
+  if (!resolvePrepromptItem(source.prepromptId)?.inherit) return;
+  await setTaskPreprompt(toTaskId, source.prepromptId);
 }

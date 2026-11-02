@@ -8,6 +8,8 @@ export interface ResolvedPreprompt {
   prompt: string;
   /** Chosen icon/color. `null` when no icon is picked. */
   icon: AvatarSpec | null;
+  /** Whether a task an agent files inherits this preprompt (off by default). */
+  inherit: boolean;
 }
 
 /**
@@ -28,5 +30,11 @@ export function resolvePrepromptItem(
   // Only carry a meaningful icon (one with a picked name); the avatarField
   // default is an all-null spec which would render a blank disc.
   const icon = item.icon?.icon != null ? item.icon : null;
-  return { id: item.id, title: item.title, prompt, icon };
+  return {
+    id: item.id,
+    title: item.title,
+    prompt,
+    icon,
+    inherit: item.inherit,
+  };
 }

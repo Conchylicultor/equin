@@ -25,6 +25,7 @@
     - `resource.declare` "task-preprompts:rows"
     - `taskLaunchServer` "preprompt"
   - Uses:
+    - `conversations/preprompts.resolvePrepromptItem`
     - `infra/endpoints.implement`
     - `infra/entity-extensions.defineExtension`
     - `network/live.serveCollection`

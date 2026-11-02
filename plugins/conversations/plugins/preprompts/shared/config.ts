@@ -6,6 +6,7 @@ import {
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { listField } from "@plugins/fields/plugins/list/plugins/config/core";
 import { multilineTextField } from "@plugins/fields/plugins/multiline-text/plugins/config/core";
+import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import {
   avatarField,
   migrateClassicAvatar,
@@ -51,6 +52,12 @@ export const prepromptsConfig = defineConfig({
         }),
         title: textField({ label: "Title" }),
         prompt: multilineTextField({ label: "Prompt" }),
+        inherit: boolField({
+          label: "Inherited by agent-filed tasks",
+          description:
+            "When on, a task an agent files (add_task) carries this preprompt over from the agent's own task. Off: the filed task starts with no preprompt.",
+          default: false,
+        }),
       },
       default: [],
     }),
