@@ -56,11 +56,33 @@ function script(rel: string): string {
 
 // `bun` is a mise shim, which picks its version from the CURRENT directory's
 // mise.toml / mise.lock — and a scratch workspace has none (nor is there a
-// global default), so run from the guards' checkout: its lock picks the bun its
-// guards are written for. The guards read the agent's cwd from the hook input,
-// not from the process.
+// global default: "mise ERROR No version is set for shim: bun"), so every hook
+// running a bun script `cd`s into the script's checkout first: its lock picks
+// the bun the script is written for. A hook reads the agent's cwd from the hook
+// input, never from the process.
 function runGuard(rel: string): string {
   return `cd "${ROOT}" && bun ${script(rel)}`;
+}
+
+// A hook command is run by the CLI's own hook shell, so a literal path is held
+// to a plain-path alphabet rather than escaped for it.
+const SAFE_PATH_RE = /^\/[A-Za-z0-9_./ +-]+$/;
+
+/**
+ * The hook command that runs the bun script at `scriptPath` (absolute, plain)
+ * from the script's own directory, whatever the agent's cwd — so mise resolves
+ * `bun` from the checkout holding the script (see `runGuard`). The one spelling
+ * for a hook outside the agent policy (stop-gate, compaction-context, …).
+ */
+export function bunScriptHookCommand(scriptPath: string): string {
+  if (!SAFE_PATH_RE.test(scriptPath)) {
+    throw new Error(
+      `hook script path ${JSON.stringify(scriptPath)} must be absolute and ` +
+        `plain (it is spliced into a hook command)`,
+    );
+  }
+  const dir = scriptPath.slice(0, scriptPath.lastIndexOf("/")) || "/";
+  return `cd "${dir}" && bun "${scriptPath}"`;
 }
 
 // Fails closed. Claude Code blocks a tool call only on exit 2 — any other

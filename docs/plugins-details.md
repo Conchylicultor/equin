@@ -15004,7 +15004,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `CompactionContext`
         - Routes: `POST /api/conversations/:id/compaction-context`
       - Core:
-        - Uses: `infra/endpoints.defineEndpoint`
+        - Uses:
+          - `framework/tooling/guards/agent-policy.bunScriptHookCommand`
+          - `infra/endpoints.defineEndpoint`
         - Exports (types):
           - `CompactionContextResponse`
           - `CompactionHookEntry`
@@ -19875,7 +19877,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `StopWaiver`
         - Routes: `GET /api/conversations/:id/stop-gate`
       - Core:
-        - Uses: `infra/endpoints.defineEndpoint`
+        - Uses:
+          - `framework/tooling/guards/agent-policy.bunScriptHookCommand`
+          - `infra/endpoints.defineEndpoint`
         - Exports (types):
           - `StopGateHookEntry`
           - `StopGateResponse`
@@ -28221,9 +28225,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `PolicyHooks`
                 - Exports (values):
                   - `agentPolicySettings`
+                  - `bunScriptHookCommand`
                   - `GUARD_SCRIPTS`
               - Cross-plugin:
-                - Imported by: `framework/tooling/codegen`
+                - Imported by:
+                  - `conversations/compaction-context`
+                  - `conversations/stop-gate`
+                  - `framework/tooling/codegen`
             - **`refusal-format`** — The text format of a guard's denial — the did-not-run banner, then 'Why it was blocked:' and the guard's own reason — written (joinRefusal) and read back (refusalReason) in one place, so a transcript viewer can show the reason without the banner.
               - Cross-plugin:
                 - Imported by:

@@ -53,7 +53,9 @@ This plugin names no contributor.
     - `StopWaiver`
   - Routes: `GET /api/conversations/:id/stop-gate`
 - Core:
-  - Uses: `infra/endpoints.defineEndpoint`
+  - Uses:
+    - `framework/tooling/guards/agent-policy.bunScriptHookCommand`
+    - `infra/endpoints.defineEndpoint`
   - Exports (types):
     - `StopGateHookEntry`
     - `StopGateResponse`

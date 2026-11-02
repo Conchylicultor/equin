@@ -1,4 +1,8 @@
-export { agentPolicySettings, GUARD_SCRIPTS } from "./agent-policy";
+export {
+  agentPolicySettings,
+  bunScriptHookCommand,
+  GUARD_SCRIPTS,
+} from "./agent-policy";
 export type {
   AgentPolicySettings,
   PolicyHookCommand,

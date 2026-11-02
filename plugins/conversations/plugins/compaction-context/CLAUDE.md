@@ -54,7 +54,9 @@ adds itself.
   - Exports (values): `CompactionContext`
   - Routes: `POST /api/conversations/:id/compaction-context`
 - Core:
-  - Uses: `infra/endpoints.defineEndpoint`
+  - Uses:
+    - `framework/tooling/guards/agent-policy.bunScriptHookCommand`
+    - `infra/endpoints.defineEndpoint`
   - Exports (types):
     - `CompactionContextResponse`
     - `CompactionHookEntry`

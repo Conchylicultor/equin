@@ -1,3 +1,5 @@
+import { bunScriptHookCommand } from "@plugins/framework/plugins/tooling/plugins/guards/plugins/agent-policy/core";
+
 // The stop-gate hook's Claude Code entry, as data: this plugin owns the one
 // place its command and timeout are spelled. The machine half resolves the
 // script's absolute path (machine/internal/hook-entry.ts) and the launch
@@ -11,10 +13,6 @@
  */
 export const STOP_GATE_HOOK_TIMEOUT_S = 30;
 
-// The command is run by the CLI's own hook shell, so the path is held to a
-// plain-path alphabet rather than escaped for it.
-const SAFE_PATH_RE = /^\/[A-Za-z0-9_./ +-]+$/;
-
 export interface StopGateHookEntry {
   type: "command";
   command: string;
@@ -27,15 +25,9 @@ export function stopGateHook({
 }: {
   scriptPath: string;
 }): StopGateHookEntry {
-  if (!SAFE_PATH_RE.test(scriptPath)) {
-    throw new Error(
-      `stop-gate script path ${JSON.stringify(scriptPath)} must be ` +
-        `absolute and plain (it is spliced into a hook command)`,
-    );
-  }
   return {
     type: "command",
-    command: `bun "${scriptPath}"`,
+    command: bunScriptHookCommand(scriptPath),
     timeout: STOP_GATE_HOOK_TIMEOUT_S,
   };
 }

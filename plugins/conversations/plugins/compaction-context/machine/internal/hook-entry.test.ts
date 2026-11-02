@@ -5,7 +5,7 @@ import { compactionHookEntry } from "./hook-entry";
 describe("compactionHookEntry", () => {
   test("runs the hook script beside this code, by absolute path", async () => {
     const entry = compactionHookEntry();
-    const path = /^bun "(.+)"$/.exec(entry.command)?.[1];
+    const path = /^cd "[^"]+" && bun "(.+)"$/.exec(entry.command)?.[1];
     expect(path).toBeDefined();
     expect(isAbsolute(path!)).toBe(true);
     expect(await Bun.file(path!).exists()).toBe(true);
