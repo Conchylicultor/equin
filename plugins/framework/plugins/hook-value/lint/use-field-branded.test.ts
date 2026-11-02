@@ -2,24 +2,22 @@
  * Tests for `hook-value/use-field-branded`. Run with
  * `./equin test plugins/framework/plugins/hook-value`.
  *
- * Same typed RuleTester harness as `hook-binding-name.test.ts` (see
- * `plugins/primitives/plugins/passthrough/lint/no-unanchored-passthrough.test.ts`
- * for why it is shaped this way).
+ * A typed rule test: each case is a VIRTUAL `case.tsx` under an inferred
+ * project (`createTypedRuleTester` in `tooling/lint/core/testing`).
  */
 
-import { describe, it, setDefaultTimeout } from "bun:test";
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
+import { setDefaultTimeout } from "bun:test";
+import { createTypedRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 import rule from "./use-field-branded";
 
 // The first case pays for building the inferred program (seconds); every case
 // after it is milliseconds. bun:test's default five-second budget is too tight.
 setDefaultTimeout(60_000);
 
-/** This directory — where `tsconfig.case.json` and the virtual case both sit. */
+/** This directory — where the virtual case sits. */
 const LINT_DIR = new URL(".", import.meta.url).pathname.replace(/\/$/, "");
 
-/** The path every case is linted AS — nothing exists there (see the harness notes). */
+/** The path every case is linted AS — nothing exists there. */
 const VIRTUAL_CASE = "case.tsx";
 const FILENAME = `${LINT_DIR}/${VIRTUAL_CASE}`;
 
@@ -39,43 +37,24 @@ const invalid = (code: string, messageIds: string[]) => ({
   errors: messageIds.map((messageId) => ({ messageId })),
 });
 
-// Hand RuleTester bun:test's describe/it explicitly: it only picks up ambient
-// globals, and without them it runs every case at import time — failures still
-// throw, but the run reports "0 tests" and names no case.
-RuleTester.describe = describe;
-RuleTester.it = it;
-
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      ecmaFeatures: { jsx: true },
-      projectService: {
-        defaultProject: "tsconfig.case.json",
-        allowDefaultProject: [VIRTUAL_CASE],
-      },
-      tsconfigRootDir: LINT_DIR,
-    },
-  },
+const ruleTester = createTypedRuleTester({
+  dir: LINT_DIR,
+  cases: [VIRTUAL_CASE],
+  jsx: true,
 });
 
-ruleTester.run(
-  "use-field-branded",
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      valid(`interface Spec { useX: Hook<() => number> }`),
-      valid(`type Spec = { useX?: Hook<(s: string) => boolean> }`),
-      // A string-or-hook union: the only callable member is branded.
-      valid(`interface Title { useText: string | Hook<() => string> }`),
-      // Non-function use* fields are not hooks.
-      valid(`interface Opts { useCache: boolean; use2x?: number | null }`),
-      // Not a hook name (`user`, `usage`): no capital after `use`.
-      valid(`interface Opts { user: () => string; usage(): number }`),
-      // Out of scope: function declarations and object literals.
-      valid(`
+ruleTester.run("use-field-branded", rule, {
+  valid: [
+    valid(`interface Spec { useX: Hook<() => number> }`),
+    valid(`type Spec = { useX?: Hook<(s: string) => boolean> }`),
+    // A string-or-hook union: the only callable member is branded.
+    valid(`interface Title { useText: string | Hook<() => string> }`),
+    // Non-function use* fields are not hooks.
+    valid(`interface Opts { useCache: boolean; use2x?: number | null }`),
+    // Not a hook name (`user`, `usage`): no capital after `use`.
+    valid(`interface Opts { user: () => string; usage(): number }`),
+    // Out of scope: function declarations and object literals.
+    valid(`
         export function useFoo() { return 1; }
         const mock = { useFoo: () => 2 };`),
     ],

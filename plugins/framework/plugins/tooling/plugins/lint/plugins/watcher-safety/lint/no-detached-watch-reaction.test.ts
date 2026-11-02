@@ -1,12 +1,11 @@
 /**
- * Tests for `watcher-safety/no-detached-watch-reaction`. Typed RuleTester
- * harness copied from `plugins/framework/plugins/hook-value/lint` — each case is
- * a VIRTUAL `case.ts` under an inferred project (`tsconfig.case.json`).
+ * Tests for `watcher-safety/no-detached-watch-reaction`. A typed rule test:
+ * each case is a VIRTUAL `case.ts` under an inferred project
+ * (`createTypedRuleTester` in `tooling/lint/core/testing`).
  */
 
-import { describe, it, setDefaultTimeout } from "bun:test";
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
+import { setDefaultTimeout } from "bun:test";
+import { createTypedRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 import rule from "./no-detached-watch-reaction";
 
 // The first case pays for building the inferred program.
@@ -36,54 +35,37 @@ const invalid = (code: string, count = 1) => ({
   errors: Array.from({ length: count }, () => ({ messageId: "detached" })),
 });
 
-RuleTester.describe = describe;
-RuleTester.it = it;
-
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      projectService: {
-        defaultProject: "tsconfig.case.json",
-        allowDefaultProject: [VIRTUAL_CASE],
-      },
-      tsconfigRootDir: LINT_DIR,
-    },
-  },
+const ruleTester = createTypedRuleTester({
+  dir: LINT_DIR,
+  cases: [VIRTUAL_CASE],
 });
 
-ruleTester.run(
-  "no-detached-watch-reaction",
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // Returned work: the watch coalesces it.
-      valid(`start({ onChange: () => work() });`),
-      valid(`start({ onChange: async () => { await work(); } });`),
-      valid(`start({ onChange: () => work(), onLost: () => work() });`),
-      // Sync reactions.
-      valid(`start({ onChange: () => notify() });`),
-      valid(
-        `const seen: string[] = []; start({ onChange: (e) => void seen.push(...e) });`,
-      ),
-      // A detach inside a NESTED function is that function's business.
-      valid(`start({ onChange: () => later(() => { void work(); }) });`),
-      // Not a watch callback.
-      valid(`later(() => { void work(); });`),
-      // Module scope: no enclosing function at all.
-      valid(`void work();`),
-    ],
-    invalid: [
-      invalid(`start({ onChange: () => { void work(); } });`),
-      invalid(`start({ onChange: () => void work() });`),
-      invalid(
-        `start({ onChange: () => notify(), onLost: () => { void work(); } });`,
-      ),
-      invalid(
-        `start({ onChange: (events) => { if (events.length > 0) void work(); } });`,
-      ),
-    ],
-  },
-);
+ruleTester.run("no-detached-watch-reaction", rule, {
+  valid: [
+    // Returned work: the watch coalesces it.
+    valid(`start({ onChange: () => work() });`),
+    valid(`start({ onChange: async () => { await work(); } });`),
+    valid(`start({ onChange: () => work(), onLost: () => work() });`),
+    // Sync reactions.
+    valid(`start({ onChange: () => notify() });`),
+    valid(
+      `const seen: string[] = []; start({ onChange: (e) => void seen.push(...e) });`,
+    ),
+    // A detach inside a NESTED function is that function's business.
+    valid(`start({ onChange: () => later(() => { void work(); }) });`),
+    // Not a watch callback.
+    valid(`later(() => { void work(); });`),
+    // Module scope: no enclosing function at all.
+    valid(`void work();`),
+  ],
+  invalid: [
+    invalid(`start({ onChange: () => { void work(); } });`),
+    invalid(`start({ onChange: () => void work() });`),
+    invalid(
+      `start({ onChange: () => notify(), onLost: () => { void work(); } });`,
+    ),
+    invalid(
+      `start({ onChange: (events) => { if (events.length > 0) void work(); } });`,
+    ),
+  ],
+});

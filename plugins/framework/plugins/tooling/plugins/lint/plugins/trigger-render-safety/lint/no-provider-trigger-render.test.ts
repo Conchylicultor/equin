@@ -15,37 +15,20 @@
  *   - a non-`render` prop.
  */
 
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 import rule from "./no-provider-trigger-render";
+import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      ecmaFeatures: { jsx: true },
+const ruleTester = createRuleTester({ jsx: true });
+
+ruleTester.run("no-provider-trigger-render", rule, {
+  valid: [
+    // DOM-rooted IconButton render target — the prescribed fix.
+    {
+      code: `const x = <DropdownMenuTrigger render={<IconButton icon={X} label="Add" />} />;`,
     },
-  },
-});
-
-// `RuleTester.run` drives the test harness itself (it calls the ambient
-// describe/it that bun:test provides), so it must run at module top level.
-ruleTester.run(
-  "no-provider-trigger-render",
-  // The eslint flat-config RuleTester is typed against the legacy Rule shape;
-  // the typescript-eslint createRule object is compatible at runtime.
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // DOM-rooted IconButton render target — the prescribed fix.
-      {
-        code: `const x = <DropdownMenuTrigger render={<IconButton icon={X} label="Add" />} />;`,
-      },
-      // Provider hoisted as ANCESTOR (not the render root) — harmless.
-      {
-        code: `
+    // Provider hoisted as ANCESTOR (not the render root) — harmless.
+    {
+      code: `
           const x = (
             <ControlSizeProvider>
               <DropdownMenuTrigger render={<IconButton icon={X} label="Add" />} />

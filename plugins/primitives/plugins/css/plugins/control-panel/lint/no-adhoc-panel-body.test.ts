@@ -18,85 +18,69 @@
  * component being nobody's violation — the host is a different line of code.
  */
 
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 // The rule is a FACTORY taking the shared class-token walk (rule files cannot
 // import it — they dual-load under jiti). Tests run under Bun, where the
 // `@plugins/*` alias resolves, so they construct it with the real toolkit.
-import { lintToolkit } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
+import {
+  createRuleTester,
+  lintToolkit,
+} from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 import buildRule from "./no-adhoc-panel-body";
 
 const rule = buildRule(lintToolkit);
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      ecmaFeatures: { jsx: true },
+const ruleTester = createRuleTester({ jsx: true });
+
+ruleTester.run("no-adhoc-panel-body", rule, {
+  valid: [
+    // A separator inside the menu it belongs to.
+    {
+      code: `const el = <DropdownMenuContent><DropdownMenuItem/><DropdownMenuSeparator/></DropdownMenuContent>;`,
     },
-  },
-});
+    // A sub-menu counts as a menu surface.
+    {
+      code: `const el = <DropdownMenuSubContent><DropdownMenuSeparator/></DropdownMenuSubContent>;`,
+    },
+    // Nested several levels deep, through a fragment.
+    {
+      code: `const el = <DropdownMenuContent><><div><DropdownMenuSeparator/></div></></DropdownMenuContent>;`,
+    },
+    // THE grouped-menu shape: the separator is emitted from an inline `.map()`
+    // callback, which is the same JSX tree as the content around it — not a
+    // different component. (This is `operator-picker.tsx`, and treating the
+    // callback as a boundary reported every grouped menu in the repo.)
+    {
+      code: `const el = <DropdownMenuContent>{groups.map((g, i) => (<Fragment key={g.label}>{i > 0 && <DropdownMenuSeparator/>}<DropdownMenuItem/></Fragment>))}</DropdownMenuContent>;`,
+    },
+    // Same, one function expression deep instead of an arrow.
+    {
+      code: `const el = <DropdownMenuContent>{groups.map(function (g) { return <DropdownMenuSeparator key={g.id}/>; })}</DropdownMenuContent>;`,
+    },
+    // `CursorAnchoredMenu` renders its children straight into a
+    // `DropdownMenuContent`, so it IS a menu surface despite the name.
+    {
+      code: `const el = <CursorAnchoredMenu anchor={a} onClose={c}><DropdownMenuItem/><DropdownMenuSeparator/></CursorAnchoredMenu>;`,
+    },
+    // A non-JSX reference to the component must not trip.
+    {
+      code: `const x = DropdownMenuSeparator; register(DropdownMenuSeparator);`,
+    },
+    // `<Separator>` outside a floating panel — a form, a card, a page — is the
+    // primitive doing its job.
+    { code: `const el = <div><Separator/></div>;` },
+    // A separator in a DIFFERENT component from a panel surface: the walk stops
+    // at the function boundary, so this is not attributed to the panel.
+    {
+      code: `function Body(){ return <Separator/>; } function Panel(){ return <PopoverContent><Body/></PopoverContent>; }`,
+    },
+    // Half a hairline is not a hairline: a bare `h-px` spacer …
+    { code: `const el = <div className="h-px w-full" />;` },
+    // … and a bare border fill.
+    { code: `const el = <div className="bg-border rounded-md" />;` },
+    // A `h-pxl`-ish near-miss must not match — the height token is anchored.
+    { code: `const el = <div className="h-pxl bg-border" />;` },
 
-// `RuleTester.run` drives the test harness itself (it calls the ambient
-// describe/it that bun:test provides), so it must run at module top level —
-// never wrapped in a `test()` callback.
-ruleTester.run(
-  "no-adhoc-panel-body",
-  // The eslint flat-config RuleTester is typed against the legacy Rule shape;
-  // the typescript-eslint createRule object is compatible at runtime.
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // A separator inside the menu it belongs to.
-      {
-        code: `const el = <DropdownMenuContent><DropdownMenuItem/><DropdownMenuSeparator/></DropdownMenuContent>;`,
-      },
-      // A sub-menu counts as a menu surface.
-      {
-        code: `const el = <DropdownMenuSubContent><DropdownMenuSeparator/></DropdownMenuSubContent>;`,
-      },
-      // Nested several levels deep, through a fragment.
-      {
-        code: `const el = <DropdownMenuContent><><div><DropdownMenuSeparator/></div></></DropdownMenuContent>;`,
-      },
-      // THE grouped-menu shape: the separator is emitted from an inline `.map()`
-      // callback, which is the same JSX tree as the content around it — not a
-      // different component. (This is `operator-picker.tsx`, and treating the
-      // callback as a boundary reported every grouped menu in the repo.)
-      {
-        code: `const el = <DropdownMenuContent>{groups.map((g, i) => (<Fragment key={g.label}>{i > 0 && <DropdownMenuSeparator/>}<DropdownMenuItem/></Fragment>))}</DropdownMenuContent>;`,
-      },
-      // Same, one function expression deep instead of an arrow.
-      {
-        code: `const el = <DropdownMenuContent>{groups.map(function (g) { return <DropdownMenuSeparator key={g.id}/>; })}</DropdownMenuContent>;`,
-      },
-      // `CursorAnchoredMenu` renders its children straight into a
-      // `DropdownMenuContent`, so it IS a menu surface despite the name.
-      {
-        code: `const el = <CursorAnchoredMenu anchor={a} onClose={c}><DropdownMenuItem/><DropdownMenuSeparator/></CursorAnchoredMenu>;`,
-      },
-      // A non-JSX reference to the component must not trip.
-      {
-        code: `const x = DropdownMenuSeparator; register(DropdownMenuSeparator);`,
-      },
-      // `<Separator>` outside a floating panel — a form, a card, a page — is the
-      // primitive doing its job.
-      { code: `const el = <div><Separator/></div>;` },
-      // A separator in a DIFFERENT component from a panel surface: the walk stops
-      // at the function boundary, so this is not attributed to the panel.
-      {
-        code: `function Body(){ return <Separator/>; } function Panel(){ return <PopoverContent><Body/></PopoverContent>; }`,
-      },
-      // Half a hairline is not a hairline: a bare `h-px` spacer …
-      { code: `const el = <div className="h-px w-full" />;` },
-      // … and a bare border fill.
-      { code: `const el = <div className="bg-border rounded-md" />;` },
-      // A `h-pxl`-ish near-miss must not match — the height token is anchored.
-      { code: `const el = <div className="h-pxl bg-border" />;` },
-
-      // ── Signal D: which surface hosts the panel body ──────────────────
+    // ── Signal D: which surface hosts the panel body ──────────────────
       // The sanctioned host.
       {
         code: `const el = <ControlPanelPopover trigger={t}><ControlPanel><ControlPanel.Section/></ControlPanel></ControlPanelPopover>;`,

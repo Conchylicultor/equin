@@ -9,63 +9,50 @@
  * indirection this rule deliberately lets through.
  */
 
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 import rule from "./no-adhoc-detail-sections";
+import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      ecmaFeatures: { jsx: true },
+const ruleTester = createRuleTester({ jsx: true });
+
+ruleTester.run("no-adhoc-detail-sections", rule, {
+  valid: [
+    // `website.section` / `home.section` — self-closing, no render-prop at all.
+    { code: `const el = <Website.Section.Render />;` },
+    { code: `const el = <Home.Section.Render />;` },
+    // `pages.welcome.section` — returns the contributed component bare.
+    {
+      code: `const el = <PagesWelcome.Section.Render>{(s) => <s.component />}</PagesWelcome.Section.Render>;`,
     },
-  },
-});
-
-// `RuleTester.run` drives bun:test's ambient describe/it, so it must run at
-// module top level — never wrapped in a `test()` callback.
-ruleTester.run(
-  "no-adhoc-detail-sections",
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // `website.section` / `home.section` — self-closing, no render-prop at all.
-      { code: `const el = <Website.Section.Render />;` },
-      { code: `const el = <Home.Section.Render />;` },
-      // `pages.welcome.section` — returns the contributed component bare.
-      { code: `const el = <PagesWelcome.Section.Render>{(s) => <s.component />}</PagesWelcome.Section.Render>;` },
-      // `profiling.section` — Gantt lanes, a plain keyed div.
-      {
-        code: `const el = <Profiling.Section.Render>{(s) => <div key={s.id}><s.component /></div>}</Profiling.Section.Render>;`,
-      },
-      // The sanctioned shape: the factory's Host renders the section through a helper.
-      {
-        code: `const el = <Section.Render>{(item) => <SectionItemHost section={item} entityProps={p} />}</Section.Render>;`,
-      },
-      // A `.Render` zone that is not `.Section.Render` — the member before
-      // `.Render` must literally be `Section`.
-      {
-        code: `const el = <Toolbar.Start.Render>{(s) => <Card><s.component /></Card>}</Toolbar.Start.Render>;`,
-      },
-      // Chrome around the LIST rather than per item (review's plugin-changes shape).
-      {
-        code: `const el = <Card><PluginChanges.Section.Render>{(s) => <s.component />}</PluginChanges.Section.Render></Card>;`,
-      },
-      // Multi-hop indirection — the documented false negative (Sonata's old host).
-      {
-        code: `const el = <Sonata.Section.Render>{(s) => <SectionCardHost section={s} />}</Sonata.Section.Render>;`,
-      },
-      // A wrapper that merely CONTAINS a card resolves to the wrapper, not the card.
-      {
-        code: `const el = <Foo.Section.Render>{(s) => <div><Card /></div>}</Foo.Section.Render>;`,
-      },
-    ],
-    invalid: [
-      // The Workflows host verbatim — the shape this rule exists to catch.
-      {
-        code: `const el = (
+    // `profiling.section` — Gantt lanes, a plain keyed div.
+    {
+      code: `const el = <Profiling.Section.Render>{(s) => <div key={s.id}><s.component /></div>}</Profiling.Section.Render>;`,
+    },
+    // The sanctioned shape: the factory's Host renders the section through a helper.
+    {
+      code: `const el = <Section.Render>{(item) => <SectionItemHost section={item} entityProps={p} />}</Section.Render>;`,
+    },
+    // A `.Render` zone that is not `.Section.Render` — the member before
+    // `.Render` must literally be `Section`.
+    {
+      code: `const el = <Toolbar.Start.Render>{(s) => <Card><s.component /></Card>}</Toolbar.Start.Render>;`,
+    },
+    // Chrome around the LIST rather than per item (review's plugin-changes shape).
+    {
+      code: `const el = <Card><PluginChanges.Section.Render>{(s) => <s.component />}</PluginChanges.Section.Render></Card>;`,
+    },
+    // Multi-hop indirection — the documented false negative (Sonata's old host).
+    {
+      code: `const el = <Sonata.Section.Render>{(s) => <SectionCardHost section={s} />}</Sonata.Section.Render>;`,
+    },
+    // A wrapper that merely CONTAINS a card resolves to the wrapper, not the card.
+    {
+      code: `const el = <Foo.Section.Render>{(s) => <div><Card /></div>}</Foo.Section.Render>;`,
+    },
+  ],
+  invalid: [
+    // The Workflows host verbatim — the shape this rule exists to catch.
+    {
+      code: `const el = (
           <WorkflowsDetail.Section.Render>
             {(s) => (
               <Surface key={s.id} level="raised" as="section" className="p-lg">

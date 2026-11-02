@@ -8,34 +8,16 @@
  * `.pending` field, or on render ternaries whose pending branch is real UI.
  */
 
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 import rule from "./no-pending-data-collapse";
+import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      ecmaFeatures: { jsx: true },
-    },
-  },
-});
+const ruleTester = createRuleTester({ jsx: true });
 
-// `RuleTester.run` drives the test harness itself (it calls the ambient
-// describe/it that bun:test provides), so it must run at module top level —
-// never wrapped in a `test()` callback.
-ruleTester.run(
-  "no-pending-data-collapse",
-  // The eslint flat-config RuleTester is typed against the legacy Rule shape;
-  // the typescript-eslint createRule object is compatible at runtime.
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // A slot order whose loading arm renders a real loading state.
-      {
-        code: `
+ruleTester.run("no-pending-data-collapse", rule, {
+  valid: [
+    // A slot order whose loading arm renders a real loading state.
+    {
+      code: `
           const order = useSlotOrder(Header.Item);
           const node = order.status !== "ready" ? renderSkeleton() : order.data.length;
         `,

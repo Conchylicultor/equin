@@ -12,33 +12,16 @@
  *   - a computed `role={x}` — not analyzable, so not guessed at.
  */
 
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 import rule from "./no-orphan-composite-role";
+import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      ecmaFeatures: { jsx: true },
-    },
-  },
-});
+const ruleTester = createRuleTester({ jsx: true });
 
-// `RuleTester.run` drives the test harness itself (it calls the ambient
-// describe/it that bun:test provides), so it must run at module top level.
-ruleTester.run(
-  "no-orphan-composite-role",
-  // The eslint flat-config RuleTester is typed against the legacy Rule shape;
-  // the typescript-eslint createRule object is compatible at runtime.
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // The prescribed shape: container and children in one file (file-tabs.tsx).
-      {
-        code: `
+ruleTester.run("no-orphan-composite-role", rule, {
+  valid: [
+    // The prescribed shape: container and children in one file (file-tabs.tsx).
+    {
+      code: `
           const el = (
             <Stack role="tablist">
               {tabs.map((t) => <button key={t.id} role="tab" aria-selected={t.active}>{t.label}</button>)}

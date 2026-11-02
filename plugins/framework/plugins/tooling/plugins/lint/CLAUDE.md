@@ -202,9 +202,13 @@ its disable does not cover. Parameters and imports have no in-file value.
   - Exempts itself from:
     - `boundaries/no-platform-api` — `core/declared-utilities.ts`, `core/plugin-dirs.ts` (debt)
     - `rule-kind-safety/no-raw-rule-creator` — `core/rule-creator.ts` (sanctioned)
+    - `rule-kind-safety/no-raw-rule-tester` — `core/testing/rule-tester.ts` (sanctioned)
 - Test helpers:
   - Core: `@plugins/framework/plugins/tooling/plugins/lint/core/testing`
+    - `createRuleTester` — A syntactic rule's tester: no program, no project.
+    - `createTypedRuleTester` — A type-aware rule's tester.
     - `lintToolkit`
+    - Types: `LintRuleTester`
 - Sub-plugins:
   - **`agent-origin-safety`** — Lint rule keeping an e2e script's own Node-side calls to the app under test marked with the agent-origin headers, so the writes they cause stay attributable and revertible.
   - **`aria-safety`** — aria-safety lint rule: no-orphan-composite-role

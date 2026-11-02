@@ -29,9 +29,8 @@ export interface TestRunnerOutcome {
   failures: string[];
   /**
    * Files this runner was given that its report never mentions. JUnit cannot
-   * say why: the file threw while loading, OR it recorded no test cases at all
-   * (an ESLint `RuleTester` file asserts at load time and registers none). Not
-   * failures, then — but a file moving INTO this list between two runs is how a
+   * say why: the file threw while loading, OR it recorded no test cases at all.
+   * Not failures, then — but a file moving INTO this list between two runs is how a
    * new load crash shows up, so a comparison should diff it too.
    */
   unreported: string[];

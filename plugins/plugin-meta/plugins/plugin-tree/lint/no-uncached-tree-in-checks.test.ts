@@ -5,16 +5,10 @@
  * AST holds no real import. Scoping is exercised via the `filename` option.
  */
 
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 import rule from "./no-uncached-tree-in-checks";
+import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: { ecmaVersion: "latest", sourceType: "module" },
-  },
-});
+const ruleTester = createRuleTester();
 
 const CORE = "@plugins/plugin-meta/plugins/plugin-tree/core";
 const CHECK = "/repo/plugins/tasks/plugins/foo/check/index.ts";
@@ -26,55 +20,51 @@ const CODEGEN =
 const CHECK_COMMAND =
   "/repo/plugins/framework/plugins/cli/plugins/check/cli/run.ts";
 
-ruleTester.run(
-  "no-uncached-tree-in-checks",
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      {
-        code: `import { buildStructureTreeOnce } from "${CORE}"; buildStructureTreeOnce("/p");`,
-        filename: CHECK,
-      },
-      {
-        code: `import type { PluginTree } from "${CORE}";`,
-        filename: CHECK,
-      },
-      {
-        code: `import { type PluginTree, resolvePluginSpecifier } from "${CORE}";`,
-        filename: RUNNER,
-      },
-      // The codegen memos are the builder's legitimate owners.
-      {
-        code: `import { buildPluginTree } from "${CORE}"; buildPluginTree("/p");`,
-        filename: CODEGEN,
-      },
-      {
-        code: `import { buildPluginTree } from "${CORE}"; buildPluginTree("/p");`,
-        filename: CHECK_COMMAND,
-      },
-    ],
-    invalid: [
-      {
-        code: `import { buildPluginTree } from "${CORE}";`,
-        filename: CHECK,
-        errors: [{ messageId: "uncachedTree" }],
-      },
-      {
-        code: `import { buildPluginTree as b } from "${CORE}";`,
-        filename: RUNNER,
-        errors: [{ messageId: "uncachedTree" }],
-      },
-      {
-        code: `import * as pt from "${CORE}"; pt.buildPluginTree("/p");`,
-        filename: CHECK,
-        errors: [{ messageId: "uncachedTree" }],
-      },
-      {
-        code: `import { buildPluginTree } from "${CORE}";`,
-        filename:
-          "/repo/plugins/framework/plugins/tooling/plugins/checks/plugins/x/check/index.ts",
-        errors: [{ messageId: "uncachedTree" }],
-      },
-    ],
-  },
-);
+ruleTester.run("no-uncached-tree-in-checks", rule, {
+  valid: [
+    {
+      code: `import { buildStructureTreeOnce } from "${CORE}"; buildStructureTreeOnce("/p");`,
+      filename: CHECK,
+    },
+    {
+      code: `import type { PluginTree } from "${CORE}";`,
+      filename: CHECK,
+    },
+    {
+      code: `import { type PluginTree, resolvePluginSpecifier } from "${CORE}";`,
+      filename: RUNNER,
+    },
+    // The codegen memos are the builder's legitimate owners.
+    {
+      code: `import { buildPluginTree } from "${CORE}"; buildPluginTree("/p");`,
+      filename: CODEGEN,
+    },
+    {
+      code: `import { buildPluginTree } from "${CORE}"; buildPluginTree("/p");`,
+      filename: CHECK_COMMAND,
+    },
+  ],
+  invalid: [
+    {
+      code: `import { buildPluginTree } from "${CORE}";`,
+      filename: CHECK,
+      errors: [{ messageId: "uncachedTree" }],
+    },
+    {
+      code: `import { buildPluginTree as b } from "${CORE}";`,
+      filename: RUNNER,
+      errors: [{ messageId: "uncachedTree" }],
+    },
+    {
+      code: `import * as pt from "${CORE}"; pt.buildPluginTree("/p");`,
+      filename: CHECK,
+      errors: [{ messageId: "uncachedTree" }],
+    },
+    {
+      code: `import { buildPluginTree } from "${CORE}";`,
+      filename:
+        "/repo/plugins/framework/plugins/tooling/plugins/checks/plugins/x/check/index.ts",
+      errors: [{ messageId: "uncachedTree" }],
+    },
+  ],
+});

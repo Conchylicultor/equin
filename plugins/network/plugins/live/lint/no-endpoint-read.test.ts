@@ -5,12 +5,10 @@
  * report.
  *
  * Type-aware: a `LiveReader` is recognised by its type's name, so every case
- * is type-checked. The
- * harness is the one `primitives/passthrough`'s
- * `no-unanchored-passthrough.test.ts` explains: each case is linted as a path
- * that does not exist on disk (`web/case.tsx` beside this file — under a
- * `web/` folder, the rule's scope), under an inferred project whose options
- * come from `tsconfig.case.json` (`types: []` keeps it fast). The endpoints
+ * is type-checked (`createTypedRuleTester` in `tooling/lint/core/testing`):
+ * each case is linted as a path that does not exist on disk (`web/case.tsx`
+ * beside this file — under a `web/` folder, the rule's scope), under an
+ * inferred project. The endpoints
  * barrel does not resolve there, so a case binds `fetchEndpoint` itself (a
  * `declare const`, a `useFetchEndpoint()` result, a parameter) — the rule
  * recognises the client by its binding NAME, not its type — while
@@ -19,14 +17,13 @@
  */
 
 import { setDefaultTimeout } from "bun:test";
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
+import { createTypedRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 import rule from "./no-endpoint-read";
 
 // The first case pays for building the inferred project's program.
 setDefaultTimeout(60_000);
 
-/** This directory — where `tsconfig.case.json` sits. */
+/** This directory — where the virtual cases sit. */
 const LINT_DIR = new URL(".", import.meta.url).pathname.replace(/\/$/, "");
 
 /** The virtual paths cases are linted as (nothing exists there). */
@@ -80,44 +77,27 @@ declare function useLiveReader(): LiveReader;
 declare const stat: { key: "host-fs.stat" };
 `;
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      ecmaFeatures: { jsx: true },
-      projectService: {
-        defaultProject: "tsconfig.case.json",
-        allowDefaultProject: [WEB_CASE, SERVER_CASE, CORE_CASE],
-      },
-      tsconfigRootDir: LINT_DIR,
-    },
-  },
+const ruleTester = createTypedRuleTester({
+  dir: LINT_DIR,
+  cases: [WEB_CASE, SERVER_CASE, CORE_CASE],
+  jsx: true,
 });
 
-// `RuleTester.run` drives the test harness itself (it calls the ambient
-// describe/it that bun:test provides), so it must run at module top level.
-ruleTester.run(
-  "no-endpoint-read",
-  // The eslint flat-config RuleTester is typed against the legacy Rule shape;
-  // the typescript-eslint createRule object is compatible at runtime.
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // The live read.
-      {
-        filename: WEB,
-        code:
-          PRELUDE +
-          `import { useLive } from "@plugins/network/plugins/live/web";`,
-      },
-      // Writes stay on endpoints.
-      {
-        filename: WEB,
-        code:
-          PRELUDE +
-          `
+ruleTester.run("no-endpoint-read", rule, {
+  valid: [
+    // The live read.
+    {
+      filename: WEB,
+      code:
+        PRELUDE +
+        `import { useLive } from "@plugins/network/plugins/live/web";`,
+    },
+    // Writes stay on endpoints.
+    {
+      filename: WEB,
+      code:
+        PRELUDE +
+        `
           declare const fetchEndpoint: FetchEndpoint;
           import { useMutation } from "${REACT_QUERY}";
           useMutation({ mutationFn: (b) => fetchEndpoint(save, { body: b }) });

@@ -5,16 +5,10 @@
  * unused-exemption report.
  */
 
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 import rule from "./no-legacy-resource-spelling";
+import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: { ecmaVersion: "latest", sourceType: "module" },
-  },
-});
+const ruleTester = createRuleTester();
 
 const LIVE_STATE_WEB = "@plugins/primitives/plugins/live-state/web";
 const SERVER_CORE = "@plugins/framework/plugins/server-core/core";
@@ -27,21 +21,14 @@ const legacy = (name: string) => ({
   message: new RegExp(`^\`${name}\` is a legacy live-resource spelling\\.`),
 });
 
-// `RuleTester.run` drives the test harness itself (it calls the ambient
-// describe/it that bun:test provides), so it must run at module top level.
-ruleTester.run(
-  "no-legacy-resource-spelling",
-  // The eslint flat-config RuleTester is typed against the legacy Rule shape;
-  // the typescript-eslint createRule object is compatible at runtime.
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // A name the same barrel exports that is not an old spelling.
-      { code: `import { matchResource } from "${LIVE_STATE_WEB}";` },
-      { code: `import type { ResourceResult } from "${LIVE_STATE_WEB}";` },
-      // The unified spellings.
-      {
-        code: `
+ruleTester.run("no-legacy-resource-spelling", rule, {
+  valid: [
+    // A name the same barrel exports that is not an old spelling.
+    { code: `import { matchResource } from "${LIVE_STATE_WEB}";` },
+    { code: `import type { ResourceResult } from "${LIVE_STATE_WEB}";` },
+    // The unified spellings.
+    {
+      code: `
           import { useLive, useLiveRow } from "@plugins/network/plugins/live/web";
           import { serveValue } from "@plugins/network/plugins/live/server";
         `,

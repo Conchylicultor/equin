@@ -9,16 +9,10 @@
  * `.as("alias")`, and every `.as<T>()` that has nothing to do with drizzle.
  */
 
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 import rule from "./no-asserted-sql-type";
+import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: { ecmaVersion: "latest", sourceType: "module" },
-  },
-});
+const ruleTester = createRuleTester();
 
 /** A file inside the owner directory, where the rule must stay silent. */
 const OWNED =
@@ -26,24 +20,17 @@ const OWNED =
 /** An ordinary consumer file, where it must fire. */
 const CONSUMER = "plugins/tasks/plugins/tasks-core/server/internal/views.ts";
 
-// `RuleTester.run` drives the harness itself (it calls the ambient describe/it
-// that bun:test provides), so it must run at module top level.
-ruleTester.run(
-  "no-asserted-sql-type",
-  // The eslint flat-config RuleTester is typed against the legacy Rule shape;
-  // the typescript-eslint createRule object is compatible at runtime.
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // --- The sanctioned door: the type comes from the decoder. ---
-      { code: "const a = sql`(x IS NULL)`.mapWith(Boolean).as('active');" },
-      { code: "const a = sql`count(*)::int`.mapWith(Number).as('n');" },
-      {
-        code: "const a = sql`min(t.created_at)`.mapWith(nullable(t.createdAt)).as('finished_at');",
-      },
-      {
-        code: "const a = sql`CASE END`.mapWith(parsed(StatusSchema, 'tasks_v.status')).as('status');",
-      },
+ruleTester.run("no-asserted-sql-type", rule, {
+  valid: [
+    // --- The sanctioned door: the type comes from the decoder. ---
+    { code: "const a = sql`(x IS NULL)`.mapWith(Boolean).as('active');" },
+    { code: "const a = sql`count(*)::int`.mapWith(Number).as('n');" },
+    {
+      code: "const a = sql`min(t.created_at)`.mapWith(nullable(t.createdAt)).as('finished_at');",
+    },
+    {
+      code: "const a = sql`CASE END`.mapWith(parsed(StatusSchema, 'tasks_v.status')).as('status');",
+    },
 
       // --- No type argument at all: honestly `SQL<unknown>`. ---
       { code: "const a = sql`blocks.data -> 'icon'`;" },

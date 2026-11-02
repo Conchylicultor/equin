@@ -1,14 +1,13 @@
 /**
- * Tests for `user-path/no-unproven-claim`. Typed RuleTester harness as in
- * `watcher-safety/no-detached-watch-reaction` — each case is a VIRTUAL file
- * under an inferred project (`tsconfig.case.json`, with `@types/node`), named
+ * Tests for `user-path/no-unproven-claim`. A typed rule test (`createTypedRuleTester` in
+ * `tooling/lint/core/testing`) — each case is a VIRTUAL file under an inferred
+ * project with `@types/node`, named
  * under a `server/` or `core/` folder (runtime code) or a `cli/` one (out of
  * scope).
  */
 
-import { describe, it, setDefaultTimeout } from "bun:test";
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
+import { setDefaultTimeout } from "bun:test";
+import { createTypedRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 import rule from "./no-unproven-claim";
 
 // The first case pays for building the inferred program.
@@ -54,64 +53,45 @@ const invalid = (
   errors: messageIds.map((messageId) => ({ messageId })),
 });
 
-RuleTester.describe = describe;
-RuleTester.it = it;
-
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      projectService: {
-        defaultProject: "tsconfig.case.json",
-        allowDefaultProject: [SERVER_CASE, CORE_CASE, CLI_CASE],
-      },
-      tsconfigRootDir: LINT_DIR,
-    },
-  },
+const ruleTester = createTypedRuleTester({
+  dir: LINT_DIR,
+  cases: [SERVER_CASE, CORE_CASE, CLI_CASE],
 });
 
 /* eslint-disable no-template-curly-in-string -- the cases ARE template literals */
-ruleTester.run(
-  "no-unproven-claim",
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // Proven by the rule: only the type is given.
-      valid(`const a = asAppPath(join(APP_DIR, "meta", "x.json"));`),
-      valid("const a = asAppPath(`${APP_DIR}.tmp`);"),
-      valid(
-        `const a = asAppPath(dirname(APP_DIR)); const b = asAppPath(realpathSync(APP_DIR));`,
-      ),
-      valid(`const a = asAppPath(fs.mkdtempSync(join(tmpdir(), "x-")));`),
-      valid(`const a = asAppPath(resolve(import.meta.dir, ".."));`),
-      valid(`const a = asAppPath("/opt/tool");`),
-      valid(`const a = APP_DIR as AppPath; const b = asAppPath(APP_DIR);`),
-      // Out of scope: a CLI file.
-      valid(`const a = asAppPath(plain);`, CLI_CASE),
-    ],
-    invalid: [
-      // A claim nothing backs.
-      invalid(`const a = asAppPath(plain);`, ["claim"]),
-      // A plain-string tail may climb out of the root: joinAppPath, not a claim.
-      invalid(`const a = asAppPath(join(APP_DIR, plain));`, ["claim"]),
-      invalid(`function f(root: string) { return asAppPath(root); }`, [
-        "claim",
-      ]),
-      invalid(`const a = asAppPath(body.path);`, ["claim"]),
-      invalid(`const a = asAppPath(join(HOME_DIR, "app"));`, ["claim"]),
-      invalid(`const a = asAppPath(process.env.SOME_DIR!);`, ["claim"]),
-      invalid(`const a = plain as AppPath;`, ["claim"]),
-      invalid(`const a = plain as unknown as AppPath;`, ["claim"]),
-      invalid(`const a = <AppPath>plain;`, ["claim"]),
-      invalid(`const a = [plain].map(asAppPath);`, ["claim"]),
-      invalid(`const a = asAppPath(plain);`, ["claim"], CORE_CASE),
-      // A user path is never claimable.
-      invalid(`existsSync(asAppPath(picked));`, ["launder"]),
-      invalid(`const p = picked as unknown as AppPath;`, ["launder"]),
-      invalid(`const p = asAppPath(join(APP_DIR, picked));`, ["launder"]),
-    ],
-  },
-);
+ruleTester.run("no-unproven-claim", rule, {
+  valid: [
+    // Proven by the rule: only the type is given.
+    valid(`const a = asAppPath(join(APP_DIR, "meta", "x.json"));`),
+    valid("const a = asAppPath(`${APP_DIR}.tmp`);"),
+    valid(
+      `const a = asAppPath(dirname(APP_DIR)); const b = asAppPath(realpathSync(APP_DIR));`,
+    ),
+    valid(`const a = asAppPath(fs.mkdtempSync(join(tmpdir(), "x-")));`),
+    valid(`const a = asAppPath(resolve(import.meta.dir, ".."));`),
+    valid(`const a = asAppPath("/opt/tool");`),
+    valid(`const a = APP_DIR as AppPath; const b = asAppPath(APP_DIR);`),
+    // Out of scope: a CLI file.
+    valid(`const a = asAppPath(plain);`, CLI_CASE),
+  ],
+  invalid: [
+    // A claim nothing backs.
+    invalid(`const a = asAppPath(plain);`, ["claim"]),
+    // A plain-string tail may climb out of the root: joinAppPath, not a claim.
+    invalid(`const a = asAppPath(join(APP_DIR, plain));`, ["claim"]),
+    invalid(`function f(root: string) { return asAppPath(root); }`, ["claim"]),
+    invalid(`const a = asAppPath(body.path);`, ["claim"]),
+    invalid(`const a = asAppPath(join(HOME_DIR, "app"));`, ["claim"]),
+    invalid(`const a = asAppPath(process.env.SOME_DIR!);`, ["claim"]),
+    invalid(`const a = plain as AppPath;`, ["claim"]),
+    invalid(`const a = plain as unknown as AppPath;`, ["claim"]),
+    invalid(`const a = <AppPath>plain;`, ["claim"]),
+    invalid(`const a = [plain].map(asAppPath);`, ["claim"]),
+    invalid(`const a = asAppPath(plain);`, ["claim"], CORE_CASE),
+    // A user path is never claimable.
+    invalid(`existsSync(asAppPath(picked));`, ["launder"]),
+    invalid(`const p = picked as unknown as AppPath;`, ["launder"]),
+    invalid(`const p = asAppPath(join(APP_DIR, picked));`, ["launder"]),
+  ],
+});
 /* eslint-enable no-template-curly-in-string */

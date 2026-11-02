@@ -9,70 +9,52 @@
  * nested helper, and a `.map` with a non-callback first arg are all left alone.
  */
 
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 import rule from "./no-adhoc-row-list";
+import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      ecmaFeatures: { jsx: true },
+const ruleTester = createRuleTester({ jsx: true });
+
+ruleTester.run("no-adhoc-row-list", rule, {
+  valid: [
+    // map returning a plain intrinsic — not a Row.
+    `const a = items.map((i) => <div key={i.id}>{i.name}</div>);`,
+    // map returning another component — only the bare `Row` identifier trips.
+    `const a = items.map((i) => <Item key={i.id} />);`,
+    // A fragment WRAPPING a Row — deliberate false negative (grouped/bespoke
+    // compositions resolve to the fragment, not the Row).
+    `const a = items.map((i) => <><Row key={i.id} /></>);`,
+    // A wrapper element CONTAINING a Row — likewise not flagged.
+    `const a = items.map((i) => <div><Row key={i.id} /></div>);`,
+    // `Row` rendered outside any map is fine (a single row).
+    `const a = <Row />;`,
+    // A nested inner function returns Row, but the map callback itself returns
+    // something else — the inner return is not the map's return.
+    `const a = items.map((i) => { const make = () => <Row />; return <Item render={make} />; });`,
+    // `.map` with a non-callback first arg (a bare value) — no callback to scan.
+    `const a = items.map(fn);`,
+    // `SectionHeaderRow` is not a data row.
+    `const a = items.map((i) => <SectionHeaderRow key={i.id} />);`,
+  ],
+  invalid: [
+    // Arrow expression body returning a bare Row.
+    {
+      code: `const a = items.map((i) => <Row key={i.id} />);`,
+      errors: [{ messageId: "adhocRowList" }],
     },
-  },
+    // Parenthesized arrow body — parens carry no AST node; still a bare Row.
+    {
+      code: `const a = items.map((i) => (<Row key={i.id} />));`,
+      errors: [{ messageId: "adhocRowList" }],
+    },
+    // Block body with an explicit `return <Row/>`.
+    {
+      code: `const a = items.map((i) => { return <Row key={i.id} />; });`,
+      errors: [{ messageId: "adhocRowList" }],
+    },
+    // Conditional expression body — the truthy branch resolves to a Row.
+    {
+      code: `const a = items.map((i) => (i.ok ? <Row key={i.id} /> : null));`,
+      errors: [{ messageId: "adhocRowList" }],
+    },
+  ],
 });
-
-// `RuleTester.run` drives the harness itself (calls the ambient describe/it that
-// bun:test provides), so it must run at module top level — never inside test().
-ruleTester.run(
-  "no-adhoc-row-list",
-  // The eslint flat-config RuleTester is typed against the legacy Rule shape;
-  // the typescript-eslint createRule object is compatible at runtime.
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // map returning a plain intrinsic — not a Row.
-      `const a = items.map((i) => <div key={i.id}>{i.name}</div>);`,
-      // map returning another component — only the bare `Row` identifier trips.
-      `const a = items.map((i) => <Item key={i.id} />);`,
-      // A fragment WRAPPING a Row — deliberate false negative (grouped/bespoke
-      // compositions resolve to the fragment, not the Row).
-      `const a = items.map((i) => <><Row key={i.id} /></>);`,
-      // A wrapper element CONTAINING a Row — likewise not flagged.
-      `const a = items.map((i) => <div><Row key={i.id} /></div>);`,
-      // `Row` rendered outside any map is fine (a single row).
-      `const a = <Row />;`,
-      // A nested inner function returns Row, but the map callback itself returns
-      // something else — the inner return is not the map's return.
-      `const a = items.map((i) => { const make = () => <Row />; return <Item render={make} />; });`,
-      // `.map` with a non-callback first arg (a bare value) — no callback to scan.
-      `const a = items.map(fn);`,
-      // `SectionHeaderRow` is not a data row.
-      `const a = items.map((i) => <SectionHeaderRow key={i.id} />);`,
-    ],
-    invalid: [
-      // Arrow expression body returning a bare Row.
-      {
-        code: `const a = items.map((i) => <Row key={i.id} />);`,
-        errors: [{ messageId: "adhocRowList" }],
-      },
-      // Parenthesized arrow body — parens carry no AST node; still a bare Row.
-      {
-        code: `const a = items.map((i) => (<Row key={i.id} />));`,
-        errors: [{ messageId: "adhocRowList" }],
-      },
-      // Block body with an explicit `return <Row/>`.
-      {
-        code: `const a = items.map((i) => { return <Row key={i.id} />; });`,
-        errors: [{ messageId: "adhocRowList" }],
-      },
-      // Conditional expression body — the truthy branch resolves to a Row.
-      {
-        code: `const a = items.map((i) => (i.ok ? <Row key={i.id} /> : null));`,
-        errors: [{ messageId: "adhocRowList" }],
-      },
-    ],
-  },
-);

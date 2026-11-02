@@ -8,38 +8,20 @@
  * and popup triggers (`aria-haspopup`), whose content is not a fold.
  */
 
-import { describe, it } from "bun:test";
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 import rule from "./no-unanimated-disclosure";
+import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 
-RuleTester.describe = describe;
-RuleTester.it = it;
-RuleTester.itOnly = it.only;
-
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      ecmaFeatures: { jsx: true },
-    },
-  },
-});
+const ruleTester = createRuleTester({ jsx: true });
 
 const error = [{ messageId: "unanimatedDisclosure" as const }];
 
 // `RuleTester.run` registers bun:test cases, so it runs at module top level —
 // never wrapped in a `test()` callback.
-ruleTester.run(
-  "no-unanimated-disclosure",
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // The default spelling: the content bag on a FoldMotion.
-      {
-        code: `function A() {
+ruleTester.run("no-unanimated-disclosure", rule, {
+  valid: [
+    // The default spelling: the content bag on a FoldMotion.
+    {
+      code: `function A() {
           const { open, triggerProps, contentProps } = useCollapsible();
           return <div><button {...triggerProps}>{open ? "Hide" : "Show"}</button>
             <FoldMotion {...contentProps}><Body /></FoldMotion></div>;

@@ -28320,9 +28320,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `boundaries/no-platform-api` — `core/declared-utilities.ts`, `core/plugin-dirs.ts` (debt)
               - `rule-kind-safety/no-raw-rule-creator` — `core/rule-creator.ts` (sanctioned)
+              - `rule-kind-safety/no-raw-rule-tester` — `core/testing/rule-tester.ts` (sanctioned)
           - Test helpers:
             - Core: `@plugins/framework/plugins/tooling/plugins/lint/core/testing`
+              - `createRuleTester` — A syntactic rule's tester: no program, no project.
+              - `createTypedRuleTester` — A type-aware rule's tester.
               - `lintToolkit`
+              - Types: `LintRuleTester`
           - Plugins:
             - **`agent-origin-safety`** — Lint rule keeping an e2e script's own Node-side calls to the app under test marked with the agent-origin headers, so the writes they cause stay attributable and revertible.
               - Exemptions:

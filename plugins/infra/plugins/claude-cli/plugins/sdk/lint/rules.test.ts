@@ -3,28 +3,13 @@
  * claudeQuery, or the executable spawned by hand, is flagged.
  */
 
-import { describe, it } from "bun:test";
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 import noClaudeBinSpawn from "./no-claude-bin-spawn";
 import noDirectSdkQuery from "./no-direct-sdk-query";
+import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 
-// Hand RuleTester bun's own describe/it, or it registers nothing under
-// `./equin test`.
-RuleTester.describe = describe;
-RuleTester.it = it;
-RuleTester.itOnly = it.only;
+const ruleTester = createRuleTester();
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: { ecmaVersion: "latest", sourceType: "module" },
-  },
-});
-
-type Rule = Parameters<RuleTester["run"]>[1];
-
-ruleTester.run("no-direct-sdk-query", noDirectSdkQuery as unknown as Rule, {
+ruleTester.run("no-direct-sdk-query", noDirectSdkQuery, {
   valid: [
     { code: `import type { Query } from "@anthropic-ai/claude-agent-sdk";` },
     {
@@ -55,7 +40,7 @@ ruleTester.run("no-direct-sdk-query", noDirectSdkQuery as unknown as Rule, {
   ],
 });
 
-ruleTester.run("no-claude-bin-spawn", noClaudeBinSpawn as unknown as Rule, {
+ruleTester.run("no-claude-bin-spawn", noClaudeBinSpawn, {
   valid: [
     { code: `claudeQuery({ env, bin: bundledClaudeBin(), prompt, options });` },
     { code: `spawnCaptured(["git", "log"], opts);` },

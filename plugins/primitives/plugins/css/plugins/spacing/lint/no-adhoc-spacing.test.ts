@@ -11,95 +11,78 @@
  * below assert they pass; the invalid cases assert genuine raw spacing still fails.
  */
 
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 // The rule is a FACTORY taking the shared class-token walk (rule files cannot
 // import it — they dual-load under jiti). Tests run under Bun, where the
 // `@plugins/*` alias resolves, so they construct it with the real toolkit.
-import { lintToolkit } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
+import {
+  createRuleTester,
+  lintToolkit,
+} from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 import buildRule from "./no-adhoc-spacing";
 
 const rule = buildRule(lintToolkit);
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      ecmaFeatures: { jsx: true },
-    },
-  },
-});
+const ruleTester = createRuleTester({ jsx: true });
 
-// `RuleTester.run` drives the test harness itself (it calls the ambient
-// describe/it that bun:test provides), so it must run at module top level —
-// never wrapped in a `test()` callback.
-ruleTester.run(
-  "no-adhoc-spacing",
-  // The eslint flat-config RuleTester is typed against the legacy Rule shape;
-  // the typescript-eslint createRule object is compatible at runtime.
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // The regression: the two digit-led named steps must be allowed across
-      // gap / padding (every axis). (Whether a word-valued class EXISTS — e.g.
-      // `mx-2xl`, which does not — is space-ramp/no-dead-spacing's call.)
-      { code: `const el = <div className="gap-2xs" />;` },
-      { code: `const el = <div className="gap-2xl" />;` },
-      { code: `const el = <div className="py-2xs p-2xl" />;` },
-      { code: `const el = <span className={cn("gap-2xs", "p-2xl")} />;` },
-      // The letter-led named steps are likewise fine.
-      { code: `const el = <div className="gap-sm p-md pt-lg" />;` },
-      // Centering utilities are word-valued and untouched.
-      { code: `const el = <div className="mx-auto my-auto" />;` },
-      // A non-className string that merely mentions a banned class — the
-      // class-name-context scoping must not trip on it.
-      { code: `const DOC = "gap-2 is banned — use gap-sm";` },
-    ],
-    invalid: [
-      // Numeric raw spacing across each family.
-      {
-        code: `const el = <div className="gap-2" />;`,
-        errors: [{ messageId: "adhocSpacing" }],
-      },
-      {
-        code: `const el = <div className="px-3" />;`,
-        errors: [{ messageId: "adhocSpacing" }],
-      },
-      {
-        code: `const el = <div className="mt-4" />;`,
-        errors: [{ messageId: "adhocSpacing" }],
-      },
-      {
-        code: `const el = <div className="space-y-2" />;`,
-        errors: [{ messageId: "adhocSpacing" }],
-      },
-      // Fractional step — still raw.
-      {
-        code: `const el = <div className="gap-0.5" />;`,
-        errors: [{ messageId: "adhocSpacing" }],
-      },
-      // Arbitrary value.
-      {
-        code: `const el = <div className="p-[5px]" />;`,
-        errors: [{ messageId: "adhocSpacing" }],
-      },
-      // Tailwind v4's arbitrary custom-property shorthand.
-      {
-        code: `const el = <div className="mb-(--space-xs)" />;`,
-        errors: [{ messageId: "adhocSpacing" }],
-      },
-      // Negative arbitrary margin — `baseClass` strips the leading `-`.
-      {
-        code: `const el = <div className="-mx-[7px]" />;`,
-        errors: [{ messageId: "adhocSpacing" }],
-      },
-      // Raw spacing inside a cn(...) class-builder argument.
-      {
-        code: `const cls = cn("gap-2", "p-2xl");`,
-        errors: [{ messageId: "adhocSpacing" }],
-      },
-    ],
-  },
-);
+ruleTester.run("no-adhoc-spacing", rule, {
+  valid: [
+    // The regression: the two digit-led named steps must be allowed across
+    // gap / padding (every axis). (Whether a word-valued class EXISTS — e.g.
+    // `mx-2xl`, which does not — is space-ramp/no-dead-spacing's call.)
+    { code: `const el = <div className="gap-2xs" />;` },
+    { code: `const el = <div className="gap-2xl" />;` },
+    { code: `const el = <div className="py-2xs p-2xl" />;` },
+    { code: `const el = <span className={cn("gap-2xs", "p-2xl")} />;` },
+    // The letter-led named steps are likewise fine.
+    { code: `const el = <div className="gap-sm p-md pt-lg" />;` },
+    // Centering utilities are word-valued and untouched.
+    { code: `const el = <div className="mx-auto my-auto" />;` },
+    // A non-className string that merely mentions a banned class — the
+    // class-name-context scoping must not trip on it.
+    { code: `const DOC = "gap-2 is banned — use gap-sm";` },
+  ],
+  invalid: [
+    // Numeric raw spacing across each family.
+    {
+      code: `const el = <div className="gap-2" />;`,
+      errors: [{ messageId: "adhocSpacing" }],
+    },
+    {
+      code: `const el = <div className="px-3" />;`,
+      errors: [{ messageId: "adhocSpacing" }],
+    },
+    {
+      code: `const el = <div className="mt-4" />;`,
+      errors: [{ messageId: "adhocSpacing" }],
+    },
+    {
+      code: `const el = <div className="space-y-2" />;`,
+      errors: [{ messageId: "adhocSpacing" }],
+    },
+    // Fractional step — still raw.
+    {
+      code: `const el = <div className="gap-0.5" />;`,
+      errors: [{ messageId: "adhocSpacing" }],
+    },
+    // Arbitrary value.
+    {
+      code: `const el = <div className="p-[5px]" />;`,
+      errors: [{ messageId: "adhocSpacing" }],
+    },
+    // Tailwind v4's arbitrary custom-property shorthand.
+    {
+      code: `const el = <div className="mb-(--space-xs)" />;`,
+      errors: [{ messageId: "adhocSpacing" }],
+    },
+    // Negative arbitrary margin — `baseClass` strips the leading `-`.
+    {
+      code: `const el = <div className="-mx-[7px]" />;`,
+      errors: [{ messageId: "adhocSpacing" }],
+    },
+    // Raw spacing inside a cn(...) class-builder argument.
+    {
+      code: `const cls = cn("gap-2", "p-2xl");`,
+      errors: [{ messageId: "adhocSpacing" }],
+    },
+  ],
+});

@@ -8,20 +8,10 @@
  * not the tabs barrel's.
  */
 
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 import rule from "./no-click-navigate";
+import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      ecmaFeatures: { jsx: true },
-    },
-  },
-});
+const ruleTester = createRuleTester({ jsx: true });
 
 const handler = { messageId: "handler" } as const;
 const activation = { messageId: "activation" } as const;
@@ -29,25 +19,17 @@ const resolver = { messageId: "resolver" } as const;
 
 const TABS = `import { navigate, appLink } from "@plugins/apps-core/plugins/tabs/web";\n`;
 
-// `RuleTester.run` drives the test harness itself (it calls the ambient
-// describe/it that bun:test provides), so it must run at module top level —
-// never wrapped in a `test()` callback.
-ruleTester.run(
-  "no-click-navigate",
-  // The eslint flat-config RuleTester is typed against the legacy Rule shape;
-  // the typescript-eslint createRule object is compatible at runtime.
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // The link / data forms — the fix.
-      { code: `<Button {...openPane.link(p, { id }, { mode: "push" })} />;` },
-      { code: `<LinkChip activation={openPane.to(p, { id })} />;` },
-      { code: TABS + `<Row activation={appLink(url)} />;` },
-      {
-        code: `<DataView rowActivation={(r) => openPane.to(p, { id: r.id })} />;`,
-      },
-      {
-        code: `
+ruleTester.run("no-click-navigate", rule, {
+  valid: [
+    // The link / data forms — the fix.
+    { code: `<Button {...openPane.link(p, { id }, { mode: "push" })} />;` },
+    { code: `<LinkChip activation={openPane.to(p, { id })} />;` },
+    { code: TABS + `<Row activation={appLink(url)} />;` },
+    {
+      code: `<DataView rowActivation={(r) => openPane.to(p, { id: r.id })} />;`,
+    },
+    {
+      code: `
           const openPane = useOpenPane();
           <DataView rowActivation={(r) => openPane.to(p, { id: r.id })} />;
         `,

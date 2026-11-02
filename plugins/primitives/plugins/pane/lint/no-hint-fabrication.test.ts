@@ -8,34 +8,16 @@
  * Hint, nor on sanctioned fallbacks (`null` / `undefined` / a JSX placeholder).
  */
 
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 import rule from "./no-hint-fabrication";
+import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      ecmaFeatures: { jsx: true },
-    },
-  },
-});
+const ruleTester = createRuleTester({ jsx: true });
 
-// `RuleTester.run` drives the test harness itself (it calls the ambient
-// describe/it that bun:test provides), so it must run at module top level —
-// never wrapped in a `test()` callback.
-ruleTester.run(
-  "no-hint-fabrication",
-  // The eslint flat-config RuleTester is typed against the legacy Rule shape;
-  // the typescript-eslint createRule object is compatible at runtime.
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // Canonical value supplied — the sanctioned observation.
-      {
-        code: `
+ruleTester.run("no-hint-fabrication", rule, {
+  valid: [
+    // Canonical value supplied — the sanctioned observation.
+    {
+      code: `
           const h = p.useHint();
           const title = h.pick("title", canonical);
         `,

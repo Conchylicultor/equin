@@ -19,16 +19,13 @@
  */
 
 import { expect, test } from "bun:test";
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 import rule from "./no-asserted-column-type";
+import {
+  createRuleTester,
+  type LintRuleTester,
+} from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: { ecmaVersion: "latest", sourceType: "module" },
-  },
-});
+const ruleTester = createRuleTester();
 
 /** A file inside the owner directory, where the rule must stay silent. */
 const OWNED =
@@ -42,7 +39,7 @@ const CONSUMER = "plugins/infra/plugins/jobs/server/internal/tables.ts";
  * copy.
  * Typed off the harness's own parameter so the shape cannot be restated here.
  */
-type Cases = Parameters<RuleTester["run"]>[2];
+type Cases = Parameters<LintRuleTester["run"]>[2];
 
 const cases: Cases = {
   valid: [
@@ -172,15 +169,7 @@ const cases: Cases = {
   ],
 };
 
-// `RuleTester.run` drives the harness itself (it calls the ambient describe/it
-// that bun:test provides), so it must run at module top level.
-ruleTester.run(
-  "no-asserted-column-type",
-  // The eslint flat-config RuleTester is typed against the legacy Rule shape;
-  // the typescript-eslint createRule object is compatible at runtime.
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  cases,
-);
+ruleTester.run("no-asserted-column-type", rule, cases);
 
 test("every declared message is reached by an invalid case", () => {
   // `errors` is `number | (string | RegExp | TestCaseError)[]` (a RegExp entry

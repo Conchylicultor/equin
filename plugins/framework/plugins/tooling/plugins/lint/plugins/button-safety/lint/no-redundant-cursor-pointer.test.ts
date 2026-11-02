@@ -8,78 +8,65 @@
  * a control opts back out.
  */
 
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 import rule from "./no-redundant-cursor-pointer";
+import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      ecmaFeatures: { jsx: true },
+const ruleTester = createRuleTester({ jsx: true });
+
+ruleTester.run("no-redundant-cursor-pointer", rule, {
+  valid: [
+    // A plain div that happens to be clickable: nothing in the base layer
+    // reaches it, so the class is the only thing doing the job.
+    { code: `const el = <div onClick={go} className="cursor-pointer" />;` },
+    {
+      code: `const el = <tr onClick={go} className="cursor-pointer border-b" />;`,
     },
-  },
-});
-
-ruleTester.run(
-  "no-redundant-cursor-pointer",
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // A plain div that happens to be clickable: nothing in the base layer
-      // reaches it, so the class is the only thing doing the job.
-      { code: `const el = <div onClick={go} className="cursor-pointer" />;` },
-      {
-        code: `const el = <tr onClick={go} className="cursor-pointer border-b" />;`,
-      },
-      // `Row` renders a <button> only when it has an onClick — its own props
-      // decide, so the rule does not guess.
-      {
-        code: `const el = <Row onClick={go} className="min-h-7 cursor-pointer" />;`,
-      },
-      // Opting out is still allowed, on a button or anywhere else.
-      { code: `const el = <button className="w-full cursor-default" />;` },
-      // A word that merely contains the class name is not the class.
-      { code: `const el = <button className="group-cursor-pointerish" />;` },
-      // A label with no checkbox inside is not covered, so not redundant.
-      {
-        code: `const el = <label className="cursor-pointer"><span>x</span></label>;`,
-      },
-    ],
-    invalid: [
-      // Literal tags.
-      {
-        code: `const el = <button className="w-full cursor-pointer text-left" />;`,
-        errors: [{ messageId: "redundant" }],
-      },
-      {
-        code: `const el = <summary className="cursor-pointer" />;`,
-        errors: [{ messageId: "redundant" }],
-      },
-      // role / as, on any tag.
-      {
-        code: `const el = <span role="button" className="cursor-pointer rounded-sm" />;`,
-        errors: [{ messageId: "redundant" }],
-      },
-      {
-        code: `const el = <Badge as="button" className="cursor-pointer hover:text-destructive" />;`,
-        errors: [{ messageId: "redundant" }],
-      },
-      // The shared components.
-      {
-        code: `const el = <IconButton className="cursor-pointer" />;`,
-        errors: [{ messageId: "redundant" }],
-      },
-      // Clickable input types.
-      {
-        code: `const el = <input type="checkbox" className="size-4 cursor-pointer accent-primary" />;`,
-        errors: [{ messageId: "redundant" }],
-      },
-      // A label around a checkbox, however deep the checkbox sits.
-      {
-        code: `const el = (
+    // `Row` renders a <button> only when it has an onClick — its own props
+    // decide, so the rule does not guess.
+    {
+      code: `const el = <Row onClick={go} className="min-h-7 cursor-pointer" />;`,
+    },
+    // Opting out is still allowed, on a button or anywhere else.
+    { code: `const el = <button className="w-full cursor-default" />;` },
+    // A word that merely contains the class name is not the class.
+    { code: `const el = <button className="group-cursor-pointerish" />;` },
+    // A label with no checkbox inside is not covered, so not redundant.
+    {
+      code: `const el = <label className="cursor-pointer"><span>x</span></label>;`,
+    },
+  ],
+  invalid: [
+    // Literal tags.
+    {
+      code: `const el = <button className="w-full cursor-pointer text-left" />;`,
+      errors: [{ messageId: "redundant" }],
+    },
+    {
+      code: `const el = <summary className="cursor-pointer" />;`,
+      errors: [{ messageId: "redundant" }],
+    },
+    // role / as, on any tag.
+    {
+      code: `const el = <span role="button" className="cursor-pointer rounded-sm" />;`,
+      errors: [{ messageId: "redundant" }],
+    },
+    {
+      code: `const el = <Badge as="button" className="cursor-pointer hover:text-destructive" />;`,
+      errors: [{ messageId: "redundant" }],
+    },
+    // The shared components.
+    {
+      code: `const el = <IconButton className="cursor-pointer" />;`,
+      errors: [{ messageId: "redundant" }],
+    },
+    // Clickable input types.
+    {
+      code: `const el = <input type="checkbox" className="size-4 cursor-pointer accent-primary" />;`,
+      errors: [{ messageId: "redundant" }],
+    },
+    // A label around a checkbox, however deep the checkbox sits.
+    {
+      code: `const el = (
           <label className="cursor-pointer">
             <Stack><input type="checkbox" onChange={t} /><span>x</span></Stack>
           </label>

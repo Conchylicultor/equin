@@ -2,46 +2,10 @@
  * Tests for the `no-unanchored-passthrough` lint rule. Run with
  * `./equin test plugins/primitives/plugins/passthrough`.
  *
- * ## The harness — the repo's first type-aware rule test
- *
  * The rule asks the TypeScript checker whether a component's props type has a
- * string index signature, so `RuleTester` has to hand the parser a real
- * program, not just a parser. Nothing here did that before — the other
- * type-aware rule, `button-safety/no-async-raw-button`, ships no test at all —
- * so this file is the precedent, and the shape is worth explaining.
- *
- * Each case is linted as a path that **does not exist on disk** (`case.tsx`
- * beside this file), type-checked through TypeScript's project service under an
- * inferred project. `projectService.allowDefaultProject` names that virtual
- * path, and `defaultProject` points at `tsconfig.case.json`, which is read for
- * its compiler options and nothing else. Each case's source IS the virtual
- * file's content, so there is nothing on disk to keep in step with it.
- *
- * That little config is a config, not a source file, and that is the whole
- * point: `type-check` requires every lintable `.ts`/`.tsx` in the repo to
- * belong to a tsconfig program, so the winning move is to have no `.tsx` to
- * place. Two details in it are load-bearing:
- *
- * - `types: []` — an inferred project otherwise pulls in every `@types` package
- *   it can see. With the repo root as the project root that took the first case
- *   from three seconds to five minutes.
- * - `include: ["*.ts"]` (this folder's rule sources) — TypeScript refuses to
- *   parse a config whose input set is empty, and typescript-eslint reports that
- *   as "Unable to parse the specified 'tsconfig' file". The inputs are never
- *   compiled; only the options are read. Those files already belong to the root
- *   `tsconfig.json` — the repo's one program — which is what type-checks and
- *   lints them; nothing discovers this config but this test.
- *
- * The first attempt was a small fixture project checked in beside this file
- * (`lint/fixtures/tsconfig.json` plus an empty `file.tsx` whose bytes the
- * RuleTester substituted). It worked, and it failed
- * `./equin check type-check`: a `.tsx` in the repo that no tsconfig
- * program covers is invisible to type-checking and linting, and the check says
- * so out loud. The fix was to stop needing a file on disk, not to exempt one.
- *
- * `@typescript-eslint/rule-tester` has type-aware support built in and would be
- * the obvious third option; it is not a dependency of this repo, and the
- * project service reaches the same place with the packages already installed.
+ * string index signature, so each case is type-checked: a virtual `case.tsx`
+ * beside this file under an inferred project (`createTypedRuleTester` in
+ * `tooling/lint/core/testing`, whose header explains the harness).
  *
  * Each case is prefixed with {@link PRELUDE} so the snippets declare a real open
  * props type — the rule would otherwise skip every one of them at the type gate,
@@ -54,8 +18,7 @@
  */
 
 import { setDefaultTimeout } from "bun:test";
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
+import { createTypedRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 import rule from "./no-unanchored-passthrough";
 
 // The FIRST case pays for building the program behind the inferred project —
@@ -65,7 +28,7 @@ import rule from "./no-unanchored-passthrough";
 // rather than paying it.
 setDefaultTimeout(60_000);
 
-/** This directory — where `tsconfig.case.json` and the virtual case both sit. */
+/** This directory — where the virtual case sits. */
 const LINT_DIR = new URL(".", import.meta.url).pathname.replace(/\/$/, "");
 
 /**
@@ -100,41 +63,18 @@ const invalid = (code: string, messageIds: string[]) => ({
   errors: messageIds.map((messageId) => ({ messageId })),
 });
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      ecmaFeatures: { jsx: true },
-      projectService: {
-        // Read for its compiler options only — `files: []` means it claims no
-        // file, so the virtual case falls through to the inferred project. It
-        // also declares `types: []`, which is the difference between a suite
-        // that runs in seconds and one that spends five minutes pulling every
-        // `@types` package in the repo into an inferred project.
-        defaultProject: "tsconfig.case.json",
-        allowDefaultProject: [VIRTUAL_CASE],
-      },
-      tsconfigRootDir: LINT_DIR,
-    },
-  },
+const ruleTester = createTypedRuleTester({
+  dir: LINT_DIR,
+  cases: [VIRTUAL_CASE],
+  jsx: true,
 });
 
-// `RuleTester.run` drives the harness itself (it calls the ambient describe/it
-// that bun:test provides), so it must run at module top level — never inside
-// test().
-ruleTester.run(
-  "no-unanchored-passthrough",
-  // The eslint flat-config RuleTester is typed against the legacy Rule shape;
-  // the typescript-eslint createRule object is compatible at runtime.
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // `Badge`: two host elements, no `ref` destructured, one spread. Correct —
-      // `ref` rides inside the bag, so it lands wherever the bag lands.
-      valid(
-        `export function Badge({ children, ...rest }: BoxProps) {
+ruleTester.run("no-unanchored-passthrough", rule, {
+  valid: [
+    // `Badge`: two host elements, no `ref` destructured, one spread. Correct —
+    // `ref` rides inside the bag, so it lands wherever the bag lands.
+    valid(
+      `export function Badge({ children, ...rest }: BoxProps) {
            return <span {...rest}><span className="truncate">{children}</span></span>;
          }`,
       ),

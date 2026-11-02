@@ -5,28 +5,19 @@
  * test fixtures are not.
  */
 
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 import rule from "./no-handrolled-result";
+import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: { ecmaVersion: "latest", sourceType: "module" },
-  },
-});
+const ruleTester = createRuleTester();
 
 const DOMAIN = "/repo/plugins/tasks/web/internal/use-thing.ts";
 
-ruleTester.run(
-  "no-handrolled-result",
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // A domain state machine that shares the word "loading".
-      {
-        filename: DOMAIN,
-        code: `
+ruleTester.run("no-handrolled-result", rule, {
+  valid: [
+    // A domain state machine that shares the word "loading".
+    {
+      filename: DOMAIN,
+      code: `
           type ResolvedFileState =
             | { status: "loading" }
             | { status: "exact"; path: string }

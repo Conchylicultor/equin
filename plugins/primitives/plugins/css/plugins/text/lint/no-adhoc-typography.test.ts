@@ -11,52 +11,29 @@
  * param-passed classNames (no in-file initializer) must NOT be.
  */
 
-import { describe, it } from "bun:test";
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 // The rule is a FACTORY taking the shared class-token walk (rule files cannot
 // import it — they dual-load under jiti). Tests run under Bun, where the
 // `@plugins/*` alias resolves, so they construct it with the real toolkit.
-import { lintToolkit } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
+import {
+  createRuleTester,
+  lintToolkit,
+} from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 import buildRule from "./no-adhoc-typography";
 
 const rule = buildRule(lintToolkit);
 
-// Hand RuleTester bun's own describe/it, or it registers nothing under
-// `./equin test`.
-RuleTester.describe = describe;
-RuleTester.it = it;
-RuleTester.itOnly = it.only;
+const ruleTester = createRuleTester({ jsx: true });
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      ecmaFeatures: { jsx: true },
-    },
-  },
-});
-
-// `RuleTester.run` drives the test harness itself (through the describe/it
-// handed to it above), so it must run at module top level — never wrapped in a
-// `test()` callback.
-ruleTester.run(
-  "no-adhoc-typography",
-  // The eslint flat-config RuleTester is typed against the legacy Rule shape;
-  // the typescript-eslint createRule object is compatible at runtime.
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // A doc string / unrelated literal not in any class-name context: the walk
-      // never starts here, so `text-sm` in prose is never inspected.
-      { code: `const note = "use text-sm instead of raw sizes";` },
-      // Color + sanctioned sub-scale in a map that reaches className: harvested,
-      // but neither `text-muted-foreground` (color) nor `text-2xs` (sub-scale)
-      // is a banned named size.
-      {
-        code: `
+ruleTester.run("no-adhoc-typography", rule, {
+  valid: [
+    // A doc string / unrelated literal not in any class-name context: the walk
+    // never starts here, so `text-sm` in prose is never inspected.
+    { code: `const note = "use text-sm instead of raw sizes";` },
+    // Color + sanctioned sub-scale in a map that reaches className: harvested,
+    // but neither `text-muted-foreground` (color) nor `text-2xs` (sub-scale)
+    // is a banned named size.
+    {
+      code: `
           const M = { a: "text-muted-foreground text-2xs" };
           const C = () => <span className={cn(M.a)} />;
         `,

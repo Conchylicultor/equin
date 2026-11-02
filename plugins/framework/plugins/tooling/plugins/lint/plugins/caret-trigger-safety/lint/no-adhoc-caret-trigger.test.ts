@@ -14,30 +14,21 @@
  *    with no keyboard model.
  */
 
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 import rule from "./no-adhoc-caret-trigger";
+import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: { ecmaVersion: "latest", sourceType: "module" },
-  },
-});
+const ruleTester = createRuleTester();
 
-ruleTester.run(
-  "no-adhoc-caret-trigger",
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // An update listener with no text scan — the format toolbar / markdown shortcuts.
-      `editor.registerUpdateListener(() => { const sel = $getSelection(); });`,
-      // A text scan with no update listener — insertLink locating the trigger to replace.
-      `const idx = full.slice(0, caretOffset).lastIndexOf("[[");`,
-      // The sanctioned consumer shape: no listener, no scan.
-      `const caret = useCaretQuery({ id: "slash", trigger: "/" });`,
-      // Full adoption — the surface import is paired with the keyboard model.
-      `
+ruleTester.run("no-adhoc-caret-trigger", rule, {
+  valid: [
+    // An update listener with no text scan — the format toolbar / markdown shortcuts.
+    `editor.registerUpdateListener(() => { const sel = $getSelection(); });`,
+    // A text scan with no update listener — insertLink locating the trigger to replace.
+    `const idx = full.slice(0, caretOffset).lastIndexOf("[[");`,
+    // The sanctioned consumer shape: no listener, no scan.
+    `const caret = useCaretQuery({ id: "slash", trigger: "/" });`,
+    // Full adoption — the surface import is paired with the keyboard model.
+    `
     import { CaretTriggerMenu, useCaretMenu, useCaretQuery } from "@plugins/primitives/plugins/text-editor/plugins/caret-trigger/web";
     const caret = useCaretQuery({ id: "slash", trigger: "/" });
     const { surfaceOpen, commit } = useCaretMenu(caret, { itemCount: n, onCommit: pick });

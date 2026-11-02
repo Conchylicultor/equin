@@ -11,43 +11,18 @@
  * alone — the rule favours false negatives.
  */
 
-import { describe, it } from "bun:test";
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 import rule from "./no-reactive-server-io";
+import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 
-// Hand RuleTester bun's own describe/it. Left to find them as globals, it
-// registers nothing under `./equin test` ("Ran 0 tests across 1 file"):
-// it runs every case inline at module load and stops at the first failure.
-RuleTester.describe = describe;
-RuleTester.it = it;
-RuleTester.itOnly = it.only;
-
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      ecmaFeatures: { jsx: true },
-    },
-  },
-});
+const ruleTester = createRuleTester({ jsx: true });
 
 const error = { messageId: "reactiveServerIo" as const };
 
-// `RuleTester.run` registers one bun test per case (through the describe/it
-// handed to it above), so it must run at module top level.
-ruleTester.run(
-  "no-reactive-server-io",
-  // The eslint flat-config RuleTester is typed against the legacy Rule shape;
-  // the typescript-eslint createRule object is compatible at runtime.
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // The effect reacts to local state only.
-      {
-        code: `function C() {
+ruleTester.run("no-reactive-server-io", rule, {
+  valid: [
+    // The effect reacts to local state only.
+    {
+      code: `function C() {
           const [n, setN] = useState(0);
           useEffect(() => { toast("n changed"); }, [n]);
         }`,

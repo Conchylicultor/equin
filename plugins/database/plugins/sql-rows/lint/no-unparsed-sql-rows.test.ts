@@ -9,36 +9,23 @@
  * that make the conjunction worth having.
  */
 
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 import rule from "./no-unparsed-sql-rows";
+import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: { ecmaVersion: "latest", sourceType: "module" },
-  },
-});
+const ruleTester = createRuleTester();
 
 /** A file inside the owner directory, where the rule must stay silent. */
 const OWNED = "plugins/database/plugins/sql-rows/core/internal/parse-rows.ts";
 /** An ordinary consumer file, where it must fire. */
 const CONSUMER = "plugins/database/plugins/admin/server/internal/databases.ts";
 
-// `RuleTester.run` drives the harness itself (it calls the ambient describe/it
-// that bun:test provides), so it must run at module top level.
-ruleTester.run(
-  "no-unparsed-sql-rows",
-  // The eslint flat-config RuleTester is typed against the legacy Rule shape;
-  // the typescript-eslint createRule object is compatible at runtime.
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // --- DDL/DML: the result is never read, so there is nothing to assert. ---
-      { code: `await pool.query(ddl);` },
-      { code: "await db.execute(sql`DELETE FROM jobs`);" },
-      { code: `await client.query("BEGIN");` },
-      { code: `await pool.query(sql, [a, b]);` },
+ruleTester.run("no-unparsed-sql-rows", rule, {
+  valid: [
+    // --- DDL/DML: the result is never read, so there is nothing to assert. ---
+    { code: `await pool.query(ddl);` },
+    { code: "await db.execute(sql`DELETE FROM jobs`);" },
+    { code: `await client.query("BEGIN");` },
+    { code: `await pool.query(sql, [a, b]);` },
 
       // --- The result is read, but not for rows. ---
       { code: `const r = await pool.query(s); if (r.rowCount) { done(); }` },

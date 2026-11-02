@@ -9,32 +9,16 @@
  * with the letters "peek" without a word boundary (`peeking()`).
  */
 
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 import rule from "./no-render-phase-peek";
+import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      ecmaFeatures: { jsx: true },
-    },
-  },
-});
+const ruleTester = createRuleTester({ jsx: true });
 
-// `RuleTester.run` drives the test harness itself (it calls the ambient
-// describe/it that bun:test provides), so it must run at module top level —
-// never wrapped in a `test()` callback.
-ruleTester.run(
-  "no-render-phase-peek",
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // Effect callback — runs after installation, and re-runs.
-      {
-        code: `
+ruleTester.run("no-render-phase-peek", rule, {
+  valid: [
+    // Effect callback — runs after installation, and re-runs.
+    {
+      code: `
         function ExpandButton() {
           useEffect(() => {
             const nav = appNavSink.peek();

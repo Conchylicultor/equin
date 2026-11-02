@@ -11,19 +11,11 @@
  * sanctioned escape hatch.
  */
 
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 import rule from "./no-unroute";
+import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: { ecmaVersion: "latest", sourceType: "module" },
-  },
-});
+const ruleTester = createRuleTester();
 
-// `RuleTester.run` drives the harness itself (it calls the ambient describe/it
-// that bun:test provides), so it must run at module top level.
 ruleTester.run(
   "no-unroute",
   rule as unknown as Parameters<typeof ruleTester.run>[1],

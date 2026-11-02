@@ -5,44 +5,30 @@
  * the owning plugins' `exempt/index.ts`, so every filename here is flagged).
  */
 
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 import noScalingTransform from "./no-scaling-transform";
 import noRawDndKit from "./no-raw-dnd-kit";
+import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: { ecmaVersion: "latest", sourceType: "module" },
-  },
+const ruleTester = createRuleTester();
+
+ruleTester.run("no-scaling-transform", noScalingTransform, {
+  valid: [
+    { code: `const t = CSS.Translate.toString(transform);` },
+    { code: `const t = other.Transform.toString(transform);` },
+  ],
+  invalid: [
+    {
+      code: `const t = CSS.Transform.toString(transform);`,
+      errors: [{ messageId: "scalingTransform" }],
+    },
+    {
+      code: `const f = CSS.Transform;`,
+      errors: [{ messageId: "scalingTransform" }],
+    },
+  ],
 });
 
-// The eslint flat-config RuleTester is typed against the legacy Rule shape;
-// the typescript-eslint createRule object is compatible at runtime.
-type RuleArg = Parameters<RuleTester["run"]>[1];
-
-ruleTester.run(
-  "no-scaling-transform",
-  noScalingTransform as unknown as RuleArg,
-  {
-    valid: [
-      { code: `const t = CSS.Translate.toString(transform);` },
-      { code: `const t = other.Transform.toString(transform);` },
-    ],
-    invalid: [
-      {
-        code: `const t = CSS.Transform.toString(transform);`,
-        errors: [{ messageId: "scalingTransform" }],
-      },
-      {
-        code: `const f = CSS.Transform;`,
-        errors: [{ messageId: "scalingTransform" }],
-      },
-    ],
-  },
-);
-
-ruleTester.run("no-raw-dnd-kit", noRawDndKit as unknown as RuleArg, {
+ruleTester.run("no-raw-dnd-kit", noRawDndKit, {
   valid: [
     {
       code: `import { SortableList } from "@plugins/primitives/plugins/sortable-list/web";`,

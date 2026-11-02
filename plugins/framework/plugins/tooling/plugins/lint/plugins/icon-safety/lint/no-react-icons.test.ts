@@ -4,25 +4,17 @@
  * symbols.
  */
 
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 import noReactIcons from "./no-react-icons";
 import noRobotIcon from "./no-robot-icon";
+import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 
-type Rule = Parameters<RuleTester["run"]>[1];
-
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: { ecmaVersion: "latest", sourceType: "module" },
-  },
-});
+const ruleTester = createRuleTester();
 
 const PICKER =
   "/repo/plugins/primitives/plugins/icon-picker/web/components/icon-picker.tsx";
 const ELSEWHERE = "/repo/plugins/tasks/web/components/task-row.tsx";
 
-ruleTester.run("no-react-icons", noReactIcons as unknown as Rule, {
+ruleTester.run("no-react-icons", noReactIcons, {
   valid: [
     {
       code: `import { symbol } from "@plugins/ui/plugins/icons/core";`,
@@ -58,7 +50,7 @@ ruleTester.run("no-react-icons", noReactIcons as unknown as Rule, {
   ],
 });
 
-ruleTester.run("no-robot-icon", noRobotIcon as unknown as Rule, {
+ruleTester.run("no-robot-icon", noRobotIcon, {
   valid: [
     {
       code: `import { symbol } from "@plugins/ui/plugins/icons/core";\nconst i = symbol("auto-awesome");`,

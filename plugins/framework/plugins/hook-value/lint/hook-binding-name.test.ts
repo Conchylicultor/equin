@@ -2,25 +2,22 @@
  * Tests for `hook-value/hook-binding-name`. Run with
  * `./equin test plugins/framework/plugins/hook-value`.
  *
- * Typed RuleTester harness copied from
- * `plugins/primitives/plugins/passthrough/lint/no-unanchored-passthrough.test.ts`
- * — read its header for why each case is a VIRTUAL `case.tsx` under an inferred
- * project, and why `tsconfig.case.json` sets `types: []`.
+ * A typed rule test: each case is a VIRTUAL `case.tsx` under an inferred
+ * project (`createTypedRuleTester` in `tooling/lint/core/testing`).
  */
 
-import { describe, it, setDefaultTimeout } from "bun:test";
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
+import { setDefaultTimeout } from "bun:test";
+import { createTypedRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 import rule from "./hook-binding-name";
 
 // The first case pays for building the inferred program (seconds); every case
 // after it is milliseconds. bun:test's default five-second budget is too tight.
 setDefaultTimeout(60_000);
 
-/** This directory — where `tsconfig.case.json` and the virtual case both sit. */
+/** This directory — where the virtual case sits. */
 const LINT_DIR = new URL(".", import.meta.url).pathname.replace(/\/$/, "");
 
-/** The path every case is linted AS — nothing exists there (see the harness notes). */
+/** The path every case is linted AS — nothing exists there. */
 const VIRTUAL_CASE = "case.tsx";
 const FILENAME = `${LINT_DIR}/${VIRTUAL_CASE}`;
 
@@ -40,38 +37,19 @@ const invalid = (code: string, messageIds: string[]) => ({
   errors: messageIds.map((messageId) => ({ messageId })),
 });
 
-// Hand RuleTester bun:test's describe/it explicitly: it only picks up ambient
-// globals, and without them it runs every case at import time — failures still
-// throw, but the run reports "0 tests" and names no case.
-RuleTester.describe = describe;
-RuleTester.it = it;
-
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      ecmaFeatures: { jsx: true },
-      projectService: {
-        defaultProject: "tsconfig.case.json",
-        allowDefaultProject: [VIRTUAL_CASE],
-      },
-      tsconfigRootDir: LINT_DIR,
-    },
-  },
+const ruleTester = createTypedRuleTester({
+  dir: LINT_DIR,
+  cases: [VIRTUAL_CASE],
+  jsx: true,
 });
 
-ruleTester.run(
-  "hook-binding-name",
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // A branded field under a hook name.
-      valid(`interface Spec { useX: Hook<() => number> }`),
-      valid(`interface Spec { useX?: Hook<(n: number) => string> }`),
-      // The fallback shape: a union of a branded and a plain hook, bound use*.
-      valid(`
+ruleTester.run("hook-binding-name", rule, {
+  valid: [
+    // A branded field under a hook name.
+    valid(`interface Spec { useX: Hook<() => number> }`),
+    valid(`interface Spec { useX?: Hook<(n: number) => string> }`),
+    // The fallback shape: a union of a branded and a plain hook, bound use*.
+    valid(`
         interface Spec { useZones?: Hook<() => string[]> }
         function useNoZones(): string[] { return []; }
         export function useView(a: Spec | undefined) {

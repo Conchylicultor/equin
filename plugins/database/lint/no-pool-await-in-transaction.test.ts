@@ -7,16 +7,10 @@
  * pool-inside-transaction shapes must fail.
  */
 
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 import rule from "./no-pool-await-in-transaction";
+import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: { ecmaVersion: "latest", sourceType: "module" },
-  },
-});
+const ruleTester = createRuleTester();
 
 /** Wrap a statement body in the transaction callback under test. */
 const tx = (body: string) => `await db.transaction(async (tx) => { ${body} });`;
@@ -32,32 +26,29 @@ const tx = (body: string) => `await db.transaction(async (tx) => { ${body} });`;
 const forest = (body: string) =>
   `await withPageForest(pageId, async (ctx) => { ${body} });`;
 
-// `RuleTester.run` drives the harness itself (it calls the ambient describe/it
-// that bun:test provides), so it must run at module top level.
-ruleTester.run(
-  "no-pool-await-in-transaction",
-  // The eslint flat-config RuleTester is typed against the legacy Rule shape;
-  // the typescript-eslint createRule object is compatible at runtime.
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // --- Audited legitimate sites: the executor is threaded. ---
-      { code: tx(`await insertForest(tx, { rootId, blocks });`) }, // page/editor
-      { code: tx(`await computePageId(root.parentId, tx);`) }, // page/editor
-      { code: tx(`await nextRankIn(_conversationGroups, tx);`) }, // conversations/grouped
-      { code: tx(`await ensureChangelogTable(tx);`) }, // change-feed
-      { code: tx(`await rebuildDerivedViews(tx);`) }, // migrations runner
-      { code: tx(`await tx.insert(t).values(v).onConflictDoUpdate({ target: t.id });`) }, // slow-ops
-      { code: tx(`await store.run(batch, () => fn(tx));`) }, // tasks-core status-batch
-      {
-        // tasks-core withTaskStatusBatch: the executor rides inside `batch`.
-        code: tx(
-          `const batch = { tx, before: new Map() };` +
-            `const result = await store.run(batch, () => fn(tx));` +
-            `await flushStatusBatch(batch);`,
-        ),
-      },
-      { code: tx("await tx.execute(sql`delete from jobs`);") }, // dead-job-gc
+ruleTester.run("no-pool-await-in-transaction", rule, {
+  valid: [
+    // --- Audited legitimate sites: the executor is threaded. ---
+    { code: tx(`await insertForest(tx, { rootId, blocks });`) }, // page/editor
+    { code: tx(`await computePageId(root.parentId, tx);`) }, // page/editor
+    { code: tx(`await nextRankIn(_conversationGroups, tx);`) }, // conversations/grouped
+    { code: tx(`await ensureChangelogTable(tx);`) }, // change-feed
+    { code: tx(`await rebuildDerivedViews(tx);`) }, // migrations runner
+    {
+      code: tx(
+        `await tx.insert(t).values(v).onConflictDoUpdate({ target: t.id });`,
+      ),
+    }, // slow-ops
+    { code: tx(`await store.run(batch, () => fn(tx));`) }, // tasks-core status-batch
+    {
+      // tasks-core withTaskStatusBatch: the executor rides inside `batch`.
+      code: tx(
+        `const batch = { tx, before: new Map() };` +
+          `const result = await store.run(batch, () => fn(tx));` +
+          `await flushStatusBatch(batch);`,
+      ),
+    },
+    { code: tx("await tx.execute(sql`delete from jobs`);") }, // dead-job-gc
 
       // --- Other shapes the executor reaches. ---
       // Long member chain rooted at the executor.

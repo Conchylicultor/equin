@@ -9,39 +9,18 @@
  * all left alone (the rule favours false negatives).
  */
 
-import { describe, it } from "bun:test";
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 import rule from "./no-hand-rolled-entity-projection";
+import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 
-// Hand RuleTester bun's own describe/it. Left to find them as globals, it
-// registers nothing under `./equin test` ("Ran 0 tests across 1 file"):
-// it runs every case inline at module load and stops at the first failure.
-RuleTester.describe = describe;
-RuleTester.it = it;
-RuleTester.itOnly = it.only;
-
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: { ecmaVersion: "latest", sourceType: "module" },
-  },
-});
+const ruleTester = createRuleTester();
 
 const error = { messageId: "handRolledProjection" as const };
 
-// `RuleTester.run` registers one bun test per case (through the describe/it
-// handed to it above), so it must run at module top level.
-ruleTester.run(
-  "no-hand-rolled-entity-projection",
-  // The eslint flat-config RuleTester is typed against the legacy Rule shape;
-  // the typescript-eslint createRule object is compatible at runtime.
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // A genuine transform (`?? null`) is not an identity projection.
-      {
-        code: `export const served = serveValue(v, {
+ruleTester.run("no-hand-rolled-entity-projection", rule, {
+  valid: [
+    // A genuine transform (`?? null`) is not an identity projection.
+    {
+      code: `export const served = serveValue(v, {
           source: "db",
           loader: async () => {
             const rows = await db.select().from(_t);

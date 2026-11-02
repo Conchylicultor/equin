@@ -6,31 +6,16 @@
  * item already wraps it in the canonical `label` baseline.
  */
 
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 import rule from "./no-adhoc-pane-title";
+import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      ecmaFeatures: { jsx: true },
-    },
-  },
-});
+const ruleTester = createRuleTester({ jsx: true });
 
-// `RuleTester.run` drives bun:test's ambient describe/it, so it must run at
-// module top level — never wrapped in a `test()` callback.
-ruleTester.run(
-  "no-adhoc-pane-title",
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // A title component that inherits the baseline.
-      {
-        code: `
+ruleTester.run("no-adhoc-pane-title", rule, {
+  valid: [
+    // A title component that inherits the baseline.
+    {
+      code: `
           function CrumbTitle() {
             return <span className="font-medium">Crumb</span>;
           }

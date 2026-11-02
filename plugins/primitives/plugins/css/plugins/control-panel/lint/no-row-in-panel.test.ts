@@ -2,20 +2,10 @@
  * Tests for the `no-row-in-panel` lint rule. Run with `./equin test
  * plugins/primitives/plugins/css/plugins/control-panel`.
  */
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 import rule from "./no-row-in-panel";
+import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      ecmaFeatures: { jsx: true },
-    },
-  },
-});
+const ruleTester = createRuleTester({ jsx: true });
 
 ruleTester.run("no-row-in-panel", rule as never, {
   valid: [

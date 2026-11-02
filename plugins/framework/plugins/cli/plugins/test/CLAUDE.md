@@ -52,7 +52,7 @@ Every run writes `test-status-<opId>.json` in the worktree data dir
 verdict) listing each runner's failures as stable identities (`<file> > <suite>
 > <case>`, or `(<runner> exited <n>)` when no failing case explains the exit),
 plus `unreported`: files JUnit never mentions — a load crash and a file with no
-registered cases (ESLint `RuleTester` suites) look identical there. Both runners
+registered cases look identical there. Both runners
 write JUnit for it. Per-op, not one fixed file: concurrent runs used to
 overwrite each other's verdict. `await` reads a run by its `opId`; the deps
 upgrade gates, which spawn `test` and never learn the id, read the newest

@@ -15,4 +15,11 @@ export default [
     reason:
       "lintRuleCreator itself: the one place ESLintUtils.RuleCreator is called",
   },
+  {
+    rule: "rule-kind-safety/no-raw-rule-tester",
+    paths: ["core/testing/rule-tester.ts"],
+    kind: "sanctioned",
+    reason:
+      "createRuleTester itself: the one subclass of eslint's RuleTester, wiring bun's describe/it and a fresh project service per typed suite",
+  },
 ] satisfies Exemptions;

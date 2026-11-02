@@ -8,24 +8,10 @@
  * connection plugin, tooling directories and tests.
  */
 
-import { describe, it } from "bun:test";
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
+import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 import rule from "./no-raw-pg-connection";
 
-// Hand RuleTester bun's own describe/it. Left to find them as globals, it
-// registers nothing under `./equin test` ("Ran 0 tests across 1 file"),
-// so a broken rule would pass green.
-RuleTester.describe = describe;
-RuleTester.it = it;
-RuleTester.itOnly = it.only;
-
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: { ecmaVersion: "latest", sourceType: "module" },
-  },
-});
+const ruleTester = createRuleTester();
 
 const BACKEND = "plugins/infra/plugins/jobs/server/internal/job-lock.ts";
 
@@ -40,19 +26,12 @@ const EXEMPT_PATHS = [
   "plugins/database/plugins/query-deadline/server/__tests__/helper.ts",
 ];
 
-// `RuleTester.run` drives the harness itself (it calls the ambient describe/it
-// that bun:test provides), so it must run at module top level.
-ruleTester.run(
-  "no-raw-pg-connection",
-  // The eslint flat-config RuleTester is typed against the legacy Rule shape;
-  // the typescript-eslint createRule object is compatible at runtime.
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // The sanctioned door.
-      {
-        filename: BACKEND,
-        code: `import { createDbPool } from "@plugins/database/plugins/connection/server";
+ruleTester.run("no-raw-pg-connection", rule, {
+  valid: [
+    // The sanctioned door.
+    {
+      filename: BACKEND,
+      code: `import { createDbPool } from "@plugins/database/plugins/connection/server";
 const pool = createDbPool({ name: "job-lock", connectionString: url, max: 4 });`,
       },
       // Types from "pg" are fine; only construction is banned.

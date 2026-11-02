@@ -8,30 +8,17 @@
  * a returned closure that peeks lazily, or on a non-exported local helper.
  */
 
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 import rule from "./no-laundered-peek";
+import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      ecmaFeatures: { jsx: true },
-    },
-  },
-});
+const ruleTester = createRuleTester({ jsx: true });
 
-ruleTester.run(
-  "no-laundered-peek",
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // ACTS on the peeked value; returns nothing. Not laundering a sample into a
-      // render-readable fact.
-      {
-        code: `
+ruleTester.run("no-laundered-peek", rule, {
+  valid: [
+    // ACTS on the peeked value; returns nothing. Not laundering a sample into a
+    // render-readable fact.
+    {
+      code: `
         export function navigateApp(url) {
           appNavSink.peekOrThrow()(url);
         }

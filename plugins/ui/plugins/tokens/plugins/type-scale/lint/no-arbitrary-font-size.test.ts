@@ -9,77 +9,60 @@
  * trip the rule. These cases lock both halves in.
  */
 
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 // The rule is a FACTORY taking the shared class-token walk (rule files cannot
 // import it — they dual-load under jiti). Tests run under Bun, where the
 // `@plugins/*` alias resolves, so they construct it with the real toolkit.
-import { lintToolkit } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
+import {
+  createRuleTester,
+  lintToolkit,
+} from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 import buildRule from "./no-arbitrary-font-size";
 
 const rule = buildRule(lintToolkit);
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      ecmaFeatures: { jsx: true },
-    },
-  },
-});
+const ruleTester = createRuleTester({ jsx: true });
 
-// `RuleTester.run` drives the test harness itself (it calls the ambient
-// describe/it that bun:test provides), so it must run at module top level —
-// never wrapped in a `test()` callback.
-ruleTester.run(
-  "no-arbitrary-font-size",
-  // The eslint flat-config RuleTester is typed against the legacy Rule shape;
-  // the typescript-eslint createRule object is compatible at runtime.
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // A non-className string that merely mentions the banned class — the
-      // false-positive case the scoping fix exists to prevent.
-      { code: `const DOC = "text-[10px] is banned — use text-3xs";` },
-      // Documentation / comment-as-string, likewise untouched.
-      { code: `const HINT = \`Avoid text-[12px] in favor of text-xs\`;` },
-      // A non-class-builder call with the same string is also ignored.
-      { code: `logMessage("text-[11px] appeared");` },
-      // Named scale classes in a real className are fine.
-      { code: `const el = <div className="text-xs font-medium" />;` },
-      // className inside cn(...) with only named classes is fine.
-      { code: `const el = <span className={cn("text-2xs", "px-2")} />;` },
-    ],
-    invalid: [
-      // Bare className string literal. 12px is a ROLE size (caption, control,
-      // …), a semantic choice — reported, never auto-fixed (the old fix wrote
-      // `text-xs`, itself banned by no-adhoc-typography).
-      {
-        code: `const el = <div className="text-[12px]" />;`,
-        output: null,
-        errors: [{ messageId: "arbitraryFontSize" }],
-      },
-      // cn(...) class-builder call argument — even outside JSX. Same for the
-      // 0.75rem spelling of 12px.
-      {
-        code: `const cls = cn("text-[0.75rem]", "px-2");`,
-        output: null,
-        errors: [{ messageId: "arbitraryFontSize" }],
-      },
-      // A sub-scale size still auto-fixes, including inside a cva table.
-      {
-        code: `const v = cva("flex", { variants: { size: { sm: "text-[11px]" } } });`,
-        output: `const v = cva("flex", { variants: { size: { sm: "text-2xs" } } });`,
-        errors: [{ messageId: "arbitraryFontSize" }],
-      },
-      // className={`…`} template-literal form.
-      {
-        code: `const el = <div className={\`flex text-[10px]\`} />;`,
-        output: `const el = <div className={\`flex text-3xs\`} />;`,
-        errors: [{ messageId: "arbitraryFontSize" }],
-      },
-    ],
-  },
-);
+ruleTester.run("no-arbitrary-font-size", rule, {
+  valid: [
+    // A non-className string that merely mentions the banned class — the
+    // false-positive case the scoping fix exists to prevent.
+    { code: `const DOC = "text-[10px] is banned — use text-3xs";` },
+    // Documentation / comment-as-string, likewise untouched.
+    { code: `const HINT = \`Avoid text-[12px] in favor of text-xs\`;` },
+    // A non-class-builder call with the same string is also ignored.
+    { code: `logMessage("text-[11px] appeared");` },
+    // Named scale classes in a real className are fine.
+    { code: `const el = <div className="text-xs font-medium" />;` },
+    // className inside cn(...) with only named classes is fine.
+    { code: `const el = <span className={cn("text-2xs", "px-2")} />;` },
+  ],
+  invalid: [
+    // Bare className string literal. 12px is a ROLE size (caption, control,
+    // …), a semantic choice — reported, never auto-fixed (the old fix wrote
+    // `text-xs`, itself banned by no-adhoc-typography).
+    {
+      code: `const el = <div className="text-[12px]" />;`,
+      output: null,
+      errors: [{ messageId: "arbitraryFontSize" }],
+    },
+    // cn(...) class-builder call argument — even outside JSX. Same for the
+    // 0.75rem spelling of 12px.
+    {
+      code: `const cls = cn("text-[0.75rem]", "px-2");`,
+      output: null,
+      errors: [{ messageId: "arbitraryFontSize" }],
+    },
+    // A sub-scale size still auto-fixes, including inside a cva table.
+    {
+      code: `const v = cva("flex", { variants: { size: { sm: "text-[11px]" } } });`,
+      output: `const v = cva("flex", { variants: { size: { sm: "text-2xs" } } });`,
+      errors: [{ messageId: "arbitraryFontSize" }],
+    },
+    // className={`…`} template-literal form.
+    {
+      code: `const el = <div className={\`flex text-[10px]\`} />;`,
+      output: `const el = <div className={\`flex text-3xs\`} />;`,
+      errors: [{ messageId: "arbitraryFontSize" }],
+    },
+  ],
+});

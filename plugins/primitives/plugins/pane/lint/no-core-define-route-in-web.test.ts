@@ -8,20 +8,10 @@
  * folder IS the rule's input, so a case without one would test nothing.
  */
 
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 import rule from "./no-core-define-route-in-web";
+import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      ecmaFeatures: { jsx: true },
-    },
-  },
-});
+const ruleTester = createRuleTester({ jsx: true });
 
 const WEB_FILE = "/repo/plugins/debug/plugins/queue/web/panes.ts";
 const CORE_FILE = "/repo/plugins/build/core/routes.ts";
@@ -30,70 +20,62 @@ const SERVER_FILE = "/repo/plugins/build/server/links.ts";
 const OWNER_WEB_FILE =
   "/repo/plugins/primitives/plugins/pane/web/__tests__/app-index.test.tsx";
 
-// `RuleTester.run` drives the test harness itself (it calls the ambient
-// describe/it that bun:test provides), so it must run at module top level —
-// never wrapped in a `test()` callback.
-ruleTester.run(
-  "no-core-define-route-in-web",
-  // The eslint flat-config RuleTester is typed against the legacy Rule shape;
-  // the typescript-eslint createRule object is compatible at runtime.
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // The canonical web spelling: one pane import, identity included.
-      {
-        filename: WEB_FILE,
-        code: `import { Pane, defineRoute } from "@plugins/primitives/plugins/pane/web";`,
-      },
-      // A core file is the core barrel's proper consumer.
-      {
-        filename: CORE_FILE,
-        code: `import { defineRoute } from "@plugins/primitives/plugins/pane/core";`,
-      },
-      // So is a shared/ file, and a server one.
-      {
-        filename: SHARED_FILE,
-        code: `import { defineRoute } from "@plugins/primitives/plugins/pane/core";`,
-      },
-      {
-        filename: SERVER_FILE,
-        code: `import { defineRoute } from "@plugins/primitives/plugins/pane/core";`,
-      },
-      // Other core-barrel symbols are NOT re-exported from web, so a web file
-      // reaching for them has no second spelling to choose between.
-      {
-        filename: WEB_FILE,
-        code: `import { normalizeRoutePath } from "@plugins/primitives/plugins/pane/core";`,
-      },
-      {
-        filename: WEB_FILE,
-        code: `import type { AppRef, RouteDef } from "@plugins/primitives/plugins/pane/core";`,
-      },
-      // A type-only specifier for the factory carries no value edge.
-      {
-        filename: WEB_FILE,
-        code: `import { type defineRoute } from "@plugins/primitives/plugins/pane/core";`,
-      },
-      // The owner's own tree: its jsdom suites drive the core barrel on purpose.
-      {
-        filename: OWNER_WEB_FILE,
-        code: `import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";`,
-      },
-      // A same-named factory from an unrelated module is not this symbol.
-      {
-        filename: WEB_FILE,
-        code: `import { defineRoute } from "some-router";`,
-      },
-      // A `web` directory NESTED under another runtime folder is not the web
-      // runtime — segment arithmetic, not a substring match.
-      {
-        filename: "/repo/plugins/build/core/web/routes.ts",
-        code: `import { defineRoute } from "@plugins/primitives/plugins/pane/core";`,
-      },
-      // A namespace import of the core barrel used for something else.
-      {
-        filename: WEB_FILE,
-        code: `
+ruleTester.run("no-core-define-route-in-web", rule, {
+  valid: [
+    // The canonical web spelling: one pane import, identity included.
+    {
+      filename: WEB_FILE,
+      code: `import { Pane, defineRoute } from "@plugins/primitives/plugins/pane/web";`,
+    },
+    // A core file is the core barrel's proper consumer.
+    {
+      filename: CORE_FILE,
+      code: `import { defineRoute } from "@plugins/primitives/plugins/pane/core";`,
+    },
+    // So is a shared/ file, and a server one.
+    {
+      filename: SHARED_FILE,
+      code: `import { defineRoute } from "@plugins/primitives/plugins/pane/core";`,
+    },
+    {
+      filename: SERVER_FILE,
+      code: `import { defineRoute } from "@plugins/primitives/plugins/pane/core";`,
+    },
+    // Other core-barrel symbols are NOT re-exported from web, so a web file
+    // reaching for them has no second spelling to choose between.
+    {
+      filename: WEB_FILE,
+      code: `import { normalizeRoutePath } from "@plugins/primitives/plugins/pane/core";`,
+    },
+    {
+      filename: WEB_FILE,
+      code: `import type { AppRef, RouteDef } from "@plugins/primitives/plugins/pane/core";`,
+    },
+    // A type-only specifier for the factory carries no value edge.
+    {
+      filename: WEB_FILE,
+      code: `import { type defineRoute } from "@plugins/primitives/plugins/pane/core";`,
+    },
+    // The owner's own tree: its jsdom suites drive the core barrel on purpose.
+    {
+      filename: OWNER_WEB_FILE,
+      code: `import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";`,
+    },
+    // A same-named factory from an unrelated module is not this symbol.
+    {
+      filename: WEB_FILE,
+      code: `import { defineRoute } from "some-router";`,
+    },
+    // A `web` directory NESTED under another runtime folder is not the web
+    // runtime — segment arithmetic, not a substring match.
+    {
+      filename: "/repo/plugins/build/core/web/routes.ts",
+      code: `import { defineRoute } from "@plugins/primitives/plugins/pane/core";`,
+    },
+    // A namespace import of the core barrel used for something else.
+    {
+      filename: WEB_FILE,
+      code: `
           import * as paneCore from "@plugins/primitives/plugins/pane/core";
           const p = paneCore.normalizeRoutePath(raw);
         `,

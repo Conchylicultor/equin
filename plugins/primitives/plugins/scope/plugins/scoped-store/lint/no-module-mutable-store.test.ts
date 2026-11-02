@@ -9,33 +9,17 @@
  * as the snapshot, or on a bare module `let` with no `useSyncExternalStore`.
  */
 
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 import rule from "./no-module-mutable-store";
+import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      ecmaFeatures: { jsx: true },
-    },
-  },
-});
+const ruleTester = createRuleTester({ jsx: true });
 
-// `RuleTester.run` drives the test harness itself (it calls the ambient
-// describe/it that bun:test provides), so it must run at module top level —
-// never wrapped in a `test()` callback.
-ruleTester.run(
-  "no-module-mutable-store",
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // KEYED store: the snapshot reads a `const` Map keyed by surface id, not a
-      // module `let`. The reference-safe pattern (use-window-geometry).
-      {
-        code: `
+ruleTester.run("no-module-mutable-store", rule, {
+  valid: [
+    // KEYED store: the snapshot reads a `const` Map keyed by surface id, not a
+    // module `let`. The reference-safe pattern (use-window-geometry).
+    {
+      code: `
           const geoState = new Map();
           const subscribers = new Set();
           let nextZ = 0;

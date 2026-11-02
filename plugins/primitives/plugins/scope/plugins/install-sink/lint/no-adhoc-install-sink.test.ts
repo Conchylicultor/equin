@@ -14,20 +14,10 @@
  * it — a case without one tests nothing.
  */
 
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 import rule from "./no-adhoc-install-sink";
+import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      ecmaFeatures: { jsx: true },
-    },
-  },
-});
+const ruleTester = createRuleTester({ jsx: true });
 
 // Fixture paths name THIS plugin rather than an invented one: the
 // `plugin-refs-resolve` check validates every plugin-path string literal in the
@@ -37,18 +27,15 @@ const ruleTester = new RuleTester({
 const WEB =
   "plugins/primitives/plugins/scope/plugins/install-sink/web/internal/store.ts";
 
-ruleTester.run(
-  "no-adhoc-install-sink",
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // --- (0) The web-runtime guard ------------------------------------------
-      // The incident's exact shape, in `server/` — no render path exists there, so
-      // the rule's message would be a lie. Same for `core/` and build-time code.
-      {
-        filename:
-          "plugins/primitives/plugins/scope/plugins/install-sink/server/internal/resource.ts",
-        code: `
+ruleTester.run("no-adhoc-install-sink", rule, {
+  valid: [
+    // --- (0) The web-runtime guard ------------------------------------------
+    // The incident's exact shape, in `server/` — no render path exists there, so
+    // the rule's message would be a lie. Same for `core/` and build-time code.
+    {
+      filename:
+        "plugins/primitives/plugins/scope/plugins/install-sink/server/internal/resource.ts",
+      code: `
         let configGetter = null;
         export function setConfigGetter(fn) { configGetter = fn; }
         export function readConfig() { return configGetter; }

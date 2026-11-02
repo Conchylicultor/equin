@@ -6,31 +6,16 @@
  * alone.
  */
 
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 import rule from "./no-ready-negation";
+import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      ecmaFeatures: { jsx: true },
-    },
-  },
-});
+const ruleTester = createRuleTester({ jsx: true });
 
-// `RuleTester.run` drives the harness itself (bun:test's ambient describe/it),
-// so it runs at module top level.
-ruleTester.run(
-  "no-ready-negation",
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // Naming the non-ready states is the point.
-      {
-        code: `
+ruleTester.run("no-ready-negation", rule, {
+  valid: [
+    // Naming the non-ready states is the point.
+    {
+      code: `
           const r = useLive(rows);
           if (r.status === "loading") return <Loading />;
           if (r.status === "error") return <ResourceErrorInline error={r.error} variant="block" />;

@@ -11,66 +11,49 @@
  * clear it, because the rule asks whether the binding reaches `RowActions`.
  */
 
-import { RuleTester } from "eslint";
-import tsParser from "@typescript-eslint/parser";
 import rule from "./no-raw-actions-slot";
+import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lint/core/testing";
 
-const ruleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      ecmaFeatures: { jsx: true },
-    },
-  },
-});
+const ruleTester = createRuleTester({ jsx: true });
 
-// `RuleTester.run` drives the harness itself (calls the ambient describe/it that
-// bun:test provides), so it must run at module top level — never inside test().
-ruleTester.run(
-  "no-raw-actions-slot",
-  // The eslint flat-config RuleTester is typed against the legacy Rule shape;
-  // the typescript-eslint createRule object is compatible at runtime.
-  rule as unknown as Parameters<RuleTester["run"]>[1],
-  {
-    valid: [
-      // Rendered through the primitive — the one sanctioned form.
-      `function Row({ actions }) { return <div><RowActions>{actions}</RowActions></div>; }`,
-      // Every placement axis of the primitive.
-      `function Cell({ rowActions }) { return <RowActions pin={null}>{rowActions}</RowActions>; }`,
-      `function Card({ itemActions }) { return <RowActions pin="top-right">{itemActions}</RowActions>; }`,
-      // Conditional inside the primitive.
-      `function Row({ actions }) { return <RowActions>{actions ? actions : null}</RowActions>; }`,
-      // Guarded render inside the primitive (`&&` — right operand renders).
-      `function Row({ actions }) { return <RowActions>{actions && actions}</RowActions>; }`,
-      // Fragment inside the primitive.
-      `function Row({ actions }) { return <RowActions><>{actions}</></RowActions>; }`,
-      // Wrapped INSIDE the primitive — the primitive still owns the reveal on
-      // its own outermost node, so any ancestor acquits.
-      `function Row({ actions }) { return <RowActions><Stack>{actions}</Stack></RowActions>; }`,
-      // Forwarded on as an attribute — a host downstream owns the cluster.
-      `function Section({ actions }) { return <Row actions={actions} />; }`,
-      `function Section({ actions }) { return <Card rowActions={actions} itemActions={actions} />; }`,
-      // Guard only — `actions` is the condition, `<Foo/>` is what renders.
-      `function Row({ actions }) { return <div>{actions && <Foo />}</div>; }`,
-      // Not rendered at all: an object of callbacks (a DataView's toolbar model).
-      `function Toolbar({ actions }) { return <button onClick={() => actions.setSort()} />; }`,
-      // A LOCAL named `actions` is not a prop — only destructured props count.
-      `function Banner() { const actions = <Remediation />; return <div>{actions}</div>; }`,
-      // An object-carried `actions` (graph node descriptor) is a member render,
-      // deliberately not tracked.
-      `function Node({ data }) { return <div>{data.actions}</div>; }`,
-      // A destructure from something that is NOT a parameter of this function.
-      `function Row() { const { actions } = useModel(); return <div>{actions}</div>; }`,
-      // Nested destructure — a nested object, not a prop.
-      `function Row({ config: { actions } }) { return <div>{actions}</div>; }`,
-      // Namespaced primitive.
-      `function Row({ actions }) { return <Ui.RowActions>{actions}</Ui.RowActions>; }`,
-      // COMPOSED, not placed: a fragment stashed in a variable decides nothing
-      // about where the cluster sits — the host it is forwarded to does. This is
-      // the tree's row-chrome shape (`{actions}{moreMenu}{addChild}`).
-      `function RowChrome({ actions }) {
+ruleTester.run("no-raw-actions-slot", rule, {
+  valid: [
+    // Rendered through the primitive — the one sanctioned form.
+    `function Row({ actions }) { return <div><RowActions>{actions}</RowActions></div>; }`,
+    // Every placement axis of the primitive.
+    `function Cell({ rowActions }) { return <RowActions pin={null}>{rowActions}</RowActions>; }`,
+    `function Card({ itemActions }) { return <RowActions pin="top-right">{itemActions}</RowActions>; }`,
+    // Conditional inside the primitive.
+    `function Row({ actions }) { return <RowActions>{actions ? actions : null}</RowActions>; }`,
+    // Guarded render inside the primitive (`&&` — right operand renders).
+    `function Row({ actions }) { return <RowActions>{actions && actions}</RowActions>; }`,
+    // Fragment inside the primitive.
+    `function Row({ actions }) { return <RowActions><>{actions}</></RowActions>; }`,
+    // Wrapped INSIDE the primitive — the primitive still owns the reveal on
+    // its own outermost node, so any ancestor acquits.
+    `function Row({ actions }) { return <RowActions><Stack>{actions}</Stack></RowActions>; }`,
+    // Forwarded on as an attribute — a host downstream owns the cluster.
+    `function Section({ actions }) { return <Row actions={actions} />; }`,
+    `function Section({ actions }) { return <Card rowActions={actions} itemActions={actions} />; }`,
+    // Guard only — `actions` is the condition, `<Foo/>` is what renders.
+    `function Row({ actions }) { return <div>{actions && <Foo />}</div>; }`,
+    // Not rendered at all: an object of callbacks (a DataView's toolbar model).
+    `function Toolbar({ actions }) { return <button onClick={() => actions.setSort()} />; }`,
+    // A LOCAL named `actions` is not a prop — only destructured props count.
+    `function Banner() { const actions = <Remediation />; return <div>{actions}</div>; }`,
+    // An object-carried `actions` (graph node descriptor) is a member render,
+    // deliberately not tracked.
+    `function Node({ data }) { return <div>{data.actions}</div>; }`,
+    // A destructure from something that is NOT a parameter of this function.
+    `function Row() { const { actions } = useModel(); return <div>{actions}</div>; }`,
+    // Nested destructure — a nested object, not a prop.
+    `function Row({ config: { actions } }) { return <div>{actions}</div>; }`,
+    // Namespaced primitive.
+    `function Row({ actions }) { return <Ui.RowActions>{actions}</Ui.RowActions>; }`,
+    // COMPOSED, not placed: a fragment stashed in a variable decides nothing
+    // about where the cluster sits — the host it is forwarded to does. This is
+    // the tree's row-chrome shape (`{actions}{moreMenu}{addChild}`).
+    `function RowChrome({ actions }) {
          const trailing = <>{actions}{moreMenu}</>;
          return <TreeRowChrome actions={trailing} />;
        }`,
