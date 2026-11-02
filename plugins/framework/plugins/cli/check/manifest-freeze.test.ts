@@ -55,9 +55,13 @@ const BASE: Record<string, string> = {
   // absent from the tree-shaken set and visible only in the loaded one.
   "manifest.generated.ts": `import "./capability";\n`,
   "capability.ts": `(globalThis as Record<string, unknown>).registered = true;\n`,
+  // A stage-1 registry and its reader, which loads it at the first call.
+  "lint.generated.ts": `export const lintEntries = [];\n`,
+  "lint-reader.ts": `export async function lintEntries() { return (await import("./lint.generated")).lintEntries; }\n`,
 };
 
 const MANIFEST = "manifest.generated.ts";
+const REGISTRY = "lint.generated.ts";
 
 const roots: string[] = [];
 afterEach(() => {
@@ -79,6 +83,8 @@ function measure(root: string) {
     root,
     entry: "bin/index.ts",
     hazards: new Map([[MANIFEST, "fx"]]),
+    registries: new Map([[REGISTRY, "lint"]]),
+    startupRoots: ["bin/index.ts", "bin/cli.ts"],
     writer: "writeManifest",
   });
 }
@@ -198,6 +204,48 @@ describe("measureManifestFreeze", () => {
       }),
     );
     expect(report.findings.map((f) => f.closure.kind)).toEqual(["startup"]);
+  });
+
+  test("a registry evaluated at a REGENERATING command's load fails", async () => {
+    const report = await measure(
+      fixture(withManifestImport("cmds/build/run.ts", "../../lint.generated")),
+    );
+    const finding = only(report.findings);
+    expect(finding.closure.kind).toBe("command-run");
+    expect(only(finding.manifests)).toMatchObject({
+      path: REGISTRY,
+      id: "lint",
+      hazard: "registry",
+      chain: ["cmds/build/run.ts", REGISTRY],
+    });
+  });
+
+  test("a registry evaluated by a DECLARATION fails as the startup closure", async () => {
+    const report = await measure(
+      fixture(
+        withManifestImport("cmds/deploy/index.ts", "../../lint.generated"),
+      ),
+    );
+    const finding = only(report.findings);
+    expect(finding.closure.kind).toBe("startup");
+    expect(only(finding.manifests)).toMatchObject({
+      path: REGISTRY,
+      hazard: "registry",
+    });
+  });
+
+  test("a registry a regenerating command reads through an import() at the call passes", async () => {
+    // Unlike a manifest, a registry's reader may sit in the closure: stage 1
+    // runs before the call evaluates it.
+    const report = await measure(
+      fixture({
+        "cmds/build/run.ts":
+          `import { regenerate } from "../../codegen";\n` +
+          `import { lintEntries } from "../../lint-reader";\n` +
+          `export default async () => { regenerate(); await lintEntries(); };\n`,
+      }),
+    );
+    expect(report.findings).toEqual([]);
   });
 
   test("throws rather than passing when no command regenerates", async () => {

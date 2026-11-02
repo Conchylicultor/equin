@@ -25,6 +25,7 @@ export type ExemptableRuleId =
   | "check-thread-safety/no-blocking-check-work"
   | "claude-sdk/no-claude-bin-spawn"
   | "claude-sdk/no-direct-sdk-query"
+  | "cli:codegen-manifests-not-frozen:registry"
   | "cli:legacy-cli-name"
   | "collapsible/no-unanimated-disclosure"
   | "color-palette/no-fill-color-as-text"

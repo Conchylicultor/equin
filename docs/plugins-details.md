@@ -26569,7 +26569,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by: `framework/tooling/import-closure`
       - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `core/internal/claudemd-conflicts.ts`, `core/internal/git-dir.ts`, `core/internal/merge-markers.ts`, `core/internal/registry-entry.ts` (debt)
+        - Exempts itself from:
+          - `boundaries/no-platform-api` — `core/internal/claudemd-conflicts.ts`, `core/internal/git-dir.ts`, `core/internal/merge-markers.ts`, `core/internal/registry-entry.ts` (debt)
+          - `cli:codegen-manifests-not-frozen:registry` — `core/cli.generated.ts` (sanctioned)
       - Plugins:
         - **`await`** — `./equin await` — block until this checkout's running op writes its verdict, and print it. Starts nothing; the wake-up becomes a tool result instead of a notification that may never arrive.
           - Cli:

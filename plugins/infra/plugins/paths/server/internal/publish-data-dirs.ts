@@ -1,5 +1,4 @@
 import { loadCollectedDir } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
-import { dataDirsEntries } from "../../core/data-dirs.generated";
 import { getDataDirs, isDataDir } from "../../core/internal/data-dir";
 import type { DataDir } from "../../core/internal/data-dir";
 import {
@@ -34,6 +33,9 @@ export async function publishDataDirsManifest(): Promise<void> {
   // worktree at all. It has no siblings to attribute anything to.
   if (isRelease()) return;
 
+  // Read at the call, never at module load: a CLI process that regenerates the
+  // registry loads this module first (`cli:codegen-manifests-not-frozen`).
+  const { dataDirsEntries } = await import("../../core/data-dirs.generated");
   await loadCollectedDir<DataDir>(dataDirsEntries, {
     isItem: isDataDir,
     dedupeKey: (d) => `${d.spec.kind}/${d.spec.name}`,

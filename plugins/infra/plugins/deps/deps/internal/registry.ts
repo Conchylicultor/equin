@@ -1,5 +1,4 @@
 import { loadCollectedDir } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
-import { depsEntries } from "../../core/deps.generated";
 import type { Dep, DepSource } from "./dep";
 
 /**
@@ -22,6 +21,10 @@ async function loadDeclared(): Promise<Dep<DepSource>[]> {
   // Strict: a declaration that fails to load, or a default export that is not
   // a dependency, must be loud — a quietly skipped one would read as "no such
   // dependency" everywhere.
+  // The registry is read here, at the first call, never at module load: `build`
+  // loads this module before stage 1 rewrites the registry, and Bun never
+  // re-reads a module it has evaluated (`cli:codegen-manifests-not-frozen`).
+  const { depsEntries } = await import("../../core/deps.generated");
   const deps = await loadCollectedDir<Dep<DepSource>>(depsEntries, {
     isItem: isDep,
     strict: true,

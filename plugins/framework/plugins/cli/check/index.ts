@@ -1,6 +1,8 @@
 import { builtinModules } from "node:module";
 import { relative } from "node:path";
 import {
+  collectedDirRegistryPath,
+  discoverCollectedDirs,
   postWebManifests,
   preBarrelManifests,
   writePreBarrelManifest,
@@ -156,22 +158,25 @@ function resolvesWithoutNodeModules(spec: string): boolean {
  * reaches is stable; the hazard is its GENERATED INPUTS changing mid-run, which
  * is what this check measures directly.
  *
- * SCOPE, stated rather than left implicit. The registry-phase outputs —
- * `checks/core/check.generated.ts`, `paths/core/data-dirs.generated.ts`,
- * `barrel-import/…/auto-stubs.generated.ts` — ARE loaded by regenerating
- * processes and ARE rewritten in-process by stage 1, i.e. the same mechanism.
- * They are out of scope deliberately: their staleness costs one run of registry
- * content (a missing check or a missing stub — loud, or benign), never the
- * silent deletion of authored data; and they arrive through `paths/server`,
- * `checks/core` and `barrel-import/core`, which the CLI cannot stop importing
- * without losing the ability to run checks or resolve its own data dirs.
- * Reopening that is a separate task, not a hole in this one. Its cost is not
- * always benign: `lint/core` once imported `lint.generated.ts` statically, so
- * `build` (through the codegen barrel) froze the previous entry list, and a
- * new `lint/index.ts` was missing from the exempt rule-id union until a second
- * build. A registry read in a regenerating process is therefore loaded at its
- * first READ (`import()` inside the reader, as `checks/core` and `lint/core`
- * do), never at module load.
+ * STAGE-1 REGISTRIES are the same hazard on a different clock, and a third
+ * rule. Every collected dir's committed `<dir>.generated.ts` (discovered, never
+ * listed — `discoverCollectedDirs`) is rewritten by stage 1 inside the
+ * regenerating process and read later in it: `lint.generated.ts` was imported
+ * at `lint/core`'s load, so `build` (through the codegen barrel) evaluated the
+ * PREVIOUS entry list before stage 1 ran, and a new `lint/index.ts` was missing
+ * from the exempt rule-id union until a second build. Stage 1 is the first
+ * thing a regenerating command does, so a registry is frozen exactly when it is
+ * evaluated AT LOAD — measured with dynamic edges cut: the startup roots plus
+ * every command declaration (what each invocation evaluates before routing),
+ * and each regenerating command's body. A literal `import()` inside the
+ * registry's reader runs after stage 1 and is fine, which is why this rule
+ * cannot reuse the manifests' "anywhere in the closure" reading. A registry
+ * evaluated at load by design (`cli.generated.ts`: commander routes by it, and
+ * its stale copy is never read again) is exempted by its owner,
+ * `${REGISTRY_RULE}`. Out of the set: `barrel-import`'s
+ * `auto-stubs.generated.ts`, not a collected dir and a different mechanism —
+ * the stubs are registered into Bun once per process, so loading them later
+ * would not refresh them either.
  * `ui/icons/…/symbol-name-list.generated.ts` and `icon-picker/…/symbols-metadata.json`
  * are produced by hand-run scripts, never by a build stage, so no build run can
  * invalidate a frozen copy of them.
@@ -206,12 +211,19 @@ function resolvesWithoutNodeModules(spec: string): boolean {
  * stage 2 runs without a full check pass guards nothing. The check this replaces
  * was not `alwaysRun`; that was a gap, not a decision.
  */
+const FREEZE_CHECK_ID = "cli:codegen-manifests-not-frozen";
+const REGISTRY_RULE = `${FREEZE_CHECK_ID}:registry`;
+
 const manifestFreezeCheck: Check = {
-  id: "cli:codegen-manifests-not-frozen",
+  id: FREEZE_CHECK_ID,
   description:
-    "no registered pre-barrel or post-web codegen manifest may be loaded by the CLI's startup closure, nor by the run closure of a command that regenerates the manifests in-process — a manifest frozen before stage 2 regenerates it is never re-read, and pruneOrphanedConfigFiles then deletes a freshly-authored config override",
+    "no registered pre-barrel or post-web codegen manifest may be loaded by the CLI's startup closure, nor by the run closure of a command that regenerates the manifests in-process — a manifest frozen before stage 2 regenerates it is never re-read, and pruneOrphanedConfigFiles then deletes a freshly-authored config override; and no stage-1 registry (<dir>.generated.ts) may be evaluated at load by either, so one build leaves every artifact read from a registry consistent",
   alwaysRun: true,
-  async run() {
+  exemptable: {
+    [REGISTRY_RULE]:
+      "this stage-1 registry is evaluated at CLI load on purpose, and its stale in-process copy is never read after stage 1 rewrites it",
+  },
+  async run(ctx) {
     const root = await getWorktreeRoot();
 
     // repo-relative manifest path -> manifest id, so a hit can name itself.
@@ -231,12 +243,38 @@ const manifestFreezeCheck: Check = {
       );
     }
 
-    const { findings } = await measureManifestFreeze({
-      root,
-      entry: CLI_ENTRY,
-      hazards,
-      writer: writePreBarrelManifest.name,
-    });
+    // Every collected dir's committed registry, discovered (not listed), so a
+    // new registry is held to the rule the moment it exists.
+    const registries = new Map<string, string>();
+    for (const def of discoverCollectedDirs(root)) {
+      registries.set(relative(root, collectedDirRegistryPath(def)), def.dir);
+    }
+    if (registries.size === 0) {
+      throw new Error(
+        "discoverCollectedDirs found NO collected dir, so there is no registry to measure. The " +
+          "plugin runtimes themselves are collected dirs, so that is a broken discovery, not a repo " +
+          "without registries — refusing to report a pass derived from it.",
+      );
+    }
+
+    const exempt = await ctx.exempt(REGISTRY_RULE);
+    const findings = (
+      await measureManifestFreeze({
+        root,
+        entry: CLI_ENTRY,
+        hazards,
+        registries,
+        startupRoots: [CLI_ENTRY, CLI_BODY],
+        writer: writePreBarrelManifest.name,
+      })
+    ).findings
+      .map((f) => ({
+        ...f,
+        manifests: f.manifests.filter(
+          (m) => m.hazard === "manifest" || !exempt.skips(m.path),
+        ),
+      }))
+      .filter((f) => f.manifests.length > 0);
     if (findings.length === 0) return { ok: true };
 
     return {
@@ -257,7 +295,11 @@ const manifestFreezeCheck: Check = {
         "plugin barrel to collect config_v2 descriptors, so a frozen copy makes generateConfigOrigins " +
         "see the PREVIOUS run's descriptor set and pruneOrphanedConfigFiles delete a freshly-authored " +
         "config override — silent data loss with no failing step. See " +
-        "codegen/core/pre-barrel-manifests.ts.",
+        "codegen/core/pre-barrel-manifests.ts. A REGISTRY hit (stage 1's `<dir>.generated.ts`) is " +
+        'fixed by loading it inside its reader, at the call — `(await import("./x.generated"))` ' +
+        "— which runs after stage 1 and reads what it wrote (`lint/core`'s `loadLintEntries`). A " +
+        `registry evaluated at load by design declares a \`${REGISTRY_RULE}\` exemption in its ` +
+        "owner's `exempt/index.ts`.",
     };
   },
 };
@@ -272,7 +314,7 @@ function describeFreezeFinding(f: FreezeFinding): string {
         `process also regenerates the manifests, via ${f.closure.regenerators.join(", ")}:`;
   const body = f.manifests.map(
     (m) =>
-      `      ${m.path}  (${m.id})\n        via ${m.chain.join("\n          → ")}`,
+      `      ${m.path}  (${m.hazard} ${m.id}${m.hazard === "registry" ? ", evaluated at load" : ""})\n        via ${m.chain.join("\n          → ")}`,
   );
   return [head, ...body].join("\n");
 }

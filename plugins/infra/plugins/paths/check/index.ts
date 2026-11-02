@@ -13,7 +13,6 @@ import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 // name this plugin from inside itself. Same shape as `test-layout/check`
 // importing `../core/test-layout`.
 import { checkoutWorktreeName } from "../core/internal/paths";
-import { dataDirsEntries } from "../core/data-dirs.generated";
 import {
   DATA_DIR_KINDS,
   dataRoot,
@@ -659,6 +658,7 @@ const noUndeclaredDataDirsCheck: Check = {
     // the `defineDataDir` calls in them are what populate the registry. Read the
     // registry rather than the returned array, so declarations already made by
     // anything else in this process are counted too.
+    const { dataDirsEntries } = await import("../core/data-dirs.generated");
     await loadCollectedDir<DataDir>(dataDirsEntries, {
       isItem: isDataDir,
       dedupeKey: (d) => `${d.spec.kind}/${d.spec.name}`,
@@ -1016,6 +1016,8 @@ const appDataDirsCheck: Check = {
     const declarations: DataDirDeclaration[] = [];
     const offenders: string[] = [];
 
+    // Read at the call, never at module load (`cli:codegen-manifests-not-frozen`).
+    const { dataDirsEntries } = await import("../core/data-dirs.generated");
     for (const entry of dataDirsEntries) {
       let mod: { default: unknown };
       try {

@@ -374,6 +374,16 @@ Two consequences worth knowing before editing:
   out** to a fresh `build --hermetic` (its own body statically imports plugin
   barrels), and `push` / `normalize-generated` spawn `regen-generated` — never
   "simplify" those into in-process calls.
+- **No stage-1 registry (`<dir>.generated.ts`) may be evaluated at load by
+  those same closures** — the same check's registry rule. Stage 1 rewrites every
+  registry inside `build`, so one imported at a module's top level holds the
+  previous run's entries (a new `lint/index.ts` was missing from the exempt
+  rule-id union until a second build). A reader loads its registry at the call
+  — `(await import("./x.generated"))` — which runs after stage 1. Measured with
+  dynamic edges cut over the startup roots, every command declaration and each
+  regenerating body; the registry set is discovered, so a new collected dir is
+  covered unlisted. `cli.generated.ts` is evaluated at startup by design and
+  declares a sanctioned `cli:codegen-manifests-not-frozen:registry` exemption.
 
 Design + rationale:
 [`research/2026-07-28-cli-hermetic-artifact-phase.md`](../../../../research/2026-07-28-cli-hermetic-artifact-phase.md),
@@ -453,7 +463,9 @@ ui-kit's `theme/app.css` (JS-sets / CSS-styles split, as with `.dark`).
 - Cross-plugin:
   - Imported by: `framework/tooling/import-closure`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `core/internal/claudemd-conflicts.ts`, `core/internal/git-dir.ts`, `core/internal/merge-markers.ts`, `core/internal/registry-entry.ts` (debt)
+  - Exempts itself from:
+    - `boundaries/no-platform-api` — `core/internal/claudemd-conflicts.ts`, `core/internal/git-dir.ts`, `core/internal/merge-markers.ts`, `core/internal/registry-entry.ts` (debt)
+    - `cli:codegen-manifests-not-frozen:registry` — `core/cli.generated.ts` (sanctioned)
 - Sub-plugins:
   - **`await`** — `./equin await` — block until this checkout's running op writes its verdict, and print it. Starts nothing; the wake-up becomes a tool result instead of a notification that may never arrive.
   - **`bootstrap`** [exempt] — CLI bootstrap — the npm-free half that must run with node_modules absent: ensureDeps, the post-install re-exec, the orphan guard, the build lock.

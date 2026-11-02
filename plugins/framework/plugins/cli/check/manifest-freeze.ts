@@ -5,8 +5,10 @@ import { parsedTsSource } from "@plugins/framework/plugins/tooling/plugins/check
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import {
   importClosure,
+  importClosures,
   loadTypescript,
   type ImportClosure,
+  type UnionImportClosure,
 } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
 
 /** How many module reads one measurement holds open at once. */
@@ -18,6 +20,18 @@ export interface ManifestFreezeInput {
   entry: string;
   /** Repo-relative manifest path → manifest id, so a hit can name itself. */
   hazards: ReadonlyMap<string, string>;
+  /**
+   * Repo-relative stage-1 registry path (`<dir>.generated.ts`) → its collected
+   * dir. Measured on what a process EVALUATES AT LOAD — see
+   * {@link measureManifestFreeze} — not on everything it can load.
+   */
+  registries: ReadonlyMap<string, string>;
+  /**
+   * The modules every invocation evaluates before routing, besides the
+   * command declarations (which are read off the startup measurement):
+   * `bin/index.ts` and the `bin/cli.ts` it imports.
+   */
+  startupRoots: readonly string[];
   /**
    * The name of the function the manifest registry writes a manifest through.
    * A module that CALLS it is regenerating code; see {@link callsFunction}.
@@ -41,6 +55,11 @@ export type FreezeClosure =
 export interface FrozenManifest {
   path: string;
   id: string;
+  /**
+   * `manifest`: a pre-barrel / post-web manifest anywhere in the closure.
+   * `registry`: a stage-1 registry evaluated at load.
+   */
+  hazard: "manifest" | "registry";
   /** Entrypoint → … → manifest, repo-relative. */
   chain: readonly string[];
 }
@@ -80,7 +99,7 @@ export interface ManifestFreezeReport {
 export async function measureManifestFreeze(
   input: ManifestFreezeInput,
 ): Promise<ManifestFreezeReport> {
-  const { root, entry, hazards, writer } = input;
+  const { root, entry, hazards, registries, startupRoots, writer } = input;
   const policy = { dynamicImports: "follow-except-command-runs" } as const;
 
   const startup = await importClosure(root, entry, policy);
@@ -152,14 +171,45 @@ export async function measureManifestFreeze(
     );
   }
 
-  const frozen = (closure: ImportClosure): FrozenManifest[] =>
-    [...hazards]
+  const hits = (
+    set: ReadonlyMap<string, string>,
+    hazard: FrozenManifest["hazard"],
+    closure: ImportClosure | UnionImportClosure,
+  ): FrozenManifest[] =>
+    [...set]
       .filter(([path]) => closure.modules.has(path))
-      .map(([path, id]) => ({ path, id, chain: closure.importChain(path) }))
-      .sort((a, b) => a.path.localeCompare(b.path));
+      .map(([path, id]) => ({
+        path,
+        id,
+        hazard,
+        chain: closure.importChain(path),
+      }));
+  const byPath = (a: FrozenManifest, b: FrozenManifest): number =>
+    a.path.localeCompare(b.path);
+
+  // Registries are written by stage 1, the FIRST thing a regenerating command
+  // does, so a registry is frozen only when it is evaluated before the command
+  // body's first statement: in the static (dynamic-cut) closure of what the
+  // process evaluates at load. A literal `import()` inside a reader runs after
+  // stage 1 and reads what it wrote — which is why the manifests' "anywhere in
+  // the closure" reading would be wrong here (every registry is reached by
+  // some reader's `import()`, and the registry of commands is evaluated at
+  // startup by design).
+  const atLoad = (entries: readonly string[]): Promise<UnionImportClosure> =>
+    importClosures(root, entries, { dynamicImports: "cut" });
+  const declarations = [
+    ...new Set(startup.commandRuns.map((e) => e.declaration)),
+  ];
 
   const findings: FreezeFinding[] = [];
-  const atStartup = frozen(startup);
+  const atStartup = [
+    ...hits(hazards, "manifest", startup),
+    ...hits(
+      registries,
+      "registry",
+      await atLoad([...startupRoots, ...declarations]),
+    ),
+  ].sort(byPath);
   if (atStartup.length > 0) {
     findings.push({
       closure: { kind: "startup", entry },
@@ -167,7 +217,10 @@ export async function measureManifestFreeze(
     });
   }
   for (const run of regeneratingRuns) {
-    const manifests = frozen(run.closure);
+    const manifests = [
+      ...hits(hazards, "manifest", run.closure),
+      ...hits(registries, "registry", await atLoad([run.target])),
+    ].sort(byPath);
     if (manifests.length === 0) continue;
     findings.push({
       closure: {
