@@ -7,17 +7,23 @@
  * paints on it. It matches the ring the prompt editor draws on a selected chip
  * decorator (`ring-2 ring-ring ring-offset-1 ring-offset-background`).
  *
+ * The highlight is made transparent rather than the letters unselectable: a
+ * `user-select: none` chip offers no caret position, so a drag starting on it
+ * or beside it anchors past it — and a chip opening its block (nothing
+ * selectable before it) could never be selected at all.
+ *
  * Both rules reach the element's CHILD: the declaring wrapper is
  * `display:contents` (no box of its own), and the chip it wraps is the box.
- * `:has(> *)` keeps a wrapper that is still showing its raw token as plain text
- * (a chip whose data has not loaded) selectable like the words around it.
+ * `> *` matches element children only, so a wrapper still showing its raw token
+ * as plain text (a chip whose data has not loaded) highlights like the words
+ * around it.
  *
  * Plain CSS, not utilities on the element, because the declaring sites belong
  * to other plugins and the rule belongs to the declaration, not to them.
  */
-[data-copy-text]:not([data-copy-text=""]):has(> *) {
-  -webkit-user-select: none;
-  user-select: none;
+[data-copy-text]:not([data-copy-text=""]) > *::selection,
+[data-copy-text]:not([data-copy-text=""]) > * ::selection {
+  background: transparent;
 }
 
 [data-copy-text-selected] > * {

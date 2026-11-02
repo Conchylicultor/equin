@@ -46,8 +46,8 @@ export function selectedUnits(range: Range): Element[] {
  *
  * The browser's own highlight cannot express this. It paints characters, so a
  * drag ending halfway into a chip lit up half of its label — while the copy of
- * that same selection carried the whole token. The element's letters are made
- * unselectable in CSS (no per-character highlight), and this marks the element
+ * that same selection carried the whole token. The element's letters get a
+ * transparent highlight in CSS (no per-character highlight), and this marks the element
  * itself, so the chip reads as one grabbed object: the same ring the prompt
  * editor paints on a selected chip decorator.
  *

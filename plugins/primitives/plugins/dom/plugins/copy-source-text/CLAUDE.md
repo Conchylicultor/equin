@@ -71,8 +71,11 @@ An element that stands in for source text (a **non-empty** declaration) is
 copied whole — a selection ending halfway into a chip still copies the full
 token. So the selection has to *look* whole too, or it lies about the copy:
 
-- `selection-units.css` makes its letters unselectable, so the browser paints
-  no half-highlighted label.
+- `selection-units.css` makes its letters' highlight transparent, so the
+  browser paints no half-highlighted label. Transparent, not unselectable: a
+  `user-select: none` chip has no caret position, so a drag starting on or
+  beside it anchors past it, and a chip opening its block could never be
+  selected.
 - `installSelectionUnits()` (the same `Core.Root` host) listens to
   `selectionchange` and stamps `data-copy-text-selected` on every such element
   the selection overlaps; the CSS rings it — the same ring the prompt editor
