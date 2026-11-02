@@ -21,8 +21,8 @@ import type { TurnState } from "../../core";
 /**
  * What can happen to a turn.
  *
- * - `hold` — the send found the conversation `starting` (a resume put it
- *   there): wait for the input box.
+ * - `hold` — the send found the conversation's agent coming up (a resume
+ *   started it): wait for the input box.
  * - `deliver` — a held or retried row starts being typed, as `typedText`.
  * - `release` — the launch that was to carry a held row threw before the
  *   agent existed: it is held again, as `typedText`.

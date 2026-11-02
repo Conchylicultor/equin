@@ -1,6 +1,6 @@
 {
-  "id": "b02e4416-c2bf-4b1c-94cd-0cfc598ff989",
-  "prevId": "83662d2d-ddf5-4f51-a8b4-c91bc7a69db3",
+  "id": "18710111-d80a-4024-813c-2813d22ace91",
+  "prevId": "b02e4416-c2bf-4b1c-94cd-0cfc598ff989",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -13563,6 +13563,12 @@
         },
         "hibernated_at": {
           "name": "hibernated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "resuming_since": {
+          "name": "resuming_since",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false

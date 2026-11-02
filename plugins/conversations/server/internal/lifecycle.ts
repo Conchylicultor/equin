@@ -15,6 +15,7 @@ import {
   updateConversation,
   updateTask,
   setConversationHibernated,
+  claimHibernatedResume,
   withTaskStatusBatch,
   conversationCreated,
   workspaceOfAttemptLookup,
@@ -740,9 +741,19 @@ async function preflightResume(
 // check must sit at the mutation, not one frame above it.
 async function respawnResume(
   row: Conversation,
-  // A rewind to the first message: nothing is left to resume, so the agent
-  // starts a fresh session (a new id the session chain records on launch).
-  { fresh = false }: { fresh?: boolean } = {},
+  {
+    fresh = false,
+    claimed = false,
+  }: {
+    // A rewind to the first message: nothing is left to resume, so the agent
+    // starts a fresh session (a new id the session chain records on launch).
+    fresh?: boolean;
+    // A hibernation resume the caller already claimed (`claimHibernatedResume`
+    // stamped `resumingSince`): the row keeps its status — the user sees the
+    // conversation they left, `waiting`, not an agent starting — and
+    // `resumingSince` is what holds sent turns until the process answers.
+    claimed?: boolean;
+  } = {},
 ): Promise<void> {
   const workspace = await workspaceOf(row);
   const preflight = await preflightResume(row, workspace);
@@ -766,8 +777,11 @@ async function respawnResume(
   await runtime.delete(row.id);
 
   // Reset status so the status reconciler can track the new session. Without this,
-  // "done" rows are skipped and the conversation stays stuck as done.
-  await updateConversation(row.id, { status: "starting", endedAt: null });
+  // "done" rows are skipped and the conversation stays stuck as done. A claimed
+  // hibernation resume is already tracked (`waiting`, `resumingSince` set).
+  if (!claimed) {
+    await updateConversation(row.id, { status: "starting", endedAt: null });
+  }
 
   try {
     await runtime.create(
@@ -788,8 +802,14 @@ async function respawnResume(
     );
   } catch (err) {
     await updateConversation(row.id, {
-      status: statusAfterFailedResume(row.status),
-      endedAt: row.endedAt,
+      // A claimed resume's status was never touched; its claim is released
+      // by the caller.
+      ...(claimed
+        ? {}
+        : {
+            status: statusAfterFailedResume(row.status),
+            endedAt: row.endedAt,
+          }),
       closeRequested: row.closeRequested,
     });
     throw err;
@@ -797,8 +817,8 @@ async function respawnResume(
 
   // A turn held while this conversation was last `starting` (a launch that
   // never came up, then went `gone`) is delivered now that a session runs
-  // again. The flip out of the `starting` set above enqueues the flush too;
-  // dedup folds the two.
+  // again. The flip out of `starting` / `resumingSince` enqueues the flush
+  // too; dedup folds the two.
   await deliverHeldTurnsJob.enqueue({ conversationId: row.id });
 }
 
@@ -835,11 +855,12 @@ export async function resumeConversation(id: string): Promise<Conversation> {
 }
 
 // Idempotent transparent restore for a hibernated conversation. No-op unless the
-// row is actually hibernated (process intentionally absent). On resume it reuses
-// the exact proven resume path, then clears the hibernation flag. Status stays
-// `waiting`-class to the user (the brief "starting" is invisible — the transcript
-// renders from disk). The chokepoint before any live-process interaction
-// (viewed/select endpoint, submitTurn).
+// row is actually hibernated (process intentionally absent). On resume it claims
+// the row (`hibernatedAt` cleared, `resumingSince` stamped, in one conditional
+// write — a concurrent resume finds nothing to claim) and reuses the proven
+// resume path WITHOUT passing through `starting`: the status stays `waiting`,
+// so opening a conversation never shows it as working. The chokepoint before
+// any live-process interaction (viewed/select endpoint, submitTurn).
 //
 // Returns a `ResumeOutcome` rather than throwing on a blocked resume: this fires
 // on every conversation open, so its failure arm has to be something the caller
@@ -855,8 +876,18 @@ export async function ensureResumed(id: string): Promise<ResumeOutcome> {
   const preflight = await preflightResume(row, await workspaceOf(row));
   if (preflight.kind === "blocked") return preflight;
 
-  await respawnResume(row);
-  await setConversationHibernated(id, null);
+  if (!(await claimHibernatedResume(id, new Date()))) {
+    return { kind: "not-hibernated" };
+  }
+  try {
+    await respawnResume(row, { claimed: true });
+  } catch (err) {
+    // Still hibernated: the claim is released, and the next open (or sent
+    // turn) claims it again.
+    await updateConversation(id, { resumingSince: null });
+    await setConversationHibernated(id, row.hibernatedAt);
+    throw err;
+  }
   return { kind: "resumed" };
 }
 

@@ -193,7 +193,7 @@ const conversationsEntity = defineEntity(conversationsEntityRef, {
   // Which columns move `updatedAt` (derived by a DB trigger; a write to it
   // raises). New messages are tracked by the status proxy: a turn enters
   // `working` and the reply leaves it; closing (`done`) counts. Resume
-  // (waiting <-> starting), a pane dying (-> gone), viewing and hibernation
+  // (waiting <-> starting, or `resumingSince`), a pane dying (-> gone), viewing and hibernation
   // do not. A turn starting or ending while background work keeps the status
   // `working` moves it through `workingOn` instead (into / out of `turn`).
   updatedAt: {
@@ -214,6 +214,7 @@ const conversationsEntity = defineEntity(conversationsEntityRef, {
       endedAt: false,
       closeRequested: false,
       hibernatedAt: false,
+      resumingSince: false,
       lastViewedAt: false,
     },
   },

@@ -8,8 +8,9 @@ import { deliverHeldTurns } from "./turns";
 
 // Path B of held-turn delivery (turns.ts): type every turn held while the
 // conversation was starting, once the agent can take input. Enqueued by the
-// status reconciler after it moves a row out of `starting`, and by a resume
-// (which puts the row back into `starting`) — a push trigger, never a poll.
+// status reconciler after it moves a row out of `starting` (or clears a
+// hibernation resume's `resumingSince`), and by a resume — a push trigger,
+// never a poll.
 export const deliverHeldTurnsJob = defineJob({
   name: "conversations.deliver-held-turns",
   description:

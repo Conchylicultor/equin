@@ -178,5 +178,11 @@ export const conversationFields = {
   closeRequested: boolField(),
   // Hibernation lifecycle (orthogonal to `status`).
   hibernatedAt: nullable(dateField()),
+  // Set while a hibernation resume brings the agent process back up: the row
+  // keeps the status the user saw (`waiting`) instead of passing through
+  // `starting`, and this is what the turn ledger holds sent turns on until
+  // the process answers. Cleared by the status reconciler once the runtime
+  // reports the session live (or the process never came up).
+  resumingSince: nullable(dateField()),
   lastViewedAt: nullable(dateField()),
 } satisfies FieldsRecord;

@@ -55,6 +55,7 @@ export type PlanRow = Pick<
   | "workingOn"
   | "createdAt"
   | "hibernatedAt"
+  | "resumingSince"
   | "statusUnverifiedSince"
 >;
 
@@ -317,11 +318,15 @@ function planLive(
       : null;
   const waitingForChanged =
     (desiredWaitingFor ?? null) !== (row.waitingFor ?? null);
-  if (!sessionChanged && !statusChanged && !waitingForChanged)
+  // A hibernation resume's process answered: the agent is up, so turns are no
+  // longer held for it (the shell flushes the held ones after this write).
+  const resumed = row.resumingSince !== null;
+  if (!sessionChanged && !statusChanged && !waitingForChanged && !resumed)
     return { kind: "noop" };
 
   const patch: UpdateConversationPatch = {
     ...(statusChanged ? desired : {}),
+    ...(resumed ? { resumingSince: null } : {}),
     ...(sessionChanged ? { claudeSessionId: desiredSessionId } : {}),
     ...(waitingForChanged ? { waitingFor: desiredWaitingFor } : {}),
     // A live session on a `gone` row resurrects it.
@@ -352,6 +357,15 @@ function planAbsent(row: PlanRow, ctx: PlanContext): UpdatePlan {
   const startingAgeMs =
     row.status === "starting" ? ctx.now - row.createdAt.getTime() : null;
   if (startingAgeMs !== null && startingAgeMs < STARTING_TIMEOUT_MS)
+    return { kind: "noop" };
+  // A hibernation resume whose `runtime.create` is still running inline: the
+  // same grace, timed from the resume's own claim. Past it the process never
+  // came up, and the row is hibernated again below (the shell clears
+  // `resumingSince` with it) — still `waiting`, resumed on the next open.
+  if (
+    row.resumingSince !== null &&
+    ctx.now - row.resumingSince.getTime() < STARTING_TIMEOUT_MS
+  )
     return { kind: "noop" };
 
   if (row.closeRequested) return { kind: "closed" };

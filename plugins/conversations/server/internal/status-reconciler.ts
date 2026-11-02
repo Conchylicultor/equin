@@ -259,6 +259,17 @@ async function planFor(
 
 async function apply(row: Conversation, plan: UpdatePlan): Promise<void> {
   const { id } = row;
+  // A hibernation resume whose process ended (closed, gone, or never came up
+  // and hibernated again) holds nothing any more: release it, keeping its held
+  // turns for the next resume, which flushes them.
+  if (
+    row.resumingSince !== null &&
+    (plan.kind === "closed" ||
+      plan.kind === "gone" ||
+      plan.kind === "hibernate")
+  ) {
+    await updateConversation(id, { resumingSince: null });
+  }
   switch (plan.kind) {
     case "noop":
       return;
@@ -350,9 +361,12 @@ async function apply(row: Conversation, plan: UpdatePlan): Promise<void> {
   // an UPDATE of the row every accept locks, so a turn the accept held before
   // it is already committed when the flush looks, and a turn accepted after it
   // saw the new status and was sent directly.
+  // A hibernation resume's process answering (`resumingSince` cleared) is
+  // the same flip, its status never having left `waiting`.
   if (
-    row.status === "starting" &&
-    (plan.patch.status === "working" || plan.patch.status === "waiting")
+    (row.status === "starting" &&
+      (plan.patch.status === "working" || plan.patch.status === "waiting")) ||
+    (row.resumingSince !== null && plan.patch.resumingSince === null)
   ) {
     await deliverHeldTurnsJob.enqueue({ conversationId: id });
   }

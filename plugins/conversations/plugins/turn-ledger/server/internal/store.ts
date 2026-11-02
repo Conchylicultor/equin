@@ -35,7 +35,7 @@ type Tx = Parameters<Parameters<NodePgDatabase["transaction"]>[0]>[0];
 /** What the accept decided for one turn. */
 export type AcceptOutcome =
   | { kind: "not-found" }
-  /** Kept as `held`: the conversation is still `starting`. */
+  /** Kept as `held`: the conversation's agent is still coming up ({@link isComingUp}). */
   | { kind: "held"; turn: TurnRow }
   /** Recorded as `typing`: the caller delivers it now. */
   | { kind: "send"; turn: TurnRow }
@@ -43,11 +43,31 @@ export type AcceptOutcome =
   | { kind: "duplicate"; turn: TurnRow };
 
 /**
- * Record a turn, held when the conversation is still `starting` and otherwise
- * `typing` for the caller to deliver.
+ * Whether a conversation's agent cannot take input yet: it is `starting` (a
+ * launch, a Resume), or a hibernation resume is bringing its process back up
+ * while the row keeps showing `waiting` (`resumingSince`).
+ */
+function isComingUp(conversation: {
+  status: string;
+  resumingSince: Date | null;
+}): boolean {
+  return (
+    conversation.status === "starting" || conversation.resumingSince !== null
+  );
+}
+
+const COMING_UP_COLUMNS = {
+  status: _conversations.status,
+  resumingSince: _conversations.resumingSince,
+};
+
+/**
+ * Record a turn, held when the conversation's agent is still coming up
+ * ({@link isComingUp}) and otherwise `typing` for the caller to deliver.
  *
  * The conversation ROW lock is what the held-turn paths' correctness rests on:
- * every status flip out of `starting` is an UPDATE of that row, so it
+ * every flip out of coming-up (`starting` → live, `resumingSince` cleared) is
+ * an UPDATE of that row, so it
  * serializes behind the accept — a turn is either held before the flip (and the
  * flush the reconciler enqueues AFTER its write sees it), or the accept sees the
  * new status and sends directly. No turn can be held after the last flush
@@ -65,12 +85,12 @@ export async function acceptTurn(
 ): Promise<AcceptOutcome> {
   return conn.transaction(async (tx) => {
     const [conversation] = await tx
-      .select({ status: _conversations.status })
+      .select(COMING_UP_COLUMNS)
       .from(_conversations)
       .where(eq(_conversations.id, conversationId))
       .for("update");
     if (!conversation) return { kind: "not-found" };
-    const held = conversation.status === "starting";
+    const held = isComingUp(conversation);
     const [inserted] = await tx
       .insert(_conversationTurns)
       .values({
@@ -100,9 +120,9 @@ export async function acceptTurn(
 }
 
 /**
- * Hold a `typing` turn when its conversation is `starting` — a resume put it
- * there between the accept and the send. Same row lock as {@link acceptTurn},
- * for the same reason: held before the flip out of `starting`, or not at all.
+ * Hold a `typing` turn when its conversation's agent is coming up — a resume
+ * started between the accept and the send. Same row lock as {@link acceptTurn},
+ * for the same reason: held before the flip out of coming-up, or not at all.
  * Returns whether it was held.
  */
 export async function holdIfStarting(
@@ -116,11 +136,11 @@ export async function holdIfStarting(
       .where(eq(_conversationTurns.id, turnIdKind.key(turnId)));
     if (!turn) throw new Error(`turn ${turnId} not found`);
     const [conversation] = await tx
-      .select({ status: _conversations.status })
+      .select(COMING_UP_COLUMNS)
       .from(_conversations)
       .where(eq(_conversations.id, turn.conversationId))
       .for("update");
-    if (conversation?.status !== "starting") return false;
+    if (!conversation || !isComingUp(conversation)) return false;
     const applied = await applyInTx(tx, turnId, { kind: "hold" });
     return applied.changed;
   });

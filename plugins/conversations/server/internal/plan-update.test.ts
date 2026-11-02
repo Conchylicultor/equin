@@ -26,6 +26,7 @@ function row(overrides: Partial<PlanRow> = {}): PlanRow {
     workingOn: null,
     createdAt: new Date(NOW - 60 * 60_000),
     hibernatedAt: null,
+    resumingSince: null,
     statusUnverifiedSince: null,
     ...overrides,
   };
@@ -378,6 +379,37 @@ describe("planConversationUpdate — no live session", () => {
         ctx(),
       ),
     ).toEqual({ kind: "noop" });
+  });
+
+  test("a hibernation resume still creating its process is left alone within the grace, hibernated past it", () => {
+    expect(
+      planConversationUpdate(
+        row({ resumingSince: new Date(NOW - 1000) }),
+        ABSENT,
+        ctx(),
+      ),
+    ).toEqual({ kind: "noop" });
+    expect(
+      planConversationUpdate(
+        row({ resumingSince: new Date(NOW - STARTING_TIMEOUT_MS - 1) }),
+        ABSENT,
+        ctx(),
+      ),
+    ).toEqual({ kind: "hibernate", endTurn: false });
+  });
+
+  test("a hibernation resume's live process ends the resume, its status untouched — never through starting", () => {
+    expect(
+      planConversationUpdate(
+        row({ resumingSince: new Date(NOW - 1000) }),
+        live(),
+        ctx(),
+      ),
+    ).toEqual({
+      kind: "patch",
+      patch: { resumingSince: null },
+      adoptedSessionId: null,
+    });
   });
 
   test("a mid-work resumable row hibernates and settles to waiting — nothing computes without a process", () => {

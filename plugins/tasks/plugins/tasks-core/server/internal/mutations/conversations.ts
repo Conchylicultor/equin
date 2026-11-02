@@ -1,4 +1,12 @@
-import { and, eq, inArray, isNull, notInArray, or } from "drizzle-orm";
+import {
+  and,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  notInArray,
+  or,
+} from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import type { ConversationStatus, ConversationWorkingOn } from "../../../core";
@@ -41,6 +49,8 @@ export type UpdateConversationPatch = ConversationStatusPatch & {
   statusUnverifiedSince?: Date | null;
   endedAt?: Date | null;
   closeRequested?: boolean;
+  /** See the field: set while a hibernation resume brings the process up. */
+  resumingSince?: Date | null;
 };
 
 // Resolve the owning task id AND the current status (status + waitingFor) of
@@ -208,6 +218,8 @@ export async function updateConversation(
   if (patch.endedAt !== undefined) dbPatch.endedAt = patch.endedAt;
   if (patch.closeRequested !== undefined)
     dbPatch.closeRequested = patch.closeRequested;
+  if (patch.resumingSince !== undefined)
+    dbPatch.resumingSince = patch.resumingSince;
   // An empty patch writes nothing (drizzle rejects an empty SET).
   if (Object.keys(dbPatch).length === 0) return;
 
@@ -350,7 +362,8 @@ export async function markConversationGone(id: string): Promise<boolean> {
 // intentionally absent, null to clear it on resume. Status is untouched —
 // a hibernated conversation shows `waiting` (the status reconciler settles a
 // row that still says `working` when it hibernates it). Only the status reconciler (suspend branch)
-// and the idle-kill job set it; only `ensureResumed` clears it.
+// and the idle-kill job set it; only a resume clears it (`claimHibernatedResume`,
+// or this, restoring it when that resume failed).
 export async function setConversationHibernated(
   id: string,
   hibernatedAt: Date | null,
@@ -359,6 +372,25 @@ export async function setConversationHibernated(
     .update(_conversations)
     .set({ hibernatedAt })
     .where(eq(_conversations.id, id));
+}
+
+// Claim a hibernated conversation's resume: clear `hibernatedAt` and stamp
+// `resumingSince` in one conditional write, so of two resumes racing on the
+// same row (an open and a sent turn) exactly one wins and respawns the agent.
+// `status` is untouched — the row keeps showing `waiting` while the process
+// comes up. Returns whether this caller claimed it.
+export async function claimHibernatedResume(
+  id: string,
+  now: Date,
+): Promise<boolean> {
+  const claimed = await db
+    .update(_conversations)
+    .set({ hibernatedAt: null, resumingSince: now })
+    .where(
+      and(eq(_conversations.id, id), isNotNull(_conversations.hibernatedAt)),
+    )
+    .returning({ id: _conversations.id });
+  return claimed.length > 0;
 }
 
 // Reset the idle timer: stamp lastViewedAt = now() when the user opens the

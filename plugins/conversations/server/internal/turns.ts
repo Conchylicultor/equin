@@ -17,9 +17,9 @@ import {
 } from "@plugins/conversations/plugins/turn-ledger/server";
 import { QUESTION_WAITING_FOR } from "../../core/turn-gate";
 import { ensureResumed, ResumeBlockedError } from "./lifecycle";
+import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import {
   conversationRuntime,
-  getConversationRow,
   withTerminal,
   type OutgoingTurn,
 } from "./runtime";
@@ -228,10 +228,11 @@ export async function launchWithHeldTurn(
  */
 export async function stopTurn(conversationId: string): Promise<string | null> {
   const takenBack = await returnHeldTurns(conversationId);
-  const row = await getConversationRow(conversationId);
+  const row = await getConversation(conversationId);
   if (!row) throw new Error(`Conversation ${conversationId} not found`);
   const nothingRunning =
-    row.status === "starting" && !(await hasTurnInFlight(conversationId));
+    (row.status === "starting" || row.resumingSince !== null) &&
+    !(await hasTurnInFlight(conversationId));
   const stopped = nothingRunning
     ? null
     : await withTerminal(conversationId, async () => {
@@ -267,9 +268,9 @@ function messageOf(err: unknown): string {
  * Send one `typing` row to its agent and record that it is `typed`. The caller is
  * the conversation's terminal writer.
  *
- * A hibernated conversation is resumed first, which puts it back in
- * `starting`; the row is then held like any turn sent while starting, and the
- * flush delivers it once the agent answers. A resume that is refused fails the
+ * A hibernated conversation is resumed first, which stamps `resumingSince`
+ * (its status stays `waiting`); the row is then held like any turn sent while
+ * the agent comes up, and the flush delivers it once the agent answers. A resume that is refused fails the
  * turn: falling through would send it to an agent that is not there.
  */
 async function deliverLocked(turn: TurnRow): Promise<TurnRow> {

@@ -424,6 +424,7 @@ serves them.
     - `AttemptSchema`
     - `AttemptStatusSchema`
     - `attemptWorkspacesServed`
+    - `claimHibernatedResume`
     - `clearMandate`
     - `clusterLabelOf`
     - `conversationAttachments`

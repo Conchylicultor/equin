@@ -172,7 +172,7 @@ export async function listConversationIdsForAttempt(
   return rows.map((r) => r.id);
 }
 
-// Idle-kill candidates: waiting, not already hibernated, resumable (has a
+// Idle-kill candidates: waiting, not already hibernated nor resuming, resumable (has a
 // saved Claude session), and idle since `before` (lastViewedAt, or createdAt
 // when never viewed). Used by the conversations.hibernate-idle job.
 export function listHibernationCandidates(
@@ -185,6 +185,7 @@ export function listHibernationCandidates(
       and(
         eq(conversations.status, "waiting"),
         isNull(conversations.hibernatedAt),
+        isNull(conversations.resumingSince),
         isNotNull(conversations.claudeSessionId),
         lt(
           sql`coalesce(${conversations.lastViewedAt}, ${conversations.createdAt})`,

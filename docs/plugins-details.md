@@ -14295,8 +14295,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `report-kind` "held-turn-undelivered"
       - `resource.declare` "conversations.context-usage"
       - `resource.declare` "conversations.partial-message"
-    - Uses: 84 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
-      - `tasks/tasks-core` ×26
+    - Uses: 85 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+      - `tasks/tasks-core` ×27
       - `conversations/turn-ledger` ×14
       - `conversations/transcript-watcher` ×7
       - `conversations/conversation-preprompt` ×3
@@ -53023,6 +53023,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AttemptSchema`
           - `AttemptStatusSchema`
           - `attemptWorkspacesServed`
+          - `claimHibernatedResume`
           - `clearMandate`
           - `clusterLabelOf`
           - `conversationAttachments`

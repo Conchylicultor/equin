@@ -64,13 +64,14 @@ runtime's input-box check produced). The data migration
   a failed row would hold its card until it left the window. A late
   confirmation of it still makes it `accepted` (the truth wins). Stop's
   `returned` ignores confirmations: the agent handed that turn back.
-- `returned` from `held`: Stop while the conversation is `starting`
+- `returned` from `held`: Stop while the conversation's agent is coming up
   (`returnHeldTurns`, conversations `stopTurn`) takes every held turn back into
   the draft at once — none reached the agent. Conditional on `held` like the
   `deliver` claim, so a turn the launch is claiming at that moment is either
   taken back whole or delivered whole (then stopped as a running turn).
 - `hold` (typing → held): a hibernated conversation the send resumed is
-  `starting` again; the turn waits for its input box like any held turn.
+  coming up (`resumingSince` set, status still `waiting`); the turn waits for
+  its input box like any held turn.
   `release` (typing → held): the launch that was to carry it threw.
 
 ## Matching the confirmation: by identity
@@ -153,9 +154,10 @@ Exit, AskUserQuestion answers, the held-turn flush and the spawn's launch
 message. The launch's own prompt is a `launch` row, accepted on the
 transaction that commits the conversation (conversations `commitConversation`),
 so it is `held` — and echoed — from the moment the conversation exists, and
-rides the launch message as the oldest held turn. `acceptTurn` holds a turn while its conversation is `starting` under
-the conversation ROW lock — every flip out of `starting` is an UPDATE of that
-row, so a turn is held before the flip (and the flush the reconciler enqueues
+rides the launch message as the oldest held turn. `acceptTurn` holds a turn while its conversation's agent is coming up —
+`starting`, or a hibernation resume's `resumingSince` (the row keeps showing
+`waiting`, so opening a conversation never flickers to working) — under the
+conversation ROW lock. Every flip out of either is an UPDATE of that row, so a turn is held before the flip (and the flush the reconciler enqueues
 after its write sees it) or the accept sees the new status. Delivery claims a
 held row with the conditional `deliver` transition, so exactly one claimant
 wins.

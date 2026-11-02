@@ -431,6 +431,7 @@ const CONVERSATION_QUEUE_CARRY = {
     "spawnedBy",
     "closeRequested",
     "hibernatedAt",
+    "resumingSince",
     "lastViewedAt",
   ],
   fields: { taskId: textField(), active: boolField() },

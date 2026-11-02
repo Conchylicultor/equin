@@ -213,6 +213,7 @@ export {
   markConversationGone,
   markConversationClosed,
   setConversationHibernated,
+  claimHibernatedResume,
   touchConversationViewed,
 } from "./internal/mutations/conversations";
 export type {
