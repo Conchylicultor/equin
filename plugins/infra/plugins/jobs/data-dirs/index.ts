@@ -3,10 +3,10 @@ import { defineDataDir } from "@plugins/infra/plugins/paths/core";
 /**
  * Durable state the jobs plugin must carry ACROSS its own process exits.
  *
- * Today that is exactly one thing: the floor-crash latch, one small JSON file
- * per worktree recording when this worktree's backend last exited because the
- * runner serving the longest hold class ran out of usable slots. Three such
- * exits within an hour suppress the fourth — the backend files its report and
+ * Today that is exactly one thing: the exit latch, one small JSON file per
+ * worktree recording when this worktree's backend last exited on purpose: the
+ * runner serving the longest hold class ran out of usable slots, or a runner
+ * died. Three such exits within an hour suppress the fourth — the backend files its report and
  * stays up instead, because an automatic restart that fixes nothing is worse
  * than an honest wedge.
  *

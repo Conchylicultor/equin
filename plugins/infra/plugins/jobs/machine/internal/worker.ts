@@ -64,11 +64,20 @@ import {
   discardWorkflowLog,
 } from "../../server/internal/workflow-log";
 import { attachSlotLedger, clearSlotLedger } from "./slot-ledger";
+import { exitForDeadRunner, watchRunner } from "./runner-watch";
 import { attachRunStats, clearRunStats, markRunSuspended } from "./run-stats";
 import { jobsLog } from "./jobs-log";
 
 // One runner per entry in the ladder (`RUNNERS`), all sharing one pg pool.
 let runners: Runner[] | null = null;
+
+// True from the moment `stopWorkers` begins: what tells a runner we stopped from
+// one that stopped on its own (`runner-watch.ts`).
+let stoppingWorkers = false;
+
+// Runners that died and stayed dead because the anti-loop latch suppressed the
+// exit. graphile's `stop()` throws on them, so `stopWorkers` skips them.
+const deadRunners = new Set<Runner>();
 
 // One slot-ledger detach per runner, undone by `stopWorkers`.
 let ledgerDetaches: (() => void)[] = [];
@@ -441,74 +450,87 @@ export async function startWorkers(): Promise<Runner[]> {
       attachRunStats(events),
     );
 
-    started.push(
-      await run(
-        {
-          // No `connectionString` here: graphile asserts the two are mutually
-          // exclusive, and the shared pool is the whole point.
-          pgPool,
-          concurrency: spec.concurrency,
-          events,
-          // `onShutdown` stops every runner explicitly. Three runners each
-          // installing their own process signal handlers would be three
-          // independent shutdown paths racing one another.
-          noHandleSignals: true,
-          taskList,
-          // A delay of 0, not graphile's default -1, and not for throughput:
-          // it is what makes a graceful stop wait for a job's OUTCOME. Unbatched
-          // (-1), graphile 0.18 starts the `completeJob` / `failJob` write and
-          // does not await it (`dist/worker.js`); the worker resolves at once, so
-          // `runner.stop()` returns, the pool ends and the process exits while
-          // the write is still in flight. A job that finished during a deploy's
-          // shutdown then kept its lock, the stuck-lock sweeper reclaimed it on
-          // the next backend, and it ran a SECOND time (job 2705006 on main,
-          // 2026-10-28). Batched, every write is a pending op of the batcher, and
-          // `terminate()` awaits the batcher's release before `stop()` resolves.
-          // A 0 ms batch adds one macrotask of lock time per job, nothing more.
-          preset: {
-            worker: { completeJobBatchDelay: 0, failJobBatchDelay: 0 },
-          },
+    const runner = await run(
+      {
+        // No `connectionString` here: graphile asserts the two are mutually
+        // exclusive, and the shared pool is the whole point.
+        pgPool,
+        concurrency: spec.concurrency,
+        events,
+        // `onShutdown` stops every runner explicitly. Three runners each
+        // installing their own process signal handlers would be three
+        // independent shutdown paths racing one another.
+        noHandleSignals: true,
+        taskList,
+        // A delay of 0, not graphile's default -1, and not for throughput:
+        // it is what makes a graceful stop wait for a job's OUTCOME. Unbatched
+        // (-1), graphile 0.18 starts the `completeJob` / `failJob` write and
+        // does not await it (`dist/worker.js`); the worker resolves at once, so
+        // `runner.stop()` returns, the pool ends and the process exits while
+        // the write is still in flight. A job that finished during a deploy's
+        // shutdown then kept its lock, the stuck-lock sweeper reclaimed it on
+        // the next backend, and it ran a SECOND time (job 2705006 on main,
+        // 2026-10-28). Batched, every write is a pending op of the batcher, and
+        // `terminate()` awaits the batcher's release before `stop()` resolves.
+        // A 0 ms batch adds one macrotask of lock time per job, nothing more.
+        preset: {
+          worker: { completeJobBatchDelay: 0, failJobBatchDelay: 0 },
         },
-        // Hand graphile the live (initially empty) cron-item array; it re-reads
-        // this reference each tick. Items are installed after the onAllReady
-        // barrier via installScheduledCronItems(). Passing an explicit array also
-        // skips graphile's crontab-file discovery.
-        //
-        // THE SHARPEST EDGE IN THIS FILE: the cron items go to ONE runner, and
-        // the others get an empty array. graphile's cron scheduler is
-        // per-runner, so three runners would be three schedulers ticking every
-        // minute over the same crontab.
-        //
-        // Being precise about what that would and would not break, because the
-        // temptation is to hand the same array to all three and see nothing go
-        // wrong: graphile's `scheduleCronJobs` gates each insert on a
-        // `_private_known_crontabs` upsert (`dist/cron.js`,
-        // `where known_crontabs.last_execution < excluded.last_execution`) whose
-        // documented purpose is exactly "jobs already scheduled via a different
-        // Worker instance will be skipped". So the ticks would MOSTLY dedupe.
-        // That is a guard to be grateful for, not a design to lean on — three
-        // schedulers racing one row every minute for no gain, with correctness
-        // resting on a race resolving the way it usually does.
-        //
-        // WHICH runner holds them does not affect where a tick RUNS — the tick
-        // is an ordinary insert on the job's own class task, fetched by whatever
-        // runner serves that class. It rides on `legacy` because that flag
-        // already means "the one runner carrying the cross-cutting duties", so
-        // the ladder has one such marker rather than two.
-        undefined,
-        spec.legacy ? scheduledCronItems : [],
-      ),
+      },
+      // Hand graphile the live (initially empty) cron-item array; it re-reads
+      // this reference each tick. Items are installed after the onAllReady
+      // barrier via installScheduledCronItems(). Passing an explicit array also
+      // skips graphile's crontab-file discovery.
+      //
+      // THE SHARPEST EDGE IN THIS FILE: the cron items go to ONE runner, and
+      // the others get an empty array. graphile's cron scheduler is
+      // per-runner, so three runners would be three schedulers ticking every
+      // minute over the same crontab.
+      //
+      // Being precise about what that would and would not break, because the
+      // temptation is to hand the same array to all three and see nothing go
+      // wrong: graphile's `scheduleCronJobs` gates each insert on a
+      // `_private_known_crontabs` upsert (`dist/cron.js`,
+      // `where known_crontabs.last_execution < excluded.last_execution`) whose
+      // documented purpose is exactly "jobs already scheduled via a different
+      // Worker instance will be skipped". So the ticks would MOSTLY dedupe.
+      // That is a guard to be grateful for, not a design to lean on — three
+      // schedulers racing one row every minute for no gain, with correctness
+      // resting on a race resolving the way it usually does.
+      //
+      // WHICH runner holds them does not affect where a tick RUNS — the tick
+      // is an ordinary insert on the job's own class task, fetched by whatever
+      // runner serves that class. It rides on `legacy` because that flag
+      // already means "the one runner carrying the cross-cutting duties", so
+      // the ladder has one such marker rather than two.
+      undefined,
+      spec.legacy ? scheduledCronItems : [],
     );
+    watchRunner({
+      runner,
+      events,
+      isStopping: () => stoppingWorkers,
+      onDeath: (reason) => {
+        deadRunners.add(runner);
+        exitForDeadRunner(spec, spec.legacy === true, reason);
+      },
+    });
+    started.push(runner);
   }
   runners = started;
   return runners;
 }
 
 export async function stopWorkers(): Promise<void> {
+  stoppingWorkers = true;
   if (runners) {
-    await Promise.all(runners.map((r) => r.stop()));
+    await Promise.all(
+      runners.filter((r) => !deadRunners.has(r)).map((r) => r.stop()),
+    );
     runners = null;
   }
+  deadRunners.clear();
+  stoppingWorkers = false;
   // After the stop, not before: in-flight jobs still emit `job:complete` while
   // `stop()` drains them. What it does not drain — jobs a timed-out graceful
   // shutdown releases with `failJobs`, no `job:complete` — is why the ledger

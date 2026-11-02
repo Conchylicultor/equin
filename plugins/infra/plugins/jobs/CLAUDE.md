@@ -144,6 +144,34 @@ GC and the sweeper's superseded DELETE discard the logs of the rows they remove
 — only row-owned run ids, since a baked (keyed/resume) id is shared with
 whatever row holds that key next.
 
+## A stopped runner: patched graphile, and exit
+
+**Two local changes in `patches/graphile-worker@0.18.0.patch`** (0.18.0 is the
+latest release), both needed since `completeJobBatchDelay: 0`, which routes every
+outcome through graphile's batcher:
+
+- **The batch retry runs.** Upstream's loop has a `break` in its `catch`, so the
+  documented 20 attempts were one, and a single failed write stopped the runner.
+- **One row per transaction.** A multi-row DELETE holds each row while waiting on
+  the next. Cron's `add_job` transaction retires the same rows in cron order, so
+  when a tick lands on rows still finishing (the overdue minutes cron fires on
+  wake from sleep) the two can take them in opposite order: `40P01`.
+  `batchCompleteJobs` and `batchFailJobs` now split a batch; an outcome is still
+  batched and awaited, which is what the delay is for.
+
+`graphile-completion-patch.test.ts` fails without the patch.
+
+**A runner that stops on its own takes the backend with it**
+(`machine/internal/runner-watch.ts`). graphile shuts a whole runner down on a
+fatal batch error or an early worker exit and never restarts it, and it RESOLVES
+`runner.promise` when it does, so `isStopping` is what tells a death from our
+shutdown. Without the exit, the rest of the backend carries on: on 2026-11-01
+main lost `wide`, so every `minutes` job and, because `wide` carries the cron
+items, every scheduled job stopped, with nothing reporting it. Every runner
+counts, not only the widest. It files `job-runner-died` and exits, sharing the
+floor's anti-loop latch (`exit-latch.ts`) and its lazy respawn; past the latch
+the backend stays up and says so.
+
 ## Superseded rows
 
 **A row graphile retires while it is locked is superseded, not dead.** Queue a
@@ -637,6 +665,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `JobQueueImpl`
     - `JobRowOpts`
     - `JobRowOutcome`
+    - `JobRunnerDiedReport`
     - `JobSlotFloorReport`
     - `JobTaskPayload`
     - `QueuedJob`
@@ -665,6 +694,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `isJobDeadlineExceededError`
     - `isNonRetryableError`
     - `isSuspendSignal`
+    - `JOB_RUNNER_DIED_KIND`
     - `JOB_SLOT_FLOOR_KIND`
     - `JobDeadlineExceededError`
     - `jobDeadlineSink`
@@ -784,6 +814,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `timer/no-unlisted-timer` — `machine/internal/stuck-lock-sweeper.ts` (sanctioned)
     - `jobs:no-raw-addjob` — `machine/internal/graphile-queue.ts`, `check/index.ts` (sanctioned)
     - `jobs:no-raw-addjob` — `machine/internal/enqueue-deadline.test.ts` (sanctioned)
+    - `jobs:no-raw-addjob` — `machine/internal/graphile-completion-patch.test.ts` (sanctioned)
     - `jobs:no-raw-addjob:task-literal` — `core/hold.ts`, `check/index.ts` (sanctioned)
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)
     - `boundaries/no-platform-api` — `server/internal/queue-schema.ts`, `server/internal/superseded-trigger.ts` (debt)

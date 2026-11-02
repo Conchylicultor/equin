@@ -31575,6 +31575,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `JobQueueImpl`
           - `JobRowOpts`
           - `JobRowOutcome`
+          - `JobRunnerDiedReport`
           - `JobSlotFloorReport`
           - `JobTaskPayload`
           - `QueuedJob`
@@ -31603,6 +31604,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isJobDeadlineExceededError`
           - `isNonRetryableError`
           - `isSuspendSignal`
+          - `JOB_RUNNER_DIED_KIND`
           - `JOB_SLOT_FLOOR_KIND`
           - `JobDeadlineExceededError`
           - `jobDeadlineSink`
@@ -31722,6 +31724,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `timer/no-unlisted-timer` — `machine/internal/stuck-lock-sweeper.ts` (sanctioned)
           - `jobs:no-raw-addjob` — `machine/internal/graphile-queue.ts`, `check/index.ts` (sanctioned)
           - `jobs:no-raw-addjob` — `machine/internal/enqueue-deadline.test.ts` (sanctioned)
+          - `jobs:no-raw-addjob` — `machine/internal/graphile-completion-patch.test.ts` (sanctioned)
           - `jobs:no-raw-addjob:task-literal` — `core/hold.ts`, `check/index.ts` (sanctioned)
           - `ids:pk-declared` — `server/internal/tables.ts` (debt)
           - `boundaries/no-platform-api` — `server/internal/queue-schema.ts`, `server/internal/superseded-trigger.ts` (debt)
@@ -31781,30 +31784,36 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/jobs.readRecentJobRuns`
               - `infra/jobs.runningJobStarts`
             - Register: `defineBackgroundKind('job')`
-        - **`deadline-audit`** — Job deadline audit: registers a handler on the jobs plugin's deadline seam and turns each announcement into a report — job-deadline-exceeded (warning) when a run passes its hold class's wall-clock deadline and has ctx.signal aborted, job-zombie (error) when it is still holding its slot a grace period later, and job-slot-floor (error) when the written-off slots add up to a runner that can no longer do its job.
+        - **`deadline-audit`** — Job deadline audit: registers a handler on the jobs plugin's deadline seam and turns each announcement into a report — job-deadline-exceeded (warning) when a run passes its hold class's wall-clock deadline and has ctx.signal aborted, job-zombie (error) when it is still holding its slot a grace period later, job-slot-floor (error) when the written-off slots add up to a runner that can no longer do its job, and job-runner-died (error) when graphile stopped a runner on its own.
           - Server:
             - Contributes:
               - `report-kind` "job-deadline-exceeded"
+              - `report-kind` "job-runner-died"
               - `report-kind` "job-slot-floor"
               - `report-kind` "job-zombie"
             - Uses:
+              - `infra/jobs.JOB_RUNNER_DIED_KIND`
               - `infra/jobs.JOB_SLOT_FLOOR_KIND`
               - `infra/jobs.JobDeadlineEvent`
               - `infra/jobs.jobDeadlineSink`
+              - `infra/jobs.JobRunnerDiedReport`
               - `infra/jobs.JobSlotFloorReport`
               - `reports.ReportKind`
               - `reports/engine.recordReport`
             - Exports (values):
               - `deadlineExceededKind`
               - `jobZombieKind`
+              - `runnerDiedKind`
               - `slotFloorKind`
           - Core:
             - Uses: `infra/jobs.HoldClassSchema`
             - Exports (types):
               - `JobDeadlinePayload`
+              - `JobRunnerDiedPayload`
               - `JobSlotFloorPayload`
             - Exports (values):
               - `JobDeadlinePayloadSchema`
+              - `JobRunnerDiedPayloadSchema`
               - `JobSlotFloorPayloadSchema`
         - **`in-process`** (excluded) — The in-process job queue: provides the JobQueue host service in memory — a row runs in this process when it is due (a transaction's enqueue only once it commits), scheduled jobs fire on a one-shot timer to their next due minute, nothing survives a reload. For a host without the desktop's graphile queue; never booted by the desktop.
           - Server:

@@ -77,3 +77,21 @@ export const JobSlotFloorPayloadSchema = z.object({
   windowMs: z.number().int(),
 });
 export type JobSlotFloorPayload = z.infer<typeof JobSlotFloorPayloadSchema>;
+
+/**
+ * The jsonb payload behind the `job-runner-died` kind: graphile stopped a runner
+ * on its own. Numbers the class table owns are carried, as above.
+ */
+export const JobRunnerDiedPayloadSchema = z.object({
+  /** `crashed` — the backend exited. `degraded` — the latch suppressed that. */
+  action: z.enum(["crashed", "degraded"]),
+  runnerId: z.string(),
+  serves: z.array(HoldClassSchema),
+  concurrency: z.number().int(),
+  carriesCron: z.boolean(),
+  reason: z.string(),
+  tripsThisWindow: z.number().int(),
+  maxTripsPerWindow: z.number().int(),
+  windowMs: z.number().int(),
+});
+export type JobRunnerDiedPayload = z.infer<typeof JobRunnerDiedPayloadSchema>;

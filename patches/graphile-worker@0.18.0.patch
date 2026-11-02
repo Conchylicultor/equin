@@ -1,0 +1,47 @@
+diff --git a/dist/main.js b/dist/main.js
+index 9be05a0..8a687f4 100644
+--- a/dist/main.js
++++ b/dist/main.js
+@@ -1061,7 +1061,6 @@ function batch(opName, delay, rawCallback, errorHandler, retryOptions) {
+                     // Tell other callers to wait until we're successful again (i.e. apply backpressure)
+                     holdup();
+                     lastError = coerceError(e);
+-                    break;
+                 }
+             }
+             throw (lastError ??
+diff --git a/dist/sql/completeJobs.js b/dist/sql/completeJobs.js
+index d8f277f..a5d5d69 100644
+--- a/dist/sql/completeJobs.js
++++ b/dist/sql/completeJobs.js
+@@ -1,5 +1,14 @@
+ const manualPrepare = false;
+ export async function batchCompleteJobs(compiledSharedOptions, withPgClient, poolId, jobs) {
++    // equin patch: one row per transaction. A multi-row DELETE holds each row it
++    // has reached while waiting on the next, so it deadlocks against cron's
++    // multi-row transaction, which takes the same rows in another order.
++    if (jobs.length > 1) {
++        for (const job of jobs) {
++            await batchCompleteJobs(compiledSharedOptions, withPgClient, poolId, [job]);
++        }
++        return;
++    }
+     const { escapedWorkerSchema, workerSchema, resolvedPreset: { worker: { preparedStatements }, }, } = compiledSharedOptions;
+     const jobIdsWithoutQueue = [];
+     const jobIdsWithQueue = [];
+diff --git a/dist/sql/failJobs.js b/dist/sql/failJobs.js
+index 45b180e..696a8f1 100644
+--- a/dist/sql/failJobs.js
++++ b/dist/sql/failJobs.js
+@@ -1,4 +1,11 @@
+ export async function batchFailJobs(compiledSharedOptions, withPgClient, poolId, specs) {
++    // equin patch: one row per transaction, for the same reason as batchCompleteJobs.
++    if (specs.length > 1) {
++        for (const spec of specs) {
++            await batchFailJobs(compiledSharedOptions, withPgClient, poolId, [spec]);
++        }
++        return;
++    }
+     const { escapedWorkerSchema, workerSchema, resolvedPreset: { worker: { preparedStatements }, }, } = compiledSharedOptions;
+     const specsWithQueues = [];
+     const specsWithoutQueues = [];

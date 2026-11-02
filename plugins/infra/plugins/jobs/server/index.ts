@@ -61,6 +61,8 @@ export type { JobDeadlineEvent } from "./internal/deadline-seam";
 // backend that had already restarted.
 export { JOB_SLOT_FLOOR_KIND } from "./internal/slot-floor";
 export type { JobSlotFloorReport } from "./internal/slot-floor";
+export { JOB_RUNNER_DIED_KIND } from "./internal/runner-died";
+export type { JobRunnerDiedReport } from "./internal/runner-died";
 export { abortDurableRun } from "./internal/abort-run";
 // The tables a served value reading the jobs API declares in its `reads`.
 export { _deadJobs, _jobRunStats, _jobRuns } from "./internal/tables";

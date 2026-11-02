@@ -23,6 +23,13 @@ export default [
       "Not an enqueue path: proves graphile's insert, through a `jobs-enqueue` pool whose connection stops answering, rejects with the connection deadline. `job.enqueue` cannot drive that, and the bytes are dropped on a throwaway database so no row lands.",
   },
   {
+    rule: "jobs:no-raw-addjob",
+    paths: ["machine/internal/graphile-completion-patch.test.ts"],
+    kind: "sanctioned",
+    reason:
+      "Not an enqueue path: proves `patches/graphile-worker@0.18.0.patch` by driving a bare graphile runner on a throwaway database, with its own task list and a faulty pool. `job.enqueue` reaches only the app's own runners.",
+  },
+  {
     rule: "jobs:no-raw-addjob:task-literal",
     paths: ["core/hold.ts", "check/index.ts"],
     kind: "sanctioned",
