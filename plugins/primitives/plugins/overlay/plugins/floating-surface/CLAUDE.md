@@ -1,9 +1,11 @@
 # floating-surface
 
-A **focus-less, caret-anchored floating surface**. `<FloatingSurface>` positions a
-panel against a transient **virtual anchor** — a caret/selection rect, or any
-`{ getBoundingClientRect }` virtual element — via Floating UI, and **never touches
-focus**.
+A **focus-less, anchored floating surface**. `<FloatingSurface>` positions a
+panel against a transient **virtual anchor** — a caret/selection rect, a hovered
+element, or any `{ getBoundingClientRect }` virtual element — via Floating UI, and
+**never touches focus**. Caret menus are one consumer; the others are the desktop
+shelf's peek, the Sonata scrubber's hover preview, the path bar, the link hover card
+and the selection toolbar.
 
 ## Why this exists (a sibling to `InlinePopover`, not an extension)
 
@@ -12,8 +14,8 @@ portal / z-layer / theme-scope in `ViewportOverlay`, and **the panel itself** in
 `ui-kit`'s `<OverlayPanel>` (overlay paint, the `POPOVER_WIDTH` /
 `POPOVER_PADDING` / `POPOVER_MAX_HEIGHT` roles, the unconditional viewport fit +
 scroller, the single-line reset, the crash boundary, the Ctrl+A scope). What
-genuinely differs between a trigger popover and a caret menu is **focus policy**: a
-trigger popover *should* move focus into its panel; a caret menu must **never** take
+genuinely differs between a trigger popover and a focus-less surface is **focus policy**: a
+trigger popover *should* move focus into its panel; a caret menu (or a hover preview) must **never** take
 focus — the caret stays live in the host contenteditable, navigation is driven by
 the host (e.g. Lexical commands), and rows `preventDefault` on mousedown to keep
 focus. base-ui's `Popover.Root` exists to manage focus, so bending it off for caret
@@ -73,7 +75,7 @@ needs the surface element.
 
 ## Plugin reference
 
-- Description: Focus-less caret-anchored floating surface: positions a panel against a virtual anchor rect via Floating UI (flip + scroll-follow), rendering the shared OverlayPanel inside a ViewportOverlay, without ever taking focus. A sibling to InlinePopover for transient caret menus.
+- Description: Focus-less anchored floating surface: positions a panel against any virtual anchor (a caret or selection rect, a hovered element, a point) via Floating UI (flip + scroll-follow), rendering the shared OverlayPanel inside a ViewportOverlay, without ever taking focus. A sibling to popover for transient surfaces that must not take focus (caret menus, hover previews, peeks, selection toolbars).
 - Web:
   - Uses:
     - `primitives/css/ui-kit.cn`

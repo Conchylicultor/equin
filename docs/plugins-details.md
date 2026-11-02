@@ -45688,7 +45688,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `shell/global-action-bar`
           - Exemptions:
             - Exempts itself from: `layout/no-adhoc-layout` — `web/internal/floating-action.tsx` (sanctioned)
-        - **`floating-surface`** — Focus-less caret-anchored floating surface: positions a panel against a virtual anchor rect via Floating UI (flip + scroll-follow), rendering the shared OverlayPanel inside a ViewportOverlay, without ever taking focus. A sibling to InlinePopover for transient caret menus.
+        - **`floating-surface`** — Focus-less anchored floating surface: positions a panel against any virtual anchor (a caret or selection rect, a hovered element, a point) via Floating UI (flip + scroll-follow), rendering the shared OverlayPanel inside a ViewportOverlay, without ever taking focus. A sibling to popover for transient surfaces that must not take focus (caret menus, hover previews, peeks, selection toolbars).
           - Web:
             - Uses:
               - `primitives/css/ui-kit.cn`

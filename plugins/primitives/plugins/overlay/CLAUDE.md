@@ -14,7 +14,7 @@ Reach for:
 |---|---|
 | A panel hung off a **trigger element** the user clicked, which takes focus | `popover` |
 | A menu pinned at the **point that was clicked** (a right-click context menu) | `cursor-menu` |
-| A menu pinned at the **text caret**, which must never take focus away from the editor | `floating-surface` |
+| A panel anchored to a **caret, selection or hovered element**, which must never take focus (caret menu, hover preview, peek, selection toolbar) | `floating-surface` |
 | A panel hung off a trigger that opens on **hover**, while the trigger's click does something else | `hover-popover` |
 | A control that **expands on hover / focus / touch** and collapses again | `floating-action` |
 | A **modal opened from a callback** that has nowhere to hold `open` state | `imperative-dialog` |
@@ -29,7 +29,7 @@ Reach for:
 
 `popover` and `floating-surface` are siblings, not one wrapping the other. They render the
 same panel; what differs is focus. A trigger popover should move focus into its panel. A
-caret menu must not — the caret stays live in the text the user is typing, and the host
+focus-less surface (a caret menu, a hover preview) must not — the caret stays live in the text the user is typing, and the host
 drives the highlighted row. `cursor-menu` is the third anchor: neither an element nor a
 caret, just an (x, y) point.
 
@@ -56,7 +56,7 @@ read.
 - Sub-plugins:
   - **`cursor-menu`** — Cursor-anchored DropdownMenu: a body-portaled zero-size anchor pinned at an (x,y) point, so position:fixed resolves against the viewport even inside a transformed ancestor.
   - **`floating-action`** — Disclosure-intent floating action: a single morphing panel revealed by hover, focus, or touch via the useDisclosureIntent state machine (grace-delay close, no re-entry dead zone, Esc/outside-press…
-  - **`floating-surface`** — Focus-less caret-anchored floating surface: positions a panel against a virtual anchor rect via Floating UI (flip + scroll-follow), rendering the shared OverlayPanel inside a ViewportOverlay…
+  - **`floating-surface`** — Focus-less anchored floating surface: positions a panel against any virtual anchor (a caret or selection rect, a hovered element, a point) via Floating UI (flip + scroll-follow), rendering the…
   - **`hover-card`** — Hover card: <WithHoverCard card> describes its trigger in a card drawn as the shared overlay panel (the menu's look, one fixed width) — a title with an inline code id, a description, has / lacks…
   - **`hover-popover`** — Hover-opened popover: a controlled ui-kit Popover revealed by pointer hover (open intent delay, grace close while the pointer is on neither the trigger nor the portaled panel), ArrowDown, or a first…
   - **`image-viewer`** — One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail that always shows the whole image, with a tiny-icon shape and a size badge; a given width /…

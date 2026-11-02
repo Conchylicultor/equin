@@ -18,7 +18,7 @@ import {
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
 
 /**
- * A FOCUS-LESS, caret-anchored floating surface.
+ * A FOCUS-LESS, anchored floating surface.
  *
  * It positions a panel against a transient **virtual anchor** (a caret/selection
  * rect, or any `{ getBoundingClientRect }` virtual element) via Floating UI — and
