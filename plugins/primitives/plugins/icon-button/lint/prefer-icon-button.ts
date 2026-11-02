@@ -42,7 +42,7 @@ const createRule = lintRuleCreator(import.meta.url);
  * resolve the `@plugins/*` alias. No auto-fix (the label text can't be inferred).
  */
 
-const ICON_MODULES = /^@plugins\/ui\/plugins\/icons\/web$/;
+const ICONS_WEB = "@plugins/ui/plugins/icons/web";
 
 /**
  * Resolve a JSX child-element's tag identifier to the module it was imported
@@ -144,7 +144,7 @@ export default createRule({
           context.sourceCode,
           only.openingElement.name,
         );
-        if (!source || !ICON_MODULES.test(source)) return;
+        if (!source || source !== ICONS_WEB) return;
 
         context.report({ node, messageId: "preferIconButton" });
       },

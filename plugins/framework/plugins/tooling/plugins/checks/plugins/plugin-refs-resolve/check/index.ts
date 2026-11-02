@@ -14,9 +14,10 @@ import {
 const MAX_SHOWN = 50;
 
 function describe(ref: PathRef | DotRef): string {
-  return ref.kind === "path"
-    ? `plugin path "${ref.value}" (${ref.syntax})`
-    : `plugin id "${ref.id}" (${ref.site})`;
+  if (ref.kind === "dot") return `plugin id "${ref.id}" (${ref.site})`;
+  return ref.syntax === "rule-source"
+    ? `lint rule import source "@${ref.barrel}" (no ${ref.barrel}/index.ts)`
+    : `plugin path "${ref.value}" (${ref.syntax})`;
 }
 
 /**
@@ -28,7 +29,7 @@ function describe(ref: PathRef | DotRef): string {
 const check: Check = {
   id: "plugin-refs-resolve",
   description:
-    "plugin paths (literals, @plugins specifiers) and dot ids (compositions manifest, reorder overrides, asPluginId, runtimeExceptions) resolve to a real plugin",
+    "plugin paths (literals, @plugins specifiers, lint rules' import-source strings — to a real barrel) and dot ids (compositions manifest, reorder overrides, asPluginId, runtimeExceptions) resolve to a real plugin",
   async run(ctx: CheckContext): Promise<CheckResult> {
     const repo = await ctx.repo();
     const tree = await buildStructureTreeOnce(
@@ -41,6 +42,15 @@ const check: Check = {
     const unresolved: Array<PathRef | DotRef> = [];
     for (const ref of refs) {
       if (ref.kind === "path" && !pathSet.has(ref.value)) unresolved.push(ref);
+      // A rule's import source must name a barrel, not just a plugin: a tsc
+      // import would refuse a missing one, a string the rule compares never does.
+      else if (
+        ref.kind === "path" &&
+        ref.syntax === "rule-source" &&
+        !repo.has(`${ref.barrel}/index.ts`)
+      ) {
+        unresolved.push(ref);
+      }
       if (ref.kind === "dot" && !idSet.has(ref.id)) unresolved.push(ref);
     }
 

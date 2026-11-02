@@ -10,8 +10,8 @@
  *    string work — so only the conjunction fires.
  * 2. The half-adoption shape: importing the caret-menu PANEL (`CaretTriggerMenu`
  *    from the caret-trigger barrel, or `FloatingSurface` from the
- *    floating-surface barrel) without calling `useCaretMenu`, i.e. a caret menu
- *    with no keyboard model.
+ *    floating-surface barrel, in an editor file) without calling `useCaretMenu`,
+ *    i.e. a caret menu with no keyboard model.
  */
 
 import rule from "./no-adhoc-caret-trigger";
@@ -49,6 +49,12 @@ ruleTester.run("no-adhoc-caret-trigger", rule, {
     `,
       // The non-surface exports carry no keyboard obligation on their own.
       `import { atWordBoundary } from "@plugins/primitives/plugins/text-editor/plugins/caret-trigger/web";`,
+    // `FloatingSurface` outside an editor file is no caret menu: a hover card,
+    // a shelf peek, a selection toolbar take it with nothing to type into.
+    `
+    import { FloatingSurface } from "@plugins/primitives/plugins/overlay/plugins/floating-surface/web";
+    const el = createElement(FloatingSurface, { anchor: elementAnchor(ref), onDismiss: close }, actions);
+    `,
       // A same-named import from an unrelated module is not the primitive.
       `import { FloatingSurface } from "./local-surface";`,
       // `indexOf` on an array in a component that happens to also subscribe is the
@@ -98,6 +104,7 @@ ruleTester.run("no-adhoc-caret-trigger", rule, {
         // the menu had no arrows / Enter — mouse-only. The rule keys on the panel,
         // so it fires whatever the anchor is (here, not a caret rect at all).
         code: `
+        import { KEY_ESCAPE_COMMAND } from "lexical";
         import { FloatingSurface } from "@plugins/primitives/plugins/overlay/plugins/floating-surface/web";
         const el = createElement(FloatingSurface, { anchor: elementAnchor(ref), onDismiss: close }, rows);
       `,
@@ -109,6 +116,21 @@ ruleTester.run("no-adhoc-caret-trigger", rule, {
         ],
       },
       {
+      // The original `url-paste` spelling: the caret rect from the primitive,
+      // the panel by hand. Any editor import makes it an editor file.
+      code: `
+        import { FloatingSurface } from "@plugins/primitives/plugins/overlay/plugins/floating-surface/web";
+        import { useEditorRef } from "@plugins/primitives/plugins/text-editor/web";
+        const el = createElement(FloatingSurface, { anchor: caretRect(), onDismiss: close }, rows);
+      `,
+      errors: [
+        {
+          messageId: "caretSurfaceWithoutMenu",
+          data: { name: "FloatingSurface" },
+        },
+      ],
+    },
+    {
         // The menu COMPONENT without the hook is the same half-adoption: the
         // surface renders and dismisses, but no key moves or commits.
         code: `

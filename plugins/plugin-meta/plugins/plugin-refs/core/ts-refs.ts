@@ -1,5 +1,6 @@
 import {
   asPluginId,
+  isTestCodePath,
   PLUGIN_FOLDERS,
 } from "@plugins/framework/plugins/plugin-id/core";
 import { parseRuntimeException } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
@@ -74,14 +75,32 @@ function specifierStarts(src: string, masked: string): Set<number> {
   return starts;
 }
 
+/** Specifier-shaped data (no `.`, so a message's prose that ends a sentence
+ *  on a barrel — `"…from @plugins/x/core."` — is not one). */
+const RULE_SOURCE_RE = /^@plugins(?:\/[A-Za-z0-9_-]+)+$/;
+
+/**
+ * A lint rule's own source: non-test code under a plugin's `lint/` folder
+ * (`plugins/<…>/<name>/lint/…`). Its `@plugins/…` strings are the import sources
+ * the rule matches — data that names a real barrel, not a fixture.
+ */
+function isLintRuleSource(file: string): boolean {
+  const segs = file.split("/");
+  if (isTestCodePath(segs)) return false;
+  return segs.some((s, i) => s === "lint" && segs[i - 2] === PLUGINS_DIR);
+}
+
 /**
  * `path` refs in one TS/TSX source: every string literal that is wholly a
  * `plugins/…` path, and every `@plugins/…` module specifier (static, dynamic
  * and mocked imports). The range spans exactly the plugin directory
  * (`plugins/a/plugins/b`) — for a specifier, starting after its `@`.
  *
- * A `@plugins/…` string that is NOT in a specifier position is not a ref: test
- * fixtures spell fake specifiers (`"@plugins/a/web"`) as data by the dozen.
+ * A `@plugins/…` string that is NOT in a specifier position is not a ref —
+ * test fixtures spell fake specifiers (`"@plugins/a/web"`) as data by the
+ * dozen — except in a lint rule's own source, where it is the import source
+ * the rule matches (`rule-source`): a rule matching a moved barrel's old
+ * specifier silently catches nothing, so it is located like any import.
  */
 export function scanPathRefs(file: string, src: string): PathRef[] {
   if (!src.includes(`${PLUGINS_DIR}/`)) return [];
@@ -89,11 +108,18 @@ export function scanPathRefs(file: string, src: string): PathRef[] {
   const specifiers = src.includes(SPECIFIER_PREFIX)
     ? specifierStarts(src, masked)
     : new Set<number>();
+  const ruleSource = isLintRuleSource(file);
   const lineOf = lineIndex(src);
   const out: PathRef[] = [];
   for (const lit of literalsIn(src, masked)) {
     const specifier = lit.value.startsWith(SPECIFIER_PREFIX);
-    if (specifier && !specifiers.has(lit.start)) continue;
+    const inSpecifierPosition = specifier && specifiers.has(lit.start);
+    if (
+      specifier &&
+      !inSpecifierPosition &&
+      !(ruleSource && RULE_SOURCE_RE.test(lit.value))
+    )
+      continue;
     const pathText = specifier ? lit.value.slice(1) : lit.value;
     const under = pluginPathFromLiteral(pathText);
     if (under == null) continue;
@@ -101,14 +127,18 @@ export function scanPathRefs(file: string, src: string): PathRef[] {
     const start = lit.start + (specifier ? 1 : 0);
     const range = { start, end: start + value.length };
     assertRange(file, src, range, value);
-    out.push({
+    const base = {
       kind: "path",
-      syntax: specifier ? "specifier" : "literal",
       file,
       range,
       line: lineOf(start),
       value,
-    });
+    } as const;
+    if (specifier && !inSpecifierPosition) {
+      out.push({ ...base, syntax: "rule-source", barrel: pathText });
+    } else {
+      out.push({ ...base, syntax: specifier ? "specifier" : "literal" });
+    }
   }
   return out;
 }

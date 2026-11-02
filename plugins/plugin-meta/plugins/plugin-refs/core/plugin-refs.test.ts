@@ -64,6 +64,56 @@ describe("path refs", () => {
   });
 });
 
+describe("lint rule import sources", () => {
+  const src = [
+    `import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";`,
+    `const SOURCE = "@plugins/primitives/plugins/overlay/plugins/floating-surface/web";`,
+    `const HELPERS = "@plugins/ui/plugins/icons/web/testing";`,
+    `const prose = "… both from " + "@plugins/framework/plugins/principal/core.";`,
+    `const prefix = "@plugins/";`,
+  ].join("\n");
+
+  test("a rule's specifier-shaped strings are rule-source refs carrying their barrel", () => {
+    const refs = scanPathRefs(
+      "plugins/primitives/plugins/icon-button/lint/rule.ts",
+      src,
+    );
+    expect(
+      refs.map((r) => [
+        r.syntax,
+        r.value,
+        r.syntax === "rule-source" ? r.barrel : null,
+      ]),
+    ).toEqual([
+      ["specifier", "plugins/framework/plugins/tooling/plugins/lint", null],
+      [
+        "rule-source",
+        "plugins/primitives/plugins/overlay/plugins/floating-surface",
+        "plugins/primitives/plugins/overlay/plugins/floating-surface/web",
+      ],
+      [
+        "rule-source",
+        "plugins/ui/plugins/icons",
+        "plugins/ui/plugins/icons/web/testing",
+      ],
+    ]);
+    expectRanges(src, refs);
+  });
+
+  test("the same strings anywhere else — a rule's own test included — are data", () => {
+    for (const file of [
+      "plugins/tasks/core/x.ts",
+      "plugins/primitives/plugins/icon-button/lint/rule.test.ts",
+      // A plugin NAMED lint is not a lint/ folder.
+      "plugins/framework/plugins/tooling/plugins/lint/core/x.ts",
+    ]) {
+      expect(scanPathRefs(file, src).map((r) => r.syntax)).toEqual([
+        "specifier",
+      ]);
+    }
+  });
+});
+
 describe("dot refs", () => {
   test("asPluginId: fixed string arguments only, empty root skipped", () => {
     const src = [

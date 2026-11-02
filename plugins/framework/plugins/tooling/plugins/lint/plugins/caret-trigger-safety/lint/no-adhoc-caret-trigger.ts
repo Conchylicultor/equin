@@ -24,25 +24,55 @@ function isIndexScan(node: TSESTree.CallExpression): boolean {
   );
 }
 
+const CARET_TRIGGER =
+  "@plugins/primitives/plugins/text-editor/plugins/caret-trigger/web";
+const FLOATING_SURFACE =
+  "@plugins/primitives/plugins/overlay/plugins/floating-surface/web";
+
 /**
- * The two barrels a caret-menu PANEL can come from, and the export each one
- * contributes. Importing either says "I am rendering a caret-anchored menu";
- * `useCaretMenu` is where that menu's keyboard model comes from.
+ * Where a caret-menu PANEL can come from, and when importing it says "I am
+ * rendering a caret-anchored menu" — the claim `useCaretMenu` must then back
+ * with a keyboard model.
  *
- * `FloatingSurface` is here because its own charter is "a focus-less,
- * caret-anchored floating surface … for transient caret menus", and its only
- * production consumer is `CaretTriggerMenu`.
+ * `CaretTriggerMenu` IS the caret-menu panel, wherever it is rendered.
+ * `FloatingSurface` is the focus-less anchored surface under it, which has since
+ * grown consumers that are no caret menu at all (a shelf peek, a scrubber hover
+ * preview, a path bar, a link hover card, a selection toolbar). It is evidence
+ * only in an EDITOR file — one that reaches Lexical, the text editor, the caret
+ * trigger or the DOM selection — which is where a hand-rolled caret menu lives
+ * (`url-paste`'s took `caretAnchor` and Lexical's `KEY_ESCAPE_COMMAND`).
+ *
+ * Sources are exact specifiers, never patterns: plugin-meta/plugin-refs locates
+ * a lint rule's `@plugins/…` string, so `plugin-refs-resolve` fails when the
+ * barrel moves and `./equin plugin move` rewrites it. A regex here once kept
+ * matching `floating-surface`'s pre-move path and caught nothing for two months.
  */
-const SURFACE_SOURCES: { source: RegExp; exports: Set<string> }[] = [
+const SURFACE_SOURCES: {
+  source: string;
+  exports: Set<string>;
+  editorOnly: boolean;
+}[] = [
   {
-    source: /text-editor\/plugins\/caret-trigger\/web$/,
+    source: CARET_TRIGGER,
     exports: new Set(["CaretTriggerMenu"]),
+    editorOnly: false,
   },
   {
-    source: /^@plugins\/primitives\/plugins\/floating-surface\/web$/,
+    source: FLOATING_SURFACE,
     exports: new Set(["FloatingSurface"]),
+    editorOnly: true,
   },
 ];
+
+/** Imports that make a file an editor file (see `SURFACE_SOURCES`). */
+const EDITOR_SOURCES = new Set([
+  "lexical",
+  "@plugins/primitives/plugins/text-editor/web",
+  CARET_TRIGGER,
+  "@plugins/primitives/plugins/dom/plugins/dom-selection/web",
+]);
+const isEditorSource = (source: string) =>
+  EDITOR_SOURCES.has(source) || source.startsWith("@lexical/");
 
 /** `useCaretMenu(...)` — the hook that owns arrows / Enter / Esc / commit. */
 function isUseCaretMenu(node: TSESTree.CallExpression): boolean {
@@ -98,21 +128,27 @@ export default createRule({
     // reaches for the KEYBOARD. Rendering is the visible half, so it is the half
     // that gets copied; the keyboard model is invisible until someone presses a
     // key. The primitive's own files reach the caret-trigger barrel by relative
-    // path, so they never self-match on it — but `FloatingSurface` is another
-    // plugin, which they must import through its barrel, so `CaretTriggerMenu`'s
-    // own file is declared in its `exempt/index.ts`.
+    // path, so they never self-match on it; `CaretTriggerMenu`'s own file takes
+    // `FloatingSurface` through its barrel, but imports nothing that makes it an
+    // editor file, so it needs no exemption.
     //
     // Keying on the panel rather than on a rect helper is a strengthening, not a
     // swap: it catches a hand-rolled caret menu HOWEVER it obtained its anchor —
     // including one anchored to an element rect, which never touched the old
     // `caretAnchor` evidence and slipped straight through.
-    const surfaceImports: { node: TSESTree.Node; name: string }[] = [];
+    const surfaceImports: {
+      node: TSESTree.Node;
+      name: string;
+      editorOnly: boolean;
+    }[] = [];
     let sawUseCaretMenu = false;
+    let isEditorFile = false;
 
     return {
       ImportDeclaration(node) {
-        const source = SURFACE_SOURCES.find((s) =>
-          s.source.test(node.source.value),
+        if (isEditorSource(node.source.value)) isEditorFile = true;
+        const source = SURFACE_SOURCES.find(
+          (s) => s.source === node.source.value,
         );
         if (!source) return;
         for (const spec of node.specifiers) {
@@ -122,7 +158,11 @@ export default createRule({
           )
             continue;
           if (source.exports.has(spec.imported.name)) {
-            surfaceImports.push({ node: spec, name: spec.imported.name });
+            surfaceImports.push({
+              node: spec,
+              name: spec.imported.name,
+              editorOnly: source.editorOnly,
+            });
           }
         }
       },
@@ -138,7 +178,8 @@ export default createRule({
           }
         }
         if (!sawUseCaretMenu) {
-          for (const { node, name } of surfaceImports) {
+          for (const { node, name, editorOnly } of surfaceImports) {
+            if (editorOnly && !isEditorFile) continue;
             context.report({
               node,
               messageId: "caretSurfaceWithoutMenu",

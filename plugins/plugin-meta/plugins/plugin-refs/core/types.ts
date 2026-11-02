@@ -28,8 +28,16 @@ interface RefBase {
  *    trailing `/` or glob): `resolveFrom`, lint/check allowlists, fixtures.
  *  - `specifier` — an `@plugins/…` string literal (import specifiers, dynamic
  *    `import()`, `vi.mock(…)`). The range starts AFTER the `@`.
+ *  - `rule-source` — an `@plugins/…` string literal held as DATA by a lint rule
+ *    (non-test code under a plugin's `lint/`): the import source the rule
+ *    matches. Spelled like a specifier (range after the `@`), and carries the
+ *    `barrel` it must name, since nothing else checks that it still exists.
  */
-export type PathRefSyntax = "literal" | "specifier";
+export type PathRefSyntax = PathRef["syntax"];
+
+interface PathRefBase extends RefBase {
+  kind: "path";
+}
 
 /**
  * A plugin named by its filesystem path. `value` is always the plugin DIRECTORY,
@@ -37,10 +45,14 @@ export type PathRefSyntax = "literal" | "specifier";
  * part after it, `/web/x.tsx` or `/**`, is outside the range). Replacing the
  * range with the new plugin dir is the whole rewrite.
  */
-export interface PathRef extends RefBase {
-  kind: "path";
-  syntax: PathRefSyntax;
-}
+export type PathRef =
+  | (PathRefBase & { syntax: "literal" | "specifier" })
+  | (PathRefBase & {
+      syntax: "rule-source";
+      /** The barrel dir the specifier names (`plugins/a/plugins/b/web`, or
+       *  `…/web/testing`): it must hold an `index.ts`. */
+      barrel: string;
+    });
 
 /**
  * Where a `dot` ref was found. Each site is read STRUCTURALLY (a parsed JSONC

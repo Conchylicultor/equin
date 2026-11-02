@@ -14,10 +14,17 @@ const BUILDER_NAME = "buildPluginTree";
  * segment-by-segment spelling the thread watch uses, so a plugin NAMED `check`
  * does not match), or the check runner's own `checks/core/`.
  */
-const CHECK_CODE = [
-  /(?:^|\/)plugins\/(?:[^/]+\/plugins\/)*[^/]+\/check\//,
-  /(?:^|\/)plugins\/framework\/plugins\/tooling\/plugins\/checks\/core\//,
-];
+const CHECK_FOLDER = /(?:^|\/)plugins\/(?:[^/]+\/plugins\/)*[^/]+\/check\//;
+/** A path string, not a pattern, so plugin-meta/plugin-refs locates it. */
+const CHECKS_CORE = "plugins/framework/plugins/tooling/plugins/checks/core";
+
+function isCheckCode(filename: string): boolean {
+  return (
+    CHECK_FOLDER.test(filename) ||
+    filename.startsWith(`${CHECKS_CORE}/`) ||
+    filename.includes(`/${CHECKS_CORE}/`)
+  );
+}
 
 export default createRule({
   name: "no-uncached-tree-in-checks",
@@ -43,7 +50,7 @@ export default createRule({
   defaultOptions: [],
   create(context) {
     const filename = context.filename.split("\\").join("/");
-    if (!CHECK_CODE.some((re) => re.test(filename))) return {};
+    if (!isCheckCode(filename)) return {};
 
     // Local names bound to `import * as tree from "…/plugin-tree/core"`.
     const nsLocals = new Set<string>();

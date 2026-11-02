@@ -28443,7 +28443,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Exemptions:
                 - Exempted by: `primitives/dom/element-size` (0 debt)
             - **`route-teardown-safety`** — route-teardown-safety lint rule: no-unroute
-            - **`rule-kind-safety`** — rule-kind-safety lint rules: type-aware-rule-declared (a lint rule that reads parser services declares meta.docs.requiresTypeChecking: true), no-raw-rule-creator (every rule is made with lint/core lintRuleCreator, which derives its docs URL and types its meta.docs)
+            - **`rule-kind-safety`** — rule-kind-safety lint rules: type-aware-rule-declared (a lint rule that reads parser services declares meta.docs.requiresTypeChecking: true), no-raw-rule-creator (every rule is made with lint/core lintRuleCreator, which derives its docs URL and types its meta.docs), no-plugin-path-regex (a lint rule names the plugins it matches as strings plugin-refs locates, never inside a regex)
               - Exemptions:
                 - Exempted by: `framework/tooling/lint` (0 debt)
             - **`runtime-isolation`** — runtime-isolation lint rule: no-deep-own-folder-import

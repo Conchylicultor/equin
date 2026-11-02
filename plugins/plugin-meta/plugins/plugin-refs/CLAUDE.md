@@ -18,7 +18,7 @@ private scan in a check.
 
 | kind | what | where it is found |
 | --- | --- | --- |
-| `path` | `plugins/a/plugins/b` | a string literal that is wholly a `plugins/…` path; a `@plugins/…` module specifier (static / dynamic `import()` / `mock(…)`) — in every `.ts`/`.tsx` except `*.generated.ts` |
+| `path` | `plugins/a/plugins/b` | a string literal that is wholly a `plugins/…` path; a `@plugins/…` module specifier (static / dynamic `import()` / `mock(…)`); in a lint rule's own source (non-test code under a plugin's `lint/`), a specifier-shaped `@plugins/…` string — the import source the rule matches (`rule-source`, carrying the `barrel` that must hold an `index.ts`) — in every `.ts`/`.tsx` except `*.generated.ts` |
 | `dot` | `a.b` | compositions manifest `entryPoints` / `selectedContributors` (via `parseEntryPattern`), in the generated origin and in its `defineConfig` source (`composition/core/config.ts`: the array literal of an `entryPoints:` / `selectedContributors:` property — `plugin-refs:compositions-source-covers-origin` fails on an id spelled any other way); reorder `items` keys in `config/**.jsonc`; `asPluginId("…")` in non-test code; boundary-config `runtimeExceptions` (via `parseRuntimeException`) |
 | `relative` | `../x/CLAUDE.md` | markdown `[x](rel)`, `[x]: rel`, `<img src>` / `<a href>` in every `*.md`; CSS `@source` / `@import` |
 
@@ -26,9 +26,14 @@ private scan in a check.
   like `search` has no dot, so a regex over prose cannot tell it from a word — and
   a mover rewriting prose would corrupt it. Each site parses the structure the id
   lives in (a JSONC node, a call argument, a named array's element).
-- **`@plugins/…` counts only in a specifier position.** Test fixtures spell fake
-  specifiers as data (`"@plugins/a/web"`); `findImports` and the call scan see the
-  real ones only.
+- **`@plugins/…` counts only in a specifier position** — or as a lint rule's
+  data. Test fixtures spell fake specifiers as data (`"@plugins/a/web"`);
+  `findImports` and the call scan see the real ones only. A rule's own source is
+  the exception: the string it compares an import against names a real barrel,
+  and a stale one makes the rule silently catch nothing (`no-adhoc-caret-trigger`
+  matched `floating-surface`'s pre-move path for two months), so
+  `plugin-refs-resolve` checks its barrel and a mover rewrites it. A rule may not
+  hide a plugin inside a regex instead (`rule-kind-safety/no-plugin-path-regex`).
 - **The range is the plugin part only.** A path ref's range is the plugin dir
   (`/web/x.tsx` and `/**` are outside it; for a specifier it starts after `@`); a
   dot ref's range is the id (`!`, `.**`, `:slot`, the `plugin.` zone and the
