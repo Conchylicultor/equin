@@ -137,6 +137,7 @@ export function AskThreadCard({
               <OpenConversationButton
                 conversationId={conversationId}
                 display="icon"
+                onOpened={minimizeAsk}
               />
               <IconButton
                 icon={newIcon}

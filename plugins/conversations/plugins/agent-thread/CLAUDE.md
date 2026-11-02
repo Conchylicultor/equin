@@ -168,7 +168,7 @@ waking a hibernated agent with nothing new to show. A refused resume is a toast.
     - `AgentThreadSlots.StepLabel` "TodoWrite" → `TodoWriteStepLabel`
     - `AgentThreadSlots.StepLabel` "AskUserQuestion" → `AskUserQuestionStepLabel`
     - `AgentThreadSlots.StepLabel` "^(Agent|Task)$" → `AgentStepLabel`
-  - Uses: 65 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 66 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/conversation-view/pending-turn` ×10
     - `primitives/live-state` ×7
     - `conversations/conversation-view/jsonl-viewer` ×4
@@ -200,6 +200,7 @@ waking a hibernated agent with nothing new to show. A refused resume is a toast.
     - `primitives/dom/in-view.useInView`
     - `primitives/icon-button.IconButton`
     - `primitives/launch.useTaskLaunch`
+    - `primitives/link-gesture.linkProps`
     - `primitives/loading.Loading`
     - `primitives/pane.useOpenPane`
     - `primitives/persistent-draft.useDraft`

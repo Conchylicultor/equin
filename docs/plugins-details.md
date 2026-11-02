@@ -14547,7 +14547,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AgentThreadSlots.StepLabel` "TodoWrite" → `TodoWriteStepLabel`
           - `AgentThreadSlots.StepLabel` "AskUserQuestion" → `AskUserQuestionStepLabel`
           - `AgentThreadSlots.StepLabel` "^(Agent|Task)$" → `AgentStepLabel`
-        - Uses: 65 symbols — full list in [`plugins/conversations/plugins/agent-thread/REFERENCE.md`](../plugins/conversations/plugins/agent-thread/REFERENCE.md)
+        - Uses: 66 symbols — full list in [`plugins/conversations/plugins/agent-thread/REFERENCE.md`](../plugins/conversations/plugins/agent-thread/REFERENCE.md)
           - `conversations/conversation-view/pending-turn` ×10
           - `primitives/live-state` ×7
           - `conversations/conversation-view/jsonl-viewer` ×4
@@ -14579,6 +14579,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/dom/in-view.useInView`
           - `primitives/icon-button.IconButton`
           - `primitives/launch.useTaskLaunch`
+          - `primitives/link-gesture.linkProps`
           - `primitives/loading.Loading`
           - `primitives/pane.useOpenPane`
           - `primitives/persistent-draft.useDraft`
@@ -44493,9 +44494,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `linkProps`
           - `openInBrowserTab`
       - Cross-plugin:
-        - Imported by: 56 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
+        - Imported by: 57 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
           - `primitives` ×13
-          - `conversations` ×11
+          - `conversations` ×12
           - `apps` ×10
           - `page` ×4
           - `apps-core` ×3
