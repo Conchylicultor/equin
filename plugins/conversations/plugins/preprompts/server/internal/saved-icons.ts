@@ -8,6 +8,7 @@ import { prepromptsConfig } from "../../shared/config";
  * so the source watches it.
  */
 export const savedIconsSource = defineSavedIconSource({
+  code: import.meta,
   id: "preprompts.icons",
   tables: [],
   names: (): SavedSymbolName[] =>

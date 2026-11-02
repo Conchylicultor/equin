@@ -8,6 +8,7 @@ import { conversationCategoryConfig } from "../../shared/config";
  * so the source watches it.
  */
 export const savedIconsSource = defineSavedIconSource({
+  code: import.meta,
   id: "conversation-category.avatars",
   tables: [],
   names: (): SavedSymbolName[] =>

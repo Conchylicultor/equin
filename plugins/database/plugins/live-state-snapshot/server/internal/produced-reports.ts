@@ -8,8 +8,14 @@ import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 // what was held and files the rest as they come.
 export const producedPersistReports = defineReportSink<string>();
 
+// A persisted key whose code digest failed (`./code-stamp`), held the same way.
+export const codeDigestReports = defineReportSink<string>();
+
 export function openProducedPersistReports(): void {
   producedPersistReports.register((message) => {
     reportServerError({ message, errorType: "ProducedTablePersisted" });
+  });
+  codeDigestReports.register((message) => {
+    reportServerError({ message, errorType: "L2CodeDigestFailed" });
   });
 }

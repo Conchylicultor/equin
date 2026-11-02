@@ -3,36 +3,8 @@ import type { SQL } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { z } from "zod";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
-import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { PersistMeta } from "@plugins/framework/plugins/server-core/core";
 import { LIVE_STATE_SNAPSHOT_TABLE } from "@plugins/database/plugins/derived-views/core";
-
-// The set of resource keys L2 persists: preloaded (with ONE default tuple) AND
-// DB-backed. `preload` is read GENERICALLY from the shared Resource.Declare
-// collection (never by naming a resource — collection-consumer separation), like
-// boot-snapshot's `preloadedKeys`. An ENUMERATED preload (a parameterized value
-// whose Declare carries `preloadTuples`) is excluded: an L2 row is one
-// param-less tuple per key, so its N tuples cannot be persisted, and a boot
-// recompute at `{}` (below, for a key with no persisted read-set) would name a
-// tuple it does not have. The `!externalSource` half is enforced in the
-// runtime's `drainEntry` (it has the live `entry.externalSource`); the injected
-// `shouldPersist` only needs the preload membership test. The contribution set is
-// fixed at module load, so caching it once is correct.
-let preloadedSet: Set<string> | null = null;
-export function preloadedKeys(): Set<string> {
-  if (!preloadedSet) {
-    preloadedSet = new Set(
-      Resource.Declare.getContributions()
-        .filter((c) => c.preload !== undefined && c.preloadTuples === undefined)
-        .map((c) => c.key),
-    );
-  }
-  return preloadedSet;
-}
-
-export function shouldPersist(key: string): boolean {
-  return preloadedKeys().has(key);
-}
 
 /**
  * What a USABLE L2 row must match (A18 as a read predicate, C22, C23) — the

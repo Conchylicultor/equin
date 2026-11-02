@@ -8,14 +8,17 @@ import {
 } from "@plugins/framework/plugins/server-core/core";
 import { ensureSnapshotTable } from "./tables-ddl";
 import {
-  shouldPersist,
   persistSnapshot,
   readPersistedReadSets,
   sweepUnusableSnapshots,
   clearPersistedSnapshots,
 } from "./persist";
 import { l2Expectation } from "./expectation";
-import { resolveCodeStamp, stampDefinition } from "./code-stamp";
+import {
+  resolveCodeStamps,
+  shouldPersist,
+  stampDefinition,
+} from "./code-stamp";
 import {
   clearHealedSnapshots,
   clearInvalidAliasSnapshots,
@@ -26,7 +29,7 @@ import {
   type RelationBases,
 } from "./produced-guard";
 import { snapshotLog as log } from "./log-sink";
-import { producedPersistReports } from "./produced-reports";
+import { codeDigestReports, producedPersistReports } from "./produced-reports";
 
 // Install the L2 snapshot subsystem during the `onReadyBlocking` barrier: create
 // the snapshot table, inject the persist hooks into the resource runtime, and seed
@@ -67,9 +70,11 @@ export async function initSnapshotSubsystem(
   routedCut: () => Promise<RoutedCut>,
 ): Promise<void> {
   try {
-    // The code stamp every definition is written and expected under — first:
-    // a stamp that cannot be known (the digest failed) leaves L2 off, below.
-    await resolveCodeStamp();
+    // The code stamp each key's definition is written and expected under —
+    // first: the persist gate is "a key whose stamp is known", so a key whose
+    // digest failed is not persisted this boot (reported), and two digest
+    // providers leave L2 off, below.
+    await resolveCodeStamps(reportCodeDigestFailure);
     await ensureSnapshotTable(db);
     // A6 (runtime): a persist whose guard tables name a produced table is
     // refused, and its key never writes a row again in this process. The
@@ -99,7 +104,7 @@ export async function initSnapshotSubsystem(
         if (await guard.refuses(key, meta.guardTables)) return;
         await persistSnapshot(db, key, paramsKey, value, watermark, {
           ...meta,
-          definition: stampDefinition(meta.definition),
+          definition: stampDefinition(key, meta.definition),
         });
       },
       routedCut,
@@ -201,4 +206,14 @@ export async function initSnapshotSubsystem(
 function reportProducedPersist(message: string): void {
   log.publish(`[live-state-snapshot] A6: ${message}`, "stderr");
   producedPersistReports.emit(`[live-state-snapshot] A6: ${message}`);
+}
+
+// A key whose code digest failed: not persisted this boot (its stamp is
+// unknown, and the persist gate is a known stamp). Logged at once; filed
+// through a held sink, like A6's — the digest runs in `onReadyBlocking`,
+// before the reports plugin installs server-core's error reporter.
+function reportCodeDigestFailure(key: string, err: unknown): void {
+  const message = `[live-state-snapshot] "${key}" is not persisted this boot: the digest of its code failed — ${String(err)}`;
+  log.publish(message, "stderr");
+  codeDigestReports.emit(message);
 }

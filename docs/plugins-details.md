@@ -20955,7 +20955,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Contributes:
           - `change-feed-changelog-retention` "live-state-snapshot's cold-boot catch-up replays the changelog; its hourly prune job (pruneChangelog) deletes the rows below the horizon no persisted snapshot needs"
-          - `live-state-snapshot-code-stamp` "liveReadCode digest"
+          - `live-state-snapshot-code-digest` "sourceDigest"
           - `fork-data-exclusion` "live_state_handoff"
           - `fork-data-exclusion` "live_state_snapshot"
         - Uses:
@@ -27179,6 +27179,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PeerMemory`
           - `PeerMemoryProbe`
           - `PersistedBase`
+          - `PersistedCode`
           - `PersistedValueCheck`
           - `PersistMeta`
           - `PhaseId`
@@ -34834,6 +34835,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LivePagedValue`
           - `LivePagedValueSpec`
           - `LiveParamValueSpec`
+          - `LivePersistableBrand`
           - `LivePlainValue`
           - `LivePortableDecl`
           - `LivePreload`
@@ -53677,6 +53679,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `defineSavedIconSource`
               - `savedIconSources`
+              - `savedIconSourcesCode`
         - **`sprites`** — Mounts the page's icon sprites inline: the resident default-style sprites from the boot snapshot (present at first paint) plus, on demand, the sprite of every other style a theme scope picks.
           - Web:
             - Contributes: `Icons.Root` → `IconSpriteHost`
@@ -54314,7 +54317,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/theme-engine.ThemeEngine`
             - DB schema: `plugins/ui/plugins/theme-engine/plugins/saved-themes/server/internal/tables.ts`
             - Exports (values): `saveTheme`
-            - Resources: `saved-themes.list` (push, whole: every saved theme: the painter needs all of them resident to paint any selection, and the list grows only by a hand-made save or import (single digits in practice))
+            - Resources: `saved-themes.list` (push, whole: every saved theme: the painter needs all of them resident to paint any selection, and the list grows only by a hand-made save or a tweakcn import — single digits in practice)
             - Routes:
               - `POST /api/saved-themes`
               - `PATCH /api/saved-themes/:id/fragment`

@@ -15,6 +15,7 @@ const iconExpr = sql`${liveBlocks.data} ->> 'icon'`.mapWith(
 
 /** Every live callout's saved icon, so callouts are drawable at first paint. */
 export const calloutIconsSource = defineSavedIconSource({
+  code: import.meta,
   id: "page.callout-icons",
   tables: [_blocks],
   names: async () =>

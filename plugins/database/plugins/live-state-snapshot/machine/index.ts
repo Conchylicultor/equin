@@ -10,7 +10,7 @@ import {
   getCoveredTables,
 } from "@plugins/database/plugins/change-feed/server";
 import { db, schemaChangedAtBoot } from "@plugins/database/server";
-import { L2CodeStamp } from "../server/internal/code-stamp";
+import { L2CodeDigest } from "../server/internal/code-stamp";
 import { healedRollups } from "../server/internal/healed-rollups";
 import {
   loadEpochHandoff,
@@ -18,6 +18,7 @@ import {
 } from "../server/internal/handoff";
 import { snapshotLog as log } from "../server/internal/log-sink";
 import { liveReadDigest } from "./internal/live-read-digest";
+import { sourceDigest } from "@plugins/packages/plugins/source-digest/server";
 import {
   LIVE_STATE_HANDOFF_TABLE,
   LIVE_STATE_SNAPSHOT_TABLE,
@@ -25,11 +26,12 @@ import {
 
 export default {
   description:
-    "The desktop's half of L2: the snapshot and epoch handoff tables excluded from a worktree's DB fork (forking is the desktop's), the code stamp of every L2 definition (the digest of the code that shapes persisted values — query-resource's liveReadCode — so a row persisted by other code is recomputed), and the epoch handoff's hooks — a backend replaced by a successor process hands its tuples over under the same digest, and a successor running other code inherits nothing.",
+    "The desktop's half of L2: the snapshot and epoch handoff tables excluded from a worktree's DB fork (forking is the desktop's), the code digest every persisted key's L2 definition is stamped with (the digest of the code its Resource.Declare names — a compiled collection's liveReadCode, a hand-written loader's own module — so a row persisted by other code is recomputed), and the epoch handoff's hooks — a backend replaced by a successor process hands its tuples over under the same digest, and a successor running other code inherits nothing.",
   contributions: [
     // Collected before any `onReadyBlocking`: the server half reads it in its
-    // own (it boots first) — `../server/internal/code-stamp`.
-    L2CodeStamp({ stamp: liveReadDigest }),
+    // own (it boots first) — `../server/internal/code-stamp`. Each persisted
+    // key is stamped with the digest of the code its Declare names.
+    L2CodeDigest({ digest: (code) => sourceDigest(code) }),
     // The snapshot is a cold-boot ACCELERATOR, not a correctness prerequisite —
     // `initSnapshotSubsystem` degrades to a full recompute when it is absent, so
     // a fork loses startup latency and nothing else.

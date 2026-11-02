@@ -1,5 +1,6 @@
 import type { RoutedSource } from "@plugins/infra/plugins/query-resource/server";
 import type { SavedSymbolName } from "@plugins/ui/plugins/icons/core";
+import { defineSourceSet } from "@plugins/packages/plugins/source-digest/core";
 
 /**
  * A place that stores user-picked icons, and so wants them drawable at first
@@ -26,18 +27,30 @@ export interface SavedIconSource {
 const sources = new Map<string, SavedIconSource>();
 
 /**
- * Register a saved-icon source (at module eval, from the plugin that owns the
- * store). The sprites plugin knows no source by name; a second source with one
- * id throws.
+ * The code of every registered source (each `defineSavedIconSource` caller's
+ * module): what the persisted saved-icon sprites are computed by besides their
+ * own module, which reaches the sources through this registry, not by import.
  */
-export function defineSavedIconSource(
-  source: SavedIconSource,
-): SavedIconSource {
+export const savedIconSourcesCode = defineSourceSet(
+  "the saved-icon sources' code (the names the persisted sprites draw)",
+);
+
+/**
+ * Register a saved-icon source (at module eval, from the plugin that owns the
+ * store), with `code: import.meta` — the module holding its `names()`, so the
+ * persisted sprites are recomputed when it changes. The sprites plugin knows
+ * no source by name; a second source with one id throws.
+ */
+export function defineSavedIconSource({
+  code,
+  ...source
+}: SavedIconSource & { code: ImportMeta }): SavedIconSource {
   if (sources.has(source.id)) {
     throw new Error(
       `[icons] saved-icon source "${source.id}" is defined twice`,
     );
   }
+  savedIconSourcesCode.include(code);
   sources.set(source.id, source);
   return source;
 }

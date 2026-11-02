@@ -752,7 +752,7 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));
   pooled Buffer (a `Uint8Array` is refused). `maxBytes` → `"too-large"`
   refusal.
 - **Preload.** `"boot"`: hydrated before first paint, owning plugin eager, a
-  DB-backed param-less one L2-persisted. A param'd one is ENUMERATED by
+  DB-backed param-less one L2-persisted (its serve call names its `code`). A param'd one is ENUMERATED by
   `preloadParams` (every tuple loaded on every page load — enumerate exactly
   what first paint reads; never L2-persisted). Central values never preload.
   `"boot-and-keep"`: also never GC'd — for small values read by late mounts.
@@ -857,6 +857,16 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));
   - Central: `follows` is a tsc error and a throw (no change feed).
   - Tests: `core/internal/compile-value-follows.test.ts`,
     `server/internal/serve-value-follows-oracle.test.ts`.
+- **`code` — a persisted value names its code.** A param-less value declared
+  `preload` and served `source: "db"` is L2-persisted (its row is read back
+  by the next boot), so its serve call passes `code: import.meta` — the module
+  holding the loader expression, whose static import closure is digested
+  (`packages/source-digest`) and stamps the row: a deploy that changes the
+  loader recomputes it instead of serving the old value. Add a `SourceSet` for
+  code the loader reaches through a registry, not by import (`code:
+  [import.meta, savedIconSourcesCode]`). Required there (tsc, via
+  `liveValue`'s `persistable` brand, and a throw); refused on any other
+  value. No `code` ⇒ the Declare names none ⇒ L2 never persists the key.
 - **The bound is the declaration's**: `serveValue` takes no `unbounded`.
 - Returns `ServedValue` (`keys`, `declare` — spread it); `"notified"` adds
   `notify`. `compileValue` derives without registering.
@@ -1287,6 +1297,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LivePagedValue`
     - `LivePagedValueSpec`
     - `LiveParamValueSpec`
+    - `LivePersistableBrand`
     - `LivePlainValue`
     - `LivePortableDecl`
     - `LivePreload`

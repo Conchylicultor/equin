@@ -110,6 +110,7 @@ export type {
   PersistMeta,
   RoutedCut,
   PersistedBase,
+  PersistedCode,
   SeedOutcome,
   PersistedValueCheck,
   ResourceDefinition,

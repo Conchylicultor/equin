@@ -8,7 +8,7 @@
 - Server:
   - Contributes:
     - `change-feed-changelog-retention` "live-state-snapshot's cold-boot catch-up replays the changelog; its hourly prune job (pruneChangelog) deletes the rows below the horizon no persisted snapshot needs"
-    - `live-state-snapshot-code-stamp` "liveReadCode digest"
+    - `live-state-snapshot-code-digest` "sourceDigest"
     - `fork-data-exclusion` "live_state_handoff"
     - `fork-data-exclusion` "live_state_snapshot"
   - Uses:
@@ -73,26 +73,35 @@ turns persistence off and leaves frames' watermarks on.
 
 ## The code stamp (`internal/code-stamp.ts`)
 
-A definition pins the compiled SQL, decoders and row schema — not the code
-that turned them into the stored value (the compilers, decoders, the
-`$columns` fold: query-resource's `liveReadCode`). So every definition L2
-writes (the persist hook) or expects (`l2Expectation`) is
-`sha256(stamp ‖ definition)`, the stamp being that code's `sourceDigest`: a row
-persisted by other code fails the usable-row predicate below and is
-recomputed — no version constant to bump (the `all` compile's used to be a
-hand-written `v: 1`).
+A definition (when a key has one) pins the compiled SQL, decoders and row
+schema — not the code that turned them into the stored value (a compiler, a
+hand-written loader). So every key's stored definition — written by the
+persist hook, expected by `l2Expectation` — is `sha256(stamp ‖ definition)`,
+the stamp being the `sourceDigest` of the code the key's `Resource.Declare`
+names (`code`): a row persisted by other code fails the usable-row predicate
+below and is recomputed — no version constant to bump.
 
+- **Who names the code.** network/live's serve calls: an `all` collection's
+  Declare names query-resource's `liveReadCode`; a preloaded db `serveValue`
+  passes `code: import.meta` (its own module, whose closure holds the loader —
+  tsc requires it), plus any set its loader reaches through a registry (the
+  saved-icon sprites name `savedIconSourcesCode`).
+- **No code, no persistence.** The persist gate (`shouldPersist`) is "a
+  preloaded, non-enumerated key whose stamp is known": a Declare naming no
+  `code` (a collection's `:count` — its SQL has no fingerprint yet) is never
+  persisted, written or served. A key with no definition of its own is
+  versioned by its code alone, never stored NULL.
 - The digest reads the source, so the desktop half provides it as the
-  `L2CodeStamp` contribution (`machine/`): collected before any
+  `L2CodeDigest` contribution (`machine/`): collected before any
   `onReadyBlocking`, read by this portable half in its own, whatever order the
   halves boot in. `exec` children run the barrier too, so they compute it.
-- A host with no provider (a browser host's in-memory database) stamps with a
-  value of its own process: nothing another process persisted is usable there.
-- Fails closed: a digest that throws (or two providers) leaves L2 off for the
-  boot (`initSnapshotSubsystem`'s degradation); a definition read before the
-  stamp is known reads `unstamped`, which no written row carries.
-- A NULL definition (a hand-written persisted value) stays NULL: its loader
-  is not part of `liveReadCode` and stays unversioned.
+- A host with no provider (a browser host's in-memory database) stamps every
+  key with a value of its own process: nothing another process persisted is
+  usable there.
+- Fails closed: a key whose digest throws is not persisted this boot (logged,
+  and filed as `L2CodeDigestFailed` once reports open); two providers leave L2
+  off for the boot (`initSnapshotSubsystem`'s degradation); a definition read
+  before the stamps are known reads `unstamped`, which no written row carries.
 
 ## The usable-row predicate (A18 / C22 / C23)
 
@@ -108,8 +117,8 @@ AND definition_at IS NOT DISTINCT FROM persisted_at  -- C22
 The expectation (`L2Expectation`, `./internal/expectation.ts`) is the running
 runtime's own answer: the keys it persists right now (a bounded or external
 key's leftover row is never served, whatever a previous boot left) and each
-one's definition (`persistedDefinitions()`, a routed plan's SQL fingerprint;
-absent ⇒ NULL). `definition_at` has NO default: every writer that knows the
+one's stored definition (its routed plan's SQL fingerprint from
+`persistedDefinitions()`, or none, stamped with its code — see above). `definition_at` has NO default: every writer that knows the
 column stamps it with the same `now()` as `persisted_at`, so an older backend's
 upsert during a hot swap — which moves `persisted_at` and not `definition_at` —
 leaves a row that invalidates itself instead of carrying the new definition over

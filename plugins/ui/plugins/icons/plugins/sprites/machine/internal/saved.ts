@@ -2,7 +2,10 @@ import { serveValue } from "@plugins/network/plugins/live/machine";
 import { DEFAULT_STYLE_KEYS } from "@plugins/ui/plugins/icons/core";
 import { savedIconSprites, savedIconsChanged } from "../../core";
 import { runtimeSymbols, symbolsHash } from "./runtime-symbols";
-import { savedIconSources } from "@plugins/ui/plugins/icons/plugins/saved-sources/server";
+import {
+  savedIconSources,
+  savedIconSourcesCode,
+} from "@plugins/ui/plugins/icons/plugins/saved-sources/server";
 
 let changes = 0;
 
@@ -28,6 +31,8 @@ function bump(): void {
  */
 export const savedIconSpritesServed = serveValue(savedIconSprites, {
   source: "db",
+  // Its loader runs every source's `names()`, reached through the registry.
+  code: [import.meta, savedIconSourcesCode],
   reads: () => ({
     tables: [...new Set(savedIconSources().flatMap((s) => s.tables))],
     reason:

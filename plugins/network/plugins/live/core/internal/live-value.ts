@@ -253,6 +253,20 @@ export type LiveSnapshotBrand<L> = [L] extends ["snapshot"]
   : { snapshot?: undefined };
 
 /**
+ * Brands a param-less value declared `preload: "boot"` / `"boot-and-keep"`:
+ * its served `{}` tuple, when the database serves it, is persisted across
+ * restarts (L2), so its `serveValue` must name the code its value comes from
+ * (`code: import.meta`) — a persisted value with no code version would be
+ * served back to whatever code boots next.
+ */
+//
+// A real field on the param-less preloaded value (read by that serve call's
+// throw), typed only through this brand: every other form's type lacks it.
+export type LivePersistableBrand<PL> = [PL] extends ["boot" | "boot-and-keep"]
+  ? { persistable: true }
+  : { persistable?: undefined };
+
+/**
  * The refusal codes a value declares — the expected, caller-caused answers
  * "this cannot be answered as asked" its loader may give instead of a value
  * (`ResourceRefusal`): a zod enum (`z.enum(["missing", "denied"])`) or the
@@ -946,10 +960,13 @@ export function liveValue<
   const L extends LiveValueLoad = "push",
   C extends string = never,
   NM extends MachineFeature | undefined = undefined,
+  const PL extends LivePreload = "none",
 >(
   key: string,
-  spec: LiveValueSpec<T, L> & LiveRefusalsSpec<C> & LiveMachineSpec<NM>,
+  spec: LiveValueSpec<T, L> & { preload?: PL } & LiveRefusalsSpec<C> &
+    LiveMachineSpec<NM>,
 ): LiveValue<T, Record<string, never>> &
+  LivePersistableBrand<PL> &
   LiveSnapshotBrand<L> &
   LiveRefusalsBrand<C> &
   LiveMachineBrand<NM>;
@@ -1110,7 +1127,7 @@ function plainOrQueryValue<T>(
       ? {
           preload,
           ...(params.length === 0
-            ? { defaultParams: {} }
+            ? { defaultParams: {}, persistable: true as const }
             : { preloadsParams: true as const }),
         }
       : {}),

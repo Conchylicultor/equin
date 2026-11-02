@@ -117,6 +117,15 @@ export type HandoffState = RtHandoffState;
 /** See `ResourceRuntimeOptions.resumeEpoch`. */
 export type ResumeRecord = RtResumeRecord;
 
+/**
+ * A set of modules whose code a persisted value depends on — packages/
+ * source-digest's `SourceSet`, read structurally (see `Resource.Declare`).
+ */
+export interface PersistedCode {
+  readonly description: string;
+  urls(): readonly string[];
+}
+
 // Resource.Declare stays here — its ~37 contributors import it from server-core.
 // `preload` (`"boot"` / `"boot-and-keep"`) is a param-less resource's opt-in to
 // being warmed server-side and hydrated client-side before first paint. It is
@@ -142,10 +151,19 @@ export type ResumeRecord = RtResumeRecord;
 // neither persists nor force-recomputes the key (its rows are one param-less
 // tuple per key). Each tuple settles on its own — a failed one is omitted and
 // reported, never the whole key.
+//
+// `code` is the code that produces the key's PERSISTED value (L2): the source
+// sets (packages/source-digest's `SourceSet`, structurally — that plugin
+// imports this one) whose digest stamps every row live-state-snapshot writes,
+// so a value persisted by other code is never served. Absent ⇒ the key is
+// never persisted: a value with no code version has no row to go stale.
+// network/live's serve calls set it (a preloaded db `serveValue`'s
+// `code: import.meta`, an `all` collection's `liveReadCode`).
 type ResourceDeclarePayload = {
   key: string;
   mode: ResourceMode;
   preload?: "boot" | "boot-and-keep";
+  code?: readonly PersistedCode[];
   preloadTuples?: () => Promise<
     (
       | { params: ResourceParams; ok: true; value: unknown }
@@ -164,6 +182,7 @@ export const Resource = {
       key: resource.key,
       mode: resource.mode,
       preload: resource.preload,
+      ...(resource.code !== undefined ? { code: resource.code } : {}),
       ...(resource.preloadTuples !== undefined
         ? { preloadTuples: resource.preloadTuples }
         : {}),

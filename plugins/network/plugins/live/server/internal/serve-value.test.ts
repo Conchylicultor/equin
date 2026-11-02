@@ -282,6 +282,7 @@ describe("serveValue", () => {
     const v = liveValue(key("served-db"), { schema: Count, preload: "boot" });
     const served = serveValue(v, {
       source: "db",
+      code: import.meta,
       reads: { tables: [counts], reason: "a test count" },
       loader: () => ({ n: 1 }),
     });
@@ -299,6 +300,61 @@ describe("serveValue", () => {
     expect("notify" in served).toBe(false);
     // @ts-expect-error — a Postgres-backed value is driven by the change feed alone
     expect(served.notify).toBeUndefined();
+  });
+
+  test("code: a preloaded db value names the code it is persisted under (tsc and a throw), and nothing else may", () => {
+    const persisted = liveValue(key("served-code"), {
+      schema: Count,
+      preload: "boot",
+    });
+    const reads = { tables: [counts], reason: "a test count" };
+    const served = serveValue(persisted, {
+      source: "db",
+      code: import.meta,
+      reads,
+      loader: () => ({ n: 1 }),
+    });
+    // One set: the serve call's module, whose closure holds the loader.
+    const [declared] = served.declare as unknown as [
+      { code: readonly { urls(): readonly string[] }[] },
+    ];
+    expect(declared.code).toHaveLength(1);
+    expect(declared.code[0]!.urls()).toEqual([import.meta.url]);
+    expect(() =>
+      serveValue(
+        liveValue(key("served-code-none"), { schema: Count, preload: "boot" }),
+        {
+          // @ts-expect-error — a persisted value names its code
+          source: "db",
+          reads,
+          loader: () => ({ n: 1 }),
+        },
+      ),
+    ).toThrow(/pass `code: import\.meta`/);
+    expect(() =>
+      serveValue(liveValue(key("served-code-unpreloaded"), { schema: Count }), {
+        // @ts-expect-error — a value loaded on mount is never persisted
+        source: "db",
+        code: import.meta,
+        reads,
+        loader: () => ({ n: 1 }),
+      }),
+    ).toThrow(/`code` is a persisted value's/);
+    expect(() =>
+      serveValue(
+        liveValue(key("served-code-external"), {
+          schema: Count,
+          preload: "boot",
+        }),
+        {
+          source: "external",
+          changes: { fixed: { reason: "a test" } },
+          // @ts-expect-error — an external value is never persisted
+          code: import.meta,
+          loader: () => ({ n: 1 }),
+        },
+      ),
+    ).toThrow(/`code` is a persisted value's/);
   });
 
   test("reads: required on the db arm, optional on a notified external (a paged one: a static list), refused on a silent one (tsc and a throw)", () => {

@@ -29,6 +29,10 @@ import {
 import type { MachineFeature } from "@plugins/infra/plugins/endpoints/core";
 import { serveValueOn } from "../../core";
 import { canonicalParams } from "@plugins/packages/plugins/canonical-params/core";
+import {
+  defineSourceSet,
+  type SourceSet,
+} from "@plugins/packages/plugins/source-digest/core";
 import type {
   AnyServeOptions,
   BytesPairing,
@@ -225,6 +229,25 @@ type PagedReadsOption<C extends LiveValueChanges> = [C] extends ["notified"]
     }
   : { reads?: never };
 
+/**
+ * The code a persisted value comes from: the serve call's own module
+ * (`import.meta` — it holds the loader expression, so its static import
+ * closure holds the loader's code), plus any source set the loader reaches
+ * at runtime rather than by import (a registry's contributors).
+ */
+export type ServedCode = ImportMeta | readonly (ImportMeta | SourceSet)[];
+
+/**
+ * A param-less preloaded value served from the database is L2-persisted: its
+ * stored value is read back by the next boot, so it is stamped with the
+ * digest of the code that produced it (live-state-snapshot) and refused under
+ * any other — the serve call names that code. Never on any other value.
+ */
+interface PersistedCodeOption {
+  /** The code the persisted value comes from — `import.meta`, see {@link ServedCode}. */
+  code: ServedCode;
+}
+
 /** Any other worktree value: its `serveValue` takes no `preloadParams`. */
 type PlainValue<T, P extends Record<string, string>> = LiveValue<T, P> & {
   preloadsParams?: never;
@@ -366,12 +389,14 @@ export interface ServeValueOverloads<H> {
     F extends FollowMap = NoFollows,
     W = unknown,
   >(
-    value: PlainValue<T, P> &
-      SnapshotPairing<"notified"> &
+    value: PlainValue<T, P> & {
+      persistable: true;
+    } & SnapshotPairing<"notified"> &
       BytesPairing<"db"> &
       H,
     opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "db", R, "notified", F, W> &
-      DbFollowsOption<NoInfer<P>, NoInfer<P>, F> & {
+      DbFollowsOption<NoInfer<P>, NoInfer<P>, F> &
+      PersistedCodeOption & {
         preloadParams?: never;
       },
   ): ServedValue<T, P>;
@@ -380,13 +405,49 @@ export interface ServeValueOverloads<H> {
     P extends Record<string, string>,
     const R extends readonly ExternalServed[] = [],
   >(
-    value: PlainValue<T, P> &
-      SnapshotPairing<"notified"> &
+    value: PlainValue<T, P> & {
+      persistable: true;
+    } & SnapshotPairing<"notified"> &
+      BytesPairing<"db"> &
+      H,
+    opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "db", R> &
+      DbReadsOption<NoInfer<P>> &
+      PersistedCodeOption & {
+        preloadParams?: never;
+      },
+  ): ServedValue<T, P>;
+  <
+    T,
+    P extends Record<string, string>,
+    const R extends readonly ExternalServed[] = [],
+    F extends FollowMap = NoFollows,
+    W = unknown,
+  >(
+    value: PlainValue<T, P> & {
+      persistable?: undefined;
+    } & SnapshotPairing<"notified"> &
+      BytesPairing<"db"> &
+      H,
+    opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "db", R, "notified", F, W> &
+      DbFollowsOption<NoInfer<P>, NoInfer<P>, F> & {
+        preloadParams?: never;
+        code?: never;
+      },
+  ): ServedValue<T, P>;
+  <
+    T,
+    P extends Record<string, string>,
+    const R extends readonly ExternalServed[] = [],
+  >(
+    value: PlainValue<T, P> & {
+      persistable?: undefined;
+    } & SnapshotPairing<"notified"> &
       BytesPairing<"db"> &
       H,
     opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "db", R> &
       DbReadsOption<NoInfer<P>> & {
         preloadParams?: never;
+        code?: never;
       },
   ): ServedValue<T, P>;
   <
@@ -468,6 +529,7 @@ export function serveAnyValue<T, P extends Record<string, string>>(
   opts: AnyServeOptions & {
     preloadParams?: () => P[] | Promise<P[]>;
     reads?: AnyServedValueReads;
+    code?: ServedCode;
   },
 ):
   | ServedValue<T, P>
@@ -493,6 +555,7 @@ export function serveAnyValue<T, P extends Record<string, string>>(
             `parameterized value declared \`preload\`.`,
     );
   }
+  const code = persistedCodeOf(value, opts);
   // Erased: the overloads checked the options against the declaration's
   // form, and the compilation dispatches on the declaration itself.
   const served = serveValueOn<T, P, "db+external">(
@@ -539,9 +602,54 @@ export function serveAnyValue<T, P extends Record<string, string>>(
         mode: served.mode,
         ...(served.preload !== undefined ? { preload: served.preload } : {}),
         ...(preloadTuples !== undefined ? { preloadTuples } : {}),
+        ...(code !== undefined ? { code } : {}),
       }),
     ] as [ReturnType<typeof ResourceContribution.Declare>],
   } as ServedValue<T, P> | ServedExternalValue<T, P>;
+}
+
+/**
+ * The code a persisted value's Declare names (`Resource.Declare`'s `code`,
+ * which live-state-snapshot stamps the value's L2 row with): a db value
+ * branded `persistable` must pass `code`, and nothing else may (tsc pairs
+ * them; this is the untyped caller's check). The `import.meta`s are one set
+ * — the serve call's loader — beside the sets passed whole.
+ */
+function persistedCodeOf(
+  value: { key: string; persistable?: true },
+  opts: { source: string; code?: ServedCode },
+): readonly SourceSet[] | undefined {
+  const persisted = value.persistable === true && opts.source === "db";
+  if (opts.code === undefined) {
+    if (!persisted) return undefined;
+    throw new Error(
+      `serveValue("${value.key}"): a preloaded value served from the database is persisted across restarts — pass \`code: import.meta\` (the module holding its loader), so a value persisted by other code is never served back.`,
+    );
+  }
+  if (!persisted) {
+    throw new Error(
+      `serveValue("${value.key}"): \`code\` is a persisted value's — a param-less value declared \`preload\` and served from the database.`,
+    );
+  }
+  const parts = Array.isArray(opts.code)
+    ? (opts.code as readonly (ImportMeta | SourceSet)[])
+    : [opts.code as ImportMeta];
+  const sets: SourceSet[] = [];
+  let loader: SourceSet | undefined;
+  for (const part of parts) {
+    if ("include" in part) {
+      sets.push(part);
+      continue;
+    }
+    loader ??= defineSourceSet(`serveValue("${value.key}")'s loader`);
+    loader.include(part);
+  }
+  if (loader === undefined) {
+    throw new Error(
+      `serveValue("${value.key}"): \`code\` names no module of its own — include \`import.meta\`, the module holding the loader.`,
+    );
+  }
+  return [loader, ...sets];
 }
 
 /** The register primitives a value's runtime is built over — server-core's in production. */

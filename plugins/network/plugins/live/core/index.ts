@@ -90,6 +90,7 @@ export type {
   LiveRefusals,
   LiveRefusalsBrand,
   LiveSnapshotBrand,
+  LivePersistableBrand,
   LiveTooLarge,
   LiveValue,
   LiveValueOrigin,

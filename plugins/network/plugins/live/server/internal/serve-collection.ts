@@ -29,6 +29,7 @@ import {
 import {
   BASE_RELATION,
   isExprField,
+  liveReadCode,
   type ColumnRef,
   type AllJoinSpec,
   type AllQueryParams,
@@ -1315,7 +1316,14 @@ export function serveAnyCollection<
       rows,
       keys: [all.key, rows.key],
       declare: [
-        ResourceContribution.Declare(all),
+        // The whole set is L2-persisted when preloaded: its definition pins
+        // the declaration, `liveReadCode` the code that compiled and folds it.
+        ResourceContribution.Declare({
+          key: all.key,
+          mode: all.mode,
+          ...(all.preload !== undefined ? { preload: all.preload } : {}),
+          code: [liveReadCode],
+        }),
         ResourceContribution.Declare(rows),
       ],
       [FOLLOW_SOURCE]: source,

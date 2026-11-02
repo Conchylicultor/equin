@@ -3,6 +3,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 export {
   defineSavedIconSource,
   savedIconSources,
+  savedIconSourcesCode,
 } from "./internal/saved-sources";
 export type { SavedIconSource } from "./internal/saved-sources";
 

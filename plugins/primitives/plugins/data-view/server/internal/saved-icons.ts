@@ -14,6 +14,7 @@ interface ParsedViewRow {
  * surface's doc.
  */
 export const viewIconsSource = defineSavedIconSource({
+  code: import.meta,
   id: "data-view.view-icons",
   tables: [],
   names: (): SavedSymbolName[] =>

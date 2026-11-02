@@ -223,7 +223,11 @@ function digestOf(paths: readonly string[]): Promise<DigestResult> {
   return result;
 }
 
-function pathsOf(sets: readonly SourceSet[]): string[] {
+// What a digest reads of a set: a structural view, so a holder that cannot
+// import this plugin (server-core's `Resource.Declare`) can carry one.
+type DigestedSet = Pick<SourceSet, "description" | "urls">;
+
+function pathsOf(sets: readonly DigestedSet[]): string[] {
   const paths = new Set<string>();
   for (const set of sets) {
     const urls = set.urls();
@@ -244,7 +248,7 @@ function pathsOf(sets: readonly SourceSet[]): string[] {
  * Computed once per process per module set.
  */
 export async function sourceDigest(
-  sets: readonly SourceSet[],
+  sets: readonly DigestedSet[],
 ): Promise<string> {
   const result = await digestOf(pathsOf(sets));
   if (!result.ok) throw result.error;

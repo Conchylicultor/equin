@@ -92,6 +92,7 @@ export async function countUnreadNotifications(
 // `notifications`, which the declared `reads` below route here.
 export const notificationsUnreadServed = serveValue(notificationsUnread, {
   source: "db",
+  code: import.meta,
   reads: {
     tables: [_notifications],
     reason:

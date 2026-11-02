@@ -19,7 +19,7 @@ import { SavedThemeSchema } from "./saved-theme";
 export const savedThemesList = liveValue("saved-themes.list", {
   schema: wholeList(SavedThemeSchema, {
     reason:
-      "every saved theme: the painter needs all of them resident to paint any selection, and the list grows only by a hand-made save or import (single digits in practice)",
+      "every saved theme: the painter needs all of them resident to paint any selection, and the list grows only by a hand-made save or a tweakcn import — single digits in practice",
   }),
   preload: "boot-and-keep",
 });

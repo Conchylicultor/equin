@@ -17,6 +17,7 @@ const iconExpr = sql`${_conversationPrepromptTable.icon} ->> 'icon'`.mapWith(
  * copied from — so the conversation chips draw at first paint.
  */
 export const prepromptSnapshotIconsSource = defineSavedIconSource({
+  code: import.meta,
   id: "conversation-preprompt.snapshots",
   tables: [conversationPreprompt],
   names: async () =>

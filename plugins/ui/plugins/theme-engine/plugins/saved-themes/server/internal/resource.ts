@@ -8,6 +8,7 @@ import { listSavedThemes } from "./store";
 // ackTx, which `useAwaitSavedThemesWrite` (web) waits on.
 export const savedThemesListServed = serveValue(savedThemesList, {
   source: "db",
+  code: import.meta,
   reads: {
     tables: [_savedThemes],
     reason: "the list is every saved theme, so a write to any row changes it",
