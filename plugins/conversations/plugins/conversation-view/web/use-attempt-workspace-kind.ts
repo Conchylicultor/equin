@@ -1,4 +1,4 @@
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { attemptWorkspaces } from "@plugins/tasks/plugins/tasks-core/core";
 import type { WorkspaceKindState } from "@plugins/conversations/plugins/workspace/core";
 
@@ -9,7 +9,7 @@ import type { WorkspaceKindState } from "@plugins/conversations/plugins/workspac
 export function useAttemptWorkspaceKind(
   attemptId: string | null,
 ): WorkspaceKindState {
-  const result = useLiveRow(attemptWorkspaces, attemptId);
+  const result = useLive(attemptWorkspaces, { id: attemptId });
   return result.status === "ready" && result.found
     ? { known: true, kind: result.row.workspace.kind }
     : { known: false };

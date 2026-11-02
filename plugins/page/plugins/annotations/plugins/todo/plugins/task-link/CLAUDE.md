@@ -62,7 +62,7 @@ nothing stored on the card.
 `todoTasks` is a lookup-only `liveCollection("todo-block-task", { row, id:
 "blockId" })` — no default window, so it mints `todo-block-task:rows` alone —
 served from the extension entity (`serveCollection(todoTasks, { from: todoTask
-})`) and read with `useLiveRow(todoTasks, blockId)`: `found: false` is "not
+})`) and read with `useLive(todoTasks, { id: blockId })`: `found: false` is "not
 dispatched". Each mounted card subscribes to its own id set, and the point
 membership routes a dispatch to the card it wrote and no other. That routing is
 the point: the seek per card is cheap, but there used to be one per open card
@@ -200,7 +200,6 @@ card, not a collection.
     - `network/live.LiveRowResult`
     - `network/live.mapRow`
     - `network/live.useLive`
-    - `network/live.useLiveRow`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`

@@ -32,7 +32,7 @@ than as work. A closed op's sleeps are stored on its row, so it takes `null`.
   draws the newest ops and says it may hold older ones above the chart
   (`LiveOpGantt`'s `capped`; a read of exactly `OPS_READ_LIMIT` says so too —
   full cannot tell "exactly" from "more").
-- **Op detail** (`opDetailPane`): `useLiveRow(opsHistory, opId)` — the stat
+- **Op detail** (`opDetailPane`): `useLive(opsHistory, { id: opId })` — the stat
   grid **Wait / Work / Asleep / Total** (Asleep only when the op slept; the
   four reconcile exactly, off the fold's one breakdown), the timeline with every
   wait and every nap (hatched, titled `Asleep 3h 40m`, or `… (position
@@ -87,11 +87,10 @@ The orphan reconciler lives in `op-log/plugins/op-store` (`reconcile.ts`).
   - Contributes:
     - `Profiling.Section` → `OpSection`
     - `Pane.Register` "debug-profiling-op-detail"
-  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug/profiling` ×8
     - `debug/profiling/ops/op-gantt` ×6
     - `primitives/pane` ×4
-    - `network/live` ×2
     - `primitives/css/badge` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/text` ×2
@@ -99,6 +98,7 @@ The orphan reconciler lives in `op-log/plugins/op-store` (`reconcile.ts`).
     - `conversations.useConversationTitleBySlug`
     - `debug/profiling/build.buildProfileDetailPane`
     - `infra/host/machine-sleep.useSleepNowForFold`
+    - `network/live.useLive`
     - `primitives/css/clip.Clip`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/placeholder.Placeholder`

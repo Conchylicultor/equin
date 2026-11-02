@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { useLive, useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
@@ -23,7 +23,7 @@ const playArrowIcon = symbol("play-arrow");
 const stopIcon = symbol("stop");
 
 export function ReleaseArtifact({ runId }: { runId: string }): ReactElement {
-  const runResult = useLiveRow(releaseRuns, runId);
+  const runResult = useLive(releaseRuns, { id: runId });
   const previewResult = useLive(releasePreviews);
 
   const startPreview = useEndpointMutation(previewEndpoint);

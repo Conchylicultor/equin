@@ -138,7 +138,7 @@ it offers every registered kind, not the ones on the loaded page.
 
 ## Reading one run: `useRun({ kind, id })`
 
-`useLiveRow(runs, runRowKey(ref))` — a live point read of the union's `:rows`,
+`useLive(runs, { id: runRowKey(ref) })` — a live point read of the union's `:rows`,
 the row shaped exactly like a listed one (`$columns` included). A key naming no
 registered kind, or no row, is `found: false`, never a contract error. A pane
 resolves it with `resolveRow` and renders its body from `rowOrStale` (the found
@@ -154,7 +154,7 @@ row, or on a failed re-read the row as last seen).
   - Uses:
     - `network/live.FieldPresentation`
     - `network/live.LiveRowResult`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/data-view.DataView`
     - `primitives/data-view.DataViewDensity`

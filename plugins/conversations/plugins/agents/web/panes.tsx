@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import {
   Pane,
@@ -38,7 +38,7 @@ export const agentsRootPane = Pane.define({
 
 /** The agent's name, or undefined until it is known (the title's fallback shows). */
 function useAgentName(id: string): string | undefined {
-  return rowOrStale(useLiveRow(agentRows, id))?.name;
+  return rowOrStale(useLive(agentRows, { id }))?.name;
 }
 
 function useAgentDetailTitle({ id }: { id: string }): string | undefined {
@@ -65,7 +65,7 @@ function useSystemAgentTitle({
 }
 
 function useResolveAgent({ id }: { id: string }): ResolveResult {
-  return resolveRow(useLiveRow(agentRows, id));
+  return resolveRow(useLive(agentRows, { id }));
 }
 
 export const agentDetailPane = Pane.define({

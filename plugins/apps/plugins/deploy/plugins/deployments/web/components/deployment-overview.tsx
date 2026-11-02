@@ -1,7 +1,7 @@
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import type { ReactNode } from "react";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { useLive, useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -36,7 +36,7 @@ export function WithDeployment({
   deploymentId: string;
   body: (props: { deployment: Deployment }) => ReactNode;
 }): ReactNode {
-  const deployment = useLiveRow(deployments, deploymentId);
+  const deployment = useLive(deployments, { id: deploymentId });
   if (deployment.status === "loading") return <Loading variant="rows" />;
   if (deployment.status === "error") {
     return (

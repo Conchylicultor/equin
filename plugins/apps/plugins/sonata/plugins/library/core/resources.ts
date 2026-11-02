@@ -9,7 +9,7 @@ import { songsEntityRef } from "./schemas";
 /**
  * The song library: `sonata_songs` as a live collection, read by the library
  * DataView as live key-range pages and by the player one row at
- * a time (`useLiveRow`). No placeholder: a window or row not loaded yet is
+ * a time (`useLive(c, { id })`). No placeholder: a window or row not loaded yet is
  * `loading`, never `[]` / not-found.
  *
  * Declared by FIELDS: the list's fields are the songs entity's (`pick`) and

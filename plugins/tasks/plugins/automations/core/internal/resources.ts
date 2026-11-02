@@ -73,7 +73,7 @@ export type AutomationTaskRow = z.infer<typeof AutomationTaskRowSchema>;
 /**
  * The tasks automations filed, newest first — an automation's HISTORY:
  * `useLive(automationTasks, { where: { automationId } })`; one task's origin is
- * `useLiveRow(automationTasks, taskId)` (`found: false` ⇒ not an automation's).
+ * `useLive(automationTasks, { id: taskId })` (`found: false` ⇒ not an automation's).
  * A list of tasks reads the exposed `origin` field instead (see
  * `taskOriginShape`), never this window as a set.
  */
@@ -121,8 +121,8 @@ export type LaunchDecisionRow = z.infer<typeof LaunchDecisionRowSchema>;
  * Every launch decision, as the WHOLE ordered set (`all`): a launch list joins
  * the decisions to every task it shows (`useLive(launchDecisions, { select })`),
  * so its reader holds them entire — a decided task never reads as undecided
- * past a window's edge. One task's decision is `useLiveRow(launchDecisions,
- * taskId)` (`found: false` ⇒ undecided) — `useTaskApproval` on the web.
+ * past a window's edge. One task's decision is `useLive(launchDecisions,
+ * { id: taskId })` (`found: false` ⇒ undecided) — `useTaskApproval` on the web.
  *
  * The key is `automations.launch-decisions.all`, not the old window's
  * `automations.launch-decisions`: no bundle ever declared this key with another

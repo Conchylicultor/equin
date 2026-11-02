@@ -12,7 +12,7 @@ import { serverHealthShape } from "./schemas";
  *   server ids it is displaying (`useServerHealthMap(serverIds)`), never the
  *   default window — a server past the window's rank would otherwise read as
  *   "never checked" even with a real verdict on file.
- * - **One server** reads `useLiveRow(serverHealthRows, serverId)`: a point
+ * - **One server** reads `useLive(serverHealthRows, { id: serverId })`: a point
  *   read, so `found: false` is "never checked" — a determinate answer, where a
  *   pending read says nothing about the server at all.
  *

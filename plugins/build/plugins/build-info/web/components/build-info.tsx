@@ -1,5 +1,5 @@
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
-import { useLive, useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { buildHistory, type BuildRun } from "@plugins/build/core";
 import { BuildStatusBadge } from "@plugins/build/plugins/build-status/web";
@@ -126,7 +126,7 @@ export function BuildInfo({ runId }: { runId: string }) {
   // One row of the history by id — the point read, so a run older than the
   // newest 50 the window holds is still found. `found: false` means this
   // namespace has no such run.
-  const result = useLiveRow(buildHistory, runId);
+  const result = useLive(buildHistory, { id: runId });
   if (result.status === "loading") return <Loading />;
   if (result.status === "error") {
     return (

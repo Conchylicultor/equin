@@ -1,4 +1,4 @@
-import { mapRow, useLive, useLiveRow } from "@plugins/network/plugins/live/web";
+import { mapRow, useLive } from "@plugins/network/plugins/live/web";
 import {
   combineResources,
   foldResource,
@@ -17,7 +17,7 @@ const ABSENT: SourceHydration = { kind: "absent" };
  * `absent` for a song with no MusicXML.
  */
 export function useHydration(songId: string): ResourceResult<SourceHydration> {
-  const row = mapRow(useLiveRow(songMusicXmlRows, songId), (r) => r);
+  const row = mapRow(useLive(songMusicXmlRows, { id: songId }), (r) => r);
   const attachmentId = foldResource(row, {
     loading: () => null,
     error: () => null,

@@ -27,7 +27,7 @@ export type TurnSummary = z.infer<typeof TurnSummarySchema>;
 // latest turn's summary), not one per turn — so it is a lookup-only
 // collection: no default window (nothing lists every conversation's summary),
 // minting `turn-summaries:rows` alone. The card reads its row with
-// `useLiveRow(turnSummaryRows, conversationId)`, and `found: false` is "no
+// `useLive(turnSummaryRows, { id: conversationId })`, and `found: false` is "no
 // summary yet". (`turnSummaries` is the server's extension handle, hence
 // `…Rows`.)
 //

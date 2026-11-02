@@ -51,7 +51,7 @@ export type OutcomeReport = z.infer<typeof OutcomeReportSchema>;
 
 // ONE task's report, read by the task's id: lookup-only (nothing lists every
 // report), minting `outcome-reports:rows` alone. A reader asks with
-// `useLiveRow(outcomeReportRows, taskId)`; `found: false` is "no report yet".
+// `useLive(outcomeReportRows, { id: taskId })`; `found: false` is "no report yet".
 // The `:rows` point routing sends a submit only to the readers of that task.
 // Served from the extension handle in `server/internal/resource.ts`.
 export const outcomeReportRows = liveCollection("outcome-reports", {

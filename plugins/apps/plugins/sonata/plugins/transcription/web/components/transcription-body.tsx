@@ -1,5 +1,5 @@
 import { exposedColumns } from "@plugins/network/plugins/live/core";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
   songIdKind,
   songLibrary,
@@ -32,7 +32,7 @@ const PENDING_THREAD_HEIGHT = "min(40rem, 75vh)";
  * section).
  */
 export function TranscriptionBody({ songId }: { songId: string }) {
-  const song = useLiveRow(songLibrary, songIdKind.key(songId));
+  const song = useLive(songLibrary, { id: songIdKind.key(songId) });
   const fetchEndpoint = useFetchEndpoint();
   if (song.status === "loading") return <Loading />;
   if (song.status === "error") {

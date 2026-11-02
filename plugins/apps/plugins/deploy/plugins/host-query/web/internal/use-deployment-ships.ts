@@ -1,7 +1,4 @@
-import {
-  useLiveRow,
-  type LiveRowResult,
-} from "@plugins/network/plugins/live/web";
+import { type LiveRowResult, useLive } from "@plugins/network/plugins/live/web";
 import type { ResourceError } from "@plugins/primitives/plugins/live-state/web";
 import { useCompositionIncludes } from "@plugins/plugin-meta/plugins/composition/web";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
@@ -58,7 +55,7 @@ export function useDeploymentShips(
   deploymentId: string,
   pluginId: PluginId,
 ): DeploymentShips {
-  const composition = compositionOf(useLiveRow(deployments, deploymentId));
+  const composition = compositionOf(useLive(deployments, { id: deploymentId }));
   const inclusion = useCompositionIncludes(
     composition.kind === "named" ? composition.name : null,
     pluginId,

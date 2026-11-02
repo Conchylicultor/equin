@@ -7,7 +7,7 @@ import { deployDeploymentsEntityRef } from "./deployment-entity";
  * 500) plus its `:rows` point sibling.
  *
  * - **One deployment** (the pane, its sections, the analytics gate) is
- *   `useLiveRow(deployments, deploymentId)`: a point read, so `found: false` is
+ *   `useLive(deployments, { id: deploymentId })`: a point read, so `found: false` is
  *   "this deployment no longer exists", never "outside the window".
  * - **One server's list** is `useLive(deployments, { where: { serverId } })` —
  *   `serverId` is the one filterable column, because it is the one a reader

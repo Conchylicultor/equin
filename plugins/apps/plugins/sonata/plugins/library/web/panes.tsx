@@ -9,7 +9,7 @@ import {
   resolveRow,
   type ResolveResult,
 } from "@plugins/primitives/plugins/pane/web";
-import { mapRow, useLiveRow } from "@plugins/network/plugins/live/web";
+import { mapRow, useLive } from "@plugins/network/plugins/live/web";
 import {
   foldResource,
   matchResource,
@@ -139,7 +139,7 @@ function useSongTitle(
   hint: Hint<{ title: string }>,
 ): string | undefined {
   // `key` upgrades a pre-rewrite bare-uuid URL to the stored `song-<uuid>`.
-  const song = useLiveRow(songLibrary, songIdKind.key(songIdParam));
+  const song = useLive(songLibrary, { id: songIdKind.key(songIdParam) });
   // `canonical` stays `undefined` until the row settles — precisely what
   // `pick` reads as "not known yet", so the hint shows through in the meantime
   // and is superseded the instant the real row (and any rename) arrives. A
@@ -167,7 +167,7 @@ function useSonataPlayerResolve({
 }): ResolveResult {
   // `key` upgrades an old bare-uuid link (`/sonata/song/<uuid>`, from before
   // the `song-` rewrite) so it resolves.
-  return resolveRow(useLiveRow(songLibrary, songIdKind.key(songIdParam)));
+  return resolveRow(useLive(songLibrary, { id: songIdKind.key(songIdParam) }));
 }
 
 /**

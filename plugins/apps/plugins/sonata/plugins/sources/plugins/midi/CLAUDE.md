@@ -39,7 +39,6 @@ MIDI for playback is its row in the lookup-only live collection `sonata.midi`
     - `network/live.FieldPresentation`
     - `network/live.mapRow`
     - `network/live.useLive`
-    - `network/live.useLiveRow`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`

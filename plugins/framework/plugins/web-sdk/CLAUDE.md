@@ -277,7 +277,7 @@ contributions: [Pane.Register({ pane: terminalPane })]
 `@plugins/framework/plugins/web-sdk/core` is the **framework** only — slots, contributions, plugin context, and the `PluginDefinition` type. Cross-cutting client-side primitives live as plugins under [`plugins/primitives/`](../../../primitives/):
 
 - `<PluginErrorBoundary>`, `ErrorBoundary.Action`, `boundaryReportSink` → `@plugins/primitives/plugins/error-boundary/web`
-- `liveValue` / `liveCollection` (declare, `core/`), `serveValue` / `serveCollection` (serve), `useLive` / `useLiveRow` (read) → `@plugins/network/plugins/live/{core,server,web}`; the transport under them (`NotificationsProvider`, the leader-elected `NotificationsClient`) → `@plugins/primitives/plugins/live-state/web`
+- `liveValue` / `liveCollection` (declare, `core/`), `serveValue` / `serveCollection` (serve), `useLive` (read) → `@plugins/network/plugins/live/{core,server,web}`; the transport under them (`NotificationsProvider`, the leader-elected `NotificationsClient`) → `@plugins/primitives/plugins/live-state/web`
 - `useReconnectingWebSocket`, `SharedWebSocket`, `fetchWithRetry`, `subscribeWsStatus` → `@plugins/primitives/plugins/networking/web`
 - `useEditableField` → `@plugins/primitives/plugins/editable-field/web`
 

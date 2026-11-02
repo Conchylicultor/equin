@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import type { MapBounds } from "@plugins/map/core";
-import { mapRow, useLiveRow } from "@plugins/network/plugins/live/web";
+import { mapRow, useLive } from "@plugins/network/plugins/live/web";
 import {
   mapResource,
   type ResourceResult,
@@ -75,7 +75,7 @@ const NO_CANDIDATES: Readonly<Record<string, PlaceCandidate>> = {};
 export function useAskCandidates(
   conversationId: string | null,
 ): ResourceResult<Readonly<Record<string, PlaceCandidate>>> {
-  const row = useLiveRow(askCandidates, conversationId);
+  const row = useLive(askCandidates, { id: conversationId });
   return useMemo(
     () => mapRow(row, (r) => (r === null ? NO_CANDIDATES : r.candidates)),
     [row],

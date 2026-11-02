@@ -18,7 +18,7 @@ export type ConversationNote = z.infer<typeof ConversationNoteSchema>;
 // or 1 row per conversation — its primary key IS the conversation — so it is a
 // lookup-only collection: no default window (nothing lists every
 // conversation's note), minting `conversation-notes:rows` alone. A reader
-// takes its row with `useLiveRow(conversationNoteRows, conversationId)`, and
+// takes its row with `useLive(conversationNoteRows, { id: conversationId })`, and
 // `found: false` is "this conversation has no note". (The server table handle
 // is `conversationNotes`, hence the `Rows` name.)
 //

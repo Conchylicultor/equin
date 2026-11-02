@@ -1,7 +1,4 @@
-import {
-  useLiveRow,
-  type LiveRowResult,
-} from "@plugins/network/plugins/live/web";
+import { type LiveRowResult, useLive } from "@plugins/network/plugins/live/web";
 import { taskPreprompts, type TaskPreprompt } from "../shared/schemas";
 
 /**
@@ -10,5 +7,5 @@ import { taskPreprompts, type TaskPreprompt } from "../shared/schemas";
  * the pending arm, so a selection can never read as "None".
  */
 export function useTaskPreprompt(taskId: string): LiveRowResult<TaskPreprompt> {
-  return useLiveRow(taskPreprompts, taskId);
+  return useLive(taskPreprompts, { id: taskId });
 }

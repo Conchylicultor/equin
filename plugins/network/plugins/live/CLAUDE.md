@@ -5,7 +5,7 @@ Rationale (why each rule is so, rejected alternatives): [DESIGN.md](DESIGN.md) �
 The unified live-resource API: **the default for every new DB-backed collection
 and every new value.** Declare in `core/` (`liveCollection` / `liveValue`),
 serve in `server/` (`serveCollection` / `serveValue`, spread `.declare` into
-`contributions`), read in `web/` (`useLive`, `useLiveRow`). Design:
+`contributions`), read in `web/` (`useLive`). Design:
 `research/2026-09-25-global-unified-live-resource-api.md`.
 
 ## Design rule — grow `useLive`, don't add APIs
@@ -19,8 +19,19 @@ serve in `server/` (`serveCollection` / `serveValue`, spread `.declare` into
   declarations, tuple, refusals and transport; banned wherever `useLive` fits
   (render, hook body, effect). Reason:
   `research/2026-10-26-global-browser-reads-only-through-live.md` §2.
-- Existing exceptions: `useLiveRow` (pending unification into `useLive`) and
-  `optimistic-mutation`'s `useOptimisticResource` (read+write).
+- The one exception: `optimistic-mutation`'s `useOptimisticResource`, a
+  read+write hook (a live read with pending local edits replayed onto it).
+  `useLiveRow` was the last read hook beside `useLive`; it is folded into
+  `useLive(c, { id })`
+  (`research/2026-10-27-global-fold-uselive-row-into-uselive.md`), and the
+  lint `live/no-legacy-resource-spelling` tells a stale import so.
+- **Held by a check, not by this text.** `live:read-hooks` reads the web
+  barrel's `use*` value exports and fails on one not listed, with what it is,
+  in `LIVE_WEB_HOOKS` (`core/internal/read-hooks.ts`: `useLive` the read,
+  `useLiveReader` the event read, `useFieldPresentations` /
+  `useClientFieldsResolvers` slot registries) — and on a table entry no
+  longer exported. A second read hook has to be written into that table as a
+  read, where review sees the rule broken.
 
 ## Shape vs freshness
 
@@ -82,7 +93,7 @@ useLive(orders, { groupBy: "status", where: { paid: true } });
 // needs `count: true`
 useLive(orders, { count: true, where: { paid: true } });
 useLive(orders, { ids: visibleIds }); // point set
-useLiveRow(orders, orderId); // one row
+useLive(orders, { id: orderId }); // one row (a null id: not found)
 
 // whole ordered set
 export const graphNodes = liveCollection("graph.nodes", {
@@ -130,7 +141,7 @@ useLive(blocks, { where: { pageId } });
   off large/write-hot tables). Mints `key:count`; a DataView over it shows
   exact section counts instead of "N+". Not on a union yet.
 - **Id sets are capped — `maxIds`.** Every `:rows` tuple (`{ ids }`,
-  `useLiveRow`, `useOptimisticResource(c, { ids })`, `preloadRows`) holds at
+  `{ id }`, `useOptimisticResource(c, { ids })`, `preloadRows`) holds at
   most `maxIds` ids: `encode` throws past it, decode refuses
   (`contract-mismatch`). Default `maxLimit`, an `all` set's `max`, else
   `LIVE_DEFAULT_MAX_IDS` (500). Read back as `c.rows.point.maxIds`.
@@ -277,9 +288,12 @@ with no same-named column is bound in `columns: { name: (j) => j.base.col }`
   table out. No exposure folds (`$columns: {}`). Refused: `all`,
   `columnScope`, union.
 
-### Read — `useLive(c, query?)` / `useLiveRow`
+### Read — `useLive(c, query?)`
 
-The query's SHAPE picks the resource. Queries are identified by canonical
+The query's SHAPE picks the resource and the result: a window, a grouping, a
+count, an id set, one row, an `all` set's slice or scope — one hook, whatever
+the result's states (see *One collection signature* for how a misuse is
+reported). Queries are identified by canonical
 encoding, so inline literals are fine; results keep identity until rows,
 state or limit change.
 
@@ -309,18 +323,69 @@ state or limit change.
   re-renders nothing. Pass a stable selector (live-state CLAUDE.md, *Slice
   selectors*). **Scoped**: `useLive(c, { where: { pageId }[, select] })` —
   exactly the `by` fields as strings (tsc); a scope change reads `loading`.
-- **`useLiveRow(c, id: string | null)`** → `loading | error (stale?) |
-  ready+found+row | ready+!found`, with `refetch`. A point read ignores client
-  filters and window bounds (the base `where` still applies): `found: false`
-  means not in the collection. A `null` id, `""`, or an id containing `,`
-  (`isPointId`) is `found: false` from the first render and reads nothing — a
-  URL/agent-supplied id renders its not-found state.
+- **One row — `useLive(c, { id })`**, `id: string | null`, on every
+  collection kind (window, lookup-only, `all`) → `LiveRowResult<Row>`:
+  `loading | error (stale?) | ready+found+row | ready+!found`, with `refetch`
+  (`mapRow` reduces it to a `ResourceResult` of what the row means). It reads
+  the `:rows` point sibling at a one-id set, so it ignores client filters and
+  window bounds (the base `where` still applies): `found: false` means not in
+  the collection.
+  - `{ id }` is exclusive — beside `limit`, `ids`, `where`, `select` or any
+    other key it is a tsc error on that key. A value's `id` PARAM is another
+    thing (`useLive(value, { id })` is a value read: argument 0 decides).
+    Never `cond ? { id } : null` (a `null` query is no row read; a union
+    naming two reads is refused): pass `{ id: cond ? x : null }`.
+  - A `null` id, `""`, or an id containing `,` (`isPointId`) is `found: false`
+    from the first render and reads nothing (the substrate's skip) — a
+    URL/agent-supplied id renders its not-found state. `{ ids }` still throws
+    on one: an explicit set is code-built, the caller's to get right.
+  - Runtime dispatch is by value — `query.id !== undefined` (a `null` id still
+    counts) — after the value branch.
+- **One collection signature.** Every 2-argument collection read — window,
+  grouping, count, `{ ids }`, `{ id }`, `all`'s `{ select }`, a scope's
+  `{ where }` — is ONE `useLive` signature (`web/internal/use-live.ts`), and a
+  new query form is a member of its union, never a signature or a hook.
+  - **The query is never captured whole** (a captured query switches off tsc's
+    own excess-property and union checks). Argument 0 infers the facets (`F`,
+    `S`, `B`) and the declaration (`D`); from the query, only one type
+    parameter per kind key (`id`, `ids`, `count`, `groupBy`, `select`), its
+    `null` / `undefined`, and its key set. The query is held to the plain
+    union of the forms `D` takes (each refusing the other kind keys,
+    `?: never`), so tsc reports a misuse on its own property.
+  - **The read is decided once**: the first kind key holding a value, in
+    `COLLECTION_KIND_KEYS` order (`live/core`) — the list the runtime
+    dispatch (`readKindOf`) and the result type both read. A key holding
+    `undefined` is absent. Two kind keys holding values are a tsc error and,
+    for an untyped caller, a throw.
+  - **A union naming two reads** (`cond ? { id } : { where }`) is a tsc error
+    on the argument (the named kind's key is required on every branch); so is
+    `null` beside anything but a count.
+  - **A query built before the call** is not excess-checked by tsc. An
+    unknown top-level key is still refused (the inferred key set). A `where`
+    built before the call is declared with its collection's where type —
+    `const w: LiveWhereOf<typeof tasks> = { … }` — so tsc checks it where it
+    is written; the lint `live/where-declared` requires it (an undeclared one
+    would compile, then throw on render: "… is not a filterable column").
+  - Every value signature takes its trailing arguments as a rest that is an
+    impossible arity for a collection (`ValueArgs` / `PagedArgs`), so a
+    collection call has ONE candidate — never TS2769 against another overload.
+    Kept separate: 1-argument `useLive(c)` / `useLive(all)`, the viewport reads
+    (3 arguments), and a count whose collection may be `null` (still TS2769,
+    as are a non-live source and a value misuse).
+  - **Pinned by `live:read-misuse-diagnostics`** (`check/`): every misuse in
+    `web/__tests__/use-live-query-types.test.ts` is a multi-line call with its
+    `// @ts-expect-error TS<code> — <label>` above the offending line. The
+    check compiles that file in a subprocess (repo compiler options, markers
+    blanked in memory) and fails on a marker without a code, a marked line
+    missing its code or reporting another, or a diagnostic with no marker.
+    Fix a TS2769 in the signatures, never by relabelling the marker.
 - **Optimistic reads** are `optimistic-mutation`'s `useOptimisticResource`
   over the same argument shapes (`(value, params?, opts)`, `(c, { ids },
   opts)`, `(c, { where }, opts)` for a scoped `all` set); `loading` until a
   real value lands, `dispatch` only on `ready`.
-- `useLive` is watched by `live-state/no-pending-data-collapse`; both by
-  `no-ready-negation` — never `status !== "ready"`.
+- `useLive` is watched by `live-state/no-pending-data-collapse` (its row read
+  has no `data` to collapse) and by `no-ready-negation` — never
+  `status !== "ready"`.
 
 ## Paged reads — key-range pages through `useLive`
 
@@ -903,7 +968,8 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));
   `refresh()`. No HTTP fetch on mount — the WS sub-ack fills it.
 - **`useLive(value, null)`** (param'd only): pending, reads NOTHING. A subject
   that will NEVER arrive is a settled answer — render it or throw. Never a
-  `""` stand-in (`live/no-sentinel-param` lint).
+  `""` stand-in (`live/no-sentinel-param` lint, a row read's
+  `{ id: x ?? "" }` included — pass `{ id: cond ? x : null }`).
 - **Many tuples — `useLive(value, [p1, p2, …])`** → one result per entry in
   order (via `useResources`, diffed: a kept tuple keeps its subscription and
   data identity). `null` entries skip. Not for param-less or paged values.
@@ -960,9 +1026,9 @@ const r = useLive(checkoutStatus);
   unions). A paged value's meta sibling inherits it.
 - `live/server`'s `serveValue` / `serveCollection` take only portable
   declarations; `live/machine`'s only machine ones (tsc).
-- `useLive` / `useLiveRow` return `WithMachine<NM, R>`; under a transport
-  with `machine: false` (the demo's browser server) the read is `unavailable`
-  from the first render and nothing is read. Gate a control before reading with
+- `useLive` returns `WithMachine<NM, R>`; under a transport with `machine:
+  false` (the demo's browser server) the read is `unavailable` from the first
+  render and nothing is read (a row read with the substrate's skip). Gate a control before reading with
   endpoints' `useMachineAvailability(declaration)`. Paged readers pass `NM`
   through (data-view's `useLivePagedValuePaging`).
 
@@ -995,7 +1061,8 @@ Flags any import/read of the old spellings (`resourceDescriptor`,
 `windowQueryResourceDescriptor`, `pointQueryResourceDescriptor`,
 `defineResource`, `defineExternalResource`, `queryResource`,
 `windowQueryResource`, `useResource`, `usePointResource(s)`,
-`useWindowResource`) — deleted ones stay listed so a stale import is told its
+`useWindowResource`, and this barrel's own deleted `useLiveRow` — one row is
+`useLive(c, { id })`) — deleted ones stay listed so a stale import is told its
 replacement. Exemptions are the substrate only (`./equin exempt list --rule
 live/no-legacy-resource-spelling`). **Never add an entry for new code.**
 
@@ -1027,7 +1094,10 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
 - `LiveWhere` is object sugar (AND of `col: value` = `eq`, or `{ op: operand
   }`, `{ isEmpty: true }`) or a `Filter` tree (`and` / `or` of `{ column, op,
   operand }`); both canonicalize to the same bytes
-  (`core/internal/query-codec.ts`). `useLive`'s query is `NoInfer`.
+  (`core/internal/query-codec.ts`). A tree is checked against the
+  collection's own declaration: the collection signature infers `F` from
+  argument 0 alone and the query's `where` is `LiveWhere<F>` itself, so
+  `or(…)` infers its clauses against it.
 - String order is code-point in memory and the cluster's `C` collation in SQL
   (pinned by the parity suite; group tiebreaks rely on it).
 
@@ -1048,7 +1118,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
 
 ## Plugin reference
 
-- Description: Unified live-resource API, read half: useLive (a collection's window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, grown by its limit, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), useLiveReader (the one read function beside useLive: one answer to one tuple of a liveValue, for a question an event asks and its own await consumes — its pushed value when observed, else one deduped HTTP read never written to the cache; refused / unavailable typed by the declaration), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple); every collection's window — and a key-range-paged liveValue — is read as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small — given a measured viewport (useLive(c, q, { viewport })) with no depth limit, the pages near it live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows, and without one every page live, capped at maxLimit rows; FieldPresentation.Register presents an owner's fields — an entity's own, an extension's exposed ones, a union arm's, a collection's own — with their cells, widths and live options in every list that reaches the owner, read by useFieldPresentations. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven — or from an external source with notify(); the serve call decides only the freshness, never the shape: every list's bound is the liveValue's own (its schema's list-bound markers), so a serve call takes no `unbounded`; pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a key-range-paged one — external only — is loaded one key range at a time, each answer checked against its range and minted its `$key`, notify(q) reaching every subscribed page and the per-question meta sibling, and sliceRange answers a range for a list held in memory) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a collection reaching an entity compiles at boot, folding every LiveColumns.Expose contribution of an extension exposing fields of it — and a `columnScope` collection every LiveColumns.Scoped set — into its rows' `$columns`; routed through the change feed, or — with `changes` — the same compiled SQL served off it, for a table its owner opted out) — or, `source: "external"`, from a source outside Postgres that answers window / rows / groups / count / all by hand (core's serveCollectionOn: every answer checked against the row schema, every window row's `$key` minted, notify() re-reading the subscribed tuples); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
+- Description: Unified live-resource API, read half: useLive (a collection's window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, grown by its limit, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — an explicit id set, or one row by id — `{ id }`: loading, failed, found, or determinately absent — all through one collection signature, so a wrong option errors on its own property), useLiveReader (the one read function beside useLive: one answer to one tuple of a liveValue, for a question an event asks and its own await consumes — its pushed value when observed, else one deduped HTTP read never written to the cache; refused / unavailable typed by the declaration), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple); every collection's window — and a key-range-paged liveValue — is read as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small — given a measured viewport (useLive(c, q, { viewport })) with no depth limit, the pages near it live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows, and without one every page live, capped at maxLimit rows; FieldPresentation.Register presents an owner's fields — an entity's own, an extension's exposed ones, a union arm's, a collection's own — with their cells, widths and live options in every list that reaches the owner, read by useFieldPresentations. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven — or from an external source with notify(); the serve call decides only the freshness, never the shape: every list's bound is the liveValue's own (its schema's list-bound markers), so a serve call takes no `unbounded`; pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a key-range-paged one — external only — is loaded one key range at a time, each answer checked against its range and minted its `$key`, notify(q) reaching every subscribed page and the per-question meta sibling, and sliceRange answers a range for a list held in memory) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a collection reaching an entity compiles at boot, folding every LiveColumns.Expose contribution of an extension exposing fields of it — and a `columnScope` collection every LiveColumns.Scoped set — into its rows' `$columns`; routed through the change feed, or — with `changes` — the same compiled SQL served off it, for a table its owner opted out) — or, `source: "external"`, from a source outside Postgres that answers window / rows / groups / count / all by hand (core's serveCollectionOn: every answer checked against the row schema, every window row's `$key` minted, notify() re-reading the subscribed tuples); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
 - Web:
   - Slots:
     - `FieldPresentation.Register`
@@ -1082,7 +1152,6 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LiveAnswer`
     - `LiveFieldOption`
     - `LiveFieldOptionsRead`
-    - `LiveIdsQuery`
     - `LiveListResult`
     - `LivePageError`
     - `LivePagePlaceholder`
@@ -1123,7 +1192,6 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `useFieldPresentations`
     - `useLive`
     - `useLiveReader`
-    - `useLiveRow`
 - Server:
   - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/query-resource` ×35
@@ -1199,6 +1267,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `ClientFieldsOwner`
     - `ClientFieldsOwnerRow`
     - `ClientFieldValue`
+    - `CollectionKindKey`
     - `CollectionRow`
     - `CompiledPagedValue`
     - `CompiledValue`
@@ -1281,6 +1350,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LiveHost`
     - `LiveHostSource`
     - `LiveHostSources`
+    - `LiveIdsQuery`
     - `LiveKeyCut`
     - `LiveKeyDirection`
     - `LiveKeyRange`
@@ -1313,9 +1383,11 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LiveRefusalsBrand`
     - `LiveRelated`
     - `LiveReservedColumn`
+    - `LiveRowQuery`
     - `LiveRowSchema`
     - `LiveRowsCollection`
     - `LiveRuntime`
+    - `LiveScopedAllQuery`
     - `LiveScopedColumns`
     - `LiveSnapshotBrand`
     - `LiveSortDirection`
@@ -1331,6 +1403,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LiveValueSpec`
     - `LiveWhere`
     - `LiveWhereObject`
+    - `LiveWhereOf`
     - `LiveWindowBounds`
     - `LiveWindowCodec`
     - `LiveWindowDescriptor`
@@ -1359,6 +1432,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `WithContributedColumns`
   - Exports (values):
     - `clientFields`
+    - `COLLECTION_KIND_KEYS`
     - `compileExternalCollection`
     - `compilePagedValue`
     - `compileQueryValue`
@@ -1377,6 +1451,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LIVE_ROW_KEY`
     - `LIVE_ROW_KEY_MAX_BYTES`
     - `LIVE_SCOPED_KEY`
+    - `LIVE_WEB_HOOKS`
     - `liveArm`
     - `liveCollection`
     - `liveValue`
@@ -1419,7 +1494,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `tag-tree/engine`
 - Exemptions:
   - Exempts itself from:
-    - `live/no-legacy-resource-spelling` — `.` (sanctioned)
+    - `live/no-legacy-resource-spelling` — `central/internal/serve-value.ts`, `server/internal/serve-collection.ts`, `server/internal/serve-off-feed.ts`, `server/internal/serve-union.ts`, `server/internal/serve-value.ts`, `web/internal/use-live.ts`, `web/internal/use-pages.ts` (sanctioned)
     - `live/no-endpoint-read` — `web` (sanctioned)
     - `no-db-backed-notify` — `server/internal/serve-off-feed.ts` (sanctioned)
     - `no-raw-websocket` — `e2e/narrowing.ts` (sanctioned)

@@ -1,5 +1,5 @@
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
@@ -22,7 +22,7 @@ export function ReportDetail() {
   const { reportId } = reportDetailPane.useParams();
   // The report's row, live: a repeat moving its count, a noise flip or a
   // linked task arrives through the reports producer (`reports.list:rows`).
-  const read = useLiveRow(reportsList, reportId);
+  const read = useLive(reportsList, { id: reportId });
   const { serverGraph } = useStaleFrontend();
 
   if (read.status === "loading") {

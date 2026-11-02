@@ -37,19 +37,22 @@ const state = vi.hoisted(() => ({
 
 vi.mock("@plugins/network/plugins/live/web", async (importOriginal) => ({
   ...(await importOriginal<object>()),
-  useLiveRow: (collection: { key: string }) =>
-    state.rows[collection.key] ?? {
-      status: "loading",
-      refetch: () => Promise.resolve(),
-    },
-  useLive: () => ({
-    status: "ready",
-    data: state.queued,
-    refetch: () => Promise.resolve(),
-    canGrow: false,
-    growing: false,
-    loadMore: () => {},
-  }),
+  // A row read (`{ id }`) answers from `state.rows`; the queue window from
+  // `state.queued`.
+  useLive: (collection: { key: string }, query?: { id?: unknown }) =>
+    query?.id !== undefined
+      ? (state.rows[collection.key] ?? {
+          status: "loading",
+          refetch: () => Promise.resolve(),
+        })
+      : {
+          status: "ready",
+          data: state.queued,
+          refetch: () => Promise.resolve(),
+          canGrow: false,
+          growing: false,
+          loadMore: () => {},
+        },
   mapRow: (
     result: RowRead,
     fn: (row: unknown) => unknown,

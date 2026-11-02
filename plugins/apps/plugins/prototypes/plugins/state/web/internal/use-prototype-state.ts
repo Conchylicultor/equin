@@ -1,5 +1,5 @@
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import { mapRow, useLive, useLiveRow } from "@plugins/network/plugins/live/web";
+import { mapRow, useLive } from "@plugins/network/plugins/live/web";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import {
   NO_PROTOTYPE_STATE,
@@ -22,7 +22,7 @@ export function usePrototypeState(
   name: string,
 ): ResourceResult<PrototypeState> {
   return mapRow(
-    useLiveRow(prototypeStates, name),
+    useLive(prototypeStates, { id: name }),
     (row): PrototypeState => row ?? NO_PROTOTYPE_STATE,
   );
 }

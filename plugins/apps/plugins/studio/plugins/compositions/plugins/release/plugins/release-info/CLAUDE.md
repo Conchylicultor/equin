@@ -9,7 +9,7 @@
   - Contributes: `ReleaseDetail.Section` "Info" → `ReleaseInfo`
   - Uses:
     - `apps/studio/compositions/release.ReleaseDetail`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`

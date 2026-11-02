@@ -15,7 +15,7 @@ import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { MessageBodyState } from "@plugins/apps/plugins/mail/plugins/sync/web";
 import { threadMessages } from "@plugins/apps/plugins/mail/plugins/reading-pane/core";
@@ -55,7 +55,7 @@ export function MailMessageTitle(): string {
  */
 export function MailMessageBody(): ReactElement {
   const { messageId } = mailMessagePane.useParams();
-  const envelope = useLiveRow(threadMessages, messageId);
+  const envelope = useLive(threadMessages, { id: messageId });
   const subject =
     envelope.status === "ready" && envelope.found
       ? (envelope.row.subject ?? "")

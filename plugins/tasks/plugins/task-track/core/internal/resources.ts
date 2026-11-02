@@ -32,7 +32,7 @@ export type TaskTrackRow = z.infer<typeof TaskTrackRowSchema>;
 
 // The stored tracks, read two ways from one declaration:
 //
-// - `useLiveRow(taskTracks, taskId)` — the exact answer for ONE task (the task
+// - `useLive(taskTracks, { id: taskId })` — the exact answer for ONE task (the task
 //   detail's Track row, the conversation header chip). `found: false` is main.
 // - `useLive(taskTracks)` — the WHOLE ordered set (`all`), for a surface that
 //   needs a track for EVERY task it shows (the sidequest autopilot's launch

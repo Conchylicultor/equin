@@ -64,7 +64,6 @@ its own.
     - `infra/endpoints.useEndpointMutation`
     - `network/live.LiveRowResult`
     - `network/live.useLive`
-    - `network/live.useLiveRow`
     - `tag-tree/engine.useTagTree`
   - Exports (values):
     - `useCreateCustomPlace`

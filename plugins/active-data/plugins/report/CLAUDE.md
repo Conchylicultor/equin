@@ -23,7 +23,7 @@ Transcript-only: a report is not something a page document links to.
     - `active-data/id-chip.idChip`
     - `active-data/id-chip.rowReferent`
     - `debug/reports.reportDetailPane`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
     - `primitives/pane.useOpenPane`
 - Server:
   - Contributes:

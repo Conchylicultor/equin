@@ -27,7 +27,7 @@ export type PromptTaskLink = z.infer<typeof PromptTaskLinkSchema>;
 //   50 (max 200). Only launches older than a block's 50th would drop out, and a
 //   block's launches are a handful.
 // - task side, "which page/block did THIS task come from?" — the `:rows` point
-//   read by task id (`useLiveRow(promptBlockTasks, taskId)`), where
+//   read by task id (`useLive(promptBlockTasks, { id: taskId })`), where
 //   `found: false` is "not launched from a prompt block".
 //
 // **The row id is `taskId`, the table's primary key** (stored as `parent_id`),

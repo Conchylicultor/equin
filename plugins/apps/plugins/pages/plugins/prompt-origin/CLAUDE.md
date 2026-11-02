@@ -39,7 +39,7 @@ at all.
   - Contributes: `TaskDetailSlots.Section` "Origin" → `PromptOriginSection`
   - Uses:
     - `apps/pages/page-tree.pageDetailPane`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
     - `page/prompt/link.usePromptTaskLink`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/link-chip.LinkChip`

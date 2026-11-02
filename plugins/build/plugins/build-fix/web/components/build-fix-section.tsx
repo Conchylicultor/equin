@@ -1,6 +1,5 @@
 import {
   useLive,
-  useLiveRow,
   type LiveListResult,
   type LiveRowResult,
   type LiveUnavailable,
@@ -37,7 +36,7 @@ import type { InvestigatePresentation } from "@plugins/primitives/plugins/launch
  * newest 50 the history window holds is still found.
  */
 function useBuildRun(runId: string): LiveRowResult<BuildRun> {
-  return useLiveRow(buildHistory, runId);
+  return useLive(buildHistory, { id: runId });
 }
 
 /**

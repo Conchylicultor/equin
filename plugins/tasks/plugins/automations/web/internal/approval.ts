@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { mapRow, useLiveRow } from "@plugins/network/plugins/live/web";
+import { mapRow, useLive } from "@plugins/network/plugins/live/web";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import {
   launchDecisions,
@@ -16,7 +16,7 @@ import {
 export function useTaskApproval(
   taskId: string,
 ): ResourceResult<LaunchDecision | null> {
-  const result = useLiveRow(launchDecisions, taskId);
+  const result = useLive(launchDecisions, { id: taskId });
   return useMemo(
     () => mapRow(result, (row) => (row ? row.decision : null)),
     [result],

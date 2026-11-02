@@ -43,7 +43,7 @@ the same Gantt with no special-casing.
   `POST /api/boot-traces` and copies
   `http://<wt>.localhost:9000/debug/boot-profile/<id>`.
 - `/debug/boot-profile/<id>` (`bootProfileDetailPane`) reads the snapshot with
-  `useLiveRow(bootTrace, id)` — `debug.boot-trace`, a lookup-only live
+  `useLive(bootTrace, { id })` — `debug.boot-trace`, a lookup-only live
   collection over `boot_traces` (a non-uuid id reads nothing: `found: false`,
   the same graceful not-found as an unknown id) — and renders it with a
   read-only "Saved snapshot · <relative time> · <worktree>" banner.
@@ -96,7 +96,7 @@ unbounded.
     - `primitives/data-table` ×2
     - `apps/debug/shell.DebugApp`
     - `infra/endpoints.useEndpointMutation`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
     - `primitives/css/center.Center`
     - `primitives/css/column.Column`
     - `primitives/css/placeholder.Placeholder`

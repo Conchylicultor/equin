@@ -1,8 +1,5 @@
 import { useCallback } from "react";
-import {
-  useLiveRow,
-  type LiveRowResult,
-} from "@plugins/network/plugins/live/web";
+import { type LiveRowResult, useLive } from "@plugins/network/plugins/live/web";
 import { conversationNoteRows, type ConversationNote } from "../../shared";
 import { setOpen, useNoteUi } from "./notes-ui-store";
 
@@ -28,7 +25,7 @@ export interface ConversationNoteState {
 export function useConversationNote(
   conversationId: string,
 ): ConversationNoteState {
-  const read = useLiveRow(conversationNoteRows, conversationId);
+  const read = useLive(conversationNoteRows, { id: conversationId });
   // On the ready arm `found: false` means this conversation has no note.
   let serverNote = "";
   if (read.status === "ready" && read.found) serverNote = read.row.notes;

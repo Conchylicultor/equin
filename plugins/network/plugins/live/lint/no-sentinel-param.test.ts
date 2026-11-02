@@ -17,8 +17,9 @@ ruleTester.run("no-sentinel-param", rule, {
     { code: `useLive(v, { path, scopeId });` },
     { code: `useLive(c, { where: { status: "open" } });` },
     { code: `useLive(v);` },
-    { code: `useLiveRow(c, id);` },
-    { code: `useLiveRow(c, id ?? null);` },
+    { code: `useLive(c, { id });` },
+    { code: `useLive(c, { id: id ?? null });` },
+    { code: `useLive(c, { id: ready ? x : null });` },
     // Not a live read.
     { code: `useThing(v, { id: x ?? "" });` },
     // A computed value is not traced.
@@ -38,6 +39,8 @@ ruleTester.run("no-sentinel-param", rule, {
       code: `useLive(v, { path: p ?? "", scopeId: s ?? "" });`,
       errors: [sentinel, sentinel],
     },
-    { code: `useLiveRow(c, id ?? "");`, errors: [sentinel] },
+    // A row read's id.
+    { code: `useLive(c, { id: id ?? "" });`, errors: [sentinel] },
+    { code: `useLive(c, { id: ready ? x : "" });`, errors: [sentinel] },
   ],
 });

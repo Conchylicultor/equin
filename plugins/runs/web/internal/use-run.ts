@@ -1,7 +1,4 @@
-import {
-  useLiveRow,
-  type LiveRowResult,
-} from "@plugins/network/plugins/live/web";
+import { type LiveRowResult, useLive } from "@plugins/network/plugins/live/web";
 import { runRowKey, runs, type RunRow } from "../../core";
 
 /**
@@ -18,5 +15,5 @@ export function useRun(ref: {
   kind: string;
   id: string;
 }): LiveRowResult<RunRow> {
-  return useLiveRow(runs, runRowKey(ref));
+  return useLive(runs, { id: runRowKey(ref) });
 }

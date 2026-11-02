@@ -29,6 +29,7 @@ import {
   type LiveOrderBy,
   type LiveQuery,
   type LiveSortDirection,
+  type LiveWhere,
   type LiveWindowBounds,
   type LiveWindowParams,
 } from "./query";
@@ -209,7 +210,7 @@ export type LivePreload = "none" | ResourcePreload;
 
 /**
  * What EVERY collection has — the `:rows` point sibling and the row schema — so
- * the id-set reads (`useLive(c, { ids })`, `useLiveRow`) take any collection,
+ * the id-set reads (`useLive(c, { ids })`, `useLive(c, { id })`) take any collection,
  * lookup-only or full.
  */
 export interface LiveRowsCollection<Row> {
@@ -388,7 +389,7 @@ export interface LiveNoWindowCollection<
 
 /**
  * A lookup-only collection: declared without a default window, so it mints
- * `${key}:rows` alone. Rows are read by id (`useLiveRow`, `useLive(c, { ids })`).
+ * `${key}:rows` alone. Rows are read by id (`useLive(c, { id })`, `useLive(c, { ids })`).
  */
 export type LiveLookupCollection<Row> = LiveNoWindowCollection<Row, undefined>;
 
@@ -414,6 +415,22 @@ export interface LiveAllCollection<
   window?: never;
   groups?: never;
 }
+
+/**
+ * The `where` a collection takes: a window's filter (`LiveWhere<F>`), a
+ * scoped set's scope record, or `never` (lookup-only, an unscoped `all`
+ * set). Declare a `where` built outside its `useLive` call with it —
+ * `const w: LiveWhereOf<typeof tasks> = { status: "open" }` — so tsc checks
+ * its columns where it is written: a value built elsewhere is never
+ * excess-checked at the call (the lint `live/where-declared`).
+ */
+export type LiveWhereOf<C> = C extends { window: object; filterable: infer F }
+  ? LiveWhere<F>
+  : C extends { all: LiveAllCollection<infer _Row, infer B>["all"] }
+    ? [B] extends [never]
+      ? never
+      : { readonly [K in B]: string }
+    : never;
 
 /** The `by` fields an `all` declaration (`Al`) scopes its tuples by — `never` when it declares none. */
 export type LiveAllBy<Al> = Al extends {
@@ -1128,7 +1145,7 @@ function allBy<Row>(
     const name = field as string;
     if (name === spec.id) {
       fail(
-        `\`all.by\` names the id "${name}" — a scope of one row is a point read (\`useLiveRow\`).`,
+        `\`all.by\` names the id "${name}" — a scope of one row is a row read (\`useLive(c, { id })\`).`,
       );
     }
     if (seen.has(name)) fail(`\`all.by\` names "${name}" twice`);

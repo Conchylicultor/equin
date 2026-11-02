@@ -1,6 +1,6 @@
 import type { Ref, RefObject } from "react";
 import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
-import { mapRow, useLiveRow } from "@plugins/network/plugins/live/web";
+import { mapRow, useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
@@ -45,7 +45,7 @@ export function PageHeader({
   // The page's own row; a page the set does not hold renders the header with
   // nothing to add to (`page` undefined).
   const result = mapRow(
-    useLiveRow(pagesTree, pageId),
+    useLive(pagesTree, { id: pageId }),
     (row): Block | undefined => row ?? undefined,
   );
   return (

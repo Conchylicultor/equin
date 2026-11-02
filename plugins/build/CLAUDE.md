@@ -222,7 +222,7 @@ wire.
   its status is its own notified `build.serve-status` value.) A window is never
   L2-persisted, so a cold boot loads its 50 rows fresh.
 - **One run** — `build-info` and `build-fix` read
-  `useLiveRow(buildHistory, runId)`, the `:rows` point read: a run older than
+  `useLive(buildHistory, { id: runId })`, the `:rows` point read: a run older than
   the newest 50 is still found, and `found: false` means this namespace has no
   such run.
 

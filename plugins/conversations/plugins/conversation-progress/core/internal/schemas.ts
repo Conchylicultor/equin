@@ -68,7 +68,7 @@ export type ConversationProgress = z.infer<typeof ConversationProgressSchema>;
 // holds 0 or 1 row per conversation — its primary key IS the conversation — so
 // it is a lookup-only collection: no default window (nothing lists every
 // conversation's phase), minting `conversation-progress:rows` alone. A reader
-// takes its row with `useLiveRow(conversationProgressRows, conversationId)`,
+// takes its row with `useLive(conversationProgressRows, { id: conversationId })`,
 // and `found: false` is "no phase classified yet". (The server table handle is
 // `conversationProgress`, hence the `Rows` name.)
 //

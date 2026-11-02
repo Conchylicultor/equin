@@ -23,7 +23,7 @@ export type ChordModeRow = z.infer<typeof ChordModeRowSchema>;
  * The chord mode of ONE song, read by the song's id: a lookup-only collection
  * over the extension table (nothing lists every song's mode), minting
  * `sonata-chord-mode:rows` alone. The observer reads the open song's row with
- * `useLiveRow(chordModes, songId)`; `found: false` is an absent row, i.e. off.
+ * `useLive(chordModes, { id: songId })`; `found: false` is an absent row, i.e. off.
  */
 export const chordModes = liveCollection("sonata-chord-mode", {
   from: chordModeShape,

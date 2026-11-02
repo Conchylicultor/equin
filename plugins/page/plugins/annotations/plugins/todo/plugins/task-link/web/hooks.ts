@@ -5,7 +5,6 @@ import {
 } from "@plugins/primitives/plugins/live-state/web";
 import {
   mapRow,
-  useLiveRow,
   type LiveRowResult,
   useLive,
 } from "@plugins/network/plugins/live/web";
@@ -23,7 +22,7 @@ import { todoTasks, type TodoTaskLink } from "../shared/schemas";
  * nothing either way) decide that themselves.
  */
 export function useTodoTask(blockId: string): LiveRowResult<TodoTaskLink> {
-  return useLiveRow(todoTasks, blockId);
+  return useLive(todoTasks, { id: blockId });
 }
 
 /** A dispatched card's task, as the card's two surfaces need to render it. */

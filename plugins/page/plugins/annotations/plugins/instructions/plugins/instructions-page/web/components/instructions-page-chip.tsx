@@ -1,7 +1,7 @@
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
   pageData,
   pageKindOf,
@@ -26,7 +26,7 @@ const publicIcon = symbol("public");
  * with its retry.
  */
 export function InstructionsPageChip({ pageId }: PageReferenceChipProps) {
-  const result = useLiveRow(pagesTree, pageId);
+  const result = useLive(pagesTree, { id: pageId });
   let page: PageRow | undefined;
   switch (result.status) {
     case "loading":

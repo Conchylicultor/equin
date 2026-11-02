@@ -95,7 +95,7 @@ ruleTester.run("no-ready-negation", rule, {
       // A destructured status.
       {
         code: `
-          const { status } = useLiveRow(tasks, id);
+          const { status } = useLive(tasks, { id });
           const spin = status !== "ready";
         `,
         errors: [{ messageId: "readyNegation" }],

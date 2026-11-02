@@ -133,7 +133,6 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
   - Uses:
     - `network/live.mapRow`
     - `network/live.useLive`
-    - `network/live.useLiveRow`
     - `primitives/file-links.FileLinksWorkspaceProvider`
     - `primitives/live-state.foldResource`
     - `primitives/live-state.mapResource`

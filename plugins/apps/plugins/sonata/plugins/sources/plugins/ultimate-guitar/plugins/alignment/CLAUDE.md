@@ -192,7 +192,7 @@ failed | not-embeddable, score }[]`) and `record | null` (jsonb decoded by
 zod, so a new value takes no migration (keep the old ones parseable). It is
 served as the lookup-only
 live collection `sonata-ug-alignment` (`core/internal/resources.ts`), read with
-`useLiveRow(ugAlignmentRows, songId)`.
+`useLive(ugAlignmentRows, { id: songId })`.
 
 The job's transcript goes to the `sonata-ug-alignment` log channel.
 

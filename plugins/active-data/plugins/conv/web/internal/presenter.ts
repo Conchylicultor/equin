@@ -1,4 +1,4 @@
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { conversationHistory } from "@plugins/conversations/plugins/all-conversations/core";
 import { useConversationOpener } from "@plugins/conversations/plugins/conversation-view/web";
 import type { IdReferentState } from "@plugins/ids/web";
@@ -16,7 +16,7 @@ function titleOf(row: { id: string; title: string | null; taskTitle: string }) {
  * "missing", which nobody said.
  */
 export function useConversationReferent(id: string): IdReferentState {
-  const read = useLiveRow(conversationHistory, id);
+  const read = useLive(conversationHistory, { id });
   if (read.status === "loading") return { status: "loading" };
   if (read.status === "error") {
     return read.stale

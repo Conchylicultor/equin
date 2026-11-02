@@ -15,7 +15,9 @@ import type {
 } from "@plugins/primitives/plugins/live-state/core";
 import type {
   LiveAllCollection,
+  LiveIdsQuery,
   LiveRowsCollection,
+  LiveScopedAllQuery,
   LiveValue,
 } from "@plugins/network/plugins/live/core";
 import { subscribeWsStatus } from "@plugins/primitives/plugins/networking/web";
@@ -42,11 +44,7 @@ import {
   type UnconfirmedDeadline,
   type UnconfirmedSample,
 } from "@plugins/network/plugins/live/web";
-import {
-  resolveOptimisticSource,
-  type OptimisticIdsQuery,
-  type OptimisticScopedQuery,
-} from "./source";
+import { resolveOptimisticSource } from "./source";
 import {
   ackPass,
   clearFailure,
@@ -357,7 +355,7 @@ export function useOptimisticResource<
  */
 export function useOptimisticResource<Row, Vars>(
   collection: LiveRowsCollection<Row>,
-  query: OptimisticIdsQuery,
+  query: LiveIdsQuery,
   options: OptimisticOptions<Row[], Vars>,
 ): OptimisticResult<Row[], Vars>;
 /**
@@ -369,7 +367,7 @@ export function useOptimisticResource<Row, Vars>(
  */
 export function useOptimisticResource<Row, B extends string, Vars>(
   collection: LiveAllCollection<Row, B>,
-  query: OptimisticScopedQuery<NoInfer<B>>,
+  query: LiveScopedAllQuery<NoInfer<B>>,
   options: OptimisticOptions<Row[], Vars>,
 ): OptimisticResult<Row[], Vars>;
 export function useOptimisticResource<Data, Vars>(

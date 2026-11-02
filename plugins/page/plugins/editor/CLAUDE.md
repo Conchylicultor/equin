@@ -72,7 +72,7 @@ liveCollection("pages.tree", {
 - **`docRank` is bound to `doc_rank` by name** (a leaked NULL fails the row
   schema's `RankSchema` loudly).
 - **Readers**: `useLive(pagesTree)` for the set (sidebar, `usePageOptions`,
-  breadcrumb, Recent pages…), `useLiveRow(pagesTree, id)` for one page.
+  breadcrumb, Recent pages…), `useLive(pagesTree, { id })` for one page.
 - **Declared by fields over the entity**: the table is
   `defineEntity(pagesEntityRef, { docRank, deletedAt, trashEntryId }, meta)`
   (`server/internal/tables.ts`), so ref and table cannot disagree.
@@ -112,7 +112,7 @@ Row pinned to `Block` (`_PinPageBlocksRow`).
     `useOptimisticResource(pageBlocks, { where: { pageId } }, …)`;
   - `enqueueDetachedWrite` on the same lane;
   - `useLive` in history preview and page outline;
-  - `useLiveRow(pageBlocks, blockId)` for the block crumb;
+  - `useLive(pageBlocks, { id: blockId })` for the block crumb;
   - `listBlocks` reads `pageBlocksServed.all.load({ pageId })`, so the HTTP twin
     cannot drift.
 - Costs pinned by `server/internal/page-blocks-oracle.test.ts` (typing projection =

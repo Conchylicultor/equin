@@ -40,7 +40,6 @@ Swing (`meta.swing`) is read here but applied at playback only — see
     - `infra/attachments.uploadAttachment`
     - `network/live.mapRow`
     - `network/live.useLive`
-    - `network/live.useLiveRow`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`

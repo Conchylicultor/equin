@@ -5,7 +5,7 @@ import {
   useSongSetting,
   useWriteSongSetting,
 } from "@plugins/apps/plugins/sonata/plugins/document/web";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
   combineResources,
   mapResource,
@@ -61,7 +61,7 @@ export function useGroove(): Groove {
   const store = useSongSetting(grooveSetting);
   const setGroove = useWriteSongSetting(grooveSetting);
   const saveRhythm = useSaveRhythm();
-  const row = useLiveRow(rhythms, currentSongId);
+  const row = useLive(rhythms, { id: currentSongId });
   const pendingPreset = usePendingPreset(currentSongId);
 
   // The row has caught up with the last committed preset id → drop the

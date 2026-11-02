@@ -10,23 +10,9 @@ import type { ResourceDescriptor } from "@plugins/primitives/plugins/live-state/
 import { canonicalParams } from "@plugins/packages/plugins/canonical-params/core";
 import type {
   LiveAllCollection,
+  LiveIdsQuery,
   LiveRowsCollection,
 } from "@plugins/network/plugins/live/core";
-
-/** The `{ ids }` read of a collection — its `:rows` point sibling. */
-export interface OptimisticIdsQuery {
-  ids: readonly string[];
-}
-
-/**
- * One scope of a collection declared `all: { by }` — exactly its `by`
- * fields, each a string (the record IS the tuple's params), as
- * `useLive(c, { where })` reads it. `never` for a set declared without `by`,
- * which has one tuple and is read through its `{ ids }` sibling here.
- */
-export type OptimisticScopedQuery<B extends string> = [B] extends [never]
-  ? never
-  : { where: { readonly [K in B]: string } };
 
 /** A resolved read: the descriptor and its canonical params tuple. */
 export interface OptimisticSource<Data> {
@@ -81,7 +67,7 @@ export function resolveOptimisticSource<Data>(
         Data,
         Record<string, string>
       >,
-      params: rows.point.encode((query as OptimisticIdsQuery).ids),
+      params: rows.point.encode((query as LiveIdsQuery).ids),
     };
   }
   if (query !== undefined && "where" in query) {

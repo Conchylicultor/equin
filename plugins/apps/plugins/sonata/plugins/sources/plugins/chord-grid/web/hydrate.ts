@@ -1,5 +1,5 @@
 import { exposedColumns } from "@plugins/network/plugins/live/core";
-import { mapRow, useLiveRow } from "@plugins/network/plugins/live/web";
+import { mapRow, useLive } from "@plugins/network/plugins/live/web";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import { songLibrary } from "@plugins/apps/plugins/sonata/plugins/library/core";
 import type { SourceHydration } from "@plugins/apps/plugins/sonata/plugins/library/web";
@@ -18,9 +18,12 @@ const chordGrid = exposedColumns(songChordGridShape.exposure);
  * the chord-grid editor section stays hidden for such songs.
  */
 export function useHydration(songId: string): ResourceResult<SourceHydration> {
-  return mapRow(useLiveRow(songLibrary, songId), (song): SourceHydration => {
-    const chordText = song === null ? null : chordGrid.read(song).chordText;
-    if (chordText === null) return { kind: "absent" };
-    return { kind: "raw", raw: { text: chordText } satisfies ChordGridRaw };
-  });
+  return mapRow(
+    useLive(songLibrary, { id: songId }),
+    (song): SourceHydration => {
+      const chordText = song === null ? null : chordGrid.read(song).chordText;
+      if (chordText === null) return { kind: "absent" };
+      return { kind: "raw", raw: { text: chordText } satisfies ChordGridRaw };
+    },
+  );
 }

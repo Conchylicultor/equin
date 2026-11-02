@@ -6,7 +6,7 @@ import {
   useMountedSongId,
   useWriteSongSetting,
 } from "@plugins/apps/plugins/sonata/plugins/document/web";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { rhythms, type RhythmRow } from "../../shared/resources";
 
 /**
@@ -25,7 +25,7 @@ export function RhythmObserver() {
   const songId = useMountedSongId();
   const setGroove = useWriteSongSetting(grooveSetting);
   const failSetting = useFailSongSetting(grooveSetting);
-  const row = useLiveRow(rhythms, songId);
+  const row = useLive(rhythms, { id: songId });
   // The row read reduced to what the effect needs: whether it has settled, and
   // the row itself (the cache's own object, identity-stable until it changes) —
   // so the effect runs on a real change only.

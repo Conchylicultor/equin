@@ -187,7 +187,7 @@ serves them.
 
 - **`taskRows`** (`tasks`) — every task, the WHOLE ordered set
   (`liveCollection(key, { all })`, `rank` then `createdAt`, `preload: "boot"`),
-  read with `useLive(taskRows[, { select }])` / `useLiveRow(taskRows, id)`. The
+  read with `useLive(taskRows[, { select }])` / `useLive(taskRows, { id })`. The
   row is exactly `TaskListItem` (every `tasks_v` column but `description`),
   under the legacy key, so an old-bundle tab subscribing `{}` parses it with its
   own schema (C39, pinned by `tree-oracle.test.ts`); a row change must rename
@@ -204,7 +204,7 @@ serves them.
   conversation's `waiting_for`) nothing.
 - **`taskDescriptions`** (`task-descriptions`, lookup-only: `:rows`) — one
   task's `description`, the heavy text the set omits, by id
-  (`useLiveRow(taskDescriptions, id)`). A description autosave is that row's
+  (`useLive(taskDescriptions, { id })`). A description autosave is that row's
   refill, and also the task's one-row refill in `tasks` (the derived
   `updated_at` moves).
 - **The ended-conversation total** is `conversationsGone`'s own `:count`
@@ -311,7 +311,7 @@ serves them.
     collection's `:count`.
   - **`conversationsById`** (`conversations.by-id`, lookup-only: `:rows`) —
     any conversation by id, whatever its status or age
-    (`useLiveRow(conversationsById, id)`; `conversations/web`'s
+    (`useLive(conversationsById, { id })`; `conversations/web`'s
     `useConversation` / `useConversationById` and the conversation pane's
     resolver read it). It is what finds a done conversation older than the
     gone window (W9), with no REST fallback.

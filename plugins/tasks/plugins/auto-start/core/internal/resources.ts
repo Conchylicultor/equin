@@ -47,7 +47,7 @@ export type TaskAutoStartRow = z.infer<typeof TaskAutoStartRowSchema>;
 // the side-table's primary key IS the task (`taskId`, stored as `parent_id`) —
 // so it is a lookup-only collection: no default window (nothing lists every
 // task's marker), minting `tasks-auto-start:rows` alone. A reader asks with
-// `useLiveRow(taskAutoStart, taskId)`, and `found: false` is "not armed".
+// `useLive(taskAutoStart, { id: taskId })`, and `found: false` is "not armed".
 //
 // Every consumer asks about ONE task and needs an exact answer — the launch
 // option's select control both reads and writes this row — so a point read is

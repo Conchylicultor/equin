@@ -181,7 +181,7 @@ every launch automation. Read two ways:
 - `launchDecisions` (`automations.launch-decisions.all`), the whole ordered set
   (`all`, at most one row per task): a launch list joins it to every task it
   shows (`useLive(launchDecisions, { select })`); one task's is
-  `useLiveRow(launchDecisions, taskId)` (`useTaskApproval`).
+  `useLive(launchDecisions, { id: taskId })` (`useTaskApproval`).
 - EXPOSED (`launchDecisionShape.exposes`, served by
   `LiveColumns.Expose(tasksLaunchDecision)`): `decision` under the field id
   `approval` (**Approval**) in every list whose rows reach a task. No default:
@@ -322,10 +322,10 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `FieldPresentation.Register` "exposure:tasks_ext_launch_decision"
     - `FieldPresentation.Register` "exposure:tasks_ext_origin"
     - `Notifications.Action` "review-automation"
-  - Uses: 58 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 57 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×7
-    - `network/live` ×6
     - `primitives/live-state` ×6
+    - `network/live` ×5
     - `primitives/pane` ×5
     - `primitives/data-view` ×4
     - `config_v2` ×3

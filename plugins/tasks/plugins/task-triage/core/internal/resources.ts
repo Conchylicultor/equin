@@ -142,7 +142,7 @@ export type TaskTriageRow = z.infer<typeof TaskTriageRowSchema>;
 /**
  * The triage rows, read three ways from one declaration:
  *
- * - `useLiveRow(taskTriageReads, taskId)` — ONE task's triage (the card).
+ * - `useLive(taskTriageReads, { id: taskId })` — ONE task's triage (the card).
  *   `found: false` ⇒ not triaged.
  * - `useLive(taskTriageReads, { ids })` — the triage of the tasks a surface
  *   shows (the autopilot's launch list joins it to its candidates).
@@ -173,7 +173,7 @@ export const taskTriageNoteShape = defineExtensionShape({
 export const TaskTriageNoteRowSchema = taskTriageNoteShape.schema;
 export type TaskTriageNoteRow = z.infer<typeof TaskTriageNoteRowSchema>;
 
-/** One task's note: `useLiveRow(taskTriageNotes, taskId)` (`found: false` ⇒ none). */
+/** One task's note: `useLive(taskTriageNotes, { id: taskId })` (`found: false` ⇒ none). */
 export const taskTriageNotes = liveCollection("task-triage.notes", {
   from: taskTriageNoteShape,
   id: "taskId",

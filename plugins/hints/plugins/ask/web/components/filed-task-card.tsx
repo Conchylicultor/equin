@@ -1,4 +1,4 @@
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -39,7 +39,7 @@ export function FiledTaskCard({
   /** The title it was filed with — named when the task is gone. */
   title: string;
 }) {
-  const task = useLiveRow(taskRows, taskId);
+  const task = useLive(taskRows, { id: taskId });
   const runs = useTaskConversations([taskId]);
   const openPane = useOpenPane();
   if (task.status === "loading" || runs.status === "loading")

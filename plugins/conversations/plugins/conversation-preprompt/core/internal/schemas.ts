@@ -52,7 +52,7 @@ export type ConversationPreprompt = z.infer<typeof ConversationPrepromptSchema>;
 // key IS the conversation — so it is a lookup-only collection: no default
 // window (nothing lists every conversation's snapshot), minting
 // `conversation-preprompts:rows` alone. A reader takes its row with
-// `useLiveRow(conversationPrepromptRows, conversationId)`, and `found: false`
+// `useLive(conversationPrepromptRows, { id: conversationId })`, and `found: false`
 // is "launched without a preprompt".
 //
 // Bounded by construction: only a mounted chip / sidebar row subscribes, a

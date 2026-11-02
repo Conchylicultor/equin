@@ -1,7 +1,4 @@
-import {
-  useLiveRow,
-  type LiveRowResult,
-} from "@plugins/network/plugins/live/web";
+import { type LiveRowResult, useLive } from "@plugins/network/plugins/live/web";
 import {
   conversationPrepromptRows,
   type ConversationPreprompt,
@@ -16,5 +13,5 @@ import {
 export function useConversationPreprompt(
   conversationId: string,
 ): LiveRowResult<ConversationPreprompt> {
-  return useLiveRow(conversationPrepromptRows, conversationId);
+  return useLive(conversationPrepromptRows, { id: conversationId });
 }

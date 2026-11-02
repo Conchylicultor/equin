@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { reportsList, type Report } from "@plugins/reports/core";
 import { investigate } from "@plugins/reports/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
@@ -75,7 +75,7 @@ function ReportFixNotificationControl({
   label,
 }: NotificationActionControlProps) {
   const { reportId } = FixPayloadSchema.parse(payload);
-  const read = useLiveRow(reportsList, reportId);
+  const read = useLive(reportsList, { id: reportId });
   if (read.status === "loading" || read.status === "error" || !read.found) {
     return null;
   }

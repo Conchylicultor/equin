@@ -1,6 +1,5 @@
 import {
   useLive,
-  useLiveRow,
   type LiveListResult,
   type LiveRowResult,
 } from "@plugins/network/plugins/live/web";
@@ -25,5 +24,5 @@ export function useBlockPromptTasks(
 export function usePromptTaskLink(
   taskId: string,
 ): LiveRowResult<PromptTaskLink> {
-  return useLiveRow(promptBlockTasks, taskId);
+  return useLive(promptBlockTasks, { id: taskId });
 }

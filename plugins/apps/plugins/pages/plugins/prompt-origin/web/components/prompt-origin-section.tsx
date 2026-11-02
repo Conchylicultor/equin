@@ -1,4 +1,4 @@
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
@@ -29,7 +29,7 @@ function useOriginPage(
   // The page row is looked up only once the link names it.
   const linked =
     origin.status === "ready" && origin.found ? origin.row.pageId : null;
-  const page = useLiveRow(pagesTree, linked);
+  const page = useLive(pagesTree, { id: linked });
 
   if (linked === null) return null;
   if (page.status === "loading" || page.status === "error") return null;

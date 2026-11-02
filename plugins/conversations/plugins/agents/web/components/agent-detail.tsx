@@ -12,7 +12,7 @@ import {
   foldResource,
   ResourceView,
 } from "@plugins/primitives/plugins/live-state/web";
-import { mapRow, useLive, useLiveRow } from "@plugins/network/plugins/live/web";
+import { mapRow, useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   SectionLabel,
@@ -62,7 +62,7 @@ async function patchAgent(
 }
 
 export function AgentDetail({ agentId }: { agentId: string }) {
-  const agentResult = mapRow(useLiveRow(agentRows, agentId), (row) => row);
+  const agentResult = mapRow(useLive(agentRows, { id: agentId }), (row) => row);
   return (
     <ResourceView resource={agentResult} fallback={<Loading variant="text" />}>
       {(agent) => {

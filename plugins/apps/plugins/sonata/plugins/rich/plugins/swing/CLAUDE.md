@@ -18,7 +18,7 @@
     - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
     - `infra/endpoints.useFetchEndpoint`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
     - `primitives/css/fill.Fill`
     - `primitives/css/slider.Slider`
     - `primitives/css/spacing.Stack`

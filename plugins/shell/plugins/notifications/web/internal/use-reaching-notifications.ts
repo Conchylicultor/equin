@@ -21,7 +21,7 @@ export type NotificationsWhere = LiveWhereObject<NotificationsFilterable>;
 function useScopedWhere(where: NotificationsWhere | undefined) {
   const audience = useAudience();
   const scope = audience.status === "ready" ? audienceScope(audience.data) : {};
-  const scoped = { ...scope, ...where };
+  const scoped: NotificationsWhere = { ...scope, ...where };
   const gate =
     audience.status === "loading"
       ? { status: "loading" as const, refetch: audience.refetch }

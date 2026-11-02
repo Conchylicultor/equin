@@ -1,5 +1,5 @@
 /**
- * `useLive(all[, { select }])` / `useLiveRow(all, id)` over a
+ * `useLive(all[, { select }])` / `useLive(all, { id })` over a
  * `createLiveStateHarness` (the use-live.test.tsx harness). A push
  * is the client's own write: a full value is `setQueryData` on the param-less
  * tuple (what a sub-ack does), a delta is `mergeKeyedDelta` over the cached
@@ -51,8 +51,11 @@ import {
   createLiveStateHarness,
   mergeKeyedDelta,
 } from "@plugins/primitives/plugins/live-state/web/testing";
-import { liveCollection } from "@plugins/network/plugins/live/core";
-import { useLive, useLiveRow } from "@plugins/network/plugins/live/web";
+import {
+  COLLECTION_KIND_KEYS,
+  liveCollection,
+} from "@plugins/network/plugins/live/core";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
   testTransport,
   transportWrapper,
@@ -319,7 +322,7 @@ describe("useLive(all)", () => {
     expect(readyData(first.result.current)).toBe(cached);
   });
 
-  it("an id read goes to `:rows`, not to the whole set — useLive(all, { ids }) and useLiveRow(all, id)", async () => {
+  it("an id read goes to `:rows`, not to the whole set — useLive(all, { ids }) and useLive(all, { id })", async () => {
     const c = allCollection();
     const live = createLiveStateHarness();
     const rowsKey = (ids: string) => queryKeyFor(c.rows.key, { ids });
@@ -327,7 +330,7 @@ describe("useLive(all)", () => {
     live.queryClient.setQueryData(rowsKey("c"), [ROWS[2]!]);
     const { result } = mount(live.Wrapper, () => ({
       ids: useLive(c, { ids: ["b", "a"] }),
-      row: useLiveRow(c, "c"),
+      row: useLive(c, { id: "c" }),
     }));
     await waitFor(() => expect(result.current.row.status).toBe("ready"));
     expect(readyData(result.current.ids)).toEqual([ROWS[0], ROWS[1]]);
@@ -431,6 +434,71 @@ describe("useLive(scoped, { where }) — a set declared `all: { by }`", () => {
     ).toThrow(/`where` on a set declared without `all.by`/);
   });
 
+  it("an untyped id read with a `select` throws instead of dropping either", () => {
+    const whole = allCollection();
+    const live = createLiveStateHarness();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const select = (rows: Row[]) => rows.length;
+    expect(() =>
+      mount(live.Wrapper, () =>
+        useLive(whole, { ids: ["a"], select } as unknown as { ids: string[] }),
+      ),
+    ).toThrow(/names `ids` and `select`/);
+    expect(() =>
+      mount(live.Wrapper, () =>
+        useLive(whole, { id: "a", select } as unknown as { id: string }),
+      ),
+    ).toThrow(/names `id` and `select`/);
+  });
+
+  it("an untyped query naming two kind keys throws, whichever two", () => {
+    const counted = liveCollection(`test.use-live-all.counted.${seq++}`, {
+      fields: ROW_FIELDS,
+      id: "id",
+      sortable: ["rank"],
+      default: { orderBy: [["rank", "asc"]], limit: 2 },
+      maxLimit: 4,
+      count: true,
+    });
+    const values = {
+      id: "a",
+      ids: ["a"],
+      count: true,
+      groupBy: "title",
+      select: (rows: Row[]) => rows.length,
+    } as const;
+    const live = createLiveStateHarness();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    for (const [i, a] of COLLECTION_KIND_KEYS.entries()) {
+      for (const b of COLLECTION_KIND_KEYS.slice(i + 1)) {
+        const query = { [a]: values[a], [b]: values[b] };
+        expect(() =>
+          mount(live.Wrapper, () =>
+            useLive(counted, query as unknown as { limit: number }),
+          ),
+        ).toThrow(new RegExp(`names \`${a}\` and \`${b}\``));
+      }
+    }
+  });
+
+  it("an untyped `select` on a collection not declared `all` throws instead of dropping it", () => {
+    const windowed = liveCollection(`test.use-live-all.window.${seq++}`, {
+      fields: ROW_FIELDS,
+      id: "id",
+      sortable: ["rank"],
+      default: { orderBy: [["rank", "asc"]], limit: 2 },
+      maxLimit: 4,
+    });
+    const live = createLiveStateHarness();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const select = (rows: Row[]) => rows.length;
+    expect(() =>
+      mount(live.Wrapper, () =>
+        useLive(windowed, { limit: 2, select } as unknown as { limit: number }),
+      ),
+    ).toThrow(/`select` slices a collection declared `all`/);
+  });
+
   it("types: the scope is exactly the `by` fields, each a string; a scoped set has no param-less read", () => {
     const c = scopedCollection();
     const whole = allCollection();
@@ -457,7 +525,7 @@ describe("useLive(scoped, { where }) — a set declared `all: { by }`", () => {
       useLive(whole, { where: { pageId } });
       // Id reads are global, whatever the scope.
       const byId = useLive(c, { ids: ["a"] });
-      const row = useLiveRow(c, "a");
+      const row = useLive(c, { id: "a" });
       return [rows, n, byId, row];
     };
     expect(typeof useTypeOnly).toBe("function");

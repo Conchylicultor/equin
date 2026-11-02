@@ -5,7 +5,7 @@ import {
   useMountedSongId,
   useWriteSongSetting,
 } from "@plugins/apps/plugins/sonata/plugins/document/web";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { transposes } from "../../shared/resources";
 
 /**
@@ -22,7 +22,7 @@ export function TransposeObserver() {
   const songId = useMountedSongId();
   const setTranspose = useWriteSongSetting(transposeSetting);
   const failSetting = useFailSongSetting(transposeSetting);
-  const row = useLiveRow(transposes, songId);
+  const row = useLive(transposes, { id: songId });
   // The row read reduced to the value it settles to — `undefined` while it is
   // loading — so the effect below runs on a real change only.
   // A failed read settles only from its last-seen row (`stale`); with none the

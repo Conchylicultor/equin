@@ -8,7 +8,7 @@ import {
   STUCK_TURN_WAITING_FOR,
   type ConversationEntry,
 } from "@plugins/conversations/core";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { WithTooltip } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
@@ -104,7 +104,7 @@ function UnknownChip({
 // session) or Failed to start (its spawn job recorded a failure) — which one is
 // not known until the failure row is read, so nothing renders before.
 function GoneChip({ conversationId }: { conversationId: string }) {
-  const failure = useLiveRow(spawnFailureRows, conversationId);
+  const failure = useLive(spawnFailureRows, { id: conversationId });
   if (failure.status === "loading") return null;
   if (failure.status === "error")
     return (

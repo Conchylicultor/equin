@@ -109,6 +109,10 @@ export interface LiveQuery<F, S extends string> {
   groupBy?: never;
   /** A total is its own query shape — {@link LiveCountQuery}. */
   count?: never;
+  /** One row is its own query shape — {@link LiveRowQuery}. */
+  id?: never;
+  /** An id set is its own query shape — {@link LiveIdsQuery}. */
+  ids?: never;
 }
 
 /** The domains a grouping may group on — one chip per scalar value. */
@@ -146,6 +150,8 @@ export interface LiveGroupQuery<
    */
   columns?: readonly LiveColumnsDeclaration[];
   orderBy?: never;
+  id?: never;
+  ids?: never;
 }
 
 /**
@@ -162,7 +168,51 @@ export interface LiveCountQuery<F> {
   groupBy?: never;
   orderBy?: never;
   limit?: never;
+  id?: never;
+  ids?: never;
 }
+
+/**
+ * An explicit id set (`useLive(c, { ids })`): the rows of the `:rows` point
+ * sibling for the ids that exist, unordered. No filter, order or bound
+ * applies — an id set is not a window.
+ */
+export interface LiveIdsQuery {
+  ids: readonly string[];
+  id?: never;
+  where?: never;
+  orderBy?: never;
+  limit?: never;
+  groupBy?: never;
+  count?: never;
+  columns?: never;
+}
+
+/**
+ * One row by id (`useLive(c, { id })`): the `:rows` point sibling at a
+ * one-id set. `null` — or an id no point set can carry (`""`, one holding a
+ * `,`) — is a determinate not-found from the first render, nothing read.
+ */
+export interface LiveRowQuery {
+  id: string | null;
+  ids?: never;
+  where?: never;
+  orderBy?: never;
+  limit?: never;
+  groupBy?: never;
+  count?: never;
+  columns?: never;
+}
+
+/**
+ * The scope of a collection declared `all: { by }` (`useLive(c, { where })`):
+ * exactly its `by` fields, each a string — a `Filter` tree, an op, a missing
+ * or an extra field is a tsc error. The record IS the tuple's params. `never`
+ * for a set declared without `by`, which has one tuple.
+ */
+export type LiveScopedAllQuery<B extends string> = [B] extends [never]
+  ? never
+  : { where: { readonly [K in B]: string }; id?: never; ids?: never };
 
 /** One group: a value of the grouped column (NULL is its own group) and how many rows carry it. */
 export interface LiveGroup<V> {
@@ -179,6 +229,24 @@ export interface LiveGroup<V> {
 export type LiveGroupValue<Row, G extends string> = G extends keyof Row
   ? NonNullable<Row[G]>
   : never;
+
+/**
+ * The keys that name WHAT a collection query reads, most specific first: one
+ * row, an id set, a total, a grouping, an `all` set's slice. A query holds at
+ * most one of them (by value: a key holding `undefined` is absent); none is a
+ * window, or an `all` set's whole set / scope. The one precedence list — the
+ * runtime dispatch (`useLive`'s `readKindOf`) and the result type both read it.
+ */
+export const COLLECTION_KIND_KEYS = [
+  "id",
+  "ids",
+  "count",
+  "groupBy",
+  "select",
+] as const;
+
+/** One key of {@link COLLECTION_KIND_KEYS}. */
+export type CollectionKindKey = (typeof COLLECTION_KIND_KEYS)[number];
 
 /** Default number of groups a grouping query returns. */
 export const LIVE_GROUP_DEFAULT_LIMIT = 50;

@@ -36,7 +36,7 @@ column is a real answer here: releases have no trigger notion.
 ## Rows activate into the Studio run-detail pane
 
 `releaseDetailPane` (Studio) is keyed by run id and nothing else — every section
-it hosts (info / logs / artifact) reads `useLiveRow(releaseRuns, id)` — so this
+it hosts (info / logs / artifact) reads `useLive(releaseRuns, { id })` — so this
 arm's `open` is the same two lines build's is, over the id the ledger row already
 carries.
 

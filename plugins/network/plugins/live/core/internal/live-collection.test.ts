@@ -321,7 +321,7 @@ describe("liveCollection — the `all` overload (C16, C39, T13)", () => {
       const whole = liveCollection("t.h", { fields: F, id: "id", all });
       // @ts-expect-error — a whole set is not a lookup-only collection (serveCollection's lookup arm)
       const _lookup: LiveLookupCollection<z.infer<typeof Row>> = whole;
-      // A whole set is still read by id (`useLive(c, { ids })`, `useLiveRow`).
+      // A whole set is still read by id (`useLive(c, { ids })`, `useLive(c, { id })`).
       const _rows: LiveRowsCollection<z.infer<typeof Row>> = whole;
       void _lookup;
       void _rows;
@@ -397,7 +397,7 @@ describe("liveCollection — a scoped `all` (`all: { by }`)", () => {
       ],
       [
         { ...base, all: { ...all, by: ["id"] } },
-        /`all.by` names the id "id" — a scope of one row is a point read/,
+        /`all.by` names the id "id" — a scope of one row is a row read/,
       ],
       [
         { ...base, all: { ...all, by: ["pageId", "pageId"] } },

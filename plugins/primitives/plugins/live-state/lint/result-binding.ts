@@ -12,7 +12,6 @@ import type { TSESLint } from "@typescript-eslint/utils";
 const RESULT_READS = new Set([
   "useResource",
   "useLive",
-  "useLiveRow",
   "combineResources",
   "useCombinedResources",
   "useConfigResult",

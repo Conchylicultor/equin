@@ -64,7 +64,6 @@ pins and photo wash); this plugin owns the contract and the page-side entry.
     - `apps/places/places-core.usePlaces`
     - `network/live.mapRow`
     - `network/live.useLive`
-    - `network/live.useLiveRow`
     - `page/map.PageMap`
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture.activationProps`

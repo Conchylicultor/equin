@@ -20,7 +20,7 @@ lookup-only collection `conversationPrepromptRows` (`liveCollection(
 "conversation-preprompts", { row, id: "conversationId" })`, minting
 `conversation-preprompts:rows` alone), served by `serveCollection` from the
 extension handle. A reader subscribes to its one conversation
-(`useLiveRow(conversationPrepromptRows, conversationId)` → pending / found /
+(`useLive(conversationPrepromptRows, { id: conversationId })` → pending / found /
 not found) so a read costs O(1) rather than an O(n) lookup over the whole
 table, and a write reaches only that conversation's subscribers. It is not
 preloaded (a lookup-only collection cannot be): the row hydrates one
@@ -52,7 +52,7 @@ the preprompts library and task-preprompt) and passes the item in.
     - `conversations/preprompts.prepromptsConfig`
     - `conversations/preprompts.usePreprompt`
     - `network/live.LiveRowResult`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
     - `primitives/css/scroll.Scroll`

@@ -1,7 +1,4 @@
-import {
-  useLiveRow,
-  type LiveRowResult,
-} from "@plugins/network/plugins/live/web";
+import { type LiveRowResult, useLive } from "@plugins/network/plugins/live/web";
 import { taskEfforts, type TaskEffort } from "../shared/schemas";
 
 /**
@@ -10,5 +7,5 @@ import { taskEfforts, type TaskEffort } from "../shared/schemas";
  * pending arm, so a set mode can never read as unset.
  */
 export function useTaskEffort(taskId: string): LiveRowResult<TaskEffort> {
-  return useLiveRow(taskEfforts, taskId);
+  return useLive(taskEfforts, { id: taskId });
 }

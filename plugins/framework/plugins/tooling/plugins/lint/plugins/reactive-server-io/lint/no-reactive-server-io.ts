@@ -6,8 +6,8 @@ import type { TSESTree } from "@typescript-eslint/utils";
  *
  * Tripwire for a specific class of bug: a client `useEffect` / `useLayoutEffect`
  * that performs server I/O (toast/fetch/endpoint/query mutations) while reacting
- * to SHARED SERVER STATE. Live-state pushes (useLive / useLiveRow / useResource /
- * subscribeWsStatus resources) fan out to EVERY open browser tab,
+ * to SHARED SERVER STATE. Live-state pushes (useLive / useResource / subscribeWsStatus
+ * resources) fan out to EVERY open browser tab,
  * so an effect that reacts to such a value and calls a write/IO fires N times —
  * once per tab — duplicating the I/O.
  *
@@ -26,7 +26,7 @@ import type { TSESTree } from "@typescript-eslint/utils";
  *       the effect's dependency array (or, if there is no dep array, the callback
  *       body) references at least one binding whose initializer is — directly or
  *       transitively through other local bindings — a call to a "shared-state hook":
- *       useLive | useLiveRow | useResource | subscribeWsStatus |
+ *       useLive | useResource | subscribeWsStatus |
  *       any use*Resource(s) hook.
  */
 
@@ -44,13 +44,12 @@ const SERVER_IO_NAMES = new Set([
 
 /**
  * Hook names whose result is (or carries) shared, cross-tab server state.
- * `useLive` / `useLiveRow` are network/live's reads (a value, a collection
- * window, a grouping, an id set, one row); neither ends in `Resource`, so the
- * naming convention below cannot catch them.
+ * `useLive` is network/live's one read (a value, a collection window, a
+ * grouping, a count, an id set, one row by id); it does not end in
+ * `Resource`, so the naming convention below cannot catch it.
  */
 const SHARED_STATE_HOOK_NAMES = new Set([
   "useLive",
-  "useLiveRow",
   "useResource",
   "subscribeWsStatus",
 ]);

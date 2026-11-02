@@ -85,7 +85,7 @@ converged and running an install no row describes any more.
   `deploy_deployments`, served by `serveCollection` (declared by FIELDS — `serverId` listed,
   the rest of `DeploymentSchema`'s keys carried; the change feed drives it). One deployment — the
   pane's resolve and title, the overview, and the sibling plugins' sections — is
-  `useLiveRow(deployments, deploymentId)`, whose `found: false` is "this
+  `useLive(deployments, { id: deploymentId })`, whose `found: false` is "this
   deployment no longer exists". A server's list is `useLive(deployments, {
   where: { serverId } })`; `serverId` is the one listed (filterable) field; the section's DataView hides it
   and its `composition` / `run` fields are the list's own (`extraFields`). The
@@ -448,7 +448,7 @@ default, a left rail revealing each (`useRevealSection`).
     - `DeploymentDetail.Section` "Danger zone" → `DangerZone`
     - `DeploymentItemActions` "deploy" → `DeployAction`
     - `DeploymentItemActions` "delete" → `DeleteDeploymentAction`
-  - Uses: 82 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 81 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×14
     - `primitives/data-view` ×7
     - `primitives/live-state` ×6
@@ -456,7 +456,6 @@ default, a left rail revealing each (`useRevealSection`).
     - `apps/deploy/servers` ×5
     - `primitives/slot-render` ×4
     - `infra/endpoints` ×3
-    - `network/live` ×2
     - `primitives/app-shell` ×2
     - `primitives/css/badge` ×2
     - `primitives/css/spacing` ×2
@@ -464,6 +463,7 @@ default, a left rail revealing each (`useRevealSection`).
     - `apps/deploy/health.useServerHealth`
     - `apps/deploy/shell.Deploy`
     - `ids.IdKinds`
+    - `network/live.useLive`
     - `plugin-meta/composition.useManifestItems`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/bouncing-dots.BouncingDots`

@@ -44,7 +44,7 @@ same `SlowEvents.View` slot; it fans out across every worktree DB fork.
     - `primitives/pane` ×3
     - `apps-core/tabs.useAppLink`
     - `debug/trace/pane.SlowEvents`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/link-chip.LinkChip`

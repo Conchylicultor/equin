@@ -30,7 +30,7 @@ import { ResourceError, type ResourceUnavailable } from "../core";
 import type { ResourceResult } from "./use-resource";
 
 /**
- * Anything gateable on readiness: a `useResource` / `useLive` / `useLiveRow`
+ * Anything gateable on readiness: a `useResource` / `useLive`
  * result, a `combineResources` result, a `useOptimisticResource` result — any
  * value naming its state by `status`, whose `error` arm carries the failure
  * (and, for a gate that reads values, whose `ready` arm carries `data`). A

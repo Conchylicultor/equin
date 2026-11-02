@@ -1618,8 +1618,8 @@ order:
    A property set by both a picked field's collection and its entity throws;
 6. else the type's `DataViewSlots.Cell`.
 
-- **Hand `fields` over DB rows has no spelling** (tsc): rows from `useLive` /
-  `useLiveRow` are `CollectionRow`, refused by the hand-`fields` arm — use
+- **Hand `fields` over DB rows has no spelling** (tsc): rows from `useLive`
+  (row reads included) are `CollectionRow`, refused by the hand-`fields` arm — use
   `collection=`. Pinned by `core/internal/data-origin-types.test.ts`,
   `web/internal/body-types.test.ts`.
 - A list then says only what it changes:

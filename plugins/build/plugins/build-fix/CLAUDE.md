@@ -15,7 +15,6 @@
     - `network/live.LiveRowResult`
     - `network/live.LiveUnavailable`
     - `network/live.useLive`
-    - `network/live.useLiveRow`
     - `primitives/launch/investigate.InvestigateAction`
     - `shell/notifications.Notifications`
 

@@ -1,4 +1,4 @@
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import { rowReferent } from "@plugins/active-data/plugins/id-chip/web";
@@ -8,7 +8,7 @@ import type { IdReferentState } from "@plugins/ids/web";
 
 /** An event source's chip title — its name — from the by-id row read. */
 export function useEventSourceReferent(id: string): IdReferentState {
-  return rowReferent(useLiveRow(eventSources, id), (s) => s.name);
+  return rowReferent(useLive(eventSources, { id }), (s) => s.name);
 }
 
 /** The link to the source's detail pane beside the surface holding the id (`push`). */

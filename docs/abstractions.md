@@ -40,7 +40,7 @@ Level-triggered server-to-client state synchronization.
 - **Push / on-demand delivery** — by default the new value is sent inline on the socket; a value declared `load: "on-demand"` sends only a version stamp and each tab re-fetches over HTTP.
 - **Notifications WebSocket** — single `/ws/notifications` socket multiplexes all resource subscriptions.
 - **Notifications client** — leader-elected, cross-tab-shared client that owns the socket and writes into TanStack Query.
-- **`useLive` / `useLiveRow` hooks** — client-side consumers (a value, a collection query, one row); pending until the server answers, with automatic reconnect and cross-tab sync.
+- **`useLive` hook** — the client-side consumer (a value, a collection query, one row by `{ id }`); pending until the server answers, with automatic reconnect and cross-tab sync.
 - **Resource runtime** — what both compile to: `defineResource` on the server, `useResource` on the client (TanStack Query), also used directly by the few resources not yet on the unified API.
 - **HTTP fallback** — every resource is also reachable at `GET /api/resources/:key/...` for curl, SSR, or WS-down scenarios.
 - **Change routing** — a `source: "db"` loader's read-set is captured at the DB pool, so any commit to a table it read recomputes it; an external value calls `notify()`.

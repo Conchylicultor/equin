@@ -44,7 +44,7 @@ export type BuildRun = z.infer<typeof BuildRunSchema>;
  *   every run in the default window keeps its profile and logs. `maxLimit` is
  *   twice the page only because every window is read as key-range pages, and
  *   a page that splits is read at `2 · default.limit`.
- * - A run's detail reads one row (`useLiveRow(buildHistory, runId)`), which
+ * - A run's detail reads one row (`useLive(buildHistory, { id: runId })`), which
  *   reads the point sibling — so a run older than the newest 50 is still found
  *   (its pruned logs read as empty, never as broken).
  *

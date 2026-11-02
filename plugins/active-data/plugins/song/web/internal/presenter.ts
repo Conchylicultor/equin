@@ -1,4 +1,4 @@
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useAppLink } from "@plugins/apps-core/plugins/tabs/web";
 import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import { rowReferent } from "@plugins/active-data/plugins/id-chip/web";
@@ -13,7 +13,7 @@ import type { IdReferentState } from "@plugins/ids/web";
 /** A song's chip title — its title — from the library's by-id row read. */
 export function useSongReferent(id: string): IdReferentState {
   return rowReferent(
-    useLiveRow(songLibrary, songIdKind.key(id)),
+    useLive(songLibrary, { id: songIdKind.key(id) }),
     (song) => song.title,
   );
 }

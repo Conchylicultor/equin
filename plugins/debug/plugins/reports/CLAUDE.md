@@ -11,7 +11,7 @@ collection read as live key-range pages, whose sort / filter / search compile
 to SQL server-side, with the
 Kind and Source filter options read live as its facets (a grouping of the whole
 table, value-sorted). The detail pane — and its route resolve — reads one row
-with `useLiveRow(reportsList, id)`.
+with `useLive(reportsList, { id })`.
 
 Nothing refetches: the `reports` table's in-process change producer routes the
 ids of every write (a new report, a repeat moving a count, a noise flip, a
@@ -60,7 +60,7 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
     - `apps/debug/shell.DebugApp`
     - `build.useStaleFrontend`
     - `infra/endpoints.useFetchEndpoint`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/cluster.Cluster`

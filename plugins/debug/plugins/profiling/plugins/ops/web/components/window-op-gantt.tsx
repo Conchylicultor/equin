@@ -1,4 +1,5 @@
 import { type ReactElement, type ReactNode } from "react";
+import type { LiveWhereOf } from "@plugins/network/plugins/live/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -34,12 +35,12 @@ export function WindowOpGantt({
   const start = new Date(span.startMs).toISOString();
   // An op overlaps the span when it was requested inside it, or requested
   // before it and completed inside it.
-  const overlaps = {
+  const overlaps: LiveWhereOf<typeof opsHistory> = {
     or: [
       { column: "requestedAt", op: "gte", operand: start },
       { column: "completedAt", op: "gte", operand: start },
     ],
-  } as const;
+  };
   const result = useLive(opsHistory, {
     where:
       span.endMs === null

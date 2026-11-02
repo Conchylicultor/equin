@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
@@ -34,7 +34,7 @@ const historyIcon = symbol("history");
  */
 export function EditedHistoryAction() {
   const { pageId } = pageDetailPane.useParams();
-  const result = useLiveRow(pagesTree, pageId);
+  const result = useLive(pagesTree, { id: pageId });
   const [open, setOpen] = useState(false);
   switch (result.status) {
     case "loading":

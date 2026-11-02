@@ -4,8 +4,8 @@ Rationale (why each rule is so, rejected alternatives): [DESIGN.md](DESIGN.md) �
 
 The client half of live resources:
 
-- `useResource` — the substrate `network/live`'s `useLive` / `useLiveRow`
-  compile to.
+- `useResource` — the substrate `network/live`'s `useLive` compiles
+  to.
 - `NotificationsClient` over the tab-shared `/ws/notifications` socket.
 - The TanStack Query cache it writes.
 
@@ -43,7 +43,7 @@ Whenever you touch `notifications-client.ts`, `shared-websocket.ts` or
     canonicalize, so the sub, HTTP URL, prime and query key name the same tuple.
 - **`params === null` is the skip**: hooks run, nothing is
   observed/fetched/counted (`queryFn` is `skipToken`); result is `loading`.
-  - Public: `useLive(value, null)`, `useLiveRow(c, null)`.
+  - Public: `useLive(value, null)`, `useLive(c, { id: null })`.
 - **No descriptor has a placeholder.** A query holds no data until the first
   value (`dataUpdatedAt === 0` ⇒ `loading`).
   - A pushed query stays disabled until a value lands (no HTTP fetch on mount;
@@ -424,7 +424,7 @@ A collection is a `liveCollection` (`network/live`):
 
 - declare in `core/`;
 - serve with `serveCollection`;
-- read with `useLive(c, query?)` / `useLive(c, { ids })` / `useLiveRow(c, id)`.
+- read with `useLive(c, query?)` / `useLive(c, { ids })` / `useLive(c, { id })`.
 
 A set read whole is a collection declared `all`, never an unbounded descriptor.
 
@@ -456,7 +456,7 @@ within the window cancels it with zero WS traffic.
 
 ## A read is `loading`, `error` or `ready`; an unknown value is `Resolvable`
 
-Every read (`useResource`, `useLive`, `useLiveRow`, `useConfigResult`,
+Every read (`useResource`, `useLive`, `useConfigResult`,
 `combineResources`, `mapResource`) returns:
 
 ```ts
@@ -590,7 +590,8 @@ const all = useCombinedResources({ conv, ranks, tasks });
     `loadMore`; `LiveListResult<Row>` is `PagedResourceResult<Row>`); a failed
     next page is the error arm with `stale`.
 - **Domain hooks keep every arm.** Never return bare `T | null`.
-  - One row: return `useLiveRow`'s `LiveRowResult` as is (ready splits into
+  - One row: return the row read's (`useLive(c, { id })`)
+    `LiveRowResult` as is (ready splits into
     `found: true` / `found: false`).
   - Other narrowing: `ResourceResult<T | null>` via `mapResource(r, fn)`.
 - **Feed only whole-resource results into gates** — never a `select` result; use
@@ -599,7 +600,7 @@ const all = useCombinedResources({ conv, ranks, tasks });
 ## Slice selectors (`useResource(resource, params, { select })`)
 
 Available on `useResource` and `useLive(all, { select })` (always gated). A
-window/value `useLive` has no `select`: one row is `useLiveRow`, a derivation is
+window/value `useLive` has no `select`: one row is `useLive(c, { id })`, a derivation is
 a `useMemo`.
 
 `select` re-renders the component only when the selected slice changes. Pass a

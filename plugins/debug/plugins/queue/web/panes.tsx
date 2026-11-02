@@ -9,7 +9,7 @@ import {
   useOpenPane,
   type ResolveResult,
 } from "@plugins/primitives/plugins/pane/web";
-import { useLive, useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { deadJobs, jobRuns, jobs } from "@plugins/infra/plugins/jobs/core";
 import {
@@ -193,8 +193,8 @@ function TabBody({ tab }: { tab: QueueTab }): ReactElement {
 function useResolveJobRow({ jobRowId }: { jobRowId: string }): ResolveResult {
   const key = parseJobKey(jobRowId);
   const liveId = key?.kind === "live" ? key.id : null;
-  const queueRow = useLiveRow(jobs, liveId);
-  const run = useLiveRow(jobRuns, key?.kind === "run" ? key.id : null);
+  const queueRow = useLive(jobs, { id: liveId });
+  const run = useLive(jobRuns, { id: key?.kind === "run" ? key.id : null });
   const followed = useLive(
     liveId === null ? null : jobRuns,
     liveId === null ? null : { count: true, where: { jobId: liveId } },
@@ -215,10 +215,10 @@ function useJobRowTitle({
   // for a queue row followed into History.
   const key = parseJobKey(jobRowId);
   const queueRow = rowOrStale(
-    useLiveRow(jobs, key?.kind === "live" ? key.id : null),
+    useLive(jobs, { id: key?.kind === "live" ? key.id : null }),
   );
   const run = rowOrStale(
-    useLiveRow(jobRuns, key?.kind === "run" ? key.id : null),
+    useLive(jobRuns, { id: key?.kind === "run" ? key.id : null }),
   );
   return (queueRow ?? run)?.jobName;
 }
@@ -260,7 +260,7 @@ function useRunTarget(): (key: string) => LinkTarget {
 
 /** A queue row's detail — or, once it has left the queue, the run it became. */
 function QueueRowDetail({ graphileId }: { graphileId: string }) {
-  const read = useLiveRow(jobs, graphileId);
+  const read = useLive(jobs, { id: graphileId });
   const runTarget = useRunTarget();
   // A running row's duration is read against this clock; its cells tick on
   // their own.
@@ -326,7 +326,7 @@ function FollowedRun({ graphileId }: { graphileId: string }) {
 
 /** A recorded run's detail. */
 function RunDetailById({ runId }: { runId: string }) {
-  const read = useLiveRow(jobRuns, runId);
+  const read = useLive(jobRuns, { id: runId });
   const runTarget = useRunTarget();
   const run = rowOrStale(read);
   if (run !== undefined) {
@@ -355,11 +355,11 @@ function RunDetailById({ runId }: { runId: string }) {
 // ─── Dead detail ───────────────────────────────────────────────────────────
 
 function useResolveDeadJob({ deadId }: { deadId: string }): ResolveResult {
-  return resolveRow(useLiveRow(deadJobs, deadId));
+  return resolveRow(useLive(deadJobs, { id: deadId }));
 }
 
 function useDeadJobTitle({ deadId }: { deadId: string }): string | undefined {
-  const row = useLiveRow(deadJobs, deadId);
+  const row = useLive(deadJobs, { id: deadId });
   return row.status === "ready" && row.found ? row.row.jobName : undefined;
 }
 
@@ -374,7 +374,7 @@ export const deadDetailPane = Pane.define({
 
 function DeadDetailBody(): ReactElement {
   const { deadId } = deadDetailPane.useParams();
-  const job = rowOrStale(useLiveRow(deadJobs, deadId));
+  const job = rowOrStale(useLive(deadJobs, { id: deadId }));
   return (
     <PaneChrome pane={deadDetailPane}>
       <Inset pad="md">
@@ -391,7 +391,7 @@ function useResolveEmission({
 }: {
   emissionId: string;
 }): ResolveResult {
-  return resolveRow(useLiveRow(eventEmissions, emissionId));
+  return resolveRow(useLive(eventEmissions, { id: emissionId }));
 }
 
 function useEmissionTitle({
@@ -399,7 +399,7 @@ function useEmissionTitle({
 }: {
   emissionId: string;
 }): string | undefined {
-  const row = useLiveRow(eventEmissions, emissionId);
+  const row = useLive(eventEmissions, { id: emissionId });
   return row.status === "ready" && row.found ? row.row.eventName : undefined;
 }
 
@@ -414,7 +414,7 @@ export const emissionDetailPane = Pane.define({
 
 function EmissionDetailBody(): ReactElement {
   const { emissionId } = emissionDetailPane.useParams();
-  const emission = rowOrStale(useLiveRow(eventEmissions, emissionId));
+  const emission = rowOrStale(useLive(eventEmissions, { id: emissionId }));
   const triggers = useLive(eventTriggers);
   return (
     <PaneChrome pane={emissionDetailPane}>

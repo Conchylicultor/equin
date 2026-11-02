@@ -20,12 +20,7 @@ export const RESULT_CONSTRUCTORS: readonly ResultConstructor[] = [
   {
     name: "useLive",
     from: "@plugins/network/plugins/live/web",
-    use: "read a liveCollection window / grouping / id set, or a liveValue",
-  },
-  {
-    name: "useLiveRow",
-    from: "@plugins/network/plugins/live/web",
-    use: "read one row of a liveCollection by id (found / absent)",
+    use: "read a liveCollection window / grouping / count / id set / one row by id (`{ id }`: found / absent), or a liveValue",
   },
   {
     name: "useResource",
@@ -51,7 +46,7 @@ export const RESULT_CONSTRUCTORS: readonly ResultConstructor[] = [
   {
     name: "mapRow",
     from: "@plugins/network/plugins/live/web",
-    use: "reduce a useLiveRow read to a ResourceResult of what the row means",
+    use: "reduce a row read (`useLive(c, { id })`) to a ResourceResult of what the row means",
   },
   {
     name: "combineResources",

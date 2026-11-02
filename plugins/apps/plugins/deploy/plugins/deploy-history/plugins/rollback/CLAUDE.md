@@ -12,7 +12,6 @@
     - `apps/deploy/deployments.useBlockedReason`
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
-    - `network/live.useLiveRow`
     - `primitives/icon-button.IconButton`
     - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
 

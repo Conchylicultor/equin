@@ -35,7 +35,7 @@ table. Each of the link's two questions is one read of it:
   `useLive(promptBlockTasks, { where: { blockId } })`, newest first (default 50,
   max 200: a block's launches are a handful, so the newest never fall out).
 - **Task side** — "which page did this task come from?" — is the `:rows` point
-  read `useLiveRow(promptBlockTasks, taskId)`; `found: false` is "not launched
+  read `useLive(promptBlockTasks, { id: taskId })`; `found: false` is "not launched
   from a prompt block". (This replaced a separate whole-table keyed resource.)
 
 **The id is `taskId`**, the table's primary key (stored as `parent_id`), and
@@ -98,7 +98,6 @@ and endpoint contract are consumed by this plugin's own `web` and `server` only.
     - `network/live.LiveListResult`
     - `network/live.LiveRowResult`
     - `network/live.useLive`
-    - `network/live.useLiveRow`
   - Exports (types): `PromptTaskLink`
   - Exports (values):
     - `createPromptTask`

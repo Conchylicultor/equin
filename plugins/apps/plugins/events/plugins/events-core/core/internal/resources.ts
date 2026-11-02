@@ -15,7 +15,7 @@ import { RunEventSchema } from "./schema";
  * an option — so a window would silently drop the oldest past its edge. The
  * set is user-curated (a person adds each source by hand).
  *
- * Read whole with `useLive(eventSources)`; one row by id is `useLiveRow`.
+ * Read whole with `useLive(eventSources)`; one row by id is `useLive(c, { id })`.
  *
  * Declared by FIELDS: the rows ARE `event_sources` rows (`from`), the fields
  * the Sources list shows `pick`ed in list order — their labels, options and

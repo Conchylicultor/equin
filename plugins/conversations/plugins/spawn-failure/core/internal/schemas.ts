@@ -28,7 +28,7 @@ export const SpawnFailureSchema = spawnFailureShape.schema;
 export type SpawnFailure = z.infer<typeof SpawnFailureSchema>;
 
 // A conversation's spawn failure, read by the conversation's id — lookup-only
-// (nothing lists every failure): `useLiveRow` for one conversation,
+// (nothing lists every failure): `useLive(c, { id })` for one conversation,
 // `useLive(c, { ids })` for a list's `gone` rows. `found: false` is "no
 // failure". A load is a primary-key seek over the asked ids, and a write
 // routes to the tuples naming that conversation alone.

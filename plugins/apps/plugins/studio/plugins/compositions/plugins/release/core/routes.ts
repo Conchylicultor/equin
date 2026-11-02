@@ -8,7 +8,7 @@ import { compositionsRoute } from "@plugins/apps/plugins/studio/plugins/composit
  *
  * The parent is the **paramless** compositions route, not `comp/:id`. A run is
  * addressable by its own id and nothing else: every section this pane hosts
- * (info / logs / artifact) reads `useLiveRow(releaseRuns, runId)`, and the
+ * (info / logs / artifact) reads `useLive(releaseRuns, { id: runId })`, and the
  * composition pane above it supplied no data — only breadcrumb position. Hung
  * off `comp/:id` the pane could only be opened by whoever already held the
  * compositions **config-item uuid**, which `release_runs` does not store (it

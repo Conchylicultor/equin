@@ -20,7 +20,7 @@ its own DB. The git heuristic (`classifyProgressJob`, on
     - `conversations/conversation-ui/item.Item`
     - `conversations/conversation-view.conversationPane`
     - `network/live.LiveRowResult`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
     - `primitives/css/inline.Inline`
     - `primitives/live-state.ResourceErrorInline`
     - `ui/segmented-progress-bar.SegmentedProgressBar`

@@ -1,8 +1,8 @@
 /**
  * A declaration that needs the computer (`needsMachine`), read under a
  * transport with none behind it (`machine: false` — an in-browser server):
- * `useLive` / `useLiveRow` answer the `unavailable` arm from the first render
- * and subscribe nothing; under the page's own server (`machine: true`) the
+ * `useLive` (a row read `{ id }` included) answers the `unavailable` arm from the first render
+ * and subscribes nothing; under the page's own server (`machine: true`) the
  * same read subscribes as any other. The type checks at the end are tsc's
  * (every `@ts-expect-error` must be an error), in a hook never called.
  */
@@ -28,7 +28,7 @@ import {
 import type { Transport } from "@plugins/primitives/plugins/networking/web";
 import { testTransport } from "@plugins/primitives/plugins/networking/web/testing";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
-import { useLive, useLiveRow, type LiveRowResult } from "../internal/use-live";
+import { useLive, type LiveRowResult } from "../internal/use-live";
 
 const MESSAGE =
   "Reading the checkout isn't available in this version of the app — it needs equin running on your computer.";
@@ -88,7 +88,7 @@ describe("useLive of a needsMachine declaration", () => {
     const read = renderHook(() => useLive(value), {
       wrapper: wrapperFor(inBrowser),
     });
-    const row = renderHook(() => useLiveRow(rows, "a"), {
+    const row = renderHook(() => useLive(rows, { id: "a" }), {
       wrapper: wrapperFor(inBrowser),
     });
     expect(read.result.current).toEqual({
@@ -170,7 +170,7 @@ function useTypeChecks() {
   // A portable read's type is unchanged: no unavailable arm.
   const portable: ResourceResult<{ n: number }> = useLive(portableValue);
 
-  const row = useLiveRow(typedRows, "a");
+  const row = useLive(typedRows, { id: "a" });
   // @ts-expect-error a machine row read may be unavailable: not a LiveRowResult
   const asRow: LiveRowResult<{ id: string }> = row;
   if (row.status === "ready" && row.found) void row.row.id;

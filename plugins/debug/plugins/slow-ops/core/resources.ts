@@ -44,7 +44,7 @@ export type SlowOpListRow =
 
 /**
  * One op with its JSON lists (waits, variants, measures, recent samples), read
- * by id (`useLiveRow`) for the detail pane: a lookup-only collection over the
+ * by id (`useLive(c, { id })`) for the detail pane: a lookup-only collection over the
  * same table, so `found: false` is "no such op" (an unknown id, or one the
  * 30-day sweep removed).
  */

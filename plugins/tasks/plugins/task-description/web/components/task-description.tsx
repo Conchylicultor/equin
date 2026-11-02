@@ -4,7 +4,7 @@ import {
   ResourceView,
   useCombinedResources,
 } from "@plugins/primitives/plugins/live-state/web";
-import { mapRow, useLiveRow } from "@plugins/network/plugins/live/web";
+import { mapRow, useLive } from "@plugins/network/plugins/live/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import { usePatchTask, useTask } from "@plugins/tasks/web";
@@ -75,7 +75,7 @@ export function TaskDescription({ taskId }: { taskId: string }) {
   // `taskDescriptions`, which stays live across tabs (an autosave elsewhere is
   // that one row's refill). A task the read does not find has none.
   const description = mapRow(
-    useLiveRow(taskDescriptions, taskId),
+    useLive(taskDescriptions, { id: taskId }),
     (row) => row?.description ?? null,
   );
 

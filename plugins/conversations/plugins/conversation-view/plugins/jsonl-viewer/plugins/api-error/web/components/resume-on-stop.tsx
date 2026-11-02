@@ -5,7 +5,7 @@ import {
 } from "@plugins/conversations/plugins/runtime-sdk/core";
 import { useJsonlConversationId } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
@@ -18,7 +18,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 export function ResumeOnStop() {
   const conversationId = useJsonlConversationId();
   const fetchEndpoint = useFetchEndpoint();
-  const stopped = useLiveRow(errorStoppedConversations, conversationId);
+  const stopped = useLive(errorStoppedConversations, { id: conversationId });
   const [error, setError] = useState<string | null>(null);
   if (conversationId === null) return null;
   // Not stopped (or not known yet, or unreadable): this line is history, and

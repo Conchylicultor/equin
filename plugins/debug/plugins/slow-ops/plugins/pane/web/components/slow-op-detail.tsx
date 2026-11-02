@@ -1,5 +1,5 @@
 import { useMemo, type ReactElement, type ReactNode } from "react";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import {
   DataView,
@@ -46,7 +46,7 @@ const callersSource = liveDataSource(slowOpCallers, {
 // One slow op, read by id from the `slow-ops.op` lookup: live, so a new
 // occurrence of this op lands within the producer's 2 s window.
 export function SlowOpDetail({ id }: { id: string }): ReactElement {
-  const result = useLiveRow(slowOpById, id);
+  const result = useLive(slowOpById, { id });
 
   if (result.status === "loading") {
     return (

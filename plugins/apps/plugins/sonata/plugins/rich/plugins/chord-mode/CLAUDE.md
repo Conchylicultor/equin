@@ -38,7 +38,7 @@ uses, while its original tracks stay individually selectable.
   (minting `sonata-chord-mode:rows` alone). This plugin registers the shell's
   `chordModeSetting` (`SonataDocument.SongSetting`, with the headless
   `ChordModeObserver`, mounted afresh for each loaded song), which reads that
-  song's row with `useLiveRow(chordModes, songId)` and writes its settled mode —
+  song's row with `useLive(chordModes, { id: songId })` and writes its settled mode —
   a per-song setting of the loaded song, pending until then and pending again
   whenever another song is loaded, so the previous song's mode never leaks into
   the next and no stand-in "off" renders meanwhile. The switch is a
@@ -85,7 +85,7 @@ remove the overwrite trade-off.
     - `apps/sonata/track-mixer.setTracksActive`
     - `infra/endpoints.useEndpointMutation`
     - `infra/endpoints.useFetchEndpoint`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
     - `primitives/css/switch.Switch`
     - `primitives/css/ui-kit.WithTooltip`
     - `primitives/live-state.ResourceErrorInline`

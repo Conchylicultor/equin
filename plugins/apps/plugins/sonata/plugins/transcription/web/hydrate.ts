@@ -1,5 +1,5 @@
 import { exposedColumns } from "@plugins/network/plugins/live/core";
-import { mapRow, useLiveRow } from "@plugins/network/plugins/live/web";
+import { mapRow, useLive } from "@plugins/network/plugins/live/web";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import { songLibrary } from "@plugins/apps/plugins/sonata/plugins/library/core";
 import type { SourceHydration } from "@plugins/apps/plugins/sonata/plugins/library/web";
@@ -18,24 +18,27 @@ const transcription = exposedColumns(songTranscriptionShape.exposure);
  * row, so the player loads the score the moment the run turns ready.
  */
 export function useHydration(songId: string): ResourceResult<SourceHydration> {
-  return mapRow(useLiveRow(songLibrary, songId), (song): SourceHydration => {
-    const status = song === null ? null : transcription.read(song).status;
-    switch (status) {
-      case null:
-      case "ready":
-        return { kind: "absent" };
-      case "transcribing":
-        return {
-          kind: "pending",
-          label: "Transcribing…",
-          Body: TranscriptionBody,
-        };
-      case "failed":
-        return {
-          kind: "pending",
-          label: "Transcription failed",
-          Body: TranscriptionBody,
-        };
-    }
-  });
+  return mapRow(
+    useLive(songLibrary, { id: songId }),
+    (song): SourceHydration => {
+      const status = song === null ? null : transcription.read(song).status;
+      switch (status) {
+        case null:
+        case "ready":
+          return { kind: "absent" };
+        case "transcribing":
+          return {
+            kind: "pending",
+            label: "Transcribing…",
+            Body: TranscriptionBody,
+          };
+        case "failed":
+          return {
+            kind: "pending",
+            label: "Transcription failed",
+            Body: TranscriptionBody,
+          };
+      }
+    },
+  );
 }

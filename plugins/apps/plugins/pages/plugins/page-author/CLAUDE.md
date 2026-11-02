@@ -61,7 +61,7 @@ Design: [`research/2026-09-15-page-agent-page-follow-ups.md`](../../../../../../
   - Uses:
     - `apps/pages/page-tree.pageDetailPane`
     - `infra/endpoints.useEndpointMutation`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
     - `primitives/css/control-panel.ControlPanel`
     - `primitives/css/control-panel.ControlPanelPopover`
     - `primitives/css/ui-kit.Button`

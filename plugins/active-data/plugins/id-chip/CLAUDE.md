@@ -27,7 +27,7 @@ two halves cannot disagree.
   as; it defaults to the kind's label lowercased. `page-link` passes `"page"`
   (a `block-…` resolves to its page) so model-facing text stayed byte-identical
   when the family moved onto its kind.
-- `rowReferent(useLiveRow(collection, id), title)` (web) folds a live by-id row
+- `rowReferent(useLive(collection, { id }), title)` (web) folds a live by-id row
   read into the presenter's `IdReferentState` — loading / failed / missing /
   found — for the families whose referent is one row (`report`, `build-run`,
   `event-source`).

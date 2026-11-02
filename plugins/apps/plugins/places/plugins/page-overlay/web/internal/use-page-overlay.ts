@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { mapRow, useLive, useLiveRow } from "@plugins/network/plugins/live/web";
+import { mapRow, useLive } from "@plugins/network/plugins/live/web";
 import {
   mapResource,
   useCombinedResources,
@@ -61,7 +61,7 @@ function ownBlocksInOrder(blocks: readonly Block[], pageId: string): Block[] {
  * read's error, then `missing` or the page's items.
  */
 export function usePageOverlay(pageId: string): ResourceResult<PageOverlay> {
-  const pageRow = useLiveRow(pagesTree, pageId);
+  const pageRow = useLive(pagesTree, { id: pageId });
   const page = useMemo(
     () =>
       mapRow(pageRow, (row): PageOverlayPage | null => {

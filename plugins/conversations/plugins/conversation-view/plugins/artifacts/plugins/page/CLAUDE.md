@@ -38,7 +38,7 @@ card. Both open.
 
 Each row resolves its key through page-tree's `useBlockTarget` — the same
 resolver the transcript's `block-…` chips use. A page id is answered by the
-`pagesTree` collection's point read (`useLiveRow`); anything else costs one
+`pagesTree` collection's point read (`useLive(c, { id })`); anything else costs one
 `getBlockPage` lookup.
 
 - **a page** — titled with the page's title, opens the page beside the chat.

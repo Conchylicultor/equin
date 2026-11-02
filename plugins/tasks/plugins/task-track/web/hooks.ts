@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { mapRow, useLive, useLiveRow } from "@plugins/network/plugins/live/web";
+import { mapRow, useLive } from "@plugins/network/plugins/live/web";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import { DEFAULT_TASK_TRACK, type TaskTrack } from "../core";
 import { taskTracks, type TaskTrackRow } from "../core";
@@ -13,7 +13,7 @@ export type TaskTrackResult = ResourceResult<TaskTrack>;
  * loading arm, so a sidequest can never flash as main.
  */
 export function useTaskTrack(taskId: string): TaskTrackResult {
-  const result = useLiveRow(taskTracks, taskId);
+  const result = useLive(taskTracks, { id: taskId });
   return useMemo(
     () => mapRow(result, (row) => (row ? row.track : DEFAULT_TASK_TRACK)),
     [result],

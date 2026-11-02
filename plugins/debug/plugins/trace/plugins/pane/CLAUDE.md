@@ -20,7 +20,7 @@ it; nothing in `trace/` imports slow-ops.
 
 ## Detail Gantt (`/debug/traces/x/:id`)
 
-The `debug.trace` point lookup (`useLiveRow`; `found: false`, or a non-uuid id,
+The `debug.trace` point lookup (`useLive(c, { id })`; `found: false`, or a non-uuid id,
 → graceful not-found). One `GanttContainer`
 (`totalMs = atMs − windowStartMs`) hosting, top to bottom: the **trip row**
 (rendered here generically from `snapshot.trigger` — the pane names no class),
@@ -55,8 +55,8 @@ descriptor the strip renders without knowing what produced it. Header: the
     - `Pane.Register` "traces"
     - `SlowEvents.View` "Events" → `EventsView`
     - `DebugApp.Sidebar` "Slow Events"
-  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `network/live` ×5
+  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live` ×4
     - `primitives/data-view` ×4
     - `debug/profiling` ×3
     - `primitives/live-state` ×3

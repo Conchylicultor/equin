@@ -114,7 +114,7 @@ defeat the open registry. The flat `triggerKind` / `triggerLabel` / `durationMs`
 `thresholdMs` columns are list metadata: the `debug.traces` window
 (`core/resources.ts`) projects them, plus two scalar extractions off the blob
 (`wallTime`, `windowSpanMs`), and **never projects the (tens-of-KB) blob**. One
-trace with its snapshot is the `debug.trace` point lookup (`useLiveRow`).
+trace with its snapshot is the `debug.trace` point lookup (`useLive(c, { id })`).
 
 - **A change producer, not a trigger** (`server/internal/producer.ts`). A trace is
   inserted *exactly* when the system is already loaded, so a per-statement

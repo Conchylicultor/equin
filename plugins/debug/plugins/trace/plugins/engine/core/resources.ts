@@ -44,7 +44,7 @@ export type TraceListItem =
   typeof traceEvents extends LiveRowsCollection<infer R> ? R : never;
 
 /**
- * One trace with its full snapshot, read by id (`useLiveRow`) for the detail
+ * One trace with its full snapshot, read by id (`useLive(c, { id })`) for the detail
  * Gantt: a lookup-only collection over the same table, so `found: false` is
  * "no such trace" (an unknown id, or one the sweep removed).
  */

@@ -6,7 +6,7 @@ import { ugAlignmentShape } from "./row";
 // 1 row per song — its primary key IS the song — so it is a lookup-only
 // collection: nothing lists every song's alignment, so it mints
 // `sonata-ug-alignment:rows` alone. A reader takes its row with
-// `useLiveRow(ugAlignmentRows, songId)`; `found: false` is "this song never had
+// `useLive(ugAlignmentRows, { id: songId })`; `found: false` is "this song never had
 // a video".
 //
 // Bounded by construction: only an open UG song subscribes (the sync effect and

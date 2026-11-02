@@ -1,5 +1,5 @@
 /**
- * useLive / useLiveRow over `createLiveStateHarness` (a real client and its QueryClient) (the
+ * useLive (row reads `{ id }` included) over `createLiveStateHarness` (a real client and its QueryClient) (the
  * live-state use-resource-error-gate.test.tsx harness): authoritative values
  * are driven with `queryClient.setQueryData` on the exact tuple the codec encodes,
  * the same call a WS sub-ack makes.
@@ -40,11 +40,7 @@ import { fieldsToZodObject } from "@plugins/fields/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
-import {
-  useLive,
-  useLiveRow,
-  type LiveRowResult,
-} from "@plugins/network/plugins/live/web";
+import { useLive, type LiveRowResult } from "@plugins/network/plugins/live/web";
 
 const ROW_FIELDS = {
   id: textField({ label: "Id" }),
@@ -473,13 +469,45 @@ describe("useLive — ids", () => {
     expect(r.data).toEqual(rows(2));
     expect("canGrow" in r).toBe(false);
   });
+
+  it("a kind key holding only `undefined` names no read — `{ ids: undefined, where }` is the window its type says", () => {
+    const c = collection();
+    const live = createLiveStateHarness();
+    const where = '{"column":"on","op":"eq","operand":true}';
+    mount(live, () => useLive(c, { ids: undefined, where: { on: true } }));
+    expect(
+      live.queryClient.getQueryState(queryKeyFor(c.key, { limit: "2", where })),
+    ).toBeDefined();
+    // Never a grouping or point read of it.
+    expect(
+      live.queryClient
+        .getQueryCache()
+        .getAll()
+        .map((q) => String(q.queryKey[0])),
+    ).toEqual([c.key]);
+  });
+
+  it("`{ count: undefined }` and `{ ids: undefined, groupBy }` read what their other keys name", () => {
+    const c = collection();
+    const live = createLiveStateHarness();
+    mount(live, () => useLive(c, { count: undefined }));
+    expect(
+      live.queryClient.getQueryState(queryKeyFor(c.key, { limit: "2" })),
+    ).toBeDefined();
+    mount(live, () => useLive(c, { ids: undefined, groupBy: "on" }));
+    expect(
+      live.queryClient.getQueryState(
+        queryKeyFor(`${c.key}:groups`, { groupBy: "on", limit: "50" }),
+      ),
+    ).toBeDefined();
+  });
 });
 
-describe("useLiveRow", () => {
+describe("useLive — row by id", () => {
   it("goes loading → found", async () => {
     const c = collection();
     const live = createLiveStateHarness();
-    const { result } = mount(live, () => useLiveRow(c, "r0"));
+    const { result } = mount(live, () => useLive(c, { id: "r0" }));
     expect(result.current.status).toBe("loading");
     act(() => {
       live.queryClient.setQueryData(
@@ -498,7 +526,7 @@ describe("useLiveRow", () => {
   it("goes loading → not found when the server answers with no row", async () => {
     const c = collection();
     const live = createLiveStateHarness();
-    const { result } = mount(live, () => useLiveRow(c, "nope"));
+    const { result } = mount(live, () => useLive(c, { id: "nope" }));
     expect(result.current.status).toBe("loading");
     act(() => {
       live.queryClient.setQueryData(
@@ -521,7 +549,7 @@ describe("useLiveRow", () => {
     const before = pendingMountSnapshot().pending;
     const seen: LiveRowResult<Row>[] = [];
     const { unmount } = mount(live, () => {
-      const r = useLiveRow(c, null);
+      const r = useLive(c, { id: null });
       seen.push(r);
       return r;
     });
@@ -548,7 +576,7 @@ describe("useLiveRow", () => {
       const observe = vi.spyOn(NotificationsClient.prototype, "observe");
       const seen: LiveRowResult<Row>[] = [];
       const { unmount } = mount(live, () => {
-        const r = useLiveRow(c, id);
+        const r = useLive(c, { id });
         seen.push(r);
         return r;
       });
@@ -573,7 +601,7 @@ describe("useLiveRow", () => {
     let id: string | null = "r0";
     const seen: LiveRowResult<Row>[] = [];
     const { result, rerender } = mount(live, () => {
-      const r = useLiveRow(c, id);
+      const r = useLive(c, { id });
       seen.push(r);
       return r;
     });
@@ -604,8 +632,8 @@ describe("useLiveRow", () => {
     const c = collection();
     const live = createLiveStateHarness();
     const { result, notifications } = mount(live, () => ({
-      hit: useLiveRow(c, "r0"),
-      miss: useLiveRow(c, "nope"),
+      hit: useLive(c, { id: "r0" }),
+      miss: useLive(c, { id: "nope" }),
     }));
     act(() => {
       live.queryClient.setQueryData(
@@ -651,9 +679,9 @@ describe("useLiveRow", () => {
     const live = createLiveStateHarness();
     const key = queryKeyFor(`${c.key}:rows`, { ids: "r0" });
     const { result, rerender } = mount(live, () => ({
-      hit: useLiveRow(c, "r0"),
-      loading: useLiveRow(c, "later"),
-      absent: useLiveRow(c, null),
+      hit: useLive(c, { id: "r0" }),
+      loading: useLive(c, { id: "later" }),
+      absent: useLive(c, { id: null }),
     }));
     const { loading, absent } = result.current;
     act(() => {
@@ -694,11 +722,11 @@ describe("a lookup-only collection", () => {
       id: "id",
     });
 
-  it("useLiveRow and an id set read its :rows sibling", async () => {
+  it("a row read and an id set read its :rows sibling", async () => {
     const c = lookup();
     const live = createLiveStateHarness();
     const { result } = mount(live, () => ({
-      row: useLiveRow(c, "r0"),
+      row: useLive(c, { id: "r0" }),
       set: useLive(c, { ids: ["r0"] }),
     }));
     expect(result.current.row.status).toBe("loading");
@@ -1066,10 +1094,12 @@ describe("status arms", () => {
     expect(grown.data).toEqual(rows(4));
   });
 
-  it("useLiveRow carries refetch on every arm; refetch from the error arm recovers", async () => {
+  it("a row read carries refetch on every arm; refetch from the error arm recovers", async () => {
     const c = collection();
     const live = createLiveStateHarness();
-    const { result, notifications } = mount(live, () => useLiveRow(c, "r0"));
+    const { result, notifications } = mount(live, () =>
+      useLive(c, { id: "r0" }),
+    );
     expect(result.current.status).toBe("loading");
     expect(typeof result.current.refetch).toBe("function");
 

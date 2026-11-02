@@ -11,7 +11,6 @@
     - `apps/studio/compositions/release.ReleaseDetail`
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
-    - `network/live.useLiveRow`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/spacing.Stack`

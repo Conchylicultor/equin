@@ -13,6 +13,7 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import type { LiveWhereOf } from "@plugins/network/plugins/live/core";
 import {
   OpNoLongerApplies,
   useOptimisticResource,
@@ -147,7 +148,10 @@ export function useServerBlockStore(pageId: string): BlockStore {
   // The base is the page's scope of `pageBlocks`: its rows in order, a scoped
   // delta merged into them by id — confirmed by the exact ack of an op's
   // commit or by content, denied only by a full frame's watermark (Rule B′).
-  const scope = useMemo(() => ({ where: { pageId } }), [pageId]);
+  const scope = useMemo(
+    (): { where: LiveWhereOf<typeof pageBlocks> } => ({ where: { pageId } }),
+    [pageId],
+  );
   // The reducer's type facts, minted from the block-handle registry. The SERVER
   // mints the same context from its own registry through the same
   // `blockOpContextOf` and passes it to the same `applyBlockOp`; if the two ever

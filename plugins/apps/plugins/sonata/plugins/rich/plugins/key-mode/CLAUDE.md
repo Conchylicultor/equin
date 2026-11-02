@@ -15,7 +15,7 @@ inferred key.
   liveCollection("sonata-key-auto-detect", { row, id: "songId" })` +
   `serveCollection(keyAutoDetects, { from: songKeyAutoDetect })` — minting
   `sonata-key-auto-detect:rows` alone — and the observer reads the open song's
-  row with `useLiveRow(keyAutoDetects, songId)`.
+  row with `useLive(keyAutoDetects, { id: songId })`.
 - **The shell defines the setting, this plugin registers it.** The score
   pipeline (`inferKeys`) lives in the load-bearing shell, which can't import a
   feature plugin, so the shell defines `keyAutoDetectSetting` (its
@@ -46,7 +46,7 @@ inferred key.
     - `apps/sonata/document.useFailSongSetting`
     - `apps/sonata/document.useMountedSongId`
     - `apps/sonata/document.useWriteSongSetting`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
   - Exports (values): `saveKeyAutoDetect`
 - Server:
   - Contributes: `resource.declare` "sonata-key-auto-detect:rows"

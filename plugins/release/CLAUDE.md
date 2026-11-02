@@ -283,7 +283,7 @@ the two endpoints that selected it).
   the resources/schemas:
   - `ReleaseRun`, `releaseRuns` — a lookup-only `liveCollection`
     (`release.runs:rows`) served from `_releaseRuns`, read one run at a time
-    with `useLiveRow(releaseRuns, runId)` (`found: false` = no such run). Any
+    with `useLive(releaseRuns, { id: runId })` (`found: false` = no such run). Any
     namespace's run resolves by id.
   - `releaseHistory` — `release.history`, this namespace's runs (a base
     `where` on `namespace`, read at bind) as a window: the Studio

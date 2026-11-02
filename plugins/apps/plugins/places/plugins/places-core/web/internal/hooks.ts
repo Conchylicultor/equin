@@ -1,9 +1,5 @@
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import {
-  useLive,
-  useLiveRow,
-  type LiveRowResult,
-} from "@plugins/network/plugins/live/web";
+import { useLive, type LiveRowResult } from "@plugins/network/plugins/live/web";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import { useTagTree } from "@plugins/tag-tree/plugins/engine/web";
 import {
@@ -30,7 +26,7 @@ export function usePlaces(): ResourceResult<Place[]> {
 
 /** One place by id, live: pending, then found or determinately absent. */
 export function usePlaceRow(placeId: string): LiveRowResult<Place> {
-  return useLiveRow(places, placeId);
+  return useLive(places, { id: placeId });
 }
 
 /**

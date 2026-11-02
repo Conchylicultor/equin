@@ -11,7 +11,7 @@
     - `conversations/model-provider.useModelCatalog`
     - `infra/endpoints.useEndpointMutation`
     - `network/live.LiveRowResult`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/live-state.ResourceErrorInline`
     - `tasks/task-list.Tasks`

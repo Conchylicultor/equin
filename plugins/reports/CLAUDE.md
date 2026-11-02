@@ -31,7 +31,7 @@ cannot reach a plugin-private `shared/`.
 
 Every reader reads `reports.list` (`core/resources.ts`), a
 `liveCollection` served by `serveCollection` (`server/internal/list-resource.ts`):
-the Reports DataView's window, the detail pane's by-id row (`useLiveRow`, its
+the Reports DataView's window, the detail pane's by-id row (`useLive(c, { id })`, its
 `:rows`) and the kind / source filter options (its `:groups`, read as DataView
 facets). There are no endpoints and no revision tick.
 

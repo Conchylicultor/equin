@@ -26,7 +26,7 @@ export type TodoTaskLink = z.infer<typeof TodoTaskLinkSchema>;
 // task per card is a fact of the schema, not a rule the endpoint remembers) —
 // so it is a lookup-only collection: no default window (nothing lists every
 // card's link), minting `todo-block-task:rows` alone. A card reads its row with
-// `useLiveRow(todoTasks, blockId)`, and `found: false` is "not dispatched".
+// `useLive(todoTasks, { id: blockId })`, and `found: false` is "not dispatched".
 //
 // Bounded by construction: only a MOUNTED card subscribes, a load is one
 // primary-key seek, and the `:rows` point routing schedules a write for the one

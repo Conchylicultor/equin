@@ -1,5 +1,5 @@
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
@@ -122,7 +122,7 @@ function kindFor(k: PageKind["kind"]): PageKind {
 export function PageKindControl() {
   const { pageId } = pageDetailPane.useParams();
   const size = useControlSize();
-  const result = useLiveRow(pagesTree, pageId);
+  const result = useLive(pagesTree, { id: pageId });
   const { mutateAsync } = useEndpointMutation(setPageKind);
 
   if (result.status === "loading") {

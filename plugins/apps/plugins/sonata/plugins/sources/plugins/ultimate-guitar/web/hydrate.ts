@@ -1,4 +1,4 @@
-import { mapRow, useLiveRow } from "@plugins/network/plugins/live/web";
+import { mapRow, useLive } from "@plugins/network/plugins/live/web";
 import {
   combineResources,
   mapResource,
@@ -25,8 +25,8 @@ import { songUgRows } from "../shared/resources";
  * generic collection — and the UG editor section stays hidden for it.
  */
 export function useHydration(songId: string): ResourceResult<SourceHydration> {
-  const tab = mapRow(useLiveRow(songUgRows, songId), (r) => r);
-  const alignment = mapRow(useLiveRow(ugAlignmentRows, songId), (r) => r);
+  const tab = mapRow(useLive(songUgRows, { id: songId }), (r) => r);
+  const alignment = mapRow(useLive(ugAlignmentRows, { id: songId }), (r) => r);
   return mapResource(
     combineResources({ tab, alignment }),
     ({ tab: row, alignment: aligned }): SourceHydration => {

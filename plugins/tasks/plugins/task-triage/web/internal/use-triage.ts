@@ -3,7 +3,7 @@ import {
   EndpointError,
   useEndpointMutation,
 } from "@plugins/infra/plugins/endpoints/web";
-import { mapRow, useLiveRow } from "@plugins/network/plugins/live/web";
+import { mapRow, useLive } from "@plugins/network/plugins/live/web";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import {
   answerTriageEndpoint,
@@ -28,7 +28,7 @@ function toRead(row: TaskTriageRow | null): TriageRead | null {
 export function useTriageRead(
   taskId: string,
 ): ResourceResult<TriageRead | null> {
-  const result = useLiveRow(taskTriageReads, taskId);
+  const result = useLive(taskTriageReads, { id: taskId });
   return useMemo(() => mapRow(result, toRead), [result]);
 }
 

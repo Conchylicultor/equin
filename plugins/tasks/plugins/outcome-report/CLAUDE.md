@@ -36,7 +36,7 @@ On submit, in order:
 ## Reading it
 
 `outcomeReportRows` (core) — lookup-only `liveCollection` keyed on `taskId`;
-`useLiveRow(outcomeReportRows, taskId)`.
+`useLive(outcomeReportRows, { id: taskId })`.
 
 - `OutcomeReportCard` (`Conversation.AbovePromptInput`) — shown only in the
   conversation that submitted it (`report.conversationId`), so a sibling
@@ -62,7 +62,7 @@ On submit, in order:
     - `conversations/conversation-view/pending-turn.useOptimisticConversationStatus`
     - `conversations/conversation-view/pending-turn.useSendConversationTurn`
     - `conversations/conversation-view/pending-turn.useTurnSendAvailability`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/badge.BadgeVariant`
     - `primitives/css/card.Card`

@@ -5,7 +5,7 @@ import {
   useOpenPane,
   type ResolveResult,
 } from "@plugins/primitives/plugins/pane/web";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import {
   reportsList,
@@ -28,7 +28,7 @@ export const reportsPane = Pane.define({
 
 function useResolveReport({ reportId }: { reportId: string }): ResolveResult {
   // The by-id row read (`reports.list:rows`), whatever the report's age.
-  return resolveRow(useLiveRow(reportsList, reportId));
+  return resolveRow(useLive(reportsList, { id: reportId }));
 }
 
 /** The report's kind once it is read; the pane falls back to "Report" until then. */
@@ -37,7 +37,7 @@ function useReportTitle({
 }: {
   reportId: string;
 }): string | undefined {
-  const row = useLiveRow(reportsList, reportId);
+  const row = useLive(reportsList, { id: reportId });
   return row.status === "ready" && row.found ? row.row.kind : undefined;
 }
 

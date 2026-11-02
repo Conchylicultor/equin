@@ -13,13 +13,15 @@ import {
 import type {
   LiveAllCollection,
   LiveCollection,
-  LiveCountedCollection,
   LiveCountQuery,
   LiveGroup,
   LiveGroupableColumn,
   LiveGroupQuery,
   LiveGroupValue,
+  LiveIdsQuery,
   LiveQuery,
+  LiveRowQuery,
+  LiveScopedAllQuery,
   LivePagedPages,
   LivePagedValue,
   LivePlainValue,
@@ -27,9 +29,12 @@ import type {
   LiveRowsCollection,
   LiveValue,
   LiveValueOrigin,
+  LiveWhereOf,
 } from "@plugins/network/plugins/live/core";
 import {
+  COLLECTION_KIND_KEYS,
   isPointId,
+  type CollectionKindKey,
   type CollectionRow,
 } from "@plugins/network/plugins/live/core";
 import { useTransport } from "@plugins/primitives/plugins/networking/web";
@@ -48,14 +53,16 @@ import {
 import type { LivePagesQuery } from "./page-source";
 
 // The read half of a `liveCollection`. A consumer asks a QUERY — a window
-// (`where` / `orderBy` / `limit`), a grouping (`groupBy`) or an explicit id set
-// — and never picks the wire resource or its params: the window goes to `key`,
-// a grouping to `:groups`, an id set to the `:rows` point sibling, and the
-// encoding is the declaration's own codec. A window is read as key-range
-// pages; a grouping shares the window's list result, grown by its limit; only
-// a read whose result has different STATES (`useLiveRow`) gets its own hook.
-// A `liveValue` is read by the same hook: its result is `ResourceResult<T>`,
-// the states every read already has, so it gets no hook of its own.
+// (`where` / `orderBy` / `limit`), a grouping (`groupBy`), a count, an
+// explicit id set (`ids`) or one row (`id`) — and never picks the wire
+// resource or its params: the window goes to `key`, a grouping to `:groups`,
+// an id set and a row to the `:rows` point sibling, and the encoding is the
+// declaration's own codec. A window is read as key-range pages; a grouping
+// shares the window's list result, grown by its limit; a row read answers
+// `LiveRowResult` (found / not found). Every collection query goes through
+// ONE signature, so a wrong option errors on its own property. A `liveValue`
+// is read by the same hook: its result is `ResourceResult<T>`, the states
+// every read already has. There is no second read hook (`live:read-hooks`).
 
 /**
  * A list read: the paged read every grow-able read with no viewport returns,
@@ -128,11 +135,6 @@ export type WithMachine<M, R> = [M] extends [MachineFeature]
   ? R | LiveUnavailable
   : R;
 
-/** An explicit id set. Rows come back for the ids that exist; no filter applies. */
-export interface LiveIdsQuery {
-  ids: readonly string[];
-}
-
 /**
  * A derived slice of a collection declared `all` (`useLive(all, { select })`).
  * The read re-renders only when the SELECTED value changes (structurally
@@ -146,19 +148,8 @@ export interface LiveAllSelect<Row, S> {
 }
 
 /**
- * The scope of a collection declared `all: { by }` (`useLive(c, { where })`):
- * exactly its `by` fields, each a string — a `Filter` tree, an op, a missing
- * or an extra field is a tsc error. The record IS the tuple's params. `never`
- * for a set declared without `by`, which has one tuple.
- */
-export type LiveScopedAllQuery<B extends string> = [B] extends [never]
-  ? never
-  : { where: { readonly [K in B]: string } };
-
-/**
- * One row by id: loading, failed, found, or determinately absent — `ready`
- * splits on `found`. `pending` is the pre-`status` spelling (see
- * `ResourceResult`), kept while the tree migrates.
+ * One row by id (`useLive(c, { id })`): loading, failed, found, or
+ * determinately absent — `ready` splits on `found`.
  */
 export type LiveRowResult<Row> =
   | {
@@ -221,34 +212,6 @@ function groupShape<Row, F, S extends string>(
 }
 
 /**
- * Read a live collection. The QUERY's shape picks what is read — a consumer
- * never names a wire resource or its params.
- *
- * - `useLive(c)` / `useLive(c, { where, orderBy, limit })` — a bounded window,
- *   read as key-range pages, every one live (page 0 is this window tuple —
- *   the one boot hydrates). Its settled arm adds `canGrow` / `growing` /
- *   `loadMore()`: `loadMore()` splits the last page (one new page, seeded —
- *   never a reload of a larger window), and it never pages past `maxLimit`
- *   rows. While a new page loads the hook STAYS settled on the rows it has
- *   (`growing: true`), so `if (pending)` never flashes a spinner over a list
- *   that already rendered. Under a viewport, see below.
- * - `useLive(c, { groupBy, where?, limit? })` — the values a text / number /
- *   boolean filterable column takes (with counts), ordered by count desc then
- *   value; each value typed as the row field. The same list result as a
- *   window, but one tuple whose limit grows: `loadMore()` reloads the
- *   grouping at one more page of groups, and while the grown one loads the
- *   hook stays settled on the previous groups (`growing: true`).
- * - `useLive(c, { count: true, where? })` — how many rows match `where`, as
- *   `ResourceResult<number>`, kept live; only on a collection declared
- *   `count: true`. `null` in place of the query (or of both) reads nothing
- *   (pending) — for a surface whose count is not cheap right now (a search is
- *   on), or that has no collection to count.
- * - `useLive(c, { ids })` — an explicit id set, via the `:rows` point sibling.
- *   No paging fields: an id set is not a window. The one list-free read, so it
- *   (and `useLiveRow`) also takes a lookup-only collection; a window or
- *   grouping read of one is a tsc error — it declares no order to list in.
- */
-/**
  * A value's params argument: absent for a param-less value (`P` is
  * `Record<string, never>` — no declared name), required otherwise — the
  * declared names (each a string, an optional one may be left out), or `null`
@@ -287,10 +250,365 @@ type LiveValueRead<V, T, C extends string> = V extends SnapshotDecl
   ? LiveSnapshotResult<T, C>
   : ResourceResult<T, C>;
 
-// The window overload comes FIRST: an argument like `where: or(...)` is a
-// generic call TypeScript checks once, against the first overload's contextual
-// type — so that type must be the collection's own `LiveWhere` for the tree's
-// columns and operands to be checked against the declaration.
+/**
+ * The facets a collection declares, read off argument 0 structurally: its
+ * filterable columns (`F`), sortable ones (`S`) and, declared `all: { by }`,
+ * its scope fields (`B`). A facet the collection does not declare stays at
+ * its default (`never`).
+ */
+interface CollectionFacets<Row, F, S extends string, B extends string> {
+  filterable?: F;
+  sortable?: readonly S[];
+  all?: LiveAllCollection<Row, B>["all"] | undefined;
+}
+
+/**
+ * The row fields outside `by`, each `never` beside a scope record: a scope
+ * built before the call (no excess-property check on it) naming one fails.
+ */
+type NotScopeFields<Row, B extends string> = {
+  readonly [K in Exclude<keyof Row & string, B>]?: never;
+};
+
+/** A scoped set's scope record. */
+type ScopeWhere<Row, B extends string> = {
+  readonly [K in B]: string;
+} & NotScopeFields<Row, B>;
+
+/** Every kind key but `K`, refused (`?: never`): a form names one read. */
+type OnlyKind<K extends CollectionKindKey | "none"> = {
+  readonly [P in Exclude<CollectionKindKey, K>]?: never;
+};
+
+/**
+ * Where the kind keys' values are inferred — one type parameter each (`not
+ * given` = `undefined`). The rest of the query's values are never captured,
+ * so tsc's own checks (excess property, value types, `or()`'s columns) run
+ * against the forms. Intersected with them: a kind key a form refuses is
+ * `never & V` there, an error on that key.
+ */
+interface KindKeyValues<Row, I, Ids, C, G, R> {
+  readonly id?: I;
+  readonly ids?: Ids;
+  readonly count?: C;
+  readonly groupBy?: G;
+  // The selector itself (its presence never depends on what it returns);
+  // the bare signature beside it types an inline lambda's rows before `R`
+  // is inferred.
+  readonly select?: R | ((rows: CollectionRow<Row>[]) => unknown);
+}
+
+/**
+ * Whether a kind key's inferred value names its read: `undefined` (not given,
+ * or given as nothing — the runtime reads kind keys by value) does not. Not
+ * distributive, so for a generic value the conditional is deferred and tsc
+ * relates a query to both of its arms ({@link KindGuard}).
+ */
+type Names<X> = { v: X } extends { v: undefined } ? false : true;
+
+/**
+ * The read a query names: the first of {@link COLLECTION_KIND_KEYS} whose
+ * inferred value is not `undefined` (the parameters' "not given"; a key
+ * holding `undefined` is absent, as the runtime reads it), else `"none"`.
+ */
+type KindOf<
+  P,
+  K extends readonly unknown[] = typeof COLLECTION_KIND_KEYS,
+> = K extends readonly [infer H extends keyof P, ...infer T]
+  ? KindStep<P[H], H, KindOf<P, T>>
+  : "none";
+
+/**
+ * One step of {@link KindOf}, distributive over the value `V`: for a generic
+ * value (a caller's `groupBy: G`) the step is deferred, and a deferred
+ * distributive conditional reads as its instantiation at `V`'s constraint —
+ * so a generic grouping's result is a grouping, not "a list or a grouping".
+ */
+type KindStep<V, H, Rest> = V extends undefined ? Rest : H;
+
+/** The inferred kind-key values, by key. */
+interface KindValues<I, Ids, C, G, R> {
+  id: I;
+  ids: Ids;
+  count: C;
+  groupBy: G;
+  select: R;
+}
+
+/**
+ * The key of the read a query names ({@link KindOf}) is required, on EVERY
+ * branch of it: a union whose branches read different things (`cond ? { id }
+ * : { where }`) — the call site's kind latch would throw — fails on the
+ * branch missing the key.
+ *
+ * The required type is `{} | null`: holding a unit type, the key is a
+ * discriminant, so every form that refuses it (`?: never`) reduces to
+ * `never` — a named read leaves ONE form, and tsc reports a misuse on its
+ * property (`limit` beside `id`, a second kind key). A conditional per step,
+ * like {@link KindOf}: a generic value (deferred) is checked against both
+ * arms.
+ */
+type KindGuard<
+  P,
+  K extends readonly unknown[] = typeof COLLECTION_KIND_KEYS,
+> = K extends readonly [infer H extends keyof P & string, ...infer T]
+  ? Names<P[H]> extends true
+    ? { readonly [Q in H]: {} | null }
+    : KindGuard<P, T>
+  : unknown;
+
+/** Every key some form of `Forms` names. */
+type FormKeys<Forms> = Forms extends unknown ? keyof Forms : never;
+
+/**
+ * Every key some collection query form names — computed once, not per call
+ * (a key one form names but this collection's do not is refused by its forms
+ * themselves: `?: never`).
+ */
+type QueryKeyName = FormKeys<
+  | CollectionForms<
+      { window: object; count: object },
+      object,
+      never,
+      never,
+      never,
+      never
+    >
+  | CollectionForms<{ all: object }, object, never, never, "scope", never>
+>;
+
+/**
+ * A key no form names is refused even on a query built before the call,
+ * which tsc never excess-checks: `K` is inferred as the query's own keys
+ * (keys only — no value is captured), and each key outside `Known` is `never`
+ * here. `where`'s slot is the collection's own where type (`W`), so the
+ * contextual type `or()` infers its columns from stays exactly that — a
+ * slot typed `unknown` there loses them (measured). A `where` built before
+ * the call is the lint `live/where-declared`'s: declared with
+ * `LiveWhereOf<typeof c>`, it is checked where it is written.
+ */
+type KnownKeysOnly<K extends PropertyKey, Known, W> = {
+  readonly [P in K]?: P extends "where" ? W : P extends Known ? unknown : never;
+};
+
+/**
+ * The query forms a collection declared `D` takes — a plain union, each
+ * naming its own kind key and refusing the others (`?: never`): tsc's own
+ * discriminated excess-property and value checks run on it, and every
+ * window form's `where` is the collection's own `LiveWhere<F>` (`or()`'s
+ * contextual columns). `S` is `NoInfer` in the window form: inferred from
+ * the collection alone, so an `orderBy` naming a non-sortable column is
+ * refused rather than widening `S`. A new query form is a member here, a
+ * key in {@link COLLECTION_KIND_KEYS} and {@link KindKeyValues}, a signature
+ * parameter and a {@link CollectionReads} row — never a signature or a hook.
+ */
+type CollectionForms<D, Row, F, S extends string, B extends string, G> =
+  | (LiveRowQuery & OnlyKind<"id">)
+  | (LiveIdsQuery & OnlyKind<"ids">)
+  | (D extends { window: object }
+      ? | (LiveQuery<F, NoInfer<S>> & OnlyKind<"none">)
+        | (LiveGroupQuery<F, G & LiveGroupableColumn<F>> & OnlyKind<"groupBy">)
+        | (D extends { count: object }
+            ? LiveCountQuery<F> & OnlyKind<"count">
+            : never)
+      : D extends { all: object }
+        ? // `select` is open on the scope form: a selector is inferred in
+          // tsc's second pass, after the kind was first read as none.
+          [B] extends [never]
+          ? OnlyKind<"select"> & { select: unknown }
+          : OnlyKind<"select"> & { where: ScopeWhere<Row, B>; select?: unknown }
+        : never);
+
+/**
+ * Beside the query object: `undefined` (a window's default query) and `null`
+ * (a count's skip — reads nothing, pending — on a counted collection). `N` is
+ * inferred from the query through `N & undefined` / `N & null`: the hole
+ * exactly when the query may be one, else `never` — so a query that cannot be
+ * is checked against its forms alone (tsc elaborates a misuse into no union
+ * with `undefined` or `null`).
+ */
+type QueryHoles<D, N> =
+  | (D extends { window: object } ? N & undefined : never)
+  | (D extends { window: object; count: object } ? N & null : never);
+
+/** Whether the query may be `null` — a count's skip. */
+type MayBeNull<N> = [N] extends [never] ? false : null extends N ? true : false;
+
+/** The count's kind value: a query that may be `null` names a count (its skip reads one). */
+type CountValue<C, N> = MayBeNull<N> extends true ? true : C;
+
+/**
+ * Beside a `null` skip the query object is a count — whatever else it names
+ * (`cond ? { ids } : null` would read an id set, then a count).
+ */
+type SkipGuard<N> =
+  MayBeNull<N> extends true ? { readonly count: true } : unknown;
+
+/**
+ * The inferred kind-key values of a query on a collection declared `D`. A
+ * selector names its read only on an `all` set — the one that takes it —
+ * so on any other collection the misfit is the window form's, on `select`.
+ */
+type QueryKindValues<D, I, Ids, C, G, R, N> = KindValues<
+  I,
+  Ids,
+  CountValue<C, N>,
+  G,
+  D extends { all: object } ? R : undefined
+>;
+
+/** What a collection read returns, by the read its query names. */
+interface CollectionReads<D, Row, G, R> {
+  id: LiveRowResult<CollectionRow<Row>>;
+  ids: ResourceResult<CollectionRow<Row>[]>;
+  count: ResourceResult<number>;
+  groupBy: LiveListResult<LiveGroup<LiveGroupValue<Row, G & string>>>;
+  select: ResourceResult<R extends (rows: never) => infer T ? T : never>;
+  none: D extends { all: object }
+    ? ResourceResult<CollectionRow<Row>[]>
+    : LiveListResult<CollectionRow<Row>>;
+}
+
+/**
+ * The count read of a collection that may be `null` — today's `(query)` when
+ * argument 0 (`V`) may be `null` and is otherwise a counted window, else an
+ * impossible arity (see {@link ValueArgs}). A bare `null` (no collection at
+ * all) takes a `null` query or a bare `{ count: true }` (`cond ? { count:
+ * true } : null`, both reading nothing): there is no collection whose columns
+ * a `where` could name (`Exclude<null, null>` is `never`, which every
+ * structural test would pass).
+ */
+type NullableCountArgs<V> = null extends V
+  ? [Exclude<V, null>] extends [never]
+    ? [query: { readonly count: true } | null]
+    : Exclude<V, null> extends { window: object; count: object }
+      ? [query: LiveCountQuery<FilterableOf<V>> | null]
+      : [never, never, never]
+  : [never, never, never];
+
+/** The filterable columns of a (possibly `null`) collection. */
+type FilterableOf<V> =
+  Exclude<V, null> extends { filterable: infer F } ? F : never;
+
+/** The `needsMachine` of a (possibly `null`) declaration. */
+type MachineOf<V> =
+  Exclude<V, null> extends MachineDecl<infer M> ? M : undefined;
+
+/**
+ * Arguments 1.. of a value overload, as a REST: an impossible arity when
+ * argument 0 (`V`) is a collection (it has `rows`), else today's params.
+ * Tested on `rows`, not on a value's own `live`: tsc infers `V` from what is
+ * LEFT of argument 0 once the constituents identical to the overload's own
+ * are matched away — for a value that strips `live`, for a collection
+ * nothing (measured). A
+ * collection call therefore leaves every value overload in tsc's ARITY
+ * bucket, and the one collection signature is the only candidate its
+ * arguments are checked against — a misuse is reported on its own property,
+ * never as "No overload matches this call" against the last value overload.
+ */
+type ValueArgs<V, Args extends unknown[]> = [
+  Extract<V, { rows: unknown }>,
+] extends [never]
+  ? Args
+  : [never, never, never];
+
+/**
+ * {@link ValueArgs} for a PAGED value's overloads, decided by its question
+ * type: argument 0 must stay a bare `LivePagedValue<…>` (no `& V`), or tsc no
+ * longer infers its type arguments from the alias — a `needsMachine` paged
+ * value's `NM`, a meta-less one's `Meta` (measured) — so the collection test
+ * reads `QIn` instead: a paged value always declares a `query` schema (its
+ * input is `QIn`), while a collection — or `null` — infers none (`unknown`).
+ */
+type PagedArgs<QIn, Args extends unknown[]> = unknown extends QIn
+  ? [never, never, never]
+  : Args;
+
+/**
+ * The one 2-argument COLLECTION read, first among the 2-argument signatures:
+ * an argument like `where: or(...)` is a generic call TypeScript checks once,
+ * against the first arity-matching overload's contextual type — so the
+ * query's `where` is literally the collection's own `LiveWhere<F>`.
+ *
+ * The query is never captured whole: one type parameter per kind key (`I`,
+ * `Ids`, `C`, `G`, `R` — {@link KindKeyValues}), the query's `null` /
+ * `undefined` (`N` — {@link QueryHoles}) and its key set (`K` —
+ * {@link KnownKeysOnly}). The read is the first kind key named, in
+ * {@link COLLECTION_KIND_KEYS} order — the runtime dispatch's own list.
+ *
+ * - `useLive(c, { where, orderBy, limit })` — a window (see `useLive(c)`).
+ * - `useLive(c, { groupBy, where?, limit? })` — the values a text / number /
+ *   boolean filterable column takes (with counts), ordered by count desc then
+ *   value; each value typed as the row field. The same list result as a
+ *   window, but one tuple whose limit grows: `loadMore()` reloads the
+ *   grouping at one more page of groups, and while the grown one loads the
+ *   hook stays settled on the previous groups (`growing: true`).
+ * - `useLive(c, { count: true, where? })` — how many rows match `where`, as
+ *   `ResourceResult<number>`, kept live; only on a collection declared
+ *   `count: true`. `null` in place of the query reads nothing (pending,
+ *   typed as the count); `null` in place of the collection is the counted
+ *   overload below.
+ * - `useLive(c, { ids })` — an explicit id set, via the `:rows` point sibling.
+ *   No paging fields: an id set is not a window.
+ * - `useLive(c, { id })` — one row by id, via the same sibling:
+ *   `LiveRowResult` — `loading`, then `ready` with `found: true` and the row,
+ *   or `found: false` when the server answered and no such row exists (a
+ *   determinate answer, never a spinner), or `error` with the row as last
+ *   seen as `stale`. A `null` id, or one no point set can carry (`""`, one
+ *   holding a `,`), is `found: false` from the first render and reads
+ *   nothing — an id from a URL, a token or a tool input renders not-found,
+ *   never a render error (`{ ids }` throws on one: a set is the caller's to
+ *   build).
+ * - `useLive(all, { select })`, `useLive(scoped, { where[, select] })` — see
+ *   `useLive(all)`.
+ *
+ * `{ id }` and `{ ids }` take every collection (window, lookup-only, `all`);
+ * a list read of a lookup-only collection — it declares no order to list in —
+ * is a tsc error. A misuse (an unknown key, a key the read or the collection
+ * does not take, a wrong `id`, `count` on an uncounted collection) is
+ * reported on its own property; a union naming two reads, and a query built
+ * before the call, on the argument.
+ */
+export function useLive<
+  Row,
+  D extends object,
+  F = never,
+  S extends string = never,
+  B extends string = never,
+  I extends string | null | undefined = undefined,
+  Ids extends readonly string[] | undefined = undefined,
+  C extends boolean | undefined = undefined,
+  G extends string | undefined = undefined,
+  R extends ((rows: CollectionRow<Row>[]) => unknown) | undefined = undefined,
+  N = never,
+  K extends PropertyKey = never,
+  NM extends MachineFeature | undefined = undefined,
+>(
+  collection: D &
+    LiveRowsCollection<Row> &
+    CollectionFacets<Row, F, S, B> &
+    MachineDecl<NM>,
+  query:
+    | (CollectionForms<D, Row, F, S, B, G> &
+        KindKeyValues<Row, I, Ids, C, G, R> &
+        KindGuard<QueryKindValues<D, I, Ids, C, G, R, N>> &
+        SkipGuard<N> &
+        KnownKeysOnly<K, QueryKeyName, LiveWhereOf<D>>)
+    | QueryHoles<D, N>,
+): WithMachine<
+  NM,
+  CollectionReads<D, Row, G, R>[KindOf<QueryKindValues<D, I, Ids, C, G, R, N>>]
+>;
+/**
+ * - `useLive(c)` — a bounded window at the collection's default query,
+ *   read as key-range pages, every one live (page 0 is this window tuple —
+ *   the one boot hydrates). Its settled arm adds `canGrow` / `growing` /
+ *   `loadMore()`: `loadMore()` splits the last page (one new page, seeded —
+ *   never a reload of a larger window), and it never pages past `maxLimit`
+ *   rows. While a new page loads the hook STAYS settled on the rows it has
+ *   (`growing: true`), so `if (pending)` never flashes a spinner over a list
+ *   that already rendered. Under a viewport, see below.
+ */
 export function useLive<
   Row,
   F,
@@ -298,27 +616,19 @@ export function useLive<
   NM extends MachineFeature | undefined = undefined,
 >(
   collection: LiveCollection<Row, F, S> & MachineDecl<NM>,
-  query?: LiveQuery<F, S>,
 ): WithMachine<NM, LiveListResult<CollectionRow<Row>>>;
-export function useLive<
-  Row,
-  F,
-  S extends string,
-  const G extends LiveGroupableColumn<F>,
-  NM extends MachineFeature | undefined = undefined,
->(
-  collection: LiveCollection<Row, F, S> & MachineDecl<NM>,
-  query: LiveGroupQuery<F, G>,
-): WithMachine<NM, LiveListResult<LiveGroup<LiveGroupValue<Row, G>>>>;
-export function useLive<
-  Row,
-  F,
-  S extends string,
-  NM extends MachineFeature | undefined = undefined,
->(
-  collection: (LiveCountedCollection<Row, F, S> & MachineDecl<NM>) | null,
-  query: LiveCountQuery<F> | null,
-): WithMachine<NM, ResourceResult<number>>;
+/**
+ * - `useLive(counted | null, { count: true, where? } | null)` — a count whose
+ *   collection may be absent: `null` in place of the collection (or of the
+ *   query) reads nothing (pending) — for a surface whose count is not cheap
+ *   right now (a search is on), or that has no collection to count. Taken
+ *   only when argument 0 may be `null` (`NullableCountArgs`), so a call on a
+ *   collection never lists it beside the collection signature.
+ */
+export function useLive<V>(
+  collection: V,
+  ...args: NullableCountArgs<V>
+): WithMachine<MachineOf<V>, ResourceResult<number>>;
 /**
  * - `useLive(c, query, { viewport, resetKey? })` — a collection's window read
  *   with no depth limit, its key-range pages kept live by the rows a surface
@@ -327,9 +637,9 @@ export function useLive<
  *   stale budget. `query` has no `limit` (the pages own the limits); `null`
  *   for both reads nothing (loading) with the hook order kept.
  *
- *   Without a viewport, `useLive(c, query?)` is the window overload above,
- *   read as the same pages, every one live: `loadMore()` splits the last
- *   page, and never pages past `maxLimit` rows.
+ *   Without a viewport, `useLive(c, query?)` is the window read above, read
+ *   as the same pages, every one live: `loadMore()` splits the last page, and
+ *   never pages past `maxLimit` rows.
  */
 export function useLive<
   Row,
@@ -352,7 +662,6 @@ export function useLive<
  * - `useLive(all, { select })` — a slice of it (`LiveAllSelect`), re-rendered
  *   only when the slice changes. Gated: its first value always renders,
  *   whatever the slice.
- *
  * - `useLive(scoped, { where: { pageId } })` — a collection declared
  *   `all: { by }`: every row OF ONE SCOPE, in the declared order (the
  *   `where` record is its tuple: exactly the `by` fields — `LiveScopedAllQuery`);
@@ -361,46 +670,13 @@ export function useLive<
  *   a tsc error, and a `where` on a set without `by` too (both throw for an
  *   untyped caller).
  *
- * An id set of an `all` collection is `useLive(all, { ids })` /
- * `useLiveRow(all, id)`, through its `:rows` point sibling like any other —
- * global, whatever the scope.
- * These overloads come AFTER the window and group ones (an `all` collection
- * has neither, so it never matches them) so a window query's contextual type
- * is still the first overload's.
+ * An id read of an `all` collection is `useLive(all, { ids })` /
+ * `useLive(all, { id })`, through its `:rows` point sibling like any other —
+ * global, whatever the scope. The 2-argument forms are the collection
+ * signature's (first).
  */
 export function useLive<Row, NM extends MachineFeature | undefined = undefined>(
   collection: LiveAllCollection<Row> & MachineDecl<NM>,
-): WithMachine<NM, ResourceResult<CollectionRow<Row>[]>>;
-export function useLive<
-  Row,
-  S,
-  NM extends MachineFeature | undefined = undefined,
->(
-  collection: LiveAllCollection<Row> & MachineDecl<NM>,
-  options: LiveAllSelect<Row, S>,
-): WithMachine<NM, ResourceResult<S>>;
-// The selected form first: a `{ where, select }` literal would otherwise be
-// tried against the plain one (its `select` an excess property).
-export function useLive<
-  Row,
-  B extends string,
-  S,
-  NM extends MachineFeature | undefined = undefined,
->(
-  collection: LiveAllCollection<Row, B> & MachineDecl<NM>,
-  query: LiveScopedAllQuery<NoInfer<B>> & LiveAllSelect<Row, S>,
-): WithMachine<NM, ResourceResult<S>>;
-export function useLive<
-  Row,
-  B extends string,
-  NM extends MachineFeature | undefined = undefined,
->(
-  collection: LiveAllCollection<Row, B> & MachineDecl<NM>,
-  query: LiveScopedAllQuery<NoInfer<B>>,
-): WithMachine<NM, ResourceResult<CollectionRow<Row>[]>>;
-export function useLive<Row, NM extends MachineFeature | undefined = undefined>(
-  collection: LiveRowsCollection<Row> & MachineDecl<NM>,
-  query: LiveIdsQuery,
 ): WithMachine<NM, ResourceResult<CollectionRow<Row>[]>>;
 /**
  * - `useLive(value)` / `useLive(value, params)` — a declared `liveValue`:
@@ -415,6 +691,10 @@ export function useLive<Row, NM extends MachineFeature | undefined = undefined>(
  *   one that will NEVER arrive (a missing registration, a legacy record with no
  *   id) is a settled answer the caller renders or throws on itself, never a
  *   `null` read left spinning.
+ *
+ * Every value overload takes its arguments after argument 0 through
+ * `ValueArgs` (a rest that is an impossible arity for a collection), so a
+ * collection call never lists them as candidates.
  */
 /**
  * - `useLive(value, [p1, p2, …])` / `useLive(queryValue, [q1, q2, …])` — MANY
@@ -435,27 +715,27 @@ export function useLive<
   Q,
   QIn,
   C extends string = never,
-  V extends object = object,
+  V extends object | null = object,
   NM extends MachineFeature | undefined = undefined,
 >(
   value: LiveQueryValue<T, Q, QIn, LiveValueOrigin> &
     RefusalsDecl<C> &
     MachineDecl<NM> &
     V,
-  queries: LiveQueryList<NoInfer<QIn>>,
+  ...args: ValueArgs<V, [queries: LiveQueryList<NoInfer<QIn>>]>
 ): WithMachine<NM, readonly LiveValueRead<V, T, C>[]>;
 export function useLive<
   T,
   P extends Record<string, string>,
   C extends string = never,
-  V extends object = object,
+  V extends object | null = object,
   NM extends MachineFeature | undefined = undefined,
 >(
   value: LivePlainValue<T, P, LiveValueOrigin> &
     RefusalsDecl<C> &
     MachineDecl<NM> &
     V,
-  params: LiveValueParamsList<NoInfer<P>>,
+  ...args: ValueArgs<V, [params: LiveValueParamsList<NoInfer<P>>]>
 ): WithMachine<NM, readonly LiveValueRead<V, T, C>[]>;
 /**
  * - `useLive(pagedValue, query, { viewport, resetKey? })` — a key-range-paged
@@ -476,8 +756,29 @@ export function useLive<
   NM extends MachineFeature | undefined = undefined,
 >(
   value: LivePagedValue<Item, Meta, Q, QIn, LiveValueOrigin, C, NM> | null,
-  query: NoInfer<QIn> | null,
-  options: LivePagesOptions,
+  ...args: PagedArgs<
+    QIn,
+    [query: NoInfer<QIn> | null, options: LivePagesOptions]
+  >
+): WithMachine<NM, LivePagesResult<Item, NoInfer<C>>>;
+// The same read for a GENERIC caller (data-view's `useLivePagedValuePaging`
+// passes its own `Item`…`NM`): there `PagedArgs<QIn>` is deferred and admits
+// no arguments, so this twin routes on argument 0 itself (`V`, defaulted
+// when the type arguments are explicit). A concrete paged value resolves on
+// the one above — whose argument 0 must stay the bare alias for its type
+// arguments to be inferred — and a collection leaves both by arity.
+export function useLive<
+  Item,
+  Meta,
+  Q,
+  QIn,
+  C extends string = never,
+  NM extends MachineFeature | undefined = undefined,
+  V extends object = object,
+>(
+  value:
+    (LivePagedValue<Item, Meta, Q, QIn, LiveValueOrigin, C, NM> & V) | null,
+  ...args: ValueArgs<V, [query: NoInfer<QIn> | null, options: LivePagesOptions]>
 ): WithMachine<NM, LivePagesResult<Item, NoInfer<C>>>;
 export function useLive<
   Item,
@@ -488,8 +789,10 @@ export function useLive<
   NM extends MachineFeature | undefined = undefined,
 >(
   value: LivePagedValue<Item, Meta, Q, QIn, LiveValueOrigin, C, NM>,
-  query: NoInfer<QIn> | null,
-  options?: LiveValuePagesOptions,
+  ...args: PagedArgs<
+    QIn,
+    [query: NoInfer<QIn> | null, options?: LiveValuePagesOptions]
+  >
   // `NoInfer`: `C` is the declaration's — never widened by the result's
   // annotation (`LiveListResult<Item>` would infer `string`).
 ): WithMachine<NM, LiveListResult<Item, NoInfer<C>>>;
@@ -506,12 +809,14 @@ export function useLive<
   QIn,
   C extends string = never,
   NM extends MachineFeature | undefined = undefined,
+  V extends object | null = object,
 >(
   value: LiveQueryValue<T, Q, QIn, LiveValueOrigin> &
     SnapshotDecl &
     RefusalsDecl<C> &
-    MachineDecl<NM>,
-  query: NoInfer<QIn> | null,
+    MachineDecl<NM> &
+    V,
+  ...args: ValueArgs<V, [query: NoInfer<QIn> | null]>
 ): WithMachine<NM, LiveSnapshotResult<T, C>>;
 export function useLive<
   T,
@@ -519,11 +824,13 @@ export function useLive<
   QIn,
   C extends string = never,
   NM extends MachineFeature | undefined = undefined,
+  V extends object | null = object,
 >(
   value: LiveQueryValue<T, Q, QIn, LiveValueOrigin> &
     RefusalsDecl<C> &
-    MachineDecl<NM>,
-  query: NoInfer<QIn> | null,
+    MachineDecl<NM> &
+    V,
+  ...args: ValueArgs<V, [query: NoInfer<QIn> | null]>
 ): WithMachine<NM, ResourceResult<T, C>>;
 /**
  * - A value declared `load: "snapshot"` (plain or typed-query) reads the same
@@ -569,6 +876,7 @@ export function useLive<Row, F, S extends string>(
     | LiveGroupQuery<F>
     | LiveCountQuery<F>
     | LiveIdsQuery
+    | LiveRowQuery
     | LiveAllSelect<Row, unknown>
     | LiveScopedAllQuery<string>
     | (LiveScopedAllQuery<string> & LiveAllSelect<Row, unknown>)
@@ -576,11 +884,14 @@ export function useLive<Row, F, S extends string>(
     | readonly unknown[]
     | null,
   options?: LivePagesOptions | LiveValuePagesOptions,
+  // A value overload's `ValueArgs` never-arm (an impossible arity) — never passed.
+  ..._unreachable: never[]
 ):
   | LiveListResult<unknown>
   | ResourceResult<unknown>
   | readonly ResourceResult<unknown>[]
   | LivePagesResult<unknown>
+  | LiveRowResult<unknown>
   | LiveUnavailable {
   // A declaration that needs the computer, under a transport with none behind
   // it, reads nothing: its own kind of read (no subscription, no HTTP read),
@@ -674,6 +985,11 @@ export function useLive<Row, F, S extends string>(
         source as LiveCollection<Row, F, S>,
         (query ?? undefined) as LiveQuery<F, S> | undefined,
       );
+    case "row":
+      return useRow(
+        source as LiveRowsCollection<Row>,
+        (query as LiveRowQuery).id,
+      );
     case "collection":
       return useCollection(
         source as LiveCollection<Row, F, S> | LiveRowsCollection<Row>,
@@ -695,6 +1011,7 @@ const READ_KIND = {
   "value-list": "list of value tuples",
   all: "whole `all` set",
   "all-pages": "window read (its pages every one live, no viewport)",
+  row: "row by id",
   collection: "grouping or id set",
 } as const;
 type ReadKind = keyof typeof READ_KIND;
@@ -732,21 +1049,52 @@ function readKindOf(
     if (decl.query === undefined) return "value";
     return decl.paged === undefined ? "query-value" : "value-pages";
   }
-  // A collection declared `all` reads its whole set — unless the query is an
-  // id set, which goes to `:rows` like any collection's.
-  const isIds = query != null && "ids" in query;
-  if ((source as { all?: unknown }).all !== undefined && !isIds) return "all";
-  // A count — or `null`, which only the count overload takes on a collection.
-  if (query === null || (query !== undefined && "count" in query)) {
-    return "count";
+  // A collection: the query's kind key decides — at most one, read by value
+  // (`{ id: undefined, where }` type-checks with no
+  // `exactOptionalPropertyTypes` and is a window read; a `null` id is an id).
+  // Two kind keys holding values would read one and drop the other, so an
+  // untyped caller's is a throw.
+  const kindKeys =
+    query == null
+      ? []
+      : COLLECTION_KIND_KEYS.filter(
+          (k) =>
+            (query as Partial<Record<CollectionKindKey, unknown>>)[k] !==
+            undefined,
+        );
+  if (kindKeys.length > 1) {
+    throw new Error(
+      `useLive("${keyOf(source)}"): a query reads one thing — this one names ${kindKeys.map((k) => `\`${k}\``).join(" and ")} (one row, an id set, a count, a grouping and a slice are each their own read).`,
+    );
   }
-  // Any other window read: its pages, every one live. A grouping and an id
-  // set are one tuple each.
-  const isGroups =
-    query !== undefined &&
-    "groupBy" in query &&
-    (query as { groupBy?: unknown }).groupBy !== undefined;
-  return isIds || isGroups ? "collection" : "all-pages";
+  const kindKey = kindKeys[0];
+  const isAll = (source as { all?: unknown }).all !== undefined;
+  switch (kindKey) {
+    case "id":
+      return "row";
+    case "ids":
+      return "collection";
+    case "select":
+      // A slice is an `all` set's (tsc refuses one elsewhere): beside a window
+      // no read would apply it.
+      if (!isAll) {
+        throw new Error(
+          `useLive("${keyOf(source)}"): \`select\` slices a collection declared \`all\` — this one is not (a window, a grouping and a count take no \`select\`).`,
+        );
+      }
+      return "all";
+    case "count":
+      return "count";
+    case "groupBy":
+      return "collection";
+    case undefined:
+      break;
+  }
+  // `null` only the count signature takes on a collection: its skip.
+  if (query === null) return "count";
+  // An `all` set reads its whole set (or its scope); any other window read
+  // its pages, every one live.
+  return isAll ? "all" : "all-pages";
 }
 
 /** The read of a declaration that needs the computer, where none is behind the transport. */
@@ -1001,7 +1349,7 @@ function useCollection<Row, F, S extends string>(
   collection: LiveCollection<Row, F, S> | LiveRowsCollection<Row>,
   query: LiveGroupQuery<F> | LiveIdsQuery,
 ): LiveListResult<unknown> | ResourceResult<Row[]> {
-  const ids = "ids" in query ? query.ids : undefined;
+  const ids = (query as { ids?: readonly string[] }).ids;
   // An id set reads `:rows` alone — it never touches the groups codec, which a
   // lookup-only collection does not have. A grouping is typed to a full one.
   const shape =
@@ -1124,46 +1472,18 @@ const NO_ID: LiveRowResult<never> = {
 };
 
 /**
- * Read one row of a live collection by id: `loading`, then `ready` with
- * `found: true` and the row, or `found: false` when the server answered and no
- * such row exists — a determinate answer, never a spinner — or `error` when the
- * read failed (with the row as last seen, as `stale`). Reads the `:rows` point
- * sibling, so it ignores every window filter and bound: it answers "does this
- * row exist".
- *
- * A `null` id (nothing to look up yet) is `found: false` from the first render
- * and reads nothing (the substrate's skip — no subscription, not a pending
- * mount): no id names no row. So is an id the point codec cannot carry (`""`,
- * or one holding a `,` — the wire set is comma-joined): no row can be
- * addressed by it, so the answer is as determinate as for `null`. A reader
- * handed an id from outside (a URL, a `[[page:…]]` token, an agent's tool
- * input) therefore renders its not-found state, never a render error.
+ * One row by id (`useLive(c, { id })`): the `:rows` point sibling at a one-id
+ * set — so it ignores every window filter and bound: it answers "does this
+ * row exist". A `null` id, or one the point codec cannot carry (`""`, one
+ * holding a `,` — the wire set is comma-joined), is {@link NO_ID} from the
+ * first render and reads nothing (the substrate's skip). The machine arm is
+ * `useLive`'s own read kind (`"unavailable"`), decided before this.
  */
-export function useLiveRow<
-  Row,
-  NM extends MachineFeature | undefined = undefined,
->(
-  collection: LiveRowsCollection<Row> & MachineDecl<NM>,
+function useRow<Row>(
+  collection: LiveRowsCollection<Row>,
   id: string | null,
-): WithMachine<NM, LiveRowResult<CollectionRow<Row>>>;
-export function useLiveRow<Row>(
-  collection: LiveRowsCollection<Row> & MachineDecl<MachineFeature | undefined>,
-  id: string | null,
-): LiveRowResult<CollectionRow<Row>> | LiveUnavailable {
-  // A collection that needs the computer, under a transport with none behind
-  // it: nothing is read (the same skip as a `null` id), and the read is
-  // `unavailable`.
-  const { machine } = useTransport();
-  const { needsMachine } = collection;
-  const unavailable = needsMachine !== undefined && !machine;
-  const unavailableRead = useMemo(
-    (): LiveUnavailable | null =>
-      needsMachine !== undefined && !machine
-        ? { status: "unavailable", message: unavailableMessage(needsMachine) }
-        : null,
-    [needsMachine, machine],
-  );
-  const absent = unavailable || id === null || !isPointId(id);
+): LiveRowResult<CollectionRow<Row>> {
+  const absent = id === null || !isPointId(id);
   const idsKey = absent ? null : collection.rows.point.encode([id]).ids;
   const params = useMemo(
     () => (idsKey === null ? null : { ids: idsKey }),
@@ -1171,10 +1491,9 @@ export function useLiveRow<Row>(
   );
   const result = useResource(collection.rows, params);
   // The result keeps its identity until what it is built from changes, like
-  // `useLive`'s list result: consumers memoize on it. `useResource`'s own
-  // result changes only with its status / data / error / stale.
-  return useMemo((): LiveRowResult<CollectionRow<Row>> | LiveUnavailable => {
-    if (unavailableRead !== null) return unavailableRead;
+  // the list result: consumers memoize on it. `useResource`'s own result
+  // changes only with its status / data / error / stale.
+  return useMemo((): LiveRowResult<CollectionRow<Row>> => {
     // Determinate without the server: no (carriable) id names no row.
     if (absent) return NO_ID;
     const { refetch } = result;
@@ -1201,5 +1520,5 @@ export function useLiveRow<Row>(
           : { status: "ready", found: true, row, refetch };
       }
     }
-  }, [unavailableRead, absent, result]);
+  }, [absent, result]);
 }

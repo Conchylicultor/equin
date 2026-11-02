@@ -1,4 +1,4 @@
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import { rowReferent } from "@plugins/active-data/plugins/id-chip/web";
@@ -13,7 +13,7 @@ import { buildRunTitle } from "../../core";
  * and the chip falls back to the raw id — which is the truth here.
  */
 export function useBuildRunReferent(id: string): IdReferentState {
-  return rowReferent(useLiveRow(buildHistory, id), buildRunTitle);
+  return rowReferent(useLive(buildHistory, { id }), buildRunTitle);
 }
 
 /** The link to the build's run-detail pane beside the surface holding the id (`push`). */

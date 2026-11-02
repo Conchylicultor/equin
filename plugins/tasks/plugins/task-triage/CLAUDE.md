@@ -80,9 +80,9 @@ risk, a context for the person, at most one one-click question. Design:
     - `DataViewSlots.CollectionItemAction` "task-triage.reads:investigate" → `CollectionInvestigate`
     - `ConfigV2.WebRegister` "config"
     - `DynamicEnum.Options` "Model"
-  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `network/live` ×4
+  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/endpoints` ×3
+    - `network/live` ×3
     - `primitives/css/ui-kit` ×3
     - `primitives/live-state` ×3
     - `tasks/automations` ×2

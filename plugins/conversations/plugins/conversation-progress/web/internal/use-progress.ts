@@ -1,7 +1,4 @@
-import {
-  useLiveRow,
-  type LiveRowResult,
-} from "@plugins/network/plugins/live/web";
+import { type LiveRowResult, useLive } from "@plugins/network/plugins/live/web";
 import {
   conversationProgressRows,
   type ConversationProgress,
@@ -14,5 +11,5 @@ import {
 export function useProgressFor(
   conversationId: string,
 ): LiveRowResult<ConversationProgress> {
-  return useLiveRow(conversationProgressRows, conversationId);
+  return useLive(conversationProgressRows, { id: conversationId });
 }

@@ -657,7 +657,7 @@ const SKIPPED_KEY = "\0skipped";
 // mismatches between the resource payload and your assumption.
 //
 // `params === null` is the substrate's SKIP — "there is no subject to read yet"
-// (public spelling: `useLive(value, null)`, `useLiveRow(c, null)`). Every hook
+// (public spelling: `useLive(value, null)`, `useLive(c, { id: null })`). Every hook
 // still runs (the call site's hook order is stable while its params flip), but
 // nothing is read: no subscription, no HTTP read or cold-start prime, and no
 // pending-mount count (the page is not waiting on the server for it). The query

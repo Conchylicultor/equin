@@ -23,7 +23,7 @@ shape and stay plain text.
     - `active-data/id-chip.idChip`
     - `active-data/id-chip.rowReferent`
     - `apps-core/tabs.useAppLink`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
 - Server:
   - Contributes:
     - `ids.referent` "song"

@@ -1,4 +1,4 @@
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
   Pane,
   resolveRow,
@@ -15,7 +15,7 @@ import { ConversationTitle } from "./components/conversation-title";
 // however old (W9) — no REST fallback. A failed read with nothing seen is the
 // failure, with Retry — never a Not Found for a conversation that may exist.
 function useResolveConversation({ convId }: { convId: string }): ResolveResult {
-  return resolveRow(useLiveRow(conversationsById, convId));
+  return resolveRow(useLive(conversationsById, { id: convId }));
 }
 
 export const conversationPane = Pane.define({

@@ -17,7 +17,7 @@ semitones (±12), surfaced as a toolbar popover and remembered per song.
   as a lookup-only collection, `transposes = liveCollection("sonata-transpose",
   { row, id: "songId" })` + `serveCollection(transposes, { from: songTranspose })`
   — minting `sonata-transpose:rows` alone — and the observer reads the open song's
-  row with `useLiveRow(transposes, songId)` (`found: false` is the absent row, so
+  row with `useLive(transposes, { id: songId })` (`found: false` is the absent row, so
   `0`). A preferred key for a song is a stable property of how the user sings it —
   so it survives reload and differs per song (unlike the ephemeral `tempoScale`).
 - **The document defines the setting, this plugin registers it.** The score
@@ -74,7 +74,7 @@ semitones (±12), surfaced as a toolbar popover and remembered per song.
     - `apps/sonata/library.sonataPlayerPane`
     - `apps/sonata/session.useSession`
     - `infra/endpoints.useFetchEndpoint`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
     - `primitives/css/center.Center`
     - `primitives/css/grid.Grid`
     - `primitives/css/pin.Pin`

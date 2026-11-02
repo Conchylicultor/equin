@@ -334,7 +334,7 @@ export const unreadServed = serveValue(notificationsUnread, { source: "db", load
 contributions: [...unreadServed.declare],
 ```
 
-Each served resource gets `GET /api/resources/<key>/...` (HTTP fallback for WS-down / curl / SSR) and a subscription entry on the shared `GET /ws/notifications` socket; the web reads it with `useLive` / `useLiveRow`.
+Each served resource gets `GET /api/resources/<key>/...` (HTTP fallback for WS-down / curl / SSR) and a subscription entry on the shared `GET /ws/notifications` socket; the web reads it with `useLive`.
 
 **`defineResource` / `defineExternalResource` are the runtime primitives** (`core/resources.ts`, over `framework/resource-runtime`) that `serveValue` / `serveCollection` compile to. Outside that substrate (and `infra/query-resource`'s `windowQueryResource`, which it calls) and tests, no plugin calls them directly — the flat `defineResource({ … })` form survives only for tests — and the `live/no-legacy-resource-spelling` lint rejects importing them anywhere else. On those forms:
 

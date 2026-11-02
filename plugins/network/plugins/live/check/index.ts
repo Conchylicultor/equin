@@ -9,6 +9,8 @@ import {
   maskSource,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
+import { readHooks } from "./internal/read-hooks";
+import { readMisuseDiagnostics } from "./internal/read-misuse-diagnostics";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = {
@@ -407,4 +409,10 @@ const clientFieldsResolved: Check = {
   },
 };
 
-export default [exposuresRegistered, armsRegistered, clientFieldsResolved];
+export default [
+  exposuresRegistered,
+  armsRegistered,
+  clientFieldsResolved,
+  readHooks,
+  readMisuseDiagnostics,
+];

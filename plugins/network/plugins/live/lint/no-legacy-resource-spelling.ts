@@ -11,12 +11,15 @@ const createRule = lintRuleCreator(import.meta.url);
  * no-legacy-resource-spelling
  *
  * The unified live-resource API (`plugins/network/plugins/live`) replaces the
- * twelve older ways to declare, serve and read a live resource with three
- * pairs: `liveValue` / `serveValue` / `useLive`, and `liveCollection` /
- * `serveCollection` / `useLive` / `useLiveRow`. The old spellings that still
- * exist stay only as the substrate the new ones compile to; the deleted ones
+ * twelve older ways to declare, serve and read a live resource with two
+ * triples: `liveValue` / `serveValue` / `useLive`, and `liveCollection` /
+ * `serveCollection` / `useLive` — one read hook, whose query picks the read
+ * (a window, a group, a count, an id set, one row by id). The old spellings
+ * that still exist stay only as the substrate the new ones compile to; the
+ * deleted ones — `useLiveRow` among them, folded into `useLive(c, { id })` —
  * stay listed so a stale import is told its replacement
- * (research/2026-10-08-global-page-tree-and-agents-routed.md).
+ * (research/2026-10-08-global-page-tree-and-agents-routed.md,
+ * research/2026-10-27-global-fold-uselive-row-into-uselive.md).
  *
  * Flags every import of an old spelling from the barrel that exports it — a
  * named import (aliases included), an `export { … } from` re-export — and every
@@ -43,9 +46,11 @@ const REPLACEMENT = {
   queryResource: "`serveCollection`",
   windowQueryResource: "`serveCollection`",
   useResource: "`useLive`",
-  usePointResource: "`useLiveRow`",
+  usePointResource: "`useLive(c, { id })`",
   usePointResources: "`useLive(c, { ids })`",
   useWindowResource: "`useLive(c, query)`",
+  // A second read hook beside `useLive`, folded into its query.
+  useLiveRow: "`useLive(c, { id })`",
   // The deferred and multi-tuple substrate the paged read and the exposing /
   // scoped collections compile to (not a fourth way to declare, serve or read
   // one).
@@ -101,6 +106,9 @@ const LEGACY_BARRELS: Readonly<Record<string, readonly LegacyName[]>> = {
     "defineResource",
     "defineExternalResource",
   ],
+  // Deleted when one row became a `useLive` query; kept so a stale import is
+  // flagged.
+  "@plugins/network/plugins/live/web": ["useLiveRow"],
 };
 
 /** The old spelling `name` is, when `source` is the barrel that exports it. */
@@ -138,7 +146,7 @@ export default createRule({
     type: "problem",
     docs: {
       description:
-        "Disallow the legacy live-resource spellings — declare, serve and read through network/live (liveValue / liveCollection, serveValue / serveCollection, useLive / useLiveRow).",
+        "Disallow the legacy live-resource spellings — declare, serve and read through network/live (liveValue / liveCollection, serveValue / serveCollection, useLive — one row is useLive(c, { id })).",
     },
     schema: [],
     messages: {

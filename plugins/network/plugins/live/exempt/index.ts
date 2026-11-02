@@ -3,10 +3,21 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 export default [
   {
     rule: "live/no-legacy-resource-spelling",
-    paths: ["."],
+    // Exactly the files compiled onto the substrate — never the whole plugin,
+    // so no new file of the live API (a second read hook among them) can
+    // reach for an old spelling unseen.
+    paths: [
+      "central/internal/serve-value.ts",
+      "server/internal/serve-collection.ts",
+      "server/internal/serve-off-feed.ts",
+      "server/internal/serve-union.ts",
+      "server/internal/serve-value.ts",
+      "web/internal/use-live.ts",
+      "web/internal/use-pages.ts",
+    ],
     kind: "sanctioned",
     reason:
-      "The substrate: defines the old live-resource spellings, or is compiled onto them (the live API, the optimistic overlay, the runtime and its server / central facades).",
+      "The substrate: the live API's serve and read halves are compiled onto the old live-resource spellings (the runtime's resources, query-resource's compilers, live-state's useResource / useResources).",
   },
   {
     rule: "live/no-endpoint-read",

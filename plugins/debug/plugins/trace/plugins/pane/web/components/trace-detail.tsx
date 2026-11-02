@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactElement } from "react";
-import { useLive, useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -36,7 +36,7 @@ import { traceDetailPane } from "../panes";
 // feeds the shared bottom detail strip. A non-uuid id (a hand-typed or stale
 // URL) is answered not-found by the point read itself, like an unknown uuid.
 export function TraceDetail({ id }: { id: string }): ReactElement {
-  const result = useLiveRow(traceById, id);
+  const result = useLive(traceById, { id });
 
   if (result.status === "loading") {
     return (

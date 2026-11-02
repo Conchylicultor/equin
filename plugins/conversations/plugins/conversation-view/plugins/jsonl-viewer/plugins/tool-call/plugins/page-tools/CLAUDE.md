@@ -9,7 +9,7 @@
   - Uses:
     - `apps/pages/page-tree.pageDetailPane`
     - `network/live.LiveRowResult`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
     - `page/editor.PageIcon`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`

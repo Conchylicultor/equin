@@ -42,7 +42,7 @@ task was filed with a placeholder) and a ≤3-word short title for narrow rows
 - Web:
   - Uses:
     - `network/live.LiveRowResult`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
   - Exports (types): `TaskShortTitle`
   - Exports (values): `useTaskShortTitle`
 - Core:

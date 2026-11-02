@@ -21,7 +21,7 @@ through `active-data/id-chip`'s `idChip` / `idChipServer`.
     - `active-data/id-chip.idChip`
     - `active-data/id-chip.rowReferent`
     - `apps/events/sources.eventSourceDetailPane`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
     - `primitives/pane.useOpenPane`
 - Server:
   - Contributes:

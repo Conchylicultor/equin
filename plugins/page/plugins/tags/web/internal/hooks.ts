@@ -1,5 +1,5 @@
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import { mapRow, useLive, useLiveRow } from "@plugins/network/plugins/live/web";
+import { mapRow, useLive } from "@plugins/network/plugins/live/web";
 import {
   combineResources,
   mapResource,
@@ -43,7 +43,7 @@ function resolveTags(
 export function usePageTags(pageId: string): ResourceResult<PageTagRow[]> {
   // No assignment row is the page carrying no tags.
   const tagIds = mapRow(
-    useLiveRow(pageTagAssignments, pageId),
+    useLive(pageTagAssignments, { id: pageId }),
     (row): readonly string[] => row?.tagIds ?? [],
   );
   const vocabulary = useTagVocabulary();
@@ -116,7 +116,7 @@ export function usePageTagsEditor(
   pageId: string,
 ): ResourceResult<PageTagsEditor> {
   const tagIds = mapRow(
-    useLiveRow(pageTagAssignments, pageId),
+    useLive(pageTagAssignments, { id: pageId }),
     (row): readonly string[] => row?.tagIds ?? [],
   );
   const put = useEndpointMutation(putPageTags);

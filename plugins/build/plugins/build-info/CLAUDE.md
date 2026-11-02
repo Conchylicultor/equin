@@ -11,7 +11,6 @@
     - `build.BuildDetailSlots`
     - `build/build-status.BuildStatusBadge`
     - `network/live.useLive`
-    - `network/live.useLiveRow`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
     - `primitives/css/rigid.rigidClass`

@@ -29,7 +29,7 @@ ruleTester.run("no-legacy-resource-spelling", rule, {
     // The unified spellings.
     {
       code: `
-          import { useLive, useLiveRow } from "@plugins/network/plugins/live/web";
+          import { useLive, useLiveReader } from "@plugins/network/plugins/live/web";
           import { serveValue } from "@plugins/network/plugins/live/server";
         `,
       },
@@ -117,6 +117,16 @@ ruleTester.run("no-legacy-resource-spelling", rule, {
       {
         code: `import { usePointResource, matchResource, useWindowResource } from "${LIVE_STATE_WEB}";`,
         errors: [legacy("usePointResource"), legacy("useWindowResource")],
+      },
+      // The deleted row hook: one row is a `useLive` query now.
+      {
+        code: `import { useLive, useLiveRow } from "@plugins/network/plugins/live/web";`,
+        errors: [
+          {
+            messageId: "legacySpelling",
+            data: { name: "useLiveRow", replacement: "`useLive(c, { id })`" },
+          },
+        ],
       },
       // Central's facade exports the same factories.
       {

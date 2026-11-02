@@ -4,8 +4,9 @@ export type {
   NotCollectionRow,
 } from "./internal/collection-row";
 // Whether a point id set can carry an id (non-empty, comma-free) — what
-// `useLiveRow` answers `found: false` for instead of encoding.
+// `useLive(c, { id })` answers `found: false` for instead of encoding.
 export { isPointId } from "./internal/window-descriptor";
+export { LIVE_WEB_HOOKS } from "./internal/read-hooks";
 export type { LiveColumnRef, LiveColumnRefOwner } from "./internal/column-ref";
 export {
   liveArm,
@@ -119,6 +120,7 @@ export type {
   LiveRowsCollection,
   LiveRowSchema,
   LiveWindowCodec,
+  LiveWhereOf,
   LiveWindowDescriptor,
 } from "./internal/live-collection";
 export { LIVE_ROW_KEY, LIVE_ROW_KEY_MAX_BYTES } from "./internal/row-key";
@@ -156,6 +158,7 @@ export type { LiveRuntime } from "./internal/compile-value";
 export type { LiveCutKey } from "./internal/row-key";
 export type {
   LiveColumnFilter,
+  CollectionKindKey,
   LiveCountParams,
   LiveCountQuery,
   LiveDecodedCountQuery,
@@ -169,15 +172,19 @@ export type {
   LiveGroupParams,
   LiveGroupQuery,
   LiveGroupValue,
+  LiveIdsQuery,
   LiveOrderBy,
   LiveQuery,
   LiveReservedColumn,
+  LiveRowQuery,
+  LiveScopedAllQuery,
   LiveSortDirection,
   LiveWhere,
   LiveWhereObject,
   LiveWindowBounds,
   LiveWindowParams,
 } from "./internal/query";
+export { COLLECTION_KIND_KEYS } from "./internal/query";
 export {
   compilePagedValue,
   compileQueryValue,

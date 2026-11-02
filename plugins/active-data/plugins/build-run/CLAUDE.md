@@ -26,7 +26,7 @@ build's legacy `<commit>-<ms>` id is not a build-run id at all and never chips.
     - `active-data/id-chip.idChip`
     - `active-data/id-chip.rowReferent`
     - `build.buildDetailPane`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
     - `primitives/pane.useOpenPane`
 - Server:
   - Contributes:

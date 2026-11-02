@@ -14,7 +14,7 @@ export type { Agent, AgentLaunch, AgentLaunchWithStatus } from "./schemas";
 // ordered by (rank, createdAt) (the id breaks ties): the Agents sidebar
 // renders the whole tree (parentId + per-parent rank), and the by-id readers
 // (the agent panes, the conversation avatars) read one row of it through
-// `:rows` (`useLiveRow`). It is hand-written, so it grows only by hand — the
+// `:rows` (`useLive(c, { id })`). It is hand-written, so it grows only by hand — the
 // stated `unbounded` reason.
 //
 // Served over the `agents` TABLE (`../server/internal/agent-rows.ts`), never

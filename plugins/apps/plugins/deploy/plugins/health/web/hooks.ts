@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import {
   mapRow,
   useLive,
-  useLiveRow,
   type LiveRowResult,
 } from "@plugins/network/plugins/live/web";
 import {
@@ -47,7 +46,7 @@ export function useServerHealthMap(
 export function useServerHealth(
   serverId: string,
 ): LiveRowResult<ServerHealthRow> {
-  return useLiveRow(serverHealthRows, serverId);
+  return useLive(serverHealthRows, { id: serverId });
 }
 
 /**

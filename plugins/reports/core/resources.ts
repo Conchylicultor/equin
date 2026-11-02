@@ -11,7 +11,7 @@ import { reportsEntityRef } from "./entity";
 const REPORTS_VIEW_ID = "debug.reports";
 
 // Every recorded report, last seen first — the Reports DataView's live source,
-// the detail pane's by-id read (`useLiveRow`, the collection's `:rows`) and its
+// the detail pane's by-id read (`useLive(c, { id })`, the collection's `:rows`) and its
 // kind / source filter options (the `:groups` grouping). One collection serves
 // all three: there is no base `where` (a worktree only ever holds its own rows —
 // `reports` is excluded from the fork).

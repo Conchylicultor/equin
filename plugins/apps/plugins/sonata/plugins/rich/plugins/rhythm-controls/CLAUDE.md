@@ -25,7 +25,7 @@ and a block chord struck once per cycle, restarting on every chord change.
   { row, id: "songId" })` + `serveCollection(rhythms, { from: songRhythm })`
   (minting `sonata-rhythm:rows` alone; the jsonb patterns bind through the
   extension's decoded columns); the observer and `useGroove` each read the open
-  song's row with `useLiveRow(rhythms, songId)`. Clones the `transpose` plugin's
+  song's row with `useLive(rhythms, { id: songId })`. Clones the `transpose` plugin's
   side-table shape verbatim.
 - **The shell defines the setting, this plugin registers it.** The score
   pipeline (`reVoiceChords`) lives in the load-bearing shell, which can't import
@@ -162,7 +162,7 @@ already-effective onsets (`effectiveOnsets(pattern)`, rotation applied) and maps
     - `primitives/css/control-panel` ×2
     - `primitives/css/spacing` ×2
     - `infra/endpoints.useEndpointMutation`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`

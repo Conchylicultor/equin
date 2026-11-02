@@ -1,10 +1,6 @@
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { type ResourceResult } from "@plugins/primitives/plugins/live-state/web";
-import {
-  useLive,
-  useLiveRow,
-  type LiveRowResult,
-} from "@plugins/network/plugins/live/web";
+import { useLive, type LiveRowResult } from "@plugins/network/plugins/live/web";
 import {
   createEventSource,
   deleteEventSource,
@@ -34,7 +30,7 @@ export function useEventSources(): ResourceResult<EventSource[]> {
 export function useEventSourceRow(
   sourceId: string,
 ): LiveRowResult<EventSource> {
-  return useLiveRow(eventSources, sourceId);
+  return useLive(eventSources, { id: sourceId });
 }
 
 /**
@@ -48,7 +44,7 @@ export function useEventSourceRun(
   runId: string,
 ): LiveRowResult<EventSourceRun> {
   // `key` upgrades a pre-rewrite bare-uuid run id (an old `run/<uuid>` URL).
-  return useLiveRow(eventSourceRuns, eventRunIdKind.key(runId));
+  return useLive(eventSourceRuns, { id: eventRunIdKind.key(runId) });
 }
 
 /**

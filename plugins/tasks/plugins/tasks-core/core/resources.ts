@@ -122,7 +122,7 @@ export type TaskRow =
   typeof taskRows extends LiveRowsCollection<infer R> ? R : never;
 
 // One task's `description` — the heavy text the `tasks` set leaves out — read
-// by id (`useLiveRow(taskDescriptions, id)`): lookup-only, so it loads only
+// by id (`useLive(taskDescriptions, { id })`): lookup-only, so it loads only
 // for an open detail pane, and a description autosave is that one row's
 // refill. A task the read does not find is `found: false`. Served over the
 // `tasks` table in `../server/internal/resources.ts`.
@@ -185,7 +185,7 @@ export const attemptRows = liveCollection("attempts", {
 });
 // One attempt's workspace (conversations/workspace: a worktree, or a scratch
 // dir and its profile) and checkout by attempt id — lookup-only, read with
-// `useLiveRow(attemptWorkspaces, attemptId)` by the surfaces that gate on
+// `useLive(attemptWorkspaces, { id: attemptId })` by the surfaces that gate on
 // what the workspace offers (the conversation pane's git surfaces), and
 // FOLLOWED by `{ ids: [attemptId] }` by the values computed from where an
 // attempt runs (`attemptWorkspacesServed`, `../server`: attempt-work,
@@ -499,7 +499,7 @@ export const conversationsGone = liveCollection("conversations-gone", {
   count: true,
   preload: "boot",
 });
-// One conversation by id, whatever its status or age (`useLiveRow`): the
+// One conversation by id, whatever its status or age (`useLive(c, { id })`): the
 // conversation pane, every toolbar control and chip that holds an id. A point
 // read, so a done conversation older than the newest `RECENT_GONE_LIMIT` is
 // found like any other (W9) — no REST fallback. Lookup-only (`:rows` alone,

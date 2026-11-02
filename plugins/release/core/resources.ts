@@ -134,7 +134,7 @@ export type ReleaseRun = z.infer<typeof ReleaseRunSchema>;
 
 // The `release_runs` rows, read by id: a lookup-only collection (no default
 // window yet), so it mints `release.runs:rows` alone. The run-detail pane's
-// sections each read their run with `useLiveRow(releaseRuns, runId)` — any run,
+// sections each read their run with `useLive(releaseRuns, { id: runId })` — any run,
 // regardless of age — and `found: false` is "no such run". The `:rows` point
 // routing sends a status flip to that run's readers alone.
 //

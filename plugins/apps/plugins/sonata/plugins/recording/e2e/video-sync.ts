@@ -63,7 +63,7 @@ const r = report(`sonata recording sync — ${songId}`);
  * One song's row of a lookup-only live collection, over its HTTP point read
  * (`GET /api/resources/<key>:rows?ids=<songId>` → `{ value: row[] }`), or
  * null when the song has none — the reads the player's hydration makes with
- * `useLiveRow` (UG's `sonata.ultimate-guitar.songs`, the alignment's
+ * `useLive(c, { id })` (UG's `sonata.ultimate-guitar.songs`, the alignment's
  * `sonata-ug-alignment`).
  */
 async function songRow(key: string): Promise<Record<string, unknown> | null> {

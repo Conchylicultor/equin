@@ -11,7 +11,6 @@
     - `apps/pages/page-tree.pageDetailPane`
     - `history/dialog.VersionHistoryDialog`
     - `network/live.useLive`
-    - `network/live.useLiveRow`
     - `page/editor.BLOCK_INSET`
     - `page/editor.PageIcon`
     - `page/read-only-view.ReadOnlyBlocks`

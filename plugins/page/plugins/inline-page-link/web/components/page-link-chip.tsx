@@ -1,5 +1,5 @@
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
@@ -29,7 +29,7 @@ const linkIcon = symbol("link");
  * one cannot be forgotten there.
  */
 export function PageLinkChip({ pageId }: { pageId: string }) {
-  const result = useLiveRow(pagesTree, pageId);
+  const result = useLive(pagesTree, { id: pageId });
 
   // A failed read that once had the page keeps resolving from it; without
   // one, the chip is the failure (an icon, to keep the line intact).

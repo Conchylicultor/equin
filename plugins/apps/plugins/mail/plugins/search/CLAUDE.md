@@ -30,7 +30,7 @@ bounded 30-day sync window. Web-only; it reads `sync`'s `mail.search` and
   afresh.
 - **`mailMessagePane`** (`segment: "m/:messageId"`, `parent: mailSearchRoute`) —
   the reader, opened for the hit's newest matched message. Its header is the
-  message's live row in the mirror (`useLiveRow(threadMessages, messageId)`),
+  message's live row in the mirror (`useLive(threadMessages, { id: messageId })`),
   its body and attachments the `mail.message-body` value: not fetched yet is
   the loading state (the subscription asks `sync`'s `mail.hydrate` job for
   it), a failed fetch shows why with a Retry — both drawn by `sync/web`'s
@@ -69,16 +69,16 @@ bounded 30-day sync window. Web-only; it reads `sync`'s `mail.search` and
     - `Mail.Sidebar` "Search"
     - `Pane.Register` "mail-message"
     - `Pane.Register` "mail-search"
-  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×4
     - `apps/mail/threads` ×3
     - `integrations/gmail` ×3
     - `primitives/data-view` ×3
     - `primitives/live-state` ×3
-    - `network/live` ×2
     - `primitives/css/spacing` ×2
     - `apps/mail/shell.Mail`
     - `apps/mail/sync.MessageBodyState`
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/cluster.Cluster`

@@ -1,5 +1,5 @@
 import { type ReactElement } from "react";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -19,7 +19,7 @@ const UUID_RE =
 // through the SAME pure Gantt as the live capture, with a read-only banner in
 // place of the live controls.
 export function BootProfileDetail({ id }: { id: string }): ReactElement {
-  const result = useLiveRow(bootTrace, UUID_RE.test(id) ? id : null);
+  const result = useLive(bootTrace, { id: UUID_RE.test(id) ? id : null });
 
   if (result.status === "loading") {
     return (

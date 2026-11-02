@@ -18,7 +18,7 @@ import type { RowTruth } from "./row-truth";
  * (per-block CRDT plan, `research/2026-07-07-page-per-block-crdt-plan-b.md`,
  * Stage 2):
  *
- * - **in** — the per-block `blockDocs` live row (`useLiveRow`). The owning
+ * - **in** — the per-block `blockDocs` live row (`useLive(c, { id })`). The owning
  *   hook pushes each server value into {@link onServerState}; the provider
  *   `Y.applyUpdate`s it with itself as transaction origin. Idempotent and
  *   commutative, so the sender's own echo is a no-op and a concurrent remote

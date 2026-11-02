@@ -36,7 +36,7 @@ export type BlockDocRow = z.infer<typeof BlockDocRowSchema>;
 
 // The `page_block_docs` rows, read one block at a time: lookup-only (no default
 // window — nothing lists every block's doc), so it mints `page-block-doc:rows`
-// alone and is read with `useLiveRow(blockDocs, blockId)`. Only mounted block
+// alone and is read with `useLive(blockDocs, { id: blockId })`. Only mounted block
 // editors subscribe, which is the lazy content-loading win; `found: false` is
 // "doc not initialized yet" (the first `doc-init` creates it). The point
 // routing sends a write to one block's row to THAT block's subscribers only.

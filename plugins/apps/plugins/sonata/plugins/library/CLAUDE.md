@@ -227,7 +227,7 @@ and composer). Served by `songLibraryServed`, which compiles at boot once the
   })` probe decides the first-run onboarding — settled with no row — and
   otherwise the DataView owns its skeleton and errors); `useCurrentSong`, the
   player title (`useSongTitle`) and its resolve gate (`useSonataPlayerResolve`)
-  each read ONE row with `useLiveRow(songLibrary, id)`, whose rows carry
+  each read ONE row with `useLive(songLibrary, { id })`, whose rows carry
   `$columns` too.
 - **Behaviour under a live source.** Nulls sort last in both directions (the
   keyset rule; the nullable sortable columns are `composer`,
@@ -247,7 +247,7 @@ and composer). Served by `songLibraryServed`, which compiles at boot once the
 `sonata_songs.title` has exactly **one** client-side owner: this plugin's
 `songLibrary` collection. There is no shell-context mirror of it. Anything that
 needs the open song's title reads it through `useCurrentSong()` (the canonical
-row for `currentSongId`, one `useLiveRow` point read, preserving the `status`
+row for `currentSongId`, one `useLive(c, { id })` point read, preserving the `status`
 arms (loading / error / ready)), and the title is *edited* in exactly one place — the inline
 `SongTitle` field, which is the player pane's TITLE node
 (`title: { component: SongTitle }` on its `Pane.define`, `web/components/song-title-field.tsx`) and
@@ -289,14 +289,14 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `Library.SongActions` "delete" → `DeleteSongAction`
     - `Pane.Register` "sonata-library"
     - `Pane.Register` "sonata-player"
-  - Uses: 93 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 92 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×13
     - `primitives/data-view` ×7
     - `apps/sonata/shell` ×6
-    - `network/live` ×6
     - `primitives/css/ui-kit` ×6
     - `primitives/live-state` ×6
     - `apps/sonata/player` ×5
+    - `network/live` ×5
     - `apps/sonata/document` ×4
     - `primitives/persistent-draft` ×3
     - `apps/sonata/view-options` ×2

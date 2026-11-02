@@ -1,7 +1,4 @@
-import {
-  useLiveRow,
-  type LiveRowResult,
-} from "@plugins/network/plugins/live/web";
+import { type LiveRowResult, useLive } from "@plugins/network/plugins/live/web";
 import { taskShortTitles, type TaskShortTitle } from "../core";
 
 /**
@@ -13,5 +10,5 @@ import { taskShortTitles, type TaskShortTitle } from "../core";
 export function useTaskShortTitle(
   taskId: string,
 ): LiveRowResult<TaskShortTitle> {
-  return useLiveRow(taskShortTitles, taskId);
+  return useLive(taskShortTitles, { id: taskId });
 }

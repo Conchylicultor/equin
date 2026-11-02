@@ -13,7 +13,7 @@ import type { Block, PageRow } from "./schemas";
 // renders every page, and the `[[` / page-link pickers filter it by title
 // locally; the by-id readers (the page header, cover and kind control, the
 // link chips, the pane resolvers) read one row of it through `:rows`
-// (`useLiveRow`). The sidebar tree is built by `pageId` (the nearest page
+// (`useLive(c, { id })`). The sidebar tree is built by `pageId` (the nearest page
 // ancestor — `parentId` may point at a content block) and ordered by `docRank`
 // — the persisted, writer-derived document-order key (see `PageRowSchema`),
 // NOT the raw storage `rank`; the set's own order is `createdAt`, which never
@@ -172,7 +172,7 @@ export type _PinPageBlocksRow = Assert<Equal<PageBlocksRow, Required<Block>>>;
 // block, content blocks included: the reverse lookup `pagesTree` structurally
 // cannot answer (it holds only page rows). Lookup-only (`:rows`, by id): a
 // surface holding a bare block id (a transcript chip, the block pane) reads
-// one row with `useLiveRow(blockLocations, id)`. Served over the `page_blocks`
+// one row with `useLive(blockLocations, { id })`. Served over the `page_blocks`
 // table with the live-block predicate (`deleted_at IS NULL`) as its base
 // membership, so a trash is a where-flip exit (the row reads not found) and a
 // restore an entrant. The point route reads only these columns, so the typing

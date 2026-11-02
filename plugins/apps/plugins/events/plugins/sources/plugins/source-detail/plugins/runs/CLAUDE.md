@@ -25,7 +25,7 @@ pointer. `RunActions` stays as the slot for actions that are genuinely actions
 (re-run, copy id); it ships none.
 
 The pane resolves the run by its **own id** (`useEventSourceRun` →
-`useLiveRow`, the collection's point sibling):
+`useLive(c, { id })`, the collection's point sibling):
 pane params are own-only, so it never sees the parent's `sourceId`, and a deep
 link must resolve from the URL rather than from whatever window the runs list
 happened to have loaded.

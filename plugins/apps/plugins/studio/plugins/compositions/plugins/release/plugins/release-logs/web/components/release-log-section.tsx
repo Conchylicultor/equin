@@ -6,7 +6,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
   DataView,
   defineDataView,
@@ -30,7 +30,7 @@ const RELEASE_RUN_LOGS = defineDataView("release.run-logs");
 const NO_LINES: ReleaseLogLine[] = [];
 
 export function ReleaseLogSection({ runId }: { runId: string }): ReactElement {
-  const result = useLiveRow(releaseRuns, runId);
+  const result = useLive(releaseRuns, { id: runId });
 
   // Live runs stream over `/ws/logs`; finished runs read the persisted log.
   // While the row is still loading we optimistically show the live stream

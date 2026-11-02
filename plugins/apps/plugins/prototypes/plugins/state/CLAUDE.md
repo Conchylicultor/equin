@@ -90,7 +90,6 @@ move-to-trash delete may still run against the shared tree.
     - `infra/endpoints.useEndpointMutation`
     - `network/live.mapRow`
     - `network/live.useLive`
-    - `network/live.useLiveRow`
   - Exports (values):
     - `usePrototypeState`
     - `usePrototypeStates`

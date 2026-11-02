@@ -5,7 +5,7 @@
  * The rule flags server I/O inside a `useEffect` / `useLayoutEffect` that reacts
  * to shared live-state, because every open tab receives the same push and runs
  * the same effect. The shared-state readers are matched by NAME: network/live's
- * `useLive` / `useLiveRow` (which the `use*Resource(s)` convention cannot see),
+ * `useLive` (which the `use*Resource(s)` convention cannot see),
  * the old `useResource`, and any `use*Resource(s)` hook. An effect that reacts
  * only to local state, or reads a shared value it does not react to, is left
  * alone — the rule favours false negatives.
@@ -39,7 +39,7 @@ ruleTester.run("no-reactive-server-io", rule, {
       // A live row, read outside the effect's dependencies.
       {
         code: `function C({ id }) {
-          const row = useLiveRow(tasks, id);
+          const row = useLive(tasks, { id });
           useEffect(() => { void fetchEndpoint(ping, {}); }, [id]);
           return row;
         }`,
@@ -77,10 +77,10 @@ ruleTester.run("no-reactive-server-io", rule, {
         }`,
         errors: [error],
       },
-      // `useLiveRow`, and a `.mutate` sink.
+      // A row read (`useLive(c, { id })`), and a `.mutate` sink.
       {
         code: `function C({ id }) {
-          const task = useLiveRow(tasks, id);
+          const task = useLive(tasks, { id });
           const save = useMutation();
           useEffect(() => { if (task.found) save.mutate(task.row); }, [task]);
         }`,
@@ -89,7 +89,7 @@ ruleTester.run("no-reactive-server-io", rule, {
       // No dependency array: the effect reacts to everything its body references.
       {
         code: `function C({ id }) {
-          const task = useLiveRow(tasks, id);
+          const task = useLive(tasks, { id });
           useEffect(() => { if (task.found) toast(task.row.title); });
         }`,
         errors: [error],

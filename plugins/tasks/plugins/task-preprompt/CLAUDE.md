@@ -15,7 +15,7 @@
     - `infra/endpoints.useFetchEndpoint`
     - `network/live.LiveRowResult`
     - `network/live.mapRow`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
     - `primitives/text-editor/composer/picker-pill.PickerPill`
     - `shell/notifications.useToast`
     - `tasks/launch-options.TaskLaunch`

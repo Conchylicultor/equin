@@ -1,7 +1,4 @@
-import {
-  useLiveRow,
-  type LiveRowResult,
-} from "@plugins/network/plugins/live/web";
+import { type LiveRowResult, useLive } from "@plugins/network/plugins/live/web";
 import { taskAutoStart, type TaskAutoStartRow } from "../core";
 
 /**
@@ -13,5 +10,5 @@ import { taskAutoStart, type TaskAutoStartRow } from "../core";
 export function useTaskAutoStart(
   taskId: string,
 ): LiveRowResult<TaskAutoStartRow> {
-  return useLiveRow(taskAutoStart, taskId);
+  return useLive(taskAutoStart, { id: taskId });
 }

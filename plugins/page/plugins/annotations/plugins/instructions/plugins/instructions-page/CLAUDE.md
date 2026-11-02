@@ -55,7 +55,7 @@ It contributes to two generic seams and names nothing else:
     - `Editor.InsertAction` "Instructions page"
   - Uses:
     - `infra/endpoints.useFetchEndpoint`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
     - `page/editor.Editor`
     - `page/page-reference.PageReference`
     - `page/page-reference.PageReferenceDecorationContribution`

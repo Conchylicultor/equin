@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
-import { mapRow, useLiveRow } from "@plugins/network/plugins/live/web";
+import { mapRow, useLive } from "@plugins/network/plugins/live/web";
 import { songLibrary } from "../core";
 import { Library, type SourceHydration } from "./slots";
 import { combineHydrations, type SongHydration } from "./hydrate-sources";
@@ -46,7 +46,7 @@ export function SongHydrator({
   children: StepProps["children"];
 }): ReactNode {
   const sources = Library.Source.useContributions();
-  const owner = mapRow(useLiveRow(songLibrary, songId), (song) =>
+  const owner = mapRow(useLive(songLibrary, { id: songId }), (song) =>
     song === null ? null : song.source,
   );
   return (

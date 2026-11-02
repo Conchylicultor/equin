@@ -62,7 +62,7 @@ Run the tests with `./equin test plugins/apps/plugins/deploy/plugins/host-query`
 - Web:
   - Uses:
     - `network/live.LiveRowResult`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
     - `plugin-meta/composition.useCompositionIncludes`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`

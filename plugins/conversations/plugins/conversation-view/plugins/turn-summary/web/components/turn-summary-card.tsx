@@ -1,5 +1,5 @@
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
   CollapsibleChevron,
   FoldMotion,
@@ -56,7 +56,7 @@ export function TurnSummaryCard({
 }: {
   conversation: ConversationRecord;
 }) {
-  const result = useLiveRow(turnSummaryRows, conversation.id);
+  const result = useLive(turnSummaryRows, { id: conversation.id });
   const { open, triggerProps, contentProps } = useCollapsible({
     defaultOpen: true,
   });

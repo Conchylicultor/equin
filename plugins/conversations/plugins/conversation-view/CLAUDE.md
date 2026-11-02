@@ -37,7 +37,7 @@
     - `conversations/conversation-view/jsonl-viewer.JsonlPane`
     - `conversations/hibernation.useMarkConversationViewed`
     - `conversations.useConversationById`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
     - `primitives/bar.Bar`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`

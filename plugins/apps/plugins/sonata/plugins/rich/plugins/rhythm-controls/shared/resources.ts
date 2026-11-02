@@ -112,7 +112,7 @@ export type RhythmRow = z.infer<typeof RhythmRowSchema>;
  * The groove of ONE song, read by the song's id: a lookup-only collection over
  * the extension table (nothing lists every song's groove), minting
  * `sonata-rhythm:rows` alone. The observer and `useGroove` read the open song's
- * row with `useLiveRow(rhythms, songId)`; `found: false` is an absent row, i.e.
+ * row with `useLive(rhythms, { id: songId })`; `found: false` is an absent row, i.e.
  * the default accompaniment.
  */
 export const rhythms = liveCollection("sonata-rhythm", {

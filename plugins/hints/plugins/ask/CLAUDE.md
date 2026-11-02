@@ -120,7 +120,7 @@ portable `server/` half.
   action of the card, empty or holding a thread (`ForAudience
   mark="badge"`), opening the Ask equin config (`useConfigLink(askConfig)`)
   — the Instructions field is the agent's prompt.
-- **A filed task** renders as `FiledTaskCard`: `useLiveRow(taskRows, taskId)`
+- **A filed task** renders as `FiledTaskCard`: `useLive(taskRows, { id: taskId })`
   — the live task's status and title, opening its newest conversation (`useTaskConversations`), or its detail pane until a run has started. Loading until
   the point read answers; **not found means deleted**, never "not there yet":
   the tool committed the task before it returned, and the card exists only
@@ -184,7 +184,7 @@ portable `server/` half.
     - `conversations/model-provider.useModelChoiceOptions`
     - `conversations.useConversation`
     - `fields/dynamic-enum/config.DynamicEnum`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/clip.clipClasses`
     - `primitives/css/column.Column`

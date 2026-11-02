@@ -12,7 +12,7 @@
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
     - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
     - `infra/endpoints.useFetchEndpoint`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `ui/icons.Icon`

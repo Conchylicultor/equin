@@ -218,7 +218,7 @@ export interface LiveFieldsSpec<
    */
   baseExposures?: false;
   /**
-   * The most ids one `:rows` tuple (`useLive(c, { ids })`, `useLiveRow`,
+   * The most ids one `:rows` tuple (`useLive(c, { ids })`, `useLive(c, { id })`,
    * `useOptimisticResource(c, { ids })`) may name: the point codec's `encode`
    * throws past it, and its `decode` — the params gate and the membership
    * `idsOf` — refuses it as `contract-mismatch`, so an id set is a bounded read

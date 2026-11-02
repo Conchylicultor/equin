@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -25,7 +25,7 @@ export function OutcomeReportCard({
 }: {
   conversation: ConversationRecord;
 }): ReactElement | null {
-  const result = useLiveRow(outcomeReportRows, conversation.taskId);
+  const result = useLive(outcomeReportRows, { id: conversation.taskId });
   const status = useOptimisticConversationStatus(conversation);
   const sendConversationTurn = useSendConversationTurn();
   // An answer is a turn: a host without the computer cannot send one.
@@ -70,7 +70,7 @@ export function OutcomeReportDetail({
 }: {
   taskId: string;
 }): ReactElement {
-  const result = useLiveRow(outcomeReportRows, taskId);
+  const result = useLive(outcomeReportRows, { id: taskId });
   if (result.status === "loading") return <Loading />;
   if (result.status === "error")
     return (

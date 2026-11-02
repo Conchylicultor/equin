@@ -113,8 +113,8 @@ export const taskDetailPane = Pane.define({
   - It is a hook (`Hook<…>` brand, `primitives/hook-value`) returning a
     `ResolveResult`: `pending` / `error` (optional `retry`) / `missing` /
     `found`.
-  - Over a live read use `resolveFrom(result, isFound)`, over `useLiveRow`
-    `resolveRow(row)`.
+  - Over a live read use `resolveFrom(result, isFound)`, over a row read
+    (`useLive(c, { id })`) `resolveRow(row)`.
   - The guard paints Loading / error with Retry / Not Found; once `found` it
     stays mounted through later `pending`/`error` (only `missing` unmounts).
   - Never answer `found` or `pending` for a failed read.

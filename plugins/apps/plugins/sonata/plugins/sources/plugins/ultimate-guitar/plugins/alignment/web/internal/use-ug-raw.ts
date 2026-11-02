@@ -1,9 +1,6 @@
 import { useMemo } from "react";
 import { useSongDocument } from "@plugins/apps/plugins/sonata/plugins/document/web";
-import {
-  useLiveRow,
-  type LiveRowResult,
-} from "@plugins/network/plugins/live/web";
+import { type LiveRowResult, useLive } from "@plugins/network/plugins/live/web";
 import { UG_SOURCE_ID } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/tab/core";
 import {
   UgSourceRawSchema,
@@ -46,6 +43,6 @@ export function useUgAlignment(): {
   row: LiveRowResult<UgAlignmentRow>;
 } {
   const song = useUgLibrarySong();
-  const row = useLiveRow(ugAlignmentRows, song?.songId ?? null);
+  const row = useLive(ugAlignmentRows, { id: song?.songId ?? null });
   return { songId: song?.songId ?? null, raw: song?.raw, row };
 }

@@ -9,7 +9,9 @@
 
 import type {
   LiveAllCollection,
+  LiveIdsQuery,
   LiveRowsCollection,
+  LiveScopedAllQuery,
   LiveValue,
 } from "@plugins/network/plugins/live/core";
 import {
@@ -23,11 +25,7 @@ import {
   EndpointError,
   getEndpointErrorMessage,
 } from "@plugins/infra/plugins/endpoints/web";
-import {
-  resolveOptimisticSource,
-  type OptimisticIdsQuery,
-  type OptimisticScopedQuery,
-} from "./source";
+import { resolveOptimisticSource } from "./source";
 
 /**
  * Enqueue a write onto a resource tuple's send lane with NO overlay — for a
@@ -53,13 +51,13 @@ export function enqueueResourceWrite<T, Data, P extends Record<string, string>>(
 /** A scope of a collection declared `all: { by }` (`{ where }`). */
 export function enqueueResourceWrite<T, Row, B extends string>(
   collection: LiveAllCollection<Row, B>,
-  query: OptimisticScopedQuery<NoInfer<B>>,
+  query: LiveScopedAllQuery<NoInfer<B>>,
   fn: () => Promise<T>,
 ): Promise<T>;
 /** An id set of a collection (`{ ids }`, its `:rows` sibling). */
 export function enqueueResourceWrite<T, Row>(
   collection: LiveRowsCollection<Row>,
-  query: OptimisticIdsQuery,
+  query: LiveIdsQuery,
   fn: () => Promise<T>,
 ): Promise<T>;
 export function enqueueResourceWrite<T>(
@@ -103,14 +101,14 @@ export function enqueueDetachedWrite<Data, P extends Record<string, string>>(
 /** A scope of a collection declared `all: { by }` (`{ where }`). */
 export function enqueueDetachedWrite<Row, B extends string>(
   collection: LiveAllCollection<Row, B>,
-  query: OptimisticScopedQuery<NoInfer<B>>,
+  query: LiveScopedAllQuery<NoInfer<B>>,
   info: DetachedWriteInfo,
   fn: () => Promise<unknown>,
 ): void;
 /** An id set of a collection (`{ ids }`, its `:rows` sibling). */
 export function enqueueDetachedWrite<Row>(
   collection: LiveRowsCollection<Row>,
-  query: OptimisticIdsQuery,
+  query: LiveIdsQuery,
   info: DetachedWriteInfo,
   fn: () => Promise<unknown>,
 ): void;

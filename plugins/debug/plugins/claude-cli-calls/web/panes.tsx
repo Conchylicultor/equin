@@ -8,7 +8,7 @@ import {
   useOpenPane,
   type ResolveResult,
 } from "@plugins/primitives/plugins/pane/web";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { claudeCliCalls } from "@plugins/infra/plugins/claude-cli/core";
 import { ClaudeCliCallDetail } from "@plugins/infra/plugins/claude-cli/web";
@@ -39,12 +39,12 @@ export const claudeCliCallsPane = Pane.define({
 function useResolveCall({ callId }: { callId: string }): ResolveResult {
   // The by-id row read (`claude-cli-calls:rows`) — found whatever the call's
   // position in the log, missing once the recorder's trim has dropped it.
-  return resolveRow(useLiveRow(claudeCliCalls, callId));
+  return resolveRow(useLive(claudeCliCalls, { id: callId }));
 }
 
 /** The call's source once it is read; the pane falls back to "Call" until then. */
 function useCallTitle({ callId }: { callId: string }): string | undefined {
-  const row = useLiveRow(claudeCliCalls, callId);
+  const row = useLive(claudeCliCalls, { id: callId });
   return row.status === "ready" && row.found ? row.row.sourceName : undefined;
 }
 
@@ -76,7 +76,7 @@ function CallDetailBody(): ReactElement {
   const { callId } = claudeCliCallDetailPane.useParams();
   // The resolve guard answered "does this call exist" before this body
   // mounted; a failed re-read keeps the row as last seen (`rowOrStale`).
-  const call = rowOrStale(useLiveRow(claudeCliCalls, callId));
+  const call = rowOrStale(useLive(claudeCliCalls, { id: callId }));
   return (
     <PaneChrome pane={claudeCliCallDetailPane}>
       {call !== undefined ? (

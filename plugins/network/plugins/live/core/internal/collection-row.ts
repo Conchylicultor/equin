@@ -1,5 +1,5 @@
 // A row read from a live collection (`useLive(collection)`, its id sets,
-// `useLiveRow`) carries this phantom mark, so a list over it is told apart from
+// `useLive(c, { id })`) carries this phantom mark, so a list over it is told apart from
 // a list over rows of nothing declared: a DataView handed rows that came from a
 // collection derives its fields from that collection (`collection=`), and its
 // hand-`fields` arm refuses them (`NotCollectionRow`) — the fields a collection

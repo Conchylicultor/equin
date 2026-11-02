@@ -24,7 +24,7 @@ build's run-detail already owns `r/:runId`.
 
 `releaseDetailRoute` (`core/routes.ts`) parents on the **paramless**
 `compositionsRoute`. A run is addressable by its own id alone: all three sections
-read `useLiveRow(releaseRuns, runId)`, and the composition pane above supplied
+read `useLive(releaseRuns, { id: runId })`, and the composition pane above supplied
 breadcrumb position and no data at all.
 
 Parented on `comp/:id` the pane could only be opened by a caller already holding
@@ -53,7 +53,7 @@ neither did.
   asserted at mount); `e2e/history-live-verify.ts` drives a custom value written
   through the API and watches the row drop out, come back and move, and a status
   flip land, without a reload. Each run's detail pane resolves its run by id
-  through the `release.runs` lookup collection (`useLiveRow`), so an old run's
+  through the `release.runs` lookup collection (`useLive(c, { id })`), so an old run's
   detail resolves regardless of age.
 
 The engine itself (`@plugins/release/core` — targets, endpoints, resources) is

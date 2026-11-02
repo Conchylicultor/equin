@@ -49,7 +49,7 @@ export function resolveFrom<T>(
   });
 }
 
-/** Resolve against a by-id row read (`useLiveRow`): its answer, arm for arm. */
+/** Resolve against a by-id row read (`useLive(c, { id })`): its answer, arm for arm. */
 export function resolveRow<Row>(row: LiveRowResult<Row>): ResolveResult {
   switch (row.status) {
     case "loading":
@@ -64,7 +64,7 @@ export function resolveRow<Row>(row: LiveRowResult<Row>): ResolveResult {
 }
 
 /**
- * The row a pane BODY renders off a by-id row read (`useLiveRow`) its resolve
+ * The row a pane BODY renders off a by-id row read (`useLive(c, { id })`) its resolve
  * guard already answered: the found row, else — on a failed re-read — the row
  * as last seen (`stale`), else `undefined`, which the body renders as its
  * loading state (never an empty one: the guard has said the row exists).

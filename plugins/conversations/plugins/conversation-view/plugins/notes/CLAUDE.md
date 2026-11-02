@@ -13,7 +13,7 @@
     - `conversations/conversation-view.Conversation`
     - `infra/endpoints.useFetchEndpoint`
     - `network/live.LiveRowResult`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`

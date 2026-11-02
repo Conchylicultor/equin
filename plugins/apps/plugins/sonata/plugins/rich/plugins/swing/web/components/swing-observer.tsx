@@ -6,7 +6,7 @@ import {
   useWriteSongSetting,
 } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import type { SwingOverride } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { swings, type SwingRow } from "../../shared/resources";
 
 /**
@@ -39,7 +39,7 @@ export function SwingObserver() {
   const songId = useMountedSongId();
   const write = useWriteSongSetting(swingSetting);
   const failSetting = useFailSongSetting(swingSetting);
-  const row = useLiveRow(swings, songId);
+  const row = useLive(swings, { id: songId });
 
   // The read reduced to primitives — `undefined` while loading — so the effect
   // below runs on a real change only (a row object is new on every push).

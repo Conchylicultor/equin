@@ -25,7 +25,7 @@ import {
   opsHistory,
   type OpRow,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/core";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useNow } from "@plugins/primitives/plugins/relative-time/web";
@@ -267,7 +267,7 @@ function OpsAroundOp({ row }: { row: OpRow }): ReactElement {
 
 export function OpDetailBody(): ReactElement {
   const { opId } = opDetailPane.useParams();
-  const result = useLiveRow(opsHistory, opId);
+  const result = useLive(opsHistory, { id: opId });
 
   return (
     <PaneChrome pane={opDetailPane}>

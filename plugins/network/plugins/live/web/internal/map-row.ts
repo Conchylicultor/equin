@@ -3,7 +3,7 @@ import type { LiveRowResult } from "./use-live";
 
 /**
  * Reduce a by-id row read to a `ResourceResult` of what the row MEANS, without
- * erasing its readiness — the `mapResource` of `useLiveRow`. `fn` receives the
+ * erasing its readiness — the `mapResource` of a row read (`useLive(c, { id })`). `fn` receives the
  * row, or `null` when the read settled with no such row (an absent row is an
  * answer — "not armed", "off", "offset 0" — that only the caller can name).
  * Loading and error pass through; the error arm's last-seen `stale` row, if

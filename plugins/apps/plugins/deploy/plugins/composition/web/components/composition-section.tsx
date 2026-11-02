@@ -8,7 +8,7 @@ import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useManifestItemByName } from "@plugins/plugin-meta/plugins/composition/web";
 import type { CompositionManifestItem } from "@plugins/plugin-meta/plugins/composition/core";
 import { studioApp } from "@plugins/apps/plugins/studio/plugins/shell/core";
@@ -40,7 +40,7 @@ export function CompositionSection({
 }: {
   deploymentId: string;
 }): ReactNode {
-  const deployment = useLiveRow(deployments, deploymentId);
+  const deployment = useLive(deployments, { id: deploymentId });
 
   if (deployment.status === "loading") return <Loading variant="rows" />;
   if (deployment.status === "error") {

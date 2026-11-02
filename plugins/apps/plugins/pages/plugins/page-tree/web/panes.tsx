@@ -10,7 +10,7 @@ import {
   type RefObject,
 } from "react";
 import { growClass } from "@plugins/primitives/plugins/css/plugins/grow/web";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
   Pane,
   PaneChrome,
@@ -84,7 +84,7 @@ const RULE_STYLE = { paddingTop: "calc(var(--space-xl) + var(--space-xs))" };
 // declarations, so the forward reference is safe at runtime.
 
 function useResolvePage({ pageId }: { pageId: string }): ResolveResult {
-  return resolveRow(useLiveRow(pagesTree, pageId));
+  return resolveRow(useLive(pagesTree, { id: pageId }));
 }
 
 export const pageDetailPane = Pane.define({
@@ -175,7 +175,7 @@ function PagesTreeBody(): ReactElement {
  * or failed (the tab then shows the chrome's pageId fallback).
  */
 function usePageTitle({ pageId }: { pageId: string }): string | undefined {
-  const result = useLiveRow(pagesTree, pageId);
+  const result = useLive(pagesTree, { id: pageId });
   if (result.status === "loading" || result.status === "error") {
     return undefined;
   }
@@ -499,7 +499,7 @@ function TrailingClickZone({
  */
 function useBlockCrumb(blockId: string, type: string): string {
   const label = useBlockTypeLabel(type);
-  const row = useLiveRow(pageBlocks, blockId);
+  const row = useLive(pageBlocks, { id: blockId });
   // Not known yet, failed, or gone: the type's label — the editor below reads
   // the page's forest and renders the failure.
   const block = row.status === "ready" && row.found ? row.row : undefined;

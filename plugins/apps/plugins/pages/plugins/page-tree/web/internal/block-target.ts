@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
@@ -46,7 +46,7 @@ const MISSING: BlockTarget = { kind: "missing" };
  * as an unknown or trashed id.
  */
 export function useBlockTarget(blockId: string): BlockTarget {
-  const location = useLiveRow(blockLocations, blockId);
+  const location = useLive(blockLocations, { id: blockId });
   switch (location.status) {
     case "loading":
       return PENDING;
@@ -113,7 +113,7 @@ const UNTITLED = "Untitled";
 export function useBlockTargetTitle(target: BlockTarget): string | undefined {
   const label = useBlockTypeLabel(target.kind === "block" ? target.type : "");
   const opens = target.kind === "page" || target.kind === "block";
-  const page = useLiveRow(pagesTree, opens ? target.pageId : null);
+  const page = useLive(pagesTree, { id: opens ? target.pageId : null });
   if (!opens) return undefined;
   // The page row not known (loading), failed or absent: no title, never a
   // stand-in.

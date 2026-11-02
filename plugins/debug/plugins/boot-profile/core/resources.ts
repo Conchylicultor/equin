@@ -25,7 +25,7 @@ export type BootTraceItem =
   typeof bootTraces extends LiveRowsCollection<infer R> ? R : never;
 
 /**
- * One saved boot trace with its full snapshot, read by id (`useLiveRow`) for
+ * One saved boot trace with its full snapshot, read by id (`useLive(c, { id })`) for
  * the permalink detail pane: a lookup-only collection over the same table, so
  * `found: false` is "no such snapshot".
  */

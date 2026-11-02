@@ -22,7 +22,7 @@ export type KeyAutoDetectRow = z.infer<typeof KeyAutoDetectRowSchema>;
  * The key-auto-detect setting of ONE song, read by the song's id: a lookup-only
  * collection over the extension table (nothing lists every song's setting),
  * minting `sonata-key-auto-detect:rows` alone. The observer reads the open
- * song's row with `useLiveRow(keyAutoDetects, songId)`; `found: false` is an
+ * song's row with `useLive(keyAutoDetects, { id: songId })`; `found: false` is an
  * absent row, i.e. `false`.
  */
 export const keyAutoDetects = liveCollection("sonata-key-auto-detect", {

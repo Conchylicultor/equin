@@ -25,7 +25,7 @@ export type SwingRow = z.infer<typeof SwingRowSchema>;
 /**
  * The swing override of ONE song, read by the song's id: a lookup-only
  * collection over the extension table. The observer reads the open song's row
- * with `useLiveRow(swings, songId)`; `found: false` is the song's own feel.
+ * with `useLive(swings, { id: songId })`; `found: false` is the song's own feel.
  */
 export const swings = liveCollection("sonata-swing", {
   from: swingShape,

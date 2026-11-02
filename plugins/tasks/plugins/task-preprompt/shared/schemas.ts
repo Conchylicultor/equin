@@ -18,7 +18,7 @@ export type TaskPreprompt = z.infer<typeof TaskPrepromptSchema>;
 // task — the side-table's primary key IS the task (`taskId`, stored as
 // `parent_id`) — so it is a lookup-only collection: no default window (nothing
 // lists every task's selection), minting `task-preprompts:rows` alone. A reader
-// asks with `useLiveRow(taskPreprompts, taskId)`, and `found: false` is "none
+// asks with `useLive(taskPreprompts, { id: taskId })`, and `found: false` is "none
 // selected".
 //
 // Every consumer asks about ONE task and needs an exact answer — the launch

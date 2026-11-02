@@ -145,7 +145,7 @@ export const conversationProgressRowsServed = serveCollection(
 );
 
 // web — no whole-table read, no `.find(id)`
-const progress = useLiveRow(conversationProgressRows, conversationId);
+const progress = useLive(conversationProgressRows, { id: conversationId });
 ```
 
 Because the handle is an entity, no form has a row projection left to write:
@@ -207,7 +207,7 @@ Each consumer plugin owns its own:
 - `server/internal/resource.ts` — `serveCollection(c, { from: ext })`, in one of the forms above
 - `shared/endpoints.ts` (or `core/`) — `defineEndpoint(...)` for the `POST /api/<feature>/:id` mutation
 - `server/index.ts` — spreads `...served.declare` into `contributions` and wires the mutation via `implement(...)`
-- `web/components/...` — `useLiveRow(c, parentId)` for reads + `useEndpointMutation(...)` / `fetchEndpoint(...)` (from `@plugins/infra/plugins/endpoints/web`) for the mutation
+- `web/components/...` — `useLive(c, { id: parentId })` for reads + `useEndpointMutation(...)` / `fetchEndpoint(...)` (from `@plugins/infra/plugins/endpoints/web`) for the mutation
 
 The parent plugin doesn't change. `sonata/transpose` is the reference consumer.
 

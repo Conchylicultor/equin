@@ -1,4 +1,4 @@
-import { useLive, useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { pagesTree, pageData } from "@plugins/page/plugins/editor/core";
@@ -36,7 +36,7 @@ export function PageLinkChip({
   const target = useBlockTarget(blockId);
   const title = useBlockTargetTitle(target);
   const opens = target.kind === "page" || target.kind === "block";
-  const page = useLiveRow(pagesTree, opens ? target.pageId : null);
+  const page = useLive(pagesTree, { id: opens ? target.pageId : null });
   const link = useBlockTargetLink();
 
   // Nothing to open, or not resolved yet: the raw string exactly as written,

@@ -2,7 +2,7 @@ import type { LiveRowResult } from "@plugins/network/plugins/live/web";
 import type { IdReferentState } from "@plugins/ids/web";
 
 /**
- * A presenter's referent from a live by-id row read (`useLiveRow`): loading
+ * A presenter's referent from a live by-id row read (`useLive(c, { id })`): loading
  * stays loading, a failed read is `failed` (never "missing" — the referent may
  * well exist), a determinate absence is `missing`, and a found row is titled by
  * `title`. The one fold every row-backed presenter shares, so none re-derives

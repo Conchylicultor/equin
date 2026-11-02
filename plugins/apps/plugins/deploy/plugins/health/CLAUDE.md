@@ -17,8 +17,8 @@ is a claim about the server, and a read in flight cannot make it:
   the deployment rows' own `serverId`s) — never the bounded default window,
   which would drop a server past its rank cutoff. Combine a still-loading id
   source's `pending` with `useCombinedResources` rather than guessing at it.
-- `useServerHealth(serverId)` — `useLiveRow`: `pending`, `found: true` with the
-  row, or `found: false` (never checked).
+- `useServerHealth(serverId)` — `useLive(c, { id })`: `loading`, `error` if the read
+  failed, `found: true` with the row, or `found: false` (never checked).
 - `useServerVerified(server)` — `"pending" | "verified" | "unverified"`, over
   `isKeyVerified(row, server)`, the one statement of the rule.
 
@@ -39,10 +39,10 @@ verdict is loading, and the SSH-setup card seeds open.
     - `ServerHeader.Meta` "platform" → `ServerHeaderPlatform`
     - `ServerHeader.Action` "check-now" → `CheckNowAction`
     - `Deploy.Sidebar` "Servers" → `ServersSidebarSection`
-  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/deploy/servers` ×6
     - `primitives/live-state` ×6
-    - `network/live` ×5
+    - `network/live` ×4
     - `primitives/css/ui-kit` ×4
     - `primitives/setup-steps` ×2
     - `apps/deploy/shell.Deploy`

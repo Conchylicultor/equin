@@ -95,7 +95,7 @@ Four `defineEntity` tables, field records in `core/internal/fields.ts`:
   a `:rows` point sibling. The change feed routes each run row's write to the
   tuples holding it, so the ledger and the live source status — written in one
   transaction — never disagree. One run is `useEventSourceRun(runId)` →
-  `useLiveRow`: by its own id, deliberately NOT through the source, so a
+  `useLive(c, { id })`: by its own id, deliberately NOT through the source, so a
   deep-linked run pane resolves from the URL instead of whatever window the runs
   list happens to have loaded. `flags` rides on the wire but is display-only.
 - `event_source_run_events` — which events one run touched and how
@@ -169,7 +169,6 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `infra/endpoints.useEndpointMutation`
     - `network/live.LiveRowResult`
     - `network/live.useLive`
-    - `network/live.useLiveRow`
     - `primitives/live-state.ResourceResult`
   - Exports (values):
     - `EventSources`

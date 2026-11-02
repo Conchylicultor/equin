@@ -9,7 +9,7 @@
   - Contributes: `ReleaseDetail.Section` "Logs" → `ReleaseLogSection`
   - Uses:
     - `apps/studio/compositions/release.ReleaseDetail`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`

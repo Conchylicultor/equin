@@ -79,7 +79,7 @@ export const opsInFlight = liveCollection("op-store.in-flight.all", {
  * Every stored op, in flight or closed (30 days, the retention window), newest
  * first — the Ops Gantt / detail / stats read model. A time window is
  * `where: { requestedAt: { gte: cutoff } }` (quantize the cutoff so the tuple
- * is stable); one op is `useLiveRow(opsHistory, opId)`.
+ * is stable); one op is `useLive(opsHistory, { id: opId })`.
  */
 export const opsHistory = liveCollection("op-store.history", {
   from: opLogOpsEntityRef,

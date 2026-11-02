@@ -61,7 +61,7 @@ other's keys.
 "Edited 2h ago" in the title bar is contributed by `apps/pages/history`, not
 here: the label is the page's version-history entry point (click → the history
 dialog), so it lives with the history UI. It reads the page row's `editedAt`
-(`useLiveRow(pagesTree, pageId)`) — the newest `updatedAt` over the page row and
+(`useLive(pagesTree, { id: pageId })`) — the newest `updatedAt` over the page row and
 its content, served off the editor's `page_content_edited_at` rollup.
 
 ## One row-action registry, no `rowMenu`
@@ -197,17 +197,17 @@ it, so an id means the same thing wherever it is clicked.
     - `PageDetail.UnderTitle` "backlinks" → `BacklinksUnderTitle`
     - `PageTree.RowActions` "delete" → `DeletePageAction`
     - `PageTree.RowActions` "add-below" → `AddPageBelowAction`
-  - Uses: 83 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 82 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×9
     - `page/editor` ×7
     - `primitives/data-view` ×5
     - `infra/endpoints` ×4
     - `primitives/css/ui-kit` ×4
     - `primitives/overlay/image-viewer` ×4
-    - `network/live` ×3
     - `page/page-reference` ×3
     - `primitives/live-state` ×3
     - `apps/pages/shell` ×2
+    - `network/live` ×2
     - `primitives/breadcrumb` ×2
     - `primitives/collapsible` ×2
     - `primitives/css/control-panel` ×2

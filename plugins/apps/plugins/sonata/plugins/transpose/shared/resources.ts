@@ -22,7 +22,7 @@ export type TransposeRow = z.infer<typeof TransposeRowSchema>;
  * The transpose offset of ONE song, read by the song's id: a lookup-only
  * collection over the extension table (no default window — nothing lists every
  * song's offset), minting `sonata-transpose:rows` alone. The observer reads the
- * open song's row with `useLiveRow(transposes, songId)`; `found: false` is an
+ * open song's row with `useLive(transposes, { id: songId })`; `found: false` is an
  * absent row, i.e. `0`. The `:rows` point routing sends a write to the one song
  * it touched, and only a tab that has that song open subscribes to it.
  */

@@ -74,11 +74,11 @@ const RESOURCE_HOOKS = new Set([
   // indistinguishable from a real one.
   "useConfigResult",
   // `network/live`'s read — the one bounded read of a collection (a window, a
-  // grouping or an id set) and of a value: a `ResourceResult<Row[]>` (plus
-  // paging handles on a window's settled arm) or `ResourceResult<T>`, so
-  // `pending ? [] : r.data` is the same collapse.
-  // `useLiveRow` needs no entry — it has no `data` to collapse into: its
-  // settled arms are `found: true` (with `row`) and `found: false`.
+  // grouping, a count or an id set) and of a value: a `ResourceResult<Row[]>`
+  // (plus paging handles on a window's settled arm) or `ResourceResult<T>`, so
+  // `pending ? [] : r.data` is the same collapse. Its row read
+  // (`useLive(c, { id })`) has no `data` to collapse into — its settled arms
+  // are `found: true` (with `row`) and `found: false` — so it never matches.
   "useLive",
   // A slot's layout order is a read too (`ResourceResult`): `loading` until
   // the slot's config is known. Collapsing it to `[]` or to the raw

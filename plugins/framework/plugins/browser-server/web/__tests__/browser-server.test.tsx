@@ -36,7 +36,7 @@ import {
   serveCollectionOn,
   serveValueOn,
 } from "@plugins/network/plugins/live/core";
-import { useLive, useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
   NotificationsProvider,
   useNotificationsChannelStatuses,
@@ -262,7 +262,7 @@ describe("browser server ⇄ the real live-state client", () => {
           }
         />
         <Probe
-          read={() => useLiveRow(tasks, "b")}
+          read={() => useLive(tasks, { id: "b" })}
           onRead={(r) =>
             (seen.row =
               r.status === "ready" && r.found ? r.row.title : r.status)
@@ -345,7 +345,7 @@ describe("browser server ⇄ the real live-state client", () => {
             onRead={(r) => (seen.value = failure(r))}
           />
           <Probe
-            read={() => useLiveRow(missingCollection, "a")}
+            read={() => useLive(missingCollection, { id: "a" })}
             onRead={(r) => (seen.row = failure(r))}
           />
           <Probe
@@ -425,7 +425,7 @@ describe("browser server ⇄ the real live-state client", () => {
           }
         />
         <Probe
-          read={() => useLiveRow(tasks, "c")}
+          read={() => useLive(tasks, { id: "c" })}
           onRead={(r) =>
             (seen.row =
               r.status === "ready" && r.found ? r.row.title : r.status)

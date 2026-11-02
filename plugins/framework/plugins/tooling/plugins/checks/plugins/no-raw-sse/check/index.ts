@@ -52,7 +52,7 @@ const check: Check = {
     return {
       ok: false,
       message: `raw \`text/event-stream\` response found in ${offenders.length} place(s):\n    ${offenders.join("\n    ")}`,
-      hint: "Live state belongs in a `liveValue` / `liveCollection` declaration, served with `serveValue` / `serveCollection` and read with `useLive` / `useLiveRow`; see `plugins/network/plugins/live/CLAUDE.md`. Append-only firehoses (terminal, log tails) belong on a dedicated WS route. The gateway's SSE endpoint for external log streams is Go and out of scope for this check. A CLIENT declaring `Accept: application/json, text/event-stream` (e.g. any MCP caller, which the transport 406s without) is not a writer and is already exempt — keep the header on ONE line so the exemption can see it. Any other file that must name it declares an exemption in its own plugin's `exempt/index.ts` (rule `no-raw-sse`).",
+      hint: "Live state belongs in a `liveValue` / `liveCollection` declaration, served with `serveValue` / `serveCollection` and read with `useLive`; see `plugins/network/plugins/live/CLAUDE.md`. Append-only firehoses (terminal, log tails) belong on a dedicated WS route. The gateway's SSE endpoint for external log streams is Go and out of scope for this check. A CLIENT declaring `Accept: application/json, text/event-stream` (e.g. any MCP caller, which the transport 406s without) is not a writer and is already exempt — keep the header on ONE line so the exemption can see it. Any other file that must name it declares an exemption in its own plugin's `exempt/index.ts` (rule `no-raw-sse`).",
     };
   },
 };

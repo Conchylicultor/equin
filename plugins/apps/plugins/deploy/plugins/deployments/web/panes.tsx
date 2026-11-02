@@ -7,7 +7,7 @@ import {
   useOpenPane,
   type ResolveResult,
 } from "@plugins/primitives/plugins/pane/web";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   deployApp,
@@ -23,7 +23,7 @@ function useResolveDeployment({
 }: {
   deploymentId: string;
 }): ResolveResult {
-  return resolveRow(useLiveRow(deployments, deploymentId));
+  return resolveRow(useLive(deployments, { id: deploymentId }));
 }
 
 /**
@@ -35,7 +35,7 @@ function useSiteTitle({
 }: {
   deploymentId: string;
 }): string | undefined {
-  const row = useLiveRow(deployments, deploymentId);
+  const row = useLive(deployments, { id: deploymentId });
   // Loading or failed: no title of its own yet; the chrome's title stands in.
   if (row.status === "loading" || row.status === "error") return undefined;
   if (!row.found) return undefined;
@@ -75,7 +75,7 @@ export const sitePane = Pane.define({
 
 function SiteBody(): ReactElement {
   const { deploymentId } = sitePane.useParams();
-  const row = useLiveRow(deployments, deploymentId);
+  const row = useLive(deployments, { id: deploymentId });
   return (
     <PaneChrome pane={sitePane}>
       {/* `useResolve` has already gated loading / error / gone: the body only

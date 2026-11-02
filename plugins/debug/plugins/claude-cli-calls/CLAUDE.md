@@ -22,7 +22,7 @@
     - `infra/claude-cli` ×2
     - `apps/debug/shell.DebugApp`
     - `conversations/model-provider.familyClass`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Inset`

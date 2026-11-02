@@ -32,7 +32,7 @@ compile) over the `agents` TABLE — never `agents_v`: every row field binds to
 its column by name, and `isFolder` is an `expr` of `prompt IS NULL`, the
 definition `agents_v.is_folder` spells. The sidebar and the avatars' lookups
 read it whole with `useLive(agentRows)`; a pane that names one agent reads
-`useLiveRow(agentRows, id)` (`:rows`).
+`useLive(agentRows, { id })` (`:rows`).
 
 - **What a write costs.** A rename, a prompt / model / avatar edit or a
   reparent is that row's refill; a rank move the refill and one `orderOf`; an
@@ -112,7 +112,7 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
     - `Item.Avatar` → `AgentAvatarRow`
     - `conversationPane.Actions` "agent-avatar" → `AgentAvatarTitlePrefix`
     - `Agents.AgentActions` "delete" → `DeleteAgentAction`
-  - Uses: 62 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 61 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×8
     - `primitives/data-view` ×5
     - `conversations/conversation-ui/item` ×4
@@ -120,8 +120,8 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
     - `primitives/collapsible` ×4
     - `primitives/live-state` ×4
     - `infra/endpoints` ×3
-    - `network/live` ×3
     - `primitives/css/ui-kit` ×3
+    - `network/live` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/status-dot` ×2
     - `primitives/css/text` ×2

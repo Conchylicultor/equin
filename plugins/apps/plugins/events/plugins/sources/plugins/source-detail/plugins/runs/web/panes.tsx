@@ -45,7 +45,7 @@ import { EventSourceRunDetail } from "./slots";
  * builds the chain from scratch — nothing does that yet.
  *
  * The run is still read by its OWN id (the `events.source-runs` point sibling,
- * `useLiveRow`) rather than reached through the source's runs list, and that is
+ * `useLive(c, { id })`) rather than reached through the source's runs list, and that is
  * unrelated to the chain: a deep link must resolve from the URL alone, not from
  * whatever window the parent's list happens to have loaded. (`useParams()` stays own-only, so
  * this pane reads `runId`; the source id stays the source pane's to read.)

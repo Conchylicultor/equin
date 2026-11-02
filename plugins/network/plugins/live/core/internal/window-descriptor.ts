@@ -150,7 +150,7 @@ export function windowQueryResourceDescriptor<Row>(
 /**
  * Whether a point id set can carry `id`: the wire form joins the set on `,`, so
  * an id must be non-empty and comma-free. An id outside that alphabet names no
- * row any point read can address — `useLiveRow` answers it `found: false`
+ * row any point read can address — `useLive(c, { id })` answers it `found: false`
  * rather than encoding it (which throws).
  */
 export function isPointId(id: string): boolean {

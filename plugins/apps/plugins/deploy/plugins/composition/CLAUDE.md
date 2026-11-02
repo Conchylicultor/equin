@@ -41,7 +41,7 @@ the first.
   - Uses:
     - `apps-core/tabs.useAppLink`
     - `apps/deploy/deployments.DeploymentDetail`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
     - `plugin-meta/composition.useManifestItemByName`
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`

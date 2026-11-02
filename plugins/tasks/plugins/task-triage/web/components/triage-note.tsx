@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { mapRow, useLiveRow } from "@plugins/network/plugins/live/web";
+import { mapRow, useLive } from "@plugins/network/plugins/live/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -25,7 +25,7 @@ function noteOf(row: TaskTriageNoteRow | null): string {
  * and letting the person type would race the real note in.
  */
 export function TriageNote({ taskId }: { taskId: string }): ReactElement {
-  const row = useLiveRow(taskTriageNotes, taskId);
+  const row = useLive(taskTriageNotes, { id: taskId });
   const note = mapRow(row, noteOf);
   return (
     <ResourceView resource={note}>

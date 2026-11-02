@@ -15,7 +15,7 @@ Viewer: the `pane` sub-plugin (Debug → Slow Events → Aggregates), all live:
 - `slow-ops.ops` — the ranked list, a scroll window (100 a page, `maxLimit`
   500) of slim rows: the counters, plus `waitMs` / `lastTraceId` derived in SQL.
   No JSON list reaches the list.
-- `slow-ops.op` — one op by id (`useLiveRow`), for the detail pane a row opens.
+- `slow-ops.op` — one op by id (`useLive(c, { id })`), for the detail pane a row opens.
 - `slow-ops.callers` — that op's callers, scoped by its key, paged by total time.
 
 ## The write: one upsert per table per batch, merges in SQL

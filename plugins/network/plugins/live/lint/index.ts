@@ -3,6 +3,7 @@ import noGrowInEffect from "./no-grow-in-effect";
 import noLegacyResourceSpelling from "./no-legacy-resource-spelling";
 import noSentinelParam from "./no-sentinel-param";
 import visibleRangeMinter from "./visible-range-minter";
+import whereDeclared from "./where-declared";
 import type { LintContribution } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 export default {
@@ -13,6 +14,7 @@ export default {
     "no-legacy-resource-spelling": noLegacyResourceSpelling,
     "no-sentinel-param": noSentinelParam,
     "visible-range-minter": visibleRangeMinter,
+    "where-declared": whereDeclared,
   },
-  noDebt: ["no-endpoint-read"],
+  noDebt: ["no-endpoint-read", "where-declared"],
 } satisfies LintContribution;

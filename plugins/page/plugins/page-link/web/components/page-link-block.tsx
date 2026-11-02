@@ -9,10 +9,7 @@ import {
   ResourceErrorInline,
   type ResourceError,
 } from "@plugins/primitives/plugins/live-state/web";
-import {
-  useLiveRow,
-  type LiveRowResult,
-} from "@plugins/network/plugins/live/web";
+import { type LiveRowResult, useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
@@ -166,7 +163,7 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
   // Only the RESOLVED link below gets actions: the picker row and the
   // not-found row name no page, so there is nothing for an action to open.
   const actions = usePageReferenceActions(pageId);
-  const result = useLiveRow(pagesTree, pageId === "" ? null : pageId);
+  const result = useLive(pagesTree, { id: pageId === "" ? null : pageId });
   const [pickerOpen, setPickerOpen] = useState(false);
 
   // Which of the five arms below will render, as a UNION that CARRIES the

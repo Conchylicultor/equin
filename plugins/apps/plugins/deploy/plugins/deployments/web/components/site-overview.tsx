@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Rigid } from "@plugins/primitives/plugins/css/plugins/rigid/web";
@@ -48,7 +48,7 @@ export function SiteOverviewTab({
 }: {
   deploymentId: string;
 }): ReactNode {
-  const row = useLiveRow(deployments, deploymentId);
+  const row = useLive(deployments, { id: deploymentId });
   if (row.status === "loading") return <Loading variant="rows" />;
   if (row.status === "error") {
     return (

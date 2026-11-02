@@ -12,9 +12,12 @@ Why the rules in [CLAUDE.md](CLAUDE.md) are what they are. Read before changing 
   Reference:
   [browser reads only through live](../../../../research/2026-10-26-global-browser-reads-only-through-live.md)
   §2.
-- **Why one hook per list read.** The query's shape picks the resource; a
-  separate hook exists only where the result has different STATES
-  (`useLiveRow`'s found / not found, the viewport read's placeholders).
+- **Why one hook for every read.** The query's shape picks the resource and
+  the result, whatever its states (a row read's found / not found, the
+  viewport read's placeholders): a result with different states is a query
+  form of the one collection signature, never a second hook — `useLiveRow`
+  was folded into `useLive(c, { id })` for exactly this
+  (`research/2026-10-27-global-fold-uselive-row-into-uselive.md`).
 
 ## Shape vs freshness
 
@@ -114,7 +117,7 @@ Why the rules in [CLAUDE.md](CLAUDE.md) are what they are. Read before changing 
   table the feed still covers, and the converse (an opted-out table served
   routed) is refused too. Either mismatch would mean writes nobody announces.
 
-### Read — `useLive(c, query?)` / `useLiveRow`
+### Read — `useLive(c, query?)`
 
 - **`loadMore()` splits, never reloads a larger window**, and stays `ready`
   with `growing: true`, so a list that already rendered never flashes a
@@ -130,7 +133,7 @@ Why the rules in [CLAUDE.md](CLAUDE.md) are what they are. Read before changing 
 - **An `all` read hands React Query no selector**, so `data` IS the cached
   array: every observer shares it and its row objects, and a per-snapshot
   memo (a `WeakMap` keyed on the array) hits across observers.
-- **`useLiveRow` with an un-carriable id** (`""`, one holding `,`) is a
+- **A row read (`{ id }`) with an un-carriable id** (`""`, one holding `,`) is a
   determinate miss, not the render error `encode` would throw: no row is
   addressable by it, and such ids come from outside (a URL, a `[[page:…]]`
   token, an agent's tool input). `useLive(c, { ids })` still throws: an

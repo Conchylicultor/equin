@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
@@ -51,7 +51,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 }
 
 export function ReleaseInfo({ runId }: { runId: string }) {
-  const result = useLiveRow(releaseRuns, runId);
+  const result = useLive(releaseRuns, { id: runId });
   if (result.status === "loading") return <Loading />;
   if (result.status === "error") {
     return (

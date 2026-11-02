@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
   useAssetSrc,
   useEndpointMutation,
@@ -50,7 +50,7 @@ const closeIcon = symbol("close");
  * reposition (images only), or remove it.
  */
 export function PageCover({ pageId }: { pageId: string }) {
-  const result = useLiveRow(pagesTree, pageId);
+  const result = useLive(pagesTree, { id: pageId });
   // Loading or failed: no band. The cover is decoration, and the page header
   // reads the same row and renders the failure.
   if (result.status === "loading" || result.status === "error") return null;

@@ -15,7 +15,7 @@
     - `conversations/conversation-view/header.HeaderChip`
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
     - `conversations/conversation-view/pending-turn.useOptimisticConversationStatus`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
     - `primitives/css/badge.formatStatusLabel`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`

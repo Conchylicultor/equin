@@ -21,7 +21,7 @@ export const askCandidatesShape = defineExtensionShape({
 });
 
 // One run's candidates, read by its conversation id — lookup-only:
-// `useLiveRow(askCandidates, conversationId)`, `found: false` before its first
+// `useLive(askCandidates, { id: conversationId })`, `found: false` before its first
 // search. A search's write routes to that conversation's readers alone.
 export const askCandidates = liveCollection("places.ask.candidates", {
   from: askCandidatesShape,

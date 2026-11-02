@@ -5,7 +5,7 @@ import {
   useCombinedResources,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
-import { mapRow, useLive, useLiveRow } from "@plugins/network/plugins/live/web";
+import { mapRow, useLive } from "@plugins/network/plugins/live/web";
 import {
   conversationsActive,
   conversationsById,
@@ -51,7 +51,7 @@ const GONE_COUNT = { count: true } as const;
 export function useConversation(
   id: string | null,
 ): ResourceResult<ConversationEntry | null> {
-  const row = useLiveRow(conversationsById, id);
+  const row = useLive(conversationsById, { id });
   return useMemo(() => mapRow(row, (r): ConversationEntry | null => r), [row]);
 }
 
@@ -129,7 +129,7 @@ export function useActiveConversations(): ResourceResult<ConversationEntry[]> {
 export function useConversationById(
   id: string | null,
 ): ConversationEntry | null {
-  const row = useLiveRow(conversationsById, id);
+  const row = useLive(conversationsById, { id });
   switch (row.status) {
     case "loading":
       return null;

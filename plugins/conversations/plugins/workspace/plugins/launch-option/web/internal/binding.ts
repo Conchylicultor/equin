@@ -3,7 +3,7 @@ import {
   combineResources,
   mapResource,
 } from "@plugins/primitives/plugins/live-state/web";
-import { mapRow, useLiveRow } from "@plugins/network/plugins/live/web";
+import { mapRow, useLive } from "@plugins/network/plugins/live/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { useTaskAttempts } from "@plugins/tasks/plugins/tasks-core/web";
@@ -23,7 +23,7 @@ export function useTaskWorkspaceBinding(
   taskId: string,
 ): LaunchBinding<WorkspaceSpec | null> {
   // An absent row is the default worktree.
-  const spec = mapRow(useLiveRow(taskWorkspaces, taskId), (row) =>
+  const spec = mapRow(useLive(taskWorkspaces, { id: taskId }), (row) =>
     row ? row.spec : null,
   );
   const attempts = useTaskAttempts(taskId);

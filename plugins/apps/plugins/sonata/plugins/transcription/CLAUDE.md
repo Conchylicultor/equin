@@ -93,7 +93,7 @@ Manual check: `scripts/smoke.sh` (needs the dep installed).
     - `infra/endpoints.useFetchEndpoint`
     - `network/live.FieldPresentation`
     - `network/live.mapRow`
-    - `network/live.useLiveRow`
+    - `network/live.useLive`
     - `primitives/css/inline.Inline`
     - `primitives/css/line.Line`
     - `primitives/css/spacing.Stack`

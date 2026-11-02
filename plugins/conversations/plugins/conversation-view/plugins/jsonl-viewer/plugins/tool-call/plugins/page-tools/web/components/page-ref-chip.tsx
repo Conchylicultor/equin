@@ -1,7 +1,4 @@
-import {
-  useLiveRow,
-  type LiveRowResult,
-} from "@plugins/network/plugins/live/web";
+import { type LiveRowResult, useLive } from "@plugins/network/plugins/live/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
@@ -70,8 +67,8 @@ export function PageRefChip({
 }) {
   // The page by `pageId`, else the block itself when it is a page. A missing
   // (or empty) id reads nothing.
-  const byPage = useLiveRow(pagesTree, pageId || null);
-  const byBlock = useLiveRow(pagesTree, blockId || null);
+  const byPage = useLive(pagesTree, { id: pageId || null });
+  const byBlock = useLive(pagesTree, { id: blockId || null });
   const openPane = useOpenPane();
 
   const id = pageId || blockId;

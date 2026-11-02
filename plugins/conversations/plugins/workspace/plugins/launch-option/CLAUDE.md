@@ -24,7 +24,6 @@ default, stored as no row) or one registered scratch profile. Design:
     - `infra/endpoints.useFetchEndpoint`
     - `network/live.mapRow`
     - `network/live.useLive`
-    - `network/live.useLiveRow`
     - `primitives/css/ui-kit.Select`
     - `primitives/css/ui-kit.SelectContent`
     - `primitives/css/ui-kit.SelectItem`
