@@ -1,6 +1,5 @@
 import { expect, test } from "bun:test";
-import { getDataDirs } from "./data-dir";
-import { REPO_ROOT } from "./paths";
+import type { DataDir } from "./data-dir";
 import {
   LEGACY_LAYOUT,
   legacyRootEntries,
@@ -10,6 +9,7 @@ import {
   rowRootNames,
   simulateSteps,
   stagingName,
+  undeclaredLegacyTargets,
 } from "./legacy-layout";
 import type { FsEntry, MigrationStep } from "./legacy-layout";
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
@@ -30,39 +30,27 @@ test("every root name the table accounts for is unique", () => {
   expect(dupes).toEqual([]);
 });
 
-test("every `to` names a <kind>/<name> that a declaration produces, or records as moved", async () => {
-  // Evaluate every owner's `data-dirs/index.ts` — the `defineDataDir` calls in
-  // them are what populate the registry.
-  //
-  // Discovered by globbing the tree rather than read off
-  // `core/data-dirs.generated.ts`, deliberately: that file only regenerates on
-  // `./equin build`, so a test keyed on it would go red for a declaration
-  // that IS written and correct, purely because codegen hasn't run. The claim
-  // here is about the declarations, so it reads the declarations.
-  const glob = new Bun.Glob("plugins/**/data-dirs/index.ts");
-  for (const rel of glob.scanSync(REPO_ROOT)) {
-    await import(`${REPO_ROOT}/${rel}`);
-  }
-  const declared = new Set(getDataDirs().keys());
-  // A `to` may also be a location some declaration records it MOVED AWAY from
-  // (`movedFrom.from`). The legacy shim then resolves in two hops —
-  // `attachments → apps/attachments → ../state/attachments` — and both hops are
-  // verified: this row's one hop by the audit's rule 2 (`readlinkSync`, one
-  // level), the second by the move's own rule-3 verification.
-  const movedAway = new Set(
-    [...getDataDirs().values()].flatMap((dir) =>
-      (dir.spec.movedFrom ?? []).map((move) => move.from),
-    ),
-  );
+// The real-tree half (every row against the evaluated registry) is the
+// `paths:legacy-layout-targets-declared` check, so it runs on every build.
+test("a row moving into a dir nothing declares or records as moved is reported", () => {
+  const declared = new Map<string, DataDir>();
+  for (const row of LEGACY_LAYOUT)
+    if (row.move !== "quarantine")
+      declared.set(row.to, { spec: {} } as unknown as DataDir);
+  expect(undeclaredLegacyTargets(declared)).toEqual([]);
 
-  const undeclared = LEGACY_LAYOUT.filter(
-    (row) =>
-      row.move !== "quarantine" &&
-      !declared.has(row.to) &&
-      !movedAway.has(row.to),
-  ).map((row) => `${row.from} → ${row.move === "quarantine" ? "" : row.to}`);
+  const dropped = LEGACY_LAYOUT.find((row) => row.move === "dir");
+  if (dropped?.move !== "dir") throw new Error("the table has no dir row");
+  declared.delete(dropped.to);
+  expect(undeclaredLegacyTargets(declared)).toEqual([
+    `${dropped.from} → ${dropped.to}`,
+  ]);
 
-  expect(undeclared).toEqual([]);
+  // Still resolvable through a declaration that records the move away.
+  declared.set("state/elsewhere", {
+    spec: { movedFrom: [{ from: dropped.to }] },
+  } as unknown as DataDir);
+  expect(undeclaredLegacyTargets(declared)).toEqual([]);
 });
 
 test("a quarantine row has no destination declaration, and every other row does", () => {

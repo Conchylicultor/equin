@@ -34,7 +34,10 @@ import {
   partitionByOwner,
   readForeignManifests,
 } from "../core/internal/data-dirs-manifest";
-import { legacyRootEntries } from "../core/internal/legacy-layout";
+import {
+  legacyRootEntries,
+  undeclaredLegacyTargets,
+} from "../core/internal/legacy-layout";
 import type { LegacyRootEntry } from "../core/internal/legacy-layout";
 
 function escapeRegExp(s: string): string {
@@ -1073,10 +1076,41 @@ const appDataDirsCheck: Check = {
   },
 };
 
+// The legacy table is written by hand (see its header), so nothing ties a row's
+// `to` to the declaration it names: a plugin that stops declaring a dir leaves
+// its row moving bytes into a directory nobody owns. Tree-scoped — it reads the
+// declarations, not the disk — so the build that drops a declaration fails here,
+// not a migration run on somebody's root later.
+const legacyLayoutTargetsDeclaredCheck: Check = {
+  id: "paths:legacy-layout-targets-declared",
+  description:
+    "Every LEGACY_LAYOUT row that moves an entry (dir / file / unshimmable) moves it into a <kind>/<name> some defineDataDir declares, or records as moved (movedFrom) — never into an undeclared directory.",
+  async run() {
+    const { dataDirsEntries } = await import("../core/data-dirs.generated");
+    await loadCollectedDir<DataDir>(dataDirsEntries, {
+      isItem: isDataDir,
+      dedupeKey: (d) => `${d.spec.kind}/${d.spec.name}`,
+      label: "data-dir",
+    });
+    const undeclared = undeclaredLegacyTargets(getDataDirs());
+    if (undeclared.length === 0) return { ok: true };
+    return {
+      ok: false,
+      message: `${undeclared.length} legacy-layout row(s) move into a directory no plugin declares:\n    ${undeclared.join("\n    ")}`,
+      hint:
+        "The destination's declaration was dropped (or renamed) without its row in " +
+        "plugins/infra/plugins/paths/core/internal/legacy-layout.ts. If the data is dead, turn the row into " +
+        '`move: "quarantine"` with a reason; if it moved, point `to` at the new declaration (or declare ' +
+        "`movedFrom` on it).",
+    };
+  },
+};
+
 export default [
   noHardcodedPathsCheck,
   noInlinedWorktreeArtifactsCheck,
   noUndeclaredDataDirsCheck,
   dataRootNotJoinedCheck,
   appDataDirsCheck,
+  legacyLayoutTargetsDeclaredCheck,
 ];

@@ -2,7 +2,7 @@
 // `@plugins/infra/plugins/paths/core` alias would cycle back through the barrel
 // that re-exports it.
 import { DATA_DIR_KINDS } from "./data-dir";
-import type { DataDirRef } from "./data-dir";
+import type { DataDir, DataDirRef } from "./data-dir";
 
 // `DataDirRef` is defined beside the registry now — `MovedFrom` needs it, and
 // this file imports `data-dir`, so defining it here would close a cycle. Still
@@ -131,7 +131,6 @@ export const LEGACY_LAYOUT: readonly LegacyMove[] = [
 
   // ── cache/ ───────────────────────────────────────────────────────────────
   { from: "check-cache", move: "dir", to: "cache/check" },
-  { from: "closure-cache", move: "dir", to: "cache/closure" },
   { from: "tsbuildinfo", move: "dir", to: "cache/tsbuildinfo" },
   { from: "web-artifacts", move: "dir", to: "cache/web-artifacts" },
   { from: "asset-mirror", move: "dir", to: "cache/asset-mirror" },
@@ -141,7 +140,6 @@ export const LEGACY_LAYOUT: readonly LegacyMove[] = [
     move: "dir",
     to: "cache/prototypes-thumbnails",
   },
-  { from: "native", move: "dir", to: "cache/signal-origin-native" },
 
   // ── locks/ ───────────────────────────────────────────────────────────────
   //
@@ -207,6 +205,23 @@ export const LEGACY_LAYOUT: readonly LegacyMove[] = [
   // Quarantine, not deletion: every entry below has NO live owner and no
   // reference left in the repo, but "I could not find a reader" is not the same
   // fact as "there is no reader".
+  // Moved once (to cache/closure and cache/signal-origin-native), then their
+  // owners stopped declaring the destination: the type-check closure cache was
+  // replaced by the per-rule-group lint cache, and the signal-origin shim is now
+  // built by infra/deps. The shim here points at an undeclared dir, so the name
+  // goes to the quarantine rather than through to it.
+  {
+    from: "closure-cache",
+    move: "quarantine",
+    reason:
+      "shim to cache/closure, which nothing declares since the type-check lint cache went per rule group",
+  },
+  {
+    from: "native",
+    move: "quarantine",
+    reason:
+      "shim to cache/signal-origin-native, which nothing declares since infra/deps builds the signal-origin shim",
+  },
   {
     from: "eslint-closure-cache",
     move: "quarantine",
@@ -313,6 +328,34 @@ export const LEGACY_LAYOUT: readonly LegacyMove[] = [
 ];
 
 // ── derived views of the table ───────────────────────────────────────────────
+
+/**
+ * Every row whose `to` no declaration produces or records as moved, spelled
+ * `<from> → <to>` — the rows the migration would move into an undeclared dir.
+ *
+ * A `to` may also be a location some declaration records it MOVED AWAY from
+ * (`movedFrom.from`): the legacy shim then resolves in two hops —
+ * `attachments → apps/attachments → ../state/attachments` — and the second hop
+ * is the move's own to verify. `paths:legacy-layout-targets-declared` runs this
+ * against the evaluated registry, so a declaration dropped without its row fails
+ * the build that drops it.
+ */
+export function undeclaredLegacyTargets(
+  declared: ReadonlyMap<string, DataDir>,
+): string[] {
+  const movedAway = new Set(
+    [...declared.values()].flatMap((dir) =>
+      (dir.spec.movedFrom ?? []).map((move) => move.from),
+    ),
+  );
+  const out: string[] = [];
+  for (const row of LEGACY_LAYOUT) {
+    if (row.move === "quarantine") continue;
+    if (declared.has(row.to) || movedAway.has(row.to)) continue;
+    out.push(`${row.from} → ${row.to}`);
+  }
+  return out;
+}
 
 function isKindName(name: string): boolean {
   return (DATA_DIR_KINDS as readonly string[]).includes(name);
