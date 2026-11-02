@@ -19607,7 +19607,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - DB schema: `plugins/conversations/plugins/runtime-sdk/server/internal/tables.ts`
         - Entity extension of: `tasks/tasks-core` (table `conversations_ext_sdk_agent`)
         - Resources:
-          - `runtime-sdk.agent-processes` (push, notified, whole: one entry per namespace on this machine with a live agent — at most its worktrees)
+          - `runtime-sdk.agent-processes` (push, notified, whole: one entry per namespace on this machine with a live agent — at most its worktrees, whole: one entry per Claude account on this machine — a handful)
           - `runtime-sdk.claude-usage` (push, notified, whole: one entry per Claude account signed in on this machine — a handful)
           - `runtime-sdk.error-stopped` (keyed, window)
           - `runtime-sdk.error-stopped:groups` (push)
@@ -19681,6 +19681,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AgentEventSchema`
           - `AgentLaunchOptionsSchema`
           - `AgentLifecycleSchema`
+          - `agentPidFileAccount`
+          - `agentPidFileText`
           - `AgentProcessesSchema`
           - `API_ERROR`
           - `applyPartialFrame`

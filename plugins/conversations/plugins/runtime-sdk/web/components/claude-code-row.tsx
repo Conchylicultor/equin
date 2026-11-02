@@ -62,6 +62,31 @@ function VersionLines({ claude, agents }: ClaudeCodeRowInputs) {
   );
 }
 
+/**
+ * The agents running on each Claude account, every worktree's: what a switch
+ * leaves behind, since a running agent keeps its account until it restarts.
+ */
+function AgentsByAccount({ agents, accounts, claude }: ClaudeCodeRowInputs) {
+  const running = Object.entries(agents.byAccount);
+  if (running.length === 0) return null;
+  const views = accountViews(accounts, claude);
+  return (
+    <Stack gap="xs">
+      <Text variant="caption" tone="muted">
+        Agents by account
+      </Text>
+      {running.map(([id, count]) => (
+        <GlanceLine
+          key={id}
+          label={plural(count, "agent")}
+          // An account removed while its agents still run keeps them.
+          value={`on ${views.find((v) => v.id === id)?.name ?? "a removed account"}`}
+        />
+      ))}
+    </Stack>
+  );
+}
+
 /** A namespace as its task's chip; main (or a name no chip claims) as text. */
 function NamespaceLabel({ namespace }: { namespace: string }) {
   const chip =
@@ -178,7 +203,12 @@ export function ClaudeCodeRowDetail() {
         </>
       ) : null}
       {/* Not loaded (or not readable here): the summary already says so. */}
-      {result.status === "ready" ? <VersionLines {...result.data} /> : null}
+      {result.status === "ready" ? (
+        <>
+          <VersionLines {...result.data} />
+          <AgentsByAccount {...result.data} />
+        </>
+      ) : null}
       <ClaudeCodeDetail />
       {result.status === "ready" ? (
         <AgentsElsewhere agents={result.data.agents} />

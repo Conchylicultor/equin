@@ -21,7 +21,10 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   `subscribe` connection per watched conversation, reconnected when the
   consumer sees the agent's `ready`). `agent-processes.ts` serves
   `runtime-sdk.agent-processes`, the agents running here and in every other
-  namespace (one watch of the pid files). `attempt-ended-job.ts` (main
+  namespace, and how many run on each Claude account (one watch of the pid
+  files; an agent's pid file is its pid, then its account —
+  `core/agent-pid-file.ts`). **Temporary**: an agent started before pid files
+  named their account counts on no account until it restarts. `attempt-ended-job.ts` (main
   only): when an attempt's last conversation is closed (`done`), SIGTERMs
   every agent its worktree's backends launched — the conversations an agent
   started in its own build while testing, which nothing else reaps once that
@@ -138,7 +141,8 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   with the in-app sign-in from `infra/claude-cli/sign-in` — the row's Sign in
   remedy, the run's panel heading the detail, "Signing in…" while it runs),
   and the agents running here and elsewhere
-  (each other worktree as its task's chip, in the expanded detail), the
+  (each other worktree as its task's chip, in the expanded detail) and on
+  which Claude account (every worktree's, by account name), the
   active Claude account's usage limits as meters, named by the account
   (glance: the week collapsed, the session too expanded; the row is
   `attention` while its limit is reached), the conversations an API error
@@ -277,7 +281,7 @@ Gotchas the spike hit:
   - DB schema: `plugins/conversations/plugins/runtime-sdk/server/internal/tables.ts`
   - Entity extension of: `tasks/tasks-core` (table `conversations_ext_sdk_agent`)
   - Resources:
-    - `runtime-sdk.agent-processes` (push, notified, whole: one entry per namespace on this machine with a live agent — at most its worktrees)
+    - `runtime-sdk.agent-processes` (push, notified, whole: one entry per namespace on this machine with a live agent — at most its worktrees, whole: one entry per Claude account on this machine — a handful)
     - `runtime-sdk.claude-usage` (push, notified, whole: one entry per Claude account signed in on this machine — a handful)
     - `runtime-sdk.error-stopped` (keyed, window)
     - `runtime-sdk.error-stopped:groups` (push)
@@ -351,6 +355,8 @@ Gotchas the spike hit:
     - `AgentEventSchema`
     - `AgentLaunchOptionsSchema`
     - `AgentLifecycleSchema`
+    - `agentPidFileAccount`
+    - `agentPidFileText`
     - `AgentProcessesSchema`
     - `API_ERROR`
     - `applyPartialFrame`

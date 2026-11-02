@@ -11,7 +11,7 @@ import {
 } from "./claude-code-row";
 
 const refetch = () => Promise.resolve();
-const none = { here: 0, elsewhere: [] };
+const none = { here: 0, elsewhere: [], byAccount: {} };
 const NOW = 1_800_000_000_000;
 const noUsage: ClaudeCodeRowInputs["usage"] = { byAccount: {} };
 const OK: HealthStatus = { state: "ok", summary: "Signed in · v2.1.303" };
@@ -41,7 +41,7 @@ describe("claudeCodeRowVerdict", () => {
     expect(
       claudeCodeRowVerdict(
         OK,
-        ready("2.1.999", { here: 3, elsewhere: [] }),
+        ready("2.1.999", { here: 3, elsewhere: [], byAccount: {} }),
         NOW,
       ),
     ).toEqual({ state: "ok", summary: "v2.1.999 · 3 agents here" });
@@ -160,7 +160,9 @@ describe("agentsPhrase", () => {
 
   test("none here, one here", () => {
     expect(agentsPhrase(none)).toBe("no agents here");
-    expect(agentsPhrase({ here: 1, elsewhere: [] })).toBe("1 agent here");
+    expect(agentsPhrase({ here: 1, elsewhere: [], byAccount: {} })).toBe(
+      "1 agent here",
+    );
   });
 
   test("sums the other namespaces", () => {
@@ -171,6 +173,7 @@ describe("agentsPhrase", () => {
           { namespace: "att-1", running: 2 },
           { namespace: "att-2", running: 1 },
         ],
+        byAccount: {},
       }),
     ).toBe("2 agents here · 3 in other worktrees");
   });

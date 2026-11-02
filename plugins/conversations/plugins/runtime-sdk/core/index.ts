@@ -25,6 +25,7 @@ export type {
   HelloReply,
   OpenRequest,
 } from "./protocol";
+export { agentPidFileAccount, agentPidFileText } from "./agent-pid-file";
 export { AgentProcessesSchema, sdkAgentProcesses } from "./agent-processes";
 export type { AgentProcesses } from "./agent-processes";
 export {

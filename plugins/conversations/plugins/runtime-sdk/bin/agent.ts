@@ -6,7 +6,7 @@
 //   commands  → --socket            (newline-delimited JSON, core/protocol.ts)
 //   events    ← <dir>/events.jsonl  (every SDK message, numbered, unchanged)
 //   partial   ← --socket, `subscribe` (the message being streamed, never on disk)
-//   pid       → --pid-file          (written at start, removed on exit)
+//   pid       → --pid-file          (pid and account, written at start, removed on exit)
 //   account   ← --account           (the Claude account it signs in as)
 //   usage     → --usage-file        (that account's limits, last reported)
 //   stdout    → a human-readable log (the backend points it at `agent.log`)
@@ -48,6 +48,7 @@ import {
   AgentCommandSchema,
   AgentLaunchOptionsSchema,
   PROTOCOL_VERSION,
+  agentPidFileText,
   claudeUsageOf,
   applyPartialFrame,
   partialFrameOf,
@@ -716,10 +717,11 @@ emit({
     turnIds: true,
   },
 });
-// The pid file is what says "running" to every backend counting agents; a
-// crash leaves it behind, so readers check the pid is alive.
+// The pid file is what says "running" to every backend counting agents (and
+// on which account); a crash leaves it behind, so readers check the pid is
+// alive.
 mkdirSync(dirname(pidPath), { recursive: true });
-writeFileSync(pidPath, `${process.pid}\n`);
+writeFileSync(pidPath, agentPidFileText(process.pid, args.account));
 log(`● agent ${process.pid} · ${dir}`);
 if (options.prompt !== null)
   pushInput(options.prompt.text, options.prompt.turnId);

@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
-import { wholeList } from "@plugins/packages/plugins/list-bound/core";
+import {
+  wholeList,
+  wholeRecord,
+} from "@plugins/packages/plugins/list-bound/core";
 
 export const AgentProcessesSchema = z.object({
   /** SDK agent processes this backend's namespace launched that are alive. */
@@ -16,12 +19,20 @@ export const AgentProcessesSchema = z.object({
         "one entry per namespace on this machine with a live agent — at most its worktrees",
     },
   ),
+  /**
+   * Every namespace's live agents, by the Claude account each runs on (its
+   * pid file names it) — an account with none is absent. An agent started
+   * before pid files named their account counts on none until it restarts.
+   */
+  byAccount: wholeRecord(z.number().int().positive(), {
+    reason: "one entry per Claude account on this machine — a handful",
+  }),
 });
 export type AgentProcesses = z.infer<typeof AgentProcessesSchema>;
 
 /**
  * How many SDK agent processes are running on the machine: this backend's own
- * and every other namespace's, read off the agents' pid files (a file whose pid
+ * and every other namespace's, and on which Claude account, read off the agents' pid files (a file whose pid
  * is gone — an agent killed outright — does not count). Read off the computer,
  * so only the desktop app answers it (`needsMachine`).
  */

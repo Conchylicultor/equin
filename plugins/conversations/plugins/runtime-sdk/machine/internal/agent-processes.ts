@@ -1,4 +1,4 @@
-import { readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
 import {
@@ -11,7 +11,11 @@ import {
 } from "@plugins/infra/plugins/namespace/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { serveValue } from "@plugins/network/plugins/live/machine";
-import { sdkAgentProcesses, type AgentProcesses } from "../../core";
+import {
+  agentPidFileAccount,
+  sdkAgentProcesses,
+  type AgentProcesses,
+} from "../../core";
 import { sdkAgentPidsDir } from "../../data-dirs";
 import { sdkConversationIdsOf } from "../../server/internal/rows";
 import { agentPidsRoot } from "./paths";
@@ -28,16 +32,35 @@ function entries(dir: string): string[] {
 }
 
 /** `namespace`'s agents whose pid file names a live pid. */
-function liveAgents(namespace: string): { id: string; pid: number }[] {
+function liveAgents(
+  namespace: string,
+): { id: string; pid: number; path: string }[] {
   const dir = join(agentPidsRoot(), namespace);
   return entries(dir)
     .filter((name) => name.endsWith(PID_SUFFIX))
     .flatMap((name) => {
-      const read = readPidFile(join(dir, name));
+      const path = join(dir, name);
+      const read = readPidFile(path);
       return read.kind === "pid" && pidAlive(read.pid)
-        ? [{ id: name.slice(0, -PID_SUFFIX.length), pid: read.pid }]
+        ? [{ id: name.slice(0, -PID_SUFFIX.length), pid: read.pid, path }]
         : [];
     });
+}
+
+/**
+ * The Claude account a live agent's pid file names — `null` from an agent
+ * started before pid files named it, or one that exited since its liveness
+ * was read (its file is gone: the next recount drops it).
+ */
+function agentAccount(pidFile: string): string | null {
+  let text: string;
+  try {
+    text = readFileSync(pidFile, "utf8");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw err;
+  }
+  return agentPidFileAccount(text);
 }
 
 /** The conversation ids of `namespace`'s agents whose pid file names a live pid. */
@@ -97,13 +120,19 @@ export function stopCheckoutAgents(checkout: string): void {
 function countAgents(): AgentProcesses {
   const here = runtimeNamespace();
   const elsewhere: AgentProcesses["elsewhere"] = [];
+  const byAccount: AgentProcesses["byAccount"] = {};
   let own = 0;
   for (const namespace of entries(agentPidsRoot()).sort()) {
-    const running = liveAgentIds(namespace).length;
+    const agents = liveAgents(namespace);
+    const running = agents.length;
     if (namespace === here) own = running;
     else if (running > 0) elsewhere.push({ namespace, running });
+    for (const agent of agents) {
+      const account = agentAccount(agent.path);
+      if (account !== null) byAccount[account] = (byAccount[account] ?? 0) + 1;
+    }
   }
-  return { here: own, elsewhere };
+  return { here: own, elsewhere, byAccount };
 }
 
 const notifiers = new Set<() => void>();
