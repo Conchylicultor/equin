@@ -275,6 +275,9 @@ const sidebarMetrics = sidebarMetricsGroup.fragment(
     sidebarRowPadX: "0.5625rem",
     sidebarIconSize: "0.9375rem",
     sidebarIconGap: "0.6875rem",
+    // The Claude account foot, the sidebar's last item, sits 8px off the
+    // bottom edge (the account-menu mock's foot padding).
+    sidebarEndPad: "0.5rem",
   }),
 );
 

@@ -229,9 +229,9 @@ export function Shelf({ tabIds }: { tabIds: string[] }) {
       >
         <div
           ref={dockRef}
-          // eslint-disable-next-line layout/no-adhoc-layout, spacing/no-adhoc-spacing -- the mockup's `.sh-dock` row: gap 4px, padding 6px (off the ramp)
+          // eslint-disable-next-line layout/no-adhoc-layout -- the mockup's `.sh-dock` row: gap 4px, padding 6px
           className={cn(
-            "flex max-w-full items-center gap-xs p-[6px] rounded-3xl",
+            "flex max-w-full items-center gap-xs p-xsm rounded-3xl",
             "whitespace-nowrap max-[760px]:overflow-hidden",
             // The overview slides the dock below the desktop's edge and fades
             // it (mockup `#root.is-overview .sh-dock`).
@@ -335,8 +335,8 @@ export function Shelf({ tabIds }: { tabIds: string[] }) {
             </SortableList>
           </div>
           <Separator />
-          {/* eslint-disable-next-line layout/no-adhoc-layout, spacing/no-adhoc-spacing -- the mockup's `.sh-tray` row (gap 6px, off the ramp) */}
-          <div className={cn(rigidClass(), "flex items-center gap-[6px]")}>
+          {/* eslint-disable-next-line layout/no-adhoc-layout -- the mockup's `.sh-tray` row (gap 6px) */}
+          <div className={cn(rigidClass(), "flex items-center gap-xsm")}>
             <div
               className="max-[760px]:hidden"
               onPointerLeave={() => hidePeek(true)}
@@ -385,14 +385,14 @@ export function Shelf({ tabIds }: { tabIds: string[] }) {
           scroll={false}
           onPointerEnter={cancelHide}
           onPointerLeave={() => hidePeek(true)}
-          // eslint-disable-next-line spacing/no-adhoc-spacing -- the mockup's peek paddings: the name tip 5px 10px, the thumbnails 6px (off the ramp)
+          // eslint-disable-next-line spacing/no-adhoc-spacing -- the mockup's name tip pads 5px block, off the ramp (its 10px inline and the thumbnails' 6px are `smd` / `xsm`)
           className={cn(
             PEEK_CHROME,
             peek.kind === "app" && peekEntry && peekEntry.windows.length === 0
               ? // The app-name tip (mockup `.peek-pop.tip`).
-                "rounded-lg px-[10px] py-[5px] text-caption font-[550]"
+                "rounded-lg px-smd py-[5px] text-caption font-[550]"
               : peek.kind === "app"
-                ? "rounded-2xl p-[6px]"
+                ? "rounded-2xl p-xsm"
                 : "rounded-2xl p-sm",
           )}
         >

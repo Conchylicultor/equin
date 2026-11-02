@@ -10,12 +10,34 @@ step-keyed `@utility` family gives each step. No components — `spacing` owns
 Runtime-themeable (it tightens with the density preset): the steps live in the
 `density` token group as `--space-{2xs…2xl}`. `none` is the constant 0, no token.
 
+### The in-between steps are derived, not valued
+
+`xsm` and `smd` (the audit's 6px and 10px,
+`research/2026-11-02-global-small-scale-audit.md`) are the **midpoints of their
+neighbours**: `--space-xsm: calc((var(--space-xs) + var(--space-sm)) / 2)`,
+`--space-smd: calc((var(--space-sm) + var(--space-md)) / 2)`. So every density
+preset and every theme that retunes the ramp moves them too (comfortable 6 / 10,
+cozy 4.5 / 8, compact 3 / 6), and neither can ever cross a neighbour — the
+ramp's order holds under any retune.
+
+They are still density **tokens** (with the calc as their default), for one
+reason: a derived var must be declared at every scope that re-values a
+neighbour. A token is painted into every theme block, and a sub-theme that
+re-values `--space-sm` re-declares every same-group token derived from it
+(`subThemeBlockValues`), so the midpoint is recomputed there instead of
+inheriting the surrounding scope's computed value. They are **not settings**:
+the customizer's Density section leaves them out and no preset sets them. A
+code theme that needs an exact value (a mockup that wants 6px under the cozy
+preset) may still name them, like any token.
+
 | Step  | Comfortable | Replaces (raw) |
 | ----- | ----------- | -------------- |
 | `none`| 0           | `*-0`          |
 | `2xs` | 0.125rem    | `*-0.5`        |
 | `xs`  | 0.25rem     | `*-1`          |
+| `xsm` | 0.375rem (derived) | `*-1.5`  |
 | `sm`  | 0.5rem      | `*-2`          |
+| `smd` | 0.625rem (derived) | `*-2.5`  |
 | `md`  | 0.75rem     | `*-3`          |
 | `lg`  | 1rem        | `*-4`          |
 | `xl`  | 1.5rem      | `*-6`          |
@@ -33,14 +55,14 @@ rather than `spacing/core` because `rail` importing "spacing" to look up
 declares its own families beside its own utilities):
 
 ```css
-/* @ramp steps: none 2xs xs sm md lg xl 2xl */
+/* @ramp steps: none 2xs xs xsm sm smd md lg xl 2xl */
 /* @ramp families: gap gap-x gap-y p px py pt pr pb pl */
 /* @ramp families: rail rail-x rail-y rail-owe */
 ```
 
 The classes are what actually exists; the TypeScript is derived — so a step in
 the union with no `@utility` behind it is unspellable. `space-ramp-gen.ts`
-requires every declared family to carry every declared step (14 × 8), and
+requires every declared family to carry every declared step (14 × 10), and
 `space-ramp-in-sync` fails otherwise. The reverse is deliberately unchecked:
 `p-chip`/`p-row`/`p-card` are legitimate non-ramp `p-` members.
 
@@ -49,7 +71,9 @@ Families are declared, **never inferred from suffixes** — `control-*`,
 separate 4-step scale.
 
 **To add or rename a step:** add its `@utility` to all 14 families in app.css,
-add `--space-<step>` to the `density` token group, update `/* @ramp steps: */`,
+add `--space-<step>` to the `density` token group (a derived calc of its
+neighbours, if it sits between two — the customizer then leaves it out by
+itself), update `/* @ramp steps: */`,
 then `./equin build`. Miss a family and the build names the missing
 classes; miss the token and `css-vars-supplied` fails.
 
@@ -103,8 +127,10 @@ only when another file happens to spell the same class. Pass the step to
     - `ui/tokens/density --space-lg`
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-smd`
     - `ui/tokens/density --space-xl`
     - `ui/tokens/density --space-xs`
+    - `ui/tokens/density --space-xsm`
     - `ui/tokens/shape --spacing`
   - Imported by: `primitives/css/rail`
 - Core:

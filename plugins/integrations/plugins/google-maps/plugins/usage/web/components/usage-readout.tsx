@@ -7,9 +7,9 @@ import {
 import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Meter } from "@plugins/primitives/plugins/css/plugins/meter/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useConfigLink } from "@plugins/config_v2/plugins/config-link/web";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { mapsUsageConfig } from "../../core";
@@ -149,23 +149,21 @@ function UsageMeter({ row }: { row: UsageRow }): ReactElement {
       </Text>
     );
   }
-  const pct =
-    row.budget === 0 ? 100 : Math.min(100, (row.calls / row.budget) * 100);
+  const fraction = row.budget === 0 ? 1 : row.calls / row.budget;
   return (
     <Stack gap="2xs">
-      <Clip className="h-1.5 w-full rounded-full bg-muted">
-        <div
-          className={cn(
-            "h-full rounded-full",
-            row.state === "spent"
-              ? "bg-destructive"
-              : row.state === "near"
-                ? "bg-warning"
-                : "bg-primary",
-          )}
-          style={{ width: `${row.calls > 0 ? Math.max(pct, 1.5) : 0}%` }}
-        />
-      </Clip>
+      <Meter
+        // A non-zero count always shows a sliver.
+        value={row.calls > 0 ? Math.max(fraction, 0.015) : 0}
+        label="Calls this month, of the budget"
+        tone={
+          row.state === "spent"
+            ? "destructive"
+            : row.state === "near"
+              ? "warning"
+              : "default"
+        }
+      />
       <Text variant="caption" tone="muted">
         {`${row.calls.toLocaleString()} / ${row.budget.toLocaleString()}`}
       </Text>

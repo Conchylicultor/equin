@@ -45,6 +45,7 @@ type ControlPanelRowExplanation =
        */
       hint?: string;
       description?: never;
+      detail?: never;
     }
   | {
       /**
@@ -57,6 +58,20 @@ type ControlPanelRowExplanation =
        */
       description: string;
       hint?: never;
+      detail?: never;
+    }
+  | {
+      /**
+       * WHICH thing the row names, as a second line — an identifier, not prose
+       * (an account's email, a file's folder): muted, ONE line, truncating.
+       * The row is one two-line unit, so its leading and trailing cells centre
+       * on both lines (a person's disc beside their name and email), unlike a
+       * `description`, whose cells sit on the title line above prose. It needs
+       * no wider panel: it truncates rather than wraps.
+       */
+      detail: string;
+      hint?: never;
+      description?: never;
     };
 
 interface ControlPanelRowCommon {
@@ -98,6 +113,13 @@ interface ControlPanelRowCommon {
   tone?: ControlPanelRowTone;
   /** Muted foreground — for a secondary row ("New field", "Add filter"). */
   muted?: boolean;
+  /**
+   * The label WRAPS onto as many lines as it needs instead of truncating, and
+   * the row grows to hold it — for a setting whose words are the whole of what
+   * it says (a switch row's sentence), where an ellipsis would hide the
+   * meaning. A sanctioned exception to invariant #2, like `description`.
+   */
+  wrap?: boolean;
   /**
    * The thing the row names is switched OFF — a hidden field, a paused rule —
    * drawn in the faint ink, clearly apart from its live siblings. Not
@@ -296,6 +318,7 @@ export function ControlPanelRow({
   icon,
   hint,
   description,
+  detail,
   select,
   checked,
   indicator = "leading",
@@ -307,6 +330,7 @@ export function ControlPanelRow({
   restingActions,
   tone = "default",
   muted,
+  wrap,
   inactive,
   keepFocus,
   disabled,
@@ -428,7 +452,7 @@ export function ControlPanelRow({
     // A `selected` row keeps its own fill under the pointer: the current row
     // never reads as merely hovered.
     selected
-      ? "bg-selected text-accent-foreground"
+      ? "bg-selected-fill text-accent-foreground"
       : interactive && "hover:menu-row-lit",
     // WHO is focused differs between the two constructions, and each spelling
     // is inert on the other path. `focus-visible:` is the box itself, which a
@@ -478,7 +502,7 @@ export function ControlPanelRow({
   // and then its hint. The node it points at is a zero-box `sr-only` sibling
   // inside the label cell, which is why the hint opens no track.
   const describedBy =
-    hint !== undefined || description !== undefined
+    hint !== undefined || description !== undefined || detail !== undefined
       ? { "aria-describedby": hintId }
       : undefined;
 
@@ -522,6 +546,8 @@ export function ControlPanelRow({
       <HintedLabelCell
         hint={hint}
         description={description}
+        detail={detail}
+        wrap={wrap}
         descriptionId={hintId}
       >
         {children}

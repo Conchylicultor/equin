@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Meter } from "@plugins/primitives/plugins/css/plugins/meter/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { LogEntry } from "../../shared/resources";
 import {
@@ -37,24 +37,19 @@ export function SizeMeter({
     );
   }
   const { maxBytes, keep } = entry.bound;
-  const pct = Math.min(100, (liveBytes / maxBytes) * 100);
+  const fraction = liveBytes / maxBytes;
   const rotated = rotatedFiles(entry).length;
   const soon = rotatesIn(entry, now);
-  const hot = pct > 85 || (soon !== null && soon < SOON_MS);
+  const hot = fraction > 0.85 || (soon !== null && soon < SOON_MS);
   return (
     <Stack gap="2xs">
-      <Clip
-        className="h-1.5 w-full rounded-full bg-muted"
+      <Meter
+        // A non-empty file always shows a sliver.
+        value={liveBytes > 0 ? Math.max(fraction, 0.015) : 0}
+        label="Live log file size, of its rotation bound"
+        tone={hot ? "warning" : "default"}
         title={`${formatBytes(liveBytes)} of ${formatBytes(maxBytes)} in the live file · ${rotated} of ${keep} rotated files kept`}
-      >
-        <div
-          className={cn(
-            "h-full rounded-full",
-            hot ? "bg-warning" : "bg-primary",
-          )}
-          style={{ width: `${liveBytes > 0 ? Math.max(pct, 1.5) : 0}%` }}
-        />
-      </Clip>
+      />
       <Stack direction="row" gap="xs" justify="between" align="center">
         <Text variant="caption" tone="muted">
           {formatBytes(liveBytes)} / {formatBytes(maxBytes)}

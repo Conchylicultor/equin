@@ -19,6 +19,13 @@ export interface HintedLabelCellProps {
    * `ControlPanelRowCommon.description`.
    */
   description?: string;
+  /**
+   * A second line naming WHICH thing the row is (an email): muted, one line,
+   * truncating. See `ControlPanelRowCommon.detail`.
+   */
+  detail?: string;
+  /** The label wraps rather than truncates (`ControlPanelRowCommon.wrap`). */
+  wrap?: boolean;
   /** From the host's own `useId()`, so the row can point at it. */
   descriptionId: string;
   className?: string;
@@ -58,15 +65,24 @@ export interface HintedLabelCellProps {
 export function HintedLabelCell({
   hint,
   description,
+  detail,
+  wrap,
   descriptionId,
   className,
   children,
 }: HintedLabelCellProps) {
   const mark = useLabelMark();
-  if (description !== undefined) {
+  const second =
+    description !== undefined
+      ? { text: description, wraps: true }
+      : detail !== undefined
+        ? { text: detail, wraps: false }
+        : null;
+  if (second !== null) {
     return (
       <DescribedLabelCell
-        description={description}
+        description={second.text}
+        wraps={second.wraps}
         descriptionId={descriptionId}
         className={className}
       >
@@ -76,7 +92,10 @@ export function HintedLabelCell({
     );
   }
   const cell = (
-    <span data-cp-cell="label" className={cn("truncate", className)}>
+    <span
+      data-cp-cell="label"
+      className={cn(wrap ? "whitespace-normal py-xs" : "truncate", className)}
+    >
       {children}
       {mark != null ? <> {mark}</> : null}
       {hint ? (
@@ -109,11 +128,15 @@ export function HintedLabelCell({
  */
 function DescribedLabelCell({
   description,
+  wraps,
   descriptionId,
   className,
   children,
 }: {
   description: string;
+  /** Prose wraps (a long token breaks rather than spill out of the cell);
+   *  a `detail` identifier truncates on its one line. */
+  wraps: boolean;
   descriptionId: string;
   className?: string;
   children: React.ReactNode;
@@ -132,7 +155,10 @@ function DescribedLabelCell({
       <span
         aria-hidden
         id={descriptionId}
-        className="text-caption whitespace-normal text-muted-foreground"
+        className={cn(
+          "text-caption text-muted-foreground",
+          wraps ? "whitespace-normal wrap-break-word" : "truncate",
+        )}
       >
         {description}
       </span>

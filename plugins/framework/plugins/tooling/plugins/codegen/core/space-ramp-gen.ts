@@ -34,7 +34,7 @@ import { appCssPath, collectUtilityDecls } from "./app-css-utilities";
  * ## The declarations
  *
  * ```css
- * /* @ramp steps: none 2xs xs sm md lg xl 2xl *\/
+ * /* @ramp steps: none 2xs xs xsm sm smd md lg xl 2xl *\/
  * /* @ramp families: gap gap-x gap-y p px py pt pr pb pl *\/
  * /* @ramp families: rail rail-x rail-y rail-owe *\/
  * ```

@@ -281,7 +281,7 @@ describe("Row — selected text", () => {
       </Row>,
     );
     const box = container.firstElementChild!;
-    expect(box.classList.contains("bg-selected")).toBe(true);
+    expect(box.classList.contains("bg-selected-fill")).toBe(true);
     expect(box.classList.contains("text-accent-foreground")).toBe(true);
   });
 

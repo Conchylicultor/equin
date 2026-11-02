@@ -329,9 +329,11 @@ export function Row({
     // in another (Mist's popover IS its muted tone, so a `muted` row in a menu
     // hovered to nothing).
     selected
-      ? // The selected tier (`--selected`, default = the accent hover
-        // fill), so a theme can set hover and selection apart.
-        "bg-selected text-accent-foreground [--scrim:var(--selected)]"
+      ? // The selected tier ON this surface (`--selected-fill`: the
+        // palette's `--selected` on the canvas, a popover's own
+        // `popoverSelected` in a menu), so a theme can set hover and
+        // selection apart and a selected row shows on every surface.
+        "bg-selected-fill text-accent-foreground [--scrim:var(--selected-fill)]"
       : "hover:bg-hover-fill hover:[--scrim:var(--hover-fill)]",
     bordered && "border",
     className,

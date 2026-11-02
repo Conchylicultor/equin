@@ -41,14 +41,14 @@ export const SURFACE_LEVELS: Record<SurfaceLevel, string> = {
   // foreground tint, which darkens under light and lightens under dark by
   // construction, at any preset.
   sunken:
-    "bg-muted [--chrome-mask:var(--muted)] [--hover-fill:color-mix(in_oklab,var(--foreground)_6%,var(--muted))] [--field-fill:var(--field)] [--field-outline:var(--input)]",
+    "bg-muted [--chrome-mask:var(--muted)] [--hover-fill:color-mix(in_oklab,var(--foreground)_6%,var(--muted))] [--selected-fill:var(--selected)] [--field-fill:var(--field)] [--field-outline:var(--input)]",
   // The ground plane: pane / page canvas, toolbar bands, sticky headers. Tone
   // only — flush bands supply their own `border-b` / radius via className.
-  base: "bg-background [--chrome-mask:var(--background)] [--hover-fill:var(--muted)] [--field-fill:var(--field)] [--field-outline:var(--input)]",
+  base: "bg-background [--chrome-mask:var(--background)] [--hover-fill:var(--muted)] [--selected-fill:var(--selected)] [--field-fill:var(--field)] [--field-outline:var(--input)]",
   // A card lifted one step above base. Its corners are the shape group's
   // `--radius-card` (`rounded-card`), which defaults to the `rounded-md` step.
   raised:
-    "rounded-card border border-border bg-card shadow-sm [--chrome-mask:var(--card)] [--hover-fill:var(--muted)] [--field-fill:var(--field)] [--field-outline:var(--input)]",
+    "rounded-card border border-border bg-card shadow-sm [--chrome-mask:var(--card)] [--hover-fill:var(--muted)] [--selected-fill:var(--selected)] [--field-fill:var(--field)] [--field-outline:var(--input)]",
   // Floats above everything — popovers, menus, command palette, floating panels.
   // Hovers to `--accent`, the tone base-ui's own menu/select items highlight
   // with, so a ghost button in a popover matches the items beside it.
@@ -57,7 +57,10 @@ export const SURFACE_LEVELS: Record<SurfaceLevel, string> = {
     // always drew); a row hovers at the overlay's own hover tone
     // (`--popover-hover`, default = the selected tier `--selected`, itself
     // default = the accent it always hovered to), so a theme whose accent IS
-    // its popover tone still shows the hover. Corners and shadow are the shape / shadow
+    // its popover tone still shows the hover. A selected row is filled with
+    // the overlay's own selected tone (`--popover-selected`, default = that
+    // hover step) for the same reason: in Mist `--selected` IS `--popover`,
+    // so a selected row in a menu painted no highlight. Corners and shadow are the shape / shadow
     // groups' popover roles (`rounded-popover`, `shadow-popover`), defaulting
     // to the `rounded-lg` and `shadow-md` steps it always wore. A text field
     // inside wears the popover's own field tokens (`--popover-field`, default =
@@ -66,7 +69,7 @@ export const SURFACE_LEVELS: Record<SurfaceLevel, string> = {
     // `backdrop-popover`): opaque and unfiltered by default, frosted glass in a
     // theme that sets them — while `--popover`, which the mask and a sticky
     // header paint, stays opaque.
-    "rounded-popover bg-popover-fill backdrop-popover text-popover-foreground shadow-popover ring-1 ring-popover-border [--chrome-mask:var(--popover)] [--hover-fill:var(--popover-hover)] [--field-fill:var(--popover-field)] [--field-outline:var(--popover-field-border)]",
+    "rounded-popover bg-popover-fill backdrop-popover text-popover-foreground shadow-popover ring-1 ring-popover-border [--chrome-mask:var(--popover)] [--hover-fill:var(--popover-hover)] [--selected-fill:var(--popover-selected)] [--field-fill:var(--popover-field)] [--field-outline:var(--popover-field-border)]",
   // Floating CHROME over content — a toolbar card, a dock, a button floated
   // over a canvas — never a menu (that is `overlay`). Glass: the material
   // group's `--float-fill` (default the card at 86%) under its
@@ -79,5 +82,5 @@ export const SURFACE_LEVELS: Record<SurfaceLevel, string> = {
   // tone a menu row highlights with; the mask is the card, the opaque tone
   // its fill is mixed from.
   float:
-    "rounded-float border border-float-border bg-float-fill float-sheen backdrop-float text-popover-foreground shadow-float [--chrome-mask:var(--card)] [--hover-fill:var(--accent)] [--field-fill:var(--field)] [--field-outline:var(--input)]",
+    "rounded-float border border-float-border bg-float-fill float-sheen backdrop-float text-popover-foreground shadow-float [--chrome-mask:var(--card)] [--hover-fill:var(--accent)] [--selected-fill:var(--selected)] [--field-fill:var(--field)] [--field-outline:var(--input)]",
 };

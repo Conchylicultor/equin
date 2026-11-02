@@ -17,8 +17,8 @@
     - `primitives/networking` ×2
     - `primitives/overlay/cursor-menu` ×2
     - `primitives/css/center.Center`
-    - `primitives/css/clip.Clip`
     - `primitives/css/fill.Fill`
+    - `primitives/css/meter.Meter`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`

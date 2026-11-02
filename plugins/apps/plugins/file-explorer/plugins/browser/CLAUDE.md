@@ -123,6 +123,7 @@
     - `ui/tokens/density --space-lg`
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-smd`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-semibold`

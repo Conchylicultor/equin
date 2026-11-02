@@ -22,19 +22,13 @@ import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web"
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
-import { Rigid } from "@plugins/primitives/plugins/css/plugins/rigid/web";
-import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Switch } from "@plugins/primitives/plugins/css/plugins/switch/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   Button,
   cn,
   ControlSizeProvider,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
   Input,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
@@ -63,6 +57,7 @@ import {
   launchAccountView,
   type AccountView,
 } from "../internal/account-views";
+import { AccountHead, LEVEL_CLASS } from "./account-head";
 import { UsageBar } from "./claude-usage-glance";
 import { ErrorStoppedBanner } from "./error-stopped";
 
@@ -141,14 +136,19 @@ function WeekRoomGlance({
   const reached = limitReached(reading, now) !== null;
   const level = reached ? "full" : usageLevel(used);
   return (
-    <Stack gap="2xs" align="end">
+    <Stack gap="xs" align="end">
       <div className="w-14">
-        <UsageBar fraction={used} level={level} label="Week usage" />
+        <UsageBar
+          fraction={used}
+          level={level}
+          label="Week usage"
+          size="thin"
+        />
       </div>
       <Text
         variant="caption"
-        tone={level === "full" ? "destructive" : "muted"}
-        className={cn("tabular-nums", level === "high" && "text-warning")}
+        tone="muted"
+        className={cn("tabular-nums", LEVEL_CLASS[level])}
       >
         {reached ? "Limited" : `${percent(room.left)} left this week`}
       </Text>
@@ -182,7 +182,8 @@ function LimitBanner({
   return (
     <Stack
       gap="xs"
-      className="rounded-md border border-destructive/30 bg-destructive/10 p-sm"
+      // The mock's `.ac-banner` padding: 8px 10px.
+      className="rounded-md border border-destructive/30 bg-destructive/10 px-smd py-sm"
     >
       <Text variant="caption">
         {active.name} hit its {USAGE_WINDOWS[reached.id].label.toLowerCase()}{" "}
@@ -307,54 +308,48 @@ function AddApiKeyForm({
   );
 }
 
-/** How an account is being added, if one is. */
-type Adding = "sign-in" | "api-key" | null;
+/** How an account is being added, if one is (`choose`: picking how). */
+type Adding = "choose" | "sign-in" | "api-key" | null;
 
-/** Add account: sign in to another Claude account, or use an API key. */
-function AddAccountMenu({
+/**
+ * Add account's two ways, shown under the Add account row while it is open:
+ * sign in to another Claude account, or use an API key.
+ */
+function AddAccountChoices({
   onPick,
 }: {
   onPick: (how: "sign-in" | "api-key") => void;
 }) {
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={<Button variant="outline" aria-label="Add account" />}
+    <>
+      <ControlPanel.Row
+        icon={<Icon icon={personIcon} />}
+        detail="Claude subscription"
+        onSelect={() => onPick("sign-in")}
       >
-        <Icon icon={addIcon} />
-        Add account
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => onPick("sign-in")}>
-          <Icon icon={personIcon} />
-          <Stack gap="none">
-            <Text>Sign in to another account</Text>
-            <Text variant="caption" tone="muted">
-              Claude subscription
-            </Text>
-          </Stack>
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onPick("api-key")}>
-          <Icon icon={keyIcon} />
-          <Stack gap="none">
-            <Text>Use an API key</Text>
-            <Text variant="caption" tone="muted">
-              Billed per use, no plan limits
-            </Text>
-          </Stack>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        Sign in to another account
+      </ControlPanel.Row>
+      <ControlPanel.Row
+        icon={<Icon icon={keyIcon} />}
+        detail="Billed per use, no plan limits"
+        onSelect={() => onPick("api-key")}
+      >
+        Use an API key
+      </ControlPanel.Row>
+    </>
   );
 }
 
 /**
- * The accounts section of the account menu: every account with its weekly
- * room, the active one highlighted; a click switches. Plus the limit banner,
- * the conversations an API error stopped (with Resume all), adding an account and
- * the auto-switch toggle.
+ * The account menu's body (the agent manager's sidebar foot): the active
+ * account with its session and week meters (and the limit banner, the
+ * conversations an API error stopped, with Resume all); then every account
+ * with its weekly room, the active one filled — a click switches — and Add
+ * account last; then the auto-switch and auto-resume switches. Its sections
+ * are bands of the panel the foot opens (`ControlPanelPopover`), which draws
+ * the rules between them.
  */
-export function ClaudeAccountsSection({
+export function ClaudeAccountMenu({
   accounts,
   usage,
   claude,
@@ -383,7 +378,12 @@ export function ClaudeAccountsSection({
   // One computer behind all three: the row's inputs, read off it, are
   // already ready, so this is the transport's own verdict.
   if (selectAccount.kind === "unavailable") {
-    return <StepNote>{selectAccount.message}</StepNote>;
+    return (
+      <ControlPanel.Section>
+        <AccountHead account={active} usage={usage} now={now} />
+        <StepNote>{selectAccount.message}</StepNote>
+      </ControlPanel.Section>
+    );
   }
   if (
     removeAccount.kind === "unavailable" ||
@@ -435,106 +435,86 @@ export function ClaudeAccountsSection({
       },
     );
   return (
+    // Every avatar in the menu is a `sm` solid disc: the panel's icon column
+    // is an `sm` avatar wide (`cp-panel`), and the controls of the inline
+    // forms and banners are the menu's compact size.
     <ControlSizeProvider size="sm">
-      <Stack gap="sm">
-        <LimitBanner
-          views={views}
-          active={active}
-          usage={usage}
-          now={now}
-          onSwitch={switchTo}
-        />
-        <ErrorStoppedBanner
-          stopped={stopped}
-          launchAccountId={launchView.id}
-          launchAccountName={launchView.name}
-          usage={usage}
-          now={now}
-        />
-        <Stack gap="2xs">
-          <Line className="gap-xs">
-            <Fill>
-              <Text variant="eyebrow" tone="muted">
-                Accounts
-              </Text>
-            </Fill>
-            {adding ? null : <AddAccountMenu onPick={setAdding} />}
-          </Line>
-          {/* eslint-disable-next-line data-view/no-adhoc-row-list -- a picker: the rows choose the one account new agents launch on, not a browsable collection */}
-          {views.map((v) => (
-            <Row
-              key={v.id}
-              size="sm"
-              selected={v.id === active.id}
-              onClick={v.id === active.id ? undefined : () => switchTo(v.id)}
-              title={
-                v.id === active.id
-                  ? "New agents launch on this account"
-                  : `Launch new agents on ${v.name}`
-              }
-              icon={<Avatar fallbackGlyph={v.name} fallbackKey={v.id} />}
-              actions={
-                v.id === SYSTEM_ACCOUNT_ID ? undefined : (
-                  <IconButton
-                    icon={removeIcon}
-                    label={`Remove ${v.name}`}
-                    onClick={() => removeAccount.mutate({ body: { id: v.id } })}
-                  />
-                )
-              }
-            >
-              <Fill>
-                <Stack gap="none">
-                  <Text variant="caption" tone="strong">
-                    {v.name}
-                  </Text>
-                  <Text variant="caption" tone="muted">
-                    {v.detail}
-                  </Text>
-                </Stack>
-              </Fill>
-              <Rigid>
-                <WeekRoomGlance
-                  account={v}
-                  usage={usage}
-                  read={usageRead(v.id)}
-                  now={now}
-                />
-              </Rigid>
-            </Row>
-          ))}
-          {adding === "sign-in" ? (
-            <AddClaudeAccountSignIn
-              onAdded={onSignedIn}
-              onClose={closeAdding}
-            />
-          ) : adding === "api-key" ? (
-            <AddApiKeyForm
-              onAdded={() => setAdding(null)}
-              onCancel={closeAdding}
-            />
-          ) : null}
+      <ControlPanel.Section>
+        <Stack gap="sm">
+          <AccountHead account={active} usage={usage} now={now} />
+          <LimitBanner
+            views={views}
+            active={active}
+            usage={usage}
+            now={now}
+            onSwitch={switchTo}
+          />
+          <ErrorStoppedBanner
+            stopped={stopped}
+            launchAccountId={launchView.id}
+            launchAccountName={launchView.name}
+            usage={usage}
+            now={now}
+          />
         </Stack>
-        <Line className="gap-sm">
-          <Fill>
-            <Text variant="caption" tone="muted">
-              Switch to the next account when one hits its limit
-              {views.some((v) => v.metered)
-                ? " — an API key only while every plan account has"
-                : ""}
-            </Text>
-          </Fill>
-          <Rigid>
-            <Switch
-              checked={accounts.autoSwitch}
-              aria-label="Switch to the next account when one hits its limit"
-              onCheckedChange={(enabled) =>
-                autoSwitch.mutate({ body: { enabled } })
-              }
-            />
-          </Rigid>
-        </Line>
-        <AutoResumeSwitch />
+      </ControlPanel.Section>
+      {/* `readout`: each row carries its weekly room (a bar over "51% left
+          this week") beside its name and detail. */}
+      <ControlPanel.Section label="Launch new agents on" needs="readout">
+        {views.map((v) => (
+          <ControlPanel.Row
+            key={v.id}
+            selected={v.id === active.id}
+            onSelect={v.id === active.id ? undefined : () => switchTo(v.id)}
+            icon={<Avatar fallbackGlyph={v.name} fallbackKey={v.id} />}
+            detail={v.detail}
+            trailing={
+              <WeekRoomGlance
+                account={v}
+                usage={usage}
+                read={usageRead(v.id)}
+                now={now}
+              />
+            }
+            // Every row carries the remove action, so every row's reading
+            // ends at one edge: the computer's own sign-in shows it disabled,
+            // saying why.
+            actions={
+              v.id === SYSTEM_ACCOUNT_ID ? (
+                <IconButton
+                  icon={removeIcon}
+                  label="This computer's own sign-in can't be removed"
+                  disabled
+                />
+              ) : (
+                <IconButton
+                  icon={removeIcon}
+                  label={`Remove ${v.name}`}
+                  onClick={() => removeAccount.mutate({ body: { id: v.id } })}
+                />
+              )
+            }
+          >
+            {v.name}
+          </ControlPanel.Row>
+        ))}
+        <ControlPanel.Row
+          muted
+          icon={<Avatar symbol={addIcon} colorless />}
+          onSelect={() => setAdding(adding === "choose" ? null : "choose")}
+        >
+          Add account
+        </ControlPanel.Row>
+        {adding === "choose" ? (
+          <AddAccountChoices onPick={setAdding} />
+        ) : adding === "sign-in" ? (
+          <AddClaudeAccountSignIn onAdded={onSignedIn} onClose={closeAdding} />
+        ) : adding === "api-key" ? (
+          <AddApiKeyForm
+            onAdded={() => setAdding(null)}
+            onCancel={closeAdding}
+          />
+        ) : null}
         {switchedTo === active.id ? (
           <StepNote>
             {active.metered && accounts.autoSwitch
@@ -543,7 +523,28 @@ export function ClaudeAccountsSection({
             Agents already running keep their account until they restart.
           </StepNote>
         ) : null}
-      </Stack>
+      </ControlPanel.Section>
+      {/* Flush: the settings start on the panel's edge with the section
+          text, not past the account rows' avatar column. */}
+      <ControlPanel.Section flush>
+        <ControlPanel.Row
+          select="switch"
+          checked={accounts.autoSwitch}
+          muted
+          wrap
+          onSelect={() =>
+            autoSwitch.mutate({ body: { enabled: !accounts.autoSwitch } })
+          }
+          {...(views.some((v) => v.metered)
+            ? {
+                hint: "An API key is switched to only while every plan account is at its limit",
+              }
+            : {})}
+        >
+          Switch on hitting the weekly limit
+        </ControlPanel.Row>
+        <AutoResumeSwitch />
+      </ControlPanel.Section>
     </ControlSizeProvider>
   );
 }
@@ -572,19 +573,14 @@ function AutoResumeSwitch() {
   }
   const { enabled } = config.data;
   return (
-    <Line className="gap-sm">
-      <Fill>
-        <Text variant="caption" tone="muted">
-          Resume stopped agents when their limit resets
-        </Text>
-      </Fill>
-      <Rigid>
-        <Switch
-          checked={enabled}
-          aria-label="Resume stopped agents when their limit resets"
-          onCheckedChange={(next) => set("enabled", next)}
-        />
-      </Rigid>
-    </Line>
+    <ControlPanel.Row
+      select="switch"
+      checked={enabled}
+      muted
+      wrap
+      onSelect={() => set("enabled", !enabled)}
+    >
+      Resume stopped agents when their limit resets
+    </ControlPanel.Row>
   );
 }

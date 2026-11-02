@@ -6,7 +6,7 @@ the lint rule that keeps them the single source of truth.
 
 ## The scale
 
-The 8-step ramp (`none | 2xs | xs | sm | md | lg | xl | 2xl`) is declared in
+The 10-step ramp (`none | 2xs | xs | xsm | sm | smd | md | lg | xl | 2xl`) is declared in
 [`primitives/css/space-ramp`](../space-ramp/CLAUDE.md) — its steps, its values,
 and the `gap-<step>` / `p-<step>` classes each step names. Import `SpaceStep`
 from there, not from here.

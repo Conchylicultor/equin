@@ -55,8 +55,8 @@ so the pane never imports this component directly.
     - `debug/trace/pane.SlowEvents`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
-    - `primitives/css/clip.Clip`
     - `primitives/css/fill.Fill`
+    - `primitives/css/meter.Meter`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.SectionLabel`
@@ -78,13 +78,10 @@ so the pane never imports this component directly.
   - Resources: `debug.slow-ops.cluster.scan` (push, notified, whole: one entry per live fork (main + attempts active or under 24 h old), not every database on the host, capped: CLUSTER_OPS_PER_WORKTREE)
 - Cross-plugin:
   - Uses tokens:
-    - `ui/tokens/color-palette --muted`
     - `ui/tokens/color-palette --muted-foreground`
-    - `ui/tokens/color-palette --primary`
     - `ui/tokens/color-palette --warning`
     - `ui/tokens/density --space-md`
     - `ui/tokens/font-family --font-mono`
-    - `ui/tokens/shape --spacing`
   - Imported by: `debug/timeline`
 - Exemptions:
   - Exempts itself from: `no-db-backed-notify` — `server/internal/scan-served.ts` (sanctioned)

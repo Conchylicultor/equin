@@ -159,12 +159,12 @@ slowness/freeze/memory-pressure incident across the cluster.
     - `primitives/css/ui-kit` ×2
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
-    - `primitives/css/clip.Clip`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/column.Column`
     - `primitives/css/fill.Fill`
     - `primitives/css/grow.growClass`
     - `primitives/css/line.Line`
+    - `primitives/css/meter.Meter`
     - `primitives/css/overlay.Overlay`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.rigidClass`
@@ -215,7 +215,6 @@ slowness/freeze/memory-pressure incident across the cluster.
     - `ui/tokens/color-palette --border`
     - `ui/tokens/color-palette --destructive`
     - `ui/tokens/color-palette --muted`
-    - `ui/tokens/color-palette --primary`
     - `ui/tokens/color-palette --warning`
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-sm`

@@ -273,7 +273,7 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
     - `primitives/css/center.Center`
-    - `primitives/css/clip.Clip`
+    - `primitives/css/meter.Meter`
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
@@ -474,10 +474,7 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `SHEETSAGE_DUMP_FILES`
     - `sheetSageDumps`
 - Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/color-palette --foreground`
-    - `ui/tokens/color-palette --muted`
-    - `ui/tokens/shape --spacing`
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/chord/curriculum`
     - `apps/chord/piano`

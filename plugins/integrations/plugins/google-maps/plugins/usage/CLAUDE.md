@@ -56,11 +56,10 @@ hard stop if this count is ever wrong.
     - `config_v2/config-link.useConfigLink`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
-    - `primitives/css/clip.Clip`
+    - `primitives/css/meter.Meter`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.FieldDef`
@@ -110,12 +109,6 @@ hard stop if this count is ever wrong.
     - `monthCalls`
     - `withinBudget`
 - Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/color-palette --destructive`
-    - `ui/tokens/color-palette --muted`
-    - `ui/tokens/color-palette --primary`
-    - `ui/tokens/color-palette --warning`
-    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/places/ask`
     - `apps/places/place-details`

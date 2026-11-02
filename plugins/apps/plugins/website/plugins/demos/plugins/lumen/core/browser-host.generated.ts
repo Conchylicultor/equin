@@ -427,6 +427,7 @@ export const browserHost = {
     "primitives.css.layer",
     "primitives.css.line",
     "primitives.css.link-chip",
+    "primitives.css.meter",
     "primitives.css.motion",
     "primitives.css.overlay",
     "primitives.css.pin",

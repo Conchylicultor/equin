@@ -5,7 +5,7 @@ import { matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Meter } from "@plugins/primitives/plugins/css/plugins/meter/web";
 import {
   Inset,
   Stack,
@@ -126,21 +126,13 @@ function LoadProgress({ status }: { status: LoadingStatus }) {
 }
 
 function ProgressBar({ done, total }: { done: number; total: number }) {
-  const fraction = total > 0 ? Math.min(1, done / total) : 0;
   return (
-    <Clip
+    <Meter
+      value={total > 0 ? done / total : 0}
+      label="Songs loaded"
       role="progressbar"
-      aria-label="Songs loaded"
-      aria-valuemin={0}
-      aria-valuemax={total}
-      aria-valuenow={done}
-      className="h-1 w-full rounded-full bg-muted"
-    >
-      <div
-        className="h-full rounded-full bg-foreground transition-[width]"
-        style={{ width: `${String(fraction * 100)}%` }}
-      />
-    </Clip>
+      valueText={`${done.toLocaleString()} of ${total.toLocaleString()}`}
+    />
   );
 }
 

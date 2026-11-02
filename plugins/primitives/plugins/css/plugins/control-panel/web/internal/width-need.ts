@@ -4,6 +4,9 @@
  *
  * - `described` — choices that each carry a visible description line (its
  *   width decides how many lines each description wraps to);
+ * - `readout` — rows that carry a measured reading beside their label (a
+ *   meter bar over its value, e.g. "51% left this week"), so label, reading
+ *   and the row's mark each keep their own column without truncating;
  * - `picker` — a body that is a grid (swatches, icons, covers, a calendar);
  * - `builder` — a six-track rule row (filter, sort).
  *
@@ -14,7 +17,7 @@
  * content the vocabulary cannot see into (a foreign grid) declares it on the
  * `Section` / `Block` that holds it (`needs`). The popover surface collects
  * the showing page's needs in CSS (`cp-surface` in `app.css`) and takes
- * the highest-ranked one — menu < described < picker < builder — sized by the
+ * the highest-ranked one — menu < described < readout < picker < builder — sized by the
  * matching `popoverWidth*` density token, so a theme sizes each bucket.
  *
  * It used to be declared by the OPENER (`ControlPanelPopover size`,
@@ -22,7 +25,8 @@
  * view-settings menu's Fold rows page opened the filter builder at menu width
  * and its rule rows overflowed.
  */
-export type ControlPanelWidthNeed = "described" | "picker" | "builder";
+export type ControlPanelWidthNeed =
+  "described" | "readout" | "picker" | "builder";
 
 /** The attribute an element states its width need with. */
 export const CP_NEEDS_ATTR = "data-cp-needs";

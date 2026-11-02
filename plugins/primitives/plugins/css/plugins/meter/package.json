@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-primitives-css-meter",
+  "description": "Linear meter / progress bar primitive: a rounded track filled to a fraction in a tone, with an optional target tick.",
+  "private": true,
+  "version": "0.0.1"
+}

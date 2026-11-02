@@ -2,8 +2,8 @@ import type { ReactNode } from "react";
 import { FieldPresentation } from "@plugins/network/plugins/live/web";
 import type { FieldExtent } from "@plugins/network/plugins/live/core";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
+import { Meter } from "@plugins/primitives/plugins/css/plugins/meter/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -27,18 +27,12 @@ function PlayCountCell(props: {
   return (
     <Inline gap="xs">
       {count}
-      <Clip
-        aria-hidden
-        className={cn(
-          "h-0.75 w-10 rounded-full bg-foreground/10",
-          rigidClass(),
-        )}
-      >
-        <div
-          className="h-full rounded-full bg-primary"
-          style={{ width: `${(fraction * 100).toFixed(0)}%` }}
-        />
-      </Clip>
+      <Meter
+        value={fraction}
+        label="Plays, against the most played"
+        size="thin"
+        className={cn("w-10", rigidClass())}
+      />
     </Inline>
   );
 }

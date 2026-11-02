@@ -35,19 +35,19 @@ truncation leaf (it ellipsizes via the ambient single-line context).
     - `clipClasses`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --radius`
-  - Imported by: 69 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×23
+  - Imported by: 60 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×19
     - `primitives` ×10
     - `conversations` ×8
-    - `debug` ×8
     - `page` ×6
+    - `debug` ×4
     - `fields` ×2
-    - `integrations` ×2
     - `review` ×2
     - `active-data/go`
     - `apps-core/surface`
     - `config_v2/settings`
     - `hints/ask`
+    - `integrations/google-maps`
     - `menu-bar`
     - `plugin-meta/plugin-view/file-tree`
     - `screenshot`

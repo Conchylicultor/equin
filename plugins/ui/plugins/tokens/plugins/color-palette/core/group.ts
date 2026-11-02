@@ -215,6 +215,17 @@ export const colorPaletteGroup = defineTokenGroup("color-palette", {
     default: "var(--selected)",
     label: "Popover row hover",
   },
+  // The current row's fill INSIDE a floating panel (a `selected` row in a
+  // menu) — the overlay surface's own selected tone, published as
+  // `--selected-fill` by the overlay surface the way `popoverHover` is its
+  // `--hover-fill`. Default = that hover step: the palette's `selected` tier
+  // is calibrated against the canvas, and a theme whose popover IS that tier
+  // (Mist) drew every selected row in a menu as no highlight at all. A theme
+  // sets it to tell the current row apart from the hovered one.
+  popoverSelected: {
+    default: "var(--popover-hover)",
+    label: "Popover selected row",
+  },
   // A slider's knob (`css/slider`) and the halo ring drawn round it. Defaults
   // = the primary knob with no halo it always wore; a theme sets a text-colour
   // knob in a soft accent ring. The track and fill stay `border` / `primary`.

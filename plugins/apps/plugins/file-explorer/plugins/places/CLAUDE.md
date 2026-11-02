@@ -28,7 +28,7 @@
     - `primitives/css/ui-kit` ×2
     - `infra/endpoints.EndpointError`
     - `network/live.useLive`
-    - `primitives/css/clip.Clip`
+    - `primitives/css/meter.Meter`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
@@ -45,8 +45,6 @@
   - Resources: `file-explorer.main-checkout` (push, fixed)
 - Cross-plugin:
   - Uses tokens:
-    - `ui/tokens/color-palette --input`
-    - `ui/tokens/color-palette --primary`
     - `ui/tokens/density --space-lg`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xs`

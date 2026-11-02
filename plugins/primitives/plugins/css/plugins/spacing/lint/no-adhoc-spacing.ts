@@ -7,8 +7,8 @@ const createRule = lintRuleCreator(import.meta.url);
 /**
  * Spacing-rhythm guardrail.
  *
- * Layout spacing must come from ONE closed set of roles — the 8-step density
- * spacing ramp (`none|2xs|xs|sm|md|lg|xl|2xl`), consumed through the `<Stack
+ * Layout spacing must come from ONE closed set of roles — the 10-step density
+ * spacing ramp (`none|2xs|xs|xsm|sm|smd|md|lg|xl|2xl`), consumed through the `<Stack
  * gap>` / `<Inset pad>` primitives (`@plugins/primitives/plugins/css/plugins/spacing/web`)
  * or the matching `gap-<step>` / `p-<step>` `@utility` classes. Tailwind's raw
  * spacing scale exposes ~20 continuous steps per axis (plus `gap-[7px]`), so
@@ -63,7 +63,7 @@ export default function buildRule({
         adhocSpacing:
           "Raw spacing class `{{token}}` is banned — set layout spacing through the " +
           "<Stack gap> / <Inset pad> primitives from @plugins/primitives/plugins/css/plugins/spacing/web, " +
-          "or a `gap-<step>` / `p*-<step>` utility (none|2xs|xs|sm|md|lg|xl|2xl) from the density spacing scale. " +
+          "or a `gap-<step>` / `p*-<step>` utility (none|2xs|xs|xsm|sm|smd|md|lg|xl|2xl) from the density spacing scale. " +
           "Margins become a Stack gap or Inset pad — the ramp has no margin classes." +
           " To make ONE instance or region look different (a hero prompt, a featured card), wrap it in a sub-theme that sets the token (`defineSubTheme` + `ThemeEngine.SubTheme` + `<Theme name={subThemeScope(…)}>`, see plugins/ui/plugins/theme-engine/CLAUDE.md).",
       },

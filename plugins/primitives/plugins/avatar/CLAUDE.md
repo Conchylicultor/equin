@@ -1,7 +1,8 @@
 # avatar
 
 Reusable circular avatar primitive — an icon on a colored disc, with an
-optional status dot overlay (Slack-style). Pure web; no server, no slots.
+optional status dot overlay (Slack-style). Pure web; no server, no slots. Every avatar box carries `data-avatar`, so a
+container can size a track to it (a control panel's icon column).
 
 ## Size: density from context (no prop)
 
@@ -12,6 +13,18 @@ sizing is a `<ControlSizeProvider size>` around the region (mirroring `Badge`),
 never a per-instance `size`; passing one is a compile error (`size?: never`).
 The no-provider default is `md`.
 
+The box per tier is a **density token** (`avatarXs` / `avatarSm` / `avatarMd` /
+`avatarLg` → `size-avatar-<size>`, defaults 16 / 24 / 32 / 48px), exactly as a
+control's height is (`controlHeight*`), so a theme sizes avatars without new
+steps and the customizer's Density section lists them. Everything inside the
+box is a **share** of it, never a fixed size, so a themed box keeps its
+proportions: the icon and the status dot in `%` of the box, the dot's
+overhang past the edge in `%` too, the letter in `cqh` (below). At the default
+boxes the shares reproduce the old fixed sizes exactly (icon 10 / 14 / 16 /
+24px, dot 6 / 8 / 10 / 12px hanging 1 / 1 / 2 / 2px). Only the dot's ring (the
+halo against the surface) stays a hairline in px. A control panel's icon column
+reads `--avatar-sm` when it holds an avatar, so the two cannot drift.
+
 The fallback letter is part of that geometry, not text hierarchy: the box is a
 size container (`@container-[size]`) and each bundle's `glyph` is a `cqh` share
 of it (10px in the 16px `xs` disc up to 16px in the 48px `lg` one). A text role
@@ -19,7 +32,7 @@ would follow the theme's type scale while the box stays fixed, so no role is
 used — and because the class-token lint walk follows a helper's return value
 (`geometryFor` → `SIZE_MAP`), a raw `text-*` size in a bundle is reported.
 
-## Presentation: badge, tile or gradient tile (from context)
+## Presentation: badge, solid badge, tile or gradient tile (from context)
 
 How an avatar draws is also a region property —
 `<AvatarPresentationProvider value>` / `useAvatarPresentation()`, modelled on
@@ -27,6 +40,11 @@ How an avatar draws is also a region property —
 
 - **`badge`** (default, no provider): the density-ramp size above and the SOFT
   paint (a 15% tint of the colour, the colour as the glyph).
+- **`solid-badge`**: the badge's density-ramp size with the FLAT paint (a
+  solid disc of the colour) and a bold glyph in the surface's own tone
+  (`text-chrome-mask` — a letter cut out of the disc, dark on a dark page):
+  people side by side that must tell apart at a glance (the Claude account
+  menu and its sidebar trigger).
 - **`tile`**: the box fills its parent (the view sizes the tile, so density is
   ignored), the FLAT paint (the solid colour under the `categorical-foreground` glyph token, white by default), the glyph at
   46% of the box (svg by `size-[46%]`, a fallback letter by a `cqh` font size, as
@@ -138,27 +156,14 @@ color palette.
     - `DEFAULT_AGENT_AVATAR`
     - `useAvatarPresentation`
 - Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/categorical --categorical-1`
-    - `ui/tokens/categorical --categorical-10`
-    - `ui/tokens/categorical --categorical-2`
-    - `ui/tokens/categorical --categorical-3`
-    - `ui/tokens/categorical --categorical-4`
-    - `ui/tokens/categorical --categorical-5`
-    - `ui/tokens/categorical --categorical-6`
-    - `ui/tokens/categorical --categorical-7`
-    - `ui/tokens/categorical --categorical-8`
-    - `ui/tokens/categorical --categorical-9`
-    - `ui/tokens/categorical --categorical-foreground`
-    - `ui/tokens/color-palette --background`
-    - `ui/tokens/color-palette --border`
-    - `ui/tokens/color-palette --foreground`
-    - `ui/tokens/color-palette --muted`
-    - `ui/tokens/color-palette --ring`
+  - Uses tokens: 25 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/categorical` ×11
+    - `ui/tokens/color-palette` ×5
+    - `ui/tokens/density` ×4
+    - `ui/tokens/type-scale` ×2
     - `ui/tokens/place-palette --place-food`
     - `ui/tokens/shadow --shadow`
     - `ui/tokens/shape --spacing`
-    - `ui/tokens/type-scale --font-weight-medium`
   - Imported by:
     - `apps-core/app-icon`
     - `apps-core/app-launcher`

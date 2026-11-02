@@ -58,6 +58,7 @@ surface co-publishes both — see the `:root, [data-theme-scope]` defaults here,
 |---|---|---|
 | `--chrome-mask` | `bg-chrome-mask` | *my background*, for a sticky bar painting **over** me |
 | `--hover-fill` | `bg-hover-fill` | *a visible step off my background*, for a control highlighting **inside** me |
+| `--selected-fill` | `bg-selected-fill` | *the current row's fill on me* — the palette's `--selected` on the canvas, a popover's `popoverSelected` in a menu |
 
 **Geometry roles** — the rail: where the things inside me start. Published by
 the `rail-*` utilities in `app.css` (see the RAIL section there, and

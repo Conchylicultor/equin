@@ -191,7 +191,7 @@ const ROW_LOOK: Record<
     base: "col-span-full grid grid-cols-subgrid items-center rounded-md min-h-tree-row text-body",
     hover: "hover:bg-accent hover:[--scrim:var(--accent)]",
     selected:
-      "bg-selected text-selected-foreground [--scrim:var(--selected)] [--row-meta:var(--selected-meta-foreground)]",
+      "bg-selected-fill text-selected-foreground [--scrim:var(--selected-fill)] [--row-meta:var(--selected-meta-foreground)]",
   },
 };
 /** A decoration's `highlighted` row (a drop target): the accent tint. */

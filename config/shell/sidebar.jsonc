@@ -55,6 +55,7 @@
     "conversations.all-conversations:all-conversations",
     "stats:stats",
     "conversations.conversations-view:conversations",
+    { "type": "divider", "id": "claude-account-rule" },
     "conversations.runtime-sdk:claude-account"
   ]
 }

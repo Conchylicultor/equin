@@ -14,7 +14,20 @@ import {
 import { densityGroup } from "../../core";
 import { densityShortcuts } from "../shortcuts";
 
-const KEYS = Object.keys(densityGroup.schema);
+// The ramp's in-between steps (`space-xsm`, `space-smd`) are derived — their
+// default reads their neighbours' vars (see the group) — not settings: editing
+// one here would pin a number that no longer follows the preset and could
+// cross a neighbour. So the customizer lists the neighbours and leaves out
+// every ramp step whose default is derived from another, read off the schema
+// so a new in-between step is left out with no edit here.
+function isDerivedRampStep(key: string): boolean {
+  const field = densityGroup.schema[key as keyof typeof densityGroup.schema];
+  return key.startsWith("space-") && field.default.includes("var(--space-");
+}
+
+const KEYS = Object.keys(densityGroup.schema).filter(
+  (key) => !isDerivedRampStep(key),
+);
 
 // Every token row filters itself by `search`; whether this section appears at
 // all is the contribution's `useAvailable` (`tokenGroupMatchesSearch`).

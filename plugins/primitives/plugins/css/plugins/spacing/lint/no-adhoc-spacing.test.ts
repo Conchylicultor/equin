@@ -4,7 +4,7 @@
  *
  * The rule bans RAW Tailwind spacing (numeric `gap-2`/`px-3`/`mt-4`/`space-y-2`
  * or arbitrary `gap-[7px]`) but ALLOWS the named density ramp
- * (`none|2xs|xs|sm|md|lg|xl|2xl`) used through the `gap-<step>`/`p-<step>`
+ * (`none|2xs|xs|xsm|sm|smd|md|lg|xl|2xl`) used through the `gap-<step>`/`p-<step>`
  * utilities. The two steps that begin with a digit — `2xs` and `2xl` — are the
  * regression this file locks in: a naive "starts with a digit" detector flags
  * `gap-2xs`/`p-2xl` even though they are legitimate named steps. The valid cases

@@ -1,4 +1,5 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import type { MeterTone } from "@plugins/primitives/plugins/css/plugins/meter/web";
 import type { VitalTone } from "./vitals-view";
 
 // Theme tokens only. A neutral reading is not good or bad news by itself, so it
@@ -12,11 +13,11 @@ export const VALUE_CLASS: Record<VitalTone, string> = {
   bad: cn("text-destructive"),
 };
 
-/** A meter's fill. */
-export const FILL_CLASS: Record<VitalTone, string> = {
-  neutral: cn("bg-muted-foreground/40"),
-  warn: cn("bg-warning"),
-  bad: cn("bg-destructive"),
+/** A meter's tone. */
+export const METER_TONE: Record<VitalTone, MeterTone> = {
+  neutral: "muted",
+  warn: "warning",
+  bad: "destructive",
 };
 
 /** A stale block: greyed, still legible. */

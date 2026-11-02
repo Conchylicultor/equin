@@ -180,6 +180,15 @@
        page canvas — which on the sidebar (`--sidebar` 0.965 vs `--muted` 0.97)
        landed on the surface color and read as no hover at all. */
     --color-hover-fill: var(--hover-fill);
+    /* The selected-row fill ON the current surface — `bg-selected-fill`
+       resolves to `--selected-fill`, which every surface co-publishes like
+       `--hover-fill`: the canvas, cards and the sidebar the `--selected` tier,
+       a popover its own `popoverSelected` (default = its hover step). A
+       selected row reads `--selected` straight off the palette no more: in a
+       theme whose popover IS its selected tone (Mist: `--popover` =
+       `--accent` = `--selected`) every selected row inside a menu painted the
+       menu's own colour onto itself and showed no highlight. */
+    --color-selected-fill: var(--selected-fill);
     /* A text field's paint on the current surface — `bg-field-fill` /
        `border-field-outline`, which every surface co-publishes (see `:root`
        default + Surface roles), so a field inside a menu wears the popover's
@@ -864,6 +873,15 @@
 @utility size-status-dot-md { width: var(--status-dot-md); height: var(--status-dot-md); } /* twmerge: extend size */
 @utility size-status-dot-lg { width: var(--status-dot-lg); height: var(--status-dot-lg); } /* twmerge: extend size */
 
+/* Avatar box sizes, one per density tier — `Avatar` picks the tier from the
+ * ambient `ControlSize`. Values come from the density token group
+ * (--avatar-*), whose defaults are the old size-4 / 6 / 8 / 12. The avatar's
+ * icon, letter and status dot are shares of this box, so they follow it. */
+@utility size-avatar-xs { width: var(--avatar-xs); height: var(--avatar-xs); } /* twmerge: extend size */
+@utility size-avatar-sm { width: var(--avatar-sm); height: var(--avatar-sm); } /* twmerge: extend size */
+@utility size-avatar-md { width: var(--avatar-md); height: var(--avatar-md); } /* twmerge: extend size */
+@utility size-avatar-lg { width: var(--avatar-lg); height: var(--avatar-lg); } /* twmerge: extend size */
+
 /* A record's cover as a list row's leading thumbnail (density `coverThumbW` /
  * `coverThumbH`, default 52 × 34px — the gallery cover's 16/10 at row height).
  * Not square, so it writes width and height apart under the one `size` name. */
@@ -1177,7 +1195,9 @@
 @utility rail-none { --rail-start: 0px;              --rail-end: 0px;              --rail-block-start: 0px;              --rail-block-end: 0px;              --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
 @utility rail-2xs  { --rail-start: var(--space-2xs); --rail-end: var(--space-2xs); --rail-block-start: var(--space-2xs); --rail-block-end: var(--space-2xs); --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
 @utility rail-xs   { --rail-start: var(--space-xs);  --rail-end: var(--space-xs);  --rail-block-start: var(--space-xs);  --rail-block-end: var(--space-xs);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
+@utility rail-xsm  { --rail-start: var(--space-xsm);  --rail-end: var(--space-xsm);  --rail-block-start: var(--space-xsm);  --rail-block-end: var(--space-xsm);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
 @utility rail-sm   { --rail-start: var(--space-sm);  --rail-end: var(--space-sm);  --rail-block-start: var(--space-sm);  --rail-block-end: var(--space-sm);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
+@utility rail-smd  { --rail-start: var(--space-smd);  --rail-end: var(--space-smd);  --rail-block-start: var(--space-smd);  --rail-block-end: var(--space-smd);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
 @utility rail-md   { --rail-start: var(--space-md);  --rail-end: var(--space-md);  --rail-block-start: var(--space-md);  --rail-block-end: var(--space-md);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
 @utility rail-lg   { --rail-start: var(--space-lg);  --rail-end: var(--space-lg);  --rail-block-start: var(--space-lg);  --rail-block-end: var(--space-lg);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
 @utility rail-xl   { --rail-start: var(--space-xl);  --rail-end: var(--space-xl);  --rail-block-start: var(--space-xl);  --rail-block-end: var(--space-xl);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
@@ -1191,7 +1211,9 @@
 @utility rail-x-none { --rail-start: 0px;              --rail-end: 0px;              --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
 @utility rail-x-2xs  { --rail-start: var(--space-2xs); --rail-end: var(--space-2xs); --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
 @utility rail-x-xs   { --rail-start: var(--space-xs);  --rail-end: var(--space-xs);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-x-xsm  { --rail-start: var(--space-xsm);  --rail-end: var(--space-xsm);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
 @utility rail-x-sm   { --rail-start: var(--space-sm);  --rail-end: var(--space-sm);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-x-smd  { --rail-start: var(--space-smd);  --rail-end: var(--space-smd);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
 @utility rail-x-md   { --rail-start: var(--space-md);  --rail-end: var(--space-md);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
 @utility rail-x-lg   { --rail-start: var(--space-lg);  --rail-end: var(--space-lg);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
 @utility rail-x-xl   { --rail-start: var(--space-xl);  --rail-end: var(--space-xl);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
@@ -1214,7 +1236,9 @@
 @utility rail-owe-none { --rail-start: 0px;              --rail-end: 0px;              --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
 @utility rail-owe-2xs  { --rail-start: var(--space-2xs); --rail-end: var(--space-2xs); --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
 @utility rail-owe-xs   { --rail-start: var(--space-xs);  --rail-end: var(--space-xs);  --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-owe-xsm  { --rail-start: var(--space-xsm);  --rail-end: var(--space-xsm);  --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
 @utility rail-owe-sm   { --rail-start: var(--space-sm);  --rail-end: var(--space-sm);  --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-owe-smd  { --rail-start: var(--space-smd);  --rail-end: var(--space-smd);  --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
 @utility rail-owe-md   { --rail-start: var(--space-md);  --rail-end: var(--space-md);  --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
 @utility rail-owe-lg   { --rail-start: var(--space-lg);  --rail-end: var(--space-lg);  --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
 @utility rail-owe-xl   { --rail-start: var(--space-xl);  --rail-end: var(--space-xl);  --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
@@ -1232,7 +1256,9 @@
 @utility rail-y-none { --rail-block-start: 0px;              --rail-block-end: 0px;              padding-block: var(--rail-block-start) var(--rail-block-end); } /* twmerge: sg-rail-y */
 @utility rail-y-2xs  { --rail-block-start: var(--space-2xs); --rail-block-end: var(--space-2xs); padding-block: var(--rail-block-start) var(--rail-block-end); } /* twmerge: sg-rail-y */
 @utility rail-y-xs   { --rail-block-start: var(--space-xs);  --rail-block-end: var(--space-xs);  padding-block: var(--rail-block-start) var(--rail-block-end); } /* twmerge: sg-rail-y */
+@utility rail-y-xsm  { --rail-block-start: var(--space-xsm);  --rail-block-end: var(--space-xsm);  padding-block: var(--rail-block-start) var(--rail-block-end); } /* twmerge: sg-rail-y */
 @utility rail-y-sm   { --rail-block-start: var(--space-sm);  --rail-block-end: var(--space-sm);  padding-block: var(--rail-block-start) var(--rail-block-end); } /* twmerge: sg-rail-y */
+@utility rail-y-smd  { --rail-block-start: var(--space-smd);  --rail-block-end: var(--space-smd);  padding-block: var(--rail-block-start) var(--rail-block-end); } /* twmerge: sg-rail-y */
 @utility rail-y-md   { --rail-block-start: var(--space-md);  --rail-block-end: var(--space-md);  padding-block: var(--rail-block-start) var(--rail-block-end); } /* twmerge: sg-rail-y */
 @utility rail-y-lg   { --rail-block-start: var(--space-lg);  --rail-block-end: var(--space-lg);  padding-block: var(--rail-block-start) var(--rail-block-end); } /* twmerge: sg-rail-y */
 @utility rail-y-xl   { --rail-block-start: var(--space-xl);  --rail-block-end: var(--space-xl);  padding-block: var(--rail-block-start) var(--rail-block-end); } /* twmerge: sg-rail-y */
@@ -1602,6 +1628,16 @@
   &:not(:has([data-cp-handle])) {
     --cp-rail-icon: var(--cp-row-pad-x);
   }
+  /* DERIVED TRACK WIDTH — the icon column is an avatar wide when an avatar
+     occupies it (`data-avatar`, stamped by `primitives/avatar`; the account
+     menu's rows), so a person's disc is not squeezed into a glyph's 18px track
+     and spills into the gap. Per PANEL, like the tracks above: every row keeps
+     one text rail. The width is the badge avatar's `sm` box (the density
+     `avatarSm` token, `size-avatar-sm`) — a panel row is a `sm` row — which is
+     why a panel that shows avatars draws them at `sm`. */
+  &:has([data-cp-cell="icon"] [data-avatar]) {
+    --cp-icon-col: var(--avatar-sm);
+  }
 }
 
 @utility cp-surface {
@@ -1614,7 +1650,7 @@
      grid) declares it with `needs`. Nothing that OPENS a panel names a width.
 
      The surface takes the highest-ranked need on the SHOWING page —
-     menu < described < picker < builder — by source order: the four rules
+     menu < described < readout < picker < builder — by source order: the rules
      share one specificity, so the last one matching wins. Rank, not `max()` of
      pixels: `described` is a WRAP width, not a minimum (the default theme
      draws it narrower than a menu, the Pages theme wider), so the bucket must
@@ -1635,6 +1671,9 @@
   max-width: var(--available-width, 100vw);
   &:has([data-cp-showing] [data-cp-needs="described"]) {
     width: var(--popover-width-described);
+  }
+  &:has([data-cp-showing] [data-cp-needs="readout"]) {
+    width: var(--popover-width-readout);
   }
   &:has([data-cp-showing] [data-cp-needs="picker"]) {
     width: var(--popover-width-picker);
@@ -1819,6 +1858,22 @@
     &
     > [data-cp-select]
     > [data-cp-cell="icon"] {
+    display: none;
+  }
+  /* A FLUSH BAND (`ControlPanel.Section flush`) draws no leading tracks at
+     all, whatever the panel's other bands occupy: its rows' labels start on
+     the panel's content edge, with the band's own label — a band of settings
+     (switches) under a list whose rows carry avatars. The band is the unit of
+     the exception, so every label INSIDE it still shares one x. Written after
+     the panel-scan templates and one class more specific, so it wins over
+     them. */
+  .cp-panel .cp-band[data-cp-flush] & {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .cp-panel .cp-band[data-cp-flush] & > [data-cp-cell="gutter"],
+  .cp-panel .cp-band[data-cp-flush] & > [data-cp-cell="icon"],
+  .cp-panel .cp-band[data-cp-flush] & > [data-cp-select] > [data-cp-cell="gutter"],
+  .cp-panel .cp-band[data-cp-flush] & > [data-cp-select] > [data-cp-cell="icon"] {
     display: none;
   }
 }
@@ -2128,10 +2183,13 @@
 
 /* Spacing scale utilities — the single source of truth for layout gap + padding
  * rhythm (<Stack gap> / <Inset pad> primitives, plugins/primitives/plugins/spacing).
- * One closed 8-step ramp (none | 2xs | xs | sm | md | lg | xl | 2xl) backed by the
+ * One closed 10-step ramp (none | 2xs | xs | xsm | sm | smd | md | lg | xl | 2xl) backed by the
  * density token group's --space-* runtime vars (overridden by ThemeInjector), so
  * gaps + insets tighten together with the active density preset — unlike raw
- * Tailwind gap-N/p-N, which are fixed. `none` is the constant 0 (no token). The
+ * Tailwind gap-N/p-N, which are fixed. `none` is the constant 0 (no token).
+ * `xsm` and `smd` are the in-between steps, DERIVED as the midpoints of their
+ * neighbours (density group), so they follow every preset and retune and can
+ * never cross a neighbour. The
  * `no-adhoc-spacing` lint rule (spacing plugin) bans raw gap-/p-/m-/space- numerics
  * so every spacing decision routes through these named steps. The generated
  * custom-utilities registry is derived from the per-utility `/* twmerge: … *\/`
@@ -2144,12 +2202,14 @@
  * re-spelling the steps or the class names. Every declared family must carry
  * every declared step, so adding a step means adding its @utility to each family
  * here; the space-ramp-in-sync check fails otherwise. */
-/* @ramp steps: none 2xs xs sm md lg xl 2xl */
+/* @ramp steps: none 2xs xs xsm sm smd md lg xl 2xl */
 /* @ramp families: gap gap-x gap-y p px py pt pr pb pl */
 @utility gap-none { gap: 0; }                 /* twmerge: extend gap */
 @utility gap-2xs  { gap: var(--space-2xs); }  /* twmerge: extend gap */
 @utility gap-xs   { gap: var(--space-xs); }   /* twmerge: extend gap */
+@utility gap-xsm  { gap: var(--space-xsm); }   /* twmerge: extend gap */
 @utility gap-sm   { gap: var(--space-sm); }   /* twmerge: extend gap */
+@utility gap-smd  { gap: var(--space-smd); }   /* twmerge: extend gap */
 @utility gap-md   { gap: var(--space-md); }   /* twmerge: extend gap */
 @utility gap-lg   { gap: var(--space-lg); }   /* twmerge: extend gap */
 @utility gap-xl   { gap: var(--space-xl); }   /* twmerge: extend gap */
@@ -2157,7 +2217,9 @@
 @utility gap-x-none { column-gap: 0; }                 /* twmerge: extend gap-x */
 @utility gap-x-2xs  { column-gap: var(--space-2xs); }  /* twmerge: extend gap-x */
 @utility gap-x-xs   { column-gap: var(--space-xs); }   /* twmerge: extend gap-x */
+@utility gap-x-xsm  { column-gap: var(--space-xsm); }   /* twmerge: extend gap-x */
 @utility gap-x-sm   { column-gap: var(--space-sm); }   /* twmerge: extend gap-x */
+@utility gap-x-smd  { column-gap: var(--space-smd); }   /* twmerge: extend gap-x */
 @utility gap-x-md   { column-gap: var(--space-md); }   /* twmerge: extend gap-x */
 @utility gap-x-lg   { column-gap: var(--space-lg); }   /* twmerge: extend gap-x */
 @utility gap-x-xl   { column-gap: var(--space-xl); }   /* twmerge: extend gap-x */
@@ -2165,7 +2227,9 @@
 @utility gap-y-none { row-gap: 0; }                 /* twmerge: extend gap-y */
 @utility gap-y-2xs  { row-gap: var(--space-2xs); }  /* twmerge: extend gap-y */
 @utility gap-y-xs   { row-gap: var(--space-xs); }   /* twmerge: extend gap-y */
+@utility gap-y-xsm  { row-gap: var(--space-xsm); }   /* twmerge: extend gap-y */
 @utility gap-y-sm   { row-gap: var(--space-sm); }   /* twmerge: extend gap-y */
+@utility gap-y-smd  { row-gap: var(--space-smd); }   /* twmerge: extend gap-y */
 @utility gap-y-md   { row-gap: var(--space-md); }   /* twmerge: extend gap-y */
 @utility gap-y-lg   { row-gap: var(--space-lg); }   /* twmerge: extend gap-y */
 @utility gap-y-xl   { row-gap: var(--space-xl); }   /* twmerge: extend gap-y */
@@ -2173,7 +2237,9 @@
 @utility p-none { padding: 0; }                /* twmerge: extend p */
 @utility p-2xs  { padding: var(--space-2xs); } /* twmerge: extend p */
 @utility p-xs   { padding: var(--space-xs); }  /* twmerge: extend p */
+@utility p-xsm  { padding: var(--space-xsm); }  /* twmerge: extend p */
 @utility p-sm   { padding: var(--space-sm); }  /* twmerge: extend p */
+@utility p-smd  { padding: var(--space-smd); }  /* twmerge: extend p */
 @utility p-md   { padding: var(--space-md); }  /* twmerge: extend p */
 @utility p-lg   { padding: var(--space-lg); }  /* twmerge: extend p */
 @utility p-xl   { padding: var(--space-xl); }  /* twmerge: extend p */
@@ -2181,7 +2247,9 @@
 @utility px-none { padding-left: 0; padding-right: 0; }                                  /* twmerge: extend px */
 @utility px-2xs  { padding-left: var(--space-2xs); padding-right: var(--space-2xs); }     /* twmerge: extend px */
 @utility px-xs   { padding-left: var(--space-xs);  padding-right: var(--space-xs); }      /* twmerge: extend px */
+@utility px-xsm  { padding-left: var(--space-xsm);  padding-right: var(--space-xsm); }      /* twmerge: extend px */
 @utility px-sm   { padding-left: var(--space-sm);  padding-right: var(--space-sm); }      /* twmerge: extend px */
+@utility px-smd  { padding-left: var(--space-smd);  padding-right: var(--space-smd); }      /* twmerge: extend px */
 @utility px-md   { padding-left: var(--space-md);  padding-right: var(--space-md); }      /* twmerge: extend px */
 @utility px-lg   { padding-left: var(--space-lg);  padding-right: var(--space-lg); }      /* twmerge: extend px */
 @utility px-xl   { padding-left: var(--space-xl);  padding-right: var(--space-xl); }      /* twmerge: extend px */
@@ -2189,7 +2257,9 @@
 @utility py-none { padding-top: 0; padding-bottom: 0; }                                  /* twmerge: extend py */
 @utility py-2xs  { padding-top: var(--space-2xs); padding-bottom: var(--space-2xs); }     /* twmerge: extend py */
 @utility py-xs   { padding-top: var(--space-xs);  padding-bottom: var(--space-xs); }      /* twmerge: extend py */
+@utility py-xsm  { padding-top: var(--space-xsm);  padding-bottom: var(--space-xsm); }      /* twmerge: extend py */
 @utility py-sm   { padding-top: var(--space-sm);  padding-bottom: var(--space-sm); }      /* twmerge: extend py */
+@utility py-smd  { padding-top: var(--space-smd);  padding-bottom: var(--space-smd); }      /* twmerge: extend py */
 @utility py-md   { padding-top: var(--space-md);  padding-bottom: var(--space-md); }      /* twmerge: extend py */
 @utility py-lg   { padding-top: var(--space-lg);  padding-bottom: var(--space-lg); }      /* twmerge: extend py */
 @utility py-xl   { padding-top: var(--space-xl);  padding-bottom: var(--space-xl); }      /* twmerge: extend py */
@@ -2197,7 +2267,9 @@
 @utility pt-none { padding-top: 0; }                /* twmerge: extend pt */
 @utility pt-2xs  { padding-top: var(--space-2xs); } /* twmerge: extend pt */
 @utility pt-xs   { padding-top: var(--space-xs); }  /* twmerge: extend pt */
+@utility pt-xsm  { padding-top: var(--space-xsm); }  /* twmerge: extend pt */
 @utility pt-sm   { padding-top: var(--space-sm); }  /* twmerge: extend pt */
+@utility pt-smd  { padding-top: var(--space-smd); }  /* twmerge: extend pt */
 @utility pt-md   { padding-top: var(--space-md); }  /* twmerge: extend pt */
 @utility pt-lg   { padding-top: var(--space-lg); }  /* twmerge: extend pt */
 @utility pt-xl   { padding-top: var(--space-xl); }  /* twmerge: extend pt */
@@ -2205,7 +2277,9 @@
 @utility pr-none { padding-right: 0; }                /* twmerge: extend pr */
 @utility pr-2xs  { padding-right: var(--space-2xs); } /* twmerge: extend pr */
 @utility pr-xs   { padding-right: var(--space-xs); }  /* twmerge: extend pr */
+@utility pr-xsm  { padding-right: var(--space-xsm); }  /* twmerge: extend pr */
 @utility pr-sm   { padding-right: var(--space-sm); }  /* twmerge: extend pr */
+@utility pr-smd  { padding-right: var(--space-smd); }  /* twmerge: extend pr */
 @utility pr-md   { padding-right: var(--space-md); }  /* twmerge: extend pr */
 @utility pr-lg   { padding-right: var(--space-lg); }  /* twmerge: extend pr */
 @utility pr-xl   { padding-right: var(--space-xl); }  /* twmerge: extend pr */
@@ -2213,7 +2287,9 @@
 @utility pb-none { padding-bottom: 0; }                /* twmerge: extend pb */
 @utility pb-2xs  { padding-bottom: var(--space-2xs); } /* twmerge: extend pb */
 @utility pb-xs   { padding-bottom: var(--space-xs); }  /* twmerge: extend pb */
+@utility pb-xsm  { padding-bottom: var(--space-xsm); }  /* twmerge: extend pb */
 @utility pb-sm   { padding-bottom: var(--space-sm); }  /* twmerge: extend pb */
+@utility pb-smd  { padding-bottom: var(--space-smd); }  /* twmerge: extend pb */
 @utility pb-md   { padding-bottom: var(--space-md); }  /* twmerge: extend pb */
 @utility pb-lg   { padding-bottom: var(--space-lg); }  /* twmerge: extend pb */
 @utility pb-xl   { padding-bottom: var(--space-xl); }  /* twmerge: extend pb */
@@ -2221,7 +2297,9 @@
 @utility pl-none { padding-left: 0; }                /* twmerge: extend pl */
 @utility pl-2xs  { padding-left: var(--space-2xs); } /* twmerge: extend pl */
 @utility pl-xs   { padding-left: var(--space-xs); }  /* twmerge: extend pl */
+@utility pl-xsm  { padding-left: var(--space-xsm); }  /* twmerge: extend pl */
 @utility pl-sm   { padding-left: var(--space-sm); }  /* twmerge: extend pl */
+@utility pl-smd  { padding-left: var(--space-smd); }  /* twmerge: extend pl */
 @utility pl-md   { padding-left: var(--space-md); }  /* twmerge: extend pl */
 @utility pl-lg   { padding-left: var(--space-lg); }  /* twmerge: extend pl */
 @utility pl-xl   { padding-left: var(--space-xl); }  /* twmerge: extend pl */
@@ -2455,6 +2533,11 @@
        preset's `--muted` and ignore its own. Guarded by
        `inherited-theme-defaults-scoped`. */
     --hover-fill: var(--muted);
+    /* Selected-row fill default = the palette's selected tier. Surface roles
+       override it per-subtree (the overlay with `--popover-selected`). Same
+       DERIVED-helper status, and the same reason to sit at every theme-scope
+       root, as `--hover-fill` above. */
+    --selected-fill: var(--selected);
     /* Text-field paint default = the canvas field (`--field`, outlined by
        `--input`). Surface roles override it per-subtree — the overlay with the
        popover's own field tokens, so a field inside a menu can sit as a well a

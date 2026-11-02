@@ -49,6 +49,14 @@ export const densityGroup = defineTokenGroup("density", {
   controlHeightSm: { default: "1.75rem", label: "Control height SM" },
   controlHeightMd: { default: "2rem", label: "Control height MD" },
   controlHeightLg: { default: "2.25rem", label: "Control height LG" },
+  // An avatar's box per density tier (`Avatar` reads the ambient
+  // `ControlSize`, `size-avatar-<size>`). Its glyph, icon and status dot are
+  // shares of the box, so a theme that sets one size moves all of them.
+  // Defaults are the old `size-4` / `size-6` / `size-8` / `size-12`.
+  avatarXs: { default: "1rem", label: "Avatar XS" },
+  avatarSm: { default: "1.5rem", label: "Avatar SM" },
+  avatarMd: { default: "2rem", label: "Avatar MD" },
+  avatarLg: { default: "3rem", label: "Avatar LG" },
   controlPadXs: { default: "0.5rem", label: "Control padding XS" },
   controlPadSm: { default: "0.625rem", label: "Control padding SM" },
   controlPadMd: { default: "0.625rem", label: "Control padding MD" },
@@ -171,6 +179,10 @@ export const densityGroup = defineTokenGroup("density", {
     label: "Builder popover width",
   },
   popoverWidthPicker: { default: "20rem", label: "Picker popover width" },
+  // A list whose rows carry a measured reading beside their label (a meter
+  // over its value — the Claude account menu's weekly room per account).
+  // Default = the account-menu mock's 320px.
+  popoverWidthReadout: { default: "20rem", label: "Readout popover width" },
   // A hover card (`overlay/hover-card`): one fixed width for every card, so
   // a card never resizes as the pointer moves from one subject to the next.
   // Default = the workspace-menu mock's 250px card.
@@ -340,7 +352,22 @@ export const densityGroup = defineTokenGroup("density", {
   // hyphen before a digit.
   "space-2xs": { default: "0.125rem", label: "Space 2xs" },
   "space-xs": { default: "0.25rem", label: "Space xs" },
+  // The two in-between steps are DERIVED, never valued: each is the midpoint
+  // of its neighbours, so every preset and every theme that retunes the ramp
+  // moves them too (comfortable 6px / 10px), and neither can cross a
+  // neighbour. They are tokens only so the value is declared at every scope
+  // (and re-declared inside a sub-theme that re-values a neighbour); the
+  // customizer does not list them (a ramp step derived from another, density/web) and no preset
+  // sets them. A theme that wants an exact value still may, in code.
+  "space-xsm": {
+    default: "calc((var(--space-xs) + var(--space-sm)) / 2)",
+    label: "Space xsm",
+  },
   "space-sm": { default: "0.5rem", label: "Space sm" },
+  "space-smd": {
+    default: "calc((var(--space-sm) + var(--space-md)) / 2)",
+    label: "Space smd",
+  },
   "space-md": { default: "0.75rem", label: "Space md" },
   "space-lg": { default: "1rem", label: "Space lg" },
   "space-xl": { default: "1.5rem", label: "Space xl" },

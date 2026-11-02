@@ -4,6 +4,11 @@ import { createContext, useContext, type ReactNode } from "react";
  * How an `<Avatar>` draws itself in a region:
  * - `badge` (default): the density-ramp size (`useControlSize`) and the soft
  *   tint — the avatar in rows, chips and headers.
+ * - `solid-badge`: the badge's geometry (the density-ramp size) with the
+ *   tile's FLAT paint — a solid disc of the colour — and the glyph bold, cut
+ *   out of it in the surface's own tone (`--chrome-mask`, so it reads dark on
+ *   a dark page and light on a light one): a person's mark where several sit
+ *   side by side and must tell apart at a glance (the Claude account menu).
  * - `tile`: the box fills its parent (the host sizes the tile), the fill lit
  *   from above (a soft top-to-bottom gradient within its own colour, a hairline
  *   lit rim) under the categorical-foreground glyph at 46% of the box — a
@@ -16,7 +21,8 @@ import { createContext, useContext, type ReactNode } from "react";
  * lays out tiles declares it once, and every avatar a field renders inside
  * follows without the field knowing where it is drawn.
  */
-export type AvatarPresentation = "badge" | "tile" | "gradient-tile";
+export type AvatarPresentation =
+  "badge" | "solid-badge" | "tile" | "gradient-tile";
 
 const AvatarPresentationContext = createContext<AvatarPresentation>("badge");
 

@@ -72,6 +72,7 @@ export type ColorTokenRef =
   | "--popover-field-border"
   | "--popover-foreground"
   | "--popover-hover"
+  | "--popover-selected"
   | "--primary"
   | "--primary-foreground"
   | "--primary-text"

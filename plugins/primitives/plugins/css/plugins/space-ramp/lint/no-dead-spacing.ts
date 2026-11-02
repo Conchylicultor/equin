@@ -57,7 +57,7 @@ export default function buildRule({
         deadSpacing:
           "`{{token}}` does not exist — no @utility in app.css declares it and Tailwind has no " +
           "`{{value}}` value for `{{family}}-`, so it compiles to nothing. Use a ramp step " +
-          "(none|2xs|xs|sm|md|lg|xl|2xl) or declare a role @utility in app.css.",
+          "(none|2xs|xs|xsm|sm|smd|md|lg|xl|2xl) or declare a role @utility in app.css.",
       },
     },
     defaultOptions: [],

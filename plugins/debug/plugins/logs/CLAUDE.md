@@ -78,9 +78,9 @@ without a DB append to, and screens read its `op_log_ops` fold.
     - `network/live.useLive`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/badge.Badge`
-    - `primitives/css/clip.Clip`
     - `primitives/css/column.Column`
     - `primitives/css/fill.Fill`
+    - `primitives/css/meter.Meter`
     - `primitives/css/text.Text`
     - `primitives/live-state.foldResource`
   - Exports (values):
@@ -103,8 +103,6 @@ without a DB append to, and screens read its `op_log_ops` fold.
   - Uses tokens:
     - `ui/tokens/color-palette --muted`
     - `ui/tokens/color-palette --muted-foreground`
-    - `ui/tokens/color-palette --primary`
-    - `ui/tokens/color-palette --warning`
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`

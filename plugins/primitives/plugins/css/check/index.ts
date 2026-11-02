@@ -85,6 +85,8 @@ const NOT_A_LAYOUT_MECHANIC: Record<string, string> = {
   "layout-harness":
     "the geometry test harness for the primitives, not a primitive",
   "link-chip": "a navigational leaf (composes Badge)",
+  meter:
+    "a linear meter / progress bar — a leaf that fills the width it is given, arranging no other boxes",
   motion:
     "how floating surfaces animate (Presence's exit, a surface's size tween) — it moves boxes that are already arranged, it does not arrange them",
   placeholder: "muted loading/empty text — a leaf",

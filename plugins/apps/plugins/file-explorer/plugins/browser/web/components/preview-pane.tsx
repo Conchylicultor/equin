@@ -84,9 +84,8 @@ export function PreviewPane({
           tier="pane"
           endSafeArea={endSafeArea}
           // The mockup's header: 16px in from the pane's edge, 10px between
-          // its parts (off the spacing ramp, one step past `sm`).
-          // eslint-disable-next-line spacing/no-adhoc-spacing -- the mockup's 10px header gap, between the ramp's 8px and 12px
-          className="gap-[10px] pl-lg"
+          // its parts.
+          className="gap-smd pl-lg"
         >
           {/* The mockup's 20px icon box holding a 14px glyph: the Seti
               glyphs are cropped to fill their box, so the box alone would

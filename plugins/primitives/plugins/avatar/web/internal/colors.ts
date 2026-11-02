@@ -5,7 +5,7 @@ import {
   type AvatarColorPick,
 } from "../../core";
 
-// Three paints per colour, both keyed off the categorical palette slot:
+// Four paints per colour, all keyed off the categorical palette slot:
 // - SOFT (badge presentation): a 15% tint of the slot with the slot as text —
 //   light bg + matching dark text in light mode, muted dark bg + light text in
 //   dark mode. Keys align with the conversation-category palette.
@@ -15,6 +15,8 @@ import {
 //   glyph token, in two shades per slot — shade 1 is `bg-categorical-N-lift`,
 //   the slot lifted 0.13 in OKLCH lightness (derived once in ui-kit's app.css) —
 //   so the eight automatic slots give sixteen tile colours.
+// - SOLID (solid-badge presentation): the same flat fill under a glyph in the
+//   surface's own tone (`text-chrome-mask`).
 //
 // Every class is a literal string so Tailwind's scanner sees it.
 
@@ -31,48 +33,18 @@ export const AVATAR_COLORS = {
   slate: "bg-categorical-10/15 text-categorical-10",
 } as const satisfies Record<AvatarColor, string>;
 
-/** The flat tile fill per slot: `[shade 0, shade 1]`. */
-const AVATAR_FLAT_COLORS = {
-  sky: [
-    "bg-categorical-1 text-categorical-foreground",
-    "bg-categorical-1-lift text-categorical-foreground",
-  ],
-  emerald: [
-    "bg-categorical-2 text-categorical-foreground",
-    "bg-categorical-2-lift text-categorical-foreground",
-  ],
-  amber: [
-    "bg-categorical-3 text-categorical-foreground",
-    "bg-categorical-3-lift text-categorical-foreground",
-  ],
-  rose: [
-    "bg-categorical-4 text-categorical-foreground",
-    "bg-categorical-4-lift text-categorical-foreground",
-  ],
-  violet: [
-    "bg-categorical-5 text-categorical-foreground",
-    "bg-categorical-5-lift text-categorical-foreground",
-  ],
-  indigo: [
-    "bg-categorical-6 text-categorical-foreground",
-    "bg-categorical-6-lift text-categorical-foreground",
-  ],
-  teal: [
-    "bg-categorical-7 text-categorical-foreground",
-    "bg-categorical-7-lift text-categorical-foreground",
-  ],
-  pink: [
-    "bg-categorical-8 text-categorical-foreground",
-    "bg-categorical-8-lift text-categorical-foreground",
-  ],
-  orange: [
-    "bg-categorical-9 text-categorical-foreground",
-    "bg-categorical-9-lift text-categorical-foreground",
-  ],
-  slate: [
-    "bg-categorical-10 text-categorical-foreground",
-    "bg-categorical-10-lift text-categorical-foreground",
-  ],
+/** The flat fill per slot: `[shade 0, shade 1]` — the tile's and the solid badge's, each with its own glyph ink. */
+const AVATAR_FLAT_FILLS = {
+  sky: ["bg-categorical-1", "bg-categorical-1-lift"],
+  emerald: ["bg-categorical-2", "bg-categorical-2-lift"],
+  amber: ["bg-categorical-3", "bg-categorical-3-lift"],
+  rose: ["bg-categorical-4", "bg-categorical-4-lift"],
+  violet: ["bg-categorical-5", "bg-categorical-5-lift"],
+  indigo: ["bg-categorical-6", "bg-categorical-6-lift"],
+  teal: ["bg-categorical-7", "bg-categorical-7-lift"],
+  pink: ["bg-categorical-8", "bg-categorical-8-lift"],
+  orange: ["bg-categorical-9", "bg-categorical-9-lift"],
+  slate: ["bg-categorical-10", "bg-categorical-10-lift"],
 } as const satisfies Record<AvatarColor, readonly [string, string]>;
 
 /**
@@ -107,10 +79,25 @@ export function avatarSoftClass(pick: AvatarColorPick | null): string {
   return pick ? AVATAR_COLORS[pick.slot] : "bg-muted";
 }
 
+/**
+ * Solid-badge paint: the flat fill, the glyph in the tone of the surface the
+ * disc sits on (`text-chrome-mask`, every surface's own background) — a letter
+ * cut out of the disc, dark on a dark page and light on a light one, where the
+ * tile's `categorical-foreground` (white by default) washes out on a bright
+ * slot.
+ */
+export function avatarSolidClass(pick: AvatarColorPick | null): string {
+  return pick
+    ? `${AVATAR_FLAT_FILLS[pick.slot][pick.shade]} text-chrome-mask`
+    : // Colourless (an Add disc): a translucent ink, a step off whatever
+      // surface it sits on — `bg-muted` IS the popover in Mist.
+      "bg-foreground/10 text-foreground";
+}
+
 /** Tile paint: the flat fill + categorical-foreground glyph class for a pick. */
 export function avatarFlatClass(pick: AvatarColorPick | null): string {
   return pick
-    ? AVATAR_FLAT_COLORS[pick.slot][pick.shade]
+    ? `${AVATAR_FLAT_FILLS[pick.slot][pick.shade]} text-categorical-foreground`
     : "bg-muted text-foreground";
 }
 
@@ -125,6 +112,9 @@ export const AVATAR_FILL_SOFT_CLASS =
   "bg-[color-mix(in_oklab,var(--avatar-fill)_15%,transparent)] text-[var(--avatar-fill)]";
 export const AVATAR_FILL_FLAT_CLASS =
   "bg-[var(--avatar-fill)] text-categorical-foreground";
+/** The solid badge's paint for a `fill`: the solid fill, the glyph cut out in the surface's tone. */
+export const AVATAR_FILL_SOLID_CLASS =
+  "bg-[var(--avatar-fill)] text-chrome-mask";
 
 /** The soft (badge) class for a colour / fallback key — `avatarSoftClass(avatarColorPick(…))`. */
 export function avatarColorClass(

@@ -1,6 +1,6 @@
 import { useRef, useState, type DragEvent } from "react";
 import type { HostEvent } from "@plugins/apps/plugins/browser/plugins/engine/core";
-import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Meter } from "@plugins/primitives/plugins/css/plugins/meter/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -88,12 +88,11 @@ export function FileChooserPrompt({
             </DialogDescription>
           </Stack>
           {uploading ? (
-            <Clip axis="both" className="h-1 w-full rounded-full bg-muted">
-              <div
-                className="h-full bg-primary transition-[width]"
-                style={{ width: `${percent}%` }}
-              />
-            </Clip>
+            <Meter
+              value={percent / 100}
+              label="Upload progress"
+              role="progressbar"
+            />
           ) : (
             <button
               type="button"

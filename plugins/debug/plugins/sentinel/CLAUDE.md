@@ -328,11 +328,11 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `debug/sentinel/machine-usage.MachineUsageBreakdown`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
-    - `primitives/css/clip.Clip`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
     - `primitives/css/line.Line`
+    - `primitives/css/meter.Meter`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.insetClass`
     - `primitives/css/spacing.Stack`

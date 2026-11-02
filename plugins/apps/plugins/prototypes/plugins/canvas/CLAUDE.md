@@ -584,10 +584,10 @@ navigation, so it starts from nothing remembered.
     - `PROTOTYPE_FRAME_KIND`
     - `variantsHint`
 - Cross-plugin:
-  - Uses tokens: 35 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 37 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/color-palette` ×12
     - `ui/tokens/type-scale` ×10
-    - `ui/tokens/density` ×6
+    - `ui/tokens/density` ×8
     - `ui/tokens/shape` ×4
     - `ui/tokens/shadow` ×2
     - `ui/tokens/font-family --font-mono`

@@ -21,11 +21,16 @@ Plus the builder pair (`RuleList` / `RuleRow`), the boxes and bands, and
 ## The five invariants
 
 1. **One rail.** Every label in every panel starts at the same x.
+   - Sole exception: a `ControlPanel.Section flush` band draws no leading
+     tracks, so its rows' labels start on the panel's content edge with the
+     band's label (switch rows under an avatar list). Labels inside the band
+     still share one x.
 2. **One row height**, always.
    - Sole exception: a row passing `description` (a visible wrapping second
      line) is two lines tall.
    - Opt-in, exclusive with `hint` (tooltip, no height); only for a choice that
      must be read before picking (the page-kind menu).
+   - A row passing `wrap` (a switch row's sentence) wraps its label and grows.
    - Everything else uses `hint`.
 3. **One selection language per meaning** — check, radio, switch. No fourth; never
    mixed on one row (`RowProps` is a discriminated union).
@@ -299,6 +304,9 @@ Host element is **inferred, never authored**:
   leading cell holds a real `icon`.
 - A row with `description` reads as title (medium, strong) over prose; leading and
   trailing cells sit on the title line.
+- A row with `detail` (an identifier naming WHICH thing — an email) is the same
+  title over one muted, truncating line; it is one two-line unit, so its leading
+  and trailing cells centre on both lines, and it declares no width need.
 
 ## Geometry: the `--cp-*` tokens
 
@@ -371,6 +379,7 @@ Buckets — each a density token `popoverWidth*`:
 | --- | --- |
 | `menu` | baseline |
 | `described` | choices with visible descriptions — a wrap width, can be narrower than menu |
+| `readout` | rows carrying a measured reading (a meter over its value) beside the label; 320px default |
 | `picker` | a grid; 320px default |
 | `builder` | six-track rule rows |
 
@@ -387,7 +396,7 @@ Buckets — each a density token `popoverWidth*`:
   - a slot whose contributions render sections carries the need in its
     contribution (`QuickTheme.Section`'s `needs`).
 - **The surface collects**: the popup is `cp-surface` (`app.css`).
-  - `:has()` rules in rank order menu < described < picker < builder pick the
+  - `:has()` rules in rank order menu < described < readout < picker < builder pick the
     highest need on the **showing** level (`data-cp-showing`, set by
     `ControlPanelStack`; hidden levels don't count).
   - Rank, not `max()` of pixels. Pure CSS, right on first paint.
@@ -490,24 +499,24 @@ surface isn't viewport-capped, it fails loudly.
     - `useControlPanelHost`
     - `usePanelStack`
 - Cross-plugin:
-  - Uses tokens: 34 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/color-palette` ×13
-    - `ui/tokens/density` ×11
+  - Uses tokens: 35 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/density` ×13
+    - `ui/tokens/color-palette` ×12
     - `ui/tokens/type-scale` ×7
     - `ui/tokens/shape` ×2
     - `ui/tokens/shadow --shadow`
-  - Imported by: 46 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 47 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×16
     - `page` ×5
     - `primitives` ×4
     - `audience` ×3
     - `config_v2` ×3
     - `tasks` ×3
+    - `conversations` ×2
     - `fields` ×2
     - `hints` ×2
     - `ui` ×2
     - `apps-core/surface`
-    - `conversations/conversation-view/dependencies`
     - `framework/cli/build/experimental-marks`
     - `fullscreen`
     - `reports/panel-overflow`

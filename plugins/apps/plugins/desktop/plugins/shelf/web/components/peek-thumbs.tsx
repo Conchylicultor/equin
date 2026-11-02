@@ -119,8 +119,8 @@ function Thumb({
       }}
       onPointerEnter={() => setPeekedWindow(minimized ? null : w.id)}
       onPointerLeave={() => setPeekedWindow(null)}
-      // eslint-disable-next-line layout/no-adhoc-layout, spacing/no-adhoc-spacing -- the mockup's `.thumb`: a column whose header is held to the snapshot's width, 6px padding (off the ramp)
-      className="group/thumb flex flex-col rounded-xl p-[6px] hover:bg-foreground/5"
+      // eslint-disable-next-line layout/no-adhoc-layout -- the mockup's `.thumb`: a column whose header is held to the snapshot's width, 6px padding
+      className="group/thumb flex flex-col rounded-xl p-xsm hover:bg-foreground/5"
     >
       {/* `w-0 min-w-full`: the header takes the snapshot's width instead of
           widening the thumbnail to its title (mockup sets it to the scaled

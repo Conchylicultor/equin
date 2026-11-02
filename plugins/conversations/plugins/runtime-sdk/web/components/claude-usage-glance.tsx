@@ -2,9 +2,13 @@ import type { GlanceProps } from "@plugins/shell/plugins/health-report/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useNow } from "@plugins/primitives/plugins/relative-time/web";
 import { combineResources } from "@plugins/primitives/plugins/live-state/web";
-import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import {
+  Meter,
+  type MeterSize,
+  type MeterTone,
+} from "@plugins/primitives/plugins/css/plugins/meter/web";
 import { Rigid } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -26,10 +30,10 @@ import { formatResets, USAGE_WINDOWS } from "../internal/claude-usage";
 // the session below it, so the week never moves. It sits inside the row's
 // click target: no controls.
 
-const FILL_CLASS: Record<UsageLevel, string> = {
-  ok: cn("bg-primary"),
-  high: cn("bg-warning"),
-  full: cn("bg-destructive"),
+const TONE: Record<UsageLevel, MeterTone> = {
+  ok: "default",
+  high: "warning",
+  full: "destructive",
 };
 const PERCENT_CLASS: Record<UsageLevel, string> = {
   ok: cn("text-foreground"),
@@ -37,34 +41,33 @@ const PERCENT_CLASS: Record<UsageLevel, string> = {
   full: cn("text-destructive"),
 };
 
-/** A thin meter: `fraction` of the track filled in its level's colour. */
+/** A usage meter: `fraction` of the track filled in its level's tone. */
 export function UsageBar({
   fraction,
   level,
   label,
+  size,
+  marker,
+  markerLabel,
 }: {
   fraction: number;
   /** `null`: nothing to fill (no current reading). */
   level: UsageLevel | null;
   label: string;
+  size?: MeterSize;
+  /** A pace / target tick at this fraction. */
+  marker?: number;
+  markerLabel?: string;
 }) {
-  const shown = Math.min(1, fraction);
   return (
-    <Clip
-      role="meter"
-      aria-label={label}
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-valuenow={Math.round(shown * 100)}
-      className="h-1 rounded-full bg-input"
-    >
-      {level ? (
-        <div
-          className={cn("h-full rounded-full", FILL_CLASS[level])}
-          style={{ width: `${(shown * 100).toFixed(1)}%` }}
-        />
-      ) : null}
-    </Clip>
+    <Meter
+      value={level ? fraction : 0}
+      label={label}
+      tone={level ? TONE[level] : "default"}
+      size={size}
+      marker={marker}
+      markerLabel={markerLabel}
+    />
   );
 }
 

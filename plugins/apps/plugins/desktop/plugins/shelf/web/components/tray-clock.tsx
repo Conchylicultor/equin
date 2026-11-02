@@ -16,10 +16,10 @@ export function TrayClock() {
   return (
     <time
       dateTime={now.toISOString()}
-      // eslint-disable-next-line layout/no-adhoc-layout, spacing/no-adhoc-spacing -- the mockup's `.tray-clock` column, right-aligned, padding 0 8px 0 6px (6px is off the ramp)
+      // eslint-disable-next-line layout/no-adhoc-layout -- the mockup's `.tray-clock` column, right-aligned, padding 0 8px 0 6px
       className={cn(
         rigidClass(),
-        "flex flex-col items-end pr-sm pl-[6px] text-caption font-[550] whitespace-nowrap tabular-nums max-[760px]:hidden",
+        "flex flex-col items-end pr-sm pl-xsm text-caption font-[550] whitespace-nowrap tabular-nums max-[760px]:hidden",
       )}
     >
       <span>{formatClockTime(now)}</span>

@@ -25,7 +25,7 @@ describe("Avatar badge (default presentation)", () => {
   it("renders today's density-ramp disc with the soft paint", () => {
     const { container } = render(<Avatar color="rose" icon={face} />);
     expect(box(container).className).toBe(
-      "relative inline-flex shrink-0 items-center justify-center @container-[size] rounded-full size-8 bg-categorical-4/15 text-categorical-4",
+      "relative inline-flex shrink-0 items-center justify-center @container-[size] rounded-full size-avatar-md bg-categorical-4/15 text-categorical-4",
     );
   });
 
@@ -42,7 +42,7 @@ describe("Avatar badge (default presentation)", () => {
     const { container } = render(<Avatar statusDot="bg-success" />);
     const dot = box(container).querySelector("[aria-hidden]");
     expect(dot?.className).toBe(
-      "absolute rounded-full ring-background size-2.5 -right-0.5 -bottom-0.5 ring-2 bg-success",
+      "absolute rounded-full ring-background size-[31.25%] -right-[6.25%] -bottom-[6.25%] ring-2 bg-success",
     );
   });
 
@@ -79,7 +79,7 @@ describe("Avatar tile presentation", () => {
     const el = box(container);
     expect(el.classList).toContain("size-full");
     expect(el.classList).toContain("rounded-squircle");
-    expect(el.classList).not.toContain("size-8");
+    expect(el.classList).not.toContain("size-avatar-md");
     for (const cls of avatarFlatClass(avatarColorPick(null, "home")).split(
       " ",
     )) {

@@ -76,7 +76,7 @@ const P_ARBITRARY = /^p-\[/; // p-[…]
 // spacing utilities (see no-adhoc-spacing, which *allows* these). They ARE card
 // padding; omitting them let a `bg-card` + rounded + border + `p-lg` card slip the
 // raised fingerprint. `p-none` (zero) is excluded — a zero-padded box isn't padded.
-const P_RAMP = /^p-(2xs|xs|sm|md|lg|xl|2xl)$/;
+const P_RAMP = /^p-(2xs|xs|xsm|sm|smd|md|lg|xl|2xl)$/;
 const PX = /^px-/;
 const PY = /^py-/;
 // named padding token (`p-card`) — the sanctioned token escape, parallel to `p-row`.

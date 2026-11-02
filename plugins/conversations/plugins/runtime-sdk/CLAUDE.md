@@ -220,30 +220,29 @@ Gotchas the spike hit:
     - `HealthReport.Row` "Claude Code" → `ClaudeCodeRowDetail`
     - `Shell.Sidebar` "Claude account" → `ClaudeAccountFoot`
     - `ConfigV2.WebRegister` "runtime-sdk-auto-resume"
-  - Uses: 57 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×11
+  - Uses: 56 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×7
     - `infra/claude-cli/availability` ×4
     - `infra/claude-cli/sign-in` ×4
     - `infra/endpoints` ×4
     - `primitives/setup-steps` ×4
     - `config_v2` ×3
+    - `primitives/css/meter` ×3
     - `primitives/data-view` ×3
     - `apps-core/tabs` ×2
+    - `primitives/avatar` ×2
+    - `primitives/css/control-panel` ×2
     - `primitives/live-state` ×2
     - `conversations/conversation-view.conversationPane`
     - `network/live.useLive`
-    - `primitives/avatar.Avatar`
     - `primitives/css/clip.Clip`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.Rigid`
-    - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
-    - `primitives/css/switch.Switch`
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
-    - `primitives/overlay/popover.InlinePopover`
     - `primitives/pane.useOpenPane`
     - `primitives/relative-time.useNow`
     - `primitives/text-editor/inline-chip.renderInlineChip`
@@ -393,12 +392,14 @@ Gotchas the spike hit:
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --faint-foreground`
     - `ui/tokens/color-palette --foreground`
-    - `ui/tokens/color-palette --input`
-    - `ui/tokens/color-palette --primary`
     - `ui/tokens/color-palette --warning`
+    - `ui/tokens/density --avatar-sm`
     - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-smd`
     - `ui/tokens/density --space-xs`
+    - `ui/tokens/density --space-xsm`
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`

@@ -83,10 +83,10 @@ desktop's own theme (`app:desktop`).
     - `primitives/overlay/floating-surface.FloatingSurface`
     - `ui/icons.Icon`
 - Cross-plugin:
-  - Uses tokens: 25 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 27 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/color-palette` ×10
     - `ui/tokens/type-scale` ×10
-    - `ui/tokens/density` ×2
+    - `ui/tokens/density` ×4
     - `ui/tokens/shape` ×2
     - `ui/tokens/shadow --shadow`
 

@@ -38,8 +38,8 @@ export function DesktopPreview({
   const count = windows.length;
   const summary = `${count ? `${count} window${count > 1 ? "s" : ""}` : "Empty"}${current ? " · current" : ""}`;
   return (
-    // eslint-disable-next-line layout/no-adhoc-layout, spacing/no-adhoc-spacing -- the mockup's `.desk-prev` column (gap 6px, off the ramp)
-    <div className="flex flex-col gap-[6px]">
+    // eslint-disable-next-line layout/no-adhoc-layout -- the mockup's `.desk-prev` column (gap 6px)
+    <div className="flex flex-col gap-xsm">
       {/* eslint-disable-next-line layout/no-adhoc-layout, spacing/no-adhoc-spacing -- the mockup's `.dp-h`: name and summary on one baseline, 2px inset (off the ramp) */}
       <div className="flex items-baseline gap-sm px-[2px] text-caption">
         <span className="font-semibold">{label}</span>

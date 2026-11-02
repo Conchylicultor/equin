@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { hostFsVolumeInfo } from "@plugins/infra/plugins/host-fs/core";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Meter } from "@plugins/primitives/plugins/css/plugins/meter/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -41,19 +41,11 @@ export function StorageMeter(): ReactNode {
           {name}
         </Text>
         <div className="py-xs">
-          <Clip
-            role="meter"
-            aria-label={`${name} storage used`}
-            aria-valuemin={0}
-            aria-valuemax={total}
-            aria-valuenow={used}
-            className="h-1 rounded-full bg-input"
-          >
-            <div
-              className="h-full rounded-full bg-primary"
-              style={{ width: `${(fraction * 100).toFixed(1)}%` }}
-            />
-          </Clip>
+          <Meter
+            value={fraction}
+            label={`${name} storage used`}
+            valueText={`${formatSize(used)} of ${formatSize(total)}`}
+          />
         </div>
         <Text variant="caption" tone="faint">
           {formatSize(free)} free of {formatSize(total)}

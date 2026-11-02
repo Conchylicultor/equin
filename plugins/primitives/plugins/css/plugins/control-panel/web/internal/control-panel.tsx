@@ -141,6 +141,15 @@ export interface ControlPanelSectionProps {
    * `width-need.ts`.
    */
   needs?: ControlPanelWidthNeed;
+  /**
+   * The band's rows draw no leading tracks (no drag gutter, no icon column),
+   * even where the panel's other bands occupy them: their labels start on the
+   * panel's content edge, flush with this band's label. For a band of settings
+   * (switch rows) under a list whose rows carry icons or avatars — the one
+   * sanctioned exception to "one rail per panel": every label inside the
+   * band still starts at one x, the band's own.
+   */
+  flush?: boolean;
   className?: string;
   children: React.ReactNode;
 }
@@ -168,12 +177,17 @@ export function ControlPanelSection({
   label,
   description,
   needs,
+  flush,
   className,
   children,
 }: ControlPanelSectionProps) {
   const style = useSectionStyle();
   return (
-    <div data-cp-needs={needs} className={cn("cp-band", className)}>
+    <div
+      data-cp-needs={needs}
+      data-cp-flush={flush ? "" : undefined}
+      className={cn("cp-band", className)}
+    >
       {style === "heading" ? (
         <>
           {label != null ? (

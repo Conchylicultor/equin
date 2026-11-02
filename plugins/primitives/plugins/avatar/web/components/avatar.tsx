@@ -15,9 +15,11 @@ import { avatarColorPick, type AvatarShape } from "../../core";
 import {
   AVATAR_FILL_FLAT_CLASS,
   AVATAR_FILL_SOFT_CLASS,
+  AVATAR_FILL_SOLID_CLASS,
   avatarFlatClass,
   avatarGradientClass,
   avatarSoftClass,
+  avatarSolidClass,
 } from "../internal/colors";
 import {
   useAvatarPresentation,
@@ -73,35 +75,47 @@ interface Geometry {
   ring: string;
 }
 
-// Glyph shares are not one ratio: a small disc needs a relatively larger
-// letter to stay legible (10px in 16px, 12px in 24px, 14px in 32px, 16px in 48px).
+// The box is a density token per tier (`avatarXs` … `avatarLg`, defaults
+// 16 / 24 / 32 / 48px), so a theme sizes avatars the way it sizes controls.
+// Everything inside is a SHARE of the box, never a fixed size, so a theme that
+// picks 22px keeps the disc's proportions: the letter in `cqh` (the box is a
+// size container), the icon and the status dot in `%` of the box, and the dot's
+// overhang in `%` of the box too. The shares reproduce the old fixed sizes
+// exactly at the default boxes; a share that is a repeating fraction (7/12,
+// 1/3, 1/24) is written rounded UP, because layout snaps a length down to
+// 1/64px and `calc(100% / 3)` of 24px drew a 7.98px dot.
+//
+// They are not one ratio per part: a small disc needs a relatively larger
+// letter and glyph to stay legible (letter 10px in 16px, 12 in 24, 14 in 32,
+// 16 in 48; icon 10 / 14 / 16 / 24px), and a relatively larger dot (6 / 8 / 10
+// / 12px, hanging 1 / 1 / 2 / 2px past the edge).
 const SIZE_MAP: Record<ControlSize, Geometry> = {
   xs: {
-    box: "size-4",
-    icon: "size-2.5",
+    box: "size-avatar-xs",
+    icon: "size-[62.5%]",
     glyph: "text-[length:62.5cqh]",
-    dot: "size-1.5 -right-px -bottom-px",
+    dot: "size-[37.5%] -right-[6.25%] -bottom-[6.25%]",
     ring: "ring-1",
   },
   sm: {
-    box: "size-6",
-    icon: "size-3.5",
+    box: "size-avatar-sm",
+    icon: "size-[58.334%]",
     glyph: "text-[length:50cqh]",
-    dot: "size-2 -right-px -bottom-px",
+    dot: "size-[33.334%] -right-[4.167%] -bottom-[4.167%]",
     ring: "ring-2",
   },
   md: {
-    box: "size-8",
-    icon: "size-4",
+    box: "size-avatar-md",
+    icon: "size-[50%]",
     glyph: "text-[length:43.75cqh]",
-    dot: "size-2.5 -right-0.5 -bottom-0.5",
+    dot: "size-[31.25%] -right-[6.25%] -bottom-[6.25%]",
     ring: "ring-2",
   },
   lg: {
-    box: "size-12",
-    icon: "size-6",
+    box: "size-avatar-lg",
+    icon: "size-[50%]",
     glyph: "text-[length:33.333cqh]",
-    dot: "size-3 -right-0.5 -bottom-0.5",
+    dot: "size-[25%] -right-[4.167%] -bottom-[4.167%]",
     ring: "ring-2",
   },
 };
@@ -181,20 +195,40 @@ export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
       ? cn(AVATAR_FILL_FLAT_CLASS, TILE_RELIEF)
       : presentation === "gradient-tile"
         ? cn(AVATAR_FILL_FLAT_CLASS, GRADIENT_TILE_RELIEF)
-        : AVATAR_FILL_SOFT_CLASS
+        : presentation === "solid-badge"
+          ? AVATAR_FILL_SOLID_CLASS
+          : AVATAR_FILL_SOFT_CLASS
     : presentation === "tile"
       ? cn(avatarFlatClass(pick), pick && TILE_RELIEF)
       : presentation === "gradient-tile"
         ? cn(avatarGradientClass(pick), GRADIENT_TILE_RELIEF)
-        : avatarSoftClass(pick);
+        : presentation === "solid-badge"
+          ? avatarSolidClass(pick)
+          : avatarSoftClass(pick);
   // leading-none keeps the fallback glyph optically centered; its font size is
   // the geometry's share of the box (see Geometry.glyph), not text hierarchy.
+  // A solid badge's letter is bold: cut out of a solid disc, a medium stroke
+  // reads thin.
+  const glyphWeight =
+    presentation === "solid-badge" ? "font-bold" : "font-medium";
+  // The letter's box is trimmed to its CAP HEIGHT over its baseline
+  // (`text-box: trim-both cap alphabetic`), so the disc's flex centring
+  // centres the capital's ink. `leading-none` alone centres the font's em box,
+  // whose ascent and descent are unequal (Inter: the capital sits ~1px low in
+  // a 24px disc). A browser without `text-box` keeps the em-box centring.
   // eslint-disable-next-line text/no-adhoc-typography -- see above
-  const glyphClass = cn("font-medium leading-none", sz.glyph);
+  const glyphClass = cn(
+    glyphWeight,
+    "leading-none [text-box:trim-both_cap_alphabetic]",
+    sz.glyph,
+  );
   return (
     <span
       ref={ref}
       title={title}
+      // Marks the box as an avatar for a container that sizes a track to it
+      // (a control panel's icon column, `cp-panel` in ui-kit's app.css).
+      data-avatar=""
       style={custom ? ({ "--avatar-fill": fill } as CSSProperties) : undefined}
       // eslint-disable-next-line layout/no-adhoc-layout -- rigid inline-level avatar disc: inline-flex center on a shrink-0 leaf that sits inline in flex rows; Center is block-level grid and would break inline placement
       className={cn(
@@ -213,7 +247,7 @@ export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
       ) : null}
       {statusDot ? (
         <span
-          // eslint-disable-next-line layout/no-adhoc-layout -- status dot pinned bottom-right with per-size sub-pixel overhang offsets (-right-px/-0.5) baked into SIZE_MAP; not on the spacing ramp Pin/outset expresses
+          // eslint-disable-next-line layout/no-adhoc-layout -- status dot pinned bottom-right with a per-size overhang that is a share of the avatar box (SIZE_MAP), so it follows a themed box; not on the spacing ramp Pin/outset expresses
           className={cn(
             "absolute rounded-full ring-background",
             sz.dot,

@@ -1,9 +1,9 @@
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useNow } from "@plugins/primitives/plugins/relative-time/web";
-import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Meter } from "@plugins/primitives/plugins/css/plugins/meter/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -11,7 +11,7 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { MachineUsageBreakdown } from "@plugins/debug/plugins/sentinel/plugins/machine-usage/web";
 import { sentinelVitals, type SentinelVitals } from "../../core";
-import { FILL_CLASS, STALE_CLASS, VALUE_CLASS } from "../internal/vitals-tone";
+import { METER_TONE, STALE_CLASS, VALUE_CLASS } from "../internal/vitals-tone";
 import {
   vitalsView,
   type SignalLineView,
@@ -30,23 +30,20 @@ import {
 function SignalMeter({
   fraction,
   tone,
+  label,
 }: {
   fraction: number;
   tone: SignalLineView["tone"];
+  label: string;
 }) {
   return (
-    <Clip
-      aria-hidden
-      className={cn(
-        rigidClass(),
-        "h-1 w-16 rounded-full bg-muted-foreground/15",
-      )}
-    >
-      <div
-        className={cn("h-full rounded-full", FILL_CLASS[tone])}
-        style={{ width: `${String(Math.round(fraction * 100))}%` }}
-      />
-    </Clip>
+    <Meter
+      value={fraction}
+      label={label}
+      tone={METER_TONE[tone]}
+      size="thin"
+      className={cn(rigidClass(), "w-16")}
+    />
   );
 }
 
@@ -59,7 +56,7 @@ function SignalLine({ line, stale }: { line: SignalLineView; stale: boolean }) {
           {line.label}
         </Text>
       </Fill>
-      <SignalMeter fraction={line.fraction} tone={tone} />
+      <SignalMeter fraction={line.fraction} tone={tone} label={line.label} />
       <Text
         variant="caption"
         tone="faint"

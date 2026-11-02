@@ -229,8 +229,8 @@ function SizePopoverBody({ layout, noWholePage }: SizeChipProps): ReactElement {
 
   return (
     <>
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- the mockup's `.pop .ph` (padding 8px 10px), off the ramp */}
-      <div className="px-[10px] py-[8px]">
+      {/* The mockup's `.pop .ph` (padding 8px 10px). */}
+      <div className="px-smd py-sm">
         <Text as="h5" variant="group" tone="muted">
           Size
         </Text>
@@ -314,10 +314,9 @@ function SizePopoverBody({ layout, noWholePage }: SizeChipProps): ReactElement {
         <ControlSizeProvider size="xs">
           <Stack
             direction="row"
-            gap="none"
+            // The mockup's `.zrow` (gap 6px).
+            gap="xsm"
             align="center"
-            // eslint-disable-next-line spacing/no-adhoc-spacing -- the mockup's `.zrow` (gap 6px), off the ramp
-            className="gap-[6px]"
           >
             <Button
               variant="outline"
@@ -424,9 +423,9 @@ function SizeRow({
         role="radio"
         aria-checked={checked}
         onClick={onSelect}
-        // eslint-disable-next-line spacing/no-adhoc-spacing -- the mockup's `.slist li` (padding 7px 10px), off the ramp
+        // eslint-disable-next-line spacing/no-adhoc-spacing -- the mockup's `.slist li` pads 7px block, off the ramp (its 10px inline is `smd`)
         className={cn(
-          "focus-ring w-full gap-sm rounded-panel-row px-[10px] py-[7px] text-left hover:bg-hover-fill",
+          "focus-ring w-full gap-sm rounded-panel-row px-smd py-[7px] text-left hover:bg-hover-fill",
           checked ? "text-foreground" : "text-muted-foreground",
         )}
       >
@@ -453,9 +452,9 @@ function SizeRow({
 function Band({ children }: { children: ReactNode }): ReactElement {
   return (
     <Stack
-      gap="none"
-      // eslint-disable-next-line spacing/no-adhoc-spacing -- the mockup's `.psec` (margin-top 6px, padding 10px 10px 6px, gap 10px), off the ramp
-      className="mt-[6px] gap-[10px] border-t border-border/64 px-[10px] pt-[10px] pb-[6px]"
+      gap="smd"
+      // eslint-disable-next-line spacing/no-adhoc-spacing -- the mockup's `.psec` margin-top 6px: the ramp has no margin classes (its padding 10px 10px 6px and gap 10px are `smd` / `xsm`)
+      className="mt-[6px] border-t border-border/64 px-smd pt-smd pb-xsm"
     >
       {children}
     </Stack>
