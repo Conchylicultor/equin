@@ -13,9 +13,12 @@ export interface ListViewOptions<TRow> {
    */
   renderRow?: (row: TRow) => ReactNode;
   /**
-   * Rows per item: 2 stacks the `line2` slot under the title, 1 puts it on the
-   * title's line. Default: 2 when the placement puts anything on line 2 (the
-   * record recipe sends prose and identifiers there), else 1.
+   * Row shape: 2 stacks the `line2` slot under the title — adjacent text
+   * terms on one line, each chip group on a line of its own — with the
+   * trailing fields as one right-aligned column beside them; 1 puts
+   * everything on the title's line, the trailing fields in aligned slots.
+   * Default: 2 when the placement puts anything on line 2 (the record recipe
+   * sends prose and identifiers there), else 1.
    */
   lines?: 1 | 2;
   /**

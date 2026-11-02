@@ -8,7 +8,7 @@ import type {
   DataViewRenderProps,
   FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
-import { ListView } from "../components/list-view";
+import { ListView, subtitleLines } from "../components/list-view";
 
 // No contributions are needed: every field here is plain text with no `onEdit`,
 // so `FieldCell` renders `String(value)` and never reaches a contributed cell or
@@ -41,12 +41,20 @@ const FIELDS: FieldDef<Row>[] = [
 
 const ROW: Row = { id: "1", name: "alpha", status: "todo", when: "5m" };
 
-function renderList(options?: unknown, row: Row = ROW) {
+function renderList(
+  options?: unknown,
+  row: Row = ROW,
+  place: Record<string, "title" | "line2" | "trail" | "edge"> = {
+    status: "line2",
+    when: "edge",
+  },
+  fields: FieldDef<Row>[] = FIELDS,
+) {
   const props: DataViewRenderProps<Row> = {
     revealSelection: true,
-    placement: { place: { status: "line2", when: "edge" } },
+    placement: { place },
     rows: [row],
-    fields: FIELDS,
+    fields,
     rowKey: (r) => r.id,
     state: { sort: [], query: "", filter: null },
     setSort: () => {},
@@ -118,5 +126,44 @@ describe("data-view list row shape", () => {
       expect(container.textContent).toBe("alpha5m");
       cleanup();
     }
+  });
+
+  it("stacks a two-line row's trailing fields in one right-aligned column", () => {
+    const { getByText } = renderList(
+      { lines: 2 },
+      ROW,
+      { status: "line2", when: "trail", name: "title" },
+      [
+        ...FIELDS,
+        { id: "kind", label: "Kind", type: "text", value: () => "x" },
+      ],
+    );
+    const when = getByText("5m");
+    const kind = getByText("x");
+    // Both trailing fields are lines of ONE column (a field per line), not
+    // side-by-side slots.
+    const column = when.closest("[data-list-slot]")?.parentElement;
+    expect(column?.contains(kind)).toBe(true);
+    expect(column?.className).toContain("items-end");
+    expect(column?.className).toContain("flex-col");
+  });
+});
+
+describe("subtitleLines", () => {
+  it("joins adjacent text terms and gives each chip term a line", () => {
+    // text, text, chip, text, chip, chip
+    const isChip = [false, false, true, false, true, true];
+    expect(subtitleLines([0, 1, 2, 3, 4, 5], isChip)).toEqual([
+      [0, 1],
+      [2],
+      [3],
+      [4],
+      [5],
+    ]);
+  });
+
+  it("follows the drawn terms only (an empty term is skipped)", () => {
+    expect(subtitleLines([0, 2], [false, false, false])).toEqual([[0, 2]]);
+    expect(subtitleLines([], [])).toEqual([]);
   });
 });

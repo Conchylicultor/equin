@@ -181,7 +181,6 @@ describe("data-view list subtitle after the SubtitleRun extraction", () => {
     expect(html).toContain(" · ");
   });
 
-  it("draws the stacked run (no seam) exactly as before", () => {
-    expect(listSubtitleHtml({ lines: 2 })).toBe(legacyHtml(false));
-  });
+  // The stacked shape no longer draws one run: a chip takes a line of its own
+  // (chip-separator.test.tsx, row-lines.test.tsx).
 });

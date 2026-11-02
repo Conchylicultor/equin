@@ -5,14 +5,19 @@ import {
 } from "@plugins/network/plugins/live/web";
 import {
   fieldOverrides,
+  QuietOption,
+  useFieldPresentation,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   mapResource,
   ResourceView,
 } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
+  isRoleTag,
   placeFlags,
   placeName,
   places as placesCollection,
@@ -21,7 +26,11 @@ import {
   type PlaceTag,
 } from "@plugins/apps/plugins/places/plugins/places-core/core";
 import { usePlaceTags } from "@plugins/apps/plugins/places/plugins/places-core/web";
-import { tagFieldOptions } from "@plugins/tag-tree/plugins/engine/core";
+import {
+  tagColor,
+  tagFieldOptions,
+} from "@plugins/tag-tree/plugins/engine/core";
+import { PlaceStatusBadges } from "../components/place-glyph";
 import { PlaceTagChips } from "../components/tag-chip";
 
 /**
@@ -39,10 +48,53 @@ function useTagFieldOptions(): LiveFieldOptionsRead {
 /** A place's tags as chips, the tree read where the cell is drawn. */
 function PlaceTagsCell({ tagIds }: { tagIds: readonly string[] }) {
   const tags = usePlaceTags();
+  // A row view's term (the side panel's list) draws quiet, as every tags
+  // field does there: a dot in the tag's colour and its name. A card or a
+  // table draws the tinted chips.
+  const quiet = useFieldPresentation().presentation === "quiet";
   return (
     <ResourceView resource={tags} fallback={<Loading variant="block" />}>
-      {(all) => <PlaceTagChips tagIds={tagIds} tags={all} />}
+      {(all) =>
+        quiet ? (
+          <QuietPlaceTags tagIds={tagIds} tags={all} />
+        ) : (
+          <PlaceTagChips tagIds={tagIds} tags={all} />
+        )
+      }
     </ResourceView>
+  );
+}
+
+/** A place's tags as quiet terms on one clipped line, Been / Want to go left
+ *  out (each has its own pill). */
+function QuietPlaceTags({
+  tagIds,
+  tags,
+}: {
+  tagIds: readonly string[];
+  tags: readonly PlaceTag[];
+}) {
+  const byId = new Map<string, PlaceTag>(tags.map((t) => [t.id, t]));
+  return (
+    <Clip className="whitespace-nowrap">
+      <Stack direction="row" gap="sm">
+        {tagIds
+          .filter((id) => !isRoleTag(id, tags))
+          .map((id) => byId.get(id))
+          .filter((t): t is PlaceTag => t !== undefined)
+          .map((t) => (
+            <QuietOption
+              key={t.id}
+              option={{
+                value: t.id,
+                label: t.name,
+                swatch: tagColor(t.id, tags) ?? undefined,
+              }}
+              label={t.name}
+            />
+          ))}
+      </Stack>
+    </Clip>
   );
 }
 
@@ -114,6 +166,25 @@ export function placeExtraFields(tags: readonly PlaceTag[]): FieldDef<Place>[] {
       filterable: true,
       groupable: true,
       width: "5rem",
+    },
+    {
+      // Want to go and Been as one status, drawn as their pills — a row's
+      // one state column. Display only: `want` / `been` are what filter,
+      // sort and group.
+      id: "status",
+      label: "Status",
+      type: "text",
+      value: (p) => {
+        const { want, been } = placeFlags(p, tags);
+        return [want && "Want to go", been && "Been"]
+          .filter(Boolean)
+          .join(", ");
+      },
+      cell: (p) => <PlaceStatusBadges {...placeFlags(p, tags)} />,
+      sortable: false,
+      filterable: false,
+      groupable: false,
+      visible: false,
     },
     {
       id: "googleLost",

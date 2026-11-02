@@ -17,11 +17,13 @@
         // computed fields would otherwise follow every derived one.
         "properties": [
           { "id": "glyph" },
+          { "id": "tile", "hidden": true },
           { "id": "name" },
           { "id": "address" },
           { "id": "tags" },
           { "id": "want" },
           { "id": "been" },
+          { "id": "status", "hidden": true },
           { "id": "businessStatus", "hidden": true },
           { "id": "googleLost", "hidden": true },
           { "id": "location", "hidden": true },
@@ -38,14 +40,22 @@
         "type": "list",
         // The fields in reading order: the place's name first, then the stored
         // fields the list derives, then its own yes / no flags — the list's
-        // computed fields would otherwise follow every derived one.
+        // computed fields would otherwise follow every derived one. The row
+        // leads with the place's tile, the address and the tags each on a
+        // line under the name (the record recipe would trail both — rigid
+        // slots wider than the panel, leaving the name no room), and Want to
+        // go / Been as one status on the right (the glyph and the two flags
+        // are the gallery's). The slots are this view's own: the gallery's
+        // card keeps its layout.
         "properties": [
-          { "id": "glyph" },
+          { "id": "tile", "slot": "lead" },
           { "id": "name" },
-          { "id": "address" },
-          { "id": "tags" },
-          { "id": "want" },
-          { "id": "been" },
+          { "id": "address", "slot": "line2" },
+          { "id": "tags", "slot": "line2" },
+          { "id": "status", "slot": "trail" },
+          { "id": "glyph", "hidden": true },
+          { "id": "want", "hidden": true },
+          { "id": "been", "hidden": true },
           { "id": "businessStatus", "hidden": true },
           { "id": "googleLost", "hidden": true },
           { "id": "location", "hidden": true },

@@ -820,7 +820,9 @@ function ListCaptions({
         <Text variant="caption" className="text-faint-foreground">
           {config.titleField?.label ?? ""}
         </Text>
-        {config.trailingFields.length > 0 ? (
+        {/* A stacked row's trailing fields are one column of lines, not
+            slots: there is no column per field to caption. */}
+        {config.trailingFields.length > 0 && config.lines === 1 ? (
           <>
             <Fill />
             <TrailingSlots config={config}>
@@ -964,6 +966,76 @@ function renderTrailing(
       ) : null}
     </Stack>
   );
+}
+
+/**
+ * The trailing fields of a STACKED row: one right-aligned column, a field per
+ * line, beside the stacked title and subtitle lines — so a two-line row reads
+ * as two columns (what it is, what state it is in) rather than as a line of
+ * text with a run of side-by-side slots that each start at their own x. No
+ * aligned slot widths: every row's column ends at the row's edge, which is
+ * the alignment a right-aligned column needs. An elided value is no line.
+ */
+function renderStackedTrailing(
+  config: ListRowConfig,
+  row: unknown,
+  aggregateCount: number | undefined,
+  presentation: FieldPresentation,
+): ReactNode {
+  return (
+    <Stack
+      gap="2xs"
+      align="end"
+      className={cn("ml-auto text-right", rigidClass())}
+    >
+      {config.trailingFields.map((field, i) =>
+        isElidedRead(presentation, field, row) ? null : (
+          <span
+            key={field.id}
+            data-list-slot={field.id}
+            className={cn(
+              config.trailingSlots[i]!.timeInk && "text-list-time-ink",
+            )}
+          >
+            <FieldCell
+              field={field}
+              row={row}
+              resolveCell={config.resolveCell}
+              resolveEditor={config.resolveEditor}
+              display="inline"
+            />
+          </span>
+        ),
+      )}
+      {aggregateCount && aggregateCount > 1 ? (
+        <Badge variant="muted">{`×${aggregateCount}`}</Badge>
+      ) : null}
+    </Stack>
+  );
+}
+
+/**
+ * The stacked row's subtitle, as lines: adjacent text terms share a line,
+ * joined by ` · ` (a metadata run — `Basilica · Paris`), and a chip term takes
+ * a line of its own — a chip group after a run of text would be pushed out of
+ * the truncating line by any long value before it. Indices into the row's
+ * subtitle fields, in drawing order.
+ */
+export function subtitleLines(
+  terms: readonly number[],
+  isChip: readonly boolean[],
+): number[][] {
+  const lines: number[][] = [];
+  for (const term of terms) {
+    const last = lines.at(-1);
+    const prev = last?.at(-1);
+    if (last && prev !== undefined && !isChip[prev] && !isChip[term]) {
+      last.push(term);
+    } else {
+      lines.push([term]);
+    }
+  }
+  return lines;
 }
 
 function renderMarks(
@@ -1187,7 +1259,9 @@ function listRowNode(
       {config.renderRow ? (
         config.renderRow(row)
       ) : config.lines === 2 ? (
-        // TWO LINES — the opt-in stacked shape, for a subtitle that is prose.
+        // STACKED — the title over its subtitle lines (`subtitleLines`: a
+        // text run per line, a chip group on its own), the trailing fields one
+        // right-aligned column beside them (`renderStackedTrailing`).
         // `Stack` is a flow container, so it RESETS the row's single-line
         // context: each `<Text>` must ask for its own `truncate`, exactly as
         // it did when this was the only shape.
@@ -1217,8 +1291,9 @@ function listRowNode(
                 {marks}
               </Line>
             ) : null}
-            {terms.length > 0 ? (
+            {subtitleLines(terms, config.subtitleIsChip).map((line) => (
               <Text
+                key={line[0]}
                 as="div"
                 variant="caption"
                 className="truncate text-muted-foreground"
@@ -1226,17 +1301,17 @@ function listRowNode(
                 <SubtitleRun
                   fields={config.subtitleFields}
                   isChip={config.subtitleIsChip}
-                  terms={terms}
+                  terms={line}
                   seam={null}
                   row={row}
                   resolveCell={config.resolveCell}
                   resolveEditor={config.resolveEditor}
                 />
               </Text>
-            ) : null}
+            ))}
           </Stack>
           {trailing
-            ? renderTrailing(config, row, aggregateCount, "ml-auto")
+            ? renderStackedTrailing(config, row, aggregateCount, presentation)
             : null}
         </>
       ) : (

@@ -104,14 +104,14 @@ describe("data-view list subtitle separators", () => {
     expect(text).not.toContain("webpage ·");
   });
 
-  it("applies the same rule in the stacked shape, minus the title seam", () => {
-    const { container } = renderList({ lines: 2 });
-    const text = container.textContent ?? "";
+  it("gives the chip a line of its own in the stacked shape", () => {
+    const { getByText } = renderList({ lines: 2 });
 
-    // The subtitle starts its own line, so it starts its own run — no leading
-    // separator, and the chip still parts its neighbours with spacing alone.
-    expect(text).toContain("alphaone webpage two");
-    expect(text).not.toContain("· webpage");
-    expect(text).not.toContain("webpage ·");
+    // Stacked, the run breaks around the chip: text, the chip, text — each
+    // its own line, so none of them carries a separator.
+    const lineOf = (t: string) => getByText(t).closest(".truncate");
+    const lines = ["one", "webpage", "two"].map(lineOf);
+    expect(new Set(lines).size).toBe(3);
+    for (const line of lines) expect(line?.textContent).not.toContain("·");
   });
 });

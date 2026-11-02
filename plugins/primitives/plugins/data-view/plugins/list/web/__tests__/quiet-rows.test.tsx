@@ -122,7 +122,9 @@ describe("data-view list: quiet rows", () => {
   });
 
   it("puts the trailing fields in aligned slots, the time-typed one last", () => {
-    const { container } = renderList();
+    // Aligned slots are the one-line row's; a stacked row's trailing fields
+    // are one column of lines (row-lines.test.tsx).
+    const { container } = renderList({ lines: 1 });
     const slots = [
       ...rowOf(container, "1").querySelectorAll<HTMLElement>(
         "[data-list-slot]",
@@ -144,7 +146,7 @@ describe("data-view list: quiet rows", () => {
   });
 
   it("columnCaptions: the title label, and each trailing label over its slot", () => {
-    const { container } = renderList({ columnCaptions: true });
+    const { container } = renderList({ columnCaptions: true, lines: 1 });
     const captions = container.querySelector<HTMLElement>(
       "[data-list-captions]",
     )!;

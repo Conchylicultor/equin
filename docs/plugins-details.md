@@ -6331,8 +6331,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `AgentThreadSlots.StepLabel` "places_search_text" → `SearchStepLabel`
               - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
               - `JsonlViewerTool.Renderer` "mcp__equin__places_show_picks" → `PicksToolView`
-            - Uses: 125 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
-              - `primitives/data-view` ×10
+            - Uses: 128 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+              - `primitives/data-view` ×12
               - `map` ×9
               - `apps/places/places-core` ×8
               - `conversations/agent-thread` ×8
@@ -6346,6 +6346,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons` ×3
               - `conversations/conversation-view/jsonl-viewer/tool-call` ×2
               - `integrations/google-maps` ×2
+              - `primitives/css/clip` ×2
               - `primitives/css/layer` ×2
               - `primitives/css/rigid` ×2
               - `primitives/css/text` ×2
@@ -6361,7 +6362,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/copy-to-clipboard.CopyButton`
               - `primitives/css/badge.Badge`
               - `primitives/css/center.Center`
-              - `primitives/css/clip.clipClasses`
               - `primitives/css/cluster.Cluster`
               - `primitives/css/column.Column`
               - `primitives/css/control-panel.ControlPanel`

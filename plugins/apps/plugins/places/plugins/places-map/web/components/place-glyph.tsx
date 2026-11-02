@@ -8,6 +8,7 @@ import { placeThumbnailUrl } from "@plugins/apps/plugins/places/plugins/place-de
 import { useState, type ReactNode } from "react";
 import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import type { PlaceVisual } from "../internal/place-visual";
 import { paleTint, washInk } from "../internal/pin-paint";
 
@@ -36,6 +37,15 @@ export function PlaceGlyph({ visual }: { visual: PlaceVisual }) {
   );
 }
 
+/** A place's colours as a pale wash: its one colour, or a diagonal blend. */
+function washBackground(
+  visual: Pick<PlaceVisual, "colors" | "mainColor">,
+): string {
+  return visual.colors.length > 1
+    ? `linear-gradient(135deg, ${visual.colors.map(paleTint).join(", ")})`
+    : paleTint(visual.mainColor);
+}
+
 /**
  * Google's first photo of a place (a thumbnail the server fetches once and
  * keeps), over its colours as a pale wash (a diagonal blend for several) with
@@ -57,10 +67,7 @@ export function PlacePhotoWash({
 }) {
   // 404 (no photo) or 503 (Maps not set up): the wash is the picture.
   const [noPhoto, setNoPhoto] = useState(false);
-  const background =
-    visual.colors.length > 1
-      ? `linear-gradient(135deg, ${visual.colors.map(paleTint).join(", ")})`
-      : paleTint(visual.mainColor);
+  const background = washBackground(visual);
   return (
     <Center className="relative size-full" style={{ background }}>
       <Icon
@@ -106,20 +113,59 @@ export function PlaceCover({
     >
       {visual.want || visual.been ? (
         <Pin to="top-right" offset="sm">
-          <Cluster gap="2xs">
-            {visual.want ? (
-              <Badge variant="muted" shape="pill">
-                Want to go
-              </Badge>
-            ) : null}
-            {visual.been ? (
-              <Badge variant="success" shape="pill">
-                ✓ Been
-              </Badge>
-            ) : null}
-          </Cluster>
+          <PlaceStatusBadges want={visual.want} been={visual.been} />
         </Pin>
       ) : null}
     </PlacePhotoWash>
+  );
+}
+
+/** Want to go and Been as their pills, in a row (both, one or none) — a
+ *  place's cover, and its status in the side panel's list. */
+export function PlaceStatusBadges({
+  want,
+  been,
+}: {
+  want: boolean;
+  been: boolean;
+}) {
+  if (!want && !been) return null;
+  return (
+    <Cluster gap="2xs">
+      {want ? (
+        <Badge variant="muted" shape="pill">
+          Want to go
+        </Badge>
+      ) : null}
+      {been ? (
+        <Badge variant="success" shape="pill">
+          ✓ Been
+        </Badge>
+      ) : null}
+    </Cluster>
+  );
+}
+
+/**
+ * A place's icon on a rounded square of its colours' pale wash — the side
+ * panel list's leading tile. Never Google's photo: a list row is too small
+ * to read one, and every row would fetch it.
+ */
+export function PlaceTile({ visual }: { visual: PlaceVisual }) {
+  const background = washBackground(visual);
+  return (
+    <Center
+      as="span"
+      // A rigid leaf: the tile keeps its size however long the row's text.
+      className={cn("size-10 rounded-lg", rigidClass())}
+      style={{ background }}
+    >
+      <Icon
+        icon={visual.icon}
+        active
+        className="size-5"
+        style={{ color: washInk(visual.mainColor) }}
+      />
+    </Center>
   );
 }

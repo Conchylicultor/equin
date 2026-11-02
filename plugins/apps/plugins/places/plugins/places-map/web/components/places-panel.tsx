@@ -38,7 +38,7 @@ import type { PanelLayout, PanelScope } from "../internal/layout-stores";
 import { scopePlaces } from "../internal/panel-scope";
 import { placeVisual } from "../internal/place-visual";
 import { PANEL_WIDTH } from "./card-frame";
-import { PlaceCover, PlaceGlyph } from "./place-glyph";
+import { PlaceCover, PlaceGlyph, PlaceTile } from "./place-glyph";
 
 /**
  * The side panel's own surface: the active preset's places as a list or a
@@ -63,9 +63,6 @@ function PanelFrame({ body }: HostedToolbarParts): ReactNode {
 }
 
 const PANEL_TOOLBAR: HostedToolbar = { kind: "hosted", frame: PanelFrame };
-
-// The panel is narrow: the name on its own line, the address and tags under it.
-const PANEL_VIEW_OPTIONS = { list: { lines: 2 as const } };
 
 // Icon-only segments, named for assistive tech (and scripts) by hidden text.
 const LAYOUT_OPTIONS = [
@@ -327,6 +324,18 @@ function PanelRows(
         value: (p) => p.id,
         cell: (p) => <PlaceGlyph visual={placeVisual(p, tags)} />,
       },
+      {
+        // The list's lead: the glyph's icon on a tile of the place's colours.
+        id: "tile",
+        label: "Tile",
+        type: "icon",
+        header: false,
+        filterable: false,
+        sortable: false,
+        groupable: false,
+        value: (p) => p.id,
+        cell: (p) => <PlaceTile visual={placeVisual(p, tags)} />,
+      },
       ...placeExtraFields(tags),
     ],
     [tags],
@@ -355,7 +364,6 @@ function PanelRows(
       views={["list", "gallery"]}
       pinnedView={layout}
       toolbar={PANEL_TOOLBAR}
-      viewOptions={PANEL_VIEW_OPTIONS}
       cover={placeCover}
       onRowActivate={onSelect}
       selectedRowId={selectedId ?? undefined}
