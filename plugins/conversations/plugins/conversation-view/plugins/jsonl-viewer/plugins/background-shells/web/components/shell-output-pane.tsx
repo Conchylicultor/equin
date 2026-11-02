@@ -60,7 +60,7 @@ function Muted({ children }: { children: ReactNode }) {
  */
 export function ShellOutputPaneBody() {
   const { shellId } = shellOutputPane.useParams();
-  const convId = conversationPane.useRouteEntry()?.params.convId;
+  const convId = conversationPane.useEnclosing()?.params.convId;
   return (
     <PaneChrome pane={shellOutputPane}>
       {convId === undefined ? (

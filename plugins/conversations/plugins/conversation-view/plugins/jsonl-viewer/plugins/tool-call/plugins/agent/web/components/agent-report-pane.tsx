@@ -18,7 +18,7 @@ export function AgentReportPaneBody() {
   // Parsed, not cast: a hand-edited URL naming some other `by` is refused here
   // rather than subscribing to a key kind the server does not know.
   const subagent = SubagentRefSchema.safeParse(params);
-  const convId = conversationPane.useRouteEntry()?.params.convId;
+  const convId = conversationPane.useEnclosing()?.params.convId;
 
   return (
     <PaneChrome pane={agentReportPane}>

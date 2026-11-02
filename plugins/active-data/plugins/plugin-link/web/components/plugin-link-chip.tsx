@@ -22,7 +22,7 @@ export function PluginLinkChip({
   content: string;
   value: PluginNode;
 }) {
-  const convId = conversationPane.useRouteEntry()?.params.convId ?? null;
+  const convId = conversationPane.useEnclosing()?.params.convId ?? null;
   const openPane = useOpenPane();
   const resolvedId = value.id;
 

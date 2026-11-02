@@ -95,7 +95,7 @@ const EXTRA_FIELDS: FieldDef<AgentLaunchWithStatus>[] = [
 export function AgentLaunches({ agentId }: { agentId: string }) {
   const launchesQ = useLive(agentLaunchRows);
   const openPane = useOpenPane();
-  const convEntry = conversationPane.useRouteEntry();
+  const convEntry = conversationPane.useOpenedHere();
   const activeConvId = convEntry?.params.convId;
 
   if (launchesQ.status === "loading") return <Loading variant="text" />;

@@ -32,7 +32,7 @@ export const convReviewPane = Pane.define({
 });
 
 function ConvReviewBody() {
-  const convId = conversationPane.useRouteEntry()?.params.convId;
+  const convId = conversationPane.useEnclosing()?.params.convId;
   const conversation = useConversationById(convId ?? null);
   const [source, setSource] = useState<Source>({ kind: "working" });
 

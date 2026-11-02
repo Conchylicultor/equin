@@ -37,7 +37,7 @@ function useOpenInFilesTarget(params: {
   dir?: string;
   open?: string;
 }): PaneExpandTarget {
-  const convId = conversationPane.useRouteEntry()?.params.convId ?? null;
+  const convId = conversationPane.useEnclosing()?.params.convId ?? null;
   const worktree = useConversationById(convId)?.worktreePath;
   const target = useOpenInFiles(
     locationOf({ dir: params.dir ?? worktree ?? "", open: params.open }),

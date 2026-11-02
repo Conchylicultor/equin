@@ -13,7 +13,7 @@ const OP_KIND_LIST = new Intl.ListFormat("en", {
 }).format(OP_KIND_IDS.map((id) => OP_KINDS[id].label.toLowerCase()));
 
 export function PushProfilingPaneBody() {
-  const convId = conversationPane.useRouteEntry()?.params.convId;
+  const convId = conversationPane.useEnclosing()?.params.convId;
   const conversation = useConversationById(convId ?? null);
   const attemptId = conversation?.attemptId;
 

@@ -2630,6 +2630,23 @@ export interface PaneObject<
    * was rendered in the Improve popover.
    */
   useOpenedHere: Hook<() => PaneRouteEntry<OwnParams> | null>;
+  /**
+   * The instance of this pane the CALLER sits in or under: the last entry for
+   * this pane at or BEFORE the caller's own pane in the route chain, or `null`
+   * when there is none. The mirror of {@link useOpenedHere}.
+   *
+   * This is the question a satellite pane asks of the pane it hangs off — "which
+   * conversation am I about?" — and {@link useRouteEntry} cannot answer it for a
+   * pane that appears more than once: it reads the FIRST entry, so a satellite
+   * opened from a second conversation column read the first column's
+   * conversation (a sub-agent pane saying the conversation had no such
+   * sub-agent, because it was looking in the parent's).
+   *
+   * A caller outside every pane instance (a sidebar) or outside every surface
+   * (global chrome) sits under nothing, so it reads `null` — a true answer, like
+   * {@link useOpenedHere}'s there, never the first entry standing in for it.
+   */
+  useEnclosing: Hook<() => PaneRouteEntry<OwnParams> | null>;
   close(instanceId: number): void;
   /** Remove this pane from the route while preserving its children. */
   unwrap(instanceId: number): void;
@@ -2819,6 +2836,22 @@ function makePaneObject(
     const entry = match.panes
       .slice(selfIndex + 1)
       .find((e) => e.pane === internal);
+    return entry ? toRouteEntry(entry) : null;
+  }
+
+  function useEnclosing(): PaneRouteEntry | null {
+    // Like `useOpenedHere`, legal outside every surface: an opener widget that
+    // asks "which conversation am I in?" also lands in popovers, where the
+    // answer is "none".
+    const match = useContext(PaneMatchContext);
+    const selfInstanceId = useContext(PaneInstanceContext);
+    if (!match || selfInstanceId === undefined) return null;
+    const selfIndex = match.panes.findIndex(
+      (e) => e.instanceId === selfInstanceId,
+    );
+    const entry = match.panes
+      .slice(0, selfIndex + 1)
+      .findLast((e) => e.pane === internal);
     return entry ? toRouteEntry(entry) : null;
   }
 
@@ -3051,6 +3084,7 @@ function makePaneObject(
     useRouteEntry,
     useRouteEntries,
     useOpenedHere,
+    useEnclosing,
     close,
     unwrap,
     promote,

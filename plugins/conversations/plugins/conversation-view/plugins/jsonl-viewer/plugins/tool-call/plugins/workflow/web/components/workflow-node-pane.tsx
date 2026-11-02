@@ -16,7 +16,7 @@ import { workflowNodePane } from "../panes";
 import { useWorkflowNode } from "../internal/use-workflow-node";
 
 export function WorkflowNodePaneBody() {
-  const convId = conversationPane.useRouteEntry()?.params.convId;
+  const convId = conversationPane.useEnclosing()?.params.convId;
   // The step's prompt names files in its conversation's worktree.
   return (
     <ConversationFileLinks conversationId={convId ?? null}>

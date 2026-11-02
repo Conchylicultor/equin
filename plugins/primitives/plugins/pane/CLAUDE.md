@@ -149,6 +149,11 @@ so sidebar, toolbar and body read the same match.
   pane after the caller's own pane).
   - Use it for opener toggles; "last entry" heuristics are wrong.
   - `useRouteEntries()` only when the question is about the whole chain.
+- `pane.useEnclosing()` — **which instance am I in or under?** (last entry for
+  this pane at or before the caller's own pane). A satellite reading the pane
+  it hangs off (`conversationPane.useEnclosing()?.params.convId`) uses this —
+  `useRouteEntry()` reads the FIRST instance, so beside a second conversation
+  column it named the first one's conversation.
 - **Outside every surface** (global chrome: `Core.Root` action bar,
   `Apps.TabBarActions`, their popovers) the route-read hooks **throw** — `null`
   is only the in-surface "not in the route". Use `useTabs()` / `navigate()`
@@ -157,6 +162,7 @@ so sidebar, toolbar and body read the same match.
   - `useOpenPane` (below);
   - `useOpenedHere()`, which returns `null` outside a surface (nothing opened
     there is "here"), so reusable opener widgets work in popovers too.
+  - `useEnclosing()`, likewise `null` outside a surface or any pane instance.
 
 ## Non-URL state: `options` and `hint`
 

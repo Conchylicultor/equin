@@ -117,7 +117,7 @@ function FilePeekPaneBody() {
 
 function FilePeekPaneContent() {
   const openPane = useOpenPane();
-  const convId = conversationPane.useRouteEntry()?.params.convId;
+  const convId = conversationPane.useEnclosing()?.params.convId;
 
   const { worktree, filePath: rawFilePath } = filePeekPane.useParams();
 

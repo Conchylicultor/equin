@@ -24,7 +24,7 @@ const BEHIND_COLOR =
   "color-mix(in srgb, var(--muted-foreground) 50%, transparent)";
 
 export function CommitsGraphBody() {
-  const convId = conversationPane.useRouteEntry()?.params.convId;
+  const convId = conversationPane.useEnclosing()?.params.convId;
   const conversation = useConversationById(convId ?? null);
   // No conversation row → no attempt to draw. Split rather than subscribe with a
   // placeholder id: the graph is read only once the attempt id is known.

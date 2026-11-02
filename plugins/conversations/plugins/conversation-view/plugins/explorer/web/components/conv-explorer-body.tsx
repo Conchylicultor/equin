@@ -15,7 +15,7 @@ import { convFileTreePane } from "../panes";
 import { useConvLocation } from "./conv-location";
 
 export function ConvExplorerBody() {
-  const convId = conversationPane.useRouteEntry()?.params.convId;
+  const convId = conversationPane.useEnclosing()?.params.convId;
   if (convId === undefined)
     return <Placeholder>No conversation open.</Placeholder>;
   return <ConvExplorer convId={convId} />;

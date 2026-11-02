@@ -29,7 +29,7 @@ const autoAwesomeIcon = symbol("auto-awesome");
 const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
 
 export function SummaryPane() {
-  const convId = conversationPane.useRouteEntry()?.params.convId;
+  const convId = conversationPane.useEnclosing()?.params.convId;
   // No conversation in the route → there is nothing to summarise, so nothing
   // to subscribe to. Split rather than subscribe with a placeholder id: the
   // hook only runs once the id is known.
