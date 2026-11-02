@@ -101,6 +101,7 @@ a hook conditionally inside one component.
     - `conversations/conversation-view`
     - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
     - `conversations/conversation-view/markdown-extensions`
+    - `conversations/conversation-view/user-message`
     - `page/audio`
     - `page/bookmark`
     - `page/file`

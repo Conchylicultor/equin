@@ -1,12 +1,15 @@
 import type { ReactNode } from "react";
-import { InlineText } from "@plugins/primitives/plugins/inline-text/web";
+import { AttachmentText } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 /**
  * One block of a user turn's text, formatted the one standard way: every
  * registered inline-text walker applied (active-data chips such as
- * `<ui-context>`, file links), or the verbatim string when `raw`.
+ * `<ui-context>`, file links) and every attachment ref the composer wrote
+ * (`![](/api/attachments/<id>)`) drawn as its thumbnail or file chip — so a
+ * turn still on its way shows its pasted image, not the markdown — or the
+ * verbatim string when `raw`.
  */
 export function UserMessageText({
   text,
@@ -17,7 +20,7 @@ export function UserMessageText({
 }) {
   return (
     <Text as="div" variant="body" className="whitespace-pre-wrap break-words">
-      {raw ? text : <InlineText text={text} />}
+      {raw ? text : <AttachmentText text={text} />}
     </Text>
   );
 }

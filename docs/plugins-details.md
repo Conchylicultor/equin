@@ -18902,12 +18902,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `TurnSummarySchema`
           - Machine:
             - Register: `defineJob('turn-summary.generate')`
-        - **`user-message`** — The user turn's standard look: <UserMessageCard> (the message-card chrome) and <UserMessageText> (the turn's text through every inline-text walker, so chips render). Shared by the transcript's user-text row and the optimistic pending-turn card, so a message looks the same before and after it is confirmed.
+        - **`user-message`** — The user turn's standard look: <UserMessageCard> (the message-card chrome) and <UserMessageText> (the turn's text through every inline-text walker, so chips render, with its attachment refs drawn as thumbnails and file chips). Shared by the transcript's user-text row and the optimistic pending-turn card, so a message looks the same before and after it is confirmed.
           - Web:
             - Uses:
               - `primitives/css/text.Text`
-              - `primitives/inline-text.InlineText`
               - `primitives/select-scope.ContentScope`
+              - `primitives/text-editor/paste-images.AttachmentText`
             - Exports (values):
               - `UserMessageCard`
               - `UserMessageText`
@@ -44361,7 +44361,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data`
           - `active-data/go`
           - `conversations/conversation-view/markdown-extensions`
-          - `conversations/conversation-view/user-message`
           - `infra/claude-cli`
           - `primitives/text-editor/paste-images`
     - **`keyset`** — Field-agnostic keyset pagination machinery: the sort-rule types (core) and a null-aware keyset seek / at-or-before / order-by compiler over drizzle SQL (server). No data-view dependency, so any server-delegated windowed query can reuse it.
@@ -47611,6 +47610,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view`
               - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
               - `conversations/conversation-view/markdown-extensions`
+              - `conversations/conversation-view/user-message`
               - `page/audio`
               - `page/bookmark`
               - `page/file`

@@ -63,7 +63,6 @@ Walkers register elsewhere (the primitive itself contributes none):
     - `active-data`
     - `active-data/go`
     - `conversations/conversation-view/markdown-extensions`
-    - `conversations/conversation-view/user-message`
     - `infra/claude-cli`
     - `primitives/text-editor/paste-images`
 
