@@ -39937,6 +39937,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/fill.Fill`
           - `primitives/css/row.Row`
           - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.MenuSurfaceProvider`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/overlay/tooltip.Kbd`
           - `primitives/shortcuts.formatShortcutLabel`
@@ -42079,8 +42080,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 449 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
-              - `primitives` ×111
+            - Imported by: 450 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+              - `primitives` ×112
               - `apps` ×104
               - `conversations` ×53
               - `page` ×26

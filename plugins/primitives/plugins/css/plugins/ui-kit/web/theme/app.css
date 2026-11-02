@@ -299,6 +299,25 @@
     z-index: var(--z-max);
 }
 
+/* The overlay surface's COLOUR ROLES — what a popover / menu / dialog panel
+ * publishes for what is drawn inside it (`--chrome-mask`, `--hover-fill`,
+ * `--selected-fill`, the field paint). ONE definition, applied twice: by
+ * `SURFACE_LEVELS.overlay` on the panel, and in `@layer base` on any theme-scope
+ * root INSIDE a floating panel. A theme-scope root resets every role to its
+ * canvas default (see the `[data-theme-scope]` block there), so without the
+ * second application a scope stamped inside a panel — the adaptive-bar overflow
+ * dock, a parked occupant carrying a sub-theme — silently put its subtree back
+ * on the canvas: in Mist, whose `--muted` IS its `--popover`, every row in it
+ * hovered to the panel's own colour. */
+@utility surface-roles-overlay {
+  /* twmerge: standalone -- Custom properties only; the overlay surface bundle's colour roles, no built-in group to conflict with. */
+  --chrome-mask: var(--popover);
+  --hover-fill: var(--popover-hover);
+  --selected-fill: var(--popover-selected);
+  --field-fill: var(--popover-field);
+  --field-outline: var(--popover-field-border);
+}
+
 /* Centralized focus-ring treatment — the single source of truth for the
  * neutral focus indicator. Controls apply `focus-ring` (or `focus-ring-within`
  * for wrappers that ring when a child is focused). The border is NEVER flipped
@@ -2652,6 +2671,14 @@
        root. The ownership rule that used to sit beside these tokens now sits on
        `cp-panel` itself, where it can be read next to the padding it
        describes. */
+    }
+  /* A theme-scope root INSIDE a floating panel is still on that panel: it
+     re-derives the overlay's colour roles in its own scope instead of the
+     canvas defaults above (one more class of specificity, so it wins whatever
+     the order). `data-overlay-panel` is stamped by `OverlayPanel` — every
+     popover, menu, select, dialog and floating surface. */
+  [data-overlay-panel] [data-theme-scope] {
+    @apply surface-roles-overlay;
     }
   body {
     @apply bg-background;

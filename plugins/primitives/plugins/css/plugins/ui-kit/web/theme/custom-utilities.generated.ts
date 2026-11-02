@@ -11,6 +11,7 @@
 import type { RegistryEntry } from "./custom-utilities-types";
 
 export const CUSTOM_UTILITY_REGISTRY = [
+  { classes: ["surface-roles-overlay"], standalone: true, reason: "Custom properties only; the overlay surface bundle's colour roles, no built-in group to conflict with." },
   { classes: ["focus-ring", "focus-ring-within"], standalone: true, reason: "Additive box-shadow/outline; no single-value built-in group to conflict with." },
   { classes: ["focus-border"], standalone: true, reason: "State-scoped border-color under :focus-visible; must coexist with the resting border-* class, not replace it." },
   { classes: ["focus-border-within"], standalone: true, reason: "State-scoped border-color under :has(); must coexist with the resting border-* class, not replace it." },

@@ -120,6 +120,7 @@ second mount. `ActionPresenceScope` / `useReportActionPresence` went with it.
     - `primitives/css/fill.Fill`
     - `primitives/css/row.Row`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.MenuSurfaceProvider`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/overlay/tooltip.Kbd`
     - `primitives/shortcuts.formatShortcutLabel`

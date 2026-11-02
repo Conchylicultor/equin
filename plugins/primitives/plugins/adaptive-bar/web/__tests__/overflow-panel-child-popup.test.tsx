@@ -20,7 +20,7 @@ function mount(childPopupOpen: boolean) {
       anchor={anchor}
       label="More"
       dockRef={() => {}}
-      dockAttrs={{}}
+      regionAttrs={{}}
       hasOpenChildPopup={() => childPopupOpen}
       onDismiss={onDismiss}
     />,

@@ -563,7 +563,8 @@ function AdaptiveBarShell({
   const [trigger, setTrigger] = useState<HTMLElement | null>(null);
   const [panelDock, setPanelDock] = useState<HTMLElement | null>(null);
   const [parkingDock, setParkingDock] = useState<HTMLElement | null>(null);
-  // This bar's own region attributes: stamped on the panel's dock, and the
+  // This bar's own region attributes: stamped on the overflow panel's overlay root
+  // (outside the panel surface — see `OverflowPanelProps.regionAttrs`), and the
   // baseline each occupant stamps only its differences from.
   const regionAttrs = useRegionForwardedAttrs();
 
@@ -1825,7 +1826,7 @@ function AdaptiveBarShell({
             anchor={trigger}
             label={label}
             dockRef={setPanelDock}
-            dockAttrs={regionAttrs}
+            regionAttrs={regionAttrs}
             hasOpenChildPopup={() =>
               [...entriesRef.current.values()].some(
                 (entry) =>

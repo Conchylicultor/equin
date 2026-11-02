@@ -1,6 +1,7 @@
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { MenuSurfaceProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
@@ -69,7 +70,12 @@ export function PanelActionRow({
   onAuxClick,
   onMouseDown,
 }: PanelActionRowProps) {
+  // The row rung IS the panel form, so this row says it is on a menu surface
+  // itself (panel-row corners, menu headings). The panel cannot say it: a
+  // parked occupant is RENDERED in the bar's React tree and only moved into the
+  // panel's DOM, so it reads the bar's context, never the panel's.
   return (
+    <MenuSurfaceProvider value={true}>
     <Row
       icon={<Icon icon={icon} active={active} />}
       onClick={onClick}
@@ -89,5 +95,6 @@ export function PanelActionRow({
       </Fill>
       {shortcut ? <Kbd>{formatShortcutLabel(shortcut)}</Kbd> : null}
     </Row>
+    </MenuSurfaceProvider>
   );
 }

@@ -68,8 +68,10 @@ export const SURFACE_LEVELS: Record<SurfaceLevel, string> = {
     // Its material is the material group's (`bg-popover-fill`,
     // `backdrop-popover`): opaque and unfiltered by default, frosted glass in a
     // theme that sets them — while `--popover`, which the mask and a sticky
-    // header paint, stays opaque.
-    "rounded-popover bg-popover-fill backdrop-popover text-popover-foreground shadow-popover ring-1 ring-popover-border [--chrome-mask:var(--popover)] [--hover-fill:var(--popover-hover)] [--selected-fill:var(--popover-selected)] [--field-fill:var(--popover-field)] [--field-outline:var(--popover-field-border)]",
+    // header paint, stays opaque. The colour roles (mask, hover, selected,
+    // field) are the `surface-roles-overlay` utility (app.css), the one
+    // definition a theme-scope root nested in the panel re-applies.
+    "rounded-popover bg-popover-fill backdrop-popover text-popover-foreground shadow-popover ring-1 ring-popover-border surface-roles-overlay",
   // Floating CHROME over content — a toolbar card, a dock, a button floated
   // over a canvas — never a menu (that is `overlay`). Glass: the material
   // group's `--float-fill` (default the card at 86%) under its

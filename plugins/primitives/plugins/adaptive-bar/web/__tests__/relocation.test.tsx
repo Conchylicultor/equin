@@ -381,17 +381,22 @@ describe("the portal container", () => {
     expect(containerOf("alpha").hasAttribute("data-theme-scope")).toBe(false);
   });
 
-  it("leaves the bar's own attributes to the row and the panel's dock", () => {
+  it("leaves the bar's own attributes to the row and the panel's overlay root", () => {
     // Re-stamping the bar's scope on the container would make it a fresh
-    // theme-scope root, resetting the text colour the row sets.
+    // theme-scope root, resetting the text colour the row sets. The panel
+    // carries it OUTSIDE its surface: a scope root inside the panel would
+    // reset the panel's own hover / selected fills to the canvas's.
     render(
       <PortalForwardProvider name="data-theme-scope" value="bar-scope">
         <ThreeProbes />
       </PortalForwardProvider>,
     );
     expect(containerOf("alpha").hasAttribute("data-theme-scope")).toBe(false);
-    const dock = document.querySelector("[role='dialog'] [data-theme-scope]");
-    expect(dock?.getAttribute("data-theme-scope")).toBe("bar-scope");
+    const panel = document.querySelector("[role='dialog']");
+    expect(panel?.querySelector("[data-theme-scope]")).toBeNull();
+    expect(
+      panel?.closest("[data-theme-scope]")?.getAttribute("data-theme-scope"),
+    ).toBe("bar-scope");
   });
 });
 

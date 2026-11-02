@@ -20,12 +20,18 @@ export interface OverflowPanelProps {
   /** Receives the dock: the one element relocated containers are moved into. */
   dockRef: (el: HTMLElement | null) => void;
   /**
-   * The bar's REGION attributes (theme scope, sub-theme included), stamped on
-   * the dock. The panel is body-portaled and its overlay carries only the popup
-   * bag, but a parked occupant is still part of the bar's region — and it
-   * stamps only what differs from these, so the dock must carry the rest.
+   * The bar's REGION attributes (theme scope, sub-theme included). The panel is
+   * body-portaled and its overlay would carry only the popup bag, but a parked
+   * occupant is still part of the bar's region — and it stamps only what
+   * differs from these, so the panel must carry the rest.
+   *
+   * Stamped on the overlay ROOT, outside the panel — never on the dock inside
+   * it. A theme-scope root resets every surface colour role to the canvas's,
+   * so a scope stamped inside the panel undid the panel's own: in Mist every
+   * parked row hovered to `--muted`, which IS the popover's colour. Scope
+   * outside, surface inside — the order every other popup has.
    */
-  dockAttrs: PortalForwardedAttrs;
+  regionAttrs: PortalForwardedAttrs;
   /**
    * Whether an occupant parked in the panel has a popup of its own open (a
    * popover its button opened). That popup is the innermost layer: it owns Esc
@@ -69,7 +75,7 @@ export function OverflowPanel({
   anchor,
   label,
   dockRef,
-  dockAttrs,
+  regionAttrs,
   hasOpenChildPopup,
   onDismiss,
 }: OverflowPanelProps): ReactElement {
@@ -133,6 +139,7 @@ export function OverflowPanel({
       // panel inside it takes pointers, and only while open.
       className="pointer-events-none"
       aria-hidden={!open}
+      {...regionAttrs}
     >
       <OverlayPanel
         ref={setFloatingEl}
@@ -155,7 +162,7 @@ export function OverflowPanel({
         data-positioned={isPositioned ? "" : undefined}
         className="pointer-events-auto transition-opacity not-data-[positioned]:opacity-0"
       >
-        <Stack ref={dockRef} gap="2xs" align="stretch" {...dockAttrs} />
+        <Stack ref={dockRef} gap="2xs" align="stretch" />
       </OverlayPanel>
     </ViewportOverlay>
   );

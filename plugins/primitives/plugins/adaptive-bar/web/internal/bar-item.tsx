@@ -152,7 +152,7 @@ function PortaledBarItem({
   // region it was rendered in, whether docked in the row or parked in the
   // panel, so it keeps a region-only value (a theme sub-theme) a popup drops.
   // Only what differs from the bar's own region: the row (docked) and the
-  // panel's dock (parked) already carry the rest, and re-stamping an equal
+  // panel's overlay root (parked) already carry the rest, and re-stamping an equal
   // `data-theme-scope` would make this container a new scope root that resets
   // the inherited text colour the row set (see `BarRegionAttrsContext`).
   const region = useRegionForwardedAttrs();
