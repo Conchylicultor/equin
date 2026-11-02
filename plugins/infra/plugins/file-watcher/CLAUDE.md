@@ -85,6 +85,14 @@ watch, and `infra/git/checkout-watch` delivers it as `onResync`. A consumer
 whose value is kept fresh by the watch alone must re-derive it there — nothing
 else will. (A `children` watch's error is already reported as its dir gone.)
 
+A `subtree` watch whose dir itself goes (removed, moved away, replaced — checked
+against its inode) is **closed at once** and reported to `onLost` with a
+`WatchedDirGoneError`. Not tidiness: a parcel subscription whose root is gone
+hears nothing more — not even a folder re-created at the path — raises no
+error, and while it stays open every OTHER parcel subscription in the process
+hears nothing either (measured, macOS FSEvents, parcel 2.6.0; unsubscribing it
+restores them). A holder that wants the dir again opens a new watch.
+
 There is **no reconcile timer**, and no spelling for one. Which backends report
 a loss, read from `@parcel/watcher` 2.6.0's source:
 

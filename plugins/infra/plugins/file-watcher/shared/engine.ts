@@ -1,6 +1,6 @@
 import type * as parcel from "@parcel/watcher";
 import { type FSWatcher, watch as fsWatch } from "node:fs";
-import { readdir, stat } from "node:fs/promises";
+import { readdir, realpath, stat } from "node:fs/promises";
 import { basename, dirname, extname, join } from "node:path";
 import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import {
@@ -109,8 +109,10 @@ export interface FileWatcherOptions {
   onChange: WatchReaction<parcel.Event>;
   /**
    * Called when a watched dir's native watch errored and may have dropped
-   * events (the error is still logged). Not called for a `children` watch: a
-   * failing one already reports its dir gone (see `depth`).
+   * events (the error is still logged), and — with a {@link WatchedDirGoneError},
+   * once — when a `subtree` watch's dir itself went: its watch is closed then
+   * (see `subscribeRoot`). Not called for a `children` watch: a failing one
+   * already reports its dir gone (see `depth`).
    */
   onLost?: WatchLost;
   debounceMs?: number;
@@ -374,7 +376,15 @@ export async function createFileWatcher(
       const sub =
         parcelWatcher === null
           ? await watchChildren(dir, take)
-          : await parcelWatcher.subscribe(dir, handlerFor(dir), parcelOptions);
+          : await subscribeRoot(parcelWatcher, dir, {
+              onEvents: handlerFor(dir),
+              options: parcelOptions,
+              onGone: (gone) => {
+                const i = subscriptions.indexOf(gone);
+                if (i >= 0) subscriptions.splice(i, 1);
+                lost(dir, new WatchedDirGoneError(dir));
+              },
+            });
       subscriptions.push(sub);
     } catch (err: unknown) {
       console.error(`[file-watcher] failed to subscribe to ${dir}`, err);
@@ -399,6 +409,82 @@ export async function createFileWatcher(
       subscriptions.length = 0;
     },
   };
+}
+
+/**
+ * A watched dir itself went — removed, moved away, or replaced by another (its
+ * inode changed) — so its watch is closed and hears nothing more of whatever
+ * lands at that path. Handed to `onLost`: re-derive (the dir is gone), and open
+ * a new watch if the dir comes back.
+ */
+export class WatchedDirGoneError extends Error {
+  constructor(readonly dir: string) {
+    super(`[file-watcher] the watched dir ${dir} went; its watch is closed`);
+    this.name = "WatchedDirGoneError";
+  }
+}
+
+/**
+ * One parcel subscription of a watched root, closed the moment its root goes.
+ *
+ * Not tidiness — a parcel subscription whose root is gone is POISON: it hears
+ * nothing more (not even a folder re-created at the path), raises no error, and
+ * while it stays open every OTHER parcel subscription in the process hears
+ * nothing either (measured on macOS FSEvents, @parcel/watcher 2.6.0: a watch
+ * opened after it heard no write; unsubscribing the dead one brought every
+ * watch back). So a root event whose dir really went (checked against the
+ * inode, since FSEvents replays a moment from before the subscription and an
+ * earlier incarnation's delete may arrive) unsubscribes at once and calls
+ * `onGone`, after the batch that told us is delivered.
+ */
+async function subscribeRoot(
+  parcelWatcher: ParcelWatcherApi,
+  dir: string,
+  opts: {
+    onEvents: parcel.SubscribeCallback;
+    options: ParcelOptions | undefined;
+    onGone: (sub: { unsubscribe(): Promise<void> }) => void;
+  },
+): Promise<{ unsubscribe(): Promise<void> }> {
+  const real = await realpath(dir);
+  const ino = (await stat(real)).ino;
+  let closed = false;
+  const dirGone = async (): Promise<boolean> => {
+    try {
+      return (await stat(real)).ino !== ino;
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code === "ENOENT" || code === "ENOTDIR") return true;
+      throw err;
+    }
+  };
+  // One close, shared: a `stop()` racing the gone path awaits the same
+  // unsubscribe rather than returning before it lands.
+  let closing: Promise<void> | null = null;
+  const close = (): Promise<void> => {
+    closed = true;
+    closing ??= native.then((sub) => sub.unsubscribe());
+    return closing;
+  };
+  const handle = { unsubscribe: close };
+  const native = parcelWatcher.subscribe(
+    dir,
+    (err, events) => {
+      if (closed) return;
+      opts.onEvents(err, events);
+      if (!events.some((e) => e.path === real || e.path === dir)) return;
+      // A stat that fails for any reason but absence rejects here, unhandled
+      // — loud, never swallowed.
+      void dirGone().then(async (gone) => {
+        if (!gone || closed) return;
+        await close();
+        opts.onGone(handle);
+      });
+    },
+    opts.options,
+  );
+  await native;
+  return handle;
 }
 
 /**

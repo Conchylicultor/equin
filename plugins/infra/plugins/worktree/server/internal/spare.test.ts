@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
   existsSync,
+  mkdirSync,
   mkdtempSync,
   realpathSync,
   rmSync,
@@ -20,6 +21,8 @@ import {
   isUnfinishedCheckout,
   listReadySpares,
   listWorktreeEntries,
+  lockWorktree,
+  unlockWorktree,
 } from "./worktree";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import {
@@ -157,6 +160,34 @@ describe("spare claim", () => {
       );
       expect(await lockOf(wtFor(id))).toBe(LEGACY_IDS.worktreeLockReason);
     }
+  });
+
+  test("lock and unlock hold while another worktree's add is half-written", async () => {
+    // What a concurrent `git worktree add` leaves for a moment: its admin
+    // entry with `commondir` created but not yet written. `git worktree lock`
+    // dies on it ("failed to read …/commondir") — 2026-11-02: a claim's
+    // checkout was left unlocked while another add ran beside it.
+    const spare = await createSpareIn(repo, noInstall);
+    const half = join(repo, ".git", "worktrees", "att-half");
+    mkdirSync(half);
+    writeFileSync(join(half, "gitdir"), `${wtFor("att-half")}/.git\n`);
+    writeFileSync(join(half, "HEAD"), `${"0".repeat(40)}\n`);
+    writeFileSync(join(half, "commondir"), "");
+    const raced = await spawnCaptured(
+      [GIT, "-C", repo, "worktree", "lock", spare, "--reason", "x"],
+      { timeoutMs: 60_000 },
+    );
+    expect(raced.stderr).toContain("commondir");
+
+    expect(await unlockWorktree(repo, spare)).toBe("unlocked");
+    expect(await unlockWorktree(repo, spare)).toBe("not-locked");
+    expect(await lockWorktree(repo, spare, "mine")).toBe("locked");
+    expect(await lockWorktree(repo, spare, "other")).toBe("already-locked");
+    expect(await lockWorktree(repo, wtFor("att-none"), "x")).toBe(
+      "unregistered",
+    );
+    rmSync(half, { recursive: true });
+    expect(await lockOf(spare)).toBe("mine");
   });
 
   test("a spare made at an older main ends at the current main", async () => {

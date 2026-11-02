@@ -43,8 +43,16 @@ install: `setupWorktree`'s `existing` path minus the convergence).
 - **The claim** (inside the mutate-gate hold): `unlock` → `git worktree move` →
   `git switch [-c] claude-web/<id>` (a two-tree checkout: it writes only the diff
   since the spare's commit) → lock. Two claimers of one spare are told apart by
-  git: the first `unlock` wins, and `move` is a rename; the loser tries the next
-  spare, then the cold add.
+  the filesystem: the first `unlock` wins, and `move` is a rename; the loser
+  tries the next spare, then the cold add.
+- **A lock is its file, not a git command.** `lockWorktree` / `unlockWorktree`
+  create (`wx`) / unlink `.git/worktrees/<id>/locked`, the entry found by its
+  `gitdir`. `git worktree lock` / `unlock` resolve their argument through the
+  list of every worktree, reading each HEAD, and die ("failed to read
+  …/commondir") on an admin dir a concurrent `git worktree add` is half-way
+  through writing — the mutate gate admits three at once, so a claim's lock
+  failed beside a spare refill and left the checkout unlocked. `git worktree
+  list` dies the same way; it still throws there (loud, the job retries).
 - **Crash convergence.** A crash after `move` leaves the dir in place on a
   detached HEAD — before the switch, or inside it. The early return recognises
   it by `isUnfinishedCheckout`: admin dir `spare-*` (the move keeps it), HEAD

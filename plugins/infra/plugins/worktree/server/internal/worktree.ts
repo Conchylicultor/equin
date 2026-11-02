@@ -11,14 +11,13 @@ import {
   realpath,
   rename,
   rm,
+  unlink,
+  writeFile,
 } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import { asNamespace } from "@plugins/infra/plugins/namespace/core";
 import { GIT } from "@plugins/infra/plugins/paths/server";
-import {
-  spawnCaptured,
-  type SpawnResult,
-} from "@plugins/infra/plugins/spawn/core";
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { attemptBranchName, attemptBranchRef } from "../../core";
 import { namespaceCollision, probeNamespace } from "./composition-namespace";
 import { installCheckout } from "./install-checkout";
@@ -64,9 +63,8 @@ const PRUNE_TIMEOUT_MS = 60_000; // metadata-only, same starvation exposure as l
 // later retry by `emptyWorktreeTrash`. Kept below TRASH_GRACE_MS so a sweep never
 // races a removal still deleting its own entry.
 const TRASH_RM_TIMEOUT_MS = 30 * 60_000;
-const LOCK_TIMEOUT_MS = 60_000; // metadata-only, same starvation exposure as prune
 const REF_TIMEOUT_MS = 60_000; // one ref read, same starvation exposure as list
-const MOVE_TIMEOUT_MS = 60_000; // a rename + admin-dir rewrite, same exposure as lock
+const MOVE_TIMEOUT_MS = 60_000; // a rename + admin-dir rewrite, same exposure as prune
 
 // A git subprocess in this file blew its bound and was KILLED. Its own type,
 // not a bare Error, because the distinction is load-bearing for callers: a
@@ -287,19 +285,99 @@ export function isCanonicalWorktreePath(
 // locked it and why rather than leaving a bare marker for a human to explain.
 const WORKTREE_LOCK_REASON = LEGACY_IDS.worktreeLockReason;
 
-// One `git worktree lock --reason`, bounded. The outcome is the caller's to
-// read: an agent checkout logs a failed lock (see `ensureWorktreeLocked`), a
-// spare throws (its lock IS its readiness).
-export function lockWorktree(
+// A linked worktree's lock, read and written as the file it is:
+// `.git/worktrees/<id>/locked`, holding the reason (gitrepository-layout(5)).
+//
+// Not `git worktree lock` / `unlock`, and the reason is a race, not taste: both
+// resolve their argument through git's list of EVERY worktree, reading each
+// one's HEAD, and die ("fatal: failed to read .git/worktrees/<other>/commondir")
+// when another worktree's admin dir is half-written by a `git worktree add`
+// running at that moment. The mutate gate admits three checkouts at once, so a
+// claim's lock could fail on a concurrent spare refill, leaving the attempt's
+// checkout unlocked — exposed to Claude Code's worktree sweep (2026-11-02, the
+// load-flaky concurrent-claims test). One worktree's lock is that worktree's
+// file only; nothing here reads any other worktree's HEAD.
+
+/**
+ * The admin dir (`<common>/worktrees/<id>`) registered for the checkout at
+ * `wtPath`, found the way git finds it — the entry whose `gitdir` file names
+ * `<wtPath>/.git` — so it is found even when the checkout's own `.git` file was
+ * never written (an add killed early). An entry whose `gitdir` is not written
+ * yet (an add in progress) names nothing and is passed over. Null when none
+ * names it: the path is not a registered worktree (or no longer — a spare
+ * another claimer moved away).
+ */
+async function adminDirOf(
+  repoRoot: AppPath,
+  wtPath: string,
+): Promise<string | null> {
+  const adminRoot = join(repoRoot, ".git", "worktrees");
+  const target = join(wtPath, ".git");
+  for (const id of await readdir(adminRoot)) {
+    const admin = join(adminRoot, id);
+    let gitdir: string;
+    try {
+      gitdir = (await readFile(join(admin, "gitdir"), "utf8")).trim();
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      // Not an entry (a stray file), or one mid-add or mid-prune.
+      if (code === "ENOENT" || code === "ENOTDIR") continue;
+      throw err;
+    }
+    // git writes it absolute, or relative to the admin dir under
+    // `worktree.useRelativePaths`.
+    if (gitdir !== "" && resolve(admin, gitdir) === target) return admin;
+  }
+  return null;
+}
+
+/**
+ * Lock the worktree at `wtPath` with `reason`. Idempotent like `git worktree
+ * lock`: an existing lock (whatever its reason) is left as it is, and answered
+ * `already-locked`; `unregistered` when `wtPath` is no registered worktree.
+ * Any other failure throws.
+ */
+export async function lockWorktree(
   repoRoot: AppPath,
   wtPath: string,
   reason: string,
-  signal?: AbortSignal,
-): Promise<SpawnResult> {
-  return spawnCaptured(
-    [GIT, "-C", repoRoot, "worktree", "lock", wtPath, "--reason", reason],
-    { timeoutMs: LOCK_TIMEOUT_MS, signal },
-  );
+): Promise<"locked" | "already-locked" | "unregistered"> {
+  const admin = await adminDirOf(repoRoot, wtPath);
+  if (admin === null) return "unregistered";
+  const file = join(admin, "locked");
+  try {
+    // `wx`: created only if absent, so two lockers cannot overwrite each other.
+    // Newline-terminated, as git writes it.
+    await writeFile(file, `${reason}\n`, { flag: "wx" });
+    return "locked";
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "EEXIST") {
+      return "already-locked";
+    }
+    throw err;
+  }
+}
+
+/**
+ * Unlock the worktree at `wtPath`. One `unlink`, so of two unlockers exactly
+ * one gets `unlocked` — what tells two claimers of one spare apart;
+ * `unregistered` when `wtPath` is no registered worktree. Any other failure
+ * throws.
+ */
+export async function unlockWorktree(
+  repoRoot: AppPath,
+  wtPath: string,
+): Promise<"unlocked" | "not-locked" | "unregistered"> {
+  const admin = await adminDirOf(repoRoot, wtPath);
+  if (admin === null) return "unregistered";
+  const file = join(admin, "locked");
+  try {
+    await unlink(file);
+    return "unlocked";
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return "not-locked";
+    throw err;
+  }
 }
 
 /**
@@ -315,8 +393,8 @@ export function lockWorktree(
  * releases a lock it did not set. So every checkout we create stays locked for
  * its whole life, and `removeWorktree` is the only thing that unlocks it.
  *
- * Idempotent: re-locking an already-locked worktree exits 128 with "is already
- * locked", which IS the state the caller asked for, so it counts as success.
+ * Idempotent: re-locking an already-locked worktree answers `already-locked`,
+ * which IS the state the caller asked for, so it counts as success.
  * That is what lets `setupWorktree` re-assert the lock on every call and
  * self-heal a checkout created before this existed.
  *
@@ -332,12 +410,18 @@ async function ensureWorktreeLocked(
   wtPath: string,
   signal?: AbortSignal,
 ): Promise<void> {
-  const r = await lockWorktree(repoRoot, wtPath, WORKTREE_LOCK_REASON, signal);
-  if (r.exitCode === 0 || r.stderr.includes("is already locked")) return;
+  signal?.throwIfAborted();
+  let failure: string;
+  try {
+    const r = await lockWorktree(repoRoot, wtPath, WORKTREE_LOCK_REASON);
+    if (r !== "unregistered") return;
+    failure = "it is not a registered worktree";
+  } catch (err) {
+    if (!(err instanceof Error)) throw err;
+    failure = err.message;
+  }
   console.warn(
-    `[worktree] could not lock ${wtPath} ` +
-      `(${r.timedOut ? `timed out after ${LOCK_TIMEOUT_MS} ms` : `exit ${r.exitCode}`}): ` +
-      `${r.stderr.trim() || "<no stderr>"} — the checkout is exposed to Claude Code's worktree sweep`,
+    `[worktree] could not lock ${wtPath}: ${failure} — the checkout is exposed to Claude Code's worktree sweep`,
   );
 }
 
@@ -428,20 +512,16 @@ async function unlockWorktreeForRemoval(
   wtPath: string,
   signal?: AbortSignal,
 ): Promise<void> {
-  const r = await spawnCaptured(
-    [GIT, "-C", repoRoot, "worktree", "unlock", wtPath],
-    { timeoutMs: LOCK_TIMEOUT_MS, signal },
-  );
-  // "is not locked" is the desired end state, not a failure.
-  if (r.exitCode === 0 || r.stderr.includes("is not locked")) return;
-  // Thrown BEFORE the dir moves: `prune` skips a locked registration, so moving
-  // the tree away from a lock we could not release would leak its
+  signal?.throwIfAborted();
+  // "not-locked" is the desired end state, not a failure. Anything else throws
+  // BEFORE the dir moves: `prune` skips a locked registration, so moving the
+  // tree away from a lock we could not release would leak its
   // `.git/worktrees` entry silently, forever.
-  throw new Error(
-    `could not unlock ${wtPath} before removal ` +
-      `(${r.timedOut ? `timed out after ${LOCK_TIMEOUT_MS} ms` : `exit ${r.exitCode}`}): ` +
-      `${r.stderr.trim() || "<no stderr>"}`,
-  );
+  if ((await unlockWorktree(repoRoot, wtPath)) === "unregistered") {
+    throw new Error(
+      `could not unlock ${wtPath} before removal: it is not a registered worktree`,
+    );
+  }
 }
 
 /**
@@ -703,21 +783,10 @@ async function claimSpare(
   signal?: AbortSignal,
 ): Promise<boolean> {
   for (const spare of await listReadySpares(repoRoot, signal)) {
-    const unlockArgv = [GIT, "-C", repoRoot, "worktree", "unlock", spare];
-    const unlocked = await spawnCaptured(unlockArgv, {
-      timeoutMs: LOCK_TIMEOUT_MS,
-      signal,
-    });
-    if (unlocked.timedOut) {
-      throw new WorktreeGitTimeoutError({
-        message: `git worktree unlock did not finish within ${LOCK_TIMEOUT_MS} ms and was killed: ${unlockArgv.join(" ")}`,
-        command: unlockArgv.join(" "),
-        timeoutMs: LOCK_TIMEOUT_MS,
-        worktreePath: spare,
-      });
-    }
+    signal?.throwIfAborted();
+    const unlocked = await unlockWorktree(repoRoot, spare);
     // Another claimer unlocked (or already moved) it first.
-    if (unlocked.exitCode !== 0) continue;
+    if (unlocked !== "unlocked") continue;
     const moveArgv = [GIT, "-C", repoRoot, "worktree", "move", spare, wtPath];
     const moved = await spawnCaptured(moveArgv, {
       tier: "background",

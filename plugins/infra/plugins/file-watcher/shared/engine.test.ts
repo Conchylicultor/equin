@@ -3,6 +3,7 @@ import {
   appendFileSync,
   mkdirSync,
   mkdtempSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
@@ -12,6 +13,7 @@ import { join } from "node:path";
 import {
   createFileWatcher,
   parcelBatchHandler,
+  WatchedDirGoneError,
   WRITES_WHILE_OPEN_MAX_ENTRIES,
   type FileWatcher,
 } from "./engine";
@@ -169,6 +171,45 @@ describe("createFileWatcher: a folder that arrives with entries inside", () => {
     await until(() => heard.includes(join(moved, "kept.txt")));
     expect(heard).toContain(join(moved, "kept.txt"));
     expect(heard.filter((p) => p.includes("/skip"))).toEqual([]);
+  });
+});
+
+describe("createFileWatcher: a watched dir that goes", () => {
+  test("its watch closes and says so, and every other watch keeps hearing", async () => {
+    // A parcel subscription whose root is gone deafens every other parcel
+    // subscription in the process for as long as it stays open — the
+    // 2026-11-02 load-flaky DataFiles watch test, run after a dir-hub test
+    // that failed holding one. So the engine closes it the moment it goes.
+    dir = realpathSync(mkdtempSync(join(tmpdir(), "fw-gone-")));
+    const doomed = join(dir, "doomed");
+    const other = join(dir, "other");
+    mkdirSync(doomed);
+    mkdirSync(other);
+    const lost: unknown[] = [];
+    watcher = await createFileWatcher({
+      dirs: [doomed],
+      debounceMs: 0,
+      onChange: () => {},
+      onLost: (_dir, error) => void lost.push(error),
+    });
+    rmSync(doomed, { recursive: true });
+    await until(() => lost.length > 0);
+    expect(lost).toHaveLength(1);
+    expect(lost[0]).toBeInstanceOf(WatchedDirGoneError);
+
+    const heard: string[] = [];
+    const after = await createFileWatcher({
+      dirs: [other],
+      debounceMs: 0,
+      onChange: (batch) => void heard.push(...batch.map((e) => e.path)),
+    });
+    try {
+      writeFileSync(join(other, "f.txt"), "x");
+      await until(() => heard.includes(join(other, "f.txt")));
+      expect(heard).toContain(join(other, "f.txt"));
+    } finally {
+      await after.stop();
+    }
   });
 });
 

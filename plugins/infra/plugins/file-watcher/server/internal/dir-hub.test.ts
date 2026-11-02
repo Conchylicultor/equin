@@ -393,13 +393,21 @@ describe("createDirWatchHub over the real engine", () => {
       scope: "children",
       onChange: (e) => void child.push(...paths(e)),
     });
-    expect(natives).toBe(1);
-    writeFileSync(join(sub, "f.txt"), "x");
-    // Test-only bound, not production polling.
-    for (let i = 0; i < 150 && child.length === 0; i++) await Bun.sleep(20);
-    expect(child).toContain(join(sub, "f.txt"));
-    rc();
-    rr();
+    try {
+      expect(natives).toBe(1);
+      const file = join(sub, "f.txt");
+      writeFileSync(file, "x");
+      // Until the write itself is heard, not any event: FSEvents replays a
+      // moment from before the watch opened, so `sub`'s own creation can
+      // arrive first, in a batch of its own (seen under load). Test-only
+      // bound, not production polling.
+      for (let i = 0; i < 150 && !child.includes(file); i++)
+        await Bun.sleep(20);
+      expect(child).toContain(file);
+    } finally {
+      rc();
+      rr();
+    }
   });
 
   /** A hub whose single-directory watches are the real engine's. */

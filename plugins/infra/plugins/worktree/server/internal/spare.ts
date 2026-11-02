@@ -4,8 +4,6 @@ import {
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readdir, readFile, stat } from "node:fs/promises";
 import { basename, join } from "node:path";
-import { GIT } from "@plugins/infra/plugins/paths/server";
-import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { installCheckout } from "./install-checkout";
 import { withWorktreeMutateSlot } from "./mutate-gate";
 import { isSpareName, newSpareName, SPARE_LOCK_REASON } from "./spare-name";
@@ -19,6 +17,7 @@ import {
   lockWorktree,
   pathExists,
   removeWorktree,
+  unlockWorktree,
 } from "./worktree";
 
 // The spare pool's mechanics. `infra/worktree` stays job-free (the CLI imports
@@ -69,12 +68,10 @@ export async function createSpareIn(
   await install(path, signal);
   // Thrown, unlike an agent checkout's lock: an unlocked spare is not ready,
   // and the prune reclaims it.
-  const r = await lockWorktree(repoRoot, path, SPARE_LOCK_REASON, signal);
-  if (r.exitCode !== 0) {
-    throw new Error(
-      `could not lock spare ${path} ` +
-        `(${r.timedOut ? "timed out" : `exit ${r.exitCode}`}): ${r.stderr.trim() || "<no stderr>"}`,
-    );
+  signal?.throwIfAborted();
+  const r = await lockWorktree(repoRoot, path, SPARE_LOCK_REASON);
+  if (r !== "locked") {
+    throw new Error(`could not lock spare ${path}: ${r}`);
   }
   return path;
 }
@@ -140,12 +137,9 @@ export async function pruneSparesIn(
     if (entry?.locked === SPARE_LOCK_REASON) {
       const createdAt = Number(name.split("-")[1]);
       if (!(now - createdAt > SPARE_MAX_AGE_MS)) continue;
-      const unlocked = await spawnCaptured(
-        [GIT, "-C", repoRoot, "worktree", "unlock", path],
-        { timeoutMs: 60_000, signal },
-      );
+      signal?.throwIfAborted();
       // A claimer unlocked it first: it is theirs now.
-      if (unlocked.timedOut || unlocked.exitCode !== 0) continue;
+      if ((await unlockWorktree(repoRoot, path)) !== "unlocked") continue;
     } else if (entry?.locked != null && entry.locked !== ADD_IN_PROGRESS_LOCK) {
       continue;
     } else {
