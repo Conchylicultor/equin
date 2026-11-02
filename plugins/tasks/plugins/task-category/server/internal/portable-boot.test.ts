@@ -4,11 +4,15 @@
  *
  * The graph is task-category's `dependsOn` closure from the app's server
  * registry (no `machine/` entry at all), plus the providers of a host without
- * the computer — the PGlite database driver (in memory), the in-process job
- * queue, attachment bytes and logs in memory, the seeded push ledger — and one
- * migration source: the committed `data/*.sql` read off disk here, the
- * worker host's bundled text being the next session's job. Only the graph under
- * test must be portable, not this harness.
+ * the computer — chosen, not listed: every service the graph's modules declare
+ * gets the one provider the `base-exclusions` row names for it (the PGlite
+ * driver, the in-process job queue, the in-memory config store, …), to a
+ * fixpoint, the way codegen picks a browser host's (`browser-host-gen.ts`). A
+ * hand-kept list went stale each time the closure reached a new service. Two
+ * services are the harness's own: the committed migrations and `config/`, read
+ * off disk here (their bundled providers inline them with `import.meta.glob`,
+ * which Bun has not). Only the graph under test must be portable, not this
+ * harness.
  *
  * Booted through the one boot sequence (`bootPluginGraph`, `exec` mode: load
  * waves, register, collect, the host-service assert, the `onReadyBlocking`
@@ -36,9 +40,18 @@ import {
 } from "@plugins/framework/plugins/server-core/core";
 import {
   bootPluginGraph,
+  declaredHostServiceIds,
+  hostServicesProvidedBy,
+  isHostService,
   serverEntries,
   serverEntryFor,
 } from "@plugins/framework/plugins/server-core/core/testing";
+import {
+  asFsPath,
+  asPluginId,
+} from "@plugins/framework/plugins/plugin-id/core";
+import { BASE_EXCLUSIONS_ID } from "@plugins/infra/plugins/namespace/core";
+import { compositionsConfig } from "@plugins/plugin-meta/plugins/composition/core";
 import { PLUGINS_DIR, REPO_ROOT } from "@plugins/infra/plugins/paths/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import {
@@ -47,6 +60,13 @@ import {
   MigrationSource,
 } from "@plugins/database/plugins/migrations/server";
 import { createTask } from "@plugins/tasks/plugins/tasks-core/server";
+import { ConfigGitLayer } from "@plugins/config_v2/server";
+import {
+  committedDocument,
+  committedFilesFromMap,
+  type CommittedFiles,
+} from "@plugins/config_v2/core";
+import { Glob } from "bun";
 import { setTaskCategory } from "./mutations";
 
 // Any registered mandate id: these tests never resolve it.
@@ -58,30 +78,98 @@ type Entry = (typeof serverEntries)[number];
 
 const SUBJECT = "tasks/plugins/task-category";
 
-// The portable providers, as registry entries: none is in the app's registry
-// (`base-exclusions` keeps them out of every desktop composition).
-const PROVIDERS: Entry[] = [
-  serverEntryFor("database/plugins/pglite", ["database"]),
-  serverEntryFor("infra/plugins/jobs/plugins/in-process", [
-    "infra/plugins/jobs",
-    "database",
-  ]),
-  serverEntryFor("infra/plugins/attachments/plugins/memory-blobs", [
-    "infra/plugins/attachments",
-  ]),
-  serverEntryFor("primitives/plugins/log-channels/plugins/memory-persistence", [
-    "primitives/plugins/log-channels",
-  ]),
-  serverEntryFor("tasks/plugins/tasks-core/plugins/seeded-push-ledger", [
-    "tasks/plugins/tasks-core",
-  ]),
-];
+/**
+ * The portable providers' candidates: the server barrels the `base-exclusions`
+ * row negates (none is in the app's registry — that row keeps them out of every
+ * desktop composition), with their source. Read, never loaded: loading one
+ * evaluates its service owner's modules, whose declarations the boot would then
+ * demand.
+ */
+function providerCandidates(): { path: string; source: string }[] {
+  const row = compositionsConfig.defaults.manifests.find(
+    (m) => m.id === BASE_EXCLUSIONS_ID,
+  );
+  if (row === undefined) throw new Error(`no "${BASE_EXCLUSIONS_ID}" row`);
+  return row.entryPoints
+    .map((e) => /^!(.+)\.\*\*$/.exec(e)?.[1])
+    .filter((id): id is string => id !== undefined)
+    .map((id) => asFsPath(asPluginId(id)))
+    .map((path) => ({
+      path,
+      barrel: join(PLUGINS_DIR, path, "server", "index.ts"),
+    }))
+    .filter(({ barrel }) => existsSync(barrel))
+    .map(({ path, barrel }) => ({
+      path,
+      source: readFileSync(barrel, "utf8"),
+    }));
+}
 
-// The committed migration history, read off disk by THIS harness.
+type LoadedBarrel = Record<string, unknown> & {
+  default: ServerPluginDefinition;
+};
+
+/**
+ * `graph` plus one provider per host service its modules declare, to a
+ * fixpoint (a provider's own modules may declare another), the way codegen
+ * picks a browser host's: the candidate whose barrel spells
+ * `<Service>.provide(` — the service named by the binding a loaded barrel
+ * exports it under. Modules load one at a time here, so no barrel races
+ * another. A service with no candidate, or two, fails, naming them.
+ */
+async function withProviders(graph: Entry[]): Promise<Entry[]> {
+  const entries = [...graph];
+  const candidates = providerCandidates();
+  const provided = new Set<string>();
+  const bindingOf = new Map<string, string>();
+  const load = async (entry: Entry): Promise<void> => {
+    const mod = (await entry.loader()) as LoadedBarrel;
+    for (const id of hostServicesProvidedBy(mod.default.contributions ?? [])) {
+      provided.add(id);
+    }
+    for (const [name, value] of Object.entries(mod)) {
+      if (isHostService(value)) bindingOf.set(value.id, name);
+    }
+  };
+  for (const e of entries) await load(e);
+  for (;;) {
+    const missing = declaredHostServiceIds().filter((id) => !provided.has(id));
+    if (missing.length === 0) return entries;
+    const members = entries.map((e) => e.pluginPath);
+    for (const id of missing) {
+      if (provided.has(id)) continue; // a provider chosen above serves it too
+      const binding = bindingOf.get(id);
+      if (binding === undefined) {
+        throw new Error(
+          `host service "${id}" is declared but no loaded server barrel exports it, so its provider cannot be named`,
+        );
+      }
+      const spelled = new RegExp(`\\b${binding}\\.provide\\(`);
+      const by = candidates.filter((c) => spelled.test(c.source));
+      if (by.length !== 1) {
+        throw new Error(
+          `host service "${id}" (${binding}) has ${by.length} candidate providers in "${BASE_EXCLUSIONS_ID}": ${by.map((c) => c.path).join(", ") || "none"}`,
+        );
+      }
+      // Loaded after everything chosen so far: its import of the service's
+      // owner never races that owner's load wave.
+      const provider = serverEntryFor(by[0]!.path, members);
+      entries.push(provider);
+      await load(provider);
+    }
+  }
+}
+
+// What the bundled providers inline with `import.meta.glob` (which Bun has
+// not), read off disk by THIS harness instead: the committed migration history
+// and the committed config layer. Their services count as provided, so
+// `withProviders` never picks the bundled candidates.
 const MIGRATIONS_DATA = join(PLUGINS_DIR, "database/plugins/migrations/data");
-const migrationSource: Entry = {
-  pluginPath: "tasks/plugins/task-category/portable-boot-migrations",
-  id: "tasks.task-category.portable-boot-migrations",
+const CONFIG_DIR = join(REPO_ROOT, "config");
+let committedConfig: CommittedFiles | undefined;
+const committedFromDisk: Entry = {
+  pluginPath: "tasks/plugins/task-category/portable-boot-committed",
+  id: "tasks.task-category.portable-boot-committed",
   loader: async () => ({
     default: {
       contributions: [
@@ -96,10 +184,25 @@ const migrationSource: Entry = {
                 })),
             ),
         }),
+        ConfigGitLayer.provide({
+          document(storePath) {
+            committedConfig ??= committedFilesFromMap(
+              new Map(
+                [...new Glob("**/*.jsonc").scanSync(CONFIG_DIR)].map((rel) => [
+                  rel,
+                  readFileSync(join(CONFIG_DIR, rel), "utf8"),
+                ]),
+              ),
+            );
+            return committedDocument(storePath, committedConfig);
+          },
+          // Read once: the checkout does not change under one test run.
+          watch: () => Promise.resolve(() => {}),
+        }),
       ],
     } satisfies ServerPluginDefinition,
   }),
-  dependsOn: ["database/plugins/migrations"],
+  dependsOn: ["database/plugins/migrations", "config_v2"],
 };
 
 /** `SUBJECT`'s `dependsOn` closure in the app's server registry. */
@@ -151,7 +254,7 @@ describe.if(IN_CHILD)("task-category's server closure boots portably", () => {
   beforeAll(async () => {
     await bootPluginGraph({
       mode: "exec",
-      entries: [...closureOf(SUBJECT), ...PROVIDERS, migrationSource],
+      entries: await withProviders([...closureOf(SUBJECT), committedFromDisk]),
       coreBarrel: (pluginPath) =>
         existsSync(join(PLUGINS_DIR, pluginPath, "core", "index.ts"))
           ? () => import(`@plugins/${pluginPath}/core`)

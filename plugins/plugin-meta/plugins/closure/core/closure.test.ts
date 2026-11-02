@@ -18,7 +18,11 @@ import {
   buildPluginTree,
   type PluginTree,
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
-import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
+import {
+  asPluginId,
+  SHIPPED_RUNTIME_FOLDERS,
+  type RuntimeFolder,
+} from "@plugins/framework/plugins/plugin-id/core";
 import { BASE_EXCLUSIONS_ID } from "@plugins/infra/plugins/namespace/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { crossRefsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/cross-refs/core";
@@ -650,8 +654,10 @@ test("removalClosure: pulls in transitive importers + descendants, leaves depend
 
 // ── Global exclusions: the base-exclusions row every composition inherits ──────
 
-/** The one negative the repo ships, and the thirteen plugins it resolves to (the
- *  plugin, its two sub-plugins, and every facet's `render-diff` adapter). */
+/** The one negative the repo ships. It resolves to the plugin, its sub-plugins,
+ *  and every facet's `render-diff` adapter (each imports it) — read off the real
+ *  tree below rather than listed, so adding a facet or a sub-plugin moves them
+ *  together instead of breaking a hand-kept copy. */
 const PLUGIN_CHANGES = asPluginId("review.plugin-changes");
 const BASE_ROW: CompositionManifest = {
   name: BASE_EXCLUSIONS_ID,
@@ -659,24 +665,31 @@ const BASE_ROW: CompositionManifest = {
   selectedContributors: [],
   extends: [],
 };
-const RENDER_DIFF_FACETS = [
-  "contributions",
-  "cross-refs",
-  "db-schema",
-  "exemptions",
-  "exports",
-  "registrations",
-  "resources",
-  "routes",
-  "slots",
-  "structure",
-];
-const EXPECTED_EXCLUDED = [
-  "review.plugin-changes",
-  "review.plugin-changes.api-changes",
-  "review.plugin-changes.file-changes",
-  ...RENDER_DIFF_FACETS.map((f) => `plugin-meta.facets.${f}.render-diff`),
-];
+const RENDER_DIFF_RE = /^plugin-meta\.facets\.[^.]+\.render-diff$/;
+
+/** Every facet's `render-diff` adapter in the real tree. */
+function renderDiffAdapters(): string[] {
+  return [...tree.byDir.values()]
+    .map((n) => String(n.id))
+    .filter((id) => RENDER_DIFF_RE.test(id));
+}
+
+/** The plugin-changes subtree in the real tree: what the pattern itself names. */
+function pluginChangesSubtree(): string[] {
+  return [...tree.byDir.values()]
+    .map((n) => String(n.id))
+    .filter(
+      (id) =>
+        id === String(PLUGIN_CHANGES) ||
+        id.startsWith(`${String(PLUGIN_CHANGES)}.`),
+    );
+}
+
+/** What the base row is meant to cost main: the excluded subtree plus every
+ *  `render-diff` adapter — and nothing else. */
+function expectedExcluded(): string[] {
+  return [...pluginChangesSubtree(), ...renderDiffAdapters()];
+}
 
 // DIRECTION. A negative takes out what would BREAK without the removed plugin —
 // its descendants and its transitive importers — never what the removed plugin
@@ -753,11 +766,10 @@ test("the base-exclusions row is inherited with no `extends`", () => {
   );
 
   expect(comp.bundle.has(PLUGIN_CHANGES)).toBe(false);
-  // …and so are the nine adapters that import it — the cascade, not the pattern.
-  for (const f of RENDER_DIFF_FACETS) {
-    expect(
-      comp.bundle.has(asPluginId(`plugin-meta.facets.${f}.render-diff`)),
-    ).toBe(false);
+  // …and so are the adapters that import it — the cascade, not the pattern.
+  expect(renderDiffAdapters().length).toBeGreaterThan(0);
+  for (const adapter of renderDiffAdapters()) {
+    expect(comp.bundle.has(asPluginId(adapter))).toBe(false);
   }
   // The rest of the facets subtree still ships.
   expect(comp.bundle.has(asPluginId("plugin-meta.facets"))).toBe(true);
@@ -785,10 +797,8 @@ test("naming the excluded plugin as an entry positive opts back in", () => {
   expect(comp.bundle.has(PLUGIN_CHANGES)).toBe(true);
   expect(comp.membership.get(PLUGIN_CHANGES)).toBe("entry");
   // The adapters come back too — nothing cascaded out.
-  for (const f of RENDER_DIFF_FACETS) {
-    expect(
-      comp.bundle.has(asPluginId(`plugin-meta.facets.${f}.render-diff`)),
-    ).toBe(true);
+  for (const adapter of renderDiffAdapters()) {
+    expect(comp.bundle.has(asPluginId(adapter))).toBe(true);
   }
   expect(comp.unsatisfiedExclusions).toEqual([]);
 });
@@ -852,12 +862,11 @@ test("naming an importer is NOT an opt-out: the contradiction is reported with i
 });
 
 // THE MIGRATION ITSELF. main is `entryPoints: ["**"]` plus the inherited
-// base row, and that must bundle exactly every plugin minus the ones the
-// the old `disabled` flag used to remove (twelve then; the exemptions facet's
-// `render-diff` adapter, which imports plugin-changes, has since made it
-// thirteen). This is what makes the swap provable: the same set, from a
-// declaration instead of a package.json key.
-test("real-tree main: everything except the thirteen excluded plugins", () => {
+// base row, and that must bundle exactly every plugin minus the ones the old
+// `disabled` flag used to remove: the plugin-changes subtree and the facets'
+// `render-diff` adapters that import it. Anything else leaving main means some
+// new plugin imports plugin-changes — a real regression, not a stale count.
+test("real-tree main: everything except plugin-changes and its render-diff importers", () => {
   const main: CompositionManifest = {
     name: MAIN_COMPOSITION_ID,
     entryPoints: ["**"],
@@ -870,13 +879,15 @@ test("real-tree main: everything except the thirteen excluded plugins", () => {
   );
 
   const allIds = [...tree.byDir.values()].map((n) => String(n.id));
-  for (const id of EXPECTED_EXCLUDED) expect(allIds).toContain(id);
+  const expected = expectedExcluded();
+  expect(expected).toContain(String(PLUGIN_CHANGES));
+  expect(renderDiffAdapters().length).toBeGreaterThan(0);
 
   const missing = allIds
     .filter((id) => !comp.bundle.has(asPluginId(id)))
     .sort();
-  expect(missing).toEqual([...EXPECTED_EXCLUDED].sort());
-  expect(comp.bundle.size).toBe(allIds.length - EXPECTED_EXCLUDED.length);
+  expect(missing).toEqual([...expected].sort());
+  expect(comp.bundle.size).toBe(allIds.length - expected.length);
   expect(comp.unsatisfiedExclusions).toEqual([]);
 });
 
@@ -888,7 +899,7 @@ test("flattenManifest does not fold the base row into itself", () => {
   expect(flat.extends).toEqual([]);
 });
 
-// `negatedTargets` is what the author ASSERTED must leave; the thirteen absent ids
+// `negatedTargets` is what the author ASSERTED must leave; the absent ids
 // are what that assertion cost. Keeping them separate is what lets a reader tell
 // "excluded on purpose" from "excluded because something else was".
 test("negatedTargets carries the asserted targets, not the cascade", () => {
@@ -903,17 +914,14 @@ test("negatedTargets carries the asserted targets, not the cascade", () => {
     flattenManifest(main, [main, BASE_ROW]),
   );
 
-  // The pattern's own matches: the plugin and its two sub-plugins.
+  // The pattern's own matches: the plugin and its sub-plugins.
   expect([...comp.negatedTargets].map(String).sort()).toEqual(
-    [
-      "review.plugin-changes",
-      "review.plugin-changes.api-changes",
-      "review.plugin-changes.file-changes",
-    ].sort(),
+    pluginChangesSubtree().sort(),
   );
-  // The nine adapters left as CASCADE — out of the bundle, not asserted.
-  for (const f of RENDER_DIFF_FACETS) {
-    const adapter = asPluginId(`plugin-meta.facets.${f}.render-diff`);
+  // The adapters left as CASCADE — out of the bundle, not asserted.
+  expect(renderDiffAdapters().length).toBeGreaterThan(0);
+  for (const id of renderDiffAdapters()) {
+    const adapter = asPluginId(id);
     expect(comp.bundle.has(adapter)).toBe(false);
     expect(comp.negatedTargets.has(adapter)).toBe(false);
   }
@@ -929,27 +937,31 @@ test("negatedTargets carries the asserted targets, not the cascade", () => {
 // release's `bun build --compile` on an unresolvable `chromium-bidi` require.
 //
 // Asserted against the REAL tree rather than a fixture: the whole failure mode was
-// an edge nobody had drawn on purpose, so the test has to see the real edges.
+// an edge nobody had drawn on purpose, so the test has to see the real edges. The
+// importers are found, not named, so a moved e2e script does not stale the test.
 test("e2e / provision / cli imports are not hard closure edges", () => {
   const BROWSER_FETCH = asPluginId("infra.safe-fetch.browser-fetch");
   const E2E_HARNESS = asPluginId("framework.tooling.e2e-harness");
-  const REORDER = asPluginId("reorder");
   const URL_EXTRACT = asPluginId("apps.events.sources.url-extract");
-  for (const id of [BROWSER_FETCH, E2E_HARNESS, REORDER, URL_EXTRACT]) {
+  for (const id of [BROWSER_FETCH, E2E_HARNESS, URL_EXTRACT]) {
     expect(hasNode(id)).toBe(true);
   }
 
-  // `reorder/e2e` really does import the harness — without this the assertion
-  // below would pass for the wrong reason the day that script is deleted.
-  const reorderNode = [...tree.byDir.values()].find((n) => n.id === REORDER)!;
-  const reorderE2eUses = getFacet(
-    reorderNode,
-    crossRefsFacetDef,
-  )!.apiUses.e2e.map((u) => u.plugin);
-  expect(reorderE2eUses).toContain(E2E_HARNESS);
+  // Every plugin whose `e2e/` imports the harness and no shipped runtime does —
+  // there must be some, or the assertion below would pass for the wrong reason.
+  const e2eOnlyImporters = [...tree.byDir.values()].filter((n) => {
+    const uses = getFacet(n, crossRefsFacetDef)?.apiUses;
+    if (!uses) return false;
+    const imports = (rt: RuntimeFolder) =>
+      uses[rt].some((u) => u.plugin === E2E_HARNESS);
+    return imports("e2e") && !SHIPPED_RUNTIME_FOLDERS.some(imports);
+  });
+  expect(e2eOnlyImporters.length).toBeGreaterThan(0);
 
-  // …and that import buys the harness no place in anyone's bundle.
-  expect(graph.hardForward.get(REORDER)).not.toContain(E2E_HARNESS);
+  // …and those imports buy the harness no place in anyone's bundle.
+  for (const n of e2eOnlyImporters) {
+    expect(graph.hardForward.get(n.id) ?? []).not.toContain(E2E_HARNESS);
+  }
   // The harness's `provision/` import of browser-fetch, likewise.
   expect(graph.hardForward.get(E2E_HARNESS)).not.toContain(BROWSER_FETCH);
 

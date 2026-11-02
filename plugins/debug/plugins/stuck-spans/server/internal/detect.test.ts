@@ -282,19 +282,17 @@ describe("findStuckSpans", () => {
 });
 
 describe("STUCK_SPAN_POLICY", () => {
-  test("decides every span kind, with the documented exclusions", () => {
-    const watched = SPAN_KINDS.filter((k) => STUCK_SPAN_POLICY[k].watch);
-    const excluded = SPAN_KINDS.filter((k) => !STUCK_SPAN_POLICY[k].watch);
-    const expectedWatched: SpanKind[] = [
-      "cascade",
-      "flush",
-      "http",
-      "loader",
-      "push",
-      "sub",
-    ];
-    expect([...watched].sort()).toEqual(expectedWatched);
-    expect([...excluded].sort()).toEqual(["bg", "db", "job"]);
+  // Which kinds are watched is the table's own decision (policy.ts, exhaustive
+  // over SpanKind by type) — not restated here, so a new span kind needs one
+  // edit, not two. What a test can hold is the shape of each decision.
+  test("decides every span kind: a positive threshold, or a stated reason", () => {
+    for (const kind of SPAN_KINDS) {
+      const p = STUCK_SPAN_POLICY[kind];
+      if (p.watch) expect(p.thresholdMs).toBeGreaterThan(0);
+      else expect(p.why.trim().length).toBeGreaterThan(0);
+    }
+    expect(WATCHED_KINDS.length).toBeGreaterThan(0);
+    expect(WATCHED_KINDS).toContain("http");
   });
 
   test("pins the real thresholds: http 120 s, the other watched kinds 90 s", () => {

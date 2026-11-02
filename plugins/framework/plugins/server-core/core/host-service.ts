@@ -72,6 +72,11 @@ let unbooted: readonly ServerContribution[] | null = null;
 // own — and are gone once the call settles.
 let scoped: ReadonlyMap<string, unknown> | null = null;
 
+// Every service object defineHostService made, so `isHostService` answers by
+// identity — never by reading properties off an arbitrary module export (a lazy
+// export such as `db` reads its service on access).
+const services = new WeakSet<object>();
+
 export function defineHostService<T>(id: string): HostService<T> {
   if (declared.has(id)) {
     throw new Error(
@@ -83,7 +88,7 @@ export function defineHostService<T>(id: string): HostService<T> {
     { docLabel: () => id },
   );
   declared.set(id, token);
-  return {
+  const service: HostService<T> = {
     id,
     provide: (impl) => token({ impl }),
     get: () => {
@@ -115,6 +120,8 @@ export function defineHostService<T>(id: string): HostService<T> {
       return providers[0]!.impl as T;
     },
   };
+  services.add(service);
+  return service;
 }
 
 function providerCountError(
@@ -183,6 +190,29 @@ export async function withHostServices<T>(
   } finally {
     scoped = previous;
   }
+}
+
+/** Every declared host service's id, sorted — test support (`core/testing`):
+ *  what a graph whose modules are loaded must provide. */
+export function declaredHostServiceIds(): string[] {
+  return [...declared.keys()].sort();
+}
+
+/** True IFF `value` is a service `defineHostService` made — test support
+ *  (`core/testing`), for a suite reading which services a module exports. */
+export function isHostService(value: unknown): value is HostService<unknown> {
+  return typeof value === "object" && value !== null && services.has(value);
+}
+
+/** The ids of the declared host services `contributions` provide, sorted —
+ *  test support (`core/testing`), for a suite choosing a graph's providers. */
+export function hostServicesProvidedBy(
+  contributions: readonly ServerContribution[],
+): string[] {
+  return [...declared]
+    .filter(([, token]) => token.from([{ contributions }]).length > 0)
+    .map(([id]) => id)
+    .sort();
 }
 
 /**

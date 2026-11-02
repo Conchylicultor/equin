@@ -329,8 +329,9 @@ export const compositionsConfig = defineConfig({
         // "agent-manager", "pages"]` — the task detail's Origin, the page
         // chips, the page artifacts and tool renderers, and the Pages app
         // itself) MINUS the surfaces that mean nothing without the computer
-        // behind it. Still only a subtraction: a plugin either app gains
-        // reaches the demo with no edit here. A profile — a variant of the one
+        // behind it, plus whole apps that run in the worker (Prototypes, below)
+        // — never a hand-picked plugin: a plugin either app gains reaches the
+        // demo with no edit here (config.test.ts holds the shape). A profile — a variant of the one
         // agent-manager app, like full vs. lean — not an app of its own: same
         // home, same shell. Never served (`serve: "off"`): it is a browser
         // host's scope, not a deployment.

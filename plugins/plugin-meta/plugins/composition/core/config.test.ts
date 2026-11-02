@@ -297,19 +297,23 @@ test("main's entry points stay exactly `**` — the exclusion lives on the base 
   expect(byName(MAIN_COMPOSITION_ID).entryPoints).toEqual(["**"]);
 });
 
-test("the demo profile is the agent manager and Pages minus machine-only surfaces", () => {
+test("the demo profile is the agent manager and Pages minus machine-only surfaces, plus whole apps", () => {
   // `agent-manager-demo` is what the in-page demo's browser host serves: it
-  // takes the full agent manager and the Pages app by `extends` and only
-  // SUBTRACTS — every own entry is a negative and it selects nothing — so a
-  // plugin either app gains reaches the demo with no edit here. Never served,
-  // same home.
+  // takes the full agent manager and the Pages app by `extends`, so a plugin
+  // either app gains reaches the demo with no edit here. Its own entries
+  // SUBTRACT machine-only surfaces, and the only thing they may add is a whole
+  // app (`apps.<app>.**`, e.g. Prototypes over its in-worker data-files root) —
+  // never a hand-picked plugin, which would drift from the app it belongs to.
+  // It selects nothing. Never served, same home.
   const demo = byName("agent-manager-demo");
   expect(demo.category).toBe("profile");
   expect(demo.extends).toEqual(["agent-manager", "pages"]);
   expect(demo.entryPoints).not.toContain("!apps.pages.**");
   expect(demo.selectedContributors).toEqual([]);
-  expect(demo.entryPoints.length).toBeGreaterThan(0);
-  for (const e of demo.entryPoints) expect(e.startsWith("!")).toBe(true);
+  expect(demo.entryPoints.some((e) => e.startsWith("!"))).toBe(true);
+  for (const e of demo.entryPoints.filter((e) => !e.startsWith("!"))) {
+    expect(e).toMatch(/^apps\.[^.]+\.\*\*$/);
+  }
   expect(demo.entryPoints).toContain(
     "!conversations.conversation-view.push-and-exit.**",
   );

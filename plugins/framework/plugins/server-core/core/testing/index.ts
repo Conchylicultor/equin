@@ -23,6 +23,15 @@ export { clearCollectedContributions } from "../contributions";
 // process's back after, so neither side's services leak into the other's.
 export { isolateHostServices } from "./host-services";
 
+// Which services a graph's loaded modules declared, and which a provider's
+// contributions provide — for a suite choosing a graph's providers from a set
+// of candidates instead of hand-listing them (the portable boot test).
+export {
+  declaredHostServiceIds,
+  hostServicesProvidedBy,
+  isHostService,
+} from "../host-service";
+
 // A headless test process boots no graph, yet runs code that reads host
 // services (`db`, the job queue): the `bun test` preload names the desktop
 // host's providers through this.

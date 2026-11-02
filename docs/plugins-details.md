@@ -27279,7 +27279,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `bootPluginGraph` — Load the plugin graph, run `register`, collect contributions, run the `onReadyBlocking` barrier.
           - `clearCollectedContributions` — Forget what was collected — back to the pre-boot state.
           - `clearRelationBases` — Back to "not set" (test support: a suite that set bases must not leak them into the next).
+          - `declaredHostServiceIds` — Every declared host service's id, sorted — test support (`core/testing`): what a graph whose modules are loaded must provide.
           - `getReadSetIndex` — The whole index as a plain object, each key's tables sorted — every key that ever captured a table, including one a removal emptied (`[]`).
+          - `hostServicesProvidedBy` — The ids of the declared host services `contributions` provide, sorted — test support (`core/testing`), for a suite choosing a graph's providers.
+          - `isHostService` — True IFF `value` is a service `defineHostService` made — test support (`core/testing`), for a suite reading which services a module exports.
           - `isolateHostServices` — Isolate this test file's declared host services: from here on no service is declared (so a graph the suite boots is not asked for the `bun test` preload's desktop providers, and the services the suite declares are its own), and once the file's tests are done the process's declared set comes back exactly as it was — the suite's own services gone, the preload's back for every later suite in the same bun process.
           - `removeReadSetTable` — Remove `table` from the read-set of every key EXCEPT those in `keepKeys` — the one eviction path of an append-only index (a suite isolating its own keys from another's captures).
           - `runPostReadyPhases` — The post-ready phases of a SERVING host (`serve`, `browser`): `onReady` (graph-driven: each plugin fires as soon as its `dependsOn` parents have resolved), then the `onAllReady` barrier. `exec` never runs them — a short-lived child has no subscribers, so no watcher, job runner or LISTEN belongs in it.
