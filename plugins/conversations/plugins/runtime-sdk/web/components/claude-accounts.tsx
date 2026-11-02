@@ -150,7 +150,7 @@ function WeekRoomGlance({
         tone="muted"
         className={cn("tabular-nums", LEVEL_CLASS[level])}
       >
-        {reached ? "Limited" : `${percent(room.left)} left this week`}
+        {reached ? "Limited" : `${percent(room.left)} left`}
       </Text>
     </Stack>
   );

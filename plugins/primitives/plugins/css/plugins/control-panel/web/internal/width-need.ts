@@ -5,7 +5,7 @@
  * - `described` — choices that each carry a visible description line (its
  *   width decides how many lines each description wraps to);
  * - `readout` — rows that carry a measured reading beside their label (a
- *   meter bar over its value, e.g. "51% left this week"), so label, reading
+ *   meter bar over its value, e.g. "51% left"), so label, reading
  *   and the row's mark each keep their own column without truncating;
  * - `picker` — a body that is a grid (swatches, icons, covers, a calendar);
  * - `builder` — a six-track rule row (filter, sort).
