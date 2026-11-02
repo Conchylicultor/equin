@@ -267,7 +267,14 @@ export function defineInlineTokenNode<F extends TokenFields>(
             _editor: LexicalEditor,
           ): HTMLElement {
             const span = document.createElement("span");
-            if (decoration.className) span.className = decoration.className;
+            // `max-w-full`: the host is bounded by its line, so a token wider
+            // than the editor (a long conversation chip) gets constrained and
+            // its own truncating label ellipsizes. An `inline-flex` host
+            // without it sizes to its content's max-content width, and the
+            // chip inside is clipped by the editor instead.
+            span.className = ["max-w-full", decoration.className]
+              .filter(Boolean)
+              .join(" ");
             return span;
           }
 

@@ -136,7 +136,10 @@ export interface InlineTokenNodeSpec<F extends TokenFields> {
 
 /** What a browser host adds on top of the headless class: rendering, only. */
 export interface InlineTokenDecoration<F extends TokenFields> {
-  /** Class on the host `<span>` the decorator's React tree mounts into. */
+  /**
+   * Class on the host `<span>` the decorator's React tree mounts into. The
+   * host always carries `max-w-full` too, so a token never outgrows its line.
+   */
   className?: string;
   /** The chip. `node` is the live instance (for `getKey()` / mutation). */
   render: (fields: F, node: LexicalNode) => ReactNode;
