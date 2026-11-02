@@ -80,6 +80,9 @@ export {
   eventSourceRuns,
   runEvents,
   RUN_EVENTS_LIMIT,
+  runEventLinks,
+  runEventRows,
+  RUN_EVENT_LINKS_MAX,
 } from "./internal/resources";
 export type { EventSourceRunRow } from "./internal/resources";
 export { externalUrl } from "./internal/external-url";

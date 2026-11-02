@@ -32,6 +32,14 @@ import { BASE_ROUTE_ID } from "./routes";
 //   both the tuple it left and the one it joined;
 // - a join's far side has no tuple column: it stays gated, with no match.
 //
+// A follow's tuple is `null` for a follower tuple that reads nothing of it
+// (a registry value following the one collection its params name): no uses.
+// A DEPENDENT follow (`loaded`) reads a tuple computed from other followed
+// rows, so its tuple comes from what the follower tuple's last load noted
+// (`usesOf(params, loaded)`); its routes carry `via.loaded`, which the
+// runtime routes past their match until a load names the tuple, and while
+// one is in flight (resource-runtime's `RouteVia.loaded`).
+//
 // The compile that minted the plan mints the FOLLOWABLE (`followablePoint`,
 // `followableScope`) beside it — the collection's own plan, identity and
 // scope, never restated — and `followRead` is the only way to copy one.
@@ -151,8 +159,15 @@ export interface FollowRead<P extends ResourceParams = ResourceParams> {
   /** The followed collection resource's key. */
   readonly collection: string;
   readonly routes: readonly FullRoute[];
-  /** The routes `params` reads: none for an empty `{ ids }` tuple. */
-  readonly usesOf: (params: P) => ReadonlyMap<string, TupleUse>;
+  /**
+   * The routes `params` reads — none for a `null` tuple or an empty
+   * `{ ids }` one; a loaded follow's tuple from `loaded`, the follower
+   * tuple's last load's note.
+   */
+  readonly usesOf: (
+    params: P,
+    loaded: unknown,
+  ) => ReadonlyMap<string, TupleUse>;
   readonly [FOLLOW_READ]: true;
 }
 
@@ -167,16 +182,31 @@ export function isFollowable(plan: object): plan is FollowablePlan {
 }
 
 /**
+ * Which collection tuple a follower tuple reads: a function of its `params`,
+ * or — `loaded`, a dependent follow — of what its last load noted. `null`:
+ * none.
+ */
+export type FollowTupleOf<P extends ResourceParams> =
+  | {
+      readonly loaded: false;
+      readonly of: (params: P) => FollowTuple | null;
+    }
+  | {
+      readonly loaded: true;
+      readonly of: (loaded: unknown) => FollowTuple | null;
+    };
+
+/**
  * Copy `followable`'s plan into a follower's reach (see the header): the
- * follow `name` reads, for a follower tuple `params`, the collection tuple
- * `tupleOf(params)` — its form (`ids` / `where`) the followable's own. A
- * `tupleOf` that throws, or answers the other form, is reported by the
+ * follow `name` reads, for a follower tuple, the collection tuple
+ * `tuple.of(…)` — its form (`ids` / `where`) the followable's own. A tuple
+ * function that throws, or answers the other form, is reported by the
  * runtime and FULLs that follower tuple.
  */
 export function followRead<P extends ResourceParams>(
   followable: FollowablePlan,
   name: string,
-  tupleOf: (params: P) => FollowTuple,
+  tuple: FollowTupleOf<P>,
 ): FollowRead<P> {
   if (!isFollowable(followable)) {
     throw new Error(
@@ -214,7 +244,9 @@ export function followRead<P extends ResourceParams>(
       columns: route.columns,
       ...(route.rows !== undefined ? { rows: route.rows } : {}),
       ...(match !== undefined && match.length > 0 ? { match } : {}),
-      via: { name, collection },
+      via: tuple.loaded
+        ? { name, collection, loaded: true }
+        : { name, collection },
     };
   });
   const none: ReadonlyMap<string, TupleUse> = new Map();
@@ -237,8 +269,15 @@ export function followRead<P extends ResourceParams>(
         return [idOf(id), copy];
       }),
     );
-  const usesOf = (params: P): ReadonlyMap<string, TupleUse> => {
-    const tuple = tupleOf(params);
+  const usesOf = (
+    params: P,
+    loaded: unknown,
+  ): ReadonlyMap<string, TupleUse> => {
+    const read = tuple.loaded ? tuple.of(loaded) : tuple.of(params);
+    if (read === null) return none;
+    return usesOfTuple(read);
+  };
+  const usesOfTuple = (tuple: FollowTuple): ReadonlyMap<string, TupleUse> => {
     if (followable.form === "ids") {
       if (!("ids" in tuple)) {
         throw new Error(

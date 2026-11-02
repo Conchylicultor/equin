@@ -897,7 +897,27 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));
     exactly its `by` fields. A value, a descriptor, an off-feed / external
     collection, a union, the other form or a wrong scope is a tsc error (and a
     throw). The tuple function takes the SUBJECT (params, or the decoded
-    question).
+    question); it may answer `null` — that subject reads nothing of the follow.
+  - **Dependent follows — `follow.from(deps, target, (subject, rows) => tuple)`**
+    read rows another follow named (a link table's rows naming another
+    collection's): `deps` are follows made before it (a DAG by construction;
+    one `follows` does not return, or one follow under two names, throws),
+    read first and handed under the aliases named. Their routes match what
+    the tuple's LAST LOAD named — the loader's read notes every dependent tuple
+    to the runtime (`LoadRun.noteLoaded`), which routes those routes past
+    their match before a first load and while one is in flight
+    (resource-runtime's `RouteVia.loaded`). Not on a paged value.
+    ```ts
+    follows: (follow) => {
+      const links = follow(linksServed, ({ ownerId }) => ({ where: { ownerId } }));
+      return {
+        links,
+        files: follow.from({ links }, filesServed, (_s, { links }) => ({
+          ids: links.map((l) => l.fileId),
+        })),
+      };
+    },
+    ```
   - **`followed[name]`** — the tuple's rows (`readonly Row[]`), read FRESH in
     each hook's call through the collection's own read (resource-runtime's
     `loadResourceFresh`). Handed to the loader, `revalidate` (its own read: a

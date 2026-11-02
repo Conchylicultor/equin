@@ -25,6 +25,8 @@ import {
   eventSourceRunsServed,
   eventSourcesServed,
   runEventsServed,
+  runEventLinksServed,
+  runEventRowsServed,
 } from "./internal/resources";
 import { IdKinds } from "@plugins/ids/server";
 import { TaskCategory } from "@plugins/tasks/plugins/task-category/server";
@@ -97,5 +99,7 @@ export default {
     ...eventSourcesServed.declare,
     ...eventSourceRunsServed.declare,
     ...runEventsServed.declare,
+    ...runEventLinksServed.declare,
+    ...runEventRowsServed.declare,
   ],
 } satisfies ServerPluginDefinition;

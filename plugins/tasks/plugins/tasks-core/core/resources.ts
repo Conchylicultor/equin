@@ -241,6 +241,29 @@ export const attemptConversationIds = liveCollection(
   },
 );
 
+// An attempt's task, by attempt id — the first hop of a value keyed by
+// attempt that reads its task's rows (task-source-url): followed by
+// `{ ids: [attemptId] }`, its task then followed by the `taskId` read here
+// (`follow.from`). An attempt never changes task, so only its insert or
+// delete reaches a follower.
+export const attemptTasks = liveCollection("attempt-tasks", {
+  from: attemptsEntityRef,
+  carry: { pick: ["id", "taskId"] },
+  baseExposures: false,
+  id: "id",
+});
+
+// Whether each task is dropped, by id — what a value choosing among several
+// tasks by liveness reads (task-subject's live task): a drop or restore of a
+// followed task reaches its followers, any other task write (a title, a
+// status, `updated_at`) reaches none.
+export const taskDroppedStates = liveCollection("task-dropped-states", {
+  from: tasksEntityRef,
+  carry: { pick: ["id", "droppedAt"] },
+  baseExposures: false,
+  id: "id",
+});
+
 // One attempt's pushes' ids — a scoped `all` set followed by
 // `{ where: { attemptId } }` (attempt-work's ledger count). `pushRows` is a
 // window: a window has no per-tuple match to follow by.

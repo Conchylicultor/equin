@@ -322,6 +322,7 @@ export interface ResourceDefinition<
   loader: (
     params: P,
     ctx?: { affectedIds: readonly string[] },
+    run?: LoadRun,
   ) => Promise<T> | T;
   /**
    * Zod schema for the payload. Required. The server parses every loader output
@@ -1292,6 +1293,30 @@ interface RoutingRecord {
    * on every change of its tables. Evicted with the tuple (N→0).
    */
   uses: Map<string, ReadonlyMap<string, TupleUse> | null>;
+  /**
+   * The routes of DEPENDENT follows (`RouteVia.loaded`): a tuple's match on
+   * them is what its last completed load noted (`loaded`). Empty for every
+   * other plan — then `loaded` / `loading` stay empty too.
+   */
+  loadedRoutes: ReadonlySet<string>;
+  /**
+   * Per pk, what the newest-STARTED completed load noted
+   * (`LoadRun.noteLoaded`) and that load's start sequence — so a slower,
+   * older load never overwrites a newer one's. Evicted with the tuple (N→0).
+   */
+  loaded: Map<string, { seq: number; state: unknown }>;
+  /** Per pk, the loads in flight: while any is, loaded routes skip their match (see `usesFor`). */
+  loading: Map<string, number>;
+}
+
+/** What a loader may tell the runtime about its run — only an entry with loaded follow routes is handed one. */
+export interface LoadRun {
+  /**
+   * What this load read that decides the tuple's match on its loaded routes
+   * (`RouteVia.loaded`): handed back to `usesOf(params, loaded)` once the
+   * load completes, unless a newer-started load already completed.
+   */
+  noteLoaded(state: unknown): void;
 }
 
 /** A drift-only routing record's plan (see `RoutingRecord`): it routes nothing. */
@@ -1346,6 +1371,7 @@ interface RegistryEntry {
   loader: (
     params: ResourceParams,
     ctx?: { affectedIds: readonly string[] },
+    run?: LoadRun,
   ) => Promise<unknown> | unknown;
   /** Row identity for keyed mode. Undefined for push/invalidate entries. */
   keyOf?: (row: unknown) => string;
@@ -3093,27 +3119,95 @@ export function createResourceRuntime(
     ctx?: { affectedIds: readonly string[] },
     sink?: { raw: unknown },
   ): Promise<unknown> {
+    const bracket = loadBracket(entry, params);
     const run = async () => {
-      const raw = await declaredLoad(entry, params, ctx);
+      const raw = await declaredLoad(entry, params, ctx, bracket?.run);
       if (sink) sink.raw = raw;
       return entry.schema.parse(raw);
     };
     let load: Promise<unknown>;
     // This run's own capture, once its span closed (see `RunCapture`).
     let own: RunReads | undefined;
-    if (opts.wrapLoad) {
-      const info: LoadInfo = {};
-      if (Object.keys(params).length > 0) info.variant = paramsKey(params);
-      if (ctx) info.scopedIds = ctx.affectedIds.length;
-      load = opts.wrapLoad(entry.key, info, run, (tables, tags) => {
-        own = { tables: [...tables].sort(), tags };
-      });
-    } else {
-      load = run();
+    try {
+      if (opts.wrapLoad) {
+        const info: LoadInfo = {};
+        if (Object.keys(params).length > 0) info.variant = paramsKey(params);
+        if (ctx) info.scopedIds = ctx.affectedIds.length;
+        load = opts.wrapLoad(entry.key, info, run, (tables, tags) => {
+          own = { tables: [...tables].sort(), tags };
+        });
+      } else {
+        load = run();
+      }
+    } catch (err) {
+      // A synchronous throw settles like a rejected load (the bracket's
+      // loading count must come down).
+      load = Promise.reject(err);
     }
-    return driftGuarded(entry)
+    const judged = driftGuarded(entry)
       ? load.then((value) => checkRouteDrift(entry, own)(value))
       : load;
+    return bracket === null ? judged : bracket.settle(judged);
+  }
+
+  // A load of an entry with loaded follow routes (`RouteVia.loaded`): the
+  // tuple counts as loading from before the loader's first read until it
+  // settles — `usesFor` routes its loaded routes past their match meanwhile,
+  // since the load may be naming rows a change it would otherwise skip
+  // already touched. A load that completes installs what it noted, unless a
+  // load started after it already did (its read is newer). One that fails, or
+  // completes noting nothing, DROPS the note (same newer-load rule): a change
+  // routed during it may have moved what the tuple reads, and a stale note
+  // would skip a write to a row it now names — open routes cannot.
+  let loadSeq = 0;
+  function loadBracket(
+    entry: RegistryEntry,
+    params: ResourceParams,
+  ): { run: LoadRun; settle<V>(load: Promise<V>): Promise<V> } | null {
+    const routing = entry.routing;
+    if (routing === undefined || routing.loadedRoutes.size === 0) return null;
+    const pk = paramsKey(params);
+    const seq = ++loadSeq;
+    routing.loading.set(pk, (routing.loading.get(pk) ?? 0) + 1);
+    let noted: { state: unknown } | undefined;
+    const done = () => {
+      const left = (routing.loading.get(pk) ?? 1) - 1;
+      if (left > 0) routing.loading.set(pk, left);
+      else routing.loading.delete(pk);
+    };
+    return {
+      run: {
+        noteLoaded(state) {
+          noted = { state };
+        },
+      },
+      settle: (load) => {
+        const land = (ok: boolean) => {
+          const prev = routing.loaded.get(pk);
+          // Only a tracked tuple keeps a note: an untracked read (HTTP, a
+          // preload) of a tuple nobody holds has nothing to route.
+          if (entry.tracked.has(pk) && (prev === undefined || prev.seq < seq)) {
+            if (ok && noted !== undefined) {
+              routing.loaded.set(pk, { seq, state: noted.state });
+            } else {
+              routing.loaded.delete(pk);
+            }
+            routing.uses.delete(pk);
+          }
+          done();
+        };
+        return load.then(
+          (value) => {
+            land(true);
+            return value;
+          },
+          (err: unknown) => {
+            land(false);
+            throw err;
+          },
+        );
+      },
+    };
   }
 
   // The loader, with one rule on what it may throw: a `ResourceRefusal` must
@@ -3125,9 +3219,12 @@ export function createResourceRuntime(
     entry: RegistryEntry,
     params: ResourceParams,
     ctx?: { affectedIds: readonly string[] },
+    run?: LoadRun,
   ): Promise<unknown> {
     try {
-      return await entry.loader(params, ctx);
+      return await (run === undefined
+        ? entry.loader(params, ctx)
+        : entry.loader(params, ctx, run));
     } catch (err) {
       if (
         err instanceof ResourceRefusal &&
@@ -3421,6 +3518,9 @@ export function createResourceRuntime(
       driftBases: new Set(),
       seededDrift: new Set(),
       uses: new Map(),
+      loadedRoutes: new Set(),
+      loaded: new Map(),
+      loading: new Map(),
     };
   }
 
@@ -4228,6 +4328,11 @@ export function createResourceRuntime(
       driftBases: new Set(),
       seededDrift: new Set(),
       uses: new Map(),
+      loadedRoutes: new Set(
+        plan.routes.filter((r) => r.via?.loaded === true).map((r) => r.id),
+      ),
+      loaded: new Map(),
+      loading: new Map(),
     };
   }
 
@@ -8657,6 +8762,7 @@ export function createResourceRuntime(
       entry.spans.delete(pk);
       entry.held.delete(pk);
       entry.routing?.uses.delete(pk);
+      entry.routing?.loaded.delete(pk);
       // Bound keyed-snapshot memory to actively-observed pks. Re-subscribe
       // re-hydrates via a full sub-ack and rebuilds the snapshot.
       // M5 exception: a PERSISTED `scopedMembership` (unbounded-window alias)
@@ -9460,11 +9566,28 @@ export function createResourceRuntime(
     pk: string,
     params: ResourceParams,
   ): ReadonlyMap<string, TupleUse> | null {
+    const uses = memoUses(entry, routing, pk, params);
+    if (uses === null || routing.loadedRoutes.size === 0) return uses;
+    // A loaded route's match is the last load's note: before one, or while a
+    // load is in flight (it may be naming rows a skipped change touched), the
+    // route reaches the tuple past its match — gate and static rows only.
+    if (routing.loaded.has(pk) && !routing.loading.has(pk)) return uses;
+    const open = new Map(uses);
+    for (const id of routing.loadedRoutes) open.set(id, { role: "membership" });
+    return open;
+  }
+
+  function memoUses(
+    entry: RegistryEntry,
+    routing: RoutingRecord,
+    pk: string,
+    params: ResourceParams,
+  ): ReadonlyMap<string, TupleUse> | null {
     const memo = routing.uses.get(pk);
     if (memo !== undefined || routing.uses.has(pk)) return memo ?? null;
     let uses: ReadonlyMap<string, TupleUse> | null = null;
     try {
-      const answer = routing.plan.usesOf(params);
+      const answer = routing.plan.usesOf(params, routing.loaded.get(pk)?.state);
       const unknown = [...answer.keys()].find(
         (id) => !routing.routeIds.has(id),
       );

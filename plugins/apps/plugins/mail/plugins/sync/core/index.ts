@@ -3,6 +3,8 @@ export {
   mailMessageBody,
   type MailMessageBody,
   mailSearch,
+  mailMessageBodies,
+  mailMessageAttachments,
   type MailSearchQuery,
   type MailSearchHit,
   type MailSearchRefusal,

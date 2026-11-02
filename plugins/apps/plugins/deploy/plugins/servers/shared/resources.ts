@@ -4,6 +4,8 @@ import {
   type LiveRowsCollection,
 } from "@plugins/network/plugins/live/core";
 import { deployServersEntityRef } from "../core";
+import { nullable } from "@plugins/fields/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { SshKeySchema } from "./schemas";
 
 /**
@@ -57,3 +59,25 @@ export const serverSshKey = liveValue("deploy.server-ssh-key", {
   params: ["serverId"],
   schema: SshKeySchema.nullable(),
 });
+
+/**
+ * Each server's stored public key, by id — the follow target of
+ * `serverSshKey` (lookup-only: `:rows` alone). The row is exactly what the
+ * key derives from, so only a write to `ssh_public_key` (storing or
+ * replacing a key) reaches a follower; a rename, a port change or another
+ * server's key reaches none. `sshPublicKey` is a server field of the entity
+ * (never on the ref), carried here as its own field: the public half only,
+ * which the derived `SshKey` names anyway.
+ */
+export const serverSshPublicKeys = liveCollection(
+  "deploy.server-ssh-public-keys",
+  {
+    from: deployServersEntityRef,
+    carry: {
+      pick: ["id"],
+      fields: { sshPublicKey: nullable(textField()) },
+    },
+    baseExposures: false,
+    id: "id",
+  },
+);

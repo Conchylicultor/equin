@@ -38,7 +38,9 @@ function buildServer(row: ServerRow, hasPrivateKey: boolean): Server {
  * The key this app holds for one server — `Server.sshKey`, served on its own
  * (`serverSshKey`) so the registry list stays a plain column projection.
  */
-export async function toSshKey(row: ServerRow): Promise<SshKey | null> {
+export async function toSshKey(
+  row: Pick<ServerRow, "id" | "sshPublicKey">,
+): Promise<SshKey | null> {
   return sshKeyOf(
     row.sshPublicKey,
     await hasSecret({ namespace: SSH_SECRET_NAMESPACE, key: row.id }),

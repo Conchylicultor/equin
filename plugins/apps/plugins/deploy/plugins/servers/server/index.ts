@@ -7,7 +7,11 @@ import { handleDelete } from "./internal/handle-delete";
 import { handleGenerateKeypair } from "./internal/handle-generate-keypair";
 import { handleImportKeypair } from "./internal/handle-import-keypair";
 import { backfillSshPublicKeys } from "./internal/backfill-ssh-public-keys";
-import { serversServed, serverSshKeyServed } from "./internal/resources";
+import {
+  serversServed,
+  serverSshKeyServed,
+  serverSshPublicKeysServed,
+} from "./internal/resources";
 import {
   listServers,
   createServer,
@@ -40,6 +44,7 @@ export default {
     IdKinds.Kind({ kind: deployServerIdKind }),
     ...serversServed.declare,
     ...serverSshKeyServed.declare,
+    ...serverSshPublicKeysServed.declare,
   ],
   onReady: async () => {
     await backfillSshPublicKeys();

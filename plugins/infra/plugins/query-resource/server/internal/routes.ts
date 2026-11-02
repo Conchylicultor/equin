@@ -538,13 +538,15 @@ export function compiledValueReach<P extends ResourceParams>(
   const usesOf =
     lookups.length === 0 && follows.length === 0
       ? () => wholeUses
-      : (params: P): ReadonlyMap<string, TupleUse> => {
+      : (params: P, loaded?: unknown): ReadonlyMap<string, TupleUse> => {
           const uses = new Map(wholeUses);
           for (const lookup of lookups) {
             for (const [id, use] of lookup.usesOf(params)) uses.set(id, use);
           }
           for (const follow of follows) {
-            for (const [id, use] of follow.usesOf(params)) uses.set(id, use);
+            for (const [id, use] of follow.usesOf(params, loaded)) {
+              uses.set(id, use);
+            }
           }
           return uses;
         };

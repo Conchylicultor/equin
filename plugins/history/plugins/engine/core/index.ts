@@ -5,6 +5,10 @@ export { VersionSchema, VersionWithSnapshotSchema } from "./schemas";
 export type { Version, VersionWithSnapshot } from "./schemas";
 
 export { listVersions, restoreVersion } from "./endpoints";
-export { historyVersions, historyVersion } from "./live";
+export {
+  historyVersions,
+  historyVersion,
+  historyVersionSnapshots,
+} from "./live";
 export type { VersionRow } from "./live";
 export { versionFields, entityVersionsEntityRef } from "./entity";

@@ -18,9 +18,11 @@ import {
   attemptConversationIdsServed,
   attemptDeliveriesServed,
   attemptPushIdsServed,
+  attemptTasksServed,
   conversationRuntimesServed,
   conversationSessionTailsServed,
   conversationWorkspacesServed,
+  taskDroppedStatesServed,
 } from "./internal/follow-targets";
 import { attempts, conversations, taskBlocking, tasks } from "./internal/views";
 import {
@@ -70,11 +72,16 @@ export {
 // for a lookup, `follow(attemptConversationIdsServed, ({ attemptId }) =>
 // ({ where: { attemptId } }))` for a scoped set. The handle (never the core
 // descriptor) proves the collection is served on this host.
-export { attemptWorkspacesServed } from "./internal/resources";
+export {
+  attemptWorkspacesServed,
+  taskDescriptionsServed,
+} from "./internal/resources";
 export {
   attemptConversationIdsServed,
   attemptPushIdsServed,
   attemptDeliveriesServed,
+  attemptTasksServed,
+  taskDroppedStatesServed,
   conversationWorkspacesServed,
   conversationSessionTailsServed,
   conversationRuntimesServed,
@@ -320,6 +327,8 @@ export default {
     ...attemptWorkspacesServed.declare,
     ...attemptConversationIdsServed.declare,
     ...attemptPushIdsServed.declare,
+    ...attemptTasksServed.declare,
+    ...taskDroppedStatesServed.declare,
     ...attemptDeliveriesServed.declare,
     ...conversationWorkspacesServed.declare,
     ...conversationSessionTailsServed.declare,

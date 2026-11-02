@@ -339,8 +339,8 @@ serves them.
     - `useTaskAttempts`
     - `useTaskConversations`
 - Server:
-  - Contributes: 37 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `resource.declare` ×26
+  - Contributes: 39 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `resource.declare` ×28
     - `derived-view` ×4
     - `ids.kind` ×3
     - `derived-table` ×2
@@ -423,6 +423,7 @@ serves them.
     - `attemptPushIdsServed`
     - `AttemptSchema`
     - `AttemptStatusSchema`
+    - `attemptTasksServed`
     - `attemptWorkspacesServed`
     - `claimHibernatedResume`
     - `clearMandate`
@@ -492,6 +493,8 @@ serves them.
     - `taskCreated`
     - `taskDependsOn`
     - `taskDescriptionChanged`
+    - `taskDescriptionsServed`
+    - `taskDroppedStatesServed`
     - `TaskListItemSchema`
     - `taskRefiled`
     - `TaskSchema`
@@ -523,6 +526,7 @@ serves them.
     - `attempt-deliveries:rows` (keyed, point)
     - `attempt-push-ids` (keyed)
     - `attempt-push-ids:rows` (keyed, point)
+    - `attempt-tasks:rows` (keyed, point)
     - `attempt-workspaces:rows` (keyed, point)
     - `attempts` (keyed)
     - `attempts:rows` (keyed, point)
@@ -542,6 +546,7 @@ serves them.
     - `pushes:groups` (push)
     - `pushes:rows` (keyed, point)
     - `task-descriptions:rows` (keyed, point)
+    - `task-dropped-states:rows` (keyed, point)
     - `tasks` (keyed)
     - `tasks:rows` (keyed, point)
 - Core:
@@ -596,6 +601,7 @@ serves them.
     - `AttemptSchema`
     - `attemptsEntityRef`
     - `AttemptStatusSchema`
+    - `attemptTasks`
     - `attemptWorkspaces`
     - `BLOCKED_STATUSES`
     - `buildTaskPrompt`
@@ -630,6 +636,7 @@ serves them.
     - `taskDependenciesEntityRef`
     - `taskDescriptions`
     - `taskDetailRoute`
+    - `taskDroppedStates`
     - `TaskFilingStartSchema`
     - `TaskGraph`
     - `TaskListItemSchema`

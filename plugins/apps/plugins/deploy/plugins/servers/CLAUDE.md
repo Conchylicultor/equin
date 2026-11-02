@@ -113,6 +113,7 @@ plus `sshKey`.
   - Contributes:
     - `ids.kind` "srv"
     - `resource.declare` "deploy.server-ssh-key"
+    - `resource.declare` "deploy.server-ssh-public-keys:rows"
     - `resource.declare` "deploy.servers.all"
     - `resource.declare` "deploy.servers.all:rows"
   - Uses:
@@ -136,6 +137,7 @@ plus `sshKey`.
     - `getServerSshPrivateKey`
   - Resources:
     - `deploy.server-ssh-key` (push)
+    - `deploy.server-ssh-public-keys:rows` (keyed, point)
     - `deploy.servers.all` (keyed)
     - `deploy.servers.all:rows` (keyed, point)
   - Routes:
@@ -178,6 +180,7 @@ plus `sshKey`.
     - `apps/deploy/fixtures`
     - `apps/deploy/health`
     - `apps/deploy/ssh-setup`
+    - `debug/read-set`
   - Extended by: `apps/deploy/health` (table `deploy_servers_ext_health`)
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/ssh-keygen.ts`, `server/internal/ssh-public-key.ts` (debt)

@@ -3,9 +3,12 @@ import {
   serveValue,
 } from "@plugins/network/plugins/live/server";
 import {
+  eventRunIdKind,
   eventSourceRuns,
   eventSources,
   RUN_EVENTS_LIMIT,
+  runEventLinks,
+  runEventRows,
   runEvents,
 } from "../../core";
 import {
@@ -14,7 +17,7 @@ import {
   _eventSourceRuns,
   _eventSourceRunEvents,
 } from "./tables";
-import { listRunEvents, runExists } from "./sources-repo";
+import { runEventsOf } from "./run-events";
 
 // The sources collection over `event_sources`: the whole ordered set and its
 // `:rows` point sibling. Every column is on the wire — a source row is small
@@ -38,21 +41,45 @@ export const eventSourceRunsServed = serveCollection(eventSourceRuns, {
   from: _eventSourceRuns,
 });
 
-// One run's events (`events.run-events`). The declared reads are the run, its
-// run-events rows, the events and their sources, so an open tuple recomputes when the run's set lands (one transaction at the end of the
-// run), when a listed event or its source changes, and when retention or a
-// source delete removes the run — which then answers `missing`, never `[]`.
+// The rows `events.run-events` follows: one run's set (the run-events
+// table, over its composite key) and the events it names.
+export const runEventLinksServed = serveCollection(runEventLinks, {
+  from: _eventSourceRunEvents,
+});
+export const runEventRowsServed = serveCollection(runEventRows, {
+  from: _events,
+});
+
+// One run's events (`events.run-events`): the run (its existence), its set,
+// then the events the set names and their sources (`follow.from`). The run's
+// set lands once, in one transaction at the end of the run; a listed event's
+// edit or its source's rename reaches it; retention or a source delete
+// removing the run answers `missing`, never `[]`. A write about any other
+// run, event or source reaches none.
 export const runEventsServed = serveValue(runEvents, {
   source: "db",
-  reads: {
-    tables: [_eventSourceRuns, _eventSourceRunEvents, _events, _eventSources],
-    reason:
-      "one run's events joined to their sources, and the run's existence check; whole-table until it follows them through collections (task-1793650999-1nff0e)",
+  follows: (follow) => {
+    const links = follow(runEventLinksServed, ({ runId }) => ({
+      where: { runId: eventRunIdKind.key(runId) },
+    }));
+    const events = follow.from({ links }, runEventRowsServed, (_p, r) => ({
+      ids: r.links.map((l) => l.eventId),
+    }));
+    return {
+      run: follow(eventSourceRunsServed, ({ runId }) => ({
+        ids: [eventRunIdKind.key(runId)],
+      })),
+      links,
+      events,
+      sources: follow.from({ events }, eventSourcesServed, (_p, r) => ({
+        ids: [...new Set(r.events.map((e) => e.sourceId))],
+      })),
+    };
   },
-  loader: async ({ runId }) => {
-    if (!(await runExists(runId))) {
+  loader: ({ runId }, { followed }) => {
+    if (followed.run.length === 0) {
       throw runEvents.refuse("missing", `Unknown event source run: ${runId}`);
     }
-    return listRunEvents(runId, RUN_EVENTS_LIMIT);
+    return runEventsOf(followed, RUN_EVENTS_LIMIT);
   },
 });

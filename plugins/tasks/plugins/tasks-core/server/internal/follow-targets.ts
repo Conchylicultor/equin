@@ -6,12 +6,20 @@ import {
   attemptConversationIds,
   attemptDeliveries,
   attemptPushIds,
+  attemptTasks,
   conversationRuntimes,
   conversationSessionTails,
   conversationWorkspaces,
+  taskDroppedStates,
 } from "../../core";
 import { conversationAttemptJoin } from "./conversation-owner";
-import { _attemptDeliveries, _conversations, pushes } from "./tables";
+import {
+  _attemptDeliveries,
+  _attempts,
+  _conversations,
+  _tasks,
+  pushes,
+} from "./tables";
 
 // The follow targets (core: `../../core/resources.ts`, *Follow targets*) as
 // they bind to the database — the ONE spelling the served handles below and
@@ -56,6 +64,20 @@ export const conversationSessionTailsServeOptions = { from: _conversations };
 /** `conversation-runtimes`: a conversation's runtime and status. */
 export const conversationRuntimesServeOptions = { from: _conversations };
 
+/** `attempt-tasks`: an attempt's task. */
+export const attemptTasksServeOptions = { from: _attempts };
+
+/** `task-dropped-states`: whether a task is dropped. */
+export const taskDroppedStatesServeOptions = { from: _tasks };
+
+export const attemptTasksServed = serveCollection(
+  attemptTasks,
+  attemptTasksServeOptions,
+);
+export const taskDroppedStatesServed = serveCollection(
+  taskDroppedStates,
+  taskDroppedStatesServeOptions,
+);
 export const attemptConversationIdsServed = serveCollection(
   attemptConversationIds,
   attemptConversationIdsServeOptions,

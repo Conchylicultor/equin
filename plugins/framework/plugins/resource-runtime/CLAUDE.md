@@ -437,6 +437,27 @@ like any reach route (gate, `rows` ∧ `use.match`, then FULL): no new edge kind
     state.
   - Throws on an unknown key, an unbound deferred one, and a tuple its params
     gate refuses.
+- **Loaded follow routes — `RouteVia.loaded`** (network/live's dependent
+  `follow.from`): the tuple a follow reads is computed from other followed
+  rows, so a follower tuple's `match` on its routes comes from its last
+  load, not its params.
+  - A loader of an entry with loaded routes is handed a third argument,
+    `run: LoadRun`; `run.noteLoaded(state)` records what the load read.
+  - `timedLoad` brackets the load (`loadBracket`): the tuple counts as
+    loading from before the loader's first read until it settles; a
+    completed load installs its note (per pk, `RoutingRecord.loaded`) unless
+    a later-started load already did; one that fails or notes nothing drops
+    the note (open routes until a load notes again: a stale note could skip a
+    row the tuple now names); a synchronous throw settles like a rejection;
+    the note is evicted with the tuple (N→0). Untracked reads keep no note.
+  - `usesOf(params, loaded)` is asked with the installed note (memoized,
+    dropped when a note is installed). `usesFor` routes every loaded route
+    PAST its match — gate and static rows only — for a tuple with no note
+    yet, or with a load in flight: that load may be naming a row a skipped
+    change already touched. The change then re-runs the tuple after the
+    flight.
+  - `mintReachPlan` refuses a follow whose routes disagree on `loaded`.
+  - Pinned by `core/runtime-loaded-follows.test.ts`.
 - **`_debug`**: `follows: [{ name, collection }]` per key (from the plan's `via`
   routes) and `followRepoints`.
 - **Messages.** D32 / T15 and the routed `recomputeOn` refusals point to
@@ -775,6 +796,7 @@ Out of reach at this seam (DB-backed harness instead):
     - `KeyedMembershipInput`
     - `KeyedResourceContract`
     - `KeyedServerResourceOptions`
+    - `LoadRun`
     - `NotifiedRead`
     - `NotifyCounts`
     - `PersistedBase`

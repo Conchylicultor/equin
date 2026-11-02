@@ -1,6 +1,6 @@
 {
-  "id": "18710111-d80a-4024-813c-2813d22ace91",
-  "prevId": "b02e4416-c2bf-4b1c-94cd-0cfc598ff989",
+  "id": "409d9e32-4a9f-4e9c-99e7-e221f7422695",
+  "prevId": "18710111-d80a-4024-813c-2813d22ace91",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -9015,6 +9015,37 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.claude_cli_call_horizon": {
+      "name": "claude_cli_call_horizon",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "total": {
+          "name": "total",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "oldest": {
+          "name": "oldest",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},

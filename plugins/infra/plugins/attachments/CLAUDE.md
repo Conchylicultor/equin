@@ -69,13 +69,17 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
     - `resource.declare` "attachments.by-owner"
     - `resource.declare` "attachments.bytes"
     - `resource.declare` "attachments.file"
+    - `resource.declare` "attachments.rows:rows"
     - `host-service:attachments.blobs` "attachments.blobs"
   - Uses:
     - `database.db`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/endpoints.rawEndpointHandler`
+    - `infra/entities.defaultNow`
+    - `infra/entities.defineEntity`
     - `infra/jobs.defineJob`
+    - `network/live.serveCollection`
     - `network/live.serveValue`
     - `primitives/log-channels.Log`
   - DB schema:
@@ -96,6 +100,7 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
     - `attachments.by-owner` (push, whole: one owner's attachments — the files a person attached to one task or block, a handful, never a growing log)
     - `attachments.bytes` (invalidate, immutable)
     - `attachments.file` (push)
+    - `attachments.rows:rows` (keyed, point)
   - Routes:
     - `POST /api/attachments`
     - `GET /api/attachments/:id`
@@ -103,9 +108,14 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
     - `PUT /api/attachments/holds`
 - Core:
   - Uses:
+    - `fields/date/config.dateField`
+    - `fields/int/config.intField`
+    - `fields/text/config.textField`
     - `infra/endpoints.blob`
     - `infra/endpoints.dateString`
     - `infra/endpoints.defineEndpoint`
+    - `infra/entities.entityRef`
+    - `network/live.liveCollection`
     - `network/live.liveValue`
     - `packages/list-bound.wholeList`
   - Exports (types):
@@ -113,10 +123,13 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
     - `AttachmentFile`
   - Exports (values):
     - `attachmentBytes`
+    - `attachmentFields`
     - `attachmentFile`
     - `AttachmentFileSchema`
+    - `attachmentRows`
     - `attachmentsByOwner`
     - `AttachmentSchema`
+    - `attachmentsEntityRef`
     - `getAttachmentFile`
 - Cross-plugin:
   - Imported by:
@@ -129,6 +142,7 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
     - `apps/sonata/transcription`
     - `conversations`
     - `conversations/agents`
+    - `debug/read-set`
     - `infra/attachments/memory-blobs`
     - `page/attachment-block`
     - `page/audio`

@@ -176,9 +176,12 @@ function pointOver(
 describe("{ ids } — a `:rows` point set's plan, copied", () => {
   test("every route is the collection's own: gate kept, mapped full, tagged via; the base matched on the identity, the far side gated with no match", () => {
     const followable = workspaces();
-    const read = followRead<{ conv: string }>(followable, "ws", (p) => ({
-      ids: [p.conv],
-    }));
+    const read = followRead<{ conv: string }>(followable, "ws", {
+      loaded: false,
+      of: (p) => ({
+        ids: [p.conv],
+      }),
+    });
     expect(read.collection).toBe("fo-ws:rows");
     const own = new Map(followable.plan.routes.map((r) => [r.id, r]));
     expect(read.routes.map((r) => r.id).sort()).toEqual(
@@ -202,65 +205,70 @@ describe("{ ids } — a `:rows` point set's plan, copied", () => {
   });
 
   test("each follower tuple's uses: the base matched on exactly its ids; an empty id set reads nothing", () => {
-    const read = followRead<{ conv: string }>(workspaces(), "ws", (p) =>
-      p.conv === "" ? { ids: [] } : { ids: [p.conv] },
-    );
-    const uses = read.usesOf({ conv: "c1" });
+    const read = followRead<{ conv: string }>(workspaces(), "ws", {
+      loaded: false,
+      of: (p) => (p.conv === "" ? { ids: [] } : { ids: [p.conv] }),
+    });
+    const uses = read.usesOf({ conv: "c1" }, undefined);
     const base = read.routes.find((r) => r.table === "fo_conversations")!;
     expect([...uses.get(base.id)!.match!.id!]).toEqual(["c1"]);
     const far = read.routes.find((r) => r.table === "fo_attempts")!;
     expect(uses.get(far.id)?.match).toBeUndefined();
-    expect(read.usesOf({ conv: "" }).size).toBe(0);
+    expect(read.usesOf({ conv: "" }, undefined).size).toBe(0);
   });
 
   test("an id the identity's text cannot equal is refused; an identity with no one spelling cannot be followed", () => {
     const read = followRead<{ id: string }>(
       pointOver(uuidKeyed, "fo-uuid:rows"),
       "u",
-      (p) => ({ ids: [p.id] }),
+      { loaded: false, of: (p) => ({ ids: [p.id] }) },
     );
-    expect([...read.usesOf({ id: PAGE }).values()][0]!.match!.id).toEqual(
-      new Set([PAGE]),
-    );
-    expect(() => read.usesOf({ id: PAGE.toUpperCase() })).toThrow(
+    expect(
+      [...read.usesOf({ id: PAGE }, undefined).values()][0]!.match!.id,
+    ).toEqual(new Set([PAGE]));
+    expect(() => read.usesOf({ id: PAGE.toUpperCase() }, undefined)).toThrow(
       /canonical form/,
     );
     expect(() =>
-      followRead<{ id: string }>(
-        pointOver(timeKeyed, "fo-time:rows"),
-        "t",
-        (p) => ({ ids: [p.id] }),
-      ),
+      followRead<{ id: string }>(pointOver(timeKeyed, "fo-time:rows"), "t", {
+        loaded: false,
+        of: (p) => ({ ids: [p.id] }),
+      }),
     ).toThrow(/timestamp with time zone/);
   });
 
   test("a tuple of the other form is refused", () => {
-    const read = followRead<ResourceParams>(
-      workspaces(),
-      "ws",
-      () => ({ where: { x: "1" } }) as never,
-    );
-    expect(() => read.usesOf({})).toThrow(/not `\{ ids \}`/);
+    const read = followRead<ResourceParams>(workspaces(), "ws", {
+      loaded: false,
+      of: () => ({ where: { x: "1" } }) as never,
+    });
+    expect(() => read.usesOf({}, undefined)).toThrow(/not `\{ ids \}`/);
   });
 });
 
 describe("{ where } — a scoped `all` set's plan, copied", () => {
   test("the base route matches on the scope column (carried old ∪ new by the feed: a re-scoped row reaches both tuples)", () => {
-    const read = followRead<{ page: string }>(pageBlocks(), "blocks", (p) => ({
-      where: { pageId: p.page },
-    }));
+    const read = followRead<{ page: string }>(pageBlocks(), "blocks", {
+      loaded: false,
+      of: (p) => ({
+        where: { pageId: p.page },
+      }),
+    });
     const base = read.routes.find((r) => r.table === "fo_blocks")!;
     expect(base.match).toEqual(["page_id"]);
     expect(base.via).toEqual({ name: "blocks", collection: "fo-blocks" });
-    const uses = read.usesOf({ page: PAGE });
+    const uses = read.usesOf({ page: PAGE }, undefined);
     expect([...uses.get(base.id)!.match!.page_id!]).toEqual([PAGE]);
   });
 
   test("a scope the column's text cannot equal is refused by the collection's own gate", () => {
-    const read = followRead<{ page: string }>(pageBlocks(), "blocks", (p) => ({
-      where: { pageId: p.page },
-    }));
-    expect(() => read.usesOf({ page: PAGE.toUpperCase() })).toThrow(
+    const read = followRead<{ page: string }>(pageBlocks(), "blocks", {
+      loaded: false,
+      of: (p) => ({
+        where: { pageId: p.page },
+      }),
+    });
+    expect(() => read.usesOf({ page: PAGE.toUpperCase() }, undefined)).toThrow(
       /canonical form/,
     );
   });
@@ -269,21 +277,59 @@ describe("{ where } — a scoped `all` set's plan, copied", () => {
     const fake = { ...pageBlocks() } as Record<PropertyKey, unknown>;
     for (const sym of Object.getOwnPropertySymbols(fake)) delete fake[sym];
     expect(() =>
-      followRead(fake as unknown as FollowablePlan, "x", () => ({ ids: [] })),
+      followRead(fake as unknown as FollowablePlan, "x", {
+        loaded: false,
+        of: () => ({ ids: [] }),
+      }),
     ).toThrow(/not minted by a collection compile/);
+  });
+});
+
+describe("null and loaded tuples", () => {
+  test("a null tuple reads nothing of the follow", () => {
+    const read = followRead<{ conv: string }>(workspaces(), "ws", {
+      loaded: false,
+      of: (p) => (p.conv === "" ? null : { ids: [p.conv] }),
+    });
+    expect(read.usesOf({ conv: "" }, undefined).size).toBe(0);
+    expect(read.usesOf({ conv: "c1" }, undefined).size).toBeGreaterThan(0);
+  });
+
+  test("a loaded follow's routes carry `via.loaded`, and its uses come from the load's note — none before one", () => {
+    const read = followRead<{ owner: string }>(workspaces(), "ws", {
+      loaded: true,
+      of: (loaded) => {
+        const ids = (loaded as { ws?: string[] } | undefined)?.ws;
+        return ids === undefined ? null : { ids };
+      },
+    });
+    for (const route of read.routes) {
+      expect(route.via).toEqual({
+        name: "ws",
+        collection: "fo-ws:rows",
+        loaded: true,
+      });
+    }
+    expect(read.usesOf({ owner: "o" }, undefined).size).toBe(0);
+    const uses = read.usesOf({ owner: "o" }, { ws: ["c1", "c2"] });
+    const base = read.routes.find((r) => r.table === "fo_conversations")!;
+    expect([...uses.get(base.id)!.match!.id!].sort()).toEqual(["c1", "c2"]);
   });
 });
 
 describe("compiledValueReach with follows", () => {
   const ws = () =>
-    followRead<{ conv: string }>(workspaces(), "ws", (p) => ({
-      ids: [p.conv],
-    })) as FollowRead<{ conv: string }>;
+    followRead<{ conv: string }>(workspaces(), "ws", {
+      loaded: false,
+      of: (p) => ({
+        ids: [p.conv],
+      }),
+    }) as FollowRead<{ conv: string }>;
 
   test("reads are optional beside a follow; its routes join the plan with their uses", () => {
     const plan = compiledValueReach<{ conv: string }>(undefined, "v", [ws()]);
     expect(plan.routes.every((r) => r.via?.name === "ws")).toBe(true);
-    const uses = plan.usesOf({ conv: "c1" });
+    const uses = plan.usesOf({ conv: "c1" }, undefined);
     expect([...uses.keys()].sort()).toEqual(
       plan.routes.map((r) => r.id).sort(),
     );
@@ -345,7 +391,7 @@ describe("compiledValueReach with follows", () => {
     );
     const whole = plan.routes.find((r) => r.table === "fo_blocks")!;
     expect(whole.via).toBeUndefined();
-    expect(plan.usesOf({ conv: "c1" }).get(whole.id)).toEqual({
+    expect(plan.usesOf({ conv: "c1" }, undefined).get(whole.id)).toEqual({
       role: "membership",
     });
   });

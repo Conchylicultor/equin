@@ -1,37 +1,47 @@
-import { eq } from "drizzle-orm";
-import { db } from "@plugins/database/server";
-import { _attempts, _tasks } from "@plugins/tasks/plugins/tasks-core/server";
-import { serveValue } from "@plugins/network/plugins/live/server";
+import {
+  attemptTasksServed,
+  taskDescriptionsServed,
+} from "@plugins/tasks/plugins/tasks-core/server";
+import {
+  serveCollection,
+  serveValue,
+} from "@plugins/network/plugins/live/server";
 import { splitUiContext } from "@plugins/primitives/plugins/ui-context/core";
-import { attemptSourceUrl } from "../../core";
+import { attemptSourceUrl, taskSourceUrls } from "../../core";
 import { tasksSourceUrl } from "./tables";
 
-// The loader reads the attempt, its task and the side table; `reads` declares
-// them, so a write to any of them recomputes the subscribed attempts.
+// Each task's stored source url, by task id.
+export const taskSourceUrlsServed = serveCollection(taskSourceUrls, {
+  from: tasksSourceUrl,
+});
+
+// The attempt's task, then that task's stored url and its description (the
+// fallback's `<ui-context>`), each followed by the task id the attempt names
+// (`follow.from`): a url stored or a description edited for this task
+// recomputes the attempts of it, and another task's reach none.
 export const attemptSourceUrlServed = serveValue(attemptSourceUrl, {
   source: "db",
-  reads: {
-    tables: [_attempts, _tasks, tasksSourceUrl.table],
-    reason:
-      "the source url joins an attempt to its task and the task's source-url row; a write to any row may change any subscribed attempt, whole-table until it follows them through collections (task-1793650999-1nff0e)",
-  },
-  loader: async ({ attemptId }) => {
-    const [row] = await db
-      .select({
-        url: tasksSourceUrl.table.url,
-        description: _tasks.description,
-      })
-      .from(_attempts)
-      .innerJoin(_tasks, eq(_tasks.id, _attempts.taskId))
-      .leftJoin(
-        tasksSourceUrl.table,
-        eq(tasksSourceUrl.table.taskId, _attempts.taskId),
-      )
-      .where(eq(_attempts.id, attemptId));
+  follows: (follow) => {
+    const attempt = follow(attemptTasksServed, ({ attemptId }) => ({
+      ids: [attemptId],
+    }));
+    const taskOf = (rows: readonly { taskId: string }[]) =>
+      rows[0] === undefined ? null : { ids: [rows[0].taskId] };
     return {
-      url: row?.url ?? uiContextUrl(row?.description ?? null),
+      attempt,
+      stored: follow.from({ attempt }, taskSourceUrlsServed, (_p, r) =>
+        taskOf(r.attempt),
+      ),
+      task: follow.from({ attempt }, taskDescriptionsServed, (_p, r) =>
+        taskOf(r.attempt),
+      ),
     };
   },
+  loader: (_params, { followed }) => ({
+    url:
+      followed.stored[0]?.url ??
+      uiContextUrl(followed.task[0]?.description ?? null),
+  }),
 });
 
 /**

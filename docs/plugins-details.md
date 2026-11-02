@@ -2876,6 +2876,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `ids.kind` "srv"
               - `resource.declare` "deploy.server-ssh-key"
+              - `resource.declare` "deploy.server-ssh-public-keys:rows"
               - `resource.declare` "deploy.servers.all"
               - `resource.declare` "deploy.servers.all:rows"
             - Uses:
@@ -2899,6 +2900,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `getServerSshPrivateKey`
             - Resources:
               - `deploy.server-ssh-key` (push)
+              - `deploy.server-ssh-public-keys:rows` (keyed, point)
               - `deploy.servers.all` (keyed)
               - `deploy.servers.all:rows` (keyed, point)
             - Routes:
@@ -2941,6 +2943,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/fixtures`
               - `apps/deploy/health`
               - `apps/deploy/ssh-setup`
+              - `debug/read-set`
             - Extended by: `apps/deploy/health` (table `deploy_servers_ext_health`)
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/ssh-keygen.ts`, `server/internal/ssh-public-key.ts` (debt)
@@ -3734,6 +3737,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ids.kind` "evs"
               - `ids.kind` "evt"
               - `taskCategory` "events"
+              - `resource.declare` "events.run-event-links"
+              - `resource.declare` "events.run-event-links:rows"
+              - `resource.declare` "events.run-event-rows:rows"
               - `resource.declare` "events.run-events"
               - `resource.declare` "events.source-runs"
               - `resource.declare` "events.source-runs:groups"
@@ -3781,6 +3787,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `updateSource`
               - `upsertEvents`
             - Resources:
+              - `events.run-event-links` (keyed)
+              - `events.run-event-links:rows` (keyed, point)
+              - `events.run-event-rows:rows` (keyed, point)
               - `events.run-events` (push, capped: RUN_EVENTS_LIMIT, whole: the flags one source run raised — a few, whole: one source's per-type input — its type's configFields)
               - `events.source-runs` (keyed, window)
               - `events.source-runs:groups` (push)
@@ -3796,7 +3805,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `POST /api/events/sources/:id/refresh`
               - `POST /api/events/sources/refresh-all`
           - Core:
-            - Uses: 24 symbols — full list in [`plugins/apps/plugins/events/plugins/events-core/REFERENCE.md`](../plugins/apps/plugins/events/plugins/events-core/REFERENCE.md)
+            - Uses: 25 symbols — full list in [`plugins/apps/plugins/events/plugins/events-core/REFERENCE.md`](../plugins/apps/plugins/events/plugins/events-core/REFERENCE.md)
               - `fields` ×3
               - `ids` ×3
               - `network/live` ×3
@@ -3811,6 +3820,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields/tags/config.tagsField`
               - `infra/endpoints.defineEndpoint`
               - `infra/entities.entityRef`
+              - `infra/query-resource.compositeKey`
             - Exports (types):
               - `CreateEventSourceBody`
               - `EventCategory`
@@ -3875,9 +3885,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `refreshEventSourceNow`
               - `RefreshSourceResultSchema`
               - `RUN_EVENT_ACTIONS`
+              - `RUN_EVENT_LINKS_MAX`
               - `RUN_EVENTS_LIMIT`
               - `RUN_OUTCOME_META`
               - `RUN_OUTCOMES`
+              - `runEventLinks`
+              - `runEventRows`
               - `runEvents`
               - `RunEventSchema`
               - `SOURCE_STATES`
@@ -5313,14 +5326,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Server:
             - Contributes:
               - `resource.declare` "mail-sync-state"
+              - `resource.declare` "mail.message-attachments"
+              - `resource.declare` "mail.message-attachments:rows"
+              - `resource.declare` "mail.message-bodies:rows"
               - `resource.declare` "mail.message-body"
               - `resource.declare` "mail.search"
-            - Uses: 22 symbols — full list in [`plugins/apps/plugins/mail/plugins/sync/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/sync/REFERENCE.md)
+            - Uses: 23 symbols — full list in [`plugins/apps/plugins/mail/plugins/sync/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/sync/REFERENCE.md)
               - `apps/mail/mail-core` ×8
               - `apps/mail/gmail-api` ×5
+              - `network/live` ×3
               - `infra/endpoints` ×2
               - `infra/jobs` ×2
-              - `network/live` ×2
               - `database.db`
               - `integrations/gmail.isGmailEnabled`
               - `primitives/log-channels.defineLogSink`
@@ -5332,6 +5348,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `defineJob('mail.hydrate')`
             - Resources:
               - `mail-sync-state` (push, whole: one row per connected mail account — the app is single-account today)
+              - `mail.message-attachments` (keyed)
+              - `mail.message-attachments:rows` (keyed, point)
+              - `mail.message-bodies:rows` (keyed, point)
               - `mail.message-body` (push, whole: one message's attachments — Gmail bounds a message at 25 MB)
               - `mail.search` (keyed, window, fixed)
             - Routes:
@@ -5352,7 +5371,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `apps/mail/mail-core.mailAccountIdKind`
               - `apps/mail/mail-core.MailAttachmentSchema`
+              - `apps/mail/mail-core.mailAttachmentsEntityRef`
+              - `apps/mail/mail-core.mailMessagesEntityRef`
               - `infra/endpoints.defineEndpoint`
+              - `network/live.liveCollection`
               - `network/live.liveValue`
               - `packages/list-bound.wholeList`
             - Exports (types):
@@ -5365,6 +5387,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `BACKFILL_WINDOW_DAYS`
               - `MAIL_SEARCH_MAX_CHARS`
               - `mailHydrateMessageEndpoint`
+              - `mailMessageAttachments`
+              - `mailMessageBodies`
               - `mailMessageBody`
               - `mailSearch`
               - `mailSyncEndpoint`
@@ -20496,12 +20520,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `schemaChangedAtBoot`
       - `snapshotWatermark`
   - Cross-plugin:
-    - Imported by: 136 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 135 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×39
       - `conversations` ×15
       - `page` ×15
       - `infra` ×13
-      - `tasks` ×13
+      - `tasks` ×12
       - `active-data` ×8
       - `debug` ×7
       - `database` ×5
@@ -23175,21 +23199,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `readSetPane`
       - Server:
         - Contributes: `resource.declare` "resources.debug"
-        - Uses:
+        - Uses: 26 symbols — full list in [`plugins/debug/plugins/read-set/REFERENCE.md`](../plugins/debug/plugins/read-set/REFERENCE.md)
+          - `tasks/tasks-core` ×9
+          - `infra/claude-cli` ×3
+          - `infra/endpoints` ×2
+          - `page/annotations/agent-notes/authorship` ×2
+          - `apps/deploy/servers._deployServers`
           - `conversations/session-chain.recordSessionId`
           - `conversations/transcript-watcher.refreshConversationChain`
           - `database.db`
-          - `infra/endpoints.HttpError`
-          - `infra/endpoints.implement`
+          - `history/engine._entityVersions`
+          - `infra/attachments._attachments`
           - `network/live.serveValue`
-          - `page/annotations/agent-notes/authorship._pageBlocksAgentAuthors`
-          - `page/annotations/agent-notes/authorship.recordAgentNotesAuthor`
           - `primitives/data-view/view-order._dataViewRowOrder`
-          - `tasks/tasks-core.deleteConversationRow`
-          - `tasks/tasks-core.getConversation`
-          - `tasks/tasks-core.insertConversation`
-          - `tasks/tasks-core.moveConversationToAttempt`
-          - `tasks/tasks-core.updateConversation`
+          - `tasks/task-source-url.setTaskSourceUrl`
+          - `tasks/task-subject.setTaskSubject`
         - Resources: `resources.debug` (invalidate, snapshot, whole: one per resource this backend registered — the declared resource keys, a few hundred, never the rows they serve, whole: the tables one resource reads or is reached through — a handful per resource, whole: one key per params-tuple some open tab subscribes to — what the user's tabs hold, never the data set, whole: the lists one value's schema reaches — a path per array or record it declares)
         - Routes: `POST /api/debug/read-set/narrowing-fixture`
       - Core:
@@ -23210,6 +23234,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `NARROWING_FIXTURE_DATA_VIEW`
           - `NARROWING_FIXTURE_SPAWNED_BY`
+          - `NARROWING_FIXTURE_SUBJECT_KIND`
           - `narrowingFixture`
           - `NarrowingFixtureBodySchema`
           - `resourcesDebug`
@@ -24772,10 +24797,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `DateFieldDef`
             - Exports (values): `dateField`
           - Cross-plugin:
-            - Imported by: 52 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
+            - Imported by: 53 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
               - `apps` ×11
               - `conversations` ×9
-              - `infra` ×5
+              - `infra` ×6
               - `tasks` ×5
               - `debug` ×4
               - `page` ×4
@@ -25413,10 +25438,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `intField`
               - `intSample`
           - Cross-plugin:
-            - Imported by: 35 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
+            - Imported by: 37 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
               - `debug` ×11
               - `apps` ×9
-              - `infra` ×3
+              - `infra` ×5
               - `conversations` ×2
               - `active-data`
               - `backup/runs-arm`
@@ -26317,11 +26342,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 77 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+            - Imported by: 78 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
               - `apps` ×21
               - `conversations` ×15
               - `tasks` ×10
-              - `infra` ×5
+              - `infra` ×6
               - `debug` ×4
               - `page` ×3
               - `primitives` ×3
@@ -27062,6 +27087,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `KeyedMembershipInput`
           - `KeyedResourceContract`
           - `KeyedServerResourceOptions`
+          - `LoadRun`
           - `NotifiedRead`
           - `NotifyCounts`
           - `PersistedBase`
@@ -29119,6 +29145,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `ids.kind` "ver"
           - `resource.declare` "history.version"
+          - `resource.declare` "history.version-snapshots:rows"
           - `resource.declare` "history.versions"
           - `resource.declare` "history.versions:groups"
           - `resource.declare` "history.versions:rows"
@@ -29142,6 +29169,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register: `defineJob('retention.entity_versions')`
         - Resources:
           - `history.version` (push)
+          - `history.version-snapshots:rows` (keyed, point)
           - `history.versions` (keyed, window)
           - `history.versions:groups` (push)
           - `history.versions:rows` (keyed, point)
@@ -29173,6 +29201,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `entityVersionsEntityRef`
           - `historyVersion`
           - `historyVersions`
+          - `historyVersionSnapshots`
           - `listVersions`
           - `restoreVersion`
           - `versionFields`
@@ -29180,7 +29209,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `VersionSchema`
           - `VersionWithSnapshotSchema`
       - Cross-plugin:
-        - Imported by: `apps/pages/history`
+        - Imported by:
+          - `apps/pages/history`
+          - `debug/read-set`
 
 - **`ids`** — The id-kind registry, web half: IdKinds.Kind registers a declared kind and IdKinds.Presenter how its ids render and open (icon, useReferent, useTarget); useIdKinds() / useIdPresenters() read them at render time. The id-kind registry, server half: IdKinds.Kind registers a declared kind and IdKinds.Referent resolves a kind's id to its title; getIdKinds() reads them at call time. idColumn / idRef are a kind's drizzle primary-key and foreign-key columns (typed Id<P>; idRef cascades on update).
   - Web:
@@ -29306,13 +29337,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "attachments.by-owner"
           - `resource.declare` "attachments.bytes"
           - `resource.declare` "attachments.file"
+          - `resource.declare` "attachments.rows:rows"
           - `host-service:attachments.blobs` "attachments.blobs"
         - Uses:
           - `database.db`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `infra/endpoints.rawEndpointHandler`
+          - `infra/entities.defaultNow`
+          - `infra/entities.defineEntity`
           - `infra/jobs.defineJob`
+          - `network/live.serveCollection`
           - `network/live.serveValue`
           - `primitives/log-channels.Log`
         - DB schema:
@@ -29333,6 +29368,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `attachments.by-owner` (push, whole: one owner's attachments — the files a person attached to one task or block, a handful, never a growing log)
           - `attachments.bytes` (invalidate, immutable)
           - `attachments.file` (push)
+          - `attachments.rows:rows` (keyed, point)
         - Routes:
           - `POST /api/attachments`
           - `GET /api/attachments/:id`
@@ -29340,9 +29376,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PUT /api/attachments/holds`
       - Core:
         - Uses:
+          - `fields/date/config.dateField`
+          - `fields/int/config.intField`
+          - `fields/text/config.textField`
           - `infra/endpoints.blob`
           - `infra/endpoints.dateString`
           - `infra/endpoints.defineEndpoint`
+          - `infra/entities.entityRef`
+          - `network/live.liveCollection`
           - `network/live.liveValue`
           - `packages/list-bound.wholeList`
         - Exports (types):
@@ -29350,10 +29391,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AttachmentFile`
         - Exports (values):
           - `attachmentBytes`
+          - `attachmentFields`
           - `attachmentFile`
           - `AttachmentFileSchema`
+          - `attachmentRows`
           - `attachmentsByOwner`
           - `AttachmentSchema`
+          - `attachmentsEntityRef`
           - `getAttachmentFile`
       - Cross-plugin:
         - Imported by:
@@ -29366,6 +29410,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/sonata/transcription`
           - `conversations`
           - `conversations/agents`
+          - `debug/read-set`
           - `infra/attachments/memory-blobs`
           - `page/attachment-block`
           - `page/audio`
@@ -29627,10 +29672,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`claude-cli`** — Consumer half of the claude-cli call log: useClaudeCliCalls({correlationId, occurredAt}) answers 'which model calls produced this record?' as a calls / none / not-retained result, <ClaudeCliCallDetail> is the one rendering of a recorded call (header, meta grid, context with id chips, output or error, prompt, system — each copyable), and SLOW_CALL_MS is the duration past which a call reads as slow. One-shot Claude generations for short, latency-tolerant work (runClaudePrint), and runClaudeReadOnly — a turn that may only Read / Grep / Glob one directory and answers with a zod-schema'd structured value. Each is one Agent SDK turn (infra/claude-cli/sdk) on the active Claude account — the one new agents launch on — recorded in the call log.
       - Server:
         - Contributes:
+          - `resource.declare` "claude-cli-call-horizon:rows"
           - `resource.declare` "claude-cli-calls"
+          - `resource.declare` "claude-cli-calls-by-record"
+          - `resource.declare` "claude-cli-calls-by-record:rows"
           - `resource.declare` "claude-cli-calls:groups"
           - `resource.declare` "claude-cli-calls:rows"
           - `resource.declare` "claude-cli.calls-for"
+          - `fork-data-exclusion` "claude_cli_call_horizon"
           - `fork-data-exclusion` "claude_cli_calls"
         - Uses:
           - `conversations/model-provider/catalog.getModelCatalog`
@@ -29651,17 +29700,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.serveValue`
         - DB schema: `plugins/infra/plugins/claude-cli/server/internal/tables.ts`
         - Exports (types):
+          - `RecordCallInput`
           - `RunClaudePrintInput`
           - `RunClaudeReadOnlyInput`
         - Exports (values):
           - `_claudeCliCalls`
           - `ClaudeCliError`
-          - `listCallsFor`
           - `READ_ONLY_TOOLS`
+          - `recordClaudeCliCall`
           - `runClaudePrint`
           - `runClaudeReadOnly`
+          - `writeRingHorizon`
         - Resources:
+          - `claude-cli-call-horizon:rows` (keyed, point)
           - `claude-cli-calls` (keyed, window)
+          - `claude-cli-calls-by-record` (keyed)
+          - `claude-cli-calls-by-record:rows` (keyed, point)
           - `claude-cli-calls:groups` (push)
           - `claude-cli-calls:rows` (keyed, point)
           - `claude-cli.calls-for` (push, capped: RECENT_CALLS_LIMIT, whole: the caller's label for the call — a few named values it chose (a source id, a url))
@@ -29699,6 +29753,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields.nullable`
           - `fields/date/config.dateField`
           - `fields/duration/config.durationField`
+          - `fields/int/config.intField`
           - `fields/json/config.jsonField`
           - `fields/text/config.enumTextField`
           - `fields/text/config.parsedTextField`
@@ -29716,8 +29771,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ClaudeCliCallsResult`
           - `ClaudeCliCallStatus`
         - Exports (values):
+          - `CLAUDE_CLI_RING_ID`
           - `claudeCliCallFields`
+          - `claudeCliCallHorizon`
+          - `claudeCliCallHorizonEntityRef`
           - `claudeCliCalls`
+          - `claudeCliCallsByRecord`
           - `ClaudeCliCallSchema`
           - `claudeCliCallsEntityRef`
           - `claudeCliCallsFor`
@@ -29745,6 +29804,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/events/sources/url-extract`
           - `apps/places/places-core`
           - `debug/claude-cli-calls`
+          - `debug/read-set`
       - Exemptions:
         - Exempts itself from:
           - `ids:pk-declared` — `server/internal/tables.ts` (debt)
@@ -30609,10 +30669,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `entityRef`
           - `wireSchema`
       - Cross-plugin:
-        - Imported by: 45 plugins — full list in [`plugins/infra/plugins/entities/REFERENCE.md`](../plugins/infra/plugins/entities/REFERENCE.md)
+        - Imported by: 46 plugins — full list in [`plugins/infra/plugins/entities/REFERENCE.md`](../plugins/infra/plugins/entities/REFERENCE.md)
           - `apps` ×10
           - `conversations` ×7
-          - `infra` ×5
+          - `infra` ×6
           - `page` ×5
           - `debug` ×4
           - `primitives` ×3
@@ -32868,6 +32928,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FollowablePoint`
           - `FollowRead`
           - `FollowTuple`
+          - `FollowTupleOf`
           - `LookupRead`
           - `LookupResult`
           - `LookupSpec`
@@ -32971,6 +33032,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `active-data`
+          - `apps/events/events-core`
           - `network/live`
           - `primitives/data-view/custom-columns/values`
           - `primitives/data-view/view-order`
@@ -52663,19 +52725,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TaskPrepromptSchema`
     - **`task-source-url`** — Reads back the page a task was filed from, by attempt (useAttemptSourceUrl). Owns the tasks_ext_source_url side-table: the page a task was filed from (the draft form's Page URL toggle), stored as data rather than only as prompt text, and read back by attempt (falling back to the url of the first <ui-context> in the task's prompt).
       - Server:
-        - Contributes: `resource.declare` "task-source-url.by-attempt"
+        - Contributes:
+          - `resource.declare` "task-source-url.by-attempt"
+          - `resource.declare` "task-source-urls:rows"
         - Uses:
-          - `database.db`
           - `infra/entity-extensions.defineExtension`
+          - `network/live.serveCollection`
           - `network/live.serveValue`
-          - `tasks/tasks-core._attempts`
           - `tasks/tasks-core._tasks`
+          - `tasks/tasks-core.attemptTasksServed`
+          - `tasks/tasks-core.taskDescriptionsServed`
         - DB schema: `plugins/tasks/plugins/task-source-url/server/internal/tables.ts`
         - Entity extension of: `tasks/tasks-core` (table `tasks_ext_source_url`)
         - Exports (values):
           - `setTaskSourceUrl`
           - `tasksSourceUrl`
-        - Resources: `task-source-url.by-attempt` (push)
+        - Resources:
+          - `task-source-url.by-attempt` (push)
+          - `task-source-urls:rows` (keyed, point)
       - Web:
         - Uses: `network/live.useLive`
         - Exports (values): `useAttemptSourceUrl`
@@ -52683,14 +52750,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `fields/text/config.textField`
           - `infra/entity-extensions.defineExtensionShape`
+          - `network/live.liveCollection`
           - `network/live.liveValue`
         - Exports (types): `AttemptSourceUrl`
         - Exports (values):
           - `attemptSourceUrl`
+          - `taskSourceUrls`
           - `taskSourceUrlShape`
       - Cross-plugin:
         - Imported by:
           - `conversations/conversation-view/open-app`
+          - `debug/read-set`
           - `tasks`
     - **`task-status`** — Single source of truth for TaskStatus display metadata — icon, label, icon color, and badge style.
       - Web:
@@ -52727,12 +52797,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-header`
     - **`task-subject`** — Reads back the live task about a subject — the record a task was launched about (useSubjectTask). Owns the tasks_ext_subject side-table: the record a task is about (a failed build run, a job run — a caller-named kind and id), so a launch about a subject that already has a live task reuses it, and a surface reads that task back live by subject.
       - Server:
-        - Contributes: `resource.declare` "task-subject.by-subject"
+        - Contributes:
+          - `resource.declare` "task-subject-links"
+          - `resource.declare` "task-subject-links:rows"
+          - `resource.declare` "task-subject.by-subject"
         - Uses:
           - `database.db`
           - `infra/entity-extensions.defineExtension`
+          - `network/live.serveCollection`
           - `network/live.serveValue`
           - `tasks/tasks-core._tasks`
+          - `tasks/tasks-core.taskDroppedStatesServed`
         - DB schema: `plugins/tasks/plugins/task-subject/server/internal/tables.ts`
         - Entity extension of: `tasks/tasks-core` (table `tasks_ext_subject`)
         - Exports (values):
@@ -52740,7 +52815,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `setTaskSubject`
           - `tasksSubject`
           - `withSubjectLock`
-        - Resources: `task-subject.by-subject` (push)
+        - Resources:
+          - `task-subject-links` (keyed)
+          - `task-subject-links:rows` (keyed, point)
+          - `task-subject.by-subject` (push)
       - Web:
         - Uses: `network/live.useLive`
         - Exports (values): `useSubjectTask`
@@ -52748,16 +52826,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `fields/text/config.textField`
           - `infra/entity-extensions.defineExtensionShape`
+          - `network/live.liveCollection`
           - `network/live.liveValue`
         - Exports (types):
           - `SubjectTask`
           - `TaskSubject`
         - Exports (values):
+          - `subjectLinks`
           - `subjectTask`
           - `TaskSubjectSchema`
           - `taskSubjectShape`
       - Cross-plugin:
         - Imported by:
+          - `debug/read-set`
           - `primitives/launch/investigate`
           - `tasks`
           - `tasks/task-triage`
@@ -53077,8 +53158,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useTaskAttempts`
           - `useTaskConversations`
       - Server:
-        - Contributes: 37 contributions — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
-          - `resource.declare` ×26
+        - Contributes: 39 contributions — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `resource.declare` ×28
           - `derived-view` ×4
           - `ids.kind` ×3
           - `derived-table` ×2
@@ -53161,6 +53242,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `attemptPushIdsServed`
           - `AttemptSchema`
           - `AttemptStatusSchema`
+          - `attemptTasksServed`
           - `attemptWorkspacesServed`
           - `claimHibernatedResume`
           - `clearMandate`
@@ -53230,6 +53312,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskCreated`
           - `taskDependsOn`
           - `taskDescriptionChanged`
+          - `taskDescriptionsServed`
+          - `taskDroppedStatesServed`
           - `TaskListItemSchema`
           - `taskRefiled`
           - `TaskSchema`
@@ -53261,6 +53345,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `attempt-deliveries:rows` (keyed, point)
           - `attempt-push-ids` (keyed)
           - `attempt-push-ids:rows` (keyed, point)
+          - `attempt-tasks:rows` (keyed, point)
           - `attempt-workspaces:rows` (keyed, point)
           - `attempts` (keyed)
           - `attempts:rows` (keyed, point)
@@ -53280,6 +53365,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `pushes:groups` (push)
           - `pushes:rows` (keyed, point)
           - `task-descriptions:rows` (keyed, point)
+          - `task-dropped-states:rows` (keyed, point)
           - `tasks` (keyed)
           - `tasks:rows` (keyed, point)
       - Core:
@@ -53334,6 +53420,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AttemptSchema`
           - `attemptsEntityRef`
           - `AttemptStatusSchema`
+          - `attemptTasks`
           - `attemptWorkspaces`
           - `BLOCKED_STATUSES`
           - `buildTaskPrompt`
@@ -53368,6 +53455,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskDependenciesEntityRef`
           - `taskDescriptions`
           - `taskDetailRoute`
+          - `taskDroppedStates`
           - `TaskFilingStartSchema`
           - `TaskGraph`
           - `TaskListItemSchema`

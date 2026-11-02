@@ -55,6 +55,20 @@
  * on F and G (cascaded with them), track-view overrides on the two songs
  * (refused unless both start with none; reset after), author stamps under
  * fixture-minted conversation ids (deleted after).
+ *
+ * `--suite byid` (research/2026-11-02-global-live-follow-by-id-and-owner.md)
+ * measures six values that `follow` rows by id or owner, each held on a
+ * subject X: `deploy.server-ssh-key`, `history.version`, `attachments.file`,
+ * `claude-cli.calls-for`, `task-subject.by-subject` and
+ * `task-source-url.by-attempt`. Everything is created by the run (fixture
+ * deploy servers, versions, attachments, tasks and attempts, and correlation
+ * ids — all `narrowing-fixture`-marked) and deleted after, so no argument is
+ * needed. Phases per value: ten writes about another subject Y (pass = 0
+ * loads, 0 frames), then the same writes about X (one load each). Not
+ * measured here: `mail.message-body` and `events.run-events` (their rows hang
+ * off FK chains no fixture creates yet).
+ *
+ *   ./equin run plugins/network/plugins/live/e2e/narrowing.ts --suite byid [--runs 3]
  */
 import { PROTOCOL } from "@plugins/packages/plugins/resource-protocol/core";
 import { canonicalJson } from "@plugins/packages/plugins/canonical-params/core";
@@ -119,29 +133,31 @@ const COMMITS_GRAPH_KEY = "commits-graph.graph";
 const PLUGIN_CHANGES_KEY = "review.plugin-changes";
 
 const r = report("[12] cost of a write per live tuple");
-if (SUITE !== "transcripts" && SUITE !== "composite") {
-  r.fail("--suite", "transcripts | composite");
+if (SUITE !== "transcripts" && SUITE !== "composite" && SUITE !== "byid") {
+  r.fail("--suite", "transcripts | composite | byid");
 }
 if (COMPOSITE_KEYS !== "old" && COMPOSITE_KEYS !== "v2") {
   r.fail("--composite-keys", "old | v2");
 }
 const required: (readonly [string, string])[] =
-  SUITE === "composite"
-    ? [
-        ["--attempt", ATTEMPT],
-        ["--page", PAGE],
-        ["--other-page", OTHER_PAGE],
-        ["--song", SONG],
-        ["--other-song", OTHER_SONG],
-      ]
-    : [
-        ["--page", PAGE],
-        ["--other-page", OTHER_PAGE],
-        ["--attempt", ATTEMPT],
-        ["--attempt-b", ATTEMPT_B],
-        ["--conv", CONV],
-        ["--other-task", OTHER_TASK],
-      ];
+  SUITE === "byid"
+    ? []
+    : SUITE === "composite"
+      ? [
+          ["--attempt", ATTEMPT],
+          ["--page", PAGE],
+          ["--other-page", OTHER_PAGE],
+          ["--song", SONG],
+          ["--other-song", OTHER_SONG],
+        ]
+      : [
+          ["--page", PAGE],
+          ["--other-page", OTHER_PAGE],
+          ["--attempt", ATTEMPT],
+          ["--attempt-b", ATTEMPT_B],
+          ["--conv", CONV],
+          ["--other-task", OTHER_TASK],
+        ];
 for (const [name, v] of required) {
   if (v === "") r.fail(name, "required");
 }
@@ -833,8 +849,184 @@ async function runComposite(n: number): Promise<Row[]> {
   }
 }
 
+// ─── Suite: byid ─────────────────────────────────────────────────────────────
+
+// Not importable (`shared/` or non-barrel declarations): the literal keys.
+const SERVER_KEY = "deploy.server-ssh-key";
+const VERSION_KEY = "history.version";
+const ATTACHMENT_KEY = "attachments.file";
+const CALLS_KEY = "claude-cli.calls-for";
+const SUBJECT_KEY = "task-subject.by-subject";
+const SOURCE_URL_KEY = "task-source-url.by-attempt";
+const FIXTURE_SOURCE = "narrowing-fixture";
+
+type FixtureRowKind = Extract<
+  NarrowingFixtureBody,
+  { action: "create-fixture-row" }
+>["row"];
+type WriteTarget = Extract<
+  NarrowingFixtureBody,
+  { action: "write-fixture-row" }
+>["target"];
+type DeleteKind = Extract<
+  NarrowingFixtureBody,
+  { action: "delete-fixture-rows" }
+>["kind"];
+
+const createRow = async (row: FixtureRowKind): Promise<string> => {
+  const body: NarrowingFixtureBody = { action: "create-fixture-row", row };
+  const { rowId } = await json<{ rowId: string | null }>(
+    narrowingFixture.path,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    },
+  );
+  return rowId!;
+};
+const writeRow = async (target: WriteTarget, id: string, value: string) => {
+  await fixture({ action: "write-fixture-row", target, id, value });
+};
+
+async function runByid(): Promise<Row[]> {
+  // Created rows, deleted in reverse order when the run ends (failed or not).
+  const created: { kind: DeleteKind; id: string }[] = [];
+  const make = async (kind: DeleteKind, row: FixtureRowKind) => {
+    const id = await createRow(row);
+    created.push({ kind, id });
+    return id;
+  };
+  try {
+    // X is held; Y is the other subject its writes must not reach.
+    const [serverX, serverY] = [
+      await make("deploy-server", { kind: "deploy-server" }),
+      await make("deploy-server", { kind: "deploy-server" }),
+    ];
+    const entityX = `${FIXTURE_SOURCE}-${crypto.randomUUID()}`;
+    const entityY = `${FIXTURE_SOURCE}-${crypto.randomUUID()}`;
+    const [versionX, versionY] = [
+      await make("version", { kind: "version", entityId: entityX }),
+      await make("version", { kind: "version", entityId: entityY }),
+    ];
+    const [fileX, fileY] = [
+      await make("attachment", { kind: "attachment" }),
+      await make("attachment", { kind: "attachment" }),
+    ];
+    const [corrX, corrY] = [1, 2].map(
+      () => `${FIXTURE_SOURCE}-${crypto.randomUUID()}`,
+    ) as [string, string];
+    created.push(
+      { kind: "claude-cli-calls", id: corrX },
+      { kind: "claude-cli-calls", id: corrY },
+    );
+    const [taskX, taskY] = [
+      await make("task", { kind: "task" }),
+      await make("task", { kind: "task" }),
+    ];
+    // The attempts hang off the tasks: the task delete removes them.
+    const [attemptX] = [
+      await createRow({ kind: "attempt", taskId: taskX }),
+      await createRow({ kind: "attempt", taskId: taskY }),
+    ];
+    const [subjX, subjY] = [1, 2].map(
+      () => `${FIXTURE_SOURCE}-${crypto.randomUUID()}`,
+    ) as [string, string];
+    await writeRow("task-subject", taskX, subjX);
+    await writeRow("task-subject", taskY, subjY);
+    await writeRow("task-source-url", taskX, "http://narrowing.invalid/x");
+    await writeRow("task-source-url", taskY, "http://narrowing.invalid/y");
+    // Seed one call each, so the held tuples hold a row.
+    await writeRow("claude-cli-call", corrX, "");
+    await writeRow("claude-cli-call", corrY, "");
+
+    const initial: Sub[] = [
+      { label: "X", key: SERVER_KEY, params: { serverId: serverX } },
+      {
+        label: "X",
+        key: VERSION_KEY,
+        params: {
+          sourceId: FIXTURE_SOURCE,
+          entityId: entityX,
+          versionId: versionX,
+        },
+      },
+      { label: "X", key: ATTACHMENT_KEY, params: { id: fileX } },
+      { label: "X", key: CALLS_KEY, params: { correlationId: corrX } },
+      {
+        label: "X",
+        key: SUBJECT_KEY,
+        params: { kind: FIXTURE_SOURCE, id: subjX },
+      },
+      { label: "X", key: SOURCE_URL_KEY, params: { attemptId: attemptX } },
+    ];
+    // Each write a real change: the value flips with `i` (a re-point of a
+    // subject link moves it between the subject and an alternate id).
+    const value = (i: number) => `v${i}`;
+    const alt = (id: string, i: number) => (i % 2 === 0 ? `${id}-alt` : id);
+    const pair = (
+      name: string,
+      target: WriteTarget,
+      x: string,
+      y: string,
+      valueOf: (id: string, i: number) => string = (_id, i) => value(i),
+    ): Phase[] => [
+      {
+        name: `${name}: other`,
+        related: false,
+        writes: WRITES,
+        write: (i) => writeRow(target, y, valueOf(y, i)),
+      },
+      {
+        name: `${name}: held`,
+        related: true,
+        writes: WRITES,
+        write: (i) => writeRow(target, x, valueOf(x, i)),
+      },
+    ];
+    return await measure({
+      initial,
+      keys: initial.map((s) => s.key),
+      phases: () => [
+        ...pair("server ssh key", "server-ssh-key", serverX, serverY),
+        ...pair("version snapshot", "version-snapshot", versionX, versionY),
+        ...pair("attachment filename", "attachment-filename", fileX, fileY),
+        ...pair("claude call", "claude-cli-call", corrX, corrY),
+        // The subject id written is the link's target; the row written is the task's.
+        {
+          name: "task subject: other",
+          related: false,
+          writes: WRITES,
+          write: (i) => writeRow("task-subject", taskY, alt(subjY, i)),
+        },
+        {
+          name: "task subject: held",
+          related: true,
+          writes: WRITES,
+          write: (i) => writeRow("task-subject", taskX, alt(subjX, i)),
+        },
+        ...pair(
+          "source url",
+          "task-source-url",
+          taskX,
+          taskY,
+          (_id, i) => `http://narrowing.invalid/${i}`,
+        ),
+      ],
+    });
+  } finally {
+    for (const { kind, id } of created.reverse()) {
+      await fixture({ action: "delete-fixture-rows", kind, id });
+    }
+  }
+}
+
 const run = (n: number) =>
-  SUITE === "composite" ? runComposite(n) : runTranscripts(n);
+  SUITE === "byid"
+    ? runByid()
+    : SUITE === "composite"
+      ? runComposite(n)
+      : runTranscripts(n);
 
 // ─── Runs, medians, report ───────────────────────────────────────────────────
 

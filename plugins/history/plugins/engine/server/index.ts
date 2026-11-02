@@ -6,6 +6,7 @@ import { handleListVersions } from "./internal/handle-list-versions";
 import { handleRestoreVersion } from "./internal/handle-restore-version";
 import {
   historyVersionServed,
+  historyVersionSnapshotsServed,
   historyVersionsServed,
 } from "./internal/resources";
 import { entityVersionsRetention } from "./internal/retention";
@@ -23,6 +24,7 @@ export default {
     IdKinds.Kind({ kind: versionIdKind }),
     ...historyVersionsServed.declare,
     ...historyVersionServed.declare,
+    ...historyVersionSnapshotsServed.declare,
   ],
   httpRoutes: {
     [listVersions.route]: handleListVersions,

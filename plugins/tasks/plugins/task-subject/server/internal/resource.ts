@@ -1,19 +1,42 @@
-import { serveValue } from "@plugins/network/plugins/live/server";
-import { _tasks } from "@plugins/tasks/plugins/tasks-core/server";
-import { subjectTask } from "../../core";
-import { findSubjectTask } from "./subject-task";
+import { taskDroppedStatesServed } from "@plugins/tasks/plugins/tasks-core/server";
+import {
+  serveCollection,
+  serveValue,
+} from "@plugins/network/plugins/live/server";
+import { subjectLinks, subjectTask } from "../../core";
 import { tasksSubject } from "./tables";
 
-// Change-feed driven: the loader reads the side table and `tasks`, so a link
-// written or a task dropped recomputes the subscribed subjects.
+// The tasks filed about each subject.
+export const subjectLinksServed = serveCollection(subjectLinks, {
+  from: tasksSubject,
+});
+
+// The subject's links, then whether each linked task is dropped (`follow.from`
+// the links' task ids): a launch about this subject, or a drop or restore of
+// one of its tasks, recomputes its readers — a link about another subject, or
+// any other task's drop, reaches none. The live task is the linked task not
+// dropped (a launch reuses it, so there is at most one; a tie takes the last
+// by id, as stamped ids sort by when they were minted).
 export const subjectTaskServed = serveValue(subjectTask, {
   source: "db",
-  reads: {
-    tables: [tasksSubject.table, _tasks],
-    reason:
-      "a subject's live task joins the subject links to the tasks they name; a link written or a task dropped may change any subject, whole-table until it follows them through collections (task-1793650999-1nff0e)",
+  follows: (follow) => {
+    const links = follow(subjectLinksServed, ({ kind, id }) => ({
+      where: { subjectKind: kind, subjectId: id },
+    }));
+    return {
+      links,
+      tasks: follow.from({ links }, taskDroppedStatesServed, (_p, r) => ({
+        ids: r.links.map((l) => l.taskId),
+      })),
+    };
   },
-  loader: async ({ kind, id }) => ({
-    taskId: await findSubjectTask({ kind, id }),
-  }),
+  loader: (_params, { followed }) => {
+    const live = new Set(
+      followed.tasks.filter((t) => t.droppedAt === null).map((t) => t.id),
+    );
+    return {
+      taskId:
+        followed.links.findLast((l) => live.has(l.taskId))?.taskId ?? null,
+    };
+  },
 });

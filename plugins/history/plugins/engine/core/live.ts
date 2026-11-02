@@ -44,3 +44,31 @@ export const historyVersion = liveValue("history.version", {
   params: ["sourceId", "entityId", "versionId"],
   refusals: ["missing"],
 });
+
+/**
+ * Each version WITH its snapshot, by id — the follow target of
+ * `historyVersion` (lookup-only: `:rows` alone; the timeline keeps the blob
+ * out). A coalesce into the version, its pin, or its deletion reaches the
+ * previews holding it; a version recorded or coalesced on any other entity
+ * reaches none.
+ */
+export const historyVersionSnapshots = liveCollection(
+  "history.version-snapshots",
+  {
+    from: entityVersionsEntityRef,
+    carry: {
+      pick: [
+        "id",
+        "sourceId",
+        "entityId",
+        "label",
+        "author",
+        "pinned",
+        "createdAt",
+        "snapshot",
+      ],
+    },
+    baseExposures: false,
+    id: "id",
+  },
+);

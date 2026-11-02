@@ -1407,7 +1407,7 @@ function idsSource<Row>(
         key,
         collection.rows.point.encode(ids),
       )) as readonly Row[],
-    reach: (name, tupleOf) => followRead(plan(), name, tupleOf),
+    reach: (name, tuple) => followRead(plan(), name, tuple),
     deferred,
   };
 }
@@ -1423,7 +1423,7 @@ function whereSource<Row>(
     collection: key,
     read: async ({ where }: FollowWhere<string>) =>
       (await loadResourceFresh(key, where)) as readonly Row[],
-    reach: (name, tupleOf) => followRead(followable(), name, tupleOf),
+    reach: (name, tuple) => followRead(followable(), name, tuple),
     deferred,
   };
 }

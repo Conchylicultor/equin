@@ -16,6 +16,7 @@ export type {
   FollowablePlan,
   FollowRead,
   FollowTuple,
+  FollowTupleOf,
 } from "./internal/follow";
 export { compileGroupsQuery } from "./internal/compile-groups";
 export { compileCountQuery } from "./internal/compile-count";

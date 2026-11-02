@@ -21,6 +21,7 @@ import {
 } from "@plugins/fields/plugins/text/plugins/config/core";
 import { durationField } from "@plugins/fields/plugins/duration/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 import {
@@ -155,6 +156,74 @@ export const claudeCliCalls = liveCollection("claude-cli-calls", {
 /** A row of the {@link claudeCliCalls} collection: the call, plus its derived `status`. */
 export type ClaudeCliCallRow =
   typeof claudeCliCalls extends LiveRowsCollection<infer R> ? R : never;
+
+/**
+ * One record's calls, oldest first — a follow target of `claudeCliCallsFor`,
+ * a scoped set by `{ where: { correlationId } }`. A call recorded for another
+ * record, or the trim aging out another record's call, reaches none of this
+ * record's readers.
+ */
+export const claudeCliCallsByRecord = liveCollection(
+  "claude-cli-calls-by-record",
+  {
+    from: claudeCliCallsEntityRef,
+    carry: {
+      pick: [
+        "id",
+        "createdAt",
+        "model",
+        "sourceName",
+        "sourceContext",
+        "prompt",
+        "system",
+        "output",
+        "error",
+        "durationMs",
+        "correlationId",
+      ],
+    },
+    baseExposures: false,
+    id: "id",
+    all: {
+      by: ["correlationId"],
+      orderBy: [["createdAt", "asc"]],
+      max: RECENT_CALLS_LIMIT,
+    },
+  },
+);
+
+/** The id of the ring horizon's one row (`claude_cli_call_horizon`). */
+export const CLAUDE_CLI_RING_ID = "ring";
+
+/**
+ * Where the call log's ring stands: how many calls it holds and its oldest
+ * call's instant — one row, rewritten by the recorder in the transaction that
+ * records and trims (and seeded at boot). It is the ring-wide fact the `none`
+ * / `not-retained` verdict reads (`statusForNoCalls`), stated as a row so a
+ * record with no calls can follow it instead of reading the whole log.
+ */
+export const claudeCliCallHorizonFields = {
+  id: textField(),
+  total: intField(),
+  oldest: nullable(dateField()),
+} satisfies FieldsRecord;
+
+/** The `claude_cli_call_horizon` entity: its one row is {@link CLAUDE_CLI_RING_ID}. */
+export const claudeCliCallHorizonEntityRef = entityRef(
+  "claude_cli_call_horizon",
+  claudeCliCallHorizonFields,
+);
+
+/**
+ * The ring horizon, by id — what `claudeCliCallsFor` follows while its record
+ * has no calls (lookup-only: `:rows` alone).
+ */
+export const claudeCliCallHorizon = liveCollection("claude-cli-call-horizon", {
+  from: claudeCliCallHorizonEntityRef,
+  carry: { pick: ["id", "total", "oldest"] },
+  baseExposures: false,
+  id: "id",
+});
 
 /**
  * The answer to "which model calls produced this record?" — a discriminated

@@ -6,8 +6,29 @@ import { FALLBACK_MODEL } from "@plugins/conversations/plugins/model-provider/co
 import { DEFAULT_CONVERSATION_RUNTIME } from "@plugins/conversations/plugins/runtime-catalog/core";
 import { recordSessionId } from "@plugins/conversations/plugins/session-chain/server";
 import { refreshConversationChain } from "@plugins/conversations/plugins/transcript-watcher/server";
-import { conversationIdKind } from "@plugins/tasks/plugins/task-ids/core";
+import { DEFAULT_WORKSPACE } from "@plugins/conversations/plugins/workspace/core";
 import {
+  attemptIdKind,
+  conversationIdKind,
+} from "@plugins/tasks/plugins/task-ids/core";
+import { interactiveMandate } from "@plugins/tasks/plugins/mandate-presets/core";
+import { setTaskSubject } from "@plugins/tasks/plugins/task-subject/server";
+import { setTaskSourceUrl } from "@plugins/tasks/plugins/task-source-url/server";
+import { deployServerIdKind } from "@plugins/apps/plugins/deploy/plugins/servers/core";
+import { _deployServers } from "@plugins/apps/plugins/deploy/plugins/servers/server";
+import { versionIdKind } from "@plugins/history/plugins/engine/core";
+import { _entityVersions } from "@plugins/history/plugins/engine/server";
+import { _attachments } from "@plugins/infra/plugins/attachments/server";
+import {
+  _claudeCliCalls,
+  recordClaudeCliCall,
+  writeRingHorizon,
+} from "@plugins/infra/plugins/claude-cli/server";
+import {
+  _attempts,
+  _tasks,
+  createAttempt,
+  createTask,
   deleteConversationRow,
   getConversation,
   insertConversation,
@@ -22,12 +43,59 @@ import { _dataViewRowOrder } from "@plugins/primitives/plugins/data-view/plugins
 import {
   narrowingFixture,
   NARROWING_FIXTURE_DATA_VIEW,
+  NARROWING_FIXTURE_SUBJECT_KIND,
   NARROWING_FIXTURE_SPAWNED_BY,
+  type NarrowingFixtureBody,
 } from "../../core";
 
 // The conversation ids an author stamp is made under: minted here, never a
 // real conversation's (`conversation_id` has no foreign key).
 const AUTHOR_PREFIX = `${NARROWING_FIXTURE_SPAWNED_BY}-`;
+
+// What marks the by-id suite's rows: a server / task named so, a version's
+// source, and the id (or correlation id) prefix of an attachment, a claude call
+// and a subject.
+const FIXTURE_NAME = "narrowing fixture";
+
+function refuseUnlessFixture(what: string, id: string, ok: boolean): void {
+  if (!ok) {
+    throw new HttpError(
+      409,
+      `${what} "${id}" is not a narrowing-fixture row (the by-id suite writes only rows it created)`,
+    );
+  }
+}
+const isFixtureId = (id: string) => id.startsWith(AUTHOR_PREFIX);
+
+async function fixtureServer(id: string): Promise<void> {
+  const [row] = await db
+    .select({ name: _deployServers.name })
+    .from(_deployServers)
+    .where(eq(_deployServers.id, deployServerIdKind.parse(id)));
+  refuseUnlessFixture("Server", id, row?.name === FIXTURE_NAME);
+}
+async function fixtureVersion(id: string): Promise<void> {
+  const [row] = await db
+    .select({ sourceId: _entityVersions.sourceId })
+    .from(_entityVersions)
+    .where(eq(_entityVersions.id, versionIdKind.parse(id)));
+  refuseUnlessFixture(
+    "Version",
+    id,
+    row?.sourceId === NARROWING_FIXTURE_SPAWNED_BY,
+  );
+}
+async function fixtureTask(id: string): Promise<void> {
+  const [row] = await db
+    .select({ author: _tasks.author, title: _tasks.title })
+    .from(_tasks)
+    .where(eq(_tasks.id, id));
+  refuseUnlessFixture(
+    "Task",
+    id,
+    row?.author === NARROWING_FIXTURE_SPAWNED_BY && row.title === FIXTURE_NAME,
+  );
+}
 
 // The fixture's own conversations only: a real conversation's attempt and
 // session chain are never written (the chain is append-only — a synthetic id
@@ -40,6 +108,163 @@ async function fixtureConversation(id: string): Promise<void> {
       409,
       `Conversation "${id}" is not a narrowing-fixture conversation (spawnedBy ${String(row.spawnedBy)})`,
     );
+  }
+}
+
+type Action<A extends NarrowingFixtureBody["action"]> = Extract<
+  NarrowingFixtureBody,
+  { action: A }
+>;
+
+async function createFixtureRow(
+  row: Action<"create-fixture-row">["row"],
+): Promise<string> {
+  switch (row.kind) {
+    case "deploy-server": {
+      const id = deployServerIdKind.mint();
+      await db.insert(_deployServers).values({
+        id,
+        name: FIXTURE_NAME,
+        host: "narrowing-fixture.invalid",
+        sshPublicKey: "narrowing-key-0",
+      });
+      return id;
+    }
+    case "version": {
+      const id = versionIdKind.mint();
+      await db.insert(_entityVersions).values({
+        id,
+        sourceId: NARROWING_FIXTURE_SPAWNED_BY,
+        entityId: row.entityId,
+        snapshot: { value: "0" },
+      });
+      return id;
+    }
+    case "attachment": {
+      const id = `${AUTHOR_PREFIX}${crypto.randomUUID()}`;
+      await db.insert(_attachments).values({
+        id,
+        filename: "narrowing-0",
+        mime: "text/plain",
+        size: 0,
+        diskPath: "/nonexistent/narrowing-fixture",
+      });
+      return id;
+    }
+    case "task": {
+      const task = await createTask({
+        title: FIXTURE_NAME,
+        titleAuto: false,
+        author: NARROWING_FIXTURE_SPAWNED_BY,
+        mandate: interactiveMandate,
+      });
+      return task.id;
+    }
+    case "attempt": {
+      await fixtureTask(row.taskId);
+      const id = attemptIdKind.mint();
+      await createAttempt({
+        id,
+        taskId: row.taskId,
+        worktreePath: "/nonexistent/narrowing-fixture",
+        workspace: DEFAULT_WORKSPACE,
+      });
+      return id;
+    }
+  }
+}
+
+async function writeFixtureRow(
+  target: Action<"write-fixture-row">["target"],
+  id: string,
+  value: string,
+): Promise<void> {
+  switch (target) {
+    case "server-ssh-key":
+      await fixtureServer(id);
+      await db
+        .update(_deployServers)
+        .set({ sshPublicKey: value })
+        .where(eq(_deployServers.id, deployServerIdKind.parse(id)));
+      return;
+    case "version-snapshot":
+      await fixtureVersion(id);
+      await db
+        .update(_entityVersions)
+        .set({ snapshot: { value } })
+        .where(eq(_entityVersions.id, versionIdKind.parse(id)));
+      return;
+    case "attachment-filename":
+      refuseUnlessFixture("Attachment", id, isFixtureId(id));
+      await db
+        .update(_attachments)
+        .set({ filename: value })
+        .where(eq(_attachments.id, id));
+      return;
+    case "claude-cli-call":
+      // Each call inserts a row (and rewrites the ring horizon), as a real one.
+      refuseUnlessFixture("Correlation id", id, isFixtureId(id));
+      await recordClaudeCliCall({
+        model: FALLBACK_MODEL,
+        sourceName: NARROWING_FIXTURE_SPAWNED_BY,
+        sourceContext: null,
+        prompt: "",
+        system: null,
+        output: null,
+        error: null,
+        durationMs: 0,
+        correlationId: id,
+      });
+      return;
+    case "task-subject":
+      await fixtureTask(id);
+      refuseUnlessFixture("Subject id", value, isFixtureId(value));
+      await setTaskSubject(id, {
+        kind: NARROWING_FIXTURE_SUBJECT_KIND,
+        id: value,
+      });
+      return;
+    case "task-source-url":
+      await fixtureTask(id);
+      await setTaskSourceUrl(id, value);
+      return;
+  }
+}
+
+async function deleteFixtureRows(
+  kind: Action<"delete-fixture-rows">["kind"],
+  id: string,
+): Promise<void> {
+  switch (kind) {
+    case "deploy-server":
+      await fixtureServer(id);
+      await db
+        .delete(_deployServers)
+        .where(eq(_deployServers.id, deployServerIdKind.parse(id)));
+      return;
+    case "version":
+      await fixtureVersion(id);
+      await db
+        .delete(_entityVersions)
+        .where(eq(_entityVersions.id, versionIdKind.parse(id)));
+      return;
+    case "attachment":
+      refuseUnlessFixture("Attachment", id, isFixtureId(id));
+      await db.delete(_attachments).where(eq(_attachments.id, id));
+      return;
+    case "task":
+      // Its attempts first (they hold no conversation: the fixture made none).
+      await fixtureTask(id);
+      await db.delete(_attempts).where(eq(_attempts.taskId, id));
+      await db.delete(_tasks).where(eq(_tasks.id, id));
+      return;
+    case "claude-cli-calls":
+      refuseUnlessFixture("Correlation id", id, isFixtureId(id));
+      await db
+        .delete(_claudeCliCalls)
+        .where(eq(_claudeCliCalls.correlationId, id));
+      await writeRingHorizon(db);
+      return;
   }
 }
 
@@ -64,7 +289,7 @@ export const handleNarrowingFixture = implement(
           status: "done",
           title: "narrowing fixture",
         });
-        return { conversationId: id };
+        return { conversationId: id, rowId: null };
       }
       case "record-session": {
         await fixtureConversation(body.conversationId);
@@ -81,22 +306,22 @@ export const handleNarrowingFixture = implement(
           },
         );
         await refreshConversationChain(body.conversationId);
-        return { conversationId: body.conversationId };
+        return { conversationId: body.conversationId, rowId: null };
       }
       case "move-conversation": {
         await fixtureConversation(body.conversationId);
         await moveConversationToAttempt(body.conversationId, body.attemptId);
-        return { conversationId: body.conversationId };
+        return { conversationId: body.conversationId, rowId: null };
       }
       case "delete-conversation": {
         await fixtureConversation(body.conversationId);
         await deleteConversationRow(body.conversationId);
-        return { conversationId: body.conversationId };
+        return { conversationId: body.conversationId, rowId: null };
       }
       case "stamp-agent-author": {
         const conversationId = `${AUTHOR_PREFIX}${crypto.randomUUID()}`;
         await recordAgentNotesAuthor(body.blockId, conversationId);
-        return { conversationId };
+        return { conversationId, rowId: null };
       }
       case "clear-agent-authors": {
         await db
@@ -107,7 +332,7 @@ export const handleNarrowingFixture = implement(
               like(_pageBlocksAgentAuthors.conversationId, `${AUTHOR_PREFIX}%`),
             ),
           );
-        return { conversationId: null };
+        return { conversationId: null, rowId: null };
       }
       case "clear-row-order": {
         if (!body.dataViewId.startsWith(NARROWING_FIXTURE_DATA_VIEW)) {
@@ -119,7 +344,20 @@ export const handleNarrowingFixture = implement(
         await db
           .delete(_dataViewRowOrder)
           .where(eq(_dataViewRowOrder.dataViewId, body.dataViewId));
-        return { conversationId: null };
+        return { conversationId: null, rowId: null };
+      }
+      case "create-fixture-row":
+        return {
+          conversationId: null,
+          rowId: await createFixtureRow(body.row),
+        };
+      case "write-fixture-row": {
+        await writeFixtureRow(body.target, body.id, body.value);
+        return { conversationId: null, rowId: null };
+      }
+      case "delete-fixture-rows": {
+        await deleteFixtureRows(body.kind, body.id);
+        return { conversationId: null, rowId: null };
       }
     }
   },

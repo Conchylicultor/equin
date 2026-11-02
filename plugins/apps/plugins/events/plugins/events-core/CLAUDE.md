@@ -188,6 +188,9 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `ids.kind` "evs"
     - `ids.kind` "evt"
     - `taskCategory` "events"
+    - `resource.declare` "events.run-event-links"
+    - `resource.declare` "events.run-event-links:rows"
+    - `resource.declare` "events.run-event-rows:rows"
     - `resource.declare` "events.run-events"
     - `resource.declare` "events.source-runs"
     - `resource.declare` "events.source-runs:groups"
@@ -235,6 +238,9 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `updateSource`
     - `upsertEvents`
   - Resources:
+    - `events.run-event-links` (keyed)
+    - `events.run-event-links:rows` (keyed, point)
+    - `events.run-event-rows:rows` (keyed, point)
     - `events.run-events` (push, capped: RUN_EVENTS_LIMIT, whole: the flags one source run raised — a few, whole: one source's per-type input — its type's configFields)
     - `events.source-runs` (keyed, window)
     - `events.source-runs:groups` (push)
@@ -250,7 +256,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `POST /api/events/sources/:id/refresh`
     - `POST /api/events/sources/refresh-all`
 - Core:
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×3
     - `ids` ×3
     - `network/live` ×3
@@ -265,6 +271,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `fields/tags/config.tagsField`
     - `infra/endpoints.defineEndpoint`
     - `infra/entities.entityRef`
+    - `infra/query-resource.compositeKey`
   - Exports (types):
     - `CreateEventSourceBody`
     - `EventCategory`
@@ -329,9 +336,12 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `refreshEventSourceNow`
     - `RefreshSourceResultSchema`
     - `RUN_EVENT_ACTIONS`
+    - `RUN_EVENT_LINKS_MAX`
     - `RUN_EVENTS_LIMIT`
     - `RUN_OUTCOME_META`
     - `RUN_OUTCOMES`
+    - `runEventLinks`
+    - `runEventRows`
     - `runEvents`
     - `RunEventSchema`
     - `SOURCE_STATES`

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
-import { liveValue } from "@plugins/network/plugins/live/core";
+import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 
 // The page a task was filed from, stored in the `tasks_ext_source_url`
 // entity-extension table (1:1 per task). Written once, when the draft form's
@@ -9,6 +9,13 @@ import { liveValue } from "@plugins/network/plugins/live/core";
 export const taskSourceUrlShape = defineExtensionShape({
   key: "taskId",
   fields: { url: textField() },
+});
+
+// Each task's stored source url, by task id — what `attemptSourceUrl`
+// follows (lookup-only: `:rows` alone).
+export const taskSourceUrls = liveCollection("task-source-urls", {
+  from: taskSourceUrlShape,
+  id: "taskId",
 });
 
 const AttemptSourceUrlSchema = z.object({ url: z.string().nullable() });

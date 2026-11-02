@@ -7,7 +7,11 @@ import { syncTickJob } from "./internal/tick";
 import { attachmentScanJob } from "./internal/attachment-scan";
 import { hydrateJob } from "./internal/hydrate";
 import { mailSyncStateServed } from "./internal/resource";
-import { mailMessageBodyServed } from "./internal/body-value";
+import {
+  mailMessageAttachmentsServed,
+  mailMessageBodiesServed,
+  mailMessageBodyServed,
+} from "./internal/body-value";
 import { mailSearchServed } from "./internal/search-value";
 
 export default {
@@ -16,6 +20,8 @@ export default {
   contributions: [
     ...mailSyncStateServed.declare,
     ...mailMessageBodyServed.declare,
+    ...mailMessageBodiesServed.declare,
+    ...mailMessageAttachmentsServed.declare,
     ...mailSearchServed.declare,
   ],
   httpRoutes: {

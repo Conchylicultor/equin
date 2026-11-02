@@ -1,5 +1,6 @@
-import { liveValue } from "@plugins/network/plugins/live/core";
+import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 import { wholeList } from "@plugins/packages/plugins/list-bound/core";
+import { attachmentsEntityRef } from "./entity";
 import { AttachmentFileSchema, AttachmentSchema } from "./schema";
 
 /**
@@ -14,6 +15,20 @@ export const attachmentsByOwner = liveValue("attachments.by-owner", {
   }),
   params: ["ownerType", "id"],
   refusals: ["unknown-owner-type"],
+});
+
+/**
+ * Each attachment row, by id — what `attachmentFile` follows (lookup-only:
+ * `:rows` alone). An attachment is written once (its upload) and then only
+ * deleted, so a reader is reached by its own attachment's deletion alone.
+ */
+export const attachmentRows = liveCollection("attachments.rows", {
+  from: attachmentsEntityRef,
+  carry: {
+    pick: ["id", "filename", "mime", "size", "diskPath", "createdAt"],
+  },
+  baseExposures: false,
+  id: "id",
 });
 
 /**

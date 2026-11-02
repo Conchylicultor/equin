@@ -1145,6 +1145,20 @@ function compilePlan(
     const getSQL = (x as { getSQL?: () => unknown } | null)?.getSQL;
     return typeof getSQL === "function" && bareColumn(getSQL.call(x));
   };
+  // Whether an expression is exactly one of its declared server-only columns.
+  const bareServerOnly = (field: ExprField): boolean => {
+    const chunks = field.sql.queryChunks.filter(
+      (c) =>
+        !(
+          is(c, StringChunk) && (c as StringChunk).value.join("").trim() === ""
+        ),
+    );
+    return (
+      chunks.length === 1 &&
+      is(chunks[0], Column) &&
+      field.serverOnly.includes(chunks[0] as PgColumn)
+    );
+  };
   const renderedExprs = new WeakMap<ExprField, SQL>();
   const renderExpr = (
     field: ExprField,
@@ -1160,7 +1174,10 @@ function compilePlan(
         `${where} declares sqlType "${field.sqlType}", which is not a Postgres type name (${SQL_TYPE_RE.source}) — it is interpolated raw into casts.`,
       );
     }
-    if (bareColumn(field.sql)) {
+    // A server-only column has no override (`j` offers wire columns only),
+    // so an expression may be exactly one — a follow target carrying a
+    // server column its follower reads.
+    if (bareColumn(field.sql) && !bareServerOnly(field)) {
       fail(
         `${where} is exactly one column — bind it with a column override (\`(j) => j.<relation>.<column>\`), which types and routes it as that column.`,
       );

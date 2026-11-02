@@ -178,6 +178,17 @@ export interface RouteVia {
   name: string;
   /** The followed collection resource's key (`_debug`'s `follows`). */
   collection: string;
+  /**
+   * A DEPENDENT follow (network/live's `follow.from`): the tuple it reads is
+   * computed from other followed rows, so a follower tuple's `match` on its
+   * routes is not a function of the params — it is what the tuple's last
+   * load named (`LoadRun.noteLoaded`, handed back to `usesOf` as `loaded`).
+   * The runtime routes a loaded route PAST its match (its column gate and
+   * static rows only) for a tuple no load has named it for yet, and for one
+   * with a load in flight: that load may be naming new rows, read before a
+   * change this route would otherwise skip. Every route of one follow agrees.
+   */
+  loaded?: true;
 }
 
 /**
@@ -295,7 +306,13 @@ export interface RoutePlanInput<
   P extends Record<string, string> = Record<string, string>,
 > {
   routes: readonly Route[];
-  usesOf(params: P): ReadonlyMap<string, TupleUse>;
+  /**
+   * The routes a tuple reads. `loaded` is what the tuple's last completed
+   * load noted (`LoadRun.noteLoaded`) — only a reach plan with loaded follow
+   * routes (`RouteVia.loaded`) is handed one, and `undefined` before any load
+   * noted it; every other plan ignores it.
+   */
+  usesOf(params: P, loaded?: unknown): ReadonlyMap<string, TupleUse>;
   /**
    * The derived relations (rollups) the compiled SQL reads beside its route
    * tables — see `DerivedRead`. Absent = none: the plan reads only its route
@@ -681,6 +698,7 @@ function assertFollowRoutes(
   // Table → the follows reading it, as `"a"` / `"a", "b"` (two may).
   const followTables = new Map<string, string>();
   const collectionOf = new Map<string, string>();
+  const loadedOf = new Map<string, boolean>();
   for (const route of routes) {
     if (route.via === undefined) continue;
     const { name, collection } = route.via;
@@ -696,6 +714,14 @@ function assertFollowRoutes(
       );
     }
     collectionOf.set(name, collection);
+    const loaded = route.via.loaded === true;
+    const knownLoaded = loadedOf.get(name);
+    if (knownLoaded !== undefined && knownLoaded !== loaded) {
+      throw new Error(
+        `mintReachPlan: the follow "${name}" has routes both loaded and not (\`RouteVia.loaded\`) — a follow's tuple is either its params' or its load's.`,
+      );
+    }
+    loadedOf.set(name, loaded);
     const onTable = followTables.get(route.table);
     if (onTable === undefined) followTables.set(route.table, `"${name}"`);
     else if (!onTable.split(", ").includes(`"${name}"`)) {

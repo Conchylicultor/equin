@@ -1,10 +1,12 @@
-import { and, eq } from "drizzle-orm";
-import { db } from "@plugins/database/server";
 import {
   serveCollection,
   serveValue,
 } from "@plugins/network/plugins/live/server";
-import { historyVersion, historyVersions } from "../../core";
+import {
+  historyVersion,
+  historyVersions,
+  historyVersionSnapshots,
+} from "../../core";
 import type { VersionWithSnapshot } from "../../core";
 import { versionIdKind } from "../../core";
 import { _entityVersions } from "./tables";
@@ -19,29 +21,29 @@ export const historyVersionsServed = serveCollection(historyVersions, {
   from: _entityVersions,
 });
 
-// One version with its snapshot. Reads `entity_versions` (declared in `reads`), so a
-// coalesce into the version while its merge window is open, or its deletion,
-// recomputes the open previews.
+// Each version with its snapshot, by id — the row `historyVersion` follows.
+export const historyVersionSnapshotsServed = serveCollection(
+  historyVersionSnapshots,
+  { from: _entityVersions },
+);
+
+// One version with its snapshot. It follows the version's row, so a coalesce
+// into it while its merge window is open, a pin, or its deletion recomputes
+// the open previews — and a version written for any other entity reaches
+// none. The (source, entity) pair is checked on the followed row: a version
+// of another timeline is `missing` here, as the old keyed lookup answered.
 export const historyVersionServed = serveValue(historyVersion, {
   source: "db",
-  reads: {
-    tables: [_entityVersions],
-    reason:
-      "a coalesce into or deletion of the version changes its snapshot; whole-table until it follows the row through a collection (task-1793650999-1nff0e)",
-  },
-  loader: async ({ sourceId, entityId, versionId }) => {
-    const [row] = await db
-      .select()
-      .from(_entityVersions)
-      .where(
-        and(
-          eq(_entityVersions.id, versionIdKind.key(versionId)),
-          eq(_entityVersions.sourceId, sourceId),
-          eq(_entityVersions.entityId, entityId),
-        ),
-      )
-      .limit(1);
-    if (!row) throw historyVersion.refuse("missing", "Version not found");
+  follows: (follow) => ({
+    version: follow(historyVersionSnapshotsServed, ({ versionId }) => ({
+      ids: [versionIdKind.key(versionId)],
+    })),
+  }),
+  loader: ({ sourceId, entityId }, { followed }) => {
+    const row = followed.version[0];
+    if (!row || row.sourceId !== sourceId || row.entityId !== entityId) {
+      throw historyVersion.refuse("missing", "Version not found");
+    }
     return {
       id: row.id,
       sourceId: row.sourceId,

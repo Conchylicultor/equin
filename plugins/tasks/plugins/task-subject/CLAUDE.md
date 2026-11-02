@@ -6,12 +6,17 @@
 
 - Description: Reads back the live task about a subject — the record a task was launched about (useSubjectTask). Owns the tasks_ext_subject side-table: the record a task is about (a failed build run, a job run — a caller-named kind and id), so a launch about a subject that already has a live task reuses it, and a surface reads that task back live by subject.
 - Server:
-  - Contributes: `resource.declare` "task-subject.by-subject"
+  - Contributes:
+    - `resource.declare` "task-subject-links"
+    - `resource.declare` "task-subject-links:rows"
+    - `resource.declare` "task-subject.by-subject"
   - Uses:
     - `database.db`
     - `infra/entity-extensions.defineExtension`
+    - `network/live.serveCollection`
     - `network/live.serveValue`
     - `tasks/tasks-core._tasks`
+    - `tasks/tasks-core.taskDroppedStatesServed`
   - DB schema: `plugins/tasks/plugins/task-subject/server/internal/tables.ts`
   - Entity extension of: `tasks/tasks-core` (table `tasks_ext_subject`)
   - Exports (values):
@@ -19,7 +24,10 @@
     - `setTaskSubject`
     - `tasksSubject`
     - `withSubjectLock`
-  - Resources: `task-subject.by-subject` (push)
+  - Resources:
+    - `task-subject-links` (keyed)
+    - `task-subject-links:rows` (keyed, point)
+    - `task-subject.by-subject` (push)
 - Web:
   - Uses: `network/live.useLive`
   - Exports (values): `useSubjectTask`
@@ -27,16 +35,19 @@
   - Uses:
     - `fields/text/config.textField`
     - `infra/entity-extensions.defineExtensionShape`
+    - `network/live.liveCollection`
     - `network/live.liveValue`
   - Exports (types):
     - `SubjectTask`
     - `TaskSubject`
   - Exports (values):
+    - `subjectLinks`
     - `subjectTask`
     - `TaskSubjectSchema`
     - `taskSubjectShape`
 - Cross-plugin:
   - Imported by:
+    - `debug/read-set`
     - `primitives/launch/investigate`
     - `tasks`
     - `tasks/task-triage`

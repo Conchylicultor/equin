@@ -3,8 +3,14 @@ import {
   liveValue,
   type LiveRowsCollection,
 } from "@plugins/network/plugins/live/core";
+import { compositeKey } from "@plugins/infra/plugins/query-resource/core";
 import { cappedList } from "@plugins/packages/plugins/list-bound/core";
-import { eventSourceRunsEntityRef, eventSourcesEntityRef } from "./entity-refs";
+import {
+  eventSourceRunEventsEntityRef,
+  eventSourceRunsEntityRef,
+  eventSourcesEntityRef,
+  eventsEntityRef,
+} from "./entity-refs";
 import { RunEventSchema } from "./schema";
 
 /**
@@ -118,6 +124,70 @@ export const eventSourceRuns = liveCollection("events.source-runs", {
 /** A run as the ledger's window delivers it: the run row plus every exposed field under `$columns`. */
 export type EventSourceRunRow =
   typeof eventSourceRuns extends LiveRowsCollection<infer R> ? R : never;
+
+/**
+ * The most events one run's set (`runEventLinks`) is read with: past it the
+ * read fails loudly rather than drop rows. A run is one extraction — tens of
+ * events (89 at most on main, 2026-11-03); `runEvents` shows the first
+ * `RUN_EVENTS_LIMIT` of them by start.
+ */
+export const RUN_EVENT_LINKS_MAX = 500;
+
+/**
+ * The events one run touched and what it did to each — a follow target of
+ * `runEvents`, a scoped set by `{ where: { runId } }` over the table's
+ * composite key. A run writes its set once, at its end; another run's set
+ * reaches no reader of this one.
+ */
+export const runEventLinks = liveCollection("events.run-event-links", {
+  from: eventSourceRunEventsEntityRef,
+  carry: { pick: ["runId", "eventId", "action"] },
+  baseExposures: false,
+  id: compositeKey(["runId", "eventId"]),
+  all: {
+    by: ["runId"],
+    orderBy: [["eventId", "asc"]],
+    max: RUN_EVENT_LINKS_MAX,
+  },
+});
+
+/**
+ * Events by id, as a run's detail lists them — a follow target of
+ * `runEvents` (lookup-only: `:rows` alone). `firstSeenAt` / `lastSeenAt` are
+ * left out: every run re-stamps `lastSeenAt` on every event it sees, and a
+ * run's detail shows neither, so those writes reach no reader.
+ */
+export const runEventRows = liveCollection("events.run-event-rows", {
+  from: eventsEntityRef,
+  carry: {
+    pick: [
+      "id",
+      "sourceId",
+      "externalId",
+      "title",
+      "description",
+      "date",
+      "startsAt",
+      "endsAt",
+      "allDay",
+      "venue",
+      "city",
+      "url",
+      "imageUrl",
+      "price",
+      "category",
+      "tags",
+      "recurring",
+      "recurrenceLabel",
+      "disappearedAt",
+      "createdAt",
+      "updatedAt",
+    ],
+  },
+  baseExposures: false,
+  id: "id",
+  maxIds: RUN_EVENT_LINKS_MAX,
+});
 
 /**
  * How many of a run's events `runEvents` holds. One run is one extraction —

@@ -4,6 +4,7 @@ import type {
   ExternalWindowPolicy,
   KeyedResourceContract,
   KeyedServerResourceOptions,
+  LoadRun,
   Resource,
   ResourceContract,
   ResourceRuntime,
@@ -852,18 +853,30 @@ function subjectsOf<P extends Record<string, string>, S>(
 
 /**
  * The runtime loader for a plain or typed-query value: a plain loader is
- * handed the params, a typed-query one the decoded question.
+ * handed the params, a typed-query one the decoded question. A follower's
+ * read notes what its dependent follows named to the runtime's `run`
+ * (`LoadRun.noteLoaded`) — the LOADER's read only: it is the one whose value
+ * the tuple's holders get, so its note is what their routes match.
  */
 function loaderOf<T, P extends Record<string, string>, S>(
   subjects: Subjects<P, S>,
   loader: (...args: never[]) => unknown,
   follows: CompiledFollows | null,
-): (params: P) => Promise<T> | T {
-  return withFollowed(
-    subjects,
-    loader as (...args: unknown[]) => unknown,
-    follows,
-  ) as (params: P) => Promise<T> | T;
+): (params: P, run?: LoadRun) => Promise<T> | T {
+  const hook = loader as (...args: unknown[]) => unknown;
+  if (follows === null || !follows.dependent) {
+    return withFollowed(subjects, hook, follows) as (
+      params: P,
+    ) => Promise<T> | T;
+  }
+  return async (params, run) => {
+    const subject = subjects.of(params);
+    const followed = await follows.read(
+      subject,
+      run === undefined ? undefined : (loaded) => run.noteLoaded(loaded),
+    );
+    return hook(subject, { followed }) as Promise<T> | T;
+  };
 }
 
 /**
@@ -1004,8 +1017,8 @@ export function mintRowKeys(
  */
 function boundedBytes<T, P extends Record<string, string>>(
   value: LiveValue<T, P, LiveValueOrigin>,
-  loader: (params: P) => Promise<T> | T,
-): (params: P) => Promise<T> | T {
+  loader: (params: P, run?: LoadRun) => Promise<T> | T,
+): (params: P, run?: LoadRun) => Promise<T> | T {
   const decl = value as {
     bytes?: true;
     maxBytes?: number;
@@ -1020,8 +1033,8 @@ function boundedBytes<T, P extends Record<string, string>>(
       `serveValue("${value.key}"): maxBytes without a declared "too-large" refusal.`,
     );
   }
-  return async (params) => {
-    const payload = await loader(params);
+  return async (params, run) => {
+    const payload = await loader(params, run);
     const size = (payload as { byteLength?: unknown }).byteLength;
     if (typeof size === "number" && size > max) {
       throw refuse(
@@ -1191,6 +1204,11 @@ function compilePagedOf(
   };
 
   const follows = followsOf(value.key, opts.follows);
+  if (follows?.dependent === true) {
+    throw new Error(
+      `serveValue("${value.key}"): a paged value follows no dependent follow (\`follow.from\`) — its pages are keyed external windows, whose routes match per question, not per load.`,
+    );
+  }
   const whileSubscribed = opts.whileSubscribed as
     | ((query: unknown, notify: () => void) => StopFn | Promise<StopFn>)
     | undefined;
@@ -1454,8 +1472,9 @@ export function compileValueOf<T, P extends Record<string, string>, S>(
       // the client reads the same field, so the two halves cannot disagree.
       // The runtime's own `"invalidate"` is the named opt-in's spelling.
       mode: value.load === "on-demand" ? "invalidate" : "push",
-      // Only the params: the runtime's scoped-refill `ctx` is a keyed concept.
-      loader: (params: P) => loader(params),
+      // Only the params (the runtime's scoped-refill `ctx` is a keyed
+      // concept) and the run a follower notes its dependent tuples to.
+      loader: (params: P, _ctx?: unknown, run?: LoadRun) => loader(params, run),
       ...(opts.throttleMs !== undefined ? { debounceMs: opts.throttleMs } : {}),
       ...(dependsOn.length > 0 ? { dependsOn } : {}),
       ...(revalidate === undefined

@@ -4,7 +4,10 @@ import {
   defaultNow,
   defaultRandom,
 } from "@plugins/infra/plugins/entities/server";
-import { claudeCliCallsEntityRef } from "../../core";
+import {
+  claudeCliCallHorizonEntityRef,
+  claudeCliCallsEntityRef,
+} from "../../core";
 
 // Durable recent-call log for one-shot `claude --print` invocations. The table
 // and the `ClaudeCliCall` wire schema both derive from the single
@@ -28,3 +31,10 @@ const claudeCliCalls = defineEntity(claudeCliCallsEntityRef, {
 
 // drizzle-kit schema-glob discovery. Name kept so consumers don't churn.
 export const _claudeCliCalls = claudeCliCalls.table;
+
+// The ring horizon: one row (`CLAUDE_CLI_RING_ID`) — the log's size and its
+// oldest call — rewritten with every record and trim (`record-call.ts`).
+const claudeCliCallHorizon = defineEntity(claudeCliCallHorizonEntityRef, {
+  primaryKey: "id",
+});
+export const _claudeCliCallHorizon = claudeCliCallHorizon.table;

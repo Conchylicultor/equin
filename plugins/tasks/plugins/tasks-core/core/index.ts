@@ -56,6 +56,8 @@ export {
   attemptConversationIds,
   attemptPushIds,
   attemptDeliveries,
+  attemptTasks,
+  taskDroppedStates,
   conversationWorkspaces,
   conversationSessionTails,
   conversationRuntimes,

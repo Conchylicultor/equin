@@ -6,12 +6,18 @@ import {
 import { expr } from "@plugins/infra/plugins/query-resource/core";
 import { parsed } from "@plugins/database/plugins/sql-projection/server";
 import {
+  CLAUDE_CLI_RING_ID,
+  claudeCliCallHorizon,
   claudeCliCalls,
+  claudeCliCallsByRecord,
   claudeCliCallsFor,
   ClaudeCliCallStatusSchema,
+  RECENT_CALLS_LIMIT,
+  type ClaudeCliCallsResult,
 } from "../../core/resources";
-import { _claudeCliCalls } from "./tables";
-import { listCallsFor, parseOccurredAt } from "./list-calls";
+import { _claudeCliCallHorizon, _claudeCliCalls } from "./tables";
+import { parseOccurredAt } from "./list-calls";
+import { statusForNoCalls } from "./retention-verdict";
 
 // The call log over `claude_cli_calls`: its window (newest first,
 // filterable / searchable — see the collection), its `:rows` point sibling and
@@ -36,19 +42,55 @@ export const claudeCliCallsServed = serveCollection(claudeCliCalls, {
   },
 });
 
-// One record's calls (`claude-cli.calls-for`): the declared reads are only
-// `claude_cli_calls`, so a call recorded for the record — or the recorder's
-// trim aging one out, which can flip `none` to `not-retained` — recomputes the
-// subscribed tuples through the change feed. The log is a ring of
-// `RECENT_CALLS_LIMIT` rows written once per model call, so recomputing every
-// open tuple on each insert stays cheap.
+// The rows `claude-cli.calls-for` follows: one record's calls, and the ring
+// horizon.
+export const claudeCliCallsByRecordServed = serveCollection(
+  claudeCliCallsByRecord,
+  { from: _claudeCliCalls },
+);
+export const claudeCliCallHorizonServed = serveCollection(
+  claudeCliCallHorizon,
+  { from: _claudeCliCallHorizon },
+);
+
+// One record's calls (`claude-cli.calls-for`). It follows the record's own
+// calls — a call recorded for it, or the trim aging one out, recomputes it;
+// another record's calls reach none. Only while it has none, and its reader
+// said when the record happened, does it follow the ring horizon
+// (`follow.from` its calls, `null` otherwise): `none` and `not-retained` are
+// told apart by where the ring stands (`statusForNoCalls`), which every call
+// recorded anywhere moves.
 export const claudeCliCallsForServed = serveValue(claudeCliCallsFor, {
   source: "db",
-  reads: {
-    tables: [_claudeCliCalls],
-    reason:
-      "a call recorded for the record, or the ring's trim aging one out, changes the answer; whole-table until it follows the record's calls through a collection (task-1793650999-1nff0e)",
+  follows: (follow) => {
+    const calls = follow(claudeCliCallsByRecordServed, ({ correlationId }) => ({
+      where: { correlationId },
+    }));
+    return {
+      calls,
+      horizon: follow.from(
+        { calls },
+        claudeCliCallHorizonServed,
+        ({ occurredAt }, r) =>
+          r.calls.length === 0 && occurredAt !== undefined
+            ? { ids: [CLAUDE_CLI_RING_ID] }
+            : null,
+      ),
+    };
   },
-  loader: ({ correlationId, occurredAt }) =>
-    listCallsFor(correlationId, parseOccurredAt(occurredAt)),
+  loader: ({ occurredAt }, { followed }): ClaudeCliCallsResult => {
+    const at = parseOccurredAt(occurredAt);
+    if (followed.calls.length > 0) {
+      return { status: "calls", calls: [...followed.calls] };
+    }
+    const ring = followed.horizon[0];
+    return {
+      status: statusForNoCalls({
+        occurredAt: at,
+        total: ring?.total ?? 0,
+        oldest: ring?.oldest ?? null,
+        limit: RECENT_CALLS_LIMIT,
+      }),
+    };
+  },
 });

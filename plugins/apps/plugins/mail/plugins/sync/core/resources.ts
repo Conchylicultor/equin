@@ -1,9 +1,11 @@
 import { z } from "zod";
-import { liveValue } from "@plugins/network/plugins/live/core";
+import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import {
   MailAttachmentSchema,
   mailAccountIdKind,
+  mailAttachmentsEntityRef,
+  mailMessagesEntityRef,
 } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 
 /**
@@ -43,6 +45,58 @@ export const mailMessageBody = liveValue("mail.message-body", {
   params: ["messageId"],
   refusals: ["missing"],
 });
+
+/**
+ * Each message's body columns, by id — a follow target of `mailMessageBody`
+ * (lookup-only: `:rows` alone). The row is exactly what the body value reads,
+ * so a sync writing a message's labels, flags or snippet reaches no open body,
+ * and a write to another message reaches none.
+ */
+export const mailMessageBodies = liveCollection("mail.message-bodies", {
+  from: mailMessagesEntityRef,
+  carry: {
+    pick: ["id", "bodyText", "bodyHtml", "bodyFetchedAt", "bodyFetchError"],
+  },
+  baseExposures: false,
+  id: "id",
+});
+
+/**
+ * One message's attachment rows — a follow target of `mailMessageBody`, a
+ * scoped set followed by `{ where: { messageId } }`. A message's attachments
+ * are written with its body (`mail.hydrate`); another message's reach none.
+ */
+export const mailMessageAttachments = liveCollection(
+  "mail.message-attachments",
+  {
+    from: mailAttachmentsEntityRef,
+    carry: {
+      pick: [
+        "id",
+        "messageId",
+        "accountId",
+        "gmailAttachmentId",
+        "filename",
+        "mimeType",
+        "sizeBytes",
+        "inline",
+        "contentId",
+        "storedAttachmentId",
+        "createdAt",
+        "updatedAt",
+      ],
+    },
+    baseExposures: false,
+    id: "id",
+    all: {
+      by: ["messageId"],
+      orderBy: [["createdAt", "asc"]],
+      unbounded: {
+        reason: "one message's attachments — Gmail bounds a message at 25 MB",
+      },
+    },
+  },
+);
 
 /** Thread ids a search page holds; `maxLimit` is the most a reader without a viewport keeps. */
 const SEARCH_PAGE = 50;

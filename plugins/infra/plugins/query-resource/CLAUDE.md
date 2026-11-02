@@ -136,8 +136,11 @@ registers a `:rows` set through **`pointQueryResource`** /
 **`deferredPointQueryResource`** (`windowQueryResource` plus its followable;
 the deferred one's getter throws until bound).
 
-**`followRead(followable, name, tupleOf)`** → a branded `FollowRead<P>` for a
-follower keyed by `P`:
+**`followRead(followable, name, tuple)`** → a branded `FollowRead<P>` for a
+follower keyed by `P`. `tuple` is `{ loaded: false, of: (params) => tuple |
+null }`, or — a dependent follow — `{ loaded: true, of: (loaded) => tuple |
+null }`, read from what the follower tuple's last load noted (its routes then
+carry `via.loaded`); `null` is no uses:
 
 - **routes** — the collection's own, one per route of its plan (ids
   `<name>:<route id>`): `columns` (the gate) and static `rows` kept, mapped
@@ -256,7 +259,9 @@ It binds where a column override does (`expr` is on the core barrel).
 - Provenance is read off the SQL (`columnsIn`). These throw:
   - an undeclared relation (no correlated subquery over an undeclared table);
   - a column neither wire nor `serverOnly`;
-  - an expression that is exactly one column (use a column override);
+  - an expression that is exactly one column (use a column override) —
+    unless it is a declared `serverOnly` column, which has no override (a
+    follow target carrying a server field its follower reads);
   - an `sqlType` outside `SQL_TYPE_RE`.
 - Unforgeable: an unexported brand only `expr` sets (`isExprField` reads it).
 - `V` is the decoder's result, `| null` unless `notNull: true` (or the `wire`
@@ -739,6 +744,7 @@ query.
     - `FollowablePoint`
     - `FollowRead`
     - `FollowTuple`
+    - `FollowTupleOf`
     - `LookupRead`
     - `LookupResult`
     - `LookupSpec`
@@ -842,6 +848,7 @@ query.
 - Cross-plugin:
   - Imported by:
     - `active-data`
+    - `apps/events/events-core`
     - `network/live`
     - `primitives/data-view/custom-columns/values`
     - `primitives/data-view/view-order`

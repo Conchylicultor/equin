@@ -120,21 +120,21 @@ session chain are never written. Refused on main (403). Spawns nothing.
   - Exports (values): `readSetPane`
 - Server:
   - Contributes: `resource.declare` "resources.debug"
-  - Uses:
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks/tasks-core` ×9
+    - `infra/claude-cli` ×3
+    - `infra/endpoints` ×2
+    - `page/annotations/agent-notes/authorship` ×2
+    - `apps/deploy/servers._deployServers`
     - `conversations/session-chain.recordSessionId`
     - `conversations/transcript-watcher.refreshConversationChain`
     - `database.db`
-    - `infra/endpoints.HttpError`
-    - `infra/endpoints.implement`
+    - `history/engine._entityVersions`
+    - `infra/attachments._attachments`
     - `network/live.serveValue`
-    - `page/annotations/agent-notes/authorship._pageBlocksAgentAuthors`
-    - `page/annotations/agent-notes/authorship.recordAgentNotesAuthor`
     - `primitives/data-view/view-order._dataViewRowOrder`
-    - `tasks/tasks-core.deleteConversationRow`
-    - `tasks/tasks-core.getConversation`
-    - `tasks/tasks-core.insertConversation`
-    - `tasks/tasks-core.moveConversationToAttempt`
-    - `tasks/tasks-core.updateConversation`
+    - `tasks/task-source-url.setTaskSourceUrl`
+    - `tasks/task-subject.setTaskSubject`
   - Resources: `resources.debug` (invalidate, snapshot, whole: one per resource this backend registered — the declared resource keys, a few hundred, never the rows they serve, whole: the tables one resource reads or is reached through — a handful per resource, whole: one key per params-tuple some open tab subscribes to — what the user's tabs hold, never the data set, whole: the lists one value's schema reaches — a path per array or record it declares)
   - Routes: `POST /api/debug/read-set/narrowing-fixture`
 - Core:
@@ -155,6 +155,7 @@ session chain are never written. Refused on main (403). Spawns nothing.
   - Exports (values):
     - `NARROWING_FIXTURE_DATA_VIEW`
     - `NARROWING_FIXTURE_SPAWNED_BY`
+    - `NARROWING_FIXTURE_SUBJECT_KIND`
     - `narrowingFixture`
     - `NarrowingFixtureBodySchema`
     - `resourcesDebug`

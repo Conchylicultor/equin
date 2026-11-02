@@ -27,7 +27,28 @@ import type {
 // - `{ where }` — one scope of a scoped `all` set (`all: { by }`).
 //
 // Anything else — a window's page, `:groups`, `:count`, a value, an external
-// collection, a scope that is not the set's `by` — has no overload. The
+// collection, a scope that is not the set's `by` — has no overload. A tuple
+// function may answer `null`: that subject reads nothing of the follow (a
+// registry value reading only the collection its params name).
+//
+// A DEPENDENT follow reads a tuple computed from other followed rows — a link
+// table's rows naming the rows of another collection:
+//
+//   follows: (follow) => {
+//     const links = follow(linksServed, ({ ownerId }) => ({ where: { ownerId } }));
+//     const files = follow.from({ links }, filesServed, (_s, { links }) => ({
+//       ids: links.map((l) => l.fileId),
+//     }));
+//     return { links, files };
+//   },
+//
+// `follow.from(deps, target, tupleOf)` names the follows it reads (made
+// before it, so the follows form a DAG by construction); they are read
+// first, and the tuple is computed from their rows. Its routes match what
+// the follower tuple's LAST LOAD named (`noteLoaded`, resource-runtime's
+// `RouteVia.loaded`): the loader's read notes every dependent tuple, and
+// the runtime routes those routes past their match before a first load and
+// while a load is in flight. The
 // follower's hooks are handed `followed[name]`: the tuple's rows, read FRESH
 // in the hook's own call through the collection's own read (its loader span,
 // its drift guard), so the routes the host compiles from the collection's
@@ -63,14 +84,26 @@ interface FollowSourceBase<Row, T> {
    */
   read(tuple: T): Promise<readonly Row[]>;
   /**
-   * The follow's routes for a follower whose wire params name the tuple
-   * `tupleOf(params)` — query-resource's `FollowRead`, opaque here (core
+   * The follow's routes for a follower tuple reading `tuple` (from its
+   * params, or its last load) — query-resource's `FollowRead`, opaque here (core
    * holds no drizzle). Throws before a deferred collection is bound.
    */
-  reach(name: string, tupleOf: (params: ResourceParams) => T): unknown;
+  reach(name: string, tuple: FollowReachTuple<T>): unknown;
   /** The collection compiles at `bindDeferredResources`: a follower of it binds there too. */
   readonly deferred: boolean;
 }
+
+/**
+ * Which tuple of a follow a follower tuple reads, for its routes: from its
+ * params, or — a dependent follow — from what its last load noted
+ * (`FollowLoaded`). `null`: none.
+ */
+export type FollowReachTuple<T> =
+  | {
+      readonly loaded: false;
+      readonly of: (params: ResourceParams) => T | null;
+    }
+  | { readonly loaded: true; readonly of: (loaded: unknown) => T | null };
 
 /** The followable read of a `:rows` point set. */
 export type FollowIdsSource<Row> = FollowSourceBase<Row, FollowIds> & {
@@ -98,12 +131,17 @@ export interface FollowWhereTarget<Row, B extends string> {
 const FOLLOW: unique symbol = Symbol("live.follow");
 declare const FOLLOW_ROW: unique symbol;
 
+/** A tuple a follow reads, or `null`: this subject reads nothing of it. */
+type FollowTuple = FollowIds | FollowWhere<string>;
+
 /** One follow: a target and the tuple a subject reads of it (see the header). */
 export interface Follow<Row> {
   readonly [FOLLOW]: {
     readonly source:
       FollowIdsSource<unknown> | FollowWhereSource<unknown, string>;
-    readonly tupleOf: (subject: never) => FollowIds | FollowWhere<string>;
+    /** The follows a dependent follow (`follow.from`) reads first; `null` for a plain one. */
+    readonly deps: FollowMap | null;
+    readonly tupleOf: (subject: never, rows: never) => FollowTuple | null;
   };
   readonly [FOLLOW_ROW]?: Row;
 }
@@ -140,11 +178,25 @@ export type FollowArgs<F> =
 export interface FollowBuilder<S> {
   <Row>(
     target: FollowIdsTarget<Row>,
-    tuple: (subject: S) => FollowIds,
+    tuple: (subject: S) => FollowIds | null,
   ): Follow<Row>;
   <Row, B extends string>(
     target: FollowWhereTarget<Row, B>,
-    tuple: (subject: S) => FollowWhere<B>,
+    tuple: (subject: S) => FollowWhere<B> | null,
+  ): Follow<Row>;
+  /**
+   * A DEPENDENT follow (see the header): its tuple is computed from the rows
+   * of `deps` — follows made before it — read first.
+   */
+  from<D extends FollowMap, Row>(
+    deps: D,
+    target: FollowIdsTarget<Row>,
+    tuple: (subject: S, rows: Followed<D>) => FollowIds | null,
+  ): Follow<Row>;
+  from<D extends FollowMap, Row, B extends string>(
+    deps: D,
+    target: FollowWhereTarget<Row, B>,
+    tuple: (subject: S, rows: Followed<D>) => FollowWhere<B> | null,
   ): Follow<Row>;
 }
 
@@ -156,18 +208,62 @@ export interface CompiledFollow {
   readonly name: string;
   readonly source:
     FollowIdsSource<unknown> | FollowWhereSource<unknown, string>;
-  readonly tupleOf: (subject: unknown) => FollowIds | FollowWhere<string>;
+  /** A dependent follow's dependencies, by name — `null` for a plain one. */
+  readonly deps: readonly string[] | null;
+  readonly tupleOf: (
+    subject: unknown,
+    rows: Readonly<Record<string, readonly unknown[]>>,
+  ) => FollowTuple | null;
 }
+
+/**
+ * What a load's read of the dependent follows named — each one's tuple by
+ * name — handed to the runtime (`LoadRun.noteLoaded`) and back to the
+ * follow routes' `usesOf` as `loaded`.
+ */
+export type FollowLoaded = Readonly<Record<string, FollowTuple | null>>;
 
 /** A value's follows, compiled once per `follows` function (`followsOf`). */
 export interface CompiledFollows {
   readonly list: readonly CompiledFollow[];
-  /** Every follow's rows for `subject`, read in parallel, by name. */
-  read(subject: unknown): Promise<Readonly<Record<string, readonly unknown[]>>>;
+  /** Whether any follow is dependent (`follow.from`). */
+  readonly dependent: boolean;
+  /**
+   * Every follow's rows for `subject`, by name: the plain ones in parallel,
+   * each dependent one once its dependencies are read. `note` is handed
+   * what the dependent follows named (`FollowLoaded`) — the loader's read
+   * passes the runtime's `noteLoaded`.
+   */
+  read(
+    subject: unknown,
+    note?: (loaded: FollowLoaded) => void,
+  ): Promise<Readonly<Record<string, readonly unknown[]>>>;
 }
 
 /** The one `follow` every `follows` is handed: it checks the target and wraps it. */
 function follow(target: unknown, tupleOf: unknown): Follow<unknown> {
+  return makeFollow(null, target, tupleOf);
+}
+
+/** `follow.from`: a dependent follow, reading `deps` first. */
+follow.from = (
+  deps: unknown,
+  target: unknown,
+  tupleOf: unknown,
+): Follow<unknown> => {
+  if (typeof deps !== "object" || deps === null) {
+    throw new Error(
+      "follow.from: the dependencies are a record of follows by name — `follow.from({ links }, target, (subject, { links }) => tuple)`.",
+    );
+  }
+  return makeFollow(deps as FollowMap, target, tupleOf);
+};
+
+function makeFollow(
+  deps: FollowMap | null,
+  target: unknown,
+  tupleOf: unknown,
+): Follow<unknown> {
   const source = (target as Partial<FollowIdsTarget<unknown>> | null)?.[
     FOLLOW_SOURCE
   ];
@@ -185,7 +281,8 @@ function follow(target: unknown, tupleOf: unknown): Follow<unknown> {
   return {
     [FOLLOW]: {
       source,
-      tupleOf: tupleOf as (subject: never) => FollowIds | FollowWhere<string>,
+      deps,
+      tupleOf: tupleOf as (subject: never, rows: never) => FollowTuple | null,
     },
   };
 }
@@ -217,6 +314,17 @@ export function followsOf(
       `serveValue("${key}"): \`follows\` answered ${JSON.stringify(map)}, not a record of follows by name.`,
     );
   }
+  // Each follow's name, by identity: a dependent follow names its
+  // dependencies by the objects `follow` made, which must be in the map.
+  const nameOf = new Map<object, string>();
+  for (const [name, f] of Object.entries(map)) {
+    if (nameOf.has(f as object)) {
+      throw new Error(
+        `serveValue("${key}"): one follow is named both "${nameOf.get(f as object)}" and "${name}" — name each follow once.`,
+      );
+    }
+    nameOf.set(f as object, name);
+  }
   const list: CompiledFollow[] = Object.entries(map).map(([name, f]) => {
     const spec = (f as Partial<Follow<unknown>> | null)?.[FOLLOW];
     if (spec === undefined) {
@@ -224,12 +332,42 @@ export function followsOf(
         `serveValue("${key}"): the follow "${name}" was not made by \`follow(served, tupleOf)\`.`,
       );
     }
+    const deps =
+      spec.deps === null
+        ? null
+        : Object.entries(spec.deps).map(([alias, dep]) => {
+            const depName = nameOf.get(dep as object);
+            if (depName === undefined) {
+              throw new Error(
+                `serveValue("${key}"): the follow "${name}" reads "${alias}" (\`follow.from\`), which \`follows\` does not return — return every follow it reads.`,
+              );
+            }
+            return [alias, depName] as const;
+          });
+    if (deps !== null && deps.length === 0) {
+      throw new Error(
+        `serveValue("${key}"): the follow "${name}" is \`follow.from({}, …)\` — a dependent follow reads at least one follow; else use \`follow(target, tupleOf)\`.`,
+      );
+    }
+    const tupleOf = spec.tupleOf as (
+      subject: unknown,
+      rows: Readonly<Record<string, readonly unknown[]>>,
+    ) => FollowTuple | null;
     return {
       name,
       source: spec.source,
-      tupleOf: spec.tupleOf as (
-        subject: unknown,
-      ) => FollowIds | FollowWhere<string>,
+      deps: deps === null ? null : deps.map(([, depName]) => depName),
+      // A dependent tuple sees its dependencies under the aliases it named.
+      tupleOf:
+        deps === null
+          ? tupleOf
+          : (subject, rows) =>
+              tupleOf(
+                subject,
+                Object.fromEntries(
+                  deps.map(([alias, depName]) => [alias, rows[depName]!]),
+                ),
+              ),
     };
   });
   if (list.length === 0) {
@@ -237,26 +375,45 @@ export function followsOf(
       `serveValue("${key}"): \`follows\` names no follow — omit it.`,
     );
   }
+  const dependent = list.some((f) => f.deps !== null);
   const out: CompiledFollows = {
     list,
-    async read(subject) {
-      const rows = await Promise.all(
-        list.map((f) => readFollow(key, f, subject)),
-      );
-      return Object.fromEntries(list.map((f, i) => [f.name, rows[i]!]));
+    dependent,
+    async read(subject, note) {
+      const rows: Record<string, readonly unknown[]> = {};
+      const loaded: Record<string, FollowTuple | null> = {};
+      const reading = new Map<string, Promise<void>>();
+      const byName = new Map(list.map((f) => [f.name, f]));
+      const readOne = (f: CompiledFollow): Promise<void> => {
+        const known = reading.get(f.name);
+        if (known !== undefined) return known;
+        const p = (async () => {
+          if (f.deps !== null) {
+            await Promise.all(f.deps.map((d) => readOne(byName.get(d)!)));
+          }
+          const answer = f.tupleOf(subject, rows);
+          const tuple = answer === null ? null : checkedTuple(key, f, answer);
+          if (f.deps !== null) loaded[f.name] = tuple;
+          rows[f.name] = await readFollow(f, tuple);
+        })();
+        reading.set(f.name, p);
+        return p;
+      };
+      await Promise.all(list.map(readOne));
+      if (dependent) note?.(loaded);
+      return Object.fromEntries(list.map((f) => [f.name, rows[f.name]!]));
     },
   };
   compiled.set(follows, out);
   return out;
 }
 
-/** One follow's rows for `subject`: its tuple, of its source's form, read fresh. */
+/** One follow's rows for its checked tuple, read fresh — none for a `null` one. */
 async function readFollow(
-  key: string,
   f: CompiledFollow,
-  subject: unknown,
+  tuple: FollowTuple | null,
 ): Promise<readonly unknown[]> {
-  const tuple = checkedTuple(key, f, f.tupleOf(subject));
+  if (tuple === null) return [];
   // An empty id set names no row: nothing to read (`point.encode` refuses it).
   if ("ids" in tuple && tuple.ids.length === 0) return [];
   return (f.source.read as (t: typeof tuple) => Promise<readonly unknown[]>)(
@@ -328,10 +485,30 @@ export function followReaches(
   subjectOf: (params: ResourceParams) => unknown,
 ): unknown[] {
   return follows.list.map((f) =>
-    f.source.reach(f.name, ((params: ResourceParams) =>
-      checkedTuple(key, f, f.tupleOf(subjectOf(params)))) as (
-      params: ResourceParams,
-    ) => never),
+    // The source's tuple form is its own (`checkedTuple`); the reach is
+    // opaque here, so its tuple type is erased.
+    (
+      f.source.reach as (
+        name: string,
+        tuple: FollowReachTuple<unknown>,
+      ) => unknown
+    )(
+      f.name,
+      f.deps === null
+        ? {
+            loaded: false,
+            of: (params: ResourceParams) => {
+              const tuple = f.tupleOf(subjectOf(params), {});
+              return tuple === null ? null : checkedTuple(key, f, tuple);
+            },
+          }
+        : {
+            // Checked when the load read it (`read`).
+            loaded: true,
+            of: (loaded: unknown) =>
+              (loaded as FollowLoaded | undefined)?.[f.name] ?? null,
+          },
+    ),
   );
 }
 

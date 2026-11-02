@@ -17,6 +17,11 @@
  *   order; a stop before a start resolved never leaks; a stop during a
  *   re-point stops the new start; untracked reads start nothing; driven end
  *   to end by the runtime's `onFollowReached` through a follow route;
+ * - dependent follows (`follow.from`): read after their dependencies, handed
+ *   their rows under the aliases named, `null` reads nothing, and the loader's
+ *   read notes every dependent tuple to the runtime's `LoadRun` (no note
+ *   without one); one referencing a follow not returned, or one follow under
+ *   two names, is refused; a paged value takes none;
  * - the refusals (a follow on a silent external value, an empty `follows`, a
  *   non-target, `whileFollowing` without follows), and the types (a non-target and a wrong tuple shape are
  *   errors; `followed` is typed per name).
@@ -773,5 +778,90 @@ describe("refusals and types", () => {
       });
     };
     expect(typeof typeOnly).toBe("function");
+  });
+});
+
+describe("dependent follows (`follow.from`)", () => {
+  test("read after their dependencies, handed their rows by alias; the loader notes each dependent tuple", async () => {
+    const rows = new Map([
+      ["c1", { id: "c1", path: "/a" }],
+      ["c2", { id: "c2", path: "/b" }],
+    ]);
+    const links = idsTarget(rows);
+    const files = idsTarget(rows);
+    const v = liveValue(key("dep"), { schema: Count, params: ["id"] });
+    const compiled = compileValue(v, {
+      source: "db",
+      follows: (follow) => {
+        const first = follow(links.target, ({ id }) => ({ ids: [id] }));
+        return {
+          first,
+          second: follow.from({ via: first }, files.target, (_p, { via }) =>
+            via.length === 0
+              ? null
+              : { ids: [via[0]!.id === "c1" ? "c2" : "c1"] },
+          ),
+        };
+      },
+      loader: (_p, { followed }) => ({
+        n: followed.first.length * 10 + followed.second.length,
+      }),
+    });
+    const notes: unknown[] = [];
+    const run = { noteLoaded: (s: unknown) => notes.push(s) };
+    expect(await compiled.options.loader({ id: "c1" }, undefined, run)).toEqual(
+      {
+        n: 11,
+      },
+    );
+    expect(files.reads).toEqual([["c2"]]);
+    expect(notes).toEqual([{ second: { ids: ["c2"] } }]);
+    // An unknown dependency row: the dependent tuple is null, read nothing.
+    expect(await compiled.options.loader({ id: "zz" }, undefined, run)).toEqual(
+      {
+        n: 0,
+      },
+    );
+    expect(files.reads).toEqual([["c2"]]);
+    expect(notes.at(-1)).toEqual({ second: null });
+    // No run (an untracked read path): nothing to note to.
+    expect(await compiled.options.loader({ id: "c1" })).toEqual({ n: 11 });
+  });
+
+  test("a dependency follows does not return, one follow under two names, and an empty dependency set are refused", () => {
+    const { target } = idsTarget(new Map());
+    const v = () =>
+      liveValue(key("dep-bad"), { schema: Count, params: ["id"] });
+    expect(() =>
+      compileValue(v(), {
+        source: "db",
+        follows: (follow) => {
+          const hidden = follow(target, ({ id }) => ({ ids: [id] }));
+          return {
+            dep: follow.from({ hidden }, target, () => ({ ids: [] })),
+          };
+        },
+        loader: () => ({ n: 0 }),
+      }),
+    ).toThrow(/does not return/);
+    expect(() =>
+      compileValue(v(), {
+        source: "db",
+        follows: (follow) => {
+          const one = follow(target, ({ id }) => ({ ids: [id] }));
+          return { one, again: one };
+        },
+        loader: () => ({ n: 0 }),
+      }),
+    ).toThrow(/named both/);
+    expect(() =>
+      compileValue(v(), {
+        source: "db",
+        follows: (follow) => ({
+          dep: follow.from({}, target, () => ({ ids: [] })),
+        }),
+        loader: () => ({ n: 0 }),
+      }),
+    ).toThrow(/reads at least one follow/);
   });
 });

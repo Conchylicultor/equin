@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
-import { liveValue } from "@plugins/network/plugins/live/core";
+import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 
 /**
  * The record a task is ABOUT: a failed build run, a deploy run, a job run. The
@@ -21,6 +21,24 @@ export type TaskSubject = z.infer<typeof TaskSubjectSchema>;
 export const taskSubjectShape = defineExtensionShape({
   key: "taskId",
   fields: { subjectKind: textField(), subjectId: textField() },
+});
+
+// The tasks filed about each subject — what `subjectTask` follows, a scoped
+// set by `{ where: { subjectKind, subjectId } }`. A link written about
+// another subject reaches none of this subject's readers. Ordered by task id
+// (the shape's row carries no timestamp): a launch reuses a subject's live
+// task, so at most one link is live and the order only breaks a tie.
+export const subjectLinks = liveCollection("task-subject-links", {
+  from: taskSubjectShape,
+  id: "taskId",
+  all: {
+    by: ["subjectKind", "subjectId"],
+    orderBy: [["taskId", "asc"]],
+    unbounded: {
+      reason:
+        "the tasks filed about one subject — one per launch about it, a handful",
+    },
+  },
 });
 
 const SubjectTaskSchema = z.object({ taskId: z.string().nullable() });

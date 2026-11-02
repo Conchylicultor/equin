@@ -244,14 +244,17 @@ the total request/byte volume versus the old full-mailbox, full-body crawl.
 - Server:
   - Contributes:
     - `resource.declare` "mail-sync-state"
+    - `resource.declare` "mail.message-attachments"
+    - `resource.declare` "mail.message-attachments:rows"
+    - `resource.declare` "mail.message-bodies:rows"
     - `resource.declare` "mail.message-body"
     - `resource.declare` "mail.search"
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/mail/mail-core` ×8
     - `apps/mail/gmail-api` ×5
+    - `network/live` ×3
     - `infra/endpoints` ×2
     - `infra/jobs` ×2
-    - `network/live` ×2
     - `database.db`
     - `integrations/gmail.isGmailEnabled`
     - `primitives/log-channels.defineLogSink`
@@ -263,6 +266,9 @@ the total request/byte volume versus the old full-mailbox, full-body crawl.
     - `defineJob('mail.hydrate')`
   - Resources:
     - `mail-sync-state` (push, whole: one row per connected mail account — the app is single-account today)
+    - `mail.message-attachments` (keyed)
+    - `mail.message-attachments:rows` (keyed, point)
+    - `mail.message-bodies:rows` (keyed, point)
     - `mail.message-body` (push, whole: one message's attachments — Gmail bounds a message at 25 MB)
     - `mail.search` (keyed, window, fixed)
   - Routes:
@@ -283,7 +289,10 @@ the total request/byte volume versus the old full-mailbox, full-body crawl.
   - Uses:
     - `apps/mail/mail-core.mailAccountIdKind`
     - `apps/mail/mail-core.MailAttachmentSchema`
+    - `apps/mail/mail-core.mailAttachmentsEntityRef`
+    - `apps/mail/mail-core.mailMessagesEntityRef`
     - `infra/endpoints.defineEndpoint`
+    - `network/live.liveCollection`
     - `network/live.liveValue`
     - `packages/list-bound.wholeList`
   - Exports (types):
@@ -296,6 +305,8 @@ the total request/byte volume versus the old full-mailbox, full-body crawl.
     - `BACKFILL_WINDOW_DAYS`
     - `MAIL_SEARCH_MAX_CHARS`
     - `mailHydrateMessageEndpoint`
+    - `mailMessageAttachments`
+    - `mailMessageBodies`
     - `mailMessageBody`
     - `mailSearch`
     - `mailSyncEndpoint`

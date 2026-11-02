@@ -120,10 +120,14 @@ block keep taking a plain `ClaudeCliCall`.
 - Description: Consumer half of the claude-cli call log: useClaudeCliCalls({correlationId, occurredAt}) answers 'which model calls produced this record?' as a calls / none / not-retained result, <ClaudeCliCallDetail> is the one rendering of a recorded call (header, meta grid, context with id chips, output or error, prompt, system — each copyable), and SLOW_CALL_MS is the duration past which a call reads as slow. One-shot Claude generations for short, latency-tolerant work (runClaudePrint), and runClaudeReadOnly — a turn that may only Read / Grep / Glob one directory and answers with a zod-schema'd structured value. Each is one Agent SDK turn (infra/claude-cli/sdk) on the active Claude account — the one new agents launch on — recorded in the call log.
 - Server:
   - Contributes:
+    - `resource.declare` "claude-cli-call-horizon:rows"
     - `resource.declare` "claude-cli-calls"
+    - `resource.declare` "claude-cli-calls-by-record"
+    - `resource.declare` "claude-cli-calls-by-record:rows"
     - `resource.declare` "claude-cli-calls:groups"
     - `resource.declare` "claude-cli-calls:rows"
     - `resource.declare` "claude-cli.calls-for"
+    - `fork-data-exclusion` "claude_cli_call_horizon"
     - `fork-data-exclusion` "claude_cli_calls"
   - Uses:
     - `conversations/model-provider/catalog.getModelCatalog`
@@ -144,17 +148,22 @@ block keep taking a plain `ClaudeCliCall`.
     - `network/live.serveValue`
   - DB schema: `plugins/infra/plugins/claude-cli/server/internal/tables.ts`
   - Exports (types):
+    - `RecordCallInput`
     - `RunClaudePrintInput`
     - `RunClaudeReadOnlyInput`
   - Exports (values):
     - `_claudeCliCalls`
     - `ClaudeCliError`
-    - `listCallsFor`
     - `READ_ONLY_TOOLS`
+    - `recordClaudeCliCall`
     - `runClaudePrint`
     - `runClaudeReadOnly`
+    - `writeRingHorizon`
   - Resources:
+    - `claude-cli-call-horizon:rows` (keyed, point)
     - `claude-cli-calls` (keyed, window)
+    - `claude-cli-calls-by-record` (keyed)
+    - `claude-cli-calls-by-record:rows` (keyed, point)
     - `claude-cli-calls:groups` (push)
     - `claude-cli-calls:rows` (keyed, point)
     - `claude-cli.calls-for` (push, capped: RECENT_CALLS_LIMIT, whole: the caller's label for the call — a few named values it chose (a source id, a url))
@@ -192,6 +201,7 @@ block keep taking a plain `ClaudeCliCall`.
     - `fields.nullable`
     - `fields/date/config.dateField`
     - `fields/duration/config.durationField`
+    - `fields/int/config.intField`
     - `fields/json/config.jsonField`
     - `fields/text/config.enumTextField`
     - `fields/text/config.parsedTextField`
@@ -209,8 +219,12 @@ block keep taking a plain `ClaudeCliCall`.
     - `ClaudeCliCallsResult`
     - `ClaudeCliCallStatus`
   - Exports (values):
+    - `CLAUDE_CLI_RING_ID`
     - `claudeCliCallFields`
+    - `claudeCliCallHorizon`
+    - `claudeCliCallHorizonEntityRef`
     - `claudeCliCalls`
+    - `claudeCliCallsByRecord`
     - `ClaudeCliCallSchema`
     - `claudeCliCallsEntityRef`
     - `claudeCliCallsFor`
@@ -238,6 +252,7 @@ block keep taking a plain `ClaudeCliCall`.
     - `apps/events/sources/url-extract`
     - `apps/places/places-core`
     - `debug/claude-cli-calls`
+    - `debug/read-set`
 - Exemptions:
   - Exempts itself from:
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)
