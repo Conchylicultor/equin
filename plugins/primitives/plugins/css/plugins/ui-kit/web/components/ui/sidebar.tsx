@@ -393,7 +393,7 @@ function SidebarInset({ className, ...props }: React.ComponentProps<"main">) {
   return (
     <main
       data-slot="sidebar-inset"
-      // eslint-disable-next-line spacing/no-adhoc-spacing -- variant-conditional inset margins (m-2/ml-0/ml-2) detach the main area as a floating card; no named margin utility
+      // eslint-disable-next-line spacing/no-adhoc-spacing -- KEPT: variant-conditional inset margins (m-2/ml-0/ml-2) detach the main area as a floating card from its peer sidebar; the owning container is the shadcn SidebarProvider wrapper and the margin only applies for the `inset` variant, so no container-owned spelling exists
       className={cn(
         "relative flex w-full flex-1 flex-col bg-background md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-sm md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2",
         className,
@@ -447,8 +447,7 @@ function SidebarSeparator({
     <Separator
       data-slot="sidebar-separator"
       data-sidebar="separator"
-      // eslint-disable-next-line spacing/no-adhoc-spacing -- mx-2 insets the separator from the sidebar edges; no named margin utility
-      className={cn("mx-2 w-auto bg-sidebar-border", className)}
+      className={cn("bg-sidebar-border bg-clip-content px-sm", className)}
       {...props}
     />
   );
@@ -488,7 +487,7 @@ function SidebarGroupLabel({
     defaultTagName: "div",
     props: mergeProps<"div">(
       {
-        // eslint-disable-next-line spacing/no-adhoc-spacing -- -mt-8 (variant-conditional) collapses the label into the rail in icon mode; no named margin utility
+        // eslint-disable-next-line spacing/no-adhoc-spacing -- KEPT: -mt-8 only in icon-collapsed mode pulls the h-8 label out of flow (animated via transition-[margin]) so the rail closes up; variant-conditional on a group data attribute, not expressible as container gap/padding
         className: cn(
           "flex h-8 shrink-0 items-center rounded-md px-sm text-label text-sidebar-foreground/70 ring-sidebar-ring outline-hidden transition-[margin,opacity] duration-200 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
           className,
@@ -740,7 +739,7 @@ function SidebarMenuSub({ className, ...props }: React.ComponentProps<"ul">) {
     <ul
       data-slot="sidebar-menu-sub"
       data-sidebar="menu-sub"
-      // eslint-disable-next-line spacing/no-adhoc-spacing -- mx-3.5 aligns the sub-list under the parent row's icon; no named margin utility
+      // eslint-disable-next-line spacing/no-adhoc-spacing -- KEPT: mx-3.5 indents the sub-list (and its border-l) under the parent row's icon; the parent is the shared SidebarMenuItem li, which cannot carry padding for only the rows that hold a sub-list
       className={cn(
         "mx-3.5 flex min-w-0 translate-x-px flex-col gap-xs border-l border-sidebar-border px-sm py-2xs group-data-[collapsible=icon]:hidden",
         className,

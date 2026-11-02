@@ -78,18 +78,16 @@ function FileRow({
           {from && (
             <>
               <span className="text-muted-foreground line-through">{from}</span>
-              {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline arrow separator offset between from/to paths */}
-              <span className="mx-1.5 text-muted-foreground">&rarr;</span>
+              <span className="text-muted-foreground">{" → "}</span>
             </>
           )}
           <span className="text-muted-foreground">{dir}</span>
-          <span className="font-medium">{basename}</span>
+          <span className="font-medium">{basename}</span>{" "}
           <CopyButton
             text={file.path}
             tooltip="Copy path"
             aspect="inline"
-            // eslint-disable-next-line spacing/no-adhoc-spacing -- inline gap after path text before copy button
-            className="ml-1 text-muted-foreground opacity-0 pointer-events-none transition-opacity hover:text-foreground group-hover/path:opacity-100 group-hover/path:pointer-events-auto"
+            className="text-muted-foreground opacity-0 pointer-events-none transition-opacity hover:text-foreground group-hover/path:opacity-100 group-hover/path:pointer-events-auto"
             onClick={(e) => e.stopPropagation()}
           />
         </Text>

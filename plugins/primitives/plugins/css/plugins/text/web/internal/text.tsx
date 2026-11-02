@@ -289,3 +289,19 @@ export function Text({
 export function textVariantClass(variant: TextVariant): string {
   return VARIANT_CLASS[variant];
 }
+
+/**
+ * The classes `<Text variant>` wears HERE — the ambient-density twin of
+ * {@link textVariantClass}: at the `xs` region the compact rung, as `<Text>`
+ * itself picks it. For a box that must share a text's metrics without being
+ * that text: `<FirstLine variant>` sizes its one-line box to the line height
+ * of the words beside it, which only matches if it compacts exactly when they do.
+ * No variant: inherit the surrounding typography (none), as `<Text>` does.
+ */
+export function useTextVariantClass(
+  variant: TextVariant | undefined,
+): string | undefined {
+  const compact = textStepFor(useControlSize()) === 1;
+  if (!variant) return undefined;
+  return (compact ? COMPACT_VARIANT_CLASS : VARIANT_CLASS)[variant];
+}

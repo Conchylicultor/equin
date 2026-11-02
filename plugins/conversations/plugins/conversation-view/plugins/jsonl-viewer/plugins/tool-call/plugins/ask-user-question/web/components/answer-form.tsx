@@ -209,23 +209,18 @@ export function AnswerForm({
   };
 
   return (
-    // eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the answer form from the question card above (no named margin utility)
-    <Stack gap="md" className="mt-2" onKeyDown={handleKeyDown}>
+    <Stack gap="md" onKeyDown={handleKeyDown}>
       {questions.map((q, qi) => {
         const answer = answers[qi]!;
         const otherActive = isOtherActive(answer, q);
         return (
-          <div key={qi}>
+          <Stack key={qi} gap="xsm">
             {questions.length > 1 && (
-              <p
-                // eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the per-question header from its question text (no named margin utility)
-                className="mb-1 text-3xs font-medium tracking-wider text-muted-foreground"
-              >
+              <p className="text-3xs font-medium tracking-wider text-muted-foreground">
                 {q.header}
               </p>
             )}
-            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the question text from its option list (no named margin utility) */}
-            <Text as="p" variant="caption" className="mb-1.5 text-foreground">
+            <Text as="p" variant="caption" className="text-foreground">
               {q.question}
             </Text>
             <Stack gap="xs">
@@ -260,7 +255,7 @@ export function AnswerForm({
                 </div>
               </OptionRow>
             </Stack>
-          </div>
+          </Stack>
         );
       })}
       {showReply && (

@@ -1,4 +1,5 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
@@ -60,22 +61,23 @@ export function PeekThumbs({
           onClose={() => onClose(w)}
         />
       ))}
-      <button
-        type="button"
-        title={`New ${app.app.name} window`}
-        aria-label={`New ${app.app.name} window`}
-        onClick={onNewWindow}
-        // eslint-disable-next-line spacing/no-adhoc-spacing -- the mockup's `.thumb-add` margin (6px 2px), off the ramp
-        className={cn(
-          rigidClass(),
-          "mx-[2px] my-[6px] w-[34px] rounded-lg border-[1.5px] border-dashed border-input text-faint-foreground",
-          "hover:border-primary/60 hover:bg-primary/7 hover:text-primary-text",
-        )}
-      >
-        <Center className="size-full">
-          <Icon icon={addIcon} className="size-[15px]" />
-        </Center>
-      </button>
+      <Stack direction="row" gap="none" className="py-xsm">
+        <button
+          type="button"
+          title={`New ${app.app.name} window`}
+          aria-label={`New ${app.app.name} window`}
+          onClick={onNewWindow}
+          className={cn(
+            rigidClass(),
+            "w-[34px] rounded-lg border-[1.5px] border-dashed border-input text-faint-foreground",
+            "hover:border-primary/60 hover:bg-primary/7 hover:text-primary-text",
+          )}
+        >
+          <Center className="size-full">
+            <Icon icon={addIcon} className="size-[15px]" />
+          </Center>
+        </button>
+      </Stack>
     </div>
   );
 }

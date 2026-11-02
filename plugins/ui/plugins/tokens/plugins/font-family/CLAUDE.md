@@ -29,7 +29,7 @@
   - Exports (types): `FontFamilyTokenValues`
   - Exports (values): `fontFamilyGroup`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
+  - Uses tokens: `ui/tokens/density --space-sm`
   - Tokens used by: 153 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×36
     - `plugin-meta` ×23

@@ -14,6 +14,7 @@
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
     - `primitives/css/fill.fillClasses`
     - `primitives/css/rigid.rigidClass`
+    - `primitives/css/spacing.FirstLine`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`

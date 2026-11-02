@@ -9,7 +9,7 @@ import { RunsRenderer } from "@plugins/page/plugins/read-only-view/web";
 import type { TableAlign, TableData } from "../../core";
 
 // The chat renderer's table (`primitives/markdown`'s base components), so a
-// table reads the same in a conversation and on a page. Its `my-2` block rhythm
+// table reads the same in a conversation and on a page. Its `my-flow-block` rhythm
 // is the page's `Inset y` here instead.
 const CELL = "border border-border px-sm py-xs align-top whitespace-pre-wrap";
 

@@ -62,67 +62,68 @@ export function NotificationBody({ n }: { n: Notification }): ReactElement {
   const link = notificationLink(n);
   return (
     <Fill className={cn(n.muted || n.read ? "opacity-60" : undefined)}>
-      <Line className="gap-xs">
-        <Text
-          as="p"
-          variant="label"
-          className={`truncate ${n.muted ? VARIANT_TEXT_MUTED[n.variant] : VARIANT_TEXT[n.variant]}`}
-        >
-          {n.title}
-        </Text>
-        {n.audience === "developer" && <DeveloperMark />}
-        {n.muted && (
-          <Badge
-            variant="muted"
-            tooltip="Low-signal / expected — dimmed, kept out of the unread badge, and never toasted."
-          >
-            muted
-          </Badge>
-        )}
-      </Line>
-      {n.description && n.description !== n.title && (
-        <Text
-          as="p"
-          variant="caption"
-          className="text-muted-foreground line-clamp-2"
-        >
-          {n.description}
-        </Text>
-      )}
-      {n.detail !== null && (
+      <Stack gap="2xs">
         <Line className="gap-xs">
-          <DeveloperMark />
-          <Text variant="caption" tone="faint">
-            {n.detail}
-          </Text>
-        </Line>
-      )}
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- small top offset separating the metadata row from the description above */}
-      <Stack direction="row" gap="sm" align="center" className="mt-0.5">
-        <RelativeTime
-          date={n.lastSeenAt}
-          className="text-3xs text-muted-foreground"
-        />
-        {n.count > 1 && (
-          <span
-            className="text-3xs text-muted-foreground tabular-nums"
-            title={`Recurred ${n.count} times — collapsed into one entry`}
+          <Text
+            as="p"
+            variant="label"
+            className={`truncate ${n.muted ? VARIANT_TEXT_MUTED[n.variant] : VARIANT_TEXT[n.variant]}`}
           >
-            &times;{n.count > 99 ? "99+" : n.count}
-          </span>
+            {n.title}
+          </Text>
+          {n.audience === "developer" && <DeveloperMark />}
+          {n.muted && (
+            <Badge
+              variant="muted"
+              tooltip="Low-signal / expected — dimmed, kept out of the unread badge, and never toasted."
+            >
+              muted
+            </Badge>
+          )}
+        </Line>
+        {n.description && n.description !== n.title && (
+          <Text
+            as="p"
+            variant="caption"
+            className="text-muted-foreground line-clamp-2"
+          >
+            {n.description}
+          </Text>
         )}
-        {n.type && (
-          <span className="text-3xs text-muted-foreground">{n.type}</span>
+        {n.detail !== null && (
+          <Line className="gap-xs">
+            <DeveloperMark />
+            <Text variant="caption" tone="faint">
+              {n.detail}
+            </Text>
+          </Line>
         )}
-        <span className="text-3xs text-muted-foreground">{n.category}</span>
-        {raisedBy !== null && (
-          <span className="text-3xs text-muted-foreground">{raisedBy}</span>
-        )}
-        {link !== undefined && (
-          <span className="text-3xs text-muted-foreground hover:text-foreground">
-            View &rarr;
-          </span>
-        )}
+        <Stack direction="row" gap="sm" align="center">
+          <RelativeTime
+            date={n.lastSeenAt}
+            className="text-3xs text-muted-foreground"
+          />
+          {n.count > 1 && (
+            <span
+              className="text-3xs text-muted-foreground tabular-nums"
+              title={`Recurred ${n.count} times — collapsed into one entry`}
+            >
+              &times;{n.count > 99 ? "99+" : n.count}
+            </span>
+          )}
+          {n.type && (
+            <span className="text-3xs text-muted-foreground">{n.type}</span>
+          )}
+          <span className="text-3xs text-muted-foreground">{n.category}</span>
+          {raisedBy !== null && (
+            <span className="text-3xs text-muted-foreground">{raisedBy}</span>
+          )}
+          {link !== undefined && (
+            <span className="text-3xs text-muted-foreground hover:text-foreground">
+              View &rarr;
+            </span>
+          )}
+        </Stack>
       </Stack>
     </Fill>
   );

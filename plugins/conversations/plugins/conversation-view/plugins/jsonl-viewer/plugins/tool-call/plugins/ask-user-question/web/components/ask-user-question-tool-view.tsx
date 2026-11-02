@@ -100,8 +100,7 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
           isError={showAsError}
           outcomeUnknown={false}
         >
-          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the form from the question card above (no named margin utility) */}
-          <Stack gap="sm" className="mt-2">
+          <Stack gap="sm">
             <Text as="p" variant="caption" tone="muted">
               The agent stopped while asking, so your answer is sent as a
               message.

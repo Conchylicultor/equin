@@ -3,7 +3,10 @@ import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-sourc
 import { EventRowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 import { ViewerThumbnail } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Inset,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 type UserImageEvent = Extract<JsonlEvent, { kind: "user-image" }>;
 
@@ -17,23 +20,24 @@ export function UserImageRow({ event }: { event: JsonlEvent }) {
   return (
     <div className="flow-root rounded-md border border-border/60 bg-background px-md py-sm">
       <EventRowActions float />
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mb-1 spaces the label from the image below it */}
-      <SectionLabel className="mb-1 text-3xs">
+      <SectionLabel className="text-3xs">
         <Stack direction="row" gap="sm" align="center">
           <span>User image</span>
           <span>{mime}</span>
         </Stack>
       </SectionLabel>
-      <ViewerThumbnail
-        image={{
-          src,
-          name: `pasted-image.${ext}`,
-          sourceLabel: "Pasted",
-          alt: "User-pasted image",
-          width: e.image.width,
-          height: e.image.height,
-        }}
-      />
+      <Inset t="xs">
+        <ViewerThumbnail
+          image={{
+            src,
+            name: `pasted-image.${ext}`,
+            sourceLabel: "Pasted",
+            alt: "User-pasted image",
+            width: e.image.width,
+            height: e.image.height,
+          }}
+        />
+      </Inset>
     </div>
   );
 }

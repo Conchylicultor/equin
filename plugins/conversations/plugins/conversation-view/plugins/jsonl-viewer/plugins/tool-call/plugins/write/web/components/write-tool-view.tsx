@@ -5,6 +5,7 @@ import {
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 
@@ -16,18 +17,16 @@ export function WriteToolView({ event }: ToolRendererProps) {
 
   return (
     <ToolCallCard event={event} aside={<FilePath filePath={file_path} />}>
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the code block from the card header */}
-      <div className="mt-2">
+      <Stack gap="xs">
         <Scroll axis="both" className="max-h-[280px]">
           <HighlightedCode code={content} lang={languageForPath(file_path)} />
         </Scroll>
         {event.result?.isError && (
-          // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-1 separates the error text from the code block above
-          <Text as="p" variant="caption" className="mt-1 text-destructive">
+          <Text as="p" variant="caption" className="text-destructive">
             {event.result.content}
           </Text>
         )}
-      </div>
+      </Stack>
     </ToolCallCard>
   );
 }

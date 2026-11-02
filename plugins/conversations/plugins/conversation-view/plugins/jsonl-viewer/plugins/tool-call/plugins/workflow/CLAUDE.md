@@ -11,12 +11,12 @@
   - Contributes:
     - `JsonlViewerTool.Renderer` "Workflow" → `WorkflowToolView`
     - `Pane.Register` "workflow-node"
-  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/spacing` ×4
     - `primitives/pane` ×4
     - `conversations/conversation-view/jsonl-viewer/tool-call` ×2
     - `primitives/collapsible` ×2
     - `primitives/css/badge` ×2
-    - `primitives/css/spacing` ×2
     - `conversations/conversation-view.conversationPane`
     - `conversations/model-provider.familyClass`
     - `conversations.ConversationFileLinks`

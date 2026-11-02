@@ -4,7 +4,10 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Inset,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Slider } from "@plugins/primitives/plugins/css/plugins/slider/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { SwitchIndicator } from "@plugins/primitives/plugins/css/plugins/switch/web";
@@ -130,8 +133,9 @@ export function SizeChip({ layout, noWholePage }: SizeChipProps): ReactElement {
               onClick={() => setSize({ kind: "preset", preset: "Phone" })}
             />
           </Stack>
-          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- the mockup's `.vdiv` (an 18px rule, 4px either side), off the ramp */}
-          <span aria-hidden className="mx-[4px] h-[18px] w-px bg-border" />
+          <Inset x="xs">
+            <span aria-hidden className="h-[18px] w-px bg-border" />
+          </Inset>
           <Popover>
             <PopoverTrigger
               render={
@@ -235,162 +239,164 @@ function SizePopoverBody({ layout, noWholePage }: SizeChipProps): ReactElement {
           Size
         </Text>
       </div>
-      <Stack gap="none" role="radiogroup" aria-label="Size">
-        <SizeRow
-          checked={size.kind === "responsive"}
-          icon={swapHorizIcon}
-          dims="fills the canvas"
-          onSelect={() => setSize({ kind: "responsive" })}
-        >
-          Responsive
-        </SizeRow>
-        <SizeRow
-          checked={size.kind === "window"}
-          icon={webAssetIcon}
-          dims={`${String(browserWindow.w)}${TIMES}${String(browserWindow.h)}`}
-          hint="What the real app gets in this browser window."
-          onSelect={() => setSize({ kind: "window" })}
-        >
-          This window
-        </SizeRow>
-        {SIZE_PRESETS.map((p) => (
+      <Stack gap="xsm">
+        <Stack gap="none" role="radiogroup" aria-label="Size">
           <SizeRow
-            key={p.name}
-            checked={size.kind === "preset" && size.preset === p.name}
-            icon={presetIcon(p.name)}
-            dims={`${String(p.w)}${TIMES}${String(p.h)}`}
-            onSelect={() => setSize({ kind: "preset", preset: p.name })}
+            checked={size.kind === "responsive"}
+            icon={swapHorizIcon}
+            dims="fills the canvas"
+            onSelect={() => setSize({ kind: "responsive" })}
           >
-            {p.name}
+            Responsive
           </SizeRow>
-        ))}
-        {size.kind === "custom" ? (
           <SizeRow
-            checked
-            icon={desktopWindowsIcon}
-            dims={`${String(size.w)}${TIMES}${String(size.h)}`}
+            checked={size.kind === "window"}
+            icon={webAssetIcon}
+            dims={`${String(browserWindow.w)}${TIMES}${String(browserWindow.h)}`}
+            hint="What the real app gets in this browser window."
+            onSelect={() => setSize({ kind: "window" })}
           >
-            Custom
+            This window
           </SizeRow>
-        ) : null}
-      </Stack>
-      <Band>
-        <BandLabel value={`${String(layout.width)}px`}>Width</BandLabel>
-        <Slider
-          aria-label="Width"
-          title="Any width; snaps onto a preset it comes near"
-          // The track is 4px but the input's hit area 16px: the negative
-          // margins hand the band the track's own height, as the mockup's
-          // bare `.slider` has.
-          // eslint-disable-next-line spacing/no-adhoc-spacing -- cancels the range input's hit-area overhang (6px each side)
-          className="-my-[6px] w-full"
-          min={MIN_WIDTH}
-          max={MAX_WIDTH}
-          step={1}
-          value={Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, layout.width))}
-          onValueChange={(w) =>
-            setSize(sizeForWidth(w, layout.width, layout.height))
-          }
-        />
-      </Band>
-      <Band>
-        <BandLabel
-          value={
-            <Button
-              variant="ghost"
-              aspect="inline"
-              aria-label="Actual size"
-              tooltip="Actual size"
-              aria-pressed={zoom === 1}
-              className="font-mono font-medium text-foreground"
-              onClick={() => dispatch({ type: "setZoom", zoom: 1 })}
+          {SIZE_PRESETS.map((p) => (
+            <SizeRow
+              key={p.name}
+              checked={size.kind === "preset" && size.preset === p.name}
+              icon={presetIcon(p.name)}
+              dims={`${String(p.w)}${TIMES}${String(p.h)}`}
+              onSelect={() => setSize({ kind: "preset", preset: p.name })}
             >
-              {percent}%
-            </Button>
-          }
-        >
-          Zoom
-        </BandLabel>
-        <ControlSizeProvider size="xs">
-          <Stack
-            direction="row"
-            // The mockup's `.zrow` (gap 6px).
-            gap="xsm"
-            align="center"
+              {p.name}
+            </SizeRow>
+          ))}
+          {size.kind === "custom" ? (
+            <SizeRow
+              checked
+              icon={desktopWindowsIcon}
+              dims={`${String(size.w)}${TIMES}${String(size.h)}`}
+            >
+              Custom
+            </SizeRow>
+          ) : null}
+        </Stack>
+        <Band>
+          <BandLabel value={`${String(layout.width)}px`}>Width</BandLabel>
+          <Slider
+            aria-label="Width"
+            title="Any width; snaps onto a preset it comes near"
+            // The track is 4px but the input's hit area 16px: the negative
+            // margins hand the band the track's own height, as the mockup's
+            // bare `.slider` has.
+            // eslint-disable-next-line spacing/no-adhoc-spacing -- cancels the range input's hit-area overhang (6px each side)
+            className="-my-[6px] w-full"
+            min={MIN_WIDTH}
+            max={MAX_WIDTH}
+            step={1}
+            value={Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, layout.width))}
+            onValueChange={(w) =>
+              setSize(sizeForWidth(w, layout.width, layout.height))
+            }
+          />
+        </Band>
+        <Band>
+          <BandLabel
+            value={
+              <Button
+                variant="ghost"
+                aspect="inline"
+                aria-label="Actual size"
+                tooltip="Actual size"
+                aria-pressed={zoom === 1}
+                className="font-mono font-medium text-foreground"
+                onClick={() => dispatch({ type: "setZoom", zoom: 1 })}
+              >
+                {percent}%
+              </Button>
+            }
           >
-            <Button
-              variant="outline"
-              aria-pressed={zoom === "fit"}
-              tooltip="The whole frame visible at once"
-              // The mockup's `.zrow .fit`: 24px, radius 7, 12px muted; on, the
-              // accent-soft fill in an accent-line border.
-              // eslint-disable-next-line spacing/no-adhoc-spacing -- the mockup's `.fit` (padding 0 9px), off the control's own pad
-              className={cn(
-                "rounded-control px-[9px] text-control text-muted-foreground",
-                zoom === "fit" &&
-                  "border-primary/45 bg-primary/14 text-foreground hover:bg-primary/14",
-              )}
-              onClick={() => dispatch({ type: "setZoom", zoom: "fit" })}
+            Zoom
+          </BandLabel>
+          <ControlSizeProvider size="xs">
+            <Stack
+              direction="row"
+              // The mockup's `.zrow` (gap 6px).
+              gap="xsm"
+              align="center"
             >
-              Fit
-            </Button>
-            <IconButton
-              icon={removeIcon}
-              label="Zoom out"
-              disabled={percent <= MIN_ZOOM * 100}
-              className="hover:bg-accent"
-              onClick={() => setPercent(lower)}
-            />
-            <Fill>
-              <Slider
-                aria-label="Zoom"
-                className="w-full"
-                min={MIN_ZOOM * 100}
-                max={MAX_ZOOM * 100}
-                step={1}
-                detent={100}
-                value={percent}
-                onValueChange={setPercent}
+              <Button
+                variant="outline"
+                aria-pressed={zoom === "fit"}
+                tooltip="The whole frame visible at once"
+                // The mockup's `.zrow .fit`: 24px, radius 7, 12px muted; on, the
+                // accent-soft fill in an accent-line border.
+                // eslint-disable-next-line spacing/no-adhoc-spacing -- the mockup's `.fit` (padding 0 9px), off the control's own pad
+                className={cn(
+                  "rounded-control px-[9px] text-control text-muted-foreground",
+                  zoom === "fit" &&
+                    "border-primary/45 bg-primary/14 text-foreground hover:bg-primary/14",
+                )}
+                onClick={() => dispatch({ type: "setZoom", zoom: "fit" })}
+              >
+                Fit
+              </Button>
+              <IconButton
+                icon={removeIcon}
+                label="Zoom out"
+                disabled={percent <= MIN_ZOOM * 100}
+                className="hover:bg-accent"
+                onClick={() => setPercent(lower)}
               />
-            </Fill>
-            <IconButton
-              icon={addIcon}
-              label="Zoom in"
-              disabled={percent >= MAX_ZOOM * 100}
-              className="hover:bg-accent"
-              onClick={() => setPercent(higher)}
-            />
-          </Stack>
-        </ControlSizeProvider>
-      </Band>
-      <Band>
-        <WithTooltip
-          content={
-            noWholePage
-              ? undefined
-              : "Show the entire page content, not just one screen."
-          }
-          side="right"
-        >
-          <Line
-            as="button"
-            type="button"
-            role="switch"
-            aria-checked={wholePage}
-            disabled={noWholePage}
-            onClick={() => dispatch({ type: "setWholePage", on: !wholePage })}
-            className="focus-ring w-full gap-sm rounded-control text-caption text-muted-foreground disabled:cursor-default"
+              <Fill>
+                <Slider
+                  aria-label="Zoom"
+                  className="w-full"
+                  min={MIN_ZOOM * 100}
+                  max={MAX_ZOOM * 100}
+                  step={1}
+                  detent={100}
+                  value={percent}
+                  onValueChange={setPercent}
+                />
+              </Fill>
+              <IconButton
+                icon={addIcon}
+                label="Zoom in"
+                disabled={percent >= MAX_ZOOM * 100}
+                className="hover:bg-accent"
+                onClick={() => setPercent(higher)}
+              />
+            </Stack>
+          </ControlSizeProvider>
+        </Band>
+        <Band>
+          <WithTooltip
+            content={
+              noWholePage
+                ? undefined
+                : "Show the entire page content, not just one screen."
+            }
+            side="right"
           >
-            <Icon icon={descriptionIcon} className="size-3.75" />
-            <span>
-              Whole page
-              {noWholePage ? <span> · sized to its window</span> : null}
-            </span>
-            <Fill />
-            <SwitchIndicator checked={wholePage} disabled={noWholePage} />
-          </Line>
-        </WithTooltip>
-      </Band>
+            <Line
+              as="button"
+              type="button"
+              role="switch"
+              aria-checked={wholePage}
+              disabled={noWholePage}
+              onClick={() => dispatch({ type: "setWholePage", on: !wholePage })}
+              className="focus-ring w-full gap-sm rounded-control text-caption text-muted-foreground disabled:cursor-default"
+            >
+              <Icon icon={descriptionIcon} className="size-3.75" />
+              <span>
+                Whole page
+                {noWholePage ? <span> · sized to its window</span> : null}
+              </span>
+              <Fill />
+              <SwitchIndicator checked={wholePage} disabled={noWholePage} />
+            </Line>
+          </WithTooltip>
+        </Band>
+      </Stack>
     </>
   );
 }
@@ -451,11 +457,7 @@ function SizeRow({
 /** A band of the Size popover under a hairline (`.psec`). */
 function Band({ children }: { children: ReactNode }): ReactElement {
   return (
-    <Stack
-      gap="smd"
-      // eslint-disable-next-line spacing/no-adhoc-spacing -- the mockup's `.psec` margin-top 6px: the ramp has no margin classes (its padding 10px 10px 6px and gap 10px are `smd` / `xsm`)
-      className="mt-[6px] border-t border-border/64 px-smd pt-smd pb-xsm"
-    >
+    <Stack gap="smd" className="border-t border-border/64 px-smd pt-smd pb-xsm">
       {children}
     </Stack>
   );

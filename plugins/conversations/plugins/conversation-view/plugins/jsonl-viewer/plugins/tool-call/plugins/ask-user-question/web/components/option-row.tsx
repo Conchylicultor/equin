@@ -135,17 +135,16 @@ export function OptionBody({
       <Text as="p" variant="caption" className="font-medium">
         {label}
       </Text>
-      <Text as="p" variant="caption" tone="muted">
-        {description}
-      </Text>
-      {preview && (
-        <pre
-          // eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the preview block from the option description above (no named margin utility)
-          className="mt-1 whitespace-pre-wrap break-words rounded-md bg-muted/60 p-xs font-mono text-3xs text-muted-foreground"
-        >
-          {preview}
-        </pre>
-      )}
+      <Stack gap="xs">
+        <Text as="p" variant="caption" tone="muted">
+          {description}
+        </Text>
+        {preview && (
+          <pre className="whitespace-pre-wrap break-words rounded-md bg-muted/60 p-xs font-mono text-3xs text-muted-foreground">
+            {preview}
+          </pre>
+        )}
+      </Stack>
     </>
   );
 }

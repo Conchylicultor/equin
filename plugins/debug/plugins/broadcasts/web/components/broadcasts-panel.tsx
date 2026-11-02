@@ -217,18 +217,19 @@ export function BroadcastsPanel() {
       {/* Header */}
       <Line className="border-b px-lg py-md">
         <Fill>
-          <Text as="span" variant="label">
-            Broadcast Messages
-          </Text>
-          {ready && (
-            <p
-              // eslint-disable-next-line spacing/no-adhoc-spacing -- tiny one-off offset below label, no parent gap to own it
-              className="mt-0.5 truncate font-mono text-3xs text-muted-foreground/50"
-              title={ready.path}
-            >
-              {ready.path}
-            </p>
-          )}
+          <Stack gap="2xs">
+            <Text as="span" variant="label">
+              Broadcast Messages
+            </Text>
+            {ready && (
+              <p
+                className="truncate font-mono text-3xs text-muted-foreground/50"
+                title={ready.path}
+              >
+                {ready.path}
+              </p>
+            )}
+          </Stack>
         </Fill>
         <Stack direction="row" gap="xs" align="center" className={rigidClass()}>
           <ControlSizeProvider size="sm">
@@ -287,12 +288,11 @@ export function BroadcastsPanel() {
           </Stack>
 
           {/* Message */}
-          <Stack direction="row" gap="sm">
+          <Stack direction="row" gap="sm" align="baseline">
             <Text
               as="span"
               variant="caption"
-              // eslint-disable-next-line spacing/no-adhoc-spacing -- one-off top offset to baseline-align label with textarea
-              className={cn("mt-1.5 w-16 text-muted-foreground", rigidClass())}
+              className={cn("w-16 text-muted-foreground", rigidClass())}
             >
               Message
             </Text>
@@ -370,8 +370,7 @@ export function BroadcastsPanel() {
                 <Text
                   as="span"
                   variant="caption"
-                  // eslint-disable-next-line spacing/no-adhoc-spacing -- one-off inline gap after checkboxes
-                  className="ml-1 italic text-muted-foreground"
+                  className="italic text-muted-foreground"
                 >
                   (all)
                 </Text>

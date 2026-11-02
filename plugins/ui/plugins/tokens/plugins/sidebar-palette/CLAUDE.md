@@ -27,6 +27,7 @@
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`
+    - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --spacing`
   - Tokens used by:
     - `apps-core/app-launcher`

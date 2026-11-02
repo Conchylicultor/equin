@@ -81,7 +81,8 @@ export interface CollapsibleCardProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   className?: string;
-  /** Collapsible body. */
+  /** Collapsible body: its blocks, as siblings — the body stacks them with its
+   *  own gap (and its own offset under the header), so none carries a margin. */
   children?: ReactNode;
   /** Always-shown content under the header (and under the body when open),
    *  inside the card's chrome — what belongs to the card but is not folded
@@ -230,9 +231,12 @@ export function CollapsibleCard({
         </Line>
       </Overlay>
       <FoldMotion {...contentProps}>
-        {/* The offset rides inside the fold, so it tweens with the body. */}
-        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separating the collapsible body from the header inside the non-flex Card; lifting into Card padding would also pad the always-present header */}
-        <div className="pt-2">{children}</div>
+        {/* The body owns its rhythm: the offset under the header (inside the
+            fold, so it tweens with the body) and the gap between its blocks.
+            A renderer passes its blocks as siblings and spaces none of them. */}
+        <Stack gap="sm" className="pt-sm">
+          {children}
+        </Stack>
       </FoldMotion>
       {footer}
     </Card>

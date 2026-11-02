@@ -44,31 +44,28 @@ export function ConfigRowBadge({
   const scopeDisplay = useScopeDisplay();
   const sourceLabel = source ? SOURCE_LABEL[source] : undefined;
   const sourceTag = sourceLabel ? (
-    // eslint-disable-next-line spacing/no-adhoc-spacing -- trailing row indicator offset from the row label
-    <Badge variant="muted" shape="pill" className="ml-2">
+    <Badge variant="muted" shape="pill">
       {sourceLabel}
     </Badge>
   ) : null;
 
   const indicator = conflict ? (
     <WithTooltip content={conflictSentence(conflict, scopeDisplay)}>
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- trailing row indicator offset from the row label */}
-      <Inline as="span" gap="none" className="ml-2 text-warning">
+      <Inline as="span" gap="none" className="text-warning">
         <Icon icon={warningIcon} className="size-4" />
       </Inline>
     </WithTooltip>
   ) : modifiedCount !== undefined && modifiedCount > 0 ? (
-    // eslint-disable-next-line spacing/no-adhoc-spacing -- trailing row indicator offset from the row label
-    <Center className="ml-2 size-5 rounded-full bg-primary text-3xs font-medium text-primary-foreground">
+    <Center className="size-5 rounded-full bg-primary text-3xs font-medium text-primary-foreground">
       {modifiedCount}
     </Center>
   ) : null;
 
   if (!sourceTag && !indicator) return null;
   return (
-    <>
+    <Inline gap="sm">
       {sourceTag}
       {indicator}
-    </>
+    </Inline>
   );
 }

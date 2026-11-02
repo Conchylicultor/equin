@@ -32,7 +32,6 @@
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`
     - `ui/tokens/color-palette --muted-foreground`
-    - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-medium`
   - Imported by: `auth/google`
 

@@ -128,27 +128,23 @@ export function VersionHistoryDialog({
       >
         <DialogContent size="sm">
           <DialogTitle>Restore this version?</DialogTitle>
-          <DialogDescription>
-            Your current page is saved as a version before restoring, so you can
-            undo this.
-          </DialogDescription>
-          <Stack
-            direction="row"
-            gap="sm"
-            justify="end"
-            // eslint-disable-next-line spacing/no-adhoc-spacing -- action row offset below the dialog description; one-off dialog footer spacing
-            className="mt-4"
-          >
-            <Button
-              variant="ghost"
-              onClick={() => setPendingRestore(null)}
-              disabled={restore.isPending}
-            >
-              Cancel
-            </Button>
-            <Button onClick={confirmRestore} loading={restore.isPending}>
-              Restore
-            </Button>
+          <Stack gap="lg">
+            <DialogDescription>
+              Your current page is saved as a version before restoring, so you
+              can undo this.
+            </DialogDescription>
+            <Stack direction="row" gap="sm" justify="end">
+              <Button
+                variant="ghost"
+                onClick={() => setPendingRestore(null)}
+                disabled={restore.isPending}
+              >
+                Cancel
+              </Button>
+              <Button onClick={confirmRestore} loading={restore.isPending}>
+                Restore
+              </Button>
+            </Stack>
           </Stack>
         </DialogContent>
       </Dialog>

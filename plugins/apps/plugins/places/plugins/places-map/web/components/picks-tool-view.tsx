@@ -117,8 +117,7 @@ function LoadedPicks({
       summary={summary}
       note={count === 0 ? "· no picks" : note}
     >
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the content from the card header */}
-      <Stack gap="sm" className="mt-2">
+      <Stack gap="sm">
         {errorText === undefined ? null : (
           <Text as="p" variant="caption" className="text-destructive">
             {errorText}

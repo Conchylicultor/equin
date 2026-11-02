@@ -108,8 +108,7 @@ function DependencySection({
   }
 
   return (
-    // eslint-disable-next-line spacing/no-adhoc-spacing -- -mx-2 negative-bleeds the tree rows out to cancel the section card's horizontal padding so row hover backgrounds span full width
-    <Stack direction="col" gap="none" className="-mx-2">
+    <Stack direction="col" gap="none" className="rail-bleed">
       {tree.roots.map((root, i) => (
         <DepRow key={`${root.id}-${i}`} node={root} depth={0} />
       ))}

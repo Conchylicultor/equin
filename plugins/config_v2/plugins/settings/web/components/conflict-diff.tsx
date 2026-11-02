@@ -41,8 +41,7 @@ export function ConflictDiff({
   const origin = data.origin ?? "";
 
   return (
-    // eslint-disable-next-line spacing/no-adhoc-spacing -- mb-2 separates the diff block from the following content
-    <Clip className="mb-2 rounded-md border border-border">
+    <Clip className="rounded-md border border-border">
       <Text
         as="div"
         variant="caption"

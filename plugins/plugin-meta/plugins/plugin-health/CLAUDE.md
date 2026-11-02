@@ -15,6 +15,7 @@
     - `plugin-meta/plugin-view.PluginNode`
     - `plugin-meta/plugin-view.PluginViewSlots`
     - `plugin-meta/plugin-view.SectionCount`
+    - `primitives/css/inline.Inline`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.FieldDef`

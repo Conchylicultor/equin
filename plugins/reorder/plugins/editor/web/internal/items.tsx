@@ -302,13 +302,8 @@ export function RestoreButton({
           </div>
         )}
 
-        <div className="px-sm py-sm">
-          <Inline
-            as="div"
-            gap="xs"
-            // eslint-disable-next-line spacing/no-adhoc-spacing -- bottom offset separating the Marketplace label from the search input
-            className="text-muted-foreground mb-1.5"
-          >
+        <Stack gap="xsm" className="px-sm py-sm">
+          <Inline as="div" gap="xs" className="text-muted-foreground">
             <Icon icon={storefrontIcon} className="size-3.5" />
             <Text as="span" variant="label">
               Marketplace
@@ -336,12 +331,11 @@ export function RestoreButton({
           <Text
             as="p"
             variant="caption"
-            // eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separating the empty-state text from the search input above
-            className="mt-1.5 text-center text-muted-foreground/60"
+            className="text-center text-muted-foreground/60"
           >
             No items
           </Text>
-        </div>
+        </Stack>
 
         <div className="p-xs">
           <Row size="sm" disabled icon={<Icon icon={addIcon} />}>

@@ -23,11 +23,7 @@ export function GenericToolView({ event }: ToolRendererProps) {
   return (
     <ToolCallCard event={event} summary={inputDescription(event.input)}>
       {event.input != null && (
-        <Scroll
-          axis="both"
-          // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the input block from the card header
-          className="mt-2 max-h-96 rounded-md bg-muted/60"
-        >
+        <Scroll axis="both" className="max-h-96 rounded-md bg-muted/60">
           <Text as="pre" variant="caption" className="p-sm">
             {formatJson(event.input)}
           </Text>
@@ -35,8 +31,7 @@ export function GenericToolView({ event }: ToolRendererProps) {
       )}
       {event.result && (
         <Scroll
-          // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 separates the result block from the input block above
-          className={`mt-2 max-h-96 rounded-md ${
+          className={`max-h-96 rounded-md ${
             event.result.isError && !event.result.outcomeUnknown
               ? "bg-destructive/10"
               : "bg-muted/60"

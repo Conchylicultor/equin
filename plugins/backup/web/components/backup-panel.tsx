@@ -89,8 +89,7 @@ export function BackupPanel({ selectedRunId }: BackupPanelProps) {
         loading={isPending}
         className={selfClass("start")}
       >
-        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- leading-icon offset inside button label */}
-        <Icon icon={backupIcon} className="size-4 mr-2" />
+        <Icon icon={backupIcon} className="size-4" />
         Run Backup Now
       </Button>
 

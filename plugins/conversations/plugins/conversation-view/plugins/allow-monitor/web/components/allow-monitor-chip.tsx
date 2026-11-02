@@ -1,3 +1,4 @@
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { allowFiles } from "../../core";
@@ -36,23 +37,24 @@ export function AllowMonitorChip() {
     <Badge
       tooltipSide="bottom"
       tooltip={
-        <>
-          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- heading offset inside a tooltip fragment with no flex parent to own the gap */}
-          <p className="mb-1 font-semibold">Guard bypasses active:</p>
-          {files.map((f) => (
-            <Text as="p" variant="caption" key={f} className="font-mono">
-              {f}
-            </Text>
-          ))}
-        </>
+        <Stack gap="xs">
+          <p className="font-semibold">Guard bypasses active:</p>
+          <div>
+            {files.map((f) => (
+              <Text as="p" variant="caption" key={f} className="font-mono">
+                {f}
+              </Text>
+            ))}
+          </div>
+        </Stack>
       }
       as="button"
-        colorClass="bg-destructive/90 text-white hover:bg-destructive"
-        icon={<Icon icon={warningIcon} />}
-        className="animate-pulse cursor-default"
-        aria-label="Security bypass active"
-      >
-        BYPASS ACTIVE
+      colorClass="bg-destructive/90 text-white hover:bg-destructive"
+      icon={<Icon icon={warningIcon} />}
+      className="animate-pulse cursor-default"
+      aria-label="Security bypass active"
+    >
+      BYPASS ACTIVE
     </Badge>
   );
 }

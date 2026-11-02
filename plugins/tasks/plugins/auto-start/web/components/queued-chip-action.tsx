@@ -51,8 +51,8 @@ export function QueuedChipAction({ row }: ItemActionProps<TaskListItem>) {
       <Badge
         as="button"
         variant="destructive"
-        // eslint-disable-next-line spacing/no-adhoc-spacing, layout/no-adhoc-layout -- same one-off offset and rigidity as the queued chip below
-        className="ml-1 shrink-0"
+        // eslint-disable-next-line layout/no-adhoc-layout -- same rigidity as the queued chip below
+        className="shrink-0"
         tooltip={`${label} is ${resolution.reason === "retired" ? "retired" : "not a model this machine knows"} — this task will not auto-start. Pick another model on the task, or click to cancel.`}
         aria-label={`Cancel auto-start (${label}, ${resolution.reason})`}
         onClick={(e: React.MouseEvent) => {
@@ -68,8 +68,8 @@ export function QueuedChipAction({ row }: ItemActionProps<TaskListItem>) {
     <Badge
       as="button"
       variant="warning"
-      // eslint-disable-next-line spacing/no-adhoc-spacing, layout/no-adhoc-layout -- ml-1 one-off inline offset of the chip from its preceding label (no parent gap to lift into); shrink-0 keeps this rigid action chip whole inside the data-view item-actions flex cluster (owned by Row, not this file)
-      className="ml-1 shrink-0 hover:bg-warning/20"
+      // eslint-disable-next-line layout/no-adhoc-layout -- shrink-0 keeps this rigid action chip whole inside the data-view item-actions flex cluster (owned by Row, not this file)
+      className="shrink-0 hover:bg-warning/20"
       tooltip="Auto-start when parent is done — click to cancel"
       aria-label={`Cancel auto-start (${label})`}
       onClick={(e: React.MouseEvent) => {

@@ -145,7 +145,7 @@ function ConfigDetailInner({
   });
 
   return (
-    <Stack gap="xs" className="p-md">
+    <Stack gap="sm" className="p-md">
       <ScopeTabs
         storePath={registration.storePath}
         scopeId={scopeId}
@@ -204,8 +204,7 @@ function ConflictElsewhereBanner({
     <Text
       as="div"
       variant="body"
-      // eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the pointer banner from the fields below (no named margin utility)
-      className="mb-2 rounded-md border border-warning/30 bg-warning/10 px-md py-sm text-warning"
+      className="rounded-md border border-warning/30 bg-warning/10 px-md py-sm text-warning"
     >
       <Stack direction="row" gap="sm" align="center" wrap>
         <Icon icon={warningIcon} className={cn("size-4", rigidClass())} />
@@ -420,14 +419,7 @@ function ConfigDetailBody({
 
   return (
     <>
-      <Stack
-        direction="row"
-        align="center"
-        justify="end"
-        gap="sm"
-        // eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the action toolbar from the fields below (no named margin utility)
-        className="mb-1"
-      >
+      <Stack direction="row" align="center" justify="end" gap="sm">
         {scopeId && !showRaw && (
           <Button
             variant="ghost"
@@ -478,8 +470,7 @@ function ConfigDetailBody({
                 <Text
                   as="div"
                   variant="body"
-                  // eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the invalid banner from the fields below (no named margin utility)
-                  className="mb-2 rounded-md border border-destructive/30 bg-destructive/10 px-md py-sm text-destructive"
+                  className="rounded-md border border-destructive/30 bg-destructive/10 px-md py-sm text-destructive"
                 >
                   <Stack gap="xs">
                     <Stack direction="row" gap="sm" align="center">
@@ -521,8 +512,7 @@ function ConfigDetailBody({
                     </Stack>
                     {conflictEntry.issues &&
                       conflictEntry.issues.length > 0 && (
-                        // eslint-disable-next-line spacing/no-adhoc-spacing -- ml indents the issue list under the banner heading (no named margin utility)
-                        <Stack gap="sm" className="ml-6">
+                        <Stack gap="sm" className="pl-xl">
                           {conflictEntry.issues.map((issue, i) => {
                             const value = drillPath(
                               conflictEntry.overrideValues,
@@ -573,8 +563,7 @@ function ConfigDetailBody({
               <Text
                 as="div"
                 variant="body"
-                // eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the soft-conflict banner from the fields below (no named margin utility)
-                className="mb-2 rounded-md border border-warning/30 bg-warning/10 px-md py-sm text-warning"
+                className="rounded-md border border-warning/30 bg-warning/10 px-md py-sm text-warning"
               >
                 <Stack
                   direction="row"
@@ -598,8 +587,7 @@ function ConfigDetailBody({
                 <Text
                   as="div"
                   variant="body"
-                  // eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the hash-conflict banner from the fields below (no named margin utility)
-                  className="mb-2 rounded-md border border-warning/30 bg-warning/10 px-md py-sm text-warning"
+                  className="rounded-md border border-warning/30 bg-warning/10 px-md py-sm text-warning"
                 >
                   <Stack gap="xs">
                     <Stack direction="row" gap="sm" align="center">
@@ -763,9 +751,8 @@ function RawSection({
   code: string | null;
 }) {
   return (
-    <section>
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the section label from the code block below (no named margin utility) */}
-      <Text as="div" variant="caption" tone="muted" className="mb-1">
+    <Stack as="section" gap="xs">
+      <Text as="div" variant="caption" tone="muted">
         <Stack direction="row" gap="sm" align="baseline">
           <span className={cn("whitespace-nowrap font-medium", rigidClass())}>
             {label}
@@ -784,6 +771,6 @@ function RawSection({
       ) : (
         <Placeholder>not set</Placeholder>
       )}
-    </section>
+    </Stack>
   );
 }

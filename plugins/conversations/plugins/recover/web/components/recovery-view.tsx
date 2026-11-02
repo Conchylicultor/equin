@@ -240,8 +240,7 @@ function ClusterGroup({
                 availability.available ? undefined : availability.message
               }
             >
-              {/* eslint-disable-next-line spacing/no-adhoc-spacing -- leading-icon offset inside button label */}
-              <Icon icon={historyIcon} className="size-3.5 mr-1" />
+              <Icon icon={historyIcon} className="size-3.5" />
               Restore all ({group.length})
             </Button>
           </ControlSizeProvider>
@@ -306,8 +305,7 @@ function ConversationRow({
             disabled={!availability.available}
             tooltip={availability.available ? undefined : availability.message}
           >
-            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- leading-icon offset inside button label */}
-            <Icon icon={historyIcon} className="size-3.5 mr-1" />
+            <Icon icon={historyIcon} className="size-3.5" />
             Restore
           </Button>
         </ControlSizeProvider>

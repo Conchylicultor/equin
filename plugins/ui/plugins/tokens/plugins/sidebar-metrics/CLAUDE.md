@@ -56,7 +56,6 @@ agent manager's conversation rows and view switcher) sizes it with the same
     - `ui/tokens/density --control-pad-md`
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-sm`
-    - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-scale`
     - `ui/tokens/type-scale --font-size-label`
     - `ui/tokens/type-scale --font-weight-medium`

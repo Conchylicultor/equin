@@ -84,11 +84,11 @@ popover width roles (the `panel` padding role).
     - `ui/tokens/color-palette --popover`
     - `ui/tokens/color-palette --popover-foreground`
     - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shadow --shadow`
     - `ui/tokens/shadow --shadow-md`
     - `ui/tokens/shape --radius`
-    - `ui/tokens/shape --spacing`
   - Tokens used by:
     - `primitives/css/motion`
     - `primitives/css/surface`

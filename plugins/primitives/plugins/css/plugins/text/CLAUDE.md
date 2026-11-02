@@ -100,6 +100,9 @@ theme moves it by setting the caption / control roles.
 elements `<Text>` cannot be — a shiki `<pre>`, a `dangerouslySetInnerHTML` div, a
 Lexical input. Same own-it-⇒-component rule as the layout helpers. It reads no
 ambient `ControlSize`, so a helper-styled box does not compact.
+`useTextVariantClass(variant)` is its hook twin that does — the classes
+`<Text variant>` wears in this region — for a box that must share a text's
+metrics without being that text (`<FirstLine variant>` in `spacing`).
 
 `eyebrow` is the overline / section-label **treatment**. Like `count` it is
 **not** a utility of its own — it reuses `text-caption` and adds the small-caps
@@ -278,15 +281,16 @@ to reconcile them; they never needed reconciling.
     - `SectionLabel`
     - `Text`
     - `textVariantClass`
+    - `useTextVariantClass`
 - Cross-plugin:
   - Uses tokens: 45 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/type-scale` ×37
     - `ui/tokens/color-palette` ×6
     - `ui/tokens/font-family` ×2
-  - Imported by: 409 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 410 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×111
     - `conversations` ×75
-    - `primitives` ×46
+    - `primitives` ×47
     - `debug` ×37
     - `page` ×24
     - `ui` ×18

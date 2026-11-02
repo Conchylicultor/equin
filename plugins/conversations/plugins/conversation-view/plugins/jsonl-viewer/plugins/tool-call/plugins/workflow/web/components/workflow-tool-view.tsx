@@ -2,7 +2,10 @@ import type { ToolRendererProps } from "@plugins/conversations/plugins/conversat
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  FirstLine,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -44,25 +47,26 @@ function PhaseList({
       {phases.map((phase, i) => (
         <Text as="li" variant="caption" key={i}>
           <Stack direction="row" gap="sm">
-            <Center
-              as="span"
-              // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-0.5 optically centers the number badge to the first text line
-              className={cn(
-                "mt-0.5 size-4 rounded-full bg-categorical-6/15 font-mono text-3xs text-categorical-6",
-                rigidClass(),
-              )}
-            >
-              {i + 1}
-            </Center>
+            <FirstLine>
+              <Center
+                as="span"
+                className={cn(
+                  "size-4 rounded-full bg-categorical-6/15 font-mono text-3xs text-categorical-6",
+                  rigidClass(),
+                )}
+              >
+                {i + 1}
+              </Center>
+            </FirstLine>
             <Fill>
               <span className="font-medium text-foreground">
                 {phase.title ?? "(untitled phase)"}
               </span>
               {phase.detail && (
-                // eslint-disable-next-line spacing/no-adhoc-spacing -- ml-1.5 separates the inline detail from the phase title
-                <span className="ml-1.5 text-muted-foreground">
-                  {phase.detail}
-                </span>
+                <>
+                  {" "}
+                  <span className="text-muted-foreground">{phase.detail}</span>
+                </>
               )}
             </Fill>
           </Stack>
@@ -156,8 +160,7 @@ export function WorkflowToolView({ event }: ToolRendererProps) {
 
   return (
     <ToolCallCard event={event} summary={summary}>
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the body from the card header */}
-      <Text as="div" variant="caption" className="mt-2">
+      <Text as="div" variant="caption">
         <Stack gap="md">
           {description && (
             <p className="text-muted-foreground">{description}</p>
@@ -178,8 +181,10 @@ export function WorkflowToolView({ event }: ToolRendererProps) {
           ) : null}
 
           {parsedResult && (
-            // eslint-disable-next-line spacing/no-adhoc-spacing -- space-y-1 spaces the summary line from the id row inside this bordered result box
-            <div className="space-y-1 rounded-md border border-border/40 bg-muted/30 px-md py-sm">
+            <Stack
+              gap="xs"
+              className="rounded-md border border-border/40 bg-muted/30 px-md py-sm"
+            >
               {parsedResult.summary && (
                 <div className="text-foreground">{parsedResult.summary}</div>
               )}
@@ -196,7 +201,7 @@ export function WorkflowToolView({ event }: ToolRendererProps) {
                   </span>
                 )}
               </Cluster>
-            </div>
+            </Stack>
           )}
 
           {result?.isError && (

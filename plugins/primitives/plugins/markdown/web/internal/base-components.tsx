@@ -100,58 +100,48 @@ export function buildBaseComponents(
 ): Components {
   return {
     h1: ({ children, ...p }) => (
-      // eslint-disable-next-line spacing/no-adhoc-spacing -- markdown block rhythm; siblings rendered independently by react-markdown
-      <Text as="h1" variant="title" className="mt-4 mb-2" {...p}>
+      <Text as="h1" variant="title" className="my-flow-heading" {...p}>
         {transform(children)}
       </Text>
     ),
     h2: ({ children, ...p }) => (
-      // eslint-disable-next-line spacing/no-adhoc-spacing -- markdown block rhythm; siblings rendered independently by react-markdown
-      <Text as="h2" variant="title" className="mt-4 mb-2" {...p}>
+      <Text as="h2" variant="title" className="my-flow-heading" {...p}>
         {transform(children)}
       </Text>
     ),
     h3: ({ children, ...p }) => (
-      // eslint-disable-next-line spacing/no-adhoc-spacing -- markdown block rhythm; siblings rendered independently by react-markdown
-      <Text as="h3" variant="heading" className="mt-3 mb-1.5" {...p}>
+      <Text as="h3" variant="heading" className="my-flow-subheading" {...p}>
         {transform(children)}
       </Text>
     ),
     h4: ({ children, ...p }) => (
-      // eslint-disable-next-line spacing/no-adhoc-spacing -- markdown block rhythm; siblings rendered independently by react-markdown
-      <Text as="h4" variant="subheading" className="mt-3 mb-1" {...p}>
+      <Text as="h4" variant="subheading" className="my-flow-subheading" {...p}>
         {transform(children)}
       </Text>
     ),
     p: ({ children, ...p }) => (
-      // eslint-disable-next-line spacing/no-adhoc-spacing -- markdown block rhythm; siblings rendered independently by react-markdown
-      <p className="my-2" {...p}>
+      <p className="my-flow-block" {...p}>
         {transform(children)}
       </p>
     ),
     a: (p) => <BaseLink {...p} />,
     img: (p) => <BaseImg {...p} />,
-    // eslint-disable-next-line spacing/no-adhoc-spacing -- markdown block rhythm (my-2); list indent kept as pl-xl
-    ul: (p) => <ul className="my-2 list-disc pl-xl" {...p} />,
-    // eslint-disable-next-line spacing/no-adhoc-spacing -- markdown block rhythm (my-2); list indent kept as pl-xl
-    ol: (p) => <ol className="my-2 list-decimal pl-xl" {...p} />,
+    ul: (p) => <ul className="my-flow-block list-disc pl-xl" {...p} />,
+    ol: (p) => <ol className="my-flow-block list-decimal pl-xl" {...p} />,
     li: ({ children, ...p }) => (
-      // eslint-disable-next-line spacing/no-adhoc-spacing -- markdown list-item rhythm; siblings rendered independently by react-markdown
-      <li className="my-0.5" {...p}>
+      <li className="my-flow-item" {...p}>
         {transform(children)}
       </li>
     ),
     blockquote: ({ children, ...p }) => (
       <blockquote
-        // eslint-disable-next-line spacing/no-adhoc-spacing -- markdown block rhythm (my-2); blockquote indent kept as pl-md
-        className="my-2 border-l-2 border-muted-foreground/30 pl-md text-muted-foreground"
+        className="my-flow-block border-l-2 border-muted-foreground/30 pl-md text-muted-foreground"
         {...p}
       >
         {transform(children)}
       </blockquote>
     ),
-    // eslint-disable-next-line spacing/no-adhoc-spacing -- markdown block rhythm; siblings rendered independently by react-markdown
-    hr: (p) => <hr className="my-4 border-border" {...p} />,
+    hr: (p) => <hr className="my-flow-rule border-border" {...p} />,
     code: ({ className, children, ...rest }) => {
       const lang = langFromClassName(className);
       const text = nodeToText(children).replace(/\n$/, "");
@@ -168,8 +158,10 @@ export function buildBaseComponents(
     pre: ({ children }) => <>{children}</>,
     table: (p) => (
       // clear-both: a table cannot wrap around a float — it starts below it.
-      // eslint-disable-next-line spacing/no-adhoc-spacing -- markdown block rhythm; siblings rendered independently by react-markdown
-      <table className="my-2 w-full clear-both border-collapse" {...p} />
+      <table
+        className="my-flow-block w-full clear-both border-collapse"
+        {...p}
+      />
     ),
     th: ({ children, ...p }) => (
       <th

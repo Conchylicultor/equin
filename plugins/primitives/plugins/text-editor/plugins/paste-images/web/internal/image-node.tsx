@@ -13,7 +13,7 @@ export type ImageNodePayload = {
  * `core/node.ts`, with rendering added.
  */
 export const imageWebNode = imageNode.decorated({
-  className: "inline-flex align-middle mx-0.5",
+  className: "inline-flex align-middle px-2xs",
   render: ({ attachmentId, alt }, node) => (
     <TokenFrame nodeKey={node.getKey()} removeLabel="Remove image">
       <AttachmentThumbnail attachmentId={attachmentId} alt={alt} />

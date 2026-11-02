@@ -2,7 +2,6 @@ import type { InitialConfigType } from "@lexical/react/LexicalComposer";
 import type { NodeExtension } from "./node-extensions";
 
 export const TEXT_EDITOR_THEME = {
-  paragraph: "m-0",
   text: { base: "" },
 } as const;
 

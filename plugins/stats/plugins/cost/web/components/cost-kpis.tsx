@@ -103,17 +103,14 @@ function Kpi({
   muted?: boolean;
 }) {
   return (
-    <div className="rounded-md border bg-background p-md">
+    <Stack gap="xs" className="rounded-md border bg-background p-md">
       <Text as="div" variant="caption" className="text-muted-foreground">
         {label}
       </Text>
       <Text
         as="div"
         variant={muted ? "subheading" : "title"}
-        // eslint-disable-next-line spacing/no-adhoc-spacing -- one-off label→value offset inside the KPI card; restructuring into a Stack would also add spacing before the optional sub-label
-        className={
-          muted ? "mt-1 font-medium text-foreground" : "mt-1 text-foreground"
-        }
+        className={muted ? "font-medium text-foreground" : "text-foreground"}
       >
         {value}
       </Text>
@@ -122,6 +119,6 @@ function Kpi({
           {sub}
         </Text>
       )}
-    </div>
+    </Stack>
   );
 }

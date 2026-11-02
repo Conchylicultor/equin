@@ -73,9 +73,7 @@
     - `taskAutoStart`
     - `taskAutoStartShape`
 - Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/color-palette --warning`
-    - `ui/tokens/shape --spacing`
+  - Uses tokens: `ui/tokens/color-palette --warning`
   - Imported by:
     - `conversations`
     - `tasks`

@@ -94,7 +94,10 @@ spacing class (`gap*`, `p*`, `m*`, `space-*`) unless it is either a Tailwind
 built-in word (`auto`, `px`, `reverse`) or a custom `@utility` app.css
 declares. app.css defines no `--spacing-*` theme key, so Tailwind accepts any
 other word silently and compiles it to nothing: `mb-xs`, `mx-2xl`, `p-mdd`,
-`gap-card`. The ramp deliberately has no margin classes.
+`gap-card`. The ramp deliberately has no margin classes — space belongs to
+the container; what to reach for instead is the table in
+[spacing's "No margins — on purpose"](../spacing/CLAUDE.md#no-margins--on-purpose),
+which the rule's message repeats.
 
 - The family list and the built-in words are plain data in
   `core/internal/spacing-classes.ts`.

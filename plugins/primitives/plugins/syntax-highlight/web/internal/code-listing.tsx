@@ -186,16 +186,16 @@ export function CodeListing({
       {variant === "pane" ? (
         <CodePaneSurface
           ref={containerRef}
-          // eslint-disable-next-line text/no-adhoc-typography, spacing/no-adhoc-spacing -- [&>pre]:leading-5 fixes mono code line-height for line-number gutter alignment; [&_.ln]:mr-4 is the line-number gutter width (paired with [&_.ln]:w-7), a fixed code-gutter dimension the density ramp can't express
-          className="[&>pre]:m-0 [&>pre]:min-h-full [&>pre]:w-max [&>pre]:min-w-full [&>pre]:p-md [&>pre]:font-mono [&>pre]:text-caption [&>pre]:leading-5 [&_.ln]:mr-4 [&_.ln]:inline-block [&_.ln]:w-7 [&_.ln]:select-none [&_.ln]:text-right [&_.ln]:text-muted-foreground/50 [&_.ln]:tabular-nums"
+          // eslint-disable-next-line text/no-adhoc-typography -- [&>pre]:leading-5 fixes mono code line-height for line-number gutter alignment
+          className="[&>pre]:min-h-full [&>pre]:w-max [&>pre]:min-w-full [&>pre]:p-md [&>pre]:font-mono [&>pre]:text-caption [&>pre]:leading-5 [&_.ln]:inline-block [&_.ln]:w-11 [&_.ln]:pr-lg [&_.ln]:select-none [&_.ln]:text-right [&_.ln]:text-muted-foreground/50 [&_.ln]:tabular-nums"
           html={html}
         />
       ) : (
         <Scroll
           ref={containerRef}
           axis="both"
-          // eslint-disable-next-line spacing/no-adhoc-spacing, layout/no-adhoc-layout -- `[&_.ln]:mr-4` is a Shiki-injected line-number gutter margin and `[&>pre]:overflow-auto` a child-pre clip, both targeted via arbitrary variant on dangerouslySetInnerHTML output; not expressible through Stack/Inset/Scroll on the child
-          className="max-h-[280px] [&>pre]:m-0 [&>pre]:overflow-auto [&>pre]:rounded-md [&>pre]:bg-muted [&>pre]:p-md [&>pre]:font-mono [&>pre]:text-caption [&_.ln]:mr-4 [&_.ln]:inline-block [&_.ln]:w-7 [&_.ln]:select-none [&_.ln]:text-right [&_.ln]:text-muted-foreground/50 [&_.ln]:tabular-nums"
+          // eslint-disable-next-line layout/no-adhoc-layout -- `[&>pre]:overflow-auto` is a child-pre clip targeted via arbitrary variant on dangerouslySetInnerHTML output; not expressible through Stack/Inset/Scroll on the child
+          className="max-h-[280px] [&>pre]:overflow-auto [&>pre]:rounded-md [&>pre]:bg-muted [&>pre]:p-md [&>pre]:font-mono [&>pre]:text-caption [&_.ln]:inline-block [&_.ln]:w-11 [&_.ln]:pr-lg [&_.ln]:select-none [&_.ln]:text-right [&_.ln]:text-muted-foreground/50 [&_.ln]:tabular-nums"
           dangerouslySetInnerHTML={{ __html: html }}
         />
       )}

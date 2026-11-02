@@ -60,7 +60,6 @@ takes the `total` and says when the list is capped.
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/density --space-md`
     - `ui/tokens/font-family --font-mono`
-    - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-medium`
   - Imported by: `conversations/conversation-view/code/file-pane`
 - Shared:

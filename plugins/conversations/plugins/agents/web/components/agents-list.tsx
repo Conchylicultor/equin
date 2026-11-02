@@ -163,7 +163,7 @@ export function AgentsList({
   const rows = result.data;
 
   return (
-    <Stack gap="xs">
+    <Stack gap="md">
       <SystemFolder selectedSystemId={selectedSystemId} />
       <DataView<Agent>
         rows={rows}

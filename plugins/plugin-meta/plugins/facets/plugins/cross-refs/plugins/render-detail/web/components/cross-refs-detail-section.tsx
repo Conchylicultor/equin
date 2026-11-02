@@ -13,7 +13,10 @@ import {
   asPath,
   type PluginId,
 } from "@plugins/framework/plugins/plugin-id/core";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Inset,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -52,7 +55,8 @@ export function CrossRefsCount({ node }: { node: PluginNode }) {
   if (!data) return null;
   const totalUses = countUses(data);
   const parts: string[] = [];
-  if (totalUses > 0) parts.push(`${totalUses} use${totalUses !== 1 ? "s" : ""}`);
+  if (totalUses > 0)
+    parts.push(`${totalUses} use${totalUses !== 1 ? "s" : ""}`);
   if (data.importedBy.length > 0)
     parts.push(
       `${data.importedBy.length} importer${data.importedBy.length !== 1 ? "s" : ""}`,
@@ -102,20 +106,21 @@ function UsesGroup({
         </span>
         <span className="text-muted-foreground/50">({uses.length})</span>
       </Stack>
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- ml-1 indents this nested tree branch under its runtime header; one-off left offset paired with the left border, not sibling rhythm */}
-      <Stack gap="none" className="ml-1 gap-px border-l border-border/50 pl-md">
-        {uses.map((u) => (
-          <Text
-            as="code"
-            variant="caption"
-            key={`${u.plugin}:${u.symbol ?? ""}`}
-            className="truncate px-xs py-px font-mono text-foreground"
-          >
-            {asPath(u.plugin)}
-            {u.symbol ? "." + u.symbol : ""}
-          </Text>
-        ))}
-      </Stack>
+      <Inset l="xs">
+        <Stack gap="none" className="gap-px border-l border-border/50 pl-md">
+          {uses.map((u) => (
+            <Text
+              as="code"
+              variant="caption"
+              key={`${u.plugin}:${u.symbol ?? ""}`}
+              className="truncate px-xs py-px font-mono text-foreground"
+            >
+              {asPath(u.plugin)}
+              {u.symbol ? "." + u.symbol : ""}
+            </Text>
+          ))}
+        </Stack>
+      </Inset>
     </Stack>
   );
 }
@@ -130,8 +135,7 @@ function ImportedByBanner({ names }: { names: PluginId[] }) {
 
   return (
     <Cluster gap="xs" className="gap-y-2xs text-3xs text-muted-foreground">
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mr-0.5 is a tiny inline trailing offset on the leading label before the wrapped chip flow, not container rhythm */}
-      <span className="mr-0.5 font-medium">Imported by</span>
+      <span className="font-medium">Imported by</span>
       {visible.map((name, i) => (
         <Inline gap="none" key={name}>
           <PluginLink name={name} label={asPath(name)} />

@@ -269,8 +269,9 @@ export function ConversationItem({
       align="start"
       className={cn("w-full", active && "opacity-60")}
     >
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off vertical nudge to baseline-align the avatar with the title row */}
-      <span className="mt-0.5">
+      {/* The avatar is taller than the title's line, so it heads the row
+          (top-aligned) rather than sitting on the title's first line. */}
+      <span>
         <ControlSizeProvider size="sm">
           <AvatarSlot conv={conv} />
         </ControlSizeProvider>

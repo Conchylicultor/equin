@@ -116,13 +116,14 @@ function AgentsRoot(): ReactElement {
   return (
     <PaneChrome pane={agentsRootPane}>
       <Inset pad="lg">
-        <AgentsList
-          selectedId={selectedUserId}
-          selectedSystemId={selectedSystemId}
-        />
-        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separating the slot section from the agents list above */}
-        <Stack gap="lg" className="mt-6">
-          <AgentsSlots.List.Render />
+        <Stack gap="xl">
+          <AgentsList
+            selectedId={selectedUserId}
+            selectedSystemId={selectedSystemId}
+          />
+          <Stack gap="lg">
+            <AgentsSlots.List.Render />
+          </Stack>
         </Stack>
       </Inset>
     </PaneChrome>
@@ -139,13 +140,14 @@ function AgentDetailBody(): ReactElement {
         <AgentsSlots.View.Render>
           {(v) => (
             <Surface level="raised" as="section" className="p-lg">
-              {v.title ? (
-                // eslint-disable-next-line spacing/no-adhoc-spacing -- bottom offset separating the section title from its body
-                <Text as="h2" variant="label" className="mb-4">
-                  {v.title}
-                </Text>
-              ) : null}
-              <v.component agentId={id} />
+              <Stack gap="lg">
+                {v.title ? (
+                  <Text as="h2" variant="label">
+                    {v.title}
+                  </Text>
+                ) : null}
+                <v.component agentId={id} />
+              </Stack>
             </Surface>
           )}
         </AgentsSlots.View.Render>

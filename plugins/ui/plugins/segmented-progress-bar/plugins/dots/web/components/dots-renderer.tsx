@@ -50,8 +50,7 @@ export function DotsRenderer({
             )}
           </Inline>
         ))}
-        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off label offset after the dot row; inline sibling, no flex parent to own it */}
-        <Text variant="caption" className="ml-0.5 text-muted-foreground">
+        <Text variant="caption" className="text-muted-foreground">
           {activeLabel}
         </Text>
       </Inline>

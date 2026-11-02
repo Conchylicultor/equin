@@ -8,7 +8,6 @@ import {
 } from "../../core";
 import { ToolNameLabel } from "./tool-name-label";
 import { HookBand, HookIndicator } from "./hook-band";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { HookRecord } from "@plugins/conversations/plugins/transcript-source/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { BouncingDots } from "@plugins/primitives/plugins/css/plugins/bouncing-dots/web";
@@ -136,10 +135,10 @@ export function ToolCallFrame({
       }
     >
       {hooks?.some(isLoudHook) ? (
-        <Stack gap="sm">
+        <>
           <HookBand hooks={hooks} />
           {children}
-        </Stack>
+        </>
       ) : (
         children
       )}

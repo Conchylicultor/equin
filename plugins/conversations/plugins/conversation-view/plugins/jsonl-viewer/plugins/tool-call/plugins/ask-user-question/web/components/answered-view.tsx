@@ -152,8 +152,7 @@ export function AnsweredQuestions({
   footer?: ReactNode;
 }) {
   return (
-    // eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the answered view from the question card above (no named margin utility)
-    <Stack gap="md" className="mt-2">
+    <Stack gap="md">
       {questions.map((q, qi) => {
         const { selected, otherText, notes } = selections[qi] ?? {
           selected: new Set<string>(),
@@ -163,17 +162,13 @@ export function AnsweredQuestions({
         const hasAnswer = selected.size > 0 || otherText != null;
 
         return (
-          <div key={qi}>
+          <Stack key={qi} gap="xsm">
             {questions.length > 1 && (
-              <p
-                // eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the per-question header from its question text (no named margin utility)
-                className="mb-1 text-3xs font-medium tracking-wider text-muted-foreground"
-              >
+              <p className="text-3xs font-medium tracking-wider text-muted-foreground">
                 {q.header}
               </p>
             )}
-            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the question text from its option list (no named margin utility) */}
-            <Text as="p" variant="caption" className="mb-1.5 text-foreground">
+            <Text as="p" variant="caption" className="text-foreground">
               {q.question}
             </Text>
             <Stack gap="xs">
@@ -200,7 +195,7 @@ export function AnsweredQuestions({
                 <WrittenRow icon={noteIcon} label="Note" text={notes} />
               )}
             </Stack>
-          </div>
+          </Stack>
         );
       })}
       {reply != null && (

@@ -87,9 +87,9 @@ const METRICS = cn(
   "whitespace-pre-wrap break-words [tab-size:2]",
 );
 // Same contract, projected onto the <pre> shiki injects.
-// eslint-disable-next-line spacing/no-adhoc-spacing -- [&>pre]:m-0 resets the shiki <pre> UA margin (layout reset, not rhythm). The metrics themselves are now the `code` role, so the textarea overlay and the <pre> track ONE definition instead of two hand-matched copies.
+// The metrics themselves are the `code` role, so the textarea overlay and the <pre> track ONE definition instead of two hand-matched copies.
 const SHIKI_PRE = cn(
-  "[&>pre]:m-0 [&>pre]:p-md [&>pre]:text-code",
+  "[&>pre]:p-md [&>pre]:text-code",
   "[&>pre]:whitespace-pre-wrap [&>pre]:break-words [&>pre]:[tab-size:2]",
 );
 
@@ -293,11 +293,7 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
                 dangerouslySetInnerHTML={{ __html: html }}
               />
             ) : (
-              <pre
-                aria-hidden
-                // eslint-disable-next-line spacing/no-adhoc-spacing -- m-0 resets the UA <pre> default margin to zero; there is no margin ramp and "none" is a layout reset, not rhythm
-                className={cn("m-0", METRICS)}
-              >
+              <pre aria-hidden className={METRICS}>
                 {underlay}
               </pre>
             )}

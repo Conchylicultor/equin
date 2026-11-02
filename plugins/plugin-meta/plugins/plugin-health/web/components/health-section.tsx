@@ -18,6 +18,7 @@ import {
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
 import { useLive } from "@plugins/network/plugins/live/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import {
@@ -91,15 +92,14 @@ function CommitsCell({ review }: { review: PluginHealthReview }) {
       />
     ),
     ready: (s) => (
-      <>
+      <Inline as="span" gap="xs">
         {s.commitsSince}
         {s.apiChanged && (
-          // eslint-disable-next-line spacing/no-adhoc-spacing -- ml-1 is a tiny inline offset for the trailing "API changed" asterisk after the commit count, not container rhythm
-          <span className="ml-1 text-warning" title="API changed">
+          <span className="text-warning" title="API changed">
             *
           </span>
         )}
-      </>
+      </Inline>
     ),
   });
 }

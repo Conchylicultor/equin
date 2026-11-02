@@ -100,8 +100,7 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
 
   return (
     <ToolCallCard event={event} summary={summary} defaultOpen>
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the body from the ToolCallCard header inside its collapsible region; not a Stack-owned gap */}
-      <Stack gap="sm" className="mt-2">
+      <Stack gap="sm">
         {input.description && (
           <div className="prose-xs text-caption text-muted-foreground">
             <Markdown>{input.description}</Markdown>

@@ -30,11 +30,7 @@ export function SystemFolder({
   if (descriptors.length === 0) return null;
 
   return (
-    <Collapsible
-      defaultOpen
-      // eslint-disable-next-line spacing/no-adhoc-spacing -- extra bottom offset separating the System folder from the agent tree below
-      className="mb-2"
-    >
+    <Collapsible defaultOpen>
       <CollapsibleTrigger className="hover:bg-accent gap-xs rounded-md px-xs py-xs text-body">
         <Center as="span" className="size-5">
           <CollapsibleChevron className="size-4" />

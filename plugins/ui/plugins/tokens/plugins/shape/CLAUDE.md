@@ -35,33 +35,35 @@
   - Exports (types): `ShapeTokenValues`
   - Exports (values): `shapeGroup`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/density --radius-chip-compact`
-  - Tokens used by: 436 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×92
+  - Uses tokens:
+    - `ui/tokens/density --radius-chip-compact`
+    - `ui/tokens/density --space-sm`
+  - Tokens used by: 408 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×87
-    - `primitives` ×72
+    - `conversations` ×79
+    - `primitives` ×69
     - `page` ×36
-    - `ui` ×32
     - `debug` ×27
-    - `plugin-meta` ×11
-    - `tasks` ×11
+    - `ui` ×27
+    - `plugin-meta` ×10
+    - `tasks` ×10
     - `fields` ×9
     - `infra` ×6
     - `reorder` ×6
     - `apps-core` ×5
-    - `review` ×5
-    - `active-data` ×4
+    - `review` ×4
     - `shell` ×4
+    - `active-data` ×3
     - `build` ×3
     - `stats` ×3
-    - `auth` ×2
     - `backup` ×2
-    - `code-explorer` ×2
     - `config_v2` ×2
-    - `framework` ×2
     - `menu-bar` ×2
     - `screenshot` ×2
     - `audience/developer-mark`
+    - `auth`
+    - `code-explorer/commit-detail`
+    - `framework/tooling/lint`
     - `hints/ask`
     - `history/dialog`
     - `integrations/google-maps`

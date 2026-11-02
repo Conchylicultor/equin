@@ -9,7 +9,11 @@ import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  FirstLine,
+  Inset,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { turnSummaryRows } from "../../shared";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -95,50 +99,51 @@ export function TurnSummaryCard({
       >
         <Stack direction="row" gap="xs" align="start">
           {hasDetail ? (
-            <CollapsibleChevron
-              open={open}
-              // eslint-disable-next-line spacing/no-adhoc-spacing -- tiny top offset to baseline-align the chevron with the first line of summary text
-              className={cn(
-                "mt-0.5 size-3.5 text-muted-foreground",
-                rigidClass(),
-              )}
-            />
+            <FirstLine>
+              <CollapsibleChevron
+                open={open}
+                className={cn("size-3.5 text-muted-foreground", rigidClass())}
+              />
+            </FirstLine>
           ) : (
-            // eslint-disable-next-line spacing/no-adhoc-spacing -- tiny top offset matching the chevron's, keeps the spacer placeholder aligned
-            <span className={cn("mt-0.5 size-3.5", rigidClass())} />
+            <FirstLine>
+              <span className={cn("size-3.5", rigidClass())} />
+            </FirstLine>
           )}
           <Fill as="span">{summary.summary || "(no summary)"}</Fill>
         </Stack>
       </button>
       {hasDetail && (
         <FoldMotion {...contentProps}>
-          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- pt-2 separates this detail block from the always-visible summary button (inside the fold, so it tweens with it); ml-5 indents it under the chevron column */}
-          <Stack gap="sm" className="pt-2 ml-5">
-            {caveats.length > 0 && (
-              <BulletList
-                icon={
-                  <Icon
-                    icon={warningIcon}
-                    // eslint-disable-next-line spacing/no-adhoc-spacing -- tiny top offset to baseline-align the bullet icon with its first text line
-                    className={cn("mt-0.5 size-3 text-warning", rigidClass())}
-                  />
-                }
-                items={caveats}
-              />
-            )}
-            {actions.length > 0 && (
-              <BulletList
-                icon={
-                  <Icon
-                    icon={arrowForwardIcon}
-                    // eslint-disable-next-line spacing/no-adhoc-spacing -- tiny top offset to baseline-align the bullet icon with its first text line
-                    className={cn("mt-0.5 size-3 text-info", rigidClass())}
-                  />
-                }
-                items={actions}
-              />
-            )}
-          </Stack>
+          {/* The top padding separates this detail block from the always-visible
+              summary button (inside the fold, so it tweens with it); the left
+              one indents it under the chevron column. */}
+          <Inset t="sm" l="lg">
+            <Stack gap="sm">
+              {caveats.length > 0 && (
+                <BulletList
+                  icon={
+                    <Icon
+                      icon={warningIcon}
+                      className={cn("size-3 text-warning", rigidClass())}
+                    />
+                  }
+                  items={caveats}
+                />
+              )}
+              {actions.length > 0 && (
+                <BulletList
+                  icon={
+                    <Icon
+                      icon={arrowForwardIcon}
+                      className={cn("size-3 text-info", rigidClass())}
+                    />
+                  }
+                  items={actions}
+                />
+              )}
+            </Stack>
+          </Inset>
         </FoldMotion>
       )}
     </Text>
@@ -156,7 +161,7 @@ function BulletList({
     <Stack as="ul" gap="xs">
       {items.map((item, i) => (
         <Stack as="li" key={i} direction="row" gap="xs" align="start">
-          {icon}
+          <FirstLine>{icon}</FirstLine>
           <span>{item}</span>
         </Stack>
       ))}

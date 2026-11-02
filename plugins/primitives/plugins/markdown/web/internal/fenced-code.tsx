@@ -29,12 +29,15 @@ export function FencedCode({
 }) {
   const renderer = useCodePreviewRenderer(lang);
   const [view, setView] = useState<string>("preview");
-  if (!renderer) return <HighlightedCode code={code} lang={lang} />;
+  if (!renderer)
+    return (
+      <HighlightedCode code={code} lang={lang} className="my-flow-block" />
+    );
 
   const Preview = renderer.Component;
   return (
-    // eslint-disable-next-line spacing/no-adhoc-spacing -- my-2 sets code-block vertical rhythm against surrounding markdown, matching HighlightedCode (clear-both too: a clipped box cannot wrap around a float)
-    <Clip className="my-2 clear-both rounded-md bg-muted">
+    // clear-both: a clipped box cannot wrap around a float.
+    <Clip className="my-flow-block clear-both rounded-md bg-muted">
       <Stack direction="row" align="center" gap="xs" className="px-sm pt-xs">
         <Text variant="caption" tone="muted" className={growClass()}>
           {renderer.label}
@@ -47,7 +50,7 @@ export function FencedCode({
       {view === "preview" ? (
         <Preview source={code} />
       ) : (
-        <HighlightedCode code={code} lang={lang} flush />
+        <HighlightedCode code={code} lang={lang} />
       )}
     </Clip>
   );

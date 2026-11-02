@@ -156,10 +156,9 @@ export function AccountsPane(): ReactElement {
     <PaneChrome pane={accountsPane}>
       <Stack gap="md" className="rail-lg">
         <Text as="p" variant="caption" tone="muted" className="px-md">
-          Tokens and keys are stored encrypted in
-          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline-code chip needs horizontal breathing room in flowing prose */}
-          <code className="mx-1">{SECRETS_DIR_DISPLAY}/</code>
-          on the main app and shared with all worktrees.
+          Tokens and keys are stored encrypted in{" "}
+          <code>{SECRETS_DIR_DISPLAY}/</code> on the main app and shared with
+          all worktrees.
         </Text>
 
         {authState.status === "ready" && authState.data.mainOffline ? (

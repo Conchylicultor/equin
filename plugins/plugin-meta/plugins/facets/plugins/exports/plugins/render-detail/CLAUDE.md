@@ -22,6 +22,7 @@ Renders the exports facet as a section in the plugin detail pane: runtime export
     - `primitives/collapsible.CollapsibleTrigger`
     - `primitives/css/badge.Badge`
     - `primitives/css/row.Row`
+    - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`

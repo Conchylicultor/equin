@@ -21,8 +21,7 @@ function ResultDetail({ result }: { result: ToolCallEvent["result"] }) {
       as="div"
       variant="caption"
       tone="destructive"
-      // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the error detail from the diffs above; element mixes bg+rounded+padding so it's not a clean Stack/Inset
-      className="mt-2 rounded-md bg-destructive/10 p-sm whitespace-pre-wrap break-words"
+      className="rounded-md bg-destructive/10 p-sm whitespace-pre-wrap break-words"
     >
       {result.content || "Error"}
     </Text>
@@ -39,17 +38,15 @@ export function MultiEditView({ event }: ToolRendererProps) {
       aside={<FilePath filePath={file_path} />}
       defaultOpen
     >
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the body from the ToolCallCard header inside its collapsible region; not a Stack-owned gap */}
-      <Stack gap="md" className="mt-2">
+      <Stack gap="md">
         {edits.map((edit, i) => (
-          <div key={i}>
+          <Stack key={i} gap="xs">
             {multi && (
               <Stack
                 direction="row"
                 gap="sm"
                 align="center"
-                // eslint-disable-next-line spacing/no-adhoc-spacing -- mb-1 offsets the per-edit label from its diff; not a flex-sibling gap
-                className="mb-1 text-2xs text-muted-foreground"
+                className="text-2xs text-muted-foreground"
               >
                 <span>
                   Edit {i + 1} / {edits.length}
@@ -62,7 +59,7 @@ export function MultiEditView({ event }: ToolRendererProps) {
               newText={edit.new_string}
               path={file_path}
             />
-          </div>
+          </Stack>
         ))}
         <ResultDetail result={event.result} />
       </Stack>

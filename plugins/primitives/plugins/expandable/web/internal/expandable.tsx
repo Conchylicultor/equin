@@ -1,5 +1,8 @@
 import { useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Inset,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -92,26 +95,27 @@ export function Expandable({
         <div ref={contentRef}>{children}</div>
       </div>
       {overflowing ? (
-        <button
-          type="button"
-          onClick={toggle}
-          // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-1 spaces the show-more toggle from the content above it
-          className="text-caption mt-1 text-muted-foreground hover:text-foreground"
-        >
-          <Stack direction="row" gap="xs" align="center">
-            {expanded ? (
-              <>
-                <Icon icon={keyboardArrowUpIcon} className="size-3.5" />
-                Show less
-              </>
-            ) : (
-              <>
-                <Icon icon={keyboardArrowDownIcon} className="size-3.5" />
-                Show more
-              </>
-            )}
-          </Stack>
-        </button>
+        <Inset t="xs">
+          <button
+            type="button"
+            onClick={toggle}
+            className="text-caption text-muted-foreground hover:text-foreground"
+          >
+            <Stack direction="row" gap="xs" align="center">
+              {expanded ? (
+                <>
+                  <Icon icon={keyboardArrowUpIcon} className="size-3.5" />
+                  Show less
+                </>
+              ) : (
+                <>
+                  <Icon icon={keyboardArrowDownIcon} className="size-3.5" />
+                  Show more
+                </>
+              )}
+            </Stack>
+          </button>
+        </Inset>
       ) : null}
     </div>
   );

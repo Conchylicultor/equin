@@ -151,8 +151,7 @@ export function AgentToolView({ event }: ToolRendererProps) {
               : undefined
         }
       >
-        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the body from the ToolCallCard header inside its collapsible region; not a Stack-owned gap */}
-        <Stack gap="sm" className="mt-2">
+        <Stack gap="sm">
           {/* Prompt */}
           <Scroll axis="both" className="max-h-96 px-md py-sm">
             <div className="prose-xs text-caption">

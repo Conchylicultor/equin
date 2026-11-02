@@ -125,30 +125,27 @@ export function PagesTrash() {
       >
         <DialogContent size="sm">
           <DialogTitle>Delete permanently</DialogTitle>
-          <DialogDescription>
-            Permanently delete{" "}
-            <span className="font-medium">
-              {confirmEntry?.label || "Untitled"}
-            </span>
-            ? This removes the page and all of its content and cannot be undone.
-          </DialogDescription>
-          <Stack
-            direction="row"
-            justify="end"
-            gap="sm"
-            // eslint-disable-next-line spacing/no-adhoc-spacing -- action row offset below the dialog description; one-off dialog footer spacing
-            className="mt-4"
-          >
-            <Button variant="ghost" onClick={() => setConfirmEntry(null)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={purge.isPending}
-              onClick={() => onConfirmPurge()}
-            >
-              Delete permanently
-            </Button>
+          <Stack gap="lg">
+            <DialogDescription>
+              Permanently delete{" "}
+              <span className="font-medium">
+                {confirmEntry?.label || "Untitled"}
+              </span>
+              ? This removes the page and all of its content and cannot be
+              undone.
+            </DialogDescription>
+            <Stack direction="row" justify="end" gap="sm">
+              <Button variant="ghost" onClick={() => setConfirmEntry(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={purge.isPending}
+                onClick={() => onConfirmPurge()}
+              >
+                Delete permanently
+              </Button>
+            </Stack>
           </Stack>
         </DialogContent>
       </Dialog>

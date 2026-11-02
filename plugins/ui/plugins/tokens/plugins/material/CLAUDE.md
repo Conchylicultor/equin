@@ -52,7 +52,7 @@ buttons, `--chrome-mask`).
     - `ui/tokens/color-palette --card`
     - `ui/tokens/color-palette --popover`
     - `ui/tokens/color-palette --popover-border`
-    - `ui/tokens/shape --spacing`
+    - `ui/tokens/density --space-sm`
   - Tokens used by:
     - `menu-bar`
     - `primitives/css/ui-kit`

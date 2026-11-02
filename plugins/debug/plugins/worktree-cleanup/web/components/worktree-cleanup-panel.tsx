@@ -299,8 +299,7 @@ export function WorktreeCleanupPanel() {
               }
             }}
           >
-            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- icon-to-label inset inside a Button; parent is a 3rd-party Button, no gap to own it */}
-            <Icon icon={folderDeleteIcon} className="size-4 mr-1.5" />
+            <Icon icon={folderDeleteIcon} className="size-4" />
             Delete {safeCount} safe
           </Button>
           <IconButton
@@ -417,8 +416,7 @@ function DeleteAction({ entry }: { entry: WorktreeEntry }): ReactElement {
     return (
       <ControlSizeProvider size="sm">
         <Button variant="ghost" disabled className="opacity-40 cursor-default">
-          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- icon-to-label inset inside a Button; parent is a 3rd-party Button, no gap to own it */}
-          <Icon icon={deleteIcon} className="size-3.5 mr-1" />
+          <Icon icon={deleteIcon} className="size-3.5" />
           Drop DB
         </Button>
       </ControlSizeProvider>
@@ -448,14 +446,12 @@ function DeleteAction({ entry }: { entry: WorktreeEntry }): ReactElement {
       >
         {step !== null ? (
           <>
-            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- icon-to-label inset inside a Button; parent is a 3rd-party Button, no gap to own it */}
-            <Spinner className="size-3.5 mr-1" />
+            <Spinner className="size-3.5" />
             {STEP_LABEL[step]}
           </>
         ) : (
           <>
-            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- icon-to-label inset inside a Button; parent is a 3rd-party Button, no gap to own it */}
-            <Icon icon={deleteIcon} className="size-3.5 mr-1" />
+            <Icon icon={deleteIcon} className="size-3.5" />
             {entry.dirExists ? "Delete" : "Drop DB"}
           </>
         )}

@@ -50,10 +50,10 @@ Renders Claude Code's native task tools (TaskCreate, TaskUpdate, TaskGet, TaskLi
     - `buildAggregate`
     - `conversationTaskAggregate`
 - Cross-plugin:
-  - Uses tokens: 22 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 23 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/color-palette` ×9
+    - `ui/tokens/density` ×5
     - `ui/tokens/type-scale` ×5
-    - `ui/tokens/density` ×4
     - `ui/tokens/shape` ×2
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shadow --shadow-sm`

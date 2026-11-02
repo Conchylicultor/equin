@@ -1,4 +1,5 @@
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   useControlSize,
@@ -83,7 +84,7 @@ export function MergeBaseMarker({
       as="li"
       direction="row"
       align="center"
-      gap="none"
+      gap="sm"
       className="text-muted-foreground"
     >
       <svg width={28} height={row} viewBox={`0 0 28 ${row}`} aria-hidden="true">
@@ -109,10 +110,10 @@ export function MergeBaseMarker({
         <circle cx={RAIL_X} cy={row / 2} r={DOT_RADIUS - 1} fill={mainColor} />
       </svg>
       <Text as="span" variant="caption">
-        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- per-label offset from the rail svg; non-uniform with the svg sibling */}
-        <span className="ml-2 font-mono">{shortSha ?? "main"}</span>
-        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- per-label offset between sha and merge-base text */}
-        <span className="ml-2">merge-base</span>
+        <Inline gap="sm">
+          <span className="font-mono">{shortSha ?? "main"}</span>
+          <span>merge-base</span>
+        </Inline>
       </Text>
     </Stack>
   );

@@ -67,8 +67,7 @@ export function ToolSearchToolView({ event }: ToolRendererProps) {
         summary={summary}
         note={missing.length > 0 ? `· ${missing.length} not found` : undefined}
       >
-        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the content stack from the card header */}
-        <Stack gap="sm" className="mt-2">
+        <Stack gap="sm">
           {loaded && loaded.length > 0 && (
             <ToolGroup title="Loaded">
               {loaded.map((t) => (
@@ -113,8 +112,7 @@ export function ToolSearchToolView({ event }: ToolRendererProps) {
           : undefined
       }
     >
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the content stack from the card header */}
-      <Stack gap="sm" className="mt-2">
+      <Stack gap="sm">
         <Text as="p" variant="caption" className="text-muted-foreground">
           Searched deferred tools for{" "}
           <span className="font-mono text-foreground">{query}</span>

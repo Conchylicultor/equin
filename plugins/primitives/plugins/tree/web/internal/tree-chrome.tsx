@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -23,15 +24,16 @@ export function TreeRootAdd({
   onAdd: () => void;
 }): ReactNode {
   return (
-    <Button
-      variant="ghost"
-      onClick={onAdd}
-      // eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the root Add button from the tree rows above (no named margin utility)
-      className="text-muted-foreground mt-1 w-fit"
-    >
-      <Icon icon={addIcon} className="size-4" />
-      {label}
-    </Button>
+    <Inset t="xs">
+      <Button
+        variant="ghost"
+        onClick={onAdd}
+        className="text-muted-foreground w-fit"
+      >
+        <Icon icon={addIcon} className="size-4" />
+        {label}
+      </Button>
+    </Inset>
   );
 }
 

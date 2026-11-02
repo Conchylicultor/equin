@@ -105,8 +105,7 @@ export function ColorPaletteSection({ search }: { search: string }) {
             >
               {group.label}
             </SectionHeaderRow>
-            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- indent offset on third-party CollapsibleContent; no padding/gap equivalent */}
-            <CollapsibleContent className="ml-2">
+            <CollapsibleContent className="pl-sm">
               <TokenRows
                 editor={editor}
                 group={colorPaletteGroup}

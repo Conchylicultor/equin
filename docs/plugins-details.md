@@ -504,7 +504,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/font-family --font-mono`
-          - `ui/tokens/shape --spacing`
     - **`task-link`** — Renders raw `task-<id>` strings inline as clickable chips that open the task detail pane, and presents the task id kind (title + open) to the id registry. Models emit the bare id, no tag wrapping needed. The task id chip's server half (idChipServer): resolves a `task-<id>` to its task's title for the id registry and for model-read text, and registers the page-editor inline token so a page block holding the chip stays agent-readable.
       - Web:
         - Contributes:
@@ -3235,7 +3234,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`shelf`** — The desktop's bottom shelf: a centred dock with the launcher button, the pinned apps and the running ones (grouped per app, with window pips, hover thumbnails and a right-click app menu), and the tray — the pager's mini-desktops with their desktop previews, the overview button and the clock. Reserves the desktop's bottom work area and is where windows minimise to.
           - Web:
             - Contributes: `Desktop.Overlay` "Desktop overlay" → `Shelf`
-            - Uses: 54 symbols — full list in [`plugins/apps/plugins/desktop/plugins/shelf/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/shelf/REFERENCE.md)
+            - Uses: 55 symbols — full list in [`plugins/apps/plugins/desktop/plugins/shelf/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/shelf/REFERENCE.md)
               - `apps/desktop/windows` ×25
               - `primitives/css/ui-kit` ×4
               - `apps-core` ×3
@@ -3252,6 +3251,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/line.Line`
               - `primitives/css/pin.Pin`
               - `primitives/css/rigid.rigidClass`
+              - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/dom/element-size.useElementSize`
               - `primitives/latest-ref.useLatestRef`
@@ -12578,7 +12578,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --destructive`
               - `ui/tokens/color-palette --muted-foreground`
-              - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-weight-medium`
             - Imported by: `auth/google`
     - **`google-maps`** — Google Maps Platform API-key provider. The key is stored in the central auth token store (encrypted, shared across worktrees) and verified against the Places API before it is accepted.
@@ -13776,7 +13775,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/density --space-md`
           - `ui/tokens/font-family --font-mono`
-          - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --font-weight-medium`
         - Imported by: `conversations/conversation-view/code/file-pane`
       - Shared:
@@ -14255,6 +14253,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --warning`
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-sm`
+          - `ui/tokens/density --space-xl`
           - `ui/tokens/density --space-xs`
           - `ui/tokens/font-family --font-mono`
           - `ui/tokens/shape --radius`
@@ -15289,7 +15288,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --warning`
               - `ui/tokens/density --space-sm`
               - `ui/tokens/density --space-xs`
-              - `ui/tokens/shape --spacing`
               - `ui/tokens/sidebar-metrics --sidebar-icon-gap`
               - `ui/tokens/sidebar-metrics --sidebar-icon-size`
               - `ui/tokens/type-scale --font-scale`
@@ -15456,6 +15454,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view.conversationPane`
               - `network/live.useLive`
               - `primitives/css/badge.Badge`
+              - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/live-state.ResourceErrorInline`
               - `ui/icons.Icon`
@@ -15476,7 +15475,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --destructive`
               - `ui/tokens/font-family --font-mono`
-              - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-weight-semibold`
         - **`artifacts`** — Conversation toolbar button listing everything the conversation made, changed or looked at. Owns the ConversationArtifacts.Kind registry each kind of artifact contributes to (its own section; its pure extractor contributes to the server-side ConversationArtifactExtractor), the server-derived whole-transcript aggregation, the popover, and the shared row / section / relation-mark chrome every kind renders through. Names no kind. Serves what a conversation made, changed or looked at over its whole transcript (conversations.conversation-view.artifacts): owns the ConversationArtifactExtractor contribution each kind of artifact adds its pure extractor to, and runs every one over the transcript on the server.
           - Web:
@@ -16291,7 +16289,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/color-palette --destructive`
                       - `ui/tokens/color-palette --foreground`
                       - `ui/tokens/color-palette --muted-foreground`
-                      - `ui/tokens/shape --spacing`
                       - `ui/tokens/type-scale --font-weight-semibold`
                 - **`attached-file`** — Renders a file the user attached to their message: a pasted image shown inline at its own aspect with a small/large toggle, or a text file as a syntax-highlighted listing behind its path.
                   - Web:
@@ -16636,7 +16633,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses tokens:
                       - `ui/tokens/color-palette --foreground`
                       - `ui/tokens/color-palette --muted-foreground`
-                      - `ui/tokens/shape --spacing`
                       - `ui/tokens/type-scale --font-weight-semibold`
                 - **`structured-output`** — Renders the schema-shaped result a subagent returned: its headline field on the collapsed line, and a readable one-level reading of the arbitrary result object in the body.
                   - Web:
@@ -16664,6 +16660,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                       - `primitives/css/fill.fillClasses`
                       - `primitives/css/rigid.rigidClass`
+                      - `primitives/css/spacing.FirstLine`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                       - `primitives/css/ui-kit.cn`
@@ -17264,9 +17261,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes: `JsonlViewer.EventRenderer` "summary" → `SummaryRow`
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
+                  - `primitives/css/spacing.Inset`
                   - `primitives/css/ui-kit.Separator`
-              - Cross-plugin:
-                - Uses tokens: `ui/tokens/shape --spacing`
             - **`system`** — Renders system events in the JSONL viewer; an informational notice folds with the harness context around it.
               - Web:
                 - Contributes:
@@ -17431,7 +17427,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/color-palette --destructive`
                       - `ui/tokens/color-palette --muted-foreground`
                       - `ui/tokens/font-family --font-mono`
-                      - `ui/tokens/shape --spacing`
                       - `ui/tokens/type-scale --font-scale`
                       - `ui/tokens/type-scale --font-size-caption`
                       - `ui/tokens/type-scale --font-weight-normal`
@@ -17614,7 +17609,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/color-palette --muted-foreground`
                       - `ui/tokens/density --space-sm`
                       - `ui/tokens/shape --radius`
-                      - `ui/tokens/shape --spacing`
                       - `ui/tokens/type-scale --font-scale`
                       - `ui/tokens/type-scale --font-size-2xs`
                       - `ui/tokens/type-scale --line-height-2xs`
@@ -17625,6 +17619,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
                       - `primitives/css/rigid.rigidClass`
+                      - `primitives/css/spacing.FirstLine`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                       - `primitives/css/ui-kit.cn`
@@ -17685,8 +17680,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                           - `primitives/css/inline.Inline`
                           - `primitives/css/spacing.Stack`
                           - `primitives/diff-view.TextDiff`
-                      - Cross-plugin:
-                        - Uses tokens: `ui/tokens/shape --spacing`
                     - **`read-page`** — Renders read_page MCP tool calls: the page the read was scoped to as a clickable chip, and the markdown it returned.
                       - Web:
                         - Contributes: `JsonlViewerTool.Renderer` "read_page$" → `ReadPageView`
@@ -17697,8 +17690,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                           - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageRefChip`
                           - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageToolError`
                           - `primitives/css/spacing.Stack`
-                      - Cross-plugin:
-                        - Uses tokens: `ui/tokens/shape --spacing`
                     - **`write-note`** — Renders write_agent_note MCP tool calls: the page the card lives on, the markdown written into it, and what the write changed.
                       - Web:
                         - Contributes: `JsonlViewerTool.Renderer` "write_agent_note$" → `WriteNoteView`
@@ -17710,8 +17701,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                           - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageToolError`
                           - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageWriteReport`
                           - `primitives/css/spacing.Stack`
-                      - Cross-plugin:
-                        - Uses tokens: `ui/tokens/shape --spacing`
                 - **`read`** — Renders Read tool calls with syntax-highlighted file content, line-number gutter, and image thumbnails.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "Read" → `ReadToolView`
@@ -17731,7 +17720,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/color-palette --destructive`
                       - `ui/tokens/density --space-sm`
                       - `ui/tokens/font-family --font-mono`
-                      - `ui/tokens/shape --spacing`
                 - **`skill`** — Renders Skill tool calls with skill name, args preview, and injected context.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "Skill" → `SkillToolView`
@@ -17803,10 +17791,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `buildAggregate`
                       - `conversationTaskAggregate`
                   - Cross-plugin:
-                    - Uses tokens: 22 vars — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/task-tools/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/task-tools/REFERENCE.md)
+                    - Uses tokens: 23 vars — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/task-tools/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/task-tools/REFERENCE.md)
                       - `ui/tokens/color-palette` ×9
+                      - `ui/tokens/density` ×5
                       - `ui/tokens/type-scale` ×5
-                      - `ui/tokens/density` ×4
                       - `ui/tokens/shape` ×2
                       - `ui/tokens/font-family --font-mono`
                       - `ui/tokens/shadow --shadow-sm`
@@ -17827,7 +17815,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/color-palette --foreground`
                       - `ui/tokens/color-palette --muted-foreground`
                       - `ui/tokens/font-family --font-mono`
-                      - `ui/tokens/shape --spacing`
                 - **`web-search`** — Renders WebSearch calls as the query and its source count; opened, the model-written summary in full and the sources grouped by site, folded beneath it.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "WebSearch" → `WebSearchToolView`
@@ -17838,6 +17825,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/collapsible.CollapsibleChevron`
                       - `primitives/collapsible.CollapsibleContent`
                       - `primitives/collapsible.CollapsibleTrigger`
+                      - `primitives/css/spacing.Inset`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                       - `primitives/css/yield.yieldClass`
@@ -17863,12 +17851,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Contributes:
                       - `JsonlViewerTool.Renderer` "Workflow" → `WorkflowToolView`
                       - `Pane.Register` "workflow-node"
-                    - Uses: 33 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/workflow/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/workflow/REFERENCE.md)
+                    - Uses: 35 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/workflow/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/workflow/REFERENCE.md)
+                      - `primitives/css/spacing` ×4
                       - `primitives/pane` ×4
                       - `conversations/conversation-view/jsonl-viewer/tool-call` ×2
                       - `primitives/collapsible` ×2
                       - `primitives/css/badge` ×2
-                      - `primitives/css/spacing` ×2
                       - `conversations/conversation-view.conversationPane`
                       - `conversations/model-provider.familyClass`
                       - `conversations.ConversationFileLinks`
@@ -17916,13 +17904,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
                       - `primitives/css/scroll.Scroll`
+                      - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                       - `primitives/syntax-highlight.HighlightedCode`
                       - `primitives/syntax-highlight.languageForPath`
                   - Cross-plugin:
-                    - Uses tokens:
-                      - `ui/tokens/color-palette --destructive`
-                      - `ui/tokens/shape --spacing`
+                    - Uses tokens: `ui/tokens/color-palette --destructive`
             - **`transcript-stats`** — The transcript's status strip: the readings pinned at the foot of the conversation, and the TranscriptStats.Item slot they come from. Owns the reading position — the strip reports the transcript as far as the reader has scrolled, so scrolling back through history walks the numbers back with it. serveTranscriptFold: serves a transcript stat's fold of everything before the page's window, which the strip continues over the loaded rows.
               - Web:
                 - Slots: `TranscriptStats.Item`
@@ -18080,6 +18067,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                   - `conversations/conversation-view/jsonl-viewer/row-actions.EventRowActions`
+                  - `primitives/css/spacing.Inset`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.SectionLabel`
                   - `primitives/overlay/image-viewer.ViewerThumbnail`
@@ -18090,7 +18078,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/density --space-md`
                   - `ui/tokens/density --space-sm`
                   - `ui/tokens/shape --radius`
-                  - `ui/tokens/shape --spacing`
                   - `ui/tokens/type-scale --font-scale`
                   - `ui/tokens/type-scale --font-size-3xs`
                   - `ui/tokens/type-scale --line-height-3xs`
@@ -18109,11 +18096,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
                   - `conversations/conversation-view/user-message.UserMessageCard`
                   - `conversations/conversation-view/user-message.UserMessageText`
+                  - `primitives/css/spacing.Inset`
                   - `primitives/expandable.Expandable`
                   - `primitives/icon-button.IconButton`
                   - `primitives/overlay/image-viewer.ViewerThumbnail`
-              - Cross-plugin:
-                - Uses tokens: `ui/tokens/shape --spacing`
         - **`launch-prompts`** — Pre-configured prompts that launch a new background conversation in the same worktree.
           - Web:
             - Contributes:
@@ -18864,6 +18850,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/collapsible.useCollapsible`
               - `primitives/css/fill.Fill`
               - `primitives/css/rigid.rigidClass`
+              - `primitives/css/spacing.FirstLine`
+              - `primitives/css/spacing.Inset`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
@@ -22450,25 +22438,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `Pane.Register` "debug-profiling"
           - `DebugApp.Sidebar` "Profiling"
-        - Uses:
+        - Uses: 21 symbols — full list in [`plugins/debug/plugins/profiling/REFERENCE.md`](../plugins/debug/plugins/profiling/REFERENCE.md)
+          - `primitives/pane` ×3
+          - `primitives/css/coords` ×2
+          - `primitives/css/text` ×2
+          - `primitives/css/ui-kit` ×2
           - `apps/debug/shell.DebugApp`
           - `primitives/css/center.Center`
           - `primitives/css/clip.Clip`
+          - `primitives/css/cluster.Cluster`
           - `primitives/css/column.Column`
-          - `primitives/css/coords.pct`
-          - `primitives/css/coords.Placed`
           - `primitives/css/fill.Fill`
           - `primitives/css/grow.growClass`
           - `primitives/css/line.Line`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/spacing.Stack`
-          - `primitives/css/text.SectionLabel`
-          - `primitives/css/text.Text`
-          - `primitives/css/ui-kit.Button`
-          - `primitives/css/ui-kit.cn`
-          - `primitives/pane.defineRoute`
-          - `primitives/pane.Pane`
-          - `primitives/pane.PaneChrome`
           - `primitives/slot-render.defineRenderSlot`
           - `ui/icons.Icon`
         - Exports (types):
@@ -28611,7 +28595,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-lg`
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-xs`
-          - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --font-weight-semibold`
         - Imported by: `framework/tooling/web-artifacts`
       - Exemptions:
@@ -38126,7 +38109,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-sm`
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
-          - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --font-weight-medium`
     - **`tags`** — Page tags, web half: the vocabulary and per-page reads (usePageTags, usePageTagIndex, the editable usePageTagsEditor), the soft TagChip / TagDot, the read-only PageTagChips, and the TagPicker popover (search or create, toggle, and per-tag rename / recolor / delete). Shows a page's tags after its title on every page reference (sub-page rows, link blocks, backlinks), and presents the exposed `tags` field (options read live from the vocabulary) in every list whose rows are blocks. Page tags, server half: the page_tags vocabulary and the page_blocks_ext_tags assignments (one ordered tag-id list per tagged page), both served live; the vocabulary CRUD and per-page PUT endpoints; and the reads/writes other plugins use — loadPageTags (the <page-meta> header), resolveTagNames (name → tag, refusing unknown names unless created explicitly) and writeResolvedPageTags / setPageTags. A page's tags are exposed as the `tags` field of every list whose rows are blocks (LiveColumns.Expose).
       - Web:
@@ -38825,6 +38807,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `plugin-meta/plugin-view.SubHeading`
                   - `primitives/css/cluster.Cluster`
                   - `primitives/css/inline.Inline`
+                  - `primitives/css/spacing.Inset`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.cn`
@@ -38838,7 +38821,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/density --space-sm`
                   - `ui/tokens/density --space-xs`
                   - `ui/tokens/font-family --font-mono`
-                  - `ui/tokens/shape --spacing`
                   - `ui/tokens/type-scale --font-scale`
                   - `ui/tokens/type-scale --font-size-3xs`
                   - `ui/tokens/type-scale --font-size-caption`
@@ -39036,6 +39018,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/collapsible.CollapsibleTrigger`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/row.Row`
+                  - `primitives/css/spacing.Inset`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.cn`
@@ -39394,6 +39377,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/plugin-view.PluginNode`
           - `plugin-meta/plugin-view.PluginViewSlots`
           - `plugin-meta/plugin-view.SectionCount`
+          - `primitives/css/inline.Inline`
           - `primitives/data-view.DataView`
           - `primitives/data-view.defineDataView`
           - `primitives/data-view.FieldDef`
@@ -39602,9 +39586,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PluginViewSlots.Section` ← `plugin-meta.plugin-view.sub-plugins`
           - `pluginViewPane.Actions` ← `primitives.pane`
         - Contributes: `Pane.Register` "plugin-view"
-        - Uses: 22 symbols — full list in [`plugins/plugin-meta/plugins/plugin-view/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-view/REFERENCE.md)
+        - Uses: 23 symbols — full list in [`plugins/plugin-meta/plugins/plugin-view/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-view/REFERENCE.md)
           - `primitives/collapsible` ×4
           - `primitives/pane` ×4
+          - `primitives/css/spacing` ×2
           - `network/live.useLive`
           - `primitives/breadcrumb.Breadcrumb`
           - `primitives/css/badge.Badge`
@@ -39612,7 +39597,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/cluster.Cluster`
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/scroll.Scroll`
-          - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/detail-sections.defineDetailSections`
           - `primitives/link-gesture.activationProps`
@@ -40328,6 +40312,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `primitives/css/badge.Badge`
           - `primitives/css/fill.Fill`
+          - `primitives/css/inline.Inline`
           - `primitives/css/line.Line`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/spacing.Stack`
@@ -40377,7 +40362,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/font-family --font-mono`
-          - `ui/tokens/shape --spacing`
         - Imported by:
           - `apps/file-explorer/git`
           - `build/build-commits`
@@ -40609,9 +40593,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ClusterProps`
             - Exports (values): `Cluster`
           - Cross-plugin:
-            - Imported by: 65 plugins — full list in [`plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md)
+            - Imported by: 66 plugins — full list in [`plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md)
               - `apps` ×25
-              - `debug` ×11
+              - `debug` ×12
               - `conversations` ×7
               - `plugin-meta` ×6
               - `primitives` ×6
@@ -40904,16 +40888,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 98 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 101 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `apps` ×21
               - `debug` ×15
               - `reports` ×15
-              - `primitives` ×11
+              - `primitives` ×13
               - `conversations` ×9
               - `page` ×6
+              - `plugin-meta` ×4
               - `tasks` ×4
               - `build` ×3
-              - `plugin-meta` ×3
               - `ui` ×2
               - `active-data/go`
               - `audience/developer-mark`
@@ -41433,12 +41417,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `rampClass`
               - `SPACE_STEPS`
               - `spaceLength`
-        - **`spacing`** — Layout spacing primitives: <Stack gap> (flex + gap) and <Inset pad> (padding) draw from the closed density spacing ramp declared in primitives/css/space-ramp, plus insetClass() — the same padding resolver as a class string, for consumers that only accept a className — and selfClass(align), one child's cross-axis override (the same StackAlign union as <Stack align>, seen from the child), which is class-only because a wrapper would become the flex item and take the alignment itself. The sanctioned home for layout rhythm; raw gap-/p-/m-/space- Tailwind is banned by no-adhoc-spacing.
+        - **`spacing`** — Layout spacing primitives: <Stack gap> (flex + gap) and <Inset pad> (padding) draw from the closed density spacing ramp declared in primitives/css/space-ramp, plus insetClass() — the same padding resolver as a class string, for consumers that only accept a className — and selfClass(align), one child's cross-axis override (the same StackAlign union as <Stack align>, seen from the child), which is class-only because a wrapper would become the flex item and take the alignment itself — and <FirstLine> / firstLineClass(), the one-line-tall box that seats a leading mark on the first line of the text beside it (the structural replacement for an optical mt-0.5 nudge). The sanctioned home for layout rhythm; raw gap-/p-/m-/space- Tailwind is banned by no-adhoc-spacing.
           - Web:
             - Uses:
+              - `primitives/css/text.TextVariant`
+              - `primitives/css/text.useTextVariantClass`
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.SingleLineProvider`
             - Exports (types):
+              - `FirstLineProps`
               - `InsetProps`
               - `InsetSides`
               - `StackAlign`
@@ -41446,15 +41433,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `StackJustify`
               - `StackProps`
             - Exports (values):
+              - `FirstLine`
+              - `firstLineClass`
               - `Inset`
               - `insetClass`
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 423 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
-              - `apps` ×108
-              - `conversations` ×65
-              - `primitives` ×54
+            - Uses tokens: `ui/tokens/shape --spacing`
+            - Imported by: 429 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+              - `apps` ×109
+              - `conversations` ×69
+              - `primitives` ×55
               - `debug` ×38
               - `ui` ×31
               - `page` ×25
@@ -41688,15 +41678,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SectionLabel`
               - `Text`
               - `textVariantClass`
+              - `useTextVariantClass`
           - Cross-plugin:
             - Uses tokens: 45 vars — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 409 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 410 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×111
               - `conversations` ×75
-              - `primitives` ×46
+              - `primitives` ×47
               - `debug` ×37
               - `page` ×24
               - `ui` ×18
@@ -42222,10 +42213,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DATA_TABLE_VIRTUALIZE_THRESHOLD`
           - `DataTable`
       - Cross-plugin:
-        - Uses tokens: 43 vars — full list in [`plugins/primitives/plugins/data-table/REFERENCE.md`](../plugins/primitives/plugins/data-table/REFERENCE.md)
+        - Uses tokens: 44 vars — full list in [`plugins/primitives/plugins/data-table/REFERENCE.md`](../plugins/primitives/plugins/data-table/REFERENCE.md)
           - `ui/tokens/data-view` ×23
+          - `ui/tokens/density` ×7
           - `ui/tokens/color-palette` ×6
-          - `ui/tokens/density` ×6
           - `ui/tokens/type-scale` ×6
           - `ui/tokens/shape` ×2
         - Imported by:
@@ -43822,6 +43813,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`expandable`** — Clamps tall content to a max height and reveals a Show more/less toggle only when the rendered content actually overflows (measured via ResizeObserver, not char/line heuristics).
       - Web:
         - Uses:
+          - `primitives/css/spacing.Inset`
           - `primitives/css/spacing.Stack`
           - `primitives/dom/element-size.useResizeObserver`
           - `ui/icons.Icon`
@@ -44077,6 +44069,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `primitives/css/card.Card`
               - `primitives/css/placeholder.Placeholder`
+              - `primitives/css/spacing.Inset`
               - `primitives/css/text.SectionLabel`
               - `primitives/css/text.Text`
               - `primitives/file-viewer.FileRendererProps`
@@ -44094,7 +44087,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-lg`
               - `ui/tokens/density --space-md`
               - `ui/tokens/density --space-xs`
-              - `ui/tokens/shape --spacing`
         - **`media`** — Video and audio player for host media files (.mp4, .mov, .webm, .mp3, .wav, .flac, …): the browser's native player with controls, auto-playing on open, Space to play / pause, seeking over byte ranges; a codec the browser cannot decode shows No preview.
           - Web:
             - Contributes:
@@ -44307,6 +44299,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `primitives/css/center.Center`
           - `primitives/css/grid.Grid`
+          - `primitives/css/inline.Inline`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.SectionLabel`
@@ -44969,27 +44962,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `nodeToText`
           - `useMarkdownEnhancement`
       - Cross-plugin:
-        - Uses tokens:
-          - `ui/tokens/color-palette --border`
-          - `ui/tokens/color-palette --code-border`
-          - `ui/tokens/color-palette --muted`
-          - `ui/tokens/color-palette --muted-foreground`
-          - `ui/tokens/color-palette --primary-text`
-          - `ui/tokens/density --pad-code-x`
-          - `ui/tokens/density --pad-code-y`
-          - `ui/tokens/density --space-md`
-          - `ui/tokens/density --space-sm`
-          - `ui/tokens/density --space-xl`
-          - `ui/tokens/density --space-xs`
+        - Uses tokens: 22 vars — full list in [`plugins/primitives/plugins/markdown/REFERENCE.md`](../plugins/primitives/plugins/markdown/REFERENCE.md)
+          - `ui/tokens/density` ×9
+          - `ui/tokens/color-palette` ×5
+          - `ui/tokens/type-scale` ×4
+          - `ui/tokens/shape` ×3
           - `ui/tokens/font-family --font-mono`
-          - `ui/tokens/shape --border-code`
-          - `ui/tokens/shape --radius`
-          - `ui/tokens/shape --radius-code`
-          - `ui/tokens/shape --spacing`
-          - `ui/tokens/type-scale --font-scale`
-          - `ui/tokens/type-scale --font-size-code`
-          - `ui/tokens/type-scale --font-weight-normal`
-          - `ui/tokens/type-scale --line-height-code`
         - Imported by:
           - `active-data`
           - `active-data/go`
@@ -47165,7 +47143,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --muted`
           - `ui/tokens/color-palette --muted-foreground`
+          - `ui/tokens/density --space-lg`
           - `ui/tokens/density --space-md`
+          - `ui/tokens/density --space-sm`
           - `ui/tokens/density --space-xs`
           - `ui/tokens/font-family --font-mono`
           - `ui/tokens/shape --radius`
@@ -47533,7 +47513,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineChipFields`
             - Exports (values): `inlineChipNode`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
+            - Uses tokens: `ui/tokens/density --space-2xs`
             - Imported by:
               - `active-data`
               - `active-data/id-chip`
@@ -47620,7 +47600,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `rewriteAttachmentMarkdown`
               - `splitAttachmentRefs`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
+            - Uses tokens: `ui/tokens/density --space-2xs`
             - Imported by:
               - `apps/file-explorer/attachment-preview`
               - `apps/pages/page-tree`
@@ -47717,8 +47697,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Slots: `Tree.Disclosure`
         - Slot contributors: `Tree.Disclosure` ← `ui.tree-disclosure`
-        - Uses: 25 symbols — full list in [`plugins/primitives/plugins/tree/REFERENCE.md`](../plugins/primitives/plugins/tree/REFERENCE.md)
+        - Uses: 26 symbols — full list in [`plugins/primitives/plugins/tree/REFERENCE.md`](../plugins/primitives/plugins/tree/REFERENCE.md)
           - `primitives/css/ui-kit` ×6
+          - `primitives/css/spacing` ×2
           - `primitives/row-actions` ×2
           - `primitives/collapsible.CollapsibleChevron`
           - `primitives/css/center.Center`
@@ -47726,7 +47707,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/fill.Fill`
           - `primitives/css/pin.Pin`
           - `primitives/css/rigid.rigidClass`
-          - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/dom/scroll-reveal.useRevealOnActive`
           - `primitives/icon-button.IconButton`
@@ -49296,7 +49276,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ui/tokens/color-palette --muted-foreground`
       - `ui/tokens/density --space-sm`
       - `ui/tokens/density --space-xs`
-      - `ui/tokens/shape --spacing`
     - Imported by:
       - `review/code-review`
       - `review/plugin-changes`
@@ -51142,9 +51121,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskAutoStart`
           - `taskAutoStartShape`
       - Cross-plugin:
-        - Uses tokens:
-          - `ui/tokens/color-palette --warning`
-          - `ui/tokens/shape --spacing`
+        - Uses tokens: `ui/tokens/color-palette --warning`
         - Imported by:
           - `conversations`
           - `tasks`
@@ -54600,7 +54577,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ColorPaletteTokenValues`
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
+            - Uses tokens:
+              - `ui/tokens/density --space-sm`
+              - `ui/tokens/shape --spacing`
             - Tokens used by: 529 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×117
               - `conversations` ×89
@@ -54720,13 +54699,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 339 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 347 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+              - `primitives` ×73
               - `apps` ×71
-              - `primitives` ×71
               - `conversations` ×49
               - `debug` ×28
+              - `ui` ×24
               - `page` ×21
-              - `ui` ×18
               - `plugin-meta` ×13
               - `fields` ×9
               - `tasks` ×8
@@ -54799,7 +54778,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `FontFamilyTokenValues`
             - Exports (values): `fontFamilyGroup`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
+            - Uses tokens: `ui/tokens/density --space-sm`
             - Tokens used by: 153 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
               - `conversations` ×36
               - `plugin-meta` ×23
@@ -54898,7 +54877,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --card`
               - `ui/tokens/color-palette --popover`
               - `ui/tokens/color-palette --popover-border`
-              - `ui/tokens/shape --spacing`
+              - `ui/tokens/density --space-sm`
             - Tokens used by:
               - `menu-bar`
               - `primitives/css/ui-kit`
@@ -54933,11 +54912,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --popover`
               - `ui/tokens/color-palette --popover-foreground`
               - `ui/tokens/density --space-md`
+              - `ui/tokens/density --space-sm`
               - `ui/tokens/density --space-xs`
               - `ui/tokens/shadow --shadow`
               - `ui/tokens/shadow --shadow-md`
               - `ui/tokens/shape --radius`
-              - `ui/tokens/shape --spacing`
             - Tokens used by:
               - `primitives/css/motion`
               - `primitives/css/surface`
@@ -54994,7 +54973,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ScrollbarTokenValues`
             - Exports (values): `scrollbarGroup`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
+            - Uses tokens: `ui/tokens/density --space-sm`
             - Tokens used by: `primitives/css/ui-kit`
         - **`shadow`** — Shadow token group (the shadow-2xs…2xl tiers) with its param-driven customizer section and "Fill from…" shortcuts.
           - Web:
@@ -55088,33 +55067,35 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ShapeTokenValues`
             - Exports (values): `shapeGroup`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 436 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
-              - `conversations` ×92
+            - Uses tokens:
+              - `ui/tokens/density --radius-chip-compact`
+              - `ui/tokens/density --space-sm`
+            - Tokens used by: 408 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `apps` ×87
-              - `primitives` ×72
+              - `conversations` ×79
+              - `primitives` ×69
               - `page` ×36
-              - `ui` ×32
               - `debug` ×27
-              - `plugin-meta` ×11
-              - `tasks` ×11
+              - `ui` ×27
+              - `plugin-meta` ×10
+              - `tasks` ×10
               - `fields` ×9
               - `infra` ×6
               - `reorder` ×6
               - `apps-core` ×5
-              - `review` ×5
-              - `active-data` ×4
+              - `review` ×4
               - `shell` ×4
+              - `active-data` ×3
               - `build` ×3
               - `stats` ×3
-              - `auth` ×2
               - `backup` ×2
-              - `code-explorer` ×2
               - `config_v2` ×2
-              - `framework` ×2
               - `menu-bar` ×2
               - `screenshot` ×2
               - `audience/developer-mark`
+              - `auth`
+              - `code-explorer/commit-detail`
+              - `framework/tooling/lint`
               - `hints/ask`
               - `history/dialog`
               - `integrations/google-maps`
@@ -55150,7 +55131,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --control-pad-md`
               - `ui/tokens/density --space-2xs`
               - `ui/tokens/density --space-sm`
-              - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-scale`
               - `ui/tokens/type-scale --font-size-label`
               - `ui/tokens/type-scale --font-weight-medium`
@@ -55189,6 +55169,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --border`
+              - `ui/tokens/density --space-sm`
               - `ui/tokens/shape --spacing`
             - Tokens used by:
               - `apps-core/app-launcher`
@@ -55220,8 +55201,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `typeScaleGroup`
           - Cross-plugin:
             - Uses tokens:
+              - `ui/tokens/density --space-sm`
               - `ui/tokens/font-family --font-mono`
-              - `ui/tokens/shape --spacing`
             - Tokens used by: 230 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
               - `apps` ×60
               - `primitives` ×38

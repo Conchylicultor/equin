@@ -69,7 +69,6 @@ contributions: [
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xs`
-    - `ui/tokens/shape --spacing`
   - Imported by:
     - `review/code-review`
     - `review/plugin-changes`

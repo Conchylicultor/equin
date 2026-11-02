@@ -43,10 +43,7 @@ export function TaskListToolView({ event }: ToolRendererProps) {
   return (
     <ToolCallCard event={event} summary={summary} defaultOpen={false}>
       {tasks && tasks.length > 0 && (
-        <Scroll
-          // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the task list from the card header
-          className="mt-2 max-h-[200px]"
-        >
+        <Scroll className="max-h-[200px]">
           <Stack gap="xs">
             {tasks.map((t, i) => (
               <Line
@@ -72,8 +69,7 @@ export function TaskListToolView({ event }: ToolRendererProps) {
         </Scroll>
       )}
       {event.result?.isError && (
-        // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the error text from the card header
-        <Text as="p" variant="caption" className="mt-2 text-destructive">
+        <Text as="p" variant="caption" className="text-destructive">
           {event.result.content}
         </Text>
       )}

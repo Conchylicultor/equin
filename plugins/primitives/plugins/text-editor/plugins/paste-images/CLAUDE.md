@@ -93,7 +93,7 @@ a hook conditionally inside one component.
     - `rewriteAttachmentMarkdown`
     - `splitAttachmentRefs`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
+  - Uses tokens: `ui/tokens/density --space-2xs`
   - Imported by:
     - `apps/file-explorer/attachment-preview`
     - `apps/pages/page-tree`

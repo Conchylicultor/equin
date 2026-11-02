@@ -1,6 +1,6 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, type ReactNode } from "react";
-import { selfClass } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { FirstLine } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { rowDataOf } from "../../core";
 import type { BlockRegionProps, BlockRendererProps } from "../types";
@@ -44,27 +44,28 @@ export function BlockTextRenderer({
   let fallbackMarker: ReactNode;
   if (handle?.toggle) {
     fallbackMarker = (
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={() =>
-          // `update` REPLACES the blob, so restate the block's other fields —
-          // but through `rowDataOf`, never a raw `{...data}` spread: the row's
-          // `text` is a ≤1 s-lagged projection of the content doc, and writing
-          // that snapshot back would revert whatever was typed in the last
-          // second. (`update` carries the projection across itself; see
-          // `preserveText`.)
-          editor.update({
-            ...rowDataOf(data),
-            [handle.toggle!.field]: !checked,
-          })
-        }
-        // Don't blur the editor before the onChange registers; the editable
-        // field flushes on blur anyway, but this keeps the caret put.
-        onMouseDown={(e) => e.preventDefault()}
-        // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 is a one-off vertical offset seating the checkbox glyph on the first text line (horizontal placement owned by the shared marker gutter)
-        className={cn("accent-primary mt-2 size-3.5", selfClass("start"))}
-      />
+      <FirstLine>
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={() =>
+            // `update` REPLACES the blob, so restate the block's other fields —
+            // but through `rowDataOf`, never a raw `{...data}` spread: the row's
+            // `text` is a ≤1 s-lagged projection of the content doc, and writing
+            // that snapshot back would revert whatever was typed in the last
+            // second. (`update` carries the projection across itself; see
+            // `preserveText`.)
+            editor.update({
+              ...rowDataOf(data),
+              [handle.toggle!.field]: !checked,
+            })
+          }
+          // Don't blur the editor before the onChange registers; the editable
+          // field flushes on blur anyway, but this keeps the caret put.
+          onMouseDown={(e) => e.preventDefault()}
+          className="accent-primary size-3.5"
+        />
+      </FirstLine>
     );
   } else if (handle?.ordinalMarker) {
     fallbackMarker = (

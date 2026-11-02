@@ -36,8 +36,7 @@ export function EditPageView({ event }: ToolRendererProps) {
 
   return (
     <ToolCallCard event={event} aside={aside} defaultOpen>
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the body from the ToolCallCard header inside its collapsible region; not a Stack-owned gap */}
-      <Stack gap="sm" className="mt-2">
+      <Stack gap="sm">
         {/* The two strings are markdown fragments of the page document, so the
             diff is given a .md path to highlight them as such. */}
         <TextDiff oldText={old_string} newText={new_string} path="page.md" />

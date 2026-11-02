@@ -76,5 +76,4 @@ export const MENU_ROW_TRAIL = "ml-auto flex shrink-0 items-center gap-xs";
  * The hairline between runs of rows. `rail-bleed` spans it through the panel's
  * own rail, whatever padding role the panel is on.
  */
-// The `my-1` vertical inset is the divider's own margin; the ramp has no margin utilities.
-export const MENU_SEPARATOR = "rail-bleed my-1 h-px bg-border";
+export const MENU_SEPARATOR = "rail-bleed my-menu-separator h-px bg-border";

@@ -64,7 +64,12 @@ export default function buildRule({
           "Raw spacing class `{{token}}` is banned — set layout spacing through the " +
           "<Stack gap> / <Inset pad> primitives from @plugins/primitives/plugins/css/plugins/spacing/web, " +
           "or a `gap-<step>` / `p*-<step>` utility (none|2xs|xs|xsm|sm|smd|md|lg|xl|2xl) from the density spacing scale. " +
-          "Margins become a Stack gap or Inset pad — the ramp has no margin classes." +
+          "A raw margin (`mt-*`, `ml-*`, `-mx-*`) has no replacement on purpose: there are no margin classes, because " +
+          "space belongs to the CONTAINER, never to a child pushing its neighbours away. Between stacked blocks → the parent's " +
+          "<Stack gap> (nest a Stack for a tighter or looser group); between inline pieces (separator, arrow, icon → text) → " +
+          "<Inline gap> / a `gap-<step>` on the row (a Button already gaps its icon); a push → an empty <Fill>; an indent → " +
+          "padding (`pl-<step>`); a bleed → `rail-bleed` under a `rail-<step>` region; an icon seated on a wrapping text's first " +
+          "line → <FirstLine>; prose rhythm → the `my-flow-*` roles." +
           " To make ONE instance or region look different (a hero prompt, a featured card), wrap it in a sub-theme that sets the token (`defineSubTheme` + `ThemeEngine.SubTheme` + `<Theme name={subThemeScope(…)}>`, see plugins/ui/plugins/theme-engine/CLAUDE.md).",
       },
     },

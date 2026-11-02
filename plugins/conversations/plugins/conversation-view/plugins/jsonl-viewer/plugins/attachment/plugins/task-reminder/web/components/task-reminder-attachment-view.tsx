@@ -1,6 +1,9 @@
 import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
 import type { AttachmentRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/core";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  FirstLine,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
@@ -52,21 +55,24 @@ export function TaskReminderAttachmentView({ event }: AttachmentRendererProps) {
         <Stack as="ul" gap="xs">
           {att.content.map((task) => (
             <Stack as="li" key={task.id} direction="row" gap="sm" align="start">
-              <span
-                // eslint-disable-next-line spacing/no-adhoc-spacing -- vertical offset aligning the status dot with the first line of wrapping subject text; not a sibling gap
-                className={cn(
-                  "mt-1.5 size-2 rounded-full",
-                  rigidClass(),
-                  STATUS_DOT[task.status] ?? DEFAULT_DOT,
-                )}
-              />
+              <FirstLine variant="caption">
+                <span
+                  className={cn(
+                    "size-2 rounded-full",
+                    rigidClass(),
+                    STATUS_DOT[task.status] ?? DEFAULT_DOT,
+                  )}
+                />
+              </FirstLine>
               <Text as="span" variant="caption" className={fillClasses("x")}>
                 <span className="text-foreground">{task.subject}</span>
                 {task.description && (
-                  /* eslint-disable-next-line spacing/no-adhoc-spacing -- inline left offset separating description from subject within a text line; not a flex-sibling gap */
-                  <span className="ml-1.5 text-muted-foreground/60 truncate">
-                    — {task.description}
-                  </span>
+                  <>
+                    {" "}
+                    <span className="text-muted-foreground/60 truncate">
+                      — {task.description}
+                    </span>
+                  </>
                 )}
               </Text>
             </Stack>

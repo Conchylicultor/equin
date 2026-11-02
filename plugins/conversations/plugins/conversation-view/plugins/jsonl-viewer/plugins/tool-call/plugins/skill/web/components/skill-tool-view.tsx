@@ -57,8 +57,7 @@ export function SkillToolView({ event }: ToolRendererProps) {
   return (
     <ToolCallCard event={event} summary={summary} leading={skillChip}>
       {(args || injected.length > 0) && (
-        // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the content stack from the card header
-        <Stack gap="sm" className="mt-2">
+        <Stack gap="sm">
           {args && (
             <pre className="text-caption whitespace-pre-wrap break-words rounded-md bg-muted/60 p-sm">
               {args}

@@ -260,7 +260,6 @@ export function BlockTextEditor({
     () => ({
       namespace: `block-text-${block.id}`,
       theme: {
-        paragraph: "m-0",
         // Inline mark classes — applied by Lexical to formatted TextNodes. These
         // are plain class strings passed to the framework (not JSX className), so
         // they map marks → utilities directly.

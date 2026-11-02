@@ -75,11 +75,7 @@ export function OverlayTextarea({
 }: OverlayTextareaProps) {
   return (
     <Clip className={cn("relative", className)}>
-      <pre
-        aria-hidden
-        // eslint-disable-next-line spacing/no-adhoc-spacing -- m-0 resets the UA <pre> default margin to zero; there is no margin ramp and "none" is a layout reset, not rhythm
-        className={cn("m-0", METRICS)}
-      >
+      <pre aria-hidden className={METRICS}>
         {value === "" ? (
           // Sizes the empty field to the hint; a lone space keeps one line.
           <span className="invisible">{placeholder || " "}</span>

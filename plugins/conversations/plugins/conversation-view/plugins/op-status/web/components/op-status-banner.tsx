@@ -184,10 +184,12 @@ function TitleCell({ item }: { item: CellRow }) {
           item.title
         )}
         {item.isSelf && (
-          // eslint-disable-next-line spacing/no-adhoc-spacing -- inline left offset on a trailing label inside a truncating cell; not a sibling gap the parent can own
-          <span className="ml-1.5 font-normal text-primary-text">
-            this conversation
-          </span>
+          <>
+            {" "}
+            <span className="font-normal text-primary-text">
+              this conversation
+            </span>
+          </>
         )}
       </span>
     </WithTooltip>

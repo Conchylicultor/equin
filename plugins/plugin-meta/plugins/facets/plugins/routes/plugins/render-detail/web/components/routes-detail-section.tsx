@@ -135,8 +135,7 @@ function CallersBanner({ names }: { names: string[] }) {
 
   return (
     <Cluster gap="xs" className="gap-y-2xs text-3xs text-muted-foreground">
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mr-0.5 is a tiny inline trailing offset on the leading label before the wrapped chip flow, not container rhythm */}
-      <span className="mr-0.5 font-medium">Endpoint callers</span>
+      <span className="font-medium">Endpoint callers</span>
       {visible.map((name, i) => (
         <Inline gap="none" key={name}>
           <PluginLink name={name} />

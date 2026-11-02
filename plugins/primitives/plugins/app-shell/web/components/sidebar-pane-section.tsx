@@ -33,11 +33,10 @@ export function SidebarPaneSection({
     <SidebarGroup className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <SidebarGroupLabel
         // eslint-disable-next-line layout/no-adhoc-layout -- shrink-0 keeps the label row rigid inside shadcn SidebarGroup's flex column
-        className="group/label shrink-0 cursor-pointer select-none hover:text-sidebar-foreground"
+        className="group/label shrink-0 cursor-pointer gap-sm select-none hover:text-sidebar-foreground"
         {...triggerControlProps}
       >
-        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off icon offset inside shadcn SidebarGroupLabel label row */}
-        <Icon icon={icon} className="mr-2 size-4" />
+        <Icon icon={icon} className="size-4" />
         {title}
         {LabelExtra && <LabelExtra />}
         <CollapsibleChevron open={open} className="ml-auto size-4" />

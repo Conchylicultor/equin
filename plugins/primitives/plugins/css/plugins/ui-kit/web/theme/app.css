@@ -2305,6 +2305,29 @@
 @utility pl-xl   { padding-left: var(--space-xl); }  /* twmerge: extend pl */
 @utility pl-2xl  { padding-left: var(--space-2xl); } /* twmerge: extend pl */
 
+/* Document-flow rhythm — the ONE place a margin is the mechanism, so it is a
+ * role of its own and never a ramp margin class (the ramp has none, on
+ * purpose: between boxes the container owns the space — <Stack gap>,
+ * <Inline gap>, <Fill>, rail-bleed). Rendered prose (markdown, a code fence or
+ * table inside it) is a run of blocks that cannot be a flex column: a float
+ * must wrap them, and the gap between two blocks depends on the PAIR (a heading
+ * after a paragraph), which only collapsing margins express. Each role reads a
+ * ramp step, so density presets retune prose with everything else. */
+@utility my-flow-block   { margin-block: var(--space-sm); } /* twmerge: standalone -- prose block rhythm; the only margin class a flow block wears. */
+@utility my-flow-item    { margin-block: var(--space-2xs); } /* twmerge: standalone -- list-item rhythm in prose; the only margin class a list item wears. */
+@utility my-flow-heading { margin-block: var(--space-lg) var(--space-sm); } /* twmerge: standalone -- the room above and below a top-level prose heading; no other margin class sits beside it. */
+@utility my-flow-subheading { margin-block: var(--space-md) var(--space-xsm); } /* twmerge: standalone -- the room above and below a minor prose heading; no other margin class sits beside it. */
+@utility my-flow-rule    { margin-block: var(--space-lg); } /* twmerge: standalone -- the room around a prose thematic break; no other margin class sits beside it. */
+
+/* Roles for a lone element among rows of a floating panel: no parent gap can own
+ * the room around it (the rows are the caller's), so the element carries it as a
+ * named role reading the ramp. `my-menu-separator`: the hairline between runs of
+ * menu rows. `my-overlay-header`: a panel's sticky header bleeding up through the
+ * panel's own block padding (`--rail-block-start`, published by whatever rail
+ * role the panel is on) and spacing the first item off its border. */
+@utility my-menu-separator { margin-block: var(--space-xs); } /* twmerge: standalone -- the room around a menu hairline; no other margin class sits beside it. */
+@utility my-overlay-header { margin-block: calc(-1 * var(--rail-block-start, 0px)) var(--space-xs); } /* twmerge: standalone -- a panel header's block bleed through the panel padding plus the room under it; no other margin class sits beside it. */
+
 /* Semantic typography role utilities — the single source of truth for text
  * hierarchy (Text primitive). Each role is a frozen bundle of size + line-height
  * + weight (+ tracking) read DIRECTLY from the typography token group's

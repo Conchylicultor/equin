@@ -15,7 +15,7 @@ import { TokenFrame } from "@plugins/primitives/plugins/text-editor/plugins/toke
  */
 export const inlineChipWebNode: InlineTokenNode<InlineChipFields> =
   inlineChipNode.decorated({
-    className: "inline-flex align-middle mx-0.5",
+    className: "inline-flex align-middle px-2xs",
     render: ({ text }, node) => (
       <InlineChipDecoration text={text} nodeKey={node.getKey()} />
     ),

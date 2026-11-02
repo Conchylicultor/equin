@@ -46,12 +46,7 @@ export function PluginDetail({ node }: PluginDetailProps) {
                 }))}
                 actions={
                   node.loadBearing ? (
-                    <Badge
-                      variant="warning"
-                      icon={<Icon icon={boltIcon} />}
-                      // eslint-disable-next-line spacing/no-adhoc-spacing -- ml-1 offsets this trailing load-bearing badge from the breadcrumb in the actions slot; one-off inline gap, no shared flex parent
-                      className="ml-1"
-                    >
+                    <Badge variant="warning" icon={<Icon icon={boltIcon} />}>
                       Load-bearing
                     </Badge>
                   ) : undefined

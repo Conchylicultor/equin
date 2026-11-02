@@ -29,6 +29,7 @@ here), the model-written summary, and a trailing `REMINDER:` to the model
     - `primitives/collapsible.CollapsibleChevron`
     - `primitives/collapsible.CollapsibleContent`
     - `primitives/collapsible.CollapsibleTrigger`
+    - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/yield.yieldClass`

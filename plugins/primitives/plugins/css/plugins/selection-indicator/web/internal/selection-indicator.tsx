@@ -4,7 +4,7 @@ import type { ReactElement, ReactNode } from "react";
 export type SelectionIndicatorProps = {
   /** Whether the option is selected (filled) or not (empty outline). */
   checked: boolean;
-  /** Extra classes for layout — e.g. `mt-0.5` to align with adjacent text. */
+  /** Extra classes for layout — e.g. `self-start` or a `<FirstLine>` wrapper to align with adjacent text. */
   className?: string;
 };
 

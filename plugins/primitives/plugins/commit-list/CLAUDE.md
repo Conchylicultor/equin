@@ -9,6 +9,7 @@
   - Uses:
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
+    - `primitives/css/inline.Inline`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
@@ -58,7 +59,6 @@
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/font-family --font-mono`
-    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/file-explorer/git`
     - `build/build-commits`

@@ -16,8 +16,7 @@ function ResultDetail({ result }: { result: ToolCallEvent["result"] }) {
     <Text
       as="div"
       variant="caption"
-      // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the error detail from the diff above; element mixes bg+rounded+padding so it's not a clean Stack/Inset
-      className="mt-2 rounded-md bg-destructive/10 p-sm text-destructive whitespace-pre-wrap break-words"
+      className="rounded-md bg-destructive/10 p-sm text-destructive whitespace-pre-wrap break-words"
     >
       {result.content || "Error"}
     </Text>
@@ -36,8 +35,7 @@ export function EditView({ event }: ToolRendererProps) {
       aside={<FilePath filePath={file_path} />}
       defaultOpen
     >
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the body from the ToolCallCard header inside its collapsible region; not a Stack-owned gap */}
-      <Stack gap="sm" className="mt-2">
+      <Stack gap="sm">
         <InlineDiff
           oldText={old_string}
           newText={new_string}

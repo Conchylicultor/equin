@@ -17,25 +17,21 @@
   - Contributes:
     - `Pane.Register` "debug-profiling"
     - `DebugApp.Sidebar` "Profiling"
-  - Uses:
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×3
+    - `primitives/css/coords` ×2
+    - `primitives/css/text` ×2
+    - `primitives/css/ui-kit` ×2
     - `apps/debug/shell.DebugApp`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
+    - `primitives/css/cluster.Cluster`
     - `primitives/css/column.Column`
-    - `primitives/css/coords.pct`
-    - `primitives/css/coords.Placed`
     - `primitives/css/fill.Fill`
     - `primitives/css/grow.growClass`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
-    - `primitives/css/text.SectionLabel`
-    - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
     - `primitives/slot-render.defineRenderSlot`
     - `ui/icons.Icon`
   - Exports (types):

@@ -188,8 +188,7 @@ function CommitFileRow({
                     <span className="text-muted-foreground line-through">
                       {from}
                     </span>
-                    {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline horizontal offset around the rename arrow between two file paths */}
-                    <span className="mx-1.5 text-muted-foreground">→</span>
+                    <span className="text-muted-foreground">{" → "}</span>
                   </>
                 )}
                 <span className="text-muted-foreground">{dir}</span>

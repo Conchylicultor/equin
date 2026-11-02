@@ -21,15 +21,13 @@ export function TaskOutputToolView({ event }: ToolRendererProps) {
       {event.result && !event.result.isError && (
         <Scroll
           as="pre"
-          // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the result block from the card header
-          className="mt-2 max-h-[200px] rounded-md bg-muted/50 p-sm text-2xs text-muted-foreground whitespace-pre-wrap"
+          className="max-h-[200px] rounded-md bg-muted/50 p-sm text-2xs text-muted-foreground whitespace-pre-wrap"
         >
           {event.result.content}
         </Scroll>
       )}
       {event.result?.isError && (
-        // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the error text from the card header
-        <Text as="p" variant="caption" className="mt-2 text-destructive">
+        <Text as="p" variant="caption" className="text-destructive">
           {event.result.content}
         </Text>
       )}

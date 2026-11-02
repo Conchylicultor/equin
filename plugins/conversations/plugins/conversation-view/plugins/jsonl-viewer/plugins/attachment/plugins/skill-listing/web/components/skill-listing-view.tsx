@@ -62,10 +62,12 @@ export function SkillListingView({ event }: AttachmentRendererProps) {
                 {skill.name}
               </span>
               {skill.description && (
-                /* eslint-disable-next-line spacing/no-adhoc-spacing -- inline left offset separating description from skill name within a text line; not a flex-sibling gap */
-                <span className="ml-1.5 text-muted-foreground/60">
-                  — {skill.description}
-                </span>
+                <>
+                  {" "}
+                  <span className="text-muted-foreground/60">
+                    — {skill.description}
+                  </span>
+                </>
               )}
             </Text>
           ))}

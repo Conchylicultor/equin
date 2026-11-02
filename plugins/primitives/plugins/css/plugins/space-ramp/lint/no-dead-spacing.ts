@@ -49,11 +49,14 @@ export default function buildRule({
       schema: [],
       messages: {
         deadMargin:
-          "`{{token}}` does not exist — it compiles to nothing. The spacing ramp deliberately " +
-          "has no margin (`m*-`) or `space-*` classes: set the space as a gap on the parent " +
-          "(<Stack gap> / `gap-<step>`) or as padding (<Inset pad> / `p*-<step>`) from " +
-          "@plugins/primitives/plugins/css/plugins/spacing/web. `*-auto` and `*-px` are the " +
-          "only word values these families have.",
+          "`{{token}}` does not exist — it compiles to nothing. Margins (`m*-`) and `space-*` do not " +
+          "exist on purpose: space belongs to the container, never to a child pushing its neighbours " +
+          "away. Between stacked blocks → the parent's <Stack gap> (nest a Stack for a tighter or looser " +
+          "group); between inline pieces → <Inline gap> / a `gap-<step>` on the row; a push → an empty " +
+          "<Fill> (or `ml-auto`); an indent → padding (<Inset> / `p*-<step>`); a bleed → `rail-bleed`; an " +
+          "icon on a wrapping text's first line → <FirstLine>; prose rhythm → `my-flow-*` (all from " +
+          "@plugins/primitives/plugins/css/plugins/spacing/web and app.css). `*-auto` and `*-px` are the " +
+          "only Tailwind word values these families have.",
         deadSpacing:
           "`{{token}}` does not exist — no @utility in app.css declares it and Tailwind has no " +
           "`{{value}}` value for `{{family}}-`, so it compiles to nothing. Use a ramp step " +

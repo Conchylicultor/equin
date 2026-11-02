@@ -135,22 +135,19 @@ export function GoogleSetup() {
 
   return (
     <Stack gap="xl">
-      <div>
+      <Stack gap="xs">
         <Text as="label" variant="label">
           GCP Project ID
         </Text>
         <Input
-          // eslint-disable-next-line spacing/no-adhoc-spacing -- single-edge offset under label, no flex parent to own a gap
-          className="mt-1"
           placeholder="my-project-123"
           value={projectId}
           onChange={(e) => handleProjectInput(e.target.value)}
         />
-        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- single-edge offset under input, no flex parent to own a gap */}
-        <Text as="p" variant="caption" className="mt-1 text-muted-foreground">
+        <Text as="p" variant="caption" className="text-muted-foreground">
           Paste any GCP console URL, or type your project ID
         </Text>
-      </div>
+      </Stack>
 
       <Steps>
         <Step

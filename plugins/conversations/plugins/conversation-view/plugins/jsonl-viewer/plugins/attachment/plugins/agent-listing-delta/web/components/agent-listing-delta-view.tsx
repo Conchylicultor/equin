@@ -74,10 +74,12 @@ export function AgentListingDeltaView({ event }: AttachmentRendererProps) {
                 {agent.name}
               </span>
               {agent.description && (
-                /* eslint-disable-next-line spacing/no-adhoc-spacing -- inline left offset separating description from agent name within a text line; not a flex-sibling gap */
-                <span className="ml-1.5 text-muted-foreground/60">
-                  — {agent.description}
-                </span>
+                <>
+                  {" "}
+                  <span className="text-muted-foreground/60">
+                    — {agent.description}
+                  </span>
+                </>
               )}
             </Text>
           ))}

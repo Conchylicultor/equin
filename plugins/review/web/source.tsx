@@ -91,10 +91,7 @@ export function SourceTabs({
             >
               <span className="max-w-[24ch] truncate">{g.message}</span>
               {g.count > 1 && (
-                <span
-                  // eslint-disable-next-line spacing/no-adhoc-spacing -- inline gap before count badge after truncated message
-                  className="ml-1 text-muted-foreground tabular-nums"
-                >
+                <span className="text-muted-foreground tabular-nums">
                   ×{g.count}
                 </span>
               )}

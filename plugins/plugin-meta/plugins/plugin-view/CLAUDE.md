@@ -61,9 +61,10 @@ an empty titled card); a count goes in `summary`, via the shared `SectionCount`.
     - `PluginViewSlots.Section` ← `plugin-meta.plugin-view.sub-plugins`
     - `pluginViewPane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "plugin-view"
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/collapsible` ×4
     - `primitives/pane` ×4
+    - `primitives/css/spacing` ×2
     - `network/live.useLive`
     - `primitives/breadcrumb.Breadcrumb`
     - `primitives/css/badge.Badge`
@@ -71,7 +72,6 @@ an empty titled card); a count goes in `summary`, via the shared `SectionCount`.
     - `primitives/css/cluster.Cluster`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/scroll.Scroll`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/link-gesture.activationProps`

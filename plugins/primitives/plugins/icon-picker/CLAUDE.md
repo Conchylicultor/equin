@@ -72,6 +72,7 @@ host owns its own inset, through `className`.
   - Uses:
     - `primitives/css/center.Center`
     - `primitives/css/grid.Grid`
+    - `primitives/css/inline.Inline`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.SectionLabel`

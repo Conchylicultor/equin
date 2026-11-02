@@ -4,6 +4,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@plugins/primitives/plugins/collapsible/web";
+import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 /**
  * Collapsible sub-section heading used within a plugin detail Section:
@@ -26,10 +27,11 @@ export function SubHeading({
         <span className="font-medium text-muted-foreground">{label}</span>
         <span className="text-muted-foreground/50">({count})</span>
       </CollapsibleTrigger>
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- ml-1 indents the collapsed content under its sub-heading trigger; one-off left offset paired with the left border, not sibling rhythm */}
-      <CollapsibleContent className="ml-1 border-l border-border/50 pl-md pt-2xs">
-        {children}
-      </CollapsibleContent>
+      <Inset l="xs">
+        <CollapsibleContent className="border-l border-border/50 pl-md pt-2xs">
+          {children}
+        </CollapsibleContent>
+      </Inset>
     </Collapsible>
   );
 }

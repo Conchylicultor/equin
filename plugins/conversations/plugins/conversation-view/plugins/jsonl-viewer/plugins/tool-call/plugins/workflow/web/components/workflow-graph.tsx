@@ -6,6 +6,7 @@ import { WorkflowNodeCard, type NodeEmphasis } from "./workflow-node-card";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
+  Inset,
   Stack,
   selfClass,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -67,29 +68,29 @@ export function WorkflowGraph({
     if (group.kind === "parallel") {
       const count = countNodes(block);
       return (
-        <div
+        <Stack
           key={group.id}
+          gap="xsm"
           className="rounded-md border border-dashed border-border/70 p-sm"
         >
-          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mb-1.5 spaces the group label from the grid below it */}
-          <div className="mb-1.5 text-3xs font-medium tracking-wider text-muted-foreground">
+          <div className="text-3xs font-medium tracking-wider text-muted-foreground">
             ⇉ parallel ×{count}
             {graph.dynamic && "?"}
           </div>
           <Grid minCellWidth="11rem" gap="xs">
             {children.map(renderBlock)}
           </Grid>
-        </div>
+        </Stack>
       );
     }
     // pipeline wrapper: children are stage groups → render as columns.
     return (
-      <div
+      <Stack
         key={group.id}
+        gap="xsm"
         className="rounded-md border border-dashed border-border/70 p-sm"
       >
-        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mb-1.5 spaces the pipeline label from the stage row below it */}
-        <div className="mb-1.5 text-3xs font-medium tracking-wider text-muted-foreground">
+        <div className="text-3xs font-medium tracking-wider text-muted-foreground">
           → pipeline
         </div>
         <div
@@ -125,7 +126,7 @@ export function WorkflowGraph({
             </Stack>
           ))}
         </div>
-      </div>
+      </Stack>
     );
   };
 
@@ -150,10 +151,9 @@ export function WorkflowGraph({
       )}
 
       {model.lanes.map((lane, i) => (
-        <div key={lane.title || `lane-${i}`}>
+        <Stack key={lane.title || `lane-${i}`} gap="xsm">
           {lane.title && (
-            // eslint-disable-next-line spacing/no-adhoc-spacing -- mb-1.5 spaces the lane title row from the blocks below it
-            <Stack direction="row" gap="sm" align="baseline" className="mb-1.5">
+            <Stack direction="row" gap="sm" align="baseline">
               <Center
                 as="span"
                 className={cn(
@@ -176,16 +176,15 @@ export function WorkflowGraph({
               )}
             </Stack>
           )}
-          <Stack
-            gap="xs"
-            // eslint-disable-next-line spacing/no-adhoc-spacing -- ml-1.5 indents the lane's blocks to align with the border-left rule
-            className={cn(
-              lane.title && "ml-1.5 border-l border-border/50 pl-md",
-            )}
-          >
-            {lane.blocks.map(renderBlock)}
-          </Stack>
-        </div>
+          <Inset l={lane.title ? "xsm" : undefined}>
+            <Stack
+              gap="xs"
+              className={cn(lane.title && "border-l border-border/50 pl-md")}
+            >
+              {lane.blocks.map(renderBlock)}
+            </Stack>
+          </Inset>
+        </Stack>
       ))}
     </Stack>
   );

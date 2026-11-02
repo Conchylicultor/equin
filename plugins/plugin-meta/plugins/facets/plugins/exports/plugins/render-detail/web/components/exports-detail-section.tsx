@@ -8,7 +8,10 @@ import {
 } from "@plugins/primitives/plugins/collapsible/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Inset,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   SectionCount,
@@ -134,14 +137,15 @@ function RuntimeGroup({
         </span>
         <span className="text-muted-foreground/50">({symbols.length})</span>
       </CollapsibleTrigger>
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- ml-1 indents the collapsed symbol list under its runtime trigger; one-off left offset paired with the left border, not sibling rhythm */}
-      <CollapsibleContent className="ml-1 border-l border-border/50 pl-md pt-2xs">
-        <Stack gap="none" className="gap-px">
-          {sorted.map((row) => (
-            <SymbolRow key={row.name} row={row} />
-          ))}
-        </Stack>
-      </CollapsibleContent>
+      <Inset l="xs">
+        <CollapsibleContent className="border-l border-border/50 pl-md pt-2xs">
+          <Stack gap="none" className="gap-px">
+            {sorted.map((row) => (
+              <SymbolRow key={row.name} row={row} />
+            ))}
+          </Stack>
+        </CollapsibleContent>
+      </Inset>
     </Collapsible>
   );
 }

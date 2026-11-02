@@ -22,6 +22,7 @@ reverse index). Reads `node.facets["cross-refs"]` directly.
     - `plugin-meta/plugin-view.SubHeading`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/inline.Inline`
+    - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
@@ -35,7 +36,6 @@ reverse index). Reads `node.facets["cross-refs"]` directly.
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/font-family --font-mono`
-    - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-scale`
     - `ui/tokens/type-scale --font-size-3xs`
     - `ui/tokens/type-scale --font-size-caption`

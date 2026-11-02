@@ -7,7 +7,10 @@ import {
   CollapsibleTrigger,
 } from "@plugins/primitives/plugins/collapsible/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Inset,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import {
@@ -63,12 +66,13 @@ function Sources({ sites, count }: { sites: SearchSite[]; count: number }) {
         Sources · {count} from {plural(sites.length, "site")}
       </CollapsibleTrigger>
       <CollapsibleContent>
-        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-1 offsets the site list from its toggle */}
-        <Stack gap="xs" className="mt-1">
-          {sites.map((site) => (
-            <Site key={site.host} site={site} />
-          ))}
-        </Stack>
+        <Inset t="xs">
+          <Stack gap="xs">
+            {sites.map((site) => (
+              <Site key={site.host} site={site} />
+            ))}
+          </Stack>
+        </Inset>
       </CollapsibleContent>
     </Collapsible>
   );
@@ -102,8 +106,7 @@ export function WebSearchToolView({ event }: ToolRendererProps) {
       summary={`“${query}”`}
       note={notes.length > 0 ? `· ${notes.join(" · ")}` : undefined}
     >
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the content stack from the card header */}
-      <Stack gap="sm" className="mt-2">
+      <Stack gap="sm">
         {scope && <ScopeLine scope={scope} />}
         {outcome?.summary && <Markdown>{outcome.summary}</Markdown>}
         {outcome && outcome.sites.length > 0 && (

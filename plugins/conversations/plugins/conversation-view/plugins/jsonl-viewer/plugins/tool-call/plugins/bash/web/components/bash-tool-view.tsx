@@ -134,10 +134,7 @@ function BashBody({
   const output = result?.content ? stripAnsi(result.content) : null;
   return (
     <ContentScope>
-      <Clip
-        // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets this output block from the ToolCallCard header
-        className="mt-2 rounded-md border border-border/40 bg-muted font-mono"
-      >
+      <Clip className="rounded-md border border-border/40 bg-muted font-mono">
         <Text as="div" variant="caption">
           <Stack direction="row" gap="sm" align="start" className="px-md py-sm">
             <span className="select-none text-muted-foreground/40">$</span>

@@ -47,6 +47,7 @@ therefore never depends on the current expand state — no flapping at the bound
 - Description: Clamps tall content to a max height and reveals a Show more/less toggle only when the rendered content actually overflows (measured via ResizeObserver, not char/line heuristics).
 - Web:
   - Uses:
+    - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/dom/element-size.useResizeObserver`
     - `ui/icons.Icon`

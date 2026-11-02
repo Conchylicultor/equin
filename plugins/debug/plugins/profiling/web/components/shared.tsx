@@ -8,6 +8,7 @@ import { minBarSize } from "./use-gantt-zoom";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { createContext, useContext, type ReactElement } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import {
@@ -228,24 +229,21 @@ export function SpanDetail({
       className={cn("border-t bg-muted/50 px-lg py-sm", className)}
     >
       {span ? (
-        <>
+        <Cluster gap="sm">
           <span className="font-mono font-medium">{span.id}</span>
-          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline horizontal padding around a middot separator between inline detail spans */}
-          <span className="mx-2 text-muted-foreground">&middot;</span>
+          <span className="text-muted-foreground">&middot;</span>
           <span>
             Phase: <strong>{span.phase}</strong>
           </span>
-          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline horizontal padding around a middot separator between inline detail spans */}
-          <span className="mx-2 text-muted-foreground">&middot;</span>
+          <span className="text-muted-foreground">&middot;</span>
           <span>
             Start: <strong>+{formatDuration(span.startMs)}</strong>
           </span>
-          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline horizontal padding around a middot separator between inline detail spans */}
-          <span className="mx-2 text-muted-foreground">&middot;</span>
+          <span className="text-muted-foreground">&middot;</span>
           <span>
             Duration: <strong>{formatDuration(span.durationMs)}</strong>
           </span>
-        </>
+        </Cluster>
       ) : (
         <span className="text-muted-foreground/50">
           Hover a span to see details

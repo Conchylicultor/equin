@@ -121,9 +121,8 @@ function TaskProgress({ aggregate }: { aggregate: TaskAggregate }) {
       // bottom-10 (2.5rem) is off the spacing ramp, so override Pin's flush inset.
       style={{ bottom: "2.5rem" }}
     >
-      <Center axis="horizontal">
-        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mx-4 gutters the centered card; can't fold into the parent without breaking the centered max-width */}
-        <div className="pointer-events-auto mx-4 w-full max-w-sm rounded-lg border bg-background/90 shadow-sm backdrop-blur-sm">
+      <Center axis="horizontal" className="px-lg">
+        <div className="pointer-events-auto w-full max-w-sm rounded-lg border bg-background/90 shadow-sm backdrop-blur-sm">
           <Stack
             direction="row"
             gap="none"

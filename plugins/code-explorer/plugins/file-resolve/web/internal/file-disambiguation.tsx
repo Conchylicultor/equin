@@ -24,8 +24,7 @@ export function FileDisambiguation({
 }) {
   return (
     <Stack gap="xs" className="h-full p-md">
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- bottom offset on heading above the scroll region, larger than the flex gap */}
-      <Text as="div" variant="caption" className="mb-1 text-muted-foreground">
+      <Text as="div" variant="caption" className="text-muted-foreground">
         Multiple files match{" "}
         <span className="font-mono font-medium text-foreground">{query}</span>
         {total > matches.length &&

@@ -39,8 +39,7 @@ export function SubPluginsCount({ node }: { node: PluginNode }) {
 
 export function SubPluginsSection({ node }: { node: PluginNode }) {
   return (
-    // eslint-disable-next-line spacing/no-adhoc-spacing -- -mx-2 negative-bleeds the tree rows out to cancel the section card's horizontal padding so row hover backgrounds span full width
-    <Stack direction="col" gap="none" className="-mx-2">
+    <Stack direction="col" gap="none" className="rail-bleed">
       {node.children.map((c) => (
         <PluginTreeNode key={c.id} node={c} depth={0} />
       ))}

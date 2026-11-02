@@ -41,6 +41,8 @@ A persistent global trigger on `conversationTurnCompleted` (contributed by this 
     - `primitives/collapsible.useCollapsible`
     - `primitives/css/fill.Fill`
     - `primitives/css/rigid.rigidClass`
+    - `primitives/css/spacing.FirstLine`
+    - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`

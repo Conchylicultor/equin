@@ -8,7 +8,7 @@ import { AttachmentFileChip } from "../components/attachment-file-chip";
  * `core/node.ts`, with rendering added.
  */
 export const fileWebNode = fileNode.decorated({
-  className: "inline-flex align-middle mx-0.5",
+  className: "inline-flex align-middle px-2xs",
   render: ({ attachmentId, filename }, node) => (
     <TokenFrame nodeKey={node.getKey()} removeLabel="Remove file">
       <AttachmentFileChip attachmentId={attachmentId} filename={filename} />

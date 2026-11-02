@@ -1557,13 +1557,14 @@ function SortIcon({
         ? arrowDownwardIcon
         : unfoldMoreIcon;
   return (
-    <Icon
-      icon={icon}
-      // eslint-disable-next-line spacing/no-adhoc-spacing -- one-off inline sort-icon offset next to the column header text
-      className={cn(
-        "mb-px ml-0.5 inline-block size-3 align-middle",
-        active ? "text-foreground" : SORT_ICON_UNSORTED_CLASS,
-      )}
-    />
+    <span className="pl-2xs">
+      <Icon
+        icon={icon}
+        className={cn(
+          "inline-block size-3 align-middle",
+          active ? "text-foreground" : SORT_ICON_UNSORTED_CLASS,
+        )}
+      />
+    </span>
   );
 }

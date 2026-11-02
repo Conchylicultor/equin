@@ -15,6 +15,7 @@ the transcript's other images. Nothing expands inline.
   - Uses:
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
     - `conversations/conversation-view/jsonl-viewer/row-actions.EventRowActions`
+    - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.SectionLabel`
     - `primitives/overlay/image-viewer.ViewerThumbnail`
@@ -25,7 +26,6 @@ the transcript's other images. Nothing expands inline.
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --radius`
-    - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-scale`
     - `ui/tokens/type-scale --font-size-3xs`
     - `ui/tokens/type-scale --line-height-3xs`

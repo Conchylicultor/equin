@@ -100,19 +100,14 @@ export function MidiLoader({ onRaw }: Props) {
         )}
       >
         <Icon icon={uploadFileIcon} className="size-10 text-muted-foreground" />
-        <div className="text-center">
+        <Stack gap="2xs" className="text-center">
           <Text as="p" variant="label">
             {fileName ?? "Drop a MIDI file here"}
           </Text>
-          <Text
-            as="p"
-            variant="caption"
-            // eslint-disable-next-line spacing/no-adhoc-spacing -- small top offset separating the hint line from the filename above inside the centered dropzone caption
-            className="mt-0.5 text-muted-foreground"
-          >
+          <Text as="p" variant="caption" className="text-muted-foreground">
             .mid / .midi — or click to browse
           </Text>
-        </div>
+        </Stack>
         {fileName ? (
           <Text
             as="div"

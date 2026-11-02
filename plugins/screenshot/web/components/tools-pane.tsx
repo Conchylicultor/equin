@@ -88,9 +88,8 @@ export function ToolsPane(props: Props) {
           // eslint-disable-next-line spacing/no-adhoc-spacing -- space-y on a bordered padded section; no named space-y utility, can't be a clean Stack
           className="space-y-3 border-b p-md"
         >
-          <div>
-            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- single-edge offset below the section label */}
-            <Text as="div" variant="label" tone="muted" className="mb-1">
+          <Stack gap="xs">
+            <Text as="div" variant="label" tone="muted">
               Color
             </Text>
             <Stack direction="row" gap="xs" wrap>
@@ -115,15 +114,9 @@ export function ToolsPane(props: Props) {
                 />
               ))}
             </Stack>
-          </div>
-          <div>
-            <Text
-              as="div"
-              variant="label"
-              tone="muted"
-              // eslint-disable-next-line spacing/no-adhoc-spacing -- single-edge offset below the width label row
-              className="mb-1"
-            >
+          </Stack>
+          <Stack gap="xs">
+            <Text as="div" variant="label" tone="muted">
               <Stack
                 direction="row"
                 gap="none"
@@ -148,7 +141,7 @@ export function ToolsPane(props: Props) {
               }
               className="w-full"
             />
-          </div>
+          </Stack>
           <Stack direction="row" gap="sm">
             <Button onClick={props.onApplyDraw} disabled={!props.hasStrokes}>
               Apply

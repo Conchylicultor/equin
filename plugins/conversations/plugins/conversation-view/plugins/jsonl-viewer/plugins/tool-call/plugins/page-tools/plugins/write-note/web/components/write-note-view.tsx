@@ -23,8 +23,7 @@ export function WriteNoteView({ event }: ToolRendererProps) {
       // via the report's `page_id` — which exists only once the write returned.
       aside={<PageRefChip pageId={report?.page_id} blockId={block_id} />}
     >
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the body from the ToolCallCard header inside its collapsible region; not a Stack-owned gap */}
-      <Stack gap="sm" className="mt-2">
+      <Stack gap="sm">
         <PageMarkdown text={content} />
         <PageWriteReport report={report} />
         <PageToolError result={event.result} />

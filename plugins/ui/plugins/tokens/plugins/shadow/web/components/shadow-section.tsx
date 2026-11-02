@@ -219,8 +219,7 @@ export function ShadowSection() {
       {/* Parameters editor */}
       <Collapsible defaultOpen>
         <SectionHeaderRow variant="eyebrow">Parameters</SectionHeaderRow>
-        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- indent + top offset on third-party CollapsibleContent; no padding/gap equivalent */}
-        <CollapsibleContent className="ml-2 mt-1">
+        <CollapsibleContent className="pl-sm pt-xs">
           <Stack gap="xs">
             {/* Color row */}
             <Row className="gap-sm">
@@ -287,10 +286,9 @@ export function ShadowSection() {
             {hasOwnShadow && (
               <Button
                 variant="ghost"
-                // eslint-disable-next-line spacing/no-adhoc-spacing -- one-off top offset seating this lone reset button below the row list
                 className={cn(
                   selfClass("start"),
-                  "mt-1 border border-border text-muted-foreground",
+                  "border border-border text-muted-foreground",
                 )}
                 onClick={resetAll}
               >
@@ -304,8 +302,7 @@ export function ShadowSection() {
       {/* Token previews */}
       <Collapsible>
         <SectionHeaderRow variant="eyebrow">Preview</SectionHeaderRow>
-        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- indent + top offset on third-party CollapsibleContent; no padding/gap equivalent */}
-        <CollapsibleContent className="ml-2 mt-1">
+        <CollapsibleContent className="pl-sm pt-xs">
           <Cluster gap="md" className="p-sm">
             {allKeys.map((key) => {
               const label = schema[key]?.label ?? (key as string);

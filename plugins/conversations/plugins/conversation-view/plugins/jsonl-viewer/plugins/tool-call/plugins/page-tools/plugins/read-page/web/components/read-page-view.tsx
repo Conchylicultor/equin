@@ -16,8 +16,7 @@ export function ReadPageView({ event }: ToolRendererProps) {
 
   return (
     <ToolCallCard event={event} aside={<PageRefChip blockId={blockId} />}>
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the body from the ToolCallCard header inside its collapsible region; not a Stack-owned gap */}
-      <Stack gap="sm" className="mt-2">
+      <Stack gap="sm">
         {event.result && !event.result.isError && (
           <PageMarkdown text={event.result.content} />
         )}

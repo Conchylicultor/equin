@@ -83,11 +83,7 @@ export function TaskCard({
 
   if (value?.launchedConvId && value.taskId) {
     return (
-      <Stack
-        gap="xs"
-        // eslint-disable-next-line spacing/no-adhoc-spacing -- top-level widget vertical offset in markdown transcript flow
-        className="my-2"
-      >
+      <Stack gap="xs" className="my-flow-block">
         <Text as="p" variant="body" tone="muted">
           {initial}
         </Text>
@@ -126,12 +122,7 @@ export function TaskCard({
   };
 
   return (
-    <Stack
-      as={Card}
-      gap="sm"
-      // eslint-disable-next-line spacing/no-adhoc-spacing -- top-level widget vertical offset in markdown transcript flow
-      className="bg-background my-2 p-sm"
-    >
+    <Stack as={Card} gap="sm" className="bg-background my-flow-block p-sm">
       <TextEditor
         value={prompt}
         onChange={setPrompt}

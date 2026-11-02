@@ -210,71 +210,76 @@ function InstrumentPicker({
         </Line>
       }
     >
-      <SearchInput
-        appearance="menu"
-        autoFocus
-        placeholder="Search instruments…"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-      />
+      <Stack gap="sm">
+        <SearchInput
+          appearance="menu"
+          autoFocus
+          placeholder="Search instruments…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
 
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the scroll list below the search input (no named margin utility) */}
-      <Scroll className="mt-2 max-h-64">
-        {/* Reset-to-auto: clears the override so resolution falls back to the
-            track's GM program / the default timbre. Active when no override. */}
-        <Row
-          size="sm"
-          selected={!instrumentCustomized}
-          icon={<Icon icon={autoModeIcon} />}
-          actions={
-            !instrumentCustomized ? (
-              <Icon icon={checkIcon} className="size-3.5 text-primary-text" />
-            ) : undefined
-          }
-          actionsAlwaysVisible
-          onClick={() => select(null)}
-        >
-          <span className="truncate">Auto</span>
-        </Row>
+        <Scroll className="max-h-64">
+          <Stack gap="xs">
+            {/* Reset-to-auto: clears the override so resolution falls back to the
+                track's GM program / the default timbre. Active when no override. */}
+            <Row
+              size="sm"
+              selected={!instrumentCustomized}
+              icon={<Icon icon={autoModeIcon} />}
+              actions={
+                !instrumentCustomized ? (
+                  <Icon
+                    icon={checkIcon}
+                    className="size-3.5 text-primary-text"
+                  />
+                ) : undefined
+              }
+              actionsAlwaysVisible
+              onClick={() => select(null)}
+            >
+              <span className="truncate">Auto</span>
+            </Row>
 
-        {groups.map(({ group, options: groupOptions }) => (
-          // eslint-disable-next-line spacing/no-adhoc-spacing -- mt separates each instrument group header from the prior group (no named margin utility)
-          <div key={group} className="mt-1">
-            <SectionLabel className="px-sm py-xs">{group}</SectionLabel>
-            {/* eslint-disable-next-line data-view/no-adhoc-row-list -- mixer channel strips (bespoke instrument UI) */}
-            {groupOptions.map((o) => {
-              const icon = o.icon;
-              const active = instrumentCustomized && o.id === resolvedId;
-              return (
-                <Row
-                  key={o.id}
-                  size="sm"
-                  selected={active}
-                  icon={
-                    icon ? (
-                      <Icon icon={icon} className="size-3.5" />
-                    ) : (
-                      <span className="size-3.5" />
-                    )
-                  }
-                  actions={
-                    active ? (
-                      <Icon
-                        icon={checkIcon}
-                        className="size-3.5 text-primary-text"
-                      />
-                    ) : undefined
-                  }
-                  actionsAlwaysVisible
-                  onClick={() => select(o.id)}
-                >
-                  <span className="truncate">{o.label}</span>
-                </Row>
-              );
-            })}
-          </div>
-        ))}
-      </Scroll>
+            {groups.map(({ group, options: groupOptions }) => (
+              <div key={group}>
+                <SectionLabel className="px-sm py-xs">{group}</SectionLabel>
+                {/* eslint-disable-next-line data-view/no-adhoc-row-list -- mixer channel strips (bespoke instrument UI) */}
+                {groupOptions.map((o) => {
+                  const icon = o.icon;
+                  const active = instrumentCustomized && o.id === resolvedId;
+                  return (
+                    <Row
+                      key={o.id}
+                      size="sm"
+                      selected={active}
+                      icon={
+                        icon ? (
+                          <Icon icon={icon} className="size-3.5" />
+                        ) : (
+                          <span className="size-3.5" />
+                        )
+                      }
+                      actions={
+                        active ? (
+                          <Icon
+                            icon={checkIcon}
+                            className="size-3.5 text-primary-text"
+                          />
+                        ) : undefined
+                      }
+                      actionsAlwaysVisible
+                      onClick={() => select(o.id)}
+                    >
+                      <span className="truncate">{o.label}</span>
+                    </Row>
+                  );
+                })}
+              </div>
+            ))}
+          </Stack>
+        </Scroll>
+      </Stack>
     </InlinePopover>
   );
 }

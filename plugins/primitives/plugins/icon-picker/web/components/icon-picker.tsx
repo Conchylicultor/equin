@@ -1,5 +1,6 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, useEffect } from "react";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   SectionLabel,
@@ -97,8 +98,9 @@ export function IconPicker({ value, onSelect, className }: IconPickerProps) {
             popover) `SectionLabel` IS the shared menu label, so this heading
             matches the panel's own `ControlPanel.Section label` beside it. */}
         <SectionLabel as="span">
-          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline left offset on the "loading…" suffix next to the label text */}
-          Icon{!set && <span className="ml-1 opacity-50">· loading…</span>}
+          <Inline gap="xs">
+            Icon{!set && <span className="opacity-50">· loading…</span>}
+          </Inline>
         </SectionLabel>
         {set && (
           <span className="text-3xs text-muted-foreground/50">

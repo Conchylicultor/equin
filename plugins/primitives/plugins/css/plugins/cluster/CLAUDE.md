@@ -38,9 +38,9 @@ defined in exactly one place. The distinct export buys two things:
   - Exports (types): `ClusterProps`
   - Exports (values): `Cluster`
 - Cross-plugin:
-  - Imported by: 65 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 66 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×25
-    - `debug` ×11
+    - `debug` ×12
     - `conversations` ×7
     - `plugin-meta` ×6
     - `primitives` ×6

@@ -98,7 +98,6 @@ directly — it is no longer re-exported here.)
     - `ui/tokens/color-palette --warning`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xs`
-    - `ui/tokens/shape --spacing`
     - `ui/tokens/sidebar-metrics --sidebar-icon-gap`
     - `ui/tokens/sidebar-metrics --sidebar-icon-size`
     - `ui/tokens/type-scale --font-scale`
