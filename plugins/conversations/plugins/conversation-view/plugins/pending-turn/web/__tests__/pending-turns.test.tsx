@@ -12,7 +12,8 @@ const ledger = vi.hoisted(() => ({
   result: { status: "loading", refetch: () => Promise.resolve() } as unknown,
 }));
 
-vi.mock("@plugins/network/plugins/live/web", () => ({
+vi.mock("@plugins/network/plugins/live/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   useLive: () => ledger.result,
 }));
 

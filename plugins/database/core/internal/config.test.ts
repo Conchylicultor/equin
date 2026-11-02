@@ -1,10 +1,15 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
-import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
+import {
+  HOME_DIR,
+  relativeToDataRoot,
+} from "@plugins/infra/plugins/paths/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+
+import { dbConfigDir } from "../../data-dirs";
 
 /**
  * `readDatabaseConfig()` resolves its path ONCE, into a module-level
@@ -73,6 +78,19 @@ async function probe(env: Record<string, string>): Promise<Probe> {
   return JSON.parse(result.stdout.trim()) as Probe;
 }
 
+/**
+ * Write `database.json` where the reader looks for it under a data root of
+ * `root` — the location derived from the `state/db-config` declaration, never
+ * spelled here, so a layout change cannot leave this test writing where
+ * nothing reads (it once wrote `<root>/database.json`, and the malformed-JSON
+ * case kept passing on the missing-file fallback).
+ */
+function writeDbConfig(root: string, body: string): void {
+  const file = join(root, relativeToDataRoot(dbConfigDir, "database.json"));
+  mkdirSync(dirname(file), { recursive: true });
+  writeFileSync(file, body);
+}
+
 // A deliberately minimal, PG*-free base environment: PATH so Bun can exec, and
 // the empty EQUIN_DIR. Anything the dev's shell exports (PGHOST, a real
 // EQUIN_DIR, USER) must NOT leak in, or the assertions below stop meaning
@@ -133,8 +151,8 @@ describe("readDatabaseConfig with a real database.json", () => {
   test("reads the file when it exists", async () => {
     const dir = mkdtempSync(join(tmpdir(), "equin-cfg-"));
     try {
-      writeFileSync(
-        join(dir, "database.json"),
+      writeDbConfig(
+        dir,
         JSON.stringify({
           connection: { host: "/var/run/pg", port: 5433, user: "pg-tester" },
           services: [
@@ -169,7 +187,7 @@ describe("readDatabaseConfig with a real database.json", () => {
   test("malformed JSON is tolerated the same way a missing file is", async () => {
     const dir = mkdtempSync(join(tmpdir(), "equin-bad-"));
     try {
-      writeFileSync(join(dir, "database.json"), "{ not json");
+      writeDbConfig(dir, "{ not json");
       const { config } = await probe({
         ...baseEnv,
         USER: "probe-user",

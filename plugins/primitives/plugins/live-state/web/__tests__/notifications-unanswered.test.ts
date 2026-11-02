@@ -28,9 +28,13 @@
 
 import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
 
-vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
-  clientLog: () => {},
-}));
+vi.mock(
+  "@plugins/primitives/plugins/log-channels/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    clientLog: () => {},
+  }),
+);
 
 import { z } from "zod";
 import { QueryClient } from "@tanstack/react-query";

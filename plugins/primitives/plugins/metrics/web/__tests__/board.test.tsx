@@ -16,13 +16,18 @@ vi.mock(
 );
 // The rail watches scroll positions jsdom does not have; it is not what these
 // cases are about.
-vi.mock("@plugins/primitives/plugins/outline/plugins/rail/web", () => ({
-  OutlineRail: ({ entries }: { entries: { id: string }[] }) => (
-    <nav data-testid="outline-rail">{entries.length}</nav>
-  ),
-}));
+vi.mock(
+  "@plugins/primitives/plugins/outline/plugins/rail/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    OutlineRail: ({ entries }: { entries: { id: string }[] }) => (
+      <nav data-testid="outline-rail">{entries.length}</nav>
+    ),
+  }),
+);
 const nav = vi.hoisted(() => ({ navigate: vi.fn() }));
-vi.mock("@plugins/apps-core/plugins/tabs/web", () => ({
+vi.mock("@plugins/apps-core/plugins/tabs/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   ...nav,
   // The rows link through the hook form (an embed's boundary first).
   useAppLink: () => (url: string) => ({

@@ -2,9 +2,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 // Mounting NotificationsProvider otherwise schedules real fetch flushes at
 // module eval — the convention the live-state hazard suites established.
-vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
-  clientLog: () => {},
-}));
+vi.mock(
+  "@plugins/primitives/plugins/log-channels/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    clientLog: () => {},
+  }),
+);
 
 import { cleanup, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";

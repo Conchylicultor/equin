@@ -5,6 +5,7 @@ export default [
     rule: "boundaries/no-platform-api",
     paths: [
       "web/internal/build-measurer-page.ts",
+      "web/internal/build-page.ts",
       "web/internal/measure-page.ts",
     ],
     kind: "debt",

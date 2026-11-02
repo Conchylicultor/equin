@@ -1,8 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@plugins/primitives/plugins/dom/plugins/element-size/web", () => ({
-  useElementSize: () => [() => {}, { width: 446, height: 210 }],
-}));
+vi.mock(
+  "@plugins/primitives/plugins/dom/plugins/element-size/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    useElementSize: () => [() => {}, { width: 446, height: 210 }],
+  }),
+);
 
 import { cleanup, fireEvent, render } from "@testing-library/react";
 import { Histogram, type HistogramBin } from "../components/histogram";

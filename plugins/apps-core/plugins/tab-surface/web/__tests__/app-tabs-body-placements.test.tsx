@@ -11,7 +11,8 @@ const registry = vi.hoisted(() => ({
   disposed: 0,
 }));
 
-vi.mock("@plugins/apps-core/plugins/tabs/web", () => ({
+vi.mock("@plugins/apps-core/plugins/tabs/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   useTabs: () => ({ tabs: [], focusedTabId: undefined }),
   registerPlacementCapabilities: (caps: unknown) => {
     registry.installed.push(caps);

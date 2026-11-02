@@ -25,18 +25,27 @@ interface FakePopoverProps {
 
 const PICKED = new Date(2026, 7, 14);
 
-vi.mock("@plugins/primitives/plugins/date-picker/web", () => ({
-  DatePickerPopover: (props: FakePopoverProps): ReactNode => (
-    <div>
-      <div data-testid="open">{String(props.open)}</div>
-      <div data-testid="seed">{props.value === null ? "null" : props.value.toISOString()}</div>
-      <div data-testid="trigger">{props.trigger}</div>
-      <button data-testid="pick" onClick={() => props.onChange(PICKED)} />
-      <button data-testid="clear" onClick={() => props.onClear()} />
-      <button data-testid="dismiss" onClick={() => props.onOpenChange(false)} />
-    </div>
-  ),
-}));
+vi.mock(
+  "@plugins/primitives/plugins/date-picker/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    DatePickerPopover: (props: FakePopoverProps): ReactNode => (
+      <div>
+        <div data-testid="open">{String(props.open)}</div>
+        <div data-testid="seed">
+          {props.value === null ? "null" : props.value.toISOString()}
+        </div>
+        <div data-testid="trigger">{props.trigger}</div>
+        <button data-testid="pick" onClick={() => props.onChange(PICKED)} />
+        <button data-testid="clear" onClick={() => props.onClear()} />
+        <button
+          data-testid="dismiss"
+          onClick={() => props.onOpenChange(false)}
+        />
+      </div>
+    ),
+  }),
+);
 
 import { DateEditor } from "../components/date-editor";
 

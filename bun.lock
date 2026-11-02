@@ -3888,6 +3888,10 @@
       "name": "@equin/plugin-framework-tooling-lint-trigger-render-safety",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/lint/plugins/vitest-mock-safety": {
+      "name": "@equin/plugin-framework-tooling-lint-vitest-mock-safety",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/lint/plugins/watcher-safety": {
       "name": "@equin/plugin-framework-tooling-lint-watcher-safety",
       "version": "0.0.1",
@@ -8995,6 +8999,8 @@
     "@equin/plugin-framework-tooling-lint-sink-safety": ["@equin/plugin-framework-tooling-lint-sink-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/sink-safety"],
 
     "@equin/plugin-framework-tooling-lint-trigger-render-safety": ["@equin/plugin-framework-tooling-lint-trigger-render-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/trigger-render-safety"],
+
+    "@equin/plugin-framework-tooling-lint-vitest-mock-safety": ["@equin/plugin-framework-tooling-lint-vitest-mock-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/vitest-mock-safety"],
 
     "@equin/plugin-framework-tooling-lint-watcher-safety": ["@equin/plugin-framework-tooling-lint-watcher-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/watcher-safety"],
 

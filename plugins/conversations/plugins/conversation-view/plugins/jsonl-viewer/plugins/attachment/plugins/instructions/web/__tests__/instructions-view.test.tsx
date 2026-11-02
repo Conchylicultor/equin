@@ -13,7 +13,6 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 
-import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
 import type { AttachmentEvent } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/core";
 
 // The card's two chrome dependencies are stubbed, because both need the live
@@ -25,7 +24,8 @@ import type { AttachmentEvent } from "@plugins/conversations/plugins/conversatio
 // the stubs render exactly the pieces it hands them.
 vi.mock(
   "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web",
-  () => ({
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
     FilePath: ({ filePath }: { filePath: string }) => <span>{filePath}</span>,
     toRelativePath: (p: string) => p,
   }),
@@ -33,7 +33,8 @@ vi.mock(
 
 vi.mock(
   "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web",
-  () => ({
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
     CollapsibleCard: ({
       label,
       note,
@@ -64,8 +65,10 @@ const { InstructionsView } = await import("../components/instructions-view");
 
 afterEach(cleanup);
 
-/** The real payloads carry an absolute path under the user's home. */
-const MEMORY = `${HOME_DIR}/.claude/projects/equin/memory/MEMORY.md`;
+/** The real payloads carry an absolute path under the user's home. A literal,
+ *  made-up one: `paths/core` names the real home through Node, which this jsdom
+ *  test is not — and the card only echoes the path it is handed. */
+const MEMORY = "/Users/someone/.claude/projects/equin/memory/MEMORY.md";
 
 function event(attachment: unknown): AttachmentEvent {
   return {

@@ -7,7 +7,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 // A developer's panel: its reads are the unscoped tuples seeded below.
-vi.mock("@plugins/audience/web", () => ({
+vi.mock("@plugins/audience/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   useAudience: () => ({
     status: "ready",
     data: "developer",
@@ -15,9 +16,13 @@ vi.mock("@plugins/audience/web", () => ({
   }),
 }));
 
-vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
-  clientLog: () => {},
-}));
+vi.mock(
+  "@plugins/primitives/plugins/log-channels/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    clientLog: () => {},
+  }),
+);
 
 import {
   cleanup,

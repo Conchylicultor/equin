@@ -24,7 +24,8 @@ import type { SpanSelection } from "../../core";
 // region, so the way to observe it from a hook test is to own the module — the
 // same isolation idiom the editor's collab tests use for their side-effecting
 // modules. Mounting the real host would test the announcer, not this hook.
-vi.mock("@plugins/primitives/plugins/announce/web", () => ({
+vi.mock("@plugins/primitives/plugins/announce/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   announce: vi.fn(),
 }));
 

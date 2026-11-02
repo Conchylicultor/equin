@@ -10,9 +10,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mounting live-state otherwise schedules real log flushes at module eval —
 // the convention the live-state hazard suites established.
-vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
-  clientLog: () => {},
-}));
+vi.mock(
+  "@plugins/primitives/plugins/log-channels/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    clientLog: () => {},
+  }),
+);
 
 const state = vi.hoisted(() => ({
   result: undefined as unknown,
@@ -20,21 +24,27 @@ const state = vi.hoisted(() => ({
   loadMore: 0,
 }));
 
-vi.mock("@plugins/network/plugins/live/web", () => ({
+vi.mock("@plugins/network/plugins/live/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   useLive: (_collection: unknown, query: unknown) => {
     state.queries.push(query);
     return state.result;
   },
 }));
 
-vi.mock("@plugins/infra/plugins/endpoints/web", () => ({
+vi.mock("@plugins/infra/plugins/endpoints/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   useEndpointMutation: () => ({ mutateAsync: () => Promise.resolve() }),
 }));
 
-vi.mock("@plugins/apps/plugins/browser/plugins/shell/web", () => ({
-  useBrowserNav: () => ({ navigate: () => {} }),
-  Favicon: () => null,
-}));
+vi.mock(
+  "@plugins/apps/plugins/browser/plugins/shell/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    useBrowserNav: () => ({ navigate: () => {} }),
+    Favicon: () => null,
+  }),
+);
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { ResourceError } from "@plugins/primitives/plugins/live-state/web";

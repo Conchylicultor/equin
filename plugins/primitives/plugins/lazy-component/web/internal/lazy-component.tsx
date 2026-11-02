@@ -1,4 +1,10 @@
-import { lazy, Suspense, type ComponentType, type ReactNode } from "react";
+import {
+  lazy,
+  Suspense,
+  useState,
+  type ComponentType,
+  type ReactNode,
+} from "react";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 
 export interface LazyComponentOptions {
@@ -7,10 +13,17 @@ export interface LazyComponentOptions {
    * `<Loading variant="spinner" />` — the Loading primitive fades in only after
    * ~120ms, so a fast chunk load never flashes a fallback. Pass a full-surface
    * fallback (e.g. a centered spinner) for a whole-pane component, or `null` for
-   * an inline widget that should simply pop in.
+   * an inline widget that should simply pop in — an explicit `null` is honoured,
+   * only an omitted fallback gets the spinner.
    */
   fallback?: ReactNode;
 }
+
+/**
+ * Every lazy component's chunk loader (memoized: `React.lazy` and a preload share
+ * one import). Read only by `loadLazyComponents` (`web/testing`).
+ */
+export const loaders = new Set<() => Promise<unknown>>();
 
 /**
  * Pairs `React.lazy` with its own `Suspense` boundary so a heavy component can be
@@ -39,9 +52,30 @@ export function lazyComponent<P extends object>(
   loader: () => Promise<{ default: ComponentType<P> }>,
   opts?: LazyComponentOptions,
 ): ComponentType<P> {
-  const Lazy = lazy(loader);
-  const fallback = opts?.fallback ?? <Loading variant="spinner" />;
+  let loading: Promise<{ default: ComponentType<P> }> | undefined;
+  let loaded: ComponentType<P> | undefined;
+  const load = () =>
+    (loading ??= loader().then((m) => {
+      loaded = m.default;
+      return m;
+    }));
+  loaders.add(load);
+  const Lazy = lazy(load);
+  // Not `??`: that reads an explicit `fallback: null` as "none given" and draws
+  // the spinner an inline widget asked not to flash.
+  const fallback =
+    opts?.fallback === undefined ? (
+      <Loading variant="spinner" />
+    ) : (
+      opts.fallback
+    );
   return function LazyBoundary(props: P) {
+    // An instance mounted after the chunk loaded renders it directly: through
+    // `React.lazy` it would still suspend once (lazy learns of a resolved
+    // promise a microtask late) and wait out React's 300 ms Suspense reveal
+    // throttle. Chosen once per instance, so an instance never switches trees.
+    const [Loaded] = useState(() => loaded);
+    if (Loaded) return <Loaded {...props} />;
     return (
       <Suspense fallback={fallback}>
         <Lazy {...props} />

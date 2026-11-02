@@ -143,8 +143,6 @@ export interface NoteVisual {
    * shade while FX still read the base.
    */
   fillExpr: string;
-  /** Fill opacity. 1 = fully opaque (Synthesia draws solid notes). */
-  alpha: number;
   /** Notes on accidental pitch classes; drives the darker shade + FX. */
   isAccidental: boolean;
   /**
@@ -221,7 +219,6 @@ export function buildNoteVisuals(input: {
       y1Sec: authoredSecondsOf(tempo, tempoScale, n.start + n.duration),
       colorExpr: base,
       fillExpr: accidental ? accidentalColor(base) : base,
-      alpha: 1,
       isAccidental: accidental,
       label: { step: s.step, accidental: accidentalGlyph(s.alter) },
     });

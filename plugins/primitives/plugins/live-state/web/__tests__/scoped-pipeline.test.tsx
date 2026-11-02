@@ -8,9 +8,13 @@
 
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
-  clientLog: () => {},
-}));
+vi.mock(
+  "@plugins/primitives/plugins/log-channels/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    clientLog: () => {},
+  }),
+);
 
 import { render, waitFor } from "@testing-library/react";
 import { useEffect, type ReactNode } from "react";

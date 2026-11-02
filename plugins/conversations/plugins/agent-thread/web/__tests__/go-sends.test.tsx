@@ -5,7 +5,7 @@
  * `ThreadComposer` registers).
  */
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -24,7 +24,11 @@ import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-sourc
 import { groupThread } from "../../core";
 import { AgentThreadView } from "../components/agent-thread-view";
 import { ThreadComposer, type PrepareTurn } from "../components/composer";
+import { loadLazyComponents } from "@plugins/primitives/plugins/lazy-component/web/testing";
 
+// The answer's markdown and the composer's editor are lazy chunks: load them
+// up front, so `findByText` below waits on the thread, not on a module import.
+beforeAll(loadLazyComponents);
 afterEach(cleanup);
 
 // The thread's sticky scroll watches its bottom sentinel; jsdom has no

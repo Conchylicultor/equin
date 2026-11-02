@@ -8,9 +8,13 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
-  clientLog: () => {},
-}));
+vi.mock(
+  "@plugins/primitives/plugins/log-channels/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    clientLog: () => {},
+  }),
+);
 
 type RowRead =
   | { status: "loading"; refetch: () => Promise<void> }
@@ -31,7 +35,8 @@ const state = vi.hoisted(() => ({
   toggled: [] as string[],
 }));
 
-vi.mock("@plugins/network/plugins/live/web", () => ({
+vi.mock("@plugins/network/plugins/live/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   useLiveRow: (collection: { key: string }) =>
     state.rows[collection.key] ?? {
       status: "loading",
@@ -58,10 +63,9 @@ vi.mock("@plugins/network/plugins/live/web", () => ({
       : result,
 }));
 
-vi.mock("@plugins/infra/plugins/endpoints/web", () => {
-  class EndpointError extends Error {}
+vi.mock("@plugins/infra/plugins/endpoints/web", async (importOriginal) => {
   return {
-    EndpointError,
+    ...(await importOriginal<object>()),
     useEndpointMutation: (endpoint: { route: string }) => ({
       mutateAsync: (args: unknown) => {
         state.calls.push({ route: endpoint.route, args });
@@ -76,7 +80,8 @@ vi.mock("@plugins/infra/plugins/endpoints/web", () => {
   };
 });
 
-vi.mock("@plugins/tasks/plugins/automations/web", () => ({
+vi.mock("@plugins/tasks/plugins/automations/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   useTaskApproval: () => state.approval,
   useSetTaskApproval: () => (taskId: string, approved: boolean) => {
     state.approvals.push({ taskId, approved });
@@ -84,20 +89,26 @@ vi.mock("@plugins/tasks/plugins/automations/web", () => ({
   },
 }));
 
-vi.mock("@plugins/conversations/plugins/conversation-view/web", () => ({
-  useConversationOpener: () => ({
-    openConvId: null,
-    isOpen: () => false,
-    toggle: (convId: string) => () => state.toggled.push(convId),
-    asPage: (convId: string) => () => state.toggled.push(convId),
+vi.mock(
+  "@plugins/conversations/plugins/conversation-view/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    useConversationOpener: () => ({
+      openConvId: null,
+      isOpen: () => false,
+      toggle: (convId: string) => () => state.toggled.push(convId),
+      asPage: (convId: string) => () => state.toggled.push(convId),
+    }),
   }),
-}));
+);
 
-vi.mock("@plugins/tasks/plugins/task-detail/web", () => ({
+vi.mock("@plugins/tasks/plugins/task-detail/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   useRegisterFlush: () => {},
 }));
 
-vi.mock("@plugins/primitives/plugins/markdown/web", () => ({
+vi.mock("@plugins/primitives/plugins/markdown/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   Markdown: ({ children }: { children: string }) => <p>{children}</p>,
 }));
 

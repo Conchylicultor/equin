@@ -18,9 +18,13 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
-  clientLog: () => {},
-}));
+vi.mock(
+  "@plugins/primitives/plugins/log-channels/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    clientLog: () => {},
+  }),
+);
 
 const spy = vi.hoisted(() => ({
   /** Every app link opened. */
@@ -34,7 +38,8 @@ const spy = vi.hoisted(() => ({
   }[],
 }));
 
-vi.mock("@plugins/shell/plugins/toast/web", () => ({
+vi.mock("@plugins/shell/plugins/toast/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   showToast: (args: {
     render: (toast: { dismiss: () => void }) => unknown;
     duration: number;
@@ -43,7 +48,8 @@ vi.mock("@plugins/shell/plugins/toast/web", () => ({
   },
 }));
 
-vi.mock("@plugins/audience/web", () => ({
+vi.mock("@plugins/audience/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   useAudience: () => ({
     status: "ready",
     data: spy.audience,

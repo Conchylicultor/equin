@@ -1,17 +1,25 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type * as WebSdkCore from "@plugins/framework/plugins/web-sdk/core";
+import type * as Namespace from "@plugins/infra/plugins/namespace/core";
 
 // The registry App.tsx boots from, replaced by a handful of fake entries the
 // test controls. Filled per test (in place — the module exports ONE array).
-const registry = vi.hoisted(() => ({
+// Hoisted above every import, so the id is loaded here, not bound from the
+// file's own (later) import.
+const registry = await vi.hoisted(async () => {
+  const { MAIN_COMPOSITION_ID } = await vi.importActual<typeof Namespace>(
+    "@plugins/infra/plugins/namespace/core",
+  );
+  return {
   webEntries: [] as {
     pluginPath: string;
     id: string;
     loader: () => Promise<{ default: unknown }>;
     dependsOn: string[];
   }[],
-  composition: { id: MAIN_COMPOSITION_ID, home: null },
-}));
+    composition: { id: MAIN_COMPOSITION_ID, home: null },
+  };
+});
 vi.mock("@composition-web-registry", () => registry);
 
 // Stage membership is a generated set; the test decides it instead, so it
@@ -47,7 +55,6 @@ import {
 } from "@plugins/framework/plugins/web-sdk/core";
 import { resetDeferredLoadStateForTests } from "@plugins/framework/plugins/web-sdk/core/testing";
 import App from "../App";
-import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 
 /**
  * Which plugin-load failures get the full-width boot banner.

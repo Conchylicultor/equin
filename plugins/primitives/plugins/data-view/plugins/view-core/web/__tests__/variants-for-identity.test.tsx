@@ -12,7 +12,8 @@ import type { ViewSourceEntry, ViewTypeMeta } from "../../core";
 // Config is mocked as in `use-views-config.test.tsx`: a fixed settled read, so
 // the optimistic mirror is what each write lands in.
 let configDoc: { views: unknown[] } = { views: [] };
-vi.mock("@plugins/config_v2/web", () => ({
+vi.mock("@plugins/config_v2/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   useConfigResult: () => ({
     status: "ready",
     data: configDoc,

@@ -11,7 +11,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 // choices are what this suite pins.
 vi.mock(
   "@plugins/conversations/plugins/conversation-view/plugins/user-message/web",
-  () => ({
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
     UserMessageCard: ({ children }: { children: React.ReactNode }) => (
       <div>{children}</div>
     ),

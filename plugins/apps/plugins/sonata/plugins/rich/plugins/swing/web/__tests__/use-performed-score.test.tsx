@@ -8,7 +8,8 @@ import {
 import { usePerformedScore } from "../use-performed-score";
 
 let swingFallingNotes = true;
-vi.mock("@plugins/config_v2/web", () => ({
+vi.mock("@plugins/config_v2/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   useConfig: () => ({ swingFallingNotes }),
 }));
 

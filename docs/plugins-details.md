@@ -16495,6 +16495,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/color-palette --muted-foreground`
                       - `ui/tokens/font-family --font-mono`
                       - `ui/tokens/shape --spacing`
+                  - Exemptions:
+                    - Exempts itself from: `paths:no-hardcoded-paths` — `web/__tests__/instructions-view.test.tsx` (sanctioned)
                 - **`mcp-instructions-delta`** — Renders mcp_instructions_delta attachment events — an MCP server's standing instructions entering or leaving the agent's context mid-session — in the same +/− grammar as the deferred-tools delta.
                   - Web:
                     - Contributes:
@@ -27550,7 +27552,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/relocate` (3 debt)
               - `plugin-meta/token-usage` (1 debt)
               - `primitives/commit-list` (1 debt)
-              - `primitives/css/layout-harness` (2 debt)
+              - `primitives/css/layout-harness` (3 debt)
               - `primitives/icon-picker` (1 debt)
               - `primitives/log-channels/log-files` (1 debt)
               - `release` (4 debt)
@@ -28466,6 +28468,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/file-sink` (0 debt)
                   - `reports/engine` (0 debt)
             - **`trigger-render-safety`** — trigger-render-safety lint rule: no-provider-trigger-render
+            - **`vitest-mock-safety`** — vitest-mock-safety lint rules: a vi.mock of a plugin barrel is partial (spreads importOriginal), and a hoisted vi.mock / vi.hoisted callback reads none of the file's imports — the two ways a jsdom suite rots silently between runs
             - **`watcher-safety`** — watcher-safety lint rules: no-direct-parcel-watcher (only the file-watcher engine loads @parcel/watcher), no-raw-fs-watch (no fs.watch / watchFile / fs.promises.watch / chokidar in host-process code — declare a watcher with defineFileWatcher, or watchForCommand in the CLI) and no-detached-watch-reaction (a watch callback returns its async work instead of detaching it with void, so the watch coalesces it to one running plus one pending run)
               - Exemptions:
                 - Exempted by:
@@ -28600,6 +28603,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `INLINE_PACKAGES`
               - `inlinedRootsFor`
               - `isBareSpecifier`
+              - `isBrowserHostSpecifier`
               - `isBrowserUnreachableDynamic`
               - `isInlinedPackage`
               - `isWorkerChunkPath`
@@ -41039,7 +41043,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-lg`
           - Exemptions:
             - Exempts itself from:
-              - `boundaries/no-platform-api` — `web/internal/build-measurer-page.ts`, `web/internal/measure-page.ts` (debt)
+              - `boundaries/no-platform-api` — `web/internal/build-measurer-page.ts`, `web/internal/build-page.ts`, `web/internal/measure-page.ts` (debt)
               - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
           - Core:
             - Exports (types):
@@ -44612,6 +44616,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/markdown`
           - `primitives/syntax-highlight/code-preview/mermaid`
           - `primitives/text-editor`
+      - Test helpers:
+        - Web: `@plugins/primitives/plugins/lazy-component/web/testing`
+          - `loadLazyComponents` — Load every lazy component's chunk declared so far — call it in a suite's `beforeAll`, after the imports that declare them.
     - **`link-gesture`** — The browser's link gestures as spreadable handler props: plain click opens here, ⌘/Ctrl- and middle-click open the destination's URL in a new browser tab. A <button> gets none of this for free, so every navigating control reads it from one place.
       - Web:
         - Uses: `primitives/pane/route-prefix.withActiveRoutePrefix`

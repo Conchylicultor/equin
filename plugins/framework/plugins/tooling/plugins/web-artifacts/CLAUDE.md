@@ -350,6 +350,7 @@ Key invariants:
     - `INLINE_PACKAGES`
     - `inlinedRootsFor`
     - `isBareSpecifier`
+    - `isBrowserHostSpecifier`
     - `isBrowserUnreachableDynamic`
     - `isInlinedPackage`
     - `isWorkerChunkPath`

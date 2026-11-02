@@ -10,10 +10,12 @@ import { showToast } from "@plugins/shell/plugins/toast/web";
 import { report } from "@plugins/reports/web";
 import { OptimisticRejectionCollector } from "../components/optimistic-rejection-collector";
 
-vi.mock("@plugins/reports/web", () => ({
+vi.mock("@plugins/reports/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   report: vi.fn(async () => null),
 }));
-vi.mock("@plugins/shell/plugins/toast/web", () => ({
+vi.mock("@plugins/shell/plugins/toast/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   showToast: vi.fn(),
 }));
 

@@ -12,7 +12,8 @@ import type { ViewConfigRow, ViewSourceEntry, ViewTypeMeta } from "../../core";
 // config read/write is faked the way `use-views-config.test.tsx` fakes it.
 const setConfigSpy = vi.fn();
 let configDoc: { views: unknown[] } = { views: [] };
-vi.mock("@plugins/config_v2/web", () => ({
+vi.mock("@plugins/config_v2/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   useConfigResult: () => ({
     status: "ready",
     data: configDoc,

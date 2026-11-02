@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-framework-tooling-lint-vitest-mock-safety",
+  "version": "0.0.1",
+  "private": true,
+  "description": "vitest-mock-safety lint rules: a vi.mock of a plugin barrel is partial (spreads importOriginal), and a hoisted vi.mock / vi.hoisted callback reads none of the file's imports — the two ways a jsdom suite rots silently between runs"
+}

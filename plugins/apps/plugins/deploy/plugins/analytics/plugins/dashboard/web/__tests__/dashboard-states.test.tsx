@@ -5,13 +5,18 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
-  clientLog: () => {},
-}));
+vi.mock(
+  "@plugins/primitives/plugins/log-channels/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    clientLog: () => {},
+  }),
+);
 
 const answer = vi.hoisted(() => ({ current: {} as Record<string, unknown> }));
 
-vi.mock("@plugins/network/plugins/live/web", () => ({
+vi.mock("@plugins/network/plugins/live/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   useLive: () => answer.current,
 }));
 // Recharts measures a real layout jsdom does not have; the chart is not what

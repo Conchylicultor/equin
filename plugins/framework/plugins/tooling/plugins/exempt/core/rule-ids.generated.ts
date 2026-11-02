@@ -174,6 +174,8 @@ export type ExemptableRuleId =
   | "user-path/no-sync-fs"
   | "user-path/no-unproven-claim"
   | "viewport-overlay/no-adhoc-viewport-overlay"
+  | "vitest-mock-safety/no-hoisted-import-read"
+  | "vitest-mock-safety/partial-barrel-mock"
   | "watcher-safety/no-detached-watch-reaction"
   | "watcher-safety/no-direct-parcel-watcher"
   | "watcher-safety/no-raw-fs-watch"

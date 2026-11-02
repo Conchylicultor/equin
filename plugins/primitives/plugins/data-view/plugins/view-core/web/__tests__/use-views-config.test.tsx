@@ -17,7 +17,8 @@ const setConfigSpy = vi.fn();
 let configDoc: { views: unknown[] } = { views: [] };
 let configPending = false;
 let configFailure: Error | null = null;
-vi.mock("@plugins/config_v2/web", () => ({
+vi.mock("@plugins/config_v2/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   useConfigResult: () =>
     configFailure !== null
       ? {

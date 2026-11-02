@@ -11,16 +11,21 @@ import type * as LiveStateWeb from "@plugins/primitives/plugins/live-state/web";
 
 // Mounting live-state otherwise schedules real log flushes at module eval —
 // the convention the live-state hazard suites established.
-vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
-  clientLog: () => {},
-}));
+vi.mock(
+  "@plugins/primitives/plugins/log-channels/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    clientLog: () => {},
+  }),
+);
 
 const live = vi.hoisted(() => ({
   socket: "open" as "connecting" | "open" | "reconnecting" | "closed",
   result: undefined as unknown,
 }));
 
-vi.mock("@plugins/network/plugins/live/web", () => ({
+vi.mock("@plugins/network/plugins/live/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   useLive: () => live.result,
 }));
 

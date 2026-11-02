@@ -48,11 +48,16 @@ vi.mock(
     subscribeWsStatus: () => () => {},
   }),
 );
-vi.mock("@plugins/primitives/plugins/live-state/web", () => ({
-  liveStateSocketKind: () => "worktree",
-  liveStateSocketUrl: () => "ws://x/worktree",
-}));
-vi.mock("@plugins/network/plugins/live/web", () => ({
+vi.mock(
+  "@plugins/primitives/plugins/live-state/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    liveStateSocketKind: () => "worktree",
+    liveStateSocketUrl: () => "ws://x/worktree",
+  }),
+);
+vi.mock("@plugins/network/plugins/live/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   useLive: vi.fn(() => ({
     status: "loading",
     refetch: () => Promise.resolve(),

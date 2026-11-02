@@ -21,15 +21,21 @@ let snapshot: unknown;
 
 vi.mock(
   "@plugins/primitives/plugins/networking/plugins/page-transport/web",
-  () => ({
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
     pageTransport: { fetch: async () => Response.json(snapshot) },
   }),
 );
-vi.mock("@plugins/primitives/plugins/perfs/plugins/boot-trace/web", () => ({
-  recordBootSpan: () => {},
-  markBootInstantAtNextCommit: () => {},
-}));
-vi.mock("@plugins/reports/web", () => ({
+vi.mock(
+  "@plugins/primitives/plugins/perfs/plugins/boot-trace/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    recordBootSpan: () => {},
+    markBootInstantAtNextCommit: () => {},
+  }),
+);
+vi.mock("@plugins/reports/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   report: async (r: { message: string }) => {
     reports.push(r);
   },

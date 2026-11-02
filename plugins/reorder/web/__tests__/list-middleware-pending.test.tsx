@@ -27,7 +27,8 @@ let config:
   refetch,
 };
 
-vi.mock("@plugins/config_v2/web", () => ({
+vi.mock("@plugins/config_v2/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   useConfigResult: () => config,
   useSetConfig: () => () => {},
 }));

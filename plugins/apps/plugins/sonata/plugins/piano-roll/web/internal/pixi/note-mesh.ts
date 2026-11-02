@@ -273,8 +273,8 @@ void main() {
   vec3 body = mix(fill * tone, inkColor, hatch * 0.65);
 
   float edge = clamp(max(ink, ghost * 1.4), 0.0, 1.0);
-  // vColor.a is the note's velocity-driven alpha, exactly as in the flat path:
-  // the pen changes how a note is drawn, never how loud it reads.
+  // vColor.a is the note's alpha, exactly as in the flat path: the pen changes
+  // how a note is drawn, never how strongly it reads.
   float alpha = max(bodyA, max(ink, ghost)) * vColor.a;
   finalColor = vec4(mix(body, inkColor, edge) * alpha, alpha);
 }
@@ -477,8 +477,8 @@ fn fsMain(v: VsOut) -> @location(0) vec4<f32> {
   let body = mix(fill * tone, inkColor, hatch * 0.65);
 
   let edge = clamp(max(ink, ghost * 1.4), 0.0, 1.0);
-  // vColor.a is the note's velocity-driven alpha, exactly as in the flat path:
-  // the pen changes how a note is drawn, never how loud it reads.
+  // vColor.a is the note's alpha, exactly as in the flat path: the pen changes
+  // how a note is drawn, never how strongly it reads.
   let alpha = max(bodyA, max(ink, ghost)) * v.vColor.a;
   return vec4<f32>(mix(body, inkColor, edge) * alpha, alpha);
 }
@@ -516,9 +516,9 @@ export interface NoteMeshHandle {
 }
 
 /** Pack one note's color bytes: the resolved fill color (`fillExpr` already
- *  carries the Synthesia white-key / black-key shade), alpha = velocity-driven
- *  visual alpha. Un-premultiplied in the buffer; the fragment shader
- *  premultiplies at output. */
+ *  carries the Synthesia white-key / black-key shade), alpha opaque — notes are
+ *  drawn solid, as Synthesia draws them. Un-premultiplied in the buffer; the
+ *  fragment shader premultiplies at output. */
 function writeColor(
   out: Uint8Array,
   byteOffset: number,
@@ -529,7 +529,7 @@ function writeColor(
   const r = (rgb >> 16) & 0xff;
   const g = (rgb >> 8) & 0xff;
   const b = rgb & 0xff;
-  const a = Math.round(Math.max(0, Math.min(1, visual.alpha)) * 255);
+  const a = 255;
   for (let corner = 0; corner < 4; corner++) {
     const o = byteOffset + corner * 4;
     out[o] = r;

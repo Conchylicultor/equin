@@ -16,9 +16,13 @@ vi.mock("../internal/interaction-tracker", () => ({
   startInteractionTracking: () => () => {},
 }));
 let pageHidden = false;
-vi.mock("@plugins/primitives/plugins/perfs/plugins/page-pauses/web", () => ({
-  pausesDuring: () => ({ hiddenMs: pageHidden ? 1 : 0, stalledMs: 0 }),
-}));
+vi.mock(
+  "@plugins/primitives/plugins/perfs/plugins/page-pauses/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    pausesDuring: () => ({ hiddenMs: pageHidden ? 1 : 0, stalledMs: 0 }),
+  }),
+);
 
 const recordMock = vi.mocked(recordSample);
 

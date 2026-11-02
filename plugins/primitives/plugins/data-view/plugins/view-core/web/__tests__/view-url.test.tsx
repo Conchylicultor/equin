@@ -14,7 +14,8 @@ import type { ViewSourceEntry, ViewTypeMeta } from "../../core";
 // device is stamped in, a URL-named view is adopted locally, and a stale id is
 // rewritten to the view actually shown. Every write replaces (the binding's
 // own concern); here the binding is a plain state cell that records writes.
-vi.mock("@plugins/config_v2/web", () => ({
+vi.mock("@plugins/config_v2/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   useConfigResult: () => ({
     status: "ready",
     data: {

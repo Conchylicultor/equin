@@ -21,7 +21,10 @@ import { CollapsibleCard } from "../components/collapsible-card";
 // does not have; it is not what is under test.
 vi.mock(
   "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web",
-  () => ({ EventRowActions: () => null }),
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    EventRowActions: () => null,
+  }),
 );
 
 afterEach(cleanup);

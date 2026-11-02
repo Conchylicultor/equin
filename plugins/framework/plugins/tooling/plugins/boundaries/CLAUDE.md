@@ -344,7 +344,7 @@ escape is a `sanctioned` exemption for a declaration desktop-only by policy.
     - `plugin-meta/relocate` (3 debt)
     - `plugin-meta/token-usage` (1 debt)
     - `primitives/commit-list` (1 debt)
-    - `primitives/css/layout-harness` (2 debt)
+    - `primitives/css/layout-harness` (3 debt)
     - `primitives/icon-picker` (1 debt)
     - `primitives/log-channels/log-files` (1 debt)
     - `release` (4 debt)

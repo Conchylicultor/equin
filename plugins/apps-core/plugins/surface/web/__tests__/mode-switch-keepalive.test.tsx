@@ -29,29 +29,34 @@ const registerSpy = vi.hoisted(() => vi.fn((_caps: unknown) => () => {}));
 
 // `TabSurface` stands in for a whole app: it counts its own mounts/unmounts and
 // mints a `useState` instance id, which is only re-minted by a real remount.
-vi.mock("@plugins/apps-core/plugins/tab-surface/web", async () => {
-  const { createElement, useEffect, useState } = await import("react");
-  return {
-    TabSurface: function TabSurfaceProbe() {
-      const [instanceId] = useState(() => `inst-${++probe.minted}`);
-      useEffect(() => {
-        probe.mounts++;
-        return () => {
-          probe.unmounts++;
-        };
-      }, []);
-      return createElement("div", {
-        "data-testid": "tab-probe",
-        "data-instance": instanceId,
-      });
-    },
-  };
-});
+vi.mock(
+  "@plugins/apps-core/plugins/tab-surface/web",
+  async (importOriginal) => {
+    const { createElement, useEffect, useState } = await import("react");
+    return {
+      ...(await importOriginal<object>()),
+      TabSurface: function TabSurfaceProbe() {
+        const [instanceId] = useState(() => `inst-${++probe.minted}`);
+        useEffect(() => {
+          probe.mounts++;
+          return () => {
+            probe.unmounts++;
+          };
+        }, []);
+        return createElement("div", {
+          "data-testid": "tab-probe",
+          "data-instance": instanceId,
+        });
+      },
+    };
+  },
+);
 
 // The tabs store, reduced to what the body reads: one tab and the surface mode.
 // A real `TabsProvider` would drag in the pane store, history and sessionStorage
 // for a question none of them are part of.
-vi.mock("@plugins/apps-core/plugins/tabs/web", () => ({
+vi.mock("@plugins/apps-core/plugins/tabs/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   useTabs: () => ({
     tabs: [{ tabId: "t1", appId: "a1", store: null }],
     focusedTabId: "t1",

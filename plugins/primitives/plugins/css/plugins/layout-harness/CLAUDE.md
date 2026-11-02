@@ -171,7 +171,8 @@ Per the collection-consumer separation rule, every consumer reads exhibits only
 through the catalog's generic `loadExhibits()`, filtered by `measurableExhibits()`:
 
 1. **the geometry `bun:test`** (`web/internal/layout-geometry.test.ts`) — builds
-   the measurer page ONCE (`build-measurer-page.ts`: Vite + React + real
+   the measurer page ONCE (`build-measurer-page.ts`, which runs `build-page.ts`
+   as its own process — never Vite inside the shared `bun test` process: Vite + React + real
    Tailwind), opens ONE headless Chromium (`measure-page.ts`), sweeps every
    measured exhibit across its `widths`, and calls `evaluateInvariant` per invariant. A
    `falsification` invariant is re-measured with its mutation applied and asserted
@@ -359,9 +360,10 @@ was `true`, every `if (import.meta.env.DEV) throw` was live, and the first fixtu
 to deliberately reproduce a construct a primitive asserts against (adaptive-bar's
 `host-stops-giving-room`) took the page down with a `fixture page error` instead
 of being measured. Building it by hand — no `NODE_ENV` — produced the opposite
-page, which is how the claim survived a hand-verification. The builder now pins
-`import.meta.env.DEV` / `PROD` and `process.env.NODE_ENV` in `define`, so the
-page is a production one whoever invokes it.
+page, which is how the claim survived a hand-verification. The builder now runs
+the build (`build-page.ts`) as a child process with `NODE_ENV=production` in its
+own environment (a `define` cannot do it: the react plugin would still compile
+JSX for the dev runtime), so the page is a production one whoever invokes it.
 
 ## The oracle (`core/oracle.ts`)
 
@@ -452,7 +454,7 @@ somehow is not.
     - `ui/tokens/density --space-lg`
 - Exemptions:
   - Exempts itself from:
-    - `boundaries/no-platform-api` — `web/internal/build-measurer-page.ts`, `web/internal/measure-page.ts` (debt)
+    - `boundaries/no-platform-api` — `web/internal/build-measurer-page.ts`, `web/internal/build-page.ts`, `web/internal/measure-page.ts` (debt)
     - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
 - Core:
   - Exports (types):

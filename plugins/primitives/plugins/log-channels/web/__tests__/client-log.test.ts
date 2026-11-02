@@ -31,17 +31,22 @@ const { EndpointError } = mocks;
 const ACCEPTED = { status: "accepted" };
 const PAUSED = { status: "paused", reason: "duress" };
 
-vi.mock("@plugins/infra/plugins/endpoints/web", () => ({
+vi.mock("@plugins/infra/plugins/endpoints/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   fetchEndpointOver: () => mocks.fetchEndpoint,
   EndpointError: mocks.EndpointError,
 }));
 
-vi.mock("@plugins/primitives/plugins/networking/web", () => ({
-  subscribeWsStatus: (fn: (ev: { url: string; status: string }) => void) => {
-    mocks.wsListeners.push(fn);
-    return () => undefined;
-  },
-}));
+vi.mock(
+  "@plugins/primitives/plugins/networking/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    subscribeWsStatus: (fn: (ev: { url: string; status: string }) => void) => {
+      mocks.wsListeners.push(fn);
+      return () => undefined;
+    },
+  }),
+);
 
 type ClientLog = typeof import("../client-log").clientLog;
 let clientLog: ClientLog;

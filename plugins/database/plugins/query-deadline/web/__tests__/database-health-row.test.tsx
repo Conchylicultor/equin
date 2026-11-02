@@ -14,7 +14,8 @@ import type { QueryDeadlineHit, QueryDeadlines } from "../../core";
 
 let resourceValue: ResourceResult<QueryDeadlines>;
 
-vi.mock("@plugins/network/plugins/live/web", () => ({
+vi.mock("@plugins/network/plugins/live/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   useLive: () => resourceValue,
 }));
 

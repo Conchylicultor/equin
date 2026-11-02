@@ -88,7 +88,7 @@ function oklabToPacked(L: number, a: number, b: number): number {
 
 /**
  * Parse a COMPUTED-style color serialization into packed 0xRRGGBB. Alpha is
- * ignored — the renderer carries opacity separately (velocity-driven). Returns
+ * ignored — the renderer carries opacity separately. Returns
  * null for anything that isn't one of the known computed forms; the caller
  * decides whether that's fatal (it is, in `resolveCssColor`). Pure.
  */

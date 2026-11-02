@@ -1,17 +1,25 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type * as WebSdkCore from "@plugins/framework/plugins/web-sdk/core";
+import type * as Namespace from "@plugins/infra/plugins/namespace/core";
 
 // The registry App.tsx boots from, replaced by a fake eager plugin per test
 // that contributes one Core.Boot task (plus a Core.Root proving the app shows).
-const registry = vi.hoisted(() => ({
+// Hoisted above every import, so the id is loaded here, not bound from the
+// file's own (later) import.
+const registry = await vi.hoisted(async () => {
+  const { MAIN_COMPOSITION_ID } = await vi.importActual<typeof Namespace>(
+    "@plugins/infra/plugins/namespace/core",
+  );
+  return {
   webEntries: [] as {
     pluginPath: string;
     id: string;
     loader: () => Promise<{ default: unknown }>;
     dependsOn: string[];
   }[],
-  composition: { id: MAIN_COMPOSITION_ID, home: null },
-}));
+    composition: { id: MAIN_COMPOSITION_ID, home: null },
+  };
+});
 vi.mock("@composition-web-registry", () => registry);
 
 vi.mock("@plugins/framework/plugins/web-sdk/core", async (importOriginal) => {
@@ -35,7 +43,8 @@ vi.mock(
 );
 
 const reported = vi.hoisted(() => [] as { message: string }[]);
-vi.mock("@plugins/reports/web", () => ({
+vi.mock("@plugins/reports/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   report: (body: { message: string }) => {
     reported.push(body);
     return Promise.resolve(null);
@@ -46,7 +55,6 @@ import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import { Core } from "@plugins/framework/plugins/web-sdk/core";
 import { resetDeferredLoadStateForTests } from "@plugins/framework/plugins/web-sdk/core/testing";
 import App from "../App";
-import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 
 /**
  * The boot root is never empty: while a Core.Boot task is pending App shows the

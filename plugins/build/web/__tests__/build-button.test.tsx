@@ -1,8 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
-  clientLog: () => {},
-}));
+vi.mock(
+  "@plugins/primitives/plugins/log-channels/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    clientLog: () => {},
+  }),
+);
 
 // The two reads the button branches on, driven directly: the build history
 // (`useLive`) and the reload advice. Nothing here needs a server.
@@ -10,7 +14,8 @@ const state = vi.hoisted(() => ({
   history: {} as Record<string, unknown>,
   advice: { kind: "none" } as { kind: string; [k: string]: unknown },
 }));
-vi.mock("@plugins/network/plugins/live/web", () => ({
+vi.mock("@plugins/network/plugins/live/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   useLive: () => state.history,
 }));
 vi.mock("../hooks/use-reload-advice", () => ({

@@ -2,19 +2,20 @@ import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import react from "@vitejs/plugin-react";
-import tailwindcss from "@tailwindcss/vite";
-import { build } from "vite";
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
-// Programmatic Vite build of the measurer page (entry.html + entry.tsx) into a
-// temp static dir. Reuses the EXACT plugin set + `@plugins` alias from the repo
-// `vitest.config.ts`, so the fixtures' real components + real Tailwind are
-// bundled identically to the app. `base: "./"` makes asset URLs relative so the
-// built page loads over `file://` (no server). Returns the built index.html path.
+// Builds the measurer page (entry.html + entry.tsx) into a temp static dir, by
+// running `build-page.ts` as a child process — see its header for why the
+// build never runs inside the calling (test) process. Returns the built
+// index.html path.
 
-const HERE = resolve(fileURLToPath(import.meta.url), "..");
-const REPO_ROOT = resolve(HERE, "../../../../../../../..");
-const PLUGINS_DIR = join(REPO_ROOT, "plugins");
+const BUILD_SCRIPT = join(
+  resolve(fileURLToPath(import.meta.url), ".."),
+  "build-page.ts",
+);
+
+/** A cold Vite + Tailwind build of every exhibit; a bound, not an estimate. */
+const BUILD_TIMEOUT_MS = 110_000;
 
 export interface BuiltPage {
   /** Absolute path to the built `index.html`. */
@@ -37,56 +38,21 @@ export async function buildMeasurerPage(): Promise<BuiltPage> {
   // `mode` is NOT the lever. Vite resolves `isProduction` from the ambient
   // `process.env.NODE_ENV` first and consults `mode` only when it is unset — and
   // the suite that builds this page runs under `bun test`, which sets
-  // `NODE_ENV=test`. So the same source produced a production page when built by
-  // hand and a DEVELOPMENT one when built by the gate, with `import.meta.env.DEV`
-  // true and every dev-only assertion live.
-  //
-  // A `define` is not the lever either, and it fails loudly rather than subtly:
-  // replacing `import.meta.env.DEV` / `process.env.NODE_ENV` at compile time
-  // leaves the react plugin still compiling JSX for the dev runtime, so the page
-  // dies on `jsxDEV is not a function`. The flag has to be set BEFORE the config
-  // is resolved, which is one env var, restored in `finally` so a build cannot
-  // leak it into the suite that called it.
-  const priorNodeEnv = process.env.NODE_ENV;
-  process.env.NODE_ENV = "production";
-  try {
-    await buildPage(outDir);
-  } finally {
-    if (priorNodeEnv === undefined) delete process.env.NODE_ENV;
-    else process.env.NODE_ENV = priorNodeEnv;
-  }
+  // `NODE_ENV=test`. A `define` is not the lever either: replacing
+  // `import.meta.env.DEV` / `process.env.NODE_ENV` at compile time leaves the
+  // react plugin compiling JSX for the dev runtime, so the page dies on
+  // `jsxDEV is not a function`. The flag has to be set before the config is
+  // resolved — the child's own environment, which no caller can leak into.
+  const result = await spawnCaptured(
+    [process.execPath, "run", BUILD_SCRIPT, outDir],
+    {
+      env: { ...process.env, NODE_ENV: "production" },
+      timeoutMs: BUILD_TIMEOUT_MS,
+    },
+  );
+  if (result.exitCode !== 0)
+    throw new Error(
+      `measurer page build exited ${String(result.exitCode)}${result.timedOut ? " (timed out)" : ""}\n--- stdout ---\n${result.stdout}\n--- stderr ---\n${result.stderr}`,
+    );
   return { html: join(outDir, "entry.html"), outDir };
-}
-
-async function buildPage(outDir: string): Promise<void> {
-  await build({
-    root: HERE,
-    base: "./",
-    // The composition alias mirrors vitest.config — entry.tsx pulls
-    // loadExhibits(), whose generated registry dynamic-imports EVERY plugin's
-    // `exhibits/index.ts` (app exhibits included, each a chunk behind its own
-    // `load()` that the page never calls), and those transitively may hit
-    // App-level registries through the @plugins tree.
-    plugins: [react(), tailwindcss()],
-    resolve: {
-      alias: {
-        "@plugins": PLUGINS_DIR,
-        "@composition-web-registry": join(
-          PLUGINS_DIR,
-          "framework/plugins/web-sdk/core/web.generated.ts",
-        ),
-      },
-    },
-    build: {
-      outDir,
-      emptyOutDir: true,
-      rolldownOptions: {
-        input: join(HERE, "entry.html"),
-        // A demo scenario names its browser host (`@browser-host/<plugin>`), a
-        // module only a composed dist maps; the page never starts one.
-        external: (id) => id.startsWith("@browser-host/"),
-      },
-    },
-    logLevel: "error",
-  });
 }

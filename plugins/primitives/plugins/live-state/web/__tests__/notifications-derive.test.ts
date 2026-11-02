@@ -28,11 +28,15 @@
 import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
 
 const logged = vi.hoisted(() => [] as { channel: string; line: string }[]);
-vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
-  clientLog: (channel: string, line: string) => {
-    logged.push({ channel, line });
-  },
-}));
+vi.mock(
+  "@plugins/primitives/plugins/log-channels/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    clientLog: (channel: string, line: string) => {
+      logged.push({ channel, line });
+    },
+  }),
+);
 
 import { QueryClient } from "@tanstack/react-query";
 import { z } from "zod";

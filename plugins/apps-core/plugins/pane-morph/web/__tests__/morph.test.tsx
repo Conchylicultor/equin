@@ -8,10 +8,15 @@ import { morphPane } from "../internal/morph";
 
 const route = vi.hoisted(() => ({ leaf: "target" }));
 const motion = vi.hoisted(() => ({ reduce: false }));
-vi.mock("@plugins/primitives/plugins/css/plugins/motion/web", () => ({
-  prefersReducedMotion: () => motion.reduce,
-}));
-vi.mock("@plugins/primitives/plugins/pane/web", () => ({
+vi.mock(
+  "@plugins/primitives/plugins/css/plugins/motion/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    prefersReducedMotion: () => motion.reduce,
+  }),
+);
+vi.mock("@plugins/primitives/plugins/pane/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   peekRoute: () => [{ paneId: "host-list" }, { paneId: route.leaf }],
 }));
 

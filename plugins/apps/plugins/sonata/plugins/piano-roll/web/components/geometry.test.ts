@@ -172,18 +172,6 @@ test("buildProjection's yToBeat inverts beatToY across tempo changes and zoom", 
 
 // --- per-note fields -----------------------------------------------------------
 
-test("alpha maps velocity 0..127 onto 0.4..1.0", () => {
-  const score = makeScore([
-    note(60, 0, 1, { velocity: 0 }),
-    note(60, 0, 1, { velocity: 127 }),
-    note(60, 0, 1, { velocity: 64 }),
-  ]);
-  const [v0, v127, v64] = build(score);
-  expect(v0!.alpha).toBeCloseTo(0.4, 10);
-  expect(v127!.alpha).toBeCloseTo(1.0, 10);
-  expect(v64!.alpha).toBeCloseTo(0.4 + (64 / 127) * 0.6, 10);
-});
-
 test("isAccidental flags accidental pitch classes", () => {
   const score = makeScore([note(60, 0, 1), note(61, 0, 1)]); // C4, C#4
   const [c, cSharp] = build(score);

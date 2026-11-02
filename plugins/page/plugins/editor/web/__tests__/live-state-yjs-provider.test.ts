@@ -61,9 +61,13 @@ vi.mock(
   }),
 );
 
-vi.mock("@plugins/primitives/plugins/live-state/web", () => ({
-  liveStateSocketKind: () => "worktree",
-}));
+vi.mock(
+  "@plugins/primitives/plugins/live-state/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    liveStateSocketKind: () => "worktree",
+  }),
+);
 
 import { EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import {

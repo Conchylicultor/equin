@@ -39,8 +39,11 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import * as Y from "yjs";
 
-const wsStatusListeners: Array<(ev: { status: string; url: string }) => void> =
-  [];
+// Hoisted: the mocked `subscribeWsStatus` is called while the imports load
+// (log-channels subscribes at module eval), before a plain `const` here exists.
+const wsStatusListeners = vi.hoisted(
+  () => [] as Array<(ev: { status: string; url: string }) => void>,
+);
 // Spread the real module: the endpoints barrel calls `transportScoped` at load.
 vi.mock(
   "@plugins/primitives/plugins/networking/web",
@@ -69,11 +72,16 @@ let rowValue:
   status: "loading",
   refetch: () => Promise.resolve(),
 };
-vi.mock("@plugins/primitives/plugins/live-state/web", () => ({
-  liveStateSocketKind: () => "worktree",
-  liveStateSocketUrl: () => "ws://x/worktree",
-}));
-vi.mock("@plugins/network/plugins/live/web", () => ({
+vi.mock(
+  "@plugins/primitives/plugins/live-state/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    liveStateSocketKind: () => "worktree",
+    liveStateSocketUrl: () => "ws://x/worktree",
+  }),
+);
+vi.mock("@plugins/network/plugins/live/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   useLive: (
     _collection: unknown,
     query: {

@@ -10,25 +10,33 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mounting live-state otherwise schedules real log flushes at module eval —
 // the convention the live-state hazard suites established.
-vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
-  clientLog: () => {},
-}));
+vi.mock(
+  "@plugins/primitives/plugins/log-channels/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    clientLog: () => {},
+  }),
+);
 
 const usage = vi.hoisted(() => ({
   recorded: [] as { namespace: string; key: string }[],
   recent: [] as string[],
 }));
 
-vi.mock("@plugins/primitives/plugins/usage-rank/web", () => ({
-  useRecordUsage: () => (namespace: string, key: string) => {
-    usage.recorded.push({ namespace, key });
-  },
-  useRecentUsage: () => ({
-    status: "ready",
-    data: usage.recent,
-    refetch: () => Promise.resolve(),
+vi.mock(
+  "@plugins/primitives/plugins/usage-rank/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    useRecordUsage: () => (namespace: string, key: string) => {
+      usage.recorded.push({ namespace, key });
+    },
+    useRecentUsage: () => ({
+      status: "ready",
+      data: usage.recent,
+      refetch: () => Promise.resolve(),
+    }),
   }),
-}));
+);
 
 import {
   act,

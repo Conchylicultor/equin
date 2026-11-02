@@ -27,10 +27,15 @@ vi.mock(
   }),
 );
 
-vi.mock("@plugins/primitives/plugins/live-state/web", () => ({
-  liveStateSocketKind: () => "worktree",
-}));
-vi.mock("@plugins/network/plugins/live/web", () => ({
+vi.mock(
+  "@plugins/primitives/plugins/live-state/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    liveStateSocketKind: () => "worktree",
+  }),
+);
+vi.mock("@plugins/network/plugins/live/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   useLive: vi.fn(() => ({
     status: "loading",
     refetch: () => Promise.resolve(),

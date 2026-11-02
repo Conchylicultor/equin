@@ -17,11 +17,16 @@ const root = vi.hoisted(() => ({
 /** Every app with its own theme document, by scope id. */
 const owning = vi.hoisted(() => new Set<string>());
 
-vi.mock("@plugins/apps-core/plugins/theme-scope/web", () => ({
-  useRootThemeScopeState: () => root.state,
-}));
+vi.mock(
+  "@plugins/apps-core/plugins/theme-scope/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    useRootThemeScopeState: () => root.state,
+  }),
+);
 
-vi.mock("@plugins/apps-core/web", () => ({
+vi.mock("@plugins/apps-core/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   Apps: {
     App: {
       useContributions: () => [{ id: "website" }, { id: "other" }],
@@ -29,7 +34,8 @@ vi.mock("@plugins/apps-core/web", () => ({
   },
 }));
 
-vi.mock("@plugins/config_v2/web", () => ({
+vi.mock("@plugins/config_v2/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   useScopeMembership: (_config: unknown, scopeId: string) => ({
     status: "ready",
     data: owning.has(scopeId),

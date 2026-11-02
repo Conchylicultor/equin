@@ -12,7 +12,8 @@ const toasts: {
   description?: string;
   action?: { label: string; onClick: () => void };
 }[] = [];
-vi.mock("@plugins/shell/plugins/toast/web", () => ({
+vi.mock("@plugins/shell/plugins/toast/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   showToast: (args: (typeof toasts)[number]) => toasts.push(args),
 }));
 

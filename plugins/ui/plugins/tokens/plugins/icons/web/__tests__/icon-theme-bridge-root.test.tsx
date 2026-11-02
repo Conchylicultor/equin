@@ -15,15 +15,21 @@ const published = vi.hoisted(
   () => [] as { scope: string | undefined; values: unknown }[],
 );
 
-vi.mock("@plugins/apps-core/plugins/theme-scope/web", () => ({
-  useRootThemeScopeState: () => root.state,
-}));
+vi.mock(
+  "@plugins/apps-core/plugins/theme-scope/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    useRootThemeScopeState: () => root.state,
+  }),
+);
 
-vi.mock("@plugins/apps-core/web", () => ({
+vi.mock("@plugins/apps-core/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   Apps: { App: { useContributions: () => [] } },
 }));
 
-vi.mock("@plugins/config_v2/web", () => ({
+vi.mock("@plugins/config_v2/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   useScopeMembership: () => ({ status: "ready", data: false }),
 }));
 
@@ -45,7 +51,8 @@ const sub = vi.hoisted(() => ({
   ],
 }));
 
-vi.mock("@plugins/ui/plugins/theme-engine/web", () => ({
+vi.mock("@plugins/ui/plugins/theme-engine/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   ThemeEngine: {
     FixedTheme: { useContributions: () => [] },
     SubTheme: { useContributions: () => [sub] },
@@ -65,7 +72,8 @@ vi.mock("@plugins/ui/plugins/theme-engine/web", () => ({
   }),
 }));
 
-vi.mock("@plugins/ui/plugins/icons/web", () => ({
+vi.mock("@plugins/ui/plugins/icons/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   usePublishIconStyle: (scope: string | undefined, values: unknown) => {
     published.push({ scope, values });
   },

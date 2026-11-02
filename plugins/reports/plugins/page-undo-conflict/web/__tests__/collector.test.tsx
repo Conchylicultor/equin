@@ -10,7 +10,8 @@ import { undoConflictReportSink } from "@plugins/page/plugins/editor/web";
 import { report } from "@plugins/reports/web";
 import { PageUndoConflictCollector } from "../components/page-undo-conflict-collector";
 
-vi.mock("@plugins/reports/web", () => ({
+vi.mock("@plugins/reports/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   report: vi.fn(async () => null),
 }));
 
