@@ -115,14 +115,16 @@ if (value?.taskId) return <TaskChip taskId={value.taskId} />;
 
 Behavior:
 
-- One live value per conversation — `activeDataBindings`
-  (`liveValue("active-data.bindings", { params: ["conversationId"] })` in
-  `core/resource.ts`, a `wholeList`, served by `serveValue(…, { source: "db" })` in
-  `server/internal/resource.ts`) — so all widgets in a conversation share one
-  subscription, each picking its own row by
-  `(messageId, tag, occurrenceIndex)`. A value, not a collection: that
-  composite is the table's key, so there is no single id to read a row by. The
-  change feed pushes it on every write; the routes notify nothing.
+- One scoped live collection — `activeDataBindings`
+  (`liveCollection("active-data.bindings.v2", { id: activeDataBindingKey, all: { by: ["conversationId"] } })`
+  in `core/resource.ts`, over the `active_data_bindings` entity, served by
+  `serveCollection` in `server/internal/resource.ts`). Its id is the table's
+  composite primary key (`activeDataBindingKey` = `compositeKey([conversationId,
+  messageId, tag, occurrenceIndex])`), so a widget reads ITS row by id —
+  `useLive(activeDataBindings, { id })`, a `:rows` point read — and a write to
+  another widget's binding reaches nothing; a whole-conversation reader holds
+  the `{ where: { conversationId } }` scope. The routes notify nothing: the
+  change feed routes each write by its carried key columns.
 - `set` upserts via `PUT /api/active-data/bindings/...`; `clear` deletes.
 - When `messageId` is absent (legacy logs), `enabled` is `false` and `set` /
   `clear` no-op — the widget falls back to non-persistent React state.
@@ -145,14 +147,13 @@ Behavior:
   - Contributes:
     - `MarkdownEnhancerSlot`
     - `InlineTextWalkerSlot`
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/markdown` ×6
     - `primitives/text-editor/inline-chip` ×5
     - `primitives/inline-text` ×4
     - `infra/endpoints` ×2
+    - `network/live` ×2
     - `page/editor` ×2
-    - `primitives/live-state` ×2
-    - `network/live.useLive`
     - `primitives/dom/copy-source-text.copiesAsText`
   - Exports (types):
     - `ActiveDataBindingHandle`
@@ -177,33 +178,44 @@ Behavior:
     - `useActiveDataLinkify`
     - `useActiveDataSegments`
 - Server:
-  - Contributes: `resource.declare` "active-data.bindings"
+  - Contributes:
+    - `resource.declare` "active-data.bindings.v2"
+    - `resource.declare` "active-data.bindings.v2:rows"
   - Uses:
     - `database.db`
-    - `database/derived-updated-at.deriveUpdatedAt`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
-    - `network/live.serveValue`
+    - `infra/entities.defaultNow`
+    - `infra/entities.defineEntity`
+    - `network/live.serveCollection`
     - `tasks/tasks-core._conversations`
   - DB schema: `plugins/active-data/server/internal/tables.ts`
   - Exports (values): `_activeDataBindings`
-  - Resources: `active-data.bindings` (push, whole: one conversation's widget bindings — a handful per assistant message; the table's key is the composite (conversationId, messageId, tag, occurrenceIndex), so no single-id :rows read fits)
+  - Resources:
+    - `active-data.bindings.v2` (keyed)
+    - `active-data.bindings.v2:rows` (keyed, point)
   - Routes:
     - `PUT /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
     - `DELETE /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
 - Core:
   - Uses:
+    - `fields/date/config.dateField`
+    - `fields/int/config.intField`
+    - `fields/json/config.jsonField`
+    - `fields/text/config.textField`
     - `infra/endpoints.defineEndpoint`
-    - `network/live.liveValue`
-    - `packages/list-bound.wholeList`
+    - `infra/entities.entityRef`
+    - `infra/query-resource.compositeKey`
+    - `network/live.liveCollection`
   - Exports (types):
     - `ActiveDataBinding`
-    - `ActiveDataBindingsPayload`
     - `PutBindingBody`
   - Exports (values):
+    - `activeDataBindingFields`
+    - `activeDataBindingKey`
     - `activeDataBindings`
     - `ActiveDataBindingSchema`
-    - `ActiveDataBindingsPayloadSchema`
+    - `activeDataBindingsEntityRef`
     - `deleteBinding`
     - `isBlockForm`
     - `putBinding`

@@ -7,10 +7,11 @@ import {
 } from "@plugins/primitives/plugins/live-state/core";
 import type { EntityRef } from "@plugins/infra/plugins/entities/core";
 import type { FieldsRecord } from "@plugins/fields/core";
-import type {
-  AllQueryResourceContract,
-  PointQueryResourceContract,
-  WindowQueryResourceContract,
+import {
+  isCompositeKey,
+  type AllQueryResourceContract,
+  type PointQueryResourceContract,
+  type WindowQueryResourceContract,
 } from "@plugins/infra/plugins/query-resource/core";
 import {
   LIST_MAX,
@@ -69,6 +70,7 @@ import {
   allResourceDescriptor,
   pointQueryResourceDescriptor,
   windowQueryResourceDescriptor,
+  type RowKey,
 } from "./window-descriptor";
 
 /** The window descriptor's codec: the query ⇄ wire-params pair, plus the bounds it enforces. */
@@ -217,7 +219,12 @@ export interface LiveRowsCollection<Row> {
   key: string;
   /** `${key}:rows` — explicit id sets; answers "does this row exist", ignoring any filter. */
   rows: PointQueryResourceContract<Row>;
-  id: keyof Row & string;
+  /**
+   * What identifies a row: one row field, or — a whole ordered set over a
+   * composite primary key — a `compositeKey([...])` over several, whose
+   * `encode(row)` is the row's id (`:rows` ids, `useLiveRow`).
+   */
+  id: RowKey<Row>;
   /** The row schema — its keys are exactly the fields the server projects. */
   row: LiveRowSchema<Row>;
   /** The row schema's keys — exactly the fields the server projects. */
@@ -274,6 +281,8 @@ export interface LiveCollection<
   F,
   S extends string,
 > extends LiveRowsCollection<Row> {
+  /** A window's id is one row field: its tiebreaker and its cuts read it. */
+  id: keyof Row & string;
   /** `key` — the ordered, filtered, bounded window. */
   window: LiveWindowDescriptor<Row, F, S>;
   /** `${key}:groups` — the values a filterable column takes, with counts. */
@@ -375,6 +384,8 @@ export interface LiveNoWindowCollection<
   Row,
   Al,
 > extends LiveRowsCollection<Row> {
+  /** A composite id only on the whole ordered set; lookup-only is one field. */
+  id: [Al] extends [undefined] ? keyof Row & string : RowKey<Row>;
   /**
    * `key` — every row, in `all.all.orderBy` order (the id breaks ties), one
    * tuple per scope when declared `by` (see {@link LiveAllOrderBase.by});
@@ -571,8 +582,12 @@ export interface LiveNoWindowSpec<
   Al extends LiveAllOrder<Row> | undefined,
 > {
   row: LiveRowSchema<Row>;
-  /** The row field that identifies a row — the point sibling's id set (and the whole set's tiebreaker). */
-  id: keyof Row & string;
+  /**
+   * What identifies a row — the point sibling's id set (and the whole set's
+   * tiebreaker): one row field, or — declared `all` over a composite primary
+   * key — `compositeKey([...])` over its fields.
+   */
+  id: [Al] extends [undefined] ? keyof Row & string : RowKey<Row>;
   all?: Al;
   /**
    * The `:rows` id-set cap (`LiveFieldsSpec.maxIds`). Default: the set's
@@ -680,11 +695,23 @@ export function liveCollection<
   const Al extends LiveAllOrder<FieldsRow<E, P, CP, OF, CF>> | undefined =
     undefined,
   NM extends MachineFeature | undefined = undefined,
+  const I extends ([Al] extends [undefined]
+    ? keyof FieldsRow<E, P, CP, OF, CF> & string
+    : RowKey<FieldsRow<E, P, CP, OF, CF>>) = [Al] extends [undefined]
+    ? keyof FieldsRow<E, P, CP, OF, CF> & string
+    : RowKey<FieldsRow<E, P, CP, OF, CF>>,
 >(
   key: string,
-  spec: Omit<LiveFieldsSpec<E, P, CP, OF, CF, R>, "related" | "fields"> & {
-    /** The row field that identifies a row — a picked, carried or own field. */
-    id: NoInfer<keyof FieldsRow<E, P, CP, OF, CF> & string>;
+  spec: Omit<
+    LiveFieldsSpec<E, P, CP, OF, CF, R>,
+    "related" | "fields" | "id"
+  > & {
+    /**
+     * What identifies a row — a picked, carried or own field; declared `all`,
+     * or a `compositeKey([...])` over several (a table keyed by a composite
+     * primary key).
+     */
+    id: I;
     fields?: OF & RequireLabel<OF>;
     related?: R;
     baseExposures?: B;
@@ -701,6 +728,7 @@ export function liveCollection<
       : WithContributedColumns<FieldsRow<E, P, CP, OF, CF>>,
   Al
 > & {
+  id: I;
   fields: LiveFields<P | (keyof OF & string)>;
   from: FromEntity<E>;
 } & LiveMachineBrand<NM>;
@@ -912,6 +940,14 @@ function mintCollection<Row, F, S extends string>(
   }
   if (spec.all !== undefined)
     return allCollection(key, spec as LiveAllSpec<Row>);
+  // A composite id (typed away elsewhere): a window's tiebreaker and cuts,
+  // a union's key space and a lookup's point reads are keyed by one column.
+  const id: RowKey<Row> = spec.id;
+  if (isCompositeKey(id)) {
+    throw new Error(
+      `liveCollection("${key}"): the id is a composite key (${id.fields.join(", ")}) — only a whole ordered set (\`all\`) takes one: declare it \`all: { by, orderBy, … }\`.`,
+    );
+  }
   if (spec.arms !== undefined) {
     // An untyped caller could pass what the overload forbids (T12): a union's
     // column vocabulary is its arms' static handles.
@@ -957,7 +993,7 @@ function mintCollection<Row, F, S extends string>(
     return {
       ...rowsPart(
         key,
-        spec,
+        { row: spec.row, id },
         null,
         checkMaxIds(key, spec.maxIds, LIVE_DEFAULT_MAX_IDS),
       ),
@@ -1151,6 +1187,12 @@ function allBy<Row>(
     if (seen.has(name)) fail(`\`all.by\` names "${name}" twice`);
     seen.add(name);
   }
+  // A scope naming every part of a composite id holds one row.
+  if (isCompositeKey(spec.id) && spec.id.fields.every((f) => seen.has(f))) {
+    fail(
+      `\`all.by\` names every part of the composite id (${spec.id.fields.join(", ")}) — a scope of one row is a point read (\`useLiveRow\`).`,
+    );
+  }
   if (spec.preload !== undefined && spec.preload !== "none") {
     fail(
       `\`preload: "${spec.preload}"\` beside \`all.by\` — a scoped set's tuples are named by its readers, so boot has none to hydrate (and it is never L2-persisted).`,
@@ -1210,12 +1252,12 @@ const WINDOW_FIELDS: readonly string[] = [
 ];
 
 /** The `:rows` point sibling and the row schema — what every collection mints. */
-function rowsPart<Row>(
+function rowsPart<Row, I extends RowKey<Row>>(
   key: string,
-  spec: { row: LiveRowSchema<Row>; id: keyof Row & string },
+  spec: { row: LiveRowSchema<Row>; id: I },
   exposes: LiveExposes | null,
   maxIds: number,
-): LiveRowsCollection<Row> {
+): LiveRowsCollection<Row> & { id: I } {
   return {
     key,
     rows: pointQueryResourceDescriptor(

@@ -289,18 +289,19 @@ so a stray `defineEntity(` outside a schema-glob file is flagged.
     - `entityRef`
     - `wireSchema`
 - Cross-plugin:
-  - Imported by: 41 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 45 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×10
     - `conversations` ×7
     - `infra` ×5
+    - `page` ×5
     - `debug` ×4
-    - `page` ×4
+    - `primitives` ×3
+    - `active-data`
     - `backup`
     - `build/run-ledger`
     - `hints`
     - `history/engine`
     - `plugin-meta/plugin-health`
-    - `primitives/usage-rank`
     - `release`
     - `reports`
     - `shell/notifications`

@@ -8,10 +8,12 @@ import {
   type WindowParams,
   type WindowSelector,
 } from "@plugins/primitives/plugins/live-state/core";
-import type {
-  AllQueryResourceContract,
-  PointQueryResourceContract,
-  WindowQueryResourceContract,
+import {
+  isCompositeKey,
+  type AllQueryResourceContract,
+  type CompositeKey,
+  type PointQueryResourceContract,
+  type WindowQueryResourceContract,
 } from "@plugins/infra/plugins/query-resource/core";
 
 // The factories `liveCollection` mints its resources with: the window
@@ -59,15 +61,32 @@ function assertWindowLimit(limit: number, context: string): void {
   }
 }
 
-function pkKeyOf<Row>(pkField: keyof Row & string): (row: unknown) => string {
-  return (row) => String((row as Record<string, unknown>)[pkField]);
+/**
+ * A row's key: one row field, or a composite key over several — the id
+ * `liveCollection` declares. Only a whole ordered set (`all`) and its
+ * `:rows` take a composite one.
+ */
+export type RowKey<Row> =
+  (keyof Row & string) | CompositeKey<keyof Row & string>;
+
+/**
+ * The one key reader of a row — the descriptor's `keyed.keyOf`, which the
+ * client and the server runtime both key every row by: the field's text, or
+ * the composite key's encoding of its fields.
+ */
+export function idKeyOf<Row>(id: RowKey<Row>): (row: unknown) => string {
+  if (isCompositeKey(id)) {
+    return (row) =>
+      id.encode(row as Readonly<Record<keyof Row & string, unknown>>);
+  }
+  return (row) => String((row as Record<string, unknown>)[id]);
 }
 
 /** A keyed row-array descriptor, registered for boot hydration. */
 function keyedRows<Row, P extends Record<string, string>>(
   key: string,
   rowSchema: z.ZodType<Row>,
-  pkField: keyof Row & string,
+  pkField: RowKey<Row>,
   opts: {
     preload?: ResourcePreload;
     /** The params gate — see `ResourceDescriptor.validateParams`. */
@@ -85,7 +104,7 @@ function keyedRows<Row, P extends Record<string, string>>(
       maxRows === undefined
         ? z.array(rowSchema)
         : z.array(rowSchema).max(maxRows),
-    keyed: { keyOf: pkKeyOf(pkField) },
+    keyed: { keyOf: idKeyOf(pkField) },
     ...rest,
   };
   registerResourceDescriptor(d as ResourceDescriptor<unknown>);
@@ -160,7 +179,7 @@ export function isPointId(id: string): boolean {
 export function pointQueryResourceDescriptor<Row>(
   key: string,
   rowSchema: z.ZodType<Row>,
-  pkField: keyof Row & string,
+  pkField: RowKey<Row>,
   maxIds: number,
 ): PointQueryResourceContract<Row> {
   if (!Number.isSafeInteger(maxIds) || maxIds < 1) {
@@ -258,7 +277,7 @@ export function pointQueryResourceDescriptor<Row>(
 export function allResourceDescriptor<Row, B extends string = never>(
   key: string,
   rowSchema: z.ZodType<Row>,
-  pkField: keyof Row & string,
+  pkField: RowKey<Row>,
   opts: {
     all: AllQueryResourceContract<Row, B>["all"];
     preload?: ResourcePreload;

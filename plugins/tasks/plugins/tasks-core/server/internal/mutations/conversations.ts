@@ -192,9 +192,17 @@ export async function insertConversationOnConflictDoNothing(
   return row ?? null;
 }
 
+/**
+ * Patch one conversation row. `alongside` is a write that must commit WITH the
+ * patch — one transaction, so a reader of both tables never sees one without
+ * the other, and the change feed carries them as one commit (a session
+ * adoption: the tail here, its chain link there — one reload of every
+ * transcript read, not two). The status events still go out after the commit.
+ */
 export async function updateConversation(
   id: string,
   patch: UpdateConversationPatch,
+  opts: { alongside?: (tx: DbExecutor) => Promise<void> } = {},
 ): Promise<void> {
   const { taskId, state: prev } = await conversationContext(id);
   // Typed against the table's own insert row, not `Record<string, unknown>`:
@@ -220,15 +228,28 @@ export async function updateConversation(
     dbPatch.closeRequested = patch.closeRequested;
   if (patch.resumingSince !== undefined)
     dbPatch.resumingSince = patch.resumingSince;
+  const alongside = opts.alongside;
   // An empty patch writes nothing (drizzle rejects an empty SET).
-  if (Object.keys(dbPatch).length === 0) return;
+  if (Object.keys(dbPatch).length === 0) {
+    if (alongside !== undefined) await alongside(db);
+    return;
+  }
 
-  await withTaskStatusChange(taskId ?? [], db, async () => {
-    await db
-      .update(_conversations)
-      .set(dbPatch)
-      .where(eq(_conversations.id, id));
-  });
+  const write = (exec: DbExecutor) =>
+    withTaskStatusChange(taskId ?? [], exec, async () => {
+      await exec
+        .update(_conversations)
+        .set(dbPatch)
+        .where(eq(_conversations.id, id));
+    });
+  if (alongside === undefined) {
+    await write(db);
+  } else {
+    await db.transaction(async (tx) => {
+      await write(tx);
+      await alongside(tx);
+    });
+  }
   // A status or a `waitingFor` write is a status change (`waitingFor` refines
   // `waiting`: a question answered with the status unchanged must still wake
   // whoever holds a turn until the agent stops waiting). Neither known

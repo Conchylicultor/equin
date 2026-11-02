@@ -5,6 +5,7 @@ import { fallbackTo, retype } from "./described-fn";
 import {
   childrenOf,
   inspect,
+  isTextPassthrough,
   isUncheckedBase,
   isZodSchema,
   peel,
@@ -800,5 +801,31 @@ describe("inspect — not a schema", () => {
     expect(isZodSchema(z.string())).toBe(true);
     expect(isZodSchema({ _def: { typeName: "ZodString" } })).toBe(false);
     expect(isZodSchema(undefined)).toBe(false);
+  });
+});
+
+describe("isTextPassthrough", () => {
+  test("an unchecked string, or one piped only into `retype`, hands back its text", () => {
+    expect(isTextPassthrough(z.string())).toBe(true);
+    expect(isTextPassthrough(z.string().transform(retype<"x">))).toBe(true);
+  });
+
+  test("a check, another transform, a codec or another base does not", () => {
+    expect(isTextPassthrough(z.string().min(1))).toBe(false);
+    expect(isTextPassthrough(z.string().trim())).toBe(false);
+    expect(
+      isTextPassthrough(z.string().transform((v) => v.toUpperCase())),
+    ).toBe(false);
+    expect(isTextPassthrough(z.enum(["a", "b"]))).toBe(false);
+    expect(isTextPassthrough(z.number())).toBe(false);
+    expect(isTextPassthrough(z.stringbool())).toBe(false);
+    expect(
+      isTextPassthrough(
+        z
+          .string()
+          .min(1)
+          .transform(retype<"x">),
+      ),
+    ).toBe(false);
   });
 });

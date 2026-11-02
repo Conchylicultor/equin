@@ -11,8 +11,8 @@ import { rowOrder, setRowOrder, type SetRowOrderBody } from "../../core";
 /**
  * One view instance's persisted row order, as a read: loading until the first
  * value lands, failed if it cannot load (the last map seen, if any, as
- * `stale`), then the settled `rowKey → Rank` map, rank-ascending (the value's
- * own order). A state, so "no order loaded yet" can never be read as "this view
+ * `stale`), then the settled `rowKey → Rank` map, rank-ascending (the
+ * collection's declared order). A state, so "no order loaded yet" can never be read as "this view
  * has genuinely never been reordered" — the two must render differently (defer
  * vs. seed-everything), and only the settled arm HAS a map.
  */
@@ -20,7 +20,7 @@ export type RowOrderState = ResourceResult<Map<string, Rank>>;
 
 /** Subscribe to one view instance's persisted row order. */
 export function useRowOrder(dataViewId: string, viewId: string): RowOrderState {
-  const result = useLive(rowOrder, { dataViewId, viewId });
+  const result = useLive(rowOrder, { where: { dataViewId, viewId } });
   return useMemo(
     () =>
       mapResource(

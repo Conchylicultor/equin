@@ -14,7 +14,7 @@ export const attachmentsByOwnerServed = serveValue(attachmentsByOwner, {
   reads: () => ({
     tables: [_attachments, ...getRegisteredLinks().map((l) => l.table)],
     reason:
-      "a tuple joins one owner's link table with attachments; a write to any link row or attachment may change it, whole-table until it reads through a collection",
+      "a tuple joins one owner's link table with attachments; a write to any link row or attachment may change it, whole-table until it follows them through collections (task-1793650999-1nff0e)",
   }),
   loader: async ({ ownerType, id }) => {
     const link = getLink(ownerType);

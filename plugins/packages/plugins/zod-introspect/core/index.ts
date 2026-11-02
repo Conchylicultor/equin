@@ -11,6 +11,7 @@ export {
 export {
   childrenOf,
   inspect,
+  isTextPassthrough,
   isUncheckedBase,
   isZodSchema,
   peel,

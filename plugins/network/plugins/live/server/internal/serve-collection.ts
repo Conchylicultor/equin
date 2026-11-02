@@ -266,8 +266,12 @@ export type ServeCollectionOptions<
  */
 export interface PreloadRowsSource {
   key: string;
-  id: string;
-  all: { key: string; preload?: ResourcePreload };
+  all: {
+    key: string;
+    preload?: ResourcePreload;
+    /** The set's row key — its id, as every reader keys its rows. */
+    keyed: { keyOf: (row: unknown) => string };
+  };
 }
 
 /** One default scope of a collection (see `ServeCollectionOptions.defaults`). */
@@ -1381,10 +1385,20 @@ function idsSource<Row>(
       point: { encode: (ids: readonly string[]) => PointParams };
     };
   },
-  followable: () => FollowablePlan,
+  // `null`: a composite-keyed set, followed by its scope only.
+  followable: () => FollowablePlan | null,
   deferred: boolean,
 ): FollowIdsSource<Row> {
   const key = collection.rows.key;
+  const plan = (): FollowablePlan => {
+    const p = followable();
+    if (p === null) {
+      throw new Error(
+        `serveCollection("${key}"): a composite-keyed set is followed by its scope (\`{ where }\`), never by \`{ ids }\` — an id follow matches one key column.`,
+      );
+    }
+    return p;
+  };
   return {
     form: "ids",
     collection: key,
@@ -1393,7 +1407,7 @@ function idsSource<Row>(
         key,
         collection.rows.point.encode(ids),
       )) as readonly Row[],
-    reach: (name, tupleOf) => followRead(followable(), name, tupleOf),
+    reach: (name, tupleOf) => followRead(plan(), name, tupleOf),
     deferred,
   };
 }
@@ -1556,15 +1570,7 @@ async function bootIdsOf(source: PreloadRowsSource): Promise<string[]> {
       `preloadRows: "${source.all.key}" loaded a non-array value — not a whole ordered set`,
     );
   }
-  return value.map((row) => {
-    const id = (row as Record<string, unknown>)[source.id];
-    if (typeof id !== "string") {
-      throw new Error(
-        `preloadRows: a "${source.all.key}" row has no string id field "${source.id}"`,
-      );
-    }
-    return id;
-  });
+  return value.map((row) => source.all.keyed.keyOf(row));
 }
 
 // ── Scoped and exposing collections: compiled at boot ───────────────────

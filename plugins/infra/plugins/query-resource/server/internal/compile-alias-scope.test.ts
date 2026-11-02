@@ -33,6 +33,7 @@ import { z } from "zod";
 import type { RoutePlan } from "@plugins/framework/plugins/resource-runtime/core";
 import { ResourceContractError } from "@plugins/packages/plugins/resource-protocol/core";
 import { parsedText } from "@plugins/database/plugins/sql-column/server";
+import { retype } from "@plugins/packages/plugins/zod-introspect/core";
 import {
   BASE_RELATION,
   expr,
@@ -62,6 +63,11 @@ const blocks = pgTable("s_blocks", {
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
   data: text("data"),
   status: parsedText("status", z.enum(["open", "done"])).notNull(),
+  // An id kind's column: its decoder only brands the text (`retype`).
+  songRef: parsedText(
+    "song_ref",
+    z.string().transform(retype<string & { readonly __song: true }>),
+  ).notNull(),
 });
 
 const page: LookupJoin<"page", typeof pages> = {
@@ -371,6 +377,17 @@ describe("refusals", () => {
     expect(() => compile("s-bad", ["status"], s)).toThrow(
       /the scope field "status" \(`all.by`\) is a decoded column \(sql-column\)/,
     );
+  });
+
+  test("a decoded column whose decoder only brands its text (an id kind) is a scope", () => {
+    const base = spec();
+    const s = spec({
+      select: (bind) => ({
+        ...base.select(bind),
+        songRef: bind.render(bind.j.base.songRef),
+      }),
+    });
+    expect(() => compile("s-brand", ["songRef"], s)).not.toThrow();
   });
 
   test("a scope field that is not projected", () => {

@@ -47,7 +47,7 @@ export const claudeCliCallsForServed = serveValue(claudeCliCallsFor, {
   reads: {
     tables: [_claudeCliCalls],
     reason:
-      "a call recorded for the record, or the ring's trim aging one out, changes the answer; whole-table until it reads through a collection",
+      "a call recorded for the record, or the ring's trim aging one out, changes the answer; whole-table until it follows the record's calls through a collection (task-1793650999-1nff0e)",
   },
   loader: ({ correlationId, occurredAt }) =>
     listCallsFor(correlationId, parseOccurredAt(occurredAt)),

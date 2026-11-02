@@ -27,7 +27,7 @@ export const serverSshKeyServed = serveValue(serverSshKey, {
   reads: {
     tables: [_deployServers],
     reason:
-      "the key derives from a server row's stored public key; whole-table until it reads through a collection",
+      "the key derives from a server row's stored public key; whole-table until it follows the row through a collection (task-1793650999-1nff0e)",
   },
   loader: async ({ serverId }) => {
     const [row] = await db

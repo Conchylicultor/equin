@@ -1,28 +1,13 @@
-import { eq } from "drizzle-orm";
-import { db } from "@plugins/database/server";
-import { serveValue } from "@plugins/network/plugins/live/server";
+import { serveCollection } from "@plugins/network/plugins/live/server";
 import { customColumnValues } from "../../core";
-import { _dataViewCustomValues } from "./tables";
+import { customColumnValuesEntity } from "./tables";
 
 /**
- * Serves `customColumnValues` from `data_view_custom_values`, scoped by
- * `dataViewId`. The declared `reads` name the table, so the change feed
- * recomputes the tuple on every write — the handlers notify nothing.
+ * Serves `customColumnValues` from `data_view_custom_values`, one scoped tuple
+ * per `dataViewId`, compiled from the table (query-resource's
+ * `compileAllCollection`). The handlers notify nothing — the change feed
+ * carries the write, routed by its `data_view_id`.
  */
-export const customColumnValuesServed = serveValue(customColumnValues, {
-  source: "db",
-  reads: {
-    tables: [_dataViewCustomValues],
-    reason:
-      "a write to any custom-value row may change the cells of the surface it belongs to; whole-table until it reads through a collection",
-  },
-  loader: async ({ dataViewId }) =>
-    db
-      .select({
-        rowKey: _dataViewCustomValues.rowKey,
-        columnId: _dataViewCustomValues.columnId,
-        value: _dataViewCustomValues.value,
-      })
-      .from(_dataViewCustomValues)
-      .where(eq(_dataViewCustomValues.dataViewId, dataViewId)),
+export const customColumnValuesServed = serveCollection(customColumnValues, {
+  from: customColumnValuesEntity,
 });

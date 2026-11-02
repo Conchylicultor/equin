@@ -33,6 +33,7 @@ sortable fractional-indexing column.
     - `conversations/conversations-view/queue`
     - `page/block-entity`
     - `page/editor`
+    - `primitives/data-view/view-order`
     - `tag-tree/engine`
     - `tasks/tasks-core`
 

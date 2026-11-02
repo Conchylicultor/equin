@@ -30,7 +30,14 @@ import {
   type ReadColumn,
   type RelationColumn,
 } from "./joins";
-import { baseIdentityRoute, type RawRoute, type RoutedBase } from "./routes";
+import {
+  baseIdentityRoute,
+  identityColumns,
+  isCompositeIdentity,
+  type CompositeIdentity,
+  type RawRoute,
+  type RoutedBase,
+} from "./routes";
 import { anyOf } from "./raw-sql";
 import type {
   QueryDb,
@@ -253,9 +260,14 @@ export function routedReads<P extends ResourceParams>(opts: {
    * the source (`resolveIdentity`'s `columns`), which a select-all reads.
    */
   projection: SelectMap;
-  pk: PgColumn;
-  /** The wire field the pk is projected under. */
-  keyField: string;
+  /**
+   * The host identity: the base table's one pk column, or — a whole ordered
+   * set over a composite primary key — its parts and codec (no join may hang
+   * off it: a join is keyed by one host column).
+   */
+  pk: PgColumn | CompositeIdentity;
+  /** The wire field the pk is projected under — a composite key's parts, each. */
+  keyField: string | readonly string[];
   where: WindowQueryResourceSpec<P>["where"];
   whereReads: readonly (PgColumn | SQL)[] | undefined;
   /** Every column any tuple may order by (the signature); `[]` for a point set. */
@@ -271,31 +283,48 @@ export function routedReads<P extends ResourceParams>(opts: {
   db: QueryDb;
 }): RoutedReads<P> {
   const { joins, where, projection } = opts;
-  if (
-    joins
-      .columnsIn(projection[opts.keyField])
-      .some(([relation]) => relation !== BASE_RELATION)
-  ) {
-    throw new Error(
-      `${opts.label}: the key field "${opts.keyField}" projects a joined column — a row's key is its base table's identity.`,
-    );
+  for (const keyField of typeof opts.keyField === "string"
+    ? [opts.keyField]
+    : opts.keyField) {
+    if (
+      joins
+        .columnsIn(projection[keyField])
+        .some(([relation]) => relation !== BASE_RELATION)
+    ) {
+      throw new Error(
+        `${opts.label}: the key field "${keyField}" projects a joined column — a row's key is its base table's identity.`,
+      );
+    }
   }
   const projected = joins.relationsIn(Object.values(projection));
   const open = typeof where === "function" && opts.whereReads === undefined;
   const reads: RelationColumn[] = [
     ...joins.columnsIn(Object.values(projection)),
-    ...joins.columnsIn(opts.pk),
+    ...joins.columnsIn([...identityColumns(opts.pk)]),
     ...joins.columnsIn(typeof where === "function" ? undefined : where),
     ...joins.columnsIn(opts.whereReads ?? []),
     ...joins.columnsIn(opts.orderColumns),
   ];
   const columnsOf = routeColumnsOf(joins, opts.base, reads, open);
-  const host = { base: opts.base, pk: opts.pk, plan: joins, db: opts.db };
+  const pk = opts.pk;
+  if (
+    isCompositeIdentity(pk) &&
+    (joins.joins.length > 0 || joins.families.length > 0)
+  ) {
+    throw new Error(
+      `${opts.label}: a composite-keyed set reads its base table alone — a join is keyed by one host column.`,
+    );
+  }
+  const host = isCompositeIdentity(pk)
+    ? null
+    : { base: opts.base, pk, plan: joins, db: opts.db };
   const routes = [
     baseIdentityRoute(opts.base, opts.pk, columnsOf(BASE_RELATION), {
       match: (opts.match ?? []).map((c) => c.name),
     }),
-    ...joins.joins.flatMap((j) => joinRoutes(j, host, columnsOf)),
+    ...(host === null
+      ? []
+      : joins.joins.flatMap((j) => joinRoutes(j, host, columnsOf))),
     // One route per family, whatever its members: which members a tuple
     // reads is its `match`, not a route of its own.
     ...joins.families.map((f) => familyRoute(f)),

@@ -15,7 +15,7 @@ export const reportInvestigationsScopeServed = serveValue(
     reads: {
       tables: [_reports],
       reason:
-        "the open count per kind is over every uninvestigated report, so a write to any report may change any tuple; whole-table until it reads through a collection",
+        "the open count per kind is over every uninvestigated report, so a write to any report may change any tuple: an aggregate over the table, whole-table by nature",
     },
     throttleMs: 1000,
     loader: async ({ minCount }) => {

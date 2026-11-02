@@ -39,7 +39,8 @@ These are exactly the options keyed `defineResource(descriptor, …)` accepts.
    - The source is a `RoutedSource` (`PgTable | Entity`, never a view): an
      `Entity` projects its `wireColumns`, a `PgTable` selects all.
    - The pk is the table's single primary key. Composite / missing pk without
-     `identity.pk` throws — such a payload is a pushed `liveValue` instead.
+     `identity.pk` throws — a composite-keyed table is served as an `all` set
+     with a `compositeKey` id (*The `all` compiler*).
 2. **keyField** — the projection key whose column matches the pk (by DB column
    name, so an aliased projection keys on the alias), else the pk's property
    name. Throws if the pk is unprojected or the descriptor's `queryPk`
@@ -383,11 +384,28 @@ Details:
     base-use `match` + `moves` — so they cannot disagree.
   - Refused: a field not projected, not a DIRECT base column, or not text /
     varchar / uuid / smallint / integer / bigint (the feed's `col::text` must
-    equal the param).
+    equal the param); a sql-column decoded column unless its decoder only
+    brands its text (zod-introspect's `isTextPassthrough` — an id kind).
   - The `all` half gets a server `validateParams` enforcing canonical text.
   - Only a scoped set's definition / routes carry `by` / `match`.
   - Tests: `compile-alias-scope.test.ts`, network/live's
     `serve-collection-all-scoped-oracle.test.ts`.
+- **Composite id — `queryPk: compositeKey([...])`** (`core/internal/composite-key.ts`,
+  the one codec: `encodeURIComponent` parts joined by `/`, strictly canonical
+  decode, an integer part as its decimal text). Only on an `all` set:
+  - the key fields must be the table's composite pk columns (`tablePrimaryColumns`),
+    field for column, in order; every pk column breaks ties;
+  - the base identity route lists its `columns` and a `compose`
+    (`routes.ts`'s `CompositeIdentity`): resource-runtime composes each
+    changed row's id from the carried key columns;
+  - ids select as `__k0..n`, composed in JS; refills read
+    `(c1,…,cn) IN (SELECT * FROM unnest($1::t1[],…))` (`raw-sql.ts`'s
+    `tupleIn`), each part's canonical text checked first (`:rows` absent,
+    refills throw);
+  - refused: joins, families, groups; `followable.rows` is `null` (followed by
+    scope only). Tests: `composite-key.test.ts`, network/live's
+    `serve-collection-all-composite-oracle.test.ts` and
+    `composite-id-refusals.test.ts`.
 - **Aggregates.**
   - `jsonAgg` renders `json_agg(json_build_object(…) ORDER BY … NULLS LAST,
     <child pk>)`, timestamptz via `to_char(… AT TIME ZONE 'UTC', …)` (session-TZ
@@ -781,6 +799,7 @@ query.
     - `ClosureRefs`
     - `ColumnRef`
     - `ColumnRefsOf`
+    - `CompositeKey`
     - `ExprDecoder`
     - `ExprField`
     - `ExtensionJoin`
@@ -798,6 +817,7 @@ query.
     - `OuterColumnRef`
     - `OuterColumnRefsOf`
     - `PointQueryResourceContract`
+    - `QueryKey`
     - `RollupJoin`
     - `TypedColumnRef`
     - `WindowQueryResourceContract`
@@ -807,9 +827,12 @@ query.
     - `BASE_RELATION`
     - `childrenJoin`
     - `closureJoin`
+    - `COMPOSITE_KEY_MAX_FIELDS`
+    - `compositeKey`
     - `expr`
     - `familyMember`
     - `isAggregate`
+    - `isCompositeKey`
     - `isExprField`
     - `jsonAgg`
     - `jsonAggValue`
@@ -818,7 +841,10 @@ query.
     - `SQL_TYPE_RE`
 - Cross-plugin:
   - Imported by:
+    - `active-data`
     - `network/live`
+    - `primitives/data-view/custom-columns/values`
+    - `primitives/data-view/view-order`
     - `runs`
     - `tasks/tasks-core`
 - Exemptions:

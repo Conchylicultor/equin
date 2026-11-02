@@ -14,7 +14,7 @@ export const searchResultsServed = serveValue(searchResults, {
   reads: {
     tables: [_searchDocuments],
     reason:
-      "any indexed document may enter or leave any question's ranked hits; whole-table until it reads through a collection",
+      "any indexed document may enter or leave any question's ranked hits: a full-text rank over the whole index has no scope a write could be routed by, so whole-table by nature",
   },
   throttleMs: 1000,
   loader: ({ q, sources }) => runSearch(q, sources ?? []),

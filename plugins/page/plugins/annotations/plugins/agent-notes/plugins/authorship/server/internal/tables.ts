@@ -1,5 +1,9 @@
-import { pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  defaultNow,
+  defineEntity,
+} from "@plugins/infra/plugins/entities/server";
 import { _blocks } from "@plugins/page/plugins/editor/server";
+import { agentNotesAuthorsEntityRef } from "../../shared/schemas";
 
 // One row per (agent-notes card, conversation that wrote into it). Presence of a
 // row means "this conversation authored content in this card"; the whole set for
@@ -51,14 +55,24 @@ import { _blocks } from "@plugins/page/plugins/editor/server";
 // leads with `block_id` — so that seek, and the FK's own cascade-delete lookup,
 // are both already covered. The `ORDER BY created_at` sorts a handful of rows
 // (one card's authors); a second index would cost every write and buy nothing.
-export const _pageBlocksAgentAuthors = pgTable(
-  "page_blocks_agent_authors",
+//
+// ## An entity
+//
+// Declared through `defineEntity` from the one field record in
+// `../../shared/schemas.ts`, so the live read (`agentNotesAuthors`) is a
+// collection `from` it — the same DDL the hand-written `pgTable` had.
+export const agentNotesAuthorsEntity = defineEntity(
+  agentNotesAuthorsEntityRef,
   {
-    blockId: text("block_id")
-      .notNull()
-      .references(() => _blocks.id, { onDelete: "cascade" }),
-    conversationId: text("conversation_id").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    primaryKey: ["blockId", "conversationId"],
+    columns: {
+      blockId: {
+        references: { column: () => _blocks.id, onDelete: "cascade" },
+      },
+      createdAt: { default: defaultNow() },
+    },
   },
-  (t) => [primaryKey({ columns: [t.blockId, t.conversationId] })],
 );
+
+// drizzle-kit schema-glob discovery, and the name every writer uses.
+export const _pageBlocksAgentAuthors = agentNotesAuthorsEntity.table;

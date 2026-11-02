@@ -264,6 +264,23 @@ export interface GroupedPlan {
 
 const VALUE: TupleUse = { role: "value" };
 
+/**
+ * The grouped half of a compile that declares no grouped join and has no one
+ * host column to key one by: a whole ordered set over a composite primary key
+ * (`./compile-alias`), which reads its base table alone.
+ */
+export const NO_GROUPED: GroupedPlan = Object.freeze({
+  aliases: [],
+  refs: new Map(),
+  ctes: () => [],
+  recursive: false,
+  outerJoins: () => [],
+  routes: [],
+  uses: new Map(),
+  derivedReads: [],
+  rollups: [],
+});
+
 /** The ISO-8601 `Z` text a `Date` crosses the JSON wire as, rendered by Postgres. */
 const ISO_UTC = `'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'`;
 

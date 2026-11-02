@@ -20,7 +20,7 @@ export const mailMessageBodyServed = serveValue(mailMessageBody, {
   reads: {
     tables: [_mailMessages, _mailAttachments],
     reason:
-      "one message's body columns and attachment rows, read by id — whole-table until it reads through a collection; a tuple is one pk lookup, and the open bodies are the few cards a reader has expanded",
+      "one message's body columns and attachment rows, read by id — whole-table until it follows them through collections (task-1793650999-1nff0e); a tuple is one pk lookup, and the open bodies are the few cards a reader has expanded",
   },
   // A delta sync writes many message rows at once; each open body re-reads at
   // most once per window.

@@ -344,14 +344,14 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `schemaChangedAtBoot`
     - `snapshotWatermark`
 - Cross-plugin:
-  - Imported by: 135 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 136 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×39
     - `conversations` ×15
     - `page` ×15
     - `infra` ×13
     - `tasks` ×13
     - `active-data` ×8
-    - `debug` ×6
+    - `debug` ×7
     - `database` ×5
     - `primitives` ×4
     - `reports` ×2

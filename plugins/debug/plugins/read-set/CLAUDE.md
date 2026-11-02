@@ -123,9 +123,13 @@ session chain are never written. Refused on main (403). Spawns nothing.
   - Uses:
     - `conversations/session-chain.recordSessionId`
     - `conversations/transcript-watcher.refreshConversationChain`
+    - `database.db`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `network/live.serveValue`
+    - `page/annotations/agent-notes/authorship._pageBlocksAgentAuthors`
+    - `page/annotations/agent-notes/authorship.recordAgentNotesAuthor`
+    - `primitives/data-view/view-order._dataViewRowOrder`
     - `tasks/tasks-core.deleteConversationRow`
     - `tasks/tasks-core.getConversation`
     - `tasks/tasks-core.insertConversation`
@@ -149,6 +153,7 @@ session chain are never written. Refused on main (403). Spawns nothing.
     - `ResourcesDebug`
     - `ResourceShape`
   - Exports (values):
+    - `NARROWING_FIXTURE_DATA_VIEW`
     - `NARROWING_FIXTURE_SPAWNED_BY`
     - `narrowingFixture`
     - `NarrowingFixtureBodySchema`

@@ -159,6 +159,17 @@ useLive(blocks, { where: { pageId } });
     names the id; `preload` is `never` (boot has no tuple). `:rows` stays
     global. Postgres only (the external arm refuses it). A write to another
     scope reaches no tuple; a move between scopes is an exit + an entrant.
+    A scope column decoded by sql-column is refused unless its decoder only
+    brands its text (an id kind's `idKindField`).
+  - **Composite id — `id: compositeKey([...])`** (query-resource/core): only
+    on an `all` set, over the table's composite primary key, field for
+    column, in order; `by` may not name every part. The id is the parts'
+    `encodeURIComponent` joined by `/` (strictly canonical decode), so the
+    client's `keyOf`, the server's ids and `:rows` all derive from one codec.
+    The router composes each changed row's id from the pk columns the feed
+    already carries (missing / NULL / over the cap → FULL). Refused: joins,
+    families, groups; a composite set is followed by scope only. Oracle:
+    `server/internal/serve-collection-all-composite-oracle.test.ts`.
   - **C39 — converting a key under the same name.** The params gate is no skew
     signal for a param-less predecessor: an old bundle subscribing the same key
     with `{}` passes and parses the new rows with ITS schema. A converting step
@@ -1247,14 +1258,14 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `serveValue`
     - `sliceRange`
 - Core:
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×6
+    - `infra/query-resource` ×6
     - `network/live/filter` ×6
     - `packages/zod-introspect` ×6
     - `primitives/live-state` ×6
     - `packages/list-bound` ×3
     - `packages/resource-protocol` ×2
-    - `infra/query-resource.KIND_RE`
     - `packages/canonical-params.canonicalJson`
   - Exports (types):
     - `AnyCollection`

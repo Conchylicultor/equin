@@ -15,7 +15,7 @@ export const mailLabelsServed = serveValue(mailLabels, {
   reads: {
     tables: [_mailLabels, _mailAccounts],
     reason:
-      "the whole user-label list of the connected account, whose choice reads every account row — whole-table until it reads through a collection",
+      "the whole user-label list of the connected account, whose choice reads every account row — whole-table by nature (one param-less tuple over two small tables written by sync)",
   },
   loader: async () => {
     const accountId = await resolveMailAccountId();

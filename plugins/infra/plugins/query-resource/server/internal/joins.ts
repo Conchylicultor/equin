@@ -522,7 +522,8 @@ export function compileJoins(
 export function compileAllJoins(
   base: RoutedBase,
   specs: readonly PlannedJoin[],
-  hostPk: PgColumn,
+  // None for a composite-keyed set, which declares no join.
+  hostPk: PgColumn | undefined,
   label: string,
   grouped: ReadonlyMap<string, PgTable> = new Map(),
 ): JoinPlan {

@@ -95,6 +95,7 @@ first):
     - `resource.declare` "conversation-sessions:rows"
   - Uses:
     - `database.db`
+    - `database.DbExecutor`
     - `database/sql-projection.parsed`
     - `ids.IdKinds`
     - `infra/entities.defaultNow`

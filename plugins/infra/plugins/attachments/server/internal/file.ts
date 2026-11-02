@@ -10,7 +10,7 @@ export const attachmentFileServed = serveValue(attachmentFile, {
   reads: {
     tables: [_attachments],
     reason:
-      "one attachment row looked up by id; whole-table until it reads through a collection",
+      "one attachment row looked up by id; whole-table until it follows the row through a collection (task-1793650999-1nff0e)",
   },
   loader: async ({ id }) => {
     const att = await getAttachment(id);

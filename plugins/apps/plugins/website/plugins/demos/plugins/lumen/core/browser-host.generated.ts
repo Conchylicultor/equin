@@ -720,9 +720,9 @@ export const hostReads: readonly {
   readonly key: string;
   readonly needsMachine: boolean;
 }[] = [
-  { key: "active-data.bindings", needsMachine: false },
+  { key: "active-data.bindings.v2", needsMachine: false },
   { key: "agent-launches", needsMachine: false },
-  { key: "agent-notes-authors", needsMachine: false },
+  { key: "agent-notes-authors.v2", needsMachine: false },
   { key: "agent-thread.runs", needsMachine: false },
   { key: "agents.roster", needsMachine: false },
   { key: "allow-files", needsMachine: true },
@@ -777,8 +777,8 @@ export const hostReads: readonly {
   { key: "conversations.partial-message", needsMachine: true },
   { key: "conversations.rewind-preview", needsMachine: true },
   { key: "data-files.text", needsMachine: false },
-  { key: "data-view-custom-values", needsMachine: false },
-  { key: "data-view-row-order", needsMachine: false },
+  { key: "data-view-custom-values.v2", needsMachine: false },
+  { key: "data-view-row-order.v2", needsMachine: false },
   { key: "edited-files", needsMachine: true },
   { key: "edited-files.file", needsMachine: true },
   { key: "file-viewer.bytes", needsMachine: true },

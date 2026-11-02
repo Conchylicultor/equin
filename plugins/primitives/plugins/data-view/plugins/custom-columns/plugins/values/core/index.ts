@@ -1,6 +1,10 @@
 export { CustomColumnValueRowSchema } from "./internal/types";
 export type { CustomColumnValueRow } from "./internal/types";
-export { customColumnValues } from "./internal/resource";
+export {
+  customColumnValues,
+  customColumnValueFields,
+  customColumnValuesEntityRef,
+} from "./internal/resource";
 export {
   setCustomColumnValue,
   SetCustomColumnValueBodySchema,

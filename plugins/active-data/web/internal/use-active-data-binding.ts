@@ -1,15 +1,13 @@
 import type { z } from "zod";
 import { useCallback, useMemo } from "react";
-import { useLive } from "@plugins/network/plugins/live/web";
-import {
-  mapResource,
-  type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+import { mapRow, useLive } from "@plugins/network/plugins/live/web";
+import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import {
   useFetchEndpoint,
   EndpointError,
 } from "@plugins/infra/plugins/endpoints/web";
 import {
+  activeDataBindingKey,
   activeDataBindings,
   putBinding,
   deleteBinding,
@@ -38,8 +36,9 @@ export interface ActiveDataBindingHandle<T> {
   /**
    * The persisted, schema-validated payload for this widget instance, as a
    * read: loading, failed, or ready with the payload (`null` when none is
-   * stored). Stays `loading` while `enabled` is false — no identity names no
-   * binding, so nothing is read.
+   * stored). While `enabled` is false it is `ready` with `null` from the first
+   * render and nothing is read — no identity names no binding (a `null` row
+   * id is the row read's skip); callers branch on `enabled` first.
    */
   value: ResourceResult<T | null>;
   /** Upsert the payload. No-op when `enabled` is false. */
@@ -53,29 +52,22 @@ export function useActiveDataBinding<T>(
 ): ActiveDataBindingHandle<T> {
   const fetchEndpoint = useFetchEndpoint();
   const identity = useActiveDataIdentity();
-  // Without an identity there is no conversation to read: the read is skipped
-  // (nothing subscribed), and the handle below reports `loading` with
-  // `enabled: false` — a caller renders a legacy log's widget off `enabled`.
-  const resource = useLive(
-    activeDataBindings,
-    identity ? { conversationId: identity.conversationId } : null,
-  );
+  // Without an identity there is no binding to read: a `null` id is the
+  // row read's skip (nothing subscribed; `ready`, not found) — a caller
+  // renders a legacy log's widget off `enabled`. With one, the widget reads ITS row by its composite id
+  // (`:rows`), so a write to another widget's binding reaches nothing here.
+  const row = useLive(activeDataBindings, {
+    id: identity ? activeDataBindingKey.encode(identity) : null,
+  });
 
   const value = useMemo(
-    () =>
-      mapResource(resource, (rows): T | null => {
-        if (!identity) return null;
-        const row = rows.find(
-          (b) =>
-            b.messageId === identity.messageId &&
-            b.tag === identity.tag &&
-            b.occurrenceIndex === identity.occurrenceIndex,
-        );
-        if (!row) return null;
-        const parsed = schema.safeParse(row.payload);
+    (): ResourceResult<T | null> =>
+      mapRow(row, (found) => {
+        if (found === null) return null;
+        const parsed = schema.safeParse(found.payload);
         return parsed.success ? parsed.data : null;
       }),
-    [identity, resource, schema],
+    [row, schema],
   );
 
   const set = useCallback(

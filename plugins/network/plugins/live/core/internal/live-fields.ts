@@ -16,6 +16,10 @@ import type {
   FilterColumn,
   FilterDomainId,
 } from "@plugins/network/plugins/live/plugins/filter/core";
+import {
+  isCompositeKey,
+  type CompositeKey,
+} from "@plugins/infra/plugins/query-resource/core";
 import { fieldDomain, type FieldsFilterable } from "./field-domain";
 
 // A collection's FIELDS — the new spelling (phase 2 of fields-declared-once,
@@ -278,7 +282,7 @@ export function resolveFieldsSpec(
     FieldsRecord,
     FieldsRecord,
     LiveRelated | undefined
-  > & { id: string },
+  > & { id: string | CompositeKey },
 ): ResolvedFieldsSpec {
   const fail = (message: string): never => {
     throw new Error(`liveCollection("${key}"): ${message}`);
@@ -396,10 +400,12 @@ export function resolveFieldsSpec(
       );
     }
   }
-  if (!seen.has(spec.id)) {
-    fail(
-      `the id "${spec.id}" is not a field of the row — \`carry\` it (\`carry: { pick: ["${spec.id}"] }\`).`,
-    );
+  for (const id of isCompositeKey(spec.id) ? spec.id.fields : [spec.id]) {
+    if (!seen.has(id)) {
+      fail(
+        `the id${isCompositeKey(spec.id) ? " part" : ""} "${id}" is not a field of the row — \`carry\` it (\`carry: { pick: ["${id}"] }\`).`,
+      );
+    }
   }
   const filterable: Record<string, FilterColumn> = {};
   for (const [name, field] of listed) {

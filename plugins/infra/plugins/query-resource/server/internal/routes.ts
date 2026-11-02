@@ -25,6 +25,7 @@ import {
   armKeyCodec,
   BASE_RELATION,
   type ArmKeyCodec,
+  type CompositeKey,
 } from "@plugins/infra/plugins/query-resource/core";
 import type { EntitySource, RoutedSource } from "./spec";
 import { isLookupRead, type LookupRead } from "./compile-lookup";
@@ -98,8 +99,59 @@ export function tablePrimary(table: PgTable): PgColumn | null {
 }
 
 /**
+ * The table's primary key columns in their declared order — one for a
+ * single-column key, several for a composite one, none without a key. The
+ * declaration's columns are built apart from the table's own column objects:
+ * each is resolved back to the table's by name.
+ */
+export function tablePrimaryColumns(table: PgTable): PgColumn[] {
+  const columns = Object.values(
+    getTableColumns(table) as Record<string, PgColumn>,
+  );
+  const declared = getTableConfig(table).primaryKeys;
+  if (declared.length === 0) return columns.filter((c) => c.primary);
+  const out: PgColumn[] = [];
+  for (const d of declared[0]!.columns) {
+    const col = columns.find((c) => c.name === d.name);
+    if (col === undefined) {
+      throw new Error(
+        `tablePrimaryColumns: the primary key of "${getTableConfig(table).name}" names "${d.name}", which is none of its columns`,
+      );
+    }
+    out.push(col);
+  }
+  return out;
+}
+
+/**
+ * A whole ordered set's identity over a COMPOSITE primary key: the key's
+ * columns in the codec's field order, and the codec composing a row's id
+ * from their texts (`CompositeKey.encodeParts`).
+ */
+export interface CompositeIdentity {
+  columns: readonly PgColumn[];
+  key: CompositeKey;
+}
+
+/** Whether a compile's identity is a composite one (else its one pk column). */
+export function isCompositeIdentity(
+  pk: PgColumn | CompositeIdentity,
+): pk is CompositeIdentity {
+  return (pk as Partial<CompositeIdentity>).key !== undefined;
+}
+
+/** The columns an identity reads: its one pk column, or a composite key's parts. */
+export function identityColumns(
+  pk: PgColumn | CompositeIdentity,
+): readonly PgColumn[] {
+  return isCompositeIdentity(pk) ? pk.columns : [pk];
+}
+
+/**
  * The base table's route in a keyed read whose host ids are the values of
- * `pk`: an `identity` route. When `pk` IS the table's primary key the change
+ * `pk`: an `identity` route. A composite identity reads each changed row's
+ * parts off the change's carried keys (the route carries them all) and
+ * composes its id with the codec. When `pk` IS the table's primary key the change
  * feed's ids are the host ids as they stand; otherwise the route reads `pk` off
  * the change's key layout, and a change that carries none recomputes its readers
  * FULL (correct, not scoped). Every tuple reads it as membership: a row write
@@ -113,7 +165,7 @@ export function tablePrimary(table: PgTable): PgColumn | null {
  */
 export function baseIdentityRoute(
   base: RoutedBase,
-  pk: PgColumn,
+  pk: PgColumn | CompositeIdentity,
   columns: readonly string[],
   opts: { match?: readonly string[] } = {},
 ): RawRoute {
@@ -121,8 +173,13 @@ export function baseIdentityRoute(
   return {
     id: BASE_ROUTE_ID,
     table: base.name,
-    map:
-      tablePrimary(base.table) === pk
+    map: isCompositeIdentity(pk)
+      ? {
+          kind: "identity",
+          columns: pk.columns.map((c) => c.name),
+          compose: pk.key.encodeParts,
+        }
+      : tablePrimary(base.table) === pk
         ? { kind: "identity" }
         : { kind: "identity", column: pk.name },
     columns,
@@ -139,7 +196,8 @@ export function baseIdentityRoute(
  * compile cannot spell an encoded route at all.
  */
 export type RawHostMap =
-  | { kind: "identity"; column?: string; encode?: never }
+  | { kind: "identity"; column?: string; encode?: never; columns?: never }
+  | Extract<HostMap, { kind: "identity"; columns: readonly string[] }>
   | { kind: "alias"; column?: string; encode?: never }
   | Extract<HostMap, { kind: "reverse" | "full" }>;
 
@@ -244,6 +302,11 @@ function encodedMap(
   const map = route.map;
   switch (map.kind) {
     case "identity":
+      if (map.columns !== undefined) {
+        throw new Error(
+          `union route plan: arm "${kind}"'s identity route "${route.id}" is a composite key (${map.columns.join(", ")}) — an arm's id is its base table's single-column primary key; a composite key is served only as a whole ordered set (\`all\`)`,
+        );
+      }
       if (map.column !== undefined) {
         throw new Error(
           `union route plan: arm "${kind}"'s identity route "${route.id}" reads "${map.column}" — an arm's id is its base table's single-column primary key, read off the change's ids`,

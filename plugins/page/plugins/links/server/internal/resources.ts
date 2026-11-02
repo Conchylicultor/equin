@@ -54,7 +54,7 @@ export const pageBacklinksServed = serveValue(pageBacklinks, {
   reads: () => ({
     tables: [...new Set([_pageLinks, _blocks, ...inlineTokenReferentTables()])],
     reason:
-      "the backlinks of one page join every edge and every source page's title, icon and text, and each snippet shows the titles its chips resolve to (tasks, songs, pages, …) — whole-table until it reads through a collection",
+      "the backlinks of one page join every edge and every source page's title, icon and text, and each snippet shows the titles its chips resolve to (tasks, songs, pages, …) — the referents are found by parsing the snippet text, so no written row names the tuples it reaches: whole-table by nature",
   }),
   loader: async ({ pageId }) => {
     const edges = await db

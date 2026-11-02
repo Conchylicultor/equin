@@ -361,7 +361,6 @@ export async function createTreeOracle(
   function registerRows<Row>(
     collection: {
       key: string;
-      id: string;
       rows: LiveAllCollection<Row>["rows"];
     },
     rows: AllCollectionSpecs<Row>["rows"],
@@ -375,8 +374,7 @@ export async function createTreeOracle(
         return rows.loader(p, ctx);
       },
     } as typeof rows);
-    const keyOf = (row: unknown) =>
-      String((row as Record<string, unknown>)[collection.id]);
+    const keyOf = collection.rows.keyed.keyOf;
     registered.set(rowsKey, {
       key: rowsKey,
       full: async (p) => {

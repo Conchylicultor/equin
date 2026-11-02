@@ -321,8 +321,14 @@ export type ExternalWindowCollection<
   count: Cn;
 };
 
-/** An `all` collection an external source serves. */
-export type ExternalAllCollection<Row> = LiveAllCollection<Row>;
+/**
+ * An `all` collection an external source serves — keyed by one field: a
+ * composite id (`compositeKey`) is a Postgres table's composite primary key,
+ * served from the table (its parts routed off the change feed).
+ */
+export type ExternalAllCollection<Row> = LiveAllCollection<Row> & {
+  id: keyof Row & string;
+};
 
 /** A lookup-only collection an external source serves. */
 export type ExternalLookupCollection<Row> = LiveLookupCollection<Row>;

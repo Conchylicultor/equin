@@ -1,11 +1,9 @@
+import { index } from "drizzle-orm/pg-core";
 import {
-  index,
-  pgTable,
-  primaryKey,
-  text,
-  timestamp,
-} from "drizzle-orm/pg-core";
-import { deriveUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
+  defaultNow,
+  defineEntity,
+} from "@plugins/infra/plugins/entities/server";
+import { customColumnValuesEntityRef } from "../../core";
 
 /**
  * Generic per-row custom-column VALUES, keyed by `(dataViewId, rowKey, columnId)`.
@@ -13,34 +11,31 @@ import { deriveUpdatedAt } from "@plugins/database/plugins/derived-updated-at/se
  * the surface (`storageKey`), `rowKey` the consumer's `rowKey(row)`, `columnId`
  * the custom-column def id. `value` is v1 text (widen to jsonb later via a
  * migration when non-text field types land).
+ *
+ * Declared through `defineEntity` from the one field record in
+ * `../../core/internal/resource.ts`, so the live read (`customColumnValues`) is
+ * a collection `from` it — the same DDL the hand-written `pgTable` had.
  */
-export const _dataViewCustomValues = deriveUpdatedAt(
-  pgTable(
-    "data_view_custom_values",
-    {
-      dataViewId: text("data_view_id").notNull(),
-      rowKey: text("row_key").notNull(),
-      columnId: text("column_id").notNull(),
-      value: text("value").notNull(),
-      createdAt: timestamp("created_at", { withTimezone: true })
-        .defaultNow()
-        .notNull(),
-      updatedAt: timestamp("updated_at", { withTimezone: true })
-        .defaultNow()
-        .notNull(),
-    },
-    (t) => [
-      primaryKey({ columns: [t.dataViewId, t.rowKey, t.columnId] }),
-      index("dvcv_data_view_id_idx").on(t.dataViewId),
-    ],
-  ),
+export const customColumnValuesEntity = defineEntity(
+  customColumnValuesEntityRef,
   {
-    touchedBy: {
-      value: true,
-      dataViewId: false,
-      rowKey: false,
-      columnId: false,
-      createdAt: false,
+    primaryKey: ["dataViewId", "rowKey", "columnId"],
+    columns: {
+      createdAt: { default: defaultNow() },
+      updatedAt: { default: defaultNow() },
     },
+    updatedAt: {
+      touchedBy: {
+        value: true,
+        dataViewId: false,
+        rowKey: false,
+        columnId: false,
+        createdAt: false,
+      },
+    },
+    indexes: (t) => [index("dvcv_data_view_id_idx").on(t.dataViewId)],
   },
 );
+
+// drizzle-kit schema-glob discovery, and the name every writer uses.
+export const _dataViewCustomValues = customColumnValuesEntity.table;

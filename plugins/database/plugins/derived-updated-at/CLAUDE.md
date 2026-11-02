@@ -118,7 +118,6 @@ are in `infra/entities/server/internal/`
 - Description: Derived updatedAt: compiles a table's per-column touchedBy rules (declared in defineEntity's meta.updatedAt, or deriveUpdatedAt on a raw pgTable) into a BEFORE UPDATE trigger that sets updated_at = now() only when a counted column really changed and RAISEs on any app write to it; a registry filled at module eval, the boot installer (signature-in-COMMENT, advisory-locked, asserted) the database plugin runs right after migrations, and a check that every schema table with an updated_at column declares one.
 - Cross-plugin:
   - Imported by:
-    - `active-data`
     - `apps/chord/curriculum`
     - `apps/chord/song-index`
     - `conversations/conversations-view/grouped`
@@ -126,8 +125,6 @@ are in `infra/entities/server/internal/`
     - `database/migrations`
     - `debug/profiling/op-log/op-store`
     - `infra/entities`
-    - `primitives/data-view/custom-columns/values`
-    - `primitives/data-view/view-order`
     - `ui/theme-engine/saved-themes`
 - Server:
   - DB schema: `plugins/database/plugins/derived-updated-at/server/internal/from-table.ts`

@@ -22,30 +22,40 @@ child names nothing of its parent.
 
 - Description: Per-row custom-column VALUES keyed by (dataViewId, rowKey, columnId): the generic data_view_custom_values table, the data-view-custom-values live value over it, and the upsert/delete-on-empty and delete-column endpoints. Pure DB, so portable; the config-bound column definitions are the parent custom-columns plugin's.
 - Server:
-  - Contributes: `resource.declare` "data-view-custom-values"
+  - Contributes:
+    - `resource.declare` "data-view-custom-values.v2"
+    - `resource.declare` "data-view-custom-values.v2:rows"
   - Uses:
     - `database.db`
-    - `database/derived-updated-at.deriveUpdatedAt`
     - `infra/endpoints.implement`
-    - `network/live.serveValue`
+    - `infra/entities.defaultNow`
+    - `infra/entities.defineEntity`
+    - `network/live.serveCollection`
   - DB schema: `plugins/primitives/plugins/data-view/plugins/custom-columns/plugins/values/server/internal/tables.ts`
   - Exports (values): `_dataViewCustomValues`
-  - Resources: `data-view-custom-values` (push, whole: one DataView surface's custom-column cells, indexed client-side onto every rendered row; the key is the composite (dataViewId, rowKey, columnId), so no single-id :rows read fits)
+  - Resources:
+    - `data-view-custom-values.v2` (keyed)
+    - `data-view-custom-values.v2:rows` (keyed, point)
   - Routes:
     - `POST /api/data-view/custom-values`
     - `POST /api/data-view/custom-values/delete-column`
 - Core:
   - Uses:
+    - `fields/date/config.dateField`
+    - `fields/text/config.textField`
     - `infra/endpoints.defineEndpoint`
-    - `network/live.liveValue`
-    - `packages/list-bound.wholeList`
+    - `infra/entities.entityRef`
+    - `infra/query-resource.compositeKey`
+    - `network/live.liveCollection`
   - Exports (types):
     - `CustomColumnValueRow`
     - `DeleteCustomColumnValuesBody`
     - `SetCustomColumnValueBody`
   - Exports (values):
+    - `customColumnValueFields`
     - `CustomColumnValueRowSchema`
     - `customColumnValues`
+    - `customColumnValuesEntityRef`
     - `deleteCustomColumnValues`
     - `DeleteCustomColumnValuesBodySchema`
     - `setCustomColumnValue`

@@ -42,12 +42,15 @@ plus a per-song reset.
   contribution (else the first). The picker writes the override (or `null` to
   reset to auto); the audio engine consumes the resolved map to route each
   track's notes to its own voice manager.
-- **One song's overrides, one value, multiple consumers.** `trackViews =
-  liveValue("sonata-track-view", { schema: z.array(TrackViewRowSchema), params:
-  ["songId"] })` is the song's rows, served by `serveValue({ source: "db",
-  unbounded: { reason }, loader })` (at most one row per track of that song; a
-  value, not a collection, because the key is the composite `(songId,
-  trackId)`). This plugin owns the song's track views as a per-song setting of
+- **One song's overrides, one scoped collection, multiple consumers.**
+  `trackViews = liveCollection("sonata-track-view.v2", { id: compositeKey(["songId", "trackId"]), all: { by: ["songId"] } })`
+  is the song's rows (at most one row per track of that song), served by
+  `serveCollection` over the `sonata_track_view` entity. The id is the table's
+  composite primary key, so the change feed routes each write by its carried
+  `song_id`: a write to another song reaches no tuple, one to this song is a
+  keyed delta of the rows it touched. Read and send lane share one scope,
+  `trackViewScope(songId)` (the song id keyed the way the routes key it).
+  This plugin owns the song's track views as a per-song setting of
   the loaded song, `trackViewSetting` (`web/track-view-setting.ts`, a
   `defineSongSetting` key: pending until the rows are read, pending again
   whenever another song is loaded), and registers it with the shell
@@ -145,17 +148,21 @@ plus a per-song reset.
     - `useTrackMixerEntries`
     - `useTrackVolumeMap`
 - Server:
-  - Contributes: `resource.declare` "sonata-track-view"
+  - Contributes:
+    - `resource.declare` "sonata-track-view.v2"
+    - `resource.declare` "sonata-track-view.v2:rows"
   - Uses:
     - `apps/sonata/library._songs`
     - `database.db`
     - `infra/endpoints.implement`
     - `infra/entities.defaultNow`
     - `infra/entities.defineEntity`
-    - `network/live.serveValue`
+    - `network/live.serveCollection`
   - DB schema: `plugins/apps/plugins/sonata/plugins/track-mixer/server/internal/tables.ts`
   - Exports (values): `_trackView`
-  - Resources: `sonata-track-view` (push, whole: one song's per-track view overrides — at most one row per track of that song)
+  - Resources:
+    - `sonata-track-view.v2` (keyed)
+    - `sonata-track-view.v2:rows` (keyed, point)
   - Routes:
     - `POST /api/sonata/songs/:songId/track-view`
     - `DELETE /api/sonata/songs/:songId/track-view`

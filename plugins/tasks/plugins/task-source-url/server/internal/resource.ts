@@ -13,7 +13,7 @@ export const attemptSourceUrlServed = serveValue(attemptSourceUrl, {
   reads: {
     tables: [_attempts, _tasks, tasksSourceUrl.table],
     reason:
-      "the source url joins an attempt to its task and the task's source-url row; a write to any row may change any subscribed attempt, whole-table until it reads through a collection",
+      "the source url joins an attempt to its task and the task's source-url row; a write to any row may change any subscribed attempt, whole-table until it follows them through collections (task-1793650999-1nff0e)",
   },
   loader: async ({ attemptId }) => {
     const [row] = await db

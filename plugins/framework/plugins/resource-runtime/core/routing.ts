@@ -83,6 +83,23 @@ export type HostMap =
       kind: "identity";
       column?: string;
       encode?: (value: string) => string;
+      columns?: never;
+      compose?: never;
+    }
+  /**
+   * The table's rows ARE host rows, keyed by a COMPOSITE primary key: each
+   * changed row's host id is `compose` of its `columns` (the key's parts, in
+   * order), read row-aligned off the change's carried `keys` (old ∪ new for an
+   * UPDATE, so a re-keyed row names both ids). A row the keys do not carry — a
+   * statement past the keys cap, a missing column, a NULL part — is unknown:
+   * the tuple recomputes FULL. A `D` means the host row is gone.
+   */
+  | {
+      kind: "identity";
+      columns: readonly string[];
+      compose: (parts: readonly string[]) => string;
+      column?: never;
+      encode?: never;
     }
   /**
    * The changed row carries its host key in `column` (an extension's
@@ -210,6 +227,9 @@ export function tableLayoutRequirements(
     const map = route.map;
     if (map.kind !== "full" && map.column !== undefined) {
       req.carry.add(map.column);
+    }
+    if (map.kind === "identity" && map.columns !== undefined) {
+      for (const column of map.columns) req.carry.add(column);
     }
     for (const column of Object.keys(route.rows ?? {})) req.carry.add(column);
     for (const column of route.match ?? []) req.carry.add(column);
@@ -781,12 +801,17 @@ function selectRows(
 // The changed values a map reads, or `null` when they are unknown. A map with no
 // `column` reads the PK straight off `change.ids` — the row filter cannot narrow
 // those (ids are not row-aligned with `keys`), so it over-approximates to every
-// changed row: one extra refill, never a missed one.
+// changed row: one extra refill, never a missed one. A composite identity
+// composes each selected row's id from its carried key columns.
 function valuesOf(
   change: TableChange,
   rows: number[] | "unknown",
-  column: string | undefined,
+  map: Exclude<HostMap, { kind: "full" }>,
 ): string[] | null {
+  if (map.kind === "identity" && map.columns !== undefined) {
+    return composedValuesOf(change, rows, map.columns, map.compose);
+  }
+  const column = map.column;
   if (column === undefined) return change.ids === null ? null : [...change.ids];
   if (rows === "unknown") return null;
   const values = change.keys?.[column];
@@ -795,6 +820,36 @@ function valuesOf(
   for (const i of rows) {
     const v = values[i];
     if (v !== null && v !== undefined) out.add(v);
+  }
+  return [...out];
+}
+
+// Each selected row's composite id, or `null` (unknown ⇒ FULL) when a row's
+// part is not carried: the keys are absent (over the cap), a column is
+// missing from the layout, or a part is NULL (a key column is NOT NULL, so a
+// NULL is a layout this map cannot read).
+function composedValuesOf(
+  change: TableChange,
+  rows: number[] | "unknown",
+  columns: readonly string[],
+  compose: (parts: readonly string[]) => string,
+): string[] | null {
+  if (rows === "unknown") return null;
+  const carried: (readonly (string | null)[])[] = [];
+  for (const column of columns) {
+    const values = change.keys?.[column];
+    if (values === undefined) return null;
+    carried.push(values);
+  }
+  const out = new Set<string>();
+  for (const i of rows) {
+    const parts: string[] = [];
+    for (const values of carried) {
+      const v = values[i];
+      if (v === null || v === undefined) return null;
+      parts.push(v);
+    }
+    out.add(compose(parts));
   }
   return [...out];
 }
@@ -838,7 +893,7 @@ export function routeTuple(
     }
     // 3. Unmappable, or values unknown ⇒ this tuple recomputes FULL.
     if (route.map.kind === "full") return { kind: "full" };
-    const values = valuesOf(change, rows, route.map.column);
+    const values = valuesOf(change, rows, route.map);
     if (values === null) return { kind: "full" };
     if (values.length === 0) continue;
     touched = true;

@@ -27,7 +27,7 @@ export const historyVersionServed = serveValue(historyVersion, {
   reads: {
     tables: [_entityVersions],
     reason:
-      "a coalesce into or deletion of the version changes its snapshot; whole-table until it reads through a collection",
+      "a coalesce into or deletion of the version changes its snapshot; whole-table until it follows the row through a collection (task-1793650999-1nff0e)",
   },
   loader: async ({ sourceId, entityId, versionId }) => {
     const [row] = await db

@@ -807,7 +807,7 @@ Details:
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`
     - `ui/tokens/shadow --shadow`
-  - Imported by: 305 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 304 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×83
     - `conversations` ×50
     - `debug` ×29
@@ -816,8 +816,8 @@ Details:
     - `page` ×16
     - `primitives` ×15
     - `infra` ×9
-    - `active-data` ×7
     - `build` ×7
+    - `active-data` ×6
     - `plugin-meta` ×5
     - `auth` ×4
     - `apps-core` ×3

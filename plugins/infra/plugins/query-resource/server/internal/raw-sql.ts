@@ -149,3 +149,33 @@ export function anyOfExpr(
   if (canonicalSqlType(type) === "text") return sql`${col} = ANY(${param})`;
   return sql`${col} = ANY(ARRAY(SELECT x::${sql.raw(type)} FROM unnest(${param}) AS x WHERE pg_input_is_valid(x, ${type})))`;
 }
+
+/**
+ * `(c1, …, cn) IN (SELECT * FROM unnest($1::t1[], …, $n::tn[]))` — a
+ * composite key's membership test over `tuples` (each one value per column,
+ * in column order): ONE array param per column whatever the count, each cast
+ * to its column's type, so Postgres compares the keys it stored and the
+ * primary key's index serves the probe. The tuples are VOUCHED FOR — every
+ * part valid input for its column (the caller checks untrusted ids first): a
+ * bad one fails the cast, loudly.
+ */
+export function tupleIn(
+  cols: readonly PgColumn[],
+  tuples: readonly (readonly string[])[],
+): SQL {
+  for (const t of tuples) {
+    if (t.length !== cols.length) {
+      throw new Error(
+        `tupleIn: a tuple of ${t.length} parts for ${cols.length} columns`,
+      );
+    }
+  }
+  const arrays = cols.map(
+    (col, i) =>
+      sql`${sql.param(tuples.map((t) => t[i]!))}::${sql.raw(col.getSQLType())}[]`,
+  );
+  return sql`(${sql.join(
+    cols.map((c) => sql`${c}`),
+    sql`, `,
+  )}) IN (SELECT * FROM unnest(${sql.join(arrays, sql`, `)}))`;
+}

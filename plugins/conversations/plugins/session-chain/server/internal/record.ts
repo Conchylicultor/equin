@@ -1,7 +1,7 @@
 import { asc, desc, eq, inArray, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { z } from "zod";
-import { db } from "@plugins/database/server";
+import { db, type DbExecutor } from "@plugins/database/server";
 import { parsed } from "@plugins/database/plugins/sql-projection/server";
 import { sessionLinkIdKind } from "../../core";
 import { _conversationSessions } from "./tables";
@@ -28,12 +28,13 @@ export interface SessionChainEntry {
  * stays pinned at first-seen, which is what the transcript merge wants (first
  * occurrence wins, original timestamps survive).
  *
- * `conn` is injectable so DB-backed tests can drive a throwaway database.
+ * `conn` is injectable so DB-backed tests can drive a throwaway database, and
+ * so the reconciler appends inside the transaction that writes the tail.
  */
 export async function recordSessionId(
   conversationId: string,
   claudeSessionId: string,
-  conn: NodePgDatabase = db,
+  conn: DbExecutor = db,
 ): Promise<void> {
   const [tail] = await conn
     .select({ claudeSessionId: _conversationSessions.claudeSessionId })

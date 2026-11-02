@@ -1,12 +1,9 @@
+import { index } from "drizzle-orm/pg-core";
 import {
-  index,
-  pgTable,
-  primaryKey,
-  text,
-  timestamp,
-} from "drizzle-orm/pg-core";
-import { deriveUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
-import { rankText } from "@plugins/primitives/plugins/rank/server";
+  defaultNow,
+  defineEntity,
+} from "@plugins/infra/plugins/entities/server";
+import { rowOrderEntityRef } from "../../core";
 
 /**
  * Generic per-view-instance manual ROW ORDER, keyed by
@@ -19,28 +16,18 @@ import { rankText } from "@plugins/primitives/plugins/rank/server";
  * so a deleted row leaves a stale entry until the view's next reorder replaces
  * the set. Identical bounded-table posture as `data_view_custom_values`; see this
  * plugin's CLAUDE.md § Retention.
+ *
+ * Declared through `defineEntity` from the one field record in
+ * `../../core/internal/resource.ts`, so the live read (`rowOrder`) is a
+ * collection `from` it — the same DDL the hand-written `pgTable` had.
  */
-export const _dataViewRowOrder = deriveUpdatedAt(
-  pgTable(
-    "data_view_row_order",
-    {
-      dataViewId: text("data_view_id").notNull(),
-      viewId: text("view_id").notNull(),
-      rowKey: text("row_key").notNull(),
-      rank: rankText("rank").notNull(),
-      createdAt: timestamp("created_at", { withTimezone: true })
-        .defaultNow()
-        .notNull(),
-      updatedAt: timestamp("updated_at", { withTimezone: true })
-        .defaultNow()
-        .notNull(),
-    },
-    (t) => [
-      primaryKey({ columns: [t.dataViewId, t.viewId, t.rowKey] }),
-      index("dvro_view_idx").on(t.dataViewId, t.viewId),
-    ],
-  ),
-  {
+export const rowOrderEntity = defineEntity(rowOrderEntityRef, {
+  primaryKey: ["dataViewId", "viewId", "rowKey"],
+  columns: {
+    createdAt: { default: defaultNow() },
+    updatedAt: { default: defaultNow() },
+  },
+  updatedAt: {
     touchedBy: {
       rank: true,
       dataViewId: false,
@@ -49,4 +36,8 @@ export const _dataViewRowOrder = deriveUpdatedAt(
       createdAt: false,
     },
   },
-);
+  indexes: (t) => [index("dvro_view_idx").on(t.dataViewId, t.viewId)],
+});
+
+// drizzle-kit schema-glob discovery, and the name every writer uses.
+export const _dataViewRowOrder = rowOrderEntity.table;

@@ -13,12 +13,13 @@ User-defined custom columns for any DataView. Two stores:
   per-app-scopable, reactive — zero new registration machinery (mirrors
   `sortPresetsExtraFields`).
 - **Values** (per-row user data keyed by `(dataViewId, rowKey, columnId)`) live in
-  the `data_view_custom_values` DB table, surfaced by the `customColumnValues` live
-  value (`liveValue` with `params: ["dataViewId"]`, served
-  `serveValue(…, { source: "db" })`, its schema a `wholeList` — recomputed by the change feed on
-  every write) + a single upsert/delete-on-empty endpoint. A value, not a
-  collection: the composite key has no single id to read a row by. The table,
-  the live value and the two endpoints are the portable child
+  the `data_view_custom_values` DB table (an entity), surfaced by the
+  `customColumnValues` scoped collection (`liveCollection("data-view-custom-values.v2",
+  { id: compositeKey(["dataViewId", "rowKey", "columnId"]), all: { by: ["dataViewId"] } })`,
+  served by `serveCollection`) + a single upsert/delete-on-empty endpoint. The id
+  is the table's composite primary key, so the change feed routes a write by its
+  carried `data_view_id`: another surface's cell reaches no tuple, this surface's
+  is a one-row keyed delta. The table, the collection and the two endpoints are the portable child
   [`plugins/values`](plugins/values/CLAUDE.md) (pure DB, so it runs in the
   browser host too); this plugin keeps the config-bound definitions and imports
   the child — never the reverse.

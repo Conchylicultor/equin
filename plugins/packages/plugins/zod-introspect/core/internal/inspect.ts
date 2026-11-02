@@ -1,4 +1,5 @@
 import { inspectV4, isV4Schema } from "./backend-v4";
+import { describedFn } from "./described-fn";
 import type {
   Schema,
   SchemaChild,
@@ -212,4 +213,29 @@ export function isUncheckedBase(schema: unknown): boolean {
   const node = inspect(schema);
   if (!BASE_KINDS.has(node.kind) || node.checks.length > 0) return false;
   return !("coerce" in node) || !node.coerce;
+}
+
+/**
+ * Does `schema` hand back exactly the text it parses — an unchecked
+ * `z.string()`, or one piped only into `retype` (a brand: its output IS its
+ * input, `z.string().transform(retype<Id<"song">>)`)? Then a value it decodes
+ * and the stored text are one spelling, so the text can stand for the value
+ * (a scope param bound as the stored text the change feed carries). Any check,
+ * coercion, codec or other transform says no.
+ */
+export function isTextPassthrough(schema: unknown): boolean {
+  const node = inspect(schema);
+  if (node.kind === "string") return isUncheckedBase(schema);
+  if (node.kind !== "pipe" || node.codec || node.checks.length > 0) {
+    return false;
+  }
+  if (inspect(node.in).kind !== "string" || !isUncheckedBase(node.in)) {
+    return false;
+  }
+  const out = inspect(node.out);
+  return (
+    out.kind === "transform" &&
+    out.checks.length === 0 &&
+    describedFn(out.fn)?.fn === "retype"
+  );
 }

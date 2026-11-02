@@ -1286,7 +1286,10 @@ async function allRecord(
     return fullRows;
   });
   return {
-    keyField: compiled.keyField,
+    keyField:
+      typeof compiled.keyField === "string"
+        ? compiled.keyField
+        : { composite: [...compiled.keyField.fields] },
     definition: compiled.definition,
     options: optionsOf(all),
     routes: await routesOf(h, all),

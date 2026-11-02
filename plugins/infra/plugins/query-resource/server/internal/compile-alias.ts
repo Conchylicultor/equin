@@ -16,6 +16,7 @@ import {
 } from "@plugins/database/plugins/sql-projection/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { columnSchema } from "@plugins/database/plugins/sql-column/server";
+import { isTextPassthrough } from "@plugins/packages/plugins/zod-introspect/core";
 import type {
   DerivedRead,
   KeyedServerResourceOptions,
@@ -32,6 +33,7 @@ import {
 } from "@plugins/primitives/plugins/keyset/server";
 import {
   BASE_RELATION,
+  isCompositeKey,
   liveReadCode,
   type AggregateRef,
   type AllJoinRefs,
@@ -39,9 +41,11 @@ import {
   type AllQueryParams,
   type AllQueryResourceContract,
   type ColumnRef,
+  type CompositeKey,
   type ExprField,
   type JoinSpec,
   type PointQueryResourceContract,
+  type QueryKey,
   type RollupJoin,
 } from "@plugins/infra/plugins/query-resource/core";
 import { routedReads } from "./arm-plan";
@@ -61,6 +65,7 @@ import {
 import {
   compileGrouped,
   groupedRelationsOf,
+  NO_GROUPED,
   type GroupedJoinSpec,
   type GroupedScope,
 } from "./grouped";
@@ -78,12 +83,15 @@ import {
   canonicalSqlType,
   decoderOfRead,
   fromSql,
+  tupleIn,
   type InvalidIdPolicy,
 } from "./raw-sql";
 import {
   compiledRoutePlan,
   routedBase,
   tablePrimary,
+  tablePrimaryColumns,
+  type CompositeIdentity,
   type RawRoute,
 } from "./routes";
 import type {
@@ -139,6 +147,17 @@ liveReadCode.include(import.meta);
 // the param. Such a set is never preloaded, so never persisted; its
 // definition is computed all the same, over a placeholder param. `:rows`
 // stays global (by id), with no match.
+//
+// A set whose key is COMPOSITE (the contract's `queryPk` a `CompositeKey`,
+// declared `id: compositeKey([...])`) is over a table with a composite
+// primary key — its fields read the key's columns, in the key's order. Every
+// key site derives from the one codec: `orderIds` selects the parts and JS
+// composes each id (`encodeParts`), a refill or `:rows` read decodes its ids
+// back to tuples (`(c1, …) IN (SELECT * FROM unnest(…))`), and the base
+// identity route composes a changed row's id from the parts the change feed
+// carries. Such a set reads its base table alone (a join is keyed by one host
+// column), and the pk columns, ascending, break order ties. Research:
+// research/2026-11-02-global-live-composite-key-collections.md.
 
 /** The wire columns a routed source binds through: an entity's, or a table's own. */
 type SourceColumns<T extends RoutedSource> = T extends EntitySource
@@ -173,7 +192,11 @@ export interface AllCollectionSpec<
   T extends RoutedSource = RoutedSource,
   J extends readonly AllJoinSpec[] = readonly AllJoinSpec[],
 > {
-  /** The base table — never a view (A1). Its single-column primary key is the host identity. */
+  /**
+   * The base table — never a view (A1). Its primary key is the host
+   * identity: a single column, or — a contract keyed by a `CompositeKey` —
+   * the composite key the codec's fields read, in its order.
+   */
   from: T;
   /** Row-wise joins (extension, lookup, keyed side, rollup) and grouped ones (children, closure). */
   joins?: J;
@@ -223,15 +246,17 @@ export interface CompiledAllCollection<
   all: KeyedServerResourceOptions<Row[], P> & ScopePolicy<P>;
   rows: KeyedServerResourceOptions<Row[], PointParams> &
     ScopePolicy<PointParams>;
-  keyField: string;
+  /** The row's key: the key field, or the composite key's codec. */
+  keyField: QueryKey;
   /** The L2 definition the `all` plan carries (A18). */
   definition: string;
   /**
    * What a follow copies of each half (`./follow`): `rows` by `{ ids }`
-   * always, `all` by `{ where }` only for a scoped set (`null` otherwise —
+   * unless the key is composite (`null`: an id follow matches one key
+   * column), `all` by `{ where }` only for a scoped set (`null` otherwise —
    * a whole unscoped set is no tuple of a computed value's).
    */
-  followable: { all: FollowablePlan | null; rows: FollowablePlan };
+  followable: { all: FollowablePlan | null; rows: FollowablePlan | null };
 }
 
 /**
@@ -265,16 +290,35 @@ export function compileAllCollection<
   }
   if (contracts.rows.queryPk !== contract.queryPk) {
     fail(
-      `the point contract keys on "${contracts.rows.queryPk}", the whole set on "${contract.queryPk}" — one row, one key.`,
+      `the point contract keys on ${describeKey(contracts.rows.queryPk)}, the whole set on ${describeKey(contract.queryPk)} — one row, one key.`,
     );
   }
   const db: QueryDb = spec.db ?? (realDb as unknown as QueryDb);
   const base = routedBase(spec.from, label);
-  const pk =
-    tablePrimary(base.table) ??
+  const queryKey: QueryKey = contract.queryPk;
+  const composite: CompositeKey | null = isCompositeKey(queryKey)
+    ? queryKey
+    : null;
+  // The host identity: the one pk column, or the composite key's columns.
+  const pkColumns = tablePrimaryColumns(base.table);
+  const pk: PgColumn | CompositeIdentity =
+    composite === null
+      ? (tablePrimary(base.table) ??
+        fail(
+          `the base table "${base.name}" has no single-column primary key${pkColumns.length > 1 ? ` (its key is composite: ${pkColumns.map((c) => `"${c.name}"`).join(", ")}) — declare the collection's id as \`compositeKey([...])\` over its fields` : ""} — the whole set is keyed by its host identity.`,
+        ))
+      : pkColumns.length === composite.fields.length && pkColumns.length > 1
+        ? { columns: pkColumns, key: composite }
+        : fail(
+            `the id is a composite key over ${composite.fields.length} fields, but the base table "${base.name}"'s primary key is ${pkColumns.length === 0 ? "none" : pkColumns.map((c) => `"${c.name}"`).join(", ")} — a composite id is the table's composite primary key, field for column.`,
+          );
+  const hostPk: PgColumn | undefined =
+    composite === null ? (pk as PgColumn) : undefined;
+  if (composite !== null && (spec.joins ?? []).length > 0) {
     fail(
-      `the base table "${base.name}" has no single-column primary key — the whole set is keyed by its host identity.`,
+      "a composite-keyed set reads its base table alone — a join is keyed by one host column, and the set has none.",
     );
+  }
   const sourceColumns: Record<string, PgColumn> = isEntitySource(spec.from)
     ? spec.from.wireColumns
     : (getTableColumns(base.table) as Record<string, PgColumn>);
@@ -288,16 +332,19 @@ export function compileAllCollection<
     else rowWise.push(j);
   }
   const relations = groupedRelationsOf(groupedSpecs, fail);
-  const plan = compileAllJoins(base, rowWise, pk, label, relations);
-  const grouped = compileGrouped(groupedSpecs, {
-    plan,
-    base,
-    hostPk: pk,
-    relations,
-    db,
-    label,
-    fail,
-  });
+  const plan = compileAllJoins(base, rowWise, hostPk, label, relations);
+  const grouped =
+    hostPk === undefined
+      ? NO_GROUPED
+      : compileGrouped(groupedSpecs, {
+          plan,
+          base,
+          hostPk,
+          relations,
+          db,
+          label,
+          fail,
+        });
 
   // ── `j`, and the projection over it ──────────────────────────────────────
   const windowJoins = rowWise.filter((j): j is JoinSpec => j.kind !== "rollup");
@@ -361,17 +408,42 @@ export function compileAllCollection<
     // Every read must be one the plan knows (its SQL type and nullability).
     plan.sqlTypeOf(f.read);
   }
-  const keyField = contract.queryPk;
-  const keyRead =
-    select[keyField] ??
-    fail(
-      `the key field "${keyField}" is not projected — a row is keyed by it.`,
-    );
-  if (!sameColumn(keyRead as ReadColumn, pk)) {
-    fail(
-      `the key field "${keyField}" does not read the base table's primary key "${pk.name}" — the whole set is keyed by its host identity.`,
-    );
-  }
+  // The key's fields, each reading its pk column (a composite key's in the
+  // key's order — the order the feed's parts and the codec's agree on).
+  const keyFields: readonly string[] =
+    composite === null ? [queryKey as string] : composite.fields;
+  const keyColumns: readonly PgColumn[] =
+    composite === null ? [pk as PgColumn] : pkColumns;
+  keyFields.forEach((keyField, i) => {
+    const col = keyColumns[i]!;
+    const keyRead =
+      select[keyField] ??
+      fail(
+        `the key field "${keyField}" is not projected — a row is keyed by it.`,
+      );
+    if (!sameColumn(keyRead as ReadColumn, col)) {
+      fail(
+        composite === null
+          ? `the key field "${keyField}" does not read the base table's primary key "${col.name}" — the whole set is keyed by its host identity.`
+          : `the key field "${keyField}" (part ${i + 1} of the composite id) does not read the primary key's column "${col.name}" — a composite id is the table's primary key, field for column, in the key's order.`,
+      );
+    }
+  });
+  // What the key's parts must be, as text: the canonical `col::text` the
+  // change feed carries (a composite part only — a single id is checked by
+  // the column's own cast).
+  const partChecks =
+    composite === null
+      ? []
+      : pkColumns.map((col) => {
+          const sqlType = canonicalSqlType(col.getSQLType());
+          return (
+            canonicalTextOf(sqlType) ??
+            fail(
+              `the composite id's column "${col.name}" is ${sqlType} — a key part is text, uuid or an integer: its text must have one spelling the change feed's carried key can equal.`,
+            )
+          );
+        });
   if (where !== undefined) {
     for (const [relation, column] of plan.columnsIn(where)) {
       if (plan.isGrouped(relation)) {
@@ -404,9 +476,13 @@ export function compileAllCollection<
     orderReads.push(r);
     return { fieldId: field, col: r, dir, nullable: plan.canBeNull(r) };
   });
-  if (!orderReads.some((r) => sameColumn(r, pk))) {
-    sortKeys.push({ fieldId: keyField, col: pk, dir: "asc", nullable: false });
-  }
+  // The key breaks ties — each of its columns the order does not name yet.
+  keyFields.forEach((fieldId, i) => {
+    const col = keyColumns[i]!;
+    if (!orderReads.some((r) => sameColumn(r, col))) {
+      sortKeys.push({ fieldId, col, dir: "asc", nullable: false });
+    }
+  });
   const orderSql = sql.join(orderByClauses(sortKeys), sql`, `);
   // A capped set (`all: { max }`) reads one row past its cap, so a set that
   // outgrew it is a loud loader error, never a silently truncated list. The
@@ -442,7 +518,7 @@ export function compileAllCollection<
     joins: plan,
     projection: select,
     pk,
-    keyField,
+    keyField: keyFields,
     where,
     whereReads: undefined,
     match: scope.map((s) => s.col),
@@ -491,7 +567,10 @@ export function compileAllCollection<
   };
   const fromWith = (): SQL =>
     sql.join(
-      [fromSql(base, plan, rowIncluded, label), ...grouped.outerJoins(pk)],
+      [
+        fromSql(base, plan, rowIncluded, label),
+        ...(hostPk === undefined ? [] : grouped.outerJoins(hostPk)),
+      ],
       sql` `,
     );
   const fullSql = (params: AllParams): SQL => {
@@ -504,18 +583,61 @@ export function compileAllCollection<
     if (limitSql !== null) parts.push(limitSql);
     return sql.join(parts, sql` `);
   };
+  // A composite key's host tuples: each id decoded and each part checked
+  // against its column's canonical text. A vouched-for id (a route's, the
+  // runtime's refill) that fails is a broken invariant — thrown; a client's
+  // (`:rows`) names no row — absent.
+  const hostTuples = (
+    hosts: readonly string[],
+    invalid: InvalidIdPolicy,
+  ): string[][] => {
+    const key = composite!;
+    const tuples: string[][] = [];
+    for (const id of hosts) {
+      const parts = key.decode(id);
+      const bad =
+        parts === null || parts.some((p, i) => partChecks[i]!(p) !== null);
+      if (!bad) tuples.push(parts);
+      else if (invalid === "throws") {
+        fail(
+          `the host id ${JSON.stringify(id)} is no id of this set's composite key — a routed or refilled id is the codec's.`,
+        );
+      }
+    }
+    return tuples;
+  };
+  // The refill / `:rows` shape over `hosts` — `null` when no host can match
+  // (every composite id was absent), so the caller reads nothing.
   const scopedSql = (
     hosts: readonly string[],
     invalid: InvalidIdPolicy,
     params: AllParams | null,
-  ): SQL => {
+  ): SQL | null => {
+    if (composite !== null) {
+      const tuples = hostTuples(hosts, invalid);
+      return tuples.length === 0 ? null : scopedTupleSql(tuples, params);
+    }
     const hostIn = (col: PgColumn): SQL => anyOf(col, hosts, { invalid });
-    return sql`${withOf({ kind: "scoped", hostIn })}SELECT ${projection} FROM ${fromWith()} WHERE ${allOf([whereOf(params), hostIn(pk)])}`;
+    return sql`${withOf({ kind: "scoped", hostIn })}SELECT ${projection} FROM ${fromWith()} WHERE ${allOf([whereOf(params), hostIn(pk as PgColumn)])}`;
   };
+  const scopedTupleSql = (
+    tuples: readonly (readonly string[])[],
+    params: AllParams | null,
+  ): SQL =>
+    sql`SELECT ${projection} FROM ${fromWith()} WHERE ${allOf([whereOf(params), tupleIn(pkColumns, tuples)])}`;
+  // The ids' columns `orderIds` selects: `__id`, or a composite key's parts
+  // `__k0`… (composed in JS).
+  const idSelect =
+    composite === null
+      ? sql`${pk as PgColumn} AS __id`
+      : sql.join(
+          pkColumns.map((c, i) => sql`${c} AS ${sql.identifier(`__k${i}`)}`),
+          sql`, `,
+        );
   const orderIdsSql = (params: AllParams): SQL => {
     const w = whereOf(params);
     const parts = [
-      sql`SELECT ${pk} AS __id FROM ${fromSql(base, plan, membershipIncluded, label)}`,
+      sql`SELECT ${idSelect} FROM ${fromSql(base, plan, membershipIncluded, label)}`,
     ];
     if (w !== undefined) parts.push(sql`WHERE ${w}`);
     parts.push(sql`ORDER BY ${orderSql}`);
@@ -539,7 +661,9 @@ export function compileAllCollection<
   const rendered = {
     full: renderQuery(fullSql(placeholder), "the full shape", fail),
     scoped: renderQuery(
-      scopedSql(["$ids"], "throws", placeholder),
+      composite === null
+        ? scopedSql(["$ids"], "throws", placeholder)!
+        : scopedTupleSql([pkColumns.map((_, i) => `$ids${i}`)], placeholder),
       "the scoped shape",
       fail,
     ),
@@ -581,6 +705,17 @@ export function compileAllCollection<
     return rows.map(encode);
   };
   const orderOf = async (params: AllParams): Promise<string[]> => {
+    if (composite !== null) {
+      const parts = pkColumns.map((_, i) => `__k${i}`);
+      const rows = await executeRows(db, {
+        query: orderIdsSql(params),
+        row: decodedRow(Object.fromEntries(parts.map((p) => [p, String]))),
+        label: `${key}:orderIds`,
+      });
+      return capped(rows, "orderIds").map((r) =>
+        composite.encodeParts(parts.map((p) => r[p] as string)),
+      );
+    }
     const rows = await executeRows(db, {
       query: orderIdsSql(params),
       row: decodedRow({ __id: String }),
@@ -607,7 +742,9 @@ export function compileAllCollection<
       full: rendered.full,
       scoped: rendered.scoped,
       orderIds: rendered.orderIds,
-      keyField,
+      // A single key keeps its field (the definition every existing set had);
+      // a composite one its fields, in order.
+      keyField: composite === null ? queryKey : { composite: keyFields },
       orderBy: contract.all.orderBy,
       fields: fields.map((f) => [
         f.name,
@@ -680,10 +817,15 @@ export function compileAllCollection<
     for (const s of scope) s.check(key, params[s.field]!);
   };
   const all = {
-    loader: (params: AllParams, ctx?: { affectedIds: readonly string[] }) =>
-      ctx
-        ? load(scopedSql(ctx.affectedIds, "throws", params), "scoped")
-        : load(fullSql(params), "full").then((rows) => capped(rows, "full")),
+    loader: (params: AllParams, ctx?: { affectedIds: readonly string[] }) => {
+      if (!ctx) {
+        return load(fullSql(params), "full").then((rows) =>
+          capped(rows, "full"),
+        );
+      }
+      const scoped = scopedSql(ctx.affectedIds, "throws", params);
+      return scoped === null ? Promise.resolve([]) : load(scoped, "scoped");
+    },
     ...allPolicy,
     ...(spec.debounceMs != null ? { debounceMs: spec.debounceMs } : {}),
     ...(scope.length === 0 ? {} : { validateParams: validateScope }),
@@ -701,9 +843,8 @@ export function compileAllCollection<
       ctx?: { affectedIds: readonly string[] },
     ) => {
       const ids = ctx?.affectedIds ?? point.decode(params);
-      return ids.length === 0
-        ? []
-        : load(scopedSql(ids, "absent", null), "rows");
+      const scoped = ids.length === 0 ? null : scopedSql(ids, "absent", null);
+      return scoped === null ? [] : load(scoped, "rows");
     },
     ...rowsPolicy,
   } as KeyedServerResourceOptions<Row[], PointParams> &
@@ -712,7 +853,7 @@ export function compileAllCollection<
   return {
     all: all as unknown as CompiledAllCollection<Row, AllQueryParams<B>>["all"],
     rows,
-    keyField,
+    keyField: queryKey,
     definition,
     followable: {
       all:
@@ -724,12 +865,17 @@ export function compileAllCollection<
               scope.map((s) => ({ field: s.field, column: s.col.name })),
               validateScope,
             ),
-      rows: followablePoint(
-        contracts.rows.key,
-        rowsPolicy.routes as unknown as RoutePlan<ResourceParams>,
-        pk,
-        (ids) => point.encode(ids),
-      ),
+      // An id follow matches the feed's one key column; a composite key
+      // has none (a composite-keyed set is followed by its scope).
+      rows:
+        composite === null
+          ? followablePoint(
+              contracts.rows.key,
+              rowsPolicy.routes as unknown as RoutePlan<ResourceParams>,
+              pk as PgColumn,
+              (ids) => point.encode(ids),
+            )
+          : null,
     },
   };
 }
@@ -763,9 +909,12 @@ function scopeOf(
       );
     }
     const col = plan.columnOf(read);
-    if (columnSchema(col) !== undefined) {
+    // A decoder that only re-types its text (an id kind's brand) round-trips
+    // it: the param, the stored text and the decoded value are one spelling.
+    const decoder = columnSchema(col);
+    if (decoder !== undefined && !isTextPassthrough(decoder)) {
       fail(
-        `the scope field "${field}" (\`all.by\`) is a decoded column (sql-column) — a scope is a plain text, uuid or integer column: its param is bound as the stored text the change feed carries, which a decoder may not round-trip.`,
+        `the scope field "${field}" (\`all.by\`) is a decoded column (sql-column) — a scope is a plain text, uuid or integer column (or one whose decoder only brands its text): its param is bound as the stored text the change feed carries, which a decoder may not round-trip.`,
       );
     }
     const sqlType = canonicalSqlType(plan.sqlTypeOf(read));
@@ -788,6 +937,13 @@ function scopeOf(
       },
     };
   });
+}
+
+/** A key as an error names it: its field, or its composite fields. */
+function describeKey(key: QueryKey): string {
+  return isCompositeKey(key)
+    ? `the composite key (${key.fields.join(", ")})`
+    : `"${key}"`;
 }
 
 function isEntitySource(from: RoutedSource): from is EntitySource {

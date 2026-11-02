@@ -289,7 +289,10 @@ no contributor).
 - **`RoutePlan`** (keyed, membership arms only) holds `Route`s, each with:
   - a table occurrence;
   - a `HostMap`: `identity` | `alias` | `reverse` | `full` (`identity` / `alias`
-    with no `column` read the table's single-column PK);
+    with no `column` read the table's single-column PK; a composite
+    `identity` lists its pk `columns` and a `compose`, and each changed row's
+    host id is composed from those carried keys — a missing column, a NULL
+    part or keys over the NOTIFY cap go FULL, `core/routing-composite.test.ts`);
   - the referenced `columns`;
   - an optional key filter.
 

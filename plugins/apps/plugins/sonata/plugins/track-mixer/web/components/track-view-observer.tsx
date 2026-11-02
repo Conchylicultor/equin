@@ -6,7 +6,7 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { foldResource } from "@plugins/primitives/plugins/live-state/web";
-import { trackViews } from "../../shared/resources";
+import { trackViewScope, trackViews } from "../../shared/resources";
 import { trackViewSetting } from "../track-view-setting";
 
 /**
@@ -25,7 +25,7 @@ export function TrackViewObserver() {
   const songId = useMountedSongId();
   const setTrackViews = useWriteSongSetting(trackViewSetting);
   const failSetting = useFailSongSetting(trackViewSetting);
-  const views = useLive(trackViews, { songId });
+  const views = useLive(trackViews, trackViewScope(songId));
   // A failed read settles only from its last-seen rows (`stale`); with none the
   // setting is reported FAILED (below) — never a stand-in value — so the
   // player shows the failure with Retry instead of waiting forever.

@@ -8,7 +8,7 @@ import { _dataViewCustomValues } from "./tables";
  * Delete every per-row value for one custom column across a surface (column
  * removal), keyed by `(dataViewId, columnId)` — no `rowKey` predicate, so it
  * clears the column across all rows. The write recomputes
- * the `customColumnValues` live value via the L4 DB change-feed.
+ * the `customColumnValues` live collection via the L4 DB change-feed.
  */
 export const handleDeleteCustomColumnValues = implement(
   deleteCustomColumnValues,

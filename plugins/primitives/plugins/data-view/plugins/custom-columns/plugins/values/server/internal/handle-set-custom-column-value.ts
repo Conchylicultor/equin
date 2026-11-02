@@ -8,7 +8,7 @@ import { _dataViewCustomValues } from "./tables";
  * Upsert a single custom-column cell, or DELETE it when the new value is empty
  * (so clearing a cell leaves no orphan row). Keyed by the composite PK
  * `(dataViewId, rowKey, columnId)`. The write recomputes
- * the `customColumnValues` live value via the L4 DB change-feed.
+ * the `customColumnValues` live collection via the L4 DB change-feed.
  */
 export const handleSetCustomColumnValue = implement(
   setCustomColumnValue,

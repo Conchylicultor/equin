@@ -8,8 +8,8 @@ import { agentNotesAuthors, type AgentNotesAuthor } from "../shared/schemas";
 
 /**
  * The conversations that wrote into one agent-notes card, oldest-first — the
- * loader's `ORDER BY created_at`, which a value delivers as is (it is pushed
- * whole, never merged row by row).
+ * collection's declared order (`createdAt`, then `conversationId`), which a
+ * scoped set holds its rows in.
  *
  * "Not loaded yet" stays its own state: the caller decides what a card whose
  * provenance has not arrived shows, rather than reading it as "no recorded
@@ -18,7 +18,7 @@ import { agentNotesAuthors, type AgentNotesAuthor } from "../shared/schemas";
 export function useAgentNotesAuthors(
   blockId: string,
 ): ResourceResult<AgentNotesAuthor[]> {
-  return useLive(agentNotesAuthors, { blockId });
+  return useLive(agentNotesAuthors, { where: { blockId } });
 }
 
 /**

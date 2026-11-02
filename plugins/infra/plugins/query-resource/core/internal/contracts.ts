@@ -5,6 +5,7 @@ import type {
   WindowResourceDescriptor,
   WindowSelector,
 } from "@plugins/primitives/plugins/live-state/core";
+import type { CompositeKey } from "./composite-key";
 
 // The web-safe half of a query-resource declaration: the contract a server
 // compiler consumes. Each is a live-state descriptor plus one extra field —
@@ -31,9 +32,16 @@ export type WindowQueryResourceContract<
   queryPk: string;
 };
 
+/**
+ * What a row's key is: one row field, or — for a whole ordered set over a
+ * composite primary key (and its `:rows`) — a {@link CompositeKey} over
+ * several, which the client `keyOf` and every server key site derive from.
+ */
+export type QueryKey = string | CompositeKey;
+
 export type PointQueryResourceContract<Row> = PointResourceDescriptor<Row> & {
-  /** The row field the client `keyOf` reads — matched against the server keyField. */
-  queryPk: string;
+  /** The row's key the client `keyOf` reads — matched against the server's. */
+  queryPk: QueryKey;
   point: {
     /**
      * The most ids one tuple may name: `encode` throws past it, and `decode`
@@ -101,6 +109,6 @@ export type AllQueryResourceContract<
         /** The row fields a tuple is scoped by — its params' keys, in declaration order. */
         by: readonly B[];
       });
-  /** The row field the client `keyOf` reads — matched against the server keyField. */
-  queryPk: string;
+  /** The row's key the client `keyOf` reads — matched against the server's. */
+  queryPk: QueryKey;
 } & ([B] extends [never] ? unknown : { preload?: never });

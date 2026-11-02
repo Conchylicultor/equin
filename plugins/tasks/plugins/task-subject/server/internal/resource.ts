@@ -11,7 +11,7 @@ export const subjectTaskServed = serveValue(subjectTask, {
   reads: {
     tables: [tasksSubject.table, _tasks],
     reason:
-      "a subject's live task joins the subject links to the tasks they name; a link written or a task dropped may change any subject, whole-table until it reads through a collection",
+      "a subject's live task joins the subject links to the tasks they name; a link written or a task dropped may change any subject, whole-table until it follows them through collections (task-1793650999-1nff0e)",
   },
   loader: async ({ kind, id }) => ({
     taskId: await findSubjectTask({ kind, id }),

@@ -342,7 +342,19 @@ async function apply(row: Conversation, plan: UpdatePlan): Promise<void> {
       break;
   }
 
-  await updateConversation(id, plan.patch);
+  // An adopted session id is written twice — the tail on the row, the link in
+  // the chain — in ONE transaction: one commit, so every transcript read
+  // (which reads both) reloads once, and none ever sees the tail without its
+  // link. The chain's `seenAt` is that transaction's start: one id per
+  // transaction, so the chain's order holds.
+  const adopted = plan.adoptedSessionId;
+  await updateConversation(
+    id,
+    plan.patch,
+    adopted
+      ? { alongside: (tx) => recordSessionId(id, adopted, tx) }
+      : undefined,
+  );
 
   // Its agent holds a turn it will not start: the status now says stuck, and
   // the cause — a Claude Code wedged while alive — is worth an investigation.
@@ -374,17 +386,10 @@ async function apply(row: Conversation, plan: UpdatePlan): Promise<void> {
   // `conversations.claude_session_id` is the live TAIL (what `claude --resume`
   // hands back); the chain is the full ordered history the transcript readers
   // merge. Every id the reconciler adopts — including the first, since `null →
-  // sid` flows through this same branch — is appended here, behind the
-  // adoption gate, so neither a session with no file on disk nor one whose file
-  // lives in another conversation's directory ever enters the chain.
-  //
-  // Chain ORDER comes from `seenAt` = the DB's `now()`, which is TRANSACTION
-  // START time. Safe here: each call is its own implicit transaction, and
-  // reconciles are serialized through `reconcileGate`. A future caller appending
-  // two ids inside one transaction would give them an identical `seenAt` and
-  // scramble the chain order.
-  if (plan.adoptedSessionId) {
-    await recordSessionId(id, plan.adoptedSessionId);
+  // sid` flows through this same branch — was appended above with the tail,
+  // behind the adoption gate, so neither a session with no file on disk nor one
+  // whose file lives in another conversation's directory ever enters the chain.
+  if (adopted) {
     // Let any live subscriber follow the new file now, rather than at the next
     // 30s watcher reconcile.
     await refreshConversationChain(id);

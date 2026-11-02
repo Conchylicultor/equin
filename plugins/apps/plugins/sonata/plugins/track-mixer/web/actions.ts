@@ -4,7 +4,7 @@ import {
   enqueueResourceWrite,
 } from "@plugins/primitives/plugins/optimistic-mutation/web";
 import { resetTrackView, upsertTrackView } from "../shared/endpoints";
-import { trackViews } from "../shared/resources";
+import { trackViewScope, trackViews } from "../shared/resources";
 
 // Fire-and-forget writes: the UI never reads the response — state refreshes via
 // the `trackViews` push the write's commit triggers. `enqueueDetachedWrite`
@@ -25,7 +25,7 @@ import { trackViews } from "../shared/resources";
 // same moment.
 //
 // `enqueueResourceWrite` puts each write on the song's send lane — the
-// `trackViews` `{ songId }` tuple — which departs them strictly in the order
+// `trackViews` scope of the song (`trackViewScope`) — which departs them strictly in the order
 // they were issued. One lane covers every track-view write for that song: that
 // serializes writes across its tracks too, which costs a little head-of-line
 // latency and buys the guarantee that nothing here can reorder. Writes for
@@ -39,7 +39,7 @@ function send(
 ): void {
   enqueueDetachedWrite(
     trackViews,
-    { songId },
+    trackViewScope(songId),
     { label: "Track", describe },
     write,
   );
@@ -150,7 +150,7 @@ export function setTracksActive(
   trackIds: readonly string[],
   active: boolean,
 ): Promise<void> {
-  return enqueueResourceWrite(trackViews, { songId }, () =>
+  return enqueueResourceWrite(trackViews, trackViewScope(songId), () =>
     fetchEndpoint(
       upsertTrackView,
       { songId },

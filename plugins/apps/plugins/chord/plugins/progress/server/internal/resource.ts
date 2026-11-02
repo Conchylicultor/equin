@@ -26,7 +26,7 @@ export const chordProgressServed = serveValue(chordProgress, {
   reads: {
     tables: [_chordAnswers, _chordRounds, _chordIndexState, _chordIndexRequest],
     reason:
-      "an answer or round changes the standing of any chord set; the index rows decide the catalog's Rare pool; whole-table until it reads through a collection",
+      "an answer or round changes the standing of any chord set; the index rows decide the catalog's Rare pool: one aggregate over the whole answer history, so whole-table by nature",
     outsideFeed: {
       tables: [_chordLoopWindows],
       reason:

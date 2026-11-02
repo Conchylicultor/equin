@@ -100,6 +100,7 @@ tag.get(schema);                       // T | undefined
     - `describeSchema`
     - `fallbackTo`
     - `inspect`
+    - `isTextPassthrough`
     - `isUncheckedBase`
     - `isZodSchema`
     - `OPAQUE_MARK`

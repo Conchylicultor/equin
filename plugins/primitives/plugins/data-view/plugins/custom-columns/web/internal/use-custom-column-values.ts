@@ -44,7 +44,7 @@ function indexValues(
  * `(rowKey, columnId)`.
  */
 export function useCustomColumnValues(dataViewId: string): CustomColumnValues {
-  const result = useLive(customColumnValues, { dataViewId });
+  const result = useLive(customColumnValues, { where: { dataViewId } });
   return useMemo(() => mapResource(result, indexValues), [result]);
 }
 

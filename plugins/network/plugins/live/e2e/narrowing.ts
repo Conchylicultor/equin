@@ -35,6 +35,26 @@
  * zero), `viewed` markers, a task title toggled and restored, and fixture
  * conversations — every one deleted before the run ends (their synthetic
  * session-chain rows stay: the chain is append-only).
+ *
+ * `--suite composite` (session 3, research/2026-11-02-global-live-composite-key-collections.md)
+ * measures the five values over composite-key tables instead: each held on
+ * one scope X — row order and custom values on fixture data views
+ * (`narrowing-fixture:…`), bindings on fixture conversation F, track views
+ * on `--song`, agent-notes authors on a content block of `--page` — plus F's
+ * transcript values (recording a session: the adoption transaction). Phases:
+ * ten writes on another scope of each (pass = 0 loads, 0 frames), the same
+ * writes on X (one load, a keyed delta of about one row, each), then one
+ * record-session on F. `--composite-keys old|v2` picks the keys (the old
+ * whole-table values, or their `.v2` scoped collections).
+ *
+ *   ./equin run plugins/network/plugins/live/e2e/narrowing.ts --suite composite \
+ *     --attempt <A> --page <page id> --other-page <page id> \
+ *     --song <song id> --other-song <song id> [--composite-keys old|v2] [--runs 3]
+ *
+ * Its writes: rows under the two fixture data views (deleted after), bindings
+ * on F and G (cascaded with them), track-view overrides on the two songs
+ * (refused unless both start with none; reset after), author stamps under
+ * fixture-minted conversation ids (deleted after).
  */
 import { PROTOCOL } from "@plugins/packages/plugins/resource-protocol/core";
 import { canonicalJson } from "@plugins/packages/plugins/canonical-params/core";
@@ -89,25 +109,47 @@ const GAP_MS = numArg("gap-ms", 300);
 // (2026-10-28 baseline trial): the drain had not run when the counters were read.
 const SETTLE_MS = numArg("settle-ms", 6000);
 const RUNS = numArg("runs", 1);
+const SUITE = arg("suite", "transcripts");
+const COMPOSITE_KEYS = arg("composite-keys", "old");
+const SONG = arg("song", "");
+const OTHER_SONG = arg("other-song", "");
 
 // Not importable (a `shared/` declaration): the literal keys.
 const COMMITS_GRAPH_KEY = "commits-graph.graph";
 const PLUGIN_CHANGES_KEY = "review.plugin-changes";
 
 const r = report("[12] cost of a write per live tuple");
-for (const [name, v] of [
-  ["--page", PAGE],
-  ["--other-page", OTHER_PAGE],
-  ["--attempt", ATTEMPT],
-  ["--attempt-b", ATTEMPT_B],
-  ["--conv", CONV],
-  ["--other-task", OTHER_TASK],
-] as const) {
+if (SUITE !== "transcripts" && SUITE !== "composite") {
+  r.fail("--suite", "transcripts | composite");
+}
+if (COMPOSITE_KEYS !== "old" && COMPOSITE_KEYS !== "v2") {
+  r.fail("--composite-keys", "old | v2");
+}
+const required: (readonly [string, string])[] =
+  SUITE === "composite"
+    ? [
+        ["--attempt", ATTEMPT],
+        ["--page", PAGE],
+        ["--other-page", OTHER_PAGE],
+        ["--song", SONG],
+        ["--other-song", OTHER_SONG],
+      ]
+    : [
+        ["--page", PAGE],
+        ["--other-page", OTHER_PAGE],
+        ["--attempt", ATTEMPT],
+        ["--attempt-b", ATTEMPT_B],
+        ["--conv", CONV],
+        ["--other-task", OTHER_TASK],
+      ];
+for (const [name, v] of required) {
   if (v === "") r.fail(name, "required");
 }
-if (OTHERS.length === 0) r.fail("--others", "pass other conversation ids");
-if (SUB_BY !== "call" && SUB_BY !== "agent") {
-  r.fail("--subagent", "<call|agent>:<key>");
+if (SUITE === "transcripts") {
+  if (OTHERS.length === 0) r.fail("--others", "pass other conversation ids");
+  if (SUB_BY !== "call" && SUB_BY !== "agent") {
+    r.fail("--subagent", "<call|agent>:<key>");
+  }
 }
 if (r.failures.length > 0) await r.finish();
 
@@ -210,8 +252,8 @@ async function toggleTitle(id: string): Promise<void> {
 
 /** The fixture conversations alive now — deleted at the end of a run, failed or not. */
 const alive = new Set<string>();
-async function fixture(body: NarrowingFixtureBody): Promise<string> {
-  const { conversationId } = await json<{ conversationId: string }>(
+async function fixture(body: NarrowingFixtureBody): Promise<string | null> {
+  const { conversationId } = await json<{ conversationId: string | null }>(
     narrowingFixture.path,
     {
       method: "POST",
@@ -219,12 +261,12 @@ async function fixture(body: NarrowingFixtureBody): Promise<string> {
       body: JSON.stringify(body),
     },
   );
-  if (body.action === "create-conversation") alive.add(conversationId);
-  if (body.action === "delete-conversation") alive.delete(conversationId);
+  if (body.action === "create-conversation") alive.add(conversationId!);
+  if (body.action === "delete-conversation") alive.delete(conversationId!);
   return conversationId;
 }
-const createConv = (attemptId: string) =>
-  fixture({ action: "create-conversation", attemptId });
+const createConv = async (attemptId: string): Promise<string> =>
+  (await fixture({ action: "create-conversation", attemptId }))!;
 const deleteConv = (conversationId: string) =>
   fixture({ action: "delete-conversation", conversationId });
 
@@ -319,18 +361,36 @@ interface Row {
 // An even number of toggles leaves every row as it was.
 const evenWrites = WRITES % 2 === 0 ? WRITES : WRITES + 1;
 
-async function run(n: number): Promise<Row[]> {
+/** What a sub-ack answered, by tuple id — a suite's precondition checks read it. */
+type Acked = Map<string, unknown>;
+
+/**
+ * Hold `initial` over one socket, then run `phases` in order, reporting each
+ * key of `keys` per phase: Δloads by parent, Δfeed, Δack overflows, drift and
+ * the frames received per tuple label.
+ */
+async function measure(opts: {
+  initial: Sub[];
+  keys: readonly string[];
+  /**
+   * Runs once `initial` settled; throw to refuse the run (a precondition).
+   * `unsubscribe` drops a tuple held only for the check.
+   */
+  check?: (acked: Acked, unsubscribe: (subs: Sub[]) => void) => void;
+  phases: (subscribe: (subs: Sub[]) => void) => Phase[];
+}): Promise<Row[]> {
   const served = await debug();
-  const pluginChanges = served.has(PLUGIN_CHANGES_KEY);
-  if (n === 0 && !pluginChanges) {
-    r.note(`${PLUGIN_CHANGES_KEY} not served by this deploy: not measured`);
+  for (const k of opts.keys) {
+    if (!served.has(k))
+      r.fail(
+        k,
+        "not served by this deploy (pass --page-key / --composite-keys?)",
+      );
   }
-  // F: the fixture whose transcript / worktree values are held beside C's.
-  // G: a fixture in B nobody holds (record-session there reaches no tuple).
-  const F = await createConv(ATTEMPT);
-  const G = await createConv(ATTEMPT_B);
+  if (r.failures.length > 0) await r.finish();
 
   const labelOf = new Map<string, string>();
+  const acked: Acked = new Map();
   const frames: {
     phase: string;
     kind: string;
@@ -356,6 +416,7 @@ async function run(n: number): Promise<Row[]> {
     if (m.kind === "sub-error" && phase === "subscribe") {
       r.fail(`sub ${m.key}`, `${String(m.reason)} ${String(m.message ?? "")}`);
     }
+    if (m.kind === "sub-ack") acked.set(tupleId(m.key, m.params), m.value);
     frames.push({
       phase,
       kind: String(m.kind),
@@ -383,120 +444,30 @@ async function run(n: number): Promise<Row[]> {
     }
   };
 
-  const initial = [
-    ...pageSubs,
-    ...attemptSubs("A", ATTEMPT),
-    ...convSubs("C", CONV, pluginChanges),
-    ...convSubs("F", F, pluginChanges),
-  ];
-  const bSubs = attemptSubs("B", ATTEMPT_B);
-  const KEYS = [...new Set([...initial, ...bSubs].map((s) => s.key))];
-  for (const k of KEYS) {
-    if (!served.has(k))
-      r.fail(k, "not served by this deploy (pass --page-key?)");
-  }
-  if (r.failures.length > 0) await r.finish();
-  subscribe(initial);
+  const unsubscribe = (subs: Sub[]) => {
+    for (const s of subs) {
+      ws.send(
+        JSON.stringify({ op: "unsub", key: s.key, params: s.params, tabId }),
+      );
+    }
+  };
+
+  subscribe(opts.initial);
   await sleep(SETTLE_MS * 2);
   if (r.failures.length > 0) await r.finish();
-
-  const created: string[] = [];
-  let H = "";
-  const PHASES: Phase[] = [
-    {
-      name: "block on another page",
-      related: false,
-      writes: evenWrites,
-      write: () => toggleBlock(OTHER_PAGE),
-    },
-    {
-      name: "viewed: other conversations",
-      related: false,
-      writes: WRITES,
-      write: (i) => viewed(OTHERS[i % OTHERS.length]!),
-    },
-    {
-      name: "viewed: C",
-      related: false,
-      writes: WRITES,
-      write: () => viewed(CONV),
-    },
-    {
-      name: "another task's title",
-      related: false,
-      writes: evenWrites,
-      write: () => toggleTitle(OTHER_TASK),
-    },
-    {
-      name: "create-conversation into B (B not held)",
-      related: false,
-      writes: WRITES,
-      write: async () => {
-        created.push(await createConv(ATTEMPT_B));
-      },
-      cleanup: async () => {
-        for (const id of created) await deleteConv(id);
-      },
-    },
-    {
-      name: "record-session: unheld fixture",
-      related: false,
-      writes: WRITES,
-      write: async () => {
-        await fixture({ action: "record-session", conversationId: G });
-      },
-      // B's values are held from here on (the related phases move F into B).
-      cleanup: async () => subscribe(bSubs),
-    },
-    {
-      name: "block on the held page",
-      related: true,
-      writes: evenWrites,
-      write: () => toggleBlock(PAGE),
-    },
-    {
-      name: "create-conversation into A",
-      related: true,
-      writes: 1,
-      write: async () => {
-        H = await createConv(ATTEMPT);
-      },
-      cleanup: async () => {
-        await deleteConv(H);
-      },
-    },
-    {
-      name: "record-session: F",
-      related: true,
-      writes: 1,
-      write: async () => {
-        await fixture({ action: "record-session", conversationId: F });
-      },
-    },
-    {
-      name: "move-conversation F A→B",
-      related: true,
-      writes: 1,
-      write: async () => {
-        await fixture({
-          action: "move-conversation",
-          conversationId: F,
-          attemptId: ATTEMPT_B,
-        });
-      },
-    },
-    {
-      name: "delete-conversation F",
-      related: true,
-      writes: 1,
-      write: async () => {
-        await deleteConv(F);
-      },
-    },
-  ];
+  if (opts.check) {
+    try {
+      opts.check(acked, unsubscribe);
+    } catch (err) {
+      ws.close();
+      throw err;
+    }
+    await sleep(SETTLE_MS);
+  }
 
   const rows: Row[] = [];
-  for (const p of PHASES) {
+  for (const p of opts.phases(subscribe)) {
+    if (p.setup) await p.setup();
     const [dBefore, lBefore] = [await debug(), await loads()];
     phase = p.name;
     for (let i = 0; i < p.writes; i++) {
@@ -506,7 +477,7 @@ async function run(n: number): Promise<Row[]> {
     await sleep(SETTLE_MS);
     phase = `${p.name} (settled)`;
     const [dAfter, lAfter] = [await debug(), await loads()];
-    for (const k of KEYS) {
+    for (const k of opts.keys) {
       const lb = lBefore.get(k);
       const la = lAfter.get(k);
       const parents = [...(la?.byParent ?? new Map<string, number>())]
@@ -541,9 +512,329 @@ async function run(n: number): Promise<Row[]> {
     }
   }
   ws.close();
-  for (const id of [...alive]) await deleteConv(id);
   return rows;
 }
+
+// ─── Suite: transcripts (session 2) ──────────────────────────────────────────
+
+async function runTranscripts(n: number): Promise<Row[]> {
+  const pluginChanges = (await debug()).has(PLUGIN_CHANGES_KEY);
+  if (n === 0 && !pluginChanges) {
+    r.note(`${PLUGIN_CHANGES_KEY} not served by this deploy: not measured`);
+  }
+  // F: the fixture whose transcript / worktree values are held beside C's.
+  // G: a fixture in B nobody holds (record-session there reaches no tuple).
+  const F = await createConv(ATTEMPT);
+  const G = await createConv(ATTEMPT_B);
+
+  const initial = [
+    ...pageSubs,
+    ...attemptSubs("A", ATTEMPT),
+    ...convSubs("C", CONV, pluginChanges),
+    ...convSubs("F", F, pluginChanges),
+  ];
+  const bSubs = attemptSubs("B", ATTEMPT_B);
+  const created: string[] = [];
+  let H = "";
+  return measure({
+    initial,
+    keys: [...new Set([...initial, ...bSubs].map((s) => s.key))],
+    phases: (subscribe) => [
+      {
+        name: "block on another page",
+        related: false,
+        writes: evenWrites,
+        write: () => toggleBlock(OTHER_PAGE),
+      },
+      {
+        name: "viewed: other conversations",
+        related: false,
+        writes: WRITES,
+        write: (i) => viewed(OTHERS[i % OTHERS.length]!),
+      },
+      {
+        name: "viewed: C",
+        related: false,
+        writes: WRITES,
+        write: () => viewed(CONV),
+      },
+      {
+        name: "another task's title",
+        related: false,
+        writes: evenWrites,
+        write: () => toggleTitle(OTHER_TASK),
+      },
+      {
+        name: "create-conversation into B (B not held)",
+        related: false,
+        writes: WRITES,
+        write: async () => {
+          created.push(await createConv(ATTEMPT_B));
+        },
+        cleanup: async () => {
+          for (const id of created) await deleteConv(id);
+        },
+      },
+      {
+        name: "record-session: unheld fixture",
+        related: false,
+        writes: WRITES,
+        write: async () => {
+          await fixture({ action: "record-session", conversationId: G });
+        },
+        // B's values are held from here on (the related phases move F into B).
+        cleanup: async () => subscribe(bSubs),
+      },
+      {
+        name: "block on the held page",
+        related: true,
+        writes: evenWrites,
+        write: () => toggleBlock(PAGE),
+      },
+      {
+        name: "create-conversation into A",
+        related: true,
+        writes: 1,
+        write: async () => {
+          H = await createConv(ATTEMPT);
+        },
+        cleanup: async () => {
+          await deleteConv(H);
+        },
+      },
+      {
+        name: "record-session: F",
+        related: true,
+        writes: 1,
+        write: async () => {
+          await fixture({ action: "record-session", conversationId: F });
+        },
+      },
+      {
+        name: "move-conversation F A→B",
+        related: true,
+        writes: 1,
+        write: async () => {
+          await fixture({
+            action: "move-conversation",
+            conversationId: F,
+            attemptId: ATTEMPT_B,
+          });
+        },
+      },
+      {
+        name: "delete-conversation F",
+        related: true,
+        writes: 1,
+        write: async () => {
+          await deleteConv(F);
+        },
+      },
+    ],
+  });
+}
+
+// ─── Suite: composite (session 3) ────────────────────────────────────────────
+
+// Not importable (`shared/` declarations, or renamed by the migration): the
+// literal keys, old (whole-table values) or `.v2` (scoped collections).
+const v = (key: string) => (COMPOSITE_KEYS === "v2" ? `${key}.v2` : key);
+const ROW_ORDER_KEY = v("data-view-row-order");
+const CUSTOM_VALUES_KEY = v("data-view-custom-values");
+const BINDINGS_KEY = v("active-data.bindings");
+const TRACK_VIEW_KEY = v("sonata-track-view");
+const AUTHORS_KEY = v("agent-notes-authors");
+
+// A write whose answer the run never reads (some answer no body at all).
+async function send(path: string, init: RequestInit): Promise<void> {
+  const res = await agentFetch(path, init);
+  if (!res.ok) {
+    throw new Error(
+      `${init.method ?? "GET"} ${path}: ${res.status} ${await res.text()}`,
+    );
+  }
+}
+const post = (path: string, body: unknown, method = "POST") =>
+  send(path, {
+    method,
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+// Each write a real change: a rank / value / payload / volume flips with `i`.
+const setOrder = (dataViewId: string, viewId: string, i: number) =>
+  post("/api/data-view/row-order", {
+    dataViewId,
+    viewId,
+    writes: [{ rowKey: "narrowing-row", rank: i % 2 === 0 ? "a0" : "a1" }],
+  });
+const setCell = (dataViewId: string, i: number) =>
+  post("/api/data-view/custom-values", {
+    dataViewId,
+    rowKey: "narrowing-row",
+    columnId: "narrowing-col",
+    value: `v${i}`,
+  });
+const putBinding = (conversationId: string, i: number) =>
+  post(
+    `/api/active-data/bindings/${conversationId}/narrowing-msg/narrowing/0`,
+    { payload: { i } },
+    "PUT",
+  );
+const setTrack = (songId: string, i: number) =>
+  post(`/api/sonata/songs/${songId}/track-view`, {
+    trackIds: ["narrowing-track"],
+    volume: i % 2 === 0 ? 0.5 : 1,
+  });
+const resetTracks = (songId: string) =>
+  send(`/api/sonata/songs/${songId}/track-view`, { method: "DELETE" });
+const stampAuthor = (blockId: string) =>
+  fixture({ action: "stamp-agent-author", blockId });
+
+const DV = { a: "narrowing-fixture:dvA", b: "narrowing-fixture:dvB" };
+
+async function runComposite(n: number): Promise<Row[]> {
+  // F: the fixture whose bindings and transcript values are held; G: another
+  // conversation's bindings, nobody's.
+  const F = await createConv(ATTEMPT);
+  const G = await createConv(ATTEMPT);
+  const block = (await contentBlockOf(PAGE)).id;
+  const otherBlock = (await contentBlockOf(OTHER_PAGE)).id;
+  if (n === 0) {
+    r.note(`keys: ${COMPOSITE_KEYS}; held block ${block}, other ${otherBlock}`);
+  }
+  const held: Sub[] = [
+    {
+      label: "X",
+      key: ROW_ORDER_KEY,
+      params: { dataViewId: DV.a, viewId: "viewA" },
+    },
+    { label: "X", key: CUSTOM_VALUES_KEY, params: { dataViewId: DV.a } },
+    { label: "X", key: BINDINGS_KEY, params: { conversationId: F } },
+    { label: "X", key: TRACK_VIEW_KEY, params: { songId: SONG } },
+    { label: "X", key: AUTHORS_KEY, params: { blockId: block } },
+  ];
+  // Held only to check the other song starts with no overrides (a reset
+  // after the run would otherwise delete the user's).
+  const probe: Sub = {
+    label: "probe",
+    key: TRACK_VIEW_KEY,
+    params: { songId: OTHER_SONG },
+  };
+  const initial = [...held, probe, ...convSubs("F", F, false)];
+  const cleanup = async () => {
+    for (const dv of [DV.a, DV.b]) {
+      await fixture({ action: "clear-row-order", dataViewId: dv });
+      await post("/api/data-view/custom-values/delete-column", {
+        dataViewId: dv,
+        columnId: "narrowing-col",
+      });
+    }
+    for (const b of [block, otherBlock]) {
+      await fixture({ action: "clear-agent-authors", blockId: b });
+    }
+  };
+  let songsChecked = false;
+  try {
+    return await measure({
+      initial,
+      keys: [...new Set(initial.map((s) => s.key))],
+      check: (acked, unsubscribe) => {
+        for (const songId of [SONG, OTHER_SONG]) {
+          const value = acked.get(tupleId(TRACK_VIEW_KEY, { songId }));
+          if (!Array.isArray(value) || value.length > 0) {
+            throw new Error(
+              `song ${songId} has track-view overrides (${JSON.stringify(value)}) — pass songs with none: the run resets both`,
+            );
+          }
+        }
+        songsChecked = true;
+        unsubscribe([probe]);
+      },
+      phases: () => [
+        {
+          name: "row order: other view",
+          related: false,
+          writes: WRITES,
+          write: (i) => setOrder(DV.a, "viewB", i),
+        },
+        {
+          name: "custom value: other data view",
+          related: false,
+          writes: WRITES,
+          write: (i) => setCell(DV.b, i),
+        },
+        {
+          name: "binding: other conversation",
+          related: false,
+          writes: WRITES,
+          write: (i) => putBinding(G, i),
+        },
+        {
+          name: "track view: other song",
+          related: false,
+          writes: WRITES,
+          write: (i) => setTrack(OTHER_SONG, i),
+        },
+        {
+          name: "author stamp: other block",
+          related: false,
+          writes: WRITES,
+          write: async () => {
+            await stampAuthor(otherBlock);
+          },
+        },
+        {
+          name: "row order: held view",
+          related: true,
+          writes: WRITES,
+          write: (i) => setOrder(DV.a, "viewA", i),
+        },
+        {
+          name: "custom value: held data view",
+          related: true,
+          writes: WRITES,
+          write: (i) => setCell(DV.a, i),
+        },
+        {
+          name: "binding: F",
+          related: true,
+          writes: WRITES,
+          write: (i) => putBinding(F, i),
+        },
+        {
+          name: "track view: held song",
+          related: true,
+          writes: WRITES,
+          write: (i) => setTrack(SONG, i),
+        },
+        {
+          name: "author stamp: held block",
+          related: true,
+          writes: WRITES,
+          write: async () => {
+            await stampAuthor(block);
+          },
+        },
+        {
+          name: "record-session: F",
+          related: true,
+          writes: 1,
+          write: async () => {
+            await fixture({ action: "record-session", conversationId: F });
+          },
+        },
+      ],
+    });
+  } finally {
+    await cleanup();
+    if (songsChecked) {
+      for (const songId of [SONG, OTHER_SONG]) await resetTracks(songId);
+    }
+  }
+}
+
+const run = (n: number) =>
+  SUITE === "composite" ? runComposite(n) : runTranscripts(n);
 
 // ─── Runs, medians, report ───────────────────────────────────────────────────
 

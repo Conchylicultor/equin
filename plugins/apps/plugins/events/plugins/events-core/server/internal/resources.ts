@@ -47,7 +47,7 @@ export const runEventsServed = serveValue(runEvents, {
   reads: {
     tables: [_eventSourceRuns, _eventSourceRunEvents, _events, _eventSources],
     reason:
-      "one run's events joined to their sources, and the run's existence check; whole-table until it reads through a collection",
+      "one run's events joined to their sources, and the run's existence check; whole-table until it follows them through collections (task-1793650999-1nff0e)",
   },
   loader: async ({ runId }) => {
     if (!(await runExists(runId))) {

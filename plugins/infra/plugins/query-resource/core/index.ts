@@ -3,6 +3,7 @@ export type {
   AllQueryParams,
   AllQueryResourceContract,
   PointQueryResourceContract,
+  QueryKey,
   WindowQueryResourceContract,
 } from "./internal/contracts";
 export { BASE_RELATION, familyMember } from "./internal/joins";
@@ -55,6 +56,12 @@ export type {
 export { expr, isExprField } from "./internal/expr";
 export type { ExprField } from "./internal/expr";
 export { armKeyCodec, KIND_RE } from "./internal/arm-key";
+export {
+  COMPOSITE_KEY_MAX_FIELDS,
+  compositeKey,
+  isCompositeKey,
+} from "./internal/composite-key";
+export type { CompositeKey } from "./internal/composite-key";
 export type { ArmKeyCodec } from "./internal/arm-key";
 export { SQL_TYPE_RE } from "./internal/expr";
 export type { ExprDecoder } from "./internal/expr";

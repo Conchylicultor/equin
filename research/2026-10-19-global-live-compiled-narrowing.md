@@ -212,7 +212,7 @@ serveValue(attemptWork, {
 
 `findWorkspaceOfConversation` (raw SQL, kept to avoid a cycle) stays only for non-resource callers.
 
-### D. Composite keys (session 3)
+### D. Composite keys (session 3) — refined and landed by `2026-11-02-global-live-composite-key-collections.md` (no trigger change: ids composed from the carried pk columns)
 
 **One key codec** in `query-resource/core/internal/composite-key.ts`, shared by web and server:
 - `compositeKey(["dataViewId","viewId","rowKey"])` percent-encodes each part and joins with `/`. `,` is always encoded, so `isPointId` and comma-joined point sets keep working.
