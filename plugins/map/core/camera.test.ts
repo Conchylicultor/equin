@@ -3,6 +3,7 @@ import {
   SINGLE_POINT_ZOOM,
   boundsContain,
   cameraFor,
+  framingOverlays,
   overlayPositions,
 } from "./camera";
 import type { MapOverlay } from "./overlays";
@@ -59,6 +60,37 @@ describe("overlayPositions", () => {
       { lat: 3, lng: 3 },
       { lat: 4, lng: 4 },
     ]);
+  });
+});
+
+describe("framingOverlays", () => {
+  const pin = (id: string, frame?: false): MapOverlay => ({
+    kind: "pin",
+    id,
+    pinType: "x",
+    position: { lat: 1, lng: 1 },
+    ...(frame === undefined ? {} : { frame }),
+  });
+  const ids = (os: readonly MapOverlay[]) => os.map((o) => o.id);
+
+  test("leaves out frame: false overlays", () => {
+    expect(ids(framingOverlays([pin("a"), pin("b", false)]))).toEqual(["a"]);
+  });
+
+  test("focusIds narrows to the overlays it names", () => {
+    expect(
+      ids(framingOverlays([pin("a"), pin("b"), pin("c")], ["c", "a"])),
+    ).toEqual(["a", "c"]);
+  });
+
+  test("an empty focusIds narrows nothing", () => {
+    expect(ids(framingOverlays([pin("a"), pin("b")], []))).toEqual(["a", "b"]);
+  });
+
+  test("a focused frame: false overlay is still left out", () => {
+    expect(ids(framingOverlays([pin("a", false), pin("b")], ["a"]))).toEqual(
+      [],
+    );
   });
 });
 

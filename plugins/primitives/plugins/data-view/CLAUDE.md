@@ -1564,7 +1564,7 @@ Views call `useItemActionZones(itemActions, { hasPersistentSlot, hasPrimarySlot 
 | gallery | `true` | `true` (round button, cover bottom-right) | cover top-right float chip (`DataCard.actions.atRest`) |
 | table | `true` | `false` — `true` with `cover: true` | the reserved trailing `auto` track |
 | nested table | `true` (`false` for `outline`) | `false` | the row's trailing cell |
-| list | `false` (keeps title width in narrow sidebars) | `true` while the row shows a cover thumbnail | — demoted to the hover cluster |
+| list | `false` (keeps title width in narrow sidebars) | `true` while the row shows a cover thumbnail | — demoted to the hover cluster (painted at rest with `actionsAtRest`) |
 | icons | `true` | `false` | tile top-right float chip |
 
 `CollectionItemAction`s are always `revealed`. **`primitives/action-presentation` is
@@ -2004,8 +2004,8 @@ list, table and `primitives/tree` share it.
     - `DataViewSlots.Control` ← `primitives.data-view`
     - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
     - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-  - Contributes: 103 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.WebRegister` ×93
+  - Contributes: 104 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.WebRegister` ×94
     - `DataViewSlots.Control` ×4
     - `DataViewSlots.Setting` ×4
     - `IdKinds.Kind` ×2
@@ -2272,8 +2272,8 @@ list, table and `primitives/tree` share it.
     - `useViewRowCounts`
     - `wearsTimeInk`
 - Server:
-  - Contributes: 95 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.Register` ×93
+  - Contributes: 96 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.Register` ×94
     - `ids.kind` ×2
   - Uses:
     - `config_v2.getConfig`

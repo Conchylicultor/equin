@@ -70,6 +70,8 @@ export const taskDetailPane = Pane.define({
     text.
   - They don't change collision shape and don't count as "paramful" for
     `useResolve`.
+  - An app's index pane may declare them with no positional part
+    (`segment: ";page"`) — see "The index pane carries them" below.
 - **Surface view keys `;view.<surface>`** — every pane carries them undeclared
   (`surfaceViewKey(surface)`, core; grammar `[A-Za-z0-9._-]+`): which view of
   one surface (e.g. a DataView, keyed by its id) is on screen.
@@ -83,16 +85,29 @@ export const taskDetailPane = Pane.define({
   - Only `fillSegment(…, { ownSlot: true })` writes them.
   - A pane with no keyed params strips only a trailing run of
     `;view.<surface>=…` (and a retired bare `;view=…`).
-- **The index pane carries them on the base path**:
-  `/sonata;view.sonata.library=all`. It is not a slot, so its keyed params live
-  beside the route in the store (`getIndexParams()`):
-  - parsed off a leading `;…` (`parseUrl` → `index`);
-  - saved in `history.state` as `index`;
+- **The index pane carries them on the base path** — surface view keys and
+  its own declared keyed params: `segment: ";page"` (no positional part) gives
+  `/places;page=x`, `/sonata;view.sonata.library=all`. It is not a slot, so its
+  keyed params live beside the route in the store (`getIndexParams()`):
+  - parsed off a leading `;…` (`parseUrl` → `index`, every identifier and view
+    key — the parse knows no base path; the index match keeps only the
+    declared names, so `useParams()` is `{ page?: string }`);
+  - written declared names first (declaration order), then views, sorted;
+  - saved in `history.state` and the persisted tab as `index`;
   - carried by `navigate()` / boot;
   - dropped by a navigation that doesn't pass them
     (`setRoute(route, replace, index)`).
 
-  A non-index pane with no URL part of its own cannot carry them.
+  Link: `route.link(app, { page })` → `/places;page=x` (`{}` → `/places/`).
+  Change: `pane.useSetParams()({ page })` — a history push; the route and the
+  mounted pane untouched (no remount; views kept). Open:
+  `openPane(indexPane, { page }, { mode: "root" })` lands on the bare root with
+  them (`clearRoute({ index })`) — any root open of an index pane does; other
+  modes throw for one with keyed params.
+
+  Only an `appIndex` pane may have a keyed-only segment (`Pane.define`
+  throws), and such a route cannot have child routes (`defineRoute` throws: as
+  a mid-route ancestor its keys would have no part to ride).
 - **`useResolve`** is required exactly when the route's own segment has a
   `:param`, forbidden otherwise; opt out with `useResolve: false`.
   - It is a hook (`Hook<…>` brand, `primitives/hook-value`) returning a
@@ -620,8 +635,9 @@ portals; collapsed Miller columns too).
 `appIndex: true` marks the app's landing pane — what the bare base path shows
 with an empty route.
 
-- Its route has `segment: ""`; registry sync throws on a segment-bearing index
-  pane or a second index per app.
+- Its route has `segment: ""` — or keyed params only (`";page"`, written on
+  the base path, see "Keyed params"); registry sync throws on an index pane
+  with a positional part or a second index per app.
 - No global fallback: no index pane ⇒ empty main area (legitimate: `home`,
   `studio`).
 - `useIndexMatch(basePath)` resolves it; the main renderer paints it only for
@@ -917,8 +933,8 @@ with an empty route.
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-md`
     - `ui/tokens/shape --spacing`
-  - Imported by: 190 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×71
+  - Imported by: 191 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×72
     - `conversations` ×30
     - `debug` ×27
     - `active-data` ×10
@@ -965,6 +981,9 @@ with an empty route.
     - `defineRoute`
     - `fillSegment`
     - `indexKeyedSuffix`
+    - `isKeyedOnlySegment`
+    - `joinBasePath`
+    - `joinUrlParts`
     - `MissingRouteParamError`
     - `normalizeRoutePath`
     - `onlySurfaceViews`

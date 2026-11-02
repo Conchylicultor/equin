@@ -13,7 +13,7 @@ import {
   type PlaceSnapshot,
   type PlaceSuggestion,
 } from "@plugins/page/plugins/place/core";
-import { GOOGLE_PLACE_PROVIDER_ID } from "../../shared";
+import { GOOGLE_PLACE_PROVIDER_ID } from "../../core";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { googleTypeToKind } from "./type-to-kind";
 import { googleTypeToFamily } from "./type-to-family";

@@ -6116,6 +6116,43 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`mapstr-import`** — `./equin places import-mapstr <export>` — matches a Mapstr export's places to Google places (Text Search, scored by name, distance and area extent; hand decisions via --overrides and the search-place lookup verb) into a reviewable mapstr-matches.json, then with --apply replaces every place and tag with the seed tree and the matched places (Mapstr tags mapped onto seed tags, comments as notes, original save dates), in one transaction.
           - Cli:
             - Uses: `framework/server-core.runExec`
+        - **`page-overlay`** — A page's places laid over the Places map, web half: usePageOverlay(pageId) reads the page (title, icon), its blocks and your saved places live and joins them — loading, failed, the page missing, or its Google places numbered in page order, each matched to your saved place — and Open in Places — an icon button (the pane Expand glyph) contributed to the page map block's top-right corner (PageMap.Action), revealed on hover — links to /places;page=<pageId> (the map pane's ;page view, placesMapRoute — owned here so the page side needs no import of places-map).
+          - Web:
+            - Contributes: `PageMap.Action` "open-in-places" → `OpenInPlacesAction`
+            - Uses:
+              - `apps-core/tabs.useAppLink`
+              - `apps/places/places-core.usePlaces`
+              - `network/live.mapRow`
+              - `network/live.useLive`
+              - `network/live.useLiveRow`
+              - `page/map.PageMap`
+              - `primitives/icon-button.IconButton`
+              - `primitives/link-gesture.activationProps`
+              - `primitives/live-state.mapResource`
+              - `primitives/live-state.ResourceResult`
+              - `primitives/live-state.useCombinedResources`
+            - Exports (types):
+              - `PageOverlay`
+              - `PageOverlayPage`
+            - Exports (values): `usePageOverlay`
+          - Core:
+            - Uses:
+              - `apps/places/places-core.Place`
+              - `apps/places/places-core.placesByGoogleId`
+              - `fields/int/config.intField`
+              - `fields/text/config.textField`
+              - `network/live.rowKind`
+              - `page/place/google.GOOGLE_PLACE_PROVIDER_ID`
+              - `primitives/pane.defineRoute`
+            - Exports (types):
+              - `PageOverlayItem`
+              - `PageOverlayItems`
+            - Exports (values):
+              - `joinPageOverlay`
+              - `pageOverlayItemKind`
+              - `placesMapRoute`
+          - Cross-plugin:
+            - Imported by: `apps/places/places-map`
         - **`place-details`** — Reads Google's rich details of a saved place (usePlaceDetails) for the place card. Serves Google's rich details of a saved place (photos, opening hours, rating, price level, phone, website, summary) as the places.details value — at the richest tier this month's Google budget allows (with summary → without → photos only, free), one call per place per tier per day, kept in memory, never stored — and proxies its photos (GET /api/places/photo, refused once the Place Photo budget is spent) so the Places key stays on the server; and serves each Google place's gallery thumbnail (its first photo, fetched once and cached on disk; GET /api/places/thumbnail).
           - Server:
             - Contributes: `resource.declare` "places.details"
@@ -6291,6 +6328,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `places`
               - `PLACES_SEARCH_MAX_RESULTS`
               - `PLACES_SEARCH_MAX_SUGGESTIONS`
+              - `placesByGoogleId`
               - `PlaceSchema`
               - `placeSearch`
               - `PlaceSearchQuerySchema`
@@ -6316,48 +6354,61 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps/places/ask`
+              - `apps/places/page-overlay`
               - `apps/places/place-details`
               - `apps/places/places-map`
-        - **`places-map`** — The Places app's index pane (/places): every saved place on one full-bleed map whose views are filter presets (All places, then the user's own — edits are drafts until saved, ⌥1–9 switch), with its chrome floating on the map — the tag sidebar (the presets with their counts and dirty dots, the tag filter as AND-ed rows of OR-ed tags with the preset's Reset / Save as new / Update, the tag tree with faceted counts; folded, the header alone, titled by a dropdown of the presets), the side panel (the preset's places in view or all, as a list or a gallery, hover-linked with their pins, a selected place's card drilled into it), the "Search or add places" bar (your places filtered live, Google's hits around the map's view as cards to save and as ghost pins hover-linked with them, the camera never moving; Ask Sonnet hands a question to a background run shown as a thread in a card docked on the right — the newest picks as Google cards with photos, why they fit, what makes them special and their sources, earlier answers folded, as numbered pins — its progress as a pill in the bar that shows and hides the card, and the recent questions in the panel to reopen), the selected place's card or a Google place's detail card — plus the saved-place pin (a drop near, a round badge far out with each spot's size beside it), the Google result's ghost pin, Sonnet's numbered pick pin, the thread's step labels for the Ask Sonnet tools, and the transcript row of places_show_picks (the numbered picks beside a mini map, hover-linked).
+          - Test helpers:
+            - Core: `@plugins/apps/plugins/places/plugins/places-core/core/testing`
+              - `testPlace` — A saved place for a test: a Google place named after its Google id, at (0, 0), untagged — `over` sets whatever the test is about.
+        - **`places-map`** — The Places app's index pane (/places): every saved place on one full-bleed map whose views are filter presets (All places, then the user's own — edits are drafts until saved, ⌥1–9 switch), with its chrome floating on the map — the tag sidebar (the presets with their counts and dirty dots, the tag filter as AND-ed rows of OR-ed tags with the preset's Reset / Save as new / Update, the tag tree with faceted counts; folded, the header alone, titled by a dropdown of the presets), the side panel (the preset's places in view or all, as a list or a gallery, hover-linked with their pins, a selected place's card drilled into it), the "Search or add places" bar (your places filtered live, Google's hits around the map's view as cards to save and as ghost pins hover-linked with them, the camera never moving; Ask Sonnet hands a question to a background run shown as a thread in a card docked on the right — the newest picks as Google cards with photos, why they fit, what makes them special and their sources, earlier answers folded, as numbered pins — its progress as a pill in the bar that shows and hides the card, and the recent questions in the panel to reopen), the selected place's card or a Google place's detail card — plus the saved-place pin (a drop near, a round badge far out with each spot's size beside it), the Google result's ghost pin, Sonnet's numbered pick pin, the thread's step labels for the Ask Sonnet tools, and the transcript row of places_show_picks (the numbered picks beside a mini map, hover-linked). Its ;page param, /places;page=<pageId>, lays one page's places over the same map, read live (page-overlay): the page's saved places numbered, the rest dimmed, the page's places not saved yet as numbered ghost pins, the camera framed on the page, the map never remounted — and a panel in the side panel's spot listing them in page order (hover-linked with their pins, each place's card drilled in, Save and Save all with one Undo, × back to the plain map).
           - Web:
-            - Slots: `places-map.actions`
-            - Slot contributors: `places-map.actions` ← `primitives.pane`
+            - Slots:
+              - `places-map.actions`
+              - `page-overlay-item-actions`
+            - Slot contributors:
+              - `places-map.actions` ← `primitives.pane`
+              - `page-overlay-item-actions` ← `apps.places.places-map`
             - Contributes:
               - `Pane.Register` "places-map"
               - `FieldPresentation.Register` "entity:places"
               - `GeoMap.Pin` → `SavedPlacePin`
               - `GeoMap.Pin` → `GoogleResultPin`
+              - `GeoMap.Pin` → `PageItemPin`
               - `GeoMap.Pin` → `AskPickPin`
+              - `page-overlay-item-actions` "save" → `SavePageItemAction`
               - `AgentThreadSlots.StepLabel` "places_search_text" → `SearchStepLabel`
               - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
               - `JsonlViewerTool.Renderer` "mcp__equin__places_show_picks" → `PicksToolView`
-            - Uses: 128 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
-              - `primitives/data-view` ×12
+            - Uses: 136 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+              - `primitives/data-view` ×14
               - `map` ×9
               - `apps/places/places-core` ×8
               - `conversations/agent-thread` ×8
               - `primitives/collapsible` ×6
-              - `primitives/live-state` ×5
+              - `primitives/live-state` ×6
               - `network/live` ×4
               - `primitives/css/ui-kit` ×4
               - `primitives/overlay/image-viewer` ×4
               - `primitives/hover-reveal` ×3
               - `primitives/link-gesture/new-tab` ×3
               - `ui/icons` ×3
+              - `apps/places/page-overlay` ×2
               - `conversations/conversation-view/jsonl-viewer/tool-call` ×2
               - `integrations/google-maps` ×2
+              - `page/place` ×2
               - `primitives/css/clip` ×2
               - `primitives/css/layer` ×2
               - `primitives/css/rigid` ×2
               - `primitives/css/text` ×2
-              - `primitives/pane` ×2
               - `primitives/persistent-draft` ×2
               - `primitives/relative-time` ×2
               - `tag-tree/picker` ×2
+              - `apps-core/tabs.useAppLinkProps`
               - `apps/places/place-details.usePlaceDetails`
               - `apps/places/tag-manager.TagManagerPanel`
               - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
               - `integrations/google-maps/usage.useMapsBudget`
+              - `page/editor.PageIcon`
               - `primitives/app-shell.AppShellBrand`
               - `primitives/copy-to-clipboard.CopyButton`
               - `primitives/css/badge.Badge`
@@ -6390,16 +6441,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
               - `primitives/overlay/tooltip.Kbd`
+              - `primitives/pane.Pane`
               - `primitives/shortcuts.useSurfaceShortcuts`
               - `shell/toast.showToast`
               - `tag-tree/engine.useTagTreeActions`
           - Cross-plugin:
-            - Uses tokens: 30 vars — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+            - Uses tokens: 31 vars — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
               - `ui/tokens/color-palette` ×12
               - `ui/tokens/type-scale` ×7
               - `ui/tokens/density` ×6
               - `ui/tokens/shape` ×3
               - `ui/tokens/categorical --categorical-foreground`
+              - `ui/tokens/place-palette --place-overlay`
               - `ui/tokens/shadow --shadow`
         - **`shell`** — The Places app's rail entry and frame: the standard sidebar-less app shell around the full-pane renderer, where the map's index pane is shown, and the app's own light-only theme, which the places app selects.
           - Web:
@@ -12094,8 +12147,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceMode`
           - `useTabs`
       - Cross-plugin:
-        - Imported by: 41 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
-          - `apps` ×11
+        - Imported by: 43 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+          - `apps` ×13
           - `apps-core` ×9
           - `debug` ×7
           - `hints` ×2
@@ -25364,9 +25417,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `intField`
               - `intSample`
           - Cross-plugin:
-            - Imported by: 33 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
+            - Imported by: 34 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
               - `debug` ×11
-              - `apps` ×8
+              - `apps` ×9
               - `infra` ×3
               - `conversations` ×2
               - `backup/runs-arm`
@@ -26265,8 +26318,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 73 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
-              - `apps` ×20
+            - Imported by: 74 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+              - `apps` ×21
               - `conversations` ×15
               - `tasks` ×10
               - `infra` ×5
@@ -34100,7 +34153,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `layouts/full-pane`
           - `layouts/miller`
 
-- **`map`** — Vendor-neutral map primitive: <MapView overlays/> draws pins, paths and areas through the first GeoMap.Renderer (showing its set-up action while it is blocked, and a loud state when none is installed), with every pin's look contributed through the GeoMap.Pin dispatch slot keyed on its pinType, and a crowd mode the caller picks: clustering (every group of nearby pins drawn through the GeoMap.Cluster dispatch slot keyed on the pinType its pins share) or spots (every pin stays drawn — far out as a compact centred mark, with the size of each spot beside its lead pin).
+- **`map`** — Vendor-neutral map primitive: <MapView overlays/> draws pins, paths and areas through the first GeoMap.Renderer (showing its set-up action while it is blocked, and a loud state when none is installed), with every pin's look contributed through the GeoMap.Pin dispatch slot keyed on its pinType, and a crowd mode the caller picks: clustering (every group of nearby pins drawn through the GeoMap.Cluster dispatch slot keyed on the pinType its pins share) or spots (every pin stays drawn — far out as a compact centred mark, with the size of each spot beside its lead pin). Chrome drawn over the tiles — the renderer's Fit control, the empty notice and a host's `controls` — wears the map-chrome fixed theme of the tiles' scheme (<MapChrome>), so it is light over light tiles whatever the app's scheme.
   - Web:
     - Slots:
       - `GeoMap.Renderer`
@@ -34110,7 +34163,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `GeoMap.Renderer` ← `map.google`
       - `GeoMap.Pin` ← `apps.places.places-map`
       - `GeoMap.Pin` ← `page.place.map-layer`
-    - Uses:
+    - Contributes:
+      - `ThemeEngine.FixedTheme` "Map controls (dark tiles)"
+      - `ThemeEngine.FixedTheme` "Map controls (light tiles)"
+    - Uses: 21 symbols — full list in [`plugins/map/REFERENCE.md`](../plugins/map/REFERENCE.md)
+      - `primitives/persistent-draft` ×3
+      - `primitives/slot-render` ×2
       - `primitives/css/center.Center`
       - `primitives/css/coords.Placed`
       - `primitives/css/layer.Layer`
@@ -34120,16 +34178,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/css/placeholder.Placeholder`
       - `primitives/css/surface.Surface`
       - `primitives/css/text.Text`
+      - `primitives/css/theme-boundary.Theme`
       - `primitives/css/ui-kit.cn`
       - `primitives/dom/web-storage.defineStore`
       - `primitives/latest-ref.useLatestRef`
       - `primitives/loading.Loading`
-      - `primitives/persistent-draft.legacyDraftKeys`
-      - `primitives/persistent-draft.readDraft`
-      - `primitives/persistent-draft.writeDraft`
-      - `primitives/slot-render.defineDispatchSlot`
-      - `primitives/slot-render.renderIsolated`
       - `ui/icons.useIconMarkup`
+      - `ui/theme-engine.ThemeEngine`
     - Exports (types):
       - `MapClusterMarkFn`
       - `MapClusterProps`
@@ -34149,6 +34204,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `GeoMap`
       - `MAP_LABEL_HALO_PX`
       - `MAP_LABEL_PAINT`
+      - `MapChrome`
       - `MapLabel`
       - `MapMarkImage`
       - `MapView`
@@ -34240,10 +34296,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ConfigV2.WebRegister` "config"
           - `GeoMap.Renderer` "Google Maps" → `LazyBoundary`
           - `LiveMapSetup.MapIdPreview` → `MapIdPreview`
-        - Uses: 23 symbols — full list in [`plugins/map/plugins/google/REFERENCE.md`](../plugins/map/plugins/google/REFERENCE.md)
+        - Uses: 24 symbols — full list in [`plugins/map/plugins/google/REFERENCE.md`](../plugins/map/plugins/google/REFERENCE.md)
           - `integrations/google-maps` ×6
+          - `map` ×4
           - `map/pin-layer` ×3
-          - `map` ×3
           - `config_v2` ×2
           - `primitives/css/spacing` ×2
           - `primitives/css/center.Center`
@@ -34844,8 +34900,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 313 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `apps` ×83
+        - Imported by: 314 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `apps` ×84
           - `conversations` ×52
           - `debug` ×32
           - `tasks` ×31
@@ -36727,9 +36783,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape` ×2
           - `ui/tokens/font-family --font-mono`
           - `ui/tokens/shadow --shadow`
-        - Imported by: 81 plugins — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+        - Imported by: 82 plugins — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
           - `page` ×59
-          - `apps` ×10
+          - `apps` ×11
           - `reports` ×4
           - `active-data` ×3
           - `primitives` ×2
@@ -37261,10 +37317,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/inline-page-link`
           - `page/markdown-apply`
           - `page/page-link`
-    - **`map`** — Map block type: draws every located item on the page on an interactive map (through the map primitive), with overlays derived on each render from the page's blocks by contributed PageMap.Layer functions — so the map cannot drift from the page and names no block type. Clicking a pin scrolls to and selects the block it stands for; items a layer cannot place yet are counted under the map. Map block type: registers its (empty) `data` schema at the server write boundary.
+    - **`map`** — Map block type: draws every located item on the page on an interactive map (through the map primitive), with overlays derived on each render from the page's blocks by contributed PageMap.Layer functions — so the map cannot drift from the page and names no block type. Clicking a pin scrolls to and selects the block it stands for; items a layer cannot place yet are counted under the map. Contributed PageMap.Action controls float in the map's top-right corner, handed the page id. Map block type: registers its (empty) `data` schema at the server write boundary.
       - Web:
-        - Slots: `PageMap.Layer`
-        - Slot contributors: `PageMap.Layer` ← `page.place.map-layer`
+        - Slots:
+          - `PageMap.Layer`
+          - `PageMap.Action`
+        - Slot contributors:
+          - `PageMap.Layer` ← `page.place.map-layer`
+          - `PageMap.Action` ← `apps.places.page-overlay`
         - Contributes: `Editor.Block` "map" → `MapBlock`
         - Uses:
           - `map.MapView`
@@ -37276,6 +37336,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/editor.useBlockEditor`
           - `page/editor.useSelectionControl`
           - `primitives/css/clip.clipClasses`
+          - `primitives/css/pin.Pin`
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/spacing.Inset`
           - `primitives/css/spacing.Stack`
@@ -37283,7 +37344,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
           - `primitives/dom/scroll-reveal.revealElement`
-        - Exports (types): `PageMapLayerContribution`
+          - `primitives/hover-reveal.hoverRevealGroup`
+          - `primitives/hover-reveal.hoverRevealTarget`
+          - `primitives/slot-render.defineRenderSlot`
+        - Exports (types):
+          - `PageMapActionProps`
+          - `PageMapLayerContribution`
         - Exports (values): `PageMap`
       - Server:
         - Contributes: `page.block-data` "map"
@@ -37305,7 +37371,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MapDataSchema`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: `page/place/map-layer`
+        - Imported by:
+          - `apps/places/page-overlay`
+          - `page/place/map-layer`
     - **`markdown-apply`** — Apply an edited markdown document onto an existing page's block forest without re-minting block ids: the block-scoped read, the structural patch, and the per-block text edits (written through page/block-text-write). Audience-agnostic — the agent-facing tools over it are page/annotations/agent-access.
       - Server:
         - Uses:
@@ -37654,6 +37722,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/editor.defineBlock`
           - `ui/icons.symbol`
         - Exports (types):
+          - `LocatedPlace`
           - `PlaceData`
           - `PlaceFamily`
           - `PlaceKind`
@@ -37662,6 +37731,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PlaceSnapshotState`
           - `PlaceSuggestion`
         - Exports (values):
+          - `locatedPlaces`
           - `PLACE_LOOKUP_REFUSALS`
           - `PLACE_SEARCH_MAX_SUGGESTIONS`
           - `PLACE_SNAPSHOT_TTL_MS`
@@ -37687,6 +37757,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --spacing`
         - Imported by:
+          - `apps/places/places-map`
           - `page/place/google`
           - `page/place/map-layer`
       - Plugins:
@@ -37709,7 +37780,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reports/engine.recordReport`
             - DB schema: `plugins/page/plugins/place/plugins/google/server/internal/table-a.ts`
             - Register: `definePlaceProvider('google')`
-          - Shared:
+          - Cross-plugin:
+            - Imported by: `apps/places/page-overlay`
+          - Core:
             - Exports (values): `GOOGLE_PLACE_PROVIDER_ID`
         - **`map-layer`** — Puts /place blocks on the /map block: a PageMap.Layer turning every located place on the page into a pin that points back at its block (picked places without coordinates are counted as unplaced, not dropped), and the place pin itself — a teardrop in the place card's kind colour and glyph, with the name beside it as a haloed map label, that lifts on hover and grows from its tip when active.
           - Web:
@@ -41044,10 +41117,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pinClasses`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 59 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
+            - Imported by: 60 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
               - `primitives` ×18
               - `apps` ×16
-              - `page` ×10
+              - `page` ×11
               - `conversations` ×4
               - `tasks` ×2
               - `apps-core/app-rail`
@@ -41655,12 +41728,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --muted`
               - `ui/tokens/sidebar-palette --sidebar`
               - `ui/tokens/sidebar-palette --sidebar-accent`
-            - Imported by: 21 plugins — full list in [`plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md)
+            - Imported by: 22 plugins — full list in [`plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md)
               - `apps-core` ×7
               - `apps` ×7
               - `hints` ×2
               - `shell` ×2
               - `layouts/miller`
+              - `map`
               - `plugin-meta/exhibits`
               - `primitives/pane`
           - Exemptions:
@@ -42164,8 +42238,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ← `primitives.data-view`
           - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
           - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-        - Contributes: 103 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.WebRegister` ×93
+        - Contributes: 104 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.WebRegister` ×94
           - `DataViewSlots.Control` ×4
           - `DataViewSlots.Setting` ×4
           - `IdKinds.Kind` ×2
@@ -42432,8 +42506,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useViewRowCounts`
           - `wearsTimeInk`
       - Server:
-        - Contributes: 95 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.Register` ×93
+        - Contributes: 96 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.Register` ×94
           - `ids.kind` ×2
         - Uses:
           - `config_v2.getConfig`
@@ -44142,9 +44216,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hoverRevealTargetWithGroupFocus`
           - `useHoverReveal`
       - Cross-plugin:
-        - Imported by: 39 plugins — full list in [`plugins/primitives/plugins/hover-reveal/REFERENCE.md`](../plugins/primitives/plugins/hover-reveal/REFERENCE.md)
+        - Imported by: 40 plugins — full list in [`plugins/primitives/plugins/hover-reveal/REFERENCE.md`](../plugins/primitives/plugins/hover-reveal/REFERENCE.md)
           - `apps` ×12
-          - `page` ×9
+          - `page` ×10
           - `primitives` ×7
           - `ui` ×4
           - `conversations` ×2
@@ -44168,8 +44242,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 130 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
-          - `apps` ×45
+        - Imported by: 131 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+          - `apps` ×46
           - `primitives` ×21
           - `conversations` ×20
           - `page` ×8
@@ -44419,10 +44493,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `linkProps`
           - `openInBrowserTab`
       - Cross-plugin:
-        - Imported by: 55 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
+        - Imported by: 56 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
           - `primitives` ×13
           - `conversations` ×11
-          - `apps` ×9
+          - `apps` ×10
           - `page` ×4
           - `apps-core` ×3
           - `tasks` ×3
@@ -44594,8 +44668,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/shadow --shadow`
-        - Imported by: 304 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
-          - `apps` ×82
+        - Imported by: 305 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+          - `apps` ×83
           - `conversations` ×50
           - `debug` ×29
           - `ui` ×25
@@ -46136,8 +46210,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-md`
           - `ui/tokens/shape --spacing`
-        - Imported by: 190 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `apps` ×71
+        - Imported by: 191 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `apps` ×72
           - `conversations` ×30
           - `debug` ×27
           - `active-data` ×10
@@ -46184,6 +46258,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineRoute`
           - `fillSegment`
           - `indexKeyedSuffix`
+          - `isKeyedOnlySegment`
+          - `joinBasePath`
+          - `joinUrlParts`
           - `MissingRouteParamError`
           - `normalizeRoutePath`
           - `onlySurfaceViews`
@@ -46912,17 +46989,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSlotOrder`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/density --control-height-sm`
-        - Imported by: 92 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
+        - Imported by: 93 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
           - `apps` ×31
           - `primitives` ×15
           - `conversations` ×13
           - `ui` ×5
           - `apps-core` ×4
           - `shell` ×4
+          - `page` ×3
           - `tasks` ×3
           - `config_v2` ×2
           - `debug` ×2
-          - `page` ×2
           - `framework/web-core`
           - `hints/help-menu`
           - `integrations/google-maps`
@@ -48242,8 +48319,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 278 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×278
+    - Contributes: 280 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×280
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -48268,8 +48345,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 277 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×277
+    - Contributes: 279 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×279
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
@@ -53961,12 +54038,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ThemeEngine.SubTheme`
           - `ThemeEngine.FixedTheme`
           - `ThemeEngine.ThemeSource`
-        - Slot contributors: 49 contributors — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+        - Slot contributors: 50 contributors — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ThemeEngine.TokenGroup` ×19
           - `ThemeEngine.Theme` ×14
           - `ThemeEngine.SubTheme` ×6
           - `ThemeEngine.VariantGroup` ×6
-          - `ThemeEngine.FixedTheme` ×2
+          - `ThemeEngine.FixedTheme` ×3
           - `ThemeEngine.ThemeSource` ×2
         - Contributes:
           - `Core.Root` → `ThemeInjector`
@@ -54114,11 +54191,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape` ×4
           - `ui/tokens/type-scale` ×4
           - `ui/tokens/data-view` ×2
-        - Imported by: 51 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+        - Imported by: 52 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ui` ×29
           - `apps` ×17
           - `apps-core/chrome-theme`
           - `hints`
+          - `map`
           - `menu-bar`
           - `plugin-meta/token-usage`
           - `reports/theme-resolution`
@@ -54822,7 +54900,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/motion`
               - `primitives/css/surface`
               - `primitives/css/ui-kit`
-        - **`place-palette`** — Place colour token group: the --place-<family> colours place cards are painted with (Google Maps' own pin colours by default), and their customizer section.
+        - **`place-palette`** — Place colour token group: the --place-<family> colours place cards are painted with (Google Maps' own pin colours by default), plus --place-overlay — the accent of a page's places laid over the Places map — and their customizer section.
           - Web:
             - Contributes:
               - `ThemeEngine.TokenGroup` "Places"
@@ -54842,7 +54920,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `placePaletteGroup`
               - `placeTokenFill`
           - Cross-plugin:
-            - Tokens used by: `primitives/avatar`
+            - Tokens used by:
+              - `apps/places/places-map`
+              - `primitives/avatar`
         - **`rich-text-palette`** — Rich-text color palette token group: the closed --rt-color-<token> vars backing inline text color in the page block editor.
           - Web:
             - Contributes: `ThemeEngine.TokenGroup` "Rich-text palette"

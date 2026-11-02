@@ -548,7 +548,7 @@
     },
     {
       "paneId": "places-map",
-      "segment": "",
+      "segment": ";page",
       "appIndex": true,
       "parent": null
     },

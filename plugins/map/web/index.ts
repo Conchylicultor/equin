@@ -1,5 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { GeoMap } from "./slots";
+import { mapChromeThemes } from "./internal/map-chrome-theme";
 
 export { GeoMap } from "./slots";
 export type {
@@ -16,6 +18,7 @@ export type {
   MapClusterMarkFn,
 } from "./slots";
 export { MapView } from "./components/map-view";
+export { MapChrome } from "./components/map-chrome";
 export {
   MAP_LABEL_HALO_PX,
   MAP_LABEL_PAINT,
@@ -33,6 +36,10 @@ export { useLinkedHover } from "./internal/use-linked-hover";
 
 export default {
   description:
-    "Vendor-neutral map primitive: <MapView overlays/> draws pins, paths and areas through the first GeoMap.Renderer (showing its set-up action while it is blocked, and a loud state when none is installed), with every pin's look contributed through the GeoMap.Pin dispatch slot keyed on its pinType, and a crowd mode the caller picks: clustering (every group of nearby pins drawn through the GeoMap.Cluster dispatch slot keyed on the pinType its pins share) or spots (every pin stays drawn — far out as a compact centred mark, with the size of each spot beside its lead pin).",
+    "Vendor-neutral map primitive: <MapView overlays/> draws pins, paths and areas through the first GeoMap.Renderer (showing its set-up action while it is blocked, and a loud state when none is installed), with every pin's look contributed through the GeoMap.Pin dispatch slot keyed on its pinType, and a crowd mode the caller picks: clustering (every group of nearby pins drawn through the GeoMap.Cluster dispatch slot keyed on the pinType its pins share) or spots (every pin stays drawn — far out as a compact centred mark, with the size of each spot beside its lead pin). Chrome drawn over the tiles — the renderer's Fit control, the empty notice and a host's `controls` — wears the map-chrome fixed theme of the tiles' scheme (<MapChrome>), so it is light over light tiles whatever the app's scheme.",
   slots: GeoMap,
+  contributions: [
+    ThemeEngine.FixedTheme(mapChromeThemes.light),
+    ThemeEngine.FixedTheme(mapChromeThemes.dark),
+  ],
 } satisfies PluginDefinition;

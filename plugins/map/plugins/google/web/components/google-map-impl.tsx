@@ -30,7 +30,7 @@ import {
   type MapPath,
   type MapPin,
 } from "@plugins/map/core";
-import type { MapRendererProps } from "@plugins/map/web";
+import { MapChrome, type MapRendererProps } from "@plugins/map/web";
 import {
   MapIdRasterNotice,
   MapsMapAccessAction,
@@ -126,6 +126,7 @@ function GoogleMapCanvas({
   initialCamera,
   onCameraRest,
   fitRequest,
+  focusIds,
 }: MapRendererProps & { browserKey: string; mapId: string | null }) {
   // Held in state, not a ref: the tone colours are read off this element, and
   // a ref cannot trigger the render that reads them.
@@ -134,8 +135,9 @@ function GoogleMapCanvas({
   const [loadError, setLoadError] = useState<string | null>(null);
   const colors = useToneColors(host, overlays);
   const pins = overlays.filter((o): o is MapPin => o.kind === "pin");
-  // What the camera frames — never a `frame: false` overlay (a proposal).
-  const framed = framingOverlays(overlays);
+  // What the camera frames — never a `frame: false` overlay (a proposal),
+  // and only the caller's `focusIds` when it names some.
+  const framed = framingOverlays(overlays, focusIds);
 
   if (refused) return <MapErrorCard reason={{ kind: "refused" }} />;
   if (loadError !== null) {
@@ -459,19 +461,22 @@ function FitControl({
   }, [fitRequest, latestFit]);
   return (
     <MapControl position={ControlPosition.RIGHT_BOTTOM}>
-      {/* The inset keeps the button off the map's edge, as Google's own
-          controls sit. */}
-      <Inset pad="sm">
-        <Surface level="overlay">
-          <IconButton
-            icon={fitIcon}
-            label="Fit to the map's places"
-            tooltipSide="left"
-            disabled={map === null || overlays.length === 0}
-            onClick={fit}
-          />
-        </Surface>
-      </Inset>
+      {/* Over the tiles, so in the map's chrome theme (light over Google's
+          light tiles, whatever the app's scheme). The inset keeps the button
+          off the map's edge, as Google's own controls sit. */}
+      <MapChrome>
+        <Inset pad="sm">
+          <Surface level="overlay">
+            <IconButton
+              icon={fitIcon}
+              label="Fit to the map's places"
+              tooltipSide="left"
+              disabled={map === null || overlays.length === 0}
+              onClick={fit}
+            />
+          </Surface>
+        </Inset>
+      </MapChrome>
     </MapControl>
   );
 }

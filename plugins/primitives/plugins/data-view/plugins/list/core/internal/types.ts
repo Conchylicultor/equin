@@ -59,6 +59,15 @@ export interface ListViewOptions<TRow> {
    */
   detail?: (row: TRow) => ReactNode;
   /**
+   * The row's action cluster stays painted at rest, not only while the row
+   * is hovered — for a short list whose item action IS the point of the row
+   * (a page's places beside a map, each with its Save). The cluster keeps its
+   * trailing track either way; an action with nothing to offer for a row
+   * draws nothing. Default off: a list keeps its title's width in narrow
+   * surfaces.
+   */
+  actionsAtRest?: boolean;
+  /**
    * A caption row over the list: the title field's label on the left, each
    * trailing (trail / edge) field's label over its aligned slot. Default off.
    * Also the view type's `configSchema` option, so a user turns it on from the view's

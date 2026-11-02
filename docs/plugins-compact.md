@@ -26,7 +26,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`shell`** — App shell for Keyboard Party: registers the /keyboard-party app entry, whose one page is the party stage.
     - **`mail`** [exempt] [12 sub-plugins] — Mail — a Gmail-class client.
     - **`pages`** [exempt] [17 sub-plugins] — Notion-like pages app.
-    - **`places`** [exempt] [7 sub-plugins] — Places — the places you want to go and have been, on a map: saved Google places organised by one nested tag tree, coloured by their tags.
+    - **`places`** [test helpers] [exempt] [8 sub-plugins] — Places — the places you want to go and have been, on a map: saved Google places organised by one nested tag tree, coloured by their tags.
     - **`prototypes`** [test helpers] [17 sub-plugins] — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under. Declares the app's data dir as the prototypesFiles…
     - **`settings`** [4 sub-plugins] — Settings app.
     - **`sonata`** [test helpers] [exempt] [81 sub-plugins] — Sonata — extensible piano and music app.

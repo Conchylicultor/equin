@@ -69,9 +69,21 @@ export type MapCamera =
   | { kind: "point"; center: LatLng; zoom: number }
   | { kind: "bounds"; bounds: MapBounds };
 
-/** The overlays a camera frames: all but those marked `frame: false`. */
-export function framingOverlays(overlays: readonly MapOverlay[]): MapOverlay[] {
-  return overlays.filter((o) => o.frame !== false);
+/**
+ * The overlays a camera frames: all but those marked `frame: false` — and,
+ * when `focusIds` is set and non-empty, only those whose id it names (a
+ * caller framing one part of what it draws). An empty or absent `focusIds`
+ * narrows nothing.
+ */
+export function framingOverlays(
+  overlays: readonly MapOverlay[],
+  focusIds?: readonly string[],
+): MapOverlay[] {
+  const focus =
+    focusIds === undefined || focusIds.length === 0 ? null : new Set(focusIds);
+  return overlays.filter(
+    (o) => o.frame !== false && (focus === null || focus.has(o.id)),
+  );
 }
 
 /** Every coordinate an overlay occupies — a pin's position, a path's points, an area's ring. */

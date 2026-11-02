@@ -63,6 +63,80 @@ Then `PlacesSurface` renders, inside a `relative h-full` box:
   click away. The map does not re-frame for the new position (the renderer
   holds framing after a pick).
 
+## A page laid over the map (`/places;page=<pageId>`)
+
+A VIEW of the one map pane, not a pane of its own: the index route
+(`placesMapRoute`, owned by `places/page-overlay` so the page side can link
+to it) declares a keyed param, `;page`. `placesMapPane`'s body reads
+`useParams().page` and hands it to `PlacesScreen` — so opening (a page map
+block's "Open in Places"), closing and back / forward only change a param of
+the mounted pane: the map, the DataView and every piece of screen state stay.
+Plan: `research/2026-11-02-apps-places-page-overlay-v2.md` (v1, the second
+pane it replaced: `research/2026-10-31-apps-places-page-overlay.md`).
+Nothing is written: the page's places are a layer, read live. Reference UI:
+prototype `proto-1793376812-x39bpd` (`overlay-tpin=ghost`,
+`overlay-others=dim`, `overlay-list=panel`, `overlay-numbers=on`).
+
+- **The read.** `PlacesScreen`'s gate covers places and tags only. The page's
+  read (`usePageOverlay`) lives in `PageOverlayReader`, a child of the
+  surface mounted only while `;page` is set, which reports it up (a report
+  counts only for the page `;page` names now). So the map never re-gates on
+  the page: the page's loading and failure are the overlay panel's own states
+  (`PageOverlayRead`, drawn inside the panel's frame), and the layer (dims,
+  numbers, ghosts) appears once it has landed.
+- **Close.** × clears `;page` with the pane's own `useSetParams()` — a
+  history push on the same mounted pane (back reopens the layer, forward
+  closes it), never `inAppLink`. A page place's detail card closes with the
+  layer; the camera stays where it rests.
+- **Pins.** A page's place that is one of yours is its own saved pin with its
+  number on a badge (`SavedPinVisual.pageNumber`, the head's top-right, in
+  `--place-overlay`), drawn above the rest (`rank` 2) and kept on the map
+  whatever the preset hides (`keep`); every other saved pin is `dimmed`
+  (faded and desaturated, still clickable) — both in the mark key. A place not
+  saved yet is a ghost pin (`places.page-item`, `page-item-pin.tsx`): the
+  Google result's ghost disc (`ghostDiscMark`) with its ring dashed in the
+  overlay accent, its kind's glyph in its family's darkened colour and its
+  number on a badge — framed by the camera (no `frame: false`). A search hit
+  or a pick of the same place is not drawn twice. Numbers are map text
+  (`MapMark.texts` `center` at a `point`), so the DOM pin draws them too
+  (`MarkTexts`).
+- **Camera.** `focusIds` = the page's places while the layer is on (a saved
+  one by its row key, the rest by `pageItemPinId`). Opened cold on a page
+  (`;page` at mount), the map opens `cameraOpen: "framed"` — on the page, not
+  where the user left it, yet still remembering each rest under `places.map`.
+  However `;page` came to be set (cold, an open from Pages, back / forward),
+  the screen bumps `fitRequest` once per page id as soon as its places are
+  known (not on each live edit of the page); × leaves the camera where it is
+  and drops `focusIds`. The panel's Fit bumps `fitRequest` too.
+- **The panel** (`page-overlay-panel.tsx`) takes the side panel's spot and
+  width (`asideEnd`, always shown while `;page` is set): "From a page" and ×
+  (clears `;page`); the
+  page's icon and title with "← Page" (`pageDetailRoute` in Pages); "N places ·
+  k saved · m not saved" and the places not on the map; the places as a
+  DataView list (`places.page-overlay`, its config one unsorted list —
+  `renderRow`: Google's photo over the colours' wash with the number, name,
+  rating (`usePlaceDetails`) · type, ✓ Saved and two tags, or the address);
+  Save is the row's item action (`PageOverlayItemActions`, painted at rest —
+  the list's `actionsAtRest`), handed its handler by context. The footer: Fit,
+  "m not in your places yet", **Save all m** — every save in turn, then ONE
+  toast with ONE Undo deleting them all. Each Save (row, card) is the search's
+  own save (`useSavePlace`: auto-tags, Want to go) with its toast and Undo.
+- **Hover.** A row and its pin light together. The panel's rows and the
+  ghost pins claim the hover by page BLOCK (`useLinkedHover`) — whether or not
+  the place is saved, so a row saved while hovered releases what it claimed;
+  a saved one lifts its row pin (the map's `hoveredRowId` derived from it),
+  one not saved yet its ghost. A saved pin hovered on the map lights its row
+  through `hoveredPlaceId`.
+- **Drill.** Selecting a place (row or pin) drills its card into the panel
+  under "← <page> · k of N": `PlaceCard` for a saved one, else
+  `GooglePlaceCard` with the page's note ("On <page> — not in your places",
+  Save to my places in the overlay accent, in place of the footer's Save) —
+  saving it opens the new place's own card.
+- **Search and Ask** work as on the plain map; their cards drill into the
+  overlay panel the same way, and its list returns when they close.
+- A page gone since the link was made shows "This page no longer exists" in
+  the panel; nothing is dimmed.
+
 ## Fields (`web/internal/fields.tsx`)
 
 name (primary — `placeName`: the user's title, else Google's or a custom
@@ -206,7 +280,9 @@ zoom. The mark resolves every colour through the map (`env.color`), so its
 key changes with the theme's outline colour and the tag colours.
 
 Paint strings are pure (`web/internal/pin-paint.ts`, tested). `PlaceVisual`
-(`web/internal/place-visual.ts`) resolves colours, the `want` / `been` flags and icon once: the
+(`web/internal/place-visual.ts`) resolves colours, the `want` / `been` flags and icon once
+(the pin's data is a `SavedPinVisual`: plus `pageNumber` / `dimmed` while a
+page is laid over the map): the
 place's own icon (Haiku), else its first tag's nearest icon, else
 `location-on`. A saved-place pin without one throws (a wiring bug).
 
@@ -369,46 +445,55 @@ away closes it — a click in the thread is not away (`useClickAway`'s
 
 ## Plugin reference
 
-- Description: The Places app's index pane (/places): every saved place on one full-bleed map whose views are filter presets (All places, then the user's own — edits are drafts until saved, ⌥1–9 switch), with its chrome floating on the map — the tag sidebar (the presets with their counts and dirty dots, the tag filter as AND-ed rows of OR-ed tags with the preset's Reset / Save as new / Update, the tag tree with faceted counts; folded, the header alone, titled by a dropdown of the presets), the side panel (the preset's places in view or all, as a list or a gallery, hover-linked with their pins, a selected place's card drilled into it), the "Search or add places" bar (your places filtered live, Google's hits around the map's view as cards to save and as ghost pins hover-linked with them, the camera never moving; Ask Sonnet hands a question to a background run shown as a thread in a card docked on the right — the newest picks as Google cards with photos, why they fit, what makes them special and their sources, earlier answers folded, as numbered pins — its progress as a pill in the bar that shows and hides the card, and the recent questions in the panel to reopen), the selected place's card or a Google place's detail card — plus the saved-place pin (a drop near, a round badge far out with each spot's size beside it), the Google result's ghost pin, Sonnet's numbered pick pin, the thread's step labels for the Ask Sonnet tools, and the transcript row of places_show_picks (the numbered picks beside a mini map, hover-linked).
+- Description: The Places app's index pane (/places): every saved place on one full-bleed map whose views are filter presets (All places, then the user's own — edits are drafts until saved, ⌥1–9 switch), with its chrome floating on the map — the tag sidebar (the presets with their counts and dirty dots, the tag filter as AND-ed rows of OR-ed tags with the preset's Reset / Save as new / Update, the tag tree with faceted counts; folded, the header alone, titled by a dropdown of the presets), the side panel (the preset's places in view or all, as a list or a gallery, hover-linked with their pins, a selected place's card drilled into it), the "Search or add places" bar (your places filtered live, Google's hits around the map's view as cards to save and as ghost pins hover-linked with them, the camera never moving; Ask Sonnet hands a question to a background run shown as a thread in a card docked on the right — the newest picks as Google cards with photos, why they fit, what makes them special and their sources, earlier answers folded, as numbered pins — its progress as a pill in the bar that shows and hides the card, and the recent questions in the panel to reopen), the selected place's card or a Google place's detail card — plus the saved-place pin (a drop near, a round badge far out with each spot's size beside it), the Google result's ghost pin, Sonnet's numbered pick pin, the thread's step labels for the Ask Sonnet tools, and the transcript row of places_show_picks (the numbered picks beside a mini map, hover-linked). Its ;page param, /places;page=<pageId>, lays one page's places over the same map, read live (page-overlay): the page's saved places numbered, the rest dimmed, the page's places not saved yet as numbered ghost pins, the camera framed on the page, the map never remounted — and a panel in the side panel's spot listing them in page order (hover-linked with their pins, each place's card drilled in, Save and Save all with one Undo, × back to the plain map).
 - Web:
-  - Slots: `places-map.actions`
-  - Slot contributors: `places-map.actions` ← `primitives.pane`
+  - Slots:
+    - `places-map.actions`
+    - `page-overlay-item-actions`
+  - Slot contributors:
+    - `places-map.actions` ← `primitives.pane`
+    - `page-overlay-item-actions` ← `apps.places.places-map`
   - Contributes:
     - `Pane.Register` "places-map"
     - `FieldPresentation.Register` "entity:places"
     - `GeoMap.Pin` → `SavedPlacePin`
     - `GeoMap.Pin` → `GoogleResultPin`
+    - `GeoMap.Pin` → `PageItemPin`
     - `GeoMap.Pin` → `AskPickPin`
+    - `page-overlay-item-actions` "save" → `SavePageItemAction`
     - `AgentThreadSlots.StepLabel` "places_search_text" → `SearchStepLabel`
     - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
     - `JsonlViewerTool.Renderer` "mcp__equin__places_show_picks" → `PicksToolView`
-  - Uses: 128 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×12
+  - Uses: 136 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×14
     - `map` ×9
     - `apps/places/places-core` ×8
     - `conversations/agent-thread` ×8
     - `primitives/collapsible` ×6
-    - `primitives/live-state` ×5
+    - `primitives/live-state` ×6
     - `network/live` ×4
     - `primitives/css/ui-kit` ×4
     - `primitives/overlay/image-viewer` ×4
     - `primitives/hover-reveal` ×3
     - `primitives/link-gesture/new-tab` ×3
     - `ui/icons` ×3
+    - `apps/places/page-overlay` ×2
     - `conversations/conversation-view/jsonl-viewer/tool-call` ×2
     - `integrations/google-maps` ×2
+    - `page/place` ×2
     - `primitives/css/clip` ×2
     - `primitives/css/layer` ×2
     - `primitives/css/rigid` ×2
     - `primitives/css/text` ×2
-    - `primitives/pane` ×2
     - `primitives/persistent-draft` ×2
     - `primitives/relative-time` ×2
     - `tag-tree/picker` ×2
+    - `apps-core/tabs.useAppLinkProps`
     - `apps/places/place-details.usePlaceDetails`
     - `apps/places/tag-manager.TagManagerPanel`
     - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
     - `integrations/google-maps/usage.useMapsBudget`
+    - `page/editor.PageIcon`
     - `primitives/app-shell.AppShellBrand`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/badge.Badge`
@@ -441,16 +526,18 @@ away closes it — a click in the thread is not away (`useClickAway`'s
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
     - `primitives/overlay/tooltip.Kbd`
+    - `primitives/pane.Pane`
     - `primitives/shortcuts.useSurfaceShortcuts`
     - `shell/toast.showToast`
     - `tag-tree/engine.useTagTreeActions`
 - Cross-plugin:
-  - Uses tokens: 30 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 31 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/color-palette` ×12
     - `ui/tokens/type-scale` ×7
     - `ui/tokens/density` ×6
     - `ui/tokens/shape` ×3
     - `ui/tokens/categorical --categorical-foreground`
+    - `ui/tokens/place-palette --place-overlay`
     - `ui/tokens/shadow --shadow`
 
 <!-- AUTOGENERATED:END -->

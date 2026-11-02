@@ -369,17 +369,17 @@ the outcome too, with no separate code path.
     - `useSlotOrder`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/density --control-height-sm`
-  - Imported by: 92 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 93 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×31
     - `primitives` ×15
     - `conversations` ×13
     - `ui` ×5
     - `apps-core` ×4
     - `shell` ×4
+    - `page` ×3
     - `tasks` ×3
     - `config_v2` ×2
     - `debug` ×2
-    - `page` ×2
     - `framework/web-core`
     - `hints/help-menu`
     - `integrations/google-maps`

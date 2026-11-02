@@ -65,6 +65,12 @@ export interface MapViewOptions<TRow> {
    */
   cameraKey?: string;
   /**
+   * Where a map with a `cameraKey` opens (the map primitive's `cameraOpen`):
+   * where the user left it (default), or `"framed"` on its pins (`focusIds`
+   * included) while still remembering each rest under the key.
+   */
+  cameraOpen?: "remembered" | "framed";
+  /**
    * Row keys drawn even where the view's search or filter hides them — rows
    * something beside the map stands for (a search's hits that are rows). The
    * selected row is always drawn; it needs no entry here.
@@ -92,4 +98,14 @@ export interface MapViewOptions<TRow> {
    * Fit control does.
    */
   fitRequest?: number;
+  /**
+   * The pins the camera frames, when set and non-empty (the map primitive's
+   * `focusIds`): its first framing, the Fit control and each `fitRequest`
+   * frame only these. Ids are the ids the map sees — a row's ROW KEY
+   * (`rowKey`, the row pin's id) or an extra overlay's own `id`
+   * (`overlays.items`) — so name a row by its key, as `keep` and `hoveredId`
+   * do. A `frame: false` overlay stays out even when named. Absent or empty:
+   * every framed pin.
+   */
+  focusIds?: readonly string[];
 }

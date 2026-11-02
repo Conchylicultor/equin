@@ -100,10 +100,10 @@ const check: Check = {
     const byPattern = new Map<string, SegmentSite[]>();
     for (const { rel, src } of sources) {
       for (const site of collectSegments(ts, rel, src)) {
-        // Index/empty-segment panes resolve via appIndex, not URL matching —
-        // multiple empties are legal (mirrors useSyncPaneRegistry).
-        if (site.raw === "" || site.raw === "/") continue;
-        // A segment ending in `:name?` claims two shapes of URL; each is checked.
+        // Index/empty-segment panes (`""`, or keyed-only `";page"`) resolve via
+        // appIndex, not URL matching, so they claim no pattern — multiple are
+        // legal (mirrors useSyncPaneRegistry). A segment ending in `:name?`
+        // claims two shapes of URL; each is checked.
         for (const pattern of segmentMatchPatterns(site.raw)) {
           const list = byPattern.get(pattern) ?? [];
           list.push(site);

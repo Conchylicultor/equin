@@ -1,4 +1,11 @@
-import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   DataView,
   defineDataView,
@@ -13,6 +20,7 @@ import { spaceLength } from "@plugins/primitives/plugins/css/plugins/space-ramp/
 import {
   ResourceView,
   useCombinedResources,
+  type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
@@ -25,10 +33,16 @@ import {
   placeFlags,
   placeName,
   places as placesCollection,
+  placesByGoogleId,
   placeTagTree,
   type Place,
   type PlaceTag,
 } from "@plugins/apps/plugins/places/plugins/places-core/core";
+import type { PageOverlayItem } from "@plugins/apps/plugins/places/plugins/page-overlay/core";
+import {
+  usePageOverlay,
+  type PageOverlay,
+} from "@plugins/apps/plugins/places/plugins/page-overlay/web";
 import {
   freeSiblingName,
   tagPath,
@@ -55,7 +69,18 @@ import {
 } from "../internal/layout-stores";
 import { useClickAway } from "../internal/use-click-away";
 import { useCoveredEdges } from "../internal/use-covered-edges";
-import { SAVED_PLACE_PIN_TYPE, placeVisual } from "../internal/place-visual";
+import {
+  SAVED_PLACE_PIN_TYPE,
+  placeVisual,
+  type SavedPinVisual,
+} from "../internal/place-visual";
+import {
+  PAGE_ITEM_PIN_TYPE,
+  blockIdOfPin,
+  pageItemHit,
+  pageItemPinData,
+  pageItemPinId,
+} from "../internal/page-item";
 import {
   GOOGLE_RESULT_PIN_TYPE,
   googlePinId,
@@ -78,6 +103,11 @@ import { UniversalSearchPanel } from "./universal-search";
 import { PlaceCard } from "./place-card";
 import { PANEL_WIDTH, PLACE_CARD_WIDTH, type CardFrame } from "./card-frame";
 import { PlacesPanel } from "./places-panel";
+import {
+  PAGE_OVERLAY_UNREPORTED,
+  PageOverlayPanel,
+  type PageOverlayRead,
+} from "./page-overlay-panel";
 import { PinPickBar, dropName, type PinPick } from "./pin-pick-bar";
 import { TagSidebar } from "./tag-sidebar";
 
@@ -133,11 +163,19 @@ const NO_EXPANDED: ReadonlySet<string> = new Set();
 /** A card floating on the map (the side panel is hidden). */
 const FLOATING: CardFrame = { kind: "floating" };
 
-/** A Google place shown in the detail card: the hit, and Sonnet's words when it is a pick. */
+/**
+ * A Google place shown in the detail card: the hit, Sonnet's words when it is
+ * a pick, and the page's place it is when it comes from the page laid over
+ * the map.
+ */
 interface GoogleDetail {
   hit: DetailedHit;
   pick: AskPickNote | null;
+  pageItem: PageOverlayItem | null;
 }
+
+/** A Google place saved: the place, and whether this save made it (else it was already yours). */
+type SavedHit = { place: Place; fresh: boolean };
 
 function detailedHit(hit: GoogleHit): DetailedHit | null {
   return hit.result === undefined ? null : { ...hit, result: hit.result };
@@ -166,30 +204,105 @@ function detailedHit(hit: GoogleHit): DetailedHit | null {
  * screen (pins, sidebar counts, card) needs both — so the screen waits for
  * both and never draws an empty map, or a tree of zero counts, for a read
  * that has not landed.
+ *
+ * `pageId` (the map pane's `;page` view, `/places;page=<pageId>`) lays one
+ * page's places over the map (`page-overlay`). It is a view of this same
+ * screen: setting or clearing it re-renders the mounted map, never remounts
+ * it. The page's read is mounted only while it is set (`PageOverlayReader`),
+ * as a child, so this gate never waits for it: its loading is the overlay
+ * panel's own state.
  */
-export function PlacesScreen() {
+export function PlacesScreen({
+  pageId,
+  onClosePage,
+}: {
+  /** The page laid over the map, or `null`: the plain map. */
+  pageId: string | null;
+  /** Clear `;page` — a history push on the same mounted pane. */
+  onClosePage: () => void;
+}) {
   const readiness = useCombinedResources({
     places: usePlaces(),
     tags: usePlaceTags(),
   });
   return (
     <ResourceView resource={readiness} fallback={<Loading variant="block" />}>
-      {({ places, tags }) => <PlacesSurface places={places} tags={tags} />}
+      {({ places, tags }) => (
+        <PlacesSurface
+          places={places}
+          tags={tags}
+          pageId={pageId}
+          onClosePage={onClosePage}
+        />
+      )}
     </ResourceView>
   );
+}
+
+/** The page overlay's read as its reader last reported it, for the page it read. */
+interface OverlayReport {
+  pageId: string;
+  read: ResourceResult<PageOverlay>;
+}
+
+/**
+ * Reads one page laid over the map and reports it up. A child of the surface,
+ * mounted only while `;page` is set: the read's hooks live and die with the
+ * param, while the surface — and the map in it — stays mounted.
+ */
+function PageOverlayReader({
+  pageId,
+  onRead,
+}: {
+  pageId: string;
+  onRead: (report: OverlayReport) => void;
+}): null {
+  const read = usePageOverlay(pageId);
+  useEffect(() => {
+    onRead({ pageId, read });
+  }, [pageId, read, onRead]);
+  return null;
 }
 
 function PlacesSurface({
   places,
   tags,
+  pageId,
+  onClosePage,
 }: {
   places: readonly Place[];
   tags: readonly PlaceTag[];
+  /** The page laid over the map (`;page`), or `null`: the plain map. */
+  pageId: string | null;
+  onClosePage: () => void;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // A Google place not saved yet, in the detail card (exclusive with the
   // selection: opening one closes the other).
   const [detail, setDetail] = useState<GoogleDetail | null>(null);
+  // The page laid over the map: its reader's last report, read only for the
+  // page `;page` names now (another page's report is not this one's).
+  const [overlayReport, setOverlayReport] = useState<OverlayReport | null>(
+    null,
+  );
+  const overlayRead: PageOverlayRead | null =
+    pageId === null
+      ? null
+      : overlayReport?.pageId === pageId
+        ? overlayReport.read
+        : PAGE_OVERLAY_UNREPORTED;
+  const overlay: PageOverlay | null =
+    overlayRead?.status === "ready" ? overlayRead.data : null;
+  // The map opens framed on the page when it is first drawn with one (a cold
+  // `/places;page=…`); read once, as the map reads its opening camera.
+  const [openedOnPage] = useState(pageId !== null);
+  // `;page` changed under the mounted map (opened, closed, back / forward):
+  // a page place's card belongs to the page it came from.
+  const [seenPageId, setSeenPageId] = useState(pageId);
+  if (seenPageId !== pageId) {
+    setSeenPageId(pageId);
+    if (detail?.pageItem != null) setDetail(null);
+  }
   const [manager, setManager] = useState<{ focusTagId: string | null } | null>(
     null,
   );
@@ -210,13 +323,44 @@ function PlacesSurface({
   const [visible, setVisible] = useState<MapBounds | null>(null);
   // The panel's Fit map: each bump frames the preset's places.
   const [fitRequest, setFitRequest] = useState(0);
+  // The page the camera last framed: once per page laid over the map, as
+  // soon as its places are known — however `;page` came to be set (a cold
+  // load, an open from Pages, back / forward). Not on every live edit of the
+  // page, and closing leaves the camera where it rests.
+  const [framedPageId, setFramedPageId] = useState<string | null>(null);
+  const framePageId =
+    overlay?.kind === "page" && overlay.items.length > 0 ? pageId : null;
+  if (framePageId !== null && framePageId !== framedPageId) {
+    setFramedPageId(framePageId);
+    setFitRequest((n) => n + 1);
+  } else if (pageId === null && framedPageId !== null) {
+    setFramedPageId(null);
+  }
   // One hovered place, lit on both sides: its pin and its row in the panel.
   const { hoveredId: hoveredPlaceId, onHoverChange: setHoveredPlaceId } =
     useLinkedHover();
   const [sidebarOpen, setSidebarOpen] = useDraft(sidebarOpenStore, true);
   const [panelLayout, setPanelLayout] = useDraft(panelLayoutStore, "list");
   const [panelScope, setPanelScope] = useDraft(panelScopeStore, "in-view");
-  const panelOpen = panelLayout !== "hidden";
+  // A page laid over the map takes the side panel's spot with its own panel,
+  // always shown.
+  const panelOpen = pageId !== null || panelLayout !== "hidden";
+  const pageItems = useMemo(
+    (): readonly PageOverlayItem[] =>
+      overlay?.kind === "page" ? overlay.items : [],
+    [overlay],
+  );
+  const layered = overlay?.kind === "page";
+  // The page item hovered, by block — in the panel, or its ghost pin on the
+  // map. Keyed by block whether or not the place is saved, so a row saved
+  // while hovered releases what it claimed; a saved one lights its row pin
+  // (below), one not saved yet its ghost.
+  const { hoveredId: hoveredPageBlock, onHoverChange: setHoveredPageBlock } =
+    useLinkedHover();
+  const hoveredPageItem =
+    hoveredPageBlock === null
+      ? undefined
+      : pageItems.find((i) => i.blockId === hoveredPageBlock);
   // One session per search round: an autocomplete answer (the ladder's last
   // rung) and the save it ends in are billed together.
   const [session, setSession] = useState(() => crypto.randomUUID());
@@ -247,14 +391,45 @@ function PlacesSurface({
     bounds,
     tags,
   );
-  const savedByGoogleId = useMemo(
-    () =>
-      new Map(
-        places.flatMap((p) =>
-          p.googlePlaceId === null ? [] : [[p.googlePlaceId, p] as const],
-        ),
+  const savedByGoogleId = useMemo(() => placesByGoogleId(places), [places]);
+  // A saved place's number on the page laid over the map (its first, when
+  // the page holds it twice).
+  const pageNumberOf = useMemo(() => {
+    const byPlace = new Map<string, number>();
+    for (const item of pageItems) {
+      if (item.saved !== null && !byPlace.has(item.saved.id)) {
+        byPlace.set(item.saved.id, item.n);
+      }
+    }
+    return byPlace;
+  }, [pageItems]);
+  // The page's places not saved yet: ghost pins the camera frames.
+  const pagePins = useMemo(
+    (): MapPin[] =>
+      pageItems.flatMap((item) =>
+        item.saved !== null
+          ? []
+          : [
+              {
+                kind: "pin",
+                id: pageItemPinId(item.blockId),
+                position: item.position,
+                pinType: PAGE_ITEM_PIN_TYPE,
+                label: item.name,
+                data: pageItemPinData(item),
+              },
+            ],
       ),
-    [places],
+    [pageItems],
+  );
+  // What the camera frames while a page is laid over the map: the page's
+  // places alone — a saved one by its row key, the rest by their pins.
+  const focusIds = useMemo(
+    (): readonly string[] =>
+      pageItems.map((i) =>
+        i.saved === null ? pageItemPinId(i.blockId) : i.saved.id,
+      ),
+    [pageItems],
   );
   const googleHits = useMemo(
     () => (google.kind === "answer" ? google.hits : []),
@@ -267,11 +442,20 @@ function PlacesSurface({
   // Sonnet's picks first: a place both picked and searched is drawn as the
   // pick (one pin per place).
   const ghostPins = useMemo((): MapPin[] => {
-    const pinned = new Set<string>();
-    const pins: MapPin[] = [];
+    // A page's place already has its own ghost: a search hit or a pick of the
+    // same place is not drawn twice.
+    const pinned = new Set<string>(
+      pageItems.flatMap((i) => (i.saved === null ? [i.googlePlaceId] : [])),
+    );
+    const pins: MapPin[] = [...pagePins];
     for (const p of askPicks) {
       const { result } = p.hit;
-      if (result === undefined || savedByGoogleId.has(p.hit.placeId)) continue;
+      if (
+        result === undefined ||
+        savedByGoogleId.has(p.hit.placeId) ||
+        pinned.has(p.hit.placeId)
+      )
+        continue;
       pinned.add(p.hit.placeId);
       pins.push({
         kind: "pin",
@@ -302,16 +486,18 @@ function PlacesSurface({
       });
     }
     return pins;
-  }, [askPicks, googleHits, savedByGoogleId]);
+  }, [askPicks, googleHits, savedByGoogleId, pageItems, pagePins]);
   const keepIds = useMemo(
     (): ReadonlySet<string> =>
-      new Set(
-        [...askPicks.map((p) => p.hit), ...googleHits].flatMap((hit) => {
+      new Set([
+        ...[...askPicks.map((p) => p.hit), ...googleHits].flatMap((hit) => {
           const saved = savedByGoogleId.get(hit.placeId);
           return saved === undefined ? [] : [saved.id];
         }),
-      ),
-    [askPicks, googleHits, savedByGoogleId],
+        // The page's saved places stay on the map whatever the preset hides.
+        ...pageNumberOf.keys(),
+      ]),
+    [askPicks, googleHits, savedByGoogleId, pageNumberOf],
   );
 
   const extraFields = useMemo(() => placeExtraFields(tags), [tags]);
@@ -426,6 +612,12 @@ function PlacesSurface({
 
   // A pick's or a ghost's click opens its detail card.
   const activateGhost = useEventCallback((id: string) => {
+    const blockId = blockIdOfPin(id);
+    if (blockId !== null) {
+      const item = pageItems.find((i) => i.blockId === blockId);
+      if (item !== undefined) openPageItem(item);
+      return;
+    }
     const placeId = googlePlaceIdOfPin(id);
     if (placeId === null) return;
     const pick = askPicks.find((p) => p.hit.placeId === placeId);
@@ -441,17 +633,34 @@ function PlacesSurface({
     () => ({
       map: {
         pinType: SAVED_PLACE_PIN_TYPE,
-        pinData: (p) => placeVisual(p, tags),
+        // While a page is laid over the map, its places wear their number and
+        // the rest step back (dimmed, still clickable).
+        pinData: (p): SavedPinVisual => {
+          const visual = placeVisual(p, tags);
+          if (!layered) return visual;
+          const n = pageNumberOf.get(p.id);
+          return n === undefined
+            ? { ...visual, dimmed: true }
+            : { ...visual, pageNumber: n };
+        },
         label: (p) => placeName(p),
         // Every place stays on the map (Google's way): far out a round badge,
         // with each spot's size beside its lead — a place still to go to
         // leads, and draws above, one that is not.
         crowd: { kind: "spots" },
-        rank: (p) => (placeFlags(p, tags).want ? 1 : 0),
+        // A page's place draws above the rest; then a place still to go to.
+        rank: (p) =>
+          pageNumberOf.has(p.id) ? 2 : placeFlags(p, tags).want ? 1 : 0,
         fitPadding,
         // The map opens where the user left it, as Google Maps does; only a
         // first visit frames every place (which, worldwide, is the globe).
+        // Opened on a page (`;page`), it opens framed on the page's places —
+        // and still remembers where it rests, so closing it leaves the camera
+        // there. A page laid over a map already open frames through
+        // `fitRequest` (above).
         cameraKey: "places.map",
+        ...(openedOnPage ? { cameraOpen: "framed" as const } : {}),
+        ...(layered ? { focusIds } : {}),
         ...(pick === undefined ? {} : { pick }),
         keep: keepIds,
         overlays: {
@@ -459,8 +668,17 @@ function PlacesSurface({
           onActivate: activateGhost,
         },
         hoveredId:
-          hoveredGoogleId === null ? null : googlePinId(hoveredGoogleId),
+          hoveredGoogleId !== null
+            ? googlePinId(hoveredGoogleId)
+            : hoveredPageItem !== undefined && hoveredPageItem.saved === null
+              ? pageItemPinId(hoveredPageItem.blockId)
+              : null,
         onHoverChange: (id, hovered) => {
+          const blockId = blockIdOfPin(id);
+          if (blockId !== null) {
+            setHoveredPageBlock(blockId, hovered);
+            return;
+          }
           const placeId = googlePlaceIdOfPin(id);
           if (placeId !== null) setHoveredGoogleId(placeId, hovered);
         },
@@ -473,12 +691,18 @@ function PlacesSurface({
     }),
     [
       tags,
+      layered,
+      openedOnPage,
+      pageNumberOf,
+      focusIds,
       fitPadding,
       pick,
       keepIds,
       ghostPins,
       hoveredGoogleId,
       setHoveredGoogleId,
+      hoveredPageItem,
+      setHoveredPageBlock,
       activateGhost,
       fitRequest,
     ],
@@ -503,15 +727,31 @@ function PlacesSurface({
     claim();
     setSearchOpen(false);
     setSelectedId(null);
-    setDetail({ hit: detailed, pick: note });
+    setDetail({ hit: detailed, pick: note, pageItem: null });
+  }
+
+  /** A page's place: its place card once it is yours, else its Google card with the page's note. */
+  function openPageItem(item: PageOverlayItem) {
+    if (item.saved !== null) {
+      openPlace(item.saved);
+      return;
+    }
+    claim();
+    setSearchOpen(false);
+    setSelectedId(null);
+    setDetail({ hit: pageItemHit(item), pick: null, pageItem: item });
   }
 
   function openPick(p: AskPick) {
     openHit(p.hit, { n: p.n, why: p.why, about: p.about, sources: p.sources });
   }
 
-  /** Save a Google hit; resolves the saved place (an earlier save too), or null when Maps is not set up. */
-  const saveHit = async (hit: GoogleHit): Promise<Place | null> => {
+  /**
+   * Save a Google hit, without a word: resolves the saved place — `fresh`
+   * when this save made it, else it was yours already — or null when Maps is
+   * not set up.
+   */
+  const savePlaceOf = async (hit: GoogleHit): Promise<SavedHit | null> => {
     const result = await savePlace({
       body: {
         googlePlaceId: hit.placeId,
@@ -524,8 +764,18 @@ function PlacesSurface({
       return null;
     }
     if (hit.result === undefined) setSession(crypto.randomUUID());
-    if (result.kind === "already-saved") return result.place;
-    const place = result.place;
+    if (result.kind === "already-saved") {
+      return { place: result.place, fresh: false };
+    }
+    return { place: result.place, fresh: true };
+  };
+
+  /** Save a Google hit; resolves the saved place (an earlier save too), or null when Maps is not set up. */
+  const saveHit = async (hit: GoogleHit): Promise<Place | null> => {
+    const saved = await savePlaceOf(hit);
+    if (saved === null) return null;
+    if (!saved.fresh) return saved.place;
+    const place = saved.place;
     const tagged = [
       ...place.autoTags.flatMap((id) => tagPath(id, tags).slice(-1)),
       ...tags.filter((t) => t.role === "want"),
@@ -558,6 +808,56 @@ function PlacesSurface({
     });
   };
 
+  /** Save a page's place where it is: its ghost becomes its numbered pin, its row says Saved. */
+  const savePageItem = async (item: PageOverlayItem): Promise<void> => {
+    await saveHit(pageItemHit(item));
+  };
+
+  /** Save every page place not saved yet — one toast, one Undo for all of them. */
+  const saveAllPageItems = async (
+    items: readonly PageOverlayItem[],
+  ): Promise<void> => {
+    const made: Place[] = [];
+    for (const item of items) {
+      const saved = await savePlaceOf(pageItemHit(item));
+      // Maps is not set up: the rest would fail the same way.
+      if (saved === null) break;
+      if (saved.fresh) made.push(saved.place);
+    }
+    if (made.length === 0) return;
+    const title = overlay?.kind === "page" ? overlay.page.title : "the page";
+    showToast({
+      title:
+        made.length === 1
+          ? `Saved ${placeName(made[0]!)}`
+          : `Saved ${made.length} places from ${title}`,
+      description: "Tagged Want to go",
+      action: {
+        label: "Undo",
+        onClick: () => {
+          for (const place of made) {
+            void deletePlace({ params: { id: place.id } });
+          }
+        },
+      },
+    });
+  };
+
+  // The open card's page item (its row selected in the overlay panel).
+  const selectedPageBlock =
+    detail?.pageItem?.blockId ??
+    (selected === undefined
+      ? null
+      : (pageItems.find((i) => i.saved?.id === selected.id)?.blockId ?? null));
+  // The overlay panel's hovered row: a page place not saved yet by its block,
+  // a saved one through its place.
+  const hoveredPanelBlock =
+    hoveredPageBlock ??
+    (hoveredPlaceId === null
+      ? null
+      : (pageItems.find((i) => i.saved?.id === hoveredPlaceId)?.blockId ??
+        null));
+
   /** Save the detail card's place: it is one of your places now — its own card. */
   const saveDetail = async (d: GoogleDetail): Promise<void> => {
     const place = await saveHit(d.hit);
@@ -566,6 +866,12 @@ function PlacesSurface({
       setSelectedId(place.id);
     }
   };
+
+  // A page's place not saved yet says where it comes from on its card.
+  const pageNoteOf = (d: GoogleDetail): { pageTitle: string } | null =>
+    d.pageItem !== null && overlay?.kind === "page"
+      ? { pageTitle: overlay.page.title }
+      : null;
 
   // The open card drilled into the side panel, under the panel's Back line.
   const drilledCard = (back: ReactNode): ReactNode => {
@@ -591,6 +897,7 @@ function PlacesSurface({
           ref={cardRef}
           hit={detail.hit}
           pick={detail.pick}
+          pageNote={pageNoteOf(detail)}
           frame={frame}
           onClose={() => setDetail(null)}
           onSave={() => saveDetail(detail)}
@@ -620,6 +927,7 @@ function PlacesSurface({
         key={`google:${detail.hit.placeId}`}
         hit={detail.hit}
         pick={detail.pick}
+        pageNote={pageNoteOf(detail)}
         frame={FLOATING}
         onClose={() => setDetail(null)}
         onSave={() => saveDetail(detail)}
@@ -726,7 +1034,25 @@ function PlacesSurface({
         {...(floatingCard
           ? {}
           : {
-              asideEnd: (
+              asideEnd:
+                overlayRead !== null ? (
+                  <PageOverlayPanel
+                    overlay={overlayRead}
+                    tags={tags}
+                    hoveredBlockId={hoveredPanelBlock}
+                    onHoverChange={setHoveredPageBlock}
+                    selectedBlockId={selectedPageBlock}
+                    onSelect={openPageItem}
+                    onSave={savePageItem}
+                    onSaveAll={saveAllPageItems}
+                    onFit={() => setFitRequest((n) => n + 1)}
+                    // Back to the plain map — `;page` cleared on this same
+                    // pane: the layer goes, the camera stays where it rests.
+                    onClose={onClosePage}
+                    drill={cardOpen ? drilledCard : null}
+                    onBack={closeCards}
+                  />
+                ) : (
                 <PlacesPanel
                   places={places}
                   tags={tags}
@@ -743,9 +1069,9 @@ function PlacesSurface({
                   drill={cardOpen ? drilledCard : null}
                   onBack={closeCards}
                 />
-              ),
+                ),
             })}
-        hoveredRowId={hoveredPlaceId}
+        hoveredRowId={hoveredPlaceId ?? hoveredPageItem?.saved?.id ?? null}
         onRowHoverChange={setHoveredPlaceId}
         viewOptions={viewOptions}
         onRowActivate={(p) => {
@@ -842,6 +1168,9 @@ function PlacesSurface({
           </Pin>
         ) : null}
       </Presence>
+      {pageId === null ? null : (
+        <PageOverlayReader pageId={pageId} onRead={setOverlayReport} />
+      )}
       <Presence>
         {pinPick !== null ? (
           <Pin key="pin-pick" to="bottom" offset="lg" layer="float">

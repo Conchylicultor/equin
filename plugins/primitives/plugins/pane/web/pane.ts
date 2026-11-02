@@ -17,6 +17,9 @@ import { splitRoutePrefix } from "@plugins/primitives/plugins/pane/plugins/route
 import {
   fillSegment,
   indexKeyedSuffix,
+  isKeyedOnlySegment,
+  joinBasePath,
+  joinUrlParts,
   MissingRouteParamError,
   normalizeRoutePath,
   parseSegmentParts,
@@ -353,8 +356,9 @@ export interface PaneInternal {
    * empty main area at its bare root.
    *
    * Two invariants, both thrown on at registry sync (`useSyncPaneRegistry`):
-   * an index pane has NO URL segment of its own (it is reached at the bare
-   * root), and an app has at most one.
+   * an index pane has NO positional URL part of its own (it is reached at the
+   * bare root — keyed params alone, `";page"`, ride the base path:
+   * `/places;page=x`), and an app has at most one.
    */
   appIndex: boolean;
   /**
@@ -695,16 +699,21 @@ function nonEmptyIndex(
 
 /**
  * The app-relative URL of `route`, with the landing pane's `index` params (if
- * any) as a leading `;…` part — which {@link applyIndexToBase} joins onto the
- * base path, so the address bar reads `/sonata;view.sonata.library=all`.
+ * any) as a leading `;…` part — which the store's `applyBasePath` (or
+ * `joinBasePath`, core) joins onto the base path, so the address bar reads
+ * `/places;page=x` or `/sonata;view.sonata.library=all`. `indexPane` is the
+ * landing pane the params belong to: its declared keyed names are written
+ * first, in declaration order (see `indexKeyedSuffix`).
  */
 export function buildRouteUrl(
   route: PaneSlot[],
   index: Record<string, string> = NO_PARAMS,
+  indexPane?: PaneInternal,
 ): string {
-  const suffix = indexKeyedSuffix(index);
-  if (route.length === 0) return suffix ? "/" + suffix : "/";
-
+  const suffix = indexKeyedSuffix(
+    index,
+    indexPane ? segmentKeyedParamNames(indexPane.segment) : [],
+  );
   const parts: string[] = suffix ? [suffix] : [];
   for (const slot of route) {
     const pane = registry.get(slot.paneId);
@@ -713,8 +722,21 @@ export function buildRouteUrl(
     // single source of truth shared with `RouteDef.path`.
     parts.push(...fillSegment(pane.segment, slot.params, { ownSlot: true }));
   }
+  return joinUrlParts(parts);
+}
 
-  return "/" + parts.join("/") || "/";
+/**
+ * The app's index (landing) pane registered for `basePath`, or `undefined` —
+ * segment-less and unique per app, both enforced at registry sync.
+ */
+function indexPaneFor(basePath: string): PaneInternal | undefined {
+  const bp = normalizeAppPath(basePath);
+  for (const pane of registry.values()) {
+    if (pane.appIndex && normalizeAppPath(pane.app.basePath) === bp) {
+      return pane;
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -757,6 +779,22 @@ function strandedRouteUrl(basePath: string, route: PaneSlot[]): string | null {
   const homeBase = normalizeAppPath(home.basePath);
   if (homeBase === normalizeAppPath(basePath)) return null;
   return homeBase + buildRouteUrl(route);
+}
+
+/**
+ * {@link strandedRouteUrl} for an open: a landing open (an app's index pane at
+ * the root — an empty route, which names no app) belongs to the index pane's
+ * own app, at its bare root with its keyed params (`/places;page=x`).
+ */
+function strandedOpenUrl(
+  basePath: string,
+  next: OpenComputation,
+): string | null {
+  if (!next.landing) return strandedRouteUrl(basePath, next.route);
+  const { pane, index } = next.landing;
+  const homeBase = normalizeAppPath(pane.app.basePath);
+  if (homeBase === normalizeAppPath(basePath)) return null;
+  return joinBasePath(homeBase, buildRouteUrl(EMPTY, index, pane));
 }
 
 // ---------------------------------------------------------------------------
@@ -876,9 +914,11 @@ export interface PaneStore {
   /**
    * The full address — base path included — this store writes for `route`:
    * what the address bar shows once `route` is on screen, and so what a new
-   * browser tab must be given to boot into the same layout.
+   * browser tab must be given to boot into the same layout. `index` is the
+   * landing pane's params that address carries (`/places;page=x`) — none when
+   * omitted.
    */
-  routeUrl(route: PaneSlot[]): string;
+  routeUrl(route: PaneSlot[], index?: Record<string, string>): string;
   /**
    * The {@link routeUrl} of the route `restoreRoute(slots)` would put on
    * screen — the href half of a restore that is a link (a sidebar entry that
@@ -947,7 +987,9 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     route: PaneSlot[],
     index: Record<string, string> = NO_PARAMS,
   ): string {
-    return applyBasePath(buildRouteUrl(route, index));
+    return applyBasePath(
+      buildRouteUrl(route, index, indexPaneFor(currentBasePath)),
+    );
   }
 
   function restoredRouteUrl(
@@ -1245,20 +1287,25 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
       crossApp: AppNavigator;
     },
   ): void {
-    const next = computeOpen(currentSlots(), undefined, internal, params, {
-      mode: implOpts.root ? "root" : "push",
-      options: implOpts.options,
-      hint: implOpts.hint,
-    });
-    const away = next.changed
-      ? strandedRouteUrl(currentBasePath, next.route)
-      : null;
+    const next = computeOpen(
+      currentSlots(),
+      undefined,
+      internal,
+      params,
+      {
+        mode: implOpts.root ? "root" : "push",
+        options: implOpts.options,
+        hint: implOpts.hint,
+      },
+      currentIndex,
+    );
+    const away = next.changed ? strandedOpenUrl(currentBasePath, next) : null;
     if (away !== null) implOpts.crossApp(away);
     else apply(next);
   }
 
   function apply(next: OpenComputation): void {
-    if (next.changed) setRoute(next.route, next.replace);
+    if (next.changed) setRoute(next.route, next.replace, next.landing?.index);
   }
 
   function close(internal: PaneInternal, instanceId: number): void {
@@ -1294,6 +1341,19 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     instanceId: number,
     params: Record<string, string>,
   ): void {
+    // The app's landing pane is not a slot: its keyed params live beside the
+    // route (`getIndexParams`) and ride the base path (`/places;page=x`). The
+    // same in-place rewrite — the route, and so the mounted pane, untouched;
+    // its views kept — written as a navigation like any `setParams`.
+    if (internal.appIndex && instanceId === indexInstanceIdFor(internal.id)) {
+      const index = nonEmptyIndex({
+        ...extractOwnParams(internal, params),
+        ...onlySurfaceViews(currentIndex),
+      });
+      if (sameParams(index, currentIndex)) return;
+      setRoute(currentSlots(), !internal.chrome.history, index);
+      return;
+    }
     const route = currentSlots();
     const idx = route.findIndex((s) => s.instanceId === instanceId);
     if (idx < 0) {
@@ -1672,8 +1732,8 @@ export function restoreRoute(
  * "/" (→ the app root via applyBasePath), pushes history, and notifies; the
  * empty route then re-resolves to the index pane via `useIndexMatch`.
  */
-export function clearRoute(): void {
-  liveStoreSink.peek().clearRoute();
+export function clearRoute(opts?: { index?: Record<string, string> }): void {
+  liveStoreSink.peek().clearRoute(opts);
 }
 
 export function setBasePath(basePath: string): void {
@@ -1765,7 +1825,10 @@ function extractOwnParams(
   const names = segmentParamNames(pane.segment);
   const own: Record<string, string> = {};
   for (const name of names) {
-    if (name in allParams) own[name] = allParams[name]!;
+    // An optional key passed as `undefined` (`useSetParams({ page: undefined })`)
+    // is absent, not a param holding "undefined".
+    const value = allParams[name] as string | undefined;
+    if (value !== undefined) own[name] = value;
   }
   return own;
 }
@@ -1984,6 +2047,13 @@ export interface OpenRequest {
 export interface OpenComputation {
   /** The route after the open — the current route itself when `!changed`. */
   route: PaneSlot[];
+  /**
+   * Set when the open lands on an app's LANDING pane (an `appIndex` target
+   * opened at the root): the route is empty — the bare root, which shows the
+   * index pane — and `index` its params, riding the base path
+   * (`/places;page=x`). `pane` names the app it is the landing of.
+   */
+  landing?: { pane: PaneInternal; index: Record<string, string> };
   /** Write it as a history replace (the target opts out of history). */
   replace: boolean;
   /** False when the target is already on screen as asked: nothing to write. */
@@ -2010,6 +2080,7 @@ export function computeOpen(
   target: PaneInternal,
   params: Record<string, string>,
   opts: OpenRequest,
+  currentIndex: Record<string, string> = NO_PARAMS,
 ): OpenComputation {
   const options = opts.options ?? {};
   const hint = opts.hint ?? {};
@@ -2025,6 +2096,34 @@ export function computeOpen(
     changed: true,
   });
   const ownParams = extractOwnParams(target, params);
+
+  // An app's landing pane, opened at the root, IS the app's bare root: the
+  // empty route (which shows it) with its keyed params beside it, exactly what
+  // its URL (`/places;page=x`) parses back to — not a slot whose URL could not
+  // carry them. Already on the bare root, its surface views stay (as
+  // `setParams` keeps them); the same params there is no change at all. Only
+  // the root: the landing pane has no URL part of its own to sit anywhere else
+  // in a route, so a positional open of one declaring keyed params throws.
+  if (target.appIndex) {
+    if (opts.mode === "root") {
+      const index = nonEmptyIndex(
+        currentRoute.length === 0
+          ? { ...ownParams, ...onlySurfaceViews(currentIndex) }
+          : ownParams,
+      );
+      const landing = { pane: target, index };
+      if (currentRoute.length === 0 && sameParams(index, currentIndex)) {
+        return { ...unchanged, landing };
+      }
+      return { route: EMPTY, replace, changed: true, landing };
+    }
+    if (isKeyedOnlySegment(target.segment)) {
+      throw new Error(
+        `Pane "${target.id}" is its app's index pane and declares keyed params ("${target.segment}"), ` +
+          `which ride the app's base path — it can only be opened with mode "root", not "${opts.mode}".`,
+      );
+    }
+  }
 
   // append: beside whatever is on screen, wherever the open comes from — the
   // one positional open global chrome (a popover in the action bar) can make,
@@ -2862,7 +2961,9 @@ function makePaneObject(
         href: () => {
           const current = store.getRoute();
           const next = computePromote(current, internal, instanceId);
-          return store.routeUrl(next ? next.route : current);
+          return next
+            ? store.routeUrl(next.route, next.landing?.index)
+            : store.routeUrl(current);
         },
       };
     }, [store, instanceId, slots, surfaceAppId, navigator]);
@@ -3021,12 +3122,13 @@ type OwnRouteParams<Seg extends string> = RouteParams<Seg>;
 // The `appIndex` field. An index pane is reached at its app's BARE ROOT, so it
 // cannot own a URL segment — and now that the route's `Seg` literal is reliable
 // (see the `const Seg` note in `core/route.ts`) that stops being a boot-time
-// throw and becomes a tsc error.
+// throw and becomes a tsc error. Keyed params alone (`";page"`) own no URL
+// part — they ride the base path (`/places;page=x`) — so they are allowed.
 //
 // The runtime throws in `useSyncPaneRegistry` stay: they still guard the
 // untyped `AnyPane` path, and the "one index per app" half of the invariant is
 // cross-file, which no type can see.
-type AppIndexField<Seg extends string> = Seg extends "" | "/"
+type AppIndexField<Seg extends string> = Seg extends "" | "/" | `;${string}`
   ? {
       /**
        * Marks this pane as its app's index/landing pane — what that app's bare
@@ -3154,6 +3256,16 @@ function define(
         `Add a static prefix (e.g. "x/${segment}") to avoid URL parsing ambiguity.`,
     );
   }
+  // Keyed params with no positional part ride the app's base path — only the
+  // app's landing pane is written there (the type forbids the rest; this
+  // guards the erased `AnyPane` path).
+  if (isKeyedOnlySegment(segment) && args.appIndex !== true) {
+    throw new Error(
+      `Pane "${id}": segment "${segment}" declares keyed params on no URL part of its own. ` +
+        `Only an app's index pane (appIndex: true) may — its keyed params ride the app's ` +
+        `base path. Give the segment a static part ("x${segment}"), or mark it appIndex.`,
+    );
+  }
 
   // A real render slot: a pane's header is a visible list whose order the user
   // should own, exactly like any other. (It was a plain `defineSlot` while slot
@@ -3226,12 +3338,15 @@ export function useSyncPaneRegistry(): void {
         continue;
       }
       if (internal.appIndex) {
-        if (internal.segment && internal.segment !== "/") {
+        // "Owns a URL part" is POSITIONAL: keyed params (`";page"`) ride the
+        // base path (`/places;page=x`), so an index pane may declare them.
+        if (parseSegmentParts(internal.segment).length > 0) {
           throw new Error(
             `Pane "${internal.id}" declares appIndex but owns the URL segment "${internal.segment}". ` +
               `An index pane is reached at its app's bare root ("${internal.app.basePath}"), so it ` +
               `cannot have a segment of its own — drop the segment, or drop appIndex and let the ` +
-              `app's bare root resolve elsewhere.`,
+              `app's bare root resolve elsewhere. (Keyed params alone — ";name" — are allowed: ` +
+              `they ride the base path.)`,
           );
         }
         const owner = indexOwner.get(internal.app.id);
@@ -3244,25 +3359,20 @@ export function useSyncPaneRegistry(): void {
         }
         indexOwner.set(internal.app.id, internal.id);
       }
-      // Index/empty-segment panes resolve via `appIndex`, not URL matching, so
-      // multiple empty segments are legal — only check real URL segments.
-      if (
-        internal.segment &&
-        internal.segment !== "/" &&
-        internal.segment !== ""
-      ) {
-        // A segment ending in `:name?` claims two shapes of URL; each is checked.
-        for (const pattern of segmentMatchPatterns(internal.segment)) {
-          const owner = patternOwner.get(pattern);
-          if (owner) {
-            throw new Error(
-              `Pane segment collision: "${owner}" and "${internal.id}" both match the same URLs ` +
-                `("${registry.get(owner)!.segment}" vs "${internal.segment}"). Segments must be ` +
-                `globally unique across all registered panes — rename one to disambiguate.`,
-            );
-          }
-          patternOwner.set(pattern, internal.id);
+      // Index/empty-segment panes (`""`, keyed-only `";page"`) resolve via
+      // `appIndex`, not URL matching, so they claim no pattern and any number
+      // are legal (`segmentMatchPatterns` answers none). A segment ending in
+      // `:name?` claims two shapes of URL; each is checked.
+      for (const pattern of segmentMatchPatterns(internal.segment)) {
+        const owner = patternOwner.get(pattern);
+        if (owner) {
+          throw new Error(
+            `Pane segment collision: "${owner}" and "${internal.id}" both match the same URLs ` +
+              `("${registry.get(owner)!.segment}" vs "${internal.segment}"). Segments must be ` +
+              `globally unique across all registered panes — rename one to disambiguate.`,
+          );
         }
+        patternOwner.set(pattern, internal.id);
       }
       seen.add(internal.id);
       // The only place the pane's owning plugin is knowable: the loader stamps
@@ -3371,25 +3481,25 @@ export function useIndexMatch(basePath: string): PaneMatch | null {
     () => NO_PARAMS,
   );
   return useMemo(() => {
-    const bp = normalizeAppPath(basePath);
-    for (const pane of registry.values()) {
-      // Segment-less and unique per app — both enforced at registry sync, so
-      // there is nothing left to defend against on this hot path.
-      if (!pane.appIndex) continue;
-      if (normalizeAppPath(pane.app.basePath) !== bp) continue;
-      const entry: MatchEntry = {
-        instanceId: indexInstanceIdFor(pane.id),
-        uuid: `index:${pane.id}`,
-        pane,
-        params: {},
-        fullParams: {},
-        options: { ...pane.optionDefaults },
-        hint: {},
-        views: surfaceViewsOf(index),
-      };
-      return { panes: [entry] };
-    }
-    return null;
+    const pane = indexPaneFor(basePath);
+    if (!pane) return null;
+    // The SAME instance (id, uuid) whatever its params: a keyed param is a view
+    // of the landing pane, so changing one re-renders it, never remounts it.
+    // Only the names its segment declares: an undeclared identifier key the
+    // URL carried is ignored, as on any pane, and the surface view keys are the
+    // entry's `views`.
+    const params = extractOwnParams(pane, index);
+    const entry: MatchEntry = {
+      instanceId: indexInstanceIdFor(pane.id),
+      uuid: `index:${pane.id}`,
+      pane,
+      params,
+      fullParams: { ...params },
+      options: { ...pane.optionDefaults },
+      hint: {},
+      views: surfaceViewsOf(index),
+    };
+    return { panes: [entry] };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `contributions` identity tracks the registry; registry itself is a module-level mutable Map read inside. `index` is identity-stable until changed.
   }, [basePath, contributions, index]);
 }
@@ -3595,6 +3705,7 @@ export function useOpenPane(): OpenPaneFn {
         target._internal,
         params,
         opts,
+        store.getIndexParams(),
       );
     const open = (
       target: AnyPane,
@@ -3606,8 +3717,9 @@ export function useOpenPane(): OpenPaneFn {
       if (!next.changed) return;
       // A route headed by another app's pane belongs to that app: hand it over,
       // exactly as Expand does, instead of stranding it here.
-      const away = strandedRouteUrl(store.getBasePath(), next.route);
-      if (away === null) store.setRoute(next.route, next.replace);
+      const away = strandedOpenUrl(store.getBasePath(), next);
+      if (away === null)
+        store.setRoute(next.route, next.replace, next.landing?.index);
       else (navBoundary ?? navigateApp)(away);
     };
     const to = (
@@ -3620,9 +3732,10 @@ export function useOpenPane(): OpenPaneFn {
       // route's URL is exactly it.
       href: () => {
         const store = resolveStore();
-        const { route } = compute(store, target, params, opts);
+        const next = compute(store, target, params, opts);
         return (
-          strandedRouteUrl(store.getBasePath(), route) ?? store.routeUrl(route)
+          strandedOpenUrl(store.getBasePath(), next) ??
+          store.routeUrl(next.route, next.landing?.index)
         );
       },
     });

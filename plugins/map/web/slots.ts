@@ -105,6 +105,13 @@ export interface MapRendererProps {
    * control does. Absent: only the Fit control frames on demand.
    */
   fitRequest?: number;
+  /**
+   * The overlay ids the camera frames, when set and non-empty: its one
+   * framing, the Fit control and {@link fitRequest} frame only these (still
+   * never a `frame: false` one) — `framingOverlays(overlays, focusIds)`.
+   * Absent or empty: every framed overlay.
+   */
+  focusIds?: readonly string[];
 }
 
 /**

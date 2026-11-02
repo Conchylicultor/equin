@@ -82,6 +82,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "page.links.backlinks", pluginId: "page.links" },
   { id: "pages-sidebar", pluginId: "apps.pages.page-tree" },
   { id: "pages.trash", pluginId: "apps.pages.trash" },
+  { id: "places.page-overlay", pluginId: "apps.places.places-map" },
   { id: "places.panel", pluginId: "apps.places.places-map" },
   { id: "places.presets", pluginId: "apps.places.places-map" },
   { id: "places.tags", pluginId: "apps.places.tag-manager" },

@@ -11,8 +11,17 @@ import { hash53 } from "@plugins/packages/plugins/string-hash/core";
 export type MapMarkText =
   /** Beside the mark at its `labelAt`, in map-label paint (haloed in the tile colour). */
   | { at: "beside"; text: string }
-  /** In the middle of the mark, in `color` — a cluster's count on its disc. */
-  | { at: "center"; text: string; color: string };
+  /**
+   * Centred on a point of the mark, in `color` — a cluster's count on its
+   * disc (the mark's `anchor`, the default), or a number on a badge the mark
+   * draws off its anchor (`point`, in the mark's box, CSS px).
+   */
+  | {
+      at: "center";
+      text: string;
+      color: string;
+      point?: { x: number; y: number };
+    };
 
 export interface MapMark {
   kind: "mark";

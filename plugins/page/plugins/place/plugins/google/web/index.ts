@@ -4,7 +4,7 @@ import {
   useMapsAccess,
 } from "@plugins/integrations/plugins/google-maps/web";
 import { Place } from "@plugins/page/plugins/place/web";
-import { GOOGLE_PLACE_PROVIDER_ID } from "../shared";
+import { GOOGLE_PLACE_PROVIDER_ID } from "../core";
 import { brand } from "@plugins/ui/plugins/icons/core";
 
 export default {

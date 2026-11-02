@@ -796,6 +796,10 @@
       "name": "@equin/plugin-apps-places-mapstr-import",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/places/plugins/page-overlay": {
+      "name": "@equin/plugin-apps-places-page-overlay",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/places/plugins/place-details": {
       "name": "@equin/plugin-apps-places-place-details",
       "version": "0.0.1",
@@ -7483,6 +7487,8 @@
     "@equin/plugin-apps-places-ask": ["@equin/plugin-apps-places-ask@workspace:plugins/apps/plugins/places/plugins/ask"],
 
     "@equin/plugin-apps-places-mapstr-import": ["@equin/plugin-apps-places-mapstr-import@workspace:plugins/apps/plugins/places/plugins/mapstr-import"],
+
+    "@equin/plugin-apps-places-page-overlay": ["@equin/plugin-apps-places-page-overlay@workspace:plugins/apps/plugins/places/plugins/page-overlay"],
 
     "@equin/plugin-apps-places-place-details": ["@equin/plugin-apps-places-place-details@workspace:plugins/apps/plugins/places/plugins/place-details"],
 

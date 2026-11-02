@@ -42,6 +42,7 @@ import {
 import { defaultPinMark } from "./default-pin";
 import { defaultClusterMark } from "./default-cluster";
 import { MarkHostProvider, useMapMarkEnv } from "./mark-env";
+import { MapChrome, MapTilesProvider } from "./map-chrome";
 
 /** A renderer as the slot hands it back: `component` sealed, everything else readable. */
 type RendererItem = ReturnType<typeof GeoMap.Renderer.useContributions>[number];
@@ -75,6 +76,14 @@ export interface MapViewProps {
    */
   fitRequest?: number;
   /**
+   * The overlay ids the camera frames, when set and non-empty: the map's own
+   * first framing, its Fit control and each {@link fitRequest} frame only
+   * these — a caller showing one set among others (a page's places among the
+   * user's saved ones). Ids are the overlays' own `id`s. A `frame: false`
+   * overlay stays out even when named. Absent or empty: every framed overlay.
+   */
+  focusIds?: readonly string[];
+  /**
    * How pins that crowd each other on screen are drawn: merged into clusters
    * (`GeoMap.Cluster`) or kept as spots (see `MapRendererProps.crowd`).
    * Omitted numbers take the map's defaults. Absent = every pin on its own.
@@ -105,6 +114,15 @@ export interface MapViewProps {
    */
   cameraKey?: string;
   /**
+   * Where a map with a {@link cameraKey} opens: where the user left it
+   * (`"remembered"`, the default), or framed on its overlays as a first visit
+   * is (`"framed"`) — while still remembering each rest under the key, so the
+   * next map opening `"remembered"` opens where this one was left. For a view
+   * that must open on what it was opened for (a page's places laid over the
+   * user's map) but hands its camera back when it closes.
+   */
+  cameraOpen?: "remembered" | "framed";
+  /**
    * The host's own words for "nothing to show", floated on a card over the
    * map while there are no overlays — or `null` for a bare map (a host that
    * already says the count elsewhere). The map itself stays mounted either
@@ -112,6 +130,15 @@ export interface MapViewProps {
    * again keeps the user's pan and zoom.
    */
   empty: ReactNode;
+  /**
+   * The host's own controls floated over the map's tiles (an "Open in…"
+   * button) — placed by the host (a `Pin` to a corner of the map), drawn
+   * inside the map's chrome boundary ({@link MapChrome}), so they wear the
+   * tiles' scheme as the map's own Fit control does: light over light tiles,
+   * whatever the app's scheme. Drawn only over a mounted map, never over a
+   * set-up or loading state.
+   */
+  controls?: ReactNode;
 }
 
 function ignoreActivate(): void {}
@@ -144,13 +171,14 @@ const cameraStore = defineStore({
  */
 function useRememberedCamera(
   cameraKey: string | undefined,
+  cameraOpen: "remembered" | "framed",
   framesSomething: boolean,
 ): {
   initialCamera: CameraView | null;
   remember: ((view: CameraView) => void) | undefined;
 } {
   const [initialCamera] = useState(() => {
-    if (cameraKey === undefined) return null;
+    if (cameraKey === undefined || cameraOpen === "framed") return null;
     return readDraft(cameraStore, { scope: cameraKey });
   });
   const framing = useLatestRef(framesSomething);
@@ -188,12 +216,16 @@ export function MapView({
   fitPadding = NO_MAP_PADDING,
   pick,
   cameraKey,
+  cameraOpen = "remembered",
   fitRequest,
+  focusIds,
   empty,
+  controls,
 }: MapViewProps) {
   const renderer = GeoMap.Renderer.useContributions()[0];
   const { initialCamera, remember } = useRememberedCamera(
     cameraKey,
+    cameraOpen,
     framingOverlays(overlays).length > 0,
   );
   // The caller's report through a ref, keyed on its presence only: a new
@@ -244,27 +276,34 @@ export function MapView({
     ...(initialCamera === null ? {} : { initialCamera }),
     ...(onCameraRest === undefined ? {} : { onCameraRest }),
     ...(fitRequest === undefined ? {} : { fitRequest }),
+    ...(focusIds === undefined ? {} : { focusIds }),
   };
+  // Drawn over the tiles, so in the map's chrome theme, not the app's.
   const notice = (
-    <Presence>
-      {overlays.length === 0 && empty !== null ? (
-        <Pin key="notice" to="center" layer="raised" decorative>
-          <Surface level="overlay" className="p-md">
-            {empty}
-          </Surface>
-        </Pin>
-      ) : null}
-    </Presence>
+    <MapChrome>
+      <Presence>
+        {overlays.length === 0 && empty !== null ? (
+          <Pin key="notice" to="center" layer="raised" decorative>
+            <Surface level="overlay" className="p-md">
+              {empty}
+            </Surface>
+          </Pin>
+        ) : null}
+      </Presence>
+      {controls}
+    </MapChrome>
   );
   return (
-    <MarkHostProvider>
-      <MarkedRenderer
-        renderer={renderer}
-        props={props}
-        notice={notice}
-        tiles={tiles}
-      />
-    </MarkHostProvider>
+    <MapTilesProvider tiles={tiles}>
+      <MarkHostProvider>
+        <MarkedRenderer
+          renderer={renderer}
+          props={props}
+          notice={notice}
+          tiles={tiles}
+        />
+      </MarkHostProvider>
+    </MapTilesProvider>
   );
 }
 
@@ -317,7 +356,7 @@ function MarkedRenderer({
 interface GateProps {
   renderer: RendererItem;
   props: MapRendererProps;
-  /** Floated over the mounted map (the empty notice), never over a set-up state. */
+  /** Floated over the mounted map (the empty notice, the host's controls), never over a set-up state. */
   notice: ReactNode;
 }
 

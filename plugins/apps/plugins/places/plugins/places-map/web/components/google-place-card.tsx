@@ -38,6 +38,8 @@ import { PickSources } from "./pick-sources";
 const closeIcon = symbol("close");
 const saveIcon = symbol("add");
 const whyIcon = symbol("auto-awesome");
+const pageIcon = symbol("description");
+const saveToMineIcon = symbol("bookmark-add");
 
 /** A Google hit the detail card can show: one with its full candidate (a position). */
 export type DetailedHit = GoogleHit & { result: PlaceCandidate };
@@ -54,6 +56,7 @@ export type DetailedHit = GoogleHit & { result: PlaceCandidate };
 export function GooglePlaceCard({
   hit,
   pick,
+  pageNote = null,
   frame,
   ref,
   onClose,
@@ -61,6 +64,12 @@ export function GooglePlaceCard({
 }: {
   hit: DetailedHit;
   pick: AskPickNote | null;
+  /**
+   * The page laid over the map it comes from (`page-overlay`): the card says
+   * so — "On <page> — not in your places" — and Save sits in that note, in
+   * the overlay accent, instead of the footer.
+   */
+  pageNote?: { pageTitle: string } | null;
   /** Floating on the map, or drilled into the side panel. */
   frame: CardFrame;
   /** The card's box (what a click away is measured against). */
@@ -178,6 +187,9 @@ export function GooglePlaceCard({
                 )}
               </Stack>
               {pick === null ? null : <PickNote pick={pick} />}
+              {pageNote === null ? null : (
+                <PageNote pageTitle={pageNote.pageTitle} onSave={onSave} />
+              )}
               <DetailsNotice details={details} />
               {rich !== null ? (
                 <PhotoThumbs
@@ -205,14 +217,47 @@ export function GooglePlaceCard({
       footer={
         showPhotos ? undefined : (
           <MapsActions place={mapsPlace} ink={ink}>
-            <Button variant="outline" onClick={onSave}>
-              <Icon icon={saveIcon} />
-              Save
-            </Button>
+            {pageNote === null ? (
+              <Button variant="outline" onClick={onSave}>
+                <Icon icon={saveIcon} />
+                Save
+              </Button>
+            ) : null}
           </MapsActions>
         )
       }
     />
+  );
+}
+
+/**
+ * Where a page's place comes from: "On <page> — not in your places", and Save,
+ * in the overlay accent (`place-palette`'s `--place-overlay`).
+ */
+function PageNote({
+  pageTitle,
+  onSave,
+}: {
+  pageTitle: string;
+  onSave: () => Promise<void>;
+}): ReactNode {
+  return (
+    <Stack gap="xs" className="rounded-md bg-(--place-overlay)/10 px-sm py-xs">
+      <Stack direction="row" gap="xs" align="start">
+        <Icon icon={pageIcon} className="size-4 text-(--place-overlay)" />
+        <Text variant="caption">
+          On <strong>{pageTitle}</strong> — not in your places. Shown for this
+          page only.
+        </Text>
+      </Stack>
+      <Button
+        className="bg-(--place-overlay) text-categorical-foreground hover:bg-(--place-overlay)/90"
+        onClick={onSave}
+      >
+        <Icon icon={saveToMineIcon} />
+        Save to my places
+      </Button>
+    </Stack>
   );
 }
 

@@ -252,7 +252,11 @@ function makeBackgroundStore(appId: string, apps: AppList): PaneStore {
 function rebuildBackgroundTab(persisted: PersistedTab, apps: AppList): Tab {
   const store = makeBackgroundStore(persisted.appId, apps);
   if (persisted.route.length > 0) {
-    store.restoreRoute(persisted.route);
+    store.restoreRoute(persisted.route, { index: persisted.index });
+  } else if (persisted.index) {
+    // A bare-root tab whose landing pane carried keyed params
+    // (`/places;page=x`): the same empty route, with them beside it.
+    store.clearRoute({ index: persisted.index });
   } else if (persisted.rawPath) {
     // A backgrounded PENDING tab (empty route + a non-empty rawPath it was
     // waiting to resolve) survives the reload as pending — re-seed it so the tab
@@ -487,7 +491,9 @@ export function bootTabs(
     persistedFocused?.route.length &&
     persistedFocused.rawPath === parsed.rawPath
   ) {
-    focused.store.restoreRoute(persistedFocused.route);
+    focused.store.restoreRoute(persistedFocused.route, {
+      index: persistedFocused.index,
+    });
   } else {
     focused.store.seedPending(parsed.rawPath);
   }

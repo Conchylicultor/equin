@@ -199,6 +199,8 @@ interface ListRowConfig {
   rowSize: "sm" | "md";
   rowChrome: ListViewOptions<unknown>["rowChrome"];
   renderRow: ListViewOptions<unknown>["renderRow"];
+  /** The action cluster is painted at rest (`ListViewOptions.actionsAtRest`). */
+  actionsAtRest: boolean;
   labelClassName: ((row: unknown) => ClassName | undefined) | undefined;
   detail: ListViewOptions<unknown>["detail"];
   rowActivation: DataViewRenderProps<unknown>["rowActivation"];
@@ -371,6 +373,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   const { properties } = props.state;
   const { fields, rowActivation, rowTone, cover } = props;
   const { rowChrome, renderRow, labelClassName } = options;
+  const actionsAtRest = options.actionsAtRest === true;
   // Where every field goes (the surface's recipe and pins, the user's
   // Properties); the section pipeline above keeps using the full
   // `props.fields` for sort/filter/search.
@@ -499,6 +502,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       rowSize,
       rowChrome,
       renderRow,
+      actionsAtRest,
       labelClassName,
       detail,
       rowActivation,
@@ -520,6 +524,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     rowSize,
     rowChrome,
     renderRow,
+    actionsAtRest,
     labelClassName,
     detail,
     rowActivation,
@@ -1253,8 +1258,11 @@ function listRowNode(
         )
       }
       // The disclosure must be findable, so a row with detail or attached
-      // rows shows its cluster at rest.
-      actionsAlwaysVisible={detail || childCount > 0 ? true : undefined}
+      // rows shows its cluster at rest — and so does every row of a list
+      // whose actions are its point (`actionsAtRest`).
+      actionsAlwaysVisible={
+        detail || childCount > 0 || config.actionsAtRest ? true : undefined
+      }
     >
       {config.renderRow ? (
         config.renderRow(row)

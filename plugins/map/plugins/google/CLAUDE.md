@@ -79,7 +79,8 @@ The only map-vendor code in the repo. Everything else draws maps through
 - **Camera**: `FitCamera` frames once (the first time there are overlays,
   `moveCamera` straight there); `FitControl` — our `IconButton` on an overlay
   surface, placed with `MapControl` at `RIGHT_BOTTOM` above Google's camera
-  control — flies there on click (`internal/fly-camera.ts`: one `moveCamera`
+  control, inside `<MapChrome>` so it wears the light map-chrome theme over
+  the light tiles in a dark app too — flies there on click (`internal/fly-camera.ts`: one `moveCamera`
   per animation frame along the core's `flyPath`, fractional zoom switched on
   for the flight and put back as it was (a raster map snaps to whole zooms, a
   vector map stays fractional); a
@@ -91,8 +92,9 @@ The only map-vendor code in the repo. Everything else draws maps through
   `fitPadding`) — and re-reports when the padding changes, since no `idle`
   follows a padding change. A changed `fitRequest` runs `FitControl`'s own
   fit (the same function as its click; the mount's value is skipped). Both
-  framings and the opening view read `framingOverlays` (never a
-  `frame: false` overlay). The lifted hover is the pointer's, else the
+  framings and the opening view read `framingOverlays(overlays, focusIds)`
+  (never a `frame: false` overlay, and only the `focusIds` ones when the
+  caller names some). The lifted hover is the pointer's, else the
   host's `hoveredId`; pointer changes are reported through `onHoverChange`
   from the pointer events themselves, as a release of the pin left and a claim
   of the pin entered (`(id, false)` then `(id, true)`), never a bare "none".
@@ -117,10 +119,10 @@ The only map-vendor code in the repo. Everything else draws maps through
     - `ConfigV2.WebRegister` "config"
     - `GeoMap.Renderer` "Google Maps" → `LazyBoundary`
     - `LiveMapSetup.MapIdPreview` → `MapIdPreview`
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `integrations/google-maps` ×6
+    - `map` ×4
     - `map/pin-layer` ×3
-    - `map` ×3
     - `config_v2` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/center.Center`

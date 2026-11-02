@@ -193,12 +193,13 @@ the code:
     - `ui/tokens/color-palette --muted`
     - `ui/tokens/sidebar-palette --sidebar`
     - `ui/tokens/sidebar-palette --sidebar-accent`
-  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps-core` ×7
     - `apps` ×7
     - `hints` ×2
     - `shell` ×2
     - `layouts/miller`
+    - `map`
     - `plugin-meta/exhibits`
     - `primitives/pane`
 - Exemptions:

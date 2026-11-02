@@ -200,6 +200,10 @@ conditional hook.
 - `columnCaptions?` — a caption row over the list (title label, each trailing
   label over its slot). Default off; also the view type's `configSchema`
   option (a switch in the view's settings).
+- `actionsAtRest?` — the row's action cluster stays painted at rest, not
+  only on hover: a short list whose item action is the point of each row
+  (Places' page overlay: Save on a place not saved yet). An action with
+  nothing to offer for a row draws nothing. Default off.
 - `size?` — row density, `"sm" | "md"`. Default follows the SURFACE's
   `DataViewProps.density`: `"sm"` when it declared itself compact, `"md"`
   otherwise. Setting it here pins a density whatever the surface asked for.

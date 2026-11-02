@@ -147,8 +147,8 @@ export class PinLayer {
             {
               at: "center",
               text: t.text,
-              x: box.left + mark.anchor.x,
-              y: box.top + mark.anchor.y,
+              x: box.left + (t.point ?? mark.anchor).x,
+              y: box.top + (t.point ?? mark.anchor).y,
               color: t.color,
             },
             fonts,

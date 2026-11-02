@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-places-page-overlay",
+  "description": "A page's places laid over the Places map, read live by page id: the overlay route, the join of a page's place blocks with the saved places, and the Open in Places button on a page's map block.",
+  "private": true,
+  "version": "0.0.1"
+}

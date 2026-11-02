@@ -82,6 +82,9 @@ which decides which one draws on top).
 - `cameraKey?` — remember the camera on this device under this key (the map
   primitive's `cameraKey`): it opens where the user left it, framing the pins
   only on a first visit. Places passes `"places.map"`.
+- `cameraOpen?` — the map primitive's: `"framed"` opens framed on the pins
+  (`focusIds` included) while still remembering each rest under `cameraKey`
+  (Places' page overlay, which hands its camera back to the plain map).
 - `rank?(row)` — the row's importance (`MapPin.rank`): draws above lower ranks
   where pins overlap and leads its spot. Default 0.
 - `keep?` — row keys drawn even where the search or filter hides them (a
@@ -99,6 +102,10 @@ which decides which one draws on top).
   (`CameraRest.visible`, re-reported when the padding changes).
 - `fitRequest?` — the map primitive's: each change (not the mount's value)
   frames the pins as the Fit control does.
+- `focusIds?` — the map primitive's: when non-empty, the first framing, the
+  Fit control and `fitRequest` frame only the pins it names. The ids are the
+  ones the map sees: a row pin's id is its row key, an extra overlay's is its
+  own `id` — so a row is named by its key, as in `keep` and `hoveredId`.
 
 ```tsx
 <DataView

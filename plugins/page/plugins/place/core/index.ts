@@ -1,4 +1,5 @@
 export { placeBlock, PLACE_TYPE } from "./place-block";
+export { locatedPlaces, type LocatedPlace } from "./located-places";
 export {
   placeSearch,
   placeResolve,

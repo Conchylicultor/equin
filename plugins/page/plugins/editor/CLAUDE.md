@@ -2544,9 +2544,9 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `ui/tokens/shape` ×2
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shadow --shadow`
-  - Imported by: 81 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 82 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `page` ×59
-    - `apps` ×10
+    - `apps` ×11
     - `reports` ×4
     - `active-data` ×3
     - `primitives` ×2

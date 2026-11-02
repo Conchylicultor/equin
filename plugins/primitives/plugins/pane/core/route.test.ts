@@ -17,6 +17,7 @@ import {
   withoutSurfaceViews,
   segmentMatchPatterns,
   splitKeyedPart,
+  joinUrlParts,
 } from "./route";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
@@ -252,9 +253,67 @@ describe("keyed params (`;name`)", () => {
     expect(() => defineRoute({ id: "kp-bad", segment: "t;a-b" })).toThrow(
       /not an identifier/,
     );
-    expect(() => defineRoute({ id: "kp-empty", segment: ";lens" })).toThrow(
-      /URL part/,
-    );
+    expect(() =>
+      defineRoute({ id: "kp-index-dup", segment: ";page;page" }),
+    ).toThrow(/declared twice/);
+    expect(() =>
+      defineRoute({ id: "kp-index-view", segment: ";view" }),
+    ).toThrow(/reserved/);
+  });
+});
+
+describe("keyed params on an index route (no positional part)", () => {
+  const places = defineApp({
+    id: "kp-places",
+    name: "Places",
+    basePath: "/places",
+    icon: symbol("map"),
+  });
+  const placesMap = defineRoute({ id: "kp-places-map", segment: ";page" });
+
+  test("are accepted, typed optional", () => {
+    const params: Parameters<typeof placesMap.path>[0] = {};
+    expect(placesMap.path(params)).toBe("/");
+  });
+
+  test("ride the base path, never a part of their own", () => {
+    expect(placesMap.path({ page: "x" })).toBe("/;page=x");
+    expect(placesMap.link(places, { page: "x" })).toBe("/places;page=x");
+    expect(placesMap.link(places, { page: "a b" })).toBe("/places;page=a%20b");
+  });
+
+  test("an absent value writes nothing: the bare root", () => {
+    expect(placesMap.link(places, {})).toBe("/places/");
+  });
+
+  test("on the root app, are the root's own suffix", () => {
+    expect(placesMap.link(rootApp, { page: "x" })).toBe("/;page=x");
+  });
+
+  test("fillSegment returns them as one `;…` suffix part", () => {
+    expect(fillSegment(";page", { page: "x" })).toEqual([";page=x"]);
+    expect(fillSegment(";page", {})).toEqual([]);
+    expect(
+      fillSegment(";page", { page: "x", "view.a": "y" }, { ownSlot: true }),
+    ).toEqual([";page=x;view.a=y"]);
+    expect(joinUrlParts([";page=x"])).toBe("/;page=x");
+    expect(joinUrlParts(["a", ";k=1", "b"])).toBe("/a;k=1/b");
+    expect(joinUrlParts([])).toBe("/");
+  });
+
+  test("claim no URL shape (two index panes never collide)", () => {
+    expect(segmentMatchPatterns(";page")).toEqual([]);
+    expect(segmentMatchPatterns("")).toEqual([]);
+  });
+
+  test("an index route with keyed params cannot have children", () => {
+    expect(() =>
+      defineRoute({
+        id: "kp-places-child",
+        segment: "p/:id",
+        parent: placesMap,
+      }),
+    ).toThrow(/cannot have child routes/);
   });
 });
 
@@ -355,8 +414,25 @@ describe("surface view keys", () => {
       indexKeyedSuffix({ "view.lib": "recently edited", "view.a": "x" }),
     ).toBe(";view.a=x;view.lib=recently%20edited");
     expect(
-      readIndexKeyedParams("view.lib=recently%20edited;view=old;junk=1"),
+      readIndexKeyedParams("view.lib=recently%20edited;view=old;bad-name=1"),
     ).toEqual({ "view.lib": "recently edited" });
+  });
+
+  test("an index pane's declared keyed params: written first, read back", () => {
+    expect(
+      indexKeyedSuffix({ "view.lib": "all", zoom: "2", page: "x" }, [
+        "zoom",
+        "page",
+      ]),
+    ).toBe(";zoom=2;page=x;view.lib=all");
+    // Any other identifier key is kept (sorted, before the views): the parse
+    // knows no base path, so the index match is what ignores undeclared ones.
+    expect(indexKeyedSuffix({ b: "1", page: "x", a: "2" }, ["page"])).toBe(
+      ";page=x;a=2;b=1",
+    );
+    expect(
+      readIndexKeyedParams("page=a%3Bb;view.lib=all;view=old;junk"),
+    ).toEqual({ page: "a;b", "view.lib": "all" });
   });
 });
 

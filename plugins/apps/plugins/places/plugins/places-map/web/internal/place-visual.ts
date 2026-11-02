@@ -81,11 +81,24 @@ export function placeVisual(
 }
 
 /**
+ * What a saved-place pin carries in `MapPin.data`: the place's look, plus how
+ * a page laid over the map marks it (`page-overlay`) — its number on the
+ * page (a badge on the head), or `dimmed` when it is not on the page (faded
+ * and desaturated, still clickable). Both absent on the plain map.
+ */
+export interface SavedPinVisual extends PlaceVisual {
+  /** 1-based: the place's number on the page laid over the map. */
+  pageNumber?: number;
+  /** Not one of the page's places, while a page is laid over the map. */
+  dimmed?: boolean;
+}
+
+/**
  * The visual a saved-place pin carries in `MapPin.data` (the map view's
  * `pinData`). A pin of this type without one is a wiring bug, so it throws
  * rather than drawing a blank pin.
  */
-export function readPlaceVisual(pin: MapPin): PlaceVisual {
+export function readPlaceVisual(pin: MapPin): SavedPinVisual {
   const data: unknown = pin.data;
   if (
     typeof data !== "object" ||
@@ -98,5 +111,5 @@ export function readPlaceVisual(pin: MapPin): PlaceVisual {
       `saved-place pin "${pin.id}" carries no PlaceVisual — pass pinData: (p) => placeVisual(p, tags)`,
     );
   }
-  return data as PlaceVisual;
+  return data as SavedPinVisual;
 }

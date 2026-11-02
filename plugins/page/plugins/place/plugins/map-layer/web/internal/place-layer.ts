@@ -3,10 +3,9 @@ import { z } from "zod";
 import type { MapPin } from "@plugins/map/core";
 import type { Block } from "@plugins/page/plugins/editor/core";
 import {
-  PLACE_TYPE,
   PlaceFamilySchema,
   PlaceKindSchema,
-  placeBlock,
+  locatedPlaces,
   type PlaceFamily,
   type PlaceKind,
 } from "@plugins/page/plugins/place/core";
@@ -34,38 +33,25 @@ export function placePinData(pin: MapPin): {
 }
 
 /**
- * Every place on the page as a pin. A place that has been PICKED but has no
- * coordinates (still resolving, or stored before `lat`/`lng` were kept) is
- * counted as unplaced rather than dropped. An empty `/place` block — a search
- * box with nothing chosen — is not a place yet and counts as nothing. A row
- * whose data does not parse is the place block's own error to show, not the
- * map's.
+ * Every located place on the page as a pin (`locatedPlaces`: a picked place
+ * with no coordinates yet is counted as unplaced, an empty `/place` block is
+ * nothing, and unparseable data is the place block's own error to show).
  */
 export function placeOverlays(blocks: readonly Block[]): PageMapLayerResult {
-  const overlays: PageMapLayerResult["overlays"] = [];
-  let unplaced = 0;
-  for (const b of blocks) {
-    if (b.type !== PLACE_TYPE) continue;
-    const parsed = placeBlock.safeParse(b.data);
-    if (!parsed.success) continue;
-    const { placeId, lat, lng, name, kind, family } = parsed.data;
-    if (placeId === undefined) continue;
-    if (lat === undefined || lng === undefined) {
-      unplaced++;
-      continue;
-    }
-    overlays.push({
+  const { located, unplaced } = locatedPlaces(blocks);
+  const overlays: PageMapLayerResult["overlays"] = located.map(
+    ({ blockId, name, kind, family, position }) => ({
       overlay: {
         kind: "pin",
-        id: b.id,
+        id: blockId,
         pinType: PLACE_PIN_TYPE,
-        position: { lat, lng },
+        position,
         label: name,
         data: { kind, family } satisfies PlacePinData,
       },
-      blockId: b.id,
-    });
-  }
+      blockId,
+    }),
+  );
   return { overlays, unplaced };
 }
 

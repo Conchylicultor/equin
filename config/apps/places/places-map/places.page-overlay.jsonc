@@ -1,0 +1,18 @@
+// @hash 6ec84829688d
+{
+  // A page's places laid over the map (`/places/page/<pageId>`): one list, in
+  // page order — the rows arrive numbered as the page holds them, so the view
+  // neither sorts nor groups. Each row is drawn whole (photo, number, name,
+  // rating · type, Saved with its tags or the address), Save its one action.
+  "views": [
+    {
+      "id": "list",
+      "name": "Page places",
+      "icon": "list",
+      "view": { "type": "list" }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

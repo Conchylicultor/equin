@@ -53,6 +53,12 @@ focused tab was saved on, the panes parsed from it take the saved slots' uuids
 the pane instance (a Miller column's collapse, the prototype canvas) comes back
 after a reload, while a new link still opens new instances.
 
+A tab at its app's bare root keeps its landing pane's keyed params too
+(`/places;page=x`, surface views): the index pane is not a slot, so the
+persisted tab carries them as `index` beside `route`, and its `rawPath` is
+rebuilt from them (`;page=x`). A background tab restores them with
+`clearRoute({ index })`; the focused tab takes them from the address bar.
+
 ## In-app links: one URL resolution, two destinations
 
 `navigate(url, { newTab })` is the only way to open a pane, in this tab or a
@@ -229,8 +235,8 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `useSurfaceMode`
     - `useTabs`
 - Cross-plugin:
-  - Imported by: 41 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×11
+  - Imported by: 43 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×13
     - `apps-core` ×9
     - `debug` ×7
     - `hints` ×2

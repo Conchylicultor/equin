@@ -15,7 +15,12 @@ import { setRoutePrefixes } from "@plugins/primitives/plugins/pane/plugins/route
 import { resetRoutePrefixForTests } from "@plugins/primitives/plugins/pane/plugins/route-prefix/web/testing";
 import { bootTabs } from "../internal/use-tabs";
 import { isDeadUnresolvedLink } from "../internal/load-scope";
-import type { PersistedTabs } from "../internal/tabs-store";
+import {
+  loadPersistedTabs,
+  savePersistedTabs,
+  type PersistedTabs,
+} from "../internal/tabs-store";
+import { createPaneStore } from "@plugins/primitives/plugins/pane/web";
 
 // bootTabs is nearly pure store construction: it reads the address bar + the
 // persisted-tabs blob and returns the initial tab set, seeding the focused tab's
@@ -235,6 +240,87 @@ describe("bootTabs — snapshot-stable focus across reload", () => {
     const focused = boot.tabs.find((t) => t.tabId === boot.focusedTabId)!;
     expect(focused.appId).toBe("pages");
     expect(boot.focusedTabId).not.toBe("t-story");
+  });
+});
+
+describe("tab persistence — the landing pane's keyed params (`/places;page=x`)", () => {
+  // The index pane is not a slot, so a tab at its app's bare root holds its
+  // keyed params beside the route (`PaneStore.getIndexParams`). They are
+  // persisted with the tab and come back on reload — for a background tab too,
+  // whose route the URL does not decide.
+  const APPS2 = [
+    fakeApp("pages", "/pages"),
+    fakeApp("story", "/story"),
+  ] as unknown as AppList;
+
+  it("persists a slotless tab's index params, and its rawPath rebuilt from them", () => {
+    const store = createPaneStore({ live: false });
+    store.setBasePath("/story");
+    store.clearRoute({ index: { page: "x", "view.lib": "all" } });
+
+    savePersistedTabs(
+      [{ tabId: "t-story", appId: "story", store }],
+      "t-story",
+      "",
+    );
+
+    const tab = loadPersistedTabs()!.tabs[0]!;
+    expect(tab.route).toEqual([]);
+    expect(tab.index).toEqual({ page: "x", "view.lib": "all" });
+    expect(tab.rawPath).toBe(";page=x;view.lib=all");
+  });
+
+  it('a bare-root tab with none persists no index and rawPath ""', () => {
+    const store = createPaneStore({ live: false });
+    store.setBasePath("/story");
+    store.clearRoute();
+
+    savePersistedTabs(
+      [{ tabId: "t-story", appId: "story", store }],
+      "t-story",
+      "",
+    );
+
+    const tab = loadPersistedTabs()!.tabs[0]!;
+    expect(tab.index).toBeUndefined();
+    expect(tab.rawPath).toBe("");
+  });
+
+  it("a background slotless tab keeps its index params across reload", () => {
+    persist({
+      tabs: [
+        { tabId: "t-pages", appId: "pages", route: [], rawPath: "" },
+        {
+          tabId: "t-story",
+          appId: "story",
+          route: [],
+          rawPath: ";page=x",
+          index: { page: "x" },
+        },
+      ],
+      focusedTabId: "t-pages",
+      mode: "",
+    });
+    setPath("/pages");
+
+    const boot = bootTabs(APPS2, "pages");
+    const story = boot.tabs.find((t) => t.tabId === "t-story")!;
+    const state = story.store.getRouteState();
+    expect(state).toEqual({ kind: "resolved", slots: [] });
+    expect(story.store.getIndexParams()).toEqual({ page: "x" });
+  });
+
+  it("the focused tab takes them from the URL (`/story;page=x`)", () => {
+    persist({
+      tabs: [{ tabId: "t-story", appId: "story", route: [], rawPath: "" }],
+      focusedTabId: "t-story",
+      mode: "",
+    });
+    setPath("/story;page=x");
+
+    const boot = bootTabs(APPS2, "story");
+    const focused = boot.tabs.find((t) => t.tabId === boot.focusedTabId)!;
+    expect(focused.store.getIndexParams()).toEqual({ page: "x" });
   });
 });
 

@@ -7,6 +7,7 @@ export {
   type PlaceTag,
 } from "./internal/schema";
 export { placeName, isCustomPlace } from "./internal/place-name";
+export { placesByGoogleId } from "./internal/by-google-id";
 export { placeIdKind, placeTagIdKind } from "./internal/id-kinds";
 export type { PlaceId, PlaceTagId } from "./internal/id-kinds";
 export {

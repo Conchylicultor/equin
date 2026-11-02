@@ -7,7 +7,7 @@ import { PlacePaletteSection } from "./components/place-palette-section";
 
 export default {
   description:
-    "Place colour token group: the --place-<family> colours place cards are painted with (Google Maps' own pin colours by default), and their customizer section.",
+    "Place colour token group: the --place-<family> colours place cards are painted with (Google Maps' own pin colours by default), plus --place-overlay — the accent of a page's places laid over the Places map — and their customizer section.",
   contributions: [
     ThemeEngine.TokenGroup({
       id: "place",

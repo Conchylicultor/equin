@@ -177,6 +177,9 @@ export function MapDataView(props: DataViewRenderProps<unknown>): ReactNode {
         {...(options.cameraKey === undefined
           ? {}
           : { cameraKey: options.cameraKey })}
+        {...(options.cameraOpen === undefined
+          ? {}
+          : { cameraOpen: options.cameraOpen })}
         onActivate={onActivate}
         hoveredId={hoveredId}
         {...(onHoverChange === undefined ? {} : { onHoverChange })}
@@ -186,6 +189,9 @@ export function MapDataView(props: DataViewRenderProps<unknown>): ReactNode {
         {...(options.fitRequest === undefined
           ? {}
           : { fitRequest: options.fitRequest })}
+        {...(options.focusIds === undefined
+          ? {}
+          : { focusIds: options.focusIds })}
         empty={
           // The surface's empty state speaks for an empty LIST. A list the
           // search or filter emptied is just a bare map (the map stays put,

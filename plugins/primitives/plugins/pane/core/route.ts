@@ -429,28 +429,59 @@ function keyedPairs(
 
 /**
  * The keyed suffix an app's LANDING (index) pane writes on the app's base path
- * — `;view.sonata.library=all` in `/sonata;view.sonata.library=all` — or `""`
- * when it carries none. An index pane has no URL part of its own (it is what
- * the bare root shows), so its keyed params ride the base path; it declares
- * none, so only surface view keys are ever written there.
+ * — `;page=x;view.sonata.library=all` in `/places;page=x;view.sonata.library=all`
+ * — or `""` when it carries none. An index pane has no URL part of its own (it
+ * is what the bare root shows), so its keyed params ride the base path.
+ *
+ * Written in one spelling: the index segment's `declared` names first, in
+ * declaration order; then any other identifier key `params` holds, sorted (a
+ * key read off the URL before the index pane registered, or one it no longer
+ * declares — kept rather than silently dropped, and ignored by the pane); then
+ * the surface view keys, sorted.
  */
-export function indexKeyedSuffix(params: Record<string, string>): string {
-  const pairs = keyedPairs(surfaceViewKeysOf(params), params);
+export function indexKeyedSuffix(
+  params: Record<string, string>,
+  declared: readonly string[] = [],
+): string {
+  const others = Object.keys(params)
+    .filter((name) => !declared.includes(name) && !isSurfaceViewKey(name))
+    .sort();
+  const pairs = keyedPairs(
+    [...declared, ...others, ...surfaceViewKeysOf(params)],
+    params,
+  );
   return pairs.length > 0 ? ";" + pairs.join(";") : "";
 }
 
-/** Read {@link indexKeyedSuffix}'s text back (without its leading `;`). */
+/**
+ * Read {@link indexKeyedSuffix}'s text back (without its leading `;`): every
+ * well-formed identifier key and every surface view key. The parse knows no
+ * base path, so it cannot know which index pane's names to keep — the index
+ * match filters them against the pane's declared names (an undeclared key is
+ * ignored there, as on any pane). A malformed name, a pair with no `=` and the
+ * retired bare `;view=` are dropped.
+ */
 export function readIndexKeyedParams(keyed: string): Record<string, string> {
-  return readKeyedParams(keyed, []);
+  const names = keyed.split(";").flatMap((pair) => {
+    const eq = pair.indexOf("=");
+    if (eq < 0) return [];
+    const name = decodeURIComponent(pair.slice(0, eq));
+    return KEYED_NAME.test(name) && name !== RESERVED_VIEW_NAME ? [name] : [];
+  });
+  return readKeyedParams(keyed, names);
 }
 
 /** The name the surface view family is spelled under — no route may declare it. */
 const RESERVED_VIEW_NAME = "view";
 
 /**
- * Throws on a malformed keyed suffix: a name that is not an identifier, one
- * declared twice or also used positionally, or keyed params on a segment with
- * no URL part of its own to carry them. Called by `defineRoute`.
+ * Throws on a malformed keyed suffix: a name that is not an identifier, the
+ * reserved `view`, or one declared twice or also used positionally. Called by
+ * `defineRoute`.
+ *
+ * A segment with keyed params and NO positional part (`";page"`) is legal: it
+ * is an app's index pane, whose keyed params ride the app's base path
+ * (`/places;page=x`) — `Pane.define` throws for one that is not `appIndex`.
  */
 function assertKeyedParams(id: string, segment: string): void {
   for (const part of parseSegmentParts(segment)) {
@@ -463,12 +494,6 @@ function assertKeyedParams(id: string, segment: string): void {
   }
   const names = segmentKeyedParamNames(segment);
   if (names.length === 0) return;
-  if (parseSegmentParts(segment).length === 0) {
-    throw new Error(
-      `Route "${id}": keyed params in segment "${segment}" need a URL part of the ` +
-        `segment's own to be written on.`,
-    );
-  }
   const positional = new Set(
     parseSegmentParts(segment).flatMap((p) =>
       p.kind === "static" ? [] : [p.name],
@@ -537,10 +562,27 @@ export class MissingRouteParamError extends Error {
 }
 
 /**
+ * Is `segment` keyed-only — keyed params (`";page"`) and no positional part?
+ * Only an app's index pane has one (`Pane.define` enforces it): it owns no URL
+ * part, so its keyed params ride the base path.
+ */
+export function isKeyedOnlySegment(segment: string): boolean {
+  return (
+    parseSegmentParts(segment).length === 0 &&
+    segmentKeyedParamNames(segment).length > 0
+  );
+}
+
+/**
  * `segment`'s URL parts for `params`. `ownSlot` also writes the surface view
  * keys — only a slot's own segment carries them, never an ancestor's
  * (`RouteDef.path` fills every segment of the chain from ONE flat param set,
  * which would otherwise stamp the same views on each of them).
+ *
+ * A segment with no positional part of its own (an index pane's `";page"`)
+ * returns its keyed pairs as ONE part starting with `;` — a suffix of whatever
+ * comes before it (the base path, for an index pane), joined on by
+ * {@link joinUrlParts}. Nothing to write ⇒ no part at all.
  */
 export function fillSegment(
   segment: string,
@@ -566,20 +608,50 @@ export function fillSegment(
       parts.push(encodeURIComponent(val));
     }
   }
-  // Keyed params ride the last part written (`assertKeyedParams` guarantees the
-  // segment has one for its declared names), in declaration order so a route
+  // Keyed params ride the last part written, in declaration order so a route
   // has ONE spelling — the surface view keys last, sorted. A segment with no
-  // part of its own cannot carry them, so they are dropped there.
+  // part of its own writes them as a `;…` suffix part (see above).
   const keyed = keyedPairs(
     opts?.ownSlot === true
       ? slotKeyedParamNames(segment, params)
       : segmentKeyedParamNames(segment),
     params,
   );
-  if (keyed.length > 0 && parts.length > 0) {
-    parts[parts.length - 1] += ";" + keyed.join(";");
-  }
+  if (keyed.length === 0) return parts;
+  if (parts.length === 0) return [";" + keyed.join(";")];
+  parts[parts.length - 1] += ";" + keyed.join(";");
   return parts;
+}
+
+/**
+ * The app-relative URL (`/a/b`, or `"/"`) of {@link fillSegment}'s parts. A
+ * part starting with `;` is a keyed suffix of the part before it; first, it is
+ * the leading `/;…` part a base path joins onto itself (see
+ * {@link joinBasePath}).
+ */
+export function joinUrlParts(parts: readonly string[]): string {
+  const joined: string[] = [];
+  for (const part of parts) {
+    if (part.startsWith(";") && joined.length > 0) {
+      joined[joined.length - 1] += part;
+    } else {
+      joined.push(part);
+    }
+  }
+  return joined.length > 0 ? "/" + joined.join("/") : "/";
+}
+
+/**
+ * `appUrl` (app-relative, from {@link joinUrlParts}) under `basePath`. The
+ * index pane's `;…` suffix joins the base path itself (`/places;page=x`),
+ * never a part of its own (`/places/;page=x`); the root app (`"/"` or `""`)
+ * contributes nothing. An empty URL stays `basePath + "/"` — the bare root's
+ * historical spelling for a link.
+ */
+export function joinBasePath(basePath: string, appUrl: string): string {
+  const base = basePath === "/" ? "" : basePath;
+  if (base && appUrl.startsWith("/;")) return base + appUrl.slice(1);
+  return base + appUrl;
 }
 
 /** The names a segment declares — required, optional, wildcard and keyed alike. */
@@ -630,7 +702,8 @@ export function normalizeRoutePath(pathname: string): string {
 // (`page/:`) does not collide with `s/:`. A segment ending in an optional
 // `:name?` matches TWO shapes of URL — with that part and without — so it has
 // two patterns, and collides with anything claiming either (`proto/:name/:stage?`
-// is both `proto/:` and `proto/:/:`). THE single definition: the runtime
+// is both `proto/:` and `proto/:/:`). A segment with no positional part has
+// none. THE single definition: the runtime
 // registry (`useSyncPaneRegistry`) enforces the globally-unique-segment
 // invariant at registration, and the `pane:segments-unique` check enforces the
 // same invariant statically at build time — both call this, so they can't drift.
@@ -638,6 +711,10 @@ export function normalizeRoutePath(pathname: string): string {
 
 export function segmentMatchPatterns(segment: string): string[] {
   const parts = parseSegmentParts(segment);
+  // No positional part (`""`, `"/"`, an index pane's keyed-only `";page"`):
+  // the segment owns no URL part, so it matches no URL and claims no shape —
+  // index panes are resolved by `appIndex`, never by URL matching.
+  if (parts.length === 0) return [];
   const shape = (ps: SegmentPart[]) =>
     ps
       .map((part) => {
@@ -720,6 +797,19 @@ export function defineRoute<
 
   assertOptionalIsLast(def.id, def.segment);
   assertKeyedParams(def.id, def.segment);
+  if (def.parent && isKeyedOnlySegment(def.parent.segment)) {
+    // A keyed-only segment is an app's index pane, its params riding the base
+    // path. A child route would make it an ancestor slot in the middle of a
+    // URL, where its keyed params have no part to ride and an open from
+    // scratch drops them — not well-defined, so not allowed until an app
+    // needs it.
+    throw new Error(
+      `Route "${def.id}": its parent "${def.parent.id}" (segment "${def.parent.segment}") ` +
+        `declares keyed params on no URL part of its own — an app index pane, whose ` +
+        `params ride the base path. Such a route cannot have child routes: the keyed ` +
+        `params would have nowhere to be written. Drop the keyed params or the parent.`,
+    );
+  }
 
   // Root-first chain of RouteDefs, this route last.
   const chain: RouteDef<any, any>[] = [];
@@ -733,12 +823,11 @@ export function defineRoute<
     for (const r of [...chain, route]) {
       parts.push(...fillSegment(r.segment, params));
     }
-    return parts.length > 0 ? "/" + parts.join("/") : "/";
+    return joinUrlParts(parts);
   }
 
   function link(app: AppRef, params: Record<string, string>): string {
-    const base = app.basePath === "/" ? "" : app.basePath;
-    return base + path(params);
+    return joinBasePath(app.basePath, path(params));
   }
 
   const route: RouteDef<Params, Seg> = {

@@ -67,6 +67,13 @@ export interface PersistedTab {
    * pane. Optional so payloads written before this field load unchanged.
    */
   rawPath?: string;
+  /**
+   * The app's landing pane's keyed params (`PaneStore.getIndexParams` — its
+   * declared keyed params and surface view keys, riding the base path:
+   * `/places;page=x`). The index pane is not a slot, so `route` cannot hold
+   * them; a reload restores them from here. Absent when there are none.
+   */
+  index?: Record<string, string>;
 }
 
 export interface PersistedTabs {
@@ -96,6 +103,7 @@ const persistedTabsSchema = z
         appId: z.string(),
         route: z.array(persistedSlotSchema),
         rawPath: z.string().optional(),
+        index: z.record(z.string(), z.string()).optional(),
       }),
     ),
     focusedTabId: z.string().optional(),
@@ -170,7 +178,9 @@ export function normalizeRawPath(path: string): string {
  * a background tab's app has not loaded):
  *
  * - **unresolved (pending)** ⇒ the store's own `rawPath`.
- * - **resolved bare root** ⇒ `""`.
+ * - **resolved bare root** ⇒ the landing pane's keyed suffix (`;page=x`), or
+ *   `""` with none — rebuilt from the store's index params (an empty route
+ *   reads no pane registry, so this never throws).
  * - **resolved, live (focused) tab** ⇒ derived from the address bar: the live
  *   store's URL mirrors its resolved route, so the app-relative pathname IS the
  *   rawPath `buildRouteUrl(route)` would produce — but without touching the pane
@@ -186,7 +196,13 @@ function rawPathForTab(
 ): string | undefined {
   const state = tab.store.getRouteState();
   if (state.kind === "unresolved") return state.rawPath;
-  if (state.slots.length === 0) return "";
+  if (state.slots.length === 0) {
+    const index = tab.store.getIndexParams();
+    if (Object.keys(index).length === 0) return "";
+    return normalizeRawPath(
+      stripBasePath(tab.store.routeUrl([], index), tab.store.getBasePath()),
+    );
+  }
   if (tab.store.live) {
     return normalizeRawPath(
       stripBasePath(currentRoutePath(), tab.store.getBasePath()),
@@ -211,6 +227,12 @@ export function loadPersistedTabs(): PersistedTabs | null {
   return read.kind === "value" ? read.value : null;
 }
 
+/** A store's landing-pane params as a {@link PersistedTab} field (none ⇒ absent). */
+function indexOf(store: PaneStore): { index?: Record<string, string> } {
+  const index = store.getIndexParams();
+  return Object.keys(index).length > 0 ? { index } : {};
+}
+
 /** Persist the live tab set (route serialized per store) to sessionStorage. */
 export function savePersistedTabs(
   tabs: Tab[],
@@ -233,6 +255,7 @@ export function savePersistedTabs(
       appId: t.appId,
       route: serializeRoute(t.store),
       rawPath: rawPathForTab(t, prevRawByTab),
+      ...indexOf(t.store),
     })),
     focusedTabId,
     mode,

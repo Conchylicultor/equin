@@ -54,7 +54,7 @@ exactly this (`plugins/apps/plugins/website/plugins/shell/web/internal/theme.ts`
   - **`icons`** — Icons token group (family — Material Symbols or their Lucide counterparts — and the shape, fill, active fill and stroke of the Material Symbols a scope draws; Material, outline, filled when active…
   - **`material`** — Material token group (a floating panel's fill and backdrop filter — opaque, unfiltered by default; frosted glass when a theme sets them) with its customizer section.
   - **`overlay`** — Overlay token group (how a floating panel enters — instant by default — and the tooltip's fill, ink, ring, corners, padding, shadow, distance and arrow) with its customizer section.
-  - **`place-palette`** — Place colour token group: the --place-<family> colours place cards are painted with (Google Maps' own pin colours by default), and their customizer section.
+  - **`place-palette`** — Place colour token group: the --place-<family> colours place cards are painted with (Google Maps' own pin colours by default), plus --place-overlay — the accent of a page's places laid over the…
   - **`rich-text-palette`** — Rich-text color palette token group: the closed --rt-color-<token> vars backing inline text color in the page block editor.
   - **`scrollbar`** — Scrollbar token group (the thumb and track colours of the native scrollbar, `auto` by default) with its customizer section.
   - **`shadow`** — Shadow token group (the shadow-2xs…2xl tiers) with its param-driven customizer section and "Fill from…" shortcuts.

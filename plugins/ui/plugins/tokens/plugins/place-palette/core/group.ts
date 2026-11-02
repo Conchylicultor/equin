@@ -11,6 +11,8 @@ const PARK = "#178038";
 const HEALTH = "#F74A56";
 const TRANSIT = "#4A6276";
 const GREY = "#78909C";
+// A page's places laid over the Places map: a deep teal no family wears.
+const OVERLAY = "#0f766e";
 
 function token(label: string, value: string) {
   return { default: value, darkDefault: value, label };
@@ -45,6 +47,13 @@ export const placePaletteGroup = defineTokenGroup("place", {
   "place-worship": token("Places of worship", GREY),
   /** A place with no family: an address, or a type the provider has no heading for. */
   "place-none": token("No family", GREY),
+  /**
+   * Not a family: the accent of a page's places laid over the Places map
+   * (their numbers, the dashed ring of one not saved yet, the overlay
+   * panel's chip and Save all) — one colour no family wears, so the page's
+   * places read apart from yours.
+   */
+  "place-overlay": token("Page overlay", OVERLAY),
 });
 
 /** One place colour token: `place-<family>`, or `place-none`. */

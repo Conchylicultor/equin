@@ -44,14 +44,16 @@ Plain data, no React:
 - `frame: false` (any overlay): kept out of the camera's framing — neither the
   one framing a map makes on its own nor the Fit control frames it
   (`framingOverlays`). For proposals (search hits) shown where they are
-  without ever moving the user's camera.
+  without ever moving the user's camera. `framingOverlays(overlays,
+  focusIds?)` also narrows to the ids `focusIds` names when it is non-empty.
 - **Marks** (`mark.ts`): a pin's look as data — `MapMark { key, svg, width,
   height, anchor, labelAt, texts? }`, one standalone SVG image placed with its
   `anchor` on the point. `key` names the look (equal keys = identical pixels:
   the sprite cache key); the SVG holds concrete colours only, no `<use>`, no
   `<text>` (`markSvgProblem`, enforced where it is rasterized AND where the DOM
   draws it); text goes in `texts` (`beside` at `labelAt`, in map-label paint,
-  or `center` on the mark). `markSvg`, `markIdPrefix` (ids unique per look —
+  or `center` on the mark — its `anchor`, or a `point` of the box: a
+  number on a badge drawn off the anchor). `markSvg`, `markIdPrefix` (ids unique per look —
   marks are also drawn inline), `markShadow` / `MARK_SHADOW_PAD` (`shadow-md`
   inside the box), `MARK_PENDING` (an icon still loading: drawn once ready,
   never a stand-in).
@@ -89,7 +91,10 @@ Plain data, no React:
   renderer gets it as `initialCamera` (read once, at mount; it then skips its
   one framing) and reports each resting view through `onCameraRest`; the host
   remembers it only while some overlay frames (an empty map's world view is
-  never remembered).
+  never remembered). `cameraOpen: "framed"` opens framed on the overlays
+  (`focusIds` included) as a first visit does, yet still remembers each rest
+  under the key — a view opened for one thing (a page's places) that hands
+  its camera back to the map it was opened over.
 - `onCameraRest` (optional) — the caller's: each time the camera rests (and
   once when the map first settles), a `CameraRest` (`center`, `zoom`,
   `bounds`, and `visible` — the part of `bounds` the `fitPadding` chrome
@@ -100,6 +105,12 @@ Plain data, no React:
 - `fitRequest` (optional number) — a caller's own Fit: each time it changes
   (never its value at mount) the renderer frames the overlays exactly as its
   Fit control does (a flight, `frame: false` overlays left out).
+- `focusIds` (optional overlay ids) — what the camera frames, when non-empty:
+  the map's own first framing, the Fit control and `fitRequest` frame only the
+  overlays it names (by their own `id`; a `frame: false` one still never), so
+  a caller can frame one set among the others it draws (a page's places among
+  the user's saved ones) — set it, then bump `fitRequest`. Absent or empty:
+  every framed overlay.
 - `hoveredId` / `onHoverChange` (optional) — hover linked to something outside
   the map (a result card, a list row): `hoveredId` lifts that pin as a pointer
   hover does — the same `hovered: true` state, so the same look (the
@@ -109,6 +120,23 @@ Plain data, no React:
   move arrive in no fixed order, and a "none" would erase the other's claim.
   `useLinkedHover()` (web) holds the shared state every surface reports into
   (`nextLinkedHover`, core: a leave clears only the id it names).
+- **Chrome over the tiles wears the tiles' scheme.** The tiles have one
+  scheme whatever the app's (`renderer.tiles`: Google's are light), so what is
+  drawn OVER them — the renderer's own controls (Fit), the empty notice, and
+  a host's `controls` (optional `ReactNode`: its own floating buttons, placed
+  by the host with a `Pin`; drawn only over a mounted map) — sits inside
+  `<MapChrome>`, a `<Theme surface="none" className="contents">` boundary
+  wearing the map-chrome **fixed theme** of that scheme (`map-chrome-light` /
+  `map-chrome-dark`, contributed through `ThemeEngine.FixedTheme`, no tokens of
+  their own — the schema defaults' light or dark half). So a dark Pages app
+  shows light controls over the light map, and their tooltips and popovers
+  stay light too (a fixed theme's popups keep it). Fixed, not a sub-theme: a
+  sub-theme names a few tokens and inherits the rest from the app, so every
+  colour it does not name would stay dark, and its popups leave it. `MapView`
+  provides the scheme to `MapChrome` (it throws outside a `MapView`); a
+  renderer wraps its own controls in it. **Pins are never inside it**: the
+  mark host, the pin canvas and lifted pins resolve colours in the app's own
+  scope, so an app's palette (Places') still colours its pins.
 - `GeoMap.Renderer` — a data slot. **First contribution wins**; zero is a loud
   "no map renderer installed" state. Its contract is `Place.Provider`'s, widened
   to three states: `useReadiness(): "pending" | "ready" | "blocked"`, and
@@ -119,7 +147,8 @@ Plain data, no React:
   `renderPin(pin, state)`, `markPin(pin, scale)`, `onActivate`, `activeId`,
   `crowd`, `renderCluster(pins)`, `markCluster(pins)`, `focusId`,
   `fitPadding` — always set, zeros when nothing floats — and the optional
-  `pick`, `initialCamera`, `onCameraRest`, `fitRequest`). **A renderer never styles a pin**: it draws every pin at rest from
+  `pick`, `initialCamera`, `onCameraRest`, `fitRequest`, `focusIds` — a
+  renderer frames `framingOverlays(overlays, focusIds)`). **A renderer never styles a pin**: it draws every pin at rest from
   its mark (`markPin` — the matched contribution's `mark`, via
   `GeoMap.Pin.useMatch()`, the same match `.Dispatch` renders) on ONE surface
   (`map/pin-layer`), and lifts only the pins being interacted with (hovered,
@@ -168,7 +197,7 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
 
 ## Plugin reference
 
-- Description: Vendor-neutral map primitive: <MapView overlays/> draws pins, paths and areas through the first GeoMap.Renderer (showing its set-up action while it is blocked, and a loud state when none is installed), with every pin's look contributed through the GeoMap.Pin dispatch slot keyed on its pinType, and a crowd mode the caller picks: clustering (every group of nearby pins drawn through the GeoMap.Cluster dispatch slot keyed on the pinType its pins share) or spots (every pin stays drawn — far out as a compact centred mark, with the size of each spot beside its lead pin).
+- Description: Vendor-neutral map primitive: <MapView overlays/> draws pins, paths and areas through the first GeoMap.Renderer (showing its set-up action while it is blocked, and a loud state when none is installed), with every pin's look contributed through the GeoMap.Pin dispatch slot keyed on its pinType, and a crowd mode the caller picks: clustering (every group of nearby pins drawn through the GeoMap.Cluster dispatch slot keyed on the pinType its pins share) or spots (every pin stays drawn — far out as a compact centred mark, with the size of each spot beside its lead pin). Chrome drawn over the tiles — the renderer's Fit control, the empty notice and a host's `controls` — wears the map-chrome fixed theme of the tiles' scheme (<MapChrome>), so it is light over light tiles whatever the app's scheme.
 - Web:
   - Slots:
     - `GeoMap.Renderer`
@@ -178,7 +207,12 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `GeoMap.Renderer` ← `map.google`
     - `GeoMap.Pin` ← `apps.places.places-map`
     - `GeoMap.Pin` ← `page.place.map-layer`
-  - Uses:
+  - Contributes:
+    - `ThemeEngine.FixedTheme` "Map controls (dark tiles)"
+    - `ThemeEngine.FixedTheme` "Map controls (light tiles)"
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/persistent-draft` ×3
+    - `primitives/slot-render` ×2
     - `primitives/css/center.Center`
     - `primitives/css/coords.Placed`
     - `primitives/css/layer.Layer`
@@ -188,16 +222,13 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
+    - `primitives/css/theme-boundary.Theme`
     - `primitives/css/ui-kit.cn`
     - `primitives/dom/web-storage.defineStore`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/loading.Loading`
-    - `primitives/persistent-draft.legacyDraftKeys`
-    - `primitives/persistent-draft.readDraft`
-    - `primitives/persistent-draft.writeDraft`
-    - `primitives/slot-render.defineDispatchSlot`
-    - `primitives/slot-render.renderIsolated`
     - `ui/icons.useIconMarkup`
+    - `ui/theme-engine.ThemeEngine`
   - Exports (types):
     - `MapClusterMarkFn`
     - `MapClusterProps`
@@ -217,6 +248,7 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `GeoMap`
     - `MAP_LABEL_HALO_PX`
     - `MAP_LABEL_PAINT`
+    - `MapChrome`
     - `MapLabel`
     - `MapMarkImage`
     - `MapView`
