@@ -72,6 +72,17 @@ export interface EdgeGraph {
   /** Required-if-used companions — conditions, not edges; {@link hardClosure}
    *  fires each once its owner and one of its users are in. */
   rules: UsageRule[];
+  /**
+   * The HOST PROVIDERS, each with the host-service bindings it provides: the
+   * plugins whose portable `server/index.ts` calls `<Service>.provide(…)` —
+   * the answer of a host without the computer (the desktop's provider is the
+   * service owner's `machine/` half, which ships with it). Not an edge: a
+   * fact about the node, which resolution reads to keep every host provider
+   * out of every composition (`expandEntrySeeds`), so the provider itself is
+   * the one statement of where it may boot. A browser host picks its
+   * providers from these (codegen's `hostProviderServerBarrels`).
+   */
+  hostProviders: Map<PluginId, string[]>;
 }
 
 /**

@@ -2,8 +2,9 @@
 
 The PGlite database driver: a `DatabaseDriver` (`database/server`'s host
 service) over Postgres compiled to WASM, running in this process — for a host
-without the computer's Postgres cluster. The desktop never boots it: it is in
-`base-exclusions` (`plugin-meta/composition`), and its own `pgDriver`
+without the computer's Postgres cluster. The desktop never boots it: it is a
+host provider, which no composition bundles (`plugin-meta/closure`'s
+`hostProviders`), and its own `pgDriver`
 (`database#machine`) is the desktop's provider. A composition that runs without
 the computer names it to take it back.
 

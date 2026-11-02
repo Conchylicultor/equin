@@ -422,10 +422,10 @@ export async function prepareCompositionSources(opts: {
   });
   for (const line of browserHosts) hooks.log(line);
 
-  // 1b'. A plugin `package.json` whose derived `"name"` codegen just corrected
-  // (a new or moved plugin) leaves `bun.lock` — which records every workspace
-  // member's name — describing the old one, so the next frozen install (push)
-  // would refuse it. Re-resolve now, while this build still owns the install:
+  // 1b'. A plugin `package.json` codegen just created or whose derived `"name"`
+  // it corrected (a new or moved plugin) leaves `bun.lock` — which records
+  // every workspace member's name — without it or describing the old one, so
+  // the next frozen install (push) would refuse it. Re-resolve now, while this build still owns the install:
   // `ensureDeps` sees the changed package.json and rewrites the lockfile.
   if (renamedPackages.length > 0) {
     hooks.log(

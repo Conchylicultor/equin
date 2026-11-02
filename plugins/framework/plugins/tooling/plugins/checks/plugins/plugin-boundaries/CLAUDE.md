@@ -40,8 +40,9 @@ first step of `regenerateRegistryCodegen`) writes it on every
 `./equin build` / `./equin regen-generated`, touching only that one
 value. R1 is the in-sync guard, the same role `plugins-registry-in-sync` plays
 for the registries: a stale name is fixed by running the build, never by hand.
-Composition roots are skipped by both. A plugin with no `package.json` at all is
-still R1's to report — the build does not create one.
+Composition roots are skipped by both. A plugin with no `package.json` at all
+gets a minimal one from the build (the derived name, `private`, `version`), so
+a new plugin needs only its barrels; R1 reports it until the build ran.
 
 Because `bun.lock` records every workspace member's name, a build that corrects
 a name re-resolves dependencies right after (`ensureDeps`), so the lockfile

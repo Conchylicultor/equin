@@ -3,8 +3,8 @@
 The `DataFiles` host service of a host without the computer's disk (the browser
 composition): every root's tree in memory, lost with the process — the demo
 resets on reload. The desktop provides the service from `data-files#machine`;
-this plugin is excluded from every desktop app by the composition config's
-base-exclusions row (two providers of one service fail boot).
+this plugin is a host provider, which no composition bundles (two providers of
+one service fail boot; `plugin-meta/closure`'s `hostProviders`).
 
 - Directories come into being as a write's parents and stay until removed, as on
   disk — so an emptied directory lists as empty, not missing. The shared

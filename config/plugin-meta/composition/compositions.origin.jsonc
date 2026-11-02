@@ -1,4 +1,4 @@
-// @hash 47c1a7e63d24
+// @hash a24d20f35cb1
 {
   "manifests": [
     {
@@ -32,23 +32,7 @@
       "name": "base-exclusions",
       "category": "pack",
       "entryPoints": [
-        "!review.plugin-changes.**",
-        "!database.pglite.**",
-        "!infra.jobs.in-process.**",
-        "!infra.attachments.memory-blobs.**",
-        "!primitives.log-channels.memory-persistence.**",
-        "!tasks.tasks-core.seeded-push-ledger.**",
-        "!database.migrations.bundled-source.**",
-        "!conversations.transcript-source.memory.**",
-        "!conversations.model-provider.catalog.baseline.**",
-        "!tasks.task-title.filed-titles.**",
-        "!infra.host-account.guest.**",
-        "!infra.warmup.sole-host.**",
-        "!config_v2.browser-store.**",
-        "!config_v2.bundled-layer.**",
-        "!infra.paths.data-files.memory.**",
-        "!apps.prototypes.files.snapshot-history.**",
-        "!apps.prototypes.thumbnails.no-renderer.**"
+        "!review.plugin-changes.**"
       ],
       "selectedContributors": [],
       "extends": [],

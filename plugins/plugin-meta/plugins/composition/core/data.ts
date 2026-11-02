@@ -45,6 +45,12 @@ const serializedEdgeGraphSchema: z.ZodType<SerializedEdgeGraph> = z.object({
   subtree: adjacency,
   edges: wholeList(edgeSchema, { reason: GRAPH_REASON }),
   rules: wholeList(usageRuleSchema, { reason: GRAPH_REASON }),
+  hostProviders: wholeRecord(
+    wholeList(z.string(), {
+      reason: "the host-service bindings one plugin's server barrel provides",
+    }),
+    { reason: GRAPH_REASON },
+  ),
 });
 
 export interface CompositionData {

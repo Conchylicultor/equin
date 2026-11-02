@@ -127,7 +127,8 @@ export function useCompositionData(): CompositionDataResult {
  *
  * `excluded` is every plugin id outside the main composition's bundle.
  * `negatedTargets` is the subset a manifest negated BY NAME (in practice the
- * `base-exclusions` row every composition inherits) — the rest are ids the
+ * `base-exclusions` row every composition inherits), plus the host providers
+ * (`EdgeGraph.hostProviders`), out by their own statement — the rest are ids the
  * removal cascade took because they descend from, or import, one of those. That
  * is exactly the distinction the explorer badge draws between *Not in the app*
  * and *Not in the app (cascade)*.

@@ -37,6 +37,7 @@ import {
   parseRouteDeclarations,
   parseServerCompanionKinds,
   parseServerCompanions,
+  parseHostServiceProvides,
   sourceRef,
 } from "./internal/static-parse";
 import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
@@ -214,6 +215,9 @@ export default createFacet<ContributionsFacetData>({
       // companions, and its `server/index.ts`'s `companion: true` calls.
       serverCompanionKinds: parseServerCompanionKinds(ctx.dir),
       serverCompanions: parseServerCompanions(ctx.dir),
+      // The host services its `server/index.ts` provides: a non-empty list makes
+      // it a host provider, which no composition bundles (`EdgeGraph.hostProviders`).
+      hostServiceProvides: parseHostServiceProvides(ctx.dir),
     };
   },
 

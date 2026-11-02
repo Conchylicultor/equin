@@ -11,14 +11,15 @@ const run: CliAction<[], object> = async () => {
   const { renamedPackages } = await regenerateRegistryCodegen({ root });
   await regenerateManifestCodegen({ root });
 
-  // A corrected package name leaves `bun.lock` recording the old one. This
+  // A created or corrected package.json leaves `bun.lock` without the new
+  // member, or recording its old name. This
   // command does not install (it runs inside push's merge-driver path), so it
   // says so; the next `./equin` invocation's dependency check sees the
   // changed package.json and re-resolves the lockfile.
   if (renamedPackages.length > 0) {
     console.error(
-      `Wrote the derived package name in:\n  ${renamedPackages.join("\n  ")}\n` +
-        "bun.lock still records the old name(s) until dependencies are " +
+      `Wrote the derived package name in (new or renamed workspace members):\n  ${renamedPackages.join("\n  ")}\n` +
+        "bun.lock does not record them until dependencies are " +
         "re-resolved — `./equin build` does it.",
     );
   }

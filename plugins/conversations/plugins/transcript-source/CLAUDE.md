@@ -46,8 +46,8 @@ A conversation's transcript, independent of the host that stores it.
 - **Providers.** The desktop: `transcript-watcher#machine` (the session files on
   disk, signed by mtime + size, watched by the one transcript watcher). A host
   without the files: `plugins/memory` (JSONL text written to it —
-  `writeTranscript(id, jsonl)` — parsed by the same parser; excluded from every
-  desktop app by `base-exclusions`).
+  `writeTranscript(id, jsonl)` — parsed by the same parser; a host provider, which
+  no composition bundles).
 
 Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
 

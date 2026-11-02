@@ -85,8 +85,8 @@ const HOST_PLUMBING = [
 ];
 
 // The providers of a host without the computer, as registry entries: none is
-// in the app's registry (`base-exclusions` keeps them out of every desktop
-// composition).
+// in the app's registry (they are host providers, which no
+// composition bundles).
 const PROVIDERS: Entry[] = [
   serverEntryFor("database/plugins/pglite", ["database"]),
   serverEntryFor("infra/plugins/jobs/plugins/in-process", [

@@ -1,8 +1,11 @@
 import { readFile, writeFile } from "fs/promises";
 import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { join, relative } from "path";
-import { packageNameFor } from "@plugins/framework/plugins/plugin-id/core";
-import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import {
+  packageNameFor,
+  RUNTIME_FOLDERS,
+} from "@plugins/framework/plugins/plugin-id/core";
+import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 
 /**
  * Plugin `package.json` `"name"` is DERIVED from the plugin's path
@@ -16,32 +19,62 @@ import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
  *
  * Skipped, exactly as R1 skips them: composition roots (they self-declare via
  * `equin.compositionRoot` and carry their own names). A plugin with NO
- * `package.json` is left for R1 to report — creating one is an authoring act
- * (the file also carries the plugin's dependencies), not a derivation.
+ * `package.json` but a barrel gets the minimal one ({@link newPackageJson}): with no
+ * dependencies its content is the derived name alone, so writing it is a
+ * derivation too — a plugin is its folder and its barrels (a host provider is
+ * one `server/index.ts`), and a dependency is added to the file once there is
+ * one.
  *
- * Returns the repo-relative paths it rewrote, so a caller can re-resolve the
- * workspace: `bun.lock` records each member's name, and a renamed member makes
- * a frozen install fail until the lockfile is refreshed.
+ * Returns the repo-relative paths it wrote, so a caller can re-resolve the
+ * workspace: `bun.lock` records each member's name, and a new or renamed
+ * member makes a frozen install fail until the lockfile is refreshed.
  */
 export async function syncPluginPackageNames({
   root,
   tree,
 }: {
   root: AppPath;
-  tree: PluginTree;
+  /** The plugin tree (only each node's folder, path and root flag are read). */
+  tree: {
+    byDir: ReadonlyMap<
+      string,
+      Pick<PluginNode, "dir" | "path" | "compositionRoot">
+    >;
+  };
 }): Promise<string[]> {
   const rewritten: string[] = [];
   for (const node of tree.byDir.values()) {
     if (node.compositionRoot) continue;
     const file = join(node.dir, "package.json");
     const text = await readIfExists(file);
-    if (text === null) continue;
+    if (text === null) {
+      // Only a plugin with a barrel: a shell a moved plugin left behind (an
+      // untracked file, no code) stays R1's to report, never a new member.
+      if (!(await hasBarrel(node.dir))) continue;
+      await writeFile(file, newPackageJson(packageNameFor(node.path)));
+      rewritten.push(relative(root, file));
+      continue;
+    }
     const next = withPackageName(text, packageNameFor(node.path), file);
     if (next === text) continue;
     await writeFile(file, next);
     rewritten.push(relative(root, file));
   }
   return rewritten.sort();
+}
+
+async function hasBarrel(dir: string): Promise<boolean> {
+  for (const folder of RUNTIME_FOLDERS) {
+    if ((await readIfExists(join(dir, folder, "index.ts"))) !== null)
+      return true;
+  }
+  return false;
+}
+
+/** The `package.json` of a plugin that has none: its derived name, private,
+ *  the version every plugin carries. */
+export function newPackageJson(name: string): string {
+  return `${JSON.stringify({ name, private: true, version: "0.0.1" }, null, 2)}\n`;
 }
 
 async function readIfExists(file: string): Promise<string | null> {

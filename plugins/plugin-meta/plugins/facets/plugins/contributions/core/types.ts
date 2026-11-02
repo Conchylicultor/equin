@@ -146,6 +146,13 @@ export interface ContributionsFacetData {
   serverCompanionKinds: ServerCompanionKind[];
   /** The companion contributions of this plugin's `server/index.ts`. */
   serverCompanions: ServerCompanionContribution[];
+  /**
+   * The host-service bindings this plugin's `server/index.ts` calls
+   * `.provide(…)` on. Non-empty makes it a HOST PROVIDER — the answer of a host
+   * without the computer, never bundled by a composition (the closure engine's
+   * `EdgeGraph.hostProviders`); the desktop's provider is a `machine/` half.
+   */
+  hostServiceProvides: string[];
 }
 
 export const contributionsFacetDef =

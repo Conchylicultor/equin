@@ -522,7 +522,7 @@ async function checkPackageNaming(
       rule: "package",
       file: relPkg,
       message: "plugin is missing package.json",
-      fix: `create \`${relPkg}\` with \`"name": "${expected}"\` (bun needs the field; any later drift is fixed by the build)`,
+      fix: `${REGEN_HINT} — it creates the file with the derived name (\`"${expected}"\`)`,
     });
     return;
   }

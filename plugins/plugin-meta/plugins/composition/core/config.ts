@@ -248,44 +248,17 @@ export const compositionsConfig = defineConfig({
         // exactly as the disabled closure did. One mechanism decides membership now,
         // and it is this one.
         //
-        // The others are the HOST-SERVICE PROVIDERS of a host without the
-        // computer — the PGlite database driver, the in-process job queue, the
-        // memory stores for attachment bytes, logs, the push ledger and
-        // transcripts, the migration history bundled as text, the baseline
-        // model catalog, the task titles kept as filed, the guest host account,
-        // the in-memory config store, the committed config bundled as text, the
-        // in-memory data files, the prototypes' snapshot version history and
-        // the warm-up admission of a sole host.
-        // A desktop backend
-        // provides each of those services from a machine half
-        // (`database#machine`, `jobs#machine`, `config_v2#machine`, …), and a
-        // host booting two providers of one service fails boot
-        // (`assertHostServices`), so no app that runs on the desktop may ship
-        // them. A composition that runs without the computer takes them back by
-        // naming them.
+        // The host-service providers of a host without the computer (the PGlite
+        // driver, the in-process job queue, the guest host account, …) are not
+        // listed here: a plugin whose portable `server/` provides a host service
+        // is a HOST PROVIDER, and resolution keeps every one out of every
+        // composition from that fact alone (`EdgeGraph.hostProviders`, in
+        // `expandEntrySeeds`) — a browser host picks its providers itself.
         {
           id: BASE_EXCLUSIONS_ID,
           name: BASE_EXCLUSIONS_ID,
           category: "pack" as const,
-          entryPoints: [
-            "!review.plugin-changes.**",
-            "!database.pglite.**",
-            "!infra.jobs.in-process.**",
-            "!infra.attachments.memory-blobs.**",
-            "!primitives.log-channels.memory-persistence.**",
-            "!tasks.tasks-core.seeded-push-ledger.**",
-            "!database.migrations.bundled-source.**",
-            "!conversations.transcript-source.memory.**",
-            "!conversations.model-provider.catalog.baseline.**",
-            "!tasks.task-title.filed-titles.**",
-            "!infra.host-account.guest.**",
-            "!infra.warmup.sole-host.**",
-            "!config_v2.browser-store.**",
-            "!config_v2.bundled-layer.**",
-            "!infra.paths.data-files.memory.**",
-            "!apps.prototypes.files.snapshot-history.**",
-            "!apps.prototypes.thumbnails.no-renderer.**",
-          ],
+          entryPoints: ["!review.plugin-changes.**"],
           selectedContributors: [] as string[],
           extends: [] as string[],
           excludes: [] as string[],

@@ -29,8 +29,8 @@ The portable `server/` serves `hostAccount` through the **`HostAccountSource`**
 host service (`{ read(): Promise<HostAccount> }`). Its providers:
 
 - `machine/` (the desktop) — the OS account, below;
-- `plugins/guest` (a host without the computer, excluded from every desktop
-  composition by `base-exclusions`) — a fixed demo account, so the Pages brand
+- `plugins/guest` (a host without the computer; a host provider, which no
+  composition bundles) — a fixed demo account, so the Pages brand
   renders in the demo as it does on the desktop.
 
 The desktop read is `machine/internal/read-account.ts`, through `infra/spawn`'s

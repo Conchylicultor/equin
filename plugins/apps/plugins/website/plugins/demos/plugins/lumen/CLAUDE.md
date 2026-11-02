@@ -98,7 +98,8 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   composition whose server barrel is portable (derived from its static
   closure, `serverPortabilityOf` — no flag), the portable barrels
   `bin/browser-host.ts` loads (the seed's imports), and one provider per host
-  service from the `base-exclusions` negatives (`hostProviders`). A portable
+  service from the host providers (plugins whose `server/` provides one, which
+  no composition bundles; emitted as `hostProviders`). A portable
   barrel reaching a non-portable one fails codegen, naming the import chain.
 - **Growing it**: a read, endpoint or config the scope newly uses that the
   worker does not serve fails the build, naming the key, the reader

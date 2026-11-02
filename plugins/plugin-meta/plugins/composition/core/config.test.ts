@@ -268,28 +268,6 @@ test("the base-exclusions row carries the migrated plugin-changes exclusion", ()
   expect(base.entryPoints).toContain("!review.plugin-changes.**");
 });
 
-test("the base-exclusions row keeps the browser-only host-service providers out of every app", () => {
-  // A desktop backend provides these services from machine halves; booting a
-  // second provider of one fails boot, so no app may ship them by default.
-  const base = byName(BASE_EXCLUSIONS_ID);
-  for (const provider of [
-    "database.pglite",
-    "infra.jobs.in-process",
-    "infra.attachments.memory-blobs",
-    "primitives.log-channels.memory-persistence",
-    "tasks.tasks-core.seeded-push-ledger",
-    "conversations.transcript-source.memory",
-    "conversations.model-provider.catalog.baseline",
-    "tasks.task-title.filed-titles",
-    "infra.host-account.guest",
-    "infra.warmup.sole-host",
-    "config_v2.browser-store",
-    "config_v2.bundled-layer",
-  ]) {
-    expect(base.entryPoints).toContain(`!${provider}.**`);
-  }
-});
-
 test("main's entry points stay exactly `**` — the exclusion lives on the base row", () => {
   // The negative deliberately does NOT go on main's row. Written there it would
   // hold for main alone, and any other composition reaching the same plugins

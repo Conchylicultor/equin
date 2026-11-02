@@ -30,6 +30,7 @@ function graphWith(rules: UsageRule[]): EdgeGraph {
     subtree: empty(),
     edges: [],
     rules,
+    hostProviders: new Map(),
   };
 }
 

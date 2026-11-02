@@ -18,10 +18,10 @@
  *      through a seam. Whether a provider is portable depends on this same
  *      taint, so rule 3 is a monotone fixpoint: import taint first, then the
  *      declaring modules of services left without an untainted provider, then
- *      re-propagate, until stable. That a portable `server/` provider sits in
- *      a `base-exclusions` negative (no desktop boots it) is
- *      `host-services:provider-placement`'s rule, so the provider set read
- *      here is exactly the browser candidates whenever that check passes.
+ *      re-propagate, until stable. A `server/` barrel that provides a service
+ *      is a host provider, which no composition bundles
+ *      (`EdgeGraph.hostProviders`), so the portable providers read here are
+ *      exactly a browser host's candidates.
  *
  * One union build over every server barrel, then a reverse BFS over the
  * reversed edges from the modules that need the computer (cycles are fine).

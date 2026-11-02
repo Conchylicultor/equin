@@ -5,7 +5,7 @@
  * The graph is task-category's `dependsOn` closure from the app's server
  * registry (no `machine/` entry at all), plus the providers of a host without
  * the computer — chosen, not listed: every service the graph's modules declare
- * gets the one provider the `base-exclusions` row names for it (the PGlite
+ * gets the one host provider that provides it (the PGlite
  * driver, the in-process job queue, the in-memory config store, …), to a
  * fixpoint, the way codegen picks a browser host's (`browser-host-gen.ts`). A
  * hand-kept list went stale each time the closure reached a new service. Two
@@ -46,12 +46,7 @@ import {
   serverEntries,
   serverEntryFor,
 } from "@plugins/framework/plugins/server-core/core/testing";
-import {
-  asFsPath,
-  asPluginId,
-} from "@plugins/framework/plugins/plugin-id/core";
-import { BASE_EXCLUSIONS_ID } from "@plugins/infra/plugins/namespace/core";
-import { compositionsConfig } from "@plugins/plugin-meta/plugins/composition/core";
+import { providedServiceNames } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { PLUGINS_DIR, REPO_ROOT } from "@plugins/infra/plugins/paths/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import {
@@ -79,30 +74,31 @@ type Entry = (typeof serverEntries)[number];
 const SUBJECT = "tasks/plugins/task-category";
 
 /**
- * The portable providers' candidates: the server barrels the `base-exclusions`
- * row negates (none is in the app's registry — that row keeps them out of every
- * desktop composition), with their source. Read, never loaded: loading one
- * evaluates its service owner's modules, whose declarations the boot would then
- * demand.
+ * The portable providers' candidates: every host provider — a plugin whose
+ * `server/index.ts` calls `<Service>.provide(…)`, which no composition bundles
+ * (the closure engine's `EdgeGraph.hostProviders`, so none is in the app's
+ * registry) — with its source. Read, never loaded: loading one evaluates its
+ * service owner's modules, whose declarations the boot would then demand.
  */
 function providerCandidates(): { path: string; source: string }[] {
-  const row = compositionsConfig.defaults.manifests.find(
-    (m) => m.id === BASE_EXCLUSIONS_ID,
-  );
-  if (row === undefined) throw new Error(`no "${BASE_EXCLUSIONS_ID}" row`);
-  return row.entryPoints
-    .map((e) => /^!(.+)\.\*\*$/.exec(e)?.[1])
-    .filter((id): id is string => id !== undefined)
-    .map((id) => asFsPath(asPluginId(id)))
-    .map((path) => ({
-      path,
-      barrel: join(PLUGINS_DIR, path, "server", "index.ts"),
-    }))
-    .filter(({ barrel }) => existsSync(barrel))
-    .map(({ path, barrel }) => ({
-      path,
-      source: readFileSync(barrel, "utf8"),
-    }));
+  const out: { path: string; source: string }[] = [];
+  // Plugin folders only (`<p>/plugins/<child>/…`), never a package's own tree.
+  const visit = (path: string): void => {
+    const barrel = join(PLUGINS_DIR, path, "server", "index.ts");
+    if (existsSync(barrel)) {
+      const source = readFileSync(barrel, "utf8");
+      if (providedServiceNames(source).length > 0) out.push({ path, source });
+    }
+    const children = join(PLUGINS_DIR, path, "plugins");
+    if (!existsSync(children)) return;
+    for (const child of readdirSync(children, { withFileTypes: true })) {
+      if (child.isDirectory()) visit(`${path}/plugins/${child.name}`);
+    }
+  };
+  for (const top of readdirSync(PLUGINS_DIR, { withFileTypes: true })) {
+    if (top.isDirectory()) visit(top.name);
+  }
+  return out.sort((a, b) => a.path.localeCompare(b.path));
 }
 
 type LoadedBarrel = Record<string, unknown> & {
@@ -148,7 +144,7 @@ async function withProviders(graph: Entry[]): Promise<Entry[]> {
       const by = candidates.filter((c) => spelled.test(c.source));
       if (by.length !== 1) {
         throw new Error(
-          `host service "${id}" (${binding}) has ${by.length} candidate providers in "${BASE_EXCLUSIONS_ID}": ${by.map((c) => c.path).join(", ") || "none"}`,
+          `host service "${id}" (${binding}) has ${by.length} host providers: ${by.map((c) => c.path).join(", ") || "none"}`,
         );
       }
       // Loaded after everything chosen so far: its import of the service's

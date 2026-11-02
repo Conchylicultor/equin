@@ -59,7 +59,7 @@ export { runSettledPhase } from "../boot-stages";
 // `dependsOn`, from which a `dependsOn` closure is the graph to boot.
 export { serverEntries } from "../server.generated";
 
-// A registry entry for a plugin the app's registry does not hold (a provider
-// `base-exclusions` keeps out of every desktop composition), loaded the way the
+// A registry entry for a plugin the app's registry does not hold (a host
+// provider, which no composition bundles), loaded the way the
 // registry loads one — for a suite booting a graph with it.
 export { serverEntryFor } from "./server-entry";

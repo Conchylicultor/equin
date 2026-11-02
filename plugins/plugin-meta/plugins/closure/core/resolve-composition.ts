@@ -103,7 +103,8 @@ export function removalClosure(
  *     `redundantSelections`); every id the pattern matches (`base` ∪ its `.**`
  *     subtree, or every node for a root `**`) goes into `seeds`. A root `**`
  *     contributes NOTHING to `named` — see the comment at the loop.
- *  2. Negatives: see below — the targets, the opt-out, then the cascade.
+ *  2. Negatives: see below — the targets, the opt-out, the host providers
+ *     (always out, see {@link EdgeGraph.hostProviders}), then the cascade.
  *
  * Unknown bases (no `subtree` entry) pass through inertly — the base itself is
  * still seeded/removed, it just contributes no descendants.
@@ -145,6 +146,17 @@ export function expandEntrySeeds(
   for (const id of [...negated]) {
     if (named.has(id) || selected.has(id)) negated.delete(id);
   }
+  // HOST PROVIDERS leave every composition, with no opt-out: a plugin whose
+  // portable `server/` provides a host service is the answer of a host without
+  // the computer, and a desktop that booted it would hold two providers of one
+  // service. The provider says so itself (`graph.hostProviders`); no manifest
+  // repeats it. A host that runs without the computer picks them separately
+  // (codegen's browser-host derivation), never through a composition. Added
+  // after the opt-out, so naming one is no opt-out: a named (or imported)
+  // provider stays protected from the cascade below, lands in the bundle, and
+  // the postcondition reports it as an unsatisfied exclusion — the
+  // `composition-closure` check and codegen fail on that.
+  for (const id of graph.hostProviders.keys()) negated.add(id);
 
   // THE CASCADE. Removing X also removes X's descendants and everything that
   // transitively imports X (see {@link removalClosure}) — otherwise a surviving

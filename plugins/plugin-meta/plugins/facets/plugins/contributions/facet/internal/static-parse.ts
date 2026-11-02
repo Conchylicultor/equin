@@ -9,6 +9,7 @@ import {
   markerCallSpans,
   lineAt,
   parseServerContributionDeclarations,
+  providedServiceNames,
   stripTypes,
   type MarkerCallSpan,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
@@ -637,4 +638,17 @@ export function parseServerCompanions(
       );
     return { token };
   });
+}
+
+/**
+ * The host services this plugin's `server/index.ts` provides — the bindings
+ * it calls `<Service>.provide(…)` on (parse-utils' one spelling). A plugin
+ * whose portable `server/` provides a host service is a HOST PROVIDER: the
+ * answer of a host without the computer, which no composition bundles (the
+ * closure engine's `EdgeGraph.hostProviders`). `machine/` is not read: the
+ * desktop's provider lives there and ships with its plugin.
+ */
+export function parseHostServiceProvides(pluginDir: string): string[] {
+  const src = readIfExists(asAppPath(join(pluginDir, "server", "index.ts")));
+  return src ? providedServiceNames(src) : [];
 }

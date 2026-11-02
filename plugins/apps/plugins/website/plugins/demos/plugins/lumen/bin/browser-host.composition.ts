@@ -5,8 +5,9 @@
 // from it (`codegen/core/browser-host-gen.ts`): every plugin of the
 // composition whose server barrel is portable (derived from its static
 // closure — nothing in it needs the computer), the portable barrels
-// `./browser-host.ts` (its seed) loads, and — from the `base-exclusions`
-// negatives — one provider of each host service for a host without the
+// `./browser-host.ts` (its seed) loads, and — from the host providers (a
+// plugin whose `server/` provides a host service, which no composition
+// bundles) — one provider of each host service for a host without the
 // computer (PGlite, bundled migrations, in-process jobs, in-memory blobs /
 // logs / transcripts / config, the committed config bundled as text, the
 // seeded push ledger, filed titles, the baseline model catalog). Generated

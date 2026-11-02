@@ -40,6 +40,21 @@ legal composition id but never a servable namespace, exactly like main's.
 Resolution therefore stays additive with one asymmetry, stated below: negatives
 subtract, and a local positive always wins over a negative from anywhere.
 
+### Host providers: out of every composition, by their own statement
+
+`EdgeGraph.hostProviders` names every **host provider** — a plugin whose
+portable `server/index.ts` calls `<Service>.provide(…)` (the contributions
+facet's `hostServiceProvides`): the answer of a host without the computer
+(PGlite, the in-process job queue, the guest account, …), whose desktop twin is
+the service owner's `machine/` half. `expandEntrySeeds` adds every one to the
+negated targets after the opt-out, so no composition bundles one, and naming
+one is no opt-out: it is reported as an unsatisfied exclusion, which the
+`composition-closure` check and codegen fail on. No row
+lists them: the provider is the one statement of where it boots, and a browser
+host picks its providers from these (codegen's browser-host derivation).
+`host-services:provider-placement` keeps the cascade empty — a host provider
+has no other barrel, no sub-plugin and no importer.
+
 **Conservative opt-IN model — NOTHING soft is included by default.** The bundle
 is the hard closure of (entries ∪ explicitly selected contributors). Soft
 contributors are *options* a human/agent reviews and selects; they are never

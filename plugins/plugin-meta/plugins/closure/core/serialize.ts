@@ -2,7 +2,7 @@ import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import type { Edge, EdgeGraph, UsageRule } from "./types";
 
 /**
- * JSON-safe shape of an {@link EdgeGraph}. The five adjacency `Map`s become plain
+ * JSON-safe shape of an {@link EdgeGraph}. The five adjacency `Map`s (and `hostProviders`) become plain
  * `Record<string, string[]>` (PluginId is a branded string, so the keys/values are
  * already JSON-safe); `edges` and `rules` are carried verbatim. This is the wire shape shipped
  * by the composition data endpoint and rehydrated client-side via
@@ -16,6 +16,8 @@ export interface SerializedEdgeGraph {
   subtree: Record<string, PluginId[]>;
   edges: Edge[];
   rules: UsageRule[];
+  /** {@link EdgeGraph.hostProviders}: host provider → the bindings it provides. */
+  hostProviders: Record<string, string[]>;
 }
 
 function mapToRecord(map: Map<PluginId, PluginId[]>): Record<string, PluginId[]> {
@@ -40,6 +42,7 @@ export function serializeEdgeGraph(graph: EdgeGraph): SerializedEdgeGraph {
     subtree: mapToRecord(graph.subtree),
     edges: graph.edges,
     rules: graph.rules,
+    hostProviders: Object.fromEntries(graph.hostProviders),
   };
 }
 
@@ -54,5 +57,11 @@ export function deserializeEdgeGraph(s: SerializedEdgeGraph): EdgeGraph {
     subtree: recordToMap(s.subtree),
     edges: s.edges,
     rules: s.rules,
+    hostProviders: new Map(
+      Object.entries(s.hostProviders).map(([id, bindings]) => [
+        id as PluginId,
+        bindings,
+      ]),
+    ),
   };
 }

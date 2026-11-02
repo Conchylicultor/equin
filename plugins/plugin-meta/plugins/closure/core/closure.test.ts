@@ -215,21 +215,28 @@ test("matchEntryPattern on root covers every node in the graph", () => {
 // refuses to trim. If `**` named everything, `!x.**` could never remove anything
 // and the composition-closure check would reject every negative under it as dead.
 // Root means "everything is in", not "everything is explicitly demanded".
-test("root seeds every id and NAMES NONE", () => {
+test("root seeds every id but the host providers, and NAMES NONE", () => {
   const { seeds, named } = expand(["**"], graph);
-  expect(seeds.size).toBe(tree.byDir.size);
-  for (const n of tree.byDir.values()) expect(seeds.has(n.id)).toBe(true);
+  // Host providers leave every composition (see the host-provider tests); a
+  // lone `server/` barrel nothing imports, so they take nothing with them.
+  expect(seeds.size).toBe(tree.byDir.size - graph.hostProviders.size);
+  for (const n of tree.byDir.values())
+    expect(seeds.has(n.id)).toBe(!graph.hostProviders.has(n.id));
   expect(named.size).toBe(0);
 });
 
-test("resolveComposition under `**`: everything bundled + required, nothing available", () => {
+test("resolveComposition under `**`: everything but the host providers bundled + required, nothing available", () => {
   const comp = resolveComposition(graph, {
     name: "everything",
     entryPoints: [asPluginId("**")],
     selectedContributors: [],
   });
-  expect(comp.bundle.size).toBe(tree.byDir.size);
+  expect(comp.bundle.size).toBe(tree.byDir.size - graph.hostProviders.size);
   for (const n of tree.byDir.values()) {
+    if (graph.hostProviders.has(n.id)) {
+      expect(comp.bundle.has(n.id)).toBe(false);
+      continue;
+    }
     expect(comp.bundle.has(n.id)).toBe(true);
     // Nothing is `entry` — root names nothing — so every bundled node is `required`.
     expect(comp.membership.get(n.id)).toBe("required");
@@ -250,14 +257,19 @@ test("a negative trims its subtree even under a root positive", () => {
   expect(seeds.has(AGENT_MANAGER)).toBe(true);
 
   // `negated` is what the manifest ASSERTED must go — the pattern's matches,
-  // not the cascade.
-  expect([...negated].sort()).toEqual([...sonataIds].sort());
+  // not the cascade — plus the host providers, which always go.
+  expect([...negated].sort()).toEqual(
+    [...sonataIds, ...graph.hostProviders.keys()].sort(),
+  );
 
   // The seed set is exactly everything minus the REMOVAL closure of those ids:
   // sonata's own nodes plus whatever transitively imports them (the website
   // demos embed the real Sonata keyboard, so the cascade reaches further than
   // the branch itself — which is the behaviour that makes a negative honest).
-  const cascade = removalClosure(sonataIds.map(asPluginId), graph);
+  const cascade = removalClosure(
+    [...sonataIds.map(asPluginId), ...graph.hostProviders.keys()],
+    graph,
+  );
   expect(seeds.size).toBe(tree.byDir.size - cascade.size);
   for (const id of cascade) expect(seeds.has(id)).toBe(false);
 });
@@ -611,6 +623,7 @@ function syntheticGraph(
       kind: "hard" as const,
     })),
     rules: [],
+    hostProviders: new Map(),
   };
 }
 
@@ -685,10 +698,20 @@ function pluginChangesSubtree(): string[] {
     );
 }
 
-/** What the base row is meant to cost main: the excluded subtree plus every
- *  `render-diff` adapter — and nothing else. */
+/** The host providers of the real tree (`graph.hostProviders`): out of every
+ *  composition by what their own `server/` provides, never by a row. */
+function hostProviderIds(): string[] {
+  return [...graph.hostProviders.keys()].map(String);
+}
+
+/** What main leaves out: the base row's excluded subtree plus every
+ *  `render-diff` adapter, and the host providers — and nothing else. */
 function expectedExcluded(): string[] {
-  return [...pluginChangesSubtree(), ...renderDiffAdapters()];
+  return [
+    ...pluginChangesSubtree(),
+    ...renderDiffAdapters(),
+    ...hostProviderIds(),
+  ];
 }
 
 // DIRECTION. A negative takes out what would BREAK without the removed plugin —
@@ -866,7 +889,7 @@ test("naming an importer is NOT an opt-out: the contradiction is reported with i
 // `disabled` flag used to remove: the plugin-changes subtree and the facets'
 // `render-diff` adapters that import it. Anything else leaving main means some
 // new plugin imports plugin-changes — a real regression, not a stale count.
-test("real-tree main: everything except plugin-changes and its render-diff importers", () => {
+test("real-tree main: everything except plugin-changes, its render-diff importers and the host providers", () => {
   const main: CompositionManifest = {
     name: MAIN_COMPOSITION_ID,
     entryPoints: ["**"],
@@ -914,9 +937,10 @@ test("negatedTargets carries the asserted targets, not the cascade", () => {
     flattenManifest(main, [main, BASE_ROW]),
   );
 
-  // The pattern's own matches: the plugin and its sub-plugins.
+  // The pattern's own matches: the plugin and its sub-plugins — and the host
+  // providers, asserted by themselves.
   expect([...comp.negatedTargets].map(String).sort()).toEqual(
-    pluginChangesSubtree().sort(),
+    [...pluginChangesSubtree(), ...hostProviderIds()].sort(),
   );
   // The adapters left as CASCADE — out of the bundle, not asserted.
   expect(renderDiffAdapters().length).toBeGreaterThan(0);
@@ -925,6 +949,72 @@ test("negatedTargets carries the asserted targets, not the cascade", () => {
     expect(comp.bundle.has(adapter)).toBe(false);
     expect(comp.negatedTargets.has(adapter)).toBe(false);
   }
+});
+
+// ── Host providers: out of every composition by their own statement ─────────
+
+// A plugin whose portable `server/` provides a host service is the answer of a
+// host without the computer; a desktop booting it beside the service owner's
+// `machine/` provider would fail boot. Resolution keeps it out from the fact
+// alone — no row lists it — and naming it cannot take it back.
+function withHostProvider(g: EdgeGraph, id: string): EdgeGraph {
+  return {
+    ...g,
+    hostProviders: new Map([[asPluginId(id), ["SomeService"]]]),
+  };
+}
+
+test("a host provider leaves `**` with no negative naming it", () => {
+  const g = withHostProvider(
+    syntheticGraph(["svc", "svc.guest", "app"], [["svc.guest", "svc"]], {
+      svc: ["svc.guest"],
+    }),
+    "svc.guest",
+  );
+  const all: CompositionManifest = {
+    name: "all",
+    entryPoints: ["**"],
+    selectedContributors: [],
+    extends: [],
+  };
+  const comp = resolveComposition(g, all);
+  expect(comp.bundle.has(asPluginId("svc.guest"))).toBe(false);
+  expect(comp.bundle.has(asPluginId("svc"))).toBe(true); // its service's owner stays
+  expect(comp.bundle.has(asPluginId("app"))).toBe(true);
+  expect(comp.negatedTargets.has(asPluginId("svc.guest"))).toBe(true);
+  expect(comp.unsatisfiedExclusions).toEqual([]);
+});
+
+test("naming a host provider is no opt-out: it is reported, not bundled silently", () => {
+  const g = withHostProvider(
+    syntheticGraph(["svc", "svc.guest"], [["svc.guest", "svc"]], {
+      svc: ["svc.guest"],
+    }),
+    "svc.guest",
+  );
+  for (const named of [
+    { entryPoints: ["svc", "svc.guest"], selectedContributors: [] },
+    { entryPoints: ["svc"], selectedContributors: [asPluginId("svc.guest")] },
+  ]) {
+    const comp = resolveComposition(g, {
+      name: "names-the-guest",
+      extends: [],
+      ...named,
+    });
+    expect(comp.unsatisfiedExclusions.map((u) => String(u.target))).toEqual([
+      "svc.guest",
+    ]);
+  }
+});
+
+test("the real tree's host providers are read off their own server barrels", () => {
+  // The guest account: `HostAccountSource.provide(…)` in its `server/index.ts`.
+  expect(
+    graph.hostProviders.get(asPluginId("infra.host-account.guest")),
+  ).toEqual(["HostAccountSource"]);
+  // A desktop provider lives in `machine/`, which is never read: the service
+  // owner itself is no host provider.
+  expect(graph.hostProviders.has(asPluginId("infra.host-account"))).toBe(false);
 });
 
 // ── Developer-only runtimes are not closure edges ─────────────────────────────

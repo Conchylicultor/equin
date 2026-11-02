@@ -50,6 +50,7 @@ function makeGraph(hard: [string, string][], soft: [string, string][]): EdgeGrap
     subtree,
     edges,
     rules: [],
+    hostProviders: new Map(),
   };
 }
 

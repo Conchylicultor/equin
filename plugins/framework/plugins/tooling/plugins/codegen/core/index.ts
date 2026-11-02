@@ -291,6 +291,3 @@ export type {
   HostContributionBarrel,
   HostRead,
 } from "./browser-host-coverage";
-// The browser-host providers' plugins (the `base-exclusions` negatives),
-// shared with `host-services:provider-placement`.
-export { baseExclusionServerBarrels } from "./host-services";

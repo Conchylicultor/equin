@@ -123,9 +123,12 @@ export function classifyEdges(tree: PluginTree): EdgeGraph {
   // groupName → owning PluginId. Skip `_runtimeOnly` slots; first-writer-wins.
   const groupOwner = slotGroupOwners(tree);
 
+  const hostProviders = new Map<PluginId, string[]>();
   for (const node of tree.byDir.values()) {
     const data = getFacet(node, contributionsFacetDef);
     if (!data) continue;
+    if (data.hostServiceProvides.length > 0)
+      hostProviders.set(node.id, [...data.hostServiceProvides]);
     // Collect the distinct slot groups this plugin contributes to.
     const groups = new Set<string>();
     for (const contribution of data.static) {
@@ -208,5 +211,6 @@ export function classifyEdges(tree: PluginTree): EdgeGraph {
     subtree,
     edges,
     rules,
+    hostProviders,
   };
 }

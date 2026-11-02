@@ -198,9 +198,12 @@ plugin lists `Svc.provide(impl)` in its `contributions`, consumers call
 so a register token can read a service — `assertHostServices()` fails boot for
 any declared service with zero or two providers. The desktop's
 providers are `machine/` halves (booted in the same graph as `<id>#machine`
-nodes); providers for a host without the computer (`database/pglite`,
-`jobs/in-process`, the memory stores) are in `base-exclusions`, so no desktop
-composition boots two. Today's services: `database.driver`,
+nodes). A plugin whose portable `server/index.ts` provides a service is a
+**host provider** — the answer of a host without the computer
+(`database/pglite`, `jobs/in-process`, the memory stores, `host-account/guest`)
+— and no composition bundles one: resolution reads the fact off the barrel
+itself (`plugin-meta/closure`'s `EdgeGraph.hostProviders`), so no desktop boots
+two and no row lists them. Today's services: `database.driver`,
 `database.migration-source`, `jobs.queue`, `log-channels.persistence`,
 `attachments.blobs`, `tasks-core.push-ledger`,
 `conversations.transcript-source`, `model-provider.catalog-source`,
@@ -208,13 +211,31 @@ composition boots two. Today's services: `database.driver`,
 `host-account.source`, `warmup.host`, `secrets.store` (each declared
 `export const X = defineHostService<…>("<id>")`).
 
+- **A host provider is one file.** A fixed answer for a host without the
+  computer is a sub-plugin holding only `server/index.ts`:
+
+  ```ts
+  export default {
+    description: "The account of a host without the computer: …",
+    contributions: [
+      HostAccountSource.provide({
+        read: () => Promise.resolve({ username: "demo", fullName: "Alex Morgan" }),
+      }),
+    ],
+  } satisfies ServerPluginDefinition;
+  ```
+
+  `./equin build` writes its `package.json` (and the `CLAUDE.md` reference);
+  nothing else names it — no composition row, no host list.
 - **Placement is checked** (`check/`, `host-services:provider-placement`):
   every service has exactly one `machine/` provider; a service declared in a
   portable `server/` barrel (one a browser host can reach) also has exactly one
-  browser candidate — a portable `server/` barrel a `base-exclusions` negative
-  names — no portable `server/` barrel provides a service outside those
-  negatives, and every negated `server/` barrel that provides a service is
-  portable (else the check names what in its closure needs the computer).
+  host provider; every host provider is portable (else the check names what in
+  its closure needs the computer), every binding a `server/` barrel calls
+  `.provide(` on names a declared service (any other would exclude the plugin
+  by mistake), and a host provider is a lone `server/` barrel — no other
+  plugin folder, no sub-plugin, no importer — since leaving
+  every composition takes all of those with it.
 - **A service only `machine/` provides makes its declarer non-portable.**
   Portability is derived (`serverPortabilityOf`, `boundaries/core`), and one of
   its rules is this: a module declaring a service that no portable `server/`
@@ -223,13 +244,12 @@ composition boots two. Today's services: `database.driver`,
   (`infra/claude-cli/accounts`' `ActiveClaudeAccount`,
   `apps/deploy/deploy-secrets`' `DeploySecretSource`, `infra/secrets`'
   `SecretStore` — central's store, so everything reading a secret stays off
-  a browser host). Give it a browser
-  provider (a portable `server/` sub-plugin a `base-exclusions` negative names)
+  a browser host). Give it a host provider
   and its declarers turn portable by themselves.
 - **A browser host's providers are derived, not listed.** Its graph is inferred
   from the composition it names (`codegen/core/browser-host-gen.ts`): the
-  composition's portable server barrels, plus — to a fixpoint — the negated
-  candidate providing each service the graph declares, emitted as
+  composition's portable server barrels, plus — to a fixpoint — the host
+  provider of each service the graph declares, emitted as
   `hostProviders` beside `hostEntries`.
 - **Identity is the plugin, not the node.** Contributions and registrations of
   a machine half are stamped with its PLUGIN id (`pluginOfNode`), so a config's

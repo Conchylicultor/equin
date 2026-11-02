@@ -2,8 +2,8 @@
 
 An in-memory `JobQueue` (`infra/jobs`' host service) for a host without the
 desktop's graphile queue — the browser composition and the portable boot test.
-The desktop never boots it: it is in `base-exclusions`
-(`plugin-meta/composition`), and `jobs#machine` provides the desktop's queue.
+The desktop never boots it: it is a host provider, which no composition bundles
+(`plugin-meta/closure`'s `hostProviders`), and `jobs#machine` provides the desktop's queue.
 
 - **A row runs in this process when it is due**, through the jobs plugin's
   portable row runner (`UNSAFE_runJobRow`: schema-drift check, the durable

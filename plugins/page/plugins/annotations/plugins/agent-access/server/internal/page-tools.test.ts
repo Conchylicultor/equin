@@ -48,7 +48,7 @@ type Entry = (typeof serverEntries)[number];
 const SUBJECT = "page/plugins/annotations/plugins/agent-access";
 
 // The portable providers, as registry entries: none is in the app's registry
-// (`base-exclusions` keeps them out of every desktop composition).
+// (they are host providers, which no composition bundles).
 const PROVIDERS: Entry[] = [
   serverEntryFor("database/plugins/pglite", ["database"]),
   serverEntryFor("infra/plugins/jobs/plugins/in-process", [

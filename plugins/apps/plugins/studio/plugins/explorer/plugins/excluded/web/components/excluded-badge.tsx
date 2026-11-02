@@ -15,7 +15,7 @@ const blockIcon = symbol("block");
  * Two labels, and the difference is a real one for whoever is reading:
  * *Not in the app* is a decision someone wrote down (a manifest negated this id
  * by name, in practice on the `base-exclusions` row every composition
- * inherits), while *Not in the app (cascade)* is a consequence — the plugin
+ * inherits, or a host provider, out of every app by its own statement), while *Not in the app (cascade)* is a consequence — the plugin
  * descends from, or imports, one of those, so it could not stay.
  *
  * Deliberately NOT the sibling `membership` tint: that one colours rows by the

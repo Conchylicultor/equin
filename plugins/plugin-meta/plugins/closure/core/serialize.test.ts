@@ -42,6 +42,7 @@ function tinyGraph(): EdgeGraph {
     rules: [
       { then: c, owner: a, users: [b], space: "field-type", key: "date" },
     ],
+    hostProviders: new Map([[c, ["SomeService"]]]),
   };
 }
 
@@ -55,6 +56,7 @@ describe("serializeEdgeGraph / deserializeEdgeGraph", () => {
     }
     expect(restored.edges).toEqual(graph.edges);
     expect(restored.rules).toEqual(graph.rules);
+    expect([...restored.hostProviders]).toEqual([...graph.hostProviders]);
   });
 
   test("serialized form is JSON-safe (survives JSON stringify/parse)", () => {

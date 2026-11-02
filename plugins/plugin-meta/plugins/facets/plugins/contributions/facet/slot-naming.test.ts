@@ -140,6 +140,7 @@ describe("contributions facet: slot ids come from the paired naming", () => {
       paneRefs: {},
       serverCompanionKinds: [],
       serverCompanions: [],
+      hostServiceProvides: [],
     };
     expect(
       extract({ modules: [], naming: declarePluginSlots([], "source") }),

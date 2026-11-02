@@ -29,11 +29,12 @@ A plugin with `bin/browser-host.composition.ts`
 declares a browser host. `deriveBrowserHostGraph` infers its worker graph from
 that composition, the way the desktop boots every plugin of its own: the
 bundle's portable server barrels, the portable barrels `bin/browser-host.ts`
-loads, and — to a fixpoint — the `base-exclusions`-negated portable barrel
-providing each host service the graph's code declares (`core/host-services.ts`,
-the text parsers in `parse-utils`; exactly one, else
+loads, and — to a fixpoint — the portable host provider (`EdgeGraph.hostProviders`:
+a plugin whose `server/index.ts` provides a host service, which no composition
+bundles) providing each host service the graph's code declares
+(`core/host-services.ts`, the text parsers in `parse-utils`; exactly one, else
 it throws naming the service and candidates). Negatives are never flipped, so
-a negated plugin providing nothing (`review/plugin-changes`) stays out. Every
+a negated plugin (`review/plugin-changes`) stays out. Every
 server barrel the graph's code reaches must be in it, or it throws with the
 import chain — the worker's boot assert, moved to build. Reach is measured by
 `importClosures` (`tooling/import-closure`): ONE union `Bun.build` for the
@@ -159,13 +160,13 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
 
 - Description: Plugin doc generation and registry codegen
 - Core:
-  - Uses: 119 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 116 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `plugin-meta/parse-utils` ×20
     - `config_v2` ×15
     - `framework/plugin-id` ×14
     - `framework/tooling/resource-vocabulary` ×10
-    - `plugin-meta/closure` ×7
     - `plugin-meta/barrel-import` ×6
+    - `plugin-meta/closure` ×5
     - `plugin-meta/composition` ×5
     - `plugin-meta/facets` ×5
     - `infra/host-fs/user-path` ×4
@@ -175,7 +176,6 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `framework/tooling/boundaries` ×2
     - `framework/tooling/format` ×2
     - `framework/tooling` ×2
-    - `infra/namespace` ×2
     - `packages/macrotask-yield` ×2
     - `packages/resource-protocol` ×2
     - `fields/reorder-tree.REORDER_NODE_LEGEND`
@@ -183,6 +183,7 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `framework/tooling/import-closure.importClosures`
     - `framework/tooling/lint.loadLintContributions`
     - `framework/tooling/web-artifacts.COMPOSITION_SPECIFIERS`
+    - `infra/namespace.MAIN_COMPOSITION_ID`
     - `packages/semaphore.createSemaphore`
     - `plugin-meta/facets/contributions.contributionsFacetDef`
     - `plugin-meta/facets/exemptions.exemptionsFacetDef`
@@ -223,7 +224,6 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `appDeclarationsManifestPath`
     - `assertSlotsDeclared`
     - `barrelStubsPath`
-    - `baseExclusionServerBarrels`
     - `buildBarrelFreeTree`
     - `buildEnrichedTree`
     - `buildRegistryGenContext`

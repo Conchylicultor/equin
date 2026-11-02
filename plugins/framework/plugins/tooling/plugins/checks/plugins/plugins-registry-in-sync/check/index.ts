@@ -55,7 +55,8 @@ const check: Check = {
     // closure changed NOTHING (`render(bundle: mainBundle) === render(no
     // bundle)`). That was the right shape while the old `disabled` flag was the
     // mechanism that removed plugins and the closure merely had to agree with it.
-    // Both halves of that are gone. The `base-exclusions` row carries a negative,
+    // Both halves of that are gone. The `base-exclusions` row carries a negative
+    // and every host provider leaves every composition (`EdgeGraph.hostProviders`),
     // so main's closure is deliberately not every plugin; and an unfiltered
     // render has no spelling any more (`bundle` is a required parameter of
     // `renderCollectedDirRegistry`), because a registry belonging to no
@@ -124,7 +125,7 @@ const check: Check = {
       return {
         ok: false,
         message: `${rel} is out of sync with what the "${MAIN_COMPOSITION_ID}" composition renders${detail}`,
-        hint: `Run \`./equin build\` and commit the regenerated file. If a listed plugin is one you did NOT expect to move: the committed registries are exactly "${MAIN_COMPOSITION_ID}"'s closure, so a plugin leaves them by being negated out of a manifest — check the \`base-exclusions\` row (whose negatives every composition inherits) and "${MAIN_COMPOSITION_ID}"'s own entry points \`["**"]\` in plugins/plugin-meta/plugins/composition/core/config.ts.`,
+        hint: `Run \`./equin build\` and commit the regenerated file. If a listed plugin is one you did NOT expect to move: the committed registries are exactly "${MAIN_COMPOSITION_ID}"'s closure, so a plugin leaves them by being negated out of a manifest — check the \`base-exclusions\` row (whose negatives every composition inherits) and "${MAIN_COMPOSITION_ID}"'s own entry points \`["**"]\` in plugins/plugin-meta/plugins/composition/core/config.ts — or by being a host provider (its \`server/index.ts\` calls \`<Service>.provide(…)\`), which no composition bundles.`,
       };
     }
 

@@ -27821,13 +27821,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Register: `defineSupervisedJob('type-check.backstop')`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 119 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 116 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `plugin-meta/parse-utils` ×20
               - `config_v2` ×15
               - `framework/plugin-id` ×14
               - `framework/tooling/resource-vocabulary` ×10
-              - `plugin-meta/closure` ×7
               - `plugin-meta/barrel-import` ×6
+              - `plugin-meta/closure` ×5
               - `plugin-meta/composition` ×5
               - `plugin-meta/facets` ×5
               - `infra/host-fs/user-path` ×4
@@ -27837,7 +27837,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/boundaries` ×2
               - `framework/tooling/format` ×2
               - `framework/tooling` ×2
-              - `infra/namespace` ×2
               - `packages/macrotask-yield` ×2
               - `packages/resource-protocol` ×2
               - `fields/reorder-tree.REORDER_NODE_LEGEND`
@@ -27845,6 +27844,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/import-closure.importClosures`
               - `framework/tooling/lint.loadLintContributions`
               - `framework/tooling/web-artifacts.COMPOSITION_SPECIFIERS`
+              - `infra/namespace.MAIN_COMPOSITION_ID`
               - `packages/semaphore.createSemaphore`
               - `plugin-meta/facets/contributions.contributionsFacetDef`
               - `plugin-meta/facets/exemptions.exemptionsFacetDef`
@@ -27885,7 +27885,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `appDeclarationsManifestPath`
               - `assertSlotsDeclared`
               - `barrelStubsPath`
-              - `baseExclusionServerBarrels`
               - `buildBarrelFreeTree`
               - `buildEnrichedTree`
               - `buildRegistryGenContext`
@@ -38611,7 +38610,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/plugin-tree.getFacetsTreeCached`
           - `plugin-meta/plugin-tree.onPluginTreeChanged`
           - `plugin-meta/plugin-tree.pluginTreeGeneration`
-        - Resources: `composition.data` (invalidate, notified, whole: the plugin graph of this checkout — one entry per plugin (about 1.5k) and per edge between two, which the closure engine walks whole client-side)
+        - Resources: `composition.data` (invalidate, notified, whole: the plugin graph of this checkout — one entry per plugin (about 1.5k) and per edge between two, which the closure engine walks whole client-side, whole: the host-service bindings one plugin's server barrel provides)
       - Core:
         - Uses:
           - `config_v2.defineConfig`

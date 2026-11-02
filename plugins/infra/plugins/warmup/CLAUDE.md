@@ -19,8 +19,8 @@ like `defineJob`.
     share the machine), every body under the host-wide heavy-read slot
     (`withHeavyReadSlot`, reentrant).
   - Sole host (the browser composition, portable boot tests):
-    `warmup/plugins/sole-host` — every scope, no slot. Excluded from desktop
-    apps by the composition config's base-exclusions row.
+    `warmup/plugins/sole-host` — every scope, no slot. A host provider, which
+    no composition bundles.
 - **Executor.** A bounded concurrency gate (`WARMUP_CONCURRENCY`), a macrotask
   yield before each body, the host's slot around it; a throw is logged and the
   drain continues (a warm-up is an optimization, never a correctness

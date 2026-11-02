@@ -46,6 +46,7 @@ function makeGraph(spec: {
     subtree,
     edges,
     rules: [],
+    hostProviders: new Map(),
   };
 }
 

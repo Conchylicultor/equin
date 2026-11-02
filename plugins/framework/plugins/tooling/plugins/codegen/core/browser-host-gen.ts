@@ -12,9 +12,10 @@
 //   portable (`serverPortabilityOf`: nothing its static closure loads needs
 //   the computer — derived, never declared), plus every portable server
 //   barrel the host's own entry (`bin/browser-host.ts` — its seed) loads;
-// - the providers: the portable server barrels a `base-exclusions` negative
-//   names (no desktop ships them) that provide a host service the graph
-//   declares, added to a fixpoint — exactly one per service;
+// - the providers: the portable host providers (`EdgeGraph.hostProviders`: a
+//   plugin whose `server/index.ts` provides a host service, which no
+//   composition bundles) that provide a host service the graph declares, added
+//   to a fixpoint — exactly one per service;
 // - the guard: every server barrel the graph's code statically loads
 //   (`importClosures` — one union build per fixpoint round) must be in it,
 //   so a portable barrel reaching a non-portable one fails here, naming the
@@ -58,7 +59,7 @@ import {
   serverBarrelBlockers,
   type HostRead,
 } from "./browser-host-coverage";
-import { baseExclusionServerBarrels } from "./host-services";
+import { hostProviderServerBarrels } from "./host-services";
 import { readCompositionManifestsFromDisk } from "./main-bundle";
 import {
   resolveRegistryHome,
@@ -143,7 +144,7 @@ export interface HostGraphInputs {
   entry: string;
   /** The server barrels of the composition's bundle (portable or not). */
   bundleBarrels: readonly string[];
-  /** The server barrels a `base-exclusions` negative names. */
+  /** The host providers' server barrels (`hostProviderServerBarrels`). */
   candidateBarrels: readonly string[];
   read(path: string): Promise<string | null>;
   /**
@@ -318,7 +319,7 @@ export async function resolveHostGraph(
     }
     problems.push(
       by.length === 0
-        ? `host service "${service.id}" (${service.module}) has no provider: no portable server barrel a \`base-exclusions\` negative names spells ${service.name}.provide(…)`
+        ? `host service "${service.id}" (${service.module}) has no provider: no portable host provider (a plugin whose \`server/index.ts\` spells ${service.name}.provide(…))`
         : `host service "${service.id}" has ${by.length} providers: ${by.map(pluginOfBarrel).join(", ")}`,
     );
   }
@@ -453,9 +454,7 @@ async function inferUncached(
       .map(barrelOf)
       .filter((b) => repo.has(b))
       .sort(),
-    candidateBarrels: baseExclusionServerBarrels(ctx.graph, manifests, (p) =>
-      repo.has(p),
-    ),
+    candidateBarrels: hostProviderServerBarrels(ctx.graph),
     read: (path) => repo.read(path),
     portability: await serverPortabilityOf(repo),
     // What the bundler loads from these modules, as the bundle will.

@@ -119,8 +119,9 @@ modules that need the computer. A module needs it when it:
    computer-only API behind a seam. Whether a provider is portable depends on
    the same taint, so this is a monotone fixpoint (taint, then the declarers
    of services left without an untainted provider, re-propagate, until
-   stable). That a portable provider sits in a `base-exclusions` negative is
-   `host-services:provider-placement`'s rule.
+   stable). A `server/` barrel that provides a service is a host provider,
+   which no composition bundles (`EdgeGraph.hostProviders`), so the portable
+   providers are exactly a browser host's candidates.
 
 `offenders(barrel)` explains a non-portable barrel: the frontier modules that
 need the computer (one per plugin outside its own), each with what it needs and
