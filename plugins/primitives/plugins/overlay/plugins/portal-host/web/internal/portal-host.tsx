@@ -1,17 +1,13 @@
-import {
-  createContext,
-  useContext,
-  useRef,
-  type ReactNode,
-  type RefObject,
-} from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 
 /**
- * The container the nearest {@link PortalHost} draws popups into. `null`
- * outside any host: the popup library then uses its own default, `body`.
+ * The element the nearest {@link PortalHost} draws popups into: the element
+ * itself, `null` while the host has not mounted it yet, or — no provider —
+ * outside any host.
  */
-const PortalContainerContext =
-  createContext<RefObject<HTMLElement | null> | null>(null);
+const PortalContainerContext = createContext<HTMLElement | null | undefined>(
+  undefined,
+);
 
 /**
  * Makes every popup opened inside it — popover, menu, select, tooltip, dialog —
@@ -38,23 +34,27 @@ export function PortalHost({
    *  is `pointer-events-none`, so the popups drawn into it stay clickable. */
   className?: string;
 }): ReactNode {
-  const ref = useRef<HTMLDivElement>(null);
+  // The element, not a ref to it: the popup library resolves a ref's
+  // `.current` only when its portal mounts, so a popup already open on the
+  // host's first commit — mounted before the host element after it is
+  // attached — read `null` and fell back to `body` for good. As state, the
+  // element reaches every popup once it exists (and again if it is replaced).
+  const [element, setElement] = useState<HTMLDivElement | null>(null);
   return (
-    <PortalContainerContext.Provider value={ref}>
+    <PortalContainerContext.Provider value={element}>
       {children}
-      <div ref={ref} data-portal-host="" className={className} />
+      <div ref={setElement} data-portal-host="" className={className} />
     </PortalContainerContext.Provider>
   );
 }
 
 /**
- * The container a popup portals into: the nearest {@link PortalHost}'s, or
- * `undefined` (the library's default, `body`) outside any host. Handed as a
- * ref, which the library resolves when the popup opens — after the host has
- * mounted. Called by the ui-kit portal wrappers; a feature plugin wraps a region
- * in `PortalHost` instead.
+ * The container a popup portals into: the nearest {@link PortalHost}'s
+ * element; `null` inside a host not mounted yet, which the library reads as
+ * "wait" (never `body`, where the popup would be invisible); `undefined` (the
+ * library's default, `body`) outside any host. Called by the ui-kit portal
+ * wrappers; a feature plugin wraps a region in `PortalHost` instead.
  */
-export function usePortalContainer():
-  RefObject<HTMLElement | null> | undefined {
-  return useContext(PortalContainerContext) ?? undefined;
+export function usePortalContainer(): HTMLElement | null | undefined {
+  return useContext(PortalContainerContext);
 }
