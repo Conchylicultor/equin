@@ -24,6 +24,13 @@ export interface TreeDisclosureProps {
   isOpen: boolean;
   /** Toggle expand/collapse. Undefined on rows that cannot toggle. */
   onToggle?: () => void;
+  /**
+   * The disclosure look this one surface pins (a variant id — `"merged"`,
+   * `"column"`, `"dimmed-leaf"`), overriding the app's configured one; absent
+   * → the app's. Read by the region host, never by a variant. An id no
+   * installed variant matches throws.
+   */
+  variant?: string;
 }
 
 /**

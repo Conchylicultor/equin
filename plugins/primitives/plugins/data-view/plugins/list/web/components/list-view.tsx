@@ -225,6 +225,8 @@ interface ListRowConfig {
    *  glyph is a plain icon. Per list, so every row of it draws the same lead
    *  (a column disclosure reserves its box on a row with nothing to fold). */
   disclosure: "attach" | "detail" | null;
+  /** The disclosure look the list pins (`ListViewOptions.disclosureVariant`). */
+  disclosureVariant: string | undefined;
   rowActivation: DataViewRenderProps<unknown>["rowActivation"];
   rowTone: DataViewRenderProps<unknown>["rowTone"];
   revealed: ItemActionRender<unknown> | null;
@@ -394,7 +396,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     ItemActionsDescriptor<unknown> | undefined;
   const { properties } = props.state;
   const { fields, rowActivation, rowTone, cover } = props;
-  const { rowChrome, renderRow, labelClassName } = options;
+  const { rowChrome, renderRow, labelClassName, disclosureVariant } = options;
   const actionsAtRest = options.actionsAtRest === true;
   // Where every field goes (the surface's recipe and pins, the user's
   // Properties); the section pipeline above keeps using the full
@@ -542,6 +544,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       labelClassName,
       detail,
       disclosure: anyAttached ? "attach" : detail ? "detail" : null,
+      disclosureVariant,
       rowActivation,
       rowTone,
       revealed,
@@ -551,6 +554,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     };
   }, [
     anyAttached,
+    disclosureVariant,
     layout,
     terms,
     trailingSlots,
@@ -1314,6 +1318,7 @@ function listRowNode(
             isOpen={isOpen}
             onToggle={toggle}
             icon={glyph}
+            disclosure={config.disclosureVariant}
           />
         ) : undefined
       }

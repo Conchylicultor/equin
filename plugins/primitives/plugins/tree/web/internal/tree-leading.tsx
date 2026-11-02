@@ -23,6 +23,8 @@ export type TreeLeadingProps = {
   leading?: ReactNode;
   /** Draw the indent guides. Default false. */
   guides?: boolean;
+  /** Pin this surface's disclosure look (`TreeDisclosureProps.variant`). */
+  disclosure?: string;
 };
 
 /**
@@ -97,6 +99,7 @@ export function TreeLeading({
   icon,
   leading,
   guides = false,
+  disclosure: pinnedVariant,
 }: TreeLeadingProps) {
   // A UI plugin can contribute the icon-bearing leading disclosure (merged /
   // dimmed-leaf / column). Exactly one is expected — its Region internally
@@ -109,6 +112,7 @@ export function TreeLeading({
     hasChildren,
     isOpen,
     onToggle,
+    variant: pinnedVariant,
   };
   return (
     <>

@@ -157,7 +157,11 @@ row's leading glyph
 through the tree primitive's `TreeLeading` in `Row`'s `lead` slot, so the
 theme's `Tree.Disclosure` variant decides the look (merged: the chevron
 replaces the glyph on hover; column: a faint chevron box ahead of it), and the
-row carries `TREE_ROW_GROUP`, the named hover group the variants read. The
+row carries `TREE_ROW_GROUP`, the named hover group the variants read.
+`ListViewOptions.disclosureVariant` pins the look for one list (the Queue pins
+`"merged"`) without changing the app's other trees: it reaches the region host
+as `TreeDisclosureProps.variant` (variant-region's `VariantRegionPin`), which
+wins over the configured variant and throws on an id no variant matches. The
 `lead` is outside the row's own `<button>` (no nested control) and
 click-through (a press on the glyph at rest opens the row). The action cluster
 keeps its hover reveal: it used to hold the disclosure and was therefore

@@ -9,14 +9,18 @@ import { DynamicEnum } from "@plugins/fields/plugins/dynamic-enum/plugins/config
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import type { VariantRegionCore } from "../core";
 import type { VariantContribution } from "./slots";
-import { createRegion } from "./components/variant-region-host";
+import {
+  createRegion,
+  type VariantRegionPin,
+} from "./components/variant-region-host";
 import { createPicker } from "./components/variant-region-picker";
 
 export interface VariantRegionWeb<Props> {
   /** Slot each variant sub-plugin contributes to: `ui.variant-region.<id>.variant`. */
   readonly Variant: Slot<VariantContribution<Props>>;
-  /** The live chrome host. Reads the per-app variant and dispatches to it. */
-  readonly Region: ComponentType<Props>;
+  /** The live chrome host. Reads the per-app variant (or the surface's pin,
+   *  `VariantRegionPin`) and dispatches to it. */
+  readonly Region: ComponentType<Props & VariantRegionPin>;
   /** The settings picker rendered in the theme-customizer (scope-aware). */
   readonly Picker: ComponentType;
   /**

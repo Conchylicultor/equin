@@ -108,6 +108,10 @@ const QUEUE_VIEW_OPTIONS = {
       <SidebarConversationItem conv={c} muted={c.isBlocked} />
     ),
     size: "sm",
+    // A supervisor's expand/collapse sits in its status dot's place, shown
+    // only on hover (Pages / file-explorer style) — this list only; the rest
+    // of the agent manager's trees keep the app's disclosure look.
+    disclosureVariant: "merged",
   },
 };
 

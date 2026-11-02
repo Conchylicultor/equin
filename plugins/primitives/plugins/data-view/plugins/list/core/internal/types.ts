@@ -42,6 +42,15 @@ export interface ListViewOptions<TRow> {
    */
   rowChrome?: "row" | "tree";
   /**
+   * The disclosure look this list pins for its rows' expand/collapse (a
+   * `Tree.Disclosure` variant id: `"merged"` — the chevron in the glyph's
+   * place, on hover only; `"column"`; `"dimmed-leaf"`), whatever its app's
+   * tree-disclosure config says — so one list can wear a look without
+   * changing every tree of its app. Absent → the app's. The default row
+   * chrome only (a `rowChrome: "tree"` row wears its app's look).
+   */
+  disclosureVariant?: string;
+  /**
    * Per-row title className, composed after the row tone — the list twin of
    * the tree view's `labelClassName` (e.g. the open record's row in a heavier
    * weight).
