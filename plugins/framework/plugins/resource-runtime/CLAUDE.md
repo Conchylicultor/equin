@@ -570,8 +570,10 @@ All but the version are co-produced by the starter. A push drain mints
   follow read, upstream, hooks or `revalidate`.
   - The old backend, at SIGTERM (server-core's `handOffEpoch`, before any
     `onShutdown`): change-feed's `feedCut`, then `handoffState()` — every
-    tracked tuple with a snapshot, no pending, not draining — stored by
-    live-state-snapshot.
+    tracked tuple with no pending, not draining, whose value this process
+    knows: a snapshot, or inherited by a claim at the current version (so an
+    inherited tuple is handed on, not reloaded every other restart) — stored
+    by live-state-snapshot.
   - The successor, on the first sub echoing a foreign epoch: loads the record,
     installs a SHADOW per tuple (equal definition, every route table in the
     changelog), then replays the changelog since the cut into them; a live

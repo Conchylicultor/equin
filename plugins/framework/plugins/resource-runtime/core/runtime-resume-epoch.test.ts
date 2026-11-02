@@ -15,7 +15,9 @@
  *     the shadows were installed, a definition mismatch, an echoed version the
  *     old backend did not vouch for, a route table outside the changelog, an
  *     entry with no definition, a tuple this process already served;
- *   - the old half leaves out a tuple with a pending change;
+ *   - the old half leaves out a tuple with a pending change, and hands on
+ *     a tuple it inherited and nothing changed since (a chain of restarts
+ *     keeps inheriting);
  *   - after an inheritance the first change reloads the tuple and ships it at
  *     the next version.
  */
@@ -516,6 +518,57 @@ describe("the epoch handoff — the old half", () => {
     await tick();
     // Drained: vouched for again, at the version it shipped.
     const [t] = old.h.runtime.handoffState().tuples;
+    expect(t!.version).toBe(old.version + 1);
+  });
+
+  test("an inherited tuple is handed on: a third backend inherits it too, with no load anywhere", async () => {
+    const table = new Map([["a", 1]]);
+    const old = await oldBackend(table);
+    const mid = backend(table, {
+      resumeEpoch: async () => record(old.h.runtime.handoffState()),
+    });
+    await mid.h.subscribeBatch(
+      [{ key: "pt", params: A, version: old.version }],
+      { epoch: old.epoch },
+    );
+    await tick();
+    const midEpoch = mid.h.frames.find(
+      (f) => f.kind === "up-to-date-batch",
+    )!.epoch!;
+    expect(loadsOf(mid)).toBe(0);
+    // Claimed, so no snapshot here — still vouched for at the inherited version.
+    const midState = mid.h.runtime.handoffState();
+    expect(midState.tuples.map((t) => t.version)).toEqual([old.version]);
+
+    const last = backend(table, { resumeEpoch: async () => record(midState) });
+    await last.h.subscribeBatch(
+      [{ key: "pt", params: A, version: old.version }],
+      { epoch: midEpoch },
+    );
+    await tick();
+    expect(upToDate(last.h).map((u) => u.version)).toEqual([old.version]);
+    expect(loadsOf(last)).toBe(0);
+  });
+
+  test("an inherited tuple a change reached is not handed on at the inherited version", async () => {
+    const table = new Map([["a", 1]]);
+    const old = await oldBackend(table);
+    const mid = backend(table, {
+      resumeEpoch: async () => record(old.h.runtime.handoffState()),
+    });
+    await mid.h.subscribeBatch(
+      [{ key: "pt", params: A, version: old.version }],
+      { epoch: old.epoch },
+    );
+    await tick();
+    table.set("a", 2);
+    feedChange(mid.h, { table: TABLE, op: "U", ids: ["a"] });
+    // Pending: left out.
+    expect(mid.h.runtime.handoffState().tuples).toEqual([]);
+    await tick();
+    await tick();
+    // Drained: vouched for at the version it shipped, never the inherited one.
+    const [t] = mid.h.runtime.handoffState().tuples;
     expect(t!.version).toBe(old.version + 1);
   });
 

@@ -7444,6 +7444,15 @@ export function createResourceRuntime(
     return null;
   }
 
+  // A tuple is vouched for when this process knows the value its holders hold
+  // at `version`: it loaded one (a snapshot), or it inherited one and minted
+  // nothing since (`inherited` at the current version — `claimInherited`'s
+  // own "still that value" rule; any change since drains FULL and bumps the
+  // version). Requiring a snapshot alone left every claimed tuple out, so a
+  // backend that booted by inheriting handed its successor nothing it had
+  // inherited and every other restart reloaded every point read through the
+  // read-admit gate (main, 2026-11-02: 14–30 tuples handed after an
+  // inheriting boot vs ~250 otherwise, and 270–370 read-admit waits there).
   function handoffState(): HandoffState {
     const tuples: HandoffTuple[] = [];
     for (const entry of registry.values()) {
@@ -7453,7 +7462,8 @@ export function createResourceRuntime(
         const version = entry.versions.get(pk) ?? 0;
         if (
           version > 0 &&
-          entry.snapshots?.has(pk) === true &&
+          (entry.snapshots?.has(pk) === true ||
+            inherited.get(tupleSlot(entry.key, pk)) === version) &&
           !entry.pendingNotifies.has(pk) &&
           !entry.draining.has(pk)
         ) {
