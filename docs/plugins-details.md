@@ -20951,15 +20951,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Contributes:
           - `change-feed-changelog-retention` "live-state-snapshot's cold-boot catch-up replays the changelog; its hourly prune job (pruneChangelog) deletes the rows below the horizon no persisted snapshot needs"
+          - `live-state-snapshot-code-stamp` "liveReadCode digest"
           - `fork-data-exclusion` "live_state_handoff"
           - `fork-data-exclusion` "live_state_snapshot"
         - Uses:
           - `database.db`
-          - `database.schemaChangedAtBoot`
           - `database/change-feed.ChangelogRetention`
-          - `database/change-feed.feedCut`
-          - `database/change-feed.feedListening`
-          - `database/change-feed.getCoveredTables`
           - `database/change-feed.producedTableNames`
           - `database/change-feed.readLayout`
           - `database/change-feed.relationBases`
@@ -27531,6 +27528,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/signal-origin` (2 debt)
               - `packages/single-flight` (1 debt)
               - `packages/sleep-clock` (1 debt)
+              - `packages/source-digest` (0 debt)
               - `packages/spawn-priority` (3 debt)
               - `packages/thread-cpu-clock` (1 debt)
               - `packages/ticket-line` (1 debt)
@@ -29973,11 +29971,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/file-watcher.JournalReplay`
           - `infra/host/host-read-pool.withHeavyReadSlot`
           - `infra/warmup.defineWarmup`
+          - `packages/source-digest.sourceDigest`
         - Exports (types):
           - `CorpusDelta`
           - `CorpusIndex`
           - `CorpusIndexSpec`
         - Exports (values): `defineCorpusIndex`
+      - Core:
+        - Uses:
+          - `packages/source-digest.defineSourceSet`
+          - `packages/source-digest.SourceSet`
+        - Exports (types): `CorpusFormat`
+        - Exports (values): `corpusFormat`
       - Cross-plugin:
         - Imported by:
           - `apps/sonata/sources/midi/folders`
@@ -32796,16 +32801,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `pointQueryResource`
           - `presenceExpr`
           - `windowQueryResource`
-      - Cross-plugin:
-        - Imported by:
-          - `network/live`
-          - `runs`
-          - `tasks/tasks-core`
-      - Exemptions:
-        - Exempts itself from:
-          - `resource-runtime:compiled-routes` — `server/internal/routes.ts` (sanctioned)
-          - `live/no-legacy-resource-spelling` — `.` (sanctioned)
       - Core:
+        - Uses: `packages/source-digest.defineSourceSet`
         - Exports (types):
           - `Aggregate`
           - `AggregateOrder`
@@ -32862,7 +32859,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `jsonAgg`
           - `jsonAggValue`
           - `KIND_RE`
+          - `liveReadCode`
           - `SQL_TYPE_RE`
+      - Cross-plugin:
+        - Imported by:
+          - `network/live`
+          - `runs`
+          - `tasks/tasks-core`
+      - Exemptions:
+        - Exempts itself from:
+          - `resource-runtime:compiled-routes` — `server/internal/routes.ts` (sanctioned)
+          - `live/no-legacy-resource-spelling` — `.` (sanctioned)
       - Test helpers:
         - Server: `@plugins/infra/plugins/query-resource/server/testing`
           - `compileAllCollection` — Compile a collection declared `all` (see the header).
@@ -35379,6 +35386,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `createSmoothClockModel`
           - `SMOOTH_CLOCK_MAX_SLEW`
           - `SMOOTH_CLOCK_SNAP_SEC`
+    - **`source-digest`** — Digest of the code a source set loads: sourceDigest(sets) — sha256 over the static runtime import closure of the modules each set includes (repo files by relative path and bytes, packages by name@version, builtins by name; type-only imports erased), computed once per process, every defined set started at a serving backend's boot. What persisted or inherited state stamps itself with, so a cache built by other code is refused without a version anyone bumps.
+      - Cross-plugin:
+        - Imported by:
+          - `infra/corpus-index`
+          - `infra/query-resource`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/digest.ts` (sanctioned)
+      - Server:
+        - Exports (values): `sourceDigest`
+      - Core:
+        - Exports (types): `SourceSet`
+        - Exports (values):
+          - `allSourceSets`
+          - `defineSourceSet`
     - **`spawn-disclaim`**
       - Core:
         - Uses: `infra/launcher/env-names.readEnv`

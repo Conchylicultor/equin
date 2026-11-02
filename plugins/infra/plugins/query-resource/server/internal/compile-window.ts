@@ -19,9 +19,10 @@ import type {
   WindowParams,
   WindowSelector,
 } from "@plugins/primitives/plugins/live-state/core";
-import type {
-  PointQueryResourceContract,
-  WindowQueryResourceContract,
+import {
+  liveReadCode,
+  type PointQueryResourceContract,
+  type WindowQueryResourceContract,
 } from "@plugins/infra/plugins/query-resource/core";
 import {
   planArm,
@@ -40,6 +41,10 @@ import type {
   WindowOrderKey,
   WindowQueryResourceSpec,
 } from "./spec";
+
+// The point compile — this module and everything it loads — is code a handed-
+// over `:rows` tuple's value depends on (`liveReadCode`).
+liveReadCode.include(import.meta);
 
 // The bounded-membership (window / point) compiler for the bounded working-set
 // contract (research/2026-07-18-global-bounded-working-set-resource-contract.md);

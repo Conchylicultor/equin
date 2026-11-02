@@ -293,8 +293,10 @@ describe.if(IN_CHILD)("writePrototypeFixture, after the host is up", () => {
         migrationSource,
         diskGitLayer,
       ],
-      hasCoreBarrel: (pluginPath) =>
-        existsSync(join(PLUGINS_DIR, pluginPath, "core", "index.ts")),
+      coreBarrel: (pluginPath) =>
+        existsSync(join(PLUGINS_DIR, pluginPath, "core", "index.ts"))
+          ? () => import(`@plugins/${pluginPath}/core`)
+          : null,
     });
     // Past ready, as a demo's seed runs: the watcher, the job queue, LISTEN.
     await runPostReadyPhases(ordered);

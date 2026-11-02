@@ -102,7 +102,7 @@ export async function bootBrowserHost(
     mode: "browser",
     entries: opts.entries,
     // One bundle: every module it can reach is already in it, nothing to warm.
-    hasCoreBarrel: () => false,
+    coreBarrel: () => null,
   });
 
   // The build proves the bundle reaches no platform module; this names the

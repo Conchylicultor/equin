@@ -58,8 +58,8 @@ function emptyTiered(): TieredTokens {
  * `"fast"` yet, so that arm is defensive rather than observed.
  *
  * An unrecognized value normalizes to `"standard"`: the union is closed by
- * `DayBucket`, and a genuinely new speed tier is a schema change (new arm +
- * `INDEX_VERSION` bump + a rate in `ModelPrice`), not something this parse can
+ * `DayBucket`, and a genuinely new speed tier is a schema change (new arm — which
+ * rebuilds the corpus index, as any parse change does — + a rate in `ModelPrice`), not something this parse can
  * represent.
  */
 function normalizeSpeed(speed: string | null | undefined): "standard" | "fast" {

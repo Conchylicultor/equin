@@ -111,6 +111,14 @@ CREATE TABLE IF NOT EXISTS ${LIVE_STATE_HANDOFF_TABLE} (
 );
 `;
 
+// `code` — the digest of the code that shapes a point read's rows
+// (query-resource's `liveReadCode`) in the backend that wrote the record: a
+// successor running other code inherits nothing (`./handoff`). Idempotent
+// in-place upgrade; a record written before it reads NULL and is refused.
+const HANDOFF_TABLE_ADD_CODE = `
+ALTER TABLE ${LIVE_STATE_HANDOFF_TABLE} ADD COLUMN IF NOT EXISTS code text;
+`;
+
 const PresentRowSchema = z.object({ present: z.boolean() });
 
 async function relationExists(
@@ -165,4 +173,5 @@ export async function ensureSnapshotTable(db: NodePgDatabase): Promise<void> {
   await db.execute(drizzleSql.raw(SNAPSHOT_TABLE_ADD_DEFINITION));
   await ensureChangelogHorizon(db);
   await db.execute(drizzleSql.raw(HANDOFF_TABLE_DDL));
+  await db.execute(drizzleSql.raw(HANDOFF_TABLE_ADD_CODE));
 }

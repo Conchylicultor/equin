@@ -32,6 +32,7 @@ import {
 } from "@plugins/primitives/plugins/keyset/server";
 import {
   BASE_RELATION,
+  liveReadCode,
   type AggregateRef,
   type AllJoinRefs,
   type AllJoinSpec,
@@ -92,6 +93,11 @@ import type {
   SelectMap,
   WindowOrderKey,
 } from "./spec";
+
+// The `all` compile — this module and everything it loads — is code a
+// persisted `all` value depends on beyond its definition (`liveReadCode`): the
+// L2 snapshot is refused under another digest of it.
+liveReadCode.include(import.meta);
 
 // The `all` compiler (P8 v3 §4.1, C2/C3/C5/C7/C18 of
 // research/2026-10-06-global-scoped-change-routing-p8-v3.md): a collection
@@ -598,7 +604,6 @@ export function compileAllCollection<
   // ── The definition (A18 / A40) ───────────────────────────────────────────
   const definition = sha256(
     JSON.stringify({
-      v: 1,
       full: rendered.full,
       scoped: rendered.scoped,
       orderIds: rendered.orderIds,

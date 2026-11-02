@@ -95,6 +95,7 @@ import {
   exposureFolds,
   type ExposureFold,
 } from "./exposure-folds";
+import { rowEncodeOf } from "./encode-row";
 import {
   compileExternalCollection,
   type AnyCollection,
@@ -738,49 +739,15 @@ export function compileCollection<
       );
     }
   }
-  // A row reaching exposures: their flat wire-named values, wire-encoded like
-  // any column, folded into `$columns[set][field]` (every set present, so a
-  // row always carries each slice).
-  const fold = (out: Record<string, unknown>): void => {
-    const cols: Record<string, Record<string, unknown>> = Object.fromEntries(
-      handles.map((h) => [h.name, {}]),
-    );
-    for (const [wire, { set, field }] of foldedFields) {
-      cols[set]![field] = out[wire];
-      delete out[wire];
-    }
-    out[LIVE_COLUMNS_KEY] = cols;
-  };
-  const encodeRow =
-    wired.length === 0 && !foldsColumns
-      ? undefined
-      : (row: Record<string, unknown>): Record<string, unknown> => {
-          const out = { ...row };
-          for (const [name, codec] of wired) {
-            const value = out[name];
-            if (value !== null && value !== undefined) {
-              out[name] = codec.encode(value);
-            }
-          }
-          if (foldsColumns) fold(out);
-          return out;
-        };
-  // What `encodeRow` does, as data, for the point read's definition: the
-  // `$columns` fold alone is fixed by which wire field lands where. A wire
-  // codec's `encode` is code no id names, so a row with one has no definition
-  // (its point read is never inherited across a restart).
-  const encodeRowId =
-    encodeRow !== undefined && wired.length === 0
-      ? `fold:${JSON.stringify({
-          sets: handles.map((h) => h.name),
-          fields: [...foldedFields]
-            .map(([wire, { set, field }]) => [wire, set, field])
-            .sort(([a], [b]) => (a! < b! ? -1 : a! > b! ? 1 : 0)),
-        })}`
-      : undefined;
-  const withEncode = encodeRow
-    ? { encodeRow, ...(encodeRowId !== undefined ? { encodeRowId } : {}) }
-    : {};
+  // What a row goes through on its way to the wire (`./encode-row`): wired
+  // fields encoded, exposed values folded into `$columns[set][field]`.
+  const withEncode = rowEncodeOf({
+    sets: handles.map((h) => h.name),
+    foldedFields,
+    wired,
+    foldsColumns,
+    columnsKey: LIVE_COLUMNS_KEY,
+  });
   // The order signature reads a sorted exposed column off `$columns`.
   const readField = (row: Record<string, unknown>, field: string): unknown => {
     const c = foldedFields.get(field);

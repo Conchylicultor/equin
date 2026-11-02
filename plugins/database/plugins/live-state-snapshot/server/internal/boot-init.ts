@@ -14,6 +14,7 @@ import {
   clearPersistedSnapshots,
 } from "./persist";
 import { l2Expectation } from "./expectation";
+import { resolveCodeStamp, stampDefinition } from "./code-stamp";
 import {
   clearHealedSnapshots,
   clearInvalidAliasSnapshots,
@@ -61,6 +62,9 @@ export async function initSnapshotSubsystem(
   healedRollups: readonly string[],
 ): Promise<void> {
   try {
+    // The code stamp every definition is written and expected under — first:
+    // a stamp that cannot be known (the digest failed) leaves L2 off, below.
+    await resolveCodeStamp();
     await ensureSnapshotTable(db);
     // A6 (runtime): a persist whose guard tables name a produced table is
     // refused, and its key never writes a row again in this process. The
@@ -88,7 +92,10 @@ export async function initSnapshotSubsystem(
       shouldPersist,
       persistSnapshot: async (key, paramsKey, value, watermark, meta) => {
         if (await guard.refuses(key, meta.guardTables)) return;
-        await persistSnapshot(db, key, paramsKey, value, watermark, meta);
+        await persistSnapshot(db, key, paramsKey, value, watermark, {
+          ...meta,
+          definition: stampDefinition(meta.definition),
+        });
       },
     });
     const exp = l2Expectation();

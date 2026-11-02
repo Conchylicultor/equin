@@ -1,4 +1,4 @@
-import { extname, sep } from "node:path";
+import { sep } from "node:path";
 import {
   defineCorpusIndex,
   type CorpusDelta,
@@ -11,8 +11,7 @@ import {
 import { sonataDir } from "@plugins/apps/plugins/sonata/data-dirs";
 import { readableDirs, refreshFolderStatuses } from "./folder-status";
 import { importMidiFileJob } from "./import-job";
-
-const MIDI_EXTENSIONS = new Set([".mid", ".midi"]);
+import { midiFileFormat } from "./midi-format";
 
 // The incremental, throttled, fingerprint-keyed enumeration of every `.mid`/
 // `.midi` file under the watched folders. The generic mechanics (enumerate →
@@ -37,10 +36,9 @@ const midiIndex = defineCorpusIndex({
   // Only the readable folders: an unreadable one is shown in the library, never
   // walked — one bad root would otherwise abort the walk for every folder.
   roots: readableDirs,
-  match: (p) => MIDI_EXTENSIONS.has(extname(p).toLowerCase()),
+  format: midiFileFormat,
   indexPath: sonataDir.file("midi-folders-index.json"),
   scope: "host",
-  version: 1,
 });
 
 /**

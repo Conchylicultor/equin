@@ -21,6 +21,12 @@ import { snapshotLog as log } from "./log-sink";
 // inherit (resource-runtime's `EpochHandoff`); this file only stores, loads
 // and replays — and every way it can fail says so, so the runtime loads.
 //
+// The record carries the digest of the CODE that shaped the tuples' rows
+// (`code`: query-resource's `liveReadCode` — the point compile and loader,
+// the decoders, the row encode), which no tuple's definition pins. A
+// successor whose digest differs gets no record: a deploy that changed that
+// code reloads every tuple, with no version anyone has to bump.
+//
 // db-PARAMETRIZED like `persist.ts` / `catch-up.ts`, so a test drives it on a
 // throwaway database.
 
@@ -48,10 +54,13 @@ const HandoffTupleSchema = z.object({
 const HandoffRowSchema = z.object({
   cut_xid: z.string(),
   tuples: z.array(HandoffTupleSchema),
+  code: z.string().nullable(),
 });
 
 /** What the old backend's half needs — injected, so a test can stand them in. */
 export interface HandoffWriteDeps {
+  /** The digest of the code this process serves point reads with (see the header). */
+  code: () => Promise<string>;
   /** change-feed's `feedCut`. */
   cut: () => Promise<{ cutXid: string }>;
   /** The runtime's `handoffState`, taken right after the cut. */
@@ -70,6 +79,8 @@ export async function writeEpochHandoff(
   deps: HandoffWriteDeps,
 ): Promise<void> {
   const write = async (): Promise<number> => {
+    // Before the cut: the state must be taken synchronously right after it.
+    const code = await deps.code();
     const { cutXid } = await deps.cut();
     // Synchronously after the cut resolved: every change below it has made
     // its pending, so a tuple one reached is not in the state.
@@ -83,10 +94,11 @@ export async function writeEpochHandoff(
         WHERE epoch <> ${state.epoch}
       )
       INSERT INTO ${drizzleSql.raw(LIVE_STATE_HANDOFF_TABLE)}
-        (epoch, cut_xid, tuples)
-      VALUES (${state.epoch}, ${cutXid}::numeric, ${JSON.stringify(state.tuples)}::jsonb)
+        (epoch, cut_xid, tuples, code)
+      VALUES (${state.epoch}, ${cutXid}::numeric, ${JSON.stringify(state.tuples)}::jsonb, ${code})
       ON CONFLICT (epoch) DO UPDATE
-        SET cut_xid = EXCLUDED.cut_xid, tuples = EXCLUDED.tuples, written_at = now()
+        SET cut_xid = EXCLUDED.cut_xid, tuples = EXCLUDED.tuples,
+            code = EXCLUDED.code, written_at = now()
     `);
     return state.tuples.length;
   };
@@ -109,6 +121,10 @@ export async function writeEpochHandoff(
 
 /** What the successor's half needs — injected, so a test can stand them in. */
 export interface HandoffLoadDeps {
+  /** The digest of the code this process serves point reads with (see the header). */
+  code: () => Promise<string>;
+  /** Told why a record exists but is not handed over (default: logged). */
+  refused: (reason: string) => void;
   /** The tables whose every change is in the changelog (change-feed's `getCoveredTables`). */
   changelogTables: () => readonly string[];
   /** The rollups this boot's reconcile healed — rows rewritten with no changelog entry. */
@@ -122,7 +138,8 @@ export interface HandoffLoadDeps {
 /**
  * The successor's half: the record of boot `epoch`, or null when there is
  * none (a crash, a cut that failed, a write out of budget, a record older
- * than `HANDOFF_FRESH`). Its `replay` waits for the LISTEN session, routes
+ * than `HANDOFF_FRESH`) or it was written by other code (its `code` digest is
+ * not this process's — told to `refused`). Its `replay` waits for the LISTEN session, routes
  * every changelog row since the cut, and refuses when the gap cannot be
  * proven: a migration applied at boot, a rollup healed, history pruned at or
  * past the cut, or no LISTEN session in time.
@@ -134,7 +151,7 @@ export async function loadEpochHandoff(
 ): Promise<ResumeRecord | null> {
   const rows = await executeRows(db, {
     query: drizzleSql`
-      SELECT cut_xid::text AS cut_xid, tuples
+      SELECT cut_xid::text AS cut_xid, tuples, code
       FROM ${drizzleSql.raw(LIVE_STATE_HANDOFF_TABLE)}
       WHERE epoch = ${epoch}
         AND written_at > now() - ${HANDOFF_FRESH}::interval
@@ -144,6 +161,15 @@ export async function loadEpochHandoff(
   });
   const row = rows[0];
   if (row === undefined) return null;
+  const code = await deps.code();
+  if (row.code !== code) {
+    deps.refused(
+      row.code === null
+        ? "the record carries no code digest (written before it was stamped)"
+        : `the live-read code changed (${row.code.slice(0, 12)} → ${code.slice(0, 12)})`,
+    );
+    return null;
+  }
   const cutXid = row.cut_xid;
   return {
     tuples: row.tuples,

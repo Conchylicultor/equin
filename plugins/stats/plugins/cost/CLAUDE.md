@@ -114,7 +114,9 @@ is only final on the LAST line (8 on the thinking line, 3,778 on the text line
 after it). `foldUsageEntry` keeps what it counted per hash (`SeenEntry`) and
 tops a repeat's extra output up into the same bucket — ccusage's reading. Until
 2026-10-28 it kept the first line, under-counting output by 16.5% (−1.4% of
-cost); `INDEX_VERSION` 4 re-parses the corpus, the archive takes the grown
+cost); the parse change re-parses the corpus (the index is stamped with the
+code digest of `usage-index.ts`, the module declaring its `corpusFormat`, so
+any change to the parse rebuilds it), the archive takes the grown
 counts (live wins on growth), and conversations/usage recounts its legacy rows.
 History whose transcripts were already deleted stays under-counted.
 

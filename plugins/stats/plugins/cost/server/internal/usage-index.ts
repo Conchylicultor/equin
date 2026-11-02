@@ -1,4 +1,5 @@
 import { basename, dirname } from "node:path";
+import { corpusFormat } from "@plugins/infra/plugins/corpus-index/core";
 import {
   emptyUsageBuckets,
   foldUsageEntry,
@@ -25,10 +26,14 @@ import {
 // the tier-decomposed token counts (`buckets.ts`) and `rollup` turns them into
 // dollars with today's table, so the archive stays re-priceable forever.
 //
-// Bump `INDEX_VERSION` whenever `FilePartial`'s shape — or what the parse counts
-// into it — changes: the corpus index treats a version mismatch as empty and
-// rebuilds. (4: a message counts at its largest output, not its first line's.)
-export const INDEX_VERSION = 4;
+// The corpus format is declared HERE, beside the parse, so the index is
+// stamped with this module's code (and everything it loads): change the parse
+// — what it counts, or `FilePartial`'s shape — and the stored index is rebuilt.
+// Keep this module's imports narrow: every file it reaches moves that stamp.
+export const transcriptFormat = corpusFormat(import.meta, {
+  match: (p: string) => p.endsWith(".jsonl"),
+  parse: (p: string) => parseTranscript(p),
+});
 
 /**
  * The per-file token aggregate for one session file. Pricing-free by design:

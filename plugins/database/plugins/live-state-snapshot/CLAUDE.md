@@ -8,15 +8,12 @@
 - Server:
   - Contributes:
     - `change-feed-changelog-retention` "live-state-snapshot's cold-boot catch-up replays the changelog; its hourly prune job (pruneChangelog) deletes the rows below the horizon no persisted snapshot needs"
+    - `live-state-snapshot-code-stamp` "liveReadCode digest"
     - `fork-data-exclusion` "live_state_handoff"
     - `fork-data-exclusion` "live_state_snapshot"
   - Uses:
     - `database.db`
-    - `database.schemaChangedAtBoot`
     - `database/change-feed.ChangelogRetention`
-    - `database/change-feed.feedCut`
-    - `database/change-feed.feedListening`
-    - `database/change-feed.getCoveredTables`
     - `database/change-feed.producedTableNames`
     - `database/change-feed.readLayout`
     - `database/change-feed.relationBases`
@@ -71,6 +68,29 @@ L2 does not own the commit watermark: the runtime's capture is the database's
 `setWatermarkSource` by `database`), and L2 receives it only as an argument —
 a persisted value's floor. So a degraded init (`setLiveStateSnapshotHooks(null)`)
 turns persistence off and leaves frames' watermarks on.
+
+## The code stamp (`internal/code-stamp.ts`)
+
+A definition pins the compiled SQL, decoders and row schema — not the code
+that turned them into the stored value (the compilers, decoders, the
+`$columns` fold: query-resource's `liveReadCode`). So every definition L2
+writes (the persist hook) or expects (`l2Expectation`) is
+`sha256(stamp ‖ definition)`, the stamp being that code's `sourceDigest`: a row
+persisted by other code fails the usable-row predicate below and is
+recomputed — no version constant to bump (the `all` compile's used to be a
+hand-written `v: 1`).
+
+- The digest reads the source, so the desktop half provides it as the
+  `L2CodeStamp` contribution (`machine/`): collected before any
+  `onReadyBlocking`, read by this portable half in its own, whatever order the
+  halves boot in. `exec` children run the barrier too, so they compute it.
+- A host with no provider (a browser host's in-memory database) stamps with a
+  value of its own process: nothing another process persisted is usable there.
+- Fails closed: a digest that throws (or two providers) leaves L2 off for the
+  boot (`initSnapshotSubsystem`'s degradation); a definition read before the
+  stamp is known reads `unstamped`, which no written row carries.
+- A NULL definition (a hand-written persisted value) stays NULL: its loader
+  is not part of `liveReadCode` and stays unversioned.
 
 ## The usable-row predicate (A18 / C22 / C23)
 
@@ -211,7 +231,18 @@ recomputes rather than skips.
 
 The storage half of resource-runtime's epoch handoff
 (`research/2026-10-30-global-cross-boot-resume-epoch-handoff.md`), installed
-through server-core's `setEpochHandoffHooks` in `onReadyBlocking`:
+through server-core's `setEpochHandoffHooks` in the desktop half's
+(`machine/`) `onReadyBlocking` — only a backend replaced by a successor
+process hands over, and the code digest below reads the source on disk:
+
+- **code** — the record is stamped with the `sourceDigest`
+  (`packages/source-digest`) of query-resource's `liveReadCode`: the code
+  that shapes a point read's rows (the point compile and loader, decoders, the
+  row encode), which no tuple's definition pins. A successor whose digest
+  differs gets no record (logged `not inherited: the point-read code
+  changed`), so a deploy that moved that code reloads every tuple — no
+  version constant to bump. The digest is taken at boot, so it describes the
+  files the process loaded, not the ones a later merge put on disk.
 
 - **write** (the old backend's shutdown, before every `onShutdown`):
   change-feed's `feedCut`, then the runtime's `handoffState()`, stored as one

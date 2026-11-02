@@ -130,13 +130,13 @@ export async function runExec(
     // the future `supervised-exec` declaration that imports this barrel keeps a
     // trivial static closure, and neither the registry nor `spec.json` is read
     // by a `./equin` invocation that is not this one.
-    const { serverEntries, machineEntries, hasCoreBarrel } =
+    const { serverEntries, machineEntries, coreBarrel } =
       await import("../bin/active-runtime");
     ordered = await bootPluginGraph({
       mode: "exec",
       // The same graph a serving desktop backend boots: both halves.
       entries: [...serverEntries, ...machineEntries],
-      hasCoreBarrel,
+      coreBarrel,
     });
     await body();
   } catch (err) {

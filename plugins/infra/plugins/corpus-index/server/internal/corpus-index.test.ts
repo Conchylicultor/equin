@@ -24,6 +24,7 @@ import {
   type CorpusJournal,
   type RefreshDeps,
 } from "./corpus-index";
+import { corpusFormat } from "../../core";
 
 // ─── Fixture ─────────────────────────────────────────────────────────────────
 // A tiny `<root>/<dir>/<name>.txt` tree standing in for a real corpus. `parse`
@@ -35,7 +36,8 @@ let corpusRoot: string;
 let indexPath: string;
 let parseCount: Map<string, number>;
 
-const VERSION = 1;
+// The format's code digest the stubbed env answers (a real one is a sha256).
+const VERSION = "digest-1";
 
 function deps(
   overrides: Partial<RefreshDeps<string>> = {},
@@ -129,15 +131,15 @@ test("vanished files are dropped", async () => {
   );
 });
 
-test("a version mismatch forces a full rebuild (empty on load)", async () => {
-  // Persist a v1 index, then load it asking for v2 → treated as empty.
+test("another format's digest forces a full rebuild (empty on load)", async () => {
+  // Persist an index under one digest, then load it under another → empty.
   const index = empty();
   await refreshCorpus(index, deps({ persist: true }));
   const loadedSame = await loadCorpusFile<string>(indexPath, VERSION);
   expect(Object.keys(loadedSame.files).length).toBe(3); // same version → reused
 
-  const loadedBumped = await loadCorpusFile<string>(indexPath, VERSION + 1);
-  expect(loadedBumped.version).toBe(VERSION + 1);
+  const loadedBumped = await loadCorpusFile<string>(indexPath, "digest-2");
+  expect(loadedBumped.version).toBe("digest-2");
   expect(Object.keys(loadedBumped.files).length).toBe(0); // mismatch → rebuild
 });
 
@@ -227,21 +229,25 @@ test("the walk tolerates a missing root and lists the others", async () => {
 // host wiring (isMain / heavy-read slot / macrotask yield / watcher) so the
 // dirty-latch and delta plumbing are observable without a real backend.
 
-function spec(
-  overrides: Partial<CorpusIndexSpec<string>> = {},
-): CorpusIndexSpec<string> {
+function spec({
+  parse = async (p) => {
+    parseCount.set(p, (parseCount.get(p) ?? 0) + 1);
+    return await readFile(p, "utf8");
+  },
+  ...overrides
+}: Partial<CorpusIndexSpec<string>> & {
+  parse?: (path: string) => Promise<string>;
+} = {}): CorpusIndexSpec<string> {
   return {
     name: "test.corpus",
     description: "Test corpus.",
     roots: [corpusRoot],
-    match: (p) => p.endsWith(".txt"),
-    parse: async (p) => {
-      parseCount.set(p, (parseCount.get(p) ?? 0) + 1);
-      return await readFile(p, "utf8");
-    },
+    format: corpusFormat(import.meta, {
+      match: (p) => p.endsWith(".txt"),
+      parse,
+    }),
     indexPath,
     scope: "worktree",
-    version: VERSION,
     concurrency: 4,
     ...overrides,
   };
@@ -259,6 +265,7 @@ function env(overrides: Partial<CorpusIndexEnv> = {}): CorpusIndexEnv {
       cursor: async () => ({ kind: "unsupported", reason: "test" }),
       changesSince: async () => ({ kind: "unknown", reason: "test" }),
     },
+    digest: async () => VERSION,
     ...overrides,
   };
 }
@@ -328,14 +335,14 @@ test("ensureFresh returns the delta: added / modified / removed / and empty when
 
 test("defineCorpusIndex with no parse yields CorpusIndex<null> and still indexes files", async () => {
   // Enumerate-only: no `parse`. TPartial is pinned to `null` by the overload.
+  // Real host wiring: the stored index is stamped with this module's digest.
   const idx = defineCorpusIndex({
     name: "test.noparse",
     description: "Test corpus.",
     roots: [corpusRoot],
-    match: (p) => p.endsWith(".txt"),
+    format: corpusFormat(import.meta, { match: (p) => p.endsWith(".txt") }),
     indexPath,
     scope: "worktree",
-    version: VERSION,
   });
   const delta = await idx.ensureFresh();
   expect(delta.addedPaths.length).toBe(3);
@@ -347,6 +354,48 @@ test("defineCorpusIndex with no parse yields CorpusIndex<null> and still indexes
     // A `null` payload is the whole contract of the no-parse overload.
     expect(value).toBeNull();
   }
+});
+
+test("an index stored under another format's code is rebuilt: every file re-parsed", async () => {
+  await createCorpusIndex(spec(), env()).ensureFresh();
+  parseCount.clear();
+  // Same code: the stored index is reused, nothing re-parsed.
+  await createCorpusIndex(spec(), env()).ensureFresh();
+  expect(parseCount.size).toBe(0);
+  // Another digest (the parse or match changed): every file is parsed again.
+  const next = createCorpusIndex(
+    spec(),
+    env({ digest: async () => "digest-2" }),
+  );
+  const delta = await next.ensureFresh();
+  expect(delta.addedPaths.length).toBe(3);
+  expect(parseCount.size).toBe(3);
+  const stored = JSON.parse(
+    await readFile(indexPath, "utf8"),
+  ) as CorpusFile<string>;
+  expect(stored.version).toBe("digest-2");
+});
+
+test("a format digest that fails: the read fails — a stored index is never reused unstamped", async () => {
+  await createCorpusIndex(spec(), env()).ensureFresh();
+  parseCount.clear();
+  const idx = createCorpusIndex(
+    spec(),
+    env({
+      digest: async () => {
+        throw new Error("cannot resolve an import");
+      },
+    }),
+  );
+  let failed: unknown = null;
+  try {
+    await idx.ensureFresh();
+  } catch (err) {
+    failed = err;
+  }
+  expect(String(failed)).toContain("cannot resolve an import");
+  expect(idx.entries().size).toBe(0);
+  expect(parseCount.size).toBe(0);
 });
 
 test("a second caller joining an in-flight ensureFresh receives the same delta", async () => {

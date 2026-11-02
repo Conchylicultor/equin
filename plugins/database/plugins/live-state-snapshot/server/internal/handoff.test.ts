@@ -65,7 +65,14 @@ const STATE: HandoffState = {
   ],
 };
 
+// The digest of the code that shaped the tuples (liveReadCode's), as both
+// halves see it.
+const CODE = "code-1";
+const refusals: string[] = [];
+
 const deps = {
+  code: async () => CODE,
+  refused: (reason: string) => refusals.push(reason),
   changelogTables: () => ["items"],
   healedRollups: () => [] as readonly string[],
   schemaChanged: () => false,
@@ -75,6 +82,7 @@ const deps = {
 async function write(cutXid = "1000"): Promise<unknown[]> {
   const reported: unknown[] = [];
   await writeEpochHandoff(t.db, {
+    code: async () => CODE,
     cut: async () => ({ cutXid }),
     state: () => STATE,
     report: (err) => reported.push(err),
@@ -107,6 +115,60 @@ describe("the epoch handoff's storage", () => {
     expect([...record!.changelogTables]).toEqual(["items"]);
   });
 
+  test("a record written by other point-read code: null, and the refusal says why", async () => {
+    await write();
+    refusals.length = 0;
+    expect(
+      await loadEpochHandoff(t.db, "epoch-old", {
+        ...deps,
+        code: async () => "code-2",
+      }),
+    ).toBeNull();
+    expect(refusals).toEqual(["the live-read code changed (code-1 → code-2)"]);
+    // The same code still inherits it.
+    expect(await loadEpochHandoff(t.db, "epoch-old", deps)).not.toBeNull();
+  });
+
+  test("a code digest that fails on the successor: the load fails, nothing is inherited", async () => {
+    await write();
+    let failed: unknown = null;
+    try {
+      await loadEpochHandoff(t.db, "epoch-old", {
+        ...deps,
+        code: async () => {
+          throw new Error("cannot resolve an import");
+        },
+      });
+    } catch (err) {
+      failed = err;
+    }
+    expect(String(failed)).toContain("cannot resolve an import");
+  });
+
+  test("a record with no code digest (written before the column): null", async () => {
+    await write();
+    await t.db.execute(
+      sql`UPDATE ${sql.raw(LIVE_STATE_HANDOFF_TABLE)} SET code = NULL`,
+    );
+    refusals.length = 0;
+    expect(await loadEpochHandoff(t.db, "epoch-old", deps)).toBeNull();
+    expect(refusals[0]).toMatch(/carries no code digest/);
+  });
+
+  test("a code digest that fails writes nothing and is reported", async () => {
+    const reported: unknown[] = [];
+    await writeEpochHandoff(t.db, {
+      code: async () => {
+        throw new Error("cannot resolve an import");
+      },
+      cut: async () => ({ cutXid: "1000" }),
+      state: () => STATE,
+      report: (err) => reported.push(err),
+    });
+    expect(reported).toHaveLength(1);
+    expect(await loadEpochHandoff(t.db, "epoch-old", deps)).toBeNull();
+  });
+
   test("no record for the epoch: null", async () => {
     await write();
     expect(await loadEpochHandoff(t.db, "epoch-other", deps)).toBeNull();
@@ -116,6 +178,7 @@ describe("the epoch handoff's storage", () => {
     const reported: unknown[] = [];
     let stateTaken = false;
     await writeEpochHandoff(t.db, {
+      code: async () => CODE,
       cut: async () => {
         throw new Error("feed cut failed: no LISTEN session is established");
       },
@@ -194,6 +257,7 @@ describe("the epoch handoff's storage", () => {
   test("a write drops every other boot's record: only the latest is trusted", async () => {
     await write();
     await writeEpochHandoff(t.db, {
+      code: async () => CODE,
       cut: async () => ({ cutXid: "1000" }),
       state: () => ({ ...STATE, epoch: "epoch-newer" }),
       report: (err) => {

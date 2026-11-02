@@ -35,7 +35,7 @@ describe("bootPluginGraph — the preload-declare assert", () => {
     try {
       await bootPluginGraph({
         mode: "exec",
-        hasCoreBarrel: () => false,
+        coreBarrel: () => null,
         entries: [
           {
             pluginPath: "test/undeclared",

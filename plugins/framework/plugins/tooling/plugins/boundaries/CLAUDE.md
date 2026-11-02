@@ -281,6 +281,7 @@ escape is a `sanctioned` exemption for a declaration desktop-only by policy.
     - `packages/signal-origin` (2 debt)
     - `packages/single-flight` (1 debt)
     - `packages/sleep-clock` (1 debt)
+    - `packages/source-digest` (0 debt)
     - `packages/spawn-priority` (3 debt)
     - `packages/thread-cpu-clock` (1 debt)
     - `packages/ticket-line` (1 debt)

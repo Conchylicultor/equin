@@ -25,9 +25,10 @@ import { decoderOfRead } from "./raw-sql";
 // one is never inherited. Unlike the `all` compile this never throws: a point
 // read with no definition is legitimate, it only loses the handoff.
 //
-// Bump on any change to the point compile or the point codec that moves what
-// a load produces with none of the inputs below moving.
-const POINT_DEFINITION_VERSION = 1;
+// The CODE that turns these inputs into rows — the point compile and loader,
+// the decoders, the row encode — is not in the definition: the handoff record
+// carries the digest of that code (`liveReadCode`, this plugin's core), and a
+// successor whose digest differs inherits nothing (live-state-snapshot).
 
 /** Why a point definition gave up — internal, turned into `null`. */
 class NoDefinition extends Error {}
@@ -74,7 +75,6 @@ export function pointDefinition<P extends ResourceParams>(
     const rendered = renderQuery(query.getSQL(), "the point shape", giveUp);
     const definition = sha256(
       JSON.stringify({
-        v: POINT_DEFINITION_VERSION,
         point: rendered,
         keyField: input.arm.keyField,
         fields: input.arm.projection.map((f) => [

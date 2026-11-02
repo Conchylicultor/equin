@@ -635,9 +635,19 @@ windowQueryResource(c.rows, {
   across a restart only under an equal one. Fail-closed to `null` (never
   inherited) for a function `where`, an `encodeRow` with no `encodeRowId`, an
   opaque decoder or schema part, a non-literal param. `serveCollection` names
-  its `$columns` fold as an `encodeRowId`; a wire codec has none. Bump
-  `POINT_DEFINITION_VERSION` when the point compile changes what a load
-  produces with none of those moving. Pinned by `point-definition.test.ts`.
+  its `$columns` fold as an `encodeRowId`; a wire codec has none. Pinned by
+  `point-definition.test.ts`.
+  - **The code is versioned by its digest, not by hand.** What turns those
+    inputs into rows — the point compile and loader (`compile-window.ts` and
+    everything it loads: arm-plan, raw-sql, the sql-projection / sql-column
+    decoders, zod's version), the `all` compile (`compile-alias.ts`) and
+    network/live's row encode and `$columns` fold (`encode-row.ts`) — is the
+    source set `liveReadCode` (core). live-state-snapshot stamps the handoff
+    record and every L2 definition with its `sourceDigest`: a successor under
+    another digest inherits nothing, and a persisted value written by other
+    code is recomputed. A new module whose code shapes a compiled read's rows
+    and that those modules do not load includes itself
+    (`liveReadCode.include(import.meta)`).
 
 **Golden fixtures** (`network/live/server/internal/compile-sql-golden.test.ts`
 and `compile-union-golden.test.ts`) pin every shape's SQL, params, routes,
@@ -746,16 +756,8 @@ query.
     - `pointQueryResource`
     - `presenceExpr`
     - `windowQueryResource`
-- Cross-plugin:
-  - Imported by:
-    - `network/live`
-    - `runs`
-    - `tasks/tasks-core`
-- Exemptions:
-  - Exempts itself from:
-    - `resource-runtime:compiled-routes` — `server/internal/routes.ts` (sanctioned)
-    - `live/no-legacy-resource-spelling` — `.` (sanctioned)
 - Core:
+  - Uses: `packages/source-digest.defineSourceSet`
   - Exports (types):
     - `Aggregate`
     - `AggregateOrder`
@@ -812,7 +814,17 @@ query.
     - `jsonAgg`
     - `jsonAggValue`
     - `KIND_RE`
+    - `liveReadCode`
     - `SQL_TYPE_RE`
+- Cross-plugin:
+  - Imported by:
+    - `network/live`
+    - `runs`
+    - `tasks/tasks-core`
+- Exemptions:
+  - Exempts itself from:
+    - `resource-runtime:compiled-routes` — `server/internal/routes.ts` (sanctioned)
+    - `live/no-legacy-resource-spelling` — `.` (sanctioned)
 - Test helpers:
   - Server: `@plugins/infra/plugins/query-resource/server/testing`
     - `compileAllCollection` — Compile a collection declared `all` (see the header).

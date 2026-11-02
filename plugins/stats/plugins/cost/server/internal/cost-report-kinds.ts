@@ -139,7 +139,7 @@ function renderShrink(row: ReportRow, d: ArchiveShrinkPayload): string {
       `routine event. Plausible causes: the file was rewritten or replaced by an ` +
       `external tool; a partial/interrupted write was observed mid-flight; or a ` +
       `parse-shape change made this binary read fewer tokens out of the same bytes ` +
-      `(check whether \`INDEX_VERSION\` moved recently).`,
+      `(a recent change to \`usage-index.ts\` or what it imports rebuilds the index).`,
     "",
     `**No history was lost.** \`mergeLive\` keeps the banked partial whenever the ` +
       `live one is smaller, so the charts still show the larger figure. This report ` +

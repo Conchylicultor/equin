@@ -188,8 +188,10 @@ describe.if(IN_CHILD)("pageTools on a portable host", () => {
         ...PROVIDERS,
         migrationSource,
       ],
-      hasCoreBarrel: (pluginPath) =>
-        existsSync(join(PLUGINS_DIR, pluginPath, "core", "index.ts")),
+      coreBarrel: (pluginPath) =>
+        existsSync(join(PLUGINS_DIR, pluginPath, "core", "index.ts"))
+          ? () => import(`@plugins/${pluginPath}/core`)
+          : null,
     });
     for (const r of ROWS) {
       await db.execute(

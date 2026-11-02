@@ -22,6 +22,9 @@ import {
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { yieldMacrotask } from "@plugins/packages/plugins/macrotask-yield/core";
+import type { SourceSet } from "@plugins/packages/plugins/source-digest/core";
+import { sourceDigest } from "@plugins/packages/plugins/source-digest/server";
+import type { CorpusFormat } from "../../core";
 
 // ─── What this is ─────────────────────────────────────────────────────────────
 //
@@ -48,16 +51,15 @@ export interface CorpusIndexSpec<TPartial> {
   description: string;
   /** Roots to enumerate. A function so callers can defer path resolution. */
   roots: string[] | (() => string[]);
-  /** Predicate on a full path deciding whether a file belongs to the corpus. */
-  match: (path: string) => boolean;
   /**
-   * Per-file parse. Side-effect-free — token/data only, never persists. OPTIONAL:
-   * omit it for an enumerate-only corpus (the incrementally-maintained,
-   * throttled, fingerprint-keyed set of paths with no per-file payload). When
-   * omitted the partial is `null` and `TPartial` is `null` (see the
-   * `defineCorpusIndex` no-`parse` overload).
+   * Which files belong and what each becomes — `corpusFormat(import.meta,
+   * { match, parse })` (this plugin's core), declared in a small module. The
+   * stored index is stamped with that module's code digest: an index built by
+   * another `match` / `parse` is rebuilt. `parse` is side-effect-free (data
+   * only, never persists); omitted, the corpus is enumerate-only (every
+   * partial `null`).
    */
-  parse?: (path: string) => Promise<TPartial>;
+  format: CorpusFormat<TPartial>;
   /** On-disk index file path (host-global dir or a per-worktree data dir). */
   indexPath: string;
   /**
@@ -66,8 +68,6 @@ export interface CorpusIndexSpec<TPartial> {
    * the write. `worktree` ⇒ each backend owns its index and always persists.
    */
   scope: "host" | "worktree";
-  /** Bump when `TPartial`'s shape changes ⇒ a version mismatch forces a full rebuild. */
-  version: number;
   /** Bounded readdir/stat/parse concurrency (defaults to {@link DEFAULT_CONCURRENCY}). */
   concurrency?: number;
 }
@@ -168,7 +168,8 @@ interface CorpusEntry<TPartial> {
 
 /** On-disk index document. */
 export interface CorpusFile<TPartial> {
-  version: number;
+  /** The code digest of the format that built `files` — another one rebuilds. */
+  version: string;
   files: Record<string, CorpusEntry<TPartial>>;
   /**
    * One file-system journal cursor per root, taken before the last full walk
@@ -202,7 +203,7 @@ export function computePersist(
 
 export async function loadCorpusFile<TPartial>(
   indexPath: string,
-  version: number,
+  version: string,
 ): Promise<CorpusFile<TPartial>> {
   let raw: string;
   try {
@@ -224,7 +225,9 @@ export async function loadCorpusFile<TPartial>(
     parsed.version !== version ||
     typeof parsed.files !== "object"
   ) {
-    // Version mismatch (or a corrupt/partial file) ⇒ start empty and rebuild.
+    // Another format's index (its code digest differs — or an index stamped
+    // with a pre-digest numeric version), or a corrupt/partial file ⇒ start
+    // empty and rebuild.
     return { version, files: {} };
   }
   /* eslint-enable @typescript-eslint/no-unnecessary-condition */
@@ -491,6 +494,8 @@ export interface CorpusIndexEnv {
   watcherRegistration: Registration;
   /** The file-system journal (file-watcher's `journalCursor` / `journalChangesSince`). */
   journal: CorpusJournal;
+  /** The digest of the format's code (source-digest's `sourceDigest`). */
+  digest: (code: SourceSet) => Promise<string>;
 }
 
 /** What the index asks of the file-system journal (injectable for tests). */
@@ -573,18 +578,14 @@ export function createCorpusIndex<TPartial>(
   const changeListeners = new Set<() => void>();
   const concurrency = spec.concurrency ?? DEFAULT_CONCURRENCY;
 
-  // An omitted `parse` ⇒ an enumerate-only corpus: the partial is always `null`.
-  // (The `defineCorpusIndex` overload pins `TPartial` to `null` in that case, so
-  // this single assertion is sound; it is the ONE place the default is applied.)
-  const parse: (path: string) => Promise<TPartial> =
-    spec.parse ?? (() => Promise.resolve(null as TPartial));
+  const { match, parse } = spec.format;
 
   const resolveRoots = (): string[] =>
     typeof spec.roots === "function" ? spec.roots() : spec.roots;
 
   const refreshDeps = (): RefreshDeps<TPartial> => ({
     roots: resolveRoots(),
-    match: spec.match,
+    match,
     parse,
     indexPath: spec.indexPath,
     concurrency,
@@ -641,7 +642,10 @@ export function createCorpusIndex<TPartial>(
   }
 
   async function ensureFresh(): Promise<CorpusDelta> {
-    index ??= await loadCorpusFile<TPartial>(spec.indexPath, spec.version);
+    index ??= await loadCorpusFile<TPartial>(
+      spec.indexPath,
+      await env.digest(spec.format.code),
+    );
     // Main clears `stale` after a refresh and relies on the watcher (or an
     // explicit markDirty) to set it again. Worktree backends have no watcher, so
     // they always re-walk. Nothing moved ⇒ an empty delta (a real empty success).
@@ -774,16 +778,8 @@ export function corpusWatcherDescription(indexDescription: string): string {
  * {@link createCorpusIndex} with the real host wiring (`isMain`, the host-wide
  * heavy-read slot, a macrotask yield, and the `@parcel/watcher` primitive).
  *
- * Overloaded on `parse`: omit it for an enumerate-only corpus (`CorpusIndex<null>`
- * — the incrementally-maintained set of paths with no per-file payload); supply
- * it for a per-file `TPartial` payload.
+ * `TPartial` is the format's (`null` for an enumerate-only one).
  */
-export function defineCorpusIndex(
-  spec: Omit<CorpusIndexSpec<null>, "parse">,
-): CorpusIndex<null>;
-export function defineCorpusIndex<TPartial>(
-  spec: CorpusIndexSpec<TPartial>,
-): CorpusIndex<TPartial>;
 export function defineCorpusIndex<TPartial>(
   spec: CorpusIndexSpec<TPartial>,
 ): CorpusIndex<TPartial> {
@@ -803,6 +799,7 @@ export function defineCorpusIndex<TPartial>(
     journal: { cursor: journalCursor, changesSince: journalChangesSince },
     withSlot: withHeavyReadSlot,
     yieldMacrotask,
+    digest: (code) => sourceDigest([code]),
     watcherRegistration: watcher,
     startFileWatcher: async ({ dirs, onChange, onLost }) => {
       // Process-lifetime watcher — the handle is intentionally discarded (the

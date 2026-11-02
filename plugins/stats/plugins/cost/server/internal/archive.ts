@@ -33,7 +33,7 @@ import type { FilePartial } from "./usage-index";
 
 /**
  * Version of the ENTRY shape written by this binary — stamped per entry, never
- * per file, and deliberately NOT `INDEX_VERSION`.
+ * per file, and deliberately NOT the corpus index's code digest.
  *
  * Sharing a version with the rebuildable corpus index would mean the next routine
  * reshape of `FilePartial` silently destroyed years of history. Entries carrying

@@ -30,9 +30,8 @@ import {
 import type { PriceTable } from "../../core";
 import { reportCostAnomalies } from "./record-anomalies";
 import {
-  INDEX_VERSION,
-  parseTranscript,
   rollup,
+  transcriptFormat,
   type DailyRow,
   type FilePartial,
   type SessionRollup,
@@ -114,11 +113,9 @@ const costIndex = defineCorpusIndex<FilePartial>({
   description:
     "Indexes the token usage recorded in agent transcripts so cost stats can be computed quickly.",
   roots: [CLAUDE_PROJECTS_DIR],
-  match: (p) => p.endsWith(".jsonl"),
-  parse: parseTranscript,
+  format: transcriptFormat,
   indexPath: INDEX_PATH,
   scope: "host",
-  version: INDEX_VERSION,
   concurrency: 6,
 });
 

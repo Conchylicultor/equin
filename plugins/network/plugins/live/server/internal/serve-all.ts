@@ -31,6 +31,7 @@ import {
   LIVE_COLUMNS_KEY,
   type LiveAllCollection,
 } from "@plugins/network/plugins/live/core";
+import { foldColumns } from "./encode-row";
 import { exposedBinding, exposureFolds } from "./exposure-folds";
 import type { ExposingExtension } from "./serve-columns";
 import {
@@ -422,16 +423,16 @@ export function compileAllSpecs<Row, B extends string = never>(
   // flat wire name. `encodeRow` is code the definition cannot read, so its id
   // names exactly the fields it moves (A18).
   const slices = folds.map((f) => f.handle.name);
+  // Shared with `serveCollection` (`./encode-row`, part of `liveReadCode`).
+  const folded = new Map(
+    [...exposedFields].map(([wire, { slice, field }]) => [
+      wire,
+      { set: slice, field },
+    ]),
+  );
   const fold = (row: Record<string, unknown>): Record<string, unknown> => {
     const out = { ...row };
-    const cols: Record<string, Record<string, unknown>> = Object.fromEntries(
-      slices.map((slice) => [slice, {}]),
-    );
-    for (const [wire, { slice, field }] of exposedFields) {
-      cols[slice]![field] = out[wire];
-      delete out[wire];
-    }
-    out[LIVE_COLUMNS_KEY] = cols;
+    foldColumns(out, slices, folded, LIVE_COLUMNS_KEY);
     return out;
   };
   const foldId = `exposed:${[...exposedFields.keys()].sort().join(",")}`;

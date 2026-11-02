@@ -31,7 +31,7 @@ import {
 } from "../core/boot-stages";
 // The ACTIVE registry (which app is this backend?) and the on-disk plugins dir,
 // resolved once for both boot modes.
-import { serverEntries, machineEntries, hasCoreBarrel } from "./active-runtime";
+import { serverEntries, machineEntries, coreBarrel } from "./active-runtime";
 import {
   boostInteractiveQos,
   leaveDarwinBackground,
@@ -211,7 +211,7 @@ const ordered = await bootPluginGraph({
   mode: "serve",
   // A desktop host boots both halves of every plugin as one graph.
   entries: [...serverEntries, ...machineEntries],
-  hasCoreBarrel,
+  coreBarrel,
   beforeReadyBarrier: bindSocket,
 });
 markServerReady();

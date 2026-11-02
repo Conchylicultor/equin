@@ -38,12 +38,19 @@ import { machineEntries } from "@composition-machine-registry";
 export { serverEntries, machineEntries };
 
 /**
- * Whether `plugins/<pluginPath>/core/index.ts` exists — the predicate the load
- * waves use to decide which core barrels to warm. `PLUGINS_DIR` is derived from
- * the paths plugin's own location, not from cwd; in a `bun --compile` release it
- * may not exist on disk at all, and returning false there is correct (the whole
- * graph is one bundle, so there is no cold-barrel race to warm away).
+ * The loader of `plugins/<pluginPath>/core/index.ts`, or null when it does not
+ * exist — what the load waves warm (`BootSpec.coreBarrel`). `PLUGINS_DIR` is
+ * derived from the paths plugin's own location, not from cwd; in a `bun
+ * --compile` release it may not exist on disk at all, and null there is
+ * correct (the whole graph is one bundle, so there is no cold-barrel race to
+ * warm away). The import by computed path lives here, in the composition root,
+ * not in the boot sequence every compiled live read reaches.
  */
-export function hasCoreBarrel(pluginPath: string): boolean {
-  return existsSync(join(PLUGINS_DIR, pluginPath, "core", "index.ts"));
+export function coreBarrel(
+  pluginPath: string,
+): (() => Promise<unknown>) | null {
+  if (!existsSync(join(PLUGINS_DIR, pluginPath, "core", "index.ts"))) {
+    return null;
+  }
+  return () => import(`@plugins/${pluginPath}/core`);
 }

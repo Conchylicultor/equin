@@ -152,8 +152,10 @@ describe.if(IN_CHILD)("task-category's server closure boots portably", () => {
     await bootPluginGraph({
       mode: "exec",
       entries: [...closureOf(SUBJECT), ...PROVIDERS, migrationSource],
-      hasCoreBarrel: (pluginPath) =>
-        existsSync(join(PLUGINS_DIR, pluginPath, "core", "index.ts")),
+      coreBarrel: (pluginPath) =>
+        existsSync(join(PLUGINS_DIR, pluginPath, "core", "index.ts"))
+          ? () => import(`@plugins/${pluginPath}/core`)
+          : null,
     });
   });
 
