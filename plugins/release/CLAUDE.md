@@ -513,7 +513,6 @@ remote is built here.
   - Exports (values):
     - `bunCompileTarget`
     - `BundleResolutionSchema`
-    - `hostPlatformTag`
     - `isLinuxTag`
     - `isPlatformTag`
     - `nodeTargetFor`

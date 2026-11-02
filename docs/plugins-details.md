@@ -41043,6 +41043,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Exemptions:
             - Exempts itself from:
               - `boundaries/no-platform-api` — `web/internal/build-measurer-page.ts`, `web/internal/build-page.ts`, `web/internal/measure-page.ts` (debt)
+              - `boundaries:web-loads-portable` — `web/internal/build-measurer-page.ts`, `web/internal/measure-page.ts` (debt)
               - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
           - Core:
             - Exports (types):
@@ -48311,7 +48312,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Exports (values):
       - `bunCompileTarget`
       - `BundleResolutionSchema`
-      - `hostPlatformTag`
       - `isLinuxTag`
       - `isPlatformTag`
       - `nodeTargetFor`

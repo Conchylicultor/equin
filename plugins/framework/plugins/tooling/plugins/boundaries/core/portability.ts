@@ -228,26 +228,7 @@ export async function derivePortability(
     }
   }
 
-  const parents = new Map<string, string[]>();
-  for (const module of modules) {
-    for (const child of closure.children(module)) {
-      const list = parents.get(child);
-      if (list === undefined) parents.set(child, [module]);
-      else list.push(module);
-    }
-  }
-  const taintFrom = (from: Iterable<string>): Set<string> => {
-    const tainted = new Set(from);
-    const queue = [...tainted];
-    for (const node of queue) {
-      for (const parent of parents.get(node) ?? []) {
-        if (tainted.has(parent)) continue;
-        tainted.add(parent);
-        queue.push(parent);
-      }
-    }
-    return tainted;
-  };
+  const taintFrom = reverseTaint(closure, modules);
 
   // Rule 3, to a fixpoint: taint only grows, so it terminates.
   let tainted = taintFrom(seeds.keys());
@@ -290,39 +271,143 @@ export async function derivePortability(
           `offenders(${barrel}): it is portable — nothing in its closure needs the computer.`,
         );
       }
-      // Forward BFS through tainted modules only (every path to a seed runs
-      // through them), stopping at each seed: the frontier.
-      const own = pluginOf(barrel);
-      const parent = new Map<string, string>([[barrel, barrel]]);
-      const queue = [barrel];
-      const found: Offender[] = [];
-      const named = new Set<string>();
-      for (const node of queue) {
-        const needs = seeds.get(node);
-        if (needs !== undefined) {
-          const plugin = pluginOf(node);
-          if (plugin === own || !named.has(plugin)) {
-            named.add(plugin);
-            const chain = [node];
-            for (let n = node; n !== barrel; n = parent.get(n)!)
-              chain.unshift(parent.get(n)!);
-            found.push({ module: node, needs, chain });
-          }
-          continue;
-        }
-        for (const child of closure.children(node)) {
-          if (parent.has(child) || !tainted.has(child)) continue;
-          parent.set(child, node);
-          queue.push(child);
-        }
-      }
-      if (found.length === 0) {
-        throw new Error(
-          `offenders(${barrel}): the barrel is tainted but no module of its closure needs the computer — the taint and the edge walk disagree.`,
-        );
-      }
+      const found = frontierOffenders(closure, seeds, tainted, barrel);
       offendersMemo.set(barrel, found);
       return found;
+    },
+  };
+}
+
+/**
+ * Every module of `modules` that reaches one of `from` (included), walking
+ * the closure's edges backwards — cycles are fine.
+ */
+function reverseTaint(
+  closure: Pick<UnionImportClosure, "children">,
+  modules: readonly string[],
+): (from: Iterable<string>) => Set<string> {
+  const parents = new Map<string, string[]>();
+  for (const module of modules) {
+    for (const child of closure.children(module)) {
+      const list = parents.get(child);
+      if (list === undefined) parents.set(child, [module]);
+      else list.push(module);
+    }
+  }
+  return (from) => {
+    const tainted = new Set(from);
+    const queue = [...tainted];
+    for (const node of queue) {
+      for (const parent of parents.get(node) ?? []) {
+        if (tainted.has(parent)) continue;
+        tainted.add(parent);
+        queue.push(parent);
+      }
+    }
+    return tainted;
+  };
+}
+
+/**
+ * Why tainted `entry` needs the computer: a forward BFS through tainted
+ * modules only (every path to a seed runs through them), stopping at each
+ * seed — the frontier, pruned to one offender per plugin outside the entry's
+ * own, each with the shortest chain from `entry`. Never empty.
+ */
+function frontierOffenders(
+  closure: Pick<UnionImportClosure, "children">,
+  seeds: ReadonlyMap<string, string[]>,
+  tainted: ReadonlySet<string>,
+  entry: string,
+): Offender[] {
+  const own = pluginOf(entry);
+  const parent = new Map<string, string>([[entry, entry]]);
+  const queue = [entry];
+  const found: Offender[] = [];
+  const named = new Set<string>();
+  for (const node of queue) {
+    const needs = seeds.get(node);
+    if (needs !== undefined) {
+      const plugin = pluginOf(node);
+      if (plugin === own || !named.has(plugin)) {
+        named.add(plugin);
+        const chain = [node];
+        for (let n = node; n !== entry; n = parent.get(n)!)
+          chain.unshift(parent.get(n)!);
+        found.push({ module: node, needs, chain });
+      }
+      continue;
+    }
+    for (const child of closure.children(node)) {
+      if (parent.has(child) || !tainted.has(child)) continue;
+      parent.set(child, node);
+      queue.push(child);
+    }
+  }
+  if (found.length === 0) {
+    throw new Error(
+      `offenders(${entry}): it is tainted but no module of its closure needs the computer — the taint and the edge walk disagree.`,
+    );
+  }
+  return found;
+}
+
+/** Rules 1 and 2 over a union closure, for arbitrary entrypoints. */
+export interface PlatformTaint {
+  /** Whether `module`'s closure needs the computer (rules 1 and 2). Throws for a module outside the closure. */
+  needsComputer(module: string): boolean;
+  /** Why it does — {@link frontierOffenders}. Throws for a module that does not. */
+  offenders(module: string): Offender[];
+}
+
+/**
+ * Rules 1 and 2 (no host services: rule 3 is a server-barrel question) over
+ * an already-measured union closure — every module that imports a platform
+ * API or uses a host-only value, propagated to every module that loads one.
+ * What `boundaries:web-loads-portable` asks of the modules a browser realm
+ * loads.
+ */
+export async function platformTaint(
+  closure: Pick<UnionImportClosure, "modules" | "children">,
+  read: (path: string) => Promise<string | null>,
+): Promise<PlatformTaint> {
+  const ts = await loadTypescript();
+  const modules = [...closure.modules].sort();
+  const seeds = new Map<string, string[]>();
+  let lastYield = performance.now();
+  for (const module of modules) {
+    if (performance.now() - lastYield > 10) {
+      await yieldMacrotask();
+      lastYield = performance.now();
+    }
+    const src = await read(module);
+    if (src === null) {
+      throw new Error(
+        `The closure loads ${module}, which the run's file set cannot read.`,
+      );
+    }
+    const needs = moduleNeeds(ts, module, src);
+    if (needs.length > 0) seeds.set(module, needs);
+  }
+  const tainted = reverseTaint(closure, modules)(seeds.keys());
+  const assertIn = (module: string): void => {
+    if (!closure.modules.has(module)) {
+      throw new Error(`${module} is not in the measured closure.`);
+    }
+  };
+  return {
+    needsComputer(module) {
+      assertIn(module);
+      return tainted.has(module);
+    },
+    offenders(module) {
+      assertIn(module);
+      if (!tainted.has(module)) {
+        throw new Error(
+          `offenders(${module}): nothing in its closure needs the computer.`,
+        );
+      }
+      return frontierOffenders(closure, seeds, tainted, module);
     },
   };
 }

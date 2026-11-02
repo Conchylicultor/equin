@@ -97,6 +97,10 @@ describe("platformValueUsesIn", () => {
       "function f(process: P) { return process.x; }\nprocess.exit(1);",
       ["global process"],
     ],
+    // Bun's own module-path properties: undefined in a browser realm.
+    ["const d = join(import.meta.dir, 'x');", ["import.meta.dir"]],
+    ["const p = import.meta.path;", ["import.meta.path"]],
+    ["if (import.meta.main) run();", ["import.meta.main"]],
     [
       "const a = Buffer.from(s);\nsetImmediate(f);\nh.unref();",
       ["global Buffer", "global setImmediate", "unguarded .unref()"],
@@ -129,6 +133,9 @@ describe("platformValueUsesIn", () => {
     "// Buffer.from(x); setImmediate(f); t.unref()",
     "const s = 'Buffer.from(x) setImmediate(f) process.exit()';",
     "new TextEncoder().encode(s).byteLength",
+    "const u = new URL('./x', import.meta.url);",
+    "const dev = import.meta.env.DEV;",
+    "const o = { dir: x.dir };",
   ])("%s uses none", (src) => {
     expect(usesIn(src)).toEqual([]);
   });

@@ -133,6 +133,25 @@ const PLATFORM_GLOBALS: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * `import.meta` properties only Bun (or Node) defines: the module's own file
+ * path (`import.meta.dir`, `.dirname`, `.filename`, `.path`), `.require` and
+ * `.main`. A browser realm (and vitest's jsdom) leaves them undefined, so
+ * `join(import.meta.dir, …)` throws there. `import.meta.url`, `.env` and
+ * `.resolve` exist in every realm and never count.
+ */
+const HOST_IMPORT_META: ReadonlySet<string> = new Set([
+  "dir",
+  "dirname",
+  "filename",
+  "path",
+  "require",
+  "main",
+]);
+
+const HOST_IMPORT_META_RE =
+  /import\.meta\.(?:dir|dirname|filename|path|require|main)\b/;
+
+/**
  * Whether `source`'s text could hold a host-only value use — it names a
  * platform global or `unref` anywhere (strings and comments included). A cheap
  * superset of {@link platformValueUsesIn}'s answer, so a caller scanning
@@ -140,6 +159,7 @@ const PLATFORM_GLOBALS: ReadonlySet<string> = new Set([
  */
 export function mayUsePlatformValue(source: string): boolean {
   if (source.includes("unref")) return true;
+  if (HOST_IMPORT_META_RE.test(source)) return true;
   for (const name of PLATFORM_GLOBALS) if (source.includes(name)) return true;
   return false;
 }
@@ -188,6 +208,13 @@ export function platformValueUsesIn(
       node.expression.name.text === "unref"
     ) {
       found.add("unguarded .unref()");
+    } else if (
+      ts.isPropertyAccessExpression(node) &&
+      ts.isMetaProperty(node.expression) &&
+      node.expression.keywordToken === ts.SyntaxKind.ImportKeyword &&
+      HOST_IMPORT_META.has(node.name.text)
+    ) {
+      found.add(`import.meta.${node.name.text}`);
     }
     ts.forEachChild(node, visit);
   };

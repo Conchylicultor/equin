@@ -5,7 +5,9 @@ root, the user's home, the Claude corpus, the per-worktree artifact layout, and
 the data root (`~/.equin/`).
 
 `core/` here means **runtime-neutral Node, not web-safe** — it reaches
-`node:os` / `node:fs` / `node:path` and must never be imported from `web/`. A
+`node:os` / `node:fs` / `node:path` and must never be imported from `web/`
+(a jsdom suite included) — `boundaries:web-loads-portable` fails any
+browser-realm module whose import reaches it. A
 browser that needs to *name* a directory reads the string literals in the
 `display` sub-plugin instead.
 

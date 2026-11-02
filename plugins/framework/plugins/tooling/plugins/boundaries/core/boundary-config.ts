@@ -188,8 +188,9 @@ export default defineBoundaries({
     // Host-only (Node) code that sits in `core/` and reads its own plugin's
     // data-dir declaration. `core/` has two meanings today: code the browser
     // and the host share, and Node-only code that is not tied to one server
-    // runtime. These files are the second kind. No `web/` file imports any of
-    // these `core/` barrels, so the browser never loads `paths/core` through
+    // runtime. These files are the second kind. No browser-realm module loads
+    // any of these `core/` barrels — `boundaries:web-loads-portable` measures
+    // it from the closure, so the browser never loads `paths/core` through
     // them. Each line is scoped to one plugin's own `data-dirs`, never
     // `core -> data-dirs` at large.
     "plugin.database.core -> plugin.database.data-dirs",

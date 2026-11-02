@@ -67,10 +67,10 @@ import { FATAL_SIGNAL_EXITS } from "@plugins/framework/plugins/cli/plugins/op-ru
 import {
   PLATFORM_TAGS,
   bunCompileTarget,
-  hostPlatformTag,
   isLinuxTag,
   nodeTargetFor,
   isPlatformTag,
+  platformTagFor,
   type PlatformTag,
 } from "@plugins/release/core";
 import {
@@ -146,7 +146,7 @@ const FILTERED_WEB_REGISTRY = (composition: string): string =>
 
 /** The tag of the machine cutting the release, or a loud failure. */
 function hostTagOrThrow(): PlatformTag {
-  const host = hostPlatformTag();
+  const host = platformTagFor(process.platform, process.arch);
   if (!host.ok) throw new Error(`release: ${host.reason}`);
   return host.tag;
 }

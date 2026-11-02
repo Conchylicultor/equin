@@ -11,7 +11,6 @@ export {
   PlatformTagSchema,
   isPlatformTag,
   platformTagFor,
-  hostPlatformTag,
   platformTagFromUname,
   bunCompileTarget,
   nodeTargetFor,

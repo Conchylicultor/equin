@@ -13,6 +13,17 @@ export default [
     reason: "not yet split into server/ + machine/",
   },
   {
+    rule: "boundaries:web-loads-portable",
+    paths: [
+      "web/internal/build-measurer-page.ts",
+      "web/internal/measure-page.ts",
+    ],
+    kind: "debt",
+    task: "task-1792338443-riwqev",
+    reason:
+      "The geometry suite's Node driver (Vite build in a child, Playwright) sits in web/ beside the measurer page it drives; it never runs in a browser realm. Moves out of web/ with the server/ + machine/ split.",
+  },
+  {
     rule: "check-thread-safety/no-blocking-check-work",
     paths: ["check/index.ts"],
     kind: "debt",

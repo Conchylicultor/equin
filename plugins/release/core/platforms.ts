@@ -50,7 +50,11 @@ export function isPlatformTag(value: string): value is PlatformTag {
 export type PlatformTagResult =
   { ok: true; tag: PlatformTag } | { ok: false; reason: string };
 
-/** Node's `process.platform`/`process.arch` pair → tag. */
+/**
+ * Node's `process.platform`/`process.arch` pair → tag. The caller reads
+ * `process` itself: this module is loaded in the browser (Deploy's health
+ * rows, the release artifact pane), where there is no process.
+ */
 export function platformTagFor(
   platform: string,
   arch: string,
@@ -61,11 +65,6 @@ export function platformTagFor(
     return { ok: false, reason: `unsupported platform ${platform}/${arch}` };
   }
   return { ok: true, tag: `${os}-${cpu}` as PlatformTag };
-}
-
-/** The tag of the process calling this. */
-export function hostPlatformTag(): PlatformTagResult {
-  return platformTagFor(process.platform, process.arch);
 }
 
 /**
