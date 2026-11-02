@@ -28,8 +28,11 @@ export type CrashPayload = z.infer<typeof CrashPayloadSchema>;
 // this order:
 //
 //  1. Top 3 normalized stack frames, prefixed by the error type — the real
-//     crash case. Normalization strips line:col and cache-busters so the same
-//     bug yields the same fingerprint across restarts and dev reloads.
+//     crash case. Normalization keeps only what names the code (function +
+//     app-relative file) and strips everything that says WHERE that code was
+//     served from or WHICH build of it ran — see normalizeFrames — so the same
+//     bug yields the same fingerprint across restarts, rebuilds, namespaces,
+//     worktrees and a product rename.
 //  2. No parsable frames, but a caller-declared `errorType` — several callers
 //     pass exactly that ON PURPOSE, so a family of varying messages collapses
 //     onto one row (`PaneRestoreCorrupt`, `JobDeadline`,
@@ -43,8 +46,11 @@ export type CrashPayload = z.infer<typeof CrashPayloadSchema>;
 //     months — the wrong source, the wrong task and whichever message arrived
 //     last.
 //
-// Branches 1 and 2 reproduce the pre-existing input byte for byte, so no report
-// that already has a row changes identity (pinned in crash-kind.test.ts).
+// Branch 2 and 3 inputs are pinned in crash-kind.test.ts. Branch 1's input
+// changed once, on 2026-11-02, when the location noise below was stripped
+// (research/2026-11-02-reports-host-independent-crash-fingerprint.md): framed
+// rows recorded before then keep their old fingerprint and age out under
+// retention; a recurrence lands on a new, now-stable row.
 export async function crashFingerprint(
   data: CrashPayload,
   ctx: ReportFingerprintContext,
@@ -66,7 +72,21 @@ export async function crashFingerprint(
 // stack's prose header line out, even when the message itself contains an "@".
 const NON_V8_FRAME = /^[^@\s]*@\S+$/;
 
-function normalizeFrames(stack: string): string[] {
+// A frame's identity is the function and the app-relative file it ran in. Its
+// location also carries what varies between occurrences of ONE bug, each
+// stripped below:
+//  - line:col, cache-busters (`?v=`, `?t=`, `?import`) — every edit/dev reload;
+//  - the origin (`http://<namespace>.localhost:9000`, `file://`) — the
+//    namespace serving the page differs per worktree, main answers on its
+//    alias, and a product rename moved every host;
+//  - a content hash in a path (`/artifacts/network.live.web.<16 hex>/`, a
+//    worker chunk, a package asset) — every rebuild of that artifact;
+//  - an absolute checkout prefix (`/Users/…/repo/.claude/worktrees/<id>/`, or
+//    vite's `/@fs/…`) — the checkout a server or dev frame ran from. The path
+//    is cut at its first `/plugins/` or `/node_modules/`, the repo's own roots.
+//
+// Exported for the test, which pins the normalized form.
+export function normalizeFrames(stack: string): string[] {
   return stack
     .split("\n")
     .map((l) => l.trim())
@@ -75,8 +95,14 @@ function normalizeFrames(stack: string): string[] {
       l
         .replace(/:\d+:\d+\)?$/, "")
         .replace(/\?(?:v|t|import)=[a-z0-9]+/gi, "")
+        .replace(/\b[a-z][a-z0-9+.-]*:\/\/[^/\s()]*/gi, "")
+        .replace(/(?:[.-][0-9a-f]{16}(?=[/.])|(?<=\/)[0-9a-f]{16}\.)/g, "")
         .replace(/\/node_modules\/\.vite\/deps\//, "/NM/")
-        .replace(/\/@fs\//, "/"),
+        .replace(/\/@fs\//, "/")
+        .replace(
+          /(?<=[\s(@])[^\s()@]*?(?=\/(?:plugins|node_modules|NM)\/)/,
+          "",
+        ),
     );
 }
 

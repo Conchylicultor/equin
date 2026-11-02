@@ -2,18 +2,24 @@
  * The crash fingerprint's three-branch identity rule
  * (research/2026-09-18-reports-stackless-fingerprint-and-crash-realert.md).
  *
- * Two halves are pinned here. The regression half: a report with no stack and
- * no error type used to hash the constant `Error|`, so every one of them landed
- * on a single row — on main, 499 unrelated occurrences. The migration-free
- * half: the literal hashes below were computed from the PREVIOUS implementation
- * and must not move, because a changed fingerprint means an existing report row
- * is orphaned and its history starts over.
+ * Three things are pinned here. The regression half: a report with no stack
+ * and no error type used to hash the constant `Error|`, so every one of them
+ * landed on a single row — on main, 499 unrelated occurrences. The stability
+ * half: the literal hashes below must not move, because a changed fingerprint
+ * means an existing report row is orphaned and its history starts over. And the
+ * location-independence half: one crash keeps one identity whichever host,
+ * build or checkout it ran from — before, the page's host was hashed in, so a
+ * product rename moved every pinned hash and each namespace minted its own row.
  *
  * Run: `./equin test plugins/reports`
  */
 
 import { describe, test, expect } from "bun:test";
-import { crashFingerprint, normalizeMessage } from "./crash-kind";
+import {
+  crashFingerprint,
+  normalizeFrames,
+  normalizeMessage,
+} from "./crash-kind";
 
 const ctx = (message: string) => ({ message, source: "browser-error" });
 
@@ -65,12 +71,15 @@ describe("crashFingerprint", () => {
   });
 
   test("a stack's frames are the identity — pinned, so existing rows keep theirs", async () => {
+    // Re-pinned 2026-11-02 when the origin / content hash / checkout prefix
+    // left the frame (research/2026-11-02-reports-host-independent-crash-fingerprint.md);
+    // the hash no longer depends on the fixture's host.
     expect(
       await crashFingerprint(
         { errorType: "TypeError", stack: V8_STACK },
         ctx("boom"),
       ),
-    ).toBe("406bada5c34f165b");
+    ).toBe("2b8fe9edd20f4851");
     // The message is NOT part of a framed crash's identity: two occurrences of
     // one bug carry different messages.
     expect(
@@ -78,7 +87,7 @@ describe("crashFingerprint", () => {
         { errorType: "TypeError", stack: V8_STACK },
         ctx("a different message"),
       ),
-    ).toBe("406bada5c34f165b");
+    ).toBe("2b8fe9edd20f4851");
   });
 
   test("a caller-declared errorType with no stack keeps its identity — pinned", async () => {
@@ -124,6 +133,76 @@ describe("crashFingerprint", () => {
       ctx("boom"),
     );
     expect(sameBug).toBe(safari);
+  });
+});
+
+describe("a frame's location is not its identity", () => {
+  const fp = (stack: string) =>
+    crashFingerprint({ errorType: "TypeError", stack }, ctx("boom"));
+
+  test("the host serving the page — namespace, alias, renamed product", async () => {
+    const pinned = await fp(V8_STACK);
+    // Any origin at all: another namespace, main's alias, the host main
+    // answered on before the product rename, a dev server.
+    for (const host of [
+      "http://att-1793641754-xwb5vn.localhost:9000",
+      "http://127.0.0.1:9000",
+      "http://localhost:5173",
+      "https://app.example.com",
+    ]) {
+      expect(
+        await fp(V8_STACK.replaceAll("https://equin.localhost:9000", host)),
+      ).toBe(pinned);
+    }
+  });
+
+  test("the content hash of the build that served it", async () => {
+    const built = (hash: string) =>
+      [
+        "Error: boom",
+        `    at reject (http://equin.localhost:9000/artifacts/network.live.core.${hash}/index.js:57:9)`,
+        `    at http://equin.localhost:9000/artifacts/network.live.web.${hash}/index.js:218:25`,
+      ].join("\n");
+    expect(await fp(built("5d6e9dbccf632a03"))).toBe(
+      await fp(built("e8ef70cea1efca77")),
+    );
+  });
+
+  test("the checkout a server frame ran from", async () => {
+    const ranFrom = (root: string) =>
+      [
+        "AgentStartError: exited",
+        `    at launchAgent (${root}/plugins/conversations/plugins/runtime-sdk/machine/internal/sdk-runtime.ts:383:15)`,
+        `    at async <anonymous> (${root}/node_modules/graphile-worker/dist/main.js:12:3)`,
+      ].join("\n");
+    const main = await fp(ranFrom("/home/a/dev/repo"));
+    expect(
+      await fp(ranFrom("/home/a/dev/repo/.claude/worktrees/att-1-x")),
+    ).toBe(main);
+    expect(await fp(ranFrom("file:///home/b/src/equin"))).toBe(main);
+  });
+
+  test("the normalized frame is the function and the app-relative file", () => {
+    expect(
+      normalizeFrames(
+        [
+          "Error: boom",
+          "    at reject (http://equin.localhost:9000/artifacts/network.live.core.5d6e9dbccf632a03/index.js:57:9)",
+          "    at http://x.localhost:9000/artifacts/set.0123456789abcdef/react.js:1:2",
+          "    at f (http://x.localhost:9000/@fs/home/a/repo/node_modules/.vite/deps/react-dom.js?v=1a2b:3:4)",
+          "    at g (/home/a/repo/.claude/worktrees/att-1-x/plugins/p/plugins/q/server/x.ts:5:6)",
+          "    at h (http://x.localhost:9000/plugins/p/web/y.tsx?t=123:7:8)",
+          "TaskRow@https://equin.localhost:9000/src/task-row.tsx:41:17",
+        ].join("\n"),
+      ),
+    ).toEqual([
+      "at reject (/artifacts/network.live.core/index.js",
+      "at /artifacts/set/react.js",
+      "at f (/NM/react-dom.js",
+      "at g (/plugins/p/plugins/q/server/x.ts",
+      "at h (/plugins/p/web/y.tsx",
+      "TaskRow@/src/task-row.tsx",
+    ]);
   });
 });
 
