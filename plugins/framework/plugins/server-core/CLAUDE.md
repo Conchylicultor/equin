@@ -223,8 +223,14 @@ composition boots two. Today's services: `database.driver`,
   store path or a job's "declared in" never reads `<id>#machine`.
 - **A headless test is an unbooted host.** The `bun test` preload hands the
   desktop's providers (the machine halves that `.provide(` one) to
-  `provideHostServicesUnbooted` (`core/testing`); `get()` reads them only while
-  nothing has been collected. A suite swapping some services for one call (its
+  `provideHostServicesUnbooted` (`core/testing`); `get()` reads them whenever no
+  graph is booted. Booted means a collect that `assertHostServices` proved (what
+  `bootPluginGraph` does) — a suite's bare `collectContributions` of a few hooks
+  boots nothing, so it never takes the preload's providers from the next test
+  file. Providers never switch silently: a collect over a booted graph with no
+  re-assert or `clearCollectedContributions` between makes `get()` throw (a
+  suite that boots in-process clears after), and a host that boots names no
+  unbooted providers, so with no proven graph `get()` throws there too. A suite swapping some services for one call (its
   fixtures over the preload's, or over a faked collect's) wraps the call in
   `withHostServices(providers, fn)` (`core/testing`), which puts the previous
   answers back once it settles — never `provideHostServicesUnbooted`, which

@@ -211,9 +211,29 @@ function splitCompanion<I>(
   return { input: rest as I, companion: true };
 }
 
+// How many times what was collected has been deliberately forgotten
+// (`clearCollectedContributions`) — so state proven against one collection can
+// tell "replaced after a clear" (a fresh start) from "replaced over it".
+let clears = 0;
+
+/**
+ * The current collection as an opaque identity (`collection`, null before any
+ * collect) and the clear count it sits after: a new `collectContributions`
+ * makes a different collection, a clear bumps `clears`, so state proven
+ * against one collection (host services' boot assert) can tell it is stale,
+ * and whether a clear came between.
+ */
+export function currentCollection(): {
+  collection: object | null;
+  clears: number;
+} {
+  return { collection: byKind, clears };
+}
+
 /** Forget what was collected — back to the pre-boot state. Test support (`core/testing`). */
 export function clearCollectedContributions(): void {
   byKind = null;
+  clears++;
 }
 
 export function collectContributions(

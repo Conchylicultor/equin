@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, test } from "bun:test";
 import { z } from "zod";
 import {
   clearRelationBases,
@@ -13,10 +13,14 @@ import {
   runSettledPhase,
 } from "./boot-stages";
 import { clearHostServices } from "./host-service";
+import { clearCollectedContributions } from "./contributions";
 
 // The boot asserts every declared host service; the services the `bun test`
 // preload's desktop providers declared are not this suite's graph.
 clearHostServices();
+// This suite boots graphs in the shared bun process: forget them after, so the
+// next suite is back to "no graph booted" (its host services the preload's).
+afterAll(() => clearCollectedContributions());
 
 // Where the preload-declare assert sits in the boot sequence: after the
 // contributions are collected and BEFORE the ready barrier. The barrier's L2

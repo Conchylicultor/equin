@@ -1,4 +1,5 @@
 import {
+  currentCollection,
   defineServerContribution,
   type ServerContribution,
   type ServerContributionToken,
@@ -23,6 +24,18 @@ import {
  * providers like any other contribution. "Exactly one" is checked once, at boot,
  * by `assertHostServices()` — not at the first `get()`, which may come long
  * after a graph with no provider started serving.
+ *
+ * What answers `get()` is a BOOTED graph — one whose collect that assert
+ * proved — never a bare `collectContributions`. A suite that collects a few
+ * contributions of its own (block types, lifecycle hooks) to drive booted code
+ * has booted nothing: its host services stay the process's (the `bun test`
+ * preload's unbooted providers), so a collect left behind by one test file
+ * cannot take the next file's database away.
+ *
+ * Providers never switch silently. Production collects once per boot, inside
+ * `bootPluginGraph`, which asserts right after; a host that boots names no
+ * unbooted providers, so with no proven graph `get()` throws. A collect that
+ * replaces a booted graph without a re-assert or a clear between throws too.
  */
 export interface HostService<T> {
   readonly id: string;
@@ -41,10 +54,16 @@ export interface HostService<T> {
 // `assertHostServices` checks every one of these, consumed or not.
 const declared = new Map<string, ServerContributionToken<{ impl: unknown }>>();
 
+// The collection `assertHostServices` proved — the booted graph — and the
+// clear count it was proved after. While it is the collected one it answers;
+// once a clear has forgotten it, the process is back to "no graph booted";
+// replaced by a collect with no clear or re-assert between, it is an error.
+let booted: { collection: object; clears: number } | null = null;
+
 // The providers of a process that runs booted code WITHOUT booting the graph — a
 // headless `bun test`, whose preload names the desktop host's providers here
-// (`provideHostServicesUnbooted`). Read only while nothing has been collected:
-// once a graph boots, its own collected providers answer, exactly as at runtime.
+// (`provideHostServicesUnbooted`). Read whenever no booted graph answers: once a
+// graph boots, its own providers answer, exactly as at runtime.
 let unbooted: readonly ServerContribution[] | null = null;
 
 // Test support: the implementations a suite swapped in for the length of one
@@ -69,24 +88,29 @@ export function defineHostService<T>(id: string): HostService<T> {
     provide: (impl) => token({ impl }),
     get: () => {
       if (scoped?.has(id)) return scoped.get(id) as T;
-      // Collected (a booted graph) answers; else the unbooted host's
-      // providers, when it names one for this service; else nothing has
-      // collected and nobody provided — read too early.
-      const collected = token.getContributionsIfCollected();
-      const unbootedProviders =
-        collected === undefined && unbooted !== null
-          ? token.from([{ contributions: unbooted }])
-          : [];
-      const providers =
-        collected ??
-        (unbootedProviders.length > 0 ? unbootedProviders : undefined);
-      if (providers === undefined) {
+      // The booted graph answers while its collection is still the collected
+      // one. A service whose module loaded after the boot assert is read from
+      // that same collection, held to the same exactly-one rule.
+      const now = currentCollection();
+      if (booted !== null && booted.collection === now.collection) {
+        const providers = token.getContributions();
+        if (providers.length !== 1) throw providerCountError(id, providers);
+        return providers[0]!.impl as T;
+      }
+      if (booted !== null && booted.clears === now.clears) {
         throw new Error(
-          `[host-service] "${id}" read before boot collected contributions — host services are read after boot collects contributions, never at module evaluation.`,
+          `[host-service] "${id}" read after contributions were collected again over a booted graph, with no boot assert since — ` +
+            `a graph boots through bootPluginGraph (collect, then assertHostServices); a suite faking a collect after one clears it first (clearCollectedContributions).`,
         );
       }
-      // `assertHostServices` has proven exactly one provider by the time any
-      // booted code runs; a different count here means it was skipped.
+      // Else the unbooted host's providers, when it names this service; else
+      // no graph booted and nobody provided — read too early.
+      if (unbooted === null) {
+        throw new Error(
+          `[host-service] "${id}" read before boot — host services are read by code running in a booted graph (or under a host that names its providers unbooted), never at module evaluation.`,
+        );
+      }
+      const providers = token.from([{ contributions: unbooted }]);
       if (providers.length !== 1) throw providerCountError(id, providers);
       return providers[0]!.impl as T;
     },
@@ -114,14 +138,17 @@ function providerCountError(
  * the graph: the `bun test` preload (the desktop host's machine halves'
  * contributions) and a check that runs booted code headless (the migration
  * dry-run's log persistence). Until some
- * suite boots a graph (whose collected providers then answer), every
+ * suite boots a graph (whose asserted providers then answer), every
  * `HostService.get()` reads its provider from these, with the same
- * exactly-one rule.
+ * exactly-one rule. Returns the set it replaced, so a suite naming its own
+ * can put the process's back.
  */
 export function provideHostServicesUnbooted(
-  providers: readonly ServerContribution[],
-): void {
+  providers: readonly ServerContribution[] | null,
+): readonly ServerContribution[] | null {
+  const previous = unbooted;
   unbooted = providers;
+  return previous;
 }
 
 /**
@@ -170,6 +197,12 @@ export function clearHostServices(): void {
  * `collectContributions`, before any phase hook can read a service.
  */
 export function assertHostServices(): void {
+  const { collection, clears } = currentCollection();
+  if (collection === null) {
+    throw new Error(
+      "[host-service] assertHostServices ran before collectContributions — it proves a collected graph's providers.",
+    );
+  }
   const problems: string[] = [];
   for (const [id, token] of declared) {
     const providers = token.getContributions();
@@ -177,4 +210,5 @@ export function assertHostServices(): void {
       problems.push(providerCountError(id, providers).message);
   }
   if (problems.length > 0) throw new Error(problems.join("\n"));
+  booted = { collection, clears };
 }
