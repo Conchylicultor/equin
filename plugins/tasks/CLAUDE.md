@@ -4,11 +4,12 @@
 
 ## Plugin reference
 
-- Description: Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations: the task CRUD, chain, dependency and auto-start routes, portable (arming a task wakes the launcher through the tasks.autoStartArmed trigger event). Launching, the repo info, the add_task MCP tool and the auto-start catch-up are the machine half's.
+- Description: Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations: the task CRUD, chain, dependency and auto-start routes, and the edit_task / drop_task MCP tools (gated on the tasks.manage grant, scoped to the caller's mandate tree), portable (arming a task wakes the launcher through the tasks.autoStartArmed trigger event). Launching, the repo info, the add_task MCP tool and the auto-start catch-up are the machine half's.
 - Server:
   - Contributes:
-    - `resource.declare` "tasks.repo-info"
     - `mandateCapability` "tasks.file"
+    - `mandateCapability` "tasks.manage"
+    - `resource.declare` "tasks.repo-info"
     - `treeDigestAnnotation` "tasks"
     - `conversations.compaction-context` "task-tree"
     - `watchSource` "tasks.created"
@@ -19,20 +20,25 @@
     - `trigger` "watch.ingest"
     - `trigger` "watch.ingest"
     - `trigger` "watch.ingest"
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `tasks/tasks-core` ×17
+  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks/tasks-core` ×19
     - `infra/endpoints` ×2
     - `primitives/rank` ×2
     - `tasks/auto-start` ×2
+    - `tasks/orchestration/mandate` ×2
     - `conversations/model-provider/catalog.getModelCatalog`
     - `database.db`
     - `infra/attachments.getAttachment`
+    - `infra/mcp.Mcp`
     - `tasks/launch-options.resolveLaunchOptions`
     - `tasks/task-category.setTaskCategory`
     - `tasks/task-source-url.setTaskSourceUrl`
     - `tasks/task-title.scheduleTaskTitleUpdate`
     - `tasks/task-track.listSidequestIds`
   - Exports (values): `armTaskAutoStart`
+  - Register:
+    - `mcpTool('edit_task')`
+    - `mcpTool('drop_task')`
   - Resources: `tasks.repo-info` (invalidate, snapshot)
   - Routes:
     - `GET /api/tasks`

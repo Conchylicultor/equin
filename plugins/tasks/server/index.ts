@@ -14,6 +14,11 @@ import {
 import { handleInsertBetween } from "./internal/handle-insert-between";
 import { handleDepsMove } from "./internal/handle-deps-move";
 import {
+  dropTaskTool,
+  editTaskTool,
+  tasksManageCapability,
+} from "./internal/manage-tools";
+import {
   listTasks,
   createTask,
   createTaskChain,
@@ -34,7 +39,9 @@ export { armTaskAutoStart } from "./internal/arm-auto-start";
 
 export default {
   description:
-    "Nested tasks with attempts linking to conversations: the task CRUD, chain, dependency and auto-start routes, portable (arming a task wakes the launcher through the tasks.autoStartArmed trigger event). Launching, the repo info, the add_task MCP tool and the auto-start catch-up are the machine half's.",
+    "Nested tasks with attempts linking to conversations: the task CRUD, chain, dependency and auto-start routes, and the edit_task / drop_task MCP tools (gated on the tasks.manage grant, scoped to the caller's mandate tree), portable (arming a task wakes the launcher through the tasks.autoStartArmed trigger event). Launching, the repo info, the add_task MCP tool and the auto-start catch-up are the machine half's.",
+  contributions: [tasksManageCapability],
+  register: [editTaskTool, dropTaskTool],
   httpRoutes: {
     [listTasks.route]: handleList,
     [createTask.route]: handleCreate,

@@ -639,6 +639,7 @@ serves them.
     - `tasksEntityRef`
     - `tasksFile`
     - `TasksFileGrantSchema`
+    - `tasksManage`
     - `tasksRootRoute`
     - `TaskStatusSchema`
     - `TrackFilingGrantSchema`

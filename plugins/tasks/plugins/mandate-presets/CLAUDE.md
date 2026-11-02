@@ -11,7 +11,8 @@ The named mandates for the code that creates a root task
   launch option, `tasks/supervisor-run`). Whole tree: `tasks.file` (`main:
   now/after/manual`, `sidequest: manual`), `watch.children`, `message.tree`,
   `flag.raise`, `context.compact`. Root only: `push.policy: on-request`,
-  `exit.clean: on-request`, `watch.tree`. Below the root (the workers):
+  `exit.clean: on-request`, `watch.tree`, `tasks.manage` (edit and drop the
+  tree's tasks — the supervisor only, never its workers). Below the root (the workers):
   `report.required`, `exit.clean: when-done` (close once reported).
 
 **A task names its mandate; it never copies the grants.** The grants

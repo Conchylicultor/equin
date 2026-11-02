@@ -2,7 +2,7 @@ import {
   mandatePolicy,
   type MandatePolicy,
 } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
-import { tasksFile } from "@plugins/tasks/plugins/tasks-core/core";
+import { tasksFile, tasksManage } from "@plugins/tasks/plugins/tasks-core/core";
 import {
   exitClean,
   flagRaise,
@@ -51,6 +51,7 @@ export function supervisorPolicy(): MandatePolicy {
         pushPolicy.grant("on-request"),
         exitClean.grant("on-request"),
         watchTree.grant(true),
+        tasksManage.grant(true),
       ],
       below: [reportRequired.grant(true), exitClean.grant("when-done")],
     },

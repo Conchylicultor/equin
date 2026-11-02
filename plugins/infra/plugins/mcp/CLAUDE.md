@@ -160,6 +160,7 @@ and without it no tool set can be computed.
     - `hints/ask`
     - `infra/mcp/browser`
     - `plugin-meta/plugin-health`
+    - `tasks`
     - `tasks/orchestration/mandate`
     - `tasks/orchestration/message`
     - `tasks/task-triage`

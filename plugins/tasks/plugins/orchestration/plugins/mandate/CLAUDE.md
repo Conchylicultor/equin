@@ -90,6 +90,7 @@ automations define theirs through `defineAutomation({ mandate })`.
   - Imported by:
     - `conversations/conversation-view/push-and-exit`
     - `conversations/self-compact`
+    - `tasks`
     - `tasks/orchestration/message`
     - `tasks/orchestration/tree-digest`
 - Sub-plugins:

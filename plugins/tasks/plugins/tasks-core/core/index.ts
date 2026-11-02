@@ -109,4 +109,6 @@ export type {
   TasksFileGrant,
   TrackFilingGrant,
 } from "./internal/tasks-file";
+// The `tasks.manage` capability: edit and drop the tasks of the mandate's tree.
+export { tasksManage } from "./internal/tasks-manage";
 export { taskMandateShape } from "./task-mandate";
