@@ -93,6 +93,15 @@ error, and while it stays open every OTHER parcel subscription in the process
 hears nothing either (measured, macOS FSEvents, parcel 2.6.0; unsubscribing it
 restores them). A holder that wants the dir again opens a new watch.
 
+`acquireDirWatch` retires such a root (its native watches are keyed by dir and
+generation, like the single-directory ones): its riders hear `onLost`, the next
+acquire of that dir — or of one under it — opens a fresh root instead of joining
+the dead one, and riders still holding the dead root move onto the fresh root
+once one opens at or above their old root. A consumer that must follow a folder
+through its deletion and re-creation without someone else re-acquiring it uses
+`acquireEventualDirWatch` (below), which re-acquires when the folder reappears.
+A bare `defineFileWatcher(...).start` instance is not re-armed: it stays closed.
+
 There is **no reconcile timer**, and no spelling for one. Which backends report
 a loss, read from `@parcel/watcher` 2.6.0's source:
 

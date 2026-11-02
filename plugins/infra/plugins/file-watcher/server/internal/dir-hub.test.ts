@@ -9,7 +9,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createFileWatcher } from "../../shared/engine";
+import { createFileWatcher, WatchedDirGoneError } from "../../shared/engine";
 import type { FileChangeEvent } from "../../shared/registry";
 import { createDirWatchHub, type StartRootWatch } from "./dir-hub";
 
@@ -301,6 +301,97 @@ describe("createDirWatchHub", () => {
     expect(hub.shallowDirs()).toEqual([]);
   });
 
+  test("a root that reported its dir gone is retired: a later acquire there or below opens a fresh one", async () => {
+    // One emitter per opened watch (not per dir): two watches of /w coexist.
+    const opened: { root: string; emit: (e: FileChangeEvent[]) => void }[] = [];
+    const losers: ((error: unknown) => void)[] = [];
+    const stopped: string[] = [];
+    const subtree: StartRootWatch = async (root, onChange, onLost) => {
+      opened.push({ root, emit: onChange });
+      losers.push(onLost);
+      return { stop: async () => void stopped.push(root) };
+    };
+    const hub = createDirWatchHub({ subtree, children: shallowNever });
+    const lost: unknown[] = [];
+    const first = await hub.acquire({
+      dir: "/w",
+      scope: "subtree",
+      onChange: () => {},
+      onLost: (e) => void lost.push(e),
+    });
+    // Any other loss keeps the root: its watch is still open.
+    losers[0]!(new Error("overflow"));
+    const below = await hub.acquire({
+      dir: "/w/a",
+      scope: "subtree",
+      onChange: () => {},
+    });
+    expect(opened.map((o) => o.root)).toEqual(["/w"]);
+    below();
+    // The folder goes: the engine closed the watch; its rider is told.
+    const gone = new WatchedDirGoneError("/w");
+    losers[0]!(gone);
+    expect(lost.at(-1)).toBe(gone);
+    // A folder under the dead root opens its own root, not ride the dead one.
+    const heard: string[] = [];
+    const sub = await hub.acquire({
+      dir: "/w/a",
+      scope: "subtree",
+      onChange: (e) => void heard.push(...paths(e)),
+    });
+    expect(opened.map((o) => o.root)).toEqual(["/w", "/w/a"]);
+    opened[1]!.emit([{ type: "update", path: "/w/a/f" }]);
+    expect(heard).toEqual(["/w/a/f"]);
+    sub();
+    first();
+    expect(stopped).toEqual(["/w/a", "/w"]);
+    expect(hub.roots()).toEqual([]);
+  });
+
+  test("a rider stranded on a dead root moves onto the fresh root opened at its dir", async () => {
+    const opened: { root: string; emit: (e: FileChangeEvent[]) => void }[] = [];
+    const losers: ((error: unknown) => void)[] = [];
+    const stopped: string[] = [];
+    const subtree: StartRootWatch = async (root, onChange, onLost) => {
+      opened.push({ root, emit: onChange });
+      losers.push(onLost);
+      return { stop: async () => void stopped.push(root) };
+    };
+    const hub = createDirWatchHub({ subtree, children: shallowNever });
+    const opener = await hub.acquire({
+      dir: "/w",
+      scope: "subtree",
+      onChange: () => {},
+    });
+    const stranded: string[] = [];
+    const rider = await hub.acquire({
+      dir: "/w/a",
+      scope: "children",
+      onChange: (e) => void stranded.push(...paths(e)),
+    });
+    // The child-scope rider rides /w: no root of its own.
+    expect(opened.map((o) => o.root)).toEqual(["/w"]);
+    losers[0]!(new WatchedDirGoneError("/w"));
+    // The folder comes back, and someone watches it again.
+    const again = await hub.acquire({
+      dir: "/w",
+      scope: "subtree",
+      onChange: () => {},
+    });
+    await Promise.resolve();
+    expect(opened.map((o) => o.root)).toEqual(["/w", "/w"]);
+    // The rider's hold on the dead watch is given back once it moved: the
+    // dead watch stops as soon as its last other holder releases.
+    opener();
+    expect(stopped).toEqual(["/w"]);
+    opened[1]!.emit([{ type: "update", path: "/w/a/f" }]);
+    expect(stranded).toEqual(["/w/a/f"]);
+    again();
+    expect(stopped).toEqual(["/w"]);
+    rider();
+    expect(stopped).toEqual(["/w", "/w"]);
+  });
+
   test("a children request under an open root rides it, hearing only the dir's direct entries", async () => {
     const fake = fakeStart();
     const hub = createDirWatchHub({
@@ -407,6 +498,51 @@ describe("createDirWatchHub over the real engine", () => {
     } finally {
       rc();
       rr();
+    }
+  });
+
+  test("a root whose folder is deleted and re-created is watched again by the next acquire", async () => {
+    dir = realpathSync(mkdtempSync(join(tmpdir(), "dir-hub-")));
+    const watched = join(dir, "w");
+    mkdirSync(watched);
+    const hub = createDirWatchHub({
+      subtree: (root, onChange, onLost) =>
+        createFileWatcher({
+          dirs: [root],
+          debounceMs: 0,
+          onChange,
+          onLost: (_dir, error) => onLost(error),
+        }),
+      children: shallowNever,
+    });
+    const lost: unknown[] = [];
+    const first = await hub.acquire({
+      dir: watched,
+      scope: "subtree",
+      onChange: () => {},
+      onLost: (e) => void lost.push(e),
+    });
+    let second: (() => void) | null = null;
+    try {
+      rmSync(watched, { recursive: true });
+      // Test-only bound, not production polling.
+      for (let i = 0; i < 150 && lost.length === 0; i++) await Bun.sleep(20);
+      expect(lost[0]).toBeInstanceOf(WatchedDirGoneError);
+      mkdirSync(watched);
+      const heard: string[] = [];
+      second = await hub.acquire({
+        dir: watched,
+        scope: "subtree",
+        onChange: (e) => void heard.push(...paths(e)),
+      });
+      const file = join(watched, "f.txt");
+      writeFileSync(file, "x");
+      for (let i = 0; i < 150 && !heard.includes(file); i++)
+        await Bun.sleep(20);
+      expect(heard).toContain(file);
+    } finally {
+      second?.();
+      first();
     }
   });
 

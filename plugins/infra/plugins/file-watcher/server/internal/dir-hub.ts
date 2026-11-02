@@ -4,7 +4,7 @@ import {
   createRefcountHub,
   type HubHold,
 } from "@plugins/packages/plugins/refcount-hub/core";
-import type { WatchReaction } from "../../shared/engine";
+import { WatchedDirGoneError, type WatchReaction } from "../../shared/engine";
 import type { FileChangeEvent } from "../../shared/registry";
 
 /**
@@ -48,7 +48,7 @@ export interface DirWatchHub {
    * and a change landing in that gap is never reported.
    */
   acquire(request: DirWatchRequest): Promise<DirWatchRelease>;
-  /** The roots with a native recursive watch open, or opening. */
+  /** The roots with a native recursive watch open, or opening (a retired one is not). */
   roots(): string[];
   /** The dirs with a native single-directory watch open, or opening. */
   shallowDirs(): string[];
@@ -86,10 +86,47 @@ function inScope(dir: string, scope: DirWatchScope, path: string): boolean {
   return scope === "children" ? dirname(path) === dir : isUnder(dir, path);
 }
 
+/**
+ * One native watch per dir at a time, keyed `${dir}\0${generation}`. A watch
+ * that reports its own dir gone is dead — it hears nothing more of whatever
+ * folder lands at that path — so it is retired: the dir forgets its key, and
+ * the next acquire there opens a fresh watch under a new key rather than
+ * joining the dead one (which the holders still riding it keep until they
+ * release).
+ */
+function createGenerations(isOpen: (key: string) => boolean) {
+  const current = new Map<string, string>();
+  let generation = 0;
+  return {
+    /** The dir's live key, minting one when it has none (or a stale one). */
+    keyFor(dir: string): string {
+      let key = current.get(dir);
+      if (key === undefined || !isOpen(key)) {
+        key = `${dir}\0${++generation}`;
+        current.set(dir, key);
+      }
+      return key;
+    },
+    /** The dir's live key, if a watch of it is open (or opening) and not dead. */
+    liveKey(dir: string): string | undefined {
+      const key = current.get(dir);
+      return key !== undefined && isOpen(key) ? key : undefined;
+    },
+    isLive: (key: string): boolean => current.get(dirOf(key)) === key,
+    retire(key: string): void {
+      if (current.get(dirOf(key)) === key) current.delete(dirOf(key));
+    },
+  };
+}
+
+const dirOf = (key: string): string => key.slice(0, key.indexOf("\0"));
+
 /** One watcher, and the root whose native watch it currently rides. */
 interface Holder {
   dir: string;
   root: string;
+  /** `root`'s generation key — the native watch it rides. */
+  rootKey: string;
   hold: HubHold;
   /** The hold it is leaving, kept until the new root's watch is open. */
   previous: HubHold | null;
@@ -120,59 +157,57 @@ interface Holder {
  * watcher releases. The release an acquire returns follows its watcher onto
  * whichever root it rides. A watcher whose own root went live after a root
  * above it opened moves up then, so the order the two opened in does not
- * matter.
+ * matter. A root whose own dir goes (removed, moved, replaced — the engine's
+ * {@link WatchedDirGoneError}) is retired: its riders hear `onLost`, a later
+ * acquire of that dir (or one under it) opens a fresh root, and the riders
+ * stranded on the dead one move onto whichever root next opens at or above it.
  */
 export function createDirWatchHub(starts: DirWatchStarts): DirWatchHub {
-  const hub = createRefcountHub<RootSignal>(async (root, emit) => {
+  const hub = createRefcountHub<RootSignal>(async (key, emit) => {
+    const root = dirOf(key);
     const watch = await starts.subtree(
       root,
       (events) => emit({ kind: "changes", events }),
-      (error) => emit({ kind: "lost", error }),
+      (error) => {
+        if (error instanceof WatchedDirGoneError && error.dir === root) {
+          rootKeys.retire(key);
+        }
+        emit({ kind: "lost", error });
+      },
     );
-    return () => watch.stop();
+    return () => {
+      rootKeys.retire(key);
+      return watch.stop();
+    };
   });
-  // A single-directory watch, keyed by `${dir}\0${generation}`. Once it
-  // reports its own dir gone (removed, moved, replaced, or the watch failed)
-  // it is dead — it hears nothing more of whatever folder lands at that path
-  // — so it is retired: `shallowKeys` forgets it, and the holder re-arming on
-  // that delete opens a fresh watch rather than joining the dead one (which
-  // its previous hold, released only once the new one is open, still keeps).
-  const shallowKeys = new Map<string, string>();
-  let shallowGeneration = 0;
-  const shallowKeyFor = (dir: string): string => {
-    let key = shallowKeys.get(dir);
-    if (key === undefined) {
-      key = `${dir}\0${++shallowGeneration}`;
-      shallowKeys.set(dir, key);
-    }
-    return key;
-  };
-  const retireShallow = (dir: string, key: string): void => {
-    if (shallowKeys.get(dir) === key) shallowKeys.delete(dir);
-  };
-  const shallowDirOf = (key: string): string => key.slice(0, key.indexOf("\0"));
+  const rootKeys = createGenerations((key) => hub.has(key));
+  // A single-directory watch reports its dir gone as a delete of the dir (or
+  // the watch failed) — retired then, so the holder re-arming on that delete
+  // opens a fresh watch (its previous hold, released only once the new one is
+  // open, still keeps the dead one).
   const shallow = createRefcountHub<RootSignal>(async (key, emit) => {
-    const dir = shallowDirOf(key);
+    const dir = dirOf(key);
     const watch = await starts.children(
       dir,
       (events) => {
         const gone = events.some((e) => e.type === "delete" && e.path === dir);
-        if (gone) retireShallow(dir, key);
+        if (gone) shallowKeys.retire(key);
         emit({ kind: "changes", events });
       },
       (error) => emit({ kind: "lost", error }),
     );
     return () => {
-      retireShallow(dir, key);
+      shallowKeys.retire(key);
       return watch.stop();
     };
   });
+  const shallowKeys = createGenerations((key) => shallow.has(key));
   const holders = new Set<Holder>();
 
-  /** The nearest open (or opening) root at or above `dir`. */
+  /** The nearest open (or opening), not dead, root at or above `dir`. */
   function coveringRoot(dir: string): string | undefined {
     for (let d = dir; ; d = dirname(d)) {
-      if (hub.has(d)) return d;
+      if (rootKeys.liveKey(d) !== undefined) return d;
       if (d === dirname(d)) return undefined;
     }
   }
@@ -186,11 +221,14 @@ export function createDirWatchHub(starts: DirWatchStarts): DirWatchHub {
   function move(h: Holder, root: string): void {
     const old = h.hold;
     const oldRoot = h.root;
-    const next = hub.acquire(root, h.listener);
+    const oldKey = h.rootKey;
+    const key = rootKeys.keyFor(root);
+    const next = hub.acquire(key, h.listener);
     h.previous?.release();
     h.previous = old;
     h.hold = next;
     h.root = root;
+    h.rootKey = key;
     next.ready.then(
       () => {
         if (h.previous !== old) return;
@@ -201,19 +239,24 @@ export function createDirWatchHub(starts: DirWatchStarts): DirWatchHub {
         if (h.released || h.hold !== next) return;
         h.hold = old;
         h.root = oldRoot;
+        h.rootKey = oldKey;
         h.previous = null;
       },
     );
   }
 
   /**
-   * Gather onto `root` every live watcher riding a root strictly below it.
-   * Runs once `root` is live, so each re-attach joins an open watch.
+   * Gather onto `root` every live watcher riding a root strictly below it, or
+   * a dead root at it (its dir went and came back). Runs once `root` is live,
+   * so each re-attach joins an open watch.
    */
   function absorbBelow(root: string): void {
-    if (!hub.has(root)) return;
+    const key = rootKeys.liveKey(root);
+    if (key === undefined) return;
     for (const h of holders) {
-      if (h.live && !h.released && isUnder(root, h.root)) move(h, root);
+      if (!h.live || h.released || h.rootKey === key) continue;
+      const stranded = h.root === root && !rootKeys.isLive(h.rootKey);
+      if (stranded || isUnder(root, h.root)) move(h, root);
     }
   }
 
@@ -241,7 +284,7 @@ export function createDirWatchHub(starts: DirWatchStarts): DirWatchHub {
         if (mine.length > 0) reaction.trigger(mine);
       };
       if (scope === "children" && covering === undefined) {
-        const hold = shallow.acquire(shallowKeyFor(dir), listener);
+        const hold = shallow.acquire(shallowKeys.keyFor(dir), listener);
         await hold.ready;
         return () => {
           if (released) return;
@@ -250,10 +293,12 @@ export function createDirWatchHub(starts: DirWatchStarts): DirWatchHub {
         };
       }
       const root = covering ?? dir;
+      const rootKey = rootKeys.keyFor(root);
       const h: Holder = {
         dir,
         root,
-        hold: hub.acquire(root, listener),
+        rootKey,
+        hold: hub.acquire(rootKey, listener),
         previous: null,
         listener,
         live: false,
@@ -282,7 +327,7 @@ export function createDirWatchHub(starts: DirWatchStarts): DirWatchHub {
         h.previous = null;
       };
     },
-    roots: () => hub.keys(),
-    shallowDirs: () => shallow.keys().map(shallowDirOf),
+    roots: () => hub.keys().filter(rootKeys.isLive).map(dirOf),
+    shallowDirs: () => shallow.keys().map(dirOf),
   };
 }
