@@ -10102,7 +10102,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ids.idKindField`
               - `infra/entities.entityRef`
             - Exports (types): `TrackViewRow`
-            - Exports (values): `TrackViewRowSchema`
+            - Exports (values):
+              - `trackViewEntityRef`
+              - `TrackViewRowSchema`
+              - `trackViewServerFields`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --border`
@@ -14008,6 +14011,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Exemptions:
     - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/config-registrations.ts`, `check/overrides-authored.ts` (debt)
   - Test helpers:
+    - Server: `@plugins/config_v2/server/testing`
+      - `diskConfigGitLayer` — The committed config layer a browser host bundles (`config_v2/bundled-layer`, which reads it through vite's `import.meta.glob` — absent under `bun test`), provided from the same files read off disk: for a suite booting a portable graph without the computer.
     - Core: `@plugins/config_v2/core/testing`
       - `LEGEND_MARKER` — The build-owned `// @legend` block of a committed config override: a descriptor's `overrideLegend` lines, stamped directly under the `// @hash` header so whoever opens the file to hand-edit it sees how to write its values — for a reorder slot, that a spacer node exists and what it does.
   - Plugins:
@@ -22274,9 +22279,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Pane.Register` "debug-mcp-tool"
           - `Pane.Register` "debug-mcp-tools"
           - `DebugApp.Sidebar` "MCP tools"
-        - Uses: 28 symbols — full list in [`plugins/debug/plugins/mcp-tools/REFERENCE.md`](../plugins/debug/plugins/mcp-tools/REFERENCE.md)
+        - Uses: 29 symbols — full list in [`plugins/debug/plugins/mcp-tools/REFERENCE.md`](../plugins/debug/plugins/mcp-tools/REFERENCE.md)
+          - `primitives/live-state` ×6
           - `primitives/pane` ×6
-          - `primitives/live-state` ×5
           - `primitives/data-view` ×3
           - `primitives/css/spacing` ×2
           - `apps/debug/shell.DebugApp`
@@ -27365,16 +27370,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/plugin-id.RUNTIME_FOLDERS`
               - `framework/plugin-id.TESTING_FOLDER`
               - `framework/plugin-id.VERIFYING_FOLDERS`
+              - `framework/tooling/import-closure.importClosure`
+              - `framework/tooling/import-closure.importClosures`
+              - `framework/tooling/import-closure.loadTypescript`
+              - `framework/tooling/import-closure.UnionImportClosure`
               - `infra/host-fs/user-path.joinAppPath`
               - `infra/spawn.getWorktreeRoot`
               - `packages/macrotask-yield.yieldMacrotask`
               - `plugin-meta/parse-utils.findImports`
+              - `plugin-meta/parse-utils.HostServiceDecl`
+              - `plugin-meta/parse-utils.hostServicesByName`
+              - `plugin-meta/parse-utils.ImportRef`
+              - `plugin-meta/parse-utils.parseHostServiceDeclarations`
+              - `plugin-meta/parse-utils.providedServiceNames`
               - `plugin-meta/plugin-tree.buildStructureTreeOnce`
             - Exports (types):
               - `AllowEdge`
               - `BoundaryConfig`
               - `DenyEdge`
               - `Edge`
+              - `Offender`
+              - `ServerPortability`
               - `ZoneDefinition`
             - Exports (values):
               - `allow`
@@ -27387,6 +27403,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `parseRuntimeException`
               - `platformValueUsesIn`
               - `runtimeNames`
+              - `serverPortabilityOf`
               - `zone`
           - Cross-plugin:
             - Imported by:
@@ -27802,8 +27819,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Register: `defineSupervisedJob('type-check.backstop')`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 118 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
-              - `plugin-meta/parse-utils` ×17
+            - Uses: 119 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+              - `plugin-meta/parse-utils` ×20
               - `config_v2` ×15
               - `framework/plugin-id` ×14
               - `framework/tooling/resource-vocabulary` ×10
@@ -27814,7 +27831,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host-fs/user-path` ×4
               - `plugin-meta/plugin-tree` ×4
               - `framework/slot-declaration` ×3
-              - `framework/tooling/import-closure` ×3
               - `config_v2/ledger` ×2
               - `framework/tooling/boundaries` ×2
               - `framework/tooling/format` ×2
@@ -27824,6 +27840,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/resource-protocol` ×2
               - `fields/reorder-tree.REORDER_NODE_LEGEND`
               - `framework/tooling/guards/agent-policy.agentPolicySettings`
+              - `framework/tooling/import-closure.importClosures`
               - `framework/tooling/lint.loadLintContributions`
               - `framework/tooling/web-artifacts.COMPOSITION_SPECIFIERS`
               - `packages/semaphore.createSemaphore`
@@ -27846,7 +27863,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `HostConfigRegistration`
               - `HostContributionBarrel`
               - `HostRead`
-              - `HostServiceDecl`
               - `InferredBrowserHostGraph`
               - `MainComposition`
               - `OriginAnnotationsPreparer`
@@ -27925,7 +27941,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `generateReorderableSlots`
               - `generateSpaceRamp`
               - `generateTokenGroupVars`
-              - `hostServicesByName`
               - `iconManifestPath`
               - `inferBrowserHostGraph`
               - `isAppContent`
@@ -27935,7 +27950,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `mainBundle`
               - `mainComposition`
               - `parseCustomUtilities`
-              - `parseHostServiceDeclarations`
               - `parseNamedCompositionRegistryFileName`
               - `parseSpaceRamp`
               - `pluginClaudeMdPath`
@@ -27945,7 +27959,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `postWebManifests`
               - `preBarrelManifests`
               - `propagateConfigToUser`
-              - `providedServiceNames`
               - `readCompositionManifestsFromDisk`
               - `readDeclaredApps`
               - `readDefineApp`
@@ -28259,7 +28272,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `importClosures`
               - `loadTypescript`
           - Cross-plugin:
-            - Imported by: `framework/tooling/codegen`
+            - Imported by:
+              - `framework/tooling/boundaries`
+              - `framework/tooling/codegen`
           - Exemptions:
             - Exempts itself from:
               - `boundaries/no-platform-api` — `core/import-closure.ts` (debt)
@@ -32274,14 +32289,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plannedServiceExecutable`
               - `reconcileLoginService`
               - `terminateProcess`
-    - **`mcp`** — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool, and serves the mcp.catalog live value: every tool, instructions section and the scope resolver with the plugin that declared each, each tool's input schema as tools/list sends it; and the mcp.health push value: the latest request's outcome (failing on a throw or a 5xx) and every per-connection contribution whose latest run threw.
+    - **`mcp`** — The MCP contribution API, SDK-free: Mcp.tool / Mcp.instructions / Mcp.scope register a tool, a server-instructions section or THE scope resolver into the in-process registry the desktop half (machine/) serves over HTTP — so a plugin contributing to the MCP server stays portable.
       - Server:
         - Contributes:
           - `resource.declare` "mcp.catalog"
           - `resource.declare` "mcp.health"
-        - Uses:
-          - `infra/endpoints.rawEndpointHandler`
-          - `network/live.serveValue`
         - Exports (types):
           - `McpInstructions`
           - `McpScope`
@@ -32294,6 +32306,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Resources:
           - `mcp.catalog` (push, fixed, whole: every Mcp.tool the code registers — fixed for the process, a hundred or so, whole: every Mcp.instructions section the code registers — fixed for the process, a handful, whole: the scratch profiles a tool is reserved for — one or two, whole: one JSON Schema object's top-level keywords (type, properties, required, …) — a handful)
           - `mcp.health` (push, notified, capped: MCP_HEALTH_MAX_DEGRADED)
+      - Machine:
+        - Uses:
+          - `infra/endpoints.machineHandler`
+          - `network/live.serveValue`
         - Routes: `POST /api/mcp/:conversationId`
       - Core:
         - Uses:
@@ -33178,12 +33194,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `HeaderReader`
               - `HeaderSource`
             - Exports (values): `detectBotMitigation`
-    - **`secrets`** — Encrypted key-value primitive. AES-256-GCM blob at ~/.equin/state/secrets/secrets.json.enc with the master key in the OS keychain (fallback to the .key beside it). Hosted on the central runtime; consumers (auth, config) call /api/secrets/* via the gateway.
+    - **`secrets`** — The secrets API every backend calls (getSecret / setSecret / deleteSecret / hasSecret / getSecretMetadata / listKeysInNamespace), through the SecretStore host service (secrets.store) — provided on the computer by the machine half, a client of central's store. No browser host provides it, so nothing that reads secrets runs in one. Encrypted key-value primitive. AES-256-GCM blob at ~/.equin/state/secrets/secrets.json.enc with the master key in the OS keychain (fallback to the .key beside it). Hosted on the central runtime; consumers (auth, config) call /api/secrets/* via the gateway.
       - Server:
-        - Uses: `infra/endpoints.callEndpoint`
+        - Contributes: `host-service:secrets.store` "secrets.store"
         - Exports (types):
           - `SecretMetadata`
           - `SecretRef`
+          - `SecretStoreImpl`
         - Exports (values):
           - `deleteSecret`
           - `getSecret`
@@ -33194,6 +33211,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SecretsError`
           - `SecretsKeychainLockedError`
           - `SecretsMainOfflineError`
+          - `SecretStore`
           - `setSecret`
       - Core:
         - Uses: `infra/endpoints.defineEndpoint`
@@ -33220,6 +33238,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/claude-cli/accounts`
       - Exemptions:
         - Exempts itself from: `paths:no-hardcoded-paths` — `central/index.ts` (sanctioned)
+      - Machine:
+        - Exports (values): `centralSecretStore`
       - Central:
         - Exports (types):
           - `SecretMetadata`
@@ -33241,6 +33261,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `POST /api/secrets/has`
           - `POST /api/secrets/meta`
           - `POST /api/secrets/list`
+      - Cli:
+        - Exports (values): `centralSecretStore`
     - **`spawn`** — Wedge-proof child-process primitive: spawnCaptured/spawnExpectOk capture stdout/stderr via temp-file fds (no piped stdio, so bun 1.3.13's exit-during-stream-pull race has nothing to wedge), spawnPassthrough inherits the parent's streams, and getWorktreeRoot/getMainRepoRoot are the memoized canonical git-root helpers. Node-only (no db/jobs) so a CLI process can import it; the spawn-safety lint rule routes every raw Bun.spawn here.
       - Core:
         - Uses:
@@ -33955,6 +33977,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HooktheoryNotSignedInError`
           - `HooktheoryProviderUnavailableError`
           - `HooktheorySectionNotFoundError`
+          - `parseOrThrow`
           - `ProgressionParamSchema`
           - `ProgressionSchema`
           - `sectionFromHookpadDoc`
@@ -39417,6 +39440,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DefaultExportObject`
           - `EndpointExport`
           - `FsSnapshot`
+          - `HostServiceDecl`
           - `ImportRef`
           - `MarkerCall`
           - `MarkerCallSpan`
@@ -39430,7 +39454,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `findImports`
           - `findMarkerCalls`
           - `hasField`
-          - `isPortableServerBarrel`
+          - `hostServicesByName`
           - `lineAt`
           - `markerCallSpans`
           - `maskSource`
@@ -39438,10 +39462,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `parseBarrelExports`
           - `parseBoolField`
           - `parseDefineGroup`
+          - `parseHostServiceDeclarations`
           - `parseServerContributionDeclarations`
           - `parseStaticCallId`
           - `parseStringField`
           - `pathExists`
+          - `providedServiceNames`
           - `readIfExists`
           - `readStaticCallId`
           - `readStringLiteral`

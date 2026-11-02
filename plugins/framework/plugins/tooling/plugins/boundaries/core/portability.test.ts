@@ -19,6 +19,10 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { serverPortability, type ServerPortability } from "./portability";
+import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // A fixture module under a made-up plugin (built, not spelled, so the
 // plugin-reference locator does not read it as a path into this repo).
@@ -113,11 +117,11 @@ const BARRELS = [
   "u",
 ].map(barrel);
 
-let root: string;
+let root: AppPath;
 let portability: ServerPortability;
 
 beforeAll(async () => {
-  root = mkdtempSync(join(tmpdir(), "portability-"));
+  root = asAppPath(mkdtempSync(join(tmpdir(), "portability-")));
   for (const [path, text] of Object.entries(FILES)) {
     mkdirSync(dirname(join(root, path)), { recursive: true });
     writeFileSync(join(root, path), text);

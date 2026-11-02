@@ -29,6 +29,7 @@
  */
 
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   importClosure,
   importClosures,
@@ -129,7 +130,7 @@ export function moduleNeeds(
  * `needs` memoizes each module's reading across calls.
  */
 export async function platformOffenders(
-  root: string,
+  root: AppPath,
   entry: string,
   read: (path: string) => Promise<string | null>,
   needs: Map<string, string[]>,
@@ -332,7 +333,7 @@ export async function derivePortability(
  * instead, which shares one derivation per repo snapshot.
  */
 export async function serverPortability(
-  root: string,
+  root: AppPath,
   barrels: readonly string[],
   read: (path: string) => Promise<string | null>,
 ): Promise<ServerPortability> {
