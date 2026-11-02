@@ -79,6 +79,19 @@ worktrees must collide on purpose. The digest's byte stream is frozen (name,
 NUL, bytes, NUL per file, sorted) — it names every PNG already cached, and
 `hash-dir.test.ts` pins it to the `node:crypto` value.
 
+**The listing only decides whether to hash again** (`fingerprint-memo.ts`):
+a host-global memo (`fingerprints/memo.json` in the cache root — a subdir, so
+the age sweep skips it) maps each folder to the key it hashed to at a listing
+(every file's name, size, mtime, birthtime). An unchanged listing is not read
+again, on any backend, so a boot over an unchanged tree is a listing per folder.
+
+- Fails closed: an unknown listing is hashed; a listing of a file written in the
+  last 2 s is never remembered (a same-tick rewrite could hide behind it).
+- A rewrite that moves mtimes but not bytes re-hashes to the same key — still no
+  re-render.
+- Backends merge saves under the root's lock; nothing is written unless a folder
+  was learned or went away.
+
 **State is in memory, so there is no migration.** Every arm is derivable from
 the filesystem (a fingerprint, plus whether its PNG exists) — a table would be a
 second copy of what the disk already says, free to rebuild and impossible to

@@ -3,7 +3,7 @@ import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import type { ThumbnailState } from "../../core";
 import { hasThumbnail } from "./cache";
 import { decideThumbnail } from "./decide";
-import { fingerprintPrototype } from "./fingerprint";
+import { fingerprintPrototype, prototypeFingerprints } from "./fingerprint";
 import { ThumbnailRenderer, type ThumbnailRenderRequest } from "./renderer";
 import {
   patchThumbnailStates,
@@ -26,23 +26,33 @@ import {
  * It needs the prototypes' NAMES, nothing else, so it reads the folder listing
  * (`listPrototypeNames`) — never `listPrototypeMetas`, which reads, validates
  * and parses every folder and was 2–4 s of this pass's ~3 s on main.
+ *
+ * And it reads no folder's bytes it already knows: the fingerprint memo
+ * (`fingerprint-memo.ts`, host-global) answers a folder whose listing has not
+ * moved since it was last hashed — on this backend or any other — so a boot
+ * over an unchanged tree costs a listing per folder and a stat per PNG, not a
+ * read and a sha256 of all 15 MB on every backend.
  */
 export async function syncThumbnails(): Promise<void> {
   const renderer = ThumbnailRenderer.get();
+  const names = await listPrototypeNames();
   const next = new Map<string, ThumbnailState>();
-  const pending = await decideAll(await listPrototypeNames(), next, renderer);
+  const pending = await decideAll(names, next, renderer);
   replaceThumbnailStates(next);
   await requestRenders(renderer, pending);
+  // After the cards have their states: the memo only speeds up the next pass.
+  await prototypeFingerprints.retainOnly(names);
+  await prototypeFingerprints.save();
 }
 
 /**
  * The boot reconcile, as a declared warm-up rather than a fire-and-forget in
- * `onReady`: it reads and hashes every prototype's bytes (130 prototypes /
- * 15 MB on the desktop: ~1.8 s standalone, half of it the pure-JS sha256;
- * 3.6 s as a boot warm-up beside the rest of the drain), which on every
- * backend's boot competed with the boot hooks and first requests. The drain
- * runs it once the host has settled, under the executor's gate and slot.
- * `worktree` scope: the state it rebuilds is this backend's own memory.
+ * `onReady`, so it runs once the host has settled, under the executor's gate
+ * and slot. On the default budget: it once read and hashed every prototype's
+ * bytes on every boot (15 MB, ~1.8 s standalone, 3.6 s as a warm-up); with the
+ * fingerprint memo an unchanged tree is one listing per folder. `worktree`
+ * scope: the state it rebuilds is this backend's own memory — the expensive
+ * part, the hashing, is already shared host-wide through the memo.
  *
  * Until it runs, a card has no state — the same as before any sync — and an
  * edit in the meantime still re-decides its prototype (`onPrototypesChanged`).
@@ -52,7 +62,6 @@ export const thumbnailsSyncWarmup = defineWarmup({
   description:
     "Checks every prototype's gallery preview against its files and renders the ones that are missing or out of date.",
   scope: "worktree",
-  budgetMs: 6000,
   run: () => syncThumbnails(),
 });
 
@@ -70,6 +79,7 @@ export async function syncChangedThumbnails(
   const gone = changed.filter((name) => !next.has(name));
   patchThumbnailStates(next, gone);
   await requestRenders(renderer, pending);
+  await prototypeFingerprints.save();
 }
 
 type Renderer = ReturnType<typeof ThumbnailRenderer.get>;
@@ -80,18 +90,28 @@ async function decideAll(
   next: Map<string, ThumbnailState>,
   renderer: Renderer,
 ): Promise<ThumbnailRenderRequest[]> {
+  // Every folder at once, not one after another: with the memo each is a
+  // listing and a stat, and in series each await queues behind whatever else
+  // holds a booting event loop (the same reason `readPrototypesSignature`
+  // reads concurrently).
+  const looked = await Promise.all(
+    names.map(async (name) => {
+      const fingerprint = await fingerprintPrototype(name);
+      if (fingerprint.kind === "missing") return null;
+      const { key } = fingerprint;
+      return { name, key, cached: await hasThumbnail(key) };
+    }),
+  );
   const pending: ThumbnailRenderRequest[] = [];
-  for (const name of names) {
-    const fingerprint = await fingerprintPrototype(name);
+  for (const found of looked) {
     // Not in the tree: deleted between the listing and the hash (the watcher
     // fires again for the removal), or a change that named a removed
     // prototype. Either way it has no state.
-    if (fingerprint.kind === "missing") continue;
-    const { key } = fingerprint;
-
+    if (found === null) continue;
+    const { name, key, cached } = found;
     const decision = decideThumbnail(
       key,
-      await hasThumbnail(key),
+      cached,
       readThumbnailState(name),
       renderer,
     );

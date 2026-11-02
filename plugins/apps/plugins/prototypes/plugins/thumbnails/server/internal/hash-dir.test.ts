@@ -7,7 +7,7 @@ import {
 } from "@plugins/infra/plugins/paths/plugins/data-files/core";
 import { createMemoryDataFiles } from "@plugins/infra/plugins/paths/plugins/data-files/plugins/memory/server/testing";
 import { systemOrigin } from "@plugins/infra/plugins/request-origin/core";
-import { fingerprintFolder } from "./hash-dir";
+import { fingerprintFolder, noFingerprintMemo } from "./hash-dir";
 
 const writer = systemOrigin("fingerprint test");
 
@@ -31,7 +31,11 @@ async function makeDir(
 }
 
 async function keyOf(mount: Mount, name: string): Promise<string> {
-  const fingerprint = await fingerprintFolder(mount, relPath(name));
+  const fingerprint = await fingerprintFolder(
+    mount,
+    relPath(name),
+    noFingerprintMemo,
+  );
   if (fingerprint.kind !== "hashed") throw new Error(`${name} is missing`);
   return fingerprint.key;
 }
@@ -102,7 +106,9 @@ describe("fingerprintFolder", () => {
   });
 
   test("a folder that is not there is missing, not an empty hash", async () => {
-    expect(await fingerprintFolder(freshMount(), relPath("gone"))).toEqual({
+    expect(
+      await fingerprintFolder(freshMount(), relPath("gone"), noFingerprintMemo),
+    ).toEqual({
       kind: "missing",
     });
   });

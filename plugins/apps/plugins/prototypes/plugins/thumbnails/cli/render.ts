@@ -7,7 +7,10 @@ import { diskDirMount } from "@plugins/infra/plugins/paths/plugins/data-files/ma
 import { ensureDep } from "@plugins/infra/plugins/deps/deps";
 import { cliExecContext } from "@plugins/infra/plugins/jobs/plugins/supervised-job/cli";
 import { chromium } from "@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/deps";
-import { fingerprintFolder } from "../server/internal/hash-dir";
+import {
+  fingerprintFolder,
+  noFingerprintMemo,
+} from "../server/internal/hash-dir";
 import { renderThumbnail } from "../machine/internal/render";
 
 /**
@@ -39,7 +42,11 @@ export const renderThumbnailsAction: CliAction<
     log: (line) => console.error(line),
   });
   for (const meta of metas) {
-    const fingerprint = await fingerprintFolder(mount, relPath(meta.name));
+    const fingerprint = await fingerprintFolder(
+      mount,
+      relPath(meta.name),
+      noFingerprintMemo,
+    );
     if (fingerprint.kind !== "hashed")
       throw new Error(`${meta.name} vanished from ${tree} while rendering`);
     const file = join(out, `${fingerprint.key}.png`);

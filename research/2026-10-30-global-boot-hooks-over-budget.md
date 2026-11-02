@@ -36,7 +36,9 @@ filed as its own task.
    after the host settles under the warm-up executor's gate and slot. It
    declares a 6 s budget: its hashing measured ~1.8 s standalone and 3.6 s of
    own time as a warm-up on a worktree boot. Re-hashing every unchanged
-   prototype on every boot is filed separately.
+   prototype on every boot is filed separately — since fixed by a host-global
+   fingerprint memo (an unchanged folder is listed, not read or hashed), and the
+   warm-up is back on the default budget.
 3. **config-orphans** — the audit leaves `onAllReady` for a `worktree`-scoped
    `defineWarmup` (it still runs after every `onReady`, so it reads the full
    config registry).
