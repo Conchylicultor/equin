@@ -6,10 +6,8 @@ import {
 import { existsSync, realpathSync } from "node:fs";
 import { mkdir, unlink } from "node:fs/promises";
 import { sep } from "node:path";
-import type {
-  FileWatcher,
-  FileWatcherDecl,
-} from "@plugins/infra/plugins/file-watcher/server";
+import type { FileWatcherDecl } from "@plugins/infra/plugins/file-watcher/server";
+import { startEventualFileWatcher } from "@plugins/infra/plugins/file-watcher/machine";
 import type {
   AgentWriteLedger,
   AgentWriteLedgerEntry,
@@ -60,7 +58,9 @@ export interface DiskDataFilesOptions {
  *   files the prototypes CLI and every other backend take, so all of them
  *   interoperate.
  * - `watch` opens the root's declared file watcher once, on the first
- *   subscriber, and fans its batches out; a dropped-events report (`onLost`) is a `rescan`.
+ *   subscriber, and fans its batches out; a dropped-events report (`onLost`)
+ *   is a `rescan`, and so is the root's dir going or coming back — the watch
+ *   follows the folder through a delete and re-create (or a replace).
  * - An agent-origin write or remove under the root's ledger area is recorded
  *   in the shared agent-write ledger first, so the e2e harness can revert it.
  */
@@ -165,11 +165,13 @@ function realDir(dir: AppPath): AppPath {
 /**
  * One root's watch: the declared watcher opened once, on the first subscriber,
  * and stopped with the last; each batch handed to every subscriber as paths
- * inside the root.
+ * inside the root. It follows the root's dir: removed and re-created, or
+ * replaced (a restore renaming a new folder in), the watcher is opened again
+ * on the folder now there, and the change is a `rescan`.
  */
 function rootWatch(spec: FileRootSpec, binding: () => BoundRoot) {
   const handlers = new Set<DataChangeHandler>();
-  let opening: Promise<FileWatcher> | null = null;
+  let opening: Promise<{ stop(): Promise<void> }> | null = null;
 
   /** An event's absolute path as a RelPath inside the root, or null outside it. */
   const relOf = (path: string, prefixes: readonly string[]): RelPath | null => {
@@ -199,7 +201,7 @@ function rootWatch(spec: FileRootSpec, binding: () => BoundRoot) {
     );
   };
 
-  async function open(): Promise<FileWatcher> {
+  async function open(): Promise<{ stop(): Promise<void> }> {
     const watcher = binding().watcher;
     if (watcher === null) {
       throw new Error(
@@ -207,15 +209,23 @@ function rootWatch(spec: FileRootSpec, binding: () => BoundRoot) {
       );
     }
     const dir = binding().dir();
-    // The engine errors on a missing dir; the root's data dir is its owner's,
-    // so making it is the root's to do.
+    // The root's data dir is its owner's, so making it on the first open is
+    // the root's to do. Never again on its loss: a mkdir then would race a
+    // replace (rm + rename-in) — the watch follows the folder back instead.
     await mkdir(dir, { recursive: true });
-    // FSEvents reports real paths (`/private/var/…` for `/var/…`).
-    const prefixes = [...new Set([dir, realDir(dir)])];
-    return watcher.start({
-      dirs: [dir],
+    // FSEvents reports real paths (`/private/var/…` for `/var/…`), and the
+    // hub keys its watches by them: follow the real dir.
+    const real = realDir(dir);
+    const prefixes = [...new Set([dir, real])];
+    return startEventualFileWatcher(watcher, {
+      dir: real,
       label: spec.id,
       onChange: (events) => {
+        // The dir itself appeared, went or was replaced: anything in it may
+        // differ, unheard.
+        if (events.some((e) => e.path === real)) {
+          return deliver({ kind: "rescan" });
+        }
         const paths = events
           .map((e) => relOf(e.path, prefixes))
           .filter(
@@ -228,7 +238,7 @@ function rootWatch(spec: FileRootSpec, binding: () => BoundRoot) {
         if (reported.length === 0) return undefined;
         return deliver({ kind: "changed", paths: reported });
       },
-      // The watch reported dropped events: re-derive everything.
+      // The watch reported dropped events, or its dir went: re-derive everything.
       onLost: () => deliver({ kind: "rescan" }),
     });
   }

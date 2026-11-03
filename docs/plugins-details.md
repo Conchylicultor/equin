@@ -31028,9 +31028,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `boundaries/no-platform-api` — `core/internal/file-sink.ts`, `core/internal/history.ts`, `core/internal/read.ts` (debt)
     - **`file-watcher`** — defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, depth, mainOnly) whose start({dirs, label, onChange, onLost}) opens instances over one @parcel/watcher engine (debounce + ceiling flush, kqueue sizing; no timer — a dropped event is reported to onLost, the one backstop). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: one native watch per folder tree, refcounted, a dir under a watched root riding its watch, with subtree or children (depth-1 listing) scope — a children request with no root above it opening only a single-directory watch (depth children, fs.watch), never a recursive one.
       - Cross-plugin:
-        - Imported by: 25 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
+        - Imported by: 26 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
+          - `infra` ×8
           - `debug` ×7
-          - `infra` ×7
           - `build` ×2
           - `conversations` ×2
           - `apps/sonata/sources/midi/folders`
@@ -31079,7 +31079,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineFileWatcher('file-watcher.dirs')`
           - `defineFileWatcher('file-watcher.dir-entries')`
       - Machine:
-        - Exports (values): `acquireEventualDirWatch`
+        - Exports (types): `EventualFileWatcherOptions`
+        - Exports (values):
+          - `acquireEventualDirWatch`
+          - `startEventualFileWatcher`
       - Cli:
         - Exports (types):
           - `FileWatcher`
@@ -31087,6 +31090,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WatchLost`
           - `WatchReaction`
         - Exports (values): `watchForCommand`
+      - Test helpers:
+        - Server: `@plugins/infra/plugins/file-watcher/server/testing`
+          - `registerDirWatchHub` — Register the shared directory-watch hub's two declarations, as the file-watcher server plugin's `register: [...]` does at boot — for a suite that opens the real hub (`acquireDirWatch`, `acquireEventualDirWatch`, `startEventualFileWatcher`) without booting the graph.
       - Plugins:
         - **`background-arm`** — File watchers in the Background activity catalog: registers the `file-watcher` background kind — every declaration made with defineFileWatcher under File watchers, triggered on file change, its scope from mainOnly, and its facts (open instances and the directories each watches, the native backend, the last change batch) — plus its handler runs in this process. Pushes the catalog as instances open and close and as runs land (throttled by the file-watcher registry).
           - Server:
@@ -32795,6 +32801,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `data-files.stat` (push, notified)
               - `data-files.text` (invalidate, notified)
             - Routes: `GET /api/data-files/:root/raw`
+          - Machine:
+            - Uses: `infra/file-watcher.startEventualFileWatcher`
+            - Exports (values):
+              - `diskDirMount`
+              - `diskMount`
+              - `FileRootLocation`
           - Core:
             - Uses:
               - `infra/endpoints.assetPath`
@@ -32858,11 +32870,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/file-viewer`
           - Exemptions:
             - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/roots.ts` (debt)
-          - Machine:
-            - Exports (values):
-              - `diskDirMount`
-              - `diskMount`
-              - `FileRootLocation`
           - Test helpers:
             - Server: `@plugins/infra/plugins/paths/plugins/data-files/server/testing`
               - `CONFORMANCE_ROOT` — The suite's root: watched, with {@link CONFORMANCE_WATCH_EXTENSIONS}.

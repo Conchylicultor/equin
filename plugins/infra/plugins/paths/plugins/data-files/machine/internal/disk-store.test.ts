@@ -1,5 +1,5 @@
 import { afterAll, expect, test } from "bun:test";
-import { closeSync, mkdirSync, openSync } from "node:fs";
+import { closeSync, mkdirSync, openSync, renameSync, rmSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -10,9 +10,10 @@ import {
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { flockTry } from "@plugins/packages/plugins/flock/core";
 import { defineFileWatcher } from "@plugins/infra/plugins/file-watcher/server";
+import { registerDirWatchHub } from "@plugins/infra/plugins/file-watcher/server/testing";
 import { systemOrigin } from "@plugins/infra/plugins/request-origin/core";
 import { relPath } from "../../core/internal/rel-path";
-import { LockBusyError } from "../../core/internal/types";
+import { LockBusyError, type DataChange } from "../../core/internal/types";
 import type { FileRootSpec } from "../../server";
 import { describeDataFilesConformance } from "../../server/testing";
 import {
@@ -37,6 +38,9 @@ async function rejection(p: Promise<unknown>): Promise<Error> {
 }
 
 let watchers = 0;
+// A root's watch follows its dir through the hub (a children watch of its
+// parent), which the file-watcher server plugin registers at boot.
+registerDirWatchHub();
 
 /** A disk provider over a fresh temp dir: each root a subdir named by its id. */
 async function diskHarness() {
@@ -66,6 +70,8 @@ async function diskHarness() {
   });
   return {
     store,
+    /** Where a root lives: its id under the temp dir. */
+    dirOf: (spec: FileRootSpec) => join(tmp, spec.id),
     dispose: () => rm(tmp, { recursive: true, force: true }),
   };
 }
@@ -187,3 +193,70 @@ test("a ledger entry restores by its one role, a role recorded before the root's
     "exactly one file",
   );
 });
+
+const followRoot: FileRootSpec = {
+  id: "follow",
+  dir: "cache/data-files-follow",
+  watch: {
+    name: "data-files-test.follow",
+    description: "A root whose dir is removed and re-created under its watch.",
+    extensions: [".txt"],
+  },
+};
+
+/** Until `done` holds over `seen`, at most 5 s. Test-only bound, not production polling. */
+async function until(
+  seen: DataChange[],
+  done: (seen: DataChange[]) => boolean,
+): Promise<void> {
+  for (let i = 0; i < 250 && !done(seen); i++) await Bun.sleep(20);
+  if (!done(seen)) {
+    throw new Error(
+      `no matching change within 5s; saw ${JSON.stringify(seen)}`,
+    );
+  }
+}
+
+const heard = (seen: DataChange[], path: string): boolean =>
+  seen.some((c) => c.kind === "changed" && c.paths.includes(relPath(path)));
+
+for (const how of [
+  "removed and re-created",
+  "replaced by a folder renamed in",
+]) {
+  test(`a root's watch follows its dir ${how}: a rescan, then its writes are heard`, async () => {
+    const h = await diskHarness();
+    const root = h.store.root(followRoot);
+    const dir = h.dirOf(followRoot);
+    const seen: DataChange[] = [];
+    const sub = await root.watch((change) => void seen.push(change));
+    try {
+      await root.write(relPath("before.txt"), "x", {
+        writer: systemOrigin("t"),
+      });
+      await until(seen, (s) => heard(s, "before.txt"));
+
+      if (how === "removed and re-created") {
+        rmSync(dir, { recursive: true });
+        mkdirSync(dir);
+      } else {
+        const staged = `${dir}.staged`;
+        mkdirSync(staged);
+        rmSync(dir, { recursive: true });
+        renameSync(staged, dir);
+      }
+      const from = seen.length;
+      await until(seen, (s) => s.slice(from).some((c) => c.kind === "rescan"));
+
+      // The folder now at the path is watched: the rescan comes once its
+      // watch is open.
+      await root.write(relPath("after.txt"), "x", {
+        writer: systemOrigin("t"),
+      });
+      await until(seen, (s) => heard(s, "after.txt"));
+    } finally {
+      await sub.dispose();
+      await h.dispose();
+    }
+  });
+}

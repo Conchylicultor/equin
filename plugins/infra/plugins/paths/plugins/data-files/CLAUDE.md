@@ -84,7 +84,7 @@ App data place (`apps/file-explorer/app-data`) is the browser.
 
 | host | provider | notes |
 |---|---|---|
-| desktop | `data-files#machine` | single-descriptor reads (a racing remove is `missing`, never ENOENT), temp+rename writes, flock, one `defineFileWatcher` per watching root (named by the root, so the Background catalog lists it; declared in data-files), one ledger per ledgered root |
+| desktop | `data-files#machine` | single-descriptor reads (a racing remove is `missing`, never ENOENT), temp+rename writes, flock, one `defineFileWatcher` per watching root (named by the root, so the Background catalog lists it; declared in data-files), opened with `startEventualFileWatcher` so it follows the root's dir through a removal and re-creation or a replace (a `rescan` each time; the dir is made only on the first open), one ledger per ledgered root |
 | browser | `plugins/memory` (base-excluded) | in-process tree, monotonic clock, keyed-mutex locks, one `changed` per microtask, never `rescan` |
 
 `diskMount(dataDir)` (machine barrel) is the disk operations for a `cli/`
@@ -157,6 +157,12 @@ against both providers; a new provider runs it too.
     - `data-files.stat` (push, notified)
     - `data-files.text` (invalidate, notified)
   - Routes: `GET /api/data-files/:root/raw`
+- Machine:
+  - Uses: `infra/file-watcher.startEventualFileWatcher`
+  - Exports (values):
+    - `diskDirMount`
+    - `diskMount`
+    - `FileRootLocation`
 - Core:
   - Uses:
     - `infra/endpoints.assetPath`
@@ -220,11 +226,6 @@ against both providers; a new provider runs it too.
     - `primitives/file-viewer`
 - Exemptions:
   - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/roots.ts` (debt)
-- Machine:
-  - Exports (values):
-    - `diskDirMount`
-    - `diskMount`
-    - `FileRootLocation`
 - Test helpers:
   - Server: `@plugins/infra/plugins/paths/plugins/data-files/server/testing`
     - `CONFORMANCE_ROOT` — The suite's root: watched, with {@link CONFORMANCE_WATCH_EXTENSIONS}.

@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { DirWatchRequest, FileChangeEvent } from "../../server";
+import { WatchedDirGoneError } from "../../shared/engine";
 import { acquireEventualDirWatchWith } from "./eventual-dir-watch";
 
 /** A fake hub: one held watch per dir. */
@@ -95,6 +96,40 @@ describe("acquireEventualDirWatchWith", () => {
       caught = err;
     }
     expect(caught).toBeInstanceOf(Error);
+    expect(fake.held.size).toBe(0);
+  });
+});
+
+describe("the dir's own watch reporting its dir gone", () => {
+  test("re-opens it, even when the folder now there has the same inode", async () => {
+    const { dir, fake, seen, request } = setup();
+    mkdirSync(dir);
+    let opens = 0;
+    const acquire = async (r: DirWatchRequest) => {
+      if (r.dir === dir) opens++;
+      return fake.acquire(r);
+    };
+    const lost: unknown[] = [];
+    const release = await acquireEventualDirWatchWith(acquire, {
+      ...request,
+      onLost: (e) => void lost.push(e),
+    });
+    expect(opens).toBe(1);
+
+    // The engine closed the dir's watch (it saw the dir go); by the time the
+    // re-sync stats the path a folder is back there — same inode or not, the
+    // dead watch must not be kept.
+    const gone = new WatchedDirGoneError(dir);
+    fake.held.get(dir)!.onLost!(gone);
+    for (let i = 0; i < 100 && opens < 2; i++) await Bun.sleep(5);
+    expect(opens).toBe(2);
+    expect(fake.held.has(dir)).toBe(true);
+    expect(seen).toEqual([
+      { type: "delete", path: dir },
+      { type: "create", path: dir },
+    ]);
+    expect(lost).toEqual([gone]);
+    release();
     expect(fake.held.size).toBe(0);
   });
 });
