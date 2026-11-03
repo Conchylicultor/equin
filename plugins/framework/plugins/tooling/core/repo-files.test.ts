@@ -200,8 +200,8 @@ describe("loadRepoSnapshot", () => {
     expect([...snap.all()]).toEqual([...EXPECTED, "ignored/i.ts"].sort());
   });
 
-  test("a missing extra fails loudly", async () => {
-    await expect(
+  test("a missing extra fails loudly", () => {
+    expect(
       loadRepoSnapshot(root, { extra: ["ignored/nope.ts"] }),
     ).rejects.toThrow("hash-object");
   });
