@@ -33,7 +33,7 @@ export function FolderPath({ path }: { path: string }) {
     <Inline
       gap="2xs"
       align="center"
-      className="max-w-full rounded-md bg-muted py-2xs pr-sm pl-xs text-muted-foreground"
+      className="rounded-md bg-muted py-2xs pr-sm pl-xs text-muted-foreground"
     >
       <Icon icon={folderIcon} className={`size-3 ${rigidClass()}`} />
       <Text variant="code" title={path}>

@@ -93,13 +93,7 @@ export function SubtitleRun({
     return (
       <span key={field.id}>
         {separator}
-        {isChip[fi] ? (
-          <Inline gap="none" className="max-w-full">
-            {cell}
-          </Inline>
-        ) : (
-          cell
-        )}
+        {isChip[fi] ? <Inline gap="none">{cell}</Inline> : cell}
       </span>
     );
   });

@@ -38,7 +38,7 @@ export function FilePath({ filePath }: FilePathProps) {
   );
 
   return (
-    <Inline gap="2xs" className="group/path max-w-full">
+    <Inline gap="2xs" className="group/path">
       <SingleLineProvider value={true}>
         <Text
           as="button"

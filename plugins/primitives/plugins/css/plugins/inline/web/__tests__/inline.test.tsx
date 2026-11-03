@@ -24,18 +24,21 @@ describe("Inline", () => {
     expect(el.classList.contains("gap-2xs")).toBe(true);
     // default cross-axis alignment is center.
     expect(el.classList.contains("items-center")).toBe(true);
+    // bounded by its line, so a long label inside truncates instead of overflowing.
+    expect(el.classList.contains("max-w-full")).toBe(true);
   });
 
   it("never bakes in min-w-0 — the truncation leaf owns it, not the container", () => {
     render(
-      <Inline gap="none" className="max-w-full" data-testid="box">
+      <Inline gap="none" className="max-w-xs" data-testid="box">
         <span>x</span>
       </Inline>,
     );
     const el = document.querySelector<HTMLElement>('[data-testid="box"]')!;
     expect(el.classList.contains("min-w-0")).toBe(false);
-    // caller className composes last.
-    expect(el.classList.contains("max-w-full")).toBe(true);
+    // caller className composes last: its own bound replaces the default one.
+    expect(el.classList.contains("max-w-xs")).toBe(true);
+    expect(el.classList.contains("max-w-full")).toBe(false);
   });
 
   it("honors as / align overrides and forwards arbitrary attributes", () => {

@@ -108,13 +108,7 @@ function LegacyRun({ titleSeam }: { titleSeam: boolean }): ReactNode {
     return (
       <span key={field.id}>
         {sep}
-        {isChip[fi] ? (
-          <Inline gap="none" className="max-w-full">
-            {cell}
-          </Inline>
-        ) : (
-          cell
-        )}
+        {isChip[fi] ? <Inline gap="none">{cell}</Inline> : cell}
       </span>
     );
   });

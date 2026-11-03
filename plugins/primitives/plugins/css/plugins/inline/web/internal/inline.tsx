@@ -38,10 +38,16 @@ export interface InlineProps extends React.HTMLAttributes<HTMLElement> {
  *     re-implementing the ramp.
  *   - `align-baseline` (`vertical-align: baseline`) seats the box on the surrounding
  *     text baseline — the same recipe `Badge` uses for inline-in-text chips.
+ *   - `max-w-full` bounds the box by its line, as `Badge` bounds a chip. An
+ *     inline-level box sizes to its content, so without it a row holding a long
+ *     label outgrew its container and was clipped there, and the truncating leaf
+ *     inside never got a width to ellipsize at. Built in rather than left to each
+ *     caller: a caller that forgot it (the editor's token frame) clipped a chip
+ *     instead of truncating it. A caller wanting another bound passes its own
+ *     `max-w-*` (tailwind-merge keeps the later one).
  *
- * Deliberately carries NO `min-w-0`: the box constrains itself with `max-w-full`
- * (in `className`) and the truncation LEAF inside owns `min-w-0`, keeping the
- * "exactly one primitive owns `min-w-0`" invariant intact.
+ * Deliberately carries NO `min-w-0`: the truncation LEAF inside owns it, keeping
+ * the "exactly one primitive owns `min-w-0`" invariant intact.
  *
  * Caller `className` composes last.
  */
@@ -65,7 +71,7 @@ export function Inline({
       wrap={wrap}
       as={As}
       ref={ref}
-      className={cn("inline-flex align-baseline", className)}
+      className={cn("inline-flex align-baseline max-w-full", className)}
       {...rest}
     >
       {children}

@@ -19,8 +19,12 @@ align/justify semantics stay in one place. It overrides only the display:
 - `align-baseline` (`vertical-align: baseline`) seats the box on the surrounding text
   baseline — the recipe `Badge` already uses for inline-in-text chips.
 
-Carries **no `min-w-0`**: constrain the box with `max-w-full` in `className`; the truncation
-leaf inside (a `<Text>` in a line container) owns `min-w-0`. This preserves the "exactly one
+- `max-w-full` bounds the box by its line (as `Badge` bounds a chip), so a long label inside
+  truncates instead of the whole row overflowing and being clipped. Built in — a caller never
+  adds it; pass another `max-w-*` to bound it tighter.
+
+Carries **no `min-w-0`**: the truncation leaf inside (a `<Text>` in a line container) owns
+`min-w-0`. This preserves the "exactly one
 primitive owns `min-w-0`" invariant.
 
 Single-line context: a non-wrapping `<Inline>` (the default — a row that is line-ish, not a

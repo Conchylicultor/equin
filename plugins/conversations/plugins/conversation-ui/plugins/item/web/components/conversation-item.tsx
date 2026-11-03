@@ -263,11 +263,7 @@ export function ConversationItem({
   }
   if (layout === "inline") {
     return (
-      <Inline
-        ref={ref}
-        gap="xs"
-        className={cn("max-w-full", active && "opacity-60")}
-      >
+      <Inline ref={ref} gap="xs" className={cn(active && "opacity-60")}>
         <ControlSizeProvider size="xs">
           <AvatarSlot conv={conv} />
         </ControlSizeProvider>
