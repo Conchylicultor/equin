@@ -33,9 +33,9 @@ import type { LogChannel } from "@plugins/primitives/plugins/log-channels/server
 import type { RunTerminal } from "../../../core";
 import { defineSupervisedRunKind, type UnfinishedRun } from "./registry";
 import {
-  isSupervisedSpawnError,
   reconcileSupervisedRuns,
   startSupervisedRun,
+  SupervisedSpawnError,
   supervisedRunLivenessTimer,
   supervisedRunWatcher,
 } from "./supervisor";
@@ -348,16 +348,6 @@ const spawnKind = defineSupervisedRunKind({
 });
 await spawnKind.register();
 
-/** Await `p` and return the Error it rejected with; throw if it resolved. */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 /** Both artifact paths of a run of `spawnKind`, registered for cleanup. */
 function trackArtifacts(runId: string): void {
   created.push(
@@ -379,14 +369,13 @@ describe("startSupervisedRun: which side of the spawn a failure happened on", ()
     created.push(marker);
     appendFileSync(marker, "0 -\n");
 
-    const err = await rejection(
-      startSupervisedRun(spawnKind, { runId, argv: ["true"] }),
-    );
+    const failed = startSupervisedRun(spawnKind, { runId, argv: ["true"] });
 
-    expect(isSupervisedSpawnError(err)).toBe(true);
-    if (!isSupervisedSpawnError(err)) return;
-    expect(err.childStarted).toBe(false);
-    expect(err.message).toContain("BEFORE");
+    expect(failed).rejects.toBeInstanceOf(SupervisedSpawnError);
+    expect(failed).rejects.toMatchObject({
+      childStarted: false,
+      message: expect.stringContaining("BEFORE"),
+    });
   });
 
   test("a failure after the spawn reports childStarted: true", async () => {
@@ -397,16 +386,15 @@ describe("startSupervisedRun: which side of the spawn a failure happened on", ()
       // `true` exits immediately, so the child this spawns is gone by the time
       // the assertion runs — the point is only that it EXISTED, which is what
       // makes closing its row unsafe.
-      const err = await rejection(
-        startSupervisedRun(spawnKind, { runId, argv: ["true"] }),
-      );
+      const failed = startSupervisedRun(spawnKind, { runId, argv: ["true"] });
 
-      expect(isSupervisedSpawnError(err)).toBe(true);
-      if (!isSupervisedSpawnError(err)) return;
-      expect(err.childStarted).toBe(true);
-      expect(err.message).toContain("AFTER");
-      // The original failure is preserved rather than replaced.
-      expect((err.cause as Error).message).toBe("setPid write failed");
+      expect(failed).rejects.toBeInstanceOf(SupervisedSpawnError);
+      expect(failed).rejects.toMatchObject({
+        childStarted: true,
+        message: expect.stringContaining("AFTER"),
+        // The original failure is preserved rather than replaced.
+        cause: { message: "setPid write failed" },
+      });
     } finally {
       setPidFails = false;
     }

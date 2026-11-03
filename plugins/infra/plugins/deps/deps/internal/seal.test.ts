@@ -45,15 +45,6 @@ afterEach(() => rmSync(base, { recursive: true, force: true }));
 
 const exec = execContextForTests();
 
-/** The message a promise rejects with; a resolve fails the test. */
-async function errorOf(promise: Promise<unknown>): Promise<string> {
-  const outcome = await promise.then(
-    () => null,
-    (err: unknown) => (err instanceof Error ? err.message : String(err)),
-  );
-  if (outcome === null) throw new Error("expected a rejection");
-  return outcome;
-}
 const HOST = hostTarget();
 const FOREIGN: DepTarget =
   HOST.platform === "linux"
@@ -167,16 +158,14 @@ describe("sealDep", () => {
     const calls: Calls = { identity: 0, install: [] };
     const dep = fakeDep(calls, "required", (t) => t === HOST);
     expect(
-      await errorOf(
-        sealDep(dep, {
-          target: FOREIGN,
-          outDir: bundle,
-          exec,
-          root: base,
-          store,
-        }),
-      ),
-    ).toMatch(/required in every bundle.*cannot build/);
+      sealDep(dep, {
+        target: FOREIGN,
+        outDir: bundle,
+        exec,
+        root: base,
+        store,
+      }),
+    ).rejects.toThrow(/required in every bundle.*cannot build/);
   });
 
   test("an optional one is left out, and the bundle says why", async () => {
@@ -209,16 +198,14 @@ describe("sealDep", () => {
       store,
     });
     expect(
-      await errorOf(
-        sealDep(fakeDep(calls, "required", undefined, "other-dep"), {
-          target: HOST,
-          outDir: bundle,
-          exec,
-          root: base,
-          store,
-        }),
-      ),
-    ).toMatch(/seals a bundle for/);
+      sealDep(fakeDep(calls, "required", undefined, "other-dep"), {
+        target: HOST,
+        outDir: bundle,
+        exec,
+        root: base,
+        store,
+      }),
+    ).rejects.toThrow(/seals a bundle for/);
   });
 });
 
@@ -253,7 +240,7 @@ describe("a sealed root", () => {
     expect(calls.identity).toBe(before.identity);
     expect(calls.install).toEqual(before.install);
     expect(existsSync(store.cacheRoot)).toBe(false);
-    expect(await errorOf(removeDep(dep, { root: bundle, store }))).toMatch(
+    expect(removeDep(dep, { root: bundle, store })).rejects.toThrow(
       /sealed release bundle/,
     );
   });
@@ -269,9 +256,9 @@ describe("a sealed root", () => {
     });
     const missing = fakeDep(calls, "required", undefined, "not-in-bundle");
     const identityBefore = calls.identity;
-    expect(
-      await errorOf(ensureDep(missing, exec, { root: bundle, store })),
-    ).toMatch(/not sealed into this bundle/);
+    expect(ensureDep(missing, exec, { root: bundle, store })).rejects.toThrow(
+      /not sealed into this bundle/,
+    );
     const now = await readyNow(missing, { root: bundle, store });
     expect(now.kind).toBe("failed");
     expect(calls.identity).toBe(identityBefore);

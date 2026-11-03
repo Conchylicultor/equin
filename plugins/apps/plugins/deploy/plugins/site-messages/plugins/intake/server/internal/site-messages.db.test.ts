@@ -87,16 +87,6 @@ function send(
   );
 }
 
-/** The error a promise rejects with; a resolve fails the test. */
-function rejection(p: Promise<unknown>): Promise<unknown> {
-  return p.then(
-    () => {
-      throw new Error("expected a rejection");
-    },
-    (err: unknown) => err,
-  );
-}
-
 async function rows() {
   return t.db.select().from(siteMessages).orderBy(siteMessages.createdAt);
 }
@@ -244,9 +234,9 @@ describe("notify", () => {
         error: "domain not verified",
       }),
     });
-    expect(
-      String(await rejection(notifySiteMessage(t.db, id, refusing))),
-    ).toMatch(/domain not verified/);
+    expect(notifySiteMessage(t.db, id, refusing)).rejects.toThrow(
+      /domain not verified/,
+    );
     let [row] = await t.db
       .select()
       .from(siteMessages)
@@ -256,8 +246,8 @@ describe("notify", () => {
       notifyError: "Resend answered 403: domain not verified",
     });
     expect(
-      await rejection(notifySiteMessage(t.db, id, { ...refusing, attempt: 5 })),
-    ).toBeInstanceOf(Error);
+      notifySiteMessage(t.db, id, { ...refusing, attempt: 5 }),
+    ).rejects.toBeInstanceOf(Error);
     [row] = await t.db
       .select()
       .from(siteMessages)
@@ -371,14 +361,16 @@ describe("confirm", () => {
     const refusing = deps({
       send: async () => ({ ok: false, status: 422, error: "bad address" }),
     });
-    expect(
-      String(await rejection(confirmSiteMessage(t.db, id, refusing))),
-    ).toMatch(/bad address/);
+    expect(confirmSiteMessage(t.db, id, refusing)).rejects.toThrow(
+      /bad address/,
+    );
     expect(await row(id)).toMatchObject({
       confirmState: "pending",
       confirmError: "Resend answered 422: bad address",
     });
-    await rejection(confirmSiteMessage(t.db, id, { ...refusing, attempt: 5 }));
+    expect(
+      confirmSiteMessage(t.db, id, { ...refusing, attempt: 5 }),
+    ).rejects.toBeInstanceOf(Error);
     expect((await row(id)).confirmState).toBe("failed");
   });
 

@@ -13,16 +13,6 @@ afterEach(() => {
   for (const s of servers.splice(0)) s.stop();
 });
 
-/** Await `p` and return what it rejected with; throw if it resolved. */
-async function rejection(p: Promise<unknown>): Promise<unknown> {
-  try {
-    await p;
-  } catch (err) {
-    return err;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 function serve(handler: (req: Request) => Response): string {
   const server = Bun.serve({ port: 0, fetch: handler });
   servers.push(server);
@@ -67,40 +57,38 @@ describe("fetchStopGate", () => {
     expect(calls).toBe(3);
   });
 
-  test("a 4xx throws at once", async () => {
+  test("a 4xx throws at once", () => {
     let calls = 0;
     const baseUrl = serve(() => {
       calls++;
       return new Response("no", { status: 404 });
     });
     expect(
-      await rejection(fetchStopGate({ baseUrl, conversationId: "c" })),
-    ).toBeInstanceOf(StopGateRefusedError);
+      fetchStopGate({ baseUrl, conversationId: "c" }),
+    ).rejects.toBeInstanceOf(StopGateRefusedError);
     expect(calls).toBe(1);
   });
 
-  test("a malformed answer throws at once", async () => {
+  test("a malformed answer throws at once", () => {
     const baseUrl = serve(() => Response.json({ decision: "maybe" }));
     expect(
-      await rejection(fetchStopGate({ baseUrl, conversationId: "c" })),
-    ).toBeInstanceOf(StopGateRefusedError);
+      fetchStopGate({ baseUrl, conversationId: "c" }),
+    ).rejects.toBeInstanceOf(StopGateRefusedError);
   });
 
-  test("gives up once the backend has been unreachable long enough", async () => {
+  test("gives up once the backend has been unreachable long enough", () => {
     let t = 0;
     expect(
-      await rejection(
-        fetchStopGate({
-          baseUrl: "http://127.0.0.1:1",
-          conversationId: "c",
-          sleep: (ms) => {
-            t += ms;
-            return Promise.resolve();
-          },
-          now: () => t,
-        }),
-      ),
-    ).toBeInstanceOf(Error);
+      fetchStopGate({
+        baseUrl: "http://127.0.0.1:1",
+        conversationId: "c",
+        sleep: (ms) => {
+          t += ms;
+          return Promise.resolve();
+        },
+        now: () => t,
+      }),
+    ).rejects.toBeInstanceOf(Error);
   });
 });
 

@@ -31,26 +31,11 @@ test("getMainRepoRoot resolves the main checkout owning .git", async () => {
   expect(existsSync(join(mainRoot, ".git"))).toBe(true);
 });
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test (see the
- * host-semaphore suite's identical helper), so this asserts the rejection for
- * real and hands back the error to pin its class.
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 test("throws outside a git repo instead of absorbing to empty", async () => {
   const dir = mkdtempSync(join(tmpdir(), "sg-spawn-norepo-"));
   try {
-    expect(await rejection(getWorktreeRoot(dir))).toBeInstanceOf(SpawnFailedError);
-    expect(await rejection(getMainRepoRoot(dir))).toBeInstanceOf(SpawnFailedError);
+    expect(getWorktreeRoot(dir)).rejects.toBeInstanceOf(SpawnFailedError);
+    expect(getMainRepoRoot(dir)).rejects.toBeInstanceOf(SpawnFailedError);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

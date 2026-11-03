@@ -3,21 +3,6 @@ import { createInflight } from "./inflight";
 
 const tick = () => new Promise<void>((r) => setTimeout(r, 0));
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test (see the
- * spawn / host-semaphore suites' identical helper), so awaiting it is an
- * `await` of a non-Thenable — this asserts the rejection for real.
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 describe("createInflight", () => {
   test("shares one execution across concurrent callers with the same key", async () => {
     const inflight = createInflight();
@@ -227,7 +212,7 @@ describe("createInflight — freshness floor (notBefore)", () => {
     });
 
     openOld();
-    expect((await rejection(first)).message).toContain("stale boom");
+    expect(first).rejects.toThrow("stale boom");
     expect(await second).toBe("fresh"); // the rejection is the old flight's alone
     await tick();
     expect(inflight.size).toBe(0);

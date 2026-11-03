@@ -113,15 +113,6 @@ function mintedKeys(key: string): string[] {
     .filter((k) => resourceDescriptorByKey(k) !== undefined);
 }
 
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 const sample = { id: "a", title: "T", rank: 1, notes: 2 };
 const script = (q: RecordedQuery): unknown[] =>
   /^SELECT \S+ AS __id /.test(q.sql) ? [{ __id: "a" }] : [sample];
@@ -210,7 +201,7 @@ describe("serveCollection — the `all` arm (C4)", () => {
     ).toBeUndefined();
     expect(specs.all.scopedMembership).toBeDefined();
     // Nothing registered: neither key resolves on the server.
-    expect((await rejection(loadResourceByKey(c.key, {}))).message).toMatch(
+    expect(loadResourceByKey(c.key, {})).rejects.toThrow(
       /unknown resource key/,
     );
   });

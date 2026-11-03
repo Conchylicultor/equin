@@ -35,16 +35,6 @@ const BASE = {
 
 const digestOf = (root: string) => computeDigest([join(root, "entry.ts")]);
 
-/** The error `p` rejected with (`rejects.toThrow` is typed `void` under bun:test). */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 test("a change to a file the entry reaches moves the digest", async () => {
   await tree(dir, BASE);
   const before = await digestOf(dir);
@@ -93,16 +83,14 @@ test("an import that does not resolve throws, naming it", async () => {
   await tree(dir, {
     "entry.ts": `import { x } from "./missing";\nexport const a = x;\n`,
   });
-  expect((await rejection(digestOf(dir))).message).toMatch(
-    /cannot resolve "\.\/missing"/,
-  );
+  expect(digestOf(dir)).rejects.toThrow(/cannot resolve "\.\/missing"/);
 });
 
 test("an import whose path is not a literal throws: the digest cannot follow it", async () => {
   await tree(dir, {
     "entry.ts": `export const load = (name: string) => import(\`./\${name}\`);\n`,
   });
-  expect((await rejection(digestOf(dir))).message).toMatch(
+  expect(digestOf(dir)).rejects.toThrow(
     /1 `import\(…\)` whose path is not a literal/,
   );
 });
@@ -127,7 +115,7 @@ test("sourceDigest: once per process per module set, and a set with no module th
   await tree(dir, { "lib/c.ts": `export const c = () => 0;\n` });
   expect(await sourceDigest([set])).toBe(first);
 
-  expect(
-    (await rejection(sourceDigest([defineSourceSet("empty set")]))).message,
-  ).toMatch(/"empty set" includes no module/);
+  expect(sourceDigest([defineSourceSet("empty set")])).rejects.toThrow(
+    /"empty set" includes no module/,
+  );
 });

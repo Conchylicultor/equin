@@ -489,9 +489,9 @@ describe("define-rollup oracle — the select against its declaration", () => {
     const bad = latestRollup({
       reads: [conversations.kind, conversations.title, conversations.createdAt],
     });
-    expect(
-      (await rejection(rebuildDerivedTables(t.db, [bad]))).message,
-    ).toMatch(/reads conversations\.status, which no declaration names/);
+    expect(rebuildDerivedTables(t.db, [bad])).rejects.toThrow(
+      /reads conversations\.status, which no declaration names/,
+    );
   });
 
   test("a table that is neither a source nor a via is refused", async () => {
@@ -504,9 +504,9 @@ describe("define-rollup oracle — the select against its declaration", () => {
          WHERE c.kind <> 'system' AND ${scope("a.task_id")}
          ORDER BY a.task_id, c.created_at DESC, c.id DESC`,
     });
-    expect(
-      (await rejection(rebuildDerivedTables(t.db, [bad]))).message,
-    ).toMatch(/reads public\.tasks, which is neither a source nor a via table/);
+    expect(rebuildDerivedTables(t.db, [bad])).rejects.toThrow(
+      /reads public\.tasks, which is neither a source nor a via table/,
+    );
   });
 
   test("a column the table does not have is refused, not dropped", async () => {
@@ -519,9 +519,9 @@ describe("define-rollup oracle — the select against its declaration", () => {
          WHERE c.kind <> 'system' AND ${scope("a.task_id")}
          ORDER BY a.task_id, c.created_at DESC, c.id DESC`,
     });
-    expect(
-      (await rejection(rebuildDerivedTables(t.db, [bad]))).message,
-    ).toMatch(/returns "kind", not a column of the table/);
+    expect(rebuildDerivedTables(t.db, [bad])).rejects.toThrow(
+      /returns "kind", not a column of the table/,
+    );
   });
 });
 
@@ -554,20 +554,6 @@ describe("define-rollup oracle — the older builds' state table", () => {
     await run(`DROP TABLE "${DERIVED_TABLE_STATE_TABLE}"`);
   });
 });
-
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test, so it cannot be
- * awaited under `await-thenable`.
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
 
 // Wait (bounded) until some backend of this database waits on an advisory
 // lock — the reconcile, queued behind a writer's per-key lock.

@@ -67,15 +67,6 @@ async function triggeredTables(): Promise<string[]> {
   return [...new Set(rows.map((r) => r.table))].sort();
 }
 
-async function rejection(p: Promise<unknown>): Promise<string> {
-  try {
-    await p;
-  } catch (err) {
-    return String(err);
-  }
-  throw new Error("expected the install to throw, but it resolved");
-}
-
 describe("installFeed with a produced table", () => {
   test("a table that was triggered loses its triggers once produced; A1′ covers a route on it", async () => {
     // A previous boot, before the table had a producer.
@@ -92,43 +83,38 @@ describe("installFeed with a produced table", () => {
   });
 
   test("A1′ still refuses a table with no change source at all", async () => {
-    const err = await rejection(
-      installFeed(
-        t.db,
-        inputs(
-          {},
-          {
-            scoped: [
-              { key: "ghost.list", table: "pb_ghost", via: 'route "ghost"' },
-            ],
-          },
-        ),
+    const boot = installFeed(
+      t.db,
+      inputs(
+        {},
+        {
+          scoped: [
+            { key: "ghost.list", table: "pb_ghost", via: 'route "ghost"' },
+          ],
+        },
       ),
     );
-    expect(err).toContain("Dead scope policy");
-    expect(err).toContain("pb_ghost");
+    expect(boot).rejects.toThrow("Dead scope policy");
+    expect(boot).rejects.toThrow("pb_ghost");
   });
 
   test("A2′: a produced table that is also opted out, or a rollup, blocks boot", async () => {
     expect(
-      await rejection(
-        installFeed(t.db, inputs({ optedOut: new Set(["pb_items"]) })),
-      ),
-    ).toContain("AND an ExcludeFromChangeFeed");
+      installFeed(t.db, inputs({ optedOut: new Set(["pb_items"]) })),
+    ).rejects.toThrow("AND an ExcludeFromChangeFeed");
     expect(
-      await rejection(
-        installFeed(t.db, inputs({ feedExempt: new Set(["pb_items"]) })),
-      ),
-    ).toContain("AND is a derived-table rollup");
+      installFeed(t.db, inputs({ feedExempt: new Set(["pb_items"]) })),
+    ).rejects.toThrow("AND is a derived-table rollup");
   });
 
   test("D6: a DB-backed resource that declares no reads blocks boot", async () => {
-    const err = await rejection(
-      installFeed(t.db, inputs({}, { unrouted: ["a.value", "b.value"] })),
+    const boot = installFeed(
+      t.db,
+      inputs({}, { unrouted: ["a.value", "b.value"] }),
     );
-    expect(err).toContain("declare no reads");
-    expect(err).toContain("a.value");
-    expect(err).toContain("b.value");
+    expect(boot).rejects.toThrow("declare no reads");
+    expect(boot).rejects.toThrow("a.value");
+    expect(boot).rejects.toThrow("b.value");
   });
 
   test("D35: a view's bases must each have a change source or be opted out", async () => {
@@ -150,40 +136,36 @@ describe("installFeed with a produced table", () => {
       ),
     );
     // A view reaching, through a rollup, a source no trigger feeds.
-    const err = await rejection(
-      installFeed(
-        t.db,
-        inputs(
-          {},
-          {
-            relations: {
-              views: new Map([["pb_v", ["pb_other", "pb_roll"]]]),
-              rollups: new Map([["pb_roll", ["pb_ghost"]]]),
-            },
+    const boot = installFeed(
+      t.db,
+      inputs(
+        {},
+        {
+          relations: {
+            views: new Map([["pb_v", ["pb_other", "pb_roll"]]]),
+            rollups: new Map([["pb_roll", ["pb_ghost"]]]),
           },
-        ),
+        },
       ),
     );
-    expect(err).toContain("D35");
-    expect(err).toContain('view "pb_v" → "pb_ghost"');
-    expect(err).toContain('rollup "pb_roll" → "pb_ghost"');
-    expect(err).not.toContain('"pb_other"');
+    expect(boot).rejects.toThrow("D35");
+    expect(boot).rejects.toThrow('view "pb_v" → "pb_ghost"');
+    expect(boot).rejects.toThrow('rollup "pb_roll" → "pb_ghost"');
+    expect(boot).rejects.not.toThrow('"pb_other"');
   });
 
   test("A3p: a route on a produced table that needs a carried column blocks boot", async () => {
-    const err = await rejection(
-      installFeed(
-        t.db,
-        inputs(
-          {},
-          {
-            layouts: [{ ...identityLayout, carry: ["kind"] }],
-          },
-        ),
+    const boot = installFeed(
+      t.db,
+      inputs(
+        {},
+        {
+          layouts: [{ ...identityLayout, carry: ["kind"] }],
+        },
       ),
     );
-    expect(err).toContain("A3p");
-    expect(err).toContain('"pb_items" routes need "kind"');
+    expect(boot).rejects.toThrow("A3p");
+    expect(boot).rejects.toThrow('"pb_items" routes need "kind"');
   });
 
   test("A2′ (catalog): a live_state trigger on a produced table blocks boot", async () => {
@@ -194,8 +176,8 @@ describe("installFeed with a produced table", () => {
     `);
     try {
       expect(
-        await rejection(assertNoTriggerOnProduced(t.db, new Set(["pb_items"]))),
-      ).toContain("live_state_pb_items_x");
+        assertNoTriggerOnProduced(t.db, new Set(["pb_items"])),
+      ).rejects.toThrow("live_state_pb_items_x");
     } finally {
       await t.db.execute(
         sql`DROP TRIGGER live_state_pb_items_x ON pb_items; DROP FUNCTION pb_noop()`,

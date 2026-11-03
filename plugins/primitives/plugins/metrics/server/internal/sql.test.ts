@@ -15,20 +15,6 @@ import {
 import { resolveRange, type Interval } from "../../core/intervals";
 import { sqlFlow, sqlLevel } from "./sql";
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test, so awaiting it
- * trips await-thenable.
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 let t: TestDb;
 
 const NOW = new Date("2026-09-30T15:00:00Z");
@@ -135,9 +121,9 @@ describe("sqlFlow", () => {
   });
 
   test("a split with no SQL expression throws", async () => {
-    expect(
-      (await rejection(flow()({ intervals, split: "nope", params }))).message,
-    ).toMatch(/no SQL expression for split "nope"/);
+    expect(flow()({ intervals, split: "nope", params })).rejects.toThrow(
+      /no SQL expression for split "nope"/,
+    );
   });
 });
 

@@ -120,20 +120,6 @@ function makeStore(
   return { tasks, edges, armed, tracks, watches, file };
 }
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test, so it cannot be
- * awaited under `await-thenable`.
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 describe("add_task filing: main track vs sidequest", () => {
   test("mixed filing: sidequests hang off T in parallel, the main chain takes T's place", async () => {
     const s = makeStore();
@@ -214,10 +200,9 @@ describe("add_task filing: main track vs sidequest", () => {
     const s = makeStore();
     const tasksBefore = new Set(s.tasks);
     const edgesBefore = new Set(s.edges);
-    const err = await rejection(
+    expect(
       s.file({ title: "S", track: "sidequest", model: "opus" }),
-    );
-    expect(err.message).toMatch(/never armed/);
+    ).rejects.toThrow(/never armed/);
     expect(s.tasks).toEqual(tasksBefore);
     expect(s.edges).toEqual(edgesBefore);
     expect(s.armed.size).toBe(0);
@@ -226,10 +211,9 @@ describe("add_task filing: main track vs sidequest", () => {
   test("a sidequest prerequisite throws before anything is written", async () => {
     const s = makeStore();
     const tasksBefore = new Set(s.tasks);
-    const err = await rejection(
+    expect(
       s.file({ title: "S", track: "sidequest", relation: "prerequisite" }),
-    );
-    expect(err.message).toMatch(/block the main track/);
+    ).rejects.toThrow(/block the main track/);
     expect(s.tasks).toEqual(tasksBefore);
     expect(s.tracks.size).toBe(0);
   });
@@ -246,10 +230,9 @@ describe("add_task start modes", () => {
 
   test("now with `after` is refused", async () => {
     const s = makeStore(BASELINE_MODELS, ALL);
-    const err = await rejection(
+    expect(
       s.file({ title: "N", track: "main", start: "now", after: [T] }),
-    );
-    expect(err.message).toMatch(/`after` is meaningless/);
+    ).rejects.toThrow(/`after` is meaningless/);
     expect(s.tasks.size).toBe(2);
   });
 
@@ -280,7 +263,7 @@ describe("add_task start modes", () => {
 
   test("a relation with several afters is refused", async () => {
     const s = makeStore(BASELINE_MODELS, ALL);
-    const err = await rejection(
+    expect(
       s.file({
         title: "J",
         track: "main",
@@ -288,16 +271,14 @@ describe("add_task start modes", () => {
         after: [T, D],
         relation: "prerequisite",
       }),
-    );
-    expect(err.message).toMatch(/single `after`/);
+    ).rejects.toThrow(/single `after`/);
   });
 
   test("an unknown after task is refused before anything is written", async () => {
     const s = makeStore();
-    const err = await rejection(
+    expect(
       s.file({ title: "M", track: "main", after: ["nope"] }),
-    );
-    expect(err.message).toMatch(/"nope" not found/);
+    ).rejects.toThrow(/"nope" not found/);
     expect(s.tasks.size).toBe(2);
   });
 
@@ -315,13 +296,11 @@ describe("add_task start modes", () => {
 describe("add_task grant refusals", () => {
   test("a start mode the grant does not list is refused, listing what it allows", async () => {
     const s = makeStore();
-    const err = await rejection(
-      s.file({ title: "S", track: "sidequest", start: "now" }),
-    );
-    expect(err.message).toContain(
+    const errPromise = s.file({ title: "S", track: "sidequest", start: "now" });
+    expect(errPromise).rejects.toThrow(
       'does not allow filing track "sidequest" with start "now"',
     );
-    expect(err.message).toContain(
+    expect(errPromise).rejects.toThrow(
       'track "main": start "after"; track "sidequest": start "manual"',
     );
     expect(s.tasks.size).toBe(2);
@@ -329,9 +308,9 @@ describe("add_task grant refusals", () => {
 
   test("a track the grant does not list is refused", async () => {
     const s = makeStore(BASELINE_MODELS, { sidequest: { start: ["manual"] } });
-    const err = await rejection(s.file({ title: "M", track: "main" }));
-    expect(err.message).toContain('track "main"');
-    expect(err.message).toContain(
+    const errPromise = s.file({ title: "M", track: "main" });
+    expect(errPromise).rejects.toThrow('track "main"');
+    expect(errPromise).rejects.toThrow(
       'It allows: track "sidequest": start "manual"',
     );
     expect(s.tasks.size).toBe(2);
@@ -339,8 +318,9 @@ describe("add_task grant refusals", () => {
 
   test("no grant at all is refused", async () => {
     const s = makeStore(BASELINE_MODELS, null);
-    const err = await rejection(s.file({ title: "M", track: "main" }));
-    expect(err.message).toMatch(/does not allow filing tasks/);
+    expect(s.file({ title: "M", track: "main" })).rejects.toThrow(
+      /does not allow filing tasks/,
+    );
     expect(s.tasks.size).toBe(2);
   });
 });
@@ -358,17 +338,17 @@ describe("add_task model: the id grammar at the schema, the catalog at filing", 
   test("a version this machine's catalog never saw is refused before anything is written, listing what can run", async () => {
     const s = makeStore();
     const before = new Set(s.tasks);
-    const err = await rejection(
-      s.file({
-        title: "Main",
-        track: "main",
-        model: ModelChoiceSchema.parse("sonnet-9"),
-      }),
+    const filing = s.file({
+      title: "Main",
+      track: "main",
+      model: ModelChoiceSchema.parse("sonnet-9"),
+    });
+    expect(filing).rejects.toBeInstanceOf(ModelUnavailableError);
+    expect(filing).rejects.toMatchObject({ status: 400 });
+    expect(filing).rejects.toThrow(
+      "Sonnet 9 is not a model this machine knows",
     );
-    expect(err).toBeInstanceOf(ModelUnavailableError);
-    expect((err as ModelUnavailableError).status).toBe(400);
-    expect(err.message).toContain("Sonnet 9 is not a model this machine knows");
-    expect(err.message).toContain("pick another: Fable, Opus, Sonnet");
+    expect(filing).rejects.toThrow("pick another: Fable, Opus, Sonnet");
     expect(s.tasks).toEqual(before);
     expect(s.armed.size).toBe(0);
   });
@@ -408,17 +388,17 @@ describe("add_task model: the id grammar at the schema, the catalog at filing", 
           : v,
       ),
     });
-    const err = await rejection(
-      s.file({
-        title: "Main",
-        track: "main",
-        model: ModelChoiceSchema.parse("opus-4-6"),
-      }),
-    );
-    expect(err.message).toContain(
+    const filing = s.file({
+      title: "Main",
+      track: "main",
+      model: ModelChoiceSchema.parse("opus-4-6"),
+    });
+    expect(filing).rejects.toThrow(
       "Opus 4.6 is retired (no longer offered by Claude Code 2.2.0)",
     );
-    expect(err.message).not.toContain("Opus 4.6,");
+    expect(filing).rejects.toMatchObject({
+      message: expect.not.stringContaining("Opus 4.6,"),
+    });
   });
 });
 

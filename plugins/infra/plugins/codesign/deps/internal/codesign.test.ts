@@ -27,18 +27,6 @@ import { isSignedBy, signBinary, signedByRequirement } from "./sign";
 
 const exec = execContextForTests();
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test.
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
 const DEV_ID = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const DEV_ID_2 = "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB";
 const EXPIRED = "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC";
@@ -190,16 +178,16 @@ describe("resolveSigningIdentity", () => {
     const missing = fakeHost({
       env: envEntries({ CODESIGN_IDENTITY: "Nobody" }),
     });
-    expect(
-      (await rejection(resolveSigningIdentity(missing))).message,
-    ).toContain("not in your keychains");
+    expect(resolveSigningIdentity(missing)).rejects.toThrow(
+      "not in your keychains",
+    );
 
     const expired = fakeHost({
       env: envEntries({ CODESIGN_IDENTITY: "Old Cert" }),
     });
-    expect(
-      (await rejection(resolveSigningIdentity(expired))).message,
-    ).toContain("CSSMERR_TP_CERT_EXPIRED");
+    expect(resolveSigningIdentity(expired)).rejects.toThrow(
+      "CSSMERR_TP_CERT_EXPIRED",
+    );
 
     // Two distinct identities with one name.
     const ambiguous = fakeHost({
@@ -210,9 +198,9 @@ describe("resolveSigningIdentity", () => {
         stderr: "",
       }),
     });
-    expect(
-      (await rejection(resolveSigningIdentity(ambiguous))).message,
-    ).toContain("matches 2 identities");
+    expect(resolveSigningIdentity(ambiguous)).rejects.toThrow(
+      "matches 2 identities",
+    );
 
     const host = fakeHost();
     mkdirSync(host.dir, { recursive: true });
@@ -256,9 +244,7 @@ describe("resolveSigningIdentity", () => {
     const host = fakeHost();
     const created = await ensureLocalIdentity(host);
     rmSync(created.keyPath);
-    expect((await rejection(resolveSigningIdentity(host))).message).toContain(
-      "codesign reset",
-    );
+    expect(resolveSigningIdentity(host)).rejects.toThrow("codesign reset");
   });
 });
 
@@ -355,16 +341,12 @@ describe("signBinary", () => {
     const bin = join(base, "gateway");
     writeFileSync(bin, "binary");
     expect(
-      (
-        await rejection(
-          signBinary(bin, {
-            identifier: "dev.example.tool",
-            exec,
-            host: lying,
-          }),
-        )
-      ).message,
-    ).toContain("does not satisfy");
+      signBinary(bin, {
+        identifier: "dev.example.tool",
+        exec,
+        host: lying,
+      }),
+    ).rejects.toThrow("does not satisfy");
     expect(readFileSync(bin, "utf8")).toBe("binary");
   });
 
@@ -381,37 +363,27 @@ describe("signBinary", () => {
     const bin = join(base, "gateway");
     writeFileSync(bin, "binary");
     expect(
-      (
-        await rejection(
-          signBinary(bin, {
-            identifier: "dev.example.tool",
-            exec,
-            host: failing,
-          }),
-        )
-      ).message,
-    ).toContain("errSecInternalComponent");
+      signBinary(bin, {
+        identifier: "dev.example.tool",
+        exec,
+        host: failing,
+      }),
+    ).rejects.toThrow("errSecInternalComponent");
     const broken: CodesignHost = {
       ...host,
       run: async () => ({ exitCode: 2, stdout: "", stderr: "bad option" }),
     };
-    expect(
-      (await rejection(isSignedBy(bin, "x", DEV_ID, broken))).message,
-    ).toContain("bad option");
+    expect(isSignedBy(bin, "x", DEV_ID, broken)).rejects.toThrow("bad option");
   });
 
   test("rejects a malformed identifier", async () => {
     expect(
-      (
-        await rejection(
-          signBinary(join(base, "x"), {
-            identifier: 'a" or true',
-            exec,
-            host: fakeHost(),
-          }),
-        )
-      ).message,
-    ).toContain("must match");
+      signBinary(join(base, "x"), {
+        identifier: 'a" or true',
+        exec,
+        host: fakeHost(),
+      }),
+    ).rejects.toThrow("must match");
   });
 });
 
@@ -430,15 +402,11 @@ describe("configuredValidTo", () => {
     );
     expect(validTo).toEqual(local.validTo);
     expect(
-      (
-        await rejection(
-          configuredValidTo(
-            { kind: "configured", sha1: DEV_ID, label: "x" },
-            keychain,
-          ),
-        )
-      ).message,
-    ).toContain("no certificate");
+      configuredValidTo(
+        { kind: "configured", sha1: DEV_ID, label: "x" },
+        keychain,
+      ),
+    ).rejects.toThrow("no certificate");
   });
 });
 

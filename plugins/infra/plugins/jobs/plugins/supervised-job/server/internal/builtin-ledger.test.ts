@@ -315,9 +315,9 @@ describe("cancelSupervisedJobByLock", () => {
       channel,
       argv: () => ({ argv: ["true"] }),
     });
-    expect(
-      (await rejectionOf(cancelSupervisedJobByLock(unlocked, {}))).message,
-    ).toContain("declares `lock`");
+    expect(cancelSupervisedJobByLock(unlocked, {})).rejects.toThrow(
+      "declares `lock`",
+    );
 
     const own = defineSupervisedJob({
       name: "supervised-job.test.ownledger",
@@ -333,26 +333,15 @@ describe("cancelSupervisedJobByLock", () => {
         closeRow: () => Promise.resolve(),
       },
     });
-    expect(
-      (await rejectionOf(cancelSupervisedJobByLock(own, {}))).message,
-    ).toContain("declares `lock`");
-    expect(
-      (await rejectionOf(latestSupervisedRun(unlocked, {}))).message,
-    ).toContain("declares `lock`");
-    expect((await rejectionOf(latestSupervisedRun(own, {}))).message).toContain(
+    expect(cancelSupervisedJobByLock(own, {})).rejects.toThrow(
       "declares `lock`",
     );
+    expect(latestSupervisedRun(unlocked, {})).rejects.toThrow(
+      "declares `lock`",
+    );
+    expect(latestSupervisedRun(own, {})).rejects.toThrow("declares `lock`");
   });
 });
-
-async function rejectionOf(promise: Promise<unknown>): Promise<Error> {
-  try {
-    await promise;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected a rejection");
-}
 
 describe("the built-in ledger (real DB)", () => {
   let t: TestDb;

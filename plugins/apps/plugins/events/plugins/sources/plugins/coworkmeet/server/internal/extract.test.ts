@@ -24,21 +24,6 @@ const ALL: CoworkmeetSourceConfig = {
   powerOutlets: [],
 };
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test (see the
- * inflight / spawn / host-semaphore suites' identical helper), so awaiting it is
- * an `await` of a non-Thenable — this asserts the rejection for real.
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 function extract(rows: SessionRow[], config: CoworkmeetSourceConfig = ALL) {
   return extractCoworkmeetSessions(
     { rows },
@@ -115,13 +100,12 @@ describe("extractCoworkmeetSessions", () => {
     expect(events[0]!.city).toBeUndefined();
   });
 
-  it("throws on a date it cannot read, instead of returning a shorter listing", async () => {
+  it("throws on a date it cannot read, instead of returning a shorter listing", () => {
     // A dropped row is one the engine stamps `disappearedAt` on, so a format we
     // stopped understanding must park the source rather than drain it.
-    const err = await rejection(
+    expect(
       extract([{ ...NELSONS, date_session: "10/09/2026" }]),
-    );
-    expect(err).toBeInstanceOf(NonRetryableError);
+    ).rejects.toBeInstanceOf(NonRetryableError);
   });
 });
 

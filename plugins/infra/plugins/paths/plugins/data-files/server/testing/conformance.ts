@@ -81,20 +81,6 @@ function collectChanges(ms: number) {
   };
 }
 
-/**
- * The error `p` rejected with; throws if it resolved. (`expect(p).rejects` is
- * typed `void` under bun:test, so it cannot be awaited under `await-thenable`.)
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    if (err instanceof Error) return err;
-    throw err;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 const changedPaths = (seen: readonly DataChange[]): RelPath[] =>
   seen.flatMap((c) => (c.kind === "changed" ? [...c.paths] : []));
 
@@ -174,10 +160,8 @@ export function describeDataFilesConformance(
       await s.write(relPath("d", "e", "f.txt"), "f", w);
       const st = await s.stat(relPath("d", "e"));
       expect(st.kind === "found" && st.entry.kind).toBe("dir");
-      expect(await rejection(s.read(relPath("d")))).toBeInstanceOf(Error);
-      expect(
-        await rejection(s.list(relPath("d", "e", "f.txt"))),
-      ).toBeInstanceOf(Error);
+      expect(s.read(relPath("d"))).rejects.toBeInstanceOf(Error);
+      expect(s.list(relPath("d", "e", "f.txt"))).rejects.toBeInstanceOf(Error);
     });
 
     test("a write replaces whole and leaves no temp file", async () => {
@@ -195,15 +179,11 @@ export function describeDataFilesConformance(
     test("a write onto a directory, under a file, or of the root throws", async () => {
       const s = await fresh();
       await s.write(relPath("d", "x.txt"), "x", w);
-      expect(await rejection(s.write(relPath("d"), "no", w))).toBeInstanceOf(
-        Error,
-      );
+      expect(s.write(relPath("d"), "no", w)).rejects.toBeInstanceOf(Error);
       expect(
-        await rejection(s.write(relPath("d", "x.txt", "y.txt"), "no", w)),
-      ).toBeInstanceOf(Error);
-      expect(await rejection(s.write(relPath(), "no", w))).toBeInstanceOf(
-        Error,
-      );
+        s.write(relPath("d", "x.txt", "y.txt"), "no", w),
+      ).rejects.toBeInstanceOf(Error);
+      expect(s.write(relPath(), "no", w)).rejects.toBeInstanceOf(Error);
       const x = await readText(s, relPath("d", "x.txt"));
       expect(x.kind === "text" && x.text).toBe("x");
     });
@@ -213,14 +193,14 @@ export function describeDataFilesConformance(
       await s.remove(relPath("nope"), { ...w, recursive: false });
       await s.write(relPath("d", "e", "x.txt"), "x", w);
       expect(
-        await rejection(s.remove(relPath("d"), { ...w, recursive: false })),
-      ).toBeInstanceOf(Error);
+        s.remove(relPath("d"), { ...w, recursive: false }),
+      ).rejects.toBeInstanceOf(Error);
       expect((await s.stat(relPath("d", "e", "x.txt"))).kind).toBe("found");
       await s.remove(relPath("d"), { ...w, recursive: true });
       expect(await s.stat(relPath("d"))).toEqual({ kind: "missing" });
       expect(
-        await rejection(s.remove(relPath(), { ...w, recursive: true })),
-      ).toBeInstanceOf(Error);
+        s.remove(relPath(), { ...w, recursive: true }),
+      ).rejects.toBeInstanceOf(Error);
     });
 
     test("rename never replaces, and reports a missing source", async () => {
@@ -260,8 +240,8 @@ export function describeDataFilesConformance(
       expect(y.kind === "text" && y.text).toBe("y");
       expect(await s.stat(relPath("src"))).toEqual({ kind: "missing" });
       expect(
-        await rejection(s.rename(relPath("dest"), relPath("dest", "inner"), w)),
-      ).toBeInstanceOf(Error);
+        s.rename(relPath("dest"), relPath("dest", "inner"), w),
+      ).rejects.toBeInstanceOf(Error);
     });
 
     test("stageThenRename and copyTree compose the operations", async () => {
@@ -315,14 +295,10 @@ export function describeDataFilesConformance(
       expect(order).toEqual(["first:start", "other", "first:end", "second"]);
 
       expect(
-        (
-          await rejection(
-            s.withLock(relPath("k"), async () => {
-              throw new Error("boom");
-            }),
-          )
-        ).message,
-      ).toContain("boom");
+        s.withLock(relPath("k"), async () => {
+          throw new Error("boom");
+        }),
+      ).rejects.toThrow("boom");
       expect(await s.withLock(relPath("k"), async () => "again")).toBe("again");
     });
 
@@ -347,9 +323,7 @@ export function describeDataFilesConformance(
     test("watch on a root without a watch policy throws", async () => {
       await fresh();
       const unwatched = harness!.store.root(CONFORMANCE_UNWATCHED_ROOT);
-      expect(
-        (await rejection(unwatched.watch(() => undefined))).message,
-      ).toContain("watch");
+      expect(unwatched.watch(() => undefined)).rejects.toThrow("watch");
     });
 
     test("roots are separate trees", async () => {

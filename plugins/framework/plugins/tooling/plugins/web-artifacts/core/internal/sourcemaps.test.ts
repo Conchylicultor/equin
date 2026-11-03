@@ -24,17 +24,6 @@ describe("isReexportFacade", () => {
   });
 });
 
-// `expect(p).rejects.toThrow()` is typed `void` under bun:test, so awaiting it
-// asserts nothing; this awaits the rejection for real.
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 describe("artifactSourcemaps", () => {
   const read = (files: Record<string, string>) => (name: string) =>
     files[name]!;
@@ -63,25 +52,21 @@ describe("artifactSourcemaps", () => {
       "chunk.mjs": "export const y = 2;",
       "chunk.mjs.map": "{}",
     };
-    const err = await rejection(
-      artifactSourcemaps({
+    const rejected = artifactSourcemaps({
         label: "a",
         files: Object.keys(files),
         read: read(files),
-      }),
-    );
-    expect(err.message).toContain("index.js has no index.js.map");
+    });
+    expect(rejected).rejects.toThrow("index.js has no index.js.map");
   });
 
   test("throws when the artifact has no map at all", async () => {
     const files = { "index.js": FACADE };
-    const err = await rejection(
-      artifactSourcemaps({
+    const rejected = artifactSourcemaps({
         label: "a",
         files: Object.keys(files),
         read: read(files),
-      }),
-    );
-    expect(err.message).toContain("no sourcemap at all");
+    });
+    expect(rejected).rejects.toThrow("no sourcemap at all");
   });
 });

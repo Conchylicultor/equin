@@ -174,15 +174,9 @@ describe("writes", () => {
   test("a value the field's schema refuses is not written", () =>
     run(async () => {
       const before = edits.length;
-      // `expect(p).rejects` is typed `void` under bun:test, so the rejection
-      // is caught by hand.
-      const refused = await setConfigByPath(ALPHA, "enabled", "not-a-bool", {
-        writer,
-      }).then(
-        () => null,
-        (err: unknown) => err,
-      );
-      expect(refused).toBeInstanceOf(Error);
+      expect(
+        setConfigByPath(ALPHA, "enabled", "not-a-bool", { writer }),
+      ).rejects.toBeInstanceOf(Error);
       expect(edits.length).toBe(before);
       expect(getConfig(alpha).enabled).toBe(true);
     }));
@@ -270,16 +264,9 @@ describe("conflict resolution", () => {
       await reloadConfigDocument(ALPHA, "");
       const before = read(file(ALPHA, "override"));
       const editCount = edits.length;
-      // `expect(p).rejects` is typed `void` under bun:test, so the rejection
-      // is caught by hand.
-      const refused = await setConfigByPath(ALPHA, "title", "from-screen", {
-        writer,
-      }).then(
-        () => null,
-        (err: unknown) => err,
-      );
-      expect(refused).toBeInstanceOf(Error);
-      expect((refused as Error).message).toContain("has a conflict");
+      expect(
+        setConfigByPath(ALPHA, "title", "from-screen", { writer }),
+      ).rejects.toThrow("has a conflict");
       expect(read(file(ALPHA, "override"))).toEqual(before);
       expect(edits.length).toBe(editCount);
     }));

@@ -43,24 +43,6 @@ import { spawnPassthrough } from "./internal/spawn-passthrough";
  */
 const BOUND = { timeoutMs: 10_000 } as const;
 
-/**
- * Await a promise that MUST reject, and hand back what it threw.
- *
- * Used instead of `await expect(p).rejects.…`: bun:test types that matcher as
- * returning `void`, so awaiting it is an `await-thenable` lint error, and the
- * un-awaited form would let a rejection escape the test as an unhandled one.
- * Returning the reason also lets each caller assert on identity — these tests
- * care that `signal.reason` arrives verbatim, not merely that something threw.
- */
-async function rejection(promise: Promise<unknown>): Promise<unknown> {
-  try {
-    await promise;
-  } catch (err) {
-    return err;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 test("GATE: numeric-fd stdio — echo roundtrip captures stdout", async () => {
   const result = await spawnCaptured(["echo", "hello-fd"], BOUND);
   expect(result.exitCode).toBe(0);
@@ -259,10 +241,8 @@ test("an already-aborted signal spawns no child at all", async () => {
     const controller = new AbortController();
     controller.abort();
     expect(
-      await rejection(
-        spawnCaptured(["touch", marker], { signal: controller.signal }),
-      ),
-    ).toBeInstanceOf(Error);
+      spawnCaptured(["touch", marker], { signal: controller.signal }),
+    ).rejects.toBeInstanceOf(Error);
     // The proof is the absence of the side effect: we returned before Bun.spawn.
     expect(existsSync(marker)).toBe(false);
   } finally {
@@ -286,7 +266,7 @@ test("aborting mid-flight kills the child and rejects with signal.reason", async
     );
     await Bun.sleep(150);
     controller.abort(reason);
-    expect(await rejection(promise)).toBe(reason);
+    expect(promise).rejects.toBe(reason);
     // Returned on the kill, not on `sleep 30` finishing, and inside the grace.
     expect(Date.now() - started).toBeLessThan(5_000);
     const pid = Number(readFileSync(pidFile, "utf8").trim());
@@ -310,7 +290,7 @@ test("an abort still throws even when the child exited cleanly first", async () 
   );
   await Bun.sleep(100);
   controller.abort();
-  expect(String(await rejection(promise))).toMatch(/aborted/i);
+  expect(promise).rejects.toThrow(/aborted/i);
 }, 15_000);
 
 test("abort wins over timedOut when the deadline fired first", async () => {
@@ -326,7 +306,7 @@ test("abort wins over timedOut when the deadline fired first", async () => {
   });
   await Bun.sleep(300);
   controller.abort(reason);
-  expect(await rejection(promise)).toBe(reason);
+  expect(promise).rejects.toBe(reason);
 }, 15_000);
 
 test("many spawns on one long-lived signal leave no listeners behind", async () => {
@@ -359,7 +339,7 @@ test("spawnExpectOk propagates the abort reason, not SpawnFailedError", async ()
   });
   await Bun.sleep(100);
   controller.abort(reason);
-  expect(await rejection(promise)).toBe(reason);
+  expect(promise).rejects.toBe(reason);
 }, 15_000);
 
 test('tier: "background" demotes without breaking the capture', async () => {

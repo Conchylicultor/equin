@@ -50,21 +50,6 @@ const networkError = () => () => {
   throw new TypeError("Failed to fetch");
 };
 
-/**
- * Await `p` and return what it rejected with; throw if it resolved.
- * `expect(p).rejects.…` is typed `void` under bun:test, so awaiting it is an
- * `await` of a non-Thenable (the inflight / host-semaphore suites use the same
- * helper) — this asserts the rejection for real.
- */
-async function rejection(p: Promise<unknown>): Promise<unknown> {
-  try {
-    await p;
-  } catch (err) {
-    return err;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 afterEach(() => {
   globalThis.fetch = realFetch;
 });
@@ -80,7 +65,7 @@ describe("fetchEndpoint retry", () => {
   test("a network error on every attempt throws after the last one", async () => {
     const fn = stubFetch([networkError(), networkError(), networkError()]);
     const call = fetchEndpoint(ping, {}, { body: { n: 1 }, retry: RETRY });
-    expect(await rejection(call)).toMatchObject({ message: "Failed to fetch" });
+    expect(call).rejects.toMatchObject({ message: "Failed to fetch" });
     expect(fn).toHaveBeenCalledTimes(RETRY.retries + 1);
   });
 
@@ -91,9 +76,8 @@ describe("fetchEndpoint retry", () => {
       {},
       { body: { n: 1 }, retry: RETRY, report: false },
     );
-    const err = await rejection(call);
-    expect(err).toBeInstanceOf(EndpointError);
-    expect(err).toMatchObject({ status: 503, body: "down" });
+    expect(call).rejects.toBeInstanceOf(EndpointError);
+    expect(call).rejects.toMatchObject({ status: 503, body: "down" });
   });
 
   test("a 400 is not retried", async () => {
@@ -103,14 +87,14 @@ describe("fetchEndpoint retry", () => {
       {},
       { body: { n: 1 }, retry: RETRY, report: false },
     );
-    expect(await rejection(call)).toMatchObject({ status: 400 });
+    expect(call).rejects.toMatchObject({ status: 400 });
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
   test("without the retry option a 503 is a single attempt", async () => {
     const fn = stubFetch([status(503), ok()]);
     const call = fetchEndpoint(ping, {}, { body: { n: 1 }, report: false });
-    expect(await rejection(call)).toMatchObject({ status: 503 });
+    expect(call).rejects.toMatchObject({ status: 503 });
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
@@ -127,11 +111,11 @@ describe("fetchEndpoint retry", () => {
 
 describe("fetchEndpoint unsupported refusal", () => {
   /** Record what reaches the endpoint error sink while `run` executes. */
-  async function sinkDuring(run: () => Promise<void>) {
+  function sinkDuring(run: () => void) {
     const emitted: EndpointErrorInfo[] = [];
     endpointErrorSink.register((info) => emitted.push(info));
     try {
-      await run();
+      run();
     } finally {
       endpointErrorSink.register(null);
     }
@@ -141,14 +125,13 @@ describe("fetchEndpoint unsupported refusal", () => {
   // A host's refusal is a gap the coverage guard missed — never hidden.
   test("a host's unsupported refusal is a plain EndpointError, reported", async () => {
     stubFetch([() => unsupportedEndpointResponse("POST", "/api/ping")]);
-    let err: unknown;
-    const emitted = await sinkDuring(async () => {
-      err = await rejection(fetchEndpoint(ping, {}, { body: { n: 1 } }));
-    });
-    expect(err).toBeInstanceOf(EndpointError);
-    expect(err).toMatchObject({
-      status: 409,
-      body: { reason: "unsupported", method: "POST", path: "/api/ping" },
+    const emitted = sinkDuring(() => {
+      const call = fetchEndpoint(ping, {}, { body: { n: 1 } });
+      expect(call).rejects.toBeInstanceOf(EndpointError);
+      expect(call).rejects.toMatchObject({
+        status: 409,
+        body: { reason: "unsupported", method: "POST", path: "/api/ping" },
+      });
     });
     expect(emitted).toEqual([
       {
@@ -205,12 +188,14 @@ describe("fetchEndpoint of a read", () => {
 
   test("a GET def a cast got past tsc throws the ReadMarker, without a request", async () => {
     const fn = stubFetch([ok()]);
-    const err = await rejection(
-      fetchEndpoint(health as unknown as typeof ping, {}, { body: { n: 1 } }),
+    const call = fetchEndpoint(
+      health as unknown as typeof ping,
+      {},
+      { body: { n: 1 } },
     );
-    expect(err).toBeInstanceOf(Error);
-    expect((err as Error).message).toBe(`GET /api/health: ${health.read}`);
-    expect((err as Error).message).toContain("useLive");
+    expect(call).rejects.toBeInstanceOf(Error);
+    expect(call).rejects.toThrow(`GET /api/health: ${health.read}`);
+    expect(call).rejects.toThrow("useLive");
     expect(fn).toHaveBeenCalledTimes(0);
   });
 

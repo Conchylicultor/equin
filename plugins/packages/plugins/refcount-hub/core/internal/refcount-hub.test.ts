@@ -1,16 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createRefcountHub, type HubStop } from "./refcount-hub";
 
-/** Await `p` and return the Error it rejected with; throw if it resolved. */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 /** A sync source per key, counting opens and stops, with a handle to emit. */
 function syncSource() {
   const life = { opens: 0, stops: 0 };
@@ -151,8 +141,8 @@ describe("createRefcountHub — async open", () => {
     const h1 = hub.acquire("k", () => {});
     const h2 = hub.acquire("k", () => {});
     pending[0]!.reject(new Error("no such dir"));
-    expect((await rejection(h1.ready)).message).toBe("no such dir");
-    expect((await rejection(h2.ready)).message).toBe("no such dir");
+    expect(h1.ready).rejects.toMatchObject({ message: "no such dir" });
+    expect(h2.ready).rejects.toMatchObject({ message: "no such dir" });
     expect(hub.has("k")).toBe(false);
     h1.release();
     const h3 = hub.acquire("k", () => {});

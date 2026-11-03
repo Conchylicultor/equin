@@ -39,16 +39,6 @@ import {
 } from "./test-support";
 import type { ResourceParams } from "./runtime";
 
-/** Await `p` and return the Error it rejected with; throw if it resolved. */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 const settle = async () => {
   await tick();
   await tick();
@@ -537,11 +527,11 @@ describe("loadResourceFresh", () => {
       },
       { mode: "push", loader: () => 1, freshness: { kind: "notified" } },
     );
-    expect(
-      (await rejection(h.runtime.loadResourceFresh("nope", {}))).message,
-    ).toMatch(/unknown resource key/);
-    expect(
-      (await rejection(h.runtime.loadResourceFresh("gated", {}))).message,
-    ).toMatch(/x required/);
+    expect(h.runtime.loadResourceFresh("nope", {})).rejects.toThrow(
+      /unknown resource key/,
+    );
+    expect(h.runtime.loadResourceFresh("gated", {})).rejects.toThrow(
+      /x required/,
+    );
   });
 });

@@ -32,21 +32,6 @@ function fakeGrant(units: number, lane: Lane): Grant {
   };
 }
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test (the same helper
- * the spawn and host-semaphore suites carry), so this asserts the rejection for
- * real and hands back the error.
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 /** The terminal summary, or undefined when no `completed` event landed. */
 function terminalOf(records: OpEvent[]): OpSummary | undefined {
   const last = records.find((r) => r.e === "completed");
@@ -263,7 +248,7 @@ describe("withDirectOp — top-level path", () => {
     expect(terminalOf(h.records)?.outcome).toBe("failed");
 
     const h2 = makeHarness();
-    const err = await rejection(
+    expect(
       withDirectOp(
         "check",
         { max: 1 },
@@ -272,8 +257,7 @@ describe("withDirectOp — top-level path", () => {
         },
         h2.deps,
       ),
-    );
-    expect(err.message).toBe("boom");
+    ).rejects.toThrow("boom");
     expect(h2.events.slice(-2)).toEqual([
       "log:completed",
       "marker:check:release",

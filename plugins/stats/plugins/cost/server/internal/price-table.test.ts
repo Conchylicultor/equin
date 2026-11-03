@@ -352,20 +352,6 @@ test("save then load round-trips", async () => {
   expect(await loadPriceTable(path)).toEqual(FIXTURE);
 });
 
-/**
- * Resolves to the rejection reason, or throws if `p` fulfilled. Two-arg `then`
- * avoids a bare catch and bun:test's non-thenable `.rejects` matcher — the same
- * shape as `didThrow` in `usage-index.test.ts:183`.
- */
-function rejection(p: Promise<unknown>): Promise<Error> {
-  return p.then(
-    () => {
-      throw new Error("expected a rejection, got a value");
-    },
-    (err: unknown) => err as Error,
-  );
-}
-
 test("an absent file is null, a corrupt one throws", async () => {
   expect(
     await loadPriceTable(join(dir, "nested", "never-written.json")),
@@ -374,13 +360,11 @@ test("an absent file is null, a corrupt one throws", async () => {
   // Truncated JSON — the classic half-written file.
   const truncated = join(dir, "truncated.json");
   await writeFile(truncated, '{"fetchedAt":1,"models":{"a":', "utf8");
-  expect((await rejection(loadPriceTable(truncated))).message).toBeTruthy();
+  expect(loadPriceTable(truncated)).rejects.toThrow(/./);
 
   // Parseable but not a price table. Absorbing this would let the next save
   // overwrite the only record of retired models' prices with a fresh fetch.
   const wrongShape = join(dir, "wrong-shape.json");
   await writeFile(wrongShape, '{"pricedAt":1,"projectCosts":[]}', "utf8");
-  expect((await rejection(loadPriceTable(wrongShape))).message).toMatch(
-    /Corrupt price table/,
-  );
+  expect(loadPriceTable(wrongShape)).rejects.toThrow(/Corrupt price table/);
 });

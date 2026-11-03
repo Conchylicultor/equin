@@ -38,17 +38,6 @@ function track(p: Promise<Ticket>): {
 /** Give flock-wait children time to be granted (a few process round trips). */
 const settle = (): Promise<void> => new Promise((r) => setTimeout(r, 300));
 
-/** The message a promise rejects with (fails the test if it resolves). */
-async function rejection(p: Promise<unknown>): Promise<string> {
-  try {
-    await p;
-  } catch (err) {
-    if (err instanceof Error) return err.message;
-    throw err;
-  }
-  throw new Error("expected a rejection");
-}
-
 const tickets = (): string[] =>
   readdirSync(dir).filter((n) => n.startsWith("t-"));
 
@@ -92,7 +81,7 @@ describe("createTicketLine", () => {
     await settle();
 
     abort.abort(new Error("gave up"));
-    expect(await rejection(b)).toBe("gave up");
+    expect(b).rejects.toMatchObject({ message: "gave up" });
     await settle();
     // C now waits on A, the live ticket ahead of it — not the head yet.
     expect(c.state()).toBe("waiting");
@@ -116,7 +105,7 @@ describe("createTicketLine", () => {
 
     // B steps out (the line stopped applying to it for a while), C stays.
     out.abort(new Error("stepped out"));
-    expect(await rejection(b)).toBe("stepped out");
+    expect(b).rejects.toMatchObject({ message: "stepped out" });
     // B comes back at the place it first arrived at, behind A, ahead of C.
     const back = track(line.join({ place }));
     await settle();
@@ -230,7 +219,9 @@ describe("createTicketLine", () => {
     const line = createTicketLine(dir);
     const abort = new AbortController();
     abort.abort(new Error("stop"));
-    expect(await rejection(line.join({ signal: abort.signal }))).toBe("stop");
+    expect(line.join({ signal: abort.signal })).rejects.toMatchObject({
+      message: "stop",
+    });
     expect(line.isEmpty()).toBe(true);
   });
 });

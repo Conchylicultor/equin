@@ -92,19 +92,6 @@ function build(name: string, content: string, icon?: string) {
   };
 }
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test.
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 const gateway = { name: "gateway" };
 const tray = { name: "equin-desktop", main: true };
 const exe = (name: string) => joinAppPath(bundle, "Contents", "MacOS", name);
@@ -277,10 +264,10 @@ describe("installServiceExecutable", () => {
   test("a failed signature leaves the installed bundle as it was", async () => {
     await installServiceExecutable(host(), gateway, build("gw", "1"), () => {});
     failSign = true;
-    const err = await rejection(
+    expect(
       installServiceExecutable(host(), gateway, build("gw", "2"), () => {}),
-    );
-    expect(err.message).toBe("signing failed");
+    ).rejects.toMatchObject({ message: "signing failed" });
+
     expect(readFileSync(exe("gateway"), "utf8")).toBe("1");
     expect(readdirSync(join(dir, "state"))).toEqual(["equin.app"]);
   });

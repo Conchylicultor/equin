@@ -58,27 +58,14 @@ function row(): InsertRunRow {
   };
 }
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test — the same helper
- * `stale-holder.test.ts` carries next door.
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 describe("a database with no build_runs table", () => {
   // The fixture is only worth what this test proves about it: that a write here
   // really does reach a missing table and is rejected with 42P01. Without it a
   // guard that swallowed everything — or a database that quietly had the table
   // after all — would pass the two tests below just as well.
-  test("the unguarded write is rejected with 42P01", async () => {
-    const err = await rejection(
+  test("the unguarded write is rejected with 42P01", () => {
+    // A drizzle builder is a thenable, not a Promise: `.rejects` needs a Promise.
+    const write = Promise.resolve(
       t.db
         .update(_buildRuns)
         .set({ finishedAt: new Date(), exitCode: 0 })
@@ -89,7 +76,7 @@ describe("a database with no build_runs table", () => {
           ),
         ),
     );
-    expect((err as { code?: string }).code).toBe("42P01");
+    expect(write).rejects.toMatchObject({ code: "42P01" });
   });
 
   test('insertRun answers "unavailable" instead of throwing', async () => {

@@ -130,18 +130,13 @@ test("discovery reads a literal membership argument, and throws on one it cannot
 
   // A second argument the regex reader cannot see through would otherwise
   // silently mean "composition".
-  const refused = await discoverCollectedDirsIn(
+  const refused = discoverCollectedDirsIn(
     memRepo("/repo", {
       [pj("d/core/index.ts")]: 'defineCollectedDir("exempt", OPTS);',
     }),
-  ).then(
-    () => null,
-    (err: unknown) => err,
   );
-  expect(refused).toBeInstanceOf(Error);
-  expect((refused as Error).message).toContain(
-    "second argument must be the literal",
-  );
+  expect(refused).rejects.toBeInstanceOf(Error);
+  expect(refused).rejects.toThrow("second argument must be the literal");
 });
 
 test("discovery reads only core files at a plugin position whose core has a barrel", async () => {
@@ -190,20 +185,6 @@ test("the standard folder set is the plugin-folder vocabulary plus plugins/", as
   );
 });
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test, so this asserts
- * the rejection for real.
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 test("an undeclared collected-dir name throws, naming the file", async () => {
   const file = pj("sdk/core/dirs.ts");
   const files = {
@@ -211,12 +192,10 @@ test("an undeclared collected-dir name throws, naming the file", async () => {
     [file]: 'defineCollectedDir("widget");',
   };
   const repo = memRepo("/repo", files);
-  expect((await rejection(discoverCollectedDirsIn(repo))).message).toMatch(
+  expect(discoverCollectedDirsIn(repo)).rejects.toThrow(
     new RegExp(`${file}.*"widget".*not a plugin folder`),
   );
-  expect((await rejection(standardPluginDirsIn(repo))).message).toMatch(
-    /not a plugin folder/,
-  );
+  expect(standardPluginDirsIn(repo)).rejects.toThrow(/not a plugin folder/);
   // The sync and snapshot fronts share the same pure core.
   const root = gitFixture(files);
   expect(() => discoverCollectedDirs(root)).toThrow(/not a plugin folder/);

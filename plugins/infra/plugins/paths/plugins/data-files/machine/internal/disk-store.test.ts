@@ -23,20 +23,6 @@ import {
 } from "./disk-store";
 import { diskTree, writeRawAtomic } from "./disk-tree";
 
-/**
- * The error `p` rejected with; throws if it resolved. (`expect(p).rejects` is
- * typed `void` under bun:test, so it cannot be awaited under `await-thenable`.)
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    if (err instanceof Error) return err;
-    throw err;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 let watchers = 0;
 // A root's watch follows its dir through the hub (a children watch of its
 // parent), which the file-watcher server plugin registers at boot.
@@ -94,10 +80,8 @@ test("withLock takes <key>.lock inside the root, and gives up on a wedged holder
   expect(flockTry(fd)).toBe(true);
   try {
     expect(
-      await rejection(
-        tree.withLock(relPath("_picks", "p-1"), async () => "never"),
-      ),
-    ).toBeInstanceOf(LockBusyError);
+      tree.withLock(relPath("_picks", "p-1"), async () => "never"),
+    ).rejects.toBeInstanceOf(LockBusyError);
   } finally {
     closeSync(fd);
   }
@@ -152,12 +136,10 @@ test("withLock's deadline covers the wait behind a holder in this process too", 
   await inside;
   let ran = false;
   expect(
-    await rejection(
-      tree.withLock(key, async () => {
-        ran = true;
-      }),
-    ),
-  ).toBeInstanceOf(LockBusyError);
+    tree.withLock(key, async () => {
+      ran = true;
+    }),
+  ).rejects.toBeInstanceOf(LockBusyError);
   release();
   await holder;
   // The waiter that gave up never runs, and the lock is free again.
@@ -189,9 +171,7 @@ test("a ledger entry restores by its one role, a role recorded before the root's
     ...legacy,
     paths: { a: file, b: file },
   } as unknown as Parameters<typeof restoreLedgerEntry>[0];
-  expect((await rejection(restoreLedgerEntry(twoRoles))).message).toContain(
-    "exactly one file",
-  );
+  expect(restoreLedgerEntry(twoRoles)).rejects.toThrow("exactly one file");
 });
 
 const followRoot: FileRootSpec = {

@@ -33,21 +33,6 @@ function expectSqlRowError(run: () => unknown): SqlRowError {
   throw new Error("expected a SqlRowError, but nothing was thrown");
 }
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test (see the
- * spawn/git-roots suite's identical helper), so this asserts the rejection for
- * real and hands back the error to pin its class and message.
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 describe("parseRows", () => {
   test("parses well-formed rows and hands back typed values", () => {
     const rows = parseRows(
@@ -249,7 +234,7 @@ describe("queryResult", () => {
       sql: "SELECT id FROM t",
       row: IdRow,
     });
-    expect(await rejection(promise)).toBeInstanceOf(SqlRowError);
+    expect(promise).rejects.toBeInstanceOf(SqlRowError);
   });
 });
 
@@ -277,9 +262,7 @@ describe("queryRows / queryOne", () => {
       params: [7],
       row: IdRow,
     });
-    expect((await rejection(promise)).message).toMatch(
-      /got 0[\s\S]*SELECT id FROM t/,
-    );
+    expect(promise).rejects.toThrow(/got 0[\s\S]*SELECT id FROM t/);
   });
 
   test("queryOne throws on two rows", async () => {
@@ -287,7 +270,7 @@ describe("queryRows / queryOne", () => {
       sql: "SELECT id FROM t",
       row: IdRow,
     });
-    expect((await rejection(promise)).message).toMatch(/got 2/);
+    expect(promise).rejects.toThrow(/got 2/);
   });
 
   test("a bad row still fails through the front door", async () => {
@@ -295,6 +278,6 @@ describe("queryRows / queryOne", () => {
       sql: "SELECT id FROM t",
       row: IdRow,
     });
-    expect(await rejection(promise)).toBeInstanceOf(SqlRowError);
+    expect(promise).rejects.toBeInstanceOf(SqlRowError);
   });
 });

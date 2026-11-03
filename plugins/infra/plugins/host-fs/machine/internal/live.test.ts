@@ -50,16 +50,6 @@ afterAll(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
-/** The code of the refusal `p` rejects with. */
-async function refusalCode(p: Promise<unknown>): Promise<string> {
-  try {
-    await p;
-  } catch (err) {
-    return (err as { code: string }).code;
-  }
-  throw new Error("expected a refusal");
-}
-
 describe("host-fs.list", () => {
   test("pages hold the paged-source contract over every range", async () => {
     const listed = await listHostDir(asUserPath(root));
@@ -98,15 +88,15 @@ describe("host-fs.list", () => {
   });
 
   test("failures are refusals", async () => {
-    expect(await refusalCode(listingMeta({ path: join(root, "nope") }))).toBe(
-      "missing",
-    );
-    expect(await refusalCode(listingMeta({ path: join(root, "b.txt") }))).toBe(
-      "not-a-dir",
-    );
-    expect(await refusalCode(listingMeta({ path: "relative" }))).toBe(
-      "invalid-path",
-    );
+    expect(listingMeta({ path: join(root, "nope") })).rejects.toMatchObject({
+      code: "missing",
+    });
+    expect(listingMeta({ path: join(root, "b.txt") })).rejects.toMatchObject({
+      code: "not-a-dir",
+    });
+    expect(listingMeta({ path: "relative" })).rejects.toMatchObject({
+      code: "invalid-path",
+    });
   });
 });
 
@@ -114,30 +104,28 @@ describe("host-fs.peek / stat / text / volume", () => {
   test("peek names the children, and refuses a missing folder", async () => {
     const peek = await dirPeek(root);
     expect(peek.kind).toBe("ok");
-    expect(await refusalCode(dirPeek(join(root, "nope")))).toBe("missing");
+    expect(dirPeek(join(root, "nope"))).rejects.toMatchObject({
+      code: "missing",
+    });
   });
 
   test("stat describes a path, and refuses a missing one", async () => {
     const stat = await hostFsPathStatServed.load({ path: join(root, "b.txt") });
     expect(stat.entry.kind).toBe("file");
     expect(
-      await refusalCode(
-        hostFsPathStatServed.load({ path: join(root, "nope") }),
-      ),
-    ).toBe("missing");
+      hostFsPathStatServed.load({ path: join(root, "nope") }),
+    ).rejects.toMatchObject({ code: "missing" });
   });
 
   test("text reads a file, and refuses a binary one or a folder", async () => {
     const text = await hostFsFileTextServed.load({ path: join(root, "b.txt") });
     expect(text.content).toBe("b.txt");
     expect(
-      await refusalCode(
-        hostFsFileTextServed.load({ path: join(root, "binary.bin") }),
-      ),
-    ).toBe("binary");
+      hostFsFileTextServed.load({ path: join(root, "binary.bin") }),
+    ).rejects.toMatchObject({ code: "binary" });
     expect(
-      await refusalCode(hostFsFileTextServed.load({ path: join(root, "sub") })),
-    ).toBe("not-a-file");
+      hostFsFileTextServed.load({ path: join(root, "sub") }),
+    ).rejects.toMatchObject({ code: "not-a-file" });
   });
 
   test("complete lists matching folders, and refuses what names no folder", async () => {
@@ -150,20 +138,24 @@ describe("host-fs.peek / stat / text / volume", () => {
     expect((await completions(`${root}/S`)).matches.map((m) => m.name)).toEqual(
       ["sub"],
     );
-    expect(await refusalCode(completions(`${root}/nope/`))).toBe("missing");
-    expect(await refusalCode(completions(`${root}/b.txt/`))).toBe("not-a-dir");
-    expect(await refusalCode(completions("relative"))).toBe("invalid-path");
-    expect(await refusalCode(completions(""))).toBe("invalid-path");
+    expect(completions(`${root}/nope/`)).rejects.toMatchObject({
+      code: "missing",
+    });
+    expect(completions(`${root}/b.txt/`)).rejects.toMatchObject({
+      code: "not-a-dir",
+    });
+    expect(completions("relative")).rejects.toMatchObject({
+      code: "invalid-path",
+    });
+    expect(completions("")).rejects.toMatchObject({ code: "invalid-path" });
   });
 
   test("volume measures the volume, and refuses a missing path", async () => {
     const volume = await hostFsVolumeInfoServed.load({ path: root });
     expect(volume.total).toBeGreaterThan(0);
     expect(
-      await refusalCode(
-        hostFsVolumeInfoServed.load({ path: join(root, "nope") }),
-      ),
-    ).toBe("missing");
+      hostFsVolumeInfoServed.load({ path: join(root, "nope") }),
+    ).rejects.toMatchObject({ code: "missing" });
   });
 });
 

@@ -21,20 +21,6 @@ import { computeTreeHash } from "./tree-hash";
 import { loadTreeSnapshot, validate, type TreeSnapshot } from "./read-set";
 import { recordingRepoFiles, runRepoFiles } from "./repo-set";
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test (the same helper
- * the op-runtime, spawn and host-semaphore suites carry).
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 let root!: AppPath;
 
 // Sorted (code-unit order). `a-b.ts` ("-" < "/") and `a.ts` ("." < "/") sort
@@ -146,7 +132,7 @@ describe("runRepoFiles (the run's ctx.repo)", () => {
         loadSnapshot: () => Promise.resolve(null),
         root: () => Promise.resolve(notARepo),
       });
-      expect((await rejection(repo())).message).toContain("git ls-files");
+      expect(repo()).rejects.toThrow("git ls-files");
     } finally {
       rmSync(notARepo, { recursive: true, force: true });
     }

@@ -127,20 +127,6 @@ async function deadPid(): Promise<number> {
   return pid;
 }
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test (the same helper
- * the retention and host-semaphore suites carry).
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 describe("claimInflightRun settles a dead holder", () => {
   test("holder with a build-logs record ⇒ closed with its exitCode and mtime; claim succeeds", async () => {
     // A live pid on the holder: the record answers before the pid is consulted.
@@ -196,8 +182,9 @@ describe("claimInflightRun settles a dead holder", () => {
     expect(await claimInflightRun(t.db, NS, holder)).toBe("claimed");
     writeLogs(holder.id, "{ not json");
 
-    const err = await rejection(claimInflightRun(t.db, NS, row(process.pid)));
-    expect(err.message).toMatch(/malformed build logs/);
+    expect(claimInflightRun(t.db, NS, row(process.pid))).rejects.toThrow(
+      /malformed build logs/,
+    );
     expect((await readRow(holder.id)).finishedAt).toBeNull();
   });
 
@@ -209,10 +196,9 @@ describe("claimInflightRun settles a dead holder", () => {
       .set({ finishedAt: new Date(), exitCode: 0 })
       .where(eq(_buildRuns.id, buildRunIdKind.key(holder.id)));
 
-    const err = await rejection(claimInflightRun(t.db, NS, holder));
-    expect((err as { constraint?: string }).constraint).not.toBe(
-      "build_runs_inflight_uniq",
-    );
+    expect(claimInflightRun(t.db, NS, holder)).rejects.not.toMatchObject({
+      constraint: "build_runs_inflight_uniq",
+    });
   });
 });
 

@@ -75,17 +75,6 @@ const registry = buildMetricRegistry([source]);
 
 const base = { range: { preset: "7d" as const }, tz: "UTC", params: {} };
 
-/** Whether `p` is refused as a question the registry cannot answer. */
-async function refused(p: Promise<unknown>): Promise<boolean> {
-  try {
-    await p;
-  } catch (err) {
-    if (err instanceof MetricQueryError) return true;
-    throw err;
-  }
-  return false;
-}
-
 describe("catalog", () => {
   test("lists sources, metrics and breakdowns", () => {
     expect(registry.catalog.sources).toEqual([
@@ -223,7 +212,9 @@ describe("runQuery", () => {
       },
     ],
   ])("%s is a MetricQueryError", async (_name, query) => {
-    expect(await refused(runQuery(registry, query, NOW))).toBe(true);
+    expect(runQuery(registry, query, NOW)).rejects.toBeInstanceOf(
+      MetricQueryError,
+    );
   });
 });
 
@@ -267,7 +258,11 @@ describe("runDetails", () => {
       { ...q, interval: { start: interval.end, end: interval.start } },
     ],
   ])("%s is a MetricQueryError", async (_name, query) => {
-    expect(await refused(runDetails(registry, query, page))).toBe(true);
-    expect(await refused(runDetailsTotal(registry, query))).toBe(true);
+    expect(runDetails(registry, query, page)).rejects.toBeInstanceOf(
+      MetricQueryError,
+    );
+    expect(runDetailsTotal(registry, query)).rejects.toBeInstanceOf(
+      MetricQueryError,
+    );
   });
 });

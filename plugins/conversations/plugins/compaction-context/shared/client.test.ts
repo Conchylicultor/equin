@@ -12,20 +12,6 @@ afterEach(() => {
   for (const s of servers.splice(0)) s.stop();
 });
 
-/**
- * Await `p` and return what it rejected with; throw if it resolved.
- * `expect(p).rejects` is typed `void` under bun:test, so awaiting it is an
- * `await` of a non-Thenable — this asserts the rejection for real.
- */
-async function rejection(p: Promise<unknown>): Promise<unknown> {
-  try {
-    await p;
-  } catch (err) {
-    return err;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 function serve(handler: (req: Request) => Response): string {
   const server = Bun.serve({ port: 0, fetch: handler });
   servers.push(server);
@@ -70,33 +56,31 @@ describe("fetchCompactionContext", () => {
     expect(calls).toBe(3);
   });
 
-  test("a 4xx throws at once", async () => {
+  test("a 4xx throws at once", () => {
     let calls = 0;
     const baseUrl = serve(() => {
       calls++;
       return new Response("no", { status: 404 });
     });
     expect(
-      await rejection(fetchCompactionContext({ baseUrl, conversationId: "c" })),
-    ).toBeInstanceOf(CompactionContextRefusedError);
+      fetchCompactionContext({ baseUrl, conversationId: "c" }),
+    ).rejects.toBeInstanceOf(CompactionContextRefusedError);
     expect(calls).toBe(1);
   });
 
-  test("gives up once the backend has been unreachable long enough", async () => {
+  test("gives up once the backend has been unreachable long enough", () => {
     let t = 0;
     expect(
-      await rejection(
-        fetchCompactionContext({
-          baseUrl: "http://127.0.0.1:1",
-          conversationId: "c",
-          sleep: (ms) => {
-            t += ms;
-            return Promise.resolve();
-          },
-          now: () => t,
-        }),
-      ),
-    ).toBeInstanceOf(Error);
+      fetchCompactionContext({
+        baseUrl: "http://127.0.0.1:1",
+        conversationId: "c",
+        sleep: (ms) => {
+          t += ms;
+          return Promise.resolve();
+        },
+        now: () => t,
+      }),
+    ).rejects.toBeInstanceOf(Error);
   });
 });
 

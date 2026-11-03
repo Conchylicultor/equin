@@ -145,25 +145,10 @@ test("a repo with no trailer-bearing commits reads as empty, not as a failure", 
   });
 });
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test, so this asserts
- * the rejection for real and hands back the error to inspect.
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 test("an unreadable repo THROWS rather than resolving to no commits", async () => {
   const root = mkdtempSync(join(tmpdir(), "sg-push-ledger-nogit-"));
   try {
-    const err = await rejection(readMainCommits(root, null));
-    expect(err).toBeInstanceOf(Error);
+    expect(readMainCommits(root, null)).rejects.toBeInstanceOf(Error);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

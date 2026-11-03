@@ -42,16 +42,6 @@ afterEach(async () => {
 const settle = (queue: JobQueueImpl) =>
   withHostServices([JobQueue.provide(queue)], () => settleJobQueue());
 
-/** The error `p` rejects with — failing the test if it resolves. */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  const outcome = await p.then(
-    () => null,
-    (e: unknown) => e,
-  );
-  if (!(outcome instanceof Error)) throw new Error("expected a rejection");
-  return outcome;
-}
-
 const completed: Handler = () => ({ kind: "completed" });
 
 test("an empty queue settles at once", async () => {
@@ -124,9 +114,9 @@ test("a row that ends dead rejects, naming the job and its error", async () => {
   await start(queue);
   await queue.enqueue(job("ok"), payload("ok"), {});
   await queue.enqueue(job("broken"), payload("broken"), {});
-  const { message } = await rejection(settle(queue));
-  expect(message).toContain("broken");
-  expect(message).toContain("index out of date");
+  const pending = settle(queue);
+  expect(pending).rejects.toThrow("broken");
+  expect(pending).rejects.toThrow("index out of date");
 });
 
 test("a retrying row's backoff is fast-forwarded until it succeeds", async () => {
@@ -159,14 +149,13 @@ test("a tx enqueue that commits just before settle is waited on", async () => {
 test("settling a queue that is not started rejects", async () => {
   const { queue } = harness({ idle: completed });
   await queue.enqueue(job("idle"), payload("idle"), {});
-  expect((await rejection(settle(queue))).message).toContain("not started");
+  expect(settle(queue)).rejects.toThrow("not started");
 });
 
 test("settleJobQueue throws when the active queue is not the in-process one", async () => {
   const { queue } = harness({});
   const other: JobQueueImpl = { ...queue };
-  const err = await rejection(
+  expect(
     withHostServices([JobQueue.provide(other)], () => settleJobQueue()),
-  );
-  expect(err.message).toContain("not the in-process queue");
+  ).rejects.toThrow("not the in-process queue");
 });

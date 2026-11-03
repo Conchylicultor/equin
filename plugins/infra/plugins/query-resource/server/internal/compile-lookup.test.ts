@@ -34,20 +34,6 @@ const attemptJoin = {
 
 const Row = z.object({ attemptId: z.string(), path: z.string() });
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test, so awaiting it
- * trips await-thenable.
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 // A label is a read tag, minted once per process: every compile names its own.
 let compiles = 0;
 const nextLabel = () => `test.ws-of-conv-${++compiles}`;
@@ -138,14 +124,12 @@ describe("compileLookup", () => {
 
   test("run refuses a row its schema does not hold, and more than one row", async () => {
     const bad = lookup(() => [{ attemptId: "a1", path: 3 }]);
-    await rejection(bad.compiled.run("c1"));
+    expect(bad.compiled.run("c1")).rejects.toThrow();
     const many = lookup(() => [
       { attemptId: "a1", path: "/a" },
       { attemptId: "a2", path: "/b" },
     ]);
-    expect((await rejection(many.compiled.run("c1"))).message).toMatch(
-      /2 rows for key "c1"/,
-    );
+    expect(many.compiled.run("c1")).rejects.toThrow(/2 rows for key "c1"/);
   });
 
   test("refused at compile: a view, a key that is not the primary key, a bad label, a column of an undeclared relation", () => {

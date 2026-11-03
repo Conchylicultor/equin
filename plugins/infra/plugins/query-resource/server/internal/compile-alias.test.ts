@@ -443,16 +443,6 @@ function compile(key: string, s = spec()) {
 
 const last = (calls: RecordedQuery[]): RecordedQuery => calls.at(-1)!;
 
-/** Await `p` and return the Error it rejected with; throw if it resolved. */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 describe("the shapes", () => {
   test("Full: the CTE set, the row-wise joins, the grouped joins, the order", async () => {
     const c = compile("a-full");
@@ -600,12 +590,12 @@ describe("the shapes", () => {
     await c.all.loader({}, { affectedIds: ["t0"] });
     expect(last(rec.calls).sql).not.toContain("LIMIT");
     n = 3;
-    expect(
-      (await rejection(Promise.resolve(c.all.loader({})))).message,
-    ).toMatch(/allCollection\("a-max"\): the full shape read more than 2 rows/);
-    expect(
-      (await rejection(policy.scopedMembership.orderOf({}))).message,
-    ).toMatch(/the orderIds shape read more than 2 rows/);
+    expect(Promise.resolve(c.all.loader({}))).rejects.toThrow(
+      /allCollection\("a-max"\): the full shape read more than 2 rows/,
+    );
+    expect(policy.scopedMembership.orderOf({})).rejects.toThrow(
+      /the orderIds shape read more than 2 rows/,
+    );
     // An unbounded set's SQL has no LIMIT (its definition is unchanged).
     const whole = compile("a-max-whole");
     await whole.all.loader({});

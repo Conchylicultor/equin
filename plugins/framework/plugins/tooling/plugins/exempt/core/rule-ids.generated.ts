@@ -162,6 +162,7 @@ export type ExemptableRuleId =
   | "sql-projection/no-asserted-sql-type"
   | "sql-rows/no-unparsed-sql-rows"
   | "surface/no-adhoc-surface"
+  | "test-layout/bun-sync-settle-matchers"
   | "text/no-adhoc-typography"
   | "text/no-clip-without-nowrap"
   | "theme-boundary/no-adhoc-theme-scope"

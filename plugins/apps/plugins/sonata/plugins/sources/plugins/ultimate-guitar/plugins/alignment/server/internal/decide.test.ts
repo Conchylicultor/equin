@@ -335,20 +335,6 @@ function fakeRun(
   };
 }
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test, so awaiting it
- * is an `await` of a non-Thenable — this asserts the rejection for real.
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 const scored = (videoId: string, score: number): AlignmentRecord =>
   record(videoId, score);
 
@@ -481,8 +467,9 @@ describe("walkCandidates", () => {
       BBBBBBBBBBB: new Error("audio-python failed to install"),
       CCCCCCCCCCC: scored("CCCCCCCCCCC", 0.7),
     });
-    const err = await rejection(walkCandidates(four, run.hooks));
-    expect(err.message).toBe("audio-python failed to install");
+    expect(walkCandidates(four, run.hooks)).rejects.toMatchObject({
+      message: "audio-python failed to install",
+    });
     expect(run.tried).toEqual(["AAAAAAAAAAA", "BBBBBBBBBBB"]);
   });
 
@@ -541,10 +528,9 @@ describe("walkCandidates", () => {
     expect(run.tried).toEqual(["AAAAAAAAAAA"]);
   });
 
-  test("a try that throws an untyped error propagates", async () => {
+  test("a try that throws an untyped error propagates", () => {
     const run = fakeRun({});
-    const err = await rejection(walkCandidates(four, run.hooks));
-    expect(err.message).toContain("no outcome");
+    expect(walkCandidates(four, run.hooks)).rejects.toThrow("no outcome");
   });
 });
 

@@ -2,23 +2,6 @@ import { describe, expect, test } from "bun:test";
 
 import { createSignedMemo } from "./signed-memo";
 
-// bun:test types `expect(...).rejects` as non-thenable, so `await`ing it trips
-// @typescript-eslint/await-thenable. Settle the promise explicitly and return the
-// rejection, which also lets a resolution fail loudly instead of passing silently.
-async function rejectionOf(promise: Promise<unknown>): Promise<Error> {
-  const outcome = await promise.then(
-    (value) => ({ value }),
-    (err: unknown) => ({ err }),
-  );
-  if (!("err" in outcome)) {
-    throw new Error(
-      `expected a rejection, but it resolved to ${String(outcome.value)}`,
-    );
-  }
-  expect(outcome.err).toBeInstanceOf(Error);
-  return outcome.err as Error;
-}
-
 /**
  * A fake authority: an in-memory "state" the signature fingerprints and the
  * compute reads. No git, no filesystem — the memo's contract is about the
@@ -242,12 +225,8 @@ describe("createSignedMemo", () => {
     const { state, memo } = createFakeAuthority();
 
     state.signatureThrows = true;
-    expect((await rejectionOf(memo.get("k"))).message).toContain(
-      "signature failed",
-    );
-    expect((await rejectionOf(memo.signature("k"))).message).toContain(
-      "signature failed",
-    );
+    expect(memo.get("k")).rejects.toThrow("signature failed");
+    expect(memo.signature("k")).rejects.toThrow("signature failed");
     // The failure short-circuits before any compute — no fallback value.
     expect(state.computeCalls).toBe(0);
 
@@ -260,9 +239,7 @@ describe("createSignedMemo", () => {
     const { state, memo } = createFakeAuthority();
 
     state.computeThrows = true;
-    expect((await rejectionOf(memo.get("k"))).message).toContain(
-      "compute failed",
-    );
+    expect(memo.get("k")).rejects.toThrow("compute failed");
     expect(state.computeCalls).toBe(1);
 
     // No poisoned entry: the next get recomputes rather than serving a value
@@ -368,7 +345,8 @@ describe("createSignedMemo", () => {
       await memo.signature("k", { input: 1 });
       const { memo: withInput } = createInputMemo();
       // @ts-expect-error — an input memo's probe requires its input
-      await rejectionOf(withInput.signature("k"));
+      const pending = withInput.signature("k");
+      expect(pending).rejects.toBeInstanceOf(Error);
     });
   });
 });

@@ -115,21 +115,6 @@ async function input(): Promise<PrepareInput> {
   return { root, treeHash };
 }
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved or
- * rejected with a non-Error. (`expect(p).rejects.toThrow()` is typed `void`
- * under bun:test, so awaiting it trips `await-thenable`.)
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    if (err instanceof Error) return err;
-    throw new Error(`expected an Error rejection, got ${String(err)}`);
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 test(
   "the thread's plan is the plan computed in-process",
   async () => {
@@ -206,12 +191,15 @@ test(
     try {
       // A tree that is not there: loading it fails loudly — inside
       // `./prepare`, on the thread.
-      const err = await rejection(
-        thread.prepare({ root: notARepo, treeHash: "0".repeat(40) }),
-      );
-      expect(err.message).toContain(notARepo);
+      const rejected = thread.prepare({
+        root: notARepo,
+        treeHash: "0".repeat(40),
+      });
+      expect(rejected).rejects.toThrow(notARepo);
       // A frame from inside `./prepare` — only the thread's own stack has one.
-      expect(err.stack).toContain("openPreparation");
+      expect(rejected).rejects.toMatchObject({
+        stack: expect.stringContaining("openPreparation"),
+      });
     } finally {
       thread.close();
     }
@@ -224,7 +212,7 @@ test(
   async () => {
     const thread = openPrepareThread();
     try {
-      expect((await rejection(thread.finalize(undefined))).message).toContain(
+      expect(thread.finalize(undefined)).rejects.toThrow(
         "finalize with no run plan",
       );
     } finally {

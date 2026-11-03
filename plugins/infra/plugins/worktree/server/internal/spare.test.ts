@@ -129,18 +129,12 @@ describe("spare claim", () => {
 
   test("a spare whose install fails throws and is never ready", async () => {
     let path = "";
-    // `expect(p).rejects` is typed `void` under bun:test; await the rejection for real.
-    let thrown: unknown;
-    try {
-      await createSpareIn(repo, async (p) => {
+    expect(
+      createSpareIn(repo, async (p) => {
         path = p;
         throw new Error("bun install exited 1");
-      });
-    } catch (err) {
-      thrown = err;
-    }
-    expect(thrown).toBeInstanceOf(Error);
-    expect((thrown as Error).message).toBe("bun install exited 1");
+      }),
+    ).rejects.toMatchObject({ message: "bun install exited 1" });
     expect(existsSync(path)).toBe(true);
     expect(await lockOf(path)).toBeNull();
     expect(await listReadySpares(repo)).toEqual([]);

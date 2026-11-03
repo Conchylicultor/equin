@@ -19,20 +19,6 @@ const TERMINAL: RunTerminal = {
   finishedAt: new Date("2026-09-02T12:00:00Z"),
 };
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test, so awaiting it
- * is an `await` of a non-Thenable — this asserts the rejection for real.
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 describe("finishSupervisedRun", () => {
   test("closes the row with the observed outcome, then announces", async () => {
     const order: string[] = [];
@@ -65,7 +51,8 @@ describe("finishSupervisedRun", () => {
     // impossible rather than unlikely.
     let closes = 0;
 
-    const err = await rejection(
+    // Reported, not swallowed: the reconciler files it per-run and carries on.
+    expect(
       finishSupervisedRun(
         {
           closeRow: () => {
@@ -77,11 +64,9 @@ describe("finishSupervisedRun", () => {
         "run-2",
         TERMINAL,
       ),
-    );
+    ).rejects.toMatchObject({ message: "emit failed" });
 
     expect(closes).toBe(1);
-    // Reported, not swallowed: the reconciler files it per-run and carries on.
-    expect(err.message).toBe("emit failed");
   });
 
   test("the row is closed with no workflow involved at all", async () => {

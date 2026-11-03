@@ -635,18 +635,11 @@ describe("exposed columns — the deferred bind", () => {
     ]);
     expect(servedList.declare).toHaveLength(3);
     expect(servedSet.keys).toEqual([set.key, `${set.key}:rows`]);
-    // `expect(p).rejects` is typed `void` by bun's matchers: capture instead.
     for (const load of [
       () => servedSet.all.load({}),
       () => servedList.window.load(list.window.window.encode()),
     ]) {
-      let early: unknown;
-      try {
-        await load();
-      } catch (err) {
-        early = err;
-      }
-      expect((early as Error).message).toMatch(/is deferred and not bound yet/);
+      expect(load()).rejects.toThrow(/is deferred and not bound yet/);
     }
 
     collectContributions([

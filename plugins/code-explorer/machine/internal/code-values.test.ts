@@ -83,16 +83,6 @@ async function readWorkspaceBytes(file: WorkspaceFile, maxBytes: number) {
   return readWorkspaceBytesIn(file, await rootOf(file.workspace), maxBytes);
 }
 
-/** The code of the refusal `p` rejects with. */
-async function refusalCode(p: Promise<unknown>): Promise<string> {
-  try {
-    await p;
-  } catch (err) {
-    return (err as { code: string }).code;
-  }
-  throw new Error("expected a refusal");
-}
-
 describe("code.file", () => {
   test("reads the file on disk, and as of a ref", async () => {
     expect(await loadCodeFile({ worktree: repo, path: "a.txt" })).toEqual({
@@ -108,17 +98,21 @@ describe("code.file", () => {
 
   test("refuses what the route answered with a status", async () => {
     const read = (path: string, ref?: string, worktree = repo) =>
-      refusalCode(
-        loadCodeFile({ worktree, path, ...(ref !== undefined ? { ref } : {}) }),
-      );
-    expect(await read("nope.txt")).toBe("missing");
-    expect(await read("nope.txt", "HEAD")).toBe("missing");
-    expect(await read("../outside.txt")).toBe("invalid-path");
-    expect(await read(join(repo, "a.txt"))).toBe("invalid-path");
-    expect(await read("a.txt", "origin/main")).toBe("invalid-ref");
-    expect(await read("bin.dat")).toBe("binary");
-    expect(await read("a.txt", undefined, join(base, "plain"))).toBe(
-      "no-workspace",
+      loadCodeFile({ worktree, path, ...(ref !== undefined ? { ref } : {}) });
+    expect(read("nope.txt")).rejects.toMatchObject({ code: "missing" });
+    expect(read("nope.txt", "HEAD")).rejects.toMatchObject({ code: "missing" });
+    expect(read("../outside.txt")).rejects.toMatchObject({
+      code: "invalid-path",
+    });
+    expect(read(join(repo, "a.txt"))).rejects.toMatchObject({
+      code: "invalid-path",
+    });
+    expect(read("a.txt", "origin/main")).rejects.toMatchObject({
+      code: "invalid-ref",
+    });
+    expect(read("bin.dat")).rejects.toMatchObject({ code: "binary" });
+    expect(read("a.txt", undefined, join(base, "plain"))).rejects.toMatchObject(
+      { code: "no-workspace" },
     );
   });
 });
@@ -141,18 +135,16 @@ describe("code.file-diff", () => {
     ).toBe("");
   });
 
-  test("refuses a bad ref, a bad path and a missing file", async () => {
+  test("refuses a bad ref, a bad path and a missing file", () => {
     expect(
-      await refusalCode(
-        loadCodeFileDiff({ worktree: repo, path: "a.txt", base: "nope" }),
-      ),
-    ).toBe("invalid-ref");
+      loadCodeFileDiff({ worktree: repo, path: "a.txt", base: "nope" }),
+    ).rejects.toMatchObject({ code: "invalid-ref" });
     expect(
-      await refusalCode(loadCodeFileDiff({ worktree: repo, path: "../x" })),
-    ).toBe("invalid-path");
+      loadCodeFileDiff({ worktree: repo, path: "../x" }),
+    ).rejects.toMatchObject({ code: "invalid-path" });
     expect(
-      await refusalCode(loadCodeFileDiff({ worktree: repo, path: "gone.txt" })),
-    ).toBe("missing");
+      loadCodeFileDiff({ worktree: repo, path: "gone.txt" }),
+    ).rejects.toMatchObject({ code: "missing" });
   });
 });
 
@@ -183,33 +175,25 @@ describe("code.dir", () => {
     expect(atFirst.some((e) => e.name === "bin.dat")).toBe(false);
   });
 
-  test("refuses a missing folder, a path outside, a bad ref and no workspace", async () => {
+  test("refuses a missing folder, a path outside, a bad ref and no workspace", () => {
     expect(
-      await refusalCode(
-        listCodeDirEntries({ worktree: repo, dir: "nope" }, root()),
+      listCodeDirEntries({ worktree: repo, dir: "nope" }, root()),
+    ).rejects.toMatchObject({ code: "missing" });
+    expect(
+      listCodeDirEntries({ worktree: repo, dir: "../.." }, root()),
+    ).rejects.toMatchObject({ code: "invalid-path" });
+    expect(
+      listCodeDirEntries({ worktree: repo, dir: "", ref: "x/y" }, root()),
+    ).rejects.toMatchObject({ code: "invalid-ref" });
+    expect(
+      listCodeDirEntries({ worktree: "x", dir: "" }, null),
+    ).rejects.toMatchObject({ code: "no-workspace" });
+    expect(
+      listCodeDirEntries(
+        { worktree: "x", dir: "", ref: "HEAD" },
+        { path: join(base, "plain"), git: false },
       ),
-    ).toBe("missing");
-    expect(
-      await refusalCode(
-        listCodeDirEntries({ worktree: repo, dir: "../.." }, root()),
-      ),
-    ).toBe("invalid-path");
-    expect(
-      await refusalCode(
-        listCodeDirEntries({ worktree: repo, dir: "", ref: "x/y" }, root()),
-      ),
-    ).toBe("invalid-ref");
-    expect(
-      await refusalCode(listCodeDirEntries({ worktree: "x", dir: "" }, null)),
-    ).toBe("no-workspace");
-    expect(
-      await refusalCode(
-        listCodeDirEntries(
-          { worktree: "x", dir: "", ref: "HEAD" },
-          { path: join(base, "plain"), git: false },
-        ),
-      ),
-    ).toBe("not-a-checkout");
+    ).rejects.toMatchObject({ code: "not-a-checkout" });
   });
 });
 

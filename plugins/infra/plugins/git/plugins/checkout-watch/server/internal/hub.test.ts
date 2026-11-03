@@ -16,16 +16,6 @@ import {
 
 const ev = (path: string): FileChangeEvent => ({ type: "update", path });
 
-/** Await `p` and return the Error it rejected with; throw if it resolved. */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 describe("classifyRootEvent", () => {
   test("a working-tree file is a worktree change", () => {
     expect(classifyRootEvent("/r", ev("/r/src/a.ts"))?.area).toBe("worktree");
@@ -361,10 +351,11 @@ describe("createCheckoutWatchHub", () => {
       readBranch: async () => OWN,
       ignored: IGNORES_NONE,
     });
-    const err = await rejection(
-      hub.acquire("/wt", { refs: ALSO_NONE, onChange: () => {} }),
-    );
-    expect(err.message).toContain("ENOENT");
+    const rejected = hub.acquire("/wt", {
+      refs: ALSO_NONE,
+      onChange: () => {},
+    });
+    expect(rejected).rejects.toThrow("ENOENT");
     expect(dirs.released).toEqual(["/wt"]);
     expect(hub.roots()).toEqual([]);
   });

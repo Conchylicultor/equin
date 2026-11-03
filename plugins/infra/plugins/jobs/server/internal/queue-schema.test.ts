@@ -50,21 +50,6 @@ afterAll(async () => {
 });
 
 /**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test (see
- * `clusters.test.ts`'s identical helper), so this asserts the rejection for
- * real and hands back the error to pin its class.
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
-/**
  * A job defined but deliberately never `register()`ed — registration is a
  * separate step, and `enqueue` does not read the registry (graphile resolves
  * the handler at pickup time, which only starts in `onReady`). Nothing in this
@@ -87,13 +72,12 @@ const job = defineJob({
 
 describe("installQueueSchema", () => {
   test("without it, a transactional enqueue fails as QueueSchemaMissingError", async () => {
-    const err = await rejection(
+    expect(
       t.db.transaction((tx) => job.enqueue({ marker: "before" }, { tx })),
-    );
+    ).rejects.toBeInstanceOf(QueueSchemaMissingError);
     // By INSTANCE, never by message text: the message is prose meant for a
     // human and is free to change, and `jobs:no-raw-addjob` forbids this file
     // from spelling the SQL function whose absence produced it anyway.
-    expect(err).toBeInstanceOf(QueueSchemaMissingError);
   });
 
   test("after it, the same enqueue lands a row on the throwaway database", async () => {

@@ -14,20 +14,6 @@ import {
 import { pathsUnder } from "./pathspec";
 import { loadRepoFiles } from "./repo-files";
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test (the same helper
- * the op-runtime, spawn and host-semaphore suites carry).
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 let root!: AppPath;
 
 // Sorted (code-unit order). `a-b.ts` ("-" < "/") and `a.ts` ("." < "/") sort
@@ -130,9 +116,7 @@ describe("loadRepoFiles", () => {
     expect(() => repo.under("a/")).toThrow("repo-relative");
     expect(() => repo.under("/a")).toThrow("repo-relative");
     expect(() => repo.under("a/../b")).toThrow("repo-relative");
-    expect((await rejection(repo.read("a//c.ts"))).message).toContain(
-      "repo-relative",
-    );
+    expect(repo.read("a//c.ts")).rejects.toThrow("repo-relative");
   });
 
   test("a git failure throws — never an empty set", async () => {
@@ -140,9 +124,7 @@ describe("loadRepoFiles", () => {
       mkdtempSync(join(tmpdir(), "repo-files-not-git-")),
     );
     try {
-      expect((await rejection(loadRepoFiles(notARepo))).message).toContain(
-        "git ls-files",
-      );
+      expect(loadRepoFiles(notARepo)).rejects.toThrow("git ls-files");
     } finally {
       rmSync(notARepo, { recursive: true, force: true });
     }

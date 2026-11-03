@@ -237,14 +237,7 @@ describe("compileUnionCollection — the shapes", () => {
         __p1: "b:1",
       },
     ]);
-    // `expect(p).rejects` is typed `void` under bun:test: assert by hand.
-    let failure: unknown;
-    try {
-      await compiled.window.loader({});
-    } catch (err) {
-      failure = err;
-    }
-    expect(String(failure)).toMatch(/__c3/);
+    expect(Promise.resolve(compiled.window.loader({}))).rejects.toThrow(/__c3/);
   });
 
   test("groups: per-arm GROUP BY, summed outside; a constant arm groups as one value", async () => {

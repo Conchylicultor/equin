@@ -139,48 +139,38 @@ describe("applyRowOrder (bounded upsert)", () => {
   });
 
   test("rejects a duplicated rowKey (400), writing nothing", async () => {
-    // Not `expect(...).rejects` — bun:test types that as non-thenable, which trips
-    // `@typescript-eslint/await-thenable`. Catch the rejection explicitly instead.
     const ranks = Rank.nBetween(null, null, 3);
-    let caught: unknown;
-    await apply([
+    const write = apply([
       { rowKey: "A", rank: ranks[0]! },
       { rowKey: "B", rank: ranks[1]! },
       { rowKey: "A", rank: ranks[2]! },
-    ]).catch((err: unknown) => {
-      caught = err;
-    });
-    expect(caught).toBeInstanceOf(HttpError);
-    expect((caught as HttpError).status).toBe(400);
+    ]);
+    expect(write).rejects.toBeInstanceOf(HttpError);
+    expect(write).rejects.toMatchObject({ status: 400 });
     // Rejected BEFORE any write.
     expect(await readOrder()).toEqual([]);
   });
 
   test("rejects a non-strictly-ascending rank sequence (400), writing nothing", async () => {
     const ranks = Rank.nBetween(null, null, 3);
-    let caught: unknown;
     // Descending: ranks[2] then ranks[0].
-    await apply([
+    const write = apply([
       { rowKey: "A", rank: ranks[2]! },
       { rowKey: "B", rank: ranks[0]! },
-    ]).catch((err: unknown) => {
-      caught = err;
-    });
-    expect(caught).toBeInstanceOf(HttpError);
-    expect((caught as HttpError).status).toBe(400);
+    ]);
+    expect(write).rejects.toBeInstanceOf(HttpError);
+    expect(write).rejects.toMatchObject({ status: 400 });
     expect(await readOrder()).toEqual([]);
   });
 
   test("rejects an equal-rank pair (not strictly ascending)", async () => {
     const r = Rank.nBetween(null, null, 1)[0]!;
-    let caught: unknown;
-    await apply([
-      { rowKey: "A", rank: r },
-      { rowKey: "B", rank: r },
-    ]).catch((err: unknown) => {
-      caught = err;
-    });
-    expect(caught).toBeInstanceOf(HttpError);
+    expect(
+      apply([
+        { rowKey: "A", rank: r },
+        { rowKey: "B", rank: r },
+      ]),
+    ).rejects.toBeInstanceOf(HttpError);
     expect(await readOrder()).toEqual([]);
   });
 

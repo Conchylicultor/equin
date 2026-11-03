@@ -106,9 +106,7 @@ describe("snapshot", () => {
       ["1.0.0.0,1.0.0.1\n", /start,end,CC/],
     ];
     for (const [csv, message] of cases) {
-      expect((await rejection(buildSnapshot(csv, 202609))).message).toMatch(
-        message,
-      );
+      expect(buildSnapshot(csv, 202609)).rejects.toThrow(message);
     }
   });
 
@@ -126,17 +124,3 @@ describe("snapshot", () => {
     expect(() => loadSnapshot(new Uint8Array(3))).toThrow(/shorter/);
   });
 });
-
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved instead.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test, so awaiting it
- * is flagged by await-thenable (the same helper as host-semaphore's tests).
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}

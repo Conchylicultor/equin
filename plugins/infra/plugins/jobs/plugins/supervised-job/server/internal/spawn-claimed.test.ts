@@ -13,20 +13,6 @@ import { HARD_KILL_EXIT_CODE, type RunTerminal } from "../../core";
 import { SupervisedSpawnError } from "./run/supervisor";
 import { spawnClaimedRun } from "./spawn-claimed";
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test, so awaiting it
- * is an `await` of a non-Thenable — this asserts the rejection for real.
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 describe("spawnClaimedRun", () => {
   test("a successful spawn touches the row not at all", async () => {
     const closed: string[] = [];
@@ -53,7 +39,9 @@ describe("spawnClaimedRun", () => {
       false,
     );
 
-    const err = await rejection(
+    // The job still fails loudly — this is the wrapper's OWN failure, so it
+    // earns the retry budget and the crash report.
+    expect(
       spawnClaimedRun(
         {
           start: () => Promise.reject(preSpawn),
@@ -64,11 +52,7 @@ describe("spawnClaimedRun", () => {
         },
         "run-enoent",
       ),
-    );
-
-    // The job still fails loudly — this is the wrapper's OWN failure, so it
-    // earns the retry budget and the crash report.
-    expect(err).toBe(preSpawn);
+    ).rejects.toBe(preSpawn);
     expect(closed).toHaveLength(1);
     expect(closed[0]?.runId).toBe("run-enoent");
     // The same sentinel the reconciler would stamp after a restart: no marker
@@ -89,7 +73,7 @@ describe("spawnClaimedRun", () => {
       true,
     );
 
-    const err = await rejection(
+    expect(
       spawnClaimedRun(
         {
           start: () => Promise.reject(postSpawn),
@@ -100,9 +84,7 @@ describe("spawnClaimedRun", () => {
         },
         "run-after-spawn",
       ),
-    );
-
-    expect(err).toBe(postSpawn);
+    ).rejects.toBe(postSpawn);
     expect(closed).toEqual([]);
   });
 
@@ -112,7 +94,7 @@ describe("spawnClaimedRun", () => {
     // case takes the recoverable side.
     const closed: string[] = [];
 
-    const err = await rejection(
+    expect(
       spawnClaimedRun(
         {
           start: () => Promise.reject(new Error("something else entirely")),
@@ -123,30 +105,29 @@ describe("spawnClaimedRun", () => {
         },
         "run-unknown",
       ),
-    );
+    ).rejects.toMatchObject({ message: "something else entirely" });
 
-    expect(err.message).toBe("something else entirely");
     expect(closed).toEqual([]);
   });
 
   test("a spawn failure whose close also fails reports BOTH", async () => {
     // The kind really is wedged until a restart in this case, so the message is
     // the only warning anyone gets — neither error may be swallowed by the other.
-    const err = await rejection(
-      spawnClaimedRun(
-        {
-          start: () =>
-            Promise.reject(new SupervisedSpawnError("EAGAIN", false)),
-          closeRow: () => Promise.reject(new Error("db is down")),
-        },
-        "run-both",
-      ),
+    const failed = spawnClaimedRun(
+      {
+        start: () => Promise.reject(new SupervisedSpawnError("EAGAIN", false)),
+        closeRow: () => Promise.reject(new Error("db is down")),
+      },
+      "run-both",
     );
 
-    expect(err).toBeInstanceOf(AggregateError);
-    expect(err.message).toContain("run-both");
-    expect((err as AggregateError).errors.map((e: Error) => e.message)).toEqual(
-      ["EAGAIN", "db is down"],
-    );
+    expect(failed).rejects.toBeInstanceOf(AggregateError);
+    expect(failed).rejects.toThrow("run-both");
+    expect(failed).rejects.toMatchObject({
+      errors: [
+        expect.objectContaining({ message: "EAGAIN" }),
+        expect.objectContaining({ message: "db is down" }),
+      ],
+    });
   });
 });

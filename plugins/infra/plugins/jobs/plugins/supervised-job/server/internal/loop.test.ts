@@ -126,21 +126,6 @@ function createCtx(onWait?: (name: string) => void): {
   };
 }
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test, so awaiting it
- * is an `await` of a non-Thenable — this asserts the rejection for real. Same
- * helper the inflight / host-semaphore suites carry.
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 /** Records every attempt the loop closed. */
 interface EndedRecord {
   runId: string;
@@ -442,7 +427,7 @@ describe("superviseRuns", () => {
       },
     };
 
-    expect((await rejection(superviseRuns(spec))).message).toBe("suspended");
+    expect(superviseRuns(spec)).rejects.toMatchObject({ message: "suspended" });
 
     // The wake arrives: same workflow, same steps, and the marker is now there.
     writeMarker(runId, "0 -\n");
@@ -503,7 +488,7 @@ describe("the retry ladder", () => {
     const first = uniqueRunId("lostretry");
     const { ctx } = createCtx();
 
-    const err = await rejection(
+    expect(
       superviseRuns({
         kind,
         runAttempts: 2,
@@ -516,9 +501,7 @@ describe("the retry ladder", () => {
         closeRow: () => Promise.resolve(),
         onEnded: (_started, terminal) => Promise.resolve(verdictOf(terminal)),
       }),
-    );
-
-    expect(err.message).toContain("attempt 2 lost its claim");
+    ).rejects.toThrow("attempt 2 lost its claim");
   });
 
   test("the backoff is e^attempt seconds, capped at a minute", () => {

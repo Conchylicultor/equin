@@ -61,20 +61,6 @@ function until(predicate: () => boolean, timeoutMs = 5_000): Promise<void> {
   });
 }
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test, so awaiting it
- * is an `await` of a non-Thenable — this asserts the rejection for real.
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 let dir: string;
 const open: FileWatcher[] = [];
 
@@ -99,9 +85,9 @@ describe("defineFileWatcherIn", () => {
       { name: "t.unregistered", description: "d" },
       runtime(),
     );
-    expect(
-      (await rejection(w.start({ dirs: [dir], onChange: () => {} }))).message,
-    ).toMatch(/before it was registered/);
+    expect(w.start({ dirs: [dir], onChange: () => {} })).rejects.toThrow(
+      /before it was registered/,
+    );
   });
 
   test("a duplicate name throws on register", () => {
@@ -122,9 +108,9 @@ describe("defineFileWatcherIn", () => {
       runtime({ scope: "main", runsHere: false }),
     );
     w.register();
-    expect(
-      (await rejection(w.start({ dirs: [dir], onChange: () => {} }))).message,
-    ).toMatch(/main-only/);
+    expect(w.start({ dirs: [dir], onChange: () => {} })).rejects.toThrow(
+      /main-only/,
+    );
     expect(snapshot("t.main-only")).toMatchObject({
       scope: "main",
       runsHere: false,
@@ -256,7 +242,7 @@ describe("defineFileWatcherIn", () => {
   });
 
   test("an unknown name has no recent runs", async () => {
-    expect((await rejection(fileWatcherRecentRuns("t.nope"))).message).toMatch(
+    expect(fileWatcherRecentRuns("t.nope")).rejects.toThrow(
       /no watcher named "t\.nope"/,
     );
   });

@@ -82,15 +82,6 @@ function createCtx(onWait?: () => void): {
   };
 }
 
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 const noClose = (): Promise<void> => Promise.resolve();
 const noUnfinished = (): Promise<readonly UnfinishedRun[]> =>
   Promise.resolve([]);
@@ -204,7 +195,7 @@ describe("runStepsBody", () => {
       );
 
     writeMarker(`${runId}.one`, "0 -\n");
-    expect((await rejection(run())).message).toBe("suspended");
+    expect(run()).rejects.toMatchObject({ message: "suspended" });
     // The resume: step one's marker was already there, step two's lands now.
     writeMarker(`${runId}.two`, "3 -\n");
     await run();
@@ -367,24 +358,24 @@ describe("runStepsBody", () => {
     };
 
     const thrown = createCtx();
-    const err = await rejection(
+    expect(
       dispatch({ ...opts, ctx: thrown.ctx }, async (step) => {
         await step("converge", { argv: ["x"] });
         throw new Error("body failed");
       }),
-    );
-    expect(err.message).toBe("body failed");
+    ).rejects.toMatchObject({ message: "body failed" });
+
     expect(closed).toEqual([`${runId}.converge`]);
 
     closed.length = 0;
     const suspending = createCtx();
-    const suspend = await rejection(
+    expect(
       dispatch({ ...opts, ctx: suspending.ctx }, async (step) => {
         await step("converge", { argv: ["x"] });
         throw suspendSignal();
       }),
-    );
-    expect(suspend.message).toBe("suspended");
+    ).rejects.toMatchObject({ message: "suspended" });
+
     expect(closed).toEqual([]);
   });
 
@@ -392,7 +383,7 @@ describe("runStepsBody", () => {
     const runId = uniqueRunId("maybestarted");
     const closed: string[] = [];
     const { ctx } = createCtx();
-    const err = await rejection(
+    expect(
       dispatch(
         {
           ctx,
@@ -412,9 +403,8 @@ describe("runStepsBody", () => {
           await step("after", { argv: ["x"] });
         },
       ),
-    );
+    ).rejects.toMatchObject({ message: "boom" });
 
-    expect(err.message).toBe("boom");
     // `before` never started, but `after` may be running under the same lock.
     expect(closed).toEqual([]);
   });
@@ -423,7 +413,6 @@ describe("runStepsBody", () => {
     const runId = uniqueRunId("names");
     writeMarker(`${runId}.once`, "0 -\n");
     const { ctx } = createCtx();
-    const messages: string[] = [];
     await dispatch(
       {
         ctx,
@@ -434,15 +423,11 @@ describe("runStepsBody", () => {
       },
       async (step) => {
         await step("once", { argv: ["true"] });
-        messages.push(
-          (await rejection(step("once", { argv: ["true"] }))).message,
-        );
-        messages.push(
-          (await rejection(step("a/b", { argv: ["true"] }))).message,
+        expect(step("once", { argv: ["true"] })).rejects.toThrow("ran twice");
+        expect(step("a/b", { argv: ["true"] })).rejects.toThrow(
+          "invalid step name",
         );
       },
     );
-    expect(messages[0]).toContain("ran twice");
-    expect(messages[1]).toContain("invalid step name");
   });
 });

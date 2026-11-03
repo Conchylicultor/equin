@@ -90,21 +90,6 @@ async function remainingIds(): Promise<string[]> {
   return rows.map((r) => r.id).sort();
 }
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test (see the
- * host-semaphore suite's identical helper), so this asserts the rejection for
- * real and hands back the error to pin its message.
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 describe("sweepExpired", () => {
   test("without beforeDelete: deletes only rows past the cutoff", async () => {
     await seed("old", 40);
@@ -146,7 +131,7 @@ describe("sweepExpired", () => {
   test("a throwing beforeDelete aborts the sweep — rows survive for the next tick", async () => {
     await seed("old", 40);
 
-    const err = await rejection(
+    expect(
       sweepExpired(dbc, {
         table: _scratch,
         column: _scratch.createdAt,
@@ -155,8 +140,7 @@ describe("sweepExpired", () => {
           throw new Error("purge boom");
         },
       }),
-    );
-    expect(err.message).toBe("purge boom");
+    ).rejects.toMatchObject({ message: "purge boom" });
 
     expect(await remainingIds()).toEqual(["old"]);
   });
@@ -223,7 +207,7 @@ describe("sweepExpired on a produced table", () => {
       route: () => {},
     });
     try {
-      const err = await rejection(
+      expect(
         dbc.transaction((tx) =>
           sweepExpired(tx, {
             table: _produced,
@@ -231,8 +215,7 @@ describe("sweepExpired on a produced table", () => {
             cutoff: retentionCutoff(new Date(), 30),
           }),
         ),
-      );
-      expect(err.message).toContain("must run on the pool");
+      ).rejects.toThrow("must run on the pool");
     } finally {
       unmount();
     }

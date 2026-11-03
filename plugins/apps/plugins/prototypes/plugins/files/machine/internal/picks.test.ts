@@ -49,20 +49,6 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved (the
- * history store suite's helper — `expect(p).rejects` is typed `void` here).
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    if (err instanceof Error) return err;
-    throw err;
-  }
-  throw new Error("expected a rejection, but it resolved");
-}
-
 describe("openPicksStore", () => {
   test("nothing picked is an empty record, and no file", async () => {
     expect(await store.read(ID)).toEqual({});
@@ -151,21 +137,15 @@ describe("openPicksStore", () => {
     await mkdir(join(root, PICKS_DIR_NAME), { recursive: true });
 
     await writeFile(fileOf(ID), "{ not json");
-    expect((await rejection(store.read(ID))).message).toContain(
-      "malformed prototype picks file",
-    );
+    expect(store.read(ID)).rejects.toThrow("malformed prototype picks file");
     // …and a write does not paper over it.
     expect(
-      (
-        await rejection(
-          store.write(
-            ID,
-            { kind: "set", option: "palette", value: "azure" },
-            writer,
-          ),
-        )
-      ).message,
-    ).toContain("malformed prototype picks file");
+      store.write(
+        ID,
+        { kind: "set", option: "palette", value: "azure" },
+        writer,
+      ),
+    ).rejects.toThrow("malformed prototype picks file");
 
     for (const bad of [
       '["azure"]',
@@ -175,17 +155,13 @@ describe("openPicksStore", () => {
       '{"palette": "Soft tray"}',
     ]) {
       await writeFile(fileOf(ID), bad);
-      expect((await rejection(store.read(ID))).message).toContain(
-        "malformed prototype picks file",
-      );
+      expect(store.read(ID)).rejects.toThrow("malformed prototype picks file");
     }
   });
 
-  test("a name that is not an id never becomes a path", async () => {
+  test("a name that is not an id never becomes a path", () => {
     expect(() => store.fileOf("../etc")).toThrow("not a prototype id");
-    expect((await rejection(store.read("_template"))).message).toContain(
-      "not a prototype id",
-    );
+    expect(store.read("_template")).rejects.toThrow("not a prototype id");
   });
 });
 

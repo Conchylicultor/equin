@@ -23,16 +23,6 @@ import { tasksMandate } from "../tables-mandate";
 import type { DbExecutor } from "../status-batch";
 import { nearestMandate } from "./tasks";
 
-/** The Error `p` rejected with; throws if it resolved. */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 // Never resolved here: tasks-core stores and walks ids only.
 const ROOT = defineMandate({ id: "test-root", label: "Root" });
 const NESTED = defineMandate({ id: "test-nested", label: "Nested" });
@@ -123,26 +113,22 @@ describe("root mandate invariant", () => {
   });
 
   test("clearMandate refuses on a root", async () => {
-    const err = await rejection(
+    expect(
       worktreeDbScenario(async (tx) => {
         const root = await createTask({ title: "root", mandate: ROOT }, tx);
         await clearMandate(root.id, tx);
       }),
-    );
-    expect(err.message).toMatch(/is a root/);
+    ).rejects.toThrow(/is a root/);
   });
 
   test("the CHECK refuses a root row without a mandate", async () => {
-    const err = await rejection(
+    expect(
       worktreeDbScenario((tx) =>
         tx.execute(sql`
           INSERT INTO tasks (id, title, title_auto, rank)
           VALUES ('mandate-test-bare-root', 'bare', false, 'a0')`),
       ),
-    );
-    expect(`${err.message} ${String(err.cause ?? "")}`).toMatch(
-      /tasks_root_has_mandate/,
-    );
+    ).rejects.toThrow(/tasks_root_has_mandate/);
   });
 });
 

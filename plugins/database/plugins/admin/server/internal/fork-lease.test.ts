@@ -29,13 +29,9 @@ describe("fork temp lease", () => {
 
   test("a lease already held is refused loudly", async () => {
     await withForkTempLease(temp, async () => {
-      // `.rejects.toThrow()` is typed `void` under bun:test; settle it by hand.
-      const err = await withForkTempLease(temp, async () => {}).then(
-        () => null,
-        (e: unknown) => e,
+      expect(withForkTempLease(temp, async () => {})).rejects.toThrow(
+        /already held/,
       );
-      expect(err).toBeInstanceOf(Error);
-      expect((err as Error).message).toMatch(/already held/);
     });
   });
 });

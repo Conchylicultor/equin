@@ -987,15 +987,6 @@ describe("the sidebar loader reads the column", () => {
     await t.db.execute(
       sql`UPDATE page_blocks SET doc_rank = NULL WHERE id = 'W'`,
     );
-    // `expect(p).rejects.toThrow()` is typed `void` under bun:test, so awaiting
-    // it trips `@typescript-eslint/await-thenable`; capture the rejection.
-    let caught: unknown;
-    try {
-      await loadPages(t.db);
-    } catch (err) {
-      caught = err;
-    }
-    expect(caught).toBeInstanceOf(Error);
-    expect((caught as Error).message).toMatch(/live page W .* has no doc_rank/);
+    expect(loadPages(t.db)).rejects.toThrow(/live page W .* has no doc_rank/);
   });
 });

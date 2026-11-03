@@ -54,16 +54,6 @@ function inputs(
   };
 }
 
-/** The rejection's message (bun's `rejects` is typed `void`). */
-async function rejection(p: Promise<unknown>): Promise<string> {
-  try {
-    await p;
-  } catch (err) {
-    return err instanceof Error ? err.message : String(err);
-  }
-  throw new Error("expected a rejection");
-}
-
 const VALUE = `import { liveValue } from "@plugins/network/plugins/live/core";
 export const greeting = liveValue("app.greeting", { schema: S });
 export const remote = liveValue("app.remote", { schema: S, needsMachine: { feature: "x" } });
@@ -108,57 +98,51 @@ describe("resolveHostCoverage", () => {
   });
 
   test("an unserved read throws, naming its reader and why its server is outside the graph", async () => {
-    const message = await rejection(
-      resolveHostCoverage(
-        inputs({
-          ...BASE,
-          [pj("disk/core/index.ts")]:
-            `import { liveValue } from "@plugins/network/plugins/live/core";\nexport const files = liveValue("disk.files", { schema: S });`,
-          [pj("disk/server/index.ts")]:
-            `import { files } from "../core";\nimport { serveValue } from "@plugins/network/plugins/live/server";\nexport const served = serveValue(files, { source: "external", changes: "notified", loader: () => 1 });\nexport default {};`,
-          [pj("app/web/view.tsx")]:
-            `import { files } from "@plugins/disk/core";\n\nuse(files);`,
-        }),
-      ),
+    const rejected = resolveHostCoverage(
+      inputs({
+        ...BASE,
+        [pj("disk/core/index.ts")]:
+          `import { liveValue } from "@plugins/network/plugins/live/core";\nexport const files = liveValue("disk.files", { schema: S });`,
+        [pj("disk/server/index.ts")]:
+          `import { files } from "../core";\nimport { serveValue } from "@plugins/network/plugins/live/server";\nexport const served = serveValue(files, { source: "external", changes: "notified", loader: () => 1 });\nexport default {};`,
+        [pj("app/web/view.tsx")]:
+          `import { files } from "@plugins/disk/core";\n\nuse(files);`,
+      }),
     );
-    expect(message).toContain(
+    expect(rejected).rejects.toThrow(
       'live read "disk.files" (plugins/disk/core/index.ts) is not served by the graph: served by disk/server, which is not portable: disk/server is not portable (via a → b)',
     );
-    expect(message).toContain("read at plugins/app/web/view.tsx:1");
+    expect(rejected).rejects.toThrow("read at plugins/app/web/view.tsx:1");
   });
 
   test("a read served only from machine/ must declare needsMachine", async () => {
-    const message = await rejection(
-      resolveHostCoverage(
-        inputs({
-          ...BASE,
-          [pj("app/core/extra.ts")]:
-            `import { liveValue } from "@plugins/network/plugins/live/core";\nexport const disk = liveValue("app.disk", { schema: S });`,
-          [pj("app/machine/index.ts")]:
-            `import { serveValue } from "@plugins/network/plugins/live/machine";\nimport { disk } from "../core/extra";\nexport const s = serveValue(disk, { source: "external", changes: "notified", loader: () => 1 });\nexport default {};`,
-          [pj("app/web/view.tsx")]:
-            `import { disk } from "../core/extra";\nuse(disk);`,
-        }),
-      ),
+    const rejected = resolveHostCoverage(
+      inputs({
+        ...BASE,
+        [pj("app/core/extra.ts")]:
+          `import { liveValue } from "@plugins/network/plugins/live/core";\nexport const disk = liveValue("app.disk", { schema: S });`,
+        [pj("app/machine/index.ts")]:
+          `import { serveValue } from "@plugins/network/plugins/live/machine";\nimport { disk } from "../core/extra";\nexport const s = serveValue(disk, { source: "external", changes: "notified", loader: () => 1 });\nexport default {};`,
+        [pj("app/web/view.tsx")]:
+          `import { disk } from "../core/extra";\nuse(disk);`,
+      }),
     );
-    expect(message).toContain(
+    expect(rejected).rejects.toThrow(
       'live read "app.disk" (plugins/app/core/extra.ts) is not served by the graph: served by app/machine — desktop-only',
     );
   });
 
   test("a central read must declare needsMachine, served or not", async () => {
     const central = `import { liveValue } from "@plugins/network/plugins/live/core";\nexport const runs = liveValue("app.central-runs", { schema: S, origin: "central" });\nexport const machineRuns = liveValue("app.central-machine", { schema: S, origin: "central", needsMachine: M });`;
-    const message = await rejection(
-      resolveHostCoverage(
-        inputs({
-          ...BASE,
-          [pj("app/core/central.ts")]: central,
-          [pj("app/web/view.tsx")]:
-            `import { runs } from "../core/central";\nuse(runs);`,
-        }),
-      ),
+    const rejected = resolveHostCoverage(
+      inputs({
+        ...BASE,
+        [pj("app/core/central.ts")]: central,
+        [pj("app/web/view.tsx")]:
+          `import { runs } from "../core/central";\nuse(runs);`,
+      }),
     );
-    expect(message).toContain(
+    expect(rejected).rejects.toThrow(
       'live read "app.central-runs" (plugins/app/core/central.ts) is central\'s (origin: "central") and not `needsMachine`',
     );
     const { reads } = await resolveHostCoverage(
@@ -173,21 +157,19 @@ describe("resolveHostCoverage", () => {
   });
 
   test("an unserved endpoint a core helper calls is found through the helper", async () => {
-    const message = await rejection(
-      resolveHostCoverage(
-        inputs({
-          ...BASE,
-          [pj("app/core/helper.ts")]:
-            `import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";\nexport const save = defineEndpoint({ route: "POST /api/app/save" });\nexport function saveIt() { return save; }`,
-          [pj("app/web/view.tsx")]:
-            `import { saveIt } from "../core/helper";\nsaveIt();`,
-        }),
-      ),
+    const rejected = resolveHostCoverage(
+      inputs({
+        ...BASE,
+        [pj("app/core/helper.ts")]:
+          `import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";\nexport const save = defineEndpoint({ route: "POST /api/app/save" });\nexport function saveIt() { return save; }`,
+        [pj("app/web/view.tsx")]:
+          `import { saveIt } from "../core/helper";\nsaveIt();`,
+      }),
     );
-    expect(message).toContain(
+    expect(rejected).rejects.toThrow(
       'endpoint "POST /api/app/save" (save, plugins/app/core/helper.ts) is not served by the graph: nothing in the repo serves it',
     );
-    expect(message).toContain("called at plugins/app/core/helper.ts:3");
+    expect(rejected).rejects.toThrow("called at plugins/app/core/helper.ts:3");
   });
 
   const PAGE_TRANSPORT_IMPORT = `import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/page-transport/web";`;
@@ -208,30 +190,26 @@ describe("resolveHostCoverage", () => {
   });
 
   test("a page-bound file's live reads are still the scope's", async () => {
-    const message = await rejection(
-      resolveHostCoverage(
-        inputs({
-          ...BASE,
-          ...DISK_ENDPOINT,
-          [pj("app/web/telemetry.ts")]:
-            `${PAGE_TRANSPORT_IMPORT}\nimport { files } from "@plugins/disk/core";\nuse(useLive(files), pageTransport);`,
-        }),
-      ),
+    const rejected = resolveHostCoverage(
+      inputs({
+        ...BASE,
+        ...DISK_ENDPOINT,
+        [pj("app/web/telemetry.ts")]:
+          `${PAGE_TRANSPORT_IMPORT}\nimport { files } from "@plugins/disk/core";\nuse(useLive(files), pageTransport);`,
+      }),
     );
-    expect(message).toContain('live read "disk.files"');
+    expect(rejected).rejects.toThrow('live read "disk.files"');
   });
 
   test("a page-bound file holding a scope fetcher too is refused", async () => {
-    const message = await rejection(
-      resolveHostCoverage(
-        inputs({
-          ...BASE,
-          [pj("app/web/telemetry.ts")]:
-            `${PAGE_TRANSPORT_IMPORT}\nexport async function act(fetchEndpoint: FetchEndpoint) { use(pageTransport); }`,
-        }),
-      ),
+    const rejected = resolveHostCoverage(
+      inputs({
+        ...BASE,
+        [pj("app/web/telemetry.ts")]:
+          `${PAGE_TRANSPORT_IMPORT}\nexport async function act(fetchEndpoint: FetchEndpoint) { use(pageTransport); }`,
+      }),
     );
-    expect(message).toContain(
+    expect(rejected).rejects.toThrow(
       "imports `pageTransport` and holds a scope fetcher too",
     );
   });
@@ -244,29 +222,25 @@ describe("resolveHostCoverage", () => {
       [pj("disk/server/index.ts")]:
         `import { raw } from "../core";\nexport default { httpRoutes: { [raw.route]: h } };`,
     };
-    const message = await rejection(
-      resolveHostCoverage(
-        inputs({
-          ...files,
-          [pj("app/web/view.tsx")]: 'fetch("/api/disk/raw?path=x");',
-        }),
-      ),
+    const rejected = resolveHostCoverage(
+      inputs({
+        ...files,
+        [pj("app/web/view.tsx")]: 'fetch("/api/disk/raw?path=x");',
+      }),
     );
-    expect(message).toContain(
+    expect(rejected).rejects.toThrow(
       'a raw "/api/disk" URL is not served by the graph',
     );
-    const unrouted = await rejection(
-      resolveHostCoverage(
-        inputs({
-          ...files,
-          [pj("app/web/view.tsx")]: 'fetch("/api/mirror/" + id);',
-        }),
-      ),
+    const unrouted = resolveHostCoverage(
+      inputs({
+        ...files,
+        [pj("app/web/view.tsx")]: 'fetch("/api/mirror/" + id);',
+      }),
     );
-    expect(unrouted).toContain(
+    expect(unrouted).rejects.toThrow(
       'a raw "/api/mirror" URL is not served by the graph (a URL built by hand cannot declare `needsMachine`',
     );
-    expect(unrouted).toContain("nothing in the repo serves it");
+    expect(unrouted).rejects.toThrow("nothing in the repo serves it");
   });
 
   test("a raw URL to a member's prefix is covered; prose naming a route is no URL", async () => {
@@ -287,56 +261,48 @@ describe("resolveHostCoverage", () => {
       ["[other.path]", "is not readable"],
       ["[missing.route]", "names no endpoint declaration"],
     ] as const) {
-      const message = await rejection(
-        resolveHostCoverage(
-          inputs({
-            ...BASE,
-            [pj("app/server/index.ts")]:
-              `import { ping } from "../core";\nexport default { httpRoutes: { [ping.route]: h, ${key}: h } };`,
-            [pj("app/web/view.tsx")]:
-              `import { ping } from "@plugins/app/core";\nuse(ping);`,
-          }),
-        ),
+      const rejected = resolveHostCoverage(
+        inputs({
+          ...BASE,
+          [pj("app/server/index.ts")]:
+            `import { ping } from "../core";\nexport default { httpRoutes: { [ping.route]: h, ${key}: h } };`,
+          [pj("app/web/view.tsx")]:
+            `import { ping } from "@plugins/app/core";\nuse(ping);`,
+        }),
       );
-      expect(message).toContain(
+      expect(rejected).rejects.toThrow(
         `plugins/app/server/index.ts: \`httpRoutes\` key \`${key}\` ${why}`,
       );
     }
     for (const entry of ["...more", "shorthand"]) {
-      const message = await rejection(
-        resolveHostCoverage(
-          inputs({
-            ...BASE,
-            [pj("app/server/index.ts")]:
-              `import { ping } from "../core";\nexport default { httpRoutes: { [ping.route]: h, ${entry} } };`,
-          }),
-        ),
-      );
-      expect(message).toContain("is not a `key: handler` pair");
-    }
-    const notObject = await rejection(
-      resolveHostCoverage(
+      const rejected = resolveHostCoverage(
         inputs({
           ...BASE,
           [pj("app/server/index.ts")]:
-            "const routes = {};\nexport default { httpRoutes: routes };",
+            `import { ping } from "../core";\nexport default { httpRoutes: { [ping.route]: h, ${entry} } };`,
         }),
-      ),
+      );
+      expect(rejected).rejects.toThrow("is not a `key: handler` pair");
+    }
+    const notObject = resolveHostCoverage(
+      inputs({
+        ...BASE,
+        [pj("app/server/index.ts")]:
+          "const routes = {};\nexport default { httpRoutes: routes };",
+      }),
     );
-    expect(notObject).toContain("`httpRoutes` is not one object literal");
+    expect(notObject).rejects.toThrow("`httpRoutes` is not one object literal");
   });
 
   test("a bad httpRoutes key in a NON-member barrel throws too (every backend barrel is read)", async () => {
-    const message = await rejection(
-      resolveHostCoverage(
-        inputs({
-          ...BASE,
-          [pj("disk/machine/index.ts")]:
-            "export default { httpRoutes: { [ROUTE_KEY]: h } };",
-        }),
-      ),
+    const rejected = resolveHostCoverage(
+      inputs({
+        ...BASE,
+        [pj("disk/machine/index.ts")]:
+          "export default { httpRoutes: { [ROUTE_KEY]: h } };",
+      }),
     );
-    expect(message).toContain(
+    expect(rejected).rejects.toThrow(
       "plugins/disk/machine/index.ts: `httpRoutes` key `[ROUTE_KEY]` is not readable",
     );
   });

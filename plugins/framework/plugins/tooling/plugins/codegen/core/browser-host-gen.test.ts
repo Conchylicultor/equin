@@ -153,17 +153,6 @@ function inputs(
 const SERVICE_MODULE = at("db", "server/internal/driver.ts");
 const SERVICE = `export const Driver = defineHostService<DriverImpl>("db.driver");`;
 
-/** The rejection's message — `expect(p).rejects` is typed `void` by bun's
- *  matchers, so awaiting it trips `await-thenable`. */
-async function rejection(p: Promise<unknown>): Promise<string> {
-  try {
-    await p;
-  } catch (err) {
-    return err instanceof Error ? err.message : String(err);
-  }
-  throw new Error("expected a rejection");
-}
-
 describe("resolveHostGraph", () => {
   test("adds the one provider of a declared service, and no other negated plugin", async () => {
     const graph = await resolveHostGraph(
@@ -212,7 +201,7 @@ describe("resolveHostGraph", () => {
         { [barrel("disk")]: "node:fs" },
       ),
     );
-    expect(await rejection(run)).toContain(
+    expect(run).rejects.toThrow(
       `the graph loads ${barrel("disk")}, which is not in it (not portable: ${barrel("disk")} needs node:fs)\n      via ${barrel("app")} → ${barrel("disk")}`,
     );
   });
@@ -225,7 +214,7 @@ describe("resolveHostGraph", () => {
         { bundleBarrels: [barrel("db")] },
       ),
     );
-    expect(await rejection(run)).toContain(
+    expect(run).rejects.toThrow(
       `host service "db.driver" (${SERVICE_MODULE}) has no provider`,
     );
   });
@@ -247,7 +236,7 @@ describe("resolveHostGraph", () => {
         },
       ),
     );
-    expect(await rejection(run)).toContain(
+    expect(run).rejects.toThrow(
       `host service "db.driver" has 2 providers: db/plugins/a, db/plugins/b`,
     );
   });

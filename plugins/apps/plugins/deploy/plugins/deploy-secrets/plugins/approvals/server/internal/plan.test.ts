@@ -8,16 +8,6 @@ import {
 } from "./plan";
 import { fingerprintSecret, importHmacKey } from "./fingerprint";
 
-/** Await `p` and return what it rejected with; throw if it resolved. (`expect(p).rejects` is typed `void` under bun:test.) */
-async function rejection(p: Promise<unknown>): Promise<unknown> {
-  try {
-    await p;
-  } catch (err) {
-    return err;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 const req = (key: string): RequiredSecret => ({
   key,
   description: `${key} description`,
@@ -107,9 +97,7 @@ describe("fingerprintSecret", () => {
     );
   });
 
-  test("a malformed stored key throws", async () => {
-    expect(String(await rejection(importHmacKey("abc")))).toContain(
-      "32 hex bytes",
-    );
+  test("a malformed stored key throws", () => {
+    expect(importHmacKey("abc")).rejects.toThrow("32 hex bytes");
   });
 });

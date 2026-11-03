@@ -9,16 +9,6 @@ import {
 
 afterEach(() => resetCodeStamps());
 
-/** The error `p` rejected with (`rejects.toThrow` is typed `void` under bun:test). */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 const set = (description: string) => ({ description, urls: () => [] });
 const loaderA = set("a's loader");
 const loaderB = set("b's loader");
@@ -107,15 +97,8 @@ test("no provider (a host without the source): every key stamped by this process
 
 test("two providers throw: L2 stays off, nothing persists or matches", async () => {
   expect(
-    (
-      await rejection(
-        resolveCodeStamps(neverFails, candidates, [
-          provider("a"),
-          provider("b"),
-        ]),
-      )
-    ).message,
-  ).toMatch(/2 plugins provide the L2 code digest/);
+    resolveCodeStamps(neverFails, candidates, [provider("a"), provider("b")]),
+  ).rejects.toThrow(/2 plugins provide the L2 code digest/);
   expect(shouldPersist("a")).toBe(false);
   expect(stampDefinition("a", "def")).toBe("unstamped");
 });

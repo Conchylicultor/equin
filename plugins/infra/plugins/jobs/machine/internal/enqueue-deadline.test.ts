@@ -67,15 +67,6 @@ afterAll(async () => {
   await t.drop();
 });
 
-async function rejectionOf(promise: Promise<unknown>): Promise<unknown> {
-  try {
-    await promise;
-  } catch (err) {
-    return err;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 describe("enqueue through the jobs-enqueue pool", () => {
   test("an insert that gets no reply rejects naming the jobs-enqueue pool", async () => {
     const { user } = readDatabaseConfig().connection;
@@ -101,14 +92,13 @@ describe("enqueue through the jobs-enqueue pool", () => {
         // which no proxy sits in front of. Exempted from `jobs:no-raw-addjob`
         // by path; the row lands nowhere (its bytes are dropped) on a throwaway
         // database.
-        const err = await rejectionOf(
-          utils.addJob("jobs.enqueue-deadline-test", {}),
-        );
-        expect(err).toBeInstanceOf(QueryDeadlineExceededError);
-        const deadline = err as QueryDeadlineExceededError;
-        expect(deadline.pool).toBe("jobs-enqueue");
-        expect(deadline.phase).toBe("query");
-        expect(deadline.deadlineMs).toBe(DEADLINE_MS);
+        const pending = utils.addJob("jobs.enqueue-deadline-test", {});
+        expect(pending).rejects.toBeInstanceOf(QueryDeadlineExceededError);
+        expect(pending).rejects.toMatchObject({
+          pool: "jobs-enqueue",
+          phase: "query",
+          deadlineMs: DEADLINE_MS,
+        });
         expect(
           events.some(
             (e) => e.kind === "deadline" && e.pool === "jobs-enqueue",

@@ -107,20 +107,6 @@ async function withRepo(
   }
 }
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test, so this asserts
- * the rejection for real and hands back the error to pin its class.
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 function standing(
   pending: AttemptPending,
   landed: { shas: string[]; pushIds: string[] },
@@ -326,9 +312,7 @@ test("a reaped worktree still measures its branch from the main repo", async () 
 
     // The directory is gone: a determinate state, and the git runner says so with
     // its own error class rather than a generic failure.
-    expect(await rejection(readPendingInWorktree(wt))).toBeInstanceOf(
-      WorktreeGoneError,
-    );
+    expect(readPendingInWorktree(wt)).rejects.toBeInstanceOf(WorktreeGoneError);
 
     // `git worktree remove` does not delete the branch, so the commits are still
     // measurable — this is what keeps a reaped attempt's unpushed work visible.
@@ -363,25 +347,19 @@ test("a git failure throws — it never resolves to a confident zero", async () 
   try {
     // Not a repository (present, but no git): every read must fail loudly. An
     // absorbed `{ahead: 0}` / `[]` here is exactly what would offer the drop.
-    expect(await rejection(refExists(dir, "refs/heads/main"))).toBeInstanceOf(
-      GitError,
-    );
+    expect(refExists(dir, "refs/heads/main")).rejects.toBeInstanceOf(GitError);
     expect(
-      await rejection(readPendingFromBranchRef(dir, "refs/heads/main")),
-    ).toBeInstanceOf(GitError);
-    expect(await rejection(readPendingInWorktree(dir))).toBeInstanceOf(
-      GitError,
-    );
+      readPendingFromBranchRef(dir, "refs/heads/main"),
+    ).rejects.toBeInstanceOf(GitError);
+    expect(readPendingInWorktree(dir)).rejects.toBeInstanceOf(GitError);
     expect(
-      await rejection(
-        readLanded(
-          dir,
-          { attemptId: "att-none", convIds: new Set(["conv-1"]) },
-          ALL_TIME,
-        ),
+      readLanded(
+        dir,
+        { attemptId: "att-none", convIds: new Set(["conv-1"]) },
+        ALL_TIME,
       ),
-    ).toBeInstanceOf(GitError);
-    expect(await rejection(probeHeadMain(dir))).toBeInstanceOf(GitError);
+    ).rejects.toBeInstanceOf(GitError);
+    expect(probeHeadMain(dir)).rejects.toBeInstanceOf(GitError);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

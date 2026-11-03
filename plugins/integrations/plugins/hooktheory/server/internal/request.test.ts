@@ -105,16 +105,6 @@ const SIGNED_IN = {
   identity: { accountId: "primary", displayName: "someone" },
 };
 
-/** Await `p` and return what it rejected with; throw if it resolved. */
-async function rejection(p: Promise<unknown>): Promise<unknown> {
-  try {
-    await p;
-  } catch (err) {
-    return err;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 afterEach(() => {
   globalThis.fetch = realFetch;
 });
@@ -137,33 +127,30 @@ describe("getTheorytabSection", () => {
     stubFetch({
       hooktheory: () => new Response(UNKNOWN_SECTION_400_JSON, { status: 400 }),
     });
-    const err = await rejection(getTheorytabSection("zzzzzzzzzzz"));
-    expect(err).toBeInstanceOf(HooktheorySectionNotFoundError);
-    expect((err as HooktheorySectionNotFoundError).sectionId).toBe(
-      "zzzzzzzzzzz",
-    );
+    const failed = getTheorytabSection("zzzzzzzzzzz");
+    expect(failed).rejects.toBeInstanceOf(HooktheorySectionNotFoundError);
+    expect(failed).rejects.toMatchObject({ sectionId: "zzzzzzzzzzz" });
   });
 
   it("keeps any other non-2xx a plain HooktheoryApiError", async () => {
     stubFetch({
       hooktheory: () => new Response("", { status: 503 }),
     });
-    const err = await rejection(getTheorytabSection("_NgbRXeYgQA"));
-    expect(err).toBeInstanceOf(HooktheoryApiError);
-    expect(err).not.toBeInstanceOf(HooktheorySectionNotFoundError);
-    expect((err as HooktheoryApiError).status).toBe(503);
+    const failed = getTheorytabSection("_NgbRXeYgQA");
+    expect(failed).rejects.toBeInstanceOf(HooktheoryApiError);
+    expect(failed).rejects.not.toBeInstanceOf(HooktheorySectionNotFoundError);
+    expect(failed).rejects.toMatchObject({ status: 503 });
   });
 
   it("refuses an id that could leave the section path, before any request", async () => {
     const calls = stubFetch({ hooktheory: () => jsonReply({}) });
-    expect(await rejection(getTheorytabSection(".."))).toBeInstanceOf(Error);
+    expect(getTheorytabSection("..")).rejects.toBeInstanceOf(Error);
     expect(calls).toHaveLength(0);
   });
 
   it("throws naming the field when a 2xx body has the wrong shape", async () => {
     stubFetch({ hooktheory: () => jsonReply({ ID: 1, song: "x" }) });
-    const err = await rejection(getTheorytabSection("_NgbRXeYgQA"));
-    expect((err as Error).message).toMatch(
+    expect(getTheorytabSection("_NgbRXeYgQA")).rejects.toThrow(
       /Hooktheory \/songs\/public\/_NgbRXeYgQA response did not match the expected shape — jsonData: /,
     );
   });
@@ -212,11 +199,11 @@ describe("signed-in calls", () => {
       token: { ok: false, needsConsent: true, reason: "no-account" },
       hooktheory: () => jsonReply([]),
     });
-    const err = await rejection(getTrendSongs(["1", "5"], 1));
-    expect(err).toBeInstanceOf(HooktheoryNotSignedInError);
-    expect((err as Error).message).toBe(
-      "Sign in to Hooktheory in Settings → Accounts",
-    );
+    const failed = getTrendSongs(["1", "5"], 1);
+    expect(failed).rejects.toBeInstanceOf(HooktheoryNotSignedInError);
+    expect(failed).rejects.toMatchObject({
+      message: "Sign in to Hooktheory in Settings → Accounts",
+    });
     expect(calls.some((c) => c.url.includes("hooktheory.com"))).toBe(false);
   });
 
@@ -229,11 +216,11 @@ describe("signed-in calls", () => {
       },
       hooktheory: () => jsonReply([]),
     });
-    const err = await rejection(getTrendNodes(["1"]));
+    const failed = getTrendNodes(["1"]);
     // Not a sign-in problem: signing in is not the way out of it.
-    expect(err).not.toBeInstanceOf(HooktheoryNotSignedInError);
-    expect(err).toBeInstanceOf(HooktheoryProviderUnavailableError);
-    expect((err as Error).message).toMatch(/unknown provider "hooktheory"/);
+    expect(failed).rejects.not.toBeInstanceOf(HooktheoryNotSignedInError);
+    expect(failed).rejects.toBeInstanceOf(HooktheoryProviderUnavailableError);
+    expect(failed).rejects.toThrow(/unknown provider "hooktheory"/);
   });
 
   it("tells the user to sign in again when Hooktheory refuses the token", async () => {
@@ -245,12 +232,13 @@ describe("signed-in calls", () => {
           headers: { "content-type": "text/html; charset=UTF-8" },
         }),
     });
-    const err = await rejection(getTrendNodes(["1", "4"]));
-    expect(err).toBeInstanceOf(HooktheoryApiError);
-    expect((err as HooktheoryApiError).status).toBe(401);
-    expect((err as Error).message).toBe(
-      "Hooktheory request failed (HTTP 401): Unauthorized (#401) — sign in to Hooktheory again in Settings → Accounts",
-    );
+    const failed = getTrendNodes(["1", "4"]);
+    expect(failed).rejects.toBeInstanceOf(HooktheoryApiError);
+    expect(failed).rejects.toMatchObject({
+      status: 401,
+      message:
+        "Hooktheory request failed (HTTP 401): Unauthorized (#401) — sign in to Hooktheory again in Settings → Accounts",
+    });
   });
 
   it("rejects a chord id holding a comma before any request", async () => {
@@ -258,8 +246,8 @@ describe("signed-in calls", () => {
       token: SIGNED_IN,
       hooktheory: () => jsonReply([]),
     });
-    expect(await rejection(getTrendNodes(["1,4"]))).toBeInstanceOf(Error);
-    expect(await rejection(getTrendSongs([], 1))).toBeInstanceOf(Error);
+    expect(getTrendNodes(["1,4"])).rejects.toBeInstanceOf(Error);
+    expect(getTrendSongs([], 1)).rejects.toBeInstanceOf(Error);
     expect(calls).toHaveLength(0);
   });
 });

@@ -143,17 +143,6 @@ async function setStatus(id: string, status: Status): Promise<void> {
   );
 }
 
-// `expect(p).rejects.toThrow()` is typed `void` under bun:test, so awaiting it
-// asserts nothing; this awaits the rejection for real.
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 beforeAll(async () => {
   t = await createTestDb({ prefix: "derived_updated_at_test" });
   await t.db.execute(sql`
@@ -200,10 +189,10 @@ describe("installDerivedUpdatedAt", () => {
   });
 
   test("throws when the table does not exist", async () => {
-    const err = await rejection(
-      installDerivedUpdatedAt(t.db, [{ ...spec, table: "dua_missing" }]),
-    );
-    expect(err.message).toMatch(/does not exist/);
+    const rejected = installDerivedUpdatedAt(t.db, [
+      { ...spec, table: "dua_missing" },
+    ]);
+    expect(rejected).rejects.toThrow(/does not exist/);
   });
 });
 
@@ -254,12 +243,13 @@ describe("the derived updated_at trigger", () => {
 
   test("writing updated_at raises; rewriting its own value passes", async () => {
     const id = await insertItem();
-    const err = await rejection(
+    // A drizzle query is a lazy thenable, not a Promise — `rejects` needs one.
+    const rejected = Promise.resolve(
       t.db.execute(
         sql`UPDATE dua_items SET updated_at = now() WHERE id = ${id}`,
       ),
     );
-    expect(err.message).toMatch(/dua_items.updated_at is derived/);
+    expect(rejected).rejects.toThrow(/dua_items.updated_at is derived/);
     await t.db.execute(
       sql`UPDATE dua_items SET updated_at = updated_at WHERE id = ${id}`,
     );
@@ -327,14 +317,12 @@ describe("a raw pgTable declared through deriveUpdatedAt", () => {
 
   test("writing updated_at raises", async () => {
     const id = await insertNote();
-    const err = await rejection(
+    const rejected = Promise.resolve(
       t.db
         .update(rawNotes)
         .set({ updatedAt: new Date() })
         .where(eq(rawNotes.id, id)),
     );
-    expect(
-      `${err.message} ${String((err as { cause?: unknown }).cause)}`,
-    ).toMatch(/dua_raw_notes.updated_at is derived/);
+    expect(rejected).rejects.toThrow(/dua_raw_notes.updated_at is derived/);
   });
 });

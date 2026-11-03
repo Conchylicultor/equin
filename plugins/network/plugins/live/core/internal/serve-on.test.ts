@@ -28,19 +28,6 @@ type Row = z.infer<typeof RowSchema>;
 let seq = 0;
 const key = (name: string) => `test.serve-on.${name}.${seq++}`;
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * (`expect(p).rejects.toThrow()` is typed `void` under bun:test.)
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 const settle = async (h: ReturnType<typeof createHarness>) => {
   for (let i = 0; i < 5; i++) await h.tick();
 };
@@ -167,7 +154,7 @@ describe("serveCollectionOn — a window collection", () => {
         rows: () => [initial[2]!],
       },
     );
-    expect((await rejection(bad.rows.load({ ids: "a" }))).message).toMatch(
+    expect(bad.rows.load({ ids: "a" })).rejects.toThrow(
       /rows\(ids\) returned the id "c", which was not asked for/,
     );
   });
@@ -240,9 +227,9 @@ describe("serveCollectionOn — a window collection", () => {
       window: () => [{ id: "a", title: 5, rank: 1 } as unknown as Row],
       rows: () => [],
     });
-    expect(
-      (await rejection(served.window.load(c.window.defaultParams))).message,
-    ).toContain(`serveCollection("${k}"): window(q) row 0: field "title"`);
+    expect(served.window.load(c.window.defaultParams)).rejects.toThrow(
+      `serveCollection("${k}"): window(q) row 0: field "title"`,
+    );
     // An answer past the limit asked, and an id twice, fail the same way.
     const over = serveCollectionOn(h.runtime, windowCollection(key("over")), {
       source: "external",
@@ -251,7 +238,7 @@ describe("serveCollectionOn — a window collection", () => {
       window: () => initial,
       rows: () => [],
     });
-    expect((await rejection(over.window.load({ limit: "2" }))).message).toMatch(
+    expect(over.window.load({ limit: "2" })).rejects.toThrow(
       /returned 3 rows for at most 2/,
     );
     const twice = serveCollectionOn(h.runtime, windowCollection(key("twice")), {
@@ -261,9 +248,9 @@ describe("serveCollectionOn — a window collection", () => {
       window: () => [initial[0]!, initial[0]!],
       rows: () => [],
     });
-    expect(
-      (await rejection(twice.window.load({ limit: "10" }))).message,
-    ).toMatch(/returned the id "a" twice/);
+    expect(twice.window.load({ limit: "10" })).rejects.toThrow(
+      /returned the id "a" twice/,
+    );
   });
 
   test("a silent collection has no notify — in its type, and at runtime", () => {
@@ -481,7 +468,7 @@ describe("serveCollectionOn — every window's $key", () => {
     const after = c.window.window.encode(undefined, {
       after: JSON.stringify(["0002", "b"]),
     });
-    expect((await rejection(served.window.load(after))).message).toMatch(
+    expect(served.window.load(after)).rejects.toThrow(
       /window\(q\): item .* is outside the range asked/,
     );
     const typesOnly = () => {
@@ -510,9 +497,9 @@ describe("serveCollectionOn — every window's $key", () => {
       window: () => [initial[1]!, initial[0]!],
       rows: () => [],
     });
-    expect(
-      (await rejection(served.window.load(c.window.defaultParams))).message,
-    ).toMatch(/not in strictly ascending key order/);
+    expect(served.window.load(c.window.defaultParams)).rejects.toThrow(
+      /not in strictly ascending key order/,
+    );
   });
 });
 
@@ -558,7 +545,7 @@ describe("serveCollectionOn — an `all` collection", () => {
     });
     expect(await served.all.load({})).toEqual(initial);
     src.rows.set("d", { id: "d", title: "D", rank: 4 });
-    expect((await rejection(served.all.load({}))).message).toMatch(
+    expect(served.all.load({})).rejects.toThrow(
       /all\(\) returned 4 rows for at most 3/,
     );
   });
@@ -580,9 +567,9 @@ describe("serveCollectionOn — `:rows` id sets are capped (`maxIds`)", () => {
     expect(() => c.rows.point.encode(["a", "b", "c"])).toThrow(
       /3 ids, at most 2/,
     );
-    expect(
-      (await rejection(served.rows.load({ ids: "a,b,c" }))).message,
-    ).toMatch(/3 ids, at most 2/);
+    expect(served.rows.load({ ids: "a,b,c" })).rejects.toThrow(
+      /3 ids, at most 2/,
+    );
     expect(src.loads).toEqual(["rows:a,b"]);
   });
 
@@ -655,9 +642,7 @@ describe("serveCollectionOn — an exposing collection", () => {
         initial.map((r) => ({ ...r, $columns: { slice: { f: 1 } } })) as Row[],
       rows: () => [],
     });
-    expect((await rejection(served.all.load({}))).message).toMatch(
-      /carries "\$columns"/,
-    );
+    expect(served.all.load({})).rejects.toThrow(/carries "\$columns"/);
   });
 });
 

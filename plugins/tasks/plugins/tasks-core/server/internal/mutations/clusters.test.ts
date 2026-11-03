@@ -118,21 +118,6 @@ async function expectOneCluster(exec: Exec, ids: string[]): Promise<string> {
   return first;
 }
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test (see the
- * spawn/git-roots and host-semaphore suites' identical helper), so this asserts
- * the rejection for real and hands back the error to pin its class.
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 // ══ 1. The union primitive, on a throwaway DB ══════════════════════════════
 
 describe("unionTaskClusters", () => {
@@ -397,8 +382,9 @@ describe("union points", () => {
     const solo = P + "u2";
     const raw = await worktreeDbScenario(async (tx) => {
       await seedTasks(tx, [solo]);
-      const err = await rejection(updateTask(solo, { folderId: solo }, tx));
-      expect(err.message).toMatch(/into itself/i);
+      expect(updateTask(solo, { folderId: solo }, tx)).rejects.toThrow(
+        /into itself/i,
+      );
       return readRawLabels(tx, [solo]);
     });
 
@@ -415,8 +401,9 @@ describe("union points", () => {
       await tx.execute(
         sql`UPDATE tasks SET folder_id = ${parent} WHERE id = ${child}`,
       );
-      const err = await rejection(updateTask(parent, { folderId: child }, tx));
-      expect(err.message).toMatch(/descendant/i);
+      expect(updateTask(parent, { folderId: child }, tx)).rejects.toThrow(
+        /descendant/i,
+      );
       return readRawLabels(tx, [parent, child]);
     });
 
@@ -429,8 +416,7 @@ describe("union points", () => {
     const [a, ghost] = [P + "r0", P + "missing"];
     const raw = await worktreeDbScenario(async (tx) => {
       await seedTasks(tx, [a]);
-      const err = await rejection(addTaskDependency(a, ghost, tx));
-      expect(err.message).toMatch(/not found/i);
+      expect(addTaskDependency(a, ghost, tx)).rejects.toThrow(/not found/i);
       return readRawLabels(tx, [a]);
     });
 
@@ -447,8 +433,7 @@ describe("union points", () => {
       await seedTasks(tx, [a, b]);
       await addTaskDependency(b, a, tx);
       const before = await readRawLabels(tx, [a, b]);
-      const err = await rejection(addTaskDependency(a, b, tx));
-      expect(err.message).toMatch(/cycle/i);
+      expect(addTaskDependency(a, b, tx)).rejects.toThrow(/cycle/i);
       return { before, after: await readRawLabels(tx, [a, b]) };
     });
 

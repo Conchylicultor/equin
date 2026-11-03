@@ -38,17 +38,6 @@ const ID = "proto-1789000000-abcd";
 const writer = systemOrigin("history contract");
 const w = { writer };
 
-/** Await `p` and return the Error it rejected with; throw if it resolved. */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    if (err instanceof Error) return err;
-    throw err;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 /**
  * The `HistoryStore` contract, against the provider `make` builds. `name`
  * labels the suite (`"git"`, `"snapshots"`).
@@ -143,9 +132,9 @@ export function describeHistoryContract(
         expect(await store.ensureHistory(ID)).toEqual({
           kind: "no-such-prototype",
         });
-        expect(
-          (await rejection(store.ensureHistory("../etc"))).message,
-        ).toMatch(/not a prototype id/);
+        expect(store.ensureHistory("../etc")).rejects.toThrow(
+          /not a prototype id/,
+        );
       });
 
       test("writes the latest stamp for v0", async () => {
@@ -376,13 +365,12 @@ export function describeHistoryContract(
         expect(
           await store.readVersionFile(ID, "0".repeat(40), "index.html"),
         ).toEqual({ kind: "not-found" });
-        expect(
-          (await rejection(store.readVersionFile(ID, "HEAD", "index.html")))
-            .message,
-        ).toMatch(/not a commit sha/);
-        expect(
-          (await rejection(store.readVersionFile(ID, sha, "../x"))).message,
-        ).toMatch(/not a file name/);
+        expect(store.readVersionFile(ID, "HEAD", "index.html")).rejects.toThrow(
+          /not a commit sha/,
+        );
+        expect(store.readVersionFile(ID, sha, "../x")).rejects.toThrow(
+          /not a file name/,
+        );
       });
     });
 
@@ -500,9 +488,9 @@ export function describeHistoryContract(
           JSON.stringify({ n: "three" }),
           w,
         );
-        const err = await rejection(store.readVersionCounts());
-        expect(err.message).toContain("malformed version stamp");
-        expect(err.message).toContain(`${ID}.${h.format}`);
+        const counts = store.readVersionCounts();
+        expect(counts).rejects.toThrow("malformed version stamp");
+        expect(counts).rejects.toThrow(`${ID}.${h.format}`);
       });
 
       test("ignores what is not a prototype's history", async () => {

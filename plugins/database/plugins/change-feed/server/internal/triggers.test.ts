@@ -294,15 +294,9 @@ describe("assertNoOtherDeferredTriggers", () => {
     try {
       // Not a table the feed routes: out of scope.
       await assertNoOtherDeferredTriggers(testDb.db, []);
-      // `expect(p).rejects` is typed `void` under bun:test: settle it by hand.
-      const err = await assertNoOtherDeferredTriggers(testDb.db, [
-        "widgets",
-      ]).then(
-        () => null,
-        (e: unknown) => e,
-      );
-      expect(err).toBeInstanceOf(Error);
-      expect((err as Error).message).toMatch(/"late_writer" on "widgets"/);
+      expect(
+        assertNoOtherDeferredTriggers(testDb.db, ["widgets"]),
+      ).rejects.toThrow(/"late_writer" on "widgets"/);
     } finally {
       await testDb.db.execute(sql`DROP TRIGGER late_writer ON widgets`);
     }

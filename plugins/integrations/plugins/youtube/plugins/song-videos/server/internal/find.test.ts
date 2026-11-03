@@ -29,20 +29,6 @@ const answered = (code: number, meta: OembedMeta = null): OembedCheck => ({
 
 const ok = () => Promise.resolve(answered(200));
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test, so awaiting it
- * is an `await` of a non-Thenable — this asserts the rejection for real.
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 describe("findSongVideosWith", () => {
   test("merges the sources, ranks, and reports what each did", async () => {
     const result = await findSongVideosWith(
@@ -173,7 +159,7 @@ describe("findSongVideosWith", () => {
   });
 
   test("every source failing throws", async () => {
-    const err = await rejection(
+    expect(
       findSongVideosWith(
         {
           sources: [source("broken", () => Promise.reject(new Error("down")))],
@@ -182,15 +168,13 @@ describe("findSongVideosWith", () => {
         query,
         exec,
       ),
-    );
-    expect(err).toBeInstanceOf(SongVideoSourcesFailedError);
+    ).rejects.toBeInstanceOf(SongVideoSourcesFailedError);
   });
 
   test("no source registered is a broken setup, not an empty answer", async () => {
-    const err = await rejection(
+    expect(
       findSongVideosWith({ sources: [], checkEmbed: ok }, query, exec),
-    );
-    expect(err.message).toContain("No song-video source");
+    ).rejects.toThrow("No song-video source");
   });
 
   test("every source unavailable answers no candidates (not a failure)", async () => {

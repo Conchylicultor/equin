@@ -13,16 +13,6 @@ import { createFileWatcher, WatchedDirGoneError } from "../../shared/engine";
 import type { FileChangeEvent } from "../../shared/registry";
 import { createDirWatchHub, type StartRootWatch } from "./dir-hub";
 
-/** Await `p` and return the Error it rejected with; throw if it resolved. */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 /** A fake native watch per root: counts starts / stops and emits on demand. */
 function fakeStart() {
   const started: string[] = [];
@@ -432,10 +422,12 @@ describe("createDirWatchHub", () => {
       subtree: fake.start,
       children: shallowNever,
     });
-    const err = await rejection(
-      hub.acquire({ dir: "/missing", scope: "subtree", onChange: () => {} }),
-    );
-    expect(err.message).toContain("ENOENT");
+    const rejected = hub.acquire({
+      dir: "/missing",
+      scope: "subtree",
+      onChange: () => {},
+    });
+    expect(rejected).rejects.toThrow("ENOENT");
     expect(hub.roots()).toEqual([]);
   });
 
@@ -445,10 +437,12 @@ describe("createDirWatchHub", () => {
       children: shallowNever,
     });
     for (const dir of ["rel", "/w/../x", "/w/"]) {
-      const err = await rejection(
-        hub.acquire({ dir, scope: "subtree", onChange: () => {} }),
-      );
-      expect(err.message).toContain("absolute, normalized");
+      const rejected = hub.acquire({
+        dir,
+        scope: "subtree",
+        onChange: () => {},
+      });
+      expect(rejected).rejects.toThrow("absolute, normalized");
     }
   });
 });

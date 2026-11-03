@@ -93,20 +93,6 @@ function measure(root: AppPath) {
   });
 }
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test (the same helper
- * the op-runtime, spawn and host-semaphore suites carry).
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 /** The single element of `items`, failing the test when there is not exactly one. */
 function only<T>(items: readonly T[]): T {
   const [first, ...rest] = items;
@@ -256,9 +242,7 @@ describe("measureManifestFreeze", () => {
     const root = fixture({
       "pipeline.ts": `export function regenerate(): void {}\n`,
     });
-    expect((await rejection(measure(root))).message).toContain(
-      "No command's run closure",
-    );
+    expect(measure(root)).rejects.toThrow("No command's run closure");
   });
 });
 

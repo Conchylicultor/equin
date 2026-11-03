@@ -266,6 +266,7 @@ Details: [`plugins/active-data/plugins/go/CLAUDE.md`](plugins/active-data/plugin
 - Two runners, split by location: `*.test.ts(x)` beside its source = pure logic; `web/__tests__/` = jsdom/React (auto-discovered by root `vitest.config.ts`).
 - Your own plugin's tests import the file under test by relative path, never via the public barrel.
 - Reusable helpers go in `<runtime>/testing/index.ts` (imported as `@plugins/<name>/<runtime>/testing`) — never the public barrel, `__tests__/`, `check/`, or loose. Runtime by user: `web/testing/`, `server/testing/`, or `core/testing/` for both. A testing barrel may re-export a real function another plugin's test checks against. Only test code and `check/` may import it. Search `[test helpers]` / *Test helpers* in `docs/plugins-details.md` before writing a fixture.
+- **Rejections under bun:test: `expect(p).rejects.toThrow(…)` with NO `await`** — bun settles the promise synchronously inside the matcher (it returns `void`). Never a hand-rolled `rejection(p)` helper. Under vitest (`web/__tests__/`) do `await` it. See [`test-layout`](plugins/framework/plugins/tooling/plugins/test-layout/CLAUDE.md).
 - jsdom tests run on a pinned clock (fixed instant, `Date` only, still ticking; pin your own "today" if needed), locale `en-US` and timezone `UTC`.
 - The split, pinning and `test-layout:runner-split` check live in [`plugins/framework/plugins/tooling/plugins/test-layout`](plugins/framework/plugins/tooling/plugins/test-layout).
 

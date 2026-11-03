@@ -446,44 +446,22 @@ describe("loadChordProgress", () => {
     expect(p.allTime.songs).toBe(3);
   });
 
-  test("params the codec refuses throw", async () => {
+  test("params the codec refuses throw", () => {
     expect(
-      (
-        await rejection(
-          loadChordProgress(
-            t.db,
-            { timeZone: "Not/AZone", tokens: "" },
-            LISTED,
-            now,
-          ),
-        )
-      ).message,
-    ).toMatch(/not a time zone/);
+      loadChordProgress(
+        t.db,
+        { timeZone: "Not/AZone", tokens: "" },
+        LISTED,
+        now,
+      ),
+    ).rejects.toThrow(/not a time zone/);
     expect(
-      (
-        await rejection(
-          loadChordProgress(
-            t.db,
-            { timeZone: "UTC", tokens: "7:4-3/0,0:4-3/0" },
-            LISTED,
-            now,
-          ),
-        )
-      ).message,
-    ).toMatch(/canonical/);
+      loadChordProgress(
+        t.db,
+        { timeZone: "UTC", tokens: "7:4-3/0,0:4-3/0" },
+        LISTED,
+        now,
+      ),
+    ).rejects.toThrow(/canonical/);
   });
 });
-
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved instead.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test, so awaiting it
- * is flagged by await-thenable.
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}

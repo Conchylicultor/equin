@@ -32,21 +32,6 @@ afterAll(async () => {
   await t.drop();
 });
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test (see the
- * host-semaphore suite's identical helper), so this asserts the rejection for
- * real and hands back the error to pin its message/class.
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 describe("recordTrashEntry", () => {
   test("inserts one ledger row and returns its id", async () => {
     const entryId = await recordTrashEntry(t.db, {
@@ -124,13 +109,13 @@ describe("consumeTrashEntry", () => {
       (s, e) => s.restore(e),
     );
 
-    const err = await rejection(
-      consumeTrashEntry(t.db, { sourceId: "test-double", entryId }, (s, e) =>
-        s.restore(e),
-      ),
+    const again = consumeTrashEntry(
+      t.db,
+      { sourceId: "test-double", entryId },
+      (s, e) => s.restore(e),
     );
-    expect(err).toBeInstanceOf(HttpError);
-    expect((err as HttpError).status).toBe(404);
+    expect(again).rejects.toBeInstanceOf(HttpError);
+    expect(again).rejects.toMatchObject({ status: 404 });
   });
 
   test("a failing action leaves the entry row in place (retryable)", async () => {
@@ -148,12 +133,11 @@ describe("consumeTrashEntry", () => {
       label: "Sticky",
     });
 
-    const err = await rejection(
+    expect(
       consumeTrashEntry(t.db, { sourceId: "test-fail", entryId }, (s, e) =>
         s.restore(e),
       ),
-    );
-    expect(err.message).toBe("restore boom");
+    ).rejects.toMatchObject({ message: "restore boom" });
 
     const remaining = await t.db
       .select()
@@ -163,15 +147,13 @@ describe("consumeTrashEntry", () => {
   });
 
   test("unregistered source is a loud config error, not a 404", async () => {
-    const err = await rejection(
-      consumeTrashEntry(
-        t.db,
-        { sourceId: "never-registered", entryId: "whatever" },
-        (s, e) => s.restore(e),
-      ),
+    const failed = consumeTrashEntry(
+      t.db,
+      { sourceId: "never-registered", entryId: "whatever" },
+      (s, e) => s.restore(e),
     );
-    expect(err).not.toBeInstanceOf(HttpError);
-    expect(err.message).toMatch(/no trash source registered/);
+    expect(failed).rejects.not.toBeInstanceOf(HttpError);
+    expect(failed).rejects.toThrow(/no trash source registered/);
   });
 });
 

@@ -33,12 +33,7 @@ describe("bootPluginGraph — the preload-declare assert", () => {
   test("an undeclared preloaded resource fails boot, naming it, before any onReadyBlocking runs", async () => {
     const key = "server-core-test.boot-stages-undeclared";
     let barrierRan = false;
-    // `expect(p).rejects.toThrow()` is typed `void` by bun's matchers, so
-    // awaiting it trips `@typescript-eslint/await-thenable`. Capture the
-    // rejection instead.
-    let caught: unknown;
-    try {
-      await bootPluginGraph({
+    const boot = bootPluginGraph({
         mode: "exec",
         coreBarrel: () => null,
         entries: [
@@ -69,12 +64,8 @@ describe("bootPluginGraph — the preload-declare assert", () => {
             },
           },
         ],
-      });
-    } catch (err) {
-      caught = err;
-    }
-    expect(caught).toBeInstanceOf(Error);
-    expect((caught as Error).message).toContain(`"${key}"`);
+    });
+    expect(boot).rejects.toThrow(`"${key}"`);
     expect(barrierRan).toBe(false);
   });
 });

@@ -107,20 +107,6 @@ const level = defineMetric(src, {
   measure: "level",
 });
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test, so awaiting it
- * trips await-thenable.
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 const week = { range: { preset: "7d" as const }, tz: "UTC", params: {} };
 
 describe("evaluateMetric", () => {
@@ -280,12 +266,8 @@ describe("evaluateMetric", () => {
 
   test("an unknown split throws", async () => {
     expect(
-      (
-        await rejection(
-          evaluateMetric(flow, { ...week, split: "nope" }, fake(count), NOW),
-        )
-      ).message,
-    ).toMatch(/no split "nope"/);
+      evaluateMetric(flow, { ...week, split: "nope" }, fake(count), NOW),
+    ).rejects.toThrow(/no split "nope"/);
   });
 
   test("a result of the wrong length throws", async () => {
@@ -293,12 +275,8 @@ describe("evaluateMetric", () => {
       { key: "total", label: "Total", values: [1, 2] },
     ];
     expect(
-      (
-        await rejection(
-          evaluateMetric(flow, { ...week, compare: false }, short, NOW),
-        )
-      ).message,
-    ).toMatch(/2 values for 8 intervals/);
+      evaluateMetric(flow, { ...week, compare: false }, short, NOW),
+    ).rejects.toThrow(/2 values for 8 intervals/);
   });
 
   test("an unsplit evaluation returning several rows throws", async () => {
@@ -309,12 +287,8 @@ describe("evaluateMetric", () => {
         values: ctx.intervals.map(() => 0),
       }));
     expect(
-      (
-        await rejection(
-          evaluateMetric(flow, { ...week, compare: false }, two, NOW),
-        )
-      ).message,
-    ).toMatch(/exactly one/);
+      evaluateMetric(flow, { ...week, compare: false }, two, NOW),
+    ).rejects.toThrow(/exactly one/);
   });
 
   test("a non-finite value throws", async () => {
@@ -326,12 +300,8 @@ describe("evaluateMetric", () => {
       },
     ];
     expect(
-      (
-        await rejection(
-          evaluateMetric(flow, { ...week, compare: false }, nan, NOW),
-        )
-      ).message,
-    ).toMatch(/non-finite/);
+      evaluateMetric(flow, { ...week, compare: false }, nan, NOW),
+    ).rejects.toThrow(/non-finite/);
   });
 });
 

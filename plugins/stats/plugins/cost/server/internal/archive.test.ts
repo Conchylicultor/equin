@@ -67,21 +67,6 @@ function shard(dir: string, key: string): string {
   return join(dir, `sessions-${key}.json`);
 }
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test (see the
- * retention / host-semaphore suites' identical helper), so this asserts the
- * rejection for real and hands back the error to pin its message.
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 const NO_META = new Map<string, ArchiveConvMeta>();
 
 // ─── Round trip ──────────────────────────────────────────────────────────────
@@ -192,19 +177,19 @@ test("an entry missing optional fields loads with defaults rather than being dro
 test("a corrupt shard throws instead of loading as empty", async () => {
   const dir = await tempDir();
   await writeFile(shard(dir, "2026"), '{"/p/a.jsonl": {"partial": {', "utf8");
-  expect((await rejection(loadArchive(dir))).message).toMatch(/Corrupt cost archive shard/);
+  expect(loadArchive(dir)).rejects.toThrow(/Corrupt cost archive shard/);
 });
 
 test("a shard whose root is not an object throws", async () => {
   const dir = await tempDir();
   await writeFile(shard(dir, "2026"), "[1,2,3]", "utf8");
-  expect((await rejection(loadArchive(dir))).message).toMatch(/expected a JSON object/);
+  expect(loadArchive(dir)).rejects.toThrow(/expected a JSON object/);
 });
 
 test("an entry without a partial throws", async () => {
   const dir = await tempDir();
   await writeFile(shard(dir, "2026"), JSON.stringify({ "/p/a.jsonl": { title: "x" } }), "utf8");
-  expect((await rejection(loadArchive(dir))).message).toMatch(/no usable "partial"/);
+  expect(loadArchive(dir)).rejects.toThrow(/no usable "partial"/);
 });
 
 // ─── Sharding ────────────────────────────────────────────────────────────────

@@ -92,19 +92,6 @@ function migration(root: AppPath, ts: string, slug: string): string {
   return `${tag}.sql`;
 }
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test.
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 const sqlPath = (f: string) => `${MIGRATIONS_DATA_DIR}/${f}`;
 const setRef = (root: AppPath, ref: string, sha: string) =>
   git(root, "update-ref", ref, sha);
@@ -177,12 +164,12 @@ describe("publishedMigrationRefs / publishedMigrationBasenames", () => {
   test("throws loudly when there is no local main", async () => {
     const root = await repo();
     await git(root, "branch", "-q", "-m", "main", "trunk");
-    expect((await rejection(publishedMigrationRefs(root))).message).toMatch(
+    expect(publishedMigrationRefs(root)).rejects.toThrow(
       /No local `main` branch/,
     );
-    expect(
-      (await rejection(publishedMigrationBasenames(root))).message,
-    ).toMatch(/No local `main` branch/);
+    expect(publishedMigrationBasenames(root)).rejects.toThrow(
+      /No local `main` branch/,
+    );
   });
 });
 

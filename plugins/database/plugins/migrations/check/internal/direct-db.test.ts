@@ -32,18 +32,6 @@ async function refusedPort(): Promise<number> {
   return address.port;
 }
 
-// Await `p` and return what it rejected with; throw if it resolved.
-// `expect(p).rejects.…` is typed `void` under bun:test (see the spawn suite's
-// identical helper), so this asserts the rejection for real.
-async function rejection(p: Promise<unknown>): Promise<unknown> {
-  try {
-    await p;
-  } catch (err) {
-    return err;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 describe("withDirectDb", () => {
   test("unreachable: nothing listens at the address — fn never runs", async () => {
     let ran = false;
@@ -85,13 +73,11 @@ describe("withDirectDb", () => {
   });
 
   test("an error thrown inside fn propagates unclassified", async () => {
-    const err = await rejection(
-      withDirectDb(MAIN_WORKTREE_NAME, async () => {
-        throw new Error("boom from fn");
-      }),
-    );
-    expect(err).toBeInstanceOf(Error);
-    expect((err as Error).message).toBe("boom from fn");
+    const run = withDirectDb(MAIN_WORKTREE_NAME, async () => {
+      throw new Error("boom from fn");
+    });
+    expect(run).rejects.toBeInstanceOf(Error);
+    expect(run).rejects.toMatchObject({ message: "boom from fn" });
   });
 
   test("errors from fn are never reclassified, even one carrying 3D000", async () => {
@@ -100,22 +86,18 @@ describe("withDirectDb", () => {
     // reinterpreted when fn throws it.
     const coded = Object.assign(new Error("coded from fn"), { code: "3D000" });
     expect(
-      await rejection(
-        withDirectDb(MAIN_WORKTREE_NAME, async () => {
-          throw coded;
-        }),
-      ),
-    ).toBe(coded);
+      withDirectDb(MAIN_WORKTREE_NAME, async () => {
+        throw coded;
+      }),
+    ).rejects.toBe(coded);
 
     expect(
-      await rejection(
-        withDirectDb(MAIN_WORKTREE_NAME, (pool) =>
-          queryRows(pool, {
-            sql: "SELECT 1 FROM direct_db_test_no_such_table",
-            row: z.object({}),
-          }),
-        ),
+      withDirectDb(MAIN_WORKTREE_NAME, (pool) =>
+        queryRows(pool, {
+          sql: "SELECT 1 FROM direct_db_test_no_such_table",
+          row: z.object({}),
+        }),
       ),
-    ).toMatchObject({ code: "42P01" });
+    ).rejects.toMatchObject({ code: "42P01" });
   });
 });

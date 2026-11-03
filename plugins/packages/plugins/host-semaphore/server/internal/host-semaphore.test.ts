@@ -209,22 +209,6 @@ describe("cross-process serialization", () => {
   });
 });
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved instead.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test, so awaiting it is
- * a no-op the assertion never actually runs behind — the test would pass even if
- * `p` resolved. This asserts the rejection for real, and hands back the error so
- * the caller can pin its message.
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 describe("acquireShare", () => {
   test("throws on a non-positive-integer max", async () => {
     const sem = createHostSemaphore({
@@ -233,9 +217,7 @@ describe("acquireShare", () => {
     });
     // Failure is a thrown type, never a `slots: 0` value a caller could absorb.
     for (const bad of [0, -1, 1.5]) {
-      expect((await rejection(sem.acquireShare(bad))).message).toContain(
-        "positive integer",
-      );
+      expect(sem.acquireShare(bad)).rejects.toThrow("positive integer");
     }
   });
 
@@ -831,12 +813,12 @@ describe("cancellation (AcquireHooks.signal)", () => {
     }) as typeof Bun.spawn;
 
     try {
-      const err = await rejection(
-        sem.acquireShare(1, { signal: AbortSignal.abort(reason) }),
-      );
+      const pending = sem.acquireShare(1, {
+        signal: AbortSignal.abort(reason),
+      });
       // `signal.reason` itself, unwrapped — the standard AbortSignal contract, so
       // whoever aborted can attach context that surfaces at the wedge site.
-      expect(err).toBe(reason);
+      expect(pending).rejects.toBe(reason);
       expect(spawnCount).toBe(0);
     } finally {
       (Bun as unknown as { spawn: typeof Bun.spawn }).spawn = origSpawn;
@@ -879,7 +861,7 @@ describe("cancellation (AcquireHooks.signal)", () => {
       expect(spawned.length).toBeGreaterThan(0);
 
       ac.abort(reason);
-      expect(await rejection(pending)).toBe(reason);
+      expect(pending).rejects.toBe(reason);
     } finally {
       (Bun as unknown as { spawn: typeof Bun.spawn }).spawn = origSpawn;
     }
@@ -920,7 +902,7 @@ describe("cancellation (AcquireHooks.signal)", () => {
 
     const reason = new Error("head gave up");
     ac.abort(reason);
-    expect(await rejection(first)).toBe(reason);
+    expect(first).rejects.toBe(reason);
 
     // The cancelled head must not take its place in line to the grave with it —
     // otherwise one aborted waiter would strand every waiter behind it, which is
@@ -968,7 +950,7 @@ describe("cancellation (AcquireHooks.signal)", () => {
       expect(spawned.length).toBe(1); // exactly one child: the ticket wait
 
       ac.abort(reason);
-      expect(await rejection(queued)).toBe(reason);
+      expect(queued).rejects.toBe(reason);
     } finally {
       (Bun as unknown as { spawn: typeof Bun.spawn }).spawn = origSpawn;
     }
@@ -1203,7 +1185,7 @@ describe("priority (AcquireHooks.priority)", () => {
     const low = sem.acquireShare(1, { priority: "low", signal: ac.signal });
     await sleep(150);
     ac.abort(new Error("gave up"));
-    expect((await rejection(low)).message).toBe("gave up");
+    expect(low).rejects.toMatchObject({ message: "gave up" });
 
     await holder.release();
     await (await normal).release();

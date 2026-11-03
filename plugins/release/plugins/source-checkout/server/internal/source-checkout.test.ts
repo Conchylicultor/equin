@@ -44,16 +44,6 @@ const repo = asAppPath(
   mkdtempSync(join(tmpdir(), "release-source-checkout-repo-")),
 );
 
-/** The rejection message of `promise`; fails the test when it resolves. */
-async function rejectionOf(promise: Promise<unknown>): Promise<string> {
-  const outcome = await promise.then(
-    () => ({ rejected: false as const }),
-    (err: unknown) => ({ rejected: true as const, err }),
-  );
-  if (!outcome.rejected) throw new Error("expected the promise to reject");
-  return String(outcome.err);
-}
-
 let firstSha = "";
 let secondSha = "";
 
@@ -118,11 +108,12 @@ describe("acquireReleaseCheckout", () => {
       expect(head.stdout.trim()).toBe(firstSha);
       expect(head.stdout.trim()).not.toBe(secondSha);
       // Detached: no branch is checked out.
-      const branch = await spawnExpectOk(
-        ["git", "-C", checkout.root, "symbolic-ref", "-q", "--short", "HEAD"],
-        { timeoutMs: 60_000 },
-      ).catch((err: unknown) => err);
-      expect(branch).toBeInstanceOf(Error);
+      expect(
+        spawnExpectOk(
+          ["git", "-C", checkout.root, "symbolic-ref", "-q", "--short", "HEAD"],
+          { timeoutMs: 60_000 },
+        ),
+      ).rejects.toBeInstanceOf(Error);
       expect(isReleaseCheckout(checkout.root)).toBe(true);
     } finally {
       await checkout.dispose();
@@ -152,24 +143,20 @@ describe("acquireReleaseCheckout", () => {
   test("a sha the repo does not have fails loudly and leaves nothing behind", async () => {
     const name = "release-3-badsha";
     expect(
-      await rejectionOf(
-        acquireReleaseCheckout({ sourceRoot: repo, sha: "0".repeat(40), name }),
-      ),
-    ).toMatch(/rev-parse/);
+      acquireReleaseCheckout({ sourceRoot: repo, sha: "0".repeat(40), name }),
+    ).rejects.toThrow(/rev-parse/);
     expect(existsSync(releaseCheckoutPath(name))).toBe(false);
     expect(existsSync(`${releaseCheckoutPath(name)}.lock`)).toBe(false);
   });
 
   test("refuses a name that is not a namespace label", async () => {
     expect(
-      await rejectionOf(
-        acquireReleaseCheckout({
-          sourceRoot: repo,
-          sha: firstSha,
-          name: "../escape",
-        }),
-      ),
-    ).toMatch(/Invalid checkout name/);
+      acquireReleaseCheckout({
+        sourceRoot: repo,
+        sha: firstSha,
+        name: "../escape",
+      }),
+    ).rejects.toThrow(/Invalid checkout name/);
   });
 });
 
@@ -207,7 +194,7 @@ describe("dispose", () => {
     mkdirSync(victim);
     writeFileSync(join(victim, "keep.txt"), "keep");
     try {
-      expect(await rejectionOf(removeCheckoutArtifacts(repo, victim))).toMatch(
+      expect(removeCheckoutArtifacts(repo, victim)).rejects.toThrow(
         /refusing to remove/,
       );
       // A nested path under the dir is not a direct child either.
@@ -216,7 +203,7 @@ describe("dispose", () => {
         "release-5-a",
         "sub",
       );
-      expect(await rejectionOf(removeCheckoutArtifacts(repo, nested))).toMatch(
+      expect(removeCheckoutArtifacts(repo, nested)).rejects.toThrow(
         /refusing to remove/,
       );
       expect(readFileSync(join(victim, "keep.txt"), "utf8")).toBe("keep");

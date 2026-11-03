@@ -10,19 +10,6 @@ import {
 import { resolveWorkspaceFile, WorkspaceEscapeError } from "./workspace-file";
 import { TRANSCRIPTION_PROFILE_ID } from "./profile-input";
 
-/**
- * Await `p` and return the Error it rejected with; throw if it resolved.
- * `expect(p).rejects.toThrow()` is typed `void` under bun:test.
- */
-async function rejection(p: Promise<unknown>): Promise<Error> {
-  try {
-    await p;
-  } catch (err) {
-    return err as Error;
-  }
-  throw new Error("expected the promise to reject, but it resolved");
-}
-
 let root: string;
 let ws: string;
 
@@ -53,7 +40,7 @@ describe("resolveWorkspaceFile", () => {
     ).toEndWith("/ws/score.musicxml");
   });
 
-  test("rejects every way out", async () => {
+  test("rejects every way out", () => {
     for (const p of [
       "../secret.xml",
       join(root, "secret.xml"),
@@ -61,16 +48,14 @@ describe("resolveWorkspaceFile", () => {
       ".",
       "sub/../..",
     ]) {
-      expect(await rejection(resolveWorkspaceFile(ws, p))).toBeInstanceOf(
+      expect(resolveWorkspaceFile(ws, p)).rejects.toBeInstanceOf(
         WorkspaceEscapeError,
       );
     }
   });
 
-  test("a missing file throws", async () => {
-    expect(
-      (await rejection(resolveWorkspaceFile(ws, "nope.xml"))).message,
-    ).toContain("ENOENT");
+  test("a missing file throws", () => {
+    expect(resolveWorkspaceFile(ws, "nope.xml")).rejects.toThrow("ENOENT");
   });
 });
 
@@ -141,7 +126,7 @@ describe("submitTranscription", () => {
     expect(calls.delivered).toEqual(["conv-1", "conv-1"]);
   });
 
-  test("a parse error comes back as feedback, and nothing is marked", async () => {
+  test("a parse error comes back as feedback, and nothing is marked", () => {
     const { deps, calls } = fakes({
       importThrows: new FakeParseError("[musicxml] <kind> in measure 3: bad"),
     });
@@ -149,52 +134,43 @@ describe("submitTranscription", () => {
       { conversationId: "conv-1", path: "score.musicxml" },
       deps,
     );
-    const err = await rejection(run);
-    expect(err).toBeInstanceOf(TranscriptionRejectedError);
-    expect(err.message).toContain("<kind> in measure 3");
+    expect(run).rejects.toBeInstanceOf(TranscriptionRejectedError);
+    expect(run).rejects.toThrow("<kind> in measure 3");
     expect(calls.ready).toEqual([]);
     expect(calls.delivered).toEqual([]);
   });
 
-  test("any other import failure propagates as is", async () => {
+  test("any other import failure propagates as is", () => {
     const boom = new Error("db down");
     const { deps, calls } = fakes({ importThrows: boom });
     expect(
-      await rejection(
-        submitTranscription(
-          { conversationId: "conv-1", path: "score.musicxml" },
-          deps,
-        ),
+      submitTranscription(
+        { conversationId: "conv-1", path: "score.musicxml" },
+        deps,
       ),
-    ).toBe(boom);
+    ).rejects.toBe(boom);
     expect(calls.ready).toEqual([]);
   });
 
-  test("refuses a path outside the workspace", async () => {
+  test("refuses a path outside the workspace", () => {
     const { deps, calls } = fakes();
     expect(
-      await rejection(
-        submitTranscription(
-          { conversationId: "conv-1", path: "../secret.xml" },
-          deps,
-        ),
+      submitTranscription(
+        { conversationId: "conv-1", path: "../secret.xml" },
+        deps,
       ),
-    ).toBeInstanceOf(WorkspaceEscapeError);
+    ).rejects.toBeInstanceOf(WorkspaceEscapeError);
     expect(calls.imported).toEqual([]);
   });
 
-  test("refuses a conversation of another profile", async () => {
+  test("refuses a conversation of another profile", () => {
     const { deps, calls } = fakes({ profile: "other.profile" });
     expect(
-      (
-        await rejection(
-          submitTranscription(
-            { conversationId: "conv-1", path: "score.musicxml" },
-            deps,
-          ),
-        )
-      ).message,
-    ).toContain("is not a sonata.transcription workspace");
+      submitTranscription(
+        { conversationId: "conv-1", path: "score.musicxml" },
+        deps,
+      ),
+    ).rejects.toThrow("is not a sonata.transcription workspace");
     expect(calls.imported).toEqual([]);
   });
 });
