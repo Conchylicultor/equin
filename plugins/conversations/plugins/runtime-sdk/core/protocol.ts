@@ -18,7 +18,7 @@ import { z } from "zod";
 //
 // Additions that an older peer can ignore do not bump the version (every
 // running agent would then refuse every command): an agent advertises them in
-// `hello` (`stream`, `contextUsage`), and a backend uses them only when
+// `hello` (`stream`, `contextUsage`, `mcpReconnect`), and a backend uses them only when
 // advertised.
 //
 // Turn ids (`turnIds`) are such an addition: every agent has always echoed a
@@ -82,6 +82,14 @@ export const AgentCommandSchema = z.discriminatedUnion("type", [
    * `hello` says `contextUsage: true`.
    */
   z.object({ type: z.literal("contextUsage") }),
+  /**
+   * Reconnect the named MCP server (the SDK's `reconnectMcpServer`): the CLI
+   * initializes it again and lists its tools again, so a conversation whose
+   * mandate changed gets the server instructions and the tools of its new
+   * mandate without a restart. Only sent to an agent whose `hello` says
+   * `mcpReconnect: true`.
+   */
+  z.object({ type: z.literal("reconnectMcp"), server: z.string() }),
 ]);
 export type AgentCommand = z.infer<typeof AgentCommandSchema>;
 
@@ -121,6 +129,8 @@ export const HelloReplySchema = z.object({
    * prompt included (`AgentLaunchPrompt`). Absent from an agent started before.
    */
   turnIds: z.literal(true).optional(),
+  /** The agent takes `reconnectMcp`. Absent from an agent started before it existed. */
+  mcpReconnect: z.literal(true).optional(),
 });
 export type HelloReply = z.infer<typeof HelloReplySchema>;
 

@@ -14539,10 +14539,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SYSTEM_CATEGORY_ID`
       - `withdrawConversationTurn`
   - Cross-plugin:
-    - Imported by: 58 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+    - Imported by: 59 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
       - `conversations` ×40
       - `apps` ×5
-      - `tasks` ×4
+      - `tasks` ×5
       - `review` ×3
       - `active-data` ×2
       - `debug/profiling/ops`
@@ -15030,7 +15030,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `automaticTurnReadiness`
           - `PendingTurn`
       - Cross-plugin:
-        - Imported by: `conversations/self-compact`
+        - Imported by:
+          - `conversations/self-compact`
+          - `tasks/orchestration/mandate/change-notice`
     - **`close`** — Closing a conversation, portable half: POST /api/conversations/:id/close marks it done on every host (markConversationClosed) — the demo's in-browser server included — then runs every CloseTeardown contribution before it returns (the desktop's stops the agent).
       - Server:
         - Contributes:
@@ -20549,12 +20551,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `schemaChangedAtBoot`
       - `snapshotWatermark`
   - Cross-plugin:
-    - Imported by: 135 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 136 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×39
       - `conversations` ×15
       - `page` ×15
       - `infra` ×13
-      - `tasks` ×12
+      - `tasks` ×13
       - `active-data` ×8
       - `debug` ×7
       - `database` ×5
@@ -30883,8 +30885,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TriggerRowSchema`
           - `TriggersPayloadSchema`
       - Cross-plugin:
-        - Imported by: 28 plugins — full list in [`plugins/infra/plugins/events/REFERENCE.md`](../plugins/infra/plugins/events/REFERENCE.md)
-          - `tasks` ×7
+        - Imported by: 29 plugins — full list in [`plugins/infra/plugins/events/REFERENCE.md`](../plugins/infra/plugins/events/REFERENCE.md)
+          - `tasks` ×8
           - `apps` ×6
           - `conversations` ×6
           - `infra` ×4
@@ -31955,12 +31957,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
       - Cross-plugin:
-        - Imported by: 60 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+        - Imported by: 61 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
           - `apps` ×18
           - `infra` ×12
           - `conversations` ×8
           - `debug` ×7
-          - `tasks` ×4
+          - `tasks` ×5
           - `database` ×3
           - `page` ×3
           - `integrations/youtube/audio-fetch`
@@ -51880,6 +51882,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `grantOf`
               - `Mandate`
               - `mandateOf`
+              - `renderMandateInstructions`
             - Register: `mcpInstructions('mandate')`
             - Resources: `mandate.capabilities` (push, fixed, whole: every capability the code contributes — fixed for the process, a handful)
           - Core:
@@ -51895,9 +51898,35 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/push-and-exit`
               - `conversations/self-compact`
               - `tasks`
+              - `tasks/orchestration/mandate/change-notice`
               - `tasks/orchestration/message`
               - `tasks/orchestration/tree-digest`
           - Plugins:
+            - **`change-notice`** — A running agent follows a change of its task's mandate without a restart: on tasks.mandateChanged each live agent on those tasks reconnects the equin MCP server (its tools are the new mandate's at once), then gets the new Mandate section as an automatic event turn — the server instructions are read only at connect. A pending notice (conversation_mandate_notices) is a PendingTurn and is held while the agent cannot take an automatic turn, re-tried on conversation.statusChanged; an agent this backend does not run gets none.
+              - Server:
+                - Contributes:
+                  - `conversations.pending-turn` "mandate-change-notice"
+                  - `trigger` "mandate-change-notice.on-change"
+                  - `trigger` "mandate-change-notice.send"
+                - Uses:
+                  - `conversations.Runtime`
+                  - `conversations.submitTurn`
+                  - `conversations/automatic-turn.automaticTurnReadiness`
+                  - `conversations/automatic-turn.PendingTurn`
+                  - `database.db`
+                  - `database.DbExecutor`
+                  - `infra/events.Trigger`
+                  - `infra/jobs.defineJob`
+                  - `tasks/orchestration/mandate.renderMandateInstructions`
+                  - `tasks/tasks-core._conversations`
+                  - `tasks/tasks-core.conversationStatusChanged`
+                  - `tasks/tasks-core.getConversation`
+                  - `tasks/tasks-core.listActiveConversations`
+                  - `tasks/tasks-core.taskMandateChanged`
+                - DB schema: `plugins/tasks/plugins/orchestration/plugins/mandate/plugins/change-notice/server/internal/tables.ts`
+                - Register:
+                  - `defineJob('mandate-change-notice.on-change')`
+                  - `defineJob('mandate-change-notice.send')`
             - **`definitions`** — The named-mandate registry's web presence: eagerly registers the boot-preloaded mandate.definitions live value (every named mandate's id and label) so boot-snapshot hydrates it before first paint. The named-mandate registry: MandateDefinitions.Definition (what one named mandate grants) and MandateDefinitions.Source (a runtime family of them — one per automation), read at every resolution through mandateDefinitionEntries, and the mandate.definitions value (every named mandate's id and label).
               - Server:
                 - Contributes: `resource.declare` "mandate.definitions"
@@ -53401,6 +53430,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TaskCreatedPayload`
           - `TaskDescriptionChangedPayload`
           - `TaskListItem`
+          - `TaskMandateChangedPayload`
           - `TaskRefiledPayload`
           - `TaskStatus`
           - `TaskStatusChangedPayload`
@@ -53416,6 +53446,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `_pushLandedTriggers`
           - `_taskCreatedTriggers`
           - `_taskDescriptionChangedTriggers`
+          - `_taskMandateChangedTriggers`
           - `_taskRefiledTriggers`
           - `_tasks`
           - `_taskStatusChangedTriggers`
@@ -53499,6 +53530,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskDescriptionsServed`
           - `taskDroppedStatesServed`
           - `TaskListItemSchema`
+          - `taskMandateChanged`
           - `taskRefiled`
           - `TaskSchema`
           - `tasksMandate`
@@ -53520,6 +53552,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineTriggerEvent('tasks.titleChanged')`
           - `defineTriggerEvent('tasks.created')`
           - `defineTriggerEvent('tasks.refiled')`
+          - `defineTriggerEvent('tasks.mandateChanged')`
           - `defineTriggerEvent('tasks.descriptionChanged')`
           - `defineTriggerEvent('conversation.statusChanged')`
           - `defineTriggerEvent('conversation.created')`
@@ -53668,9 +53701,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TRAILER_LOG_FORMAT`
           - `UNATTRIBUTED_TRAILER_KEY`
       - Cross-plugin:
-        - Imported by: 77 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Imported by: 78 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations` ×28
-          - `tasks` ×24
+          - `tasks` ×25
           - `active-data` ×5
           - `debug` ×5
           - `page` ×3

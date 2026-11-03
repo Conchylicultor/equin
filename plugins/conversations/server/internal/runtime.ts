@@ -174,6 +174,19 @@ export interface ConversationRuntime {
    * throws when the agent was asked and failed.
    */
   contextUsage(conversationId: string): Promise<ContextReading>;
+  /**
+   * Make the agent reconnect the MCP server named `server`: its client
+   * initializes it again and lists its tools again, exactly as at the
+   * conversation's start — so what the server decides per conversation (the
+   * tools a mandate grants, the instructions describing it) reaches a running
+   * agent without a restart. `not-running` when no agent process is running
+   * (the next one connects afresh anyway), `unsupported` when the running one
+   * cannot be asked; throws when it was asked and failed.
+   */
+  reconnectMcp(
+    conversationId: string,
+    server: string,
+  ): Promise<"reconnected" | "not-running" | "unsupported">;
 }
 
 const registry = new Map<string, ConversationRuntime>();

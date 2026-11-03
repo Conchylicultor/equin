@@ -76,6 +76,7 @@ automations define theirs through `defineAutomation({ mandate })`.
     - `grantOf`
     - `Mandate`
     - `mandateOf`
+    - `renderMandateInstructions`
   - Register: `mcpInstructions('mandate')`
   - Resources: `mandate.capabilities` (push, fixed, whole: every capability the code contributes — fixed for the process, a handful)
 - Core:
@@ -91,9 +92,11 @@ automations define theirs through `defineAutomation({ mandate })`.
     - `conversations/conversation-view/push-and-exit`
     - `conversations/self-compact`
     - `tasks`
+    - `tasks/orchestration/mandate/change-notice`
     - `tasks/orchestration/message`
     - `tasks/orchestration/tree-digest`
 - Sub-plugins:
+  - **`change-notice`** — A running agent follows a change of its task's mandate without a restart: on tasks.mandateChanged each live agent on those tasks reconnects the equin MCP server (its tools are the new mandate's at…
   - **`definitions`** — The named-mandate registry's web presence: eagerly registers the boot-preloaded mandate.definitions live value (every named mandate's id and label) so boot-snapshot hydrates it before first paint.…
   - **`policy`** — The mandate's value types, as a leaf: defineCapability (a capability's id, schema and label, and grant(value)), the branded MandatePolicy built only by mandatePolicy(grants) — a capability granted…
 

@@ -174,3 +174,20 @@ export const {
     conversationId: text("conversation_id"),
   },
 });
+
+export interface TaskMandateChangedPayload {
+  /** Every existing task whose effective mandate (or the task stating it) moved. */
+  taskIds: string[];
+  [key: string]: unknown;
+}
+
+// Emitted by `refreshEffectiveMandates` in the writing transaction when it
+// moves an EXISTING task's row of `tasks_ext_mandate` (a mandate stated or
+// cleared, a re-file) — not for a task it creates. What the agents of those
+// tasks may do changed: a running one's MCP connection is stale. No filter
+// columns: subscribers read `taskIds`.
+export const { event: taskMandateChanged, table: _taskMandateChangedTriggers } =
+  defineTriggerEvent<TaskMandateChangedPayload>({
+    name: "tasks.mandateChanged",
+    filters: {},
+  });

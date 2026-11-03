@@ -2,6 +2,8 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { capabilityCatalogServed } from "./internal/catalog";
 import { mandateInstructions } from "./internal/instructions";
 
+export { renderMandateInstructions } from "./internal/instructions";
+
 export { Mandate } from "./internal/contribution";
 export type { MandateCapabilityEntry } from "./internal/contribution";
 export { granted, grantOf, mandateOf } from "./internal/resolve";

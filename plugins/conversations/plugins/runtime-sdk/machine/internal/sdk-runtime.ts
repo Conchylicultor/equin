@@ -611,4 +611,17 @@ export const sdkRuntime: ConversationRuntime = {
       throw err;
     }
   },
+
+  async reconnectMcp(id: string, server: string) {
+    try {
+      // An agent started before the command existed keeps its connection
+      // until its next relaunch, which connects afresh.
+      if (!(await helloAgent(id)).mcpReconnect) return "unsupported";
+      await commandAgent(id, { type: "reconnectMcp", server }, z.undefined());
+      return "reconnected";
+    } catch (err) {
+      if (err instanceof AgentNotRunningError) return "not-running";
+      throw err;
+    }
+  },
 };

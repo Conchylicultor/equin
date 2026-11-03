@@ -527,6 +527,7 @@ async function run(cmd: AgentCommand): Promise<unknown> {
         stream: true,
         contextUsage: true,
         turnIds: true,
+        mcpReconnect: true,
       };
       return reply;
     }
@@ -552,6 +553,8 @@ async function run(cmd: AgentCommand): Promise<unknown> {
       return session.rewindFiles(cmd.userMessageId);
     case "contextUsage":
       return session.getContextUsage({ detail: "summary" });
+    case "reconnectMcp":
+      return session.reconnectMcpServer(cmd.server);
     case "shutdown":
       setTimeout(() => shutdown("shutdown command"), 0);
       return;

@@ -36,6 +36,7 @@ import {
   taskTitleChanged,
   taskCreated,
   taskRefiled,
+  taskMandateChanged,
   taskDescriptionChanged,
   conversationStatusChanged,
   conversationCreated,
@@ -255,6 +256,11 @@ export type { TaskCreatedPayload } from "./internal/tables-events";
 // Emitted when a task is re-filed (`finishRefile`): what its subtree inherits
 // down the folder chain may have moved. Filterable by taskId.
 export { taskRefiled, _taskRefiledTriggers } from "./internal/tables-events";
+export {
+  taskMandateChanged,
+  _taskMandateChangedTriggers,
+} from "./internal/tables-events";
+export type { TaskMandateChangedPayload } from "./internal/tables-events";
 export type { TaskRefiledPayload } from "./internal/tables-events";
 
 // Emitted at every write of a task's title (create, edit, the Haiku CAS
@@ -357,6 +363,7 @@ export default {
     taskTitleChanged,
     taskCreated,
     taskRefiled,
+    taskMandateChanged,
     taskDescriptionChanged,
     conversationStatusChanged,
     conversationCreated,
