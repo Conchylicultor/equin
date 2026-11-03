@@ -6,7 +6,7 @@ import { refreshCheckoutBun } from "@plugins/packages/plugins/process-name/machi
  * as `equin · <verb> · <checkout>` in Activity Monitor rather than `bun`
  * (packages/process-name). Call only on the Bun `mise.lock` picks — the script
  * trusts the record while it is newer than the lock. A filesystem refusing the
- * hardlink only leaves the name plain: nothing to report on every command.
+ * clone only leaves the name plain: nothing to report on every command.
  */
 export function recordCheckoutBun(): void {
   refreshCheckoutBun(asAppPath(process.cwd()), asAppPath(process.execPath));

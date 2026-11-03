@@ -43,7 +43,7 @@ import { readClaudeUsage } from "./claude-usage";
 import { resolveDisclaimExec } from "./disclaim";
 import { namedClaudeBin } from "./named-claude";
 import {
-  linkNamedBinary,
+  cloneNamedBinary,
   processName,
 } from "@plugins/packages/plugins/process-name/machine";
 import {
@@ -151,7 +151,7 @@ export function readAgentOptions(id: string): AgentLaunchOptions {
 /**
  * Start the agent process for `id` with `options`, written here as its
  * options file — with this start's own `claudeBin` (the Agent SDK's bundled
- * build), `disclaimExec` and named hardlink (whatever `options` carried from a
+ * build), `disclaimExec` and named clone (whatever `options` carried from a
  * previous launch is replaced). Its stdout and stderr (the
  * human log, the SDK's and the CLI's warnings, a crash before the first event)
  * append to `agent.log`.
@@ -183,7 +183,7 @@ export async function startAgentProcess(
   });
   // This backend's own bun, by path (the login shell's PATH is the account's),
   // under the conversation's name so Activity Monitor tells the agents apart.
-  const bun = linkNamedBinary({
+  const bun = cloneNamedBinary({
     bin: asAppPath(process.execPath),
     dir: agentBinDir(id),
     name: processName("agent", id),
@@ -192,10 +192,10 @@ export async function startAgentProcess(
     await recordReport({
       kind: "crash",
       source: "server-caught",
-      message: `SDK agent ${id}: could not hardlink bun into ${agentBinDir(id)} (${bun.code}), so Activity Monitor lists the agent as a bare \`bun\``,
+      message: `SDK agent ${id}: could not clone bun into ${agentBinDir(id)} (${bun.code}), so Activity Monitor lists the agent as a bare \`bun\``,
       data: { errorType: "SdkAgentBunLink", label: "runtime-sdk.process-name" },
     });
-  const namedBun = bun.kind === "linked" ? bun.path : null;
+  const namedBun = bun.kind === "cloned" ? bun.path : null;
   const options: AgentLaunchOptions = {
     ...intent,
     claudeBin,

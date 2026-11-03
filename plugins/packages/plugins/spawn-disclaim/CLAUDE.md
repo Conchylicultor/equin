@@ -12,7 +12,7 @@ The prompt names claude's executable FILE (it has no bundle) — for the native
 installer its version, `2.1.308` — and TCC keys a bundle-less client's
 decisions by that path too (measured 2026-10-24: an Allow given to a renamed
 hardlink of the binary did not reach the original path). So
-`conversations/runtime-sdk` spawns a per-conversation hardlink named
+`conversations/runtime-sdk` spawns a per-conversation clone (an APFS clone, `packages/process-name`) named
 `<title> · <conv-id>` (`machine/internal/named-claude.ts`): the prompt says
 which agent asks, and each conversation's grants are its own.
 

@@ -17,11 +17,15 @@ command -v bun >/dev/null 2>&1 || {
   exit 1
 }
 # The process's name in Activity Monitor: `equin · <verb> · <checkout>`, not
-# `bun` (packages/process-name). Run through a hardlink of the checkout's Bun,
-# which the CLI itself records (it knows the real binary behind mise's shim),
-# trusted only while its stamp is newer than mise.lock. Builtins only: on any
-# miss — none recorded, a toolchain change, a refused link — it is the plain
-# `bun` below, and that run records it again.
+# `bun` (packages/process-name). Run through an APFS clone of the checkout's
+# Bun, which the CLI itself records (it knows the real binary behind mise's
+# shim), trusted only while its stamp is newer than mise.lock. A clone, never a
+# hardlink: macOS SIGKILLs an exec whose inode it resolves to a deleted name
+# (process-name's CLAUDE.md). A clone keeps the source's mtime, so the name is
+# current while it is not the same file as `bun` (an old build's hardlink) and
+# neither is newer — re-cloned only then, a fresh name costing a ~1 s scan.
+# Builtins plus `cp`: on any miss — none recorded, a toolchain change, a
+# refused clone — it is the plain `bun` below, and that run records it again.
 names=node_modules/.cache/equin-bun
 case "${1:-}" in
   "" | *[!a-z0-9-]*) verb=cli ;;
@@ -29,8 +33,9 @@ case "${1:-}" in
 esac
 named="$names/equin · $verb · ${PWD##*/}"
 if [ -f "$names/bun" ] && [ "$names/stamp" -nt mise.lock ]; then
-  if [ "$named" -ef "$names/bun" ] ||
-    { ln -f "$names/bun" "$named.$$" 2>/dev/null && mv -f "$named.$$" "$named"; }; then
+  if { [ -f "$named" ] && ! [ "$named" -ef "$names/bun" ] &&
+    ! [ "$named" -nt "$names/bun" ] && ! [ "$names/bun" -nt "$named" ]; } ||
+    { cp -c "$names/bun" "$named.$$" 2>/dev/null && mv -f "$named.$$" "$named"; }; then
     exec "$named" plugins/framework/plugins/cli/bin/index.ts "$@"
   fi
   rm -f "$named.$$"

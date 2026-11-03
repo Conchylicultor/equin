@@ -414,7 +414,7 @@ const canUseTool: CanUseTool = async (
 let cli: ChildProcessByStdio<Writable, Readable, null> | null = null;
 const session = claudeQuery({
   env: sessionEnv,
-  // The conversation-named hardlink when the backend made one (so macOS
+  // The conversation-named clone when the backend made one (so macOS
   // names this agent in a permission prompt), else the Agent SDK's bundled
   // Claude Code the backend resolved.
   bin: options.namedClaudeBin ?? options.claudeBin,

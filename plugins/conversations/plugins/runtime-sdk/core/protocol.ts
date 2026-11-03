@@ -291,7 +291,7 @@ export const AgentLaunchOptionsSchema = z.preprocess(
      */
     disclaimExec: z.string().nullable().default(null),
     /**
-     * What the agent spawns in place of `claudeBin`: a hardlink to it named for
+     * What the agent spawns in place of `claudeBin`: an APFS clone of it named for
      * the conversation (`<title> · <id>`), so a macOS permission prompt says
      * which agent asks — and keeps that agent's grants its own. Null spawns
      * `claudeBin`. Set with `disclaimExec`, at every start; the name is kept
@@ -299,8 +299,8 @@ export const AgentLaunchOptionsSchema = z.preprocess(
      */
     namedClaudeBin: z.string().nullable().default(null),
     /**
-     * The Bun this agent process runs on, hardlinked as `equin · agent · <id>`
-     * (packages/process-name) so Activity Monitor names it; null when the link
+     * The Bun this agent process runs on, cloned as `equin · agent · <id>`
+     * (packages/process-name) so Activity Monitor names it; null when the clone
      * was refused. Made at every start, removed by the agent when it exits.
      */
     namedBun: z.string().nullable().default(null),

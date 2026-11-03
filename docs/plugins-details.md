@@ -19686,7 +19686,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/claude-cli/sdk.bundledClaudeBin`
           - `infra/endpoints.implementMachine`
           - `network/live.serveValue`
-          - `packages/process-name.linkNamedBinary`
+          - `packages/process-name.cloneNamedBinary`
           - `packages/process-name.processName`
         - Register:
           - `defineFileWatcher('runtime-sdk.events')`
@@ -35479,7 +35479,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`partial-json`** — parsePartialJson: the value a prefix of a JSON document already holds — every container closed, an in-progress string value finished, an in-progress key, number or literal cut — for drawing a document while it is still being written (a streamed tool call's input).
       - Core:
         - Exports (values): `parsePartialJson`
-    - **`process-name`** — What a process is called in Activity Monitor and ps: processName(kind, id?) spells `equin · <kind> · <id>`, and linkNamedBinary hardlinks an executable under that name (same signed file, swapped in with one rename) — macOS names a process by the file it executed, and process.title changes nothing. Also the checkout's Bun record (refreshCheckoutBun / checkoutBun) the `./equin` script and the build name CLI ops and backends from.
+    - **`process-name`** — What a process is called in Activity Monitor and ps: processName(kind, id?) spells `equin · <kind> · <id>`, and cloneNamedBinary gives an executable that name as an APFS clone (same signed bytes, no disk cost, a file of its own — never a hardlink, whose many names let macOS's exec scan be handed a deleted one and SIGKILL the process — left alone while current, else swapped in with one rename) — macOS names a process by the file it executed, and process.title changes nothing. Also the checkout's Bun record (refreshCheckoutBun / checkoutBun) the `./equin` script and the build name CLI ops and backends from.
       - Cross-plugin:
         - Imported by: `conversations/runtime-sdk`
       - Machine:
@@ -35487,7 +35487,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `CHECKOUT_BUN_DIR`
           - `checkoutBun`
-          - `linkNamedBinary`
+          - `cloneNamedBinary`
           - `processName`
           - `refreshCheckoutBun`
     - **`refcount-hub`** — Keyed refcounted subscription hub: createRefcountHub(open) shares ONE underlying subscription per key among every holder — the first acquire opens it (sync or async), each event fans out to every holder, the last release stops it — so N readers of one source cost one watch.

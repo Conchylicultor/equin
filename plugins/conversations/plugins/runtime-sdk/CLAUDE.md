@@ -197,13 +197,13 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   computer's install is never run.
 - macOS permission prompts (`machine/internal/named-claude.ts`): with
   disclaim-exec (packages/spawn-disclaim) claude is its own responsible
-  process, and a prompt names its executable file. Each start hardlinks
-  claude to `<agent dir>/bin/equin · <conv-id> · <title>` and the agent spawns that
+  process, and a prompt names its executable file. Each start clones
+  claude (an APFS clone, packages/process-name) to `<agent dir>/bin/equin · <conv-id> · <title>` and the agent spawns that
   (`namedClaudeBin` in launch.json), so a prompt says which agent asks. TCC
   keys a bundle-less client by path, so each conversation's grants are its
   own; the name is chosen at its first start and kept across relaunches
-  (read back from the previous launch.json), relinked to the current binary
-  each start, and removed by the agent on exit (a kept link would pin a
+  (read back from the previous launch.json), re-cloned from the current binary
+  when it changed, and removed by the agent on exit (a kept clone would pin a
   replaced binary).
 
 Gotchas the spike hit:
@@ -299,7 +299,7 @@ Gotchas the spike hit:
     - `infra/claude-cli/sdk.bundledClaudeBin`
     - `infra/endpoints.implementMachine`
     - `network/live.serveValue`
-    - `packages/process-name.linkNamedBinary`
+    - `packages/process-name.cloneNamedBinary`
     - `packages/process-name.processName`
   - Register:
     - `defineFileWatcher('runtime-sdk.events')`

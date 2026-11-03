@@ -2,19 +2,36 @@
 
 What a process is called in Activity Monitor and `ps`. macOS names a process by
 the file it executed, so every Bun process reads `bun`; `process.title` changes
-nothing there. A hardlink is the same file under another name, so running Bun
-through one names the process, at no disk cost.
+nothing there. An APFS clone is a copy sharing the original's blocks, so running
+Bun through one names the process, at no disk cost.
+
+**Never a hardlink.** A hardlink is the same inode under another name, and at
+exec macOS's malware scan (syspolicyd) asks the kernel for the executable's
+path — which for an inode with many names can be any of them, including one
+just renamed away or deleted. syspolicyd cannot read it (ENOENT), logs
+`Terminating process due to Malware rejection` and SIGKILLs the process inside
+exec, before it prints anything. With every named Bun one inode of ~800
+churning names, that killed a worktree's `./equin install` and a `./equin push`
+(2026-11-03). Reproduced: a stable hardlink exec'd while sibling names are
+made and deleted died 7 times in 2,600 runs; a stable clone 0 in 2,300. Spot one
+with `log show --predicate 'process == "syspolicyd" AND eventMessage CONTAINS
+"Malware rejection"'`. A fresh name — clone or link — costs one ~1.1 s scan on
+its first exec, so a current clone is never re-made.
 
 - `processName(kind, id?)` — `equin · <kind> · <id>` (kind first, so a sorted
   list groups every build, agent and server together).
-- `linkNamedBinary({ bin, dir, name })` — hardlink `bin` into `dir` as `name`,
-  swapped in with one rename. `{ kind: "refused" }` when the filesystem cannot
-  (another volume): run `bin` itself.
+- `cloneNamedBinary({ bin, dir, name })` — clone `bin` into `dir` as `name`. A
+  name already holding a current clone (one link, the source's size and mtime —
+  a clone keeps the mtime) is left alone; otherwise the clone is swapped in with
+  one rename, so an old build's hardlink is replaced. `{ kind: "refused" }` when
+  the filesystem cannot (not APFS, another volume): run `bin` itself.
 - `refreshCheckoutBun(root, bin)` / `CHECKOUT_BUN_DIR` — the checkout's Bun as a
-  hardlink plus a stamp, written by the CLI on every run. The `./equin` script
-  reads it to run the CLI as `equin · <verb> · <checkout>`, trusting it only
-  while the stamp is newer than `mise.lock` (else it runs plain `bun`, and that
-  run refreshes it).
+  clone plus a stamp, written by the CLI on every run. The `./equin` script
+  reads it to run the CLI as `equin · <verb> · <checkout>` (its own clone of
+  it, made with `cp -c`), trusting it only while the stamp is newer than
+  `mise.lock` (else it runs plain `bun`, and that run refreshes it). Each
+  refresh also re-clones a per-verb name still left a hardlink by an older
+  build — the script cannot see one once `bun` itself is a clone.
 
 Who names what:
 
@@ -32,7 +49,7 @@ test worker reads as the `test` op that started it.
 
 ## Plugin reference
 
-- Description: What a process is called in Activity Monitor and ps: processName(kind, id?) spells `equin · <kind> · <id>`, and linkNamedBinary hardlinks an executable under that name (same signed file, swapped in with one rename) — macOS names a process by the file it executed, and process.title changes nothing. Also the checkout's Bun record (refreshCheckoutBun / checkoutBun) the `./equin` script and the build name CLI ops and backends from.
+- Description: What a process is called in Activity Monitor and ps: processName(kind, id?) spells `equin · <kind> · <id>`, and cloneNamedBinary gives an executable that name as an APFS clone (same signed bytes, no disk cost, a file of its own — never a hardlink, whose many names let macOS's exec scan be handed a deleted one and SIGKILL the process — left alone while current, else swapped in with one rename) — macOS names a process by the file it executed, and process.title changes nothing. Also the checkout's Bun record (refreshCheckoutBun / checkoutBun) the `./equin` script and the build name CLI ops and backends from.
 - Cross-plugin:
   - Imported by: `conversations/runtime-sdk`
 - Machine:
@@ -40,7 +57,7 @@ test worker reads as the `test` op that started it.
   - Exports (values):
     - `CHECKOUT_BUN_DIR`
     - `checkoutBun`
-    - `linkNamedBinary`
+    - `cloneNamedBinary`
     - `processName`
     - `refreshCheckoutBun`
 

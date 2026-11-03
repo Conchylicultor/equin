@@ -62,7 +62,7 @@ export function agentOptionsPath(conversationId: string): AppPath {
 }
 
 /**
- * Where the agent's conversation-named hardlinks live: to claude (see
+ * Where the agent's conversation-named clones live: to claude (see
  * `named-claude.ts`) and to the bun the agent runs on (`startAgentProcess`) —
  * `<agent dir>/bin/`, holding at most those two files.
  */
