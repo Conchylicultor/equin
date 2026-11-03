@@ -26,8 +26,14 @@ const INHERIT = "inherit";
 
 interface EffectiveMandate {
   mandateId: string;
-  /** The task stating it: this task itself, or the ancestor it inherits from. */
-  sourceTaskId: string;
+  /**
+   * The task stating it: this task itself, or the ancestor it inherits from.
+   * Null only on a row written by a pre-`source_task_id` backend (the
+   * migration's deferred-contract window; the next boot's reconcile and the
+   * contract's backfill re-run fill it). Unknown, so it claims neither
+   * "inherited" nor "set here": the select shows the mandate itself.
+   */
+  sourceTaskId: string | null;
 }
 
 /**
@@ -87,8 +93,13 @@ export function TaskMandateControl({ taskId }: { taskId: string }) {
   }
 
   const effective = mandate.data;
-  const isRoot = task.data?.folderId == null;
-  const inherited = effective !== null && effective.sourceTaskId !== taskId;
+  // Only a task KNOWN to be nested is offered "Inherit"; a task not in the
+  // tree yet (just filed) is not taken for a root.
+  const isNested = task.data != null && task.data.folderId !== null;
+  const inherited =
+    effective !== null &&
+    effective.sourceTaskId !== null &&
+    effective.sourceTaskId !== taskId;
   const labelOf = (id: string) =>
     definitions.data.find((d) => d.id === id)?.label ?? id;
   const inheritLabel =
@@ -125,7 +136,8 @@ export function TaskMandateControl({ taskId }: { taskId: string }) {
       <Select
         // base-ui resolves the collapsed trigger label from `items`.
         items={{
-          ...(isRoot ? {} : { [INHERIT]: inheritLabel }),
+          // Always labelled, so an inherited value never shows its raw key.
+          [INHERIT]: inheritLabel,
           ...Object.fromEntries(definitions.data.map((d) => [d.id, d.label])),
         }}
         value={value}
@@ -135,7 +147,9 @@ export function TaskMandateControl({ taskId }: { taskId: string }) {
           <SelectValue placeholder="None" />
         </SelectTrigger>
         <SelectContent>
-          {!isRoot && <SelectItem value={INHERIT}>{inheritLabel}</SelectItem>}
+          {(isNested || inherited) && (
+            <SelectItem value={INHERIT}>{inheritLabel}</SelectItem>
+          )}
           {definitions.data.map((d) => (
             <SelectItem key={d.id} value={d.id}>
               {d.label}
@@ -143,7 +157,7 @@ export function TaskMandateControl({ taskId }: { taskId: string }) {
           ))}
         </SelectContent>
       </Select>
-      {inherited && effective && (
+      {inherited && effective.sourceTaskId !== null && (
         <MandateSource sourceTaskId={effective.sourceTaskId} />
       )}
     </Stack>
