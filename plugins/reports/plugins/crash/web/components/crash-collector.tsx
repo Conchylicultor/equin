@@ -2,11 +2,16 @@ import { useEffect } from "react";
 import { boundaryReportSink } from "@plugins/primitives/plugins/error-boundary/web";
 import { wedgeReportSink } from "@plugins/infra/plugins/health/web";
 import { report } from "@plugins/reports/web";
+import {
+  claimsResizeLoopError,
+  resizeLoopReportSink,
+} from "@plugins/primitives/plugins/dom/plugins/element-size/plugins/resize-loop-trace/web";
 import { EndpointAgentWriteRefusedError } from "@plugins/infra/plugins/endpoints/web";
 import {
   RawApiRequestError,
   requestGuardReportSink,
 } from "@plugins/primitives/plugins/networking/plugins/request-guard/web";
+import { describeResizeLoop } from "../internal/describe-resize-loop";
 
 // A Core.Root side-effect component (the old reports ReportCollector, now owned
 // by the crash kind). It owns the three browser crash signals — window errors,
@@ -21,6 +26,9 @@ export function CrashCollector() {
       // which also holds the ones raised before this mounted); the guard's
       // `reportError` echo of it is not a second crash.
       if (e.error instanceof RawApiRequestError) return;
+      // A ResizeObserver loop is filed by the resize-loop tracer's sink
+      // (below), a frame later, with the observers that caused it.
+      if (claimsResizeLoopError(e)) return;
       const err = e.error instanceof Error ? e.error : null;
       void report({
         kind: "crash",
@@ -111,12 +119,31 @@ export function CrashCollector() {
       });
     });
 
+    // A ResizeObserver loop error, traced (resize-loop-trace): the same
+    // stackless browser-error crash as before — so it lands on the same row —
+    // carrying the observer callbacks around it in place of a stack.
+    resizeLoopReportSink.register((r) => {
+      void report({
+        kind: "crash",
+        source: "browser-error",
+        message: r.message,
+        url: window.location.href,
+        userAgent: navigator.userAgent,
+        data: {
+          errorType: null,
+          stack: null,
+          resizeLoop: describeResizeLoop(r),
+        },
+      });
+    });
+
     return () => {
       window.removeEventListener("error", onError);
       window.removeEventListener("unhandledrejection", onRejection);
       boundaryReportSink.register(null);
       wedgeReportSink.register(null);
       requestGuardReportSink.register(null);
+      resizeLoopReportSink.register(null);
     };
   }, []);
 

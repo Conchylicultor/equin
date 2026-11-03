@@ -1,7 +1,7 @@
 import { getServerGraphHash } from "@plugins/build/plugins/server-build-id/server";
 import { serializeUiContext } from "@plugins/primitives/plugins/ui-context/core";
 import type { ReportRow } from "@plugins/reports/server";
-import { CrashPayloadSchema } from "../../core";
+import { CrashPayloadSchema, formatResizeLoopTrace } from "../../core";
 import type { CrashPayload } from "../../core";
 
 const STACK_MAX = 16_000;
@@ -110,6 +110,10 @@ function renderDescription(row: ReportRow): string {
     lines.push("```");
     lines.push(componentStack);
     lines.push("```");
+  }
+  if (data.resizeLoop) {
+    lines.push("");
+    lines.push(formatResizeLoopTrace(data.resizeLoop));
   }
   return lines.join("\n");
 }

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { ReportFingerprintContext } from "@plugins/reports/core";
 import { UiContextMetaSchema } from "@plugins/primitives/plugins/ui-context/core";
+import { ResizeLoopTraceSchema } from "./resize-loop";
 
 // The crash report payload, stored in the generic `data` jsonb column and
 // validated on ingest by the crash ReportKind. Mirrors the crash fields that
@@ -20,6 +21,10 @@ export const CrashPayloadSchema = z.object({
   // walk and no opt-in middleware installed. Absent for the window-level and
   // wedge sources, which have no DOM position to walk from.
   uiContext: UiContextMetaSchema.nullable().optional(),
+  // For a "ResizeObserver loop" window error, which has no stack: the
+  // observer callbacks around it (./resize-loop.ts). Not part of the
+  // fingerprint — every occurrence stays on the message's row.
+  resizeLoop: ResizeLoopTraceSchema.nullable().optional(),
 });
 export type CrashPayload = z.infer<typeof CrashPayloadSchema>;
 

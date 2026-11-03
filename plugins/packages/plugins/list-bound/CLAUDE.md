@@ -95,7 +95,7 @@ tuples, intersections, malformed tags).
     - `wholeRecord`
     - `wholeTuple`
 - Cross-plugin:
-  - Imported by: 95 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 96 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×17
     - `infra` ×14
     - `conversations` ×13
@@ -108,6 +108,7 @@ tuples, intersections, malformed tags).
     - `primitives` ×3
     - `ui` ×3
     - `plugin-meta` ×2
+    - `reports` ×2
     - `apps-core/app-usage`
     - `auth`
     - `backup`
@@ -116,7 +117,6 @@ tuples, intersections, malformed tags).
     - `menu-bar`
     - `network/live`
     - `release`
-    - `reports`
     - `review/plugin-changes`
     - `search/engine`
     - `shell/notifications`

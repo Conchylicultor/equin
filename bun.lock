@@ -5656,6 +5656,10 @@
       "name": "@equin/plugin-primitives-dom-element-size",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/dom/plugins/element-size/plugins/resize-loop-trace": {
+      "name": "@equin/plugin-primitives-dom-element-size-resize-loop-trace",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/dom/plugins/in-view": {
       "name": "@equin/plugin-primitives-dom-in-view",
       "version": "0.0.1",
@@ -9815,6 +9819,8 @@
     "@equin/plugin-primitives-dom-dom-selection": ["@equin/plugin-primitives-dom-dom-selection@workspace:plugins/primitives/plugins/dom/plugins/dom-selection"],
 
     "@equin/plugin-primitives-dom-element-size": ["@equin/plugin-primitives-dom-element-size@workspace:plugins/primitives/plugins/dom/plugins/element-size"],
+
+    "@equin/plugin-primitives-dom-element-size-resize-loop-trace": ["@equin/plugin-primitives-dom-element-size-resize-loop-trace@workspace:plugins/primitives/plugins/dom/plugins/element-size/plugins/resize-loop-trace"],
 
     "@equin/plugin-primitives-dom-in-view": ["@equin/plugin-primitives-dom-in-view@workspace:plugins/primitives/plugins/dom/plugins/in-view"],
 

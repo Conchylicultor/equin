@@ -28697,6 +28697,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit`
           - `primitives/css/ui-kit.Button`
+          - `primitives/dom/element-size/resize-loop-trace.installResizeLoopTrace`
           - `primitives/live-state.ensureNotificationsClient`
           - `primitives/live-state.NotificationsProvider`
           - `primitives/networking.TransportProvider`
@@ -35431,7 +35432,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wholeRecord`
           - `wholeTuple`
       - Cross-plugin:
-        - Imported by: 95 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
+        - Imported by: 96 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
           - `apps` ×17
           - `infra` ×14
           - `conversations` ×13
@@ -35444,6 +35445,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives` ×3
           - `ui` ×3
           - `plugin-meta` ×2
+          - `reports` ×2
           - `apps-core/app-usage`
           - `auth`
           - `backup`
@@ -35452,7 +35454,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `menu-bar`
           - `network/live`
           - `release`
-          - `reports`
           - `review/plugin-changes`
           - `search/engine`
           - `shell/notifications`
@@ -43810,6 +43811,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/ambient-field`
           - Exemptions:
             - Exempts itself from: `resize-observer-safety/no-raw-resize-observer` — `web/internal/element-size.ts` (sanctioned)
+          - Plugins:
+            - **`resize-loop-trace`** — Names the observers behind a 'ResizeObserver loop completed with undelivered notifications' error, which the browser raises with no stack: installResizeLoopTrace() (imported first by main.tsx) wraps the page's ResizeObserver to remember the callbacks of the current pass and where each observer was created; when the loop error fires it emits, on resizeLoopReportSink, that pass and the notifications held back to the next frame (the elements whose resize could not be delivered). claimsResizeLoopError(e) tells the window-error reporter the tracer reports this one.
+              - Cross-plugin:
+                - Imported by:
+                  - `framework/web-core`
+                  - `reports/crash`
+              - Web:
+                - Exports (types):
+                  - `ResizeLoopObservation`
+                  - `ResizeLoopReport`
+                - Exports (values):
+                  - `claimsResizeLoopError`
+                  - `installResizeLoopTrace`
+                  - `resizeLoopReportSink`
         - **`in-view`** — The one sanctioned home for new IntersectionObserver: createInViewWatcher(onChange, options) is the DOM layer, owning the WeakSet enrollment rule so a re-enrollment pass costs nothing, and useInView(target, onChange, {deps}) is the React layer — observes one element, hands the most recent entry of each batch to a stabilised callback, and rebuilds the observer only when deps change (the rebuild is what re-delivers against a still-intersecting element).
           - Web:
             - Uses: `primitives/latest-ref.useEventCallback`
@@ -49109,9 +49124,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `infra/endpoints.EndpointAgentWriteRefusedError`
           - `infra/health.wedgeReportSink`
+          - `primitives/dom/element-size/resize-loop-trace.claimsResizeLoopError`
+          - `primitives/dom/element-size/resize-loop-trace.resizeLoopReportSink`
           - `primitives/error-boundary.boundaryReportSink`
           - `primitives/networking/request-guard.RawApiRequestError`
           - `primitives/networking/request-guard.requestGuardReportSink`
+          - `primitives/ui-context.nearestOwner`
+          - `primitives/ui-context.nearestSource`
           - `reports.report`
           - `reports.Reports`
       - Server:
@@ -49120,11 +49139,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build/server-build-id.getServerGraphHash`
           - `reports.ReportKind`
       - Core:
-        - Uses: `primitives/ui-context.UiContextMetaSchema`
-        - Exports (types): `CrashPayload`
+        - Uses:
+          - `packages/list-bound.cappedList`
+          - `primitives/ui-context.UiContextMetaSchema`
+        - Exports (types):
+          - `CrashPayload`
+          - `ResizeLoopTrace`
         - Exports (values):
           - `crashFingerprint`
           - `CrashPayloadSchema`
+          - `formatResizeLoopTrace`
+          - `RESIZE_LOOP_OBSERVATIONS_MAX`
+          - `RESIZE_LOOP_TARGETS_MAX`
+          - `ResizeLoopTraceSchema`
     - **`endpoint-errors`** — Files crash tasks for bug-shaped handled endpoint errors (validation 400s and 5xx).
       - Web:
         - Contributes: `Core.Root` → `EndpointErrorReporter`

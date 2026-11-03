@@ -130,6 +130,7 @@ bun run test:dom plugins/framework/plugins/web-core/web/__tests__/plugin-render.
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit`
     - `primitives/css/ui-kit.Button`
+    - `primitives/dom/element-size/resize-loop-trace.installResizeLoopTrace`
     - `primitives/live-state.ensureNotificationsClient`
     - `primitives/live-state.NotificationsProvider`
     - `primitives/networking.TransportProvider`
