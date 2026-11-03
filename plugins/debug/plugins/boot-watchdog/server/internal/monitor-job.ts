@@ -55,10 +55,10 @@ export const bootWatchdogMonitorJob = defineJob({
     for (const wt of listWorktreeDirs()) {
       for (const ev of readBootEvents(wt, cfg.lookbackMs)) {
         if (ev.readyAt !== null) continue; // became ready — not wedged
-        // Exited before ready: a boot crash, not a wedge. Its error is on the
-        // backend's stderr, which the build that spawned it already failed
-        // on — and the next start would otherwise inflate its "un-ready"
-        // time to however long the agent took to rebuild.
+        // Exited before ready: a boot crash, not a wedge. The crash is its
+        // own report — boot-events files it, error and stack, through the
+        // report outbox — and measured to the next start its "un-ready" time
+        // would be however long the agent took to rebuild.
         if (ev.exitedAt !== null) continue;
         // The wedge duration: to the superseding attempt's start (closed
         // outage) or to now (latest attempt, possibly wedged right now).

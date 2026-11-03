@@ -25,6 +25,20 @@ Both lines go to the persisted `boot` log channel →
   signal kill runs no listener, so a backend killed mid-boot writes none and
   stays "never ready".
 
+**A boot crash is a report.** Until `ready`, the plugin's `machine/` half
+(filing needs the computer) holds `uncaughtException` / `unhandledRejection`
+listeners, armed in its register phase (`machine/internal/boot-crash.ts`): the error is printed (the gateway quotes the
+backend's last stderr lines back to the build), filed as a `crash` report
+through the report outbox (`reports/outbox` — with the checkout's merge-base
+and the stack's repo files, so main drops it once it has changed that code),
+and the process exits 1. The reports engine's own crash hooks install only in
+its `onReady`, so before this a boot that threw reached Reports through
+nothing — or, when no build was watching (a cold start on a page load, the
+gateway respawning main), through the boot watchdog misreading it as a wedge.
+The listeners come off at `ready`, and step aside as soon as the engine's
+hooks are installed (another listener on the event), which then own the
+process's crashes.
+
 ```json
 { "sampledAt": <ms>, "worktree": "<wt>", "processStartedAt": <ms>, "phase": "start" }
 { "sampledAt": <ms>, "worktree": "<wt>", "processStartedAt": <ms>, "readyAt": <ms>, "phase": "ready" }

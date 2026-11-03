@@ -29,8 +29,8 @@ Each tick sweeps every worktree's boot channel (`readBootEvents(wt, lookbackMs)`
 for boots with no `ready` line whose un-ready duration has crossed
 `bootReadyBudgetMs` (default 120 s). A boot that **exited** before ready
 (`exitedAt`, boot-events' `exited` line) is skipped: it crashed, it did not
-wedge — its error is on the backend's stderr, which the build that spawned it
-fails on. Measured to the next start it would read as a wedge as long as the
+wedge, and the crash is already its own report — boot-events files it as a
+`crash` (error and stack) through the report outbox. Measured to the next start it would read as a wedge as long as the
 agent took to rebuild (a 3 s boot assert filed as "un-ready 172s").
 
 - **superseded** — a later boot attempt already replaced it (`supersededAtMs`

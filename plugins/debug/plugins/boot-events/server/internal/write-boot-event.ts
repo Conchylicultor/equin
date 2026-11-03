@@ -46,6 +46,9 @@ function publish(line: BootLine): void {
 // synchronous (Bun runs it on a throw out of the boot as on process.exit); a
 // signal kill runs no listener, so a backend killed mid-boot stays "never
 // ready", which is what it is.
+//
+// The crash itself is a report too — armed by this plugin's machine half
+// (`machine/internal/boot-crash.ts`), since filing it needs the computer.
 let ready = false;
 
 export const bootStartRegistration: Registration = {
