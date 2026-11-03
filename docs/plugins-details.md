@@ -35403,14 +35403,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `IMAGE_SIZE_PREFIX_BYTES`
           - `readImageSize`
     - **`inflight`** — In-flight request deduplicator: createInflight() collapses concurrent callers sharing a key onto one execution, plus a caller-supplied freshness floor (notBefore) that supersedes rather than joins a flight older than a change the caller already knows about.
+      - Core:
+        - Uses: `packages/semaphore.whileWaiting`
+        - Exports (types): `Inflight`
+        - Exports (values): `createInflight`
       - Cross-plugin:
         - Imported by:
           - `framework/resource-runtime`
           - `infra/endpoints`
           - `packages/watched-memo`
-      - Core:
-        - Exports (types): `Inflight`
-        - Exports (values): `createInflight`
     - **`keyed-mutex`** — Keyed FIFO mutex: createKeyedMutex().run(key, fn) runs fn once every earlier run for the same key has settled, in arrival order, while different keys run concurrently; a key's entry is dropped the moment its queue drains.
       - Core:
         - Exports (types): `KeyedMutex`
@@ -35568,12 +35569,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/tooling/web-artifacts`
           - `infra/deps/npm`
           - `infra/endpoints`
+          - `packages/inflight`
           - `plugin-meta/barrel-import`
       - Core:
         - Exports (types):
+          - `LeaseContextRuntime`
+          - `LeaseScope`
           - `Semaphore`
           - `SlotOptions`
-        - Exports (values): `createSemaphore`
+        - Exports (values):
+          - `createSemaphore`
+          - `installLeaseContextRuntime`
+          - `whileWaiting`
     - **`signal-origin`** — Native SA_SIGINFO signal tap: records WHO sent a fatal signal (sender pid/uid, executable path, and the sender's ancestry captured inside the handler before it is reaped) and chains to the previously installed handler. armSignalOrigin(ready, signos) arms from the compiled shim (the signal-origin-shim dependency, a build kind declared in its deps barrel) and fails open and quiet; readSignalOrigin is a synchronous pure read safe from an exit hook.
       - Deps:
         - Uses:

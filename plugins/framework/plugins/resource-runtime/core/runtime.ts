@@ -2621,6 +2621,14 @@ const WATERMARK_SHARE_MS = 100;
 // including git/fs-only loaders that issue no query). The push/flush cascade is
 // deliberately NOT gated here — it stays level-parallel, bounded by the DB gate.
 // Tunable; surfaced via `get_runtime_profile`'s read-admit wait spans.
+//
+// The slot counts reads that RUN, not reads that wait: it is `yieldable`, so a
+// read that only waits on work another caller is doing (an `inflight` join —
+// a shared memo's compute, another resource's flight) gives it back for the
+// wait and takes it back ahead of every newcomer. Otherwise six reads waiting
+// on one slow read hold all six slots, and every unrelated read queues behind
+// that one read (main, 2026-11-03: 131 reads waited ~12 s on one transcript).
+// research/2026-11-03-framework-read-admission-waiters-yield.md
 const READ_LOAD_CONCURRENCY = 6;
 
 /** A reach plan's follows by table: every follow (by name) reading each one. */
@@ -3761,7 +3769,11 @@ export function createResourceRuntime(
     return inflight.run(
       `${entry.key} ${paramsKey(params)}`,
       gated
-        ? () => readLoadGate.run(load, { onWait: chargeReadGateWait })
+        ? () =>
+            readLoadGate.run(load, {
+              onWait: chargeReadGateWait,
+              yieldable: true,
+            })
         : load,
       {
         onWait: opts.onCoalesceWait,
@@ -3819,6 +3831,7 @@ export function createResourceRuntime(
       const run = () =>
         readLoadGate.run(() => revalidate(params), {
           onWait: chargeReadGateWait,
+          yieldable: true,
         });
       const raw = await (opts.wrapOrigin
         ? opts.wrapOrigin("sub", entry.key, run)

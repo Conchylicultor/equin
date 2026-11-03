@@ -1,3 +1,5 @@
+import { runInLeaseScope, type YieldableLease } from "./lease-scope";
+
 /**
  * How much of the gate one caller takes, and how it observes the wait. ONE
  * options object rather than a positional `onWait` plus a weight: a second
@@ -25,6 +27,16 @@ export interface SlotOptions {
    * from the body's own timing so queue-wait is never conflated with work time.
    */
   onWait?: (waitMs: number) => void;
+  /**
+   * `run` only: the slot is given back while the body merely WAITS on work
+   * another caller is doing (`whileWaiting` — an `inflight` join is one), and
+   * taken back ahead of every queued newcomer when the wait ends, so a gate full
+   * of waiters can never stall unrelated callers (see `lease-scope.ts`). Each
+   * take-back reports its own queue time through `onWait`. Off by default: a
+   * slot that stands for a held resource (a DB connection, a file handle) must
+   * stay held while its holder waits.
+   */
+  yieldable?: boolean;
 }
 
 export interface Semaphore {
@@ -91,7 +103,7 @@ export function createSemaphore(max: number): Semaphore {
     return weight;
   }
 
-  function acquireSlot(weight: number): Promise<void> {
+  function acquireSlot(weight: number, front = false): Promise<void> {
     // `waiters.length === 0` is the strict-FIFO rule, and it is what stops a
     // heavy waiter from being starved: once anyone is queued, a later arrival
     // queues behind it even if its own weight would fit in the free capacity.
@@ -101,9 +113,13 @@ export function createSemaphore(max: number): Semaphore {
       active += weight;
       return Promise.resolve();
     }
-    return new Promise<void>((resolve) =>
-      waiters.push({ weight, admit: resolve }),
-    );
+    // `front`: a yielded slot coming back. Its body was admitted before every
+    // caller now queued, so it resumes ahead of them — yielding while waiting
+    // never costs the waiter its place.
+    return new Promise<void>((resolve) => {
+      if (front) waiters.unshift({ weight, admit: resolve });
+      else waiters.push({ weight, admit: resolve });
+    });
   }
 
   function releaseSlot(weight: number): void {
@@ -138,6 +154,51 @@ export function createSemaphore(max: number): Semaphore {
     };
   }
 
+  // A held slot the body may give back while it waits (`SlotOptions.yieldable`).
+  // `waits` counts the body's overlapping waits: the first gives the slot back,
+  // the last takes it back. `end` is the body settling — the slot is freed if
+  // held, and a take-back still queued frees it again the moment it lands.
+  function yieldableLease(
+    weight: number,
+    onWait: ((waitMs: number) => void) | undefined,
+  ): YieldableLease & { end(): void } {
+    let held = true;
+    let ended = false;
+    let waits = 0;
+    let reclaiming: Promise<void> | undefined;
+    const giveBack = () => {
+      held = false;
+      releaseSlot(weight);
+    };
+    return {
+      get ended() {
+        return ended;
+      },
+      beginWait() {
+        waits++;
+        if (waits === 1 && held) giveBack();
+      },
+      endWait() {
+        waits--;
+        if (waits > 0 || ended || held) return Promise.resolve();
+        reclaiming ??= (async () => {
+          const t0 = performance.now();
+          await acquireSlot(weight, true);
+          onWait?.(performance.now() - t0);
+          reclaiming = undefined;
+          held = true;
+          // Settled, or waiting again, while the take-back queued.
+          if (ended || waits > 0) giveBack();
+        })();
+        return reclaiming;
+      },
+      end() {
+        ended = true;
+        if (held) giveBack();
+      },
+    };
+  }
+
   // Deliberately NOT `async`: a bad weight is a wiring bug, and it must reach
   // the call site as a throw rather than as a rejected promise nobody may be
   // awaiting yet.
@@ -148,7 +209,19 @@ export function createSemaphore(max: number): Semaphore {
   return {
     acquire,
     run<T>(fn: () => Promise<T>, opts?: SlotOptions): Promise<T> {
-      const pending = lease(weightOf(opts), opts?.onWait); // throws here, not in the promise
+      const weight = weightOf(opts); // throws here, not in the promise
+      const pending = lease(weight, opts?.onWait);
+      if (opts?.yieldable) {
+        return (async () => {
+          await pending; // its release is `held.end()`'s: one owner of the slot
+          const held = yieldableLease(weight, opts.onWait);
+          try {
+            return await runInLeaseScope(held, fn);
+          } finally {
+            held.end();
+          }
+        })();
+      }
       return (async () => {
         const release = await pending;
         try {

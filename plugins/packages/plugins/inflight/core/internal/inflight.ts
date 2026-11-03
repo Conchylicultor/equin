@@ -1,3 +1,5 @@
+import { whileWaiting } from "@plugins/packages/plugins/semaphore/core";
+
 /** Per-call options for `Inflight.run`. */
 export interface InflightOptions {
   /**
@@ -99,7 +101,11 @@ export function createInflight(): Inflight {
       // Join only a flight that satisfies the caller's freshness floor. No floor
       // ⇒ `-Infinity` ⇒ every live flight qualifies (the plain deduplicator).
       if (existing && existing.startedAt >= (opts?.notBefore ?? -Infinity)) {
-        const shared = existing.promise as Promise<T>;
+        // A joiner only waits on work the starter is doing, so it holds no
+        // yieldable gate slot while it does (`whileWaiting`): a gate full of
+        // joiners would otherwise stall every caller that depends on nothing
+        // here. Without such a slot in its context it is the shared promise.
+        const shared = whileWaiting(existing.promise as Promise<T>);
         const onWait = opts?.onWait;
         if (!onWait) return shared;
         // Joiner path: time the await of the shared flight in a wrapper async

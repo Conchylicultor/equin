@@ -30,6 +30,10 @@ import {
   type SpanMeasure,
   type GateGauge,
 } from "../../core";
+import {
+  installLeaseContextRuntime,
+  type LeaseScope,
+} from "@plugins/packages/plugins/semaphore/core";
 
 // Stores the EntryContext by identity: AsyncLocalStorage preserves the same
 // object reference across the entry's async continuation, so a gate awaited deep
@@ -65,6 +69,20 @@ const backgroundLaneAls = new AsyncLocalStorage<true>();
 installBackgroundLaneRuntime({
   run: (fn) => backgroundLaneAls.run(true, fn),
   active: () => backgroundLaneAls.getStore() === true,
+});
+
+// Separate ALS for the semaphore's yieldable-slot scope (packages/semaphore,
+// `lease-scope.ts`): which gate slots the running code holds, so a wait on
+// another caller's work (`whileWaiting` — an inflight join) gives them back for
+// the wait. Without it the live read-admission slot is held while its read
+// only waits, and reads waiting on one slow read stall every unrelated one.
+// Installed here, with the server's other ambient contexts, because a server
+// barrel of the semaphore's own would cycle through server-core.
+const leaseAls = new AsyncLocalStorage<LeaseScope>();
+
+installLeaseContextRuntime({
+  run: (scope, fn) => leaseAls.run(scope, fn),
+  current: () => leaseAls.getStore(),
 });
 
 // The root context, captured here — at module eval, outside every scope above —

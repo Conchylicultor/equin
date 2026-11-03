@@ -620,6 +620,15 @@ All but the version are co-produced by the starter. A push drain mints
     FULL to every holder.
 - **Gate-after-dedup.** The read-admission slot is acquired INSIDE the
   single-flight, so N concurrent reads of one tuple take 1 slot.
+- **Waiters hold no slot.** The slot is `yieldable` (`packages/semaphore`): a
+  read whose loader joins another caller's in-flight work (`inflight` →
+  `whileWaiting` — a shared memo's compute, another resource's flight) gives it
+  back for the wait and takes it back ahead of every newcomer. The gate bounds
+  reads that run; a slow read delays only the reads that wait on it. Needs the
+  server's lease scope (installed by `runtime-profiler/server`); central and a browser host hold
+  the slot throughout. `runtime-read-admit-yield.test.ts`,
+  `scripts/read-admit-bench.ts`,
+  `research/2026-11-03-framework-read-admission-waiters-yield.md`.
 - **Per-tab subs + batch replay.**
   - Per-socket records tag the holding tabs (`SocketSubRecord`; untagged ⇒ `""`).
   - `op: "sub-batch"` registers entries first, then `complete: true` releases what
