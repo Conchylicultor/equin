@@ -21,7 +21,7 @@ import { VersionWithSnapshotSchema } from "./schemas";
  */
 export const historyVersions = liveCollection("history.versions", {
   // Its list's DataView surface: custom columns sort and filter in SQL.
-  columnScope: "history.versions",
+  scopedColumns: true,
   from: entityVersionsEntityRef,
   pick: ["label", "createdAt", "author", "sourceId", "entityId"],
   carry: { pick: ["id", "pinned"] },

@@ -6,6 +6,7 @@ import { filterNodeIdKind, presetIdKind } from "../core";
 import "./internal/saved-icons";
 
 export {
+  isDataViewId,
   readDataViewConfigDoc,
   watchDataViewConfigDoc,
 } from "./internal/descriptors";

@@ -66,7 +66,6 @@ import {
   LIVE_ROW_KEY,
   LIVE_ROW_KEY_MAX_BYTES,
   LIVE_SCOPED_KEY,
-  scopedLiveColumns,
   type LiveAllCollection,
   type LiveCollection,
   type LiveColumnsDeclaration,
@@ -92,6 +91,7 @@ import {
   type ExposingExtension,
   type ServedScopedColumns,
 } from "./serve-columns";
+import { scopedTuples } from "./scoped-tuple";
 import {
   exposedBinding,
   exposureFolds,
@@ -566,28 +566,25 @@ export function compileCollection<
       `the id "${collection.id}" binds to join "${idRef.from}" — a collection's id is its base table's column.`,
     );
   }
-  // Scoped column sets (a DataView surface's custom columns): one join family
-  // per set, bound to the collection's scope — members joined per tuple.
-  const scope =
-    (collection as { columnScope?: string | null }).columnScope ?? null;
-  if (scoped.length > 0 && scope === null) {
+  // Scoped column sets (a surface's custom columns): one join family per set,
+  // its members joined per tuple in the scope the tuple names.
+  if (
+    scoped.length > 0 &&
+    (collection as { scopedColumns?: boolean }).scopedColumns !== true
+  ) {
     fail(
-      "scoped column sets were served for a collection that declares no `columnScope`",
+      "scoped column sets were served for a collection that is not declared `scopedColumns`",
     );
   }
-  const scopedByName = new Map<string, ServedScopedColumns>();
   for (const set of scoped) {
-    if (
-      scopedByName.has(set.name) ||
-      handles.some((h) => h.name === set.name)
-    ) {
+    if (handles.some((h) => h.name === set.name)) {
       fail(
         `two column sets are named "${set.name}" — a set's name prefixes its wire names`,
       );
     }
-    scopedByName.set(set.name, set);
   }
-  const families = scope === null ? [] : scoped.map((s) => s.bind(scope));
+  const scopedSets = scopedTuples(collection.key, scoped, fail);
+  const families = scopedSets.families;
   // The declared joins, rendered and checked once here (A4): every row field
   // bound to a join renders against its alias, so the SQL names its relation.
   const joins = compileJoins(
@@ -852,65 +849,20 @@ export function compileCollection<
   };
 
   const codec = collection.window.window;
-  // Every column set a query may name: the exposures folded here, and the
-  // scoped sets' members AS THEY STAND (a scope's members are data) — rebuilt
-  // only when some set's members changed, so the codec's per-array memo holds.
-  let declared: { key: string; all: readonly LiveColumnsDeclaration[] } = {
-    key: "",
-    all: handles,
-  };
-  const columnSets = (): readonly LiveColumnsDeclaration[] => {
-    if (scope === null) return handles;
-    const members = scoped.map((set) => [set, set.members(scope)] as const);
-    const key = JSON.stringify(
-      members.map(([set, m]) => [
-        set.name,
-        [...m].map(([id, r]) => [id, r.domain]),
-      ]),
-    );
-    if (key !== declared.key) {
-      declared = {
-        key,
-        all: [
-          ...handles,
-          ...members.map(([set, m]) =>
-            scopedLiveColumns(
-              scope,
-              set.name,
-              Object.fromEntries(
-                [...m].map(([id, r]) => [
-                  id,
-                  { domain: r.domain, sortable: true },
-                ]),
-              ),
-            ),
-          ),
-        ],
-      };
-    }
-    return declared.all;
-  };
+  // Every column set a query may name: the exposures folded here, and — in
+  // the scope the tuple names — the scoped sets' members AS THEY STAND (a
+  // scope's members are data).
+  const columnSets = (
+    params: LiveWindowParams,
+  ): readonly LiveColumnsDeclaration[] =>
+    scopedSets.columnSets(handles, scopedSets.scopeOf(params));
   // A scoped member's value (`<set>.<member>`), rendered through its family's
-  // join — cast as the member's type reads NOW. A member the scope no longer
-  // has fails the load loudly (the scope's `recomputeOn` reloads its readers,
-  // whose clients re-lower without it).
-  const scopedRead = (name: string): ReadColumn | undefined => {
-    if (scope === null) return undefined;
-    const dot = name.indexOf(".");
-    const set = dot < 0 ? undefined : scopedByName.get(name.slice(0, dot));
-    if (set === undefined) return undefined;
-    const member = name.slice(dot + 1);
-    const read =
-      set.members(scope).get(member) ??
-      fail(`"${name}" is not a member of scope "${scope}"`);
-    return joins.readMember(
-      set.name,
-      member,
-      read.cast === undefined
-        ? undefined
-        : { cast: read.cast.sql, sqlType: read.cast.sqlType },
-    );
-  };
+  // join in the tuple's scope — cast as the member's type reads NOW.
+  const scopedRead = (
+    name: string,
+    scope: string | undefined,
+  ): ReadColumn | undefined =>
+    scopedSets.read(joins, name, scope ?? null)?.read;
   // The server decodes against every column set it serves: a query may name
   // their columns, and nothing else. One strict decode per tuple's params
   // object — `where`, `orderBy`, `limitOf` and `cutsOf` each read it, on every
@@ -922,44 +874,50 @@ export function compileCollection<
   const decode = (params: LiveWindowParams) => {
     let decoded = decodedByParams.get(params);
     if (decoded === undefined) {
-      decoded = codec.decode(params, columnSets());
+      decoded = codec.decode(params, columnSets(params));
       decodedByParams.set(params, decoded);
     }
     return decoded;
   };
   // A filter naming scoped members: its targets and declaration extended by
   // each member it names (rendered per load — a member's cast may move).
-  const tupleFilterWhere = (filter: Filter | undefined): SQL | undefined => {
+  const tupleFilterWhere = (
+    filter: Filter | undefined,
+    scope: string | undefined,
+  ): SQL | undefined => {
     if (filter === undefined) return undefined;
     const extra = [...filterColumns(filter)].filter((c) => !(c in targets));
     if (extra.length === 0) return filterWhere(filter);
-    const sets = columnSets();
     const t: Record<string, SQL> = { ...targets };
     const decl: Record<string, Filterable[string]> = { ...filterDecl };
     for (const name of extra) {
       const col =
-        scopedRead(name) ?? fail(`"${name}" is not a filterable column`);
+        scopedRead(name, scope) ?? fail(`"${name}" is not a filterable column`);
       t[name] = sql`${col}`;
-      const column = sets
-        .map((h) => h.wireFilterable[name])
-        .find((c) => c !== undefined);
       decl[name] =
-        column ?? fail(`"${name}" is not a filterable scoped column`);
+        scopedSets.filterColumn(name, scope ?? null) ??
+        fail(`"${name}" is not a filterable scoped column`);
     }
     return filterSql(filter, t, decl);
   };
   const where = (params: LiveWindowParams): SQL | undefined => {
-    const filter = decode(params).where;
-    return allOf([base, ...defaultsFor(filter), tupleFilterWhere(filter)]);
+    const q = decode(params);
+    return allOf([
+      base,
+      ...defaultsFor(q.where),
+      tupleFilterWhere(q.where, q.scope),
+    ]);
   };
-  const orderBy = (params: LiveWindowParams): WindowOrderKey[] =>
-    decode(params).orderBy.map(([name, dir]) => {
+  const orderBy = (params: LiveWindowParams): WindowOrderKey[] => {
+    const q = decode(params);
+    return q.orderBy.map(([name, dir]) => {
       const col =
         bound.get(name) ??
-        scopedRead(name) ??
+        scopedRead(name, q.scope) ??
         fail(`"${name}" is not a sortable column`);
       return { col, dir, nullable: joins.canBeNull(col) };
     });
+  };
 
   const groupCodec = collection.groups.groups;
   // What a grouping and a count may name beside the collection's own columns:
@@ -1082,17 +1040,18 @@ export function compileCollection<
       window: {
         limitOf: (params: LiveWindowParams) => decode(params).limit,
         validateParams: (params) => {
-          codec.decode(params, columnSets());
+          codec.decode(params, columnSets(params as LiveWindowParams));
         },
       },
       ...(foldsColumns ? { readField } : {}),
-      // The scoped sets' families: members joined per tuple, one route per
-      // set, the members a tuple orders by projected under `$scoped`; and the
-      // external value tuples that move a scope's members.
-      ...(scope !== null && families.length > 0
+      // The scoped sets' families: members joined per tuple in the scope it
+      // names, one route per set, the members a tuple orders by projected
+      // under `$scoped`; and, per tuple, the external value tuple that moves
+      // its scope's members.
+      ...(families.length > 0
         ? {
             families: { joins: families, valuesKey: LIVE_SCOPED_KEY },
-            recomputeOn: scoped.map((set) => set.recomputeOn(scope)),
+            recomputeOn: scopedSets.recomputeOn,
           }
         : {}),
       // Every window is read as key-range pages: its page cuts (decoded
@@ -1368,8 +1327,7 @@ export function serveAnyCollection<
     };
   }
   if (
-    ((collection as { columnScope?: string | null }).columnScope ?? null) !==
-      null ||
+    (collection as { scopedColumns?: boolean }).scopedColumns === true ||
     (collection.exposes ?? null) !== null
   ) {
     return serveDeferred(collection, opts);
@@ -1458,7 +1416,7 @@ function scopeMissing(key: string): never {
 /**
  * A window or lookup-only collection served off the change feed: refused for
  * what the external arm refuses (an `all` set — its compile is a routed alias —
- * and a `columnScope`, whose scoped sets fold from routed contributions; a
+ * and a `scopedColumns` one, whose scoped sets fold from routed contributions; a
  * union never compiles), compiled as the routed arm compiles it — with no
  * exposure folded, so an exposing collection's rows carry `$columns: {}`, as
  * an external host's do — and registered by `serveOffFeed`.
@@ -1486,12 +1444,9 @@ function serveOffFeedCollection<
       "`changes` serves a window or lookup-only collection off the change feed — a collection declared `all` is a routed alias with no off-feed spelling yet.",
     );
   }
-  if (
-    ((collection as { columnScope?: string | null }).columnScope ?? null) !==
-    null
-  ) {
+  if ((collection as { scopedColumns?: boolean }).scopedColumns === true) {
     fail(
-      "a `columnScope` collection folds scoped column sets routed through the change feed — it cannot be served off it.",
+      "a `scopedColumns` collection folds scoped column sets routed through the change feed — it cannot be served off it.",
     );
   }
   const windowed = collection as
@@ -1594,7 +1549,7 @@ async function bootIdsOf(source: PreloadRowsSource): Promise<string[]> {
 }
 
 // ── Scoped and exposing collections: compiled at boot ───────────────────
-// A `columnScope` collection's scoped sets come from `LiveColumns.Scoped`
+// A `scopedColumns` collection's scoped sets come from `LiveColumns.Scoped`
 // contributions, and a collection reaching an entity its exposed fields from
 // `LiveColumns.Expose` ones — both known only once contributions are
 // collected. Its three resources are DEFERRED: registered now under their
@@ -1626,9 +1581,7 @@ function serveDeferred<
     (specs ??= compileCollection(
       collection,
       opts,
-      collection.columnScope === null
-        ? []
-        : LiveColumns.Scoped.getContributions(),
+      collection.scopedColumns ? LiveColumns.Scoped.getContributions() : [],
       collection.exposes === null ? [] : LiveColumns.Expose.getContributions(),
     ));
   const window = deferredWindowQueryResource(

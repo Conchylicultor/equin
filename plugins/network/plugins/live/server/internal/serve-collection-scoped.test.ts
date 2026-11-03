@@ -4,13 +4,16 @@
  * custom columns), without a database: the recording `QueryDb` renders every
  * query, so each case reads the SQL a tuple runs.
  *
- * - one route for the whole set (an alias on the host key, kept to the scope's
- *   rows, matched per tuple on the members it reads);
+ * - the scope is the QUERY's (`scope`, the surface asking): one route for the
+ *   whole set over every scope (an alias on the host key, matched per tuple on
+ *   the scope it names and the members it reads);
+ * - a scope no set serves is refused at the params gate; a served one is
+ *   observed once (its owner starts watching its members);
  * - a tuple joins exactly the members its where / order names, as membership;
  * - a member's value reads through its type's cast, looked up at load time;
  * - a member a tuple ORDERS BY is projected and folded under `$scoped`, where
  *   the order signature reads it;
- * - the scope's `recomputeOn` reaches the window's server options;
+ * - `recomputeOn` reaches the window per tuple: the tuple of the scope it names;
  * - provenance: every shape joins exactly the members `usesOf` names.
  *
  * Run: `./equin test plugins/network/plugins/live`.
@@ -21,6 +24,7 @@ import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { sql } from "drizzle-orm";
 import { integer, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
+import { familyMember } from "@plugins/infra/plugins/query-resource/core";
 import { familyMemberAlias } from "@plugins/infra/plugins/query-resource/core/testing";
 import {
   compileWindowQuery,
@@ -52,7 +56,8 @@ const values = pgTable(
 );
 
 const SCOPE = "test.surface";
-const RECOMPUTE = { resource: { key: "test.defs" } as never, params: {} };
+const OTHER = "other.surface";
+const RESOURCE = { key: "test.defs" } as never;
 
 let seq = 0;
 function setup() {
@@ -73,9 +78,15 @@ function setup() {
     hostKey: values.rowKey,
     member: values.columnId,
     value: values.value,
-    members: () => members,
-    recomputeOn: () => RECOMPUTE,
+    serves: (scope) => scope === SCOPE || scope === OTHER,
+    members: (scope) => (scope === SCOPE ? members : new Map()),
+    recomputeOn: {
+      resource: RESOURCE,
+      params: (scope) => ({ dataViewId: scope }),
+    },
+    watch: (scope) => watched.push(scope),
   });
+  const watched: string[] = [];
   const c = liveCollection(`test.live.scoped-${seq++}`, {
     fields: {
       id: textField({ label: "Id", filterable: false }),
@@ -86,7 +97,7 @@ function setup() {
     sortable: ["title", "n"],
     default: { orderBy: [["n", "asc"]], limit: 10 },
     maxLimit: 50,
-    columnScope: SCOPE,
+    scopedColumns: true,
   });
   const recording = recordingQueryDb((q) =>
     // A window read answers one row carrying the member it orders by.
@@ -116,7 +127,10 @@ function setup() {
     where?: object;
     orderBy?: readonly (readonly [string, "asc" | "desc"])[];
   }) => c.window.window.encode({ ...q, columns: [handle] } as never);
-  return { c, set, members, window, encode, ...recording };
+  /** A member's join alias in the test scope. */
+  const alias = (member: string) =>
+    familyMember(set.family, member, SCOPE).alias;
+  return { c, set, members, watched, window, encode, alias, ...recording };
 }
 
 const usesOf = (
@@ -161,16 +175,41 @@ describe("serveCollection with a scoped column set", () => {
     expect(familyMemberAlias("custom_set", uuid)).toBe(long);
   });
 
-  test("one route for the whole set: an alias on the host key, kept to the scope, matched on the member", () => {
+  test("a scoped member's alias names its scope too: one member id in two scopes is two joins", () => {
+    const { set, alias } = setup();
+    expect(alias("c1")).toBe(familyMemberAlias("custom", `${SCOPE}\u0000c1`));
+    expect(familyMember(set.family, "c1", OTHER).alias).not.toBe(alias("c1"));
+    expect(() => familyMember(set.family, "c1")).toThrow(/names no scope/);
+  });
+
+  test("one route for the whole set, whatever the scope: an alias on the host key, matched on the scope and the member", () => {
     const { window } = setup();
     expect(window.routes!.routes.find((r) => r.id === "custom")).toEqual({
       id: "custom",
       table: "sc_custom_values",
       map: { kind: "alias", column: "row_key" },
-      rows: { data_view_id: SCOPE },
-      match: ["column_id"],
+      rows: {},
+      match: ["column_id", "data_view_id"],
       columns: ["data_view_id", "row_key", "column_id", "value"],
     });
+  });
+
+  test("the scope is the query's: a tuple naming a member carries it, and the gate refuses one no set serves", () => {
+    const { window, encode, watched } = setup();
+    const params = encode({ where: { "custom.c1": { eq: "x" } } });
+    expect(params.scope).toBe(SCOPE);
+    expect(encode({}).scope).toBeUndefined();
+    window.validateParams!(params);
+    window.validateParams!(params);
+    // Observed once: its owner watches the scope's members from then on.
+    expect(watched).toEqual([SCOPE]);
+    expect(() =>
+      window.validateParams!({ ...params, scope: "nowhere" }),
+    ).toThrow(/served by no scoped column set/);
+    // A scope with no member of that name: the strict decode refuses it.
+    expect(() => window.validateParams!({ ...params, scope: OTHER })).toThrow(
+      /not a filterable column|custom\.c1/,
+    );
   });
 
   test("a tuple reads the set only when its where / order names a member — as membership, matching exactly those members", () => {
@@ -180,7 +219,7 @@ describe("serveCollection with a scoped column set", () => {
       usesOf(window, encode({ where: { "custom.c1": { eq: "x" } } })),
     ).toEqual({
       base: "membership",
-      custom: ["membership", { column_id: ["c1"] }],
+      custom: ["membership", { column_id: ["c1"], data_view_id: [SCOPE] }],
     });
     expect(
       usesOf(
@@ -192,25 +231,28 @@ describe("serveCollection with a scoped column set", () => {
       ),
     ).toEqual({
       base: "membership",
-      custom: ["membership", { column_id: ["c1", "cc-2"] }],
+      custom: [
+        "membership",
+        { column_id: ["c1", "cc-2"], data_view_id: [SCOPE] },
+      ],
     });
   });
 
   test("the SQL joins each named member once, keyed to the scope, and reads it through its cast", async () => {
-    const { window, encode, calls } = setup();
+    const { window, encode, calls, alias } = setup();
     const params = encode({
       where: { "custom.cc-2": { gt: 3 } },
       orderBy: [["custom.c1", "asc"]],
     });
     await window.loader(params);
     const full = calls.at(-1)!;
+    const c1 = alias("c1");
+    const cc2 = alias("cc-2");
     expect(full.sql).toContain(
-      `left join "sc_custom_values" "custom__c1" on ("custom__c1"."row_key" = "sc_songs"."id" and "custom__c1"."data_view_id" = $`,
+      `left join "sc_custom_values" "${c1}" on ("${c1}"."row_key" = "sc_songs"."id" and "${c1}"."data_view_id" = $`,
     );
-    expect(full.sql).toContain(
-      `left join "sc_custom_values" "custom__cc_2d_2"`,
-    );
-    expect(full.sql).toContain(`("custom__cc_2d_2"."value")::numeric`);
+    expect(full.sql).toContain(`left join "sc_custom_values" "${cc2}"`);
+    expect(full.sql).toContain(`("${cc2}"."value")::numeric`);
     expect(full.params).toContain(SCOPE);
     expect(full.params).toContain("cc-2");
     // The member it orders by is projected (and its key part cast back through its own type).
@@ -218,22 +260,22 @@ describe("serveCollection with a scoped column set", () => {
   });
 
   test("a member the tuple orders by is folded under `$scoped`, and the order signature reads it", async () => {
-    const { window, encode } = setup();
+    const { window, encode, alias } = setup();
     const params = encode({ orderBy: [["custom.c1", "asc"]] });
     const rows = (await window.loader(params)) as Record<string, unknown>[];
     expect(rows).toHaveLength(1);
-    expect(rows[0]!.$scoped).toEqual({ custom__c1: "x" });
+    expect(rows[0]!.$scoped).toEqual({ [alias("c1")]: "x" });
     expect(rows[0]).not.toHaveProperty("__family_0");
     const sig = window.membership!;
     if (sig.kind !== "window") throw new Error("a window");
-    const moved = { ...rows[0]!, $scoped: { custom__c1: "y" } };
+    const moved = { ...rows[0]!, $scoped: { [alias("c1")]: "y" } };
     expect(sig.orderSignatureOf!(rows[0], params)).not.toBe(
       sig.orderSignatureOf!(moved, params),
     );
   });
 
   test("a member's cast is read at load time: retyping a column changes the SQL of the next load", async () => {
-    const { window, encode, calls, members } = setup();
+    const { window, encode, calls, members, alias } = setup();
     const params = encode({ where: { "custom.c1": { eq: "x" } } });
     await window.loader(params);
     expect(calls.at(-1)!.sql).not.toContain("::numeric");
@@ -242,11 +284,12 @@ describe("serveCollection with a scoped column set", () => {
       cast: { sql: (raw) => sql`upper(${raw})`, sqlType: "text" },
     });
     await window.loader(params);
-    expect(calls.at(-1)!.sql).toContain(`upper("custom__c1"."value")`);
+    expect(calls.at(-1)!.sql).toContain(`upper("${alias("c1")}"."value")`);
   });
 
   test("retyping a member a tuple SORTS by re-renders its order: ORDER BY and projection read the new cast", async () => {
-    const { window, encode, calls, members } = setup();
+    const { window, encode, calls, members, alias } = setup();
+    const c1 = alias("c1");
     const params = encode({ orderBy: [["custom.c1", "asc"]] });
     await window.loader(params);
     const before = calls.at(-1)!.sql;
@@ -259,10 +302,10 @@ describe("serveCollection with a scoped column set", () => {
     const after = calls.at(-1)!.sql;
     // The ORDER BY, the `$scoped` projection and the row-key part all read
     // the member through its new cast — the memoized order is not the old one.
-    expect(after).toMatch(/order by \("custom__c1"\."value"\)::numeric/);
-    expect(after).toContain(`("custom__c1"."value")::numeric as "__family_0"`);
+    expect(after).toContain(`order by ("${c1}"."value")::numeric`);
+    expect(after).toContain(`("${c1}"."value")::numeric as "__family_0"`);
     expect(after).toContain(
-      `("custom__c1"."value")::numeric::text as "__row_key_0"`,
+      `("${c1}"."value")::numeric::text as "__row_key_0"`,
     );
   });
 
@@ -277,11 +320,18 @@ describe("serveCollection with a scoped column set", () => {
     expect(String(error)).toMatch(/"custom\.c1"/);
   });
 
-  test("the scope's recomputeOn reaches the window (not the point read)", () => {
-    const { window, c, set } = setup();
-    expect(window.recomputeOn).toEqual([RECOMPUTE]);
-    // The fold recorded the scope the set serves — what its owner watches.
-    expect([...set.scopes()]).toEqual([SCOPE]);
+  test("recomputeOn reaches the window per tuple — the members' tuple of the scope it names (not the point read)", () => {
+    const { window, c, set, encode } = setup();
+    expect(window.recomputeOn).toHaveLength(1);
+    const [on] = window.recomputeOn!;
+    expect(on!.resource).toBe(RESOURCE);
+    expect(
+      on!.paramsOf!(encode({ where: { "custom.c1": { eq: "x" } } })),
+    ).toEqual({
+      dataViewId: SCOPE,
+    });
+    // A tuple naming no scope compiles from no members' tuple.
+    expect(on!.paramsOf!(encode({}))).toBeNull();
     const specs = compileCollection(
       c,
       { from: songs, db: recordingQueryDb().db },
@@ -293,7 +343,7 @@ describe("serveCollection with a scoped column set", () => {
   });
 
   test("provenance: every shape joins exactly the members usesOf names", async () => {
-    const { window, encode, calls } = setup();
+    const { window, encode, calls, set: setOf } = setup();
     const params = encode({
       where: { "custom.cc-2": { gt: 1 } },
       orderBy: [["custom.c1", "desc"]],
@@ -301,9 +351,15 @@ describe("serveCollection with a scoped column set", () => {
     const members = [
       ...(window.routes!.usesOf(params).get("custom")?.match?.column_id ?? []),
     ].sort();
+    const aliasOf = new Map(
+      ["c1", "cc-2"].map((m) => [
+        familyMember(setOf.family, m, SCOPE).alias,
+        m,
+      ]),
+    );
     const joined = (s: string) =>
-      [...s.matchAll(/left join "sc_custom_values" "custom__([^"]+)"/g)]
-        .map((m) => m[1]!)
+      [...s.matchAll(/left join "sc_custom_values" "([^"]+)"/g)]
+        .map((m) => aliasOf.get(m[1]!) ?? m[1]!)
         .sort();
     await window.loader(params);
     await window.loader(params, { affectedIds: ["a"] });
@@ -312,10 +368,10 @@ describe("serveCollection with a scoped column set", () => {
     await membership.windowIdsOf(params);
     const shapes = calls.slice(-3).map((q) => joined(q.sql));
     expect(members).toEqual(["c1", "cc-2"]);
-    for (const shape of shapes) expect(shape).toEqual(["c1", "cc_2d_2"]);
+    for (const shape of shapes) expect(shape).toEqual(["c1", "cc-2"]);
   });
 
-  test("a collection with no column scope is refused scoped sets", () => {
+  test("a collection not declared `scopedColumns` is refused scoped sets", () => {
     const { set } = setup();
     const plain = liveCollection(`test.live.scoped-${seq++}`, {
       fields: {
@@ -331,19 +387,40 @@ describe("serveCollection with a scoped column set", () => {
       compileCollection(plain, { from: songs, db: recordingQueryDb().db }, [
         set,
       ]),
-    ).toThrow(/declares no `columnScope`/);
+    ).toThrow(/not declared `scopedColumns`/);
   });
 
-  test("the codec refuses a scoped set of another scope, and one on a collection without a scope", () => {
+  test("two surfaces, one collection: each tuple joins its own scope's members, through the one route", async () => {
     const { c } = setup();
-    const other = scopedLiveColumns("another.surface", "custom", {
+    const other = scopedLiveColumns(OTHER, "custom", {
       c1: { domain: "text", sortable: true },
     });
-    expect(() =>
-      c.window.window.encode({
-        where: { "custom.c1": { eq: "x" } } as never,
-        columns: [other],
-      }),
-    ).toThrow(/belong to scope "another\.surface"/);
+    // The other surface has a member "c1" too (its own definition).
+    const twoScopes = serveScopedColumns({
+      name: "custom",
+      table: values,
+      scope: values.dataViewId,
+      hostKey: values.rowKey,
+      member: values.columnId,
+      value: values.value,
+      serves: () => true,
+      members: () => new Map([["c1", { domain: "text" as const }]]),
+      recomputeOn: { resource: RESOURCE, params: (s) => ({ dataViewId: s }) },
+      watch: () => {},
+    });
+    const specs = compileCollection(
+      c,
+      { from: songs, db: recordingQueryDb().db },
+      [twoScopes],
+    );
+    const w = compileWindowQuery(c.window, specs.window).serverOpts;
+    const params = c.window.window.encode({
+      where: { "custom.c1": { eq: "x" } },
+      columns: [other],
+    } as never);
+    expect(params.scope).toBe(OTHER);
+    expect([
+      ...w.routes!.usesOf(params).get("custom")!.match!.data_view_id!,
+    ]).toEqual([OTHER]);
   });
 });

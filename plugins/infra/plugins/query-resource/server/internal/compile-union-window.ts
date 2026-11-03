@@ -14,6 +14,7 @@ import type {
   KeyedMembership,
   KeyedServerResourceOptions,
   ResourceParams,
+  RoutedRecomputeOn,
   ScopePolicy,
   TupleUse,
 } from "@plugins/framework/plugins/resource-runtime/core";
@@ -26,6 +27,7 @@ import {
 import {
   armKeyCodec,
   type ArmKeyCodec,
+  type JoinFamily,
   type JoinSpec,
 } from "@plugins/infra/plugins/query-resource/core";
 import { SQL_TYPE_RE } from "../../core";
@@ -113,6 +115,14 @@ export interface UnionArmSpec {
   where?: SQL;
   /** Every column a per-tuple predicate of this arm (`whereOf`, a grouping's `where`) may read. */
   whereReads: readonly (PgColumn | SQL)[];
+  /**
+   * Join FAMILIES the window may read members of (a surface's custom
+   * columns) — the same family objects every arm's caller renders members
+   * through (`JoinPlan.readMember`). A member joins on the arm's ROW KEY
+   * (`<kind>:<pk>`, what its side table stores), and its one route per arm
+   * keeps this arm's keys (`UnionArmRoutes.rowKeyed`).
+   */
+  families?: readonly JoinFamily[];
 }
 
 /** One outer column: its name on the row, and the SQL type every arm produces it as. */
@@ -128,11 +138,22 @@ export interface UnionColumn {
   transient?: true;
 }
 
-/** One key of a tuple's order, by outer name (a column, the discriminator, or the key field). */
-export interface UnionOrderKey {
-  name: string;
-  dir: "asc" | "desc";
-}
+/**
+ * One key of a tuple's order: by outer name (a column, the discriminator, or
+ * the key field) — or a join family MEMBER, named by its wire name, read the
+ * same in every arm (`read`, rendered through `JoinPlan.readMember`: its
+ * alias is one per member, whatever the arm). A member is a per-tuple column:
+ * projected only into the tuple ordering by it (the outer order, the row
+ * key's parts), NULL for a host with no member row, and carried under
+ * `familyValuesKey` so the order signature sees it move.
+ */
+export type UnionOrderKey =
+  | { name: string; dir: "asc" | "desc"; member?: never }
+  | {
+      name: string;
+      dir: "asc" | "desc";
+      member: { read: ReadColumn; sqlType: string };
+    };
 
 /** A tuple's page cuts: each a row key of exactly its order (the tiebreaker included). */
 export interface UnionCuts {
@@ -171,6 +192,18 @@ export interface UnionCollectionSpec<
   arms: readonly UnionArmSpec[];
   /** Every outer name any tuple may order by — the routes' order-column universe. */
   sortable: readonly string[];
+  /**
+   * Where a window row carries the family members its tuple orders by (by
+   * wire name) — read by the order signature, stripped by every reader.
+   * Required when an arm declares `families`.
+   */
+  familyValuesKey?: string;
+  /**
+   * External upstream tuples whose change moves the window's vocabulary (the
+   * members a family may name, how they cast) — the routed entry's
+   * `recomputeOn`.
+   */
+  recomputeOn?: ReadonlyArray<RoutedRecomputeOn>;
   window: {
     /** The arms the tuple's filter can match (the rest pruned: no SQL, no routes). */
     armsOf: (params: WP) => ReadonlySet<string>;
@@ -224,11 +257,15 @@ interface OuterColumn {
   nullable: boolean;
   /** Never on the row: projected only where a tuple orders by it (see `UnionColumn.transient`). */
   transient: boolean;
+  /** A family member a tuple orders by: its read, the same in every arm (see `UnionOrderKey`). */
+  member?: ReadColumn;
 }
 
 interface Arm {
   kind: string;
   codec: ArmKeyCodec;
+  /** Its family routes' ids — row-keyed (see `UnionArmRoutes.rowKeyed`). */
+  rowKeyed: ReadonlySet<string>;
   base: RoutedBase;
   plan: JoinPlan;
   pk: PgColumn;
@@ -346,7 +383,15 @@ export function compileUnionCollection<
         fail(`arm "${a.kind}" reads "${name}", which is not an outer column.`);
       }
     }
-    const plan = compileJoins(base, a.joins ?? [], a.id, armLabel);
+    const families = a.families ?? [];
+    if (families.length > 0 && spec.familyValuesKey === undefined) {
+      fail(
+        `arm "${a.kind}" declares join families, but the union names no \`familyValuesKey\` to carry the members a tuple orders by.`,
+      );
+    }
+    const plan = compileJoins(base, a.joins ?? [], a.id, armLabel, families, {
+      armKind: a.kind,
+    });
     const kindLiteral = sql.raw(`'${codec.kind}'::text`);
     const keyExpr = armKeySql(a.kind, a.id);
     const readOf = (col: OuterColumn): ReadColumn | undefined =>
@@ -367,12 +412,16 @@ export function compileUnionCollection<
     const valueOf = (col: OuterColumn): ReadColumn => {
       if (col === KIND) return kindLiteral;
       if (col === KEY) return keyExpr;
+      if (col.member !== undefined) return col.member;
       return readOf(col) ?? nullOf(col.sqlType);
     };
     const constant = (col: OuterColumn): boolean =>
-      col === KIND || (col !== KEY && readOf(col) === undefined);
+      col === KIND ||
+      (col !== KEY && col.member === undefined && readOf(col) === undefined);
     const decoderOf = (col: OuterColumn): SqlDecoderLike => {
       if (col === KIND || col === KEY) return String;
+      // A member reads NULL for a host with no member row.
+      if (col.member !== undefined) return nullable(decoderOfRead(col.member));
       const read = readOf(col);
       if (read === undefined) return nullable(String);
       const dec = decoderOfRead(read);
@@ -400,12 +449,13 @@ export function compileUnionCollection<
       where: (params) => allOf([a.where, spec.window.whereOf(params, a.kind)]),
       whereReads,
       orderColumns,
+      // A member key reads its family member: so the tuple joins it, and
+      // matches it on the family's route.
       orderOf: (params) =>
-        spec.window
-          .orderOf(params)
-          .map((k) => colOf(k.name))
+        keysOf(params as unknown as WP)
+          .map((k) => k.col)
           .filter((col) => !constant(col) && col !== KEY)
-          .map((col): WindowOrderKey => ({ col: readOf(col)! })),
+          .map((col): WindowOrderKey => ({ col: valueOf(col) })),
       db,
     });
     const pointReads = routedReads<PP>({
@@ -450,6 +500,7 @@ export function compileUnionCollection<
       valueOf,
       constant,
       decoderOf,
+      rowKeyed: new Set(families.map((f) => f.id)),
       window: {
         routes: windowReads.routes,
         tuple: perParams(
@@ -518,9 +569,15 @@ export function compileUnionCollection<
   const named = (
     r: Record<string, unknown>,
     parts: number,
+    members: readonly OuterColumn[] = [],
   ): Record<string, unknown> => {
     const out: Record<string, unknown> = {};
     for (const col of allColumns) out[col.name] = r[col.alias];
+    if (members.length > 0) {
+      out[spec.familyValuesKey!] = Object.fromEntries(
+        members.map((m) => [m.name, r[m.alias] ?? null]),
+      );
+    }
     // (A transient order key rides only in the row key's parts.)
     if (parts > 0) {
       const values: (string | null)[] = [];
@@ -537,9 +594,31 @@ export function compileUnionCollection<
   /** The tuple's keys: its order, then the row key (unless the order names it). */
   const keysOf = perParams(
     (params: WP): { col: OuterColumn; dir: "asc" | "desc" }[] => {
-      const keys = spec.window
-        .orderOf(params)
-        .map((k) => ({ col: colOf(k.name), dir: k.dir }));
+      let members = 0;
+      const keys = spec.window.orderOf(params).map((k) => {
+        if (k.member === undefined) return { col: colOf(k.name), dir: k.dir };
+        if (spec.familyValuesKey === undefined) {
+          fail(
+            `the tuple orders by family member "${k.name}", but the union names no \`familyValuesKey\`.`,
+          );
+        }
+        if (!SQL_TYPE_RE.test(k.member.sqlType)) {
+          fail(
+            `member "${k.name}" reads as "${k.member.sqlType}", which is not a Postgres type name — it is interpolated raw into a cut's cast.`,
+          );
+        }
+        // A per-tuple column: never on the row, NULL for a host with no
+        // member row (so it orders as nullable, statically for the tuple).
+        const col: OuterColumn = {
+          name: k.name,
+          alias: `__m${members++}`,
+          sqlType: k.member.sqlType,
+          nullable: true,
+          transient: true,
+          member: k.member.read,
+        };
+        return { col, dir: k.dir };
+      });
       if (!keys.some((k) => k.col === KEY)) keys.push({ col: KEY, dir: "asc" });
       return keys;
     },
@@ -645,6 +724,12 @@ export function compileUnionCollection<
         sql`(u.${sql.identifier(k.col.alias)})::text AS ${sql.identifier(`__p${i}`)}`,
     );
 
+  /** The family members a tuple orders by (carried under `familyValuesKey`). */
+  const membersOf = perParams((params: WP): OuterColumn[] =>
+    keysOf(params)
+      .map((k) => k.col)
+      .filter((c) => c.member !== undefined),
+  );
   /** What a window tuple's arm selects project: the row's columns, and any transient order key. */
   const projectedOf = perParams((params: WP): OuterColumn[] => [
     ...allColumns,
@@ -678,7 +763,7 @@ export function compileUnionCollection<
       parserOf(projected, keys.length),
       "full",
     );
-    return rows.map((r) => encode(named(r, keys.length)));
+    return rows.map((r) => encode(named(r, keys.length, membersOf(params))));
   };
   /** Decoded `kind:raw` keys, grouped by arm — an unknown kind or bad key dropped. */
   const byArm = (
@@ -715,7 +800,7 @@ export function compileUnionCollection<
       parserOf(projected, keys.length),
       "scoped",
     );
-    return rows.map((r) => encode(named(r, keys.length)));
+    return rows.map((r) => encode(named(r, keys.length, membersOf(params))));
   };
   const windowIdsOf = async (params: WP): Promise<string[]> => {
     const limit = spec.window.limitOf(params);
@@ -735,7 +820,12 @@ export function compileUnionCollection<
       .map(
         (k) =>
           JSON.stringify(
-            spec.readField(row as Record<string, unknown>, k.col.name),
+            k.col.member !== undefined
+              ? (
+                  (row as Record<string, unknown>)[spec.familyValuesKey!] as
+                    Record<string, unknown> | undefined
+                )?.[k.col.name]
+              : spec.readField(row as Record<string, unknown>, k.col.name),
           ) ?? "undefined",
       )
       .join("\u0000");
@@ -764,7 +854,11 @@ export function compileUnionCollection<
     };
   const windowPolicy: ScopePolicy<WP> = {
     routes: compiledUnionRoutePlan<WP>(
-      arms.map((arm) => ({ kind: arm.kind, routes: arm.window.routes })),
+      arms.map((arm) => ({
+        kind: arm.kind,
+        routes: arm.window.routes,
+        rowKeyed: arm.rowKeyed,
+      })),
       usesOf<WP>(survivingOf, "window"),
     ),
     membership: windowMembership,
@@ -773,6 +867,9 @@ export function compileUnionCollection<
     loader: (params: WP, ctx?: { affectedIds: readonly string[] }) =>
       ctx ? scopedRows(params, ctx.affectedIds) : fullRows(params),
     ...windowPolicy,
+    ...(spec.recomputeOn !== undefined && spec.recomputeOn.length > 0
+      ? { recomputeOn: spec.recomputeOn }
+      : {}),
     ...(spec.window.validateParams
       ? { validateParams: spec.window.validateParams }
       : {}),

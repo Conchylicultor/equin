@@ -85,7 +85,7 @@ function unfedReason(changes: LiveCollectionChanges): string {
 
 /**
  * Register a collection's compiled specs off the change feed (see the header).
- * Every refusal of the off-feed arm (an `all` set, a `columnScope`) is the
+ * Every refusal of the off-feed arm (an `all` set, a `scopedColumns` one) is the
  * caller's, before it compiles; a union never compiles.
  */
 export function serveOffFeed<Row>(

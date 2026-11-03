@@ -287,9 +287,9 @@ the two endpoints that selected it).
     namespace's run resolves by id.
   - `releaseHistory` — `release.history`, this namespace's runs (a base
     `where` on `namespace`, read at bind) as a window: the Studio
-    history DataView's live source, scoped per composition by the pane. Its
-    `columnScope` is that surface (`studio.release.history`), so the surface's
-    custom columns sort and filter it server-side
+    history DataView's live source, scoped per composition by the pane. It
+    takes `scopedColumns`, so the custom columns of the surface listing it
+    (`studio.release.history`) sort and filter it server-side
     (research/2026-09-29-global-scoped-change-routing.md P3). It replaced the
     `queryReleaseHistory` keyset endpoint.
   - `releaseCandidate` / `ReleaseCandidate` — what `ship` would pick for one

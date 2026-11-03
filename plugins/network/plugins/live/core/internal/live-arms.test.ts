@@ -44,7 +44,7 @@ describe("liveCollection — the `arms` overload", () => {
   test("a union is a window whose rows carry `$columns`", () => {
     const c = runs();
     expect(c.arms).toEqual({ discriminator: "kind" });
-    expect(c.columnScope).toBeNull();
+    expect(c.scopedColumns).toBe(false);
     // `rowKeys` stay the author's fields: `$columns` is folded, never bound.
     expect(c.rowKeys).toEqual(["runKey", "kind", "label", "startedAt"]);
     const parsed = c.row.parse({
@@ -68,7 +68,7 @@ describe("liveCollection — the `arms` overload", () => {
     expect(c.arms).toBeNull();
   });
 
-  test("runtime throws mirror the overload: from, columnScope, no default, a bad discriminator", () => {
+  test("runtime throws mirror the overload: from, count, no default, a bad discriminator", () => {
     const base = {
       fields: RUN,
       id: "runKey",
@@ -100,9 +100,9 @@ describe("liveCollection — the `arms` overload", () => {
       untyped(`test.live.arms-bad-${seq++}`, {
         ...base,
         arms: { discriminator: "kind" },
-        columnScope: "s",
+        count: true,
       }),
-    ).toThrow(/columnScope beside `arms`/);
+    ).toThrow(/count beside `arms`/);
     expect(() =>
       untyped(`test.live.arms-bad-${seq++}`, {
         fields: RUN,
@@ -124,7 +124,7 @@ describe("liveCollection — the `arms` overload", () => {
     ).toThrow(/is the id/);
   });
 
-  test("types: the overload refuses `from` / columnScope, and types the discriminator (T12)", () => {
+  test("types: the overload refuses `from`, takes `scopedColumns`, and types the discriminator (T12)", () => {
     // Never called — the assertions are the `@ts-expect-error`s.
     const _typesOnly = () => {
       const spec = {
@@ -143,12 +143,14 @@ describe("liveCollection — the `arms` overload", () => {
         arms: { discriminator: "kind" },
         from: entityRef("runs", RUN),
       });
-      liveCollection("t.c", {
+      // Scoped columns (a surface's custom columns) join every arm.
+      const scoped = liveCollection("t.c", {
         ...spec,
-        // @ts-expect-error — nor scoped
         arms: { discriminator: "kind" },
-        columnScope: "s",
+        scopedColumns: true,
       });
+      const _flag: true = scoped.scopedColumns;
+      void _flag;
       // @ts-expect-error — the discriminator is a row field
       liveCollection("t.d", {
         ...spec,
@@ -264,7 +266,7 @@ describe("the codec switches on the owner (T11)", () => {
         orderBy: [["custom.a", "asc"]],
         columns: [scoped],
       } as never),
-    ).toThrow(/declares no `columnScope`/);
+    ).toThrow(/not declared `scopedColumns`/);
 
     const other = runs();
     expect(() =>

@@ -107,6 +107,9 @@ export const runs = liveCollection("runs", {
   ],
   default: { orderBy: [["startedAt", "desc"]], limit: 50 },
   maxLimit: 200,
+  // Every surface listing runs (the runs list, the Deploy Activity page)
+  // sorts and filters it by its own custom columns, joined in every arm.
+  scopedColumns: true,
 });
 
 /** The row schema of the merged run space (base fields, the union key, the ledger id). */

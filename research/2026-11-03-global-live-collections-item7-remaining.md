@@ -311,3 +311,84 @@ Postgres): sorted by `took`, desc `[b1 20m, a2 running 10m, a1 5m, b2 running
 re-orders (the running run passes the 20-minute one); grouping `where` pinned;
 codec refusals; an arm `where` with `now()` refused. On the deployed runs list
 (e2e, below).
+
+## As landed — session 3
+
+Task task-1793679039-tjkjjz. C1 plus the per-query scope (approved by the user
+and the track supervisor, 2026-11-03).
+
+**A column scope per QUERY.** `liveCollection({ scopedColumns: true })`
+replaces `columnScope: "<surface>"` (a removed option fails loudly for an
+untyped caller). A window query whose `where` / `orderBy` names a scoped
+column carries `scope` — the asking list's surface, read off the
+`scopedLiveColumns(scope, …)` handles it brings; two scopes in one query, a
+stray, a missing or a mismatched `scope` are refused (encode / strict decode);
+part of `familyOf`. One naming none carries none, so a list that only
+displays custom columns shares its tuple with every surface's. Groupings and
+counts naming a scoped column are refused at encode (as before, server-side).
+
+**Server.** `serveScopedColumns({ …, serves, members, recomputeOn: { resource,
+params }, watch })`: `serves(scope)` is the gate (custom columns:
+`isDataViewId`, a declared surface); `watch(scope)` starts once, the first time
+a tuple names the scope (replaces `watchScopedDefinitions` at `onReady`).
+`server/internal/scoped-tuple.ts` reads a tuple's scope for both serve paths:
+the gate, the column sets the codec decodes against (memoized per scope
+until its members move), member reads, and a per-tuple `recomputeOn`.
+
+**Cheaper than the approved cost.** The approved cost was one family route
+per (collection, scope) subscribed. Landed: ONE route per (collection, set),
+whatever the scopes — query-resource's `JoinFamily` gained a `scope` column
+valued per tuple (like the members): the member join adds `scope = <the
+tuple's>`, the route's `match` carries the scope column, and each tuple
+matches the scope it names. A new surface compiles nothing and registers no
+route. Member aliases name their scope (`<set>__<scope>␀<member>`, escaped;
+real ids hash past 63 bytes — SQL is less readable, never ambiguous).
+
+**C1 — the union.** `scopedColumns` on `arms` collections. Each arm's plan
+joins the family on its ROW KEY (`compileJoins(…, { armKind })` →
+`armKeySql`, what the side table stores for a union row); each arm's family
+route is row-keyed (`UnionArmRoutes.rowKeyed`: the alias keeps that arm's keys,
+`encode` → `null` drops another arm's — resource-runtime's alias map now
+allows it). An ordered-by member is a per-tuple transient outer column
+(`UnionOrderKey.member`: nullable, NULLS LAST in both directions, projected
+into the outer order and the row key, carried under `$scoped` for the order
+signature). `fromSql` renders family members (`JoinPlan.memberJoin`).
+
+**Per-tuple `recomputeOn`** (resource-runtime): `{ resource, paramsOf }` —
+an upstream tuple's change FULLs only the tracked tuples whose `paramsOf`
+names it. A surface's definitions moving reloads that surface's tuples only
+(before: every tuple of the collection).
+
+**Migrated.** Every former `columnScope` collection (16) → `scopedColumns`;
+`runs` and `trash-entries` lose their opt-outs (both now take each surface's
+own columns). `jobs` stays `unscoped` (served outside Postgres).
+`LiveSurfaceBinding` now keys off the flag: a scoped collection takes the
+custom columns of whichever surface lists it; one without states
+`unscoped: { reason }` (tsc). TS quirk found on the way: the resource
+vocabulary infers `liveCollection`'s factory from its last overload's return
+type, and that inference fails when the flag's conditional returns a fresh
+literal (`[Sc] extends [true] ? true : false`); `? Sc : false` works
+(comment at `LiveScopedColumnsOf`).
+
+**Proof.**
+- `server/internal/serve-union-scoped-oracle.test.ts` (real Postgres): two
+  surfaces over one union, one member id defined as a number on one and text
+  on the other; arms interleave by each surface's cast value, NULLs last both
+  ways; pages at limits 1–5 tile the order across a NULL cut and a cut just
+  before the NULLs (cuts `[null, "a:a3"]`, `["10", "a:a2"]`); filters incl.
+  `isEmpty`; `$scoped`; row-keyed routes; the gate. Through the REAL feed:
+  writes on either surface and arm refill only that surface's readers (no FULL,
+  nothing in the other surface's tuples or the tuple naming none); a
+  definitions change FULLs exactly that surface's tuples.
+- `serve-collection-scoped-oracle.test.ts` (real feed, single table) now runs
+  two surfaces with different definitions; `serve-collection-scoped.test.ts`
+  pins the one route, the gate, the per-tuple recompute; compile golden
+  regenerated (aliases, `scope`, route match).
+- e2e `plugins/runs/e2e/runs-custom-columns.ts` on the deployed build: one
+  column id, a number on `runs` and text on `deploy.activity`; the server's
+  windows per scope, a stray scope refused; the Backup panel (runs surface)
+  and the Activity page each sort by their own definition, a filter narrows,
+  a value written meanwhile moves its row live — 10/10.
+
+Not in scope, unchanged: clock fields on a single-table collection are still
+refused (no collection needs one).

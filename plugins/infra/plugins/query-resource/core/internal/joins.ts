@@ -167,6 +167,13 @@ export type JoinSpec<A extends string = string, T extends PgTable = PgTable> =
  * filtered by the selectors (`rows`) and, per tuple, by the members it reads
  * (`match` on `member`). A write to another member, or to another scope's rows,
  * reaches no tuple.
+ *
+ * A family with a `scope` column is open in a second dimension: which SCOPE a
+ * member belongs to (a custom column is one DataView surface's) is the
+ * tuple's, not the compile's — a member is `(scope, member)`, joined on
+ * `scope = <the tuple's>` too, and the one route matches each tuple on its
+ * scope as on its members. So one compile serves every scope its tuples name,
+ * with no route per scope.
  */
 export interface JoinFamily<T extends PgTable = PgTable> {
   kind: "family";
@@ -175,8 +182,14 @@ export interface JoinFamily<T extends PgTable = PgTable> {
   table: T;
   /** The side column carrying the host's key (compared as the host id's text). */
   hostKey: PgColumn;
-  /** Fixed key columns, e.g. `data_view_id = "<surface>"`. */
+  /** Fixed key columns (the same value for every tuple). */
   selectors: ReadonlyArray<{ col: PgColumn; value: string }>;
+  /**
+   * The key column naming a member's SCOPE, valued per tuple (a custom
+   * column's `data_view_id`: the surface the asking list is); absent = a
+   * family whose members are one set, named by `member` alone.
+   */
+  scope?: PgColumn;
   /** The key column naming a member, e.g. `column_id`. */
   member: PgColumn;
   /** The column a member's value is read from. */
@@ -223,16 +236,44 @@ function fnv1a128(text: string): string {
   return hash.toString(36);
 }
 
-/** One member of a family, as the keyed-side join it is. */
+/**
+ * The text a member's alias is minted from: the member alone, or — in a
+ * scoped family — its scope and the member, joined by a NUL (escaped like any
+ * other character, so the pair reads back one way).
+ */
+function memberAliasKey(member: string, scope: string | null): string {
+  return scope === null ? member : `${scope}\u0000${member}`;
+}
+
+/**
+ * One member of a family, as the keyed-side join it is. `scope` is the
+ * tuple's, exactly when the family declares a `scope` column (else throws:
+ * a member of a scoped family read with no scope would join every scope's
+ * rows and multiply the host).
+ */
 export function familyMember<T extends PgTable>(
   family: JoinFamily<T>,
   member: string,
+  scope: string | null = null,
 ): KeyedSideJoin<string, T> {
+  if ((family.scope === undefined) !== (scope === null)) {
+    throw new Error(
+      family.scope === undefined
+        ? `join family "${family.id}": member "${member}" names scope "${scope}", but the family declares no \`scope\` column.`
+        : `join family "${family.id}": member "${member}" names no scope — its members are read in the scope a tuple names.`,
+    );
+  }
   return {
     kind: "keyed-side",
-    alias: familyMemberAlias(family.id, member),
+    alias: familyMemberAlias(family.id, memberAliasKey(member, scope)),
     table: family.table,
-    selectors: [...family.selectors, { col: family.member, value: member }],
+    selectors: [
+      ...family.selectors,
+      ...(family.scope === undefined || scope === null
+        ? []
+        : [{ col: family.scope, value: scope }]),
+      { col: family.member, value: member },
+    ],
     hostKey: family.hostKey,
   };
 }

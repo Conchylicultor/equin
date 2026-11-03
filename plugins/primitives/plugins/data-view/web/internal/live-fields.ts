@@ -137,9 +137,10 @@ function columnFor<TRow>(
     const owner = field.column.owner;
     switch (owner.kind) {
       case "scoped":
-        if (owner.scope !== c.columnScope) {
+        // Which surface's: the one the query names (its codec refuses two).
+        if (!c.scopedColumns) {
           throw new Error(
-            `data-view: field "${field.id}" names a scoped column of "${owner.scope}", but this DataView reads "${c.key}", whose column scope is ${c.columnScope === null ? "none" : `"${c.columnScope}"`}.`,
+            `data-view: field "${field.id}" names a scoped column of "${owner.scope}", but this DataView reads "${c.key}", which takes no scoped columns (\`scopedColumns\`).`,
           );
         }
         break;

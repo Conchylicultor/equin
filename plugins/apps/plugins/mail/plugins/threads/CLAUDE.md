@@ -68,9 +68,9 @@ revision tick, no refetch of the loaded pages.
   persisted vocabulary the authored tabs name. `snippet` (searched) and
   `accountId` (the scope) are listed but off the body
   (`web/internal/presentation.tsx`); `sender` is display-only.
-- **Custom columns sort and filter server-side**: `mailThreads.columnScope` is
-  this DataView's id (`mail-threads`), so a custom column defined on the list
-  binds as `custom.<id>` (P3 of
+- **Custom columns sort and filter server-side**: `mailThreads` takes
+  `scopedColumns`, so a custom column defined on this list (`mail-threads`)
+  binds as `custom.<id>`, the query naming the surface (P3 of
   `research/2026-09-29-global-scoped-change-routing.md`).
 
 ## Web

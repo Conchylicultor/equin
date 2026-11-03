@@ -71,11 +71,12 @@ export interface LiveDataSource<TRow> {
  * How a live surface's custom columns (user-defined fields) reach its
  * collection — stated by every live source, never a silent fallback:
  *
- * - `scoped` — the collection's `columnScope` IS the surface: each custom
- *   column joins the window as a scoped column, sorting and filtering in SQL;
- * - `unscoped` — the collection cannot take the surface's scoped columns, for
- *   the written `reason` (served outside Postgres, shared by several
- *   surfaces): custom columns show and edit, and do not sort or filter.
+ * - `scoped` — the collection takes `scopedColumns`: each custom column of
+ *   `scope` (the surface listing it) joins the window as a scoped column,
+ *   sorting and filtering in SQL — a query naming one carries the surface;
+ * - `unscoped` — the collection cannot take a surface's scoped columns, for
+ *   the written `reason` (served outside Postgres): custom columns show and
+ *   edit, and do not sort or filter.
  */
 export type LiveCustomColumns =
   | { readonly kind: "scoped"; readonly scope: string }
@@ -87,12 +88,13 @@ export type SurfaceCustomColumns =
 
 /**
  * What a live source states about its surface, from its collection's literal
- * `columnScope` (`Cs`): a scoped collection is bound to THAT surface
- * (`DataViewId<Cs>` — another surface's id is a tsc error); one without a
- * scope names its surface and says why it takes no custom columns.
+ * `scopedColumns` (`Sc`): a collection taking them takes the custom columns
+ * of whichever surface lists it; one without names its surface and says why
+ * its custom columns cannot sort or filter it (`unscoped` — a tsc error to
+ * leave out, and to state beside a collection that takes them).
  */
-export type LiveSurfaceBinding<Cs extends string | null> = [Cs] extends [string]
-  ? { surface: DataViewId<Cs>; unscoped?: never }
+export type LiveSurfaceBinding<Sc extends boolean> = [Sc] extends [true]
+  ? { surface: DataViewId; unscoped?: never }
   : { surface: DataViewId; unscoped: { reason: string } };
 
 /** A live source typed to its collection's filterable columns — what `scoped` narrows by. */

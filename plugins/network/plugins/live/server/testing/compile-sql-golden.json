@@ -8740,7 +8740,7 @@
               "resource": {
                 "key": "golden.defs"
               },
-              "params": {}
+              "paramsOf": "$function"
             }
           ],
           "validateParams": "$function"
@@ -8769,11 +8769,10 @@
                 "kind": "alias",
                 "column": "row_key"
               },
-              "rows": {
-                "data_view_id": "golden.surface"
-              },
+              "rows": {},
               "match": [
-                "column_id"
+                "column_id",
+                "data_view_id"
               ],
               "columns": [
                 "data_view_id",
@@ -8930,7 +8929,8 @@
           "byMember": {
             "params": {
               "limit": "10",
-              "order": "[[\"custom.c1\",\"desc\"]]"
+              "order": "[[\"custom.c1\",\"desc\"]]",
+              "scope": "golden.surface"
             },
             "uses": {
               "value": [
@@ -8950,6 +8950,11 @@
                         "$set": [
                           "c1"
                         ]
+                      },
+                      "data_view_id": {
+                        "$set": [
+                          "golden.surface"
+                        ]
                       }
                     }
                   }
@@ -8965,7 +8970,7 @@
                     "n": 1,
                     "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]",
                     "$scoped": {
-                      "custom__c1": "__family_0:0"
+                      "custom__golden_2e_surface_0_c1": "__family_0:0"
                     }
                   },
                   {
@@ -8974,14 +8979,14 @@
                     "n": 2,
                     "$key": "[null,\"__row_key_1:1\"]",
                     "$scoped": {
-                      "custom__c1": "__family_0:1"
+                      "custom__golden_2e_surface_0_c1": "__family_0:1"
                     }
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_sc_songs\".\"id\", \"golden_sc_songs\".\"title\", \"golden_sc_songs\".\"n\", \"custom__c1\".\"value\"::text as \"__row_key_0\", \"golden_sc_songs\".\"id\"::text as \"__row_key_1\", \"custom__c1\".\"value\" as \"__family_0\" from \"golden_sc_songs\" left join \"golden_sc_custom_values\" \"custom__c1\" on (\"custom__c1\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__c1\".\"data_view_id\" = $1 and \"custom__c1\".\"column_id\" = $2) order by \"custom__c1\".\"value\" DESC NULLS LAST, \"golden_sc_songs\".\"id\" ASC NULLS LAST limit $3",
+                  "sql": "select \"golden_sc_songs\".\"id\", \"golden_sc_songs\".\"title\", \"golden_sc_songs\".\"n\", \"custom__golden_2e_surface_0_c1\".\"value\"::text as \"__row_key_0\", \"golden_sc_songs\".\"id\"::text as \"__row_key_1\", \"custom__golden_2e_surface_0_c1\".\"value\" as \"__family_0\" from \"golden_sc_songs\" left join \"golden_sc_custom_values\" \"custom__golden_2e_surface_0_c1\" on (\"custom__golden_2e_surface_0_c1\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__golden_2e_surface_0_c1\".\"data_view_id\" = $1 and \"custom__golden_2e_surface_0_c1\".\"column_id\" = $2) order by \"custom__golden_2e_surface_0_c1\".\"value\" DESC NULLS LAST, \"golden_sc_songs\".\"id\" ASC NULLS LAST limit $3",
                   "params": [
                     "golden.surface",
                     "c1",
@@ -9003,7 +9008,7 @@
                     "n": 1,
                     "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]",
                     "$scoped": {
-                      "custom__c1": "__family_0:0"
+                      "custom__golden_2e_surface_0_c1": "__family_0:0"
                     }
                   },
                   {
@@ -9012,14 +9017,14 @@
                     "n": 2,
                     "$key": "[null,\"__row_key_1:1\"]",
                     "$scoped": {
-                      "custom__c1": "__family_0:1"
+                      "custom__golden_2e_surface_0_c1": "__family_0:1"
                     }
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_sc_songs\".\"id\", \"golden_sc_songs\".\"title\", \"golden_sc_songs\".\"n\", \"custom__c1\".\"value\"::text as \"__row_key_0\", \"golden_sc_songs\".\"id\"::text as \"__row_key_1\", \"custom__c1\".\"value\" as \"__family_0\" from \"golden_sc_songs\" left join \"golden_sc_custom_values\" \"custom__c1\" on (\"custom__c1\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__c1\".\"data_view_id\" = $1 and \"custom__c1\".\"column_id\" = $2) where \"golden_sc_songs\".\"id\" in ($3, $4)",
+                  "sql": "select \"golden_sc_songs\".\"id\", \"golden_sc_songs\".\"title\", \"golden_sc_songs\".\"n\", \"custom__golden_2e_surface_0_c1\".\"value\"::text as \"__row_key_0\", \"golden_sc_songs\".\"id\"::text as \"__row_key_1\", \"custom__golden_2e_surface_0_c1\".\"value\" as \"__family_0\" from \"golden_sc_songs\" left join \"golden_sc_custom_values\" \"custom__golden_2e_surface_0_c1\" on (\"custom__golden_2e_surface_0_c1\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__golden_2e_surface_0_c1\".\"data_view_id\" = $1 and \"custom__golden_2e_surface_0_c1\".\"column_id\" = $2) where \"golden_sc_songs\".\"id\" in ($3, $4)",
                   "params": [
                     "golden.surface",
                     "c1",
@@ -9042,7 +9047,7 @@
               },
               "queries": [
                 {
-                  "sql": "select \"golden_sc_songs\".\"id\" from \"golden_sc_songs\" left join \"golden_sc_custom_values\" \"custom__c1\" on (\"custom__c1\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__c1\".\"data_view_id\" = $1 and \"custom__c1\".\"column_id\" = $2) order by \"custom__c1\".\"value\" DESC NULLS LAST, \"golden_sc_songs\".\"id\" ASC NULLS LAST limit $3",
+                  "sql": "select \"golden_sc_songs\".\"id\" from \"golden_sc_songs\" left join \"golden_sc_custom_values\" \"custom__golden_2e_surface_0_c1\" on (\"custom__golden_2e_surface_0_c1\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__golden_2e_surface_0_c1\".\"data_view_id\" = $1 and \"custom__golden_2e_surface_0_c1\".\"column_id\" = $2) order by \"custom__golden_2e_surface_0_c1\".\"value\" DESC NULLS LAST, \"golden_sc_songs\".\"id\" ASC NULLS LAST limit $3",
                   "params": [
                     "golden.surface",
                     "c1",
@@ -9077,7 +9082,7 @@
                     "n": 1,
                     "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]",
                     "$scoped": {
-                      "custom__c1": "__family_0:0"
+                      "custom__golden_2e_surface_0_c1": "__family_0:0"
                     }
                   },
                   {
@@ -9086,14 +9091,14 @@
                     "n": 2,
                     "$key": "[null,\"__row_key_1:1\"]",
                     "$scoped": {
-                      "custom__c1": "__family_0:1"
+                      "custom__golden_2e_surface_0_c1": "__family_0:1"
                     }
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_sc_songs\".\"id\", \"golden_sc_songs\".\"title\", \"golden_sc_songs\".\"n\", \"custom__c1\".\"value\"::text as \"__row_key_0\", \"golden_sc_songs\".\"id\"::text as \"__row_key_1\", \"custom__c1\".\"value\" as \"__family_0\" from \"golden_sc_songs\" left join \"golden_sc_custom_values\" \"custom__c1\" on (\"custom__c1\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__c1\".\"data_view_id\" = $1 and \"custom__c1\".\"column_id\" = $2) order by \"custom__c1\".\"value\" DESC NULLS LAST, \"golden_sc_songs\".\"id\" ASC NULLS LAST limit $3",
+                  "sql": "select \"golden_sc_songs\".\"id\", \"golden_sc_songs\".\"title\", \"golden_sc_songs\".\"n\", \"custom__golden_2e_surface_0_c1\".\"value\"::text as \"__row_key_0\", \"golden_sc_songs\".\"id\"::text as \"__row_key_1\", \"custom__golden_2e_surface_0_c1\".\"value\" as \"__family_0\" from \"golden_sc_songs\" left join \"golden_sc_custom_values\" \"custom__golden_2e_surface_0_c1\" on (\"custom__golden_2e_surface_0_c1\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__golden_2e_surface_0_c1\".\"data_view_id\" = $1 and \"custom__golden_2e_surface_0_c1\".\"column_id\" = $2) order by \"custom__golden_2e_surface_0_c1\".\"value\" DESC NULLS LAST, \"golden_sc_songs\".\"id\" ASC NULLS LAST limit $3",
                   "params": [
                     "golden.surface",
                     "c1",
@@ -9111,7 +9116,8 @@
             "params": {
               "limit": "10",
               "where": "{\"column\":\"custom.c1\",\"op\":\"eq\",\"operand\":\"x\"}",
-              "order": "[[\"custom.cc-2\",\"asc\"]]"
+              "order": "[[\"custom.cc-2\",\"asc\"]]",
+              "scope": "golden.surface"
             },
             "uses": {
               "value": [
@@ -9132,6 +9138,11 @@
                           "c1",
                           "cc-2"
                         ]
+                      },
+                      "data_view_id": {
+                        "$set": [
+                          "golden.surface"
+                        ]
                       }
                     }
                   }
@@ -9147,7 +9158,7 @@
                     "n": 1,
                     "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]",
                     "$scoped": {
-                      "custom__cc_2d_2": "__family_0:0"
+                      "custom__golden_2e_surface_0_cc_2d_2": "__family_0:0"
                     }
                   },
                   {
@@ -9156,14 +9167,14 @@
                     "n": 2,
                     "$key": "[null,\"__row_key_1:1\"]",
                     "$scoped": {
-                      "custom__cc_2d_2": "__family_0:1"
+                      "custom__golden_2e_surface_0_cc_2d_2": "__family_0:1"
                     }
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_sc_songs\".\"id\", \"golden_sc_songs\".\"title\", \"golden_sc_songs\".\"n\", (\"custom__cc_2d_2\".\"value\")::numeric::text as \"__row_key_0\", \"golden_sc_songs\".\"id\"::text as \"__row_key_1\", (\"custom__cc_2d_2\".\"value\")::numeric as \"__family_0\" from \"golden_sc_songs\" left join \"golden_sc_custom_values\" \"custom__c1\" on (\"custom__c1\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__c1\".\"data_view_id\" = $1 and \"custom__c1\".\"column_id\" = $2) left join \"golden_sc_custom_values\" \"custom__cc_2d_2\" on (\"custom__cc_2d_2\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__cc_2d_2\".\"data_view_id\" = $3 and \"custom__cc_2d_2\".\"column_id\" = $4) where \"custom__c1\".\"value\" = $5::text order by (\"custom__cc_2d_2\".\"value\")::numeric ASC NULLS LAST, \"golden_sc_songs\".\"id\" ASC NULLS LAST limit $6",
+                  "sql": "select \"golden_sc_songs\".\"id\", \"golden_sc_songs\".\"title\", \"golden_sc_songs\".\"n\", (\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric::text as \"__row_key_0\", \"golden_sc_songs\".\"id\"::text as \"__row_key_1\", (\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric as \"__family_0\" from \"golden_sc_songs\" left join \"golden_sc_custom_values\" \"custom__golden_2e_surface_0_c1\" on (\"custom__golden_2e_surface_0_c1\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__golden_2e_surface_0_c1\".\"data_view_id\" = $1 and \"custom__golden_2e_surface_0_c1\".\"column_id\" = $2) left join \"golden_sc_custom_values\" \"custom__golden_2e_surface_0_cc_2d_2\" on (\"custom__golden_2e_surface_0_cc_2d_2\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__golden_2e_surface_0_cc_2d_2\".\"data_view_id\" = $3 and \"custom__golden_2e_surface_0_cc_2d_2\".\"column_id\" = $4) where \"custom__golden_2e_surface_0_c1\".\"value\" = $5::text order by (\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric ASC NULLS LAST, \"golden_sc_songs\".\"id\" ASC NULLS LAST limit $6",
                   "params": [
                     "golden.surface",
                     "c1",
@@ -9188,7 +9199,7 @@
                     "n": 1,
                     "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]",
                     "$scoped": {
-                      "custom__cc_2d_2": "__family_0:0"
+                      "custom__golden_2e_surface_0_cc_2d_2": "__family_0:0"
                     }
                   },
                   {
@@ -9197,14 +9208,14 @@
                     "n": 2,
                     "$key": "[null,\"__row_key_1:1\"]",
                     "$scoped": {
-                      "custom__cc_2d_2": "__family_0:1"
+                      "custom__golden_2e_surface_0_cc_2d_2": "__family_0:1"
                     }
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_sc_songs\".\"id\", \"golden_sc_songs\".\"title\", \"golden_sc_songs\".\"n\", (\"custom__cc_2d_2\".\"value\")::numeric::text as \"__row_key_0\", \"golden_sc_songs\".\"id\"::text as \"__row_key_1\", (\"custom__cc_2d_2\".\"value\")::numeric as \"__family_0\" from \"golden_sc_songs\" left join \"golden_sc_custom_values\" \"custom__c1\" on (\"custom__c1\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__c1\".\"data_view_id\" = $1 and \"custom__c1\".\"column_id\" = $2) left join \"golden_sc_custom_values\" \"custom__cc_2d_2\" on (\"custom__cc_2d_2\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__cc_2d_2\".\"data_view_id\" = $3 and \"custom__cc_2d_2\".\"column_id\" = $4) where (\"custom__c1\".\"value\" = $5::text and \"golden_sc_songs\".\"id\" in ($6, $7))",
+                  "sql": "select \"golden_sc_songs\".\"id\", \"golden_sc_songs\".\"title\", \"golden_sc_songs\".\"n\", (\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric::text as \"__row_key_0\", \"golden_sc_songs\".\"id\"::text as \"__row_key_1\", (\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric as \"__family_0\" from \"golden_sc_songs\" left join \"golden_sc_custom_values\" \"custom__golden_2e_surface_0_c1\" on (\"custom__golden_2e_surface_0_c1\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__golden_2e_surface_0_c1\".\"data_view_id\" = $1 and \"custom__golden_2e_surface_0_c1\".\"column_id\" = $2) left join \"golden_sc_custom_values\" \"custom__golden_2e_surface_0_cc_2d_2\" on (\"custom__golden_2e_surface_0_cc_2d_2\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__golden_2e_surface_0_cc_2d_2\".\"data_view_id\" = $3 and \"custom__golden_2e_surface_0_cc_2d_2\".\"column_id\" = $4) where (\"custom__golden_2e_surface_0_c1\".\"value\" = $5::text and \"golden_sc_songs\".\"id\" in ($6, $7))",
                   "params": [
                     "golden.surface",
                     "c1",
@@ -9230,7 +9241,7 @@
               },
               "queries": [
                 {
-                  "sql": "select \"golden_sc_songs\".\"id\" from \"golden_sc_songs\" left join \"golden_sc_custom_values\" \"custom__c1\" on (\"custom__c1\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__c1\".\"data_view_id\" = $1 and \"custom__c1\".\"column_id\" = $2) left join \"golden_sc_custom_values\" \"custom__cc_2d_2\" on (\"custom__cc_2d_2\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__cc_2d_2\".\"data_view_id\" = $3 and \"custom__cc_2d_2\".\"column_id\" = $4) where \"custom__c1\".\"value\" = $5::text order by (\"custom__cc_2d_2\".\"value\")::numeric ASC NULLS LAST, \"golden_sc_songs\".\"id\" ASC NULLS LAST limit $6",
+                  "sql": "select \"golden_sc_songs\".\"id\" from \"golden_sc_songs\" left join \"golden_sc_custom_values\" \"custom__golden_2e_surface_0_c1\" on (\"custom__golden_2e_surface_0_c1\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__golden_2e_surface_0_c1\".\"data_view_id\" = $1 and \"custom__golden_2e_surface_0_c1\".\"column_id\" = $2) left join \"golden_sc_custom_values\" \"custom__golden_2e_surface_0_cc_2d_2\" on (\"custom__golden_2e_surface_0_cc_2d_2\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__golden_2e_surface_0_cc_2d_2\".\"data_view_id\" = $3 and \"custom__golden_2e_surface_0_cc_2d_2\".\"column_id\" = $4) where \"custom__golden_2e_surface_0_c1\".\"value\" = $5::text order by (\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric ASC NULLS LAST, \"golden_sc_songs\".\"id\" ASC NULLS LAST limit $6",
                   "params": [
                     "golden.surface",
                     "c1",
@@ -9268,7 +9279,7 @@
                     "n": 1,
                     "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]",
                     "$scoped": {
-                      "custom__cc_2d_2": "__family_0:0"
+                      "custom__golden_2e_surface_0_cc_2d_2": "__family_0:0"
                     }
                   },
                   {
@@ -9277,14 +9288,14 @@
                     "n": 2,
                     "$key": "[null,\"__row_key_1:1\"]",
                     "$scoped": {
-                      "custom__cc_2d_2": "__family_0:1"
+                      "custom__golden_2e_surface_0_cc_2d_2": "__family_0:1"
                     }
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_sc_songs\".\"id\", \"golden_sc_songs\".\"title\", \"golden_sc_songs\".\"n\", (\"custom__cc_2d_2\".\"value\")::numeric::text as \"__row_key_0\", \"golden_sc_songs\".\"id\"::text as \"__row_key_1\", (\"custom__cc_2d_2\".\"value\")::numeric as \"__family_0\" from \"golden_sc_songs\" left join \"golden_sc_custom_values\" \"custom__c1\" on (\"custom__c1\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__c1\".\"data_view_id\" = $1 and \"custom__c1\".\"column_id\" = $2) left join \"golden_sc_custom_values\" \"custom__cc_2d_2\" on (\"custom__cc_2d_2\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__cc_2d_2\".\"data_view_id\" = $3 and \"custom__cc_2d_2\".\"column_id\" = $4) where \"custom__c1\".\"value\" = $5::text order by (\"custom__cc_2d_2\".\"value\")::numeric ASC NULLS LAST, \"golden_sc_songs\".\"id\" ASC NULLS LAST limit $6",
+                  "sql": "select \"golden_sc_songs\".\"id\", \"golden_sc_songs\".\"title\", \"golden_sc_songs\".\"n\", (\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric::text as \"__row_key_0\", \"golden_sc_songs\".\"id\"::text as \"__row_key_1\", (\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric as \"__family_0\" from \"golden_sc_songs\" left join \"golden_sc_custom_values\" \"custom__golden_2e_surface_0_c1\" on (\"custom__golden_2e_surface_0_c1\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__golden_2e_surface_0_c1\".\"data_view_id\" = $1 and \"custom__golden_2e_surface_0_c1\".\"column_id\" = $2) left join \"golden_sc_custom_values\" \"custom__golden_2e_surface_0_cc_2d_2\" on (\"custom__golden_2e_surface_0_cc_2d_2\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__golden_2e_surface_0_cc_2d_2\".\"data_view_id\" = $3 and \"custom__golden_2e_surface_0_cc_2d_2\".\"column_id\" = $4) where \"custom__golden_2e_surface_0_c1\".\"value\" = $5::text order by (\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric ASC NULLS LAST, \"golden_sc_songs\".\"id\" ASC NULLS LAST limit $6",
                   "params": [
                     "golden.surface",
                     "c1",
@@ -9305,7 +9316,8 @@
             "params": {
               "limit": "10",
               "order": "[[\"custom.cc-2\",\"asc\"]]",
-              "after": "[\"2.5\",\"a\"]"
+              "after": "[\"2.5\",\"a\"]",
+              "scope": "golden.surface"
             },
             "uses": {
               "value": [
@@ -9325,6 +9337,11 @@
                         "$set": [
                           "cc-2"
                         ]
+                      },
+                      "data_view_id": {
+                        "$set": [
+                          "golden.surface"
+                        ]
                       }
                     }
                   }
@@ -9340,7 +9357,7 @@
                     "n": 1,
                     "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]",
                     "$scoped": {
-                      "custom__cc_2d_2": "__family_0:0"
+                      "custom__golden_2e_surface_0_cc_2d_2": "__family_0:0"
                     }
                   },
                   {
@@ -9349,14 +9366,14 @@
                     "n": 2,
                     "$key": "[null,\"__row_key_1:1\"]",
                     "$scoped": {
-                      "custom__cc_2d_2": "__family_0:1"
+                      "custom__golden_2e_surface_0_cc_2d_2": "__family_0:1"
                     }
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_sc_songs\".\"id\", \"golden_sc_songs\".\"title\", \"golden_sc_songs\".\"n\", (\"custom__cc_2d_2\".\"value\")::numeric::text as \"__row_key_0\", \"golden_sc_songs\".\"id\"::text as \"__row_key_1\", (\"custom__cc_2d_2\".\"value\")::numeric as \"__family_0\" from \"golden_sc_songs\" left join \"golden_sc_custom_values\" \"custom__cc_2d_2\" on (\"custom__cc_2d_2\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__cc_2d_2\".\"data_view_id\" = $1 and \"custom__cc_2d_2\".\"column_id\" = $2) where (((\"custom__cc_2d_2\".\"value\")::numeric > $3::numeric OR (\"custom__cc_2d_2\".\"value\")::numeric IS NULL) or ((\"custom__cc_2d_2\".\"value\")::numeric = $4::numeric and \"golden_sc_songs\".\"id\" > $5::text)) order by (\"custom__cc_2d_2\".\"value\")::numeric ASC NULLS LAST, \"golden_sc_songs\".\"id\" ASC NULLS LAST limit $6",
+                  "sql": "select \"golden_sc_songs\".\"id\", \"golden_sc_songs\".\"title\", \"golden_sc_songs\".\"n\", (\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric::text as \"__row_key_0\", \"golden_sc_songs\".\"id\"::text as \"__row_key_1\", (\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric as \"__family_0\" from \"golden_sc_songs\" left join \"golden_sc_custom_values\" \"custom__golden_2e_surface_0_cc_2d_2\" on (\"custom__golden_2e_surface_0_cc_2d_2\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__golden_2e_surface_0_cc_2d_2\".\"data_view_id\" = $1 and \"custom__golden_2e_surface_0_cc_2d_2\".\"column_id\" = $2) where (((\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric > $3::numeric OR (\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric IS NULL) or ((\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric = $4::numeric and \"golden_sc_songs\".\"id\" > $5::text)) order by (\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric ASC NULLS LAST, \"golden_sc_songs\".\"id\" ASC NULLS LAST limit $6",
                   "params": [
                     "golden.surface",
                     "cc-2",
@@ -9381,7 +9398,7 @@
                     "n": 1,
                     "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]",
                     "$scoped": {
-                      "custom__cc_2d_2": "__family_0:0"
+                      "custom__golden_2e_surface_0_cc_2d_2": "__family_0:0"
                     }
                   },
                   {
@@ -9390,14 +9407,14 @@
                     "n": 2,
                     "$key": "[null,\"__row_key_1:1\"]",
                     "$scoped": {
-                      "custom__cc_2d_2": "__family_0:1"
+                      "custom__golden_2e_surface_0_cc_2d_2": "__family_0:1"
                     }
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_sc_songs\".\"id\", \"golden_sc_songs\".\"title\", \"golden_sc_songs\".\"n\", (\"custom__cc_2d_2\".\"value\")::numeric::text as \"__row_key_0\", \"golden_sc_songs\".\"id\"::text as \"__row_key_1\", (\"custom__cc_2d_2\".\"value\")::numeric as \"__family_0\" from \"golden_sc_songs\" left join \"golden_sc_custom_values\" \"custom__cc_2d_2\" on (\"custom__cc_2d_2\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__cc_2d_2\".\"data_view_id\" = $1 and \"custom__cc_2d_2\".\"column_id\" = $2) where ((((\"custom__cc_2d_2\".\"value\")::numeric > $3::numeric OR (\"custom__cc_2d_2\".\"value\")::numeric IS NULL) or ((\"custom__cc_2d_2\".\"value\")::numeric = $4::numeric and \"golden_sc_songs\".\"id\" > $5::text)) and \"golden_sc_songs\".\"id\" in ($6, $7))",
+                  "sql": "select \"golden_sc_songs\".\"id\", \"golden_sc_songs\".\"title\", \"golden_sc_songs\".\"n\", (\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric::text as \"__row_key_0\", \"golden_sc_songs\".\"id\"::text as \"__row_key_1\", (\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric as \"__family_0\" from \"golden_sc_songs\" left join \"golden_sc_custom_values\" \"custom__golden_2e_surface_0_cc_2d_2\" on (\"custom__golden_2e_surface_0_cc_2d_2\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__golden_2e_surface_0_cc_2d_2\".\"data_view_id\" = $1 and \"custom__golden_2e_surface_0_cc_2d_2\".\"column_id\" = $2) where ((((\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric > $3::numeric OR (\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric IS NULL) or ((\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric = $4::numeric and \"golden_sc_songs\".\"id\" > $5::text)) and \"golden_sc_songs\".\"id\" in ($6, $7))",
                   "params": [
                     "golden.surface",
                     "cc-2",
@@ -9423,7 +9440,7 @@
               },
               "queries": [
                 {
-                  "sql": "select \"golden_sc_songs\".\"id\" from \"golden_sc_songs\" left join \"golden_sc_custom_values\" \"custom__cc_2d_2\" on (\"custom__cc_2d_2\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__cc_2d_2\".\"data_view_id\" = $1 and \"custom__cc_2d_2\".\"column_id\" = $2) where (((\"custom__cc_2d_2\".\"value\")::numeric > $3::numeric OR (\"custom__cc_2d_2\".\"value\")::numeric IS NULL) or ((\"custom__cc_2d_2\".\"value\")::numeric = $4::numeric and \"golden_sc_songs\".\"id\" > $5::text)) order by (\"custom__cc_2d_2\".\"value\")::numeric ASC NULLS LAST, \"golden_sc_songs\".\"id\" ASC NULLS LAST limit $6",
+                  "sql": "select \"golden_sc_songs\".\"id\" from \"golden_sc_songs\" left join \"golden_sc_custom_values\" \"custom__golden_2e_surface_0_cc_2d_2\" on (\"custom__golden_2e_surface_0_cc_2d_2\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__golden_2e_surface_0_cc_2d_2\".\"data_view_id\" = $1 and \"custom__golden_2e_surface_0_cc_2d_2\".\"column_id\" = $2) where (((\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric > $3::numeric OR (\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric IS NULL) or ((\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric = $4::numeric and \"golden_sc_songs\".\"id\" > $5::text)) order by (\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric ASC NULLS LAST, \"golden_sc_songs\".\"id\" ASC NULLS LAST limit $6",
                   "params": [
                     "golden.surface",
                     "cc-2",
@@ -9461,7 +9478,7 @@
                     "n": 1,
                     "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]",
                     "$scoped": {
-                      "custom__cc_2d_2": "__family_0:0"
+                      "custom__golden_2e_surface_0_cc_2d_2": "__family_0:0"
                     }
                   },
                   {
@@ -9470,14 +9487,14 @@
                     "n": 2,
                     "$key": "[null,\"__row_key_1:1\"]",
                     "$scoped": {
-                      "custom__cc_2d_2": "__family_0:1"
+                      "custom__golden_2e_surface_0_cc_2d_2": "__family_0:1"
                     }
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_sc_songs\".\"id\", \"golden_sc_songs\".\"title\", \"golden_sc_songs\".\"n\", (\"custom__cc_2d_2\".\"value\")::numeric::text as \"__row_key_0\", \"golden_sc_songs\".\"id\"::text as \"__row_key_1\", (\"custom__cc_2d_2\".\"value\")::numeric as \"__family_0\" from \"golden_sc_songs\" left join \"golden_sc_custom_values\" \"custom__cc_2d_2\" on (\"custom__cc_2d_2\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__cc_2d_2\".\"data_view_id\" = $1 and \"custom__cc_2d_2\".\"column_id\" = $2) where (((\"custom__cc_2d_2\".\"value\")::numeric > $3::numeric OR (\"custom__cc_2d_2\".\"value\")::numeric IS NULL) or ((\"custom__cc_2d_2\".\"value\")::numeric = $4::numeric and \"golden_sc_songs\".\"id\" > $5::text)) order by (\"custom__cc_2d_2\".\"value\")::numeric ASC NULLS LAST, \"golden_sc_songs\".\"id\" ASC NULLS LAST limit $6",
+                  "sql": "select \"golden_sc_songs\".\"id\", \"golden_sc_songs\".\"title\", \"golden_sc_songs\".\"n\", (\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric::text as \"__row_key_0\", \"golden_sc_songs\".\"id\"::text as \"__row_key_1\", (\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric as \"__family_0\" from \"golden_sc_songs\" left join \"golden_sc_custom_values\" \"custom__golden_2e_surface_0_cc_2d_2\" on (\"custom__golden_2e_surface_0_cc_2d_2\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__golden_2e_surface_0_cc_2d_2\".\"data_view_id\" = $1 and \"custom__golden_2e_surface_0_cc_2d_2\".\"column_id\" = $2) where (((\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric > $3::numeric OR (\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric IS NULL) or ((\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric = $4::numeric and \"golden_sc_songs\".\"id\" > $5::text)) order by (\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric ASC NULLS LAST, \"golden_sc_songs\".\"id\" ASC NULLS LAST limit $6",
                   "params": [
                     "golden.surface",
                     "cc-2",
@@ -9497,7 +9514,8 @@
           "filterCast": {
             "params": {
               "limit": "10",
-              "where": "{\"column\":\"custom.cc-2\",\"op\":\"gt\",\"operand\":3}"
+              "where": "{\"column\":\"custom.cc-2\",\"op\":\"gt\",\"operand\":3}",
+              "scope": "golden.surface"
             },
             "uses": {
               "value": [
@@ -9519,6 +9537,11 @@
                         "$set": [
                           "cc-2"
                         ]
+                      },
+                      "data_view_id": {
+                        "$set": [
+                          "golden.surface"
+                        ]
                       }
                     }
                   }
@@ -9544,7 +9567,7 @@
               },
               "queries": [
                 {
-                  "sql": "select \"golden_sc_songs\".\"id\", \"golden_sc_songs\".\"title\", \"golden_sc_songs\".\"n\", \"golden_sc_songs\".\"n\"::text as \"__row_key_0\", \"golden_sc_songs\".\"id\"::text as \"__row_key_1\" from \"golden_sc_songs\" left join \"golden_sc_custom_values\" \"custom__cc_2d_2\" on (\"custom__cc_2d_2\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__cc_2d_2\".\"data_view_id\" = $1 and \"custom__cc_2d_2\".\"column_id\" = $2) where (\"custom__cc_2d_2\".\"value\")::numeric > $3::float8 order by \"golden_sc_songs\".\"n\" ASC NULLS LAST, \"golden_sc_songs\".\"id\" ASC NULLS LAST limit $4",
+                  "sql": "select \"golden_sc_songs\".\"id\", \"golden_sc_songs\".\"title\", \"golden_sc_songs\".\"n\", \"golden_sc_songs\".\"n\"::text as \"__row_key_0\", \"golden_sc_songs\".\"id\"::text as \"__row_key_1\" from \"golden_sc_songs\" left join \"golden_sc_custom_values\" \"custom__golden_2e_surface_0_cc_2d_2\" on (\"custom__golden_2e_surface_0_cc_2d_2\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__golden_2e_surface_0_cc_2d_2\".\"data_view_id\" = $1 and \"custom__golden_2e_surface_0_cc_2d_2\".\"column_id\" = $2) where (\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric > $3::float8 order by \"golden_sc_songs\".\"n\" ASC NULLS LAST, \"golden_sc_songs\".\"id\" ASC NULLS LAST limit $4",
                   "params": [
                     "golden.surface",
                     "cc-2",
@@ -9577,7 +9600,7 @@
               },
               "queries": [
                 {
-                  "sql": "select \"golden_sc_songs\".\"id\", \"golden_sc_songs\".\"title\", \"golden_sc_songs\".\"n\", \"golden_sc_songs\".\"n\"::text as \"__row_key_0\", \"golden_sc_songs\".\"id\"::text as \"__row_key_1\" from \"golden_sc_songs\" left join \"golden_sc_custom_values\" \"custom__cc_2d_2\" on (\"custom__cc_2d_2\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__cc_2d_2\".\"data_view_id\" = $1 and \"custom__cc_2d_2\".\"column_id\" = $2) where ((\"custom__cc_2d_2\".\"value\")::numeric > $3::float8 and \"golden_sc_songs\".\"id\" in ($4, $5))",
+                  "sql": "select \"golden_sc_songs\".\"id\", \"golden_sc_songs\".\"title\", \"golden_sc_songs\".\"n\", \"golden_sc_songs\".\"n\"::text as \"__row_key_0\", \"golden_sc_songs\".\"id\"::text as \"__row_key_1\" from \"golden_sc_songs\" left join \"golden_sc_custom_values\" \"custom__golden_2e_surface_0_cc_2d_2\" on (\"custom__golden_2e_surface_0_cc_2d_2\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__golden_2e_surface_0_cc_2d_2\".\"data_view_id\" = $1 and \"custom__golden_2e_surface_0_cc_2d_2\".\"column_id\" = $2) where ((\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric > $3::float8 and \"golden_sc_songs\".\"id\" in ($4, $5))",
                   "params": [
                     "golden.surface",
                     "cc-2",
@@ -9601,7 +9624,7 @@
               },
               "queries": [
                 {
-                  "sql": "select \"golden_sc_songs\".\"id\" from \"golden_sc_songs\" left join \"golden_sc_custom_values\" \"custom__cc_2d_2\" on (\"custom__cc_2d_2\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__cc_2d_2\".\"data_view_id\" = $1 and \"custom__cc_2d_2\".\"column_id\" = $2) where (\"custom__cc_2d_2\".\"value\")::numeric > $3::float8 order by \"golden_sc_songs\".\"n\" ASC NULLS LAST, \"golden_sc_songs\".\"id\" ASC NULLS LAST limit $4",
+                  "sql": "select \"golden_sc_songs\".\"id\" from \"golden_sc_songs\" left join \"golden_sc_custom_values\" \"custom__golden_2e_surface_0_cc_2d_2\" on (\"custom__golden_2e_surface_0_cc_2d_2\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__golden_2e_surface_0_cc_2d_2\".\"data_view_id\" = $1 and \"custom__golden_2e_surface_0_cc_2d_2\".\"column_id\" = $2) where (\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric > $3::float8 order by \"golden_sc_songs\".\"n\" ASC NULLS LAST, \"golden_sc_songs\".\"id\" ASC NULLS LAST limit $4",
                   "params": [
                     "golden.surface",
                     "cc-2",
@@ -9647,7 +9670,7 @@
               },
               "queries": [
                 {
-                  "sql": "select \"golden_sc_songs\".\"id\", \"golden_sc_songs\".\"title\", \"golden_sc_songs\".\"n\", \"golden_sc_songs\".\"n\"::text as \"__row_key_0\", \"golden_sc_songs\".\"id\"::text as \"__row_key_1\" from \"golden_sc_songs\" left join \"golden_sc_custom_values\" \"custom__cc_2d_2\" on (\"custom__cc_2d_2\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__cc_2d_2\".\"data_view_id\" = $1 and \"custom__cc_2d_2\".\"column_id\" = $2) where (\"custom__cc_2d_2\".\"value\")::numeric > $3::float8 order by \"golden_sc_songs\".\"n\" ASC NULLS LAST, \"golden_sc_songs\".\"id\" ASC NULLS LAST limit $4",
+                  "sql": "select \"golden_sc_songs\".\"id\", \"golden_sc_songs\".\"title\", \"golden_sc_songs\".\"n\", \"golden_sc_songs\".\"n\"::text as \"__row_key_0\", \"golden_sc_songs\".\"id\"::text as \"__row_key_1\" from \"golden_sc_songs\" left join \"golden_sc_custom_values\" \"custom__golden_2e_surface_0_cc_2d_2\" on (\"custom__golden_2e_surface_0_cc_2d_2\".\"row_key\" = \"golden_sc_songs\".\"id\" and \"custom__golden_2e_surface_0_cc_2d_2\".\"data_view_id\" = $1 and \"custom__golden_2e_surface_0_cc_2d_2\".\"column_id\" = $2) where (\"custom__golden_2e_surface_0_cc_2d_2\".\"value\")::numeric > $3::float8 order by \"golden_sc_songs\".\"n\" ASC NULLS LAST, \"golden_sc_songs\".\"id\" ASC NULLS LAST limit $4",
                   "params": [
                     "golden.surface",
                     "cc-2",

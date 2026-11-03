@@ -14,9 +14,8 @@
  * (an un-scraped id would have no registered descriptor and `useConfig` would
  * throw on read).
  *
- * The id's literal rides along (`DataViewId<"runs">`), so a live source can be
- * bound to the surface its collection's `columnScope` names in tsc
- * (`liveDataSource`'s `surface`). `DataViewId` alone is any surface's id.
+ * The id's literal rides along (`DataViewId<"runs">`), so a consumer can pin
+ * one surface in tsc. `DataViewId` alone is any surface's id.
  */
 declare const dataViewBrand: unique symbol;
 export type DataViewId<Id extends string = string> = Id & {

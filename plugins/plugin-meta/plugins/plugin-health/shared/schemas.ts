@@ -11,7 +11,7 @@ import { pluginHealthReviewsEntityRef } from "../core";
 // one row per axis it was reviewed along.
 export const pluginHealthReviews = liveCollection("plugin-health-reviews", {
   // Its list's DataView surface: custom columns sort and filter in SQL.
-  columnScope: "plugin-health.reviews",
+  scopedColumns: true,
   from: pluginHealthReviewsEntityRef,
   pick: ["pluginId", "axis"],
   carry: { pick: ["id", "commitHash", "conversationId", "createdAt"] },

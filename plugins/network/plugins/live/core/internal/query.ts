@@ -292,6 +292,11 @@ export type LiveWindowParams = {
   until?: string;
   /** The pinned clock (canonical epoch-ms integer), exactly when the query reads a clock field. */
   now?: string;
+  /**
+   * The scope (a DataView surface id) of the scoped columns the query names,
+   * exactly when its `where` / `orderBy` names one — the asking list's surface.
+   */
+  scope?: string;
 };
 
 /**
@@ -347,6 +352,8 @@ export interface LiveDecodedQuery<S extends string> {
   until?: LiveCutKey;
   /** The pinned clock (epoch ms), exactly when `where` / `orderBy` reads a clock field. */
   now?: number;
+  /** The scope of the scoped columns `where` / `orderBy` name, exactly when it names one. */
+  scope?: string;
 }
 
 /** A decoded grouping query with every default filled in. */

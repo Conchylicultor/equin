@@ -62,8 +62,9 @@ export type WithContributedColumns<Row> = Row & {
  * reader switches on it exhaustively (T11): a fourth kind of set is a tsc
  * error at each site that must decide what it means there.
  *
- * - `scoped` — a data-defined set (`scopedLiveColumns`), read by whichever
- *   collection declares `scope` as its `columnScope`;
+ * - `scoped` — a data-defined set (`scopedLiveColumns`) of one `scope` (a
+ *   DataView surface), read by any collection declaring `scopedColumns`, in
+ *   a query naming that scope;
  * - `arm` — one arm's own fields on an `arms` (union) collection
  *   (`liveArm`), present only on that arm's rows;
  * - `exposed` — an entity extension's exposed fields (`exposedColumns`), read
@@ -281,9 +282,9 @@ function armColumns<
 }
 
 // ── Scoped column sets: an open vocabulary per scope ───────────────────────
-// A collection declared with a `columnScope` (the DataView surface it is listed
-// on) can be sorted and filtered by columns whose set is not code but data —
-// a surface's custom columns, defined in its config. Their server half is a
+// A collection declared with `scopedColumns` can be sorted and filtered by
+// columns whose set is not code but data — the custom columns of the surface
+// a query is asked from (its scope), defined in that surface's config. Their server half is a
 // `LiveColumns.Scoped` contribution (the side table they live in, and the
 // members a scope has now); this is the browser half: a declaration built from
 // the members the client knows, handed to the codec like any other set.

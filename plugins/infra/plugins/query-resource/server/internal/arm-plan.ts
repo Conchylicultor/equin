@@ -391,20 +391,38 @@ export function routedReads<P extends ResourceParams>(opts: {
     }
     // A family's members are joined only where a `where` / order names them,
     // so a tuple reads its family as membership, matching those members.
-    const members = new Map<string, Set<string>>();
+    // In a scoped family it matches the scope(s) those members are read in
+    // too (one, as a codec spells a tuple): a write to the same member id
+    // under another scope reaches no tuple.
+    const members = new Map<
+      string,
+      { members: Set<string>; scopes: Set<string> }
+    >();
     for (const relation of included) {
       const m = joins.familyOf(relation);
       if (m === undefined) continue;
-      let set = members.get(m.family.id);
-      if (!set) members.set(m.family.id, (set = new Set()));
-      set.add(m.member);
+      let read = members.get(m.family.id);
+      if (!read) {
+        members.set(
+          m.family.id,
+          (read = { members: new Set(), scopes: new Set() }),
+        );
+      }
+      read.members.add(m.member);
+      if (m.scope !== null) read.scopes.add(m.scope);
     }
     for (const family of joins.families) {
-      const set = members.get(family.id);
-      if (set === undefined) continue;
+      const read = members.get(family.id);
+      if (read === undefined) continue;
       uses.set(family.id, {
         role: "membership",
-        match: { [family.member.name]: set },
+        match:
+          family.scope === undefined
+            ? { [family.member.name]: read.members }
+            : {
+                [family.member.name]: read.members,
+                [family.scope.name]: read.scopes,
+              },
       });
     }
     return { where: w, included, uses };

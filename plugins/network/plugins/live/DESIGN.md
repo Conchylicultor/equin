@@ -262,7 +262,22 @@ Why the rules in [CLAUDE.md](CLAUDE.md) are what they are. Read before changing 
 - An `all` set folds exposures through its wire `ids` (`exposed:<sorted wire
   names>`), so its L2-persisted definition changes when the fold does.
 
-## Scoped column sets — `columnScope` / `LiveColumns.Scoped` / `scopedLiveColumns`
+## Scoped column sets — `scopedColumns` / `LiveColumns.Scoped` / `scopedLiveColumns`
+
+- **The scope is the query's, not the collection's.** A per-collection
+  `columnScope` (one surface) was the first design: it gave custom columns to
+  one list of `runs` only, though the runs list and the Deploy Activity page
+  both list it with their own columns (and `trash-entries` every trash
+  surface). The asking list names its surface in the tuple instead,
+  validated by the server against the sets' `serves`. Rejected: one
+  collection per surface (a list's data model forked by where it is shown).
+- **One family, the scope matched per tuple** — not one family (and route)
+  per scope: a scope is a selector valued per tuple, like the members, so a
+  surface listing the collection for the first time compiles nothing and
+  registers no route. Member aliases name their scope (hashed past 63 bytes).
+- **`scope` only when a scoped column is named**, as `now` only when a clock
+  field is: a list that merely displays custom columns shares its tuple with
+  every surface listing the collection.
 
 - **Members' casts are read at load time**, so a retyped column reads its new
   type on the next load and a lost member fails loudly instead of reading a

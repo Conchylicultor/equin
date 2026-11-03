@@ -41,6 +41,7 @@ import {
 } from "@plugins/infra/plugins/query-resource/core";
 import { SQL_TYPE_RE, type ExprDecoder } from "../../core";
 import { anyOf, type InvalidIdPolicy } from "./raw-sql";
+import { armKeySql } from "./arm-key-sql";
 import {
   tablePrimary,
   type RawHostMap,
@@ -124,7 +125,13 @@ const readExpressions = new WeakMap<SQL, ReadExpression>();
  * the same reason as `readExpressions`: the plan that applies a tuple's joins
  * finds a member another plan rendered by its alias.
  */
-const familyAliases = new WeakMap<JoinFamily, Map<string, string>>();
+const familyAliases = new WeakMap<JoinFamily, Map<string, FamilyMemberKey>>();
+
+/** A family member as a tuple names it: the member, and its scope in a scoped family (else `null`). */
+export interface FamilyMemberKey {
+  member: string;
+  scope: string | null;
+}
 
 /** How a family member's value is read: a cast of the raw column, and the SQL type it produces. */
 export interface MemberRead {
@@ -314,11 +321,23 @@ export interface JoinPlan {
    * compiled on first use): the raw column, or `read`'s cast of it — an
    * expression that reads NULL for a host with no member row.
    */
-  readMember(familyId: string, member: string, read?: MemberRead): ReadColumn;
-  /** The family and member a relation is, when it is a family member's alias. */
+  readMember(
+    familyId: string,
+    member: string,
+    read?: MemberRead,
+    /** The tuple's scope — exactly when the family declares a `scope` column. */
+    scope?: string,
+  ): ReadColumn;
+  /**
+   * A family member's compiled join (LEFT, keyed to its host), by its alias —
+   * for a renderer that writes its own FROM (the raw-SQL shapes); `undefined`
+   * for an alias no family member has.
+   */
+  memberJoin(alias: string): CompiledJoin | undefined;
+  /** The family and member (and its scope) a relation is, when it is a family member's alias. */
   familyOf(
     relation: string,
-  ): { family: JoinFamily; member: string } | undefined;
+  ): ({ family: JoinFamily } & FamilyMemberKey) | undefined;
   /** The SQL type a rendered column reads as (a cast expression's own). */
   sqlTypeOf(col: ReadColumn): string;
 }
@@ -502,6 +521,7 @@ export function compileJoins(
   hostPk: PgColumn | undefined,
   label: string,
   families: readonly JoinFamily[] = [],
+  opts: JoinPlanOptions = {},
 ): JoinPlan {
   for (const spec of specs as readonly { kind: string; alias: string }[]) {
     if (ALL_ONLY_KINDS.has(spec.kind)) {
@@ -510,7 +530,18 @@ export function compileJoins(
       );
     }
   }
-  return compilePlan(base, specs, hostPk, label, families);
+  return compilePlan(base, specs, hostPk, label, families, new Map(), opts);
+}
+
+/** How a plan keys its hosts beyond the base's own id. */
+export interface JoinPlanOptions {
+  /**
+   * The plan is one ARM of a union (`compileUnionCollection`): its rows' key
+   * is `<kind>:<pk>` (`armKeySql`), and a family's side table stores THAT
+   * key per host (a custom value's `row_key` names the union row), so its
+   * members join on it rather than on the bare id.
+   */
+  armKind?: string;
 }
 
 /**
@@ -607,6 +638,7 @@ function compilePlan(
   label: string,
   families: readonly JoinFamily[],
   grouped: ReadonlyMap<string, PgTable> = new Map(),
+  opts: JoinPlanOptions = {},
 ): JoinPlan {
   const fail = (message: string): never => {
     throw new Error(`${label}: ${message}`);
@@ -894,9 +926,18 @@ function compilePlan(
       : sql`${host}::${sql.raw(hostKey.getSQLType())}`;
   }
 
+  // A family member's host key: the bare id (as the side column's type), or —
+  // in a union arm — the arm's row key, which is what the side table stores.
+  function familyHostKey(hostKey: PgColumn): PgColumn | SQL {
+    return opts.armKind === undefined
+      ? hostKeyed(hostKey)
+      : armKeySql(opts.armKind, hostCol());
+  }
+
   function keyedSideOn(
     spec: KeyedSideJoin,
     own: (col: PgColumn, role: string) => PgColumn,
+    hostKeyOf: (hostKey: PgColumn) => PgColumn | SQL = hostKeyed,
   ): SQL {
     const covered = new Set<string>([
       spec.hostKey.name,
@@ -911,7 +952,7 @@ function compilePlan(
       );
     }
     return and(
-      eq(own(spec.hostKey, "hostKey"), hostKeyed(spec.hostKey)),
+      eq(own(spec.hostKey, "hostKey"), hostKeyOf(spec.hostKey)),
       ...spec.selectors.map((s) => eq(own(s.col, "selector"), s.value)),
     )!;
   }
@@ -934,6 +975,7 @@ function compilePlan(
       family.member,
       family.value,
       ...family.selectors.map((s) => s.col),
+      ...(family.scope === undefined ? [] : [family.scope]),
     ]) {
       if (col.table !== family.table) {
         fail(
@@ -946,15 +988,22 @@ function compilePlan(
   const memberJoins = new Map<string, CompiledJoin>();
   const memberOfAlias = new Map<
     string,
-    { family: JoinFamily; member: string }
+    { family: JoinFamily } & FamilyMemberKey
   >();
-  const memberJoin = (family: JoinFamily, member: string): CompiledJoin => {
-    const spec = familyMember(family, member);
+  const memberJoin = (
+    family: JoinFamily,
+    { member, scope }: FamilyMemberKey,
+  ): CompiledJoin => {
+    const spec = familyMember(family, member, scope);
     const alias = spec.alias;
     const cached = memberJoins.get(alias);
     if (cached) {
       const owner = memberOfAlias.get(alias)!;
-      if (owner.family !== family || owner.member !== member) {
+      if (
+        owner.family !== family ||
+        owner.member !== member ||
+        owner.scope !== scope
+      ) {
         fail(
           `join family "${family.id}": members "${owner.member}" and "${member}" make the same alias "${alias}".`,
         );
@@ -990,12 +1039,12 @@ function compilePlan(
       }
       return renderRaw(join, key);
     };
-    join.on = keyedSideOn(spec, own);
+    join.on = keyedSideOn(spec, own, familyHostKey);
     memberJoins.set(alias, join);
-    memberOfAlias.set(alias, { family, member });
+    memberOfAlias.set(alias, { family, member, scope });
     let shared = familyAliases.get(family);
     if (!shared) familyAliases.set(family, (shared = new Map()));
-    shared.set(alias, member);
+    shared.set(alias, { member, scope });
     return join;
   };
   // A member another plan rendered (the same family object), found by alias.
@@ -1003,8 +1052,8 @@ function compilePlan(
     const join = byAlias.get(name) ?? memberJoins.get(name);
     if (join) return join;
     for (const family of familyById.values()) {
-      const member = familyAliases.get(family)?.get(name);
-      if (member !== undefined) return memberJoin(family, member);
+      const key = familyAliases.get(family)?.get(name);
+      if (key !== undefined) return memberJoin(family, key);
     }
     return undefined;
   };
@@ -1088,7 +1137,7 @@ function compilePlan(
 
   const familyOf = (
     relation: string,
-  ): { family: JoinFamily; member: string } | undefined => {
+  ): ({ family: JoinFamily } & FamilyMemberKey) | undefined => {
     if (byAlias.has(relation) || relation === BASE_RELATION) return undefined;
     return joinOfAlias(relation) === undefined
       ? undefined
@@ -1449,11 +1498,11 @@ function compilePlan(
     routeIdsOf,
     derivedReads,
     families,
-    readMember(familyId, member, read) {
+    readMember(familyId, member, read, scope) {
       const family =
         familyById.get(familyId) ??
         fail(`no join family "${familyId}" is declared on this compile.`);
-      const join = memberJoin(family, member);
+      const join = memberJoin(family, { member, scope: scope ?? null });
       const key = keyOf(family.table, family.value)!;
       const raw = renderRaw(join, key);
       if (read === undefined) return raw;
@@ -1472,6 +1521,8 @@ function compilePlan(
       return expr;
     },
     familyOf,
+    memberJoin: (alias) =>
+      byAlias.has(alias) ? undefined : joinOfAlias(alias),
     sqlTypeOf: (col) =>
       is(col, SQL) ? expressionOf(col).sqlType : (col as PgColumn).getSQLType(),
   };
@@ -1789,6 +1840,7 @@ export function familyRoute(family: JoinFamily): RawRoute {
     family.member.name,
     family.value.name,
     ...family.selectors.map((s) => s.col.name),
+    ...(family.scope === undefined ? [] : [family.scope.name]),
   ]);
   return {
     id: family.id,
@@ -1797,7 +1849,12 @@ export function familyRoute(family: JoinFamily): RawRoute {
     rows: Object.fromEntries(
       family.selectors.map((s) => [s.col.name, s.value]),
     ),
-    match: [family.member.name],
+    // A tuple matches the members it reads — and, in a scoped family, the
+    // scope it names: a write to another scope's rows reaches no tuple.
+    match:
+      family.scope === undefined
+        ? [family.member.name]
+        : [family.member.name, family.scope.name],
     columns: Object.values(
       getTableColumns(family.table) as Record<string, PgColumn>,
     )

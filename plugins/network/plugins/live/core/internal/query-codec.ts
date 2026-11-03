@@ -45,8 +45,8 @@ export interface LiveQueryCodecSpec {
   key: string;
   /** The row field that identifies a row — the order's tiebreaker, and a cut's last element. */
   id: string;
-  /** A collection's column scope: its queries may name scoped sets of that scope; `null` = none. */
-  columnScope: string | null;
+  /** Its window queries may name a scoped set (in the one scope each query names). */
+  scopedColumns: boolean;
   /** A union collection's queries may name its arms' own columns (by wire name); any other's may not. */
   arms: boolean;
   /** The entities a collection's `exposes` reaches: its queries may name their exposed columns. */
@@ -141,6 +141,7 @@ const PARAM_KEYS = new Set([
   "after",
   "until",
   "now",
+  "scope",
 ]);
 const GROUP_PARAM_KEYS = new Set(["groupBy", "limit", "where", "now"]);
 const COUNT_PARAM_KEYS = new Set(["where", "now"]);
@@ -200,10 +201,13 @@ export function createLiveQueryCodec<C extends string, S extends string>(
   interface Declaration {
     filterable: Filterable;
     sortable: readonly string[];
+    /** Each scoped set's wire names, by its scope (at most one scope). */
+    scoped: ReadonlyMap<string, ReadonlySet<string>>;
   }
   const own: Declaration = {
     filterable: spec.filterable,
     sortable: spec.sortable,
+    scoped: new Map(),
   };
   const withColumns = new WeakMap<
     readonly LiveColumnsDeclaration[],
@@ -218,18 +222,32 @@ export function createLiveQueryCodec<C extends string, S extends string>(
     const names = new Set<string>();
     let filterable: Filterable = spec.filterable;
     const sortable: string[] = [...spec.sortable];
+    const scoped = new Map<string, Set<string>>();
     for (const handle of columns) {
       const owner = handle.owner;
       switch (owner.kind) {
-        case "scoped":
-          if (owner.scope !== spec.columnScope) {
+        case "scoped": {
+          if (!spec.scopedColumns) {
             fail(
-              spec.columnScope === null
-                ? `a query names scoped columns "${handle.name}", but the collection declares no \`columnScope\``
-                : `scoped columns "${handle.name}" belong to scope "${owner.scope}", not this collection's "${spec.columnScope}"`,
+              `a query names scoped columns "${handle.name}", but the collection is not declared \`scopedColumns\``,
             );
           }
+          const other = [...scoped.keys()].find((s) => s !== owner.scope);
+          if (other !== undefined) {
+            fail(
+              `scoped columns "${handle.name}" are of scope "${owner.scope}", beside scope "${other}" — a query is asked from one surface`,
+            );
+          }
+          let wire = scoped.get(owner.scope);
+          if (!wire) scoped.set(owner.scope, (wire = new Set()));
+          for (const n of [
+            ...Object.keys(handle.wireFilterable),
+            ...handle.wireSortable,
+          ]) {
+            wire.add(n);
+          }
           break;
+        }
         case "arm":
           if (!spec.arms) {
             fail(
@@ -262,7 +280,7 @@ export function createLiveQueryCodec<C extends string, S extends string>(
       filterable = { ...filterable, ...handle.wireFilterable };
       sortable.push(...handle.wireSortable);
     }
-    const decl = { filterable, sortable };
+    const decl = { filterable, sortable, scoped };
     withColumns.set(columns, decl);
     return decl;
   };
@@ -335,6 +353,43 @@ export function createLiveQueryCodec<C extends string, S extends string>(
     const now = raw === undefined ? undefined : Number(raw);
     nowParam(clocks, now, (m) => reject(`decode: ${m}`));
     return now;
+  };
+
+  // ── The scope ─────────────────────────────────────────────────────
+  // A query naming a scoped column (a surface's custom column) names the
+  // surface it is asked from — its `scope` param, the scope its members are
+  // read in; one naming none carries none (one query, one tuple, whichever
+  // surface lists it).
+  const scopeOf = (
+    decl: Declaration,
+    filter: Filter | undefined,
+    orderBy: LiveOrderBy<string> | undefined,
+  ): string | undefined => {
+    if (decl.scoped.size === 0) return undefined;
+    const named = new Set(filterColumns(filter));
+    for (const [column] of orderBy ?? []) named.add(column);
+    for (const [scope, wire] of decl.scoped) {
+      for (const n of named) if (wire.has(n)) return scope;
+    }
+    return undefined;
+  };
+  const decodeScope = (
+    raw: string | undefined,
+    decl: Declaration,
+    filter: Filter | undefined,
+    orderBy: LiveOrderBy<string>,
+  ): string | undefined => {
+    const named = scopeOf(decl, filter, orderBy);
+    if (raw !== named) {
+      reject(
+        raw === undefined
+          ? `decode: the query names scoped columns of scope "${named}", but carries no \`scope\``
+          : named === undefined
+            ? `decode: \`scope\` "${raw}" beside a query that names no scoped column — only a query reading one names its surface`
+            : `decode: \`scope\` "${raw}" is not the scope "${named}" of the scoped columns the query names`,
+      );
+    }
+    return named;
   };
 
   // The object sugar → a Filter tree (an AND of clauses). A plain value is
@@ -448,6 +503,7 @@ export function createLiveQueryCodec<C extends string, S extends string>(
     orderBy: LiveOrderBy<S>,
     bounds: LiveWindowBounds | undefined,
     now: string | undefined,
+    scope: string | undefined,
   ): LiveWindowParams => {
     const params: LiveWindowParams = { limit: String(limit) };
     if (where !== undefined) params.where = where;
@@ -456,6 +512,7 @@ export function createLiveQueryCodec<C extends string, S extends string>(
     if (bounds?.after !== undefined) params.after = bounds.after;
     if (bounds?.until !== undefined) params.until = bounds.until;
     if (now !== undefined) params.now = now;
+    if (scope !== undefined) params.scope = scope;
     return params;
   };
 
@@ -481,12 +538,14 @@ export function createLiveQueryCodec<C extends string, S extends string>(
     // Validated here too, so a bad cut throws where it was built.
     if (bounds?.after !== undefined) parseCut(bounds.after, orderBy, "after");
     if (bounds?.until !== undefined) parseCut(bounds.until, orderBy, "until");
+    const filter = toFilter(query?.where);
     return windowParams(
       checkLimit(query?.limit ?? spec.defaultLimit, "limit"),
       encodeWhere(query?.where, decl),
       orderBy,
       bounds,
-      nowParam(clockNames(toFilter(query?.where), orderBy), query?.now, fail),
+      nowParam(clockNames(filter, orderBy), query?.now, fail),
+      scopeOf(decl, filter, orderBy),
     );
   };
 
@@ -498,7 +557,7 @@ export function createLiveQueryCodec<C extends string, S extends string>(
     for (const k of Object.keys(params)) {
       if (!PARAM_KEYS.has(k)) reject(`decode: unknown param "${k}"`);
     }
-    const { limit, where, order, after, until, now } = params;
+    const { limit, where, order, after, until, now, scope } = params;
     if (limit === undefined || !/^[1-9][0-9]*$/.test(limit)) {
       reject(
         `decode: params.limit must be a canonical positive-integer string, got ${JSON.stringify(limit)}`,
@@ -510,11 +569,13 @@ export function createLiveQueryCodec<C extends string, S extends string>(
         : toOrderBy(parseJson(order, reject), decl, reject);
     const filter = decodeWhere(where, decl);
     const pinned = decodeNow(now, clockNames(filter, orderBy));
+    const asked = decodeScope(scope, decl, filter, orderBy);
     const decoded: LiveDecodedQuery<S> = {
       limit: checkLimit(Number(limit), "limit", reject),
       where: filter,
       orderBy,
       ...(pinned !== undefined ? { now: pinned } : {}),
+      ...(asked !== undefined ? { scope: asked } : {}),
       ...(after !== undefined
         ? { after: parseCut(after, orderBy, "after", reject) }
         : {}),
@@ -529,6 +590,7 @@ export function createLiveQueryCodec<C extends string, S extends string>(
       decoded.orderBy,
       { after, until },
       now,
+      scope,
     );
     if (!sameParams(canonical, params)) {
       reject(
@@ -537,6 +599,25 @@ export function createLiveQueryCodec<C extends string, S extends string>(
       );
     }
     return decoded;
+  };
+
+  /** A grouping / count names no scoped column (its server decodes none). */
+  const refuseScoped = (
+    decl: Declaration,
+    filter: Filter | undefined,
+    what: string,
+    groupBy?: string,
+  ): void => {
+    const scope = scopeOf(
+      decl,
+      filter,
+      groupBy === undefined ? undefined : [[groupBy, "asc"]],
+    );
+    if (scope !== undefined) {
+      fail(
+        `${what} names a scoped column (scope "${scope}") — only a window sorts and filters by a surface's scoped columns`,
+      );
+    }
   };
 
   // ── Grouping queries ───────────────────────────────────────────────
@@ -600,6 +681,7 @@ export function createLiveQueryCodec<C extends string, S extends string>(
       );
     }
     const decl = declarationOf(query.columns);
+    refuseScoped(decl, toFilter(query.where), "a grouping", query.groupBy);
     return groupParams(
       checkGroupBy(query.groupBy, decl),
       checkGroupLimit(query.limit ?? LIVE_GROUP_DEFAULT_LIMIT),
@@ -659,8 +741,10 @@ export function createLiveQueryCodec<C extends string, S extends string>(
         fail(`a count query takes a \`where\` only — got ${k}`);
       }
     }
+    const decl = declarationOf(query.columns);
+    refuseScoped(decl, toFilter(query.where), "a count");
     return countParams(
-      encodeWhere(query.where, declarationOf(query.columns)),
+      encodeWhere(query.where, decl),
       nowParam(clockNames(toFilter(query.where), undefined), query.now, fail),
     );
   };
@@ -707,6 +791,7 @@ export function createLiveQueryCodec<C extends string, S extends string>(
         params.where ?? null,
         params.order ?? null,
         ...(params.now !== undefined ? [params.now] : []),
+        ...(params.scope !== undefined ? [{ scope: params.scope }] : []),
       ]),
     encodeGroups,
     decodeGroups,

@@ -167,7 +167,7 @@ export const DEAD_JOBS_ARCHIVE_CAP = 2000;
  */
 export const deadJobs = liveCollection("dead-jobs", {
   // Its list's DataView surface: custom columns sort and filter in SQL.
-  columnScope: "debug.queue.dead",
+  scopedColumns: true,
   from: deadJobsEntityRef,
   pick: ["jobName", "attempts", "diedAt", "lastError", "archivedAt"],
   carry: { pick: ["id", "input", "maxAttempts"] },
@@ -260,7 +260,7 @@ export const JOB_RUNS_MAX_LIMIT = 1000;
  */
 export const jobRuns = liveCollection("job-runs.history", {
   // Its list's DataView surface: custom columns sort and filter in SQL.
-  columnScope: "debug.queue.history",
+  scopedColumns: true,
   from: jobRunsEntityRef,
   pick: [
     "jobName",

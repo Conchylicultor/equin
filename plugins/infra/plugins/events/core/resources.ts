@@ -127,7 +127,7 @@ const EMISSION_OWN_FIELDS = {
  */
 export const eventEmissions = liveCollection("event-emissions", {
   // Its list's DataView surface: custom columns sort and filter in SQL.
-  columnScope: "debug.queue.events",
+  scopedColumns: true,
   from: eventEmissionsEntityRef,
   pick: ["emittedAt", "eventName", "matchedCount"],
   fields: EMISSION_OWN_FIELDS,

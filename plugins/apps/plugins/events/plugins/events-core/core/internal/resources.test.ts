@@ -30,7 +30,7 @@ test("the run ledger derives its field ids from the run entity", () => {
     failed: { label: "Failed", variant: "destructive" },
   });
   expect(eventSourceRuns.filterable.sourceId.domain).toBe("text");
-  expect(eventSourceRuns.columnScope).toBe("events.source-runs");
+  expect(eventSourceRuns.scopedColumns).toBe(true);
 });
 
 test("the sources list derives its field ids from the source entity", () => {

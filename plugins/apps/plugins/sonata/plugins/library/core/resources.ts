@@ -21,9 +21,9 @@ import { songsEntityRef } from "./schemas";
  * track count and file-missing flag — sorted and filtered like the library's
  * own; the library names none of them.
  *
- * `columnScope` is the library DataView's id (`defineDataView("sonata.library")`,
- * asserted equal at mount): the user's custom columns on that surface sort and
- * filter the window server-side (`custom.<column id>`).
+ * It takes `scopedColumns`: the user's custom columns on the surface listing
+ * it (the library DataView) sort and filter the window server-side
+ * (`custom.<column id>`).
  */
 export const songLibrary = liveCollection("sonata.songs", {
   from: songsEntityRef,
@@ -37,7 +37,7 @@ export const songLibrary = liveCollection("sonata.songs", {
   sortable: ["title", "composer", "source", "duration", "added"],
   default: { orderBy: [["added", "desc"]], limit: 100 },
   maxLimit: 500,
-  columnScope: "sonata.library",
+  scopedColumns: true,
 });
 
 /** A song as the library reads it: its row, plus every exposed field (`$columns`). */

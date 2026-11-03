@@ -18,13 +18,6 @@ function runsSourceOn(surface: DataViewId) {
   return liveDataSource(runs, {
     searchable: ["label", "message", "namespace", "trigger"],
     surface,
-    unscoped: {
-      reason:
-        // Shown in the Fields setting. The union compiler joins no scoped
-        // family per arm yet (C1 of
-        // research/2026-11-03-global-live-collections-item7-remaining.md).
-        "runs come from several ledgers, and a custom column cannot be joined to each of them yet",
-    },
   });
 }
 

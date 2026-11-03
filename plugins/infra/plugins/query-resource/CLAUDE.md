@@ -575,22 +575,35 @@ Postgres's clock (network/live, *Clock reads*).
 
 A `JoinFamily` (`core/`) is a composite-keyed side table whose MEMBERS are data
 (a DataView's custom columns): `hostKey` + `selectors` + `member` column +
-`value`. Window specs only: `families: { joins, valuesKey }`.
+`value`, and optionally a `scope` column valued PER TUPLE (a custom column's
+`data_view_id`: the surface a query is asked from). Window specs (and union
+arms, `UnionArmSpec.families`) only: `families: { joins, valuesKey }`.
 
-- A member is a keyed-side join (`familyMember(family, m)`).
-  - Alias `familyMemberAlias(id, m)` — injective escaping, hashed past 63
-    bytes; a collision fails the compile.
-  - Render a member through `JoinPlan.readMember(familyId, m, read?)`; a
-    module-level registry lets every plan over the same family find it.
+- A member is a keyed-side join (`familyMember(family, m, scope?)`; `scope`
+  exactly when the family declares one, else a throw).
+  - Alias `familyMemberAlias(id, m)` (scoped: of `scope` NUL `m`) — injective
+    escaping, hashed past 63 bytes; a collision fails the compile.
+  - Render a member through `JoinPlan.readMember(familyId, m, read?, scope?)`;
+    a module-level registry lets every plan over the same family find it
+    (`JoinPlan.memberJoin(alias)` hands a raw-SQL `fromSql` its join).
+  - In a union arm (`compileJoins(…, { armKind })`) a member joins on the
+    arm's ROW KEY (`armKeySql`), what its side table stores for a union row.
 - A tuple joins exactly the members its `where` / order names (`membership`).
-  ONE route per family (`familyRoute`: `alias` on `hostKey`, `rows` =
-  selectors, `match` on the member column).
+  ONE route per family, whatever the scopes (`familyRoute`: `alias` on
+  `hostKey`, `rows` = fixed selectors, `match` on the member column — and the
+  scope column, each tuple matching the scope it names). In a union, each
+  arm's family route is ROW-KEYED (`UnionArmRoutes.rowKeyed`): its `alias`
+  keeps that arm's row keys and drops the rest (`encode` → `null`).
+- A union orders by a member through a per-tuple transient outer column
+  (`UnionOrderKey.member`: nullable, projected into the outer order and row
+  key, carried under `familyValuesKey` for the order signature).
 - An ordered-by member is projected (`__family_<i>`) into `row[valuesKey]`;
   `whereReads` does not apply to members.
 - Order memos key on the key's RENDERING, so a retyped member's ORDER BY / cuts
   follow on the next load.
-- `recomputeOn` (spec) FULLs every tuple and drops read-set memos when the
-  family's member set changes.
+- `recomputeOn` (spec) FULLs the tuples it names and drops their read-set
+  memos when the family's member set changes (every tuple, or — the
+  per-tuple `paramsOf` form — those of the scope whose members moved).
 
 ## Bounded membership: `windowQueryResource` (window / point)
 

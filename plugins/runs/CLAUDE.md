@@ -116,11 +116,13 @@ network/live's generic arm binding (`serveUnionCollection`'s `served.arm`):
   correlated subquery over an undeclared table cannot be written — declare it as
   a join.
 
-**What this surface does not have yet:** custom columns that sort or filter.
-They show and edit (the Fields setting says why they do not sort: the source
-is `unscoped`); a union's compiler joins no scoped family per arm, and `runs`
-is listed on several surfaces (`RUNS_VIEW`, the Deploy Activity page), so its
-scope will be chosen per query by the asking list — the next step of item 7.
+**Custom columns sort and filter server-side, per surface.** `runs` takes
+`scopedColumns`: it is listed on several surfaces (`RUNS_VIEW`, the Deploy
+Activity page), each with its own custom columns, and a query naming one
+carries its surface as `scope` (network/live, *Scoped column sets*). Every
+arm joins the column's values on its row key (`kind:id`, what a DataView keys
+a run by). Proof: `e2e/runs-custom-columns.ts` (one column id, a number on the
+runs surface and text on Activity, each sorting and filtering its own list).
 
 ## Adding an arm
 

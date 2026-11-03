@@ -28,9 +28,9 @@ import {
  *   neither name nor widen it. Both are off the list body
  *   (`web/internal/presentation.tsx`).
  *
- * `columnScope` is the threads DataView's id (`defineDataView("mail-threads")`,
- * asserted equal at mount): the user's custom columns on that surface sort and
- * filter the window server-side (`custom.<column id>`).
+ * It takes `scopedColumns`: the user's custom columns on the surface listing
+ * it (the threads DataView) sort and filter the window server-side
+ * (`custom.<column id>`).
  */
 export const mailThreads = liveCollection("mail.threads", {
   from: mailThreadsEntityRef,
@@ -51,7 +51,7 @@ export const mailThreads = liveCollection("mail.threads", {
   sortable: ["subject", "lastMessageAt", "messageCount"],
   default: { orderBy: [["lastMessageAt", "desc"]], limit: 100 },
   maxLimit: 500,
-  columnScope: "mail-threads",
+  scopedColumns: true,
 });
 
 /** One row of the threads list: the listed fields and what a row draws beside them. */

@@ -306,11 +306,12 @@ export interface LiveCollection<
   filterable: F;
   sortable: readonly S[];
   /**
-   * Declared `columnScope`: the scope its scoped column sets (a DataView
-   * surface's custom columns — `LiveColumns.Scoped` on the server,
-   * `scopedLiveColumns` in the browser) resolve their members in; `null` = none.
+   * Declared `scopedColumns`: its window may be sorted and filtered by scoped
+   * column sets (a DataView surface's custom columns — `LiveColumns.Scoped` on
+   * the server, `scopedLiveColumns` in the browser), in the scope each QUERY
+   * names (the surface the asking list is). `false` = none.
    */
-  columnScope: string | null;
+  scopedColumns: boolean;
   /**
    * Declared `arms`: a UNION collection — rows of several kinds (arms), each
    * served from its own table; `discriminator` is the row field naming a
@@ -374,7 +375,6 @@ export type LiveArmsCollection<
   S extends string,
   D extends keyof Row & string = keyof Row & string,
 > = LiveCollection<WithContributedColumns<Row>, F, S> & {
-  columnScope: null;
   arms: LiveArms<D>;
   count: null;
 };
@@ -480,14 +480,15 @@ export interface LiveCollectionSpec<Row, F, S extends string> {
   /** The `:rows` id-set cap (`LiveFieldsSpec.maxIds`). Default: `maxLimit`. */
   maxIds?: number;
   /**
-   * The scope scoped column sets resolve their members in — the id of the
-   * DataView surface this collection is listed on (its `storageKey`), whose
-   * custom columns then sort and filter the window. A tuple naming one joins
-   * only the members it names; its server half compiles at boot, once the
-   * `LiveColumns.Scoped` contributions are collected. One scope per
-   * collection: a surface listing it under another id cannot bind them.
+   * The window may be sorted and filtered by scoped column sets — the custom
+   * columns of whichever DataView surface lists it: a query naming one
+   * carries its scope (the asking list's surface, its `scope` param), checked
+   * by the server against the `LiveColumns.Scoped` contributions; a tuple
+   * joins only the members it names. One collection, any number of surfaces,
+   * each with its own columns. Its server half compiles at boot, once the
+   * contributions are collected.
    */
-  columnScope?: string;
+  scopedColumns?: true;
   /**
    * Mint `${key}:count` — how many rows match a `where`, kept live (a COUNT
    * recomputed on every write to a table the collection reads). The author's
@@ -516,20 +517,16 @@ export interface LiveCollectionSpec<Row, F, S extends string> {
  * several kinds listed in one order, each arm's own fields declared by
  * `liveArm` and riding its rows under `$columns[<arm>]`. Its column
  * vocabulary is closed — every arm is a static declaration — so it takes no
- * exposures and no `columnScope`.
+ * exposures; scoped columns (a surface's custom columns) join every arm.
  */
 export interface LiveArmsSpec<
   Row,
   F,
   S extends string,
   D extends string,
-> extends Omit<
-  LiveCollectionSpec<Row, F, S>,
-  "columnScope" | "arms" | "count" | "exposes"
-> {
+> extends Omit<LiveCollectionSpec<Row, F, S>, "arms" | "count" | "exposes"> {
   /** The row field naming each row's arm (its value is the arm's kind). */
   arms: LiveArms<D>;
-  columnScope?: never;
   exposes?: never;
   /** Not yet: a union's total would sum its arms' counts. */
   count?: never;
@@ -619,7 +616,7 @@ export interface LiveNoWindowSpec<
   sortable?: never;
   default?: never;
   maxLimit?: never;
-  columnScope?: never;
+  scopedColumns?: never;
   arms?: never;
   count?: never;
 }
@@ -633,13 +630,16 @@ export type LiveAllSpec<Row> = LiveNoWindowSpec<Row, LiveAllOrder<Row>> & {
 };
 
 /**
- * A window collection's `columnScope`, as its literal: the DataView surface id
- * its scoped columns resolve in (`null` = none). Kept literal so the surface a
- * live source is bound to (`liveDataSource`'s `surface`) is checked against it
- * in tsc.
+ * A window collection's `scopedColumns`, as a literal: `true` when its
+ * queries may name a surface's scoped columns, else `false`. Kept literal so
+ * a live source (`liveDataSource`) must say why its surface's custom columns
+ * cannot sort or filter a collection without them — in tsc.
  */
-export type LiveColumnScopeOf<Cs extends string | undefined> = {
-  readonly columnScope: [Cs] extends [string] ? Cs : null;
+export type LiveScopedColumnsOf<Sc extends true | undefined> = {
+  // `Sc`, not the literal `true`: the resource vocabulary infers a factory
+  // from this overload's return type, and tsc fails that match (the whole
+  // return reads as unmatched) when the branch is a fresh literal.
+  readonly scopedColumns: [Sc] extends [true] ? Sc : false;
 };
 
 /** A window's default, in the fields spelling (its order over `S`). */
@@ -653,7 +653,7 @@ export interface LiveFieldsDefault<S extends string> {
  * spec sets, like the old spelling's three overloads:
  *
  * - `default` (`W`): a WINDOW — `sortable` (index-backed, so explicit; any row
- *   field), `maxLimit`, `preload`, `columnScope`, `count`;
+ *   field), `maxLimit`, `preload`, `scopedColumns`, `count`;
  * - `all` (`Al`): the WHOLE ORDERED SET — `preload` (unless scoped `by`),
  *   and no window field;
  * - neither: LOOKUP-ONLY — no window field, no preload, and it reaches no
@@ -722,7 +722,7 @@ export function liveCollection<
   key: string,
   spec: Omit<
     LiveFieldsSpec<E, P, CP, OF, CF, R>,
-    "related" | "fields" | "id" | "columnScope"
+    "related" | "fields" | "id" | "scopedColumns"
   > & {
     /**
      * What identifies a row — a picked, carried or own field; declared `all`,
@@ -736,8 +736,8 @@ export function liveCollection<
     arms?: never;
     default?: never;
     all?: Al;
-    /** A column scope joins a window's scoped columns — this declares none. */
-    columnScope?: never;
+    /** Scoped columns join a window — this declares none. */
+    scopedColumns?: never;
   } & LiveFieldsForm<undefined, Al, never, undefined, R> &
     LiveMachineSpec<NM>,
 ): LiveNoWindowCollection<
@@ -767,12 +767,15 @@ export function liveCollection<
     string = never,
   const I extends keyof FieldsRow<undefined, never, never, OF, CF> & string =
     never,
+  const Sc extends true | undefined = undefined,
 >(
   key: string,
   spec: Omit<
     LiveArmsSpec<FieldsRow<undefined, never, never, OF, CF>, never, S, D>,
-    "row" | "filterable" | "id" | "default"
+    "row" | "filterable" | "id" | "default" | "scopedColumns"
   > & {
+    /** Scoped columns (a surface's custom columns) join every arm (see {@link LiveCollectionSpec.scopedColumns}). */
+    scopedColumns?: Sc;
     /** The base fields every arm projects — each labelled (`RequireLabel`). */
     fields: OF & RequireLabel<OF>;
     /** Base fields on the row no list shows (the union key, an arm-local id). */
@@ -792,7 +795,12 @@ export function liveCollection<
   FieldsSpecFilterable<undefined, never, OF>,
   S,
   D
-> & { fields: LiveFields<keyof OF & string>; from: null; id: I };
+> &
+  LiveScopedColumnsOf<Sc> & {
+    fields: LiveFields<keyof OF & string>;
+    from: null;
+    id: I;
+  };
 export function liveCollection<
   const E extends LiveFrom | undefined = undefined,
   const P extends LabelledKeys<FromFields<E>> = never,
@@ -805,12 +813,12 @@ export function liveCollection<
     never,
   const Cn extends true | undefined = undefined,
   NM extends MachineFeature | undefined = undefined,
-  const Cs extends string | undefined = undefined,
+  const Sc extends true | undefined = undefined,
 >(
   key: string,
   spec: Omit<
     LiveFieldsSpec<E, P, CP, OF, CF, R>,
-    "related" | "fields" | "columnScope"
+    "related" | "fields" | "scopedColumns"
   > & {
     /** The row field that identifies a row — a picked, carried or own field. */
     id: NoInfer<keyof FieldsRow<E, P, CP, OF, CF> & string>;
@@ -820,11 +828,11 @@ export function liveCollection<
     arms?: never;
     default: LiveFieldsDefault<S>;
     /**
-     * The DataView surface this window's scoped columns resolve in (see
-     * {@link LiveFieldsSpec.columnScope}) — kept literal on the collection
-     * (`LiveColumnScopeOf`). Outside the form conditional so tsc infers it.
+     * Scoped columns sort and filter this window (see
+     * {@link LiveFieldsSpec.scopedColumns}) — kept literal on the collection
+     * (`LiveScopedColumnsOf`). Outside the form conditional so tsc infers it.
      */
-    columnScope?: Cs;
+    scopedColumns?: Sc;
   } & LiveFieldsForm<LiveFieldsDefault<S>, undefined, S, Cn, R> &
     LiveMachineSpec<NM>,
 ): LiveCollectionOf<
@@ -834,7 +842,7 @@ export function liveCollection<
   Cn,
   FieldsSpecExposes<E, R, B>
 > &
-  LiveColumnScopeOf<Cs> & {
+  LiveScopedColumnsOf<Sc> & {
   fields: LiveFields<P | (keyof OF & string)>;
   from: FromEntity<E>;
 } & LiveMachineBrand<NM>;
@@ -983,6 +991,14 @@ function mintCollection<Row, F, S extends string>(
       `liveCollection("${key}"): \`contributed\` no longer exists — another plugin's columns are an extension's exposed fields (\`defineExtensionShape({ exposes })\`), folded into every collection reaching its entity.`,
     );
   }
+  // `columnScope` is gone too (a scope per query): an untyped caller still
+  // naming one surface would otherwise mint a collection taking no scoped
+  // columns at all.
+  if ((spec as { columnScope?: unknown }).columnScope !== undefined) {
+    throw new Error(
+      `liveCollection("${key}"): \`columnScope\` no longer exists — declare \`scopedColumns: true\`, and the custom columns of whichever surface lists the collection sort and filter it (the query names its surface).`,
+    );
+  }
   if (spec.all !== undefined)
     return allCollection(key, spec as LiveAllSpec<Row>);
   // A composite id (typed away elsewhere): a window's tiebreaker and cuts,
@@ -999,12 +1015,12 @@ function mintCollection<Row, F, S extends string>(
     const fail = (message: string): never => {
       throw new Error(`liveCollection("${key}"): ${message}`);
     };
-    const stray = (["columnScope", "count", "exposes"] as const).filter(
+    const stray = (["count", "exposes"] as const).filter(
       (f) => (spec as unknown as Record<string, unknown>)[f] !== undefined,
     );
     if (stray.length > 0) {
       fail(
-        `${stray.join(", ")} beside \`arms\` — a union collection's columns are its arms' own (\`liveArm\`), never scoped or exposed, and it has no total yet.`,
+        `${stray.join(", ")} beside \`arms\` — a union collection's columns are its arms' own (\`liveArm\`) and a surface's scoped ones, never exposed, and it has no total yet.`,
       );
     }
     if (spec.default === undefined) {
@@ -1055,7 +1071,7 @@ const NOT_ALL_FIELDS: readonly string[] = [
   "filterable",
   "sortable",
   "maxLimit",
-  "columnScope",
+  "scopedColumns",
   "count",
 ];
 
@@ -1291,7 +1307,7 @@ const WINDOW_FIELDS: readonly string[] = [
   "sortable",
   "maxLimit",
   "preload",
-  "columnScope",
+  "scopedColumns",
   "arms",
   "count",
 ];
@@ -1355,16 +1371,21 @@ function fullCollection<Row, F, S extends string>(
     arms !== null || exposes !== null
       ? withColumnsSchema(key, spec.row)
       : spec.row;
-  const columnScope = spec.columnScope ?? null;
-  if (columnScope !== null && columnScope.length === 0) {
-    throw new Error(`liveCollection("${key}"): \`columnScope\` is empty`);
+  const scopedColumns = spec.scopedColumns === true;
+  if (
+    spec.scopedColumns !== undefined &&
+    (spec.scopedColumns as unknown) !== true
+  ) {
+    throw new Error(
+      `liveCollection("${key}"): \`scopedColumns\` is \`true\` or absent`,
+    );
   }
   const clock =
     (spec as { clock?: Readonly<Record<string, ClockForm>> }).clock ?? {};
   const codec = createLiveQueryCodec<keyof F & string, S>({
     key,
     id: spec.id,
-    columnScope,
+    scopedColumns,
     arms: arms !== null,
     exposes: exposes === null ? [] : Object.values(exposes).map((r) => r.name),
     // `LiveFilterable`'s keys are optional; a declared one always holds a column.
@@ -1404,7 +1425,7 @@ function fullCollection<Row, F, S extends string>(
   // reads) — declared the same way, split off the same way.
   const windowKeys: Record<string, z.ZodType> = {
     [LIVE_ROW_KEY]: z.string().nullable(),
-    ...(columnScope !== null
+    ...(scopedColumns
       ? { [LIVE_SCOPED_KEY]: z.record(z.string(), z.unknown()).optional() }
       : {}),
   };
@@ -1499,7 +1520,7 @@ function fullCollection<Row, F, S extends string>(
     count,
     filterable: spec.filterable,
     sortable: spec.sortable,
-    columnScope,
+    scopedColumns,
     arms,
     column,
   };

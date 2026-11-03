@@ -319,7 +319,11 @@ no contributor).
 - **Routed entries take no `dependsOn`** (type + throw): a cascade would FULL over
   a scoped refill. Their one non-table input is **`recomputeOn`**: upstream TUPLES
   of EXTERNAL resources (registered first) whose change FULL-recomputes every
-  subscribed tuple and drops the memoized `usesOf`.
+  subscribed tuple and drops the memoized `usesOf` — or, in the per-tuple form
+  (`{ resource, paramsOf }`), FULL-recomputes only the tracked tuples whose
+  `paramsOf(params)` names the changed upstream tuple (`null` = none: a
+  scoped column set's members, per the scope a tuple names). A throwing
+  `paramsOf` is reported and that tuple recomputes.
 - **Relation bases**: views / rollups are reached through `opts.relationBases`
   (injected by change-feed via server-core's `setRelationBases`; identity on
   central).

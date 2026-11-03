@@ -6,21 +6,22 @@
  * table carries its key layout), its LISTEN consumer, `routeChange`, and the
  * server-core runtime.
  *
- * A seeded random workload of host writes and custom-value writes (this
- * surface's and another's, single- and multi-row) runs against window tuples
- * that sort and filter by custom columns, and one that reads none. After every
- * statement:
+ * ONE collection is listed on TWO surfaces, each with its own definitions (a
+ * scope per query): a seeded random workload of host writes and custom-value
+ * writes (both surfaces', single- and multi-row) runs against window tuples
+ * that sort and filter by either surface's custom columns, and one that reads
+ * none. After every statement:
  *
  * - every subscribed tuple's client view equals a fresh FULL load of it;
  * - no subscribed tuple is reloaded FULL, and every refill names only hosts the
  *   statement changed (or a row it made room for);
- * - a tuple that reads no custom column loads nothing for a custom-value write,
- *   and another surface's writes load nothing anywhere (the route's `rows`);
+ * - a custom-value write loads nothing in a tuple of another surface, nor in
+ *   one reading no custom column (the one route's per-tuple scope `match`);
  * - a write to a column a tuple does not read loads nothing in it (the
- *   per-tuple `match`).
+ *   per-tuple member `match`).
  *
- * Then the surface's definitions change (`recomputeOn`): every subscribed tuple
- * recomputes FULL exactly once, and converges.
+ * Then one surface's definitions change (`recomputeOn`, per tuple): exactly
+ * that surface's subscribed tuples recompute FULL, once, and converge.
  *
  * Requires a running Postgres cluster (started by ./equin build).
  * Run: `./equin test plugins/network/plugins/live`.
@@ -63,6 +64,7 @@ import {
   liveCollection,
   liveValue,
   scopedLiveColumns,
+  type LiveScopedColumns,
 } from "@plugins/network/plugins/live/core";
 import { compileCollection } from "./serve-collection";
 import { serveScopedColumns, type ScopedMemberRead } from "./serve-columns";
@@ -99,18 +101,29 @@ const collection = liveCollection("test.live.scoped-oracle", {
   sortable: ["n"],
   default: { orderBy: [["n", "asc"]], limit: 4 },
   maxLimit: 20,
-  columnScope: SCOPE,
+  scopedColumns: true,
 });
 
-// The surface's definitions: `tag` (text) and `score` (a number, cast).
-const members = new Map<string, ScopedMemberRead>([
-  ["tag", { domain: "text" }],
+const NUMERIC: ScopedMemberRead = {
+  domain: "number",
+  cast: { sql: (raw) => sql`(${raw})::numeric`, sqlType: "numeric" },
+};
+// Each surface's definitions: SCOPE's `tag` (text) and `score` (a number,
+// cast); OTHER's `tag` too — a member id both define, read apart — and `rank`.
+const members = new Map<string, ReadonlyMap<string, ScopedMemberRead>>([
   [
-    "score",
-    {
-      domain: "number",
-      cast: { sql: (raw) => sql`(${raw})::numeric`, sqlType: "numeric" },
-    },
+    SCOPE,
+    new Map<string, ScopedMemberRead>([
+      ["tag", { domain: "text" }],
+      ["score", NUMERIC],
+    ]),
+  ],
+  [
+    OTHER,
+    new Map<string, ScopedMemberRead>([
+      ["tag", { domain: "text" }],
+      ["rank", NUMERIC],
+    ]),
   ],
 ]);
 let defsVersion = 0;
@@ -186,37 +199,70 @@ function canonical(v: unknown): string {
   );
 }
 
-// The browser's view of the members, for encoding tuples.
-const handle = scopedLiveColumns(SCOPE, "custom", {
-  tag: { domain: "text", sortable: true },
-  score: { domain: "number", sortable: true },
-});
-const encode = (q: {
-  where?: object;
-  orderBy?: readonly (readonly [string, "asc" | "desc"])[];
-  limit?: number;
-}) => collection.window.window.encode({ ...q, columns: [handle] } as never);
+// Each surface's browser view of its members, for encoding tuples.
+const handles: Readonly<Record<string, LiveScopedColumns>> = {
+  [SCOPE]: scopedLiveColumns(SCOPE, "custom", {
+    tag: { domain: "text", sortable: true },
+    score: { domain: "number", sortable: true },
+  }),
+  [OTHER]: scopedLiveColumns(OTHER, "custom", {
+    tag: { domain: "text", sortable: true },
+    rank: { domain: "number", sortable: true },
+  }),
+};
+const encode = (
+  scope: string,
+  q: {
+    where?: object;
+    orderBy?: readonly (readonly [string, "asc" | "desc"])[];
+    limit?: number;
+  },
+) =>
+  collection.window.window.encode({
+    ...q,
+    columns: [handles[scope]!],
+  } as never);
 
-const TUPLES: Array<{ params: ResourceParams; reads: readonly string[] }> = [
-  // Reads no custom column.
-  { params: encode({}), reads: [] },
+const TUPLES: Array<{
+  params: ResourceParams;
+  /** The surface it is asked from — `null` when it names no custom column. */
+  scope: string | null;
+  reads: readonly string[];
+}> = [
+  // Reads no custom column (whichever surface lists it: one tuple).
+  { params: encode(SCOPE, {}), scope: null, reads: [] },
   // Sorted by a custom column (membership: its order).
   {
-    params: encode({ orderBy: [["custom.tag", "asc"]], limit: 3 }),
+    params: encode(SCOPE, { orderBy: [["custom.tag", "asc"]], limit: 3 }),
+    scope: SCOPE,
     reads: ["tag"],
   },
   // Filtered by the cast one.
   {
-    params: encode({ where: { "custom.score": { gt: 4 } } }),
+    params: encode(SCOPE, { where: { "custom.score": { gt: 4 } } }),
+    scope: SCOPE,
     reads: ["score"],
   },
   // Both, and a host column.
   {
-    params: encode({
+    params: encode(SCOPE, {
       where: { "custom.tag": { eq: "b" }, n: { lte: 7 } },
       orderBy: [["custom.score", "desc"]],
     }),
+    scope: SCOPE,
     reads: ["tag", "score"],
+  },
+  // The other surface: the same member id, its own values.
+  {
+    params: encode(OTHER, { orderBy: [["custom.tag", "desc"]], limit: 3 }),
+    scope: OTHER,
+    reads: ["tag"],
+  },
+  // The other surface's own column, sorted with NULLs (no row) last.
+  {
+    params: encode(OTHER, { orderBy: [["custom.rank", "asc"]] }),
+    scope: OTHER,
+    reads: ["rank"],
   },
 ];
 
@@ -286,8 +332,10 @@ beforeAll(async () => {
     hostKey: valuesTable.rowKey,
     member: valuesTable.columnId,
     value: valuesTable.value,
-    members: () => members,
-    recomputeOn: (scope) => ({ resource: defsServed, params: { scope } }),
+    serves: (scope) => members.has(scope),
+    members: (scope) => members.get(scope)!,
+    recomputeOn: { resource: defsServed, params: (scope) => ({ scope }) },
+    watch: () => {},
   });
   const specs = compileCollection(
     collection,
@@ -363,10 +411,10 @@ interface Step {
   run: () => Promise<void>;
   /** The host ids the statement may change. */
   hosts: readonly string[];
-  /** The custom columns this surface's rows it writes (null = the host table). */
+  /** The custom columns it writes (null = the host table). */
   columns: readonly string[] | null;
-  /** Writes another surface's rows only. */
-  foreign: boolean;
+  /** The surface whose custom values it writes (null = the host table). */
+  scope: string | null;
   table: string;
 }
 
@@ -385,7 +433,7 @@ describe("serveCollection over a scoped column set — differential oracle", () 
       sql`INSERT INTO ${valuesTable} VALUES
         (${SCOPE}, 'h1', 'tag', 'a'), (${SCOPE}, 'h2', 'tag', 'b'),
         (${SCOPE}, 'h3', 'score', '7'), (${SCOPE}, 'h4', 'score', '2'),
-        (${OTHER}, 'h1', 'tag', 'z')`,
+        (${OTHER}, 'h1', 'tag', 'z'), (${OTHER}, 'h3', 'rank', '5')`,
     );
     await until(
       () => routed.some((c) => c.table === VALUES),
@@ -408,7 +456,7 @@ describe("serveCollection over a scoped column set — differential oracle", () 
             what: `set ${column}=${value} on ${id}`,
             hosts: [id],
             columns: [column],
-            foreign: false,
+            scope: SCOPE,
             table: VALUES,
             run: async () => {
               await db.execute(
@@ -425,7 +473,7 @@ describe("serveCollection over a scoped column set — differential oracle", () 
             what: `clear ${column} on ${id}`,
             hosts: [id],
             columns: [column],
-            foreign: false,
+            scope: SCOPE,
             table: VALUES,
             run: async () => {
               // A delete that may match nothing sends no NOTIFY: make it match.
@@ -444,7 +492,7 @@ describe("serveCollection over a scoped column set — differential oracle", () 
           what: "bump every score",
           hosts: present,
           columns: ["score"],
-          foreign: false,
+          scope: SCOPE,
           table: VALUES,
           run: async () => {
             await db.execute(
@@ -459,16 +507,21 @@ describe("serveCollection over a scoped column set — differential oracle", () 
         }),
         () => {
           const id = any(present);
+          const column = any(["tag", "rank"]);
+          const value =
+            column === "tag"
+              ? any(["b", "q"])
+              : String(Math.floor(rand() * 10));
           return {
-            what: `another surface's tag on ${id}`,
-            hosts: [],
-            columns: ["tag"],
-            foreign: true,
+            what: `the other surface's ${column}=${value} on ${id}`,
+            hosts: [id],
+            columns: [column],
+            scope: OTHER,
             table: VALUES,
             run: async () => {
               await db.execute(
-                sql`INSERT INTO ${valuesTable} VALUES (${OTHER}, ${id}, 'tag', ${any(["b", "q"])})
-                    ON CONFLICT (data_view_id, row_key, column_id) DO UPDATE SET value = EXCLUDED.value || 'x'`,
+                sql`INSERT INTO ${valuesTable} VALUES (${OTHER}, ${id}, ${column}, ${value})
+                    ON CONFLICT (data_view_id, row_key, column_id) DO UPDATE SET value = EXCLUDED.value || '0'`,
               );
             },
           };
@@ -480,7 +533,7 @@ describe("serveCollection over a scoped column set — differential oracle", () 
             what: `host ${id} n=${n}`,
             hosts: [id],
             columns: null,
-            foreign: false,
+            scope: null,
             table: HOST,
             run: async () => {
               await db.execute(
@@ -498,7 +551,7 @@ describe("serveCollection over a scoped column set — differential oracle", () 
             what: `insert host ${id}`,
             hosts: [id],
             columns: null,
-            foreign: false,
+            scope: null,
             table: HOST,
             run: async () => {
               await db.execute(
@@ -514,7 +567,8 @@ describe("serveCollection over a scoped column set — differential oracle", () 
 
     const history: string[] = [];
     let matchSkips = 0;
-    for (let step = 0; step < 50; step++) {
+    let scopeSkips = 0;
+    for (let step = 0; step < 60; step++) {
       const s = nextStep();
       history.push(s.what);
       const routedAt = routed.length;
@@ -569,34 +623,44 @@ describe("serveCollection over a scoped column set — differential oracle", () 
           );
         }
       }
-      // Another surface's rows reach no tuple.
-      if (s.foreign) expect(stepLoads).toEqual([]);
-      // A custom-value write reaches only the tuples reading that column.
+      // A custom-value write reaches only the tuples of its surface reading
+      // that column.
       if (s.columns !== null) {
         for (const t of TUPLES) {
-          if (t.reads.some((c) => s.columns!.includes(c))) continue;
+          if (
+            t.scope === s.scope &&
+            t.reads.some((c) => s.columns!.includes(c))
+          )
+            continue;
           const mine = stepLoads.filter(
             (l) => l.params === JSON.stringify(t.params),
           );
           expect(mine).toEqual([]);
-          if (t.reads.length > 0 && !s.foreign) matchSkips++;
+          if (t.scope !== null && t.scope !== s.scope) scopeSkips++;
+          else if (t.reads.length > 0) matchSkips++;
         }
       }
     }
     // The per-tuple match really skipped writes to columns a reading tuple
-    // did not name (not just the tuple that reads none).
+    // did not name, and writes of the other surface (not just the tuple that
+    // reads none).
     expect(matchSkips).toBeGreaterThan(0);
+    expect(scopeSkips).toBeGreaterThan(0);
 
-    // The surface's definitions change: every subscribed tuple recomputes
-    // FULL, once, and converges.
+    // One surface's definitions change: exactly its subscribed tuples
+    // recompute FULL, once, and converge.
     const at = loads.length;
-    members.set("added", { domain: "text" });
+    (members.get(SCOPE) as Map<string, ScopedMemberRead>).set("added", {
+      domain: "text",
+    });
     defsVersion++;
     defsServed.notify({ scope: SCOPE });
     await quiet();
     const full = loads.slice(at).filter((l) => l.ids === "FULL");
     expect(full.map((l) => l.params).sort()).toEqual(
-      TUPLES.map((t) => JSON.stringify(t.params)).sort(),
+      TUPLES.filter((t) => t.scope === SCOPE)
+        .map((t) => JSON.stringify(t.params))
+        .sort(),
     );
     for (const t of TUPLES) {
       expect(canonical(viewOf(t.params).value)).toBe(

@@ -34,7 +34,7 @@ describe("events list fields", () => {
       "description",
     ]);
     expect([...eventsList.sortable]).toEqual([...EVENT_LIST_SORTABLE]);
-    expect(eventsList.columnScope).toBe("events.list");
+    expect(eventsList.scopedColumns).toBe(true);
   });
 
   test("labels, types and options come from the entity", () => {

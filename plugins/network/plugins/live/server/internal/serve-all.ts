@@ -264,12 +264,12 @@ export function compileAllSpecs<Row, B extends string = never>(
   // and a union reads several tables; an `all` set is one table's, compiled
   // here once.
   const cast = collection as unknown as {
-    columnScope?: unknown;
+    scopedColumns?: unknown;
     arms?: unknown;
   };
-  if ((cast.columnScope ?? null) !== null) {
+  if (cast.scopedColumns === true) {
     fail(
-      "a collection declared `all` cannot be `columnScope`d — its definition (the L2 fingerprint) is fixed at module eval, never folded from contributions at boot.",
+      "a collection declared `all` cannot take `scopedColumns` — its definition (the L2 fingerprint) is fixed at module eval, never folded from contributions at boot.",
     );
   }
   if ((cast.arms ?? null) !== null) {

@@ -15,7 +15,7 @@ writes — the ledger is the [`deployments`](../deployments/CLAUDE.md) sibling's
 `deploy.runs` map. A run opening, finishing or failing reaches its row through
 the routed runtime: no revision tick, no refetch, and the history pages past one
 window with no cap. The surface's custom columns sort and filter it server-side
-(`deployRunHistory.columnScope` IS this DataView's id, asserted at mount);
+(`deployRunHistory` takes `scopedColumns`; a query names this DataView as its scope);
 `e2e/history-live-verify.ts` drives a custom value through the API and watches
 the row drop out, come back and move, and a status flip land, without a reload.
 

@@ -970,9 +970,10 @@ async function collectionCases(): Promise<Record<string, Json>> {
     });
   }
 
-  // A `columnScope` family: members joined per tuple, cast, ordered and folded.
+  // A scoped family: members joined per tuple in the scope it names, cast,
+  // ordered and folded.
   {
-    const RECOMPUTE = { resource: { key: "golden.defs" } as never, params: {} };
+    const SCOPE = "golden.surface";
     const members = new Map<string, ScopedMemberRead>([
       ["c1", { domain: "text" }],
       [
@@ -990,10 +991,14 @@ async function collectionCases(): Promise<Record<string, Json>> {
       hostKey: scValues.rowKey,
       member: scValues.columnId,
       value: scValues.value,
+      serves: (scope) => scope === SCOPE,
       members: () => members,
-      recomputeOn: () => RECOMPUTE,
+      recomputeOn: {
+        resource: { key: "golden.defs" } as never,
+        params: (scope) => ({ dataViewId: scope }),
+      },
+      watch: () => {},
     });
-    const SCOPE = "golden.surface";
     const c = liveCollection("golden.scoped", {
       fields: {
         id: textField({ label: "Id", ...HIDDEN }),
@@ -1004,7 +1009,7 @@ async function collectionCases(): Promise<Record<string, Json>> {
       sortable: ["title", "n"],
       default: { orderBy: [["n", "asc"]], limit: 10 },
       maxLimit: 50,
-      columnScope: SCOPE,
+      scopedColumns: true,
     });
     const { db, h } = harness([
       { id: "a", title: "A", n: 1 },

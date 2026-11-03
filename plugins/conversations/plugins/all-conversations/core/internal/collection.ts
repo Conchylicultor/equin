@@ -9,9 +9,10 @@ import {
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { CONVERSATION_SORTABLE } from "./fields";
 
-// The two lists share one shape; each is its own collection because a
-// collection's `columnScope` is the one DataView surface whose custom columns
-// sort and filter it (asserted equal to the surface's `storageKey` at mount).
+// The two lists share one shape; each is its own collection because they are
+// served apart (`conversations.all` hides system conversations by a default
+// scope, the History list does not). Both take `scopedColumns`: the custom
+// columns of the surface listing one sort and filter it.
 // Declared by FIELDS: every list field — its label, type, options, filter
 // domain — is the conversations entity's (`pick`) or one of the owners' joined
 // columns (`fields`), so the lists name none of them.
@@ -87,7 +88,7 @@ export const allConversations = liveCollection("conversations.all", {
   sortable: CONVERSATION_SORTABLE,
   default: CONVERSATION_LIST_DEFAULT,
   maxLimit: CONVERSATION_LIST_MAX_LIMIT,
-  columnScope: "all-conversations",
+  scopedColumns: true,
   // Counted: the list's section count is exact while only its scope applies.
   count: true,
 });
@@ -108,7 +109,7 @@ export const conversationHistory = liveCollection("conversations.history", {
   sortable: CONVERSATION_SORTABLE,
   default: CONVERSATION_LIST_DEFAULT,
   maxLimit: CONVERSATION_LIST_MAX_LIMIT,
-  columnScope: "conversations-sidebar",
+  scopedColumns: true,
   // Counted: the list's section count is exact while only its scope applies.
   count: true,
 });

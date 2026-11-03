@@ -2,14 +2,6 @@ import { liveCollection } from "@plugins/network/plugins/live/core";
 import type { LiveRowsCollection } from "@plugins/network/plugins/live/core";
 import { reportsEntityRef } from "./entity";
 
-/**
- * The Debug → Reports DataView's id (its `storageKey`): the surface
- * `reportsList` is listed on, whose custom columns sort and filter it. The
- * DataView declares the same literal with `defineDataView` (a web-only marker
- * the codegen scrapes); the DataView asserts at mount that the two agree.
- */
-const REPORTS_VIEW_ID = "debug.reports";
-
 // Every recorded report, last seen first — the Reports DataView's live source,
 // the detail pane's by-id read (`useLive(c, { id })`, the collection's `:rows`) and its
 // kind / source filter options (the `:groups` grouping). One collection serves
@@ -58,7 +50,7 @@ export const reportsList = liveCollection("reports.list", {
   sortable: ["kind", "source", "count", "lastSeenAt"],
   default: { orderBy: [["lastSeenAt", "desc"]], limit: 100 },
   maxLimit: 500,
-  columnScope: REPORTS_VIEW_ID,
+  scopedColumns: true,
 });
 
 /** One recorded report, as the list and the detail pane read it. */

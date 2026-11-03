@@ -236,9 +236,9 @@ and composer). Served by `songLibraryServed`, which compiles at boot once the
   count is exact only once a later section has started in the loaded rows or
   the scroll has read to the end (a library past one window, 100 songs, shows
   its last loaded section as `n+` until then).
-- **Custom columns sort and filter server-side.** `songLibrary.columnScope` is
-  the library DataView's id (`sonata.library`, asserted at mount), so a
-  user-defined custom column binds as `custom.<id>` (the `custom` scoped column
+- **Custom columns sort and filter server-side.** `songLibrary` takes
+  `scopedColumns`, so a user-defined custom column of the library DataView
+  (`sonata.library`) binds as `custom.<id>` (the `custom` scoped column
   set — P3 of `research/2026-09-29-global-scoped-change-routing.md`), which
   lifted P2's accepted regression.
 

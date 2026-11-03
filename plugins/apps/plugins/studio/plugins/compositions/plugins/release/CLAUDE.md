@@ -49,8 +49,8 @@ neither did.
   the composition as data; a run starting, finishing or failing reaches the rows
   through the routed runtime (no tick, no refetch). There is no 50-run cap: the
   full run history pages past one window. The surface's custom columns sort and
-  filter it server-side (`releaseHistory.columnScope` IS this DataView's id,
-  asserted at mount); `e2e/history-live-verify.ts` drives a custom value written
+  filter it server-side (`releaseHistory` takes `scopedColumns`; a query names
+  this DataView as its scope); `e2e/history-live-verify.ts` drives a custom value written
   through the API and watches the row drop out, come back and move, and a status
   flip land, without a reload. Each run's detail pane resolves its run by id
   through the `release.runs` lookup collection (`useLive(c, { id })`), so an old run's

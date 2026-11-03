@@ -27,41 +27,34 @@ import type {
  *
  * `surface` is the DataView it is listed on, and how the surface's custom
  * columns reach the collection is stated, never a fallback
- * (`LiveSurfaceBinding`): a collection whose `columnScope` is the surface
- * takes them as scoped columns (another surface is a tsc error); one without
- * a scope says why (`unscoped: { reason }`).
+ * (`LiveSurfaceBinding`): a collection declared `scopedColumns` takes them as
+ * scoped columns of THIS surface (its queries name it); one without says why
+ * (`unscoped: { reason }`).
  */
 export function liveDataSource<
   Row,
   F,
   S extends string,
-  // The collection as declared — its literal `columnScope` read off it whole
-  // (inferring the scope alone would merge it with `LiveCollection`'s own
-  // `string | null` and lose the literal).
-  C extends { readonly columnScope: string | null },
+  // The collection as declared — its literal `scopedColumns` read off it
+  // whole (inferring the flag alone would merge it with `LiveCollection`'s
+  // own `boolean` and lose the literal).
+  C extends { readonly scopedColumns: boolean },
 >(
   collection: LiveCollection<Row, F, S> & C,
   opts: {
     searchable: readonly LiveSearchableColumn<F>[];
     facets?: readonly LiveFacetColumn<F>[];
-  } & LiveSurfaceBinding<C["columnScope"]>,
+  } & LiveSurfaceBinding<C["scopedColumns"]>,
 ): LiveDataSourceOf<Row, F> {
   const surface = opts.surface;
-  const scope: string | null = collection.columnScope;
   // tsc already binds the two; this catches a widened or cast declaration at
   // module load, where it is declared.
-  const customColumns: LiveCustomColumns =
-    scope !== null
-      ? { kind: "scoped", scope }
-      : { kind: "unscoped", reason: opts.unscoped?.reason ?? "" };
-  if (customColumns.kind === "scoped" && scope !== surface) {
-    throw new Error(
-      `liveDataSource("${collection.key}"): its column scope is "${scope}", but it is listed on "${surface}" — a collection with a column scope is listed on that one surface.`,
-    );
-  }
+  const customColumns: LiveCustomColumns = collection.scopedColumns
+    ? { kind: "scoped", scope: surface }
+    : { kind: "unscoped", reason: opts.unscoped?.reason ?? "" };
   if (customColumns.kind === "scoped" && opts.unscoped !== undefined) {
     throw new Error(
-      `liveDataSource("${collection.key}"): a collection with a column scope takes its surface's custom columns — \`unscoped\` says the opposite.`,
+      `liveDataSource("${collection.key}"): the collection takes scoped columns — its surface's custom columns sort and filter it; \`unscoped\` says the opposite.`,
     );
   }
   if (
@@ -69,7 +62,7 @@ export function liveDataSource<
     customColumns.reason.trim().length === 0
   ) {
     throw new Error(
-      `liveDataSource("${collection.key}"): the collection takes no column scope, so "${surface}"'s custom columns cannot sort or filter it — say why (\`unscoped: { reason }\`), or give the collection \`columnScope: "${surface}"\`.`,
+      `liveDataSource("${collection.key}"): the collection takes no scoped columns, so "${surface}"'s custom columns cannot sort or filter it — say why (\`unscoped: { reason }\`), or declare the collection \`scopedColumns: true\`.`,
     );
   }
   const filterable = collection.filterable as Record<

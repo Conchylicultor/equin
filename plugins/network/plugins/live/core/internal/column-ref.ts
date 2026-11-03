@@ -17,7 +17,7 @@ interface ColumnRefFields {
   /**
    * Whose column it is — the collection's own (by key), an arm's (by its
    * collection's key), an exposure's (by its entity), or a scoped set's member (by the scope it
-   * binds under, a collection's `columnScope`).
+   * binds under — the surface a query names).
    */
   readonly owner: LiveColumnRefOwner;
   /** The column's wire name (a column set's is `<set>.<field>`). */

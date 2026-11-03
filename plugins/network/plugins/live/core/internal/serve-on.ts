@@ -620,7 +620,7 @@ export type AnyCollection = {
   count?: LiveCountDescriptor<Filterable> | null;
   filterable?: unknown;
   contributed?: boolean;
-  columnScope?: string | null;
+  scopedColumns?: boolean;
   arms?: unknown;
   exposes?: unknown;
 };
@@ -928,9 +928,9 @@ export function compileExternalCollection(
       "a union collection (declared with `arms`) reads several tables — it has no external spelling.",
     );
   }
-  if ((collection.columnScope ?? null) !== null) {
+  if (collection.scopedColumns === true) {
     fail(
-      "a `columnScope` collection folds scoped column sets from Postgres — it has no external spelling.",
+      "a `scopedColumns` collection folds scoped column sets from Postgres — it has no external spelling.",
     );
   }
   // A scoped `all` set (`all: { by }`) is typed away (`ExternalAllCollection`

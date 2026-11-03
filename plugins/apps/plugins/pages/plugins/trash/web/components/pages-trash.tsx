@@ -41,10 +41,6 @@ const TRASH_VIEW = defineDataView("pages.trash");
 // captured at trash time.
 const trashSource = liveDataSource(trashEntries, {
   surface: TRASH_VIEW,
-  unscoped: {
-    reason:
-      "trash-entries is the one generic collection every trash surface lists (infra/trash), and a column scope names one surface — scoping it to Pages would hand the next trash surface Pages' custom columns",
-  },
   searchable: ["label"],
 }).scoped({ where: { sourceId: PAGES_TRASH_SOURCE } });
 

@@ -62,14 +62,6 @@ export const eventSources = liveCollection("events.sources.all", {
 });
 
 /**
- * The DataView surface the run ledger is listed on (the source pane's Runs
- * section, `defineDataView("events.source-runs")`): the scope whose custom
- * columns sort and filter the window. The DataView declares the same literal
- * and asserts at mount that the two agree.
- */
-const SOURCE_RUNS_VIEW_ID = "events.source-runs";
-
-/**
  * The run ledger (`event_source_runs`) as a live collection: a bounded,
  * scrollable window — the source pane scopes it to one source with
  * `.scoped({ where: { sourceId } })` — plus its `:rows` point sibling, which is
@@ -118,7 +110,7 @@ export const eventSourceRuns = liveCollection("events.source-runs", {
   ],
   default: { orderBy: [["startedAt", "desc"]], limit: 100 },
   maxLimit: 500,
-  columnScope: SOURCE_RUNS_VIEW_ID,
+  scopedColumns: true,
 });
 
 /** A run as the ledger's window delivers it: the run row plus every exposed field under `$columns`. */

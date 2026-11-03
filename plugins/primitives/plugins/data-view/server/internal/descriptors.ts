@@ -41,6 +41,11 @@ export const dataViewDescriptors: Map<string, ConfigDescriptor> = new Map(
  * scoped column set) use to resolve a surface's config opaquely — without
  * rebuilding the descriptor map.
  */
+/** Whether `dataViewId` names a DataView surface the app declares (`defineDataView`). */
+export function isDataViewId(dataViewId: string): boolean {
+  return dataViewDescriptors.has(dataViewId);
+}
+
 export function readDataViewConfigDoc(
   dataViewId: string,
 ): Record<string, unknown> {

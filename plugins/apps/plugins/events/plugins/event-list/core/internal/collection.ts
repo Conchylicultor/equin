@@ -32,9 +32,8 @@ import { EVENT_LIST_PICK, EVENT_LIST_SORTABLE } from "./fields";
  * joined source ref and the rest of the listed event carried. The list names
  * no field beyond that.
  *
- * `columnScope` is the events DataView's id (`defineDataView("events.list")`,
- * asserted equal at mount): the user's custom columns on that surface sort and
- * filter the window server-side.
+ * It takes `scopedColumns`: the user's custom columns on the surface listing
+ * it (the events DataView) sort and filter the window server-side.
  */
 export const eventsList = liveCollection("events.list", {
   from: eventsEntityRef,
@@ -62,7 +61,7 @@ export const eventsList = liveCollection("events.list", {
   sortable: EVENT_LIST_SORTABLE,
   default: { orderBy: [["startsAt", "asc"]], limit: 100 },
   maxLimit: 500,
-  columnScope: "events.list",
+  scopedColumns: true,
 });
 
 /** A row as the list delivers it: the sourced event plus every exposed field under `$columns`. */

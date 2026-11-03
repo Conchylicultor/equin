@@ -238,7 +238,8 @@ describe("liveCollection — the `all` overload (C16, C39, T13)", () => {
         /sortable, maxLimit beside `all`/,
       ],
       [{ ...base, contributed: true }, /`contributed` no longer exists/],
-      [{ ...base, columnScope: "s" }, /columnScope beside `all`/],
+      [{ ...base, scopedColumns: true }, /scopedColumns beside `all`/],
+      [{ ...base, columnScope: "s" }, /`columnScope` no longer exists/],
       [{ ...base, arms: { discriminator: "n" } }, /arms beside `all`/],
       [
         { ...base, all: { ...all, unbounded: { reason: " " } } },

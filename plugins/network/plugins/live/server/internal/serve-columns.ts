@@ -11,14 +11,16 @@ import type { EntityExposure } from "@plugins/infra/plugins/entity-extensions/co
 import type { FilterDomainId } from "@plugins/network/plugins/live/plugins/filter/core";
 
 // ── Scoped column sets ─────────────────────────────────────────────────────
-// A collection declared with a `columnScope` sorts and filters by columns whose
-// set is data, not code — a DataView surface's custom columns. Their values
-// live in one composite-keyed side table (scope, host key, member, value); the
-// members a scope has are read at request time. `serveCollection` joins that
-// table once per member a tuple names (a join FAMILY — one route for all of
-// them, matched per tuple on the member), and recomputes every tuple when the
-// scope's members change (`recomputeOn`, an external value the contributor
-// notifies). The browser half is `scopedLiveColumns` (core).
+// A collection declared `scopedColumns` sorts and filters by columns whose set
+// is data, not code — the custom columns of the DataView surface a query is
+// asked from (the query's `scope`). Their values live in one composite-keyed
+// side table (scope, host key, member, value); the members a scope has are
+// read at request time. `serveCollection` joins that table once per member a
+// tuple names, in the scope the tuple names (a join FAMILY with a scope
+// column — one route for every member of every scope, matched per tuple on
+// both), and recomputes a tuple when its scope's members change
+// (`recomputeOn`, an external value the contributor notifies). The browser
+// half is `scopedLiveColumns` (core).
 
 /** One member of a scoped set as the server reads it now. */
 export interface ScopedMemberRead {
@@ -37,33 +39,48 @@ export interface ServedScopedColumns {
   /** Unique; the prefix of every wire name (`<name>.<member>`) and the family's route id. */
   readonly name: string;
   /**
-   * A collection's fold: binds the set to the collection's scope — recorded
-   * in `scopes()` — and returns that scope's family. Every `columnScope`
-   * collection folding the set calls it (it cannot join a member without the
-   * family), so the recorded scopes are exactly the ones served.
+   * The set's join family: a member is `(scope, member)`, the scope the
+   * tuple's — one family (and so one route) per collection, whatever scopes
+   * its tuples name.
    */
-  bind(scope: string): JoinFamily;
+  readonly family: JoinFamily;
   /**
-   * Every scope a collection has bound the set under — what the set's owner
-   * watches to notify `recomputeOn(scope)`. Complete once deferred resources
-   * are bound (before the ready barrier).
+   * Whether a query may name `scope` — the set's own vocabulary of scopes (a
+   * custom column's: a DataView surface the app declares). A tuple naming any
+   * other is refused (`contract-mismatch`) before anything is read.
    */
-  scopes(): ReadonlySet<string>;
+  serves(scope: string): boolean;
+  /**
+   * A tuple names `scope`: the first time, the set's owner starts watching
+   * what moves its members (its `watch`), so `recomputeOn(scope)` is notified
+   * from then on. Idempotent; called by every collection's params gate.
+   */
+  observe(scope: string): void;
   /** The members a scope has now, by id. */
   members(scope: string): ReadonlyMap<string, ScopedMemberRead>;
   /**
-   * The external value tuple whose change means `members(scope)` changed: every
-   * subscribed tuple of a collection in that scope recomputes FULL (a member's
-   * cast, or its existence, moved under the compiled SQL).
+   * The external value whose tuple `params(scope)` changing means
+   * `members(scope)` changed: every tracked tuple naming that scope recomputes
+   * FULL (a member's cast, or its existence, moved under the compiled SQL).
    */
-  recomputeOn(scope: string): RoutedRecomputeOn;
+  readonly recomputeOn: ScopedRecomputeOn;
+}
+
+/** A scoped set's members' upstream: an external value, one tuple per scope. */
+export interface ScopedRecomputeOn<
+  P extends Record<string, string> = Record<string, string>,
+> {
+  resource: RoutedRecomputeOn<P>["resource"];
+  params: (scope: string) => P;
 }
 
 /**
  * Serve a scoped column set: one composite-keyed side table — `scope` (e.g.
  * `data_view_id`), `hostKey` (the host row's key, `row_key`), `member`
- * (`column_id`) and `value` — whose members per scope `members` answers.
- * Spread into a `LiveColumns.Scoped(...)` contribution.
+ * (`column_id`) and `value` — whose scopes `serves` names and whose members
+ * per scope `members` answers. `watch(scope)` starts what notifies
+ * `recomputeOn(scope)` (called once per scope, the first time a tuple names
+ * it). Spread into a `LiveColumns.Scoped(...)` contribution.
  */
 export function serveScopedColumns<P extends Record<string, string>>(spec: {
   name: string;
@@ -72,43 +89,38 @@ export function serveScopedColumns<P extends Record<string, string>>(spec: {
   hostKey: PgColumn;
   member: PgColumn;
   value: PgColumn;
+  serves: (scope: string) => boolean;
   members: (scope: string) => ReadonlyMap<string, ScopedMemberRead>;
-  recomputeOn: (scope: string) => RoutedRecomputeOn<P>;
+  recomputeOn: ScopedRecomputeOn<P>;
+  watch: (scope: string) => void;
 }): ServedScopedColumns {
   if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(spec.name)) {
     throw new Error(
       `serveScopedColumns("${spec.name}"): a set's name is a plain identifier (it prefixes wire names and join aliases)`,
     );
   }
-  const families = new Map<string, JoinFamily>();
-  // One family object per scope: a compile renders members through it, and
-  // the plan that applies a tuple's joins finds them by it.
-  const family = (scope: string): JoinFamily => {
-    let out = families.get(scope);
-    if (!out) {
-      out = {
-        kind: "family",
-        id: spec.name,
-        table: spec.table,
-        hostKey: spec.hostKey,
-        selectors: [{ col: spec.scope, value: scope }],
-        member: spec.member,
-        value: spec.value,
-      };
-      families.set(scope, out);
-    }
-    return out;
+  const family: JoinFamily = {
+    kind: "family",
+    id: spec.name,
+    table: spec.table,
+    hostKey: spec.hostKey,
+    selectors: [],
+    scope: spec.scope,
+    member: spec.member,
+    value: spec.value,
   };
-  const bound = new Set<string>();
+  const observed = new Set<string>();
   return {
     name: spec.name,
-    bind: (scope) => {
-      bound.add(scope);
-      return family(scope);
+    family,
+    serves: spec.serves,
+    observe: (scope) => {
+      if (observed.has(scope)) return;
+      observed.add(scope);
+      spec.watch(scope);
     },
-    scopes: () => bound,
     members: spec.members,
-    recomputeOn: spec.recomputeOn,
+    recomputeOn: spec.recomputeOn as unknown as ScopedRecomputeOn,
   };
 }
 
@@ -132,9 +144,10 @@ export interface ExposingExtension {
 
 export const LiveColumns = {
   /**
-   * A scoped column set (`serveScopedColumns`): every collection declaring a
-   * `columnScope` sorts and filters by its members in that scope. Collected at
-   * boot; each such collection's `serveCollection` folds every contribution.
+   * A scoped column set (`serveScopedColumns`): every collection declaring
+   * `scopedColumns` sorts and filters by its members, in the scope a query
+   * names. Collected at boot; each such collection's `serveCollection` /
+   * `serveUnionCollection` folds every contribution.
    */
   Scoped: defineServerContribution<ServedScopedColumns>("live.columns.scoped", {
     docLabel: (s) => s.name,

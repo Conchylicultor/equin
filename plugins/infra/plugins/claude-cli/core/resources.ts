@@ -127,7 +127,7 @@ export type ClaudeCliCallStatus = z.infer<typeof ClaudeCliCallStatusSchema>;
  */
 export const claudeCliCalls = liveCollection("claude-cli-calls", {
   // Its list's DataView surface: custom columns sort and filter in SQL.
-  columnScope: "debug.claude-cli-calls",
+  scopedColumns: true,
   from: claudeCliCallsEntityRef,
   pick: [
     "createdAt",

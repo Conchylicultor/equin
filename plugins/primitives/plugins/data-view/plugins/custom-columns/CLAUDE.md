@@ -64,12 +64,13 @@ how the caller obtained it.
 
 - **A live source** (research/2026-09-29-global-scoped-change-routing.md P3):
   custom columns are the `custom` SCOPED column set (`server/internal/scoped-columns.ts`,
-  a `LiveColumns.Scoped` contribution). Every collection declaring a `columnScope`
-  — the DataView surface it is listed on — sorts and filters by that surface's
-  columns under their wire names `custom.<column id>`: a tuple joins
-  `data_view_custom_values` once per column it names (a join FAMILY, one route: an
-  alias on `row_key`, kept to the surface's rows, matched per tuple on the columns
-  it reads), each value read through its type's cast (`resolveFieldValueTextCast`,
+  a `LiveColumns.Scoped` contribution). Every collection declaring
+  `scopedColumns` sorts and filters by the columns of the surface a query is
+  asked from (its `scope`; any declared DataView id — `isDataViewId`) under
+  their wire names `custom.<column id>`: a tuple joins
+  `data_view_custom_values` once per column it names (a join FAMILY, one route
+  for every surface: an alias on `row_key`, matched per tuple on the surface
+  and the columns it reads), each value read through its type's cast (`resolveFieldValueTextCast`,
   whose `sqlType` a page cut casts back through). The members are the surface's
   definitions as its config says NOW (read at request time). The field extension,
   handed `liveColumnScope`, binds each filterable or sortable column
@@ -79,11 +80,12 @@ how the caller obtained it.
   sort or filter joins a column.
 - **The definitions move the SQL**: `customColumnDefs` (`data-view-custom-column-defs`,
   params `dataViewId`) is an external value served from the config and notified
-  from a config watch (`watchScopedDefinitions`, in `onReady`, one watch per scope
-  the set was bound under — `customScopedColumns.scopes()`, recorded by each
-  collection's fold, so a collection serving the set cannot go unwatched; a write
-  that moved only the view state compares equal and notifies nothing). Each scoped collection's window `recomputeOn`s it,
-  so a column added, dropped or retyped recomputes its live tuples FULL once.
+  from a config watch (`watchDefinitions`: one watch per surface, started the
+  first time a tuple names it — the set's `watch`, called from every scoped
+  collection's params gate, so a surface a tuple reads cannot go unwatched; a
+  write that moved only the view state compares equal and notifies nothing).
+  Each scoped window `recomputeOn`s it per tuple, so a column added, dropped or
+  retyped recomputes exactly that surface's live tuples FULL once.
 - `e2e/` publishes `defineCustomColumns` / `setCustomColumnCell` /
   `clearCustomColumnValues` / `setSurfaceConfig` for scripts driving a surface's
   columns through the app's API (config writes are put back by the harness's
@@ -131,6 +133,7 @@ how the caller obtained it.
     - `network/live.ScopedMemberRead`
     - `network/live.serveScopedColumns`
     - `network/live.serveValue`
+    - `primitives/data-view.isDataViewId`
     - `primitives/data-view.readDataViewConfigDoc`
     - `primitives/data-view.watchDataViewConfigDoc`
     - `primitives/data-view/custom-columns/values._dataViewCustomValues`
@@ -154,6 +157,7 @@ how the caller obtained it.
     - `apps/deploy/deploy-history`
     - `apps/events/sources/source-detail/runs`
     - `apps/studio/compositions/release`
+    - `runs`
 - Sub-plugins:
   - **`values`** — Per-row custom-column VALUES keyed by (dataViewId, rowKey, columnId): the generic data_view_custom_values table, the data-view-custom-values live value over it, and the upsert/delete-on-empty and…
 

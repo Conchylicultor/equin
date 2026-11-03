@@ -68,9 +68,10 @@ export function allOf(parts: readonly (SQL | undefined)[]): SQL | undefined {
 
 /**
  * `FROM <base> [joins]` — the joins a tuple includes, in declaration order,
- * each `INNER` (a required lookup) or `LEFT` and rendered under its alias.
- * A raw shape renders a plan's DECLARED joins only: an included relation no
- * join declares (a family member) throws, naming `label`.
+ * each `INNER` (a required lookup) or `LEFT` and rendered under its alias;
+ * then the family members it includes, LEFT, in alias order (a stable
+ * statement per member set, as `JoinPlan.apply`). An included relation that
+ * is neither throws, naming `label`.
  */
 export function fromSql(
   base: RoutedBase,
@@ -85,12 +86,17 @@ export function fromSql(
       sql`${sql.raw(j.inner ? "INNER JOIN" : "LEFT JOIN")} ${j.table} ${sql.identifier(j.alias)} ON ${j.on}`,
     );
   }
-  for (const alias of included) {
-    if (!plan.joins.some((j) => j.alias === alias)) {
+  const members = [...included]
+    .filter((alias) => !plan.joins.some((j) => j.alias === alias))
+    .sort();
+  for (const alias of members) {
+    const m = plan.memberJoin(alias);
+    if (m === undefined) {
       throw new Error(
-        `${label}: the tuple includes relation "${alias}", which no join declares (a raw-SQL shape renders no join families).`,
+        `${label}: the tuple includes relation "${alias}", which neither a join nor a join family of the plan declares.`,
       );
     }
+    parts.push(sql`LEFT JOIN ${m.table} ${sql.identifier(m.alias)} ON ${m.on}`);
   }
   return sql.join(parts, sql` `);
 }

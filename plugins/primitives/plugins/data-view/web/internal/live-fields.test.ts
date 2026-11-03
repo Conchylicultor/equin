@@ -384,7 +384,7 @@ describe("scoped columns (a surface's custom columns)", () => {
       sortable: ["subject"],
       default: { orderBy: [["subject", "asc"]], limit: 10 },
       maxLimit: 30,
-      columnScope: "test.surface",
+      scopedColumns: true,
     });
   const custom = (scope: string) =>
     scopedLiveColumns(scope, "custom", {
@@ -432,22 +432,38 @@ describe("scoped columns (a surface's custom columns)", () => {
     ).toBe('[["custom.cc-1","desc"]]');
   });
 
-  test("a member of another scope throws where it is declared", () => {
-    const source = liveDataSource(scopedThreads(), {
-      searchable: [],
-      surface: SCOPED,
-    });
+  test("a query names one surface: members of two scopes are refused by the codec", () => {
+    const c = scopedThreads();
     expect(() =>
-      resolveLiveFields(
-        [ccField("cc-1", "int", custom("elsewhere").column("cc-1"))],
-        source,
-        resolveOperatorSet,
-        "test",
-      ),
-    ).toThrow(/scoped column of "elsewhere".*column scope is "test.surface"/);
+      c.window.window.encode({
+        orderBy: [["custom.cc-1", "desc"]],
+        columns: [custom("test.surface"), custom("elsewhere")],
+      } as never),
+    ).toThrow(/a query is asked from one surface/);
   });
 
-  test("a collection with no column scope takes no scoped member", () => {
+  test("a query naming a member carries its surface as `scope`; one naming none carries none", () => {
+    const c = scopedThreads();
+    const columns = [custom("test.surface")];
+    const named = c.window.window.encode({
+      orderBy: [["custom.cc-1", "desc"]],
+      columns,
+    } as never);
+    expect(named.scope).toBe("test.surface");
+    expect(c.window.window.decode(named, columns).scope).toBe("test.surface");
+    const plain = c.window.window.encode({ columns } as never);
+    expect(plain.scope).toBeUndefined();
+    // Strict decode: a stray or a missing scope is a contract mismatch.
+    expect(() =>
+      c.window.window.decode({ ...plain, scope: "test.surface" }, columns),
+    ).toThrow(/names no scoped column/);
+    const { scope: _dropped, ...unscoped } = named;
+    expect(() => c.window.window.decode(unscoped, columns)).toThrow(
+      /carries no `scope`/,
+    );
+  });
+
+  test("a collection taking no scoped columns takes no scoped member", () => {
     const source = liveDataSource(threads(), {
       searchable: [],
       ...TEST_SURFACE,
@@ -459,7 +475,7 @@ describe("scoped columns (a surface's custom columns)", () => {
         resolveOperatorSet,
         "test",
       ),
-    ).toThrow(/column scope is none/);
+    ).toThrow(/takes no scoped columns/);
   });
 
   test("a scoped member's domain must be its field's operator set's", () => {
@@ -500,22 +516,25 @@ describe("scoped columns (a surface's custom columns)", () => {
     });
   });
 
-  test("a scoped collection is bound to its surface; one without a scope says why (tsc + at declaration)", () => {
+  test("a scoped collection takes the custom columns of any surface listing it; one without says why (tsc + at declaration)", () => {
+    // One collection, two surfaces: each source's scope is its own surface.
+    const c = scopedThreads();
+    for (const surface of ["a.surface", "b.surface"] as const) {
+      expect(
+        liveDataSource(c, { searchable: [], surface: surface as DataViewId })
+          .customColumns,
+      ).toEqual({ kind: "scoped", scope: surface });
+    }
     expect(() =>
-      liveDataSource(scopedThreads(), {
+      liveDataSource(c, {
         searchable: [],
-        // @ts-expect-error — the collection's column scope is "test.surface".
-        surface: "x" as DataViewId<"x">,
+        surface: "x" as DataViewId,
+        // @ts-expect-error — a collection taking scoped columns states no opt-out.
+        unscoped: { reason: "no" },
       }),
-    ).toThrow(/column scope/);
+    ).toThrow(/`unscoped` says the opposite/);
     expect(() =>
-      liveDataSource(scopedThreads(), {
-        searchable: [],
-        surface: "x" as DataViewId<"test.surface">,
-      }),
-    ).toThrow(/its column scope is "test.surface", but it is listed on "x"/);
-    expect(() =>
-      // @ts-expect-error — no column scope: the opt-out must be stated.
+      // @ts-expect-error — no scoped columns: the opt-out must be stated.
       liveDataSource(threads(), { searchable: [], surface: "x" as DataViewId }),
     ).toThrow(/say why/);
     expect(() =>

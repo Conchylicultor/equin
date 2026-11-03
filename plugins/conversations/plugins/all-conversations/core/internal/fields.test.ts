@@ -32,8 +32,8 @@ describe("conversation list fields", () => {
       expect(Object.keys(c.filterable)).toEqual(LIST_FIELD_IDS);
       expect([...c.sortable]).toEqual([...CONVERSATION_SORTABLE]);
     }
-    expect(allConversations.columnScope).toBe("all-conversations");
-    expect(conversationHistory.columnScope).toBe("conversations-sidebar");
+    expect(allConversations.scopedColumns).toBe(true);
+    expect(conversationHistory.scopedColumns).toBe(true);
   });
 
   test("labels, the title field and the enum options come from the entity", () => {

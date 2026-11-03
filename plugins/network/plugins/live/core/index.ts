@@ -133,7 +133,7 @@ export type {
   LiveCountDescriptor,
   LiveCountedCollection,
   LiveExposes,
-  LiveColumnScopeOf,
+  LiveScopedColumnsOf,
   LiveFieldsDefault,
   LiveFieldsForm,
   LiveGroupCodec,

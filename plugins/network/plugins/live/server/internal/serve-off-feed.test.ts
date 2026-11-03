@@ -13,7 +13,7 @@
  *   started by the first tuple and stopped by the last;
  * - **route coverage**: every table the SQL reads is declared unfed, and
  *   change-feed's boot check refuses it until the owner opts it out;
- * - **refusals**: an `all` set, a `columnScope`, a hook on a silent collection.
+ * - **refusals**: an `all` set, a `scopedColumns` collection, a hook on a silent collection.
  *
  * Requires a running Postgres cluster (started by ./equin build);
  * createTestDb() throws loudly when it is unreachable.
@@ -330,11 +330,11 @@ describe("serveCollection with `changes` — served off the feed", () => {
       sortable: ["rank"],
       default: { orderBy: [["rank", "asc"]], limit: 2 },
       maxLimit: 20,
-      columnScope: "test-surface",
+      scopedColumns: true,
     });
     expect(() =>
       serveCollection(scoped, { from: items, db, changes: "notified" }),
-    ).toThrow(/columnScope/);
+    ).toThrow(/scopedColumns/);
     expect(() =>
       serveCollection(itemsCollection(), {
         from: items,

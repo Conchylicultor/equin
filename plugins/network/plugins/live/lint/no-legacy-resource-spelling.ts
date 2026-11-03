@@ -55,7 +55,7 @@ const REPLACEMENT = {
   // scoped collections compile to (not a fourth way to declare, serve or read
   // one).
   defineDeferredResource:
-    "`serveCollection` (an exposing / `columnScope` collection binds deferred)",
+    "`serveCollection` (an exposing / `scopedColumns` collection binds deferred)",
   deferredWindowQueryResource: "`serveCollection`",
   useResources:
     "`useLive` (a scrolled list: a DataView `liveDataSource`, which reads `useLive(c, query, { viewport })`)",

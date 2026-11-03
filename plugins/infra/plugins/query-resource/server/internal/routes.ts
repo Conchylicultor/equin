@@ -239,6 +239,13 @@ export function compiledRoutePlan<P extends ResourceParams>(
 export interface UnionArmRoutes {
   kind: string;
   routes: readonly RawRoute[];
+  /**
+   * The ids of its `alias` routes whose carried values are already ROW KEYS
+   * of the union (`<kind>:<raw>`) — a join family's side table stores the
+   * key its host row is listed under (`JoinPlanOptions.armKind`). Their map
+   * keeps this arm's keys as they are and drops every other arm's.
+   */
+  rowKeyed?: ReadonlySet<string>;
 }
 
 /**
@@ -256,7 +263,9 @@ export function unionRouteId(kind: string, routeId: string): string {
  * - route ids are prefixed (`unionRouteId`) and must stay unique (A14);
  * - an `identity` route must read the base table's own primary key (no
  *   `column`): an arm's raw id IS its pk, which is what the key encodes;
- * - `identity` and `alias` maps gain the arm's `encode`;
+ * - `identity` and `alias` maps gain the arm's `encode` — except a row-keyed
+ *   `alias` (a join family's, `UnionArmRoutes.rowKeyed`), whose values are
+ *   row keys already: it keeps this arm's and drops the rest (`null`);
  * - a `reverse` map's `resolve` decodes `within` to THIS arm's raw ids
  *   (another arm's keys dropped; an empty set skips the probe — no host of
  *   this arm can be held; `null` passes through, an unbounded reader), probes,
@@ -288,10 +297,35 @@ export function compiledUnionRoutePlan<P extends ResourceParams>(
         );
       }
       ids.add(id);
-      routes.push({ ...route, id, map: encodedMap(arm.kind, route, codec) });
+      routes.push({
+        ...route,
+        id,
+        map:
+          arm.rowKeyed?.has(route.id) === true
+            ? rowKeyedMap(arm.kind, route, codec)
+            : encodedMap(arm.kind, route, codec),
+      });
     }
   }
   return mintRoutePlan({ routes, usesOf });
+}
+
+/** A row-keyed `alias` route's map (see `UnionArmRoutes.rowKeyed`). */
+function rowKeyedMap(
+  kind: string,
+  route: RawRoute,
+  codec: ArmKeyCodec,
+): HostMap {
+  if (route.map.kind !== "alias" || route.map.column === undefined) {
+    throw new Error(
+      `union route plan: arm "${kind}"'s route "${route.id}" is declared row-keyed, but is no \`alias\` on a carried column — only a side table storing the union's row keys is`,
+    );
+  }
+  return {
+    kind: "alias",
+    column: route.map.column,
+    encode: (value) => (codec.decode(value) === null ? null : value),
+  };
 }
 
 function encodedMap(

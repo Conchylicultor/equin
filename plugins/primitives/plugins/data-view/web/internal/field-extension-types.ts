@@ -47,8 +47,8 @@ export interface FieldExtensionProps<TRow> {
   /**
    * How this surface's custom columns reach its rows: `in-memory` (every
    * field sorts and filters over the loaded rows), `scoped` (its live
-   * collection's `columnScope` IS this surface — a contributor serving scoped
-   * columns binds its fields to them, `FieldDef.column`), or `unscoped` (its
+   * collection takes `scopedColumns` — a contributor serving scoped columns
+   * binds its fields to them in this surface's scope, `FieldDef.column`), or `unscoped` (its
    * live collection cannot take them, for the stated reason — the fields show
    * and edit, and do not sort or filter).
    */

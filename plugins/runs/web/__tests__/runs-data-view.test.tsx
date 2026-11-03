@@ -114,7 +114,6 @@ describe("the base field schema over the runs source", () => {
     const source = liveDataSource(runs, {
       searchable: ["label", "message", "namespace", "trigger"],
       surface: RUNS_VIEW,
-      unscoped: { reason: "a union collection takes no column scope yet" },
     });
     const { fields } = deriveFields(runs, true, [], [], NOW.getTime());
     // The persisted vocabulary: saved views and presets name these ids.

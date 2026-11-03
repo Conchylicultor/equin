@@ -126,7 +126,7 @@ useLive(blocks, { where: { pageId } });
 
 | Form | Declared with | Mints | Reader type |
 |---|---|---|---|
-| Window | `default` + `maxLimit` (+ `sortable`, `count?`, `columnScope?`) | `key`, `key:rows`, `key:groups` (+ `key:count`) | `LiveCollection` |
+| Window | `default` + `maxLimit` (+ `sortable`, `count?`, `scopedColumns?`) | `key`, `key:rows`, `key:groups` (+ `key:count`) | `LiveCollection` |
 | Lookup-only | neither `default` nor `all` | `key:rows` | `LiveLookupCollection` |
 | Whole set | `all: { orderBy, max \| unbounded }` | `key` (param-less), `key:rows` | `LiveAllCollection<Row>` |
 | Scoped set | `all: { by, orderBy, … }` | `key` (params = `by` fields), `key:rows` | `LiveAllCollection<Row, B>` |
@@ -279,7 +279,7 @@ with no same-named column is bound in `columns: { name: (j) => j.base.col }`
   - `whileSubscribed` starts ONE watcher for the whole collection (refcounted
     over every tuple of every minted resource). Reference: `infra/jobs`.
   - Exposed fields read their defaults (`$columns: {}`); a source row carrying
-    `$columns` throws. Refused: union, `columnScope`, a stray answer for the
+    `$columns` throws. Refused: union, `scopedColumns`, a stray answer for the
     form, an empty `changes` reason.
 - **The SQL arm off the change feed — `changes`** (`server/internal/serve-off-feed.ts`).
   A table its owner `ExcludeFromChangeFeed`s still pages through the same
@@ -297,7 +297,7 @@ with no same-named column is bound in `columns: { name: (j) => j.base.col }`
   Every table the SQL reads (base and joins) is declared unfed; change-feed's
   boot check refuses one the feed covers — so the owner must opt every read
   table out. No exposure folds (`$columns: {}`). Refused: `all`,
-  `columnScope`, union.
+  `scopedColumns`, union.
 
 ### Read — `useLive(c, query?)`
 
@@ -679,29 +679,55 @@ declared default (`COALESCE`), else NULL. User-defined custom columns are
 - **Web.** `FieldPresentation.Register({ owner: shape.exposure })`; data-view
   derives every registered exposure a list's collection reaches.
 
-## Scoped column sets — `columnScope` / `LiveColumns.Scoped` / `scopedLiveColumns`
+## Scoped column sets — `scopedColumns` / `LiveColumns.Scoped` / `scopedLiveColumns`
 
-`columnScope: "<DataView id>"` lets a collection sort/filter by columns whose
-SET is data — one DataView's custom columns.
+`scopedColumns: true` (a window, or a union) lets a collection sort/filter by
+columns whose SET is data — the custom columns of whichever DataView surface
+lists it. The scope is the QUERY's, not the collection's: one collection is
+listed on several surfaces (`runs`: the runs list and the Deploy Activity
+page; `trash-entries`: every trash surface), each with its own columns.
 
+- **`scope` rides a window tuple exactly when its `where` / `orderBy` names a
+  scoped column** (the asking list's surface, from the handles it brings —
+  `scopedLiveColumns(scope, …)`; a query naming two scopes is refused). One
+  naming none carries none, so a list that only displays custom columns
+  shares its tuple with every other surface's. Strict decode: a stray, a
+  missing or a mismatched `scope` is `contract-mismatch`. Part of `familyOf`.
+  A grouping / count naming a scoped column is refused at encode.
 - **Server** (data-view's custom-columns owns it):
   `LiveColumns.Scoped(serveScopedColumns({ name, table, scope, hostKey,
-  member, value, members, recomputeOn }))`; folded as a query-resource join
-  FAMILY per scope (`query-resource/CLAUDE.md`, *Join families*).
+  member, value, serves, members, recomputeOn: { resource, params }, watch
+  }))`. ONE query-resource join family per set, its `scope` column valued per
+  tuple (`query-resource/CLAUDE.md`, *Join families*) — so a new surface costs
+  no compile and no route. `server/internal/scoped-tuple.ts` reads everything
+  a tuple's scope means, for both `serveCollection` and
+  `serveUnionCollection`.
+- **The params gate**: a scope no set `serves` (custom columns: a declared
+  DataView id) is refused before anything is read; a served one is
+  `observe`d once — its owner `watch`es that surface's definitions from then
+  on.
 - **Wire names** `<name>.<member>` (`custom.cc-1`); a member's cast is read at
-  load time (retyping works; a lost member fails loudly).
-- **One route per set**; a write to a member a tuple doesn't read reaches no
-  tuple.
+  load time in the tuple's scope (two surfaces may define one member id with
+  two types; retyping works; a lost member fails loudly).
+- **One route per set**, matched per tuple on the scope it names and the
+  members it reads: a write to another surface's values, or to a member a
+  tuple doesn't read, reaches no tuple.
 - **A member a tuple ORDERS BY** rides the row under `$scoped`
   (`LIVE_SCOPED_KEY`), stripped by reads. Displayed values still come from
   `customColumnValues` — only sort/filter joins a member.
-- **`recomputeOn(scope)`**: adding/dropping/retyping a column FULLs every
-  subscribed tuple once.
-- **Browser**: `scopedLiveColumns(scope, name, members)`. The scope stays
-  LITERAL on the collection's type (`LiveColumnScopeOf`), so a live DataView
-  source is bound to it in tsc (`liveDataSource(c, { surface })` — data-view);
-  a collection with none must say why its surface takes no custom columns
-  (`unscoped: { reason }`).
+- **`recomputeOn` is per tuple** (resource-runtime's `paramsOf` form): a
+  surface's columns added, dropped or retyped FULL exactly the subscribed
+  tuples naming that surface, once.
+- **Unions**: every arm joins the family on its ROW KEY (`'<kind>:' ||
+  pk::text`, what the side table stores for a union row); each arm's family
+  route keeps only its own arm's keys. An ordered-by member is a per-tuple
+  transient outer column (NULL-able, NULLS LAST in both directions, cut like
+  any key). Oracle: `server/internal/serve-union-scoped-oracle.test.ts`.
+- **Browser**: `scopedLiveColumns(scope, name, members)`. The flag stays
+  LITERAL on the collection's type (`LiveScopedColumnsOf`), so a live
+  DataView source over a collection without it must say why its surface's
+  custom columns cannot sort or filter it (`unscoped: { reason }` — tsc,
+  `liveDataSource(c, { surface })` in data-view).
 
 ## Union collections — `arms` / `liveArm`
 
@@ -711,7 +737,8 @@ table, in one window (the `runs` of every run kind) — a **Meta-DataView**
 (data-view CLAUDE.md, *Meta-DataView*). Id is `kind:raw` (`armKeyCodec`).
 
 - **Declaration.** Base fields are its own (`fields` / `carry.fields`; no
-  `from` / `pick` / `related` / `exposes` / `columnScope`), presented once by
+  `from` / `pick` / `related` / `exposes`; `scopedColumns` joins every arm),
+  presented once by
   `FieldPresentation.Register({ owner: union })`. The discriminator is a
   listed, labelled field (not the id) with NO options — its options are the
   arms' `label` / `order`. `serveCollection` takes only `arms: null` (a union
@@ -1228,7 +1255,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
 
 ## Plugin reference
 
-- Description: Unified live-resource API, read half: useLive (a collection's window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, grown by its limit, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — an explicit id set, or one row by id — `{ id }`: loading, failed, found, or determinately absent — all through one collection signature, so a wrong option errors on its own property), useLiveReader (the one read function beside useLive: one answer to one tuple of a liveValue, for a question an event asks and its own await consumes — its pushed value when observed, else one deduped HTTP read never written to the cache; refused / unavailable typed by the declaration), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple); every collection's window — and a key-range-paged liveValue — is read as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small — given a measured viewport (useLive(c, q, { viewport })) with no depth limit, the pages near it live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows, and without one every page live, capped at maxLimit rows; FieldPresentation.Register presents an owner's fields — an entity's own, an extension's exposed ones, a union arm's, a collection's own — with their cells, widths and live options in every list that reaches the owner, read by useFieldPresentations. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven — or from an external source with notify(); the serve call decides only the freshness, never the shape: every list's bound is the liveValue's own (its schema's list-bound markers), so a serve call takes no `unbounded`; pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a key-range-paged one — external only — is loaded one key range at a time, each answer checked against its range and minted its `$key`, notify(q) reaching every subscribed page and the per-question meta sibling, and sliceRange answers a range for a list held in memory) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a collection reaching an entity compiles at boot, folding every LiveColumns.Expose contribution of an extension exposing fields of it — and a `columnScope` collection every LiveColumns.Scoped set — into its rows' `$columns`; routed through the change feed, or — with `changes` — the same compiled SQL served off it, for a table its owner opted out) — or, `source: "external"`, from a source outside Postgres that answers window / rows / groups / count / all by hand (core's serveCollectionOn: every answer checked against the row schema, every window row's `$key` minted, notify() re-reading the subscribed tuples); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
+- Description: Unified live-resource API, read half: useLive (a collection's window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, grown by its limit, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — an explicit id set, or one row by id — `{ id }`: loading, failed, found, or determinately absent — all through one collection signature, so a wrong option errors on its own property), useLiveReader (the one read function beside useLive: one answer to one tuple of a liveValue, for a question an event asks and its own await consumes — its pushed value when observed, else one deduped HTTP read never written to the cache; refused / unavailable typed by the declaration), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple); every collection's window — and a key-range-paged liveValue — is read as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small — given a measured viewport (useLive(c, q, { viewport })) with no depth limit, the pages near it live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows, and without one every page live, capped at maxLimit rows; FieldPresentation.Register presents an owner's fields — an entity's own, an extension's exposed ones, a union arm's, a collection's own — with their cells, widths and live options in every list that reaches the owner, read by useFieldPresentations. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven — or from an external source with notify(); the serve call decides only the freshness, never the shape: every list's bound is the liveValue's own (its schema's list-bound markers), so a serve call takes no `unbounded`; pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a key-range-paged one — external only — is loaded one key range at a time, each answer checked against its range and minted its `$key`, notify(q) reaching every subscribed page and the per-question meta sibling, and sliceRange answers a range for a list held in memory) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a collection reaching an entity compiles at boot, folding every LiveColumns.Expose contribution of an extension exposing fields of it — and a `scopedColumns` collection every LiveColumns.Scoped set, in the scope each query names — into its rows' `$columns`; routed through the change feed, or — with `changes` — the same compiled SQL served off it, for a table its owner opted out) — or, `source: "external"`, from a source outside Postgres that answers window / rows / groups / count / all by hand (core's serveCollectionOn: every answer checked against the row schema, every window row's `$key` minted, notify() re-reading the subscribed tuples); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
 - Web:
   - Slots:
     - `FieldPresentation.Register`
@@ -1305,8 +1332,8 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `useLive`
     - `useLiveReader`
 - Server:
-  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra/query-resource` ×37
+  - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/query-resource` ×38
     - `database/sql-column` ×3
     - `network/live/filter.filterSql`
   - Exports (types):
@@ -1435,7 +1462,6 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LiveColumnFilter`
     - `LiveColumnRef`
     - `LiveColumnRefOwner`
-    - `LiveColumnScopeOf`
     - `LiveColumnsDeclaration`
     - `LiveColumnsOwner`
     - `LiveCountCodec`
@@ -1508,6 +1534,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LiveRuntime`
     - `LiveScopedAllQuery`
     - `LiveScopedColumns`
+    - `LiveScopedColumnsOf`
     - `LiveSnapshotBrand`
     - `LiveSortDirection`
     - `LiveTooLarge`

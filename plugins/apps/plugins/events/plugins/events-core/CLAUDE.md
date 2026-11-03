@@ -90,8 +90,8 @@ Four `defineEntity` tables, field records in `core/internal/fields.ts`:
 - `event_source_runs` — the run ledger, including the cheap `unchanged` runs.
   This is what makes "why did nothing happen" answerable. Served as the live
   `events.source-runs` collection (`eventSourceRuns`): a scrollable window the
-  source pane scopes to one source (`.scoped({ where: { sourceId } })`), its
-  `columnScope` the runs DataView (whose custom columns sort and filter it), and
+  source pane scopes to one source (`.scoped({ where: { sourceId } })`), taking
+  `scopedColumns` (the runs DataView's custom columns sort and filter it), and
   a `:rows` point sibling. The change feed routes each run row's write to the
   tuples holding it, so the ledger and the live source status — written in one
   transaction — never disagree. One run is `useEventSourceRun(runId)` →

@@ -60,7 +60,7 @@ const STORAGE_KEY = "test-merged-sidebar" as DataViewId;
 type Conv = { id: string; title: string; status: string; createdAt: Date };
 
 let n = 0;
-const convs = (columnScope: string) =>
+const convs = () =>
   liveCollection(`test.data-view.merged-live-${n++}`, {
     fields: {
       title: textField({ label: "Title" }),
@@ -72,7 +72,7 @@ const convs = (columnScope: string) =>
     sortable: ["title", "createdAt"],
     default: { orderBy: [["createdAt", "desc"]], limit: 2 },
     maxLimit: 6,
-    columnScope,
+    scopedColumns: true,
   });
 type C = ReturnType<typeof convs>;
 
@@ -155,11 +155,16 @@ interface Host {
 // data-view's own (no data-view plugin is loaded here).
 const Sources = defineDataViewSources<Host>();
 
-function mount(c: C, state: ViewState, activeId: string | null = null) {
+function mount(
+  c: C,
+  state: ViewState,
+  activeId: string | null = null,
+  surface: DataViewId = STORAGE_KEY,
+) {
   currentModel = model(state);
   const source = liveDataSource(c, {
     searchable: ["title"],
-    surface: STORAGE_KEY,
+    surface,
   });
   function HistorySource({
     hostProps,
@@ -246,7 +251,7 @@ afterEach(() => {
 
 describe("DataViewSwitcher — a live source", () => {
   it("lowers the active instance's state onto the source's window tuple", () => {
-    const c = convs(STORAGE_KEY);
+    const c = convs();
     const { client } = mount(c, {
       ...baseState,
       sort: [{ fieldId: "title", direction: "asc" }],
@@ -257,7 +262,7 @@ describe("DataViewSwitcher — a live source", () => {
   });
 
   it("renders the rows the window holds, keyed by the collection's id, with the bundle's selection and view options", async () => {
-    const c = convs(STORAGE_KEY);
+    const c = convs();
     const { client } = mount(c, baseState, "c2");
     act(() => {
       client.setQueryData(queryKeyFor(c.key, { limit: "2" }), wire([2, 1]));
@@ -270,10 +275,12 @@ describe("DataViewSwitcher — a live source", () => {
     expect(items[1]!.getAttribute("data-selected")).toBe("false");
   });
 
-  it("a collection scoped to another surface is refused, never listed", () => {
-    const c = convs("some-other-surface");
+  it("a source declared for another surface is refused, never listed", () => {
+    const c = convs();
     const errors = vi.spyOn(console, "error").mockImplementation(() => {});
-    expect(() => mount(c, baseState)).toThrow(/column scope/);
+    expect(() =>
+      mount(c, baseState, null, "some-other-surface" as DataViewId),
+    ).toThrow(/lists a source declared for "some-other-surface"/);
     errors.mockRestore();
   });
 });

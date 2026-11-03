@@ -622,7 +622,7 @@ describe("useLive — a collection's pages, with a viewport", () => {
       sortable: ["n"],
       default: { orderBy: [["n", "asc"]], limit: 2 },
       maxLimit: 4,
-      columnScope: "test.surface",
+      scopedColumns: true,
     });
     const live = createLiveStateHarness();
     const one = scopedLiveColumns("test.surface", "custom", {
@@ -677,7 +677,7 @@ describe("useLive — a collection's pages, with a viewport", () => {
       sortable: ["n"],
       default: { orderBy: [["n", "asc"]], limit: 2 },
       maxLimit: 4,
-      columnScope: "test.surface",
+      scopedColumns: true,
     });
     const live = createLiveStateHarness();
     const custom = scopedLiveColumns("test.surface", "custom", {

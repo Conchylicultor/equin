@@ -147,11 +147,27 @@ export interface DependsOnEntry<P extends ResourceParams = ResourceParams> {
  * (a tuple that fits no upstream tuple would never match one). `createResource`
  * still refuses a non-external upstream an erased cast let through.
  */
-export interface RoutedRecomputeOn<P extends ResourceParams = ResourceParams> {
-  // biome-ignore lint/suspicious/noExplicitAny: upstream payload type is erased — only its key is read.
-  resource: ExternalResource<any, P>;
-  params: NoInfer<P>;
-}
+export type RoutedRecomputeOn<P extends ResourceParams = ResourceParams> =
+  | {
+      // biome-ignore lint/suspicious/noExplicitAny: upstream payload type is erased — only its key is read.
+      resource: ExternalResource<any, P>;
+      /** The one upstream tuple: its change recomputes EVERY subscribed tuple of the entry. */
+      params: NoInfer<P>;
+      paramsOf?: never;
+    }
+  | {
+      // biome-ignore lint/suspicious/noExplicitAny: upstream payload type is erased — only its key is read.
+      resource: ExternalResource<any, P>;
+      /**
+       * Per tuple: the upstream tuple THIS tuple compiles from (a scoped
+       * column set's members, for the scope the tuple names), or `null` for
+       * one that reads none. An upstream tuple's change recomputes exactly the
+       * tracked tuples it names — pure, synchronous, cheap (it runs per
+       * tracked tuple on each upstream change).
+       */
+      paramsOf: (params: ResourceParams) => NoInfer<P> | null;
+      params?: never;
+    };
 
 /**
  * Bounded-membership selector for a keyed own-identity resource — the
@@ -1038,7 +1054,12 @@ interface DownstreamEdge {
    * tuple (its canonical params key) changed, and drop the downstream's
    * memoized read-sets first — its compiled vocabulary moved.
    */
-  routedRecompute?: { upstreamPk: string };
+  routedRecompute?:
+    | { upstreamPk: string; paramsOf?: never }
+    | {
+        paramsOf: (params: ResourceParams) => string | null;
+        upstreamPk?: never;
+      };
 }
 
 // A coalesced pending notify for one params-tuple. `affected === null` means
@@ -4830,9 +4851,17 @@ export function createResourceRuntime(
         upstreamKey: upstream.key,
         edge: {
           downstreamKey: def.key,
-          routedRecompute: {
-            upstreamPk: paramsKey(canonicalTuple(upstream, r.params)),
-          },
+          routedRecompute:
+            r.paramsOf === undefined
+              ? { upstreamPk: paramsKey(canonicalTuple(upstream, r.params)) }
+              : {
+                  paramsOf: (params) => {
+                    const up = r.paramsOf(params);
+                    return up === null
+                      ? null
+                      : paramsKey(canonicalTuple(upstream, up));
+                  },
+                },
         },
       });
     }
@@ -6222,13 +6251,38 @@ export function createResourceRuntime(
       if (!down) continue;
       let derived: ResourceParams[];
       if (edge.routedRecompute) {
-        // Only the one upstream tuple the routed entry compiles from; its
-        // change moved the SQL, so every tuple's memoized read-set is stale.
-        if (paramsKey(params) !== edge.routedRecompute.upstreamPk) continue;
-        down.routing?.uses.clear();
-        // The tuples a table change would consider (`tracked`, never an
-        // O(sockets) scan).
-        derived = routedTargets(down).map(([, p]) => p);
+        const recompute = edge.routedRecompute;
+        if (recompute.paramsOf === undefined) {
+          // Only the one upstream tuple the routed entry compiles from; its
+          // change moved the SQL, so every tuple's memoized read-set is stale.
+          if (paramsKey(params) !== recompute.upstreamPk) continue;
+          down.routing?.uses.clear();
+          // The tuples a table change would consider (`tracked`, never an
+          // O(sockets) scan).
+          derived = routedTargets(down).map(([, p]) => p);
+        } else {
+          // Per tuple: only the tracked tuples compiling from THIS upstream
+          // tuple — their SQL moved; every other tuple's read-set holds.
+          const changed = paramsKey(params);
+          derived = [];
+          for (const [pk, p] of routedTargets(down)) {
+            let of: string | null;
+            try {
+              of = recompute.paramsOf(p);
+            } catch (err) {
+              // A throwing mapping cannot say which tuples it names: this
+              // tuple recomputes (never a skip a broken mapping hides).
+              reportLoaderError(
+                `recomputeOn paramsOf failed (${entry.key} → ${edge.downstreamKey})`,
+                err,
+              );
+              of = changed;
+            }
+            if (of !== changed) continue;
+            down.routing?.uses.delete(pk);
+            derived.push(p);
+          }
+        }
       } else if (edge.toSubscribed) {
         derived = subscribedParamsFor(edge.downstreamKey);
       } else if (edge.map) {

@@ -13,7 +13,7 @@ import { bootTracesEntityRef } from "./fields";
  */
 export const bootTraces = liveCollection("debug.boot-traces", {
   // Its list's DataView surface: custom columns sort and filter in SQL.
-  columnScope: "debug.boot-profiles",
+  scopedColumns: true,
   from: bootTracesEntityRef,
   pick: ["worktree", "id", "createdAt"],
   id: "id",

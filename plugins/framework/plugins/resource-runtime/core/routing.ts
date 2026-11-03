@@ -112,7 +112,12 @@ export type HostMap =
   | {
       kind: "alias";
       column?: string;
-      encode?: (value: string) => string;
+      /**
+       * The carried value → its host id; `null` = a value naming no host of
+       * this route (a union arm's family route reads every arm's row keys
+       * out of one side table, and keeps only its own arm's), dropped.
+       */
+      encode?: (value: string) => string | null;
     }
   /**
    * The HOST side references the changed row (an N:1 lookup). The changed
@@ -948,7 +953,10 @@ export function routeTuple(
         // Whatever the op, a host U: the host row still exists and may have changed.
         const encode = route.map.encode;
         const target = role === "value" ? valueCandidates : affected;
-        for (const v of values) target.add(encode ? encode(v) : v);
+        for (const v of values) {
+          const host = encode ? encode(v) : v;
+          if (host !== null) target.add(host);
+        }
         break;
       }
       case "reverse":

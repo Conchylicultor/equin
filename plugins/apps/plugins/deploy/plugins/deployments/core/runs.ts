@@ -323,21 +323,13 @@ export const deployRunFields = {
 export const deployRunsEntityRef = entityRef("deploy_runs", deployRunFields);
 
 /**
- * The deploy history DataView's id (its `storageKey`): the surface
- * `deployRunHistory` is listed on, whose custom columns sort and filter it.
- * The DataView declares the same literal with `defineDataView` (a web-only
- * marker the codegen scrapes) and asserts at mount that the two agree.
- */
-const DEPLOY_HISTORY_VIEW_ID = "deploy.deployment.history";
-
-/**
  * The `deploy_runs` ledger as a live window — the site page's Deployments tab
  * DataView source (research/2026-09-29-global-scoped-change-routing.md P3), the
  * pane scoping it to one deployment (`scoped({ where: { deploymentId } })`).
  * A run opening, finishing or failing reaches the tuples holding it through
  * the routed runtime: no revision tick, no refetch. Read as key-range pages
- * (no depth limit — a ledger only grows), and its `columnScope` is the
- * history surface, so that surface's custom columns sort and filter it.
+ * (no depth limit — a ledger only grows), and it takes `scopedColumns`, so
+ * the custom columns of the surface listing it sort and filter it.
  */
 export const deployRunHistory = liveCollection("deploy.run-history", {
   // Declared FROM the `deploy_runs` entity (`deployRunsEntityRef`): the run
@@ -382,7 +374,7 @@ export const deployRunHistory = liveCollection("deploy.run-history", {
   ],
   default: { orderBy: [["startedAt", "desc"]], limit: 100 },
   maxLimit: 500,
-  columnScope: DEPLOY_HISTORY_VIEW_ID,
+  scopedColumns: true,
 });
 
 /** A run record as `deployRunHistory` delivers it: the ledger's columns and the exposed `$columns`. */

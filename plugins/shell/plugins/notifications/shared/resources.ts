@@ -31,7 +31,7 @@ import { NotificationsUnreadSchema } from "./schema";
 // read only what reaches the user (`audience-scope.ts`).
 export const notifications = liveCollection("notifications", {
   // Its list's DataView surface: custom columns sort and filter in SQL.
-  columnScope: "shell.notifications",
+  scopedColumns: true,
   from: notificationsEntityRef,
   pick: [
     "type",

@@ -249,13 +249,13 @@ describe("serveCollection — the `all` arm (C4)", () => {
     const c = allCollection();
     // A cast past `all?: never`'s twin: an `all` collection never scoped.
     expect(() =>
-      serveCollection({ ...c, columnScope: "s" } as typeof c, {
+      serveCollection({ ...c, scopedColumns: true } as typeof c, {
         from: items,
         joins: [notesJoin],
         columns: { notes: (j) => j.kids.count },
         db,
       }),
-    ).toThrow(/cannot be `columnScope`d/);
+    ).toThrow(/cannot take `scopedColumns`/);
     // compileCollection's boot-time scoped sets never reach an `all` compile.
     const extra = {} as ServedScopedColumns;
     expect(() =>

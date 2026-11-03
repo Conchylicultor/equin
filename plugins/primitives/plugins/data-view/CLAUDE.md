@@ -1827,21 +1827,23 @@ const fields = [
   - Field ids stay the persisted vocabulary; no column ⇒ lowers under its id;
     derived ⇒ display-only.
   - Scoped refs (`scopedLiveColumns(...).column(member)`) resolve only on a
-    collection whose `columnScope` matches.
+    collection declared `scopedColumns`.
 - **A live source names its surface and how custom columns reach it**
   (`liveDataSource(c, { surface, … })`, `LiveSurfaceBinding`): a collection
-  whose `columnScope` IS the surface takes them as scoped columns (sort and
-  filter in SQL; another surface is a tsc error — the scope is kept literal);
-  one without a scope must say why, `unscoped: { reason }` (custom columns then
+  declared `scopedColumns` takes the custom columns of whichever surface
+  lists it, as scoped columns (sort and filter in SQL — its queries name the
+  surface as their `scope`); one without must say why, `unscoped: { reason }`
+  (tsc — the flag is kept literal; custom columns then
   show and edit, explicitly neither sorting nor filtering — the Fields
   setting says so, with the reason: `DataViewControlsContextValue.customColumns`).
   Never a silent display-only fallback. **A live DataView takes no
   `storageKey`** (tsc): its surface is `source.surface`, stated once. (A
   `DataViewSwitcher` keeps its own `storageKey`; a live source bundle under it
   is asserted to name it at mount.) Passed to extensions as
-  `FieldExtensionProps.liveColumns`. Opt-outs today: `jobs` (external),
-  `trash-entries` (one collection for every trash surface), `runs` (union —
-  a scope per query is the next step).
+  `FieldExtensionProps.liveColumns`. Opt-out today: `jobs` (served outside
+  Postgres). `runs` (a union, listed on the runs list and the Deploy
+  Activity page) and `trash-entries` (every trash surface) take each
+  surface's own columns.
 - **Clock fields** (`network/live`, *Clock reads*): a field declared
   `clockField.*` is derived like any own field, its `value(row)` computed from
   the row's inputs against the collection's pinned `now` (`useClockPin`, one
@@ -2334,6 +2336,7 @@ list, table and `primitives/tree` share it.
     - `primitives/data-view/view-core.viewsDescriptor`
     - `ui/icons/saved-sources.defineSavedIconSource`
   - Exports (values):
+    - `isDataViewId`
     - `readDataViewConfigDoc`
     - `watchDataViewConfigDoc`
 - Core:

@@ -20,6 +20,8 @@ export const trashEntries = liveCollection("trash-entries", {
   sortable: ["deletedAt"],
   default: { orderBy: [["deletedAt", "desc"]], limit: 100 },
   maxLimit: 500,
+  // Every trash surface sorts and filters it by its own custom columns.
+  scopedColumns: true,
 });
 
 /** One trash entry, as the `trash-entries` collection delivers it. */

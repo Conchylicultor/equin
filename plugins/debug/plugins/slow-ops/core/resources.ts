@@ -18,7 +18,7 @@ import {
  */
 export const slowOpsList = liveCollection("slow-ops.ops", {
   // Its list's DataView surface: custom columns sort and filter in SQL.
-  columnScope: "debug.slow-ops.local",
+  scopedColumns: true,
   from: slowOpsEntityRef,
   pick: [
     "operationKind",
@@ -81,7 +81,7 @@ export const slowOpById = liveCollection("slow-ops.op", {
  */
 export const slowOpCallers = liveCollection("slow-ops.callers", {
   // Its list's DataView surface: custom columns sort and filter in SQL.
-  columnScope: "debug.slow-op.callers",
+  scopedColumns: true,
   from: slowOpCallersEntityRef,
   pick: [
     "operationKind",

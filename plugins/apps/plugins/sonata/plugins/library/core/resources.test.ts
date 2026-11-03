@@ -19,7 +19,7 @@ describe("song library fields", () => {
     expect(Object.keys(songLibrary.fields)).toEqual(LIST_FIELD_IDS);
     expect([...songLibrary.sortable] as string[]).toEqual(LIST_FIELD_IDS);
     expect(Object.keys(songLibrary.filterable)).toEqual(LIST_FIELD_IDS);
-    expect(songLibrary.columnScope).toBe("sonata.library");
+    expect(songLibrary.scopedColumns).toBe(true);
   });
 
   test("labels and the title field come from the entity; the own fields carry theirs", () => {

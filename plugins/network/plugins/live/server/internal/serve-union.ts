@@ -2,6 +2,7 @@ import type { z } from "zod";
 import { getTableColumns, getTableName, sql, type SQL } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import {
+  filterColumns,
   testClause,
   type Filter,
   type FilterClause,
@@ -37,6 +38,7 @@ import {
   type RoutedSource,
   type UnionArmSpec,
   type UnionColumn,
+  type UnionOrderKey,
 } from "@plugins/infra/plugins/query-resource/server";
 import type { PointParams } from "@plugins/primitives/plugins/live-state/core";
 import type { EntityTable } from "@plugins/infra/plugins/entities/server";
@@ -45,6 +47,7 @@ import {
   LIVE_COLUMNS_KEY,
   LIVE_ROW_KEY,
   LIVE_ROW_KEY_MAX_BYTES,
+  LIVE_SCOPED_KEY,
   type LiveArmColumnsHandle,
   type ClockForm,
   type LiveArmsCollection,
@@ -58,7 +61,12 @@ import {
 import type { EntityRef } from "@plugins/infra/plugins/entities/core";
 import { clockFieldSql } from "./clock-sql";
 import type { ServedCollection } from "./serve-collection";
-import { LiveColumns, type ExposingExtension } from "./serve-columns";
+import {
+  LiveColumns,
+  type ExposingExtension,
+  type ServedScopedColumns,
+} from "./serve-columns";
+import { scopedTuples } from "./scoped-tuple";
 import {
   exposedBinding,
   exposureFolds,
@@ -150,6 +158,12 @@ export interface CompileUnionOptions {
    * the deferred bind by `serveUnionCollection`; a test hands its own.
    */
   exposed?: readonly ExposingExtension[];
+  /**
+   * The served scoped column sets (`LiveColumns.Scoped`) a `scopedColumns`
+   * union joins in every arm, in the scope each query names — read at the
+   * deferred bind by `serveUnionCollection`; a test hands its own.
+   */
+  scoped?: readonly ServedScopedColumns[];
   /** Test seam. Defaults to the real per-worktree drizzle `db`. */
   db?: QueryDb;
 }
@@ -296,6 +310,19 @@ export function compileUnion<
     }
   }
 
+  // Scoped column sets (a surface's custom columns): one join family per set,
+  // joined in every arm on its row key, in the scope each query names.
+  const scoped = opts.scoped ?? [];
+  if (
+    scoped.length > 0 &&
+    (collection as { scopedColumns?: boolean }).scopedColumns !== true
+  ) {
+    fail(
+      "scoped column sets were served for a union that is not declared `scopedColumns`",
+    );
+  }
+  const scopedSets = scopedTuples(key, scoped, fail);
+
   const bindings = opts.arms();
   const handles: LiveColumnsDeclaration[] = [];
   /** Wire name → the column set (an arm, or an exposure's slice) and its field. */
@@ -321,6 +348,11 @@ export function compileUnion<
     }
     if (handles.some((h) => h.name === b.columns.name)) {
       fail(`two arms are of kind "${b.columns.name}" — a kind names one arm.`);
+    }
+    if (scopedSets.sets.has(b.columns.name)) {
+      fail(
+        `arm "${b.columns.name}" is named like scoped column set "${b.columns.name}" — a set's name prefixes its wire names.`,
+      );
     }
     handles.push(b.columns);
     for (const field of b.columns.fields) {
@@ -413,6 +445,8 @@ export function compileUnion<
       joins,
       b.id,
       label,
+      scopedSets.families,
+      { armKind: kind },
     );
     renderRef = plan.render;
     const read = new Map<string, ReadColumn>();
@@ -577,9 +611,13 @@ export function compileUnion<
         whereReads: Object.keys(filterDecl)
           .map((name) => reads[i]!.get(name))
           .filter((c): c is ReadColumn => c !== undefined),
+        ...(scopedSets.families.length > 0
+          ? { families: scopedSets.families }
+          : {}),
       },
     };
   });
+  const planByKind = new Map(arms.map((a, i) => [a.kind, plans[i]!] as const));
   const armByKind = new Map(arms.map((a) => [a.kind, a] as const));
   const prune = (filter: Filter | undefined): ReadonlySet<string> => {
     const clauses = conjunctiveClauses(filter);
@@ -596,21 +634,70 @@ export function compileUnion<
         .map((arm) => arm.kind),
     );
   };
-  const whereIn = (filter: Filter | undefined, kind: string): SQL | undefined =>
-    filterSql(filter, armByKind.get(kind)!.targets, filterDecl);
+  /**
+   * A filter in one arm: its targets, extended — for a tuple naming a scope —
+   * by each scoped column it names, read through that arm's family member.
+   */
+  const whereIn = (
+    filter: Filter | undefined,
+    kind: string,
+    scope: string | null = null,
+  ): SQL | undefined => {
+    const targets = armByKind.get(kind)!.targets;
+    if (filter === undefined || scope === null) {
+      return filterSql(filter, targets, filterDecl);
+    }
+    const extra = [...filterColumns(filter)].filter((c) => !(c in targets));
+    if (extra.length === 0) return filterSql(filter, targets, filterDecl);
+    const t: Record<string, SQL> = { ...targets };
+    const decl: Record<string, Filterable[string]> = { ...filterDecl };
+    for (const name of extra) {
+      const read =
+        scopedSets.read(planByKind.get(kind)!, name, scope) ??
+        fail(`"${name}" is not a filterable column`);
+      t[name] = sql`${read.read}`;
+      decl[name] =
+        scopedSets.filterColumn(name, scope) ??
+        fail(`"${name}" is not a filterable scoped column`);
+    }
+    return filterSql(filter, t, decl);
+  };
 
   const codec = collection.window.window;
   const decoded = new WeakMap<
     LiveWindowParams,
     ReturnType<typeof codec.decode>
   >();
+  /** The column sets a tuple decodes against: the arms' and, in its scope, the scoped sets'. */
+  const columnSets = (params: LiveWindowParams) =>
+    scopedSets.columnSets(handles, scopedSets.scopeOf(params));
   const decode = (params: LiveWindowParams) => {
     let d = decoded.get(params);
     if (d === undefined) {
-      d = codec.decode(params, handles);
+      d = codec.decode(params, columnSets(params));
       decoded.set(params, d);
     }
     return d;
+  };
+  /**
+   * A tuple's order: by outer column, or — a scoped column — by its family
+   * member, read the same in every arm (one alias per member: any arm's plan
+   * renders it).
+   */
+  const orderOf = (params: LiveWindowParams): UnionOrderKey[] => {
+    const q = decode(params);
+    return q.orderBy.map(([name, dir]): UnionOrderKey => {
+      if (typeOf.has(name) || name === discriminator || name === idField) {
+        return { name, dir };
+      }
+      const member =
+        plans.length === 0
+          ? undefined
+          : scopedSets.read(plans[0]!, name, q.scope ?? null);
+      return member === undefined
+        ? fail(`"${name}" is not a sortable column`)
+        : { name, dir, member };
+    });
   };
   const groupCodec = collection.groups.groups;
   /** A grouped column's field schema: a base field's, or its column set's. */
@@ -668,9 +755,11 @@ export function compileUnion<
     sortable,
     window: {
       armsOf: (params) => prune(decode(params).where),
-      whereOf: (params, kind) => whereIn(decode(params).where, kind),
-      orderOf: (params) =>
-        decode(params).orderBy.map(([name, dir]) => ({ name, dir })),
+      whereOf: (params, kind) => {
+        const q = decode(params);
+        return whereIn(q.where, kind, q.scope ?? null);
+      },
+      orderOf,
       limitOf: (params) => decode(params).limit,
       cutsOf: (params) => {
         const { after, until } = decode(params);
@@ -682,7 +771,10 @@ export function compileUnion<
       familyOf: codec.familyOf,
       nowOf: (params) => decode(params).now ?? null,
       validateParams: (params) => {
-        codec.decode(params as LiveWindowParams, handles);
+        codec.decode(
+          params as LiveWindowParams,
+          columnSets(params as LiveWindowParams),
+        );
       },
     },
     rowKey: { keyField: LIVE_ROW_KEY, maxKeyBytes: LIVE_ROW_KEY_MAX_BYTES },
@@ -709,6 +801,12 @@ export function compileUnion<
     },
     readField,
     encodeRow,
+    ...(scopedSets.families.length > 0
+      ? {
+          familyValuesKey: LIVE_SCOPED_KEY,
+          recomputeOn: scopedSets.recomputeOn,
+        }
+      : {}),
     ...(opts.db ? { db: opts.db } : {}),
   });
   // The params gate: the descriptor's own decode knows no column set, and
@@ -798,6 +896,9 @@ export function serveUnionCollection<
     (compiled ??= compileUnion(collection, {
       arms: () => [...arms.values()].map((a) => a.binding),
       exposed: LiveColumns.Expose.getContributions(),
+      scoped: (collection as { scopedColumns?: boolean }).scopedColumns
+        ? LiveColumns.Scoped.getContributions()
+        : [],
     }));
   const window = defineDeferredResource(collection.window, () => once().window);
   const rows = defineDeferredResource(collection.rows, () => once().rows);
