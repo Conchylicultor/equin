@@ -22,11 +22,13 @@ import {
   fakeFetchEndpoint,
   withTransport,
 } from "@plugins/infra/plugins/endpoints/web/testing";
-import type {
-  LedgerTurn,
-  TurnId,
-  TurnKind,
-  TurnState,
+import {
+  transcriptUuidOfTurn,
+  turnIdKind,
+  type LedgerTurn,
+  type TurnId,
+  type TurnKind,
+  type TurnState,
 } from "@plugins/conversations/plugins/turn-ledger/core";
 import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
@@ -36,6 +38,7 @@ import {
   useOptimisticConversationStatus,
   usePendingTurns,
 } from "../internal/pending";
+import { postTurnDelivery } from "../internal/delivery";
 import {
   useResendTurn,
   useSendConversationTurn,
@@ -85,15 +88,30 @@ function freshConversation(): string {
   return `conv-pending-${seq}`;
 }
 
+/**
+ * A well-formed turn id named `name` (`turn-<uuid>`, the uuid spelling the
+ * name), so a fixture reads as "t1" while its id carries the uuid its
+ * transcript line is derived from. An id that already is one is kept.
+ */
+function tid(name: string): TurnId {
+  if (turnIdKind.is(name)) return name;
+  const hex = [...name]
+    .map((c) => c.charCodeAt(0).toString(16).padStart(2, "0"))
+    .join("");
+  return turnIdKind.parse(
+    `turn-00000000-0000-4000-8000-${hex.padStart(12, "0").slice(-12)}`,
+  );
+}
+
 function row(
   conversationId: string,
-  id: string,
+  name: string,
   state: TurnState,
   over: Partial<LedgerTurn> = {},
 ): LedgerTurn {
-  const text = over.text ?? `text of ${id}`;
+  const text = over.text ?? `text of ${name}`;
   return {
-    id: id as TurnId,
+    id: tid(name),
     conversationId,
     kind: "turn" as TurnKind,
     text,
@@ -203,7 +221,7 @@ describe("pendingTurnsOf — which ledger states draw a card", () => {
         [],
         "answer",
       ).map((t) => t.id),
-    ).toEqual(["a", "b"]);
+    ).toEqual([tid("a"), tid("b")]);
     expect(inFlightTurnsOf([answer("a", "failed")], [], "answer")).toEqual([]);
     expect(inFlightTurnsOf([answer("a", "returned")], [], "answer")).toEqual(
       [],
@@ -216,7 +234,7 @@ describe("pendingTurnsOf — which ledger states draw a card", () => {
       [],
       NO_EVENTS,
     );
-    expect(cards.map((c) => c.id)).toEqual(["first", "second"]);
+    expect(cards.map((c) => c.id)).toEqual([tid("first"), tid("second")]);
   });
 
   it("an echo stands until the transcript holds its own line — whatever else lands after", () => {
@@ -226,7 +244,7 @@ describe("pendingTurnsOf — which ledger states draw a card", () => {
       submittedAt: sentAt,
     });
     expect(pendingTurnsOf([accepted], [], NO_EVENTS)).toEqual([
-      expect.objectContaining({ id: "t1", state: "accepted" }),
+      expect.objectContaining({ id: tid("t1"), state: "accepted" }),
     ]);
     // The window starts before the confirmation, and newer events (another
     // turn's line) are no sign of this one: still the echo.
@@ -236,10 +254,39 @@ describe("pendingTurnsOf — which ledger states draw a card", () => {
       prompt("another turn", new Date()),
     ];
     expect(pendingTurnsOf([accepted], [], others)).toEqual([
-      expect.objectContaining({ id: "t1", state: "accepted" }),
+      expect.objectContaining({ id: tid("t1"), state: "accepted" }),
     ]);
     const landed = [...others, prompt("text of t1", new Date())];
     expect(pendingTurnsOf([accepted], [], landed)).toEqual([]);
+  });
+
+  it("an echo retires on the line its id names, before the ledger's confirmation lands", () => {
+    // The transcript can reach the tab before the ledger's update does (a
+    // loaded server): the turn's own line — queued under its id's uuid — is
+    // on screen, so the echo goes whatever the ledger still says.
+    const id = turnIdKind.mint();
+    const own: JsonlEvent = {
+      kind: "user-text",
+      at: new Date().toISOString(),
+      text: "budget 50 euro max",
+      uuid: transcriptUuidOfTurn(id),
+    };
+    const typed = row("c", id, "typed");
+    expect(pendingTurnsOf([typed], [], NO_EVENTS)).toHaveLength(1);
+    expect(pendingTurnsOf([typed], [], [own])).toEqual([]);
+    // A send whose row has not reached the tab at all retires the same way.
+    const sent = {
+      id,
+      conversationId: "c",
+      kind: "turn" as TurnKind,
+      text: "budget 50 euro max",
+      createdAt: new Date(),
+      status: { kind: "posted" as const },
+      delivery: postTurnDelivery,
+      fetchEndpoint: fake.fetchEndpoint,
+    };
+    expect(pendingTurnsOf([], [sent], NO_EVENTS)).toHaveLength(1);
+    expect(pendingTurnsOf([], [sent], [own])).toEqual([]);
   });
 
   it("a turn folded into a running turn retires on its message, written before the confirmation", () => {
@@ -272,7 +319,7 @@ describe("pendingTurnsOf — which ledger states draw a card", () => {
       const stuck = row("c", "t1", state);
       const later = [prompt("typed in the terminal", new Date())];
       expect(pendingTurnsOf([stuck], [], later)).toEqual([
-        expect.objectContaining({ id: "t1", state }),
+        expect.objectContaining({ id: tid("t1"), state }),
       ]);
     }
   });
@@ -299,7 +346,7 @@ describe("pendingTurnsOf — which ledger states draw a card", () => {
   it("a slash command retires on its own line, like any turn", () => {
     const sent = row("c", "t1", "typed", { text: "/compact" });
     expect(pendingTurnsOf([sent], [], NO_EVENTS)).toEqual([
-      expect.objectContaining({ id: "t1", state: "typed" }),
+      expect.objectContaining({ id: tid("t1"), state: "typed" }),
     ]);
     const sentAt = new Date(Date.now() - 1_000);
     const taken = row("c", "t1", "accepted", {

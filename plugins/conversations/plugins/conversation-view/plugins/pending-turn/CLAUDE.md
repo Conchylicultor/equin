@@ -75,8 +75,12 @@ status line goes. Never dim or restyle the echo itself.
 
 **An echo retires on its own transcript line, never on a guess.** The echo
 stands in for the message, and the two reach the tab on different channels
-(the ledger's change feed, the transcript watcher). `transcriptShows`
-(`internal/landed.ts`): the row is `accepted` — the agent confirmed taking this
+(the ledger's change feed, the transcript watcher), and either may land
+first. `transcriptShows` (`internal/landed.ts`): the loaded transcript holds
+the line the turn's own id names (`transcriptHoldsTurn` — the sdk agent queues
+a turn under its id's uuid, `transcriptUuidOfTurn`, so a ledger update lagging
+the transcript on a loaded server never shows the message twice; a tab's send
+whose row has not arrived retires the same way) — or the row is `accepted` — the agent confirmed taking this
 turn, as transcript line `promptUuid` — **and** either the loaded transcript
 holds that line, or the window begins after the row's `submittedAt` (the line
 is above what is loaded, so the echo is not on screen in its place either).

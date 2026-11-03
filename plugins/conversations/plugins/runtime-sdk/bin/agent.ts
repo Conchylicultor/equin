@@ -38,6 +38,10 @@ import {
 import { createServer, type Socket } from "node:net";
 import type { Readable, Writable } from "node:stream";
 import { defineFileSink } from "@plugins/infra/plugins/file-sink/core";
+import {
+  transcriptUuidOfTurn,
+  turnIdKind,
+} from "@plugins/conversations/plugins/turn-ledger/core";
 import { SAMPLE } from "@plugins/infra/plugins/paths/server";
 import { provideHostServicesUnbooted } from "@plugins/framework/plugins/server-core/core";
 import { SecretStore } from "@plugins/infra/plugins/secrets/server";
@@ -316,9 +320,16 @@ async function* inputStream(): AsyncGenerator<SDKUserMessage> {
     await new Promise<void>((resolve) => (wakeInput = resolve));
   }
 }
-/** Queues a user turn; its uuid is the transcript entry's (rewind targets it). */
+/**
+ * Queues a user turn; its uuid is the transcript entry's (rewind targets it).
+ * A turn with a ledger id is queued under the id's own uuid
+ * (`transcriptUuidOfTurn`), so its line is findable from the id alone.
+ */
 function pushInput(text: string, turnId: string | null): string {
-  const uuid = crypto.randomUUID();
+  const uuid =
+    turnId === null
+      ? crypto.randomUUID()
+      : transcriptUuidOfTurn(turnIdKind.parse(turnId));
   pendingInput.push({
     message: {
       type: "user",

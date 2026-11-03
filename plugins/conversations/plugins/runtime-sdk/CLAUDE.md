@@ -109,7 +109,9 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   sends `{ type: "turn", turnId, text }` and a launch writes `prompt:
   { turnId, text }` into launch.json; the agent echoes the id in the
   `turn_started` it writes when the SDK dequeues the turn, beside the user
-  message's uuid (`promptUuid`, the transcript line's uuid). The reducer turns
+  message's uuid (`promptUuid`, the transcript line's uuid) — the turn id's own
+  uuid (`transcriptUuidOfTurn`), so a reader holding the id finds the line
+  without waiting for the confirmation; a turn without an id gets a fresh one. The reducer turns
   it into a `prompt-submitted { turnId, promptUuid, at }` effect and the
   consumer calls turn-ledger's `confirmTurn` — no text matching; an id the
   ledger does not hold for this conversation is a `turn-unknown-id` report.

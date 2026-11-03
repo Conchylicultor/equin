@@ -1,5 +1,5 @@
-export { turnIdKind } from "./id-kind";
-export type { TurnId } from "./id-kind";
+export { transcriptUuidOfTurn, turnIdKind } from "./id-kind";
+export type { TranscriptUuid, TurnId } from "./id-kind";
 export { conversationTurns } from "./resources";
 export { LedgerTurnSchema } from "./entity";
 export {

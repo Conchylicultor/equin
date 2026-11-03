@@ -22,7 +22,7 @@ event is its successor.
 | `typed_text` | exactly what reached the agent: attachment refs resolved, or the whole launch prompt for a held turn that rode the launch |
 | `state` | below |
 | `submitted_at` | `accepted`: when the agent took it — the event's own time, so a late replay still records the agent's moment |
-| `prompt_uuid` | set with `submitted_at`: the uuid of the transcript line the turn became (the SDK user message the agent queued it as) — the turn's identity in the transcript: Stop and rewind return the row by it, and the web's echo retires on it |
+| `prompt_uuid` | set with `submitted_at`: the uuid of the transcript line the turn became (the SDK user message the agent queued it as) — the turn's identity in the transcript: Stop and rewind return the row by it, and the web's echo retires on it. An agent queues a turn under its id's own uuid (`transcriptUuidOfTurn`), so the line is also known from the id before the confirmation lands |
 | `error` | `failed` (kept by `withdrawn`): why |
 
 ## States — one pure function
@@ -316,6 +316,7 @@ withdrawn).
     - `network/live.liveCollection`
   - Exports (types):
     - `LedgerTurn`
+    - `TranscriptUuid`
     - `TurnId`
     - `TurnKind`
     - `TurnState`
@@ -325,6 +326,7 @@ withdrawn).
     - `ledgerTurnsEntityRef`
     - `RETRYABLE_TURN_STATES`
     - `SETTLED_TURN_STATES`
+    - `transcriptUuidOfTurn`
     - `turnIdKind`
     - `TurnKindSchema`
     - `TurnStateSchema`

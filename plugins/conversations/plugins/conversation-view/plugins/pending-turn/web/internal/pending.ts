@@ -18,7 +18,7 @@ import type {
   ConversationWorkingOn,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { isTurnRunning } from "@plugins/conversations/core";
-import { transcriptShows } from "./landed";
+import { transcriptHoldsTurn, transcriptShows } from "./landed";
 import { useSentTurns, useSettleSentTurns, type SentTurn } from "./send";
 
 /**
@@ -88,7 +88,9 @@ export function pendingTurnsOf(
   events: readonly JsonlEvent[],
 ): PendingTurn[] {
   const ledgerIds = new Set(newestFirst.map((row) => row.id));
-  const unseen = sent.filter((turn) => !ledgerIds.has(turn.id));
+  const unseen = sent.filter(
+    (turn) => !ledgerIds.has(turn.id) && !transcriptHoldsTurn(turn.id, events),
+  );
   const fromLedger: PendingTurn[] = newestFirst
     .flatMap((row) => {
       const card = CARD_OF[row.state];

@@ -20284,6 +20284,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.liveCollection`
         - Exports (types):
           - `LedgerTurn`
+          - `TranscriptUuid`
           - `TurnId`
           - `TurnKind`
           - `TurnState`
@@ -20293,6 +20294,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ledgerTurnsEntityRef`
           - `RETRYABLE_TURN_STATES`
           - `SETTLED_TURN_STATES`
+          - `transcriptUuidOfTurn`
           - `turnIdKind`
           - `TurnKindSchema`
           - `TurnStateSchema`

@@ -1,10 +1,14 @@
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
-import type { LedgerTurn } from "@plugins/conversations/plugins/turn-ledger/core";
+import {
+  transcriptUuidOfTurn,
+  type LedgerTurn,
+  type TurnId,
+} from "@plugins/conversations/plugins/turn-ledger/core";
 
 // Whether the transcript a tab renders already shows a ledger turn — the
 // moment its echo has nothing left to stand in for. The echo and the message
 // reach the tab on two channels (the ledger's change feed, the transcript
-// watcher), so neither alone retires it:
+// watcher):
 //
 //   - the LEDGER says which line: the agent's confirmation (`accepted`)
 //     records the uuid of the transcript line the turn became
@@ -13,6 +17,11 @@ import type { LedgerTurn } from "@plugins/conversations/plugins/turn-ledger/core
 //   - the TRANSCRIPT says when that line is on screen: the tab's window holds
 //     an event carrying the uuid, or the window begins after the agent took
 //     the turn, so its line is above what is loaded.
+//
+// Since the agent queues a turn under its id's own uuid
+// (`transcriptUuidOfTurn`), the line is also findable from the id alone —
+// whichever channel lands first retires the echo, so a ledger update lagging
+// the transcript (a loaded server) no longer shows the message twice.
 //
 // The line an agent writes for a turn (measured over 1,141 sdk turns,
 // 2026-10-25): a user line with the turn's uuid — a slash command too; or, for
@@ -33,14 +42,30 @@ import type { LedgerTurn } from "@plugins/conversations/plugins/turn-ledger/core
 // a window beginning after it has the line above it.
 
 /**
- * Whether `events` (the loaded transcript window, oldest first) shows `row`:
- * the agent confirmed it, and its line is in the window — or above it, the
- * window beginning after the agent took it.
+ * Whether `events` (the loaded transcript window, oldest first) shows turn
+ * `id`'s own line — the one its id names (`transcriptUuidOfTurn`), before any
+ * confirmation reached the tab. True only from the agents that queue a turn
+ * under that uuid; for an older one, {@link transcriptShows} waits for the
+ * ledger to say which line.
  */
-export function transcriptShows(
-  row: Pick<LedgerTurn, "state" | "submittedAt" | "promptUuid">,
+export function transcriptHoldsTurn(
+  id: TurnId,
   events: readonly JsonlEvent[],
 ): boolean {
+  return holdsLine(events, transcriptUuidOfTurn(id));
+}
+
+/**
+ * Whether `events` (the loaded transcript window, oldest first) shows `row`:
+ * its own line is in the window ({@link transcriptHoldsTurn}) — or the agent
+ * confirmed it, and the line it was confirmed as is in the window, or above
+ * it, the window beginning after the agent took it.
+ */
+export function transcriptShows(
+  row: Pick<LedgerTurn, "id" | "state" | "submittedAt" | "promptUuid">,
+  events: readonly JsonlEvent[],
+): boolean {
+  if (transcriptHoldsTurn(row.id, events)) return true;
   if (row.state !== "accepted" || row.submittedAt === null) return false;
   const oldest = events[0];
   if (oldest === undefined) return false;
@@ -48,12 +73,16 @@ export function transcriptShows(
   if (promptUuid === null)
     return legacyTranscriptShows(row.submittedAt, events);
   if (Date.parse(oldest.at) > row.submittedAt.getTime()) return true;
+  return holdsLine(events, promptUuid);
+}
+
+/** Whether a turn's transcript line — under `uuid`, or merged into another's — is in `events`. */
+function holdsLine(events: readonly JsonlEvent[], uuid: string): boolean {
   return events.some((event) =>
     event.kind === "compaction"
-      ? event.requestUuid === promptUuid
+      ? event.requestUuid === uuid
       : (event.kind === "user-text" || event.kind === "event-turn") &&
-        (event.uuid === promptUuid ||
-          event.mergedSendUuids?.includes(promptUuid) === true),
+        (event.uuid === uuid || event.mergedSendUuids?.includes(uuid) === true),
   );
 }
 

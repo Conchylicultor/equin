@@ -1,7 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
-import type { TurnState } from "@plugins/conversations/plugins/turn-ledger/core";
-import { transcriptShows } from "./landed";
+import {
+  transcriptUuidOfTurn,
+  turnIdKind,
+  type TurnState,
+} from "@plugins/conversations/plugins/turn-ledger/core";
+import { transcriptHoldsTurn, transcriptShows } from "./landed";
 
 const T0 = Date.parse("2026-10-18T15:53:08Z");
 const at = (ms: number) => new Date(T0 + ms).toISOString();
@@ -18,6 +22,7 @@ const turn = (
   submittedMs: number | null,
   promptUuid: string | null = "mine",
 ) => ({
+  id: turnIdKind.mint(),
   state,
   submittedAt: submittedMs === null ? null : new Date(T0 + submittedMs),
   promptUuid,
@@ -131,5 +136,30 @@ describe("transcriptShows", () => {
         transcriptShows(turn(state, null), [line("mine", 1e9), line("x", 2e9)]),
       ).toBe(false);
     }
+  });
+});
+
+describe("transcriptHoldsTurn", () => {
+  test("a turn's own line, named by its id, before any confirmation", () => {
+    const id = turnIdKind.mint();
+    const own = line(transcriptUuidOfTurn(id), 300);
+    expect(transcriptHoldsTurn(id, [line("other", 100)])).toBe(false);
+    expect(transcriptHoldsTurn(id, [line("other", 100), own])).toBe(true);
+    // The ledger has not confirmed it yet: its line alone retires the echo.
+    expect(transcriptShows({ ...turn("typed", null, null), id }, [own])).toBe(
+      true,
+    );
+  });
+
+  test("a turn merged into another send's line", () => {
+    const id = turnIdKind.mint();
+    const merged: JsonlEvent = {
+      kind: "user-text",
+      at: at(300),
+      text: "first",
+      uuid: "first",
+      mergedSendUuids: [transcriptUuidOfTurn(id)],
+    };
+    expect(transcriptHoldsTurn(id, [merged])).toBe(true);
   });
 });
