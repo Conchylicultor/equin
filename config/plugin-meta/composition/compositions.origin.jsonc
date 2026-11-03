@@ -1,4 +1,4 @@
-// @hash a24d20f35cb1
+// @hash bc2b9a48e2d7
 {
   "manifests": [
     {
@@ -140,6 +140,8 @@
         "!tasks.sidequest-autopilot.**",
         "!tasks.outcome-report.**",
         "!apps.file-explorer.**",
+        "apps.home.**",
+        "!apps.home.tour.**",
         "apps.prototypes.**",
         "!menu-bar.**",
         "!conversations.menu-bar-status.**",
@@ -153,7 +155,7 @@
       ],
       "excludes": [],
       "serve": "off",
-      "home": "agent-manager"
+      "home": "home"
     },
     {
       "id": "home",

@@ -306,7 +306,7 @@ export const compositionsConfig = defineConfig({
         // — never a hand-picked plugin: a plugin either app gains reaches the
         // demo with no edit here (config.test.ts holds the shape). A profile — a variant of the one
         // agent-manager app, like full vs. lean — not an app of its own: same
-        // home, same shell. Never served (`serve: "off"`): it is a browser
+        // shell (its home is the app gallery, as on main — below). Never served (`serve: "off"`): it is a browser
         // host's scope, not a deployment.
         //
         // Every negative here is a whole surface whose subject is the user's
@@ -324,6 +324,16 @@ export const compositionsConfig = defineConfig({
         //   profile extends would otherwise keep them);
         // - the file explorer (`apps.file-explorer.**`, and the conversation's
         //   Explorer tab that embeds it): browses a checkout on disk.
+        //
+        // Home joins it (`apps.home.**`) and is its home: the app launcher's
+        // click and its "All apps" lead to the composition's home app and
+        // its grid lists every other app, so with the agent manager as home
+        // the demo's launcher would hide the agent manager and lead back to
+        // it. With the gallery as home the demo behaves as main does. The
+        // demo still opens on the agent manager (its scenario names the app).
+        // Home's onboarding tour stays out (`!apps.home.tour.**`): it would
+        // start the first time a visitor opens Home, and walks a new user
+        // through filing their first real request — not a demo's story.
         //
         // Prototypes joins it (`apps.prototypes.**`): its tree is a
         // `data-files` root, memory in the worker, seeded with the demo's
@@ -355,6 +365,8 @@ export const compositionsConfig = defineConfig({
             "!tasks.sidequest-autopilot.**",
             "!tasks.outcome-report.**",
             "!apps.file-explorer.**",
+            "apps.home.**",
+            "!apps.home.tour.**",
             "apps.prototypes.**",
             // The OS menu-bar panel and its sections: a page the native
             // helper opens on the computer, meaningless in a demo.
@@ -367,7 +379,7 @@ export const compositionsConfig = defineConfig({
           extends: ["agent-manager", "pages"],
           excludes: [] as string[],
           serve: "off",
-          home: "agent-manager",
+          home: "home",
         },
 
         // ── Apps: lean baseline (entry only) for every other top-level app ──────

@@ -37,7 +37,7 @@ under one of those umbrellas ships with the app with no edit here. The two
 profiles still differ only by the `self-improvement` pack (`config.test.ts`
 pins both facts).
 
-`agent-manager-demo` (`profile`, `serve: "off"`, home `agent-manager`) is the
+`agent-manager-demo` (`profile`, `serve: "off"`, home `home`) is the
 composition the Agent Manager demo's browser host serves
 (`apps/website/demos/lumen/bin/browser-host.composition.ts`): it `extends:
 ["agent-manager", "pages"]` — the agent manager with the Pages app beside it,
@@ -46,7 +46,10 @@ the computer — push-and-exit, automations (`tasks.automations.**`, every
 automation and the outcome-report card with it), `stats.**` and the file
 explorer — and adds Prototypes back (`apps.prototypes.**`: its files are a
 `data-files` root, memory in the worker; the prototype chips stay negated by the
-agent-manager profile). Its web plugins are the scope the demo page renders in
+agent-manager profile) and Home (`apps.home.**`), the app gallery, which is its
+home as on main: the app launcher's grid lists every app but the home, and its
+"All apps" opens the home, so an agent-manager home would hide the agent manager
+from the demo's launcher (Home's onboarding tour, `apps.home.tour`, stays out). Its web plugins are the scope the demo page renders in
 (`web-sdk`'s `<PluginScope>`) and its portable server barrels (portability
 derived from each barrel's closure, `serverPortabilityOf`) the worker's graph,
 both derived by codegen (`browser-host-gen.ts`). A plugin portable by its

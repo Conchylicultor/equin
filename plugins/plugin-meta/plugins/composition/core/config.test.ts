@@ -282,7 +282,9 @@ test("the demo profile is the agent manager and Pages minus machine-only surface
   // SUBTRACT machine-only surfaces, and the only thing they may add is a whole
   // app (`apps.<app>.**`, e.g. Prototypes over its in-worker data-files root) —
   // never a hand-picked plugin, which would drift from the app it belongs to.
-  // It selects nothing. Never served, same home.
+  // It selects nothing. Never served. Its home is the app gallery, as main's
+  // is: the launcher's grid lists every app but the home, so an agent-manager
+  // home would hide the agent manager from the demo's launcher.
   const demo = byName("agent-manager-demo");
   expect(demo.category).toBe("profile");
   expect(demo.extends).toEqual(["agent-manager", "pages"]);
@@ -296,5 +298,7 @@ test("the demo profile is the agent manager and Pages minus machine-only surface
     "!conversations.conversation-view.push-and-exit.**",
   );
   expect(demo.serve).toBe("off");
-  expect(demo.home).toBe(byName("agent-manager").home);
+  expect(demo.entryPoints).toContain("apps.home.**");
+  expect(demo.entryPoints).toContain("!apps.home.tour.**");
+  expect(demo.home).toBe(byName(MAIN_COMPOSITION_ID).home);
 });

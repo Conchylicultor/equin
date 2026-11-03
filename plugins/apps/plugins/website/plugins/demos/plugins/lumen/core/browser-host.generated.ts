@@ -10,7 +10,7 @@ import type { DemoHost } from "@plugins/framework/plugins/browser-server/plugins
 
 export const browserHost = {
   id: "agent-manager-demo",
-  home: "agent-manager",
+  home: "home",
   plugins: [
     "active-data",
     "active-data.attempt",
@@ -50,6 +50,11 @@ export const browserHost = {
     "apps.agent-manager.shell",
     "apps.agent-manager.welcome",
     "apps.debug.shell",
+    "apps.home",
+    "apps.home.app-cards",
+    "apps.home.new-app",
+    "apps.home.shell",
+    "apps.home.usage-fields",
     "apps.pages",
     "apps.pages.agent-origin",
     "apps.pages.auto-icon",

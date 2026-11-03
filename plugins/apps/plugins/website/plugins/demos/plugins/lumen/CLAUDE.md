@@ -64,7 +64,11 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   renderers, and the Pages app itself) minus what means nothing without the
   computer (push-and-exit, the automations, the file explorer), plus Prototypes
   (`apps.prototypes.**`, a positive: its tree is a `data-files` root, memory
-  here — `research/2026-10-24-global-data-files-host-service.md`). Otherwise it
+  here — `research/2026-10-24-global-data-files-host-service.md`) and Home
+  (`apps.home.**`, the app gallery, minus its onboarding tour). Home is the composition's home, as on
+  main, so the launcher inside the embed lists the Agent Manager and its "All
+  apps" opens the gallery. The demo still opens on the Agent Manager:
+  `lumenDemo` names its app. Otherwise it
   only subtracts, so a plugin either app gains reaches the demo with no edit
   there. A plugin in the
   demo scope whose server half cannot join the worker fails the coverage guard
