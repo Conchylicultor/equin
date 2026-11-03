@@ -44,13 +44,13 @@ contributions: [
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view/action-bar.Conversation`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/ui-kit.Button`
     - `primitives/detail-sections.defineDetailSections`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`

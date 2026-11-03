@@ -7,7 +7,7 @@ import {
 } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { useOptimisticConversationStatus } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import { useModelCatalog } from "@plugins/conversations/plugins/model-provider/web";
-import { mapResource } from "@plugins/primitives/plugins/live-state/web";
+import { mapResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   FieldPresentation,
   type LiveFieldOptionsRead,

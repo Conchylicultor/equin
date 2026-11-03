@@ -127,6 +127,7 @@ report (its output length only — never the output). Adjust
     - `primitives/css/ui-kit` ×7
     - `infra/endpoints` ×3
     - `infra/claude-cli/availability.useClaudeCodeStatus`
+    - `network/live/live-state.foldResource`
     - `network/live.useLive`
     - `primitives/collapsible.useCollapsibleContext`
     - `primitives/copy-to-clipboard.CopyButton`
@@ -138,7 +139,6 @@ report (its output length only — never the output). Adjust
     - `primitives/css/text.Text`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/link-gesture.openInBrowserTab`
-    - `primitives/live-state.foldResource`
     - `primitives/loading.Loading`
     - `shell/toast.showToast`
     - `ui/icons.Icon`

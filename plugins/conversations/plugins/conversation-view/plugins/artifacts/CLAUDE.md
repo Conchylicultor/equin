@@ -164,7 +164,7 @@ here.
     - `ConversationArtifacts.Kind` ← `debug.browser-recordings`
   - Contributes: `Conversation.ActionBar` → `ArtifactsButton`
   - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/live-state` ×4
+    - `network/live/live-state` ×4
     - `primitives/css/text` ×2
     - `primitives/css/ui-kit` ×2
     - `reorder` ×2

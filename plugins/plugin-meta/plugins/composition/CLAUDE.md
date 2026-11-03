@@ -65,8 +65,8 @@ What a server plugin needs at runtime and cannot import is not added to any
 row either: it is a **server companion** (`defineServerContribution(name, {
 companions: true })` on the owner, `Kind({ …, companion: true })` in the
 contributor's `server/index.ts`), a hard edge the closure engine derives —
-`database.live-state-snapshot` (the changelog's pruner) ships with
-`database.change-feed` in every composition, the demo's worker graph
+`network.live.live-state-snapshot` (the changelog's pruner) ships with
+`network.live.change-feed` in every composition, the demo's worker graph
 included, with no row listing it. See
 [`closure`](../closure/CLAUDE.md).
 
@@ -314,9 +314,9 @@ Run with `./equin test plugins/plugin-meta/plugins/composition`.
     - `config_v2.useConfig`
     - `config_v2.useSetConfig`
     - `network/live.useLive`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceError`
-    - `primitives/live-state.ResourceResult`
+    - `network/live/live-state.mapResource`
+    - `network/live/live-state.ResourceError`
+    - `network/live/live-state.ResourceResult`
   - Exports (types):
     - `AppExclusions`
     - `CompositionDataResult`

@@ -4,7 +4,7 @@ import {
   type LiveFieldOption,
   type LiveFieldOptionsRead,
 } from "@plugins/network/plugins/live/web";
-import { mapResource } from "@plugins/primitives/plugins/live-state/web";
+import { mapResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { TaskCategoryDef } from "@plugins/tasks/plugins/task-category/core";
 import { taskCategoryShape } from "../../shared/resources";
 import { useTaskCategories } from "../hooks";

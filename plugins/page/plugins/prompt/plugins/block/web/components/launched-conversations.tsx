@@ -1,7 +1,7 @@
 import { useTaskConversations } from "@plugins/tasks/plugins/tasks-core/web";
 import { ConversationChip } from "@plugins/conversations/plugins/conversation-ui/plugins/chip/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useBlockPromptTasks } from "@plugins/page/plugins/prompt/plugins/link/web";
 
 /**

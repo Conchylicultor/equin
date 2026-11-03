@@ -9,8 +9,8 @@ import {
 import {
   matchResource,
   useCombinedResources,
-} from "@plugins/primitives/plugins/live-state/web";
-import type { ResourceReadiness } from "@plugins/primitives/plugins/live-state/core";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
+import type { ResourceReadiness } from "@plugins/network/plugins/live/plugins/live-state/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";

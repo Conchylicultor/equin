@@ -6,7 +6,7 @@ import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { DataTable } from "@plugins/primitives/plugins/data-table/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { pluginFacetsTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";

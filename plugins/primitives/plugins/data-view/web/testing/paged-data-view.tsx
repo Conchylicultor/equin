@@ -8,7 +8,7 @@ import {
 import {
   createLiveStateHarness,
   type LiveStateHarness,
-} from "@plugins/primitives/plugins/live-state/web/testing";
+} from "@plugins/network/plugins/live/plugins/live-state/web/testing";
 import { fakeViewGetter } from "@plugins/primitives/plugins/data-view/plugins/view-core/web/testing";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import type {

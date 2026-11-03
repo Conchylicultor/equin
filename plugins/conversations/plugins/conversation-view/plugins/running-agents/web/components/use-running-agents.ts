@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { ResourceError } from "@plugins/primitives/plugins/live-state/core";
+import type { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/core";
 import { useConversationSubagents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/web";
 import { useConversationShells } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/background-shells/web";
 import type { BackgroundShell } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/background-shells/core";

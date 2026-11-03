@@ -7,7 +7,7 @@ import {
 import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
 import { zLayerClass } from "@plugins/primitives/plugins/css/plugins/z-layers/web";
 import type { ZStackLayer } from "@plugins/primitives/plugins/css/plugins/z-layers/plugins/stack/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { PortalHost } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
 import { useViewportEscape } from "./use-viewport-escape";
 import { useZStackIndex } from "./use-z-stack-index";

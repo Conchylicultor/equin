@@ -12,14 +12,14 @@ import { z } from "zod";
 import {
   createResourceRuntime,
   type ResourceParams,
-} from "@plugins/framework/plugins/resource-runtime/core";
-import { wholeReach } from "@plugins/framework/plugins/resource-runtime/core/testing";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+import { wholeReach } from "@plugins/network/plugins/live/plugins/resource-runtime/core/testing";
 import { notificationsWsHandler } from "@plugins/framework/plugins/server-core/core";
 import {
   liveValue,
   type LiveQueryParams,
 } from "@plugins/network/plugins/live/core";
-import { compileLookup } from "@plugins/infra/plugins/query-resource/server";
+import { compileLookup } from "@plugins/network/plugins/live/plugins/query-resource/server";
 import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import {
   compileValue,

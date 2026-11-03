@@ -1,5 +1,5 @@
 import { defineFacet } from "@plugins/plugin-meta/plugins/facets/core";
-import type { ResourceMembership } from "@plugins/framework/plugins/tooling/plugins/resource-vocabulary/core";
+import type { ResourceMembership } from "@plugins/network/plugins/live/plugins/resource-vocabulary/core";
 
 export interface ResourceDef {
   key: string;

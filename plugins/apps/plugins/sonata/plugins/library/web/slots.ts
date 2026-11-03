@@ -1,7 +1,7 @@
 import type { ComponentType } from "react";
 import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
-import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import {

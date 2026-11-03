@@ -1,6 +1,6 @@
 import { exposedColumns } from "@plugins/network/plugins/live/core";
 import { mapRow, useLive } from "@plugins/network/plugins/live/web";
-import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { songLibrary } from "@plugins/apps/plugins/sonata/plugins/library/core";
 import type { SourceHydration } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { songChordGridShape } from "../core";

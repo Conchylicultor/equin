@@ -6,7 +6,7 @@ import {
   type CreateOption,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
-import { matchResource } from "@plugins/primitives/plugins/live-state/web";
+import { matchResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useEventSources } from "@plugins/apps/plugins/events/plugins/events-core/web";
 import {

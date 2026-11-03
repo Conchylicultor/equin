@@ -38,7 +38,7 @@ own time, and each needed a manual investigation to blame the filesystem.
   one. A backend installs `whileWaiting` (`packages/semaphore`, from
   runtime-profiler's server install), so a live read stalled on the disk
   gives its read-admit slot back while the call is pending and takes it back
-  at the head of the queue. `framework/resource-runtime/scripts/fs-yield-bench.ts` measured it: behind
+  at the head of the queue. `network/live/resource-runtime/scripts/fs-yield-bench.ts` measured it: behind
   six reads stalled 2 s, unrelated reads answered in 33–49 ms instead of
   ~2 s, and a herd of fs-heavy reads showed no thrash.
 - **A leaf.** It imports node builtins only. Every process imports it,

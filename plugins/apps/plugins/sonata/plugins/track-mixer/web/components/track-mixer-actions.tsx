@@ -1,7 +1,7 @@
 import { useLibrarySong } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { resetTrackViews } from "../actions";
 import { useTrackMixerEntries } from "../hooks";

@@ -1,4 +1,4 @@
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { SegmentedProgressBar } from "@plugins/ui/plugins/segmented-progress-bar/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";

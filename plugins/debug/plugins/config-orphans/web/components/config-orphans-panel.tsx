@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import type { OrphanEntry } from "@plugins/config_v2/core";
 import {

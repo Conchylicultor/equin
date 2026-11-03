@@ -11,7 +11,7 @@ Generic side-by-side / text diff renderer. The domain-agnostic diff-rendering cl
   - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/overlay/image-viewer` ×5
     - `primitives/syntax-highlight` ×5
-    - `primitives/live-state` ×2
+    - `network/live/live-state` ×2
     - `infra/endpoints.useAssetSrc`
     - `network/live.useLive`
     - `primitives/css/center.Center`

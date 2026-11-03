@@ -1,4 +1,4 @@
-import { ResourceRefusal } from "@plugins/packages/plugins/resource-protocol/core";
+import { ResourceRefusal } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
 import {
   InvalidRangeError,
   evaluateBreakdown,

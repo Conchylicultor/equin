@@ -6,7 +6,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   mapResource,
   type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { pagesTree, pageData, type Block } from "../../core";
 import { PageIcon } from "./page-icon";

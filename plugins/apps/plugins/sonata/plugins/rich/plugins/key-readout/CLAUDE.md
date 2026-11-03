@@ -16,13 +16,13 @@
     - `apps/sonata/rich/key-mode.saveKeyAutoDetect`
     - `apps/sonata/shell.Sonata`
     - `infra/endpoints.useFetchEndpoint`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/dom/web-storage.defineStore`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/color-palette --primary`

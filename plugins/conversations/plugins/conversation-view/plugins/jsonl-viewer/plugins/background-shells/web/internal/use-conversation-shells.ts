@@ -2,11 +2,11 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import {
   combineResources,
   type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import type {
   ResourceError,
   ResourceUnavailable,
-} from "@plugins/primitives/plugins/live-state/core";
+} from "@plugins/network/plugins/live/plugins/live-state/core";
 import { useConversationById } from "@plugins/conversations/web";
 import {
   conversationShellFacts,

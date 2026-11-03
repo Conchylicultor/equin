@@ -1,5 +1,5 @@
 import { describe, expect, spyOn, test } from "bun:test";
-import { createHarness } from "@plugins/framework/plugins/resource-runtime/core/testing";
+import { createHarness } from "@plugins/network/plugins/live/plugins/resource-runtime/core/testing";
 import {
   compilePagedValue,
   compileQueryValue,

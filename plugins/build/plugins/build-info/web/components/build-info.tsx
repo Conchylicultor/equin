@@ -1,4 +1,4 @@
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { buildHistory, type BuildRun } from "@plugins/build/core";

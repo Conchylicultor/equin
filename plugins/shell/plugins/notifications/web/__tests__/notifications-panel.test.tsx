@@ -31,11 +31,11 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import { queryKeyFor } from "@plugins/primitives/plugins/live-state/web";
+import { queryKeyFor } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   createLiveStateHarness,
   type LiveStateHarness,
-} from "@plugins/primitives/plugins/live-state/web/testing";
+} from "@plugins/network/plugins/live/plugins/live-state/web/testing";
 import { notifications } from "../../shared/resources";
 import { NotificationsPanel } from "../components/notifications-panel";
 

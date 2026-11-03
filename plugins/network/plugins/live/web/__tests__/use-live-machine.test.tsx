@@ -20,11 +20,11 @@ vi.mock(
 import { renderHook } from "@testing-library/react";
 import { z } from "zod";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
-import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   createLiveStateHarness,
   NotificationsClient,
-} from "@plugins/primitives/plugins/live-state/web/testing";
+} from "@plugins/network/plugins/live/plugins/live-state/web/testing";
 import type { Transport } from "@plugins/primitives/plugins/networking/web";
 import { testTransport } from "@plugins/primitives/plugins/networking/web/testing";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";

@@ -1,4 +1,4 @@
-import { tolerantEnum } from "@plugins/primitives/plugins/live-state/core";
+import { tolerantEnum } from "@plugins/network/plugins/live/plugins/live-state/core";
 import { FALLBACK_MODEL } from "./catalog";
 import {
   ConversationModelSchema,

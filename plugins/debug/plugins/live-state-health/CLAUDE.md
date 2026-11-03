@@ -26,7 +26,7 @@ instrumentation of its own.
     - `Pane.Register` "live-state-health"
     - `DebugApp.Sidebar` "Live State"
   - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/live-state` ×7
+    - `network/live/live-state` ×7
     - `primitives/pane` ×3
     - `primitives/css/text` ×2
     - `primitives/css/ui-kit` ×2

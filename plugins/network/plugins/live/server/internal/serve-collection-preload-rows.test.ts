@@ -12,7 +12,7 @@ import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { defineEntity } from "@plugins/infra/plugins/entities/server";
-import { recordingQueryDb } from "@plugins/infra/plugins/query-resource/server/testing";
+import { recordingQueryDb } from "@plugins/network/plugins/live/plugins/query-resource/server/testing";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import { serveCollection } from "./serve-collection";
 

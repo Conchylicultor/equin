@@ -1,4 +1,4 @@
-import { ExcludeFromChangeFeed } from "@plugins/database/plugins/change-feed/server";
+import { ExcludeFromChangeFeed } from "@plugins/network/plugins/live/plugins/change-feed/server";
 import {
   ExcludeFromBackup,
   ExcludeFromFork,

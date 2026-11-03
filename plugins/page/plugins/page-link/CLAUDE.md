@@ -9,8 +9,8 @@
   - Contributes: `Editor.Block` "page-link" → `PageLinkBlock`
   - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `page/editor` ×6
+    - `network/live/live-state` ×3
     - `page/page-reference` ×3
-    - `primitives/live-state` ×3
     - `network/live` ×2
     - `primitives/css/center.Center`
     - `primitives/css/placeholder.Placeholder`

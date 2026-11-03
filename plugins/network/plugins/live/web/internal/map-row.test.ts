@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { ResourceError } from "@plugins/primitives/plugins/live-state/core";
+import { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/core";
 import { mapRow } from "./map-row";
 import type { LiveRowResult } from "./use-live";
 

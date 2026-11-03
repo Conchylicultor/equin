@@ -1,5 +1,5 @@
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
-import type { RoutedSource } from "@plugins/infra/plugins/query-resource/server";
+import type { RoutedSource } from "@plugins/network/plugins/live/plugins/query-resource/server";
 import type { BackgroundKindSpec } from "../../shared/providers";
 import {
   makeBackgroundKind,

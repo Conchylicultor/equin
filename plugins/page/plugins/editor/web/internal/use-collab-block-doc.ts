@@ -8,7 +8,7 @@ import {
 import type { Doc } from "yjs";
 import type { Provider } from "@lexical/yjs";
 import { useLive } from "@plugins/network/plugins/live/web";
-import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   useEventCallback,
   useLatestRef,

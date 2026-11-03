@@ -411,10 +411,10 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
   - Uses:
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
+    - `network/live/live-state.combineResources`
+    - `network/live/live-state.foldResource`
+    - `network/live/live-state.mapResource`
     - `primitives/dom/web-storage.defineStore`
-    - `primitives/live-state.combineResources`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.mapResource`
   - Exports (types):
     - `ConfigRegistration`
     - `ConfigWriteRefusal`

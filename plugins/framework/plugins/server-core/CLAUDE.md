@@ -68,7 +68,7 @@ there, not in a composition root, unless it is genuinely serve-only.
 The **change-feed assertion** (`assertDbReadsHaveChangeFeed`, D3 of
 `research/2026-10-22-global-demo-writes-render-portable-change-feed.md`) opens
 the post-ready phases: a serving host whose graph registered a DB-backed
-resource must have booted `database/change-feed` (its mark: the relation
+resource must have booted `network/live/change-feed` (its mark: the relation
 bases it sets in `onReadyBlocking`), or boot throws "DB-backed live reads on a
 host with no change feed never recompute". Only serving hosts reach it — `exec`
 and partial-graph test boots (`bootPluginGraph` alone) do not.
@@ -341,7 +341,7 @@ export default plugin;
 
 The type is intentionally flat — no base classes. A plugin is a data object with optional route maps and lifecycle hooks. Two readiness hooks: **`onReadyBlocking`** runs as a hard barrier after the socket binds but before the server reports ready (and before any `onReady`) — use only for work that must finish before the backend can correctly serve requests (DB migrations + warmup, registry init); the gateway gates its hot-swap on the barrier completing. **`onReady`** runs after the barrier, so it observes a migrated DB and ready registry — use it for background work like pollers or watchers.
 
-**Barrier fatality is not gated on `loadBearing`.** A throw in _any_ plugin's `onReadyBlocking` aborts boot — the barrier's contract is "this completes before we serve", so failing to complete is fatal by definition; gating it on `loadBearing` would promote degraded backends behind a green `/api/health/ready`. If blocking work is genuinely optional-for-correctness (failure should _degrade_, not crash), catch the error **inside** the hook and continue — pattern: `plugins/database/plugins/live-state-snapshot/server/internal/boot-init.ts`. `loadBearing` still gates the post-serving `onReady` / `onAllReady` phases, where killing a live backend is reserved for critical plugins.
+**Barrier fatality is not gated on `loadBearing`.** A throw in _any_ plugin's `onReadyBlocking` aborts boot — the barrier's contract is "this completes before we serve", so failing to complete is fatal by definition; gating it on `loadBearing` would promote degraded backends behind a green `/api/health/ready`. If blocking work is genuinely optional-for-correctness (failure should _degrade_, not crash), catch the error **inside** the hook and continue — pattern: `plugins/network/plugins/live/plugins/live-state-snapshot/server/internal/boot-init.ts`. `loadBearing` still gates the post-serving `onReady` / `onAllReady` phases, where killing a live backend is reserved for critical plugins.
 
 ### Live state
 
@@ -356,7 +356,7 @@ contributions: [...unreadServed.declare],
 
 Each served resource gets `GET /api/resources/<key>/...` (HTTP fallback for WS-down / curl / SSR) and a subscription entry on the shared `GET /ws/notifications` socket; the web reads it with `useLive`.
 
-**`defineResource` / `defineExternalResource` are the runtime primitives** (`core/resources.ts`, over `framework/resource-runtime`) that `serveValue` / `serveCollection` compile to. Outside that substrate (and `infra/query-resource`'s `windowQueryResource`, which it calls) and tests, no plugin calls them directly — the flat `defineResource({ … })` form survives only for tests — and the `live/no-legacy-resource-spelling` lint rejects importing them anywhere else. On those forms:
+**`defineResource` / `defineExternalResource` are the runtime primitives** (`core/resources.ts`, over `network/live/resource-runtime`) that `serveValue` / `serveCollection` compile to. Outside that substrate (and `network/live/query-resource`'s `windowQueryResource`, which it calls) and tests, no plugin calls them directly — the flat `defineResource({ … })` form survives only for tests — and the `live/no-legacy-resource-spelling` lint rejects importing them anywhere else. On those forms:
 
 - A resource registers when `defineResource` runs; `Resource.Declare(resource)` in `contributions` is its declaration (what `...served.declare` spreads).
 - **`mode` is required** on a non-keyed resource — `push` (the value rides the WS) or `invalidate` (a version stamp; each tab refetches over HTTP). It is what `liveValue`'s `load` compiles to, and there is no default.
@@ -453,10 +453,10 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `framework/plugin-id.pluginOfNode`
     - `framework/plugin-loader.computeLoadWaves`
     - `framework/plugin-loader.topoSortPlugins`
-    - `framework/resource-runtime.createResourceRuntime`
-    - `framework/resource-runtime.ResourceGuardError`
+    - `network/live/resource-runtime.createResourceRuntime`
+    - `network/live/resource-runtime.ResourceGuardError`
     - `framework/tooling/collected-dir.defineCollectedDir`
-    - `packages/resource-protocol.RESOURCE_HTTP_ROUTE`
+    - `network/live/resource-protocol.RESOURCE_HTTP_ROUTE`
     - `packages/string-hash.hash64`
   - Exports (types):
     - `BootJournalEntry`

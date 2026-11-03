@@ -73,8 +73,8 @@ plus `sshKey`.
     - `primitives/pane` ×5
     - `primitives/data-view` ×4
     - `infra/endpoints` ×3
+    - `network/live/live-state` ×3
     - `primitives/css/ui-kit` ×3
-    - `primitives/live-state` ×3
     - `primitives/copy-to-clipboard` ×2
     - `primitives/css/fill` ×2
     - `primitives/css/spacing` ×2

@@ -480,7 +480,7 @@ describe("scanDbBackedNotify — derived feed-exclusion exemption", () => {
       "});",
     ].join("\n");
   const exclusion = [
-    'import { ExcludeFromChangeFeed } from "@plugins/database/plugins/change-feed/server";',
+    'import { ExcludeFromChangeFeed } from "@plugins/network/plugins/live/plugins/change-feed/server";',
     'import { _ledgerMinute } from "./tables";',
     "export const contributions = [",
     '  ExcludeFromChangeFeed({ table: _ledgerMinute, reason: "written every minute" }),',
@@ -627,7 +627,7 @@ describe("scanDbBackedNotify — derived feed-exclusion exemption", () => {
     const exclusions = await findFeedExclusions(
       [
         {
-          rel: "plugins/database/plugins/change-feed/server/internal/exclusion.ts",
+          rel: "plugins/network/plugins/live/plugins/change-feed/server/internal/exclusion.ts",
           src: 'export const ExcludeFromChangeFeed = defineServerContribution<{ table: PgTable }>("x");',
         },
       ],

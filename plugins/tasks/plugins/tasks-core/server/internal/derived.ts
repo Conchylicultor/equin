@@ -2,7 +2,7 @@ import { sql, type SQL, type SQLWrapper } from "drizzle-orm";
 import type {
   AggregateRef,
   ColumnRef,
-} from "@plugins/infra/plugins/query-resource/core";
+} from "@plugins/network/plugins/live/plugins/query-resource/core";
 
 // THE derivations of the tasks tree, written once (P8 v3 step 19): an
 // attempt's status / active / retained / finished_at from its two rollup rows,

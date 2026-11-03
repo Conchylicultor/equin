@@ -1,6 +1,6 @@
 import { useLive } from "@plugins/network/plugins/live/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { addTaskDependency, type TaskChainTarget } from "@plugins/tasks/core";

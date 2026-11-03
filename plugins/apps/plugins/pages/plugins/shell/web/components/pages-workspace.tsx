@@ -7,7 +7,7 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 
 /**
  * The Pages brand mark (`Apps.App` `mark`): the user's initial in a small

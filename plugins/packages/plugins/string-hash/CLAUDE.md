@@ -38,10 +38,10 @@ None of those defends against a forged collision; they tell contents apart.
 - Cross-plugin:
   - Imported by:
     - `apps/prototypes/thumbnails`
-    - `framework/resource-runtime`
     - `framework/server-core`
     - `map`
-    - `packages/resource-protocol`
+    - `network/live/resource-protocol`
+    - `network/live/resource-runtime`
     - `plugin-meta/token-usage`
     - `reports/icon-family-gap`
 - Core:

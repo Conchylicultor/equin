@@ -148,7 +148,7 @@ render (`reports/turn-unconfirmed`).
 - Web:
   - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/endpoints` ×5
-    - `primitives/live-state` ×4
+    - `network/live/live-state` ×4
     - `primitives/persistent-draft` ×3
     - `primitives/css/ui-kit` ×2
     - `primitives/networking` ×2

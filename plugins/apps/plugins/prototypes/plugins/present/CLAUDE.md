@@ -161,6 +161,7 @@ The routes live in `internal/routes.ts`, apart from the panes.
     - `primitives/pane` ×2
     - `apps-core/tabs.useSurfaceFocused`
     - `apps/prototypes/gallery.PrototypeCardActions`
+    - `network/live/live-state.matchResource`
     - `network/live.useLive`
     - `primitives/css/pin.Pin`
     - `primitives/css/scroll.Scroll`
@@ -175,7 +176,6 @@ The routes live in `internal/routes.ts`, apart from the panes.
     - `primitives/embed.embedUrl`
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture/new-tab.NewTabButton`
-    - `primitives/live-state.matchResource`
     - `primitives/loading.Loading`
     - `primitives/networking.useTransport`
     - `primitives/overlay/popup-open.PopupOpenScope`

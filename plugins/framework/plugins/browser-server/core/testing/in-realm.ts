@@ -2,9 +2,9 @@ import { createRequestHandler } from "@plugins/framework/plugins/http-router/cor
 import {
   createResourceRuntime,
   type ResourceRuntime,
-} from "@plugins/framework/plugins/resource-runtime/core";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/core";
 import { unmatchedApiResponse } from "@plugins/infra/plugins/endpoints/core";
-import { RESOURCE_HTTP_ROUTE } from "@plugins/packages/plugins/resource-protocol/core";
+import { RESOURCE_HTTP_ROUTE } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
 import type { BrowserServer } from "../internal/browser-server";
 import { serveOverPort } from "../internal/port";
 import { runtimeBrowserServer } from "../internal/runtime-socket";

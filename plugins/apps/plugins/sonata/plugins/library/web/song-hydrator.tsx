@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { mapRow, useLive } from "@plugins/network/plugins/live/web";
 import { songLibrary } from "../core";
 import { Library, type SourceHydration } from "./slots";

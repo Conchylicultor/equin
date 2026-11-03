@@ -119,7 +119,7 @@ spawn / control-file / banner helpers both scripts share are `e2e/synthetic.ts`.
     - `queue-actions` "open-conversation" → `OpenConversationAction`
   - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×6
-    - `primitives/live-state` ×5
+    - `network/live/live-state` ×5
     - `conversations/conversation-view` ×2
     - `conversations` ×2
     - `network/live` ×2

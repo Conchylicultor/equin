@@ -74,6 +74,7 @@ semitones (±12), surfaced as a toolbar popover and remembered per song.
     - `apps/sonata/library.sonataPlayerPane`
     - `apps/sonata/session.useSession`
     - `infra/endpoints.useFetchEndpoint`
+    - `network/live/live-state.ResourceErrorInline`
     - `network/live.useLive`
     - `primitives/css/center.Center`
     - `primitives/css/grid.Grid`
@@ -82,7 +83,6 @@ semitones (±12), surfaced as a toolbar popover and remembered per song.
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
   - Exports (values): `saveTranspose`

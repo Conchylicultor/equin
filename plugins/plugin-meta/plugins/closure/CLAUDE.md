@@ -113,7 +113,7 @@ Two edge kinds, both indexed forward + reverse:
   owner opens it with `export const Kind = defineServerContribution("<kind>",
   { companions: true })` in its `server/`, a contributor's `server/index.ts`
   lists `Kind({ …, companion: true })` inline, and the edge runs owner →
-  contributor (`database.change-feed` → `database.live-state-snapshot`
+  contributor (`network.live.change-feed` → `network.live.live-state-snapshot`
   through `ChangelogRetention`: the changelog the feed writes is bounded only
   by L2's prune job, and L2 imports the feed). Read by the contributions facet
   (`serverCompanionKinds` from parse-utils' `parseServerContributionDeclarations`,

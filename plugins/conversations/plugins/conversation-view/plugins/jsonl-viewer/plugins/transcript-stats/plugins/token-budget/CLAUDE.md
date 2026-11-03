@@ -15,7 +15,7 @@
     - `conversations/conversation-view/jsonl-viewer/transcript-stats.StatBadge`
     - `conversations/conversation-view/jsonl-viewer/transcript-stats.TranscriptStats`
     - `conversations/conversation-view/jsonl-viewer/transcript-stats.useTranscriptFold`
-    - `primitives/live-state.matchResource`
+    - `network/live/live-state.matchResource`
 - Server:
   - Contributes: `resource.declare` "transcript-stats.token-budget.before"
   - Uses: `conversations/conversation-view/jsonl-viewer/transcript-stats.serveTranscriptFold`

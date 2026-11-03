@@ -11,6 +11,8 @@
     - `debug/profiling.Profiling`
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
+    - `network/live/live-state.foldResource`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
@@ -18,8 +20,6 @@
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.FieldDef`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
 - Server:
   - Contributes: `resource.declare` "runtime-profiler.profile"

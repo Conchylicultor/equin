@@ -10,7 +10,7 @@
 import { describe, expect, test } from "bun:test";
 import { pgTable, text } from "drizzle-orm/pg-core";
 import { z } from "zod";
-import { createResourceRuntime } from "@plugins/framework/plugins/resource-runtime/core";
+import { createResourceRuntime } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import {
   compilePagedValue,

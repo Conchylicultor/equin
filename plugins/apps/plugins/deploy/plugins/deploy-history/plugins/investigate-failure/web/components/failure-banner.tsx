@@ -17,7 +17,7 @@ import {
 import {
   foldResource,
   type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { InvestigateRun } from "./investigate-failure-action";

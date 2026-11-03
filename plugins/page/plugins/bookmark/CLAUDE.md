@@ -13,6 +13,7 @@
     - `primitives/css/spacing` ×2
     - `primitives/hover-reveal` ×2
     - `infra/endpoints.useAssetSrc`
+    - `network/live/live-state.ResourceErrorInline`
     - `network/live.useLive`
     - `primitives/css/card.Card`
     - `primitives/css/center.Center`
@@ -21,7 +22,6 @@
     - `primitives/css/pin.Pin`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/text.Text`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/overlay/image-viewer.useImageLoad`
     - `primitives/text-editor/paste-images.attachmentUrl`

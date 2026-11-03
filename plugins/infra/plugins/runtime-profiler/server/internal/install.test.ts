@@ -18,7 +18,7 @@ import {
   clearRelationBases,
   getReadSetIndex,
 } from "@plugins/framework/plugins/server-core/core/testing";
-import { mintReachPlan } from "@plugins/framework/plugins/resource-runtime/core";
+import { mintReachPlan } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
 import "./install";
 import {
   recordEntrySpan,

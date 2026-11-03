@@ -19,7 +19,7 @@ import { FolderPicker } from "@plugins/primitives/plugins/folder-picker/web";
 import {
   foldResource,
   ResourceErrorInline,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";

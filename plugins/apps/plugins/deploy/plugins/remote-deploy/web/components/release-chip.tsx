@@ -3,7 +3,7 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { BouncingDots } from "@plugins/primitives/plugins/css/plugins/bouncing-dots/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { bundleRefusalMessage } from "@plugins/release/plugins/bundles/core";
 import {
   releaseStateLabel,

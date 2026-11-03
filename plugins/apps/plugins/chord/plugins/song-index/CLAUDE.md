@@ -272,13 +272,13 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `config_v2.ConfigV2`
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
+    - `network/live/live-state.matchResource`
     - `primitives/css/center.Center`
     - `primitives/css/meter.Meter`
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
-    - `primitives/live-state.matchResource`
     - `primitives/loading.Loading`
   - Exports (values): `SongIndexGate`
 - Server:
@@ -305,7 +305,6 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `database.db`
     - `database/admin.ExcludeFromBackup`
     - `database/admin.ExcludeFromFork`
-    - `database/change-feed.ExcludeFromChangeFeed`
     - `database/derived-updated-at.deriveUpdatedAt`
     - `database/sql-column.parsedJson`
     - `database/sql-column.parsedText`
@@ -313,6 +312,7 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `infra/jobs/supervised-job.defineSupervisedJob`
     - `integrations/youtube/song-videos.SongVideos`
     - `network/live.serveValue`
+    - `network/live/change-feed.ExcludeFromChangeFeed`
     - `primitives/log-channels.defineLogSink`
   - DB schema: `plugins/apps/plugins/chord/plugins/song-index/server/internal/tables.ts`
   - Exports (values):

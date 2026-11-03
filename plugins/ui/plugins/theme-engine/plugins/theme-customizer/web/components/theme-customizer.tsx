@@ -1,7 +1,7 @@
 import {
   foldResource,
   ResourceErrorInline,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useEffect, useRef, useState } from "react";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";

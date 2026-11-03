@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   ResourceError,
   type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { combineHydrations, foldHydrations } from "./hydrate-sources";
 import type { SourceHydration } from "./slots";
 

@@ -10,12 +10,12 @@
   - Uses:
     - `apps/studio/contributions/tables.TableDetail`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.Button`
     - `primitives/data-table.ColumnDef`
     - `primitives/data-table.DataTable`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
 - Server:
   - Contributes: `resource.declare` "studio.table-sample-rows"

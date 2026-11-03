@@ -1,6 +1,6 @@
 import { useClockParam, useLive } from "@plugins/network/plugins/live/web";
 import { MAPS_BILLING_MONTH } from "@plugins/integrations/plugins/google-maps/plugins/usage/core";
-import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { placeDetails, type PlaceDetailsResult } from "../../core";
 
 /**

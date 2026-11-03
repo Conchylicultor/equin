@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { pluginTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import { pluginViewPane } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import { PluginTree } from "@plugins/apps/plugins/studio/plugins/explorer/web";

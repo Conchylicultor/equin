@@ -8,8 +8,8 @@
 
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
-import { ResourceError } from "@plugins/primitives/plugins/live-state/core";
+import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
+import { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/core";
 import type { QueryDeadlineHit, QueryDeadlines } from "../../core";
 
 let resourceValue: ResourceResult<QueryDeadlines>;

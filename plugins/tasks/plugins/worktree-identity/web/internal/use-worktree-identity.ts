@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { namespaceFromHost } from "@plugins/infra/plugins/namespace/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {

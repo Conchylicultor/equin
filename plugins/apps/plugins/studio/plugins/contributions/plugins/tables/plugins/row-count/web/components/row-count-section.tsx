@@ -1,5 +1,5 @@
 import { useLive } from "@plugins/network/plugins/live/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { tableRowCount } from "../../shared/resources";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";

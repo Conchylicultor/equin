@@ -3,7 +3,7 @@
 The report kind for a **live-state resource wedged on a stale HTTP body** — the
 "Close (state unknown)" bug (`research/2026-07-15-global-live-state-http-cache-poisoning-class-fix.md`).
 
-When `fetchOverHttp` (`primitives/live-state`) fetches a resource over HTTP and its
+When `fetchOverHttp` (`network/live/live-state`) fetches a resource over HTTP and its
 version/epoch guard judges the body stale, it drops the body. If the query has never been
 settled by a server-vouched value, dropping the body cannot fall back to a trustworthy value —
 so the primitive throws `ResourceStaleReadError` and the query stays `pending`, leaving any
@@ -63,9 +63,9 @@ minutes for one known problem.
     - `Core.Root` → `LiveStateStaleDropCollector`
     - `Reports.KindView` → `LiveStateStaleDropKindView`
   - Uses:
+    - `network/live/live-state.httpStaleDropReportSink`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
-    - `primitives/live-state.httpStaleDropReportSink`
     - `reports.report`
     - `reports.Reports`
 - Server:

@@ -26,8 +26,8 @@ import {
   xmlTextToRuns,
 } from "@plugins/page/plugins/editor/core";
 import { HttpError } from "@plugins/infra/plugins/endpoints/core";
-import type { QueryDb } from "@plugins/infra/plugins/query-resource/server";
-import { compileWindowQuery } from "@plugins/infra/plugins/query-resource/server/testing";
+import type { QueryDb } from "@plugins/network/plugins/live/plugins/query-resource/server";
+import { compileWindowQuery } from "@plugins/network/plugins/live/plugins/query-resource/server/testing";
 import { compileCollection } from "@plugins/network/plugins/live/server";
 import { bytesToBase64 } from "@plugins/fields/plugins/bytes/plugins/storage/server";
 import { blockDocs, pageBlockDocs } from "../../core";

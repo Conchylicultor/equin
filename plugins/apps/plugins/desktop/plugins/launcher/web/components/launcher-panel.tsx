@@ -17,7 +17,7 @@ import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { CursorAnchoredMenu } from "@plugins/primitives/plugins/overlay/plugins/cursor-menu/web";
 import { useConfigResult, useSetConfig } from "@plugins/config_v2/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";

@@ -5,7 +5,7 @@ import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   foldResource,
   type ResourceError,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
 import type { SavedSymbolName } from "@plugins/ui/plugins/icons/core";
 import {

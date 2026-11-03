@@ -162,14 +162,15 @@ describe("platformValueUsesIn", () => {
 
   test("change-feed's producer names its own `interface Buffer` only as a type", () => {
     const path =
-      "plugins/database/plugins/change-feed/server/internal/producer.ts";
+      "plugins/network/plugins/live/plugins/change-feed/server/internal/producer.ts";
     expect(usesIn(readFileSync(join(REPO, path), "utf8"), path)).not.toContain(
       "global Buffer",
     );
   });
 
   test("resource-runtime's guarded timer unref is clean", () => {
-    const path = "plugins/framework/plugins/resource-runtime/core/runtime.ts";
+    const path =
+      "plugins/network/plugins/live/plugins/resource-runtime/core/runtime.ts";
     expect(usesIn(readFileSync(join(REPO, path), "utf8"), path)).toEqual([]);
   });
 });

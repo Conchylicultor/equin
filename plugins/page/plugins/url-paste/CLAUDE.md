@@ -33,13 +33,13 @@ link the user edited while the title was loading keeps their edit.
 - Web:
   - Uses:
     - `network/live.useLiveReader`
+    - `network/live/live-state.ResourceError`
     - `page/editor.BlockTextPluginProps`
     - `page/editor.readTransferText`
     - `page/editor.registerBlockTextExtension`
     - `page/editor.useBlockEditor`
     - `primitives/css/row.Row`
     - `primitives/latest-ref.useEventCallback`
-    - `primitives/live-state.ResourceError`
     - `primitives/text-editor/caret-trigger.CaretTriggerMenu`
     - `primitives/text-editor/caret-trigger.useCaretMenu`
     - `primitives/text-editor/caret-trigger.useForcedCaretQuery`

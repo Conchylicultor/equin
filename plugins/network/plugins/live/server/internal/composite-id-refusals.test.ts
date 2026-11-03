@@ -2,8 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { integer, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
-import { compositeKey } from "@plugins/infra/plugins/query-resource/core";
-import type { QueryDb } from "@plugins/infra/plugins/query-resource/server";
+import { compositeKey } from "@plugins/network/plugins/live/plugins/query-resource/core";
+import type { QueryDb } from "@plugins/network/plugins/live/plugins/query-resource/server";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import { compileCollection } from "./serve-collection";
 

@@ -85,6 +85,7 @@ top-level and untouched by this; only the Studio UI lives here.
     - `apps/studio/compositions.CompositionDetail`
     - `config_v2.useConfigResult`
     - `infra/endpoints.useEndpointMutation`
+    - `network/live/live-state.matchResource`
     - `plugin-meta/composition.useManifestItems`
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`
@@ -95,7 +96,6 @@ top-level and untouched by this; only the Studio UI lives here.
     - `primitives/css/ui-kit.Button`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/launch/investigate.Investigate`
-    - `primitives/live-state.matchResource`
     - `primitives/relative-time.RelativeTime`
     - `ui/icons.Icon`
   - Exports (values):

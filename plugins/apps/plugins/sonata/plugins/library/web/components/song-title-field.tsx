@@ -1,5 +1,5 @@
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import {

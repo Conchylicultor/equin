@@ -59,7 +59,7 @@ descriptor the strip renders without knowing what produced it. Header: the
     - `network/live` ×4
     - `primitives/data-view` ×4
     - `debug/profiling` ×3
-    - `primitives/live-state` ×3
+    - `network/live/live-state` ×3
     - `primitives/pane` ×3
     - `debug/trace/engine` ×2
     - `apps/debug/shell.DebugApp`

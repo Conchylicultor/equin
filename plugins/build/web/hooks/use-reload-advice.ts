@@ -1,5 +1,5 @@
 import { useFailedPluginPaths } from "@plugins/framework/plugins/web-sdk/core";
-import { useResourceContractMismatches } from "@plugins/primitives/plugins/live-state/web";
+import { useResourceContractMismatches } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useStaleFrontend } from "./use-stale-frontend";
 
 /**

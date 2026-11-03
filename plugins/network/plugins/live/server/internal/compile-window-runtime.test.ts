@@ -23,14 +23,14 @@ import type { SQL } from "drizzle-orm";
 import {
   createResourceRuntime,
   type ResourceParams,
-} from "@plugins/framework/plugins/resource-runtime/core";
-import type { WindowQueryResourceContract } from "@plugins/infra/plugins/query-resource/core";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+import type { WindowQueryResourceContract } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import type {
   QueryDb,
   SelectMap,
   WindowQueryResourceSpec,
-} from "@plugins/infra/plugins/query-resource/server";
-import { compileWindowQuery } from "@plugins/infra/plugins/query-resource/server/testing";
+} from "@plugins/network/plugins/live/plugins/query-resource/server";
+import { compileWindowQuery } from "@plugins/network/plugins/live/plugins/query-resource/server/testing";
 import {
   pointQueryResourceDescriptor,
   windowQueryResourceDescriptor,

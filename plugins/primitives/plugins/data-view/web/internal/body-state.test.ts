@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { ResourceError } from "@plugins/primitives/plugins/live-state/core";
+import { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/core";
 import type { FieldDef, FilterNode } from "../../core";
 import { fieldsReadByView, resolveBodyState } from "./body-state";
 import {

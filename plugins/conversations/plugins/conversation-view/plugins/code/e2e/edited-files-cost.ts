@@ -28,8 +28,8 @@
  */
 import { join } from "node:path";
 import { unlink, writeFile } from "node:fs/promises";
-import { PROTOCOL } from "@plugins/packages/plugins/resource-protocol/core";
-import { canonicalJson } from "@plugins/packages/plugins/canonical-params/core";
+import { PROTOCOL } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
+import { canonicalJson } from "@plugins/network/plugins/live/plugins/canonical-params/core";
 import {
   agentFetch,
   arg,

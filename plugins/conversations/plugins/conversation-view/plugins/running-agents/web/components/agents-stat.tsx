@@ -10,7 +10,7 @@ import {
   useTranscriptRead,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/web";
 import { usageFold } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/plugins/usage/core";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useConversationSubagents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/web";
 import {
   allAgentRows,

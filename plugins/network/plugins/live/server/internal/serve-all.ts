@@ -18,7 +18,7 @@ import {
   type JoinRef,
   type JoinSpec,
   type RollupJoin,
-} from "@plugins/infra/plugins/query-resource/core";
+} from "@plugins/network/plugins/live/plugins/query-resource/core";
 import {
   compileAllCollection,
   type AllBind,
@@ -26,7 +26,7 @@ import {
   type QueryDb,
   type ReadColumn,
   type SelectMap,
-} from "@plugins/infra/plugins/query-resource/server";
+} from "@plugins/network/plugins/live/plugins/query-resource/server";
 import {
   LIVE_COLUMNS_KEY,
   type LiveAllCollection,

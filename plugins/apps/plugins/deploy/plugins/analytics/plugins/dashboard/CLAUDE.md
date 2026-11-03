@@ -104,6 +104,7 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/analytics/plugins/das
     - `primitives/css/coords` ×2
     - `primitives/css/text` ×2
     - `primitives/css/ui-kit` ×2
+    - `network/live/live-state.ResourceErrorInline`
     - `network/live.useLive`
     - `primitives/collapsible.FoldMotion`
     - `primitives/css/badge.Badge`
@@ -121,7 +122,6 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/analytics/plugins/das
     - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture.linkProps`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
     - `ui/icons.Icon`
@@ -138,7 +138,7 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/analytics/plugins/das
     - `apps/deploy/analytics/collect.AnalyticsQuerySchema`
     - `apps/deploy/host-query.HOST_QUERY_FAILURE_ARMS`
     - `network/live.liveValue`
-    - `packages/canonical-params.canonicalJson`
+    - `network/live/canonical-params.canonicalJson`
   - Exports (types): `DeploymentAnalyticsResult`
   - Exports (values):
     - `deploymentAnalytics`

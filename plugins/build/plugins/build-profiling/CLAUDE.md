@@ -16,9 +16,9 @@
     - `debug/profiling.Span`
     - `debug/profiling.SpanDetail`
     - `network/live.useLive`
+    - `network/live/live-state.foldResource`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/placeholder.Placeholder`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
 - Server:
   - Contributes: `resource.declare` "build.run-profile"

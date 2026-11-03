@@ -18,8 +18,8 @@
  * conversation ids (`select id from conversations where hibernated_at is null`).
  * This script only reads `_debug`; it writes `viewed` markers (agent-marked).
  */
-import { PROTOCOL } from "@plugins/packages/plugins/resource-protocol/core";
-import { canonicalJson } from "@plugins/packages/plugins/canonical-params/core";
+import { PROTOCOL } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
+import { canonicalJson } from "@plugins/network/plugins/live/plugins/canonical-params/core";
 import {
   agentFetch,
   arg,

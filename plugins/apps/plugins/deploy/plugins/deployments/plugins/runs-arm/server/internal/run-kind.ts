@@ -2,7 +2,7 @@ import { sql, type SQL } from "drizzle-orm";
 import {
   expr,
   type LookupJoin,
-} from "@plugins/infra/plugins/query-resource/core";
+} from "@plugins/network/plugins/live/plugins/query-resource/core";
 import { parsed } from "@plugins/database/plugins/sql-projection/server";
 import { _deployServers } from "@plugins/apps/plugins/deploy/plugins/servers/server";
 import { _deployRuns } from "@plugins/apps/plugins/deploy/plugins/deployments/server";

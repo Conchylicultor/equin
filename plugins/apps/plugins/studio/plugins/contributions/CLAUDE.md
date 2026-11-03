@@ -15,6 +15,7 @@
     - `primitives/pane` ×4
     - `plugin-meta/contributions-table` ×3
     - `apps/studio/shell.Studio`
+    - `network/live/live-state.ResourceErrorInline`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
@@ -24,7 +25,6 @@
     - `primitives/css/text.Text`
     - `primitives/data-table.DataTable`
     - `primitives/filter-chips.FilterChip`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/search.SearchInput`
     - `ui/icons.Icon`

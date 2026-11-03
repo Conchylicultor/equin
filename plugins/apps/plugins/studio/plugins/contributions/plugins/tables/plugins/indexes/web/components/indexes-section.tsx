@@ -1,5 +1,5 @@
 import { useLive } from "@plugins/network/plugins/live/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { tableIndexes } from "../../shared/resources";
 import {
   DataTable,

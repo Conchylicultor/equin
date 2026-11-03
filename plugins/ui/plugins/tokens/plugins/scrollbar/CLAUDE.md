@@ -23,11 +23,11 @@ the overlay bar draws behind its thumb while hovered.
     - `ThemeEngine.TokenGroup` "Scrollbar"
     - `ThemeCustomizer.Section` "Scrollbar" → `ScrollbarSection`
   - Uses:
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/collapsible.Collapsible`
     - `primitives/collapsible.CollapsibleContent`
     - `primitives/css/row.SectionHeaderRow`
     - `primitives/css/spacing.Stack`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `ui/theme-engine.ThemeEngine`
     - `ui/theme-engine/theme-customizer.ThemeCustomizer`

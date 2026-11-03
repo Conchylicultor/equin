@@ -24,7 +24,7 @@ import {
   type ColumnRef,
   type ExprField,
   type JoinSpec,
-} from "@plugins/infra/plugins/query-resource/core";
+} from "@plugins/network/plugins/live/plugins/query-resource/core";
 import {
   assertStableRead,
   compileJoins,
@@ -39,8 +39,8 @@ import {
   type UnionArmSpec,
   type UnionColumn,
   type UnionOrderKey,
-} from "@plugins/infra/plugins/query-resource/server";
-import type { PointParams } from "@plugins/primitives/plugins/live-state/core";
+} from "@plugins/network/plugins/live/plugins/query-resource/server";
+import type { PointParams } from "@plugins/network/plugins/live/plugins/live-state/core";
 import type { EntityTable } from "@plugins/infra/plugins/entities/server";
 import {
   clockInputs,

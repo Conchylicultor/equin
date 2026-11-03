@@ -1,7 +1,7 @@
 import type { GlanceProps } from "@plugins/shell/plugins/health-report/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useNow } from "@plugins/primitives/plugins/relative-time/web";
-import { combineResources } from "@plugins/primitives/plugins/live-state/web";
+import { combineResources } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import {

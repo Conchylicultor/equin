@@ -6,7 +6,7 @@ import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type {
   FieldOption,
   FieldOptionsResult,

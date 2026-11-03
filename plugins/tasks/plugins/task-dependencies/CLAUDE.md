@@ -10,6 +10,7 @@
   - Uses:
     - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
@@ -18,7 +19,6 @@
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/pane.useOpenPane`
     - `tasks/task-category.TaskCategoryMap`

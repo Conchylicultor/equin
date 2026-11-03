@@ -6,7 +6,7 @@ import {
   type HostFsListingMeta,
 } from "@plugins/infra/plugins/host-fs/core";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { FilepathBreadcrumb } from "@plugins/primitives/plugins/filepath-breadcrumb/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";

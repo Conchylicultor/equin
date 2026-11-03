@@ -52,7 +52,7 @@ export const DERIVED_VIEW_STATE_TABLE_NAME = "derived_view_state";
 /**
  * The L2 durable change outbox, created imperatively by change-feed inside its
  * trigger-rebuild transaction
- * (`plugins/database/plugins/change-feed/server/internal/triggers.ts`) — the
+ * (`plugins/network/plugins/live/plugins/change-feed/server/internal/triggers.ts`) — the
  * `live_state_notify()` trigger function INSERTs into it on every commit. Not
  * present in the drizzle snapshot; the orphaned-db-tables check treats it as
  * declared.
@@ -61,7 +61,7 @@ export const LIVE_STATE_CHANGELOG_TABLE = "live_state_changelog";
 
 /**
  * Public table created imperatively by the change-feed trigger rebuilder
- * (`plugins/database/plugins/change-feed/server/internal/triggers.ts`) — holds
+ * (`plugins/network/plugins/live/plugins/change-feed/server/internal/triggers.ts`) — holds
  * the trigger layer's content signature, the twin of
  * `DERIVED_VIEW_STATE_TABLE_NAME`. It is what lets a steady-state restart skip
  * the rebuild (and its whole-database AccessExclusive lock window) entirely. Not
@@ -73,7 +73,7 @@ export const LIVE_STATE_TRIGGER_STATE_TABLE = "live_state_trigger_state";
 /**
  * The L2 persisted live-state materialization, created imperatively by
  * live-state-snapshot
- * (`plugins/database/plugins/live-state-snapshot/server/internal/tables-ddl.ts`)
+ * (`plugins/network/plugins/live/plugins/live-state-snapshot/server/internal/tables-ddl.ts`)
  * — the durable snapshot + xmin watermark read at cold boot. Not present in the
  * drizzle snapshot; the orphaned-db-tables check treats it as declared.
  */
@@ -81,7 +81,7 @@ export const LIVE_STATE_SNAPSHOT_TABLE = "live_state_snapshot";
 
 /**
  * The L2 changelog's prune horizon, created imperatively by live-state-snapshot
- * (`plugins/database/plugins/live-state-snapshot/server/internal/tables-ddl.ts`)
+ * (`plugins/network/plugins/live/plugins/live-state-snapshot/server/internal/tables-ddl.ts`)
  * — one row: the highest changelog xid the prune ever deleted, written by the
  * prune's own statement. Catch-up reads it to tell "history at or after this
  * floor was pruned" (backstop) from "no change happened since it" (replay). Not

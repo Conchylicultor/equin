@@ -3,7 +3,7 @@ import {
   serveCollection,
   type ServeAllCollectionOptions,
 } from "@plugins/network/plugins/live/server";
-import type { LookupJoin } from "@plugins/infra/plugins/query-resource/core";
+import type { LookupJoin } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import { _blocks } from "@plugins/page/plugins/editor/server";
 import { blockDocs, pageBlockDocs, type PageBlockDocsRow } from "../../core";
 import { _pageBlockDocs } from "./tables";

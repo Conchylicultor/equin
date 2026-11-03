@@ -1,6 +1,6 @@
 import { useConfigResult, useSetConfig } from "@plugins/config_v2/web";
 import type { ChordDisplayMode } from "@plugins/apps/plugins/sonata/plugins/theory/core";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { chordLabelConfig } from "../shared/config";

@@ -1,6 +1,6 @@
 import { useLive } from "@plugins/network/plugins/live/web";
-import { combineResources } from "@plugins/primitives/plugins/live-state/web";
-import type { ResourceError } from "@plugins/primitives/plugins/live-state/core";
+import { combineResources } from "@plugins/network/plugins/live/plugins/live-state/web";
+import type { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/core";
 import { useConversationById } from "@plugins/conversations/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import {

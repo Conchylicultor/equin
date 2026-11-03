@@ -4,7 +4,7 @@ import {
   useBackgroundEntry,
 } from "@plugins/infra/plugins/background/plugins/catalog/web";
 import type { BackgroundEntry } from "@plugins/infra/plugins/background/plugins/catalog/core";
-import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { AutomationTrigger } from "../../core";
 
 /**

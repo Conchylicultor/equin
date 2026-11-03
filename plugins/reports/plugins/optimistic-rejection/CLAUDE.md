@@ -3,7 +3,7 @@
 The report kind — and the user-facing toast — for **a write the server permanently
 rejected**, so the user's edit was lost.
 
-`useOptimisticResource` (`primitives/optimistic-mutation`) classifies every HTTP failure
+`useOptimisticResource` (`network/live/optimistic-mutation`) classifies every HTTP failure
 with `classifyRejection`: a 4xx other than 401 / 408 / 429 is a **final verdict** (the
 server will answer the same way however often the op is re-sent). Such an op is dropped
 from the overlay at once — the surface renders server truth again and the newer ops

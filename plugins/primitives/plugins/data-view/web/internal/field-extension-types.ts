@@ -2,7 +2,7 @@ import type { ComponentType, ReactNode } from "react";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
 import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
-import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type {
   DataViewId,
   FieldDef,

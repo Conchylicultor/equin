@@ -60,6 +60,7 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
     - `apps/debug/shell.DebugApp`
     - `build.useStaleFrontend`
     - `infra/endpoints.useFetchEndpoint`
+    - `network/live/live-state.ResourceErrorInline`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
@@ -68,7 +69,6 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
     - `shell/notifications.Notifications`

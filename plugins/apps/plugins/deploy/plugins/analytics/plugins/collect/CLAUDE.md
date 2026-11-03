@@ -97,7 +97,6 @@ The dashboard's Events panel expands an event into these rows.
     - `apps/deploy/analytics/host-only.requestClientIp`
     - `apps/deploy/analytics/ip-country.lookupCountry`
     - `database.db`
-    - `database/change-feed.ExcludeFromChangeFeed`
     - `database/sql-column.parsedJson`
     - `database/sql-column.parsedText`
     - `infra/endpoints.implement`
@@ -105,6 +104,7 @@ The dashboard's Events panel expands an event into these rows.
     - `infra/jobs.defineJob`
     - `infra/retention.defineRetention`
     - `infra/retention.markCascadeBounded`
+    - `network/live/change-feed.ExcludeFromChangeFeed`
   - DB schema: `plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/server/internal/tables.ts`
   - Register:
     - `defineJob('analytics.rollup')`

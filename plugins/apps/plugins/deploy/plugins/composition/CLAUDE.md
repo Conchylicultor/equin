@@ -42,6 +42,7 @@ the first.
     - `apps-core/tabs.useAppLink`
     - `apps/deploy/deployments.DeploymentDetail`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `plugin-meta/composition.useManifestItemByName`
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`
@@ -49,7 +50,6 @@ the first.
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
 

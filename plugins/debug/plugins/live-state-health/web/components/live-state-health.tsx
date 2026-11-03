@@ -5,7 +5,7 @@ import {
   type DebugSnapshot,
   type DebugSub,
   type TransportInfo,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { WsStatus } from "@plugins/primitives/plugins/networking/web";
 import {
   SectionLabel,

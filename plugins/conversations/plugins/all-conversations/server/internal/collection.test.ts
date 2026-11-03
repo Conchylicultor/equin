@@ -21,7 +21,7 @@ import { compileCollection } from "@plugins/network/plugins/live/server/testing"
 import {
   compileWindowQuery,
   recordingQueryDb,
-} from "@plugins/infra/plugins/query-resource/server/testing";
+} from "@plugins/network/plugins/live/plugins/query-resource/server/testing";
 import {
   _conversations,
   conversationOwnerColumns,

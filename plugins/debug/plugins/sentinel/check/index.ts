@@ -73,7 +73,7 @@ const STATUS_FILE_ENTRIES = [
 // eslint-disable-next-line exempt/no-path-allowlist -- a deny-list of import-closure targets, not an allowlist of violators
 const STATUS_FILE_FORBIDDEN_PREFIXES = [
   "plugins/config_v2/",
-  "plugins/primitives/plugins/live-state/",
+  "plugins/network/plugins/live/plugins/live-state/",
   "plugins/infra/plugins/jobs/",
   "plugins/database/",
   "plugins/debug/plugins/sentinel/core/",

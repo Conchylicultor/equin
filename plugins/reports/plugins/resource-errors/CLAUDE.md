@@ -46,10 +46,10 @@ page-local, known from the first render.
     - `Reports.KindView` → `ResourceErrorKindView`
     - `HealthReport.Row` "Live reads"
   - Uses:
+    - `network/live/live-state.resourceErrorReportSink`
+    - `network/live/live-state.useFailingResources`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
-    - `primitives/live-state.resourceErrorReportSink`
-    - `primitives/live-state.useFailingResources`
     - `reports.report`
     - `reports.Reports`
     - `shell/health-report.HealthReport`

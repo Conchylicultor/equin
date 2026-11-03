@@ -2,7 +2,7 @@ import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEffect, useRef, useState } from "react";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
-import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceView } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   useEndpointMutation,
   getEndpointErrorMessage,

@@ -133,11 +133,11 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
   - Uses:
     - `network/live.mapRow`
     - `network/live.useLive`
+    - `network/live/live-state.foldResource`
+    - `network/live/live-state.mapResource`
+    - `network/live/live-state.ResourceResult`
+    - `network/live/live-state.useCombinedResources`
     - `primitives/file-links.FileLinksWorkspaceProvider`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.useCombinedResources`
   - Exports (values):
     - `ConversationFileLinks`
     - `useActiveConversations`

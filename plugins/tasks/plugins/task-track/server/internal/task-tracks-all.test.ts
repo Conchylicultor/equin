@@ -16,7 +16,7 @@ import {
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
-import type { QueryDb } from "@plugins/infra/plugins/query-resource/server";
+import type { QueryDb } from "@plugins/network/plugins/live/plugins/query-resource/server";
 import { compileCollection } from "@plugins/network/plugins/live/server/testing";
 import { taskTracks } from "../../core";
 import { tasksTrack } from "./tables";

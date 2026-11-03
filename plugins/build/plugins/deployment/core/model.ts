@@ -2,7 +2,7 @@ import { z } from "zod";
 import {
   resolvableSchema,
   type Resolvable,
-} from "@plugins/primitives/plugins/live-state/core";
+} from "@plugins/network/plugins/live/plugins/live-state/core";
 import { CommitRowSchema } from "@plugins/primitives/plugins/commit-list/core";
 
 /**

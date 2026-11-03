@@ -26,7 +26,7 @@ import {
   createTestDb,
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
-import { createHarness } from "@plugins/framework/plugins/resource-runtime/core/testing";
+import { createHarness } from "@plugins/network/plugins/live/plugins/resource-runtime/core/testing";
 import {
   serveCollectionOn,
   type LiveDecodedQuery,

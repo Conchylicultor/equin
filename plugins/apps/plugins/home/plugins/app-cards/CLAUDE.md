@@ -33,6 +33,7 @@ one?" — opens the New app screen (`new-app`'s `newAppPane`).
     - `apps/home/new-app.newAppPane`
     - `apps/home/shell.Home`
     - `hints.useHintAnchor`
+    - `network/live/live-state.foldResource`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.Button`
     - `primitives/data-view.CreateOption`
@@ -40,7 +41,6 @@ one?" — opens the New app screen (`new-app`'s `newAppPane`).
     - `primitives/data-view.defineDataView`
     - `primitives/data-view/capsule-toolbar.capsuleToolbar`
     - `primitives/link-gesture.linkProps`
-    - `primitives/live-state.foldResource`
     - `primitives/pane.useOpenPane`
     - `ui/icons.Icon`
 - Core:

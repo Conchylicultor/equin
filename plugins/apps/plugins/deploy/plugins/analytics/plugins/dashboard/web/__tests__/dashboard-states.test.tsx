@@ -26,7 +26,7 @@ vi.mock("../components/trend-chart", () => ({
 }));
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { ResourceError } from "@plugins/primitives/plugins/live-state/core";
+import { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/core";
 import type { AnalyticsReport } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
 import type { DeploymentAnalyticsResult } from "../../core";
 import { AnalyticsDashboard } from "../components/analytics-dashboard";

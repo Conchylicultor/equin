@@ -37,6 +37,7 @@ box. It stores nothing.
     - `apps/deploy/host-query` ×3
     - `primitives/data-view` ×3
     - `primitives/relative-time` ×2
+    - `network/live/live-state.ResourceErrorInline`
     - `network/live.useLive`
     - `primitives/css/card.Card`
     - `primitives/css/fill.Fill`
@@ -46,7 +47,6 @@ box. It stores nothing.
     - `primitives/css/ui-kit.Button`
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture.linkProps`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
 - Server:

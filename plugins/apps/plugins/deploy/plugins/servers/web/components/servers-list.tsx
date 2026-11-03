@@ -1,5 +1,5 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { matchResource } from "@plugins/primitives/plugins/live-state/web";
+import { matchResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {

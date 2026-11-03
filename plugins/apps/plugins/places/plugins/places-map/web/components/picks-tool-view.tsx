@@ -13,7 +13,7 @@ import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { MapPin } from "@plugins/map/core";
 import { MapView, useLinkedHover } from "@plugins/map/web";
 import type { PlaceCandidate } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";

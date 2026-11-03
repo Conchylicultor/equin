@@ -4,8 +4,8 @@ import type {
   ResourceContract,
   ResourceMode,
   ResourceParams,
-} from "@plugins/framework/plugins/resource-runtime/core";
-import type { PointParams } from "@plugins/primitives/plugins/live-state/core";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+import type { PointParams } from "@plugins/network/plugins/live/plugins/live-state/core";
 import type {
   Filterable,
   FilterScalar,

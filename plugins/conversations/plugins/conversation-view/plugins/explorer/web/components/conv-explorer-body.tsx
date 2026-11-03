@@ -7,7 +7,7 @@ import {
 import type { ExplorerLocation } from "@plugins/apps/plugins/file-explorer/plugins/browser/core";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversation } from "@plugins/conversations/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";

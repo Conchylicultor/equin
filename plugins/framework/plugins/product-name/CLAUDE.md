@@ -70,7 +70,7 @@ A leaf with no imports, so a browser bundle, a server or a script can import it.
     - `infra/namespace`
     - `infra/paths`
     - `infra/request-origin`
-    - `packages/resource-protocol`
+    - `network/live/resource-protocol`
     - `tasks/tasks-core`
 - Exemptions:
   - Exempts itself from:

@@ -5,7 +5,7 @@ import {
   type Exhibit,
   type ExhibitLookup,
 } from "@plugins/plugin-meta/plugins/exhibits/core";
-import { useQueryResource } from "@plugins/primitives/plugins/live-state/web";
+import { useQueryResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 
 /** The catalog as a read: not known yet, or every contributed exhibit. */
 export type ExhibitsResult =

@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { rawEndpointHandler } from "@plugins/infra/plugins/endpoints/server";
-import { ExcludeFromChangeFeed } from "@plugins/database/plugins/change-feed/server";
+import { ExcludeFromChangeFeed } from "@plugins/network/plugins/live/plugins/change-feed/server";
 import { analyticsQueryEndpoint, collectEndpoint } from "../core";
 import { analyticsRollupJob } from "./internal/rollup";
 import { analyticsVisitsRetention } from "./internal/retention";

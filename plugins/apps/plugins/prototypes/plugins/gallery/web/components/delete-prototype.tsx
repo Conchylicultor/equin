@@ -7,7 +7,7 @@ import {
   useCombinedResources,
   matchResource,
   ResourceErrorInline,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { prototypesList } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { deletePrototype } from "@plugins/apps/plugins/prototypes/plugins/state/core";

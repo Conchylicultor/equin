@@ -19,13 +19,13 @@
     - `primitives/css/ui-kit` ×4
     - `primitives/data-view` ×4
     - `infra/endpoints` ×2
+    - `network/live/live-state.foldResource`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.foldResource`
     - `primitives/overlay/imperative-dialog.openDialog`
 - Server:
   - Contributes:

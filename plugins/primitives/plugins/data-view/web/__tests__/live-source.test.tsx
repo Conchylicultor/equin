@@ -50,11 +50,11 @@ import { resetDeferredLoadStateForTests } from "@plugins/framework/plugins/web-s
 import {
   ResourceError,
   queryKeyFor,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   createLiveStateHarness,
   type LiveStateHarness,
-} from "@plugins/primitives/plugins/live-state/web/testing";
+} from "@plugins/network/plugins/live/plugins/live-state/web/testing";
 import {
   liveCollection,
   type LiveQuery,

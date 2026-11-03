@@ -1,5 +1,5 @@
 import { sql, type SQL } from "drizzle-orm";
-import type { ColumnRef } from "@plugins/infra/plugins/query-resource/core";
+import type { ColumnRef } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import type { ColumnExpr } from "@plugins/primitives/plugins/keyset/server";
 import type { ReleaseRun } from "@plugins/release/core";
 import type { RunOutcome } from "@plugins/runs/plugins/run-outcome/core";

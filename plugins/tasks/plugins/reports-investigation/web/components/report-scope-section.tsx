@@ -1,7 +1,7 @@
 import { Fragment, useState, type ReactElement } from "react";
 import { useConfigResult, useSetConfig } from "@plugins/config_v2/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   ControlPanel,
   ControlPanelPane,

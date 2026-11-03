@@ -91,7 +91,7 @@ const createRule = lintRuleCreator(import.meta.url);
  *
  * Test code is out of scope (a contributed rule's default). The rule is
  * `noDebt`: its only exemptions are the two sanctioned substrate entries
- * (`network/live` and `primitives/live-state`, whose `web/` implements every
+ * (`network/live` and `network/live/live-state`, whose `web/` implements every
  * live read over TanStack queries) — never a debt entry.
  */
 

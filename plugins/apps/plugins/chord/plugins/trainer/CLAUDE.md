@@ -255,7 +255,7 @@ piano.
     - `integrations/youtube` ×5
     - `apps/chord/curriculum` ×4
     - `apps/chord/piano` ×4
-    - `primitives/live-state` ×4
+    - `network/live/live-state` ×4
     - `primitives/css/coords` ×3
     - `primitives/pane` ×3
     - `apps/chord/vocabulary` ×2

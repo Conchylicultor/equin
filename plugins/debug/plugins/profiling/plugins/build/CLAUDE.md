@@ -16,11 +16,11 @@
     - `debug/profiling.Span`
     - `debug/profiling.SpanDetail`
     - `network/live.useLive`
+    - `network/live/live-state.foldResource`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/clip.Clip`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Inset`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`

@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import {
   mapResource,
   type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { joinCatalog, type HintCatalogEntry } from "./catalog";
 import { useHints, useTours } from "./registry";
 import { useHintSeen } from "./seen";

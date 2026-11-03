@@ -1,4 +1,4 @@
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { ConversationItemConv } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { useActiveDependentCount } from "@plugins/tasks/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";

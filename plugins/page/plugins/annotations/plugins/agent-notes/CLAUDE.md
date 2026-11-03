@@ -67,13 +67,13 @@ without being in it.
     - `Editor.Block` "agent-note" → `ContainerNoRow`
     - `Editor.BlockFrame` "agent-note" → `AgentNotesFrame`
   - Uses:
+    - `network/live/live-state.foldResource`
     - `page/annotations/agent-notes/authorship.AgentNotesAuthors`
     - `page/annotations/agent-notes/authorship.useAgentNotesAuthors`
     - `page/container.ContainerBackdrop`
     - `page/container.ContainerCornerLabel`
     - `page/container.ContainerNoRow`
     - `page/editor.Editor`
-    - `primitives/live-state.foldResource`
   - Exports (values): `agentNotesBlock`
 - Server:
   - Contributes: `page.block-data` "agent-note"

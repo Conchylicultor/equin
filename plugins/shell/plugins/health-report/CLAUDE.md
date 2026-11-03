@@ -162,6 +162,7 @@ probes, is mounted per page.
     - `primitives/css/ui-kit` ×3
     - `primitives/css/spacing` ×2
     - `primitives/error-boundary` ×2
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
@@ -169,7 +170,6 @@ probes, is mounted per page.
     - `primitives/css/row.Row`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/row-actions.RowActions`

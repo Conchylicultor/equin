@@ -3,7 +3,7 @@ import {
   DataViewSwitcher,
   defineDataView,
 } from "@plugins/primitives/plugins/data-view/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Rigid } from "@plugins/primitives/plugins/css/plugins/rigid/web";

@@ -1,7 +1,7 @@
 import { useContext } from "react";
 import { useConfigResult } from "@plugins/config_v2/web";
 import { EndpointError } from "@plugins/infra/plugins/endpoints/web";
-import type { ResourceError } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   themeSelectionConfig,
   type ColorAdjustment,

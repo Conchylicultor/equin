@@ -2,7 +2,7 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 
 import { WithTooltip } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useNow } from "@plugins/primitives/plugins/relative-time/web";
 import { useSleepNowForFold } from "@plugins/infra/plugins/host/plugins/machine-sleep/web";
 import type { ConversationItemConv } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";

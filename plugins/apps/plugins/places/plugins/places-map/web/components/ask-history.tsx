@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";

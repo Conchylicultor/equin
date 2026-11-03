@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { LiveChart } from "@plugins/stats/plugins/commits/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   DataView,
   defineDataView,

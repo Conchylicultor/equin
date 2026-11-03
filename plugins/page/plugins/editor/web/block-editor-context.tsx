@@ -20,7 +20,7 @@ import {
 } from "@plugins/primitives/plugins/undo-redo/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { resolveDropParent } from "@plugins/primitives/plugins/tree/core";
 import {

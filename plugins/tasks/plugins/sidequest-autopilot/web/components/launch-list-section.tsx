@@ -8,7 +8,7 @@ import {
   combineResources,
   foldResource,
   mapResource,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   DataView,
   defineDataView,

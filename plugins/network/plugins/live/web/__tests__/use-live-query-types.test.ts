@@ -29,7 +29,7 @@ import {
   type LiveWhereOf,
 } from "@plugins/network/plugins/live/core";
 import { or } from "@plugins/network/plugins/live/plugins/filter/core";
-import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useLive } from "../internal/use-live";
 import type {
   LiveListResult,

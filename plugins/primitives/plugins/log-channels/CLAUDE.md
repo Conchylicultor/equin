@@ -230,18 +230,18 @@ count accumulates across drops.
     - `apps` ×12
     - `debug` ×9
     - `infra` ×8
-    - `database` ×7
+    - `database` ×5
     - `framework` ×4
+    - `network` ×4
     - `conversations` ×3
     - `build` ×2
-    - `primitives` ×2
     - `reports` ×2
     - `tasks` ×2
     - `active-data/show-me`
     - `backup`
     - `integrations/youtube/audio-fetch`
     - `menu-bar`
-    - `network/live`
+    - `primitives/log-channels/memory-persistence`
     - `release`
     - `stats/cost`
     - `upstream`

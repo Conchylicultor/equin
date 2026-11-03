@@ -10,6 +10,8 @@
     - `infra/endpoints.useFetchEndpoint`
     - `network/live.mapRow`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
+    - `network/live/live-state.ResourceResult`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Select`
@@ -17,8 +19,6 @@
     - `primitives/css/ui-kit.SelectItem`
     - `primitives/css/ui-kit.SelectTrigger`
     - `primitives/css/ui-kit.SelectValue`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.ResourceResult`
     - `primitives/loading.Loading`
     - `primitives/pane.useOpenPane`
     - `shell/notifications.useToast`

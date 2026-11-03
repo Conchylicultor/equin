@@ -51,14 +51,14 @@ Uses (hand-written, beyond the autogen list below): `infra/host/host-read-pool`
 - Server:
   - Uses:
     - `database.db`
-    - `database/live-state-snapshot.clearPersistedSnapshots`
-    - `infra/boot-snapshot.assembleBootSnapshot`
-    - `infra/boot-snapshot.preloadedKeys`
     - `infra/endpoints.callEndpoint`
     - `infra/endpoints.implement`
     - `infra/host/host-admission.defineHostPool`
     - `infra/host/host-read-pool.heavyReadSlotCount`
     - `infra/mcp.Mcp`
+    - `network/live/boot-snapshot.assembleBootSnapshot`
+    - `network/live/boot-snapshot.preloadedKeys`
+    - `network/live/live-state-snapshot.clearPersistedSnapshots`
     - `tasks/tasks-core.getConversation`
   - Register: `mcpTool('benchmark_boot')`
   - Routes: `POST /api/debug/boot-bench/run`

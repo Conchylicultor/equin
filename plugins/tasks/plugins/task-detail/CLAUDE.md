@@ -28,10 +28,10 @@
     - `Shell.Sidebar` "Tasks"
   - Uses:
     - `network/live.useLive`
+    - `network/live/live-state.foldResource`
     - `primitives/app-shell.opensPane`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/file-links.FileLinksWorkspaceProvider`
-    - `primitives/live-state.foldResource`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.resolveFrom`

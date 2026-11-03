@@ -34,13 +34,13 @@ import {
   collectContributions,
   unboundedWindowKeys,
 } from "@plugins/framework/plugins/server-core/core";
-import type { ResourceParams } from "@plugins/framework/plugins/resource-runtime/core";
-import type { LookupJoin } from "@plugins/infra/plugins/query-resource/core";
+import type { ResourceParams } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+import type { LookupJoin } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import {
   compileWindowQuery,
   recordingQueryDb,
   type RecordedQuery,
-} from "@plugins/infra/plugins/query-resource/server/testing";
+} from "@plugins/network/plugins/live/plugins/query-resource/server/testing";
 import {
   exposedColumns,
   liveCollection,

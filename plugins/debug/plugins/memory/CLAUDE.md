@@ -16,6 +16,8 @@ Browse Claude Code auto-memory files for the current project. Lists all `.md` fi
   - Uses:
     - `apps/debug/shell.DebugApp`
     - `network/live.useLive`
+    - `network/live/live-state.foldResource`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/badge.formatStatusLabel`
     - `primitives/css/center.Center`
     - `primitives/css/rigid.rigidClass`
@@ -27,8 +29,6 @@ Browse Claude Code auto-memory files for the current project. Lists all `.md` fi
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.FieldDef`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/markdown.Markdown`
     - `primitives/pane.defineRoute`

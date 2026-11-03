@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ResourceContractError } from "@plugins/packages/plugins/resource-protocol/core";
+import { ResourceContractError } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
 import {
   registerResourceDescriptor,
   type PointParams,
@@ -7,14 +7,14 @@ import {
   type ResourcePreload,
   type WindowParams,
   type WindowSelector,
-} from "@plugins/primitives/plugins/live-state/core";
+} from "@plugins/network/plugins/live/plugins/live-state/core";
 import {
   isCompositeKey,
   type AllQueryResourceContract,
   type CompositeKey,
   type PointQueryResourceContract,
   type WindowQueryResourceContract,
-} from "@plugins/infra/plugins/query-resource/core";
+} from "@plugins/network/plugins/live/plugins/query-resource/core";
 
 // The factories `liveCollection` mints its resources with: the window
 // (`windowQueryResourceDescriptor`), the `:rows` point sibling

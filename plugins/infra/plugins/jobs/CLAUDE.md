@@ -802,9 +802,10 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `conversations` ×8
     - `debug` ×7
     - `tasks` ×5
-    - `database` ×3
     - `page` ×3
+    - `database` ×2
     - `integrations/youtube/audio-fetch`
+    - `network/live/live-state-snapshot`
     - `shell/notifications`
     - `stats/cost`
     - `upstream`

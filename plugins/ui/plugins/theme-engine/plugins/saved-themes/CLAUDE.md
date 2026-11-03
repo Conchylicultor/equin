@@ -14,9 +14,9 @@
     - `infra/endpoints.useEndpointMutation`
     - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`
-    - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.useResourceAcks`
-    - `primitives/optimistic-mutation.useAwaitResourceWrite`
+    - `network/live/live-state.ResourceResult`
+    - `network/live/live-state.useResourceAcks`
+    - `network/live/optimistic-mutation.useAwaitResourceWrite`
     - `ui/theme-engine.ThemeEngine`
     - `ui/theme-engine.useThemes`
     - `ui/theme-engine.whenNoScopeSelects`

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ResourceDescriptor } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceDescriptor } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type {
   LiveCollection,
   LivePagedPages,

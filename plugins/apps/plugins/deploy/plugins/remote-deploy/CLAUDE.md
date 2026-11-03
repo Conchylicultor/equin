@@ -148,7 +148,7 @@ remote health gate.
     - `FieldPresentation.Register` "client:deploy.deployments:release"
   - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/deploy/deployments` ×7
-    - `primitives/live-state` ×6
+    - `network/live/live-state` ×6
     - `apps/deploy/health` ×3
     - `network/live` ×3
     - `primitives/css/ui-kit` ×3

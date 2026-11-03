@@ -1,5 +1,5 @@
 import { useLive } from "@plugins/network/plugins/live/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useAppLinkProps } from "@plugins/apps-core/plugins/tabs/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";

@@ -1,6 +1,6 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { eq, sql } from "drizzle-orm";
-import { expr } from "@plugins/infra/plugins/query-resource/core";
+import { expr } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import { parsed } from "@plugins/database/plugins/sql-projection/server";
 import { runsServed } from "@plugins/runs/server";
 import { RunOutcomeSchema } from "@plugins/runs/plugins/run-outcome/core";

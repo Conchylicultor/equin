@@ -11,7 +11,7 @@ import { useDataViewControls } from "../controls/controls-context";
 import { DataViewControlPanel } from "./control-panel-host";
 import type { ToolbarControls } from "./use-toolbar-controls";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { SlotLayout } from "../../internal/slot-layout";
 import { ROUND_AT_REST } from "./round-form";
 import { symbol } from "@plugins/ui/plugins/icons/core";

@@ -4,7 +4,7 @@ import {
   registerResourceDescriptor,
   type ResourceDescriptor,
   type ResourcePreload,
-} from "@plugins/primitives/plugins/live-state/core";
+} from "@plugins/network/plugins/live/plugins/live-state/core";
 import type { EntityRef } from "@plugins/infra/plugins/entities/core";
 import type { FieldsRecord } from "@plugins/fields/core";
 import {
@@ -12,7 +12,7 @@ import {
   type AllQueryResourceContract,
   type PointQueryResourceContract,
   type WindowQueryResourceContract,
-} from "@plugins/infra/plugins/query-resource/core";
+} from "@plugins/network/plugins/live/plugins/query-resource/core";
 import {
   LIST_MAX,
   type Filterable,

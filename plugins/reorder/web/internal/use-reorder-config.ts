@@ -5,7 +5,7 @@ import type { ReorderTree } from "@plugins/fields/plugins/reorder-tree/core";
 import {
   mapResource,
   type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 
 /**
  * Read a reorderable slot's `items` tree from its config_v2 descriptor, as a

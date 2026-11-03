@@ -2,7 +2,7 @@ import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   enqueueDetachedWrite,
   enqueueResourceWrite,
-} from "@plugins/primitives/plugins/optimistic-mutation/web";
+} from "@plugins/network/plugins/live/plugins/optimistic-mutation/web";
 import { resetTrackView, upsertTrackView } from "../shared/endpoints";
 import { trackViewScope, trackViews } from "../shared/resources";
 

@@ -4,7 +4,7 @@ import {
 } from "@plugins/conversations/plugins/model-provider/core";
 import { useModelCatalog } from "@plugins/conversations/plugins/model-provider/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import type { TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
 import { useTaskAutoStart } from "../hooks";

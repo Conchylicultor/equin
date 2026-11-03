@@ -61,7 +61,7 @@ conversation.
     - `active-data/id-chip.idChip`
     - `apps/prototypes/canvas.prototypeDetailPane`
     - `network/live.useLive`
-    - `primitives/live-state.foldResource`
+    - `network/live/live-state.foldResource`
     - `primitives/pane.useOpenPane`
 - Server:
   - Contributes:

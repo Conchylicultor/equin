@@ -1,4 +1,4 @@
-import { defineChangeProducer } from "@plugins/database/plugins/change-feed/server";
+import { defineChangeProducer } from "@plugins/network/plugins/live/plugins/change-feed/server";
 import { _reports } from "@plugins/reports/server";
 
 // The `reports` table's change source. It carries no change-feed trigger: every

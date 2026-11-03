@@ -34,8 +34,8 @@ import { runMigrations } from "@plugins/database/plugins/migrations/server/testi
 import {
   flushNow,
   mountProducersForTest,
-} from "@plugins/database/plugins/change-feed/server/testing";
-import type { routeChange } from "@plugins/database/plugins/change-feed/server";
+} from "@plugins/network/plugins/live/plugins/change-feed/server/testing";
+import type { routeChange } from "@plugins/network/plugins/live/plugins/change-feed/server";
 import { writeReport, type ReportUpsertValues } from "./record-report";
 import { reportsProducer } from "./producer";
 import { _reports } from "@plugins/reports/server";

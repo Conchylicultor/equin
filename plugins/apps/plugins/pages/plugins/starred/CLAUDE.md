@@ -58,10 +58,10 @@ Favorites/starred pages, as a **presence-only marker** — not a bespoke sidebar
     - `infra/endpoints.useEndpointMutation`
     - `network/live.FieldPresentation`
     - `network/live.useLive`
+    - `network/live/live-state.mapResource`
+    - `network/live/live-state.ResourceErrorInline`
+    - `network/live/live-state.ResourceResult`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.ResourceResult`
   - Exports (types): `StarredPageRow`
   - Exports (values): `StarredPageRowSchema`
 - Server:

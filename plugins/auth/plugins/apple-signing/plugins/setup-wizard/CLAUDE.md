@@ -12,16 +12,16 @@
     - `config_v2.useConfigRegistrations`
     - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`
+    - `network/live/live-state.mapResource`
+    - `network/live/live-state.ResourceErrorInline`
+    - `network/live/live-state.ResourceResult`
+    - `network/live/live-state.ResourceUnavailable`
+    - `network/live/live-state.useCombinedResources`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.Input`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.ResourceUnavailable`
-    - `primitives/live-state.useCombinedResources`
     - `primitives/loading.Loading`
     - `primitives/setup-steps.Step`
     - `primitives/setup-steps.StepDone`

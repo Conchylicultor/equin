@@ -4,7 +4,7 @@ import { parsed } from "@plugins/database/plugins/sql-projection/server";
 import {
   aggregate,
   childrenJoin,
-} from "@plugins/infra/plugins/query-resource/core";
+} from "@plugins/network/plugins/live/plugins/query-resource/core";
 import type { ServeAllCollectionOptions } from "@plugins/network/plugins/live/server";
 import { _blocks, PAGE_BLOCK_TYPE } from "@plugins/page/plugins/editor/server";
 import type { PageLinkSourcesRow } from "../../core";

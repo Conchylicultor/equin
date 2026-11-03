@@ -13,6 +13,8 @@
     - `conversations/conversation-ui/row.ConversationRow`
     - `conversations/conversation-view.useConversationOpener`
     - `network/live.useLive`
+    - `network/live/live-state.foldResource`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
@@ -23,8 +25,6 @@
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture.activationProps`
     - `primitives/link-gesture/new-tab.NewTabGlyph`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `tasks/attempt-status.AttemptStatusBadge`
     - `tasks/task-detail.TaskDetailSlots`

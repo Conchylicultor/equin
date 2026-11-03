@@ -13,6 +13,7 @@
     - `conversations/conversation-view/jsonl-viewer` ×3
     - `conversations/conversation-view/pending-turn` ×2
     - `primitives/css/spacing` ×2
+    - `network/live/live-state.matchResource`
     - `network/live.useLive`
     - `primitives/collapsible.FoldMotion`
     - `primitives/css/clip.Clip`
@@ -21,7 +22,6 @@
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/text.Text`
     - `primitives/css/yield.yieldClass`
-    - `primitives/live-state.matchResource`
     - `primitives/overlay/popover.InlinePopover`
     - `ui/icons.Icon`
 - Cross-plugin:

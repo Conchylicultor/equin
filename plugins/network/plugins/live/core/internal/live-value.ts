@@ -13,12 +13,12 @@ import {
 import {
   ResourceContractError,
   ResourceRefusal,
-} from "@plugins/packages/plugins/resource-protocol/core";
+} from "@plugins/network/plugins/live/plugins/resource-protocol/core";
 import {
   registerResourceDescriptor,
   type ResourceDescriptor,
   type ResourcePreload,
-} from "@plugins/primitives/plugins/live-state/core";
+} from "@plugins/network/plugins/live/plugins/live-state/core";
 import type { LivePreload, LiveRowSchema } from "./live-collection";
 import {
   liveQueryCodec,

@@ -189,8 +189,8 @@ imports `@plugins/auth/*` directly — all Gmail auth flows through
     - `fields/int/config.intField`
     - `fields/json/config.jsonField`
     - `infra/entities.entityRef`
-    - `infra/query-resource.compositeKey`
-    - `primitives/live-state.tolerantEnum`
+    - `network/live/live-state.tolerantEnum`
+    - `network/live/query-resource.compositeKey`
   - Exports (types):
     - `MailAccount`
     - `MailAccountId`

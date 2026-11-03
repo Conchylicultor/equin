@@ -22,7 +22,7 @@ vi.mock("../hooks/use-reload-advice", () => ({
   useReloadAdvice: () => state.advice,
 }));
 vi.mock(
-  "@plugins/primitives/plugins/live-state/web",
+  "@plugins/network/plugins/live/plugins/live-state/web",
   async (importOriginal) => ({
     ...(await importOriginal<object>()),
     useNotificationsChannelStatuses: () => ({
@@ -33,7 +33,7 @@ vi.mock(
 );
 
 import { cleanup, fireEvent, render } from "@testing-library/react";
-import { ResourceError } from "@plugins/primitives/plugins/live-state/core";
+import { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/core";
 import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 import { BuildButton } from "../components/build-button";
 

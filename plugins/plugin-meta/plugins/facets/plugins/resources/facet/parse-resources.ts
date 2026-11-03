@@ -18,7 +18,7 @@ import {
   type FileBindings,
   type ImportedDescriptorResolver,
   type SourceFile,
-} from "@plugins/framework/plugins/tooling/plugins/resource-vocabulary/core";
+} from "@plugins/network/plugins/live/plugins/resource-vocabulary/core";
 import type { ResourceChanges, ResourceDef, ResourceFacetData } from "../core";
 import {
   asAppPath,

@@ -3,7 +3,7 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   foldResource,
   ResourceErrorInline,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { useAccountStatus } from "../hooks";
 import { currentWorktreeName, startConnectFlow } from "../connect";

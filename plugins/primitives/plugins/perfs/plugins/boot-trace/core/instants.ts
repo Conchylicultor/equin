@@ -3,7 +3,7 @@
 // User Timing mirror). One place, so stamper and reader name the same instant.
 
 /**
- * The first React commit after the boot snapshot is hydrated (infra/boot-snapshot):
+ * The first React commit after the boot snapshot is hydrated (network/live/boot-snapshot):
  * chrome and eager panes reading real data. Deferred-tier route content may still
  * be loading.
  */

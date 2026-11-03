@@ -7,7 +7,7 @@ import {
 } from "@plugins/primitives/plugins/pane/web";
 import { DataView } from "@plugins/primitives/plugins/data-view/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { matchResource } from "@plugins/primitives/plugins/live-state/web";
+import { matchResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { GmailAccessEmptyState } from "@plugins/integrations/plugins/gmail/web";
 import { threadPane } from "@plugins/apps/plugins/mail/plugins/reading-pane/web";
 import { mailApp } from "@plugins/apps/plugins/mail/plugins/shell/core";

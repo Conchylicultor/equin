@@ -11,7 +11,7 @@ import {
   mapResource,
   type PortableGateInput,
   type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { GrooveFields } from "../shared/groove";
 import { DEFAULT_GROOVE_PRESET_ID } from "../shared/groove-presets";
 import { rhythms } from "../shared/resources";

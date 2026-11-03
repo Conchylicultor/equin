@@ -119,10 +119,10 @@ cannot be a `recomputeOn` upstream (a keyed window cascades nothing, D32).
 - Web:
   - Uses:
     - `network/live.useLive`
-    - `primitives/live-state.combineResources`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.ResourceUnavailable`
+    - `network/live/live-state.combineResources`
+    - `network/live/live-state.mapResource`
+    - `network/live/live-state.ResourceResult`
+    - `network/live/live-state.ResourceUnavailable`
   - Exports (values):
     - `gitStatusBadge`
     - `gitStatusDot`
@@ -133,8 +133,8 @@ cannot be a `recomputeOn` upstream (a keyed window cascades nothing, D32).
 - Core:
   - Uses:
     - `network/live.liveValue`
-    - `primitives/live-state.Resolvable`
-    - `primitives/live-state.resolvableSchema`
+    - `network/live/live-state.Resolvable`
+    - `network/live/live-state.resolvableSchema`
   - Exports (types):
     - `EditedFile`
     - `EditedFilesMeta`

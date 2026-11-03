@@ -34,7 +34,7 @@ vi.mock(
 import { act, cleanup, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { resetDeferredLoadStateForTests } from "@plugins/framework/plugins/web-sdk/core/testing";
-import { queryKeyFor } from "@plugins/primitives/plugins/live-state/web";
+import { queryKeyFor } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
 import { liveCollection } from "@plugins/network/plugins/live/core";

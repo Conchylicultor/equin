@@ -22,7 +22,7 @@ import { formatValue } from "@plugins/primitives/plugins/metrics/plugins/chart-k
 import {
   ResourceErrorInline,
   type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { LiveListResult } from "@plugins/network/plugins/live/web";
 import type {
   CatalogMetric,

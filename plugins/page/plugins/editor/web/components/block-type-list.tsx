@@ -5,7 +5,7 @@ import { useReorderedEntries } from "@plugins/reorder/web";
 import {
   mapResource,
   type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useRevealOnActive } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";

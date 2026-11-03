@@ -1,4 +1,4 @@
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { ReactNode } from "react";
 import { useAppLink } from "@plugins/apps-core/plugins/tabs/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";

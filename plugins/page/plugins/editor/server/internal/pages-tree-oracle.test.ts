@@ -66,7 +66,7 @@ import {
   registeredDerivedUpdatedAt,
 } from "@plugins/database/plugins/derived-updated-at/server";
 import { collectContributions } from "@plugins/framework/plugins/server-core/core";
-import type { QueryDb } from "@plugins/infra/plugins/query-resource/server";
+import type { QueryDb } from "@plugins/network/plugins/live/plugins/query-resource/server";
 import {
   compileCollection,
   subscribeAsOldDescriptor,

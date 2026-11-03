@@ -17,7 +17,7 @@ import type {
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/background-shells/web";
 import type { BackgroundShell } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/background-shells/core";
 import type { HostedToolbarParts } from "@plugins/primitives/plugins/data-view/core";
-import { ResourceError } from "@plugins/primitives/plugins/live-state/core";
+import { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/core";
 import { RunningAgentsBand } from "../components/running-agents-band";
 
 /**

@@ -11,10 +11,10 @@
     - `apps/file-explorer/browser.FileBrowser`
     - `conversations/conversation-view/code/file-pane.filePeekPane`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `plugin-meta/plugin-view.PluginViewSlots`
     - `primitives/css/clip.Clip`
     - `primitives/css/placeholder.Placeholder`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/pane.useOpenPane`
 - Cross-plugin:

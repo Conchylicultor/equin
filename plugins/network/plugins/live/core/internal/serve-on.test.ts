@@ -13,7 +13,7 @@ import { z } from "zod";
 import { fieldsToZodObject } from "@plugins/fields/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
-import { createHarness } from "@plugins/framework/plugins/resource-runtime/core/testing";
+import { createHarness } from "@plugins/network/plugins/live/plugins/resource-runtime/core/testing";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { liveCollection } from "./live-collection";
 import { liveValue } from "./live-value";

@@ -20,7 +20,7 @@ import { normalizeRoutePath } from "@plugins/primitives/plugins/pane/core";
 import {
   NotificationsProvider,
   ensureNotificationsClient,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { TransportProvider } from "@plugins/primitives/plugins/networking/web";
 import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/page-transport/web";
 import { yieldToMain } from "@plugins/primitives/plugins/perfs/plugins/scheduler/web";

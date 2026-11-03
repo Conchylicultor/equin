@@ -11,7 +11,7 @@ import {
   Button,
   WithTooltip,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   MAX_SWING_RATIO,

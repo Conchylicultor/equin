@@ -131,7 +131,7 @@ The rule has no allowlist. A genuinely-fixed one-off escapes per-site via
   - Imported by: 430 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×109
     - `conversations` ×69
-    - `primitives` ×55
+    - `primitives` ×54
     - `debug` ×38
     - `ui` ×31
     - `page` ×25
@@ -159,6 +159,7 @@ The rule has no allowlist. A genuinely-fixed one-off escapes per-site via
     - `history/dialog`
     - `map/google`
     - `music/chord-box`
+    - `network/live/live-state`
     - `reports/launch-fix`
     - `search/quick-find`
     - `tag-tree/picker`

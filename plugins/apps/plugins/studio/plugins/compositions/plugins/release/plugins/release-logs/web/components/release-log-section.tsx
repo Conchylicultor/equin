@@ -13,7 +13,7 @@ import {
   useLivePagedValuePaging,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { LiveLogChannel } from "@plugins/primitives/plugins/log-channels/web";
 import {
   RELEASE_LOG_CHANNEL,

@@ -170,7 +170,7 @@ waking a hibernated agent with nothing new to show. A refused resume is a toast.
     - `AgentThreadSlots.StepLabel` "^(Agent|Task)$" → `AgentStepLabel`
   - Uses: 66 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/conversation-view/pending-turn` ×10
-    - `primitives/live-state` ×7
+    - `network/live/live-state` ×7
     - `conversations/conversation-view/jsonl-viewer` ×4
     - `conversations/conversation-view` ×4
     - `conversations/conversation-view/user-message` ×2

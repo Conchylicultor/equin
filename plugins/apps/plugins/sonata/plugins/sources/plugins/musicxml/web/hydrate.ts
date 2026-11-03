@@ -4,7 +4,7 @@ import {
   foldResource,
   mapResource,
   type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { attachmentBytes } from "@plugins/infra/plugins/attachments/core";
 import type { SourceHydration } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { songMusicXmlRows } from "../shared/resources";

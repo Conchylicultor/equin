@@ -3,7 +3,7 @@ import {
   liveValue,
   type LiveRowsCollection,
 } from "@plugins/network/plugins/live/core";
-import { compositeKey } from "@plugins/infra/plugins/query-resource/core";
+import { compositeKey } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import { cappedList } from "@plugins/packages/plugins/list-bound/core";
 import {
   eventSourceRunEventsEntityRef,

@@ -47,7 +47,7 @@ import {
 } from "@plugins/shell/plugins/notifications/web";
 import { conversationName } from "@plugins/tasks/plugins/tasks-core/core";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
-import { combineResources } from "@plugins/primitives/plugins/live-state/web";
+import { combineResources } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { attemptWork } from "@plugins/tasks/plugins/attempt-work/core";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";

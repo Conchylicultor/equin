@@ -20,6 +20,7 @@
     - `conversations/conversation-view/action-bar.Conversation`
     - `conversations/conversation-view.conversationPane`
     - `conversations.useConversationById`
+    - `network/live/live-state.ResourceErrorInline`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
@@ -29,7 +30,6 @@
     - `primitives/css/text.Text`
     - `primitives/launch.LaunchControl`
     - `primitives/link-gesture.activationProps`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
   - Exports (values): `attemptPane`

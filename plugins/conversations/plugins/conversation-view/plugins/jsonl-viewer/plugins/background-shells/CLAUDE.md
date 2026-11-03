@@ -98,7 +98,7 @@ v1 is view-only: there is no Stop (only the agent can call `TaskStop`, which the
     - `TaskNotification.Open` "background-shell"
   - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×4
-    - `primitives/live-state` ×3
+    - `network/live/live-state` ×3
     - `primitives/css/spacing` ×2
     - `primitives/dom/auto-scroll` ×2
     - `primitives/relative-time` ×2

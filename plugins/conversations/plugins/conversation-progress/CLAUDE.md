@@ -21,8 +21,8 @@ its own DB. The git heuristic (`classifyProgressJob`, on
     - `conversations/conversation-view.conversationPane`
     - `network/live.LiveRowResult`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/inline.Inline`
-    - `primitives/live-state.ResourceErrorInline`
     - `ui/segmented-progress-bar.SegmentedProgressBar`
 - Server:
   - Contributes:

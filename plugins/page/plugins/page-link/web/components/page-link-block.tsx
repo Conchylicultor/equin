@@ -8,7 +8,7 @@ import {
   matchResource,
   ResourceErrorInline,
   type ResourceError,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { type LiveRowResult, useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";

@@ -39,6 +39,8 @@ its shape (task-track, task-category, automations).
     - `infra/endpoints.FetchEndpoint`
     - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`
+    - `network/live/live-state.foldResource`
+    - `network/live/live-state.ResourceView`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/data-view.DataView`
@@ -48,8 +50,6 @@ its shape (task-track, task-category, automations).
     - `primitives/data-view.HierarchyConfig`
     - `primitives/icon-button.IconButton`
     - `primitives/launch.LaunchControl`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.ResourceView`
     - `primitives/loading.Loading`
     - `tasks.usePatchTask`
   - Exports (values):

@@ -38,13 +38,13 @@ The chip renders a muted `—` (reason as tooltip) both for an unresolved payloa
     - `conversations/conversation-view/action-bar.Conversation`
     - `conversations/conversation-view.conversationPane`
     - `conversations.useConversationById`
+    - `network/live/live-state.ResourceErrorInline`
     - `network/live.useLive`
     - `primitives/css/column.Column`
     - `primitives/css/fill.Fill`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
 - Server:

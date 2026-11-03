@@ -17,11 +17,11 @@ import {
   loadResourceFresh,
   Resource as ResourceContribution,
 } from "@plugins/framework/plugins/server-core/core";
-import type { Resource } from "@plugins/framework/plugins/resource-runtime/core";
+import type { Resource } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
 import type {
   PointParams,
   ResourcePreload,
-} from "@plugins/primitives/plugins/live-state/core";
+} from "@plugins/network/plugins/live/plugins/live-state/core";
 import {
   columnWireCodec,
   type WireCodec,
@@ -39,7 +39,7 @@ import {
   type JoinRef,
   type JoinRefs,
   type JoinSpec,
-} from "@plugins/infra/plugins/query-resource/core";
+} from "@plugins/network/plugins/live/plugins/query-resource/core";
 import {
   assertStableRead,
   compileCountQuery,
@@ -60,7 +60,7 @@ import {
   type PointQueryResourceSpec,
   type WindowOrderKey,
   type WindowQueryResourceSpec,
-} from "@plugins/infra/plugins/query-resource/server";
+} from "@plugins/network/plugins/live/plugins/query-resource/server";
 import {
   LIVE_COLUMNS_KEY,
   LIVE_ROW_KEY,
@@ -214,7 +214,7 @@ export type ServeCollectionOptions<
    * keyed side table), their columns bound to row fields through `columns`.
    * Each is routed: a write to a joined row refills the host rows reading it,
    * and only the tuples whose SQL reads the join (see
-   * `plugins/infra/plugins/query-resource/CLAUDE.md`, *Joins*).
+   * `plugins/network/plugins/live/plugins/query-resource/CLAUDE.md`, *Joins*).
    */
   joins?: J;
   /**

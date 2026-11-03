@@ -1,7 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { matchResource } from "@plugins/primitives/plugins/live-state/web";
+import { matchResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";

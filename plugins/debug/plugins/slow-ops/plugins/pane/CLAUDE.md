@@ -44,6 +44,7 @@ same `SlowEvents.View` slot; it fans out across every worktree DB fork.
     - `primitives/pane` ×3
     - `apps-core/tabs.useAppLink`
     - `debug/trace/pane.SlowEvents`
+    - `network/live/live-state.ResourceErrorInline`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
@@ -52,7 +53,6 @@ same `SlowEvents.View` slot; it fans out across every worktree DB fork.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/yield.yieldClass`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
     - `ui/icons.Icon`

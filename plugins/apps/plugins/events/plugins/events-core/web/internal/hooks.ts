@@ -1,5 +1,5 @@
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import { type ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import { type ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useLive, type LiveRowResult } from "@plugins/network/plugins/live/web";
 import {
   createEventSource,

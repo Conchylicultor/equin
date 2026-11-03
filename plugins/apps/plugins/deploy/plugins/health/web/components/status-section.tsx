@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";

@@ -203,10 +203,10 @@ row, or on a failed re-read the row as last seen).
     - `fields/duration/config.durationField`
     - `fields/text/config.enumTextField`
     - `fields/text/config.textField`
-    - `infra/query-resource.armKeyCodec`
     - `network/live.clockField`
     - `network/live.liveCollection`
     - `network/live.LiveRowsCollection`
+    - `network/live/query-resource.armKeyCodec`
     - `runs/run-outcome.RUN_OUTCOME_OPTIONS_META`
     - `runs/run-outcome.RUN_OUTCOMES`
   - Exports (types): `RunRow`

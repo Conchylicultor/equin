@@ -10,7 +10,7 @@ import {
   matchResource,
   ResourceErrorInline,
   useCombinedResources,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
 import {

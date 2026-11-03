@@ -1,4 +1,4 @@
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";

@@ -18,7 +18,7 @@ import { SlotRender } from "@plugins/primitives/plugins/slot-render/web";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { liveCollection } from "@plugins/network/plugins/live/core";
-import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   type DataViewId,
   type FieldDef,

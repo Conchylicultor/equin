@@ -29,10 +29,10 @@ which renders `<task>prompt</task>` *block* tags as editable creation cards.
   - Uses:
     - `active-data/id-chip.idChip`
     - `network/live.useLive`
+    - `network/live/live-state.foldResource`
+    - `network/live/live-state.matchResource`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/status-dot.StatusDot`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.matchResource`
     - `primitives/pane.useOpenPane`
     - `tasks/task-detail.taskDetailPane`
     - `tasks/task-status.STATUS_META`

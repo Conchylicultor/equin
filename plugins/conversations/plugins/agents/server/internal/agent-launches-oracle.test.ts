@@ -42,7 +42,7 @@ import {
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 import { FALLBACK_MODEL } from "@plugins/conversations/plugins/model-provider/core";
-import type { QueryDb } from "@plugins/infra/plugins/query-resource/server";
+import type { QueryDb } from "@plugins/network/plugins/live/plugins/query-resource/server";
 import {
   compileCollection,
   subscribeAsOldDescriptor,

@@ -69,6 +69,7 @@ frames at all. The contract lives in `web/internal/pixi/render-scheduler.ts`:
     - `apps/sonata/primitives/inertial-drag.useInertialDrag`
     - `apps/sonata/primitives/jog-wheel.JogWheel`
     - `apps/sonata/rich/swing.usePerformedScore`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
     - `primitives/css/control-panel.ControlPanel`
@@ -81,7 +82,6 @@ frames at all. The contract lives in `web/internal/pixi/render-scheduler.ts`:
     - `primitives/dom/element-size.useElementSize`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/lazy-component.lazyComponent`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/log-channels.clientLog`
     - `primitives/slot-render.renderIsolated`

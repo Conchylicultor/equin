@@ -19,8 +19,8 @@
     - `primitives/pane` ×3
     - `config_v2` ×2
     - `infra/endpoints` ×2
+    - `network/live/live-state` ×2
     - `primitives/css/spacing` ×2
-    - `primitives/live-state` ×2
     - `apps-core.useCurrentAppId`
     - `primitives/css/color-picker.ColorPickerPopover`
     - `primitives/css/fill.Fill`

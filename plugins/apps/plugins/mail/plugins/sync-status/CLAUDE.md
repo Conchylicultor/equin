@@ -20,6 +20,9 @@ classified non-terminal.
     - `infra/endpoints.useEndpointMutation`
     - `integrations/gmail.GmailAccessAction`
     - `network/live.useLive`
+    - `network/live/live-state.mapResource`
+    - `network/live/live-state.ResourceErrorInline`
+    - `network/live/live-state.ResourceResult`
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
     - `primitives/css/spacing.Stack`
@@ -29,9 +32,6 @@ classified non-terminal.
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
     - `primitives/link-gesture/new-tab.NewTabButton`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.ResourceResult`
     - `ui/icons.Icon`
 - Cross-plugin:
   - Uses tokens:

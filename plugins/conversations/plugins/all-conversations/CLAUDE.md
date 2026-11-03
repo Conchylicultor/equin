@@ -20,13 +20,13 @@
     - `conversations/model-provider.useModelCatalog`
     - `network/live.FieldPresentation`
     - `network/live.LiveFieldOptionsRead`
+    - `network/live/live-state.mapResource`
     - `primitives/app-shell.opensPane`
     - `primitives/css/inline.Inline`
     - `primitives/css/text.Text`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.liveDataSource`
-    - `primitives/live-state.mapResource`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

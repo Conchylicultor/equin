@@ -15,6 +15,8 @@
     - `apps/debug/shell.DebugApp`
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
+    - `network/live/live-state.matchResource`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.SectionLabel`
@@ -22,8 +24,6 @@
     - `primitives/css/ui-kit.Button`
     - `primitives/data-table.ColumnDef`
     - `primitives/data-table.DataTable`
-    - `primitives/live-state.matchResource`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`

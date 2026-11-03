@@ -20,13 +20,13 @@
     - `conversations/conversation-view/jsonl-viewer.useTranscriptDrawn`
     - `conversations/conversation-view/jsonl-viewer.useVisibleEvents`
     - `network/live.useLive`
+    - `network/live/live-state.mapResource`
+    - `network/live/live-state.readyResource`
+    - `network/live/live-state.ResourceResult`
     - `primitives/css/badge.Badge`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.cn`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.readyResource`
-    - `primitives/live-state.ResourceResult`
     - `primitives/outline/scroll-spy.useActiveInView`
     - `primitives/slot-render.defineRenderSlot`
     - `ui/icons.Icon`

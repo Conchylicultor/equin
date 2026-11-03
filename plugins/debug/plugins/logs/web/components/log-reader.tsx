@@ -13,7 +13,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";

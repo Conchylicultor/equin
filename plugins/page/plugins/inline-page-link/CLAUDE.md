@@ -59,7 +59,7 @@ cannot paint itself outside Lexical is a tsc error.
 - Web:
   - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `page/editor` ×9
-    - `primitives/live-state` ×3
+    - `network/live/live-state` ×3
     - `primitives/text-editor/caret-trigger` ×3
     - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`

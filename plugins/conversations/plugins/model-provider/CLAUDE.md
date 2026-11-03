@@ -59,8 +59,8 @@ Single source of truth for the models an agent can run, and for what the user as
   - Uses:
     - `infra/endpoints.HttpError`
     - `network/live.liveValue`
+    - `network/live/live-state.tolerantEnum`
     - `packages/list-bound.wholeList`
-    - `primitives/live-state.tolerantEnum`
   - Exports (types):
     - `ConversationModel`
     - `ModelCatalog`

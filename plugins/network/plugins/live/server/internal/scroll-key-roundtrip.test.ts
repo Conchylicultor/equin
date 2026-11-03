@@ -31,8 +31,8 @@ import {
   createTestDb,
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
-import type { QueryDb } from "@plugins/infra/plugins/query-resource/server";
-import { compileWindowQuery } from "@plugins/infra/plugins/query-resource/server/testing";
+import type { QueryDb } from "@plugins/network/plugins/live/plugins/query-resource/server";
+import { compileWindowQuery } from "@plugins/network/plugins/live/plugins/query-resource/server/testing";
 import { liveCollection, LIVE_ROW_KEY } from "../../core";
 import { compileCollection } from "./serve-collection";
 

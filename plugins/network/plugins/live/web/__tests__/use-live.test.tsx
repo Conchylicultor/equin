@@ -24,7 +24,7 @@ import {
   hydrateResource,
   pendingMountSnapshot,
   queryKeyFor,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   testTransport,
   transportWrapper,
@@ -33,7 +33,7 @@ import {
   NotificationsClient,
   createLiveStateHarness,
   type LiveStateHarness,
-} from "@plugins/primitives/plugins/live-state/web/testing";
+} from "@plugins/network/plugins/live/plugins/live-state/web/testing";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 import { or } from "@plugins/network/plugins/live/plugins/filter/core";
 import { fieldsToZodObject } from "@plugins/fields/core";

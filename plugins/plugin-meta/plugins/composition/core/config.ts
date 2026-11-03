@@ -467,7 +467,10 @@ export const compositionsConfig = defineConfig({
           entryPoints: ["infra.jobs.**", "infra.events.**", "infra.secrets.**"],
         }),
         subsystem("live-state", {
-          entryPoints: ["primitives.live-state.**", "primitives.networking.**"],
+          entryPoints: [
+            "network.live.live-state.**",
+            "primitives.networking.**",
+          ],
         }),
         subsystem("auth", { entryPoints: ["auth.**"] }),
         subsystem("search", { entryPoints: ["search.engine.**"] }),
@@ -518,7 +521,7 @@ export const compositionsConfig = defineConfig({
         //   document off the top and shows the `html` loading floor (`Canvas`,
         //   near-black) above the page instead of the page's own top edge.
         //   equin.ai shipped that way.
-        // - the boot snapshot (infra.boot-snapshot): every `boot-and-keep`
+        // - the boot snapshot (network.live.boot-snapshot): every `boot-and-keep`
         //   read — config documents above all — hydrated before first paint.
         //   Left out, each config document arrives by its own request after
         //   the first render, so every slot's layout (and anything else a
@@ -547,7 +550,7 @@ export const compositionsConfig = defineConfig({
             "infra.health.**",
             "ui.theme-engine.**",
             "primitives.dom.overscroll-hint.**",
-            "infra.boot-snapshot.**",
+            "network.live.boot-snapshot.**",
           ],
         }),
 

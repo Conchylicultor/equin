@@ -68,11 +68,11 @@ import {
   resourceRegisterMarkers,
   type DescriptorInfo,
   type ImportedDescriptorResolver,
-} from "@plugins/framework/plugins/tooling/plugins/resource-vocabulary/core";
+} from "@plugins/network/plugins/live/plugins/resource-vocabulary/core";
 import {
   CENTRAL_RESOURCE_HTTP_ROUTE,
   RESOURCE_HTTP_ROUTE,
-} from "@plugins/packages/plugins/resource-protocol/core";
+} from "@plugins/network/plugins/live/plugins/resource-protocol/core";
 
 /** One live read the scoped page references, as the generated `hostReads` lists it. */
 export interface HostRead {

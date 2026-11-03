@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import type { ProducerExecutor } from "@plugins/database/plugins/change-feed/server";
+import type { ProducerExecutor } from "@plugins/network/plugins/live/plugins/change-feed/server";
 import { getServerGraphHash } from "@plugins/build/plugins/server-build-id/server";
 import { setMutedByMetadata } from "@plugins/shell/plugins/notifications/server";
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";

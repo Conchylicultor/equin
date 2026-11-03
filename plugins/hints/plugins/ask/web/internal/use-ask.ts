@@ -3,7 +3,7 @@ import { showToast } from "@plugins/shell/plugins/toast/web";
 import { useActiveApp, usePathname } from "@plugins/apps-core/web";
 import { useFocusedTabTitle } from "@plugins/apps-core/plugins/tabs/web";
 import { useConfigResult } from "@plugins/config_v2/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   normalizeModelChoice,
   type ModelChoice,

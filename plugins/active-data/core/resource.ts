@@ -5,7 +5,7 @@ import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
-import { compositeKey } from "@plugins/infra/plugins/query-resource/core";
+import { compositeKey } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 
 /**

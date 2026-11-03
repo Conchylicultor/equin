@@ -5,7 +5,7 @@ import {
   mapResource,
   type ResourceUnavailable,
   type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useConversation } from "@plugins/conversations/web";
 import {
   opsInFlight,

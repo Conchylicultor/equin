@@ -153,7 +153,7 @@ already-effective onsets (`effectiveOnsets(pattern)`, rotation applied) and maps
   - Uses: 56 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×11
     - `apps/sonata/document` ×9
-    - `primitives/live-state` ×6
+    - `network/live/live-state` ×6
     - `apps/sonata/primitives/rhythm-circle` ×3
     - `config_v2` ×3
     - `primitives/sortable-list` ×3

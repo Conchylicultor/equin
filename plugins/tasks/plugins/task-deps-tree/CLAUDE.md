@@ -52,8 +52,8 @@ fields read.
   - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×7
     - `tasks/task-list` ×4
+    - `network/live/live-state` ×2
     - `primitives/css/ui-kit` ×2
-    - `primitives/live-state` ×2
     - `tasks/task-detail` ×2
     - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`

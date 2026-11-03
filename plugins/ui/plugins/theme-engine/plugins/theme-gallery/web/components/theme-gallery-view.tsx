@@ -7,7 +7,7 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { themeFields, themeSearchText } from "../internal/theme-fields";
 import type { ThemeRow } from "../internal/theme-rows";
 import { useThemeGallery } from "../internal/use-theme-gallery";

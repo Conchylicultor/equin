@@ -20,12 +20,12 @@
     - `apps/sonata/document.useSongDocument`
     - `apps/sonata/player.SonataPlayer`
     - `apps/sonata/shell.Sonata`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/center.Center`
     - `primitives/css/column.Column`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/text.Text`
     - `primitives/dom/scroll-reveal.revealElement`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
 - Server:
   - Contributes: `ConfigV2.Register` "config"

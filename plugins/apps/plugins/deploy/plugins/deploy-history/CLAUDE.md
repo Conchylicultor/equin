@@ -84,7 +84,7 @@ with `releaseDetailRoute` and `{ runId }` would make this chip a cross-app link.
   - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/deploy/deployments` ×8
     - `primitives/data-view` ×6
-    - `primitives/live-state` ×3
+    - `network/live/live-state` ×3
     - `primitives/pane` ×3
     - `primitives/css/spacing` ×2
     - `apps/deploy/shell.Deploy`

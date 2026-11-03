@@ -4,7 +4,7 @@ import type {
   BlockEditorAPI,
 } from "@plugins/page/plugins/editor/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   TodoDispatch,
   useTodoTask,

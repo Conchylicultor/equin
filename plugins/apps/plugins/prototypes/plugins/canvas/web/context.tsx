@@ -15,7 +15,7 @@ import {
 } from "@plugins/primitives/plugins/persistent-draft/web";
 import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { isEmbeddedDocument } from "@plugins/primitives/plugins/embed/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";

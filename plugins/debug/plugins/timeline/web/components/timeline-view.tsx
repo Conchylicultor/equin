@@ -14,7 +14,7 @@ import { groupIncidents } from "@plugins/debug/plugins/trace/plugins/pane/web";
 import { TIMELINE_SOURCES } from "../../core";
 import { HOST_LANE } from "../../shared/frames";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { timelineScan, type TimelineScan } from "../../shared/scan";
 import {
   buildGroups,

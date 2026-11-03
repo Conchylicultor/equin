@@ -32,7 +32,7 @@ import {
   createTestDb,
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
-import { assertUnfedTablesOptedOut } from "@plugins/database/plugins/change-feed/server/testing";
+import { assertUnfedTablesOptedOut } from "@plugins/network/plugins/live/plugins/change-feed/server/testing";
 import {
   notificationsWsHandler,
   unfedResourceTables,
@@ -40,12 +40,12 @@ import {
 } from "@plugins/framework/plugins/server-core/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { defineEntity } from "@plugins/infra/plugins/entities/server";
-import type { LookupJoin } from "@plugins/infra/plugins/query-resource/core";
+import type { LookupJoin } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import {
   compileOffFeedQuery,
   type QueryDb,
-} from "@plugins/infra/plugins/query-resource/server";
-import { compileWindowQuery } from "@plugins/infra/plugins/query-resource/server/testing";
+} from "@plugins/network/plugins/live/plugins/query-resource/server";
+import { compileWindowQuery } from "@plugins/network/plugins/live/plugins/query-resource/server/testing";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import { compileCollection, serveCollection } from "./serve-collection";
 

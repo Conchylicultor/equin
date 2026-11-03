@@ -17,7 +17,7 @@ import {
   type TaskAggregate,
   type TaskEntry,
 } from "./use-task-aggregate";
-import { matchResource } from "@plugins/primitives/plugins/live-state/web";
+import { matchResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 

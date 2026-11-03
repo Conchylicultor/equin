@@ -33,6 +33,7 @@ this repository — a reaped attempt's commits stay readable.
   - Contributes: `Pane.Register` "commit-detail"
   - Uses:
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/collapsible.CollapsibleChevron`
     - `primitives/collapsible.FoldMotion`
     - `primitives/css/column.Column`
@@ -45,7 +46,6 @@ this repository — a reaped attempt's commits stay readable.
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/diff-view.DiffOrImageView`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`

@@ -7,7 +7,7 @@ import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   ResourceErrorInline,
   useCombinedResources,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { configValues, setConfigField } from "@plugins/config_v2/core";
 import { useConfigRegistrations } from "@plugins/config_v2/web";

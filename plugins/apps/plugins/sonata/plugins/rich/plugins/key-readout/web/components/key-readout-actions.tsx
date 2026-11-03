@@ -1,4 +1,4 @@
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useMemo } from "react";
 import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import {

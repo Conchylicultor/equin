@@ -10,11 +10,11 @@
   - Uses:
     - `apps/studio/compositions/release.ReleaseDetail`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/badge.Badge`
     - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
 - Cross-plugin:

@@ -33,7 +33,7 @@ import {
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   PathBar,
   type PathTarget,

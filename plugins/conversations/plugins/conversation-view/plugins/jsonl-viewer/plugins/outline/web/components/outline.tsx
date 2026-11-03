@@ -3,7 +3,7 @@ import { OutlineRail } from "@plugins/primitives/plugins/outline/plugins/rail/we
 import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { scrollToBottom } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { matchResource } from "@plugins/primitives/plugins/live-state/web";
+import { matchResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   paneScrollScope,
   useTranscriptDrawn,

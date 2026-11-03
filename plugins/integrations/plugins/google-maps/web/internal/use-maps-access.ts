@@ -3,7 +3,7 @@ import { GOOGLE_MAPS_PROVIDER_ID } from "@plugins/auth/plugins/google-maps/core"
 import {
   foldResource,
   type ResourceError,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useMapsBrowserConfig } from "./use-maps-browser-config";
 
 /**

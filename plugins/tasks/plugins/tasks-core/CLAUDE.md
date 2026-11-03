@@ -334,7 +334,7 @@ serves them.
     - `network/live.LiveFieldOption`
     - `network/live.LiveFieldOptionsRead`
     - `network/live.useLive`
-    - `primitives/live-state.mapResource`
+    - `network/live/live-state.mapResource`
   - Exports (values):
     - `useTaskAttempts`
     - `useTaskConversations`
@@ -359,10 +359,10 @@ serves them.
     - `infra/entities.defineEntity`
     - `infra/entity-extensions.defineExtension`
     - `infra/events.defineTriggerEvent`
-    - `infra/query-resource.compileLookup`
     - `network/live.ColumnOverride`
     - `network/live.LiveColumns`
     - `network/live.serveCollection`
+    - `network/live/query-resource.compileLookup`
     - `primitives/rank.nextRankUnder`
     - `primitives/rank.RankExecutor`
     - `primitives/rank.withRank`
@@ -576,7 +576,7 @@ serves them.
     - `framework/product-name.LEGACY_IDS`
     - `infra/entities.entityRef`
     - `infra/entity-extensions.defineExtensionShape`
-    - `infra/query-resource.compositeKey`
+    - `network/live/query-resource.compositeKey`
     - `packages/list-bound.wholeList`
     - `primitives/pane.defineRoute`
     - `primitives/rank.RankSchema`

@@ -2,7 +2,7 @@ import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { matchResource } from "@plugins/primitives/plugins/live-state/web";
+import { matchResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
   useBrowserNav,

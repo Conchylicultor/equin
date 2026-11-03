@@ -3,7 +3,7 @@ import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { matchResource } from "@plugins/primitives/plugins/live-state/web";
+import { matchResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { formatValue } from "@plugins/primitives/plugins/metrics/plugins/chart-kit/core";
 import { Sparkline } from "@plugins/primitives/plugins/metrics/plugins/chart-kit/web";

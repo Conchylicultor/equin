@@ -40,7 +40,7 @@ result.
   shape; `emptyState` requires confirmed-empty.
 - For gating on resource readiness (what to render *around* a Loading), see
   `<ResourceView>` / `matchResource` / `combineResources` in
-  `plugins/primitives/plugins/live-state/CLAUDE.md`.
+  `plugins/network/plugins/live/plugins/live-state/CLAUDE.md`.
 
 ## Lint rules contributed
 
@@ -85,8 +85,8 @@ result.
     - `apps` ×68
     - `ui` ×23
     - `conversations` ×21
-    - `primitives` ×20
     - `debug` ×19
+    - `primitives` ×19
     - `tasks` ×15
     - `page` ×11
     - `build` ×6
@@ -109,6 +109,7 @@ result.
     - `hints/ask`
     - `history/dialog`
     - `layouts/route-fallback`
+    - `network/live/live-state`
     - `screenshot`
     - `search/quick-find`
     - `tag-tree/picker`

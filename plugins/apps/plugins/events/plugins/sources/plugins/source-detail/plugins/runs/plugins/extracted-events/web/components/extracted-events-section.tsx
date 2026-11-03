@@ -5,7 +5,7 @@ import {
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
 import type { BadgeVariant } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   useEventSourceRun,
   useRunEvents,

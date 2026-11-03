@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { httpStaleDropReportSink } from "@plugins/primitives/plugins/live-state/web";
+import { httpStaleDropReportSink } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { report } from "@plugins/reports/web";
 
 // A Core.Root side-effect component. `live-state` is a primitive and must not

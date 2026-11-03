@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { resourceErrorReportSink } from "@plugins/primitives/plugins/live-state/web";
+import { resourceErrorReportSink } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { report } from "@plugins/reports/web";
 import { RESOURCE_ERROR_KIND, type ResourceErrorPayload } from "../../core";
 

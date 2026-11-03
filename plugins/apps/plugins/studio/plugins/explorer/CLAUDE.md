@@ -42,6 +42,7 @@ The fold/unfold-this-subtree button is not the explorer's to ship either: the
   - Uses:
     - `apps/studio/shell.Studio`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `plugin-meta/plugin-view.pluginViewPane`
     - `primitives/css/center.Center`
     - `primitives/css/inline.Inline`
@@ -52,7 +53,6 @@ The fold/unfold-this-subtree button is not the explorer's to ship either: the
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.FieldDef`
     - `primitives/data-view.HierarchyConfig`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`

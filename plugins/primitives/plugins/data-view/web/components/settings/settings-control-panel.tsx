@@ -6,7 +6,7 @@ import {
   useSlotOrder,
 } from "@plugins/primitives/plugins/slot-render/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { DataViewSlots } from "../../slots";
 import { slotLayout } from "../../internal/slot-layout";
 import { useDataViewControls } from "../controls/controls-context";

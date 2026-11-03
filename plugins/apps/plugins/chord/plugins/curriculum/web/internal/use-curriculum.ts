@@ -3,7 +3,7 @@ import {
   useEndpointMutation,
 } from "@plugins/infra/plugins/endpoints/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import type { LoopExtras } from "@plugins/apps/plugins/chord/plugins/song-index/core";
 import {

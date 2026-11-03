@@ -53,10 +53,10 @@ current-position tracking root from the first element `resolve` returns. A
     - `conversations/conversation-view/jsonl-viewer.useTranscriptDrawn`
     - `conversations/conversation-view/jsonl-viewer.useVisibleEvents`
     - `conversations/conversation-view/jsonl-viewer.useWholeTranscript`
+    - `network/live/live-state.matchResource`
     - `primitives/dom/auto-scroll.scrollToBottom`
     - `primitives/dom/scroll-reveal.revealElement`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.matchResource`
     - `primitives/outline/rail.OutlineRail`
 - Server:
   - Contributes: `resource.declare` "jsonl-viewer.outline.turns"

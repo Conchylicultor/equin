@@ -116,12 +116,12 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `config_v2.getConfig`
     - `database.db`
     - `database/admin.ExcludeFromFork`
-    - `database/change-feed.defineChangeProducer`
     - `infra/endpoints.implement`
     - `infra/host/duress/shed.createShedBuffer`
     - `infra/host/duress/shed.ShedSummary`
     - `infra/retention.defineRetention`
     - `infra/warmup.defineWarmup`
+    - `network/live/change-feed.defineChangeProducer`
     - `reports._reports`
     - `reports.reportInvestigationSink`
     - `reports.ReportKind`

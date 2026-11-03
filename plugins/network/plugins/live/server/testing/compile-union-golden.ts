@@ -29,12 +29,12 @@ import { integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import {
   expr,
   type LookupJoin,
-} from "@plugins/infra/plugins/query-resource/core";
+} from "@plugins/network/plugins/live/plugins/query-resource/core";
 import {
   recordingQueryDb,
   type RecordedQuery,
-} from "@plugins/infra/plugins/query-resource/server/testing";
-import type { ResourceParams } from "@plugins/framework/plugins/resource-runtime/core";
+} from "@plugins/network/plugins/live/plugins/query-resource/server/testing";
+import type { ResourceParams } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
 import { clause, or } from "@plugins/network/plugins/live/plugins/filter/core";
 import { nullable } from "@plugins/fields/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";

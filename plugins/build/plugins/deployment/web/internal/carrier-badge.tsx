@@ -2,7 +2,7 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import type React from "react";
-import type { Resolvable } from "@plugins/primitives/plugins/live-state/core";
+import type { Resolvable } from "@plugins/network/plugins/live/plugins/live-state/core";
 import { sameCommit, type Carrier, type CarrierId } from "../../core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";

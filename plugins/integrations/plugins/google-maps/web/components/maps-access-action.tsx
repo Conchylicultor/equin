@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { accountPane } from "@plugins/auth/web";
 import { GOOGLE_MAPS_PROVIDER_ID } from "@plugins/auth/plugins/google-maps/core";
 import {

@@ -157,6 +157,7 @@ slowness/freeze/memory-pressure incident across the cluster.
     - `primitives/css/coords` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/ui-kit` ×2
+    - `network/live/live-state.ResourceErrorInline`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`
@@ -173,7 +174,6 @@ slowness/freeze/memory-pressure incident across the cluster.
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/pane.useOpenPane`
     - `primitives/syntax-highlight.HighlightedCode`
 - Server:

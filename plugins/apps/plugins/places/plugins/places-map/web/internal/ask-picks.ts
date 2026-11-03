@@ -4,7 +4,7 @@ import { mapRow, useLive } from "@plugins/network/plugins/live/web";
 import {
   mapResource,
   type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useThreadTurns } from "@plugins/conversations/plugins/agent-thread/web";
 import type { PlaceTag } from "@plugins/apps/plugins/places/plugins/places-core/core";
 import type { PlaceCandidate } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";

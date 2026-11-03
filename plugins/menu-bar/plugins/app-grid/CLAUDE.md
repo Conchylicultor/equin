@@ -18,11 +18,11 @@
     - `apps-core/app-launcher` ×3
     - `primitives/css/ui-kit` ×2
     - `apps-core/tabs.useActivateApp`
+    - `network/live/live-state.mapResource`
     - `primitives/css/pin.Pin`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.insetClass`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.mapResource`
     - `primitives/loading.Loading`
 - Cross-plugin:
   - Uses tokens:

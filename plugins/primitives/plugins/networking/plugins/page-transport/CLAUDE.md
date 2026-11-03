@@ -38,8 +38,8 @@ to itself).
     - `debug/latency-ledger`
     - `debug/slow-ops`
     - `framework/web-core`
-    - `infra/boot-snapshot`
     - `infra/health`
+    - `network/live/boot-snapshot`
     - `primitives/log-channels`
     - `reports`
 - Exemptions:

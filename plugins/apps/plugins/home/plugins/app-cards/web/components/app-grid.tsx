@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Apps, useAppListing, useCurrentAppId } from "@plugins/apps-core/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useActivateApp } from "@plugins/apps-core/plugins/tabs/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {

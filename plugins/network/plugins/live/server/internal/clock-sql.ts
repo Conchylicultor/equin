@@ -3,8 +3,8 @@ import {
   expr,
   type ColumnRef,
   type ExprField,
-} from "@plugins/infra/plugins/query-resource/core";
-import { clockNow } from "@plugins/infra/plugins/query-resource/server";
+} from "@plugins/network/plugins/live/plugins/query-resource/core";
+import { clockNow } from "@plugins/network/plugins/live/plugins/query-resource/server";
 import type { ClockForm } from "@plugins/network/plugins/live/core";
 
 /**

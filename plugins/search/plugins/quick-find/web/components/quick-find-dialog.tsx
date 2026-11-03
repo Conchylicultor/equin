@@ -15,7 +15,7 @@ import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder
 import {
   foldResource,
   ResourceErrorInline,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { SearchResult } from "@plugins/search/plugins/engine/core";
 import { useSearch } from "../internal/use-search";

@@ -22,8 +22,8 @@ zeros); an app missing from a ready summary was never used and reads 0 / "—".
     - `apps-core/app-usage.useAppUsageSummary`
     - `network/live.ClientFields`
     - `network/live.FieldPresentation`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceResult`
+    - `network/live/live-state.mapResource`
+    - `network/live/live-state.ResourceResult`
 - Core:
   - Uses:
     - `apps-core/app-launcher.installedApp`

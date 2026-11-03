@@ -27,9 +27,9 @@
     - `conversations/conversation-view/drop-and-exit.droppedNotification`
     - `conversations/conversation-view/resume.useResumeConversation`
     - `ids.IdKinds`
+    - `network/live/live-state.combineResources`
     - `network/live.useLive`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/live-state.combineResources`
     - `primitives/persistent-draft.useDraft`
     - `primitives/prompt-editor.PromptEditorSlots`
     - `ui/icons.Icon`

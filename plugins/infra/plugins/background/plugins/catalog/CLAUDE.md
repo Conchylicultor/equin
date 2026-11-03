@@ -49,7 +49,7 @@ own. Plan: `research/2026-09-30-infra-background-activity-catalog.md`.
   - Slots: `RecentRunActions`
   - Slot contributors: `RecentRunActions` ← `debug.background.investigate`
   - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/live-state` ×6
+    - `network/live/live-state` ×6
     - `primitives/data-view` ×4
     - `infra/endpoints` ×2
     - `primitives/relative-time` ×2

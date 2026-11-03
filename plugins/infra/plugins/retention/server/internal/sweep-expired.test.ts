@@ -27,8 +27,8 @@ import {
   createTestDb,
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
-import { defineChangeProducer } from "@plugins/database/plugins/change-feed/server";
-import { mountProducersForTest } from "@plugins/database/plugins/change-feed/server/testing";
+import { defineChangeProducer } from "@plugins/network/plugins/live/plugins/change-feed/server";
+import { mountProducersForTest } from "@plugins/network/plugins/live/plugins/change-feed/server/testing";
 import { retentionCutoff } from "./retention-sql";
 import { sweepExpired } from "./define-retention";
 

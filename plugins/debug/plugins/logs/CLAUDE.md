@@ -75,6 +75,7 @@ without a DB append to, and screens read its `op_log_ops` fold.
     - `primitives/css/spacing` ×3
     - `primitives/relative-time` ×2
     - `apps/debug/shell.DebugApp`
+    - `network/live/live-state.foldResource`
     - `network/live.useLive`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/badge.Badge`
@@ -82,7 +83,6 @@ without a DB append to, and screens read its `op_log_ops` fold.
     - `primitives/css/fill.Fill`
     - `primitives/css/meter.Meter`
     - `primitives/css/text.Text`
-    - `primitives/live-state.foldResource`
   - Exports (values):
     - `logChannelPane`
     - `logsPane`

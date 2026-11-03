@@ -77,7 +77,7 @@ Consumers read only the generic aggregate:
     - `network/live.LiveFieldOption`
     - `network/live.LiveFieldOptionsRead`
     - `network/live.useLive`
-    - `primitives/live-state.mapResource`
+    - `network/live/live-state.mapResource`
   - Exports (types): `TaskCategoryMap`
   - Exports (values):
     - `useTaskCategories`

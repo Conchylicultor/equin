@@ -2,7 +2,7 @@ import { useConfigResult } from "@plugins/config_v2/web";
 import {
   mapResource,
   type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { Audience } from "../core";
 import { audienceConfig, audienceOf } from "../shared/config";
 

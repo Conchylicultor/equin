@@ -68,12 +68,12 @@ is therefore in page flow, not a `fill` cell.
 - Description: Factory for slot-backed tab-host views: per-tab availability gates and count badges, a pill or underline tab strip, and the active tab either device-local (localStorage) or controlled by the caller (a URL param).
 - Web:
   - Uses:
+    - `network/live/live-state.foldResource`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/column.Column`
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/css/sticky.Sticky`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/slot-render.renderIsolated`

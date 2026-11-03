@@ -5,7 +5,7 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   foldResource,
   ResourceErrorInline,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { ConversationRow } from "@plugins/conversations/plugins/conversation-ui/plugins/row/web";
 import { useConversationOpener } from "@plugins/conversations/plugins/conversation-view/web";
 import { repoInfo } from "@plugins/tasks/core";

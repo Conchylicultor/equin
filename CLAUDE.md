@@ -259,7 +259,7 @@ Details: [`plugins/active-data/plugins/go/CLAUDE.md`](plugins/active-data/plugin
 **`./equin test` is the ONLY way to run tests** — paths only, no flags, no setup (installs dependencies when stale). Never bare `bun test` / `vitest`. Optional and manual; a run is an op (host CPU grant, "Test in progress" banner).
 
 ```bash
-./equin test plugins/primitives/plugins/optimistic-mutation   # one plugin
+./equin test plugins/network/plugins/live/plugins/optimistic-mutation   # one plugin
 ./equin test                                                  # everything
 ```
 

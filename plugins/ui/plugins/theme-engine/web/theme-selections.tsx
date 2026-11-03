@@ -2,7 +2,7 @@ import { useLayoutEffect, useSyncExternalStore } from "react";
 import { useConfigResult, useScopeMembership } from "@plugins/config_v2/web";
 import { Apps } from "@plugins/apps-core/web";
 import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { DEFAULT_THEME_ID, themeSelectionConfig, type ThemeId } from "../core";
 
 /** One scope that chose a theme: the desktop (`scopeId` undefined) or an app with its own theme document. */

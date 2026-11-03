@@ -6,7 +6,7 @@ import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import type {
   ResourceResult,
   ResourceUnavailable,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { BadgeVariant } from "@plugins/primitives/plugins/css/plugins/badge/web";
 
 export interface AuthProviderContribution {

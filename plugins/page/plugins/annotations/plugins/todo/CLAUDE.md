@@ -76,6 +76,8 @@ reachable.
     - `Editor.Block` "todo" → `ContainerNoRow`
     - `Editor.BlockFrame` "todo" → `TodoFrame`
   - Uses:
+    - `network/live/live-state.foldResource`
+    - `network/live/live-state.ResourceErrorInline`
     - `page/annotations/todo/task-link.TodoDispatch`
     - `page/annotations/todo/task-link.TodoRuns`
     - `page/annotations/todo/task-link.useTodoTask`
@@ -85,8 +87,6 @@ reachable.
     - `page/container.ContainerNoRow`
     - `page/editor.Editor`
     - `primitives/css/row.Row`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.ResourceErrorInline`
     - `ui/icons.Icon`
   - Exports (values): `todoBlock`
 - Server:

@@ -16,7 +16,7 @@ import {
   type ReactNode,
 } from "react";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { enqueueDetachedWrite } from "@plugins/primitives/plugins/optimistic-mutation/web";
+import { enqueueDetachedWrite } from "@plugins/network/plugins/live/plugins/optimistic-mutation/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   moveBlock,

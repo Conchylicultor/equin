@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { useConfigResult } from "@plugins/config_v2/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { EntryRow } from "@plugins/apps/plugins/file-explorer/plugins/browser/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { placesConfig } from "../../shared/config";

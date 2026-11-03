@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { compileLookup } from "@plugins/infra/plugins/query-resource/server";
+import { compileLookup } from "@plugins/network/plugins/live/plugins/query-resource/server";
 import { _conversations } from "./tables";
 
 // Which runtime hosts a conversation, and where its turn stands — a compiled

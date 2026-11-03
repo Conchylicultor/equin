@@ -3,7 +3,7 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { ImageGallery } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { browserRecordingRuns } from "../../core";
 import { RunStrip } from "./run-strip";

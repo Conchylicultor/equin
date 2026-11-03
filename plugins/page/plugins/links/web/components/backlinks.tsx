@@ -7,7 +7,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { clipClasses } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   DataView,
   defineDataView,

@@ -17,6 +17,8 @@
     - `apps/debug/shell.DebugApp`
     - `config_v2/settings.ConfigNavSlots`
     - `network/live.useLive`
+    - `network/live/live-state.foldResource`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/fill.Fill`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
@@ -25,8 +27,6 @@
     - `primitives/css/ui-kit.cn`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

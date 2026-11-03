@@ -11,6 +11,7 @@
     - `apps/pages/page-tree.pageDetailPane`
     - `history/dialog.VersionHistoryDialog`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `page/editor.BLOCK_INSET`
     - `page/editor.PageIcon`
     - `page/read-only-view.ReadOnlyBlocks`
@@ -21,7 +22,6 @@
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
 - Server:

@@ -10,7 +10,7 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import { hoverRevealTargetInAnchor } from "@plugins/primitives/plugins/hover-reveal/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { isAdoptedConversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 

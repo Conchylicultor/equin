@@ -42,8 +42,8 @@ plugins/framework/plugins/central-core/
 
 - Core:
   - Uses:
-    - `framework/resource-runtime.createResourceRuntime`
     - `framework/tooling/collected-dir.defineCollectedDir`
+    - `network/live/resource-runtime.createResourceRuntime`
   - Exports (types):
     - `CentralPluginDefinition`
     - `DependsOnEntry`

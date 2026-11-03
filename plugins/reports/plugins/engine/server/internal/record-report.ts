@@ -4,7 +4,7 @@ import { db } from "@plugins/database/server";
 import type {
   ProducerBuilder,
   ProducerExecutor,
-} from "@plugins/database/plugins/change-feed/server";
+} from "@plugins/network/plugins/live/plugins/change-feed/server";
 import {
   runInBackgroundLane,
   runWithoutProfiling,

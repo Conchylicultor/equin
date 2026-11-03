@@ -1,5 +1,5 @@
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {

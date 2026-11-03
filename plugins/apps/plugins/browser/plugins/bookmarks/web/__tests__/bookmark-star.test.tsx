@@ -52,7 +52,7 @@ vi.mock(
 );
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { ResourceError } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { bookmarkIdKind, type BookmarkRow } from "../../core";
 import { BookmarkStar } from "../components/bookmark-star";
 

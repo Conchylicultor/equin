@@ -37,12 +37,12 @@ The **secret** type's config capability, spanning all four runtimes:
     - `config_v2/fields.Fields`
     - `config_v2/fields.useLocalValue`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/ui-kit.Input`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
 - Server:

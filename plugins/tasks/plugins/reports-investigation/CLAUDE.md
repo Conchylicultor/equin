@@ -57,10 +57,10 @@ each kind's bell variant), `minCount` (occurrences, default 3) and
     - `config_v2.useConfigResult`
     - `config_v2.useSetConfig`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/control-panel.ControlPanel`
     - `primitives/css/control-panel.ControlPanelPane`
     - `primitives/css/ui-kit.Input`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `tasks/automations.automationConfigContributions`
     - `tasks/automations.Automations`

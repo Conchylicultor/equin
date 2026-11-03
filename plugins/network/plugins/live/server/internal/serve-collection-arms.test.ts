@@ -9,7 +9,7 @@
 import { describe, expect, test } from "bun:test";
 import { pgTable, text } from "drizzle-orm/pg-core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
-import { recordingQueryDb } from "@plugins/infra/plugins/query-resource/server/testing";
+import { recordingQueryDb } from "@plugins/network/plugins/live/plugins/query-resource/server/testing";
 import { liveCollection } from "../../core";
 import { compileCollection, serveCollection } from "./serve-collection";
 

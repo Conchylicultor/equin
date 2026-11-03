@@ -11,12 +11,12 @@
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
     - `network/live.useLive`
+    - `network/live/live-state.foldResource`
     - `primitives/css/badge.Badge`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/live-state.foldResource`
     - `primitives/markdown.Markdown`
     - `primitives/pane.useOpenPane`
     - `tasks/task-detail.taskDetailPane`

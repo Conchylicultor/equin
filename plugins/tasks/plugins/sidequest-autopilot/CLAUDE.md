@@ -137,7 +137,7 @@ finish and report.
     - `Automations.Section` "sidequest-autopilot" → `RunUntilSection`
     - `Automations.Section` "sidequest-autopilot" → `TriageSection`
   - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/live-state` ×4
+    - `network/live/live-state` ×4
     - `primitives/data-view` ×3
     - `config_v2` ×2
     - `infra/endpoints` ×2

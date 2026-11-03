@@ -1,7 +1,7 @@
 /** The Live reads health row's verdict over the page's failing reads. */
 
 import { describe, expect, test } from "bun:test";
-import { ResourceError } from "@plugins/primitives/plugins/live-state/core";
+import { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/core";
 import { resourceErrorsVerdict } from "./resource-errors-health";
 
 const failing = (

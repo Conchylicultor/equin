@@ -11,8 +11,8 @@
     - `config_v2.ConfigV2`
     - `config_v2.useConfigResult`
     - `config_v2.useSetConfig`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceResult`
+    - `network/live/live-state.mapResource`
+    - `network/live/live-state.ResourceResult`
   - Exports (values):
     - `useAudience`
     - `useSetDeveloperMode`

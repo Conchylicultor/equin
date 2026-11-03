@@ -132,7 +132,7 @@ test("served-baseline lists only what BEING SERVED needs", () => {
   expect([...baseline.entryPoints].map(String).sort()).toEqual(
     [
       "apps-core.layout.**",
-      "infra.boot-snapshot.**",
+      "network.live.boot-snapshot.**",
       "infra.health.**",
       "primitives.dom.overscroll-hint.**",
       "ui.theme-engine.**",

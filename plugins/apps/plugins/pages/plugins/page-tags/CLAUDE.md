@@ -13,6 +13,7 @@
   - Uses:
     - `apps/pages/page-tree.PageDetail`
     - `apps/pages/page-tree.PageTree`
+    - `network/live/live-state.foldResource`
     - `page/tags.PageTagsEditor`
     - `page/tags.TagChipRow`
     - `page/tags.TagDot`
@@ -23,7 +24,6 @@
     - `primitives/css/inline.Inline`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/live-state.foldResource`
     - `ui/icons.Icon`
 - Cross-plugin:
   - Uses tokens:

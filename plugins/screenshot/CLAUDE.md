@@ -13,7 +13,7 @@
     - `ActionBar.Item` → `ScreenshotButton`
   - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/endpoints` ×3
-    - `primitives/live-state` ×3
+    - `network/live/live-state` ×3
     - `primitives/pane` ×3
     - `screenshot/draw-canvas` ×3
     - `primitives/css/ui-kit` ×2

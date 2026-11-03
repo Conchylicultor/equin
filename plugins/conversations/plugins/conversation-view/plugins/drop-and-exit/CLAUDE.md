@@ -13,10 +13,10 @@
     - `conversations/conversation-view/exit-menu.ExitMenu`
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
+    - `network/live/live-state.foldResource`
+    - `network/live/live-state.ResourceResult`
+    - `network/live/live-state.useCombinedResources`
     - `primitives/css/ui-kit.DropdownMenuItem`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.useCombinedResources`
     - `shell/notifications.useToast`
     - `ui/icons.Icon`
   - Exports (values): `droppedNotification`

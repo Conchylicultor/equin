@@ -3,7 +3,7 @@ import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import type { FieldsRecord } from "@plugins/fields/core";
 import { resolveTypeChain } from "@plugins/fields/core";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { mapResource } from "@plugins/primitives/plugins/live-state/web";
+import { mapResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   getDataViewDescriptor,
   type ExtensionField,

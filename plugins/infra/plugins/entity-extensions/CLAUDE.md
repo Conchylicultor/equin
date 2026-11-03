@@ -158,7 +158,7 @@ Because the handle is an entity, no form has a row projection left to write:
 
 The old push forms (`defineResource` over the whole table, or a fold into a `Record`) re-sent every parent's row to every subscriber on any write and made each reader `.find(id)` its one row; the last of them (Sonata's per-song settings) are lookup collections now, and `no-legacy-resource-spelling` rejects the spelling.
 
-**A reader that lists the PARENT by an extension column** (sort the songs by last-played, filter them by play count) joins the extension into the parent's collection instead: `ext.join(alias)` returns the extension as a join spec (`ExtensionJoin`, `infra/query-resource/core` — LEFT, 1:1 on the parent's id), and the parent collection binds its columns through overrides:
+**A reader that lists the PARENT by an extension column** (sort the songs by last-played, filter them by play count) joins the extension into the parent's collection instead: `ext.join(alias)` returns the extension as a join spec (`ExtensionJoin`, `network/live/query-resource/core` — LEFT, 1:1 on the parent's id), and the parent collection binds its columns through overrides:
 
 ```ts
 serveCollection(songsCollection, {
@@ -168,7 +168,7 @@ serveCollection(songsCollection, {
 });
 ```
 
-A side row I / U / D then refills its parent row — only in the tuples whose SQL reads the join, and for a tuple that only projects it, only when that tuple holds the parent (`plugins/infra/plugins/query-resource/CLAUDE.md`, *Joins*). The spec carries the extension's `wireColumns`, so `j.playback` offers only those — a server-only column (by default the timestamps) cannot be bound. A parent with no side row reads the extension's DEFAULTS, not NULL: a column whose meta declares a literal `default` (`columns: { playCount: { default: 0 } }`) is read as `COALESCE(playback.play_count, 0)` everywhere the SQL reads it — the projection, a filter, a sort — so "never played" is `playCount = 0` in SQL as it is in the extension's own semantics. Every other field bound to the join must be nullable (a parent with no side row reads NULL; checked at module eval). A collection reads another plugin's extension this way through its EXPOSED fields (`exposes`, above; `network/live`'s `LiveColumns.Expose(ext)`).
+A side row I / U / D then refills its parent row — only in the tuples whose SQL reads the join, and for a tuple that only projects it, only when that tuple holds the parent (`plugins/network/plugins/live/plugins/query-resource/CLAUDE.md`, *Joins*). The spec carries the extension's `wireColumns`, so `j.playback` offers only those — a server-only column (by default the timestamps) cannot be bound. A parent with no side row reads the extension's DEFAULTS, not NULL: a column whose meta declares a literal `default` (`columns: { playCount: { default: 0 } }`) is read as `COALESCE(playback.play_count, 0)` everywhere the SQL reads it — the projection, a filter, a sort — so "never played" is `playCount = 0` in SQL as it is in the extension's own semantics. Every other field bound to the join must be nullable (a parent with no side row reads NULL; checked at module eval). A collection reads another plugin's extension this way through its EXPOSED fields (`exposes`, above; `network/live`'s `LiveColumns.Expose(ext)`).
 
 A `select: { conversationId: t.parentId, … }` map or a `.map((r) => ({ songId: r.parentId, … }))` is the hand-rolled projection `no-hand-rolled-entity-projection` bans: a column added to the table silently misses the wire.
 

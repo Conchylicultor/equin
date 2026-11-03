@@ -1,7 +1,7 @@
 import type {
   RuntimeSocket,
   WsHandler,
-} from "@plugins/framework/plugins/resource-runtime/core";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/core";
 import type {
   BrowserServer,
   BrowserServerPeer,

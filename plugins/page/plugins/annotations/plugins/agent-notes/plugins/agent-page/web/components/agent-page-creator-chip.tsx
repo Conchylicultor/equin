@@ -1,6 +1,6 @@
 import { ConversationChip } from "@plugins/conversations/plugins/conversation-ui/plugins/chip/web";
 import { useConversation } from "@plugins/conversations/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import type { PageReferenceChipProps } from "@plugins/page/plugins/page-reference/web";
 import { useAgentNotesCreator } from "@plugins/page/plugins/annotations/plugins/agent-notes/plugins/authorship/web";

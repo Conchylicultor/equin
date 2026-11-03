@@ -221,6 +221,7 @@ instrument grouping — while `convert` itself stays pure.
     - `apps/sonata/document.useSongDocument`
     - `apps/sonata/player.SonataPlayer`
     - `apps/sonata/shell.Sonata`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/center.Center`
     - `primitives/css/coords.Placed`
     - `primitives/css/pin.Pin`
@@ -229,7 +230,6 @@ instrument grouping — while `convert` itself stays pure.
     - `primitives/dom/element-size.useElementSize`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/lazy-component.lazyComponent`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/virtual-rows.useVirtualRows`
 - Server:

@@ -11,9 +11,9 @@
     - `build.BuildDetailSlots`
     - `conversations/commit-conversation.OpenCommitConversation`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/commit-list.CommitRowItem`
     - `primitives/css/placeholder.Placeholder`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
 - Server:
   - Contributes: `resource.declare` "build.run-commits"

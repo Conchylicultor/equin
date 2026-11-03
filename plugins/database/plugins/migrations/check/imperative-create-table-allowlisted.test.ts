@@ -94,7 +94,7 @@ describe("findOffenders", () => {
         `    ${CT} IF NOT EXISTS \${drizzleSql.raw(MIGRATIONS_TABLE_NAME)} (`,
       ),
       m(
-        "plugins/database/plugins/live-state-snapshot/server/internal/tables-ddl.ts",
+        "plugins/network/plugins/live/plugins/live-state-snapshot/server/internal/tables-ddl.ts",
         18,
         `${CT} IF NOT EXISTS \${LIVE_STATE_SNAPSHOT_TABLE} (`,
       ),
@@ -207,7 +207,7 @@ describe("findOffenders", () => {
 
   test("exempts a path the caller resolved as a throwaway-test-db file", () => {
     const path =
-      "plugins/database/plugins/change-feed/server/internal/triggers.test.ts";
+      "plugins/network/plugins/live/plugins/change-feed/server/internal/triggers.test.ts";
     const matches = [m(path, 45, `${CT} widgets (id text PRIMARY KEY)`)];
     expect(findOffenders(matches, ids, new Set([path]))).toEqual([]);
     // …and is still an offender when the caller did NOT exempt it.

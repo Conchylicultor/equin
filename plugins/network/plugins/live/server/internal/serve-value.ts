@@ -9,12 +9,12 @@ import type {
   ResourceParams,
   ResourceRuntime,
   ServerResourceOptions,
-} from "@plugins/framework/plugins/resource-runtime/core";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/core";
 import {
   compiledValueReach,
   type FollowRead,
   type ValueReads,
-} from "@plugins/infra/plugins/query-resource/server";
+} from "@plugins/network/plugins/live/plugins/query-resource/server";
 import {
   type LivePagedParams,
   type LivePagedPages,
@@ -28,7 +28,7 @@ import {
 } from "@plugins/network/plugins/live/core";
 import type { MachineFeature } from "@plugins/infra/plugins/endpoints/core";
 import { serveValueOn } from "../../core";
-import { canonicalParams } from "@plugins/packages/plugins/canonical-params/core";
+import { canonicalParams } from "@plugins/network/plugins/live/plugins/canonical-params/core";
 import {
   defineSourceSet,
   type SourceSet,

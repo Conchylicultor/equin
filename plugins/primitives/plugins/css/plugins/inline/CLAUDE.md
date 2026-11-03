@@ -59,7 +59,7 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
     - `apps` ×21
     - `debug` ×15
     - `reports` ×15
-    - `primitives` ×13
+    - `primitives` ×12
     - `conversations` ×9
     - `page` ×6
     - `plugin-meta` ×4
@@ -72,6 +72,7 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
     - `config_v2/settings`
     - `database/query-deadline`
     - `fields/bool/table`
+    - `network/live/live-state`
     - `reorder/editor`
     - `runs/run-outcome`
     - `shell/notifications`

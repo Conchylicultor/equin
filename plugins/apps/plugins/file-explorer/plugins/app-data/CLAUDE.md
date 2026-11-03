@@ -34,7 +34,7 @@ dirs, read-only, on every host — the second user of
     - `primitives/data-view` ×4
     - `primitives/css/ui-kit` ×3
     - `primitives/pane` ×3
-    - `primitives/live-state` ×2
+    - `network/live/live-state` ×2
     - `apps/file-explorer/shell.FileExplorer`
     - `network/live.useLive`
     - `primitives/bar.Bar`

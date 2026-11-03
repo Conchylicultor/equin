@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import { ConnectButton, GrantAccessButton } from "@plugins/auth/web";
 import { useSetConfig } from "@plugins/config_v2/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { gmailConfig } from "../../shared/config";
 import { GMAIL_SCOPES, GOOGLE_PROVIDER_ID } from "../../core";
 import { useGmailAccess } from "../internal/use-gmail-access";

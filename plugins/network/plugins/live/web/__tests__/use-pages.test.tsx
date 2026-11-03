@@ -48,12 +48,12 @@ import type { z } from "zod";
 import { fieldsToZodObject } from "@plugins/fields/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
-import { queryKeyFor } from "@plugins/primitives/plugins/live-state/web";
+import { queryKeyFor } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   createLiveStateHarness,
   type LiveStateHarness,
   type NotificationsClient,
-} from "@plugins/primitives/plugins/live-state/web/testing";
+} from "@plugins/network/plugins/live/plugins/live-state/web/testing";
 import {
   liveCollection,
   scopedLiveColumns,

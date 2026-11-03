@@ -17,6 +17,7 @@
     - `apps/studio/membership-tint` ×2
     - `primitives/css/spacing` ×2
     - `apps/studio/shell.Studio`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/clip.Clip`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/column.Column`
@@ -27,7 +28,6 @@
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/graph-canvas.GraphCanvas`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/search.SearchInput`
   - Exports (values): `graphCanvasPane`

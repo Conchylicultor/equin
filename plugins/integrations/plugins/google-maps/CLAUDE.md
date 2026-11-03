@@ -166,7 +166,7 @@ over:
   - Contributes: `Auth.Integration` "Live map"
   - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/setup-steps` ×10
-    - `primitives/live-state` ×5
+    - `network/live/live-state` ×5
     - `auth` ×3
     - `infra/endpoints` ×2
     - `primitives/css/ui-kit` ×2

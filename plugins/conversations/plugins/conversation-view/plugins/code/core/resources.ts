@@ -1,5 +1,5 @@
 import { liveValue } from "@plugins/network/plugins/live/core";
-import { resolvableSchema } from "@plugins/primitives/plugins/live-state/core";
+import { resolvableSchema } from "@plugins/network/plugins/live/plugins/live-state/core";
 import {
   EditedFileSchema,
   EditedFilesMetaSchema,

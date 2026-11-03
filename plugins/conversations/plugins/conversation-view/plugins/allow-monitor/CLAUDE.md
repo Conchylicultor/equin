@@ -18,10 +18,10 @@ The directory comes from a follow of tasks-core's `conversationWorkspaces` (`{ i
   - Uses:
     - `conversations/conversation-view.conversationPane`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/badge.Badge`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/live-state.ResourceErrorInline`
     - `ui/icons.Icon`
 - Server:
   - Contributes: `resource.declare` "allow-files"

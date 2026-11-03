@@ -13,7 +13,7 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   ResourceErrorInline,
   type ResourceUnavailable,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   DATA_VIEW_HEADER_OFFSET_VAR,
   type CreateOption,

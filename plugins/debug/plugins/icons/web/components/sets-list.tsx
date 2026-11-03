@@ -7,7 +7,7 @@ import {
 import type {
   ResourceReadiness,
   ResourceUnavailable,
-} from "@plugins/primitives/plugins/live-state/core";
+} from "@plugins/network/plugins/live/plugins/live-state/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { CheckboxIndicator } from "@plugins/primitives/plugins/css/plugins/selection-indicator/web";
 import type { IconFamilyId } from "@plugins/ui/plugins/icons/core";

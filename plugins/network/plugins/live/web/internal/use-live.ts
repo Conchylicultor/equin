@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { z } from "zod";
-import { canonicalParams } from "@plugins/packages/plugins/canonical-params/core";
+import { canonicalParams } from "@plugins/network/plugins/live/plugins/canonical-params/core";
 import {
   useResource,
   useResources,
@@ -9,7 +9,7 @@ import {
   type ResourceError,
   type ResourceResult,
   type ResourceUnavailable,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import type {
   LiveAllCollection,
   LiveCollection,

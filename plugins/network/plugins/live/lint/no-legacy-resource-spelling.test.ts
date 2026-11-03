@@ -10,11 +10,13 @@ import { createRuleTester } from "@plugins/framework/plugins/tooling/plugins/lin
 
 const ruleTester = createRuleTester();
 
-const LIVE_STATE_WEB = "@plugins/primitives/plugins/live-state/web";
+const LIVE_STATE_WEB = "@plugins/network/plugins/live/plugins/live-state/web";
 const SERVER_CORE = "@plugins/framework/plugins/server-core/core";
 const CENTRAL_CORE = "@plugins/framework/plugins/central-core/core";
-const QUERY_RESOURCE_CORE = "@plugins/infra/plugins/query-resource/core";
-const QUERY_RESOURCE_SERVER = "@plugins/infra/plugins/query-resource/server";
+const QUERY_RESOURCE_CORE =
+  "@plugins/network/plugins/live/plugins/query-resource/core";
+const QUERY_RESOURCE_SERVER =
+  "@plugins/network/plugins/live/plugins/query-resource/server";
 
 /** An error naming `name` (its message starts with the old spelling). */
 const legacy = (name: string) => ({

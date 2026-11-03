@@ -43,8 +43,8 @@
     - `infra/attachments.ATTACHMENT_LINKS_MAX`
     - `infra/attachments.attachmentLinkFields`
     - `infra/entities.entityRef`
-    - `infra/query-resource.compositeKey`
     - `network/live.liveCollection`
+    - `network/live/query-resource.compositeKey`
   - Exports (values):
     - `blockAttachmentLinks`
     - `blockAttachmentLinksEntityRef`

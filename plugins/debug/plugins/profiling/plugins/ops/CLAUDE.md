@@ -98,13 +98,13 @@ The orphan reconciler lives in `op-log/plugins/op-store` (`reconcile.ts`).
     - `conversations.useConversationTitleBySlug`
     - `debug/profiling/build.buildProfileDetailPane`
     - `infra/host/machine-sleep.useSleepNowForFold`
+    - `network/live/live-state.ResourceErrorInline`
     - `network/live.useLive`
     - `primitives/css/clip.Clip`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/css/ui-kit.cn`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/relative-time.useNow`
     - `shell/toast.showToast`

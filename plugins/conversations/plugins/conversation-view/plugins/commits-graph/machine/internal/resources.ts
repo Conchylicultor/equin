@@ -3,7 +3,7 @@ import { WorktreeGoneError } from "@plugins/primitives/plugins/commit-list/serve
 import {
   resolved,
   unresolved,
-} from "@plugins/primitives/plugins/live-state/core";
+} from "@plugins/network/plugins/live/plugins/live-state/core";
 import { refHeadServed } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
 import {
   attemptConversationIdsServed,

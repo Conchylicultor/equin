@@ -1,5 +1,5 @@
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useBrowserNav } from "@plugins/apps/plugins/browser/plugins/shell/web";
 import { useBookmarkToggle } from "../internal/use-bookmarks";
 import { hostOf } from "../internal/host-of";

@@ -43,7 +43,7 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
 - Cross-plugin:
   - Imported by: 131 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×42
-    - `primitives` ×26
+    - `primitives` ×25
     - `page` ×18
     - `conversations` ×9
     - `debug` ×6
@@ -59,6 +59,7 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `config_v2/settings`
     - `framework/web-core`
     - `layouts/route-fallback`
+    - `network/live/live-state`
     - `reorder/node-types/header`
     - `screenshot`
     - `tag-tree/picker`

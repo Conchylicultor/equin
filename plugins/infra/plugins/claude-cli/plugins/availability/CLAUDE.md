@@ -78,9 +78,9 @@ constantly, and login state lives in the macOS Keychain anyway.
     - `infra/endpoints.useFetchEndpoint`
     - `infra/endpoints.useMachineAvailability`
     - `network/live.useLive`
+    - `network/live/live-state.foldResource`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/setup-steps.StepNote`
   - Exports (values):
     - `ClaudeCodeActions`

@@ -9,14 +9,14 @@
   - Contributes: `TaskDetailSlots.Section` "Task" → `TaskHeader`
   - Uses:
     - `conversations.useConversationById`
+    - `network/live/live-state.foldResource`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/fill.Fill`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/editable-field.useEditableField`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
     - `tasks.usePatchTask`

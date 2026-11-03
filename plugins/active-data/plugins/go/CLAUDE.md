@@ -161,6 +161,7 @@ back the same way.
     - `primitives/css/clip` ×2
     - `primitives/text-editor` ×2
     - `conversations/conversation-view.usePromptComposer`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/center.Center`
     - `primitives/css/coords.Placed`
     - `primitives/css/fill.Fill`
@@ -171,7 +172,6 @@ back the same way.
     - `primitives/css/text.Text`
     - `primitives/dom/copy-source-text.copiesAsText`
     - `primitives/dom/element-size.useResizeObserver`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/markdown.Markdown`
     - `ui/icons.Icon`

@@ -39,7 +39,7 @@
  *
  * The `unwrap` / `isEmptyDefaultLiteral` / `resolveVariable` / `initializerOf`
  * helpers are copied (~50 lines) from
- * `plugins/primitives/plugins/live-state/lint/no-pending-data-collapse.ts` —
+ * `plugins/network/plugins/live/plugins/live-state/lint/no-pending-data-collapse.ts` —
  * jiti cannot resolve `@plugins/*` in rule files and cross-plugin relative
  * imports are banned, so duplication is the established pattern here.
  */

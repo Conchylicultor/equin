@@ -14,13 +14,13 @@
     - `infra/endpoints.useFetchEndpoint`
     - `network/live.LiveRowResult`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/ui-kit.cn`
     - `primitives/editable-field.useEditableField`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.ResourceErrorInline`
 - Server:
   - Contributes: `resource.declare` "conversation-notes:rows"
   - Uses:

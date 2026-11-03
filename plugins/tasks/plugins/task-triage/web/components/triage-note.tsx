@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { mapRow, useLive } from "@plugins/network/plugins/live/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
-import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceView } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Textarea } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";

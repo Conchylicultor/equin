@@ -40,13 +40,13 @@ Swing (`meta.swing`) is read here but applied at playback only — see
     - `infra/attachments.uploadAttachment`
     - `network/live.mapRow`
     - `network/live.useLive`
+    - `network/live/live-state.combineResources`
+    - `network/live/live-state.foldResource`
+    - `network/live/live-state.mapResource`
+    - `network/live/live-state.ResourceResult`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
-    - `primitives/live-state.combineResources`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceResult`
     - `ui/icons.Icon`
 - Server:
   - Contributes: `resource.declare` "sonata.musicxml:rows"

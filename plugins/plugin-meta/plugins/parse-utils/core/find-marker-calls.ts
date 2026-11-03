@@ -21,9 +21,9 @@ export interface MarkerCallSpan {
 /**
  * Find the byte span of every genuine `marker[<…>](…)` call in ALREADY-MASKED
  * source — the single `<…>`-tolerant call scanner every resource-shaped scanner
- * (`findMarkerCalls`, the `no-db-backed-notify` and `keyed-resource-scope`
- * checks, and any future one) routes through, so none of them can ever again
- * SILENTLY under-match the generic call form.
+ * (`findMarkerCalls`, the `no-db-backed-notify` check, and any future one)
+ * routes through, so none of them can ever again SILENTLY under-match the
+ * generic call form.
  *
  * The caller masks first (with whatever `maskSource` options it needs — strings
  * blanked or kept) and passes the masked text; because `maskSource` preserves

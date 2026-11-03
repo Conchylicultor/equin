@@ -41,19 +41,19 @@ import {
   findCarriedProducedRoutes,
   flushNow,
   mountProducersForTest,
-} from "@plugins/database/plugins/change-feed/server/testing";
+} from "@plugins/network/plugins/live/plugins/change-feed/server/testing";
 import {
   createResourceRuntime,
   type ResourceParams,
-} from "@plugins/framework/plugins/resource-runtime/core";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/core";
 import { sweepExpired } from "@plugins/infra/plugins/retention/server/testing";
 import {
   makeClientView,
   type ClientView,
   type RecordedFrame,
-} from "@plugins/framework/plugins/resource-runtime/core/testing";
-import type { QueryDb } from "@plugins/infra/plugins/query-resource/server";
-import { compileWindowQuery } from "@plugins/infra/plugins/query-resource/server/testing";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/core/testing";
+import type { QueryDb } from "@plugins/network/plugins/live/plugins/query-resource/server";
+import { compileWindowQuery } from "@plugins/network/plugins/live/plugins/query-resource/server/testing";
 import { compileCollection } from "@plugins/network/plugins/live/server/testing";
 import { writeReport, type ReportUpsertValues } from "./record-report";
 import { linkReportTask } from "./investigate";

@@ -15,7 +15,7 @@ import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { liveCollection, type LiveRowsCollection } from "./live-collection";
 import { liveArm } from "./live-columns";
 import { LIVE_COLUMNS_KEY } from "./live-columns";
-import { tolerantEnum } from "@plugins/primitives/plugins/live-state/core";
+import { tolerantEnum } from "@plugins/network/plugins/live/plugins/live-state/core";
 import { schemaDomain } from "./field-domain";
 
 // The fields spelling: a collection names its entity, the fields a list shows

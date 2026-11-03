@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { z } from "zod";
 import { useActiveDataBinding } from "@plugins/active-data/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { usePromptComposer } from "@plugins/conversations/plugins/conversation-view/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";

@@ -165,6 +165,7 @@ the `Specimens.Specimen` dispatch slot — so there is one id namespace for both
     - `apps-core/chrome-theme.chromeThemeScope`
     - `apps-core.Apps`
     - `apps/debug/shell.DebugApp`
+    - `network/live/live-state.useQueryResource`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/card.Card`
     - `primitives/css/pin.Pin`
@@ -173,7 +174,6 @@ the `Specimens.Specimen` dispatch slot — so there is one id namespace for both
     - `primitives/css/theme-boundary.Theme`
     - `primitives/error-boundary.PluginErrorBoundary`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.useQueryResource`
     - `primitives/loading.Loading`
     - `primitives/overlay/surface-overlay.SurfaceOverlay`
   - Exports (types):

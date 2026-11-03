@@ -114,6 +114,7 @@ a steady-state reboot writes nothing).
 - Web:
   - Uses:
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `page/editor.PageIcon`
     - `page/page-reference.PageReferenceTrailing`
     - `page/page-reference.usePageNavigation`
@@ -127,7 +128,6 @@ a steady-state reboot writes nothing).
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.FieldDef`
-    - `primitives/live-state.ResourceErrorInline`
   - Exports (types): `BacklinksProps`
   - Exports (values): `Backlinks`
 - Core:

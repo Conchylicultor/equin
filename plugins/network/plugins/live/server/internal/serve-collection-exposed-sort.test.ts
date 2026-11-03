@@ -29,12 +29,12 @@ import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server";
-import type { ResourceParams } from "@plugins/framework/plugins/resource-runtime/core";
-import { ResourceContractError } from "@plugins/packages/plugins/resource-protocol/core";
+import type { ResourceParams } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+import { ResourceContractError } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
 import {
   compileWindowQuery,
   recordingQueryDb,
-} from "@plugins/infra/plugins/query-resource/server/testing";
+} from "@plugins/network/plugins/live/plugins/query-resource/server/testing";
 import {
   exposedColumns,
   liveCollection,

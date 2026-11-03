@@ -46,11 +46,11 @@ import {
   hydrateResource,
   queryKeyFor,
   type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   createLiveStateHarness,
   mergeKeyedDelta,
-} from "@plugins/primitives/plugins/live-state/web/testing";
+} from "@plugins/network/plugins/live/plugins/live-state/web/testing";
 import {
   COLLECTION_KIND_KEYS,
   liveCollection,

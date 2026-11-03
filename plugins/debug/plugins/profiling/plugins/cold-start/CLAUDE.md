@@ -82,7 +82,7 @@ start). Every row has a duration and the offset where it ends.
 | Row | Source |
 | --- | --- |
 | **TOTAL page request → route content commit** (headline) | the `route-content-commit` boot instant (web-core's boot sequence): the commit that appends the active app's priority deferred batch, or the first-data commit when that app has no deferred content — the first screen a person sees with data |
-| TOTAL page request → first data commit | the `first-data-commit` boot instant (infra/boot-snapshot): the first React commit after the boot snapshot is hydrated — chrome and eager panes reading real data, deferred route content (e.g. the `/agents` welcome pane) possibly still loading |
+| TOTAL page request → first data commit | the `first-data-commit` boot instant (network/live/boot-snapshot): the first React commit after the boot snapshot is hydrated — chrome and eager panes reading real data, deferred route content (e.g. the `/agents` welcome pane) possibly still loading |
 | page request → first request reached the gateway | gateway report `spawnRequestedAt` − page `timeOrigin`: how long the page took to send the request that woke the server (cold runs only) |
 | gateway spawn requested → ready observed (+ spawned split, spawned → server process start = exec + Bun runtime start) | the gateway's report (`spawnRequestedAt`, `spawnedAt`, `readyObservedAt`) POSTed to `/api/boot/gateway-report` (debug/boot-monitor), returned as `gateway` by the profiling endpoint |
 | server process start → first register (code loading) | `bootStartOffsetMs` + the earliest `register` span's offset |

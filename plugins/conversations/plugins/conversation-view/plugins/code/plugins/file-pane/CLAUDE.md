@@ -18,7 +18,7 @@
     - `primitives/pane` ×5
     - `apps/file-explorer/browser` ×4
     - `code-explorer/file-resolve` ×2
-    - `primitives/live-state` ×2
+    - `network/live/live-state` ×2
     - `primitives/path-bar` ×2
     - `apps/file-explorer/folder-peek.folderPeekPane`
     - `conversations/conversation-view/code.useEditedFile`

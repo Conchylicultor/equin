@@ -20,7 +20,7 @@
     - `effortItems`
     - `EffortSelect`
 - Core:
-  - Uses: `primitives/live-state.tolerantEnum`
+  - Uses: `network/live/live-state.tolerantEnum`
   - Exports (types):
     - `EffortLevel`
     - `EffortMeta`

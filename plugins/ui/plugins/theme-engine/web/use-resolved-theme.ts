@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useConfigResult } from "@plugins/config_v2/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   DEFAULT_THEME_ID,
   resolveTheme,

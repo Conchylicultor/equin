@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { growClass } from "@plugins/primitives/plugins/css/plugins/grow/web";

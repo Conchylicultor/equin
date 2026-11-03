@@ -3,7 +3,7 @@ import {
   resolved,
   unresolved,
   type Resolvable,
-} from "@plugins/primitives/plugins/live-state/core";
+} from "@plugins/network/plugins/live/plugins/live-state/core";
 import {
   LOG_FORMAT,
   parseGitLog,

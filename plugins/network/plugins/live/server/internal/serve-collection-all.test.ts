@@ -27,18 +27,18 @@ import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { loadResourceByKey } from "@plugins/framework/plugins/server-core/core";
-import { resourceDescriptorByKey } from "@plugins/primitives/plugins/live-state/core";
+import { resourceDescriptorByKey } from "@plugins/network/plugins/live/plugins/live-state/core";
 import {
   aggregate,
   childrenJoin,
   expr,
   jsonAgg,
   type ColumnRef,
-} from "@plugins/infra/plugins/query-resource/core";
+} from "@plugins/network/plugins/live/plugins/query-resource/core";
 import {
   recordingQueryDb,
   type RecordedQuery,
-} from "@plugins/infra/plugins/query-resource/server/testing";
+} from "@plugins/network/plugins/live/plugins/query-resource/server/testing";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { defineEntity } from "@plugins/infra/plugins/entities/server";
 import { withWire } from "@plugins/database/plugins/sql-column/server";

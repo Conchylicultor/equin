@@ -13,7 +13,7 @@ import {
   type ToastArgs,
 } from "@plugins/shell/plugins/notifications/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceView } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   DEFAULT_DRAFT_TTL,

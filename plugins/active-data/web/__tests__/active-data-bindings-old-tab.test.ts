@@ -23,8 +23,8 @@ vi.mock(
 import { QueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { createTransportHub } from "@plugins/primitives/plugins/networking/web/testing";
-import { NotificationsClient } from "@plugins/primitives/plugins/live-state/web/testing";
-import { queryKeyFor } from "@plugins/primitives/plugins/live-state/web";
+import { NotificationsClient } from "@plugins/network/plugins/live/plugins/live-state/web/testing";
+import { queryKeyFor } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { activeDataBindings } from "../../core";
 
 // The old bundle's row schema, as it shipped.

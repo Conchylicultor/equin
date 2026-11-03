@@ -1,6 +1,6 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { db } from "@plugins/database/server";
-import type { ProducerExecutor } from "@plugins/database/plugins/change-feed/server";
+import type { ProducerExecutor } from "@plugins/network/plugins/live/plugins/change-feed/server";
 import {
   runInBackgroundLane,
   runWithoutProfiling,

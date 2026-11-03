@@ -17,7 +17,7 @@ import type {
   PresentationReadsOf,
 } from "@plugins/infra/plugins/entities/core";
 import type { EntityExposure } from "@plugins/infra/plugins/entity-extensions/core";
-import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type {
   ClientFields,
   ClientFieldValue,

@@ -93,6 +93,7 @@ parses MIME or HTML itself.
     - `primitives/css/spacing` ×2
     - `primitives/css/ui-kit` ×2
     - `apps/mail/sync.MessageBodyState`
+    - `network/live/live-state.ResourceErrorInline`
     - `network/live.useLive`
     - `primitives/avatar.Avatar`
     - `primitives/css/center.Center`
@@ -105,7 +106,6 @@ parses MIME or HTML itself.
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
   - Exports (values): `threadPane`

@@ -88,9 +88,9 @@ demo's browser host serves (and prunes) it too.
   - Uses:
     - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`
+    - `network/live/live-state.mapResource`
+    - `network/live/live-state.ResourceResult`
     - `primitives/dom/web-storage.defineStore`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceResult`
     - `primitives/persistent-draft.legacyDraftKeys`
     - `primitives/persistent-draft.readDraft`
     - `primitives/persistent-draft.writeDraft`

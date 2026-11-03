@@ -7,13 +7,13 @@ import {
   renderHook,
   screen,
 } from "@testing-library/react";
-import { createLiveStateHarness } from "@plugins/primitives/plugins/live-state/web/testing";
+import { createLiveStateHarness } from "@plugins/network/plugins/live/plugins/live-state/web/testing";
 import {
   PluginProvider,
   type LoadedPlugin,
 } from "@plugins/framework/plugins/web-sdk/core";
 import { clause } from "@plugins/network/plugins/live/plugins/filter/core";
-import type { ResourceReadiness } from "@plugins/primitives/plugins/live-state/core";
+import type { ResourceReadiness } from "@plugins/network/plugins/live/plugins/live-state/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import type {

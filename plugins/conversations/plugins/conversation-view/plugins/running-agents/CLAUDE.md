@@ -172,9 +172,9 @@ value (`band-view.ts`: `showAll` + `open`).
     - `conversations/conversation-view/jsonl-viewer` ×3
     - `primitives/persistent-draft` ×3
     - `conversations/conversation-view/jsonl-viewer/subagents` ×2
+    - `network/live/live-state` ×2
     - `primitives/css/fill` ×2
     - `primitives/data-view` ×2
-    - `primitives/live-state` ×2
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent.agentReportPane`
     - `conversations/conversation-view.Conversation`
     - `primitives/css/clip.Clip`

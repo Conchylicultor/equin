@@ -46,7 +46,7 @@ reaches the browser within one tick.
 - Web:
   - Uses:
     - `network/live.useLive`
-    - `primitives/live-state.foldResource`
+    - `network/live/live-state.foldResource`
   - Exports (values):
     - `useSleepNow`
     - `useSleepNowForFold`

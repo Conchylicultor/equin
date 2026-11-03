@@ -173,7 +173,7 @@ honest — the prototype does exist — and it self-corrects.
     - `infra/endpoints` ×5
     - `apps/prototypes/canvas` ×4
     - `apps/prototypes/state` ×3
-    - `primitives/live-state` ×3
+    - `network/live/live-state` ×3
     - `primitives/pane` ×3
     - `apps/prototypes/thumbnails` ×2
     - `tag-tree/picker` ×2

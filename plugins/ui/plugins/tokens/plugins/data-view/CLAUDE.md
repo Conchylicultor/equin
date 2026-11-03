@@ -97,11 +97,11 @@ The pane's shared content inset is not here: it is density's `contentInset`
     - `ThemeEngine.TokenGroup` "DataView"
     - `ThemeCustomizer.Section` "DataView" → `DataViewTokensSection`
   - Uses:
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/collapsible.Collapsible`
     - `primitives/collapsible.CollapsibleContent`
     - `primitives/css/row.SectionHeaderRow`
     - `primitives/css/spacing.Stack`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `ui/theme-engine.ThemeEngine`
     - `ui/theme-engine/theme-customizer.ThemeCustomizer`

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { useEffect, useInsertionEffect, useMemo } from "react";
 import { useScopeMembership } from "@plugins/config_v2/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Apps } from "@plugins/apps-core/web";
 import {
   useRootThemeScopeState,

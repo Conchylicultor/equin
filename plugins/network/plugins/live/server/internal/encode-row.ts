@@ -1,5 +1,5 @@
 import type { WireCodec } from "@plugins/database/plugins/sql-column/server";
-import { liveReadCode } from "@plugins/infra/plugins/query-resource/core";
+import { liveReadCode } from "@plugins/network/plugins/live/plugins/query-resource/core";
 
 // A served row's encode and `$columns` fold — their own small module because
 // they are code a handed-over `:rows` tuple's value and a persisted `all`

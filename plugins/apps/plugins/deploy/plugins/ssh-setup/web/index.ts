@@ -1,4 +1,4 @@
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ServerDetail } from "@plugins/apps/plugins/deploy/plugins/servers/web";
 import { useServerVerified } from "@plugins/apps/plugins/deploy/plugins/health/web";

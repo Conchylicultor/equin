@@ -19,7 +19,7 @@ import {
 import {
   matchResource,
   ResourceErrorInline,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { DurationText, HoldBadge, ProblemBadge, StatusBadge } from "./cells";
 import {

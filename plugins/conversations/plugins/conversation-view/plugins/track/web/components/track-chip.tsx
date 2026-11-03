@@ -2,7 +2,7 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { useConversationById } from "@plugins/conversations/web";
 import { HeaderChip } from "@plugins/conversations/plugins/conversation-view/plugins/header/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { TRACK_META } from "@plugins/tasks/plugins/task-track/core";
 import { useTaskTrack } from "@plugins/tasks/plugins/task-track/web";
 

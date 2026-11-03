@@ -1,4 +1,4 @@
-import type { ResourceParams } from "@plugins/framework/plugins/resource-runtime/core";
+import type { ResourceParams } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
 import type {
   LivePagedValue,
   LiveQueryValue,

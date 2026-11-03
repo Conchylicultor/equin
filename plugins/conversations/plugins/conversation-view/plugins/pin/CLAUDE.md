@@ -12,9 +12,9 @@
     - `conversations/conversation-view.conversationPane`
     - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/hover-reveal.hoverRevealTargetInAnchor`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`

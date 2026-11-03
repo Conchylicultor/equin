@@ -32,8 +32,8 @@ import {
   createTestDb,
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
-import type { ColumnRef } from "@plugins/infra/plugins/query-resource/core";
-import type { QueryDb } from "@plugins/infra/plugins/query-resource/server";
+import type { ColumnRef } from "@plugins/network/plugins/live/plugins/query-resource/core";
+import type { QueryDb } from "@plugins/network/plugins/live/plugins/query-resource/server";
 import {
   clockField,
   clockFieldValue,

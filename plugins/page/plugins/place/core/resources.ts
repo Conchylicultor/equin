@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import { cappedList } from "@plugins/packages/plugins/list-bound/core";
-import { ResourceRefusal } from "@plugins/packages/plugins/resource-protocol/core";
+import { ResourceRefusal } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
 import { PlaceSnapshotSchema, PlaceSuggestionSchema } from "./schemas";
 
 /**

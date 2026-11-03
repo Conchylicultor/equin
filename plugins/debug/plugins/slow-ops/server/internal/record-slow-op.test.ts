@@ -27,8 +27,8 @@ import { runMigrations } from "@plugins/database/plugins/migrations/server/testi
 import {
   flushNow,
   mountProducersForTest,
-} from "@plugins/database/plugins/change-feed/server/testing";
-import type { routeChange } from "@plugins/database/plugins/change-feed/server";
+} from "@plugins/network/plugins/live/plugins/change-feed/server/testing";
+import type { routeChange } from "@plugins/network/plugins/live/plugins/change-feed/server";
 import type { ContentionSnapshot } from "@plugins/infra/plugins/host/plugins/contention/server";
 import type {
   SlowOpMeasures,

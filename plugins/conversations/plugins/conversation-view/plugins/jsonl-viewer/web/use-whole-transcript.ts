@@ -4,7 +4,7 @@ import type { LiveValue } from "@plugins/network/plugins/live/core";
 import {
   readyResource,
   type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { useTranscriptDrawn } from "./components/transcript-events-context";
 import { useJsonlConversationId } from "./components/conversation-id-context";

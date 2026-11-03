@@ -2409,10 +2409,6 @@
       "name": "@equin/plugin-database-admin",
       "version": "0.0.1",
     },
-    "plugins/database/plugins/change-feed": {
-      "name": "@equin/plugin-database-change-feed",
-      "version": "0.0.1",
-    },
     "plugins/database/plugins/client-tools": {
       "name": "@equin/plugin-database-client-tools",
       "version": "0.0.1",
@@ -2467,10 +2463,6 @@
     },
     "plugins/database/plugins/fork-point": {
       "name": "@equin/plugin-database-fork-point",
-      "version": "0.0.1",
-    },
-    "plugins/database/plugins/live-state-snapshot": {
-      "name": "@equin/plugin-database-live-state-snapshot",
       "version": "0.0.1",
     },
     "plugins/database/plugins/migrations": {
@@ -3465,10 +3457,6 @@
       "name": "@equin/plugin-framework-product-name",
       "version": "0.0.1",
     },
-    "plugins/framework/plugins/resource-runtime": {
-      "name": "@equin/plugin-framework-resource-runtime",
-      "version": "0.0.1",
-    },
     "plugins/framework/plugins/server-core": {
       "name": "@equin/plugin-framework-server-core",
       "devDependencies": {
@@ -3582,10 +3570,6 @@
     },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/inherited-theme-defaults-scoped": {
       "name": "@equin/plugin-framework-tooling-checks-inherited-theme-defaults-scoped",
-      "version": "0.0.1",
-    },
-    "plugins/framework/plugins/tooling/plugins/checks/plugins/keyed-resource-scope": {
-      "name": "@equin/plugin-framework-tooling-checks-keyed-resource-scope",
       "version": "0.0.1",
     },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/lint-directives-stable": {
@@ -3915,10 +3899,6 @@
         "babel-plugin-react-compiler": "^1.0.0",
       },
     },
-    "plugins/framework/plugins/tooling/plugins/resource-vocabulary": {
-      "name": "@equin/plugin-framework-tooling-resource-vocabulary",
-      "version": "0.0.1",
-    },
     "plugins/framework/plugins/tooling/plugins/test-layout": {
       "name": "@equin/plugin-framework-tooling-test-layout",
       "version": "0.0.1",
@@ -4030,10 +4010,6 @@
     },
     "plugins/infra/plugins/background/plugins/timer": {
       "name": "@equin/plugin-infra-background-timer",
-      "version": "0.0.1",
-    },
-    "plugins/infra/plugins/boot-snapshot": {
-      "name": "@equin/plugin-infra-boot-snapshot",
       "version": "0.0.1",
     },
     "plugins/infra/plugins/claude-cli": {
@@ -4329,10 +4305,6 @@
       "name": "@equin/plugin-infra-paths-root-migration",
       "version": "0.0.1",
     },
-    "plugins/infra/plugins/query-resource": {
-      "name": "@equin/plugin-infra-query-resource",
-      "version": "0.0.1",
-    },
     "plugins/infra/plugins/request-origin": {
       "name": "@equin/plugin-infra-request-origin",
       "version": "0.0.1",
@@ -4540,16 +4512,52 @@
       "name": "@equin/plugin-network-live",
       "version": "0.0.1",
     },
+    "plugins/network/plugins/live/plugins/boot-snapshot": {
+      "name": "@equin/plugin-network-live-boot-snapshot",
+      "version": "0.0.1",
+    },
+    "plugins/network/plugins/live/plugins/canonical-params": {
+      "name": "@equin/plugin-network-live-canonical-params",
+      "version": "0.0.1",
+    },
+    "plugins/network/plugins/live/plugins/change-feed": {
+      "name": "@equin/plugin-network-live-change-feed",
+      "version": "0.0.1",
+    },
     "plugins/network/plugins/live/plugins/filter": {
       "name": "@equin/plugin-network-live-filter",
       "version": "0.0.1",
     },
-    "plugins/packages": {
-      "name": "@equin/plugin-packages",
+    "plugins/network/plugins/live/plugins/live-state": {
+      "name": "@equin/plugin-network-live-live-state",
       "version": "0.0.1",
     },
-    "plugins/packages/plugins/canonical-params": {
-      "name": "@equin/plugin-packages-canonical-params",
+    "plugins/network/plugins/live/plugins/live-state-snapshot": {
+      "name": "@equin/plugin-network-live-live-state-snapshot",
+      "version": "0.0.1",
+    },
+    "plugins/network/plugins/live/plugins/optimistic-mutation": {
+      "name": "@equin/plugin-network-live-optimistic-mutation",
+      "version": "0.0.1",
+    },
+    "plugins/network/plugins/live/plugins/query-resource": {
+      "name": "@equin/plugin-network-live-query-resource",
+      "version": "0.0.1",
+    },
+    "plugins/network/plugins/live/plugins/resource-protocol": {
+      "name": "@equin/plugin-network-live-resource-protocol",
+      "version": "0.0.1",
+    },
+    "plugins/network/plugins/live/plugins/resource-runtime": {
+      "name": "@equin/plugin-network-live-resource-runtime",
+      "version": "0.0.1",
+    },
+    "plugins/network/plugins/live/plugins/resource-vocabulary": {
+      "name": "@equin/plugin-network-live-resource-vocabulary",
+      "version": "0.0.1",
+    },
+    "plugins/packages": {
+      "name": "@equin/plugin-packages",
       "version": "0.0.1",
     },
     "plugins/packages/plugins/coalesce": {
@@ -4598,10 +4606,6 @@
     },
     "plugins/packages/plugins/refcount-hub": {
       "name": "@equin/plugin-packages-refcount-hub",
-      "version": "0.0.1",
-    },
-    "plugins/packages/plugins/resource-protocol": {
-      "name": "@equin/plugin-packages-resource-protocol",
       "version": "0.0.1",
     },
     "plugins/packages/plugins/retry": {
@@ -5840,10 +5844,6 @@
       "name": "@equin/plugin-primitives-link-gesture-new-tab",
       "version": "0.0.1",
     },
-    "plugins/primitives/plugins/live-state": {
-      "name": "@equin/plugin-primitives-live-state",
-      "version": "0.0.1",
-    },
     "plugins/primitives/plugins/loading": {
       "name": "@equin/plugin-primitives-loading",
       "version": "0.0.1",
@@ -5886,10 +5886,6 @@
     },
     "plugins/primitives/plugins/networking/plugins/request-guard": {
       "name": "@equin/plugin-primitives-networking-request-guard",
-      "version": "0.0.1",
-    },
-    "plugins/primitives/plugins/optimistic-mutation": {
-      "name": "@equin/plugin-primitives-optimistic-mutation",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/outline": {
@@ -8326,8 +8322,6 @@
 
     "@equin/plugin-database-admin": ["@equin/plugin-database-admin@workspace:plugins/database/plugins/admin"],
 
-    "@equin/plugin-database-change-feed": ["@equin/plugin-database-change-feed@workspace:plugins/database/plugins/change-feed"],
-
     "@equin/plugin-database-client-tools": ["@equin/plugin-database-client-tools@workspace:plugins/database/plugins/client-tools"],
 
     "@equin/plugin-database-connection": ["@equin/plugin-database-connection@workspace:plugins/database/plugins/connection"],
@@ -8349,8 +8343,6 @@
     "@equin/plugin-database-fork": ["@equin/plugin-database-fork@workspace:plugins/database/plugins/fork"],
 
     "@equin/plugin-database-fork-point": ["@equin/plugin-database-fork-point@workspace:plugins/database/plugins/fork-point"],
-
-    "@equin/plugin-database-live-state-snapshot": ["@equin/plugin-database-live-state-snapshot@workspace:plugins/database/plugins/live-state-snapshot"],
 
     "@equin/plugin-database-migrations": ["@equin/plugin-database-migrations@workspace:plugins/database/plugins/migrations"],
 
@@ -8832,8 +8824,6 @@
 
     "@equin/plugin-framework-product-name": ["@equin/plugin-framework-product-name@workspace:plugins/framework/plugins/product-name"],
 
-    "@equin/plugin-framework-resource-runtime": ["@equin/plugin-framework-resource-runtime@workspace:plugins/framework/plugins/resource-runtime"],
-
     "@equin/plugin-framework-server-core": ["@equin/plugin-framework-server-core@workspace:plugins/framework/plugins/server-core"],
 
     "@equin/plugin-framework-slot-declaration": ["@equin/plugin-framework-slot-declaration@workspace:plugins/framework/plugins/slot-declaration"],
@@ -8887,8 +8877,6 @@
     "@equin/plugin-framework-tooling-checks-host-pools-declared": ["@equin/plugin-framework-tooling-checks-host-pools-declared@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/host-pools-declared"],
 
     "@equin/plugin-framework-tooling-checks-inherited-theme-defaults-scoped": ["@equin/plugin-framework-tooling-checks-inherited-theme-defaults-scoped@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/inherited-theme-defaults-scoped"],
-
-    "@equin/plugin-framework-tooling-checks-keyed-resource-scope": ["@equin/plugin-framework-tooling-checks-keyed-resource-scope@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/keyed-resource-scope"],
 
     "@equin/plugin-framework-tooling-checks-lint-directives-stable": ["@equin/plugin-framework-tooling-checks-lint-directives-stable@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/lint-directives-stable"],
 
@@ -9052,8 +9040,6 @@
 
     "@equin/plugin-framework-tooling-react-compiler": ["@equin/plugin-framework-tooling-react-compiler@workspace:plugins/framework/plugins/tooling/plugins/react-compiler"],
 
-    "@equin/plugin-framework-tooling-resource-vocabulary": ["@equin/plugin-framework-tooling-resource-vocabulary@workspace:plugins/framework/plugins/tooling/plugins/resource-vocabulary"],
-
     "@equin/plugin-framework-tooling-test-layout": ["@equin/plugin-framework-tooling-test-layout@workspace:plugins/framework/plugins/tooling/plugins/test-layout"],
 
     "@equin/plugin-framework-tooling-web-artifacts": ["@equin/plugin-framework-tooling-web-artifacts@workspace:plugins/framework/plugins/tooling/plugins/web-artifacts"],
@@ -9093,8 +9079,6 @@
     "@equin/plugin-infra-background-catalog": ["@equin/plugin-infra-background-catalog@workspace:plugins/infra/plugins/background/plugins/catalog"],
 
     "@equin/plugin-infra-background-timer": ["@equin/plugin-infra-background-timer@workspace:plugins/infra/plugins/background/plugins/timer"],
-
-    "@equin/plugin-infra-boot-snapshot": ["@equin/plugin-infra-boot-snapshot@workspace:plugins/infra/plugins/boot-snapshot"],
 
     "@equin/plugin-infra-claude-cli": ["@equin/plugin-infra-claude-cli@workspace:plugins/infra/plugins/claude-cli"],
 
@@ -9230,8 +9214,6 @@
 
     "@equin/plugin-infra-paths-root-migration": ["@equin/plugin-infra-paths-root-migration@workspace:plugins/infra/plugins/paths/plugins/root-migration"],
 
-    "@equin/plugin-infra-query-resource": ["@equin/plugin-infra-query-resource@workspace:plugins/infra/plugins/query-resource"],
-
     "@equin/plugin-infra-request-origin": ["@equin/plugin-infra-request-origin@workspace:plugins/infra/plugins/request-origin"],
 
     "@equin/plugin-infra-request-origin-agent-write-ledger": ["@equin/plugin-infra-request-origin-agent-write-ledger@workspace:plugins/infra/plugins/request-origin/plugins/agent-write-ledger"],
@@ -9328,11 +9310,29 @@
 
     "@equin/plugin-network-live": ["@equin/plugin-network-live@workspace:plugins/network/plugins/live"],
 
+    "@equin/plugin-network-live-boot-snapshot": ["@equin/plugin-network-live-boot-snapshot@workspace:plugins/network/plugins/live/plugins/boot-snapshot"],
+
+    "@equin/plugin-network-live-canonical-params": ["@equin/plugin-network-live-canonical-params@workspace:plugins/network/plugins/live/plugins/canonical-params"],
+
+    "@equin/plugin-network-live-change-feed": ["@equin/plugin-network-live-change-feed@workspace:plugins/network/plugins/live/plugins/change-feed"],
+
     "@equin/plugin-network-live-filter": ["@equin/plugin-network-live-filter@workspace:plugins/network/plugins/live/plugins/filter"],
 
-    "@equin/plugin-packages": ["@equin/plugin-packages@workspace:plugins/packages"],
+    "@equin/plugin-network-live-live-state": ["@equin/plugin-network-live-live-state@workspace:plugins/network/plugins/live/plugins/live-state"],
 
-    "@equin/plugin-packages-canonical-params": ["@equin/plugin-packages-canonical-params@workspace:plugins/packages/plugins/canonical-params"],
+    "@equin/plugin-network-live-live-state-snapshot": ["@equin/plugin-network-live-live-state-snapshot@workspace:plugins/network/plugins/live/plugins/live-state-snapshot"],
+
+    "@equin/plugin-network-live-optimistic-mutation": ["@equin/plugin-network-live-optimistic-mutation@workspace:plugins/network/plugins/live/plugins/optimistic-mutation"],
+
+    "@equin/plugin-network-live-query-resource": ["@equin/plugin-network-live-query-resource@workspace:plugins/network/plugins/live/plugins/query-resource"],
+
+    "@equin/plugin-network-live-resource-protocol": ["@equin/plugin-network-live-resource-protocol@workspace:plugins/network/plugins/live/plugins/resource-protocol"],
+
+    "@equin/plugin-network-live-resource-runtime": ["@equin/plugin-network-live-resource-runtime@workspace:plugins/network/plugins/live/plugins/resource-runtime"],
+
+    "@equin/plugin-network-live-resource-vocabulary": ["@equin/plugin-network-live-resource-vocabulary@workspace:plugins/network/plugins/live/plugins/resource-vocabulary"],
+
+    "@equin/plugin-packages": ["@equin/plugin-packages@workspace:plugins/packages"],
 
     "@equin/plugin-packages-coalesce": ["@equin/plugin-packages-coalesce@workspace:plugins/packages/plugins/coalesce"],
 
@@ -9357,8 +9357,6 @@
     "@equin/plugin-packages-process-name": ["@equin/plugin-packages-process-name@workspace:plugins/packages/plugins/process-name"],
 
     "@equin/plugin-packages-refcount-hub": ["@equin/plugin-packages-refcount-hub@workspace:plugins/packages/plugins/refcount-hub"],
-
-    "@equin/plugin-packages-resource-protocol": ["@equin/plugin-packages-resource-protocol@workspace:plugins/packages/plugins/resource-protocol"],
 
     "@equin/plugin-packages-retry": ["@equin/plugin-packages-retry@workspace:plugins/packages/plugins/retry"],
 
@@ -9934,8 +9932,6 @@
 
     "@equin/plugin-primitives-link-gesture-new-tab": ["@equin/plugin-primitives-link-gesture-new-tab@workspace:plugins/primitives/plugins/link-gesture/plugins/new-tab"],
 
-    "@equin/plugin-primitives-live-state": ["@equin/plugin-primitives-live-state@workspace:plugins/primitives/plugins/live-state"],
-
     "@equin/plugin-primitives-loading": ["@equin/plugin-primitives-loading@workspace:plugins/primitives/plugins/loading"],
 
     "@equin/plugin-primitives-log-channels": ["@equin/plugin-primitives-log-channels@workspace:plugins/primitives/plugins/log-channels"],
@@ -9957,8 +9953,6 @@
     "@equin/plugin-primitives-networking-page-transport": ["@equin/plugin-primitives-networking-page-transport@workspace:plugins/primitives/plugins/networking/plugins/page-transport"],
 
     "@equin/plugin-primitives-networking-request-guard": ["@equin/plugin-primitives-networking-request-guard@workspace:plugins/primitives/plugins/networking/plugins/request-guard"],
-
-    "@equin/plugin-primitives-optimistic-mutation": ["@equin/plugin-primitives-optimistic-mutation@workspace:plugins/primitives/plugins/optimistic-mutation"],
 
     "@equin/plugin-primitives-outline": ["@equin/plugin-primitives-outline@workspace:plugins/primitives/plugins/outline"],
 

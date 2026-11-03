@@ -1,7 +1,7 @@
 import {
   resolved,
   unresolved,
-} from "@plugins/primitives/plugins/live-state/core";
+} from "@plugins/network/plugins/live/plugins/live-state/core";
 import { autoRebuildIntervalMs } from "@plugins/plugin-meta/plugins/composition/core";
 import { wantsBuild } from "@plugins/build/plugins/deployment/core";
 import type { BuildAttempt } from "@plugins/build/plugins/deployment/core";

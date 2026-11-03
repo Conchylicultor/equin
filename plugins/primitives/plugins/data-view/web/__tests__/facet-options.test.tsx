@@ -36,11 +36,11 @@ import {
 import {
   ResourceError,
   queryKeyFor,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   createLiveStateHarness,
   type LiveStateHarness,
-} from "@plugins/primitives/plugins/live-state/web/testing";
+} from "@plugins/network/plugins/live/plugins/live-state/web/testing";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";

@@ -1,5 +1,5 @@
 import { defineServerContribution } from "@plugins/framework/plugins/server-core/core";
-import type { RoutedSource } from "@plugins/infra/plugins/query-resource/server";
+import type { RoutedSource } from "@plugins/network/plugins/live/plugins/query-resource/server";
 
 /**
  * What one inline token names, answered on the server: the thing it points at

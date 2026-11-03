@@ -19,12 +19,12 @@ vi.mock(
 
 import { renderHook, waitFor, act } from "@testing-library/react";
 import { z } from "zod";
-import { queryKeyFor } from "@plugins/primitives/plugins/live-state/web";
+import { queryKeyFor } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   NotificationsClient,
   createLiveStateHarness,
   type LiveStateHarness,
-} from "@plugins/primitives/plugins/live-state/web/testing";
+} from "@plugins/network/plugins/live/plugins/live-state/web/testing";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import { mintVisibleRange, useLive } from "@plugins/network/plugins/live/web";
 

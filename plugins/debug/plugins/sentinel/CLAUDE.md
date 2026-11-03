@@ -327,6 +327,7 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `config_v2.ConfigV2`
     - `debug/sentinel/machine-usage.MachineUsageBreakdown`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/fill.Fill`
@@ -338,7 +339,6 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/relative-time.useNow`
     - `reports.Reports`

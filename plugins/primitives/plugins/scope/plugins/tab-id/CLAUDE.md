@@ -19,7 +19,7 @@ and falls back to `"no-tab-id"` if storage is unavailable.
 - Cross-plugin:
   - Imported by:
     - `apps-core/tab-origin`
-    - `primitives/live-state`
+    - `network/live/live-state`
     - `primitives/scope/app-instance`
     - `reports`
     - `reports/main-thread-stall`

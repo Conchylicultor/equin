@@ -9,7 +9,7 @@ import type {
   JoinRefs,
   JoinSpec,
   TypedColumnRef,
-} from "@plugins/infra/plugins/query-resource/core";
+} from "@plugins/network/plugins/live/plugins/query-resource/core";
 import type {
   LIVE_COLUMNS_KEY,
   LiveArmColumnsHandle,

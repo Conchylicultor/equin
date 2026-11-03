@@ -2,7 +2,7 @@ import { desc, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { parsed } from "@plugins/database/plugins/sql-projection/server";
-import { expr } from "@plugins/infra/plugins/query-resource/core";
+import { expr } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import { serveCollection } from "@plugins/network/plugins/live/server";
 import {
   deadJobs,

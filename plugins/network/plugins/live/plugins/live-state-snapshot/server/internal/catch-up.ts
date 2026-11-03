@@ -1,0 +1,240 @@
+import { sql as drizzleSql } from "drizzle-orm";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { z } from "zod";
+import { executeRows } from "@plugins/database/plugins/sql-rows/core";
+import {
+  readLayout,
+  routeChange,
+} from "@plugins/network/plugins/live/plugins/change-feed/server";
+import type { FeedChange } from "@plugins/network/plugins/live/plugins/change-feed/server";
+import type { ReplayScope } from "@plugins/framework/plugins/server-core/core";
+import {
+  LIVE_STATE_CHANGELOG_TABLE,
+  LIVE_STATE_SNAPSHOT_TABLE,
+} from "@plugins/database/plugins/derived-views/core";
+import { isPrunedPast, readPruneHorizon } from "./changelog-horizon";
+import { snapshotLog as log } from "./log-sink";
+import { usableRowSql } from "./persist";
+import type { L2Expectation } from "./persist";
+
+// The changelog columns the catch-up reads (see CHANGELOG_TABLE_DDL in
+// change-feed's triggers.ts). `xid` is a `numeric` — which pg hands back as a
+// STRING, and which this query casts to `text` anyway; the value is compared as a
+// BigInt below, never as a number. `op` is a `char(1)` whose only three writers
+// are the trigger function's I/U/D, so the enum is the check that was previously
+// a bare assertion. `ids` is the one genuinely nullable column: a bulk statement
+// with no single-column PK writes NULL, which the replay routes as FULL.
+//
+// `keys` / `unchanged` are a routed table's key layout and known-unchanged
+// column set — written by `live_state_notify_routed()` exactly as it NOTIFYs
+// them, and NULL for every other table. `keys` is `jsonb` (decoded to its object), parsed by
+// the same reader as the live payload so the replay routes exactly what the
+// NOTIFY would have.
+const ChangelogRowSchema = z.object({
+  xid: z.string(),
+  t: z.string(),
+  op: z.enum(["I", "U", "D"]),
+  ids: z.array(z.string()).nullable(),
+  keys: z.unknown(),
+  unchanged: z.array(z.string()).nullable(),
+});
+export type ChangelogRow = z.infer<typeof ChangelogRowSchema>;
+
+/**
+ * Every changelog row at or after `floor` (an xid8 as decimal text), in the
+ * order they were written. Shared by the boot catch-up and the epoch handoff's
+ * gap replay (`./handoff`), so both replay exactly what the live NOTIFY carried.
+ */
+export async function readChangelogSince(
+  db: NodePgDatabase,
+  floor: string,
+  label: string,
+): Promise<ChangelogRow[]> {
+  return executeRows(db, {
+    query: drizzleSql`
+      SELECT xid::text AS xid, t, op, ids, keys, unchanged
+      FROM ${drizzleSql.raw(LIVE_STATE_CHANGELOG_TABLE)}
+      WHERE xid >= ${floor}::numeric
+      ORDER BY seq
+    `,
+    row: ChangelogRowSchema,
+    label: `${label}/changelog-replay`,
+  });
+}
+
+// One usable row's catch-up floor (`position`, an xid8-family numeric cast to
+// text — never through a JS number).
+const PositionRowSchema = z.object({
+  resource_key: z.string(),
+  position: z.string(),
+});
+
+/** How a replay routes one changelog row (change-feed's `routeChange`). */
+export type ReplayRoute = (change: FeedChange, replay?: ReplayScope) => void;
+
+// Replay one changelog row through the EXACT same cascade the live listener uses
+// (change-feed's exported `routeChange`). Catch-up ≡ "replay the missed changelog
+// rows as if they had just arrived over NOTIFY" — reusing `routeChange` makes that
+// true by construction and prevents drift, and THAT INVARIANT requires preserving
+// `row.ids` for every op (the live listener never strips them). A genuinely id-less
+// bulk statement still arrives with `row.ids === null` → FULL; a reach entry
+// recomputes in FULL regardless of ids; a membership entry gains the same
+// scoped delivery it gets on the live path.
+// See research/2026-06-22-global-live-state-l2-persisted-materialization.md §3.5.
+export function replayChange(
+  row: ChangelogRow,
+  route: ReplayRoute,
+  floors: ReadonlyMap<string, string>,
+): void {
+  // The layout is read by the live NOTIFY's own rule (`readLayout`): one that
+  // does not parse replays the row unscoped (FULL for its readers) rather than
+  // drop it — a missed change is the one outcome catch-up exists to prevent.
+  const { scope, malformed } = readLayout(row.ids, row.keys, row.unchanged);
+  if (malformed) {
+    log.publish(
+      `[live-state-snapshot] catch-up: malformed key layout on a "${row.t}" changelog row — replaying it unscoped`,
+      "stderr",
+    );
+  }
+  // No `xid` — catch-up replays run at boot, before any client subscribes, so
+  // ack attribution has no consumer here; a missing ack is safe by design (the
+  // client's resub snapshot watermark backstops any op the downtime absorbed).
+  // No `changedAt` either: the replay is not when the change happened.
+  //
+  // `unchanged` replays as written, though a catch-up follows a restart that
+  // may have been a deploy that changed the routes: it lists columns KNOWN
+  // equal in every row, a fact whatever gate the trigger compared under — a
+  // column a new route reads that the old gate did not compare is simply not
+  // listed, so that route is reached. Likewise its `keys`: a column the old
+  // layout did not carry reads as unknown, which recomputes — never skips.
+  //
+  // `floors` (the replay scope): a persisted key whose L2 row was read at a
+  // position above this row's xid already reflects it, so the router skips
+  // that key's `{}` (see `ReplayScope`) — the rest is the live routing.
+  route(
+    {
+      source: "feed",
+      table: row.t,
+      op: row.op,
+      ...scope,
+    },
+    { xid: row.xid, floors },
+  );
+}
+
+/**
+ * What the boot catch-up will do, decided BEFORE anything is seeded (C20):
+ *
+ * - `none` — no usable persisted row: nothing to replay (every persisted key is
+ *   recomputed instead);
+ * - `backstop` — the prune deleted a changelog row at or after the oldest
+ *   usable row's floor (`horizon` ≥ `floor`): the missing history means no row
+ *   can be proven current, so the caller clears the rows and recomputes every
+ *   persisted key, seeding nothing;
+ * - `replay` — replay every changelog row at or after `floor`.
+ */
+export type CatchUpProbe =
+  | { kind: "none" }
+  | { kind: "backstop"; floor: string; horizon: string }
+  | {
+      kind: "replay";
+      floor: string;
+      /** Every usable row's own position, by key — `floor` is their min. */
+      positions: ReadonlyMap<string, string>;
+    };
+
+/** The lower of two catch-up positions (xid8 as numeric text). */
+export function minPosition(a: string, b: string): string {
+  return BigInt(a) <= BigInt(b) ? a : b;
+}
+
+/** Every usable persisted row's position, by key — one statement. */
+export async function readUsablePositions(
+  db: NodePgDatabase,
+  exp: L2Expectation,
+): Promise<Map<string, string>> {
+  const rows = await executeRows(db, {
+    query: drizzleSql`
+      SELECT resource_key, position::text AS position
+      FROM ${drizzleSql.raw(LIVE_STATE_SNAPSHOT_TABLE)}
+      WHERE params_key = '{}' AND ${usableRowSql(exp)}
+    `,
+    row: PositionRowSchema,
+    label: "catch-up/snapshot-positions",
+  });
+  return new Map(rows.map((r) => [r.resource_key, r.position]));
+}
+
+// The floor is the OLDEST USABLE persisted row's position (the conservative
+// floor — every usable row already incorporates everything strictly older than
+// its own). A row the usable-row predicate refuses is recomputed, never
+// served or seeded, so its position bounds nothing. Every row's own position
+// comes back with it, from the same statement: the replay routes a changelog
+// row to a key only at or above ITS position (`ReplayScope`).
+export async function probeCatchUp(
+  db: NodePgDatabase,
+  exp: L2Expectation,
+): Promise<CatchUpProbe> {
+  const positions = await readUsablePositions(db, exp);
+  if (positions.size === 0) return { kind: "none" };
+  const floor = [...positions.values()].reduce((a, b) => minPosition(a, b));
+
+  // The prune horizon: if the prune deleted a row at or after our floor,
+  // history was pruned out from under a stale snapshot. (Not the oldest
+  // RETAINED xid: the changelog is sparse, so the oldest survivor of an
+  // ordinary prune sits above the floor with nothing missing in between.)
+  const horizon = await readPruneHorizon(db);
+  if (horizon !== null && isPrunedPast(floor, horizon)) {
+    return { kind: "backstop", floor, horizon };
+  }
+  return { kind: "replay", floor, positions };
+}
+
+// Bounded cold-boot catch-up: replay only the changelog rows committed at or
+// after the probe's floor. Usually empty after a short deploy. Each replayed row
+// flows through the recompute cascade → push to subscribers → re-persist,
+// advancing the floor.
+//
+// It routes every replayed row through `routeChange` (every entry through its
+// declared reads, plus each persisted entry's drift seeded at boot from its
+// `tables_read` — so catch-up works at a cold boot with NO loader having run;
+// a persisted entry is targeted at `{}` with nobody subscribed). It also relies on
+// the post-LISTEN ordering documented at the call site in `server/index.ts`:
+// this runs after change-feed's listener has its LISTEN up, so a commit landing
+// after the `SELECT` below is delivered on the live path (no gap).
+//
+// `floors` is each persisted key's own floor: a row below a key's floor is not
+// routed to that key's `{}` (its value already reflects it), so a key gets only
+// the rows since its own position — never the whole history since the oldest
+// one. A key absent from it (recomputed at boot) gets every row.
+export async function replayCatchUp(
+  db: NodePgDatabase,
+  floor: string,
+  floors: ReadonlyMap<string, string>,
+  route: ReplayRoute = routeChange,
+): Promise<void> {
+  const rows = await readChangelogSince(db, floor, "replayCatchUp");
+
+  if (rows.length === 0) {
+    log.publish(
+      "[live-state-snapshot] catch-up: no changelog rows since floor — already current",
+    );
+    return;
+  }
+
+  log.publish(
+    `[live-state-snapshot] catch-up: replaying ${rows.length} changelog row(s) since floor xid ${floor} (per-key floors: ${formatFloors(floors)})`,
+  );
+  for (const row of rows) replayChange(row, route, floors);
+}
+
+// `key@position, …` lowest first — which keys reach how far back.
+function formatFloors(floors: ReadonlyMap<string, string>): string {
+  if (floors.size === 0) return "none";
+  return [...floors]
+    .sort(([, a], [, b]) =>
+      BigInt(a) < BigInt(b) ? -1 : BigInt(a) > BigInt(b) ? 1 : 0,
+    )
+    .map(([key, position]) => `${key}@${position}`)
+    .join(", ");
+}

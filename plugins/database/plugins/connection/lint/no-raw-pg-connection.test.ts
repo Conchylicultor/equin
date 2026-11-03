@@ -99,7 +99,7 @@ const pool = new Pool({ connectionString: url, max: 4 });`,
       },
       {
         filename:
-          "plugins/database/plugins/change-feed/server/internal/listener.ts",
+        "plugins/network/plugins/live/plugins/change-feed/server/internal/listener.ts",
         code: `import { Client } from "pg";
 const c = new Client({ connectionString: url });`,
         errors: [{ messageId: "rawPgConnection", data: { name: "Client" } }],

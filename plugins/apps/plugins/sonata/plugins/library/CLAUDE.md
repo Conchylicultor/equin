@@ -293,8 +293,8 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `primitives/pane` ×13
     - `primitives/data-view` ×7
     - `apps/sonata/shell` ×6
+    - `network/live/live-state` ×6
     - `primitives/css/ui-kit` ×6
-    - `primitives/live-state` ×6
     - `apps/sonata/player` ×5
     - `network/live` ×5
     - `apps/sonata/document` ×4
@@ -399,9 +399,9 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `infra/attachments.attachmentLinkFields`
     - `infra/endpoints.defineEndpoint`
     - `infra/entities.entityRef`
-    - `infra/query-resource.compositeKey`
     - `network/live.liveCollection`
     - `network/live.LiveRowsCollection`
+    - `network/live/query-resource.compositeKey`
     - `primitives/pane.defineRoute`
   - Exports (types):
     - `Song`

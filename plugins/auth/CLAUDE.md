@@ -130,7 +130,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `primitives/pane` ×6
     - `primitives/setup-steps` ×6
     - `infra/endpoints` ×5
-    - `primitives/live-state` ×5
+    - `network/live/live-state` ×5
     - `primitives/collapsible` ×4
     - `primitives/css/ui-kit` ×3
     - `primitives/data-view` ×3

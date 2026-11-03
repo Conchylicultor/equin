@@ -1,5 +1,5 @@
 import { type LiveRowResult, useLive } from "@plugins/network/plugins/live/web";
-import type { ResourceError } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useCompositionIncludes } from "@plugins/plugin-meta/plugins/composition/web";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {

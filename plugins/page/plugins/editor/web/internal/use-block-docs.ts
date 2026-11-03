@@ -4,7 +4,7 @@ import {
   type Transport,
 } from "@plugins/primitives/plugins/networking/web";
 import { fetchEndpointOver } from "@plugins/infra/plugins/endpoints/web";
-import { liveStateSocketUrl } from "@plugins/primitives/plugins/live-state/web";
+import { liveStateSocketUrl } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { BlockDocs } from "./collab-session";
 
 /**

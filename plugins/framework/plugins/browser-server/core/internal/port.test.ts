@@ -12,7 +12,7 @@ import { liveValue, serveValueOn } from "@plugins/network/plugins/live/core";
 import {
   PROTOCOL,
   type ServerFrame,
-} from "@plugins/packages/plugins/resource-protocol/core";
+} from "@plugins/network/plugins/live/plugins/resource-protocol/core";
 import { inRealmServer } from "../testing";
 import type { BrowserServer } from "./browser-server";
 import {

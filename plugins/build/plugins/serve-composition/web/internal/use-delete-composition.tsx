@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { useManifestActions } from "@plugins/plugin-meta/plugins/composition/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useLiveReader } from "@plugins/network/plugins/live/web";
-import { ResourceError } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { confirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";

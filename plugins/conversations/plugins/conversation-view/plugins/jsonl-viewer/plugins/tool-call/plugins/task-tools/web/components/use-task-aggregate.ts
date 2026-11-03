@@ -1,5 +1,5 @@
 import { useWholeTranscript } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
-import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   buildAggregate,
   conversationTaskAggregate,

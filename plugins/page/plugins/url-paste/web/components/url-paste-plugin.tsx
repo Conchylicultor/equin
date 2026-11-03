@@ -24,7 +24,7 @@ import {
 } from "@plugins/primitives/plugins/text-editor/plugins/caret-trigger/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import { useLiveReader } from "@plugins/network/plugins/live/web";
-import { ResourceError } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import {
   $setLinkText,

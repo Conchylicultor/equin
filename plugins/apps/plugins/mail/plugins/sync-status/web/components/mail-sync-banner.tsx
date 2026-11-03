@@ -12,7 +12,7 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useMailSyncState } from "../internal/use-mail-sync";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";

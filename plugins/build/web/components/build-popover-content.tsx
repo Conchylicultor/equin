@@ -13,7 +13,7 @@ import {
 } from "../../core";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { LiveLogChannel } from "@plugins/primitives/plugins/log-channels/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";

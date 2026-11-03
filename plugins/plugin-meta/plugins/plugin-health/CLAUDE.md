@@ -12,6 +12,11 @@
   - Uses:
     - `ids.IdKinds`
     - `network/live.useLive`
+    - `network/live/live-state.combineResources`
+    - `network/live/live-state.foldResource`
+    - `network/live/live-state.mapResource`
+    - `network/live/live-state.ResourceErrorInline`
+    - `network/live/live-state.ResourceResult`
     - `plugin-meta/plugin-view.PluginNode`
     - `plugin-meta/plugin-view.PluginViewSlots`
     - `plugin-meta/plugin-view.SectionCount`
@@ -21,11 +26,6 @@
     - `primitives/data-view.FieldDef`
     - `primitives/data-view.fieldOverrides`
     - `primitives/data-view.liveDataSource`
-    - `primitives/live-state.combineResources`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.ResourceResult`
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
 - Server:

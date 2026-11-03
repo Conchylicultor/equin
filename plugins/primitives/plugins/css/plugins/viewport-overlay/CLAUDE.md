@@ -161,14 +161,14 @@ looks equivalent and silently discards the caller's.
 - Description: Viewport-filling overlay primitive: self-portals to document.body + z-layer + theme-scope so fixed inset-0 fills the real viewport, never a transformed ancestor. Also owns the runtime auditor for the same invariant — the containing-block + stacking-context ancestor walk (assertViewportEscape / useViewportEscape), which reports the two ways a fixed box silently stops being viewport-relative.
 - Web:
   - Uses:
+    - `network/live/live-state.foldResource`
+    - `network/live/live-state.mapResource`
+    - `network/live/live-state.ResourceResult`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.usePortalForwardedAttrs`
     - `primitives/css/z-layers.zLayerClass`
     - `primitives/css/z-layers/stack.ZStack`
     - `primitives/css/z-layers/stack.ZStackLayer`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceResult`
     - `primitives/overlay/portal-host.PortalHost`
     - `primitives/slot-render.useSlotOrder`
   - Exports (types):

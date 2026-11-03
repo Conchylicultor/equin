@@ -139,6 +139,7 @@ it is handed and knows no tour.
     - `apps-core.useCurrentAppId`
     - `framework/cli/build/experimental-marks.useShowExperimentalMarks`
     - `hints.useHintAnchor`
+    - `network/live/live-state.ResourceView`
     - `network/live.useLive`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
@@ -147,7 +148,6 @@ it is handed and knows no tour.
     - `primitives/css/text.Text`
     - `primitives/dom/web-storage.defineStore`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.ResourceView`
     - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/slot-render.defineRenderSlot`

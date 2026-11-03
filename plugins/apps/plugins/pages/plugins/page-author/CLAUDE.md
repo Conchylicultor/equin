@@ -62,13 +62,13 @@ Design: [`research/2026-09-15-page-agent-page-follow-ups.md`](../../../../../../
     - `apps/pages/page-tree.pageDetailPane`
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/control-panel.ControlPanel`
     - `primitives/css/control-panel.ControlPanelPopover`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSize`
     - `primitives/css/ui-kit.useControlSize`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
 - Cross-plugin:

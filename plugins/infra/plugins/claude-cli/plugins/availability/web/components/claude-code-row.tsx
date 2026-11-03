@@ -8,7 +8,7 @@ import {
 import {
   foldResource,
   ResourceErrorInline,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { StepNote } from "@plugins/primitives/plugins/setup-steps/web";
 import { claudeCodeProblem, recheckClaudeCode } from "../../core";
 import { useClaudeCodeStatus } from "../internal/use-claude-code";

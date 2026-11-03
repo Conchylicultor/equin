@@ -10,10 +10,10 @@
   - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×2
     - `infra/endpoints` ×2
+    - `network/live/live-state` ×2
     - `primitives/css/control-panel` ×2
     - `primitives/css/text` ×2
     - `primitives/css/ui-kit` ×2
-    - `primitives/live-state` ×2
     - `primitives/search` ×2
     - `conversations/conversation-ui/item.ConversationItem`
     - `conversations/conversation-view.conversationPane`

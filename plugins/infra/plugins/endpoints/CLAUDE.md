@@ -114,7 +114,7 @@ const s = await callEndpoint(queueHealthSummaryEndpoint, {}, { origin: namespace
 
 Params, body, query and the decoded answer come from the contract, so a contract change is a tsc error at the caller (the bug class: `secretsSet` went 204 while its caller still parsed `{ ok: true }`). No answer → fetch's `TypeError`; a non-2xx → `EndpointError` whose message names the request and the reply. Retry / offline policy is the caller's, over those two. Both clients share one fetch-free request core in `core/request.ts` (`endpointRequest` / `readEndpointResponse`), which a module that cannot import `server/` (a `shared/` helper run by a host process) composes around its own sanctioned `fetch`. A hand-written `/api/…` path or a `fetch` to an endpoint's `.path` off the page is the `endpoints/no-raw-endpoint-call` lint; a genuine exception (a hook process that must not load zod) is an inline disable with the reason. A URL handed to someone else rather than fetched (an agent's MCP URL) is built with `endpointPath(endpoint, params)`. A reply read across code generations (any worktree's backend, through the gateway) is not an exception: its contract defaults every field added since (`.default(…)`), so an older backend's reply parses — `profiling/runtime`'s schemas are the example.
 
-**Endpoints are for writes.** A server read a surface renders is a live resource — a `liveValue` (`params`, a typed `query`, `paged` by key ranges, or `bytes`) or a `liveCollection`, read with `useLive` (`plugins/network/plugins/live/CLAUDE.md`) as a `ResourceResult` (loading / error / ready), never React Query's own result. There is no request/response read hook: `useEndpoint`, live-state's `useEndpointResource`, `hydrateEndpoint`, `useCursorPagination`, `useEndpointMutation`'s `invalidates:` and the exported `endpointQueryKey` are deleted (`research/2026-10-11-global-endpoint-reads-onto-live.md`). A GET `fetchEndpoint` / `useEndpointMutation` / `readNdjson` does not compile anywhere in the browser (the `read` marker, above): a read is `useLive`, or `useLiveReader` in an event handler. The `live/no-endpoint-read` lint bans, in `web/` code, TanStack's `useQuery` family, `fetchEndpoint` inside a `queryFn`, a `fetchEndpoint` / `mutateAsync` of any method whose answer is used where it runs as a read (render, a hook body, an effect, module load), and a `LiveReader` call there — sanctioned only inside `network/live` and `primitives/live-state`, and never a debt entry. A write an effect fires and forgets (`void`-ed) passes. Its residual, held by review: a POST read issued from an event handler (nothing static tells it from a write showing its result) — declare it live and read it with `useLiveReader`. A structured question (once a POST body) is a typed-query `liveValue` (`{ query }`), a type-ahead search over a third party a param'd or typed-query value served `fixed` (`wallpaper.search`, `sonata.ultimate-guitar.search`); `useQueryResource` (live-state) remains only for local async loads (a code-split module), never a server read.
+**Endpoints are for writes.** A server read a surface renders is a live resource — a `liveValue` (`params`, a typed `query`, `paged` by key ranges, or `bytes`) or a `liveCollection`, read with `useLive` (`plugins/network/plugins/live/CLAUDE.md`) as a `ResourceResult` (loading / error / ready), never React Query's own result. There is no request/response read hook: `useEndpoint`, live-state's `useEndpointResource`, `hydrateEndpoint`, `useCursorPagination`, `useEndpointMutation`'s `invalidates:` and the exported `endpointQueryKey` are deleted (`research/2026-10-11-global-endpoint-reads-onto-live.md`). A GET `fetchEndpoint` / `useEndpointMutation` / `readNdjson` does not compile anywhere in the browser (the `read` marker, above): a read is `useLive`, or `useLiveReader` in an event handler. The `live/no-endpoint-read` lint bans, in `web/` code, TanStack's `useQuery` family, `fetchEndpoint` inside a `queryFn`, a `fetchEndpoint` / `mutateAsync` of any method whose answer is used where it runs as a read (render, a hook body, an effect, module load), and a `LiveReader` call there — sanctioned only inside `network/live` and `network/live/live-state`, and never a debt entry. A write an effect fires and forgets (`void`-ed) passes. Its residual, held by review: a POST read issued from an event handler (nothing static tells it from a write showing its result) — declare it live and read it with `useLiveReader`. A structured question (once a POST body) is a typed-query `liveValue` (`{ query }`), a type-ahead search over a third party a param'd or typed-query value served `fixed` (`wallpaper.search`, `sonata.ultimate-guitar.search`); `useQueryResource` (live-state) remains only for local async loads (a code-split module), never a server read.
 
 Data the **first render** needs (no loading flash) is not an endpoint read: declare it a `liveValue` with `preload: "boot"` / `"boot-and-keep"` (`network/live`), which the boot snapshot hydrates.
 
@@ -547,11 +547,11 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
   - Imported by: 232 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×65
     - `conversations` ×33
-    - `infra` ×22
+    - `infra` ×21
     - `page` ×19
     - `debug` ×18
     - `tasks` ×18
-    - `primitives` ×15
+    - `primitives` ×14
     - `reports` ×6
     - `ui` ×6
     - `auth` ×5
@@ -562,6 +562,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `config_v2` ×2
     - `history` ×2
     - `integrations` ×2
+    - `network` ×2
     - `screenshot` ×2
     - `tag-tree` ×2
     - `backup`
@@ -583,12 +584,12 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `apps/sonata/transpose` (0 debt)
     - `conversations/compaction-context` (0 debt)
     - `conversations/stop-gate` (0 debt)
-    - `infra/boot-snapshot` (0 debt)
     - `infra/endpoints` (0 debt)
     - `infra/health` (0 debt)
     - `infra/mcp/browser` (0 debt)
     - `infra/ndjson-stream` (0 debt)
-    - `primitives/live-state` (0 debt)
+    - `network/live/boot-snapshot` (0 debt)
+    - `network/live/live-state` (0 debt)
     - `primitives/networking` (0 debt)
     - `shell/notifications` (0 debt)
     - `tasks/task-graph` (0 debt)

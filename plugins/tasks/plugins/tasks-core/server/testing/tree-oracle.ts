@@ -8,22 +8,22 @@ import {
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
 import { snapshotWatermark } from "@plugins/database/server/testing";
-import type { FeedChange } from "@plugins/database/plugins/change-feed/server";
+import type { FeedChange } from "@plugins/network/plugins/live/plugins/change-feed/server";
 import {
   createChangeFeedListener,
   createChangeRouter,
   rebuildTriggers,
-} from "@plugins/database/plugins/change-feed/server/testing";
+} from "@plugins/network/plugins/live/plugins/change-feed/server/testing";
 import {
   createResourceRuntime,
   type PersistMeta,
   type ResourceRuntime,
-} from "@plugins/framework/plugins/resource-runtime/core";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/core";
 import {
   makeClientView,
   type ClientView,
   type RecordedFrame,
-} from "@plugins/framework/plugins/resource-runtime/core/testing";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/core/testing";
 import type {
   LiveAllCollection,
   LiveCollection,
@@ -34,7 +34,7 @@ import type {
   CollectionSpecs,
   LookupCollectionSpecs,
 } from "@plugins/network/plugins/live/server";
-import { compileWindowQuery } from "@plugins/infra/plugins/query-resource/server/testing";
+import { compileWindowQuery } from "@plugins/network/plugins/live/plugins/query-resource/server/testing";
 import { installDerivedUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
 import type { Rollup } from "@plugins/database/plugins/derived-tables/core";
 import { installRollups } from "@plugins/database/plugins/derived-tables/server/testing";

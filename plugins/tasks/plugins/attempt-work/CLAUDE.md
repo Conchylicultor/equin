@@ -191,7 +191,7 @@ Everything that could make the standing merely *unknown* is kept out of that arm
 - Core:
   - Uses:
     - `network/live.liveValue`
-    - `primitives/live-state.resolvableSchema`
+    - `network/live/live-state.resolvableSchema`
   - Exports (types):
     - `AttemptPending`
     - `AttemptWork`

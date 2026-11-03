@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";

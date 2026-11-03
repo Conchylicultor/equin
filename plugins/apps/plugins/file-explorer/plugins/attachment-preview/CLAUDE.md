@@ -15,10 +15,10 @@
     - `apps/file-explorer/browser.PreviewPane`
     - `apps/file-explorer/browser.useHomeDir`
     - `network/live.useLive`
+    - `network/live/live-state.foldResource`
+    - `network/live/live-state.matchResource`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/placeholder.Placeholder`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.matchResource`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`

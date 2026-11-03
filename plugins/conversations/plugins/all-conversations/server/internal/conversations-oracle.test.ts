@@ -48,23 +48,23 @@ import {
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
-import type { FeedChange } from "@plugins/database/plugins/change-feed/server";
+import type { FeedChange } from "@plugins/network/plugins/live/plugins/change-feed/server";
 import {
   createChangeFeedListener,
   createChangeRouter,
   rebuildTriggers,
-} from "@plugins/database/plugins/change-feed/server/testing";
+} from "@plugins/network/plugins/live/plugins/change-feed/server/testing";
 import {
   createResourceRuntime,
   type ResourceParams,
-} from "@plugins/framework/plugins/resource-runtime/core";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/core";
 import {
   makeClientView,
   type ClientView,
   type RecordedFrame,
-} from "@plugins/framework/plugins/resource-runtime/core/testing";
-import type { QueryDb } from "@plugins/infra/plugins/query-resource/server";
-import { compileWindowQuery } from "@plugins/infra/plugins/query-resource/server/testing";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/core/testing";
+import type { QueryDb } from "@plugins/network/plugins/live/plugins/query-resource/server";
+import { compileWindowQuery } from "@plugins/network/plugins/live/plugins/query-resource/server/testing";
 import { compileCollection } from "@plugins/network/plugins/live/server/testing";
 import { clause } from "@plugins/network/plugins/live/plugins/filter/core";
 import type { LiveWhere } from "@plugins/network/plugins/live/core";

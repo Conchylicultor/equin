@@ -8,12 +8,12 @@
 - Web:
   - Uses:
     - `apps-core/tabs.useAppLinkProps`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/ui-kit.Button`
     - `primitives/data-view.DataViewSlots`
     - `primitives/data-view.ItemActionProps`
     - `primitives/icon-button.IconButton`
     - `primitives/launch.LaunchAgentPopover`
-    - `primitives/live-state.ResourceErrorInline`
     - `tasks/task-subject.useSubjectTask`
     - `ui/icons.Icon`
   - Exports (types):

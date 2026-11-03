@@ -20,23 +20,23 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
-import type { WindowQueryResourceContract } from "@plugins/infra/plugins/query-resource/core";
+import type { WindowQueryResourceContract } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import { parsedJson } from "@plugins/database/plugins/sql-column/server";
 import {
   compileJoins,
   windowQueryResource,
   type WindowQueryResourceSpec,
-} from "@plugins/infra/plugins/query-resource/server";
-import type { ExtensionJoin } from "@plugins/infra/plugins/query-resource/core";
+} from "@plugins/network/plugins/live/plugins/query-resource/server";
+import type { ExtensionJoin } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import {
   compileWindowQuery,
   recordingQueryDb,
-} from "@plugins/infra/plugins/query-resource/server/testing";
+} from "@plugins/network/plugins/live/plugins/query-resource/server/testing";
 import {
   pointQueryResourceDescriptor,
   windowQueryResourceDescriptor,
 } from "../../core/internal/window-descriptor";
-import type { WindowParams } from "@plugins/primitives/plugins/live-state/core";
+import type { WindowParams } from "@plugins/network/plugins/live/plugins/live-state/core";
 import { liveCollection, LIVE_ROW_KEY } from "../../core";
 import { nullable } from "@plugins/fields/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";

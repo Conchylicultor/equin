@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { expr } from "@plugins/infra/plugins/query-resource/core";
+import { expr } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import { serveCollection } from "@plugins/network/plugins/live/server";
 import { traceById, traceEvents } from "../../core";
 import { _traces } from "./tables";

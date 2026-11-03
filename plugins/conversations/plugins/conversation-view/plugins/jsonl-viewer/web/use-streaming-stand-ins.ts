@@ -7,7 +7,7 @@ import {
   mapResource,
   type ResourceResult,
   type ResourceUnavailable,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { standInsOf, type StandIn } from "./streaming-blocks";
 
 /**

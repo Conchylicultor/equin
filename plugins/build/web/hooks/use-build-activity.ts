@@ -1,5 +1,5 @@
 import type { Activity } from "@plugins/primitives/plugins/css/plugins/activity-ring/web";
-import { useNotificationsChannelStatuses } from "@plugins/primitives/plugins/live-state/web";
+import { useNotificationsChannelStatuses } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { buildHistory } from "@plugins/build/core";
 import { isMainCompositionBuild } from "../../shared";

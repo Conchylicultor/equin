@@ -9,7 +9,7 @@ import {
   foldResource,
   mapResource,
   ResourceErrorInline,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";

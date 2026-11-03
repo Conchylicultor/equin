@@ -11,11 +11,11 @@ import {
   useLivePagedValuePaging,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
-import type { ResourceReadiness } from "@plugins/primitives/plugins/live-state/core";
+import type { ResourceReadiness } from "@plugins/network/plugins/live/plugins/live-state/core";
 import {
   foldResource,
   ResourceErrorInline,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";

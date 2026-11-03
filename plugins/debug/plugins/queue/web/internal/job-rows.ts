@@ -15,7 +15,7 @@ import {
   combineResources,
   mapResource,
   type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 
 /**
  * Every status a job row can be in: graphile's four queue states for a row

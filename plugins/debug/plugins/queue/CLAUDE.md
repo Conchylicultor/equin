@@ -39,7 +39,7 @@
     - `DebugApp.Sidebar` "Queue"
   - Uses: 52 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×8
-    - `primitives/live-state` ×6
+    - `network/live/live-state` ×6
     - `primitives/data-view` ×5
     - `network/live` ×4
     - `infra/endpoints` ×2

@@ -5,7 +5,7 @@ import {
   resolved,
   unresolved,
   type Resolvable,
-} from "@plugins/primitives/plugins/live-state/core";
+} from "@plugins/network/plugins/live/plugins/live-state/core";
 import { tryRunGit } from "@plugins/primitives/plugins/commit-list/server";
 import { chainTo, isAncestor, readTarget } from "./git-chain";
 import {

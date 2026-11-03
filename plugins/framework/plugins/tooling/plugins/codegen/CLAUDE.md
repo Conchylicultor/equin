@@ -164,7 +164,7 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `plugin-meta/parse-utils` ×20
     - `config_v2` ×15
     - `framework/plugin-id` ×14
-    - `framework/tooling/resource-vocabulary` ×10
+    - `network/live/resource-vocabulary` ×10
     - `plugin-meta/barrel-import` ×6
     - `plugin-meta/closure` ×5
     - `plugin-meta/composition` ×5
@@ -177,7 +177,7 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `framework/tooling/boundaries` ×2
     - `framework/tooling/format` ×2
     - `packages/macrotask-yield` ×2
-    - `packages/resource-protocol` ×2
+    - `network/live/resource-protocol` ×2
     - `fields/reorder-tree.REORDER_NODE_LEGEND`
     - `framework/tooling/guards/agent-policy.agentPolicySettings`
     - `framework/tooling/import-closure.importClosures`

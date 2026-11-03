@@ -49,8 +49,8 @@ usually a plugin that ships perfectly well.
   - Contributes: `Explorer.TreeRowBadge` "excluded" → `ExcludedBadge`
   - Uses:
     - `apps/studio/explorer.Explorer`
+    - `network/live/live-state.ResourceErrorInline`
     - `plugin-meta/composition.useAppExclusions`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
 - Cross-plugin:

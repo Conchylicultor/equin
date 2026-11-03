@@ -1,7 +1,7 @@
 import { useConversationById } from "@plugins/conversations/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useTask } from "@plugins/tasks/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 

@@ -77,10 +77,10 @@ inside one `browser_batch` (one frame per call).
     - `conversations/conversation-view/artifacts.ConversationArtifacts`
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/overlay/image-viewer.AssetThumbnail`
     - `primitives/overlay/image-viewer.ImageGallery`

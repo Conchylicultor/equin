@@ -62,6 +62,7 @@ family draws it. Plan: `research/2026-10-23-global-agent-icon-family.md` §4.
     - `primitives/css/toggle-chip` ×2
     - `apps-core.Apps`
     - `apps/debug/shell.DebugApp`
+    - `network/live/live-state.foldResource`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
@@ -71,7 +72,6 @@ family draws it. Plan: `research/2026-10-23-global-agent-icon-family.md` §4.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
-    - `primitives/live-state.foldResource`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`

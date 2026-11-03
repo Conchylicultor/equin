@@ -1,4 +1,4 @@
-import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
 import type { QueryDeadlineHit, QueryDeadlines } from "../../core";
 

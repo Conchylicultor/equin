@@ -1,4 +1,4 @@
-import type { RoutedSource } from "@plugins/infra/plugins/query-resource/server";
+import type { RoutedSource } from "@plugins/network/plugins/live/plugins/query-resource/server";
 import type { SavedSymbolName } from "@plugins/ui/plugins/icons/core";
 import { defineSourceSet } from "@plugins/packages/plugins/source-digest/core";
 

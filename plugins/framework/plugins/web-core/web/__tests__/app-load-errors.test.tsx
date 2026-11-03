@@ -39,7 +39,7 @@ vi.mock("@plugins/framework/plugins/web-sdk/core", async (importOriginal) => {
 // No live-state transport in jsdom: the provider is a pass-through and the
 // transport hoist a no-op. Neither is what this suite is about.
 vi.mock(
-  "@plugins/primitives/plugins/live-state/web",
+  "@plugins/network/plugins/live/plugins/live-state/web",
   async (importOriginal) => ({
     ...(await importOriginal<object>()),
     NotificationsProvider: ({ children }: { children: unknown }) => children,

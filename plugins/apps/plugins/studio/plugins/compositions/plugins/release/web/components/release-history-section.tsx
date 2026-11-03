@@ -9,7 +9,7 @@ import {
   liveDataSource,
 } from "@plugins/primitives/plugins/data-view/web";
 import { useConfigResult } from "@plugins/config_v2/web";
-import { matchResource } from "@plugins/primitives/plugins/live-state/web";
+import { matchResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { compositionsConfig } from "@plugins/plugin-meta/plugins/composition/core";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { releaseHistory, type ReleaseHistoryRow } from "@plugins/release/core";

@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useAwaitResourceWrite } from "@plugins/primitives/plugins/optimistic-mutation/web";
+import { useAwaitResourceWrite } from "@plugins/network/plugins/live/plugins/optimistic-mutation/web";
 import { savedThemesList } from "../core";
 
 /** Resolve once the live theme list has re-read the write acked `watermark`. */

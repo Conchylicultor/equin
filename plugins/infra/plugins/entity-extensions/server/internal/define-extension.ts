@@ -29,7 +29,7 @@ import type {
   ColumnRef,
   ExtensionJoin,
   ExtensionPresence,
-} from "@plugins/infra/plugins/query-resource/core";
+} from "@plugins/network/plugins/live/plugins/query-resource/core";
 import { extensionIndexName } from "./index-names";
 
 type ParentTable = PgTable & { id: AnyPgColumn };

@@ -42,10 +42,10 @@ Auth state and affordances come only from
     - `integrations/gmail.GmailAccessEmptyState`
     - `integrations/gmail.useGmailAccess`
     - `layouts/miller.MillerColumns`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/app-shell.AppShellLayout`
     - `primitives/css/center.Center`
     - `primitives/css/column.Column`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`

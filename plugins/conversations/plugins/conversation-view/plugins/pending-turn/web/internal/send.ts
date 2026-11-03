@@ -40,7 +40,7 @@ import { postTurnDelivery, type TurnDelivery } from "./delivery";
 // recorded is in the ledger, and one it never saw has nothing to recover but
 // its text, which the user still has.
 //
-// Not `primitives/optimistic-mutation`: its overlay lives in the React state
+// Not `network/live/optimistic-mutation`: its overlay lives in the React state
 // of the hook that dispatched, while a turn is sent from a button anywhere in
 // the pane and echoed by the transcript, a different component.
 // ---------------------------------------------------------------------------

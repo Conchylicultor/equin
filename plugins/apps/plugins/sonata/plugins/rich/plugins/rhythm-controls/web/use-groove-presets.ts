@@ -6,7 +6,7 @@ import {
   foldResource,
   mapResource,
   type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { GrooveFields } from "../shared/groove";
 import {
   groovePresetsConfig,

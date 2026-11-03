@@ -233,9 +233,9 @@ is recomputed in `onReady`.
   - Imported by:
     - `conversations/agents`
     - `database`
-    - `database/change-feed`
-    - `database/live-state-snapshot`
     - `database/migrations`
+    - `network/live/change-feed`
+    - `network/live/live-state-snapshot`
     - `page/editor`
     - `tasks/tasks-core`
 - Test helpers:

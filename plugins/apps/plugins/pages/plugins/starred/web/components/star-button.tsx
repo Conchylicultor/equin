@@ -1,5 +1,5 @@
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useStar } from "../internal/use-star";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 

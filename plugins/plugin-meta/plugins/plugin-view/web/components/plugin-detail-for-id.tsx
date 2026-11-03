@@ -3,7 +3,7 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { pluginFacetsTree } from "../../core";
 import type { PluginNode } from "../../core";
 import { PluginDetail } from "./plugin-detail";

@@ -49,7 +49,7 @@
  * autoStartModel: parsedText("auto_start_model", StoredModelSchema).notNull(),
  * ```
  *
- * `StoredModelSchema` is `tolerantEnum(...)` from `primitives/live-state/core`.
+ * `StoredModelSchema` is `tolerantEnum(...)` from `network/live/live-state/core`.
  * Putting it on the **column** rather than only on the live-state resource is
  * what makes it reach the server-side readers too — the wire guard protects the
  * browser and nothing else.

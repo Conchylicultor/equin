@@ -24,7 +24,7 @@ import {
   createLiveStateHarness,
   type LiveStateHarness,
   resetResourceContractMismatches,
-} from "@plugins/primitives/plugins/live-state/web/testing";
+} from "@plugins/network/plugins/live/plugins/live-state/web/testing";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 

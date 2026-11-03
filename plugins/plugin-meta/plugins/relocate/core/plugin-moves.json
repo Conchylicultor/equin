@@ -43,5 +43,55 @@
     "at": "2026-10-29T15:01:08.459Z",
     "from": "tasks.autonomous-run",
     "to": "tasks.supervisor-run"
+  },
+  {
+    "at": "2026-11-03T15:24:47.750Z",
+    "from": "framework.resource-runtime",
+    "to": "network.live.resource-runtime"
+  },
+  {
+    "at": "2026-11-03T15:26:46.077Z",
+    "from": "primitives.live-state",
+    "to": "network.live.live-state"
+  },
+  {
+    "at": "2026-11-03T15:31:11.189Z",
+    "from": "infra.query-resource",
+    "to": "network.live.query-resource"
+  },
+  {
+    "at": "2026-11-03T15:33:32.887Z",
+    "from": "database.live-state-snapshot",
+    "to": "network.live.live-state-snapshot"
+  },
+  {
+    "at": "2026-11-03T15:38:26.941Z",
+    "from": "infra.boot-snapshot",
+    "to": "network.live.boot-snapshot"
+  },
+  {
+    "at": "2026-11-03T15:42:18.504Z",
+    "from": "primitives.optimistic-mutation",
+    "to": "network.live.optimistic-mutation"
+  },
+  {
+    "at": "2026-11-03T15:47:08.450Z",
+    "from": "packages.resource-protocol",
+    "to": "network.live.resource-protocol"
+  },
+  {
+    "at": "2026-11-03T15:52:14.472Z",
+    "from": "packages.canonical-params",
+    "to": "network.live.canonical-params"
+  },
+  {
+    "at": "2026-11-03T15:58:05.796Z",
+    "from": "framework.tooling.resource-vocabulary",
+    "to": "network.live.resource-vocabulary"
+  },
+  {
+    "at": "2026-11-03T16:06:20.470Z",
+    "from": "database.change-feed",
+    "to": "network.live.change-feed"
   }
 ]

@@ -15,7 +15,7 @@ import {
   emptyScore,
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { ResourceError } from "@plugins/primitives/plugins/live-state/core";
+import { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/core";
 import { SonataDocument } from "../slots";
 import {
   LoadedSongProvider,

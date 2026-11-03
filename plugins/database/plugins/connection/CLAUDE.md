@@ -176,7 +176,7 @@ runtimes read, not a slot:
 | `admin` | the admin pool (fork, drop, list) | `database/admin` `pool.ts` `getAdminPool` |
 | `admin-short-lived` | one-off pools opened and closed around a single operation | `database/admin` `pool.ts` `openShortLivedClient` |
 | `fork-lease` | the session holding a DB fork's temp lease (an advisory lock), from before its temp exists to after the rename; the temp sweep tries it before a drop | `database/admin` `fork-lease.ts` |
-| `change-feed` | the change-feed LISTEN client | this plugin's `listen-session.ts` (`openListenSession`), opened by `database#machine`'s `DatabaseDriver.listen` for `database/change-feed`'s `listener.ts` |
+| `change-feed` | the change-feed LISTEN client | this plugin's `listen-session.ts` (`openListenSession`), opened by `database#machine`'s `DatabaseDriver.listen` for `network/live/change-feed`'s `listener.ts` |
 | `events-test` | the events-test harness's stand-in worker sessions | `infra/events-test` `crash-recovery.ts`, `superseded.ts`, `queue-lock-no-steal.ts` |
 
 Whole-database DDL on `admin` (`CREATE` / `DROP` / `RENAME DATABASE`) runs under
@@ -209,7 +209,7 @@ the enqueue pool's wiring.
 
 ## Why it is its own plugin
 
-`database/server` (the app pool), `database/admin`, `database/change-feed` and
+`database/server` (the app pool), `database/admin`, `network/live/change-feed` and
 `infra/jobs` all build connections, and `jobs` sits below plenty of things that
 import `database`. So this plugin imports nothing of theirs: only `pg`,
 `primitives/report-sink`, `infra/runtime-profiler/core` and

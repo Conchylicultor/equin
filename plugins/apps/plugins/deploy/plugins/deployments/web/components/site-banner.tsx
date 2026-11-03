@@ -12,7 +12,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   renderAsContribution,
   useSlotOrder,

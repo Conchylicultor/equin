@@ -3,7 +3,7 @@ import {
   serveCollection,
   serveValue,
 } from "@plugins/network/plugins/live/server";
-import { expr } from "@plugins/infra/plugins/query-resource/core";
+import { expr } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import { parsed } from "@plugins/database/plugins/sql-projection/server";
 import {
   CLAUDE_CLI_RING_ID,

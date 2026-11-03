@@ -1,5 +1,5 @@
-import type { SlowResourceInfo } from "@plugins/primitives/plugins/live-state/web";
-import { canonicalJson } from "@plugins/packages/plugins/canonical-params/core";
+import type { SlowResourceInfo } from "@plugins/network/plugins/live/plugins/live-state/web";
+import { canonicalJson } from "@plugins/network/plugins/live/plugins/canonical-params/core";
 import type { ConfigValues } from "@plugins/config_v2/core";
 import type { slowOpConfig } from "../../core";
 import {

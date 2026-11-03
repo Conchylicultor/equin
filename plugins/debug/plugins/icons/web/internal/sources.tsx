@@ -4,7 +4,7 @@ import {
   type DataViewSourceProps,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
-import type { ResourceReadiness } from "@plugins/primitives/plugins/live-state/core";
+import type { ResourceReadiness } from "@plugins/network/plugins/live/plugins/live-state/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type {
   IconFamilyId,

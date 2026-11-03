@@ -1,12 +1,12 @@
 import type { SQL } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import { defineServerContribution } from "@plugins/framework/plugins/server-core/core";
-import type { RoutedRecomputeOn } from "@plugins/framework/plugins/resource-runtime/core";
+import type { RoutedRecomputeOn } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
 import type {
   ColumnRef,
   ExtensionJoin,
   JoinFamily,
-} from "@plugins/infra/plugins/query-resource/core";
+} from "@plugins/network/plugins/live/plugins/query-resource/core";
 import type { EntityExposure } from "@plugins/infra/plugins/entity-extensions/core";
 import type { FilterDomainId } from "@plugins/network/plugins/live/plugins/filter/core";
 

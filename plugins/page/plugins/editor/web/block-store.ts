@@ -17,7 +17,7 @@ import type { LiveWhereOf } from "@plugins/network/plugins/live/core";
 import {
   OpNoLongerApplies,
   useOptimisticResource,
-} from "@plugins/primitives/plugins/optimistic-mutation/web";
+} from "@plugins/network/plugins/live/plugins/optimistic-mutation/web";
 import {
   applyBlockOpEndpoint,
   patchBlocks,

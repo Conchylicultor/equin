@@ -23,7 +23,7 @@ clip long tasks to the boot window.
     - `debug/boot-profile`
     - `debug/slow-ops`
     - `framework/web-core`
-    - `infra/boot-snapshot`
+    - `network/live/boot-snapshot`
 - Web:
   - Exports (types):
     - `AssetTiming`

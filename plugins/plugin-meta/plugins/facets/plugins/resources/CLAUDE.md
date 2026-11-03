@@ -7,7 +7,7 @@ relationships. Data is `{ server: ResourceDef[], central: ResourceDef[] }`.
 A resource is declared at a descriptor factory call (`core/`/`shared/`, carrying
 the key, keyed-ness and bounded membership) and served at a register call
 (`server/`/`central/`) that references it. Which calls count is NOT decided here
-— both name sets come from `framework/tooling/resource-vocabulary/core`, whose
+— both name sets come from `network/live/resource-vocabulary/core`, whose
 key set `tsc` derives from the live-state / query-resource / network/live
 barrels themselves.
 

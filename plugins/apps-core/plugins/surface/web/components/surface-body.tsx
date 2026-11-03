@@ -1,5 +1,5 @@
 import { useSlotOrder } from "@plugins/primitives/plugins/slot-render/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import {

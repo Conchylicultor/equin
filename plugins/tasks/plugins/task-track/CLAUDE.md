@@ -69,8 +69,8 @@ sidequest's ops at low host-admission priority, behind the main track.
     - `network/live.FieldPresentation`
     - `network/live.mapRow`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/badge.Badge`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `shell/notifications.useToast`
   - Exports (values):

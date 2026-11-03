@@ -18,7 +18,7 @@ import { AddClaudeAccountSignIn } from "@plugins/infra/plugins/claude-cli/plugin
 import type { ClaudeCodeStatus } from "@plugins/infra/plugins/claude-cli/plugins/availability/core";
 import { useConfigResult, useSetConfig } from "@plugins/config_v2/web";
 import { Avatar } from "@plugins/primitives/plugins/avatar/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";

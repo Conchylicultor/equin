@@ -1,5 +1,5 @@
 import { useLive } from "@plugins/network/plugins/live/web";
-import { combineResources } from "@plugins/primitives/plugins/live-state/web";
+import { combineResources } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useConfig } from "@plugins/config_v2/web";

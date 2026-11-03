@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { tolerantEnum } from "@plugins/primitives/plugins/live-state/core";
+import { tolerantEnum } from "@plugins/network/plugins/live/plugins/live-state/core";
 
 /**
  * Per-conversation "thinking mode". The five concrete levels map 1:1 to the

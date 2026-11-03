@@ -110,10 +110,10 @@ plus a per-song reset.
   - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/sonata/document` ×8
     - `primitives/css/text` ×3
+    - `network/live/live-state` ×2
+    - `network/live/optimistic-mutation` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/ui-kit` ×2
-    - `primitives/live-state` ×2
-    - `primitives/optimistic-mutation` ×2
     - `primitives/overlay/floating-action` ×2
     - `primitives/search` ×2
     - `apps/sonata/audio/instruments.SonataAudio`

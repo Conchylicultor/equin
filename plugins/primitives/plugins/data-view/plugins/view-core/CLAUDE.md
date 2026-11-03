@@ -233,9 +233,9 @@ contributions each surface passes in, and per-entry plugin id
     - `primitives/css/ui-kit` ×15
     - `config_v2` ×3
     - `primitives/css/text` ×3
+    - `network/live/live-state` ×2
     - `primitives/css/control-panel` ×2
     - `primitives/hover-reveal` ×2
-    - `primitives/live-state` ×2
     - `primitives/sortable-list` ×2
     - `config_v2/fields.FieldRenderer`
     - `ids.IdKinds`

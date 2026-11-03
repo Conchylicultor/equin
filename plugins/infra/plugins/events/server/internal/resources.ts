@@ -5,7 +5,7 @@ import {
   serveValue,
 } from "@plugins/network/plugins/live/server";
 import { getAllRegisteredJobNames } from "@plugins/infra/plugins/jobs/server";
-import { expr } from "@plugins/infra/plugins/query-resource/core";
+import { expr } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import { parsed } from "@plugins/database/plugins/sql-projection/server";
 import {
   EmissionMatchSchema,

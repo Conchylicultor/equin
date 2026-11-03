@@ -14,7 +14,7 @@ import {
   readHostPaths,
 } from "@plugins/infra/plugins/host-fs/core";
 import type { SectionsToolbar } from "@plugins/primitives/plugins/data-view/core";
-import type { ResourceReadiness } from "@plugins/primitives/plugins/live-state/core";
+import type { ResourceReadiness } from "@plugins/network/plugins/live/plugins/live-state/core";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import {

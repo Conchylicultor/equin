@@ -98,7 +98,7 @@ violation is boot-fatal. `./equin build` probes backend health after
 restart and fails loudly ("Check server logs") when the new backend never takes
 over, so a bad cascade claim surfaces as a failed build, not a silently-dead app.
 Precedent for a throwing boot invariant of exactly this shape:
-`plugins/database/plugins/change-feed/server/internal/route-coverage.ts`.
+`plugins/network/plugins/live/plugins/change-feed/server/internal/route-coverage.ts`.
 
 ## Why there is no `./equin check`
 
@@ -131,9 +131,9 @@ check would have been a patch on a footgun.
 - Server:
   - Uses:
     - `database.db`
-    - `database/change-feed.changeProducerFor`
     - `infra/jobs.defineJob`
     - `infra/jobs.JobFactory`
+    - `network/live/change-feed.changeProducerFor`
   - Exports (types):
     - `RetentionJob`
     - `RetentionSpec`

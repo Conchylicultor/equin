@@ -127,11 +127,11 @@ is drift repair, not a correctness dependency.
     - `config_v2` ×3
     - `primitives/css/ui-kit` ×3
     - `apps/sonata/library` ×2
+    - `network/live/live-state` ×2
     - `network/live` ×2
     - `primitives/css/control-panel` ×2
     - `primitives/css/spacing` ×2
     - `primitives/folder-picker` ×2
-    - `primitives/live-state` ×2
     - `infra/endpoints.useFetchEndpoint`
     - `primitives/css/badge.Badge`
     - `primitives/css/card.Card`

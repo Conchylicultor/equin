@@ -1,4 +1,4 @@
-import { createResourceRuntime } from "@plugins/framework/plugins/resource-runtime/core";
+import { createResourceRuntime } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
 import type {
   Resource as RtResource,
   ExternalResource as RtExternalResource,
@@ -6,10 +6,10 @@ import type {
   ResourceMode as RtMode,
   ResourceParams as RtParams,
   DependsOnEntry as RtDep,
-} from "@plugins/framework/plugins/resource-runtime/core";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/core";
 
 // Live-state primitive — central side. This is now a thin instantiation of the
-// shared runtime (@plugins/framework/plugins/resource-runtime/core), not a
+// shared runtime (@plugins/network/plugins/live/plugins/resource-runtime/core), not a
 // hand-maintained mirror of server-core. central instantiates the runtime with
 // no hooks (console.error-only on failure, no profiler, no declare-based debug
 // owners), and re-presents the runtime types as central-core's public surface.

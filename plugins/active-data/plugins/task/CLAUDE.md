@@ -26,7 +26,7 @@ gets a `useId()`-derived Lexical namespace.
   - Contributes: `ActiveData.Tag` "task" → `TaskCard`
   - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `active-data` ×2
-    - `primitives/live-state` ×2
+    - `network/live/live-state` ×2
     - `conversations/conversation-ui/row.ConversationRow`
     - `conversations/conversation-view.conversationPane`
     - `conversations.useConversationById`

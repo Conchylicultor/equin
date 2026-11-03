@@ -1,6 +1,6 @@
 import { absolutePath } from "@plugins/infra/plugins/host-account/core";
 import { useMemo, type ReactNode } from "react";
-import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type {
   ClientFieldReaders,
   ClientFieldsResolverProps,

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useConfig } from "@plugins/config_v2/web";
-import { slowResourceReportSink } from "@plugins/primitives/plugins/live-state/web";
+import { slowResourceReportSink } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { getBootTrace } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
 import { clientLatencySink } from "@plugins/primitives/plugins/perfs/plugins/latency-signal/core";
 import { currentRoutePath } from "@plugins/primitives/plugins/pane/web";

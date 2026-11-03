@@ -34,7 +34,7 @@ vi.mock("@plugins/framework/plugins/web-sdk/core", async (importOriginal) => {
 });
 
 vi.mock(
-  "@plugins/primitives/plugins/live-state/web",
+  "@plugins/network/plugins/live/plugins/live-state/web",
   async (importOriginal) => ({
     ...(await importOriginal<object>()),
     NotificationsProvider: ({ children }: { children: unknown }) => children,

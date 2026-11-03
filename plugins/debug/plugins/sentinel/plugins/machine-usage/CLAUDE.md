@@ -11,6 +11,7 @@
 - Web:
   - Uses:
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/clip.Clip`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
@@ -18,7 +19,6 @@
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
   - Exports (values): `MachineUsageBreakdown`
 - Core:

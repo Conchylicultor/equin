@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
-import { resourceDescriptorByKey } from "@plugins/primitives/plugins/live-state/core";
+import { resourceDescriptorByKey } from "@plugins/network/plugins/live/plugins/live-state/core";
 import {
   ResourceContractError,
   ResourceRefusal,
-} from "@plugins/packages/plugins/resource-protocol/core";
+} from "@plugins/network/plugins/live/plugins/resource-protocol/core";
 import {
   wholeList,
   wholeRecord,

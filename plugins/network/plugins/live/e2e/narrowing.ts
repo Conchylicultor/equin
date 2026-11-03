@@ -71,8 +71,8 @@
  *
  *   ./equin run plugins/network/plugins/live/e2e/narrowing.ts --suite byid [--runs 3]
  */
-import { PROTOCOL } from "@plugins/packages/plugins/resource-protocol/core";
-import { canonicalJson } from "@plugins/packages/plugins/canonical-params/core";
+import { PROTOCOL } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
+import { canonicalJson } from "@plugins/network/plugins/live/plugins/canonical-params/core";
 import { pageBlocks } from "@plugins/page/plugins/editor/core";
 import { attemptWork } from "@plugins/tasks/plugins/attempt-work/core";
 import { editedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";

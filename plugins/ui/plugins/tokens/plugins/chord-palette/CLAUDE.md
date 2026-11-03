@@ -10,8 +10,8 @@
     - `ThemeEngine.TokenGroup` "Chord colours"
     - `ThemeCustomizer.Section` "Chord colours" → `ChordPaletteSection`
   - Uses:
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/spacing.Stack`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `ui/theme-engine.ThemeEngine`
     - `ui/theme-engine/theme-customizer.ThemeCustomizer`

@@ -1,4 +1,4 @@
-// @hash bc2b9a48e2d7
+// @hash 99af0e924a6b
 {
   "manifests": [
     {
@@ -335,7 +335,7 @@
       "name": "live-state",
       "category": "subsystem",
       "entryPoints": [
-        "primitives.live-state.**",
+        "network.live.live-state.**",
         "primitives.networking.**"
       ],
       "selectedContributors": [],
@@ -489,7 +489,7 @@
         "infra.health.**",
         "ui.theme-engine.**",
         "primitives.dom.overscroll-hint.**",
-        "infra.boot-snapshot.**"
+        "network.live.boot-snapshot.**"
       ],
       "selectedContributors": [],
       "extends": [],

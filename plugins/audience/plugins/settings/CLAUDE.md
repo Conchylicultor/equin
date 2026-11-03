@@ -15,9 +15,9 @@
     - `apps/settings/shell.Settings`
     - `audience.useAudience`
     - `audience.useSetDeveloperMode`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/control-panel.ControlPanel`
     - `primitives/css/control-panel.ControlPanelPane`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`

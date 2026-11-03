@@ -1,5 +1,5 @@
 import { useLive } from "@plugins/network/plugins/live/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { pagesTree, pageData } from "@plugins/page/plugins/editor/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";

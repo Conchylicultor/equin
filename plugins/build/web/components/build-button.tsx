@@ -8,7 +8,7 @@ import { useState, useEffect, type ReactNode } from "react";
 import {
   ResourceErrorInline,
   useNotificationsChannelStatuses,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";

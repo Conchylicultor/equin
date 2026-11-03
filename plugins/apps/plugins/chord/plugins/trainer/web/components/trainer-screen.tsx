@@ -43,7 +43,7 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import {
   mapResource,
   matchResource,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   useEventCallback,
   useLatestRef,

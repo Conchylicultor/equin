@@ -30,7 +30,7 @@ const PAGE_TRANSPORT =
  * one is the same exemption as importing `pageTransport`.
  */
 const PAGE_BOUND_NAMES: Readonly<Record<string, readonly string[]>> = {
-  "@plugins/primitives/plugins/live-state/web": [
+  "@plugins/network/plugins/live/plugins/live-state/web": [
     "getNotificationsClient",
     "ensureNotificationsClient",
   ],

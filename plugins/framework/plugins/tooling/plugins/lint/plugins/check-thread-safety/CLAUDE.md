@@ -38,7 +38,6 @@ per-file synchronous work (`checks/CLAUDE.md`, "The check thread is shared" and
     - `framework/tooling/checks/css-vars-supplied` (1 debt)
     - `framework/tooling/checks/data-migration-dml-only` (1 debt)
     - `framework/tooling/checks/inherited-theme-defaults-scoped` (1 debt)
-    - `framework/tooling/checks/keyed-resource-scope` (1 debt)
     - `framework/tooling/checks/migration-hashes-unique` (1 debt)
     - `framework/tooling/checks/no-db-backed-notify` (1 debt)
     - `framework/tooling/checks/no-reexport-default` (1 debt)

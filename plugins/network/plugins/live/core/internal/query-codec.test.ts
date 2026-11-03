@@ -7,14 +7,14 @@ import {
   enumTextField,
   textField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
-import type { WindowQueryResourceContract } from "@plugins/infra/plugins/query-resource/core";
+import type { WindowQueryResourceContract } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import {
   and,
   decodeFilter,
   matchesFilter,
   or,
 } from "@plugins/network/plugins/live/plugins/filter/core";
-import { ResourceContractError } from "@plugins/packages/plugins/resource-protocol/core";
+import { ResourceContractError } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
 import { liveCollection } from "./live-collection";
 
 const STATUSES = ["running", "error", "idle"] as const;

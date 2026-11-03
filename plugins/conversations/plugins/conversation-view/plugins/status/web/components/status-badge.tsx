@@ -9,7 +9,7 @@ import {
   type ConversationEntry,
 } from "@plugins/conversations/core";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { WithTooltip } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import {

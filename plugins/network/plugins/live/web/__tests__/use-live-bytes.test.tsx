@@ -19,13 +19,13 @@ vi.mock(
 
 import { renderHook, waitFor } from "@testing-library/react";
 import { z } from "zod";
-import { type ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import { type ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   createLiveStateHarness,
   type LiveStateHarness,
   resetResourceContractMismatches,
-} from "@plugins/primitives/plugins/live-state/web/testing";
-import { resourceBytesHeaders } from "@plugins/packages/plugins/resource-protocol/core";
+} from "@plugins/network/plugins/live/plugins/live-state/web/testing";
+import { resourceBytesHeaders } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 

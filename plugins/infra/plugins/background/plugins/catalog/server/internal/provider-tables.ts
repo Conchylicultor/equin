@@ -1,4 +1,4 @@
-import type { RoutedSource } from "@plugins/infra/plugins/query-resource/server";
+import type { RoutedSource } from "@plugins/network/plugins/live/plugins/query-resource/server";
 
 // The tables each registered worktree provider reads, filled during the
 // register phase (before the catalog values' reads are bound). Process state,

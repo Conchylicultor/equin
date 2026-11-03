@@ -4,7 +4,7 @@ import {
   matchResource,
   ResourceErrorInline,
   type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { ChartState } from "@plugins/primitives/plugins/metrics/plugins/chart-kit/web";
 
 /** The chart body's height, every state included, so the layout never jumps. */

@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";

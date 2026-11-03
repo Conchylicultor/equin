@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { resolvableSchema, type Resolvable } from "@plugins/primitives/plugins/live-state/core";
+import {
+  resolvableSchema,
+  type Resolvable,
+} from "@plugins/network/plugins/live/plugins/live-state/core";
 
 export const EditedFileStatusSchema = z.enum([
   "modified",

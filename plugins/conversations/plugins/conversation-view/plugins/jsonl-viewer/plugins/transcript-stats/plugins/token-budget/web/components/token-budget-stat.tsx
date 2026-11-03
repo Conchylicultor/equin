@@ -3,7 +3,7 @@ import {
   StatBadge,
   useTranscriptFold,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/web";
-import { matchResource } from "@plugins/primitives/plugins/live-state/web";
+import { matchResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { budgetFold, budgetStatus, type BudgetStatus } from "../../core";
 
 // The reading is the total charged, so it only ever climbs — and scrolling back

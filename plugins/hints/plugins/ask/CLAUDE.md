@@ -169,10 +169,10 @@ portable `server/` half.
     - `apps-core` ×2
     - `config_v2` ×2
     - `hints/help-menu` ×2
+    - `network/live/live-state` ×2
     - `primitives/css/coords` ×2
     - `primitives/css/fill` ×2
     - `primitives/css/ui-kit` ×2
-    - `primitives/live-state` ×2
     - `primitives/text-editor/inline-chip` ×2
     - `primitives/ui-context` ×2
     - `tasks/task-status` ×2

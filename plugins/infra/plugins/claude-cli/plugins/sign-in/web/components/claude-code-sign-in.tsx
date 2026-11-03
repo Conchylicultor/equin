@@ -1,5 +1,5 @@
 import { useCollapsibleContext } from "@plugins/primitives/plugins/collapsible/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
 import { useClaudeCodeStatus } from "@plugins/infra/plugins/claude-cli/plugins/availability/web";
 import type { ClaudeSignInFlow } from "../../core";

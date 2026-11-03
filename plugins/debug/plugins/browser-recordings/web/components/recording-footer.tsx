@@ -2,7 +2,7 @@ import type { ToolFooterProps } from "@plugins/conversations/plugins/conversatio
 import { useLive } from "@plugins/network/plugins/live/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { ThumbnailPlaceholder } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   browserRecordedCalls,
   browserRecordingRuns,

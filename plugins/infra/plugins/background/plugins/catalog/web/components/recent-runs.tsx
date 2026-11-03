@@ -1,6 +1,6 @@
 import { useMemo, type ReactElement } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   DataView,
   defineDataView,
@@ -15,7 +15,7 @@ import type {
   HostedToolbar,
   HostedToolbarParts,
 } from "@plugins/primitives/plugins/data-view/core";
-import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   backgroundCentralRecentRuns,
   backgroundRecentRuns,

@@ -16,11 +16,11 @@
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
     - `conversations/conversation-view/pending-turn.useOptimisticConversationStatus`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/badge.formatStatusLabel`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.WithTooltip`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/relative-time.formatRelativeTime`
 - Cross-plugin:
   - Uses tokens:

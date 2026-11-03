@@ -15,7 +15,7 @@ import type {
   LiveWhere,
 } from "@plugins/network/plugins/live/core";
 import type { Filter } from "@plugins/network/plugins/live/plugins/filter/core";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { DataViewPaging, ViewState } from "../../core";
 import { narrowWhere, usePagesNarrowing } from "./narrow-pages";
 import { pagesPaging } from "./pages-paging";

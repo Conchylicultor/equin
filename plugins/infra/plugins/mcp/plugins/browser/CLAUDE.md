@@ -186,13 +186,13 @@ nor closed under it. Bounded, because the host cannot see the script end.
   - Uses:
     - `conversations.useConversationById`
     - `network/live.useLive`
+    - `network/live/live-state.foldResource`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.FieldDef`
-    - `primitives/live-state.foldResource`
     - `primitives/relative-time.useNow`
     - `shell/health-report.HealthReport`
 - Server:

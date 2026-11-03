@@ -8,7 +8,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { recordingQueryDb } from "@plugins/infra/plugins/query-resource/server/testing";
+import { recordingQueryDb } from "@plugins/network/plugins/live/plugins/query-resource/server/testing";
 import { compileUnion } from "@plugins/network/plugins/live/server/testing";
 import { runs } from "@plugins/runs/core";
 import { backupRunKind } from "./run-kind";

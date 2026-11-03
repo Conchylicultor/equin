@@ -370,6 +370,8 @@ them to include 1, which would put the warning on the same instant as the abort.
     - `apps-core/tabs.useAppLinkProps`
     - `config_v2.ConfigV2`
     - `network/live.useLive`
+    - `network/live/live-state.foldResource`
+    - `network/live/live-state.useNotificationsChannelStatuses`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
@@ -380,8 +382,6 @@ them to include 1, which would put the warning on the same instant as the abort.
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.useNotificationsChannelStatuses`
     - `primitives/loading.Loading`
     - `reports.Reports`
     - `shell/health-report.HealthReport`

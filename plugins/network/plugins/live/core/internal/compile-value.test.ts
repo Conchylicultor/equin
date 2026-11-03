@@ -10,7 +10,7 @@ import { z } from "zod";
 import {
   createResourceRuntime,
   type ResourceParams,
-} from "@plugins/framework/plugins/resource-runtime/core";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/core";
 import {
   LIVE_ROW_KEY_MAX_BYTES,
   liveValue,

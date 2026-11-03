@@ -2,7 +2,7 @@ import {
   ownMsOf,
   type ClientLatencySample,
 } from "@plugins/primitives/plugins/perfs/plugins/latency-signal/core";
-import { canonicalJson } from "@plugins/packages/plugins/canonical-params/core";
+import { canonicalJson } from "@plugins/network/plugins/live/plugins/canonical-params/core";
 import type { ConfigValues } from "@plugins/config_v2/core";
 import { CLIENT_SIGNAL_THRESHOLD, type slowOpConfig } from "../../core";
 import type { SlowOpClientItem } from "../../shared/endpoints";

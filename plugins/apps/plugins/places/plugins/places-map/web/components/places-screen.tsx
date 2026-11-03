@@ -21,7 +21,7 @@ import {
   ResourceView,
   useCombinedResources,
   type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";

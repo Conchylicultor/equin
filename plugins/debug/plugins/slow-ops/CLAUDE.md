@@ -316,11 +316,11 @@ bar).
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
     - `infra/endpoints.fetchEndpointOver`
+    - `network/live/live-state.slowResourceReportSink`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/live-state.slowResourceReportSink`
     - `primitives/networking/page-transport.pageTransport`
     - `primitives/pane.currentRoutePath`
     - `primitives/perfs/boot-trace.getBootTrace`
@@ -350,12 +350,12 @@ bar).
     - `infra/host/duress/shed` ×2
     - `reports/engine` ×2
     - `database/admin.ExcludeFromFork`
-    - `database/change-feed.defineChangeProducer`
     - `database.db`
     - `debug/trace/engine.captureTrace`
     - `infra/endpoints.implement`
     - `infra/host/machine-sleep.sleptDuring`
     - `infra/retention.defineRetention`
+    - `network/live/change-feed.defineChangeProducer`
     - `network/live.serveCollection`
     - `primitives/log-channels/log-files.readChannelJsonAsync`
     - `primitives/log-channels.defineLogSink`

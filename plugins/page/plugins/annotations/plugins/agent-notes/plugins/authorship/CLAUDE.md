@@ -108,10 +108,10 @@ gap in that plugin.
   - Uses:
     - `conversations/conversation-ui/row.ConversationRowById`
     - `network/live.useLive`
+    - `network/live/live-state.mapResource`
+    - `network/live/live-state.ResourceResult`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceResult`
     - `primitives/relative-time.RelativeTime`
   - Exports (types): `AgentNotesAuthor`
   - Exports (values):

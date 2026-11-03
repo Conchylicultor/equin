@@ -1,4 +1,4 @@
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useMemo } from "react";
 import { statusDotPaintClass } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Avatar } from "@plugins/primitives/plugins/avatar/web";

@@ -15,7 +15,7 @@
   - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×7
     - `infra/endpoints` ×4
-    - `primitives/live-state` ×3
+    - `network/live/live-state` ×3
     - `primitives/pane` ×3
     - `primitives/css/spacing` ×2
     - `primitives/css/text` ×2

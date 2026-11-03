@@ -2,7 +2,7 @@ import { useMemo, type ReactNode } from "react";
 import type { ManualOrderConfig } from "@plugins/primitives/plugins/data-view/core";
 import type { GlobalRowOrderProps } from "@plugins/primitives/plugins/data-view/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import { seedRanks, computeMoveWrites, computeInsertWrites } from "../../core";
 import { useRowOrder, useSetRowOrder } from "../internal/use-row-order";

@@ -13,6 +13,7 @@
     - `primitives/css/text` ×2
     - `primitives/persistent-draft` ×2
     - `primitives/usage-rank` ×2
+    - `network/live/live-state.ResourceView`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
@@ -26,7 +27,6 @@
     - `primitives/dom/web-storage.defineStore`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/live-state.ResourceView`
     - `primitives/loading.Loading`
   - Exports (types):
     - `AlphaSliderProps`

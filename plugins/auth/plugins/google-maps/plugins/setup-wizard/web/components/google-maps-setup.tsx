@@ -21,7 +21,7 @@ import { useAccountStatus } from "@plugins/auth/web";
 import {
   foldResource,
   ResourceErrorInline,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { GOOGLE_MAPS_PROVIDER_ID } from "@plugins/auth/plugins/google-maps/core";
 
 const CONSOLE = "https://console.cloud.google.com";

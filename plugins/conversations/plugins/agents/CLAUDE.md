@@ -116,9 +116,9 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
     - `primitives/pane` ×8
     - `primitives/data-view` ×5
     - `conversations/conversation-ui/item` ×4
+    - `network/live/live-state` ×4
     - `primitives/avatar` ×4
     - `primitives/collapsible` ×4
-    - `primitives/live-state` ×4
     - `infra/endpoints` ×3
     - `primitives/css/ui-kit` ×3
     - `network/live` ×2
@@ -232,7 +232,7 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
     - `fields/json/config.jsonField`
     - `infra/endpoints.defineEndpoint`
     - `infra/entities.entityRef`
-    - `infra/query-resource.compositeKey`
+    - `network/live/query-resource.compositeKey`
     - `network/live.liveCollection`
     - `primitives/rank.RankSchema`
     - `tasks/tasks-core.ConversationStatusSchema`

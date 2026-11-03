@@ -1,6 +1,6 @@
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { combineResources } from "@plugins/primitives/plugins/live-state/web";
+import { combineResources } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   useClaudeCodeHealth,
   useClaudeCodeStatus,

@@ -8,7 +8,7 @@
 - Web:
   - Contributes: `TaskDetailSlots.Section` "Prompt" → `TaskDescription`
   - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/live-state` ×4
+    - `network/live/live-state` ×4
     - `primitives/css/ui-kit` ×3
     - `tasks/task-detail` ×3
     - `network/live` ×2

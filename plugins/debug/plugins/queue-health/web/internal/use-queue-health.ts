@@ -2,7 +2,7 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import {
   foldResource,
   useNotificationsChannelStatuses,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
 import { queuePulse, type QueuePulse } from "../../core";
 

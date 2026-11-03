@@ -169,7 +169,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `infra/endpoints.useEndpointMutation`
     - `network/live.LiveRowResult`
     - `network/live.useLive`
-    - `primitives/live-state.ResourceResult`
+    - `network/live/live-state.ResourceResult`
   - Exports (values):
     - `EventSources`
     - `useCreateEventSource`
@@ -271,7 +271,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `fields/tags/config.tagsField`
     - `infra/endpoints.defineEndpoint`
     - `infra/entities.entityRef`
-    - `infra/query-resource.compositeKey`
+    - `network/live/query-resource.compositeKey`
   - Exports (types):
     - `CreateEventSourceBody`
     - `EventCategory`

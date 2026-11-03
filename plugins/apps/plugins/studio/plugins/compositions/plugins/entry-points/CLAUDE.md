@@ -35,6 +35,7 @@ composition: reading those entry points is exactly why someone opens the row.
   - Contributes: `CompositionDetail.Section` "Entry points" → `EntryPointsSection`
   - Uses:
     - `apps/studio/compositions.CompositionDetail`
+    - `network/live/live-state.ResourceErrorInline`
     - `plugin-meta/composition.updateActiveDraft`
     - `plugin-meta/composition.useActiveComposition`
     - `plugin-meta/composition.useCompositionData`
@@ -48,7 +49,6 @@ composition: reading those entry points is exactly why someone opens the row.
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/search.SearchInput`

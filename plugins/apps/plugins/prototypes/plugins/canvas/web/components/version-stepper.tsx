@@ -18,7 +18,7 @@ import {
   type FetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
-import { matchResource } from "@plugins/primitives/plugins/live-state/web";
+import { matchResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { ActionFormShield } from "@plugins/primitives/plugins/action-presentation/web";
 import {

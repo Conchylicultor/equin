@@ -83,7 +83,7 @@ and
     - `infra/endpoints` ×3
     - `primitives/css/ui-kit` ×3
     - `apps/deploy/health` ×2
-    - `primitives/live-state` ×2
+    - `network/live/live-state` ×2
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`

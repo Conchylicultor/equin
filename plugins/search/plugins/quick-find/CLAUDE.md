@@ -8,6 +8,8 @@
 - Web:
   - Uses:
     - `network/live.useLive`
+    - `network/live/live-state.foldResource`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
@@ -17,8 +19,6 @@
     - `primitives/css/ui-kit.ScrollArea`
     - `primitives/css/yield.yieldClass`
     - `primitives/dom/scroll-reveal.revealElement`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/search.SearchInput`
   - Exports (types):

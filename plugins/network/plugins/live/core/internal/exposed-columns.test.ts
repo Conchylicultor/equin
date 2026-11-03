@@ -10,7 +10,7 @@ import {
 } from "@plugins/fields/plugins/text/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
-import { ResourceContractError } from "@plugins/packages/plugins/resource-protocol/core";
+import { ResourceContractError } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
 import { exposedColumns } from "./exposed-columns";
 import { liveCollection } from "./live-collection";
 import { LIVE_COLUMNS_KEY } from "./live-columns";

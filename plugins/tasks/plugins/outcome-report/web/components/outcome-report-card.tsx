@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";

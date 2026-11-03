@@ -6,7 +6,7 @@ import {
 } from "@plugins/primitives/plugins/pane/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { mailApp } from "@plugins/apps/plugins/mail/plugins/shell/core";
 import { threadMessages } from "../core";
 import { MessageList } from "./components/message-list";

@@ -17,7 +17,7 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { loadSeverity } from "@plugins/debug/plugins/slow-ops/core";
 import { formatDuration } from "@plugins/fields/plugins/duration/core";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   CLUSTER_OPS_PER_WORKTREE,
   clusterScan,

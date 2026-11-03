@@ -5,7 +5,7 @@ import {
   type LiveFieldOption,
   type LiveFieldOptionsRead,
 } from "@plugins/network/plugins/live/web";
-import { mapResource } from "@plugins/primitives/plugins/live-state/web";
+import { mapResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { traceEvents } from "@plugins/debug/plugins/trace/plugins/engine/core";
 
 // A trigger kind's group, alphabetical. The column is not null, so a null

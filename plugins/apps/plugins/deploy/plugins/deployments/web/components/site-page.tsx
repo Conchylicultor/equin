@@ -22,7 +22,7 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   foldResource,
   ResourceErrorInline,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { NewTabLink } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";

@@ -324,7 +324,7 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `Notifications.Action` "review-automation"
   - Uses: 57 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×7
-    - `primitives/live-state` ×6
+    - `network/live/live-state` ×6
     - `network/live` ×5
     - `primitives/pane` ×5
     - `primitives/data-view` ×4

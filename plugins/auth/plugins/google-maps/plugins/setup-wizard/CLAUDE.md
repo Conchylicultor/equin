@@ -12,12 +12,12 @@
     - `auth.useAccountStatus`
     - `infra/endpoints.getEndpointErrorMessage`
     - `infra/endpoints.useFetchEndpoint`
+    - `network/live/live-state.foldResource`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.Input`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/setup-steps.Step`
     - `primitives/setup-steps.StepDone`
     - `primitives/setup-steps.StepLink`

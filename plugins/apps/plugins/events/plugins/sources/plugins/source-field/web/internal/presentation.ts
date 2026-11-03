@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { mapResource } from "@plugins/primitives/plugins/live-state/web";
+import { mapResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   FieldPresentation,
   type LiveFieldOption,

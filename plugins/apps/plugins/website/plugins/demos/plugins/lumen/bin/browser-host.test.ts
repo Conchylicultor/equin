@@ -89,7 +89,7 @@ import {
 import { systemOrigin } from "@plugins/infra/plugins/request-origin/core";
 import { sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { pruneChangelog } from "@plugins/database/plugins/live-state-snapshot/server/testing";
+import { pruneChangelog } from "@plugins/network/plugins/live/plugins/live-state-snapshot/server/testing";
 import {
   createTask,
   updateTask,

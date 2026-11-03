@@ -56,6 +56,10 @@ hard stop if this count is ever wrong.
     - `config_v2/config-link.useConfigLink`
     - `network/live.useClockParam`
     - `network/live.useLive`
+    - `network/live/live-state.foldResource`
+    - `network/live/live-state.mapResource`
+    - `network/live/live-state.ResourceResult`
+    - `network/live/live-state.useCombinedResources`
     - `primitives/css/badge.Badge`
     - `primitives/css/meter.Meter`
     - `primitives/css/spacing.Stack`
@@ -65,10 +69,6 @@ hard stop if this count is ever wrong.
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.FieldDef`
     - `primitives/link-gesture.activationProps`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.useCombinedResources`
   - Exports (values): `useMapsBudget`
 - Server:
   - Contributes:

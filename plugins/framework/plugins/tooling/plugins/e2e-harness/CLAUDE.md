@@ -374,10 +374,11 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `tasks` ×5
     - `active-data` ×3
     - `config_v2` ×3
-    - `infra` ×3
     - `shell` ×3
     - `ui` ×3
     - `hints` ×2
+    - `infra` ×2
+    - `network` ×2
     - `reports` ×2
     - `build`
     - `database/admin`
@@ -385,7 +386,6 @@ own `requestfailed` listener calls it too. Diagnosis:
     - `map/google`
     - `media/film`
     - `menu-bar`
-    - `network/live`
     - `plugin-meta/exhibits`
     - `release`
     - `reorder/node-types`

@@ -9,7 +9,7 @@ import type {
   ResourceContract,
   ResourceRuntime,
   ServerResourceOptions,
-} from "@plugins/framework/plugins/resource-runtime/core";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/core";
 import {
   LIVE_ROW_KEY,
   LIVE_ROW_KEY_MAX_BYTES,

@@ -30,7 +30,7 @@
     - `primitives/file-viewer` ×5
     - `network/live` ×4
     - `primitives/pane` ×4
-    - `primitives/live-state` ×3
+    - `network/live/live-state` ×3
     - `infra/endpoints` ×2
     - `primitives/path-bar` ×2
     - `primitives/persistent-draft` ×2

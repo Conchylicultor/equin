@@ -19,7 +19,7 @@ import type {
 import {
   isCompositeKey,
   type CompositeKey,
-} from "@plugins/infra/plugins/query-resource/core";
+} from "@plugins/network/plugins/live/plugins/query-resource/core";
 import { fieldDomain, type FieldsFilterable } from "./field-domain";
 import {
   clockFormOf,

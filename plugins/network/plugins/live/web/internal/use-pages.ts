@@ -5,7 +5,7 @@ import {
   type ResourceDerivation,
   type ResourceError,
   type ResourceTupleResult,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import {
   LIVE_ROW_KEY,

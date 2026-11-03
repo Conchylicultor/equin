@@ -1,4 +1,4 @@
-import type { ResourceReadiness } from "@plugins/primitives/plugins/live-state/core";
+import type { ResourceReadiness } from "@plugins/network/plugins/live/plugins/live-state/core";
 import type { FieldDef, FilterNode, FoldRule, ViewState } from "../../core";
 import type { UnavailableRule } from "./evaluate-filter";
 import type { RowOrderState } from "./row-order";

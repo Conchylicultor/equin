@@ -73,7 +73,7 @@ let rowValue:
   refetch: () => Promise.resolve(),
 };
 vi.mock(
-  "@plugins/primitives/plugins/live-state/web",
+  "@plugins/network/plugins/live/plugins/live-state/web",
   async (importOriginal) => ({
     ...(await importOriginal<object>()),
     liveStateSocketKind: () => "worktree",

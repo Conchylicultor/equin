@@ -8,7 +8,7 @@ import {
   expr,
   type ChildRefs,
   type NestedRollupJoin,
-} from "@plugins/infra/plugins/query-resource/core";
+} from "@plugins/network/plugins/live/plugins/query-resource/core";
 import type { ServeAllCollectionOptions } from "@plugins/network/plugins/live/server";
 import { TaskStatusSchema, type TaskListItem } from "../../core";
 import {

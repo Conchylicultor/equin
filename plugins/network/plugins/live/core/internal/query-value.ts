@@ -1,6 +1,6 @@
 import type { z } from "zod";
-import { canonicalJson } from "@plugins/packages/plugins/canonical-params/core";
-import { ResourceContractError } from "@plugins/packages/plugins/resource-protocol/core";
+import { canonicalJson } from "@plugins/network/plugins/live/plugins/canonical-params/core";
+import { ResourceContractError } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
 import { parseRowKey, type LiveCutKey } from "./row-key";
 
 // The codecs of a value whose question is STRUCTURED (`liveValue(key, { query })`)

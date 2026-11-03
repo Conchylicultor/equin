@@ -10,7 +10,7 @@ import {
   type Emoji,
 } from "@plugins/ui/plugins/icons/plugins/emoji/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
-import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceView } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   useRecentUsage,

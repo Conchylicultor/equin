@@ -112,7 +112,6 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/site-messages`.
     - `apps/deploy/analytics/host-only.requestClientIp`
     - `apps/deploy/deploy-secrets.readDeploySecret`
     - `database.db`
-    - `database/change-feed.ExcludeFromChangeFeed`
     - `database/sql-column.parsedText`
     - `ids.idColumn`
     - `ids.IdKinds`
@@ -121,6 +120,7 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/site-messages`.
     - `infra/jobs.defineJob`
     - `infra/retention.defineRetention`
     - `integrations/resend.sendEmail`
+    - `network/live/change-feed.ExcludeFromChangeFeed`
   - DB schema: `plugins/apps/plugins/deploy/plugins/site-messages/plugins/intake/server/internal/tables.ts`
   - Register:
     - `defineJob('site-messages.notify')`

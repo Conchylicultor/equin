@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { z } from "zod";
-import { mintReachPlan } from "@plugins/framework/plugins/resource-runtime/core";
+import { mintReachPlan } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
 import { collectContributions } from "./contributions";
 import {
   Resource,

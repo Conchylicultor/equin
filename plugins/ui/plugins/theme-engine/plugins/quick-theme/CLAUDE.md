@@ -57,13 +57,13 @@ itself stays a pane concern — this surface only follows the choice made there.
     - `apps-core.useActiveApp`
     - `apps-core/tabs.useAppLink`
     - `config_v2.useScopeMembership`
+    - `network/live/live-state.foldResource`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/control-panel.ControlPanel`
     - `primitives/css/control-panel.ControlPanelPopover`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/slot-render.defineRenderSlot`
     - `shell/action-bar.ActionBar`

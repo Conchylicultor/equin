@@ -37,9 +37,9 @@ import {
 import {
   createResourceRuntime,
   type ResourceParams,
-} from "@plugins/framework/plugins/resource-runtime/core";
-import type { QueryDb } from "@plugins/infra/plugins/query-resource/server";
-import { compileWindowQuery } from "@plugins/infra/plugins/query-resource/server/testing";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+import type { QueryDb } from "@plugins/network/plugins/live/plugins/query-resource/server";
+import { compileWindowQuery } from "@plugins/network/plugins/live/plugins/query-resource/server/testing";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import { and, or } from "@plugins/network/plugins/live/plugins/filter/core";
 import { fieldsToZodObject, nullable } from "@plugins/fields/core";

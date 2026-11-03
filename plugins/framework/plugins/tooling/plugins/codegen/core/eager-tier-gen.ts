@@ -26,7 +26,7 @@ import {
   mintsOf,
   resourceDescriptorFactories,
   type PreloadFlag,
-} from "@plugins/framework/plugins/tooling/plugins/resource-vocabulary/core";
+} from "@plugins/network/plugins/live/plugins/resource-vocabulary/core";
 import {
   buildRegistryGenContext,
   collectEntriesWithDeps,

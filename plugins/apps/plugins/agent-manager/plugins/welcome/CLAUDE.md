@@ -14,7 +14,7 @@
   - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×3
     - `primitives/persistent-draft` ×3
-    - `primitives/live-state` ×2
+    - `network/live/live-state` ×2
     - `tasks/launch-options` ×2
     - `conversations.useConversations`
     - `infra/claude-cli/availability.useClaudeCodeLaunchBlock`

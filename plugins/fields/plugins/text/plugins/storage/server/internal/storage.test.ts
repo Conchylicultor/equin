@@ -12,7 +12,7 @@ import { z } from "zod";
 import { is } from "drizzle-orm";
 import { pgTable, PgCustomColumn } from "drizzle-orm/pg-core";
 import { SqlColumnError } from "@plugins/database/plugins/sql-column/server/testing";
-import { tolerantEnum } from "@plugins/primitives/plugins/live-state/core";
+import { tolerantEnum } from "@plugins/network/plugins/live/plugins/live-state/core";
 import { decode } from "./storage";
 
 const KindSchema = z.enum(["user", "agent", "system"]);

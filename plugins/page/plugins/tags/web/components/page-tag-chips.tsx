@@ -1,6 +1,6 @@
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { PageTagRow } from "../../core";
 import { usePageTags } from "../internal/hooks";
 import { TagChip } from "./tag-chip";

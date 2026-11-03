@@ -202,11 +202,11 @@ DataView (`web/components/notifications-view.tsx`):
     - `infra/endpoints` ×3
     - `primitives/css/ui-kit` ×3
     - `ids` ×2
+    - `network/live/live-state` ×2
     - `primitives/css/coords` ×2
     - `primitives/css/fill` ×2
     - `primitives/css/spacing` ×2
     - `primitives/cursor-pagination` ×2
-    - `primitives/live-state` ×2
     - `primitives/pane` ×2
     - `apps-core/tabs.useAppLink`
     - `apps/debug/shell.DebugApp`

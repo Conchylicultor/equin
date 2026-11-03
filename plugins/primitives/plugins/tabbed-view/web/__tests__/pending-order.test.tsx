@@ -13,7 +13,7 @@ import {
   type LoadedPlugin,
 } from "@plugins/framework/plugins/web-sdk/core";
 import { SlotRender } from "@plugins/primitives/plugins/slot-render/web";
-import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { defineTabbedView } from "../internal/define-tabbed-view";
 

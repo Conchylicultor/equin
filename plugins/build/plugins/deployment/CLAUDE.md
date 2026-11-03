@@ -223,6 +223,10 @@ convergence mechanisms all missing it) and the design.
   - Uses:
     - `conversations/commit-conversation.OpenCommitConversation`
     - `network/live.useLive`
+    - `network/live/live-state.mapResource`
+    - `network/live/live-state.ResourceErrorInline`
+    - `network/live/live-state.ResourceResult`
+    - `network/live/live-state.ResourceUnavailable`
     - `primitives/commit-list.CommitRowItem`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
@@ -234,10 +238,6 @@ convergence mechanisms all missing it) and the design.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.ResourceUnavailable`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
   - Exports (types): `DeploymentReading`
@@ -254,11 +254,11 @@ convergence mechanisms all missing it) and the design.
 - Core:
   - Uses:
     - `network/live.liveValue`
+    - `network/live/live-state.Resolvable`
+    - `network/live/live-state.resolvableSchema`
+    - `network/live/live-state.resolved`
+    - `network/live/live-state.unresolved`
     - `primitives/commit-list.CommitRowSchema`
-    - `primitives/live-state.Resolvable`
-    - `primitives/live-state.resolvableSchema`
-    - `primitives/live-state.resolved`
-    - `primitives/live-state.unresolved`
   - Exports (types):
     - `BuildAttempt`
     - `Carrier`

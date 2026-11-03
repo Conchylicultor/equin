@@ -54,7 +54,7 @@ export interface SharedWebSocketOptions {
    * tab reads change. A per-build value (a module URL, a bundle hash) splits
    * the socket on every unrelated rebuild of the consumer; a hand-bumped
    * version forgets to move. Derive it from the vocabulary itself
-   * (live-state passes `PROTOCOL`, `packages/resource-protocol`).
+   * (live-state passes `PROTOCOL`, `network/live/resource-protocol`).
    */
   dialect?: string;
 }

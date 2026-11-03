@@ -70,8 +70,8 @@ tag.get(schema);                       // T | undefined
   - Imported by:
     - `ids`
     - `network/live`
+    - `network/live/live-state`
     - `packages/list-bound`
-    - `primitives/live-state`
     - `ui/icons/saved-names`
 - Exemptions:
   - Exempts itself from: `zod-introspect/no-zod-internals` — `core/internal`, `lint` (sanctioned)

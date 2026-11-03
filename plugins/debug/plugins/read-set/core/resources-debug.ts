@@ -6,7 +6,7 @@ import {
 } from "@plugins/packages/plugins/list-bound/core";
 
 // The typed view of the resource runtime's debug payload (`handleResourcesDebug`
-// in `@plugins/framework/plugins/resource-runtime/core`, the one authoritative
+// in `@plugins/network/plugins/live/plugins/resource-runtime/core`, the one authoritative
 // source; also served raw at `GET /api/resources/_debug`), as ONE live value
 // every debug pane over it reads: the read-set pane, live-state-health's
 // server-resources section and the live-state emit pane's resource dropdown.

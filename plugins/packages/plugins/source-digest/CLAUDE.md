@@ -44,11 +44,11 @@ const digest = await sourceDigest([myCode]);
   module loads: include the module holding the parse or the compiler, not the
   plugin's server entry, or every unrelated change rebuilds the state.
 
-Users: `infra/corpus-index` (`corpusFormat`), `infra/query-resource`'s
+Users: `infra/corpus-index` (`corpusFormat`), `network/live/query-resource`'s
 `liveReadCode` (the epoch handoff and every persisted `all` set), and every
 L2-persisted value's own code (`network/live`'s `serveValue` `code:
 import.meta`, carried by `Resource.Declare`) — the L2 stamps judged by
-`database/live-state-snapshot`. `sourceDigest` reads a set structurally
+`network/live/live-state-snapshot`. `sourceDigest` reads a set structurally
 (`description`, `urls()`), so a holder that cannot import this plugin
 (server-core's Declare) can carry one.
 
@@ -60,7 +60,7 @@ import.meta`, carried by `Resource.Declare`) — the L2 stamps judged by
 - Cross-plugin:
   - Imported by:
     - `infra/corpus-index`
-    - `infra/query-resource`
+    - `network/live/query-resource`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/digest.ts` (sanctioned)
 - Server:

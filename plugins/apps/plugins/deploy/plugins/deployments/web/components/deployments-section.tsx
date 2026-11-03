@@ -1,4 +1,4 @@
-import type { ResourceReadiness } from "@plugins/primitives/plugins/live-state/core";
+import type { ResourceReadiness } from "@plugins/network/plugins/live/plugins/live-state/core";
 import { useMemo, type ReactElement, type ReactNode } from "react";
 import {
   DataView,
@@ -10,7 +10,7 @@ import {
 import {
   matchResource,
   useCombinedResources,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";

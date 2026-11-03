@@ -2,7 +2,7 @@ import { sameCommit } from "./model";
 import {
   resolved,
   unresolved,
-} from "@plugins/primitives/plugins/live-state/core";
+} from "@plugins/network/plugins/live/plugins/live-state/core";
 import type {
   BuildAttempt,
   ConvergenceKind,

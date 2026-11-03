@@ -9,7 +9,7 @@ import {
   Inset,
   Stack,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";

@@ -128,11 +128,11 @@ It must **never** be imported by the mail `shell` (that would cycle) — the
     - `network/live.FieldPresentation`
     - `network/live.LiveFieldOption`
     - `network/live.useLive`
+    - `network/live/live-state.foldResource`
+    - `network/live/live-state.matchResource`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.liveDataSource`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.matchResource`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

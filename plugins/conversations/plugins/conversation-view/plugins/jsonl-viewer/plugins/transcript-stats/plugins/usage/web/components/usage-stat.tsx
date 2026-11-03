@@ -3,7 +3,7 @@ import {
   StatBadge,
   useTranscriptFold,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/web";
-import { matchResource } from "@plugins/primitives/plugins/live-state/web";
+import { matchResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { usageFold, usageTotals } from "../../core";
 
 export function UsageStat() {

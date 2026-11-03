@@ -16,7 +16,7 @@ import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { MessageBodyState } from "@plugins/apps/plugins/mail/plugins/sync/web";
 import { threadMessages } from "@plugins/apps/plugins/mail/plugins/reading-pane/core";
 import type { MailAddress } from "@plugins/apps/plugins/mail/plugins/mail-core/core";

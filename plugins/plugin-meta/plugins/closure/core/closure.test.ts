@@ -1158,8 +1158,8 @@ test("the website bundles its runtime companions, none listed by name", () => {
 // edge no composition built from entry patterns carried L2 (the demo worker's
 // changelog, and every served agent-manager's, was never pruned).
 test("a server companion contribution is a hard edge from the kind's owner", () => {
-  const CHANGE_FEED = asPluginId("database.change-feed");
-  const L2 = asPluginId("database.live-state-snapshot");
+  const CHANGE_FEED = asPluginId("network.live.change-feed");
+  const L2 = asPluginId("network.live.live-state-snapshot");
   expect(graph.hardForward.get(CHANGE_FEED)).toContain(L2);
   expect(
     graph.edges.find(
@@ -1180,10 +1180,10 @@ test("a server companion contribution is a hard edge from the kind's owner", () 
 test("a bundle holding change-feed holds L2, none listing it", () => {
   const comp = resolveComposition(graph, {
     name: "change-feed-probe",
-    entryPoints: [asPluginId("database.change-feed")],
+    entryPoints: [asPluginId("network.live.change-feed")],
     selectedContributors: [],
   });
-  expect(comp.bundle.has(asPluginId("database.live-state-snapshot"))).toBe(
+  expect(comp.bundle.has(asPluginId("network.live.live-state-snapshot"))).toBe(
     true,
   );
 });

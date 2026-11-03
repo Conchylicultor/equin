@@ -5,11 +5,11 @@ import {
   mapResource,
   type ResourceUnavailable,
   type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   resolved,
   type Resolvable,
-} from "@plugins/primitives/plugins/live-state/core";
+} from "@plugins/network/plugins/live/plugins/live-state/core";
 import {
   EDITED_FILES_MAX,
   editedFile,

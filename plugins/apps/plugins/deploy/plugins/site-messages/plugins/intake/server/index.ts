@@ -1,5 +1,5 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { ExcludeFromChangeFeed } from "@plugins/database/plugins/change-feed/server";
+import { ExcludeFromChangeFeed } from "@plugins/network/plugins/live/plugins/change-feed/server";
 import { IdKinds } from "@plugins/ids/server";
 import { rawEndpointHandler } from "@plugins/infra/plugins/endpoints/server";
 import {

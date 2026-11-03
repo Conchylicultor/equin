@@ -6,7 +6,7 @@
 
 - Description: A JSON value's change as what changed: diffValue(prev, next) → set / append / push ops at paths (null when the root itself changed), applyValuePatch(base, ops) → the next value, copy-on-write so every untouched subtree keeps its identity. What a pushed live value declared `patches: true` ships instead of its whole value.
 - Cross-plugin:
-  - Imported by: `framework/resource-runtime`
+  - Imported by: `network/live/resource-runtime`
 - Core:
   - Exports (types):
     - `ValuePatchOp`

@@ -177,8 +177,8 @@ selected tile and the table toggle are device-local, never part of the spec.
 - Web:
   - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×7
+    - `network/live/live-state` ×4
     - `primitives/data-view/view-core` ×4
-    - `primitives/live-state` ×4
     - `primitives/metrics/chart-kit` ×3
     - `network/live` ×2
     - `primitives/css/spacing` ×2

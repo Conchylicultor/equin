@@ -1,7 +1,7 @@
 import {
   useResourceAcks,
   type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import type { Theme } from "@plugins/ui/plugins/theme-engine/core";
 import { savedThemesList } from "../../core";

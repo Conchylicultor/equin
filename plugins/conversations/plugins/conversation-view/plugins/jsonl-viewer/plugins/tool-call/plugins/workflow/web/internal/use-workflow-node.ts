@@ -1,5 +1,5 @@
 import { useLive } from "@plugins/network/plugins/live/web";
-import type { ResourceError } from "@plugins/primitives/plugins/live-state/core";
+import type { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/core";
 import { transcriptToolCall } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import { useWorkflowTrace } from "./use-workflow-trace";
 import type { TracedGraph, TracedNode, TraceStatus } from "./trace-types";

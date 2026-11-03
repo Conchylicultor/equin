@@ -21,6 +21,7 @@
     - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
     - `conversations/conversation-view.conversationPane`
     - `conversations/model-provider.familyClass`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/badge.Badge`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
@@ -30,7 +31,6 @@
     - `primitives/css/ui-kit.cn`
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture.activationProps`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/markdown.Markdown`
     - `ui/icons.Icon`
   - Exports (values): `agentReportPane`

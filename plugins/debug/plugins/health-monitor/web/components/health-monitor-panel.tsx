@@ -20,7 +20,7 @@ import {
   yAxisFormatter,
 } from "@plugins/stats/plugins/commits/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   SectionLabel,
   Text,

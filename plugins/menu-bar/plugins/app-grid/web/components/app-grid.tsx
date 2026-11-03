@@ -34,7 +34,7 @@ import {
   usePanelInput,
   type NativeAppsState,
 } from "@plugins/menu-bar/web";
-import { mapResource } from "@plugins/primitives/plugins/live-state/web";
+import { mapResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { AppGridActions } from "./pin-action";
 
 const MENU_BAR_APPS_VIEW = defineDataView("menu-bar.apps");

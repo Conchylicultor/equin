@@ -64,12 +64,12 @@ pins and photo wash); this plugin owns the contract and the page-side entry.
     - `apps/places/places-core.usePlaces`
     - `network/live.mapRow`
     - `network/live.useLive`
+    - `network/live/live-state.mapResource`
+    - `network/live/live-state.ResourceResult`
+    - `network/live/live-state.useCombinedResources`
     - `page/map.PageMap`
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture.activationProps`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.useCombinedResources`
   - Exports (types):
     - `PageOverlay`
     - `PageOverlayPage`

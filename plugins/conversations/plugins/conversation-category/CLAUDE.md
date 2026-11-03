@@ -117,11 +117,11 @@ on a host without the computer gets the unavailable arm instead of a 404.
     - `conversations/conversation-ui/item.Item`
     - `fields/dynamic-enum/config.DynamicEnum`
     - `network/live.useLive`
+    - `network/live/live-state.mapResource`
+    - `network/live/live-state.ResourceErrorInline`
+    - `network/live/live-state.ResourceResult`
     - `primitives/avatar.Avatar`
     - `primitives/css/status-dot.statusDotPaintClass`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.ResourceResult`
   - Exports (types):
     - `Category`
     - `CategoryItem`

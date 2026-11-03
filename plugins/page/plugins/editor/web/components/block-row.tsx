@@ -2,7 +2,7 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, type ComponentType, type CSSProperties } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { DropZone } from "@plugins/primitives/plugins/tree/core";
 import type { Block } from "../../core";
 import type { BlockAnchorProps, BlockEditorAPI } from "../types";

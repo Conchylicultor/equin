@@ -22,6 +22,7 @@
     - `primitives/pane` ×3
     - `apps/debug/shell.DebugApp`
     - `infra/endpoints.useFetchEndpoint`
+    - `network/live/live-state.foldResource`
     - `network/live.useLive`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
@@ -31,7 +32,6 @@
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.foldResource`
     - `ui/icons.Icon`
   - Exports (values): `broadcastsPane`
 - Server:

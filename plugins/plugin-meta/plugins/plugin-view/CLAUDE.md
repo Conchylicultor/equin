@@ -65,6 +65,7 @@ an empty titled card); a count goes in `summary`, via the shared `SectionCount`.
     - `primitives/collapsible` ×4
     - `primitives/pane` ×4
     - `primitives/css/spacing` ×2
+    - `network/live/live-state.ResourceErrorInline`
     - `network/live.useLive`
     - `primitives/breadcrumb.Breadcrumb`
     - `primitives/css/badge.Badge`
@@ -75,7 +76,6 @@ an empty titled card); a count goes in `summary`, via the shared `SectionCount`.
     - `primitives/css/text.Text`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/link-gesture.activationProps`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
   - Exports (types):

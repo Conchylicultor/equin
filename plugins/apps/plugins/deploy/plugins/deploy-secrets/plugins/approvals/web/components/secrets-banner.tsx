@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   DeploymentDetail,

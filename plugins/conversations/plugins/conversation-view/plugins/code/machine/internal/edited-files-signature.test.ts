@@ -11,7 +11,7 @@ import { parsePorcelainZ } from "../../server/internal/edited-files-etag";
 import { computeEditedFiles } from "../../server/internal/compute-edited-files";
 import { sliceRange } from "@plugins/network/plugins/live/server";
 import { checkPagedSource } from "@plugins/network/plugins/live/server/testing";
-import { resolved } from "@plugins/primitives/plugins/live-state/core";
+import { resolved } from "@plugins/network/plugins/live/plugins/live-state/core";
 import { editedFiles } from "../../core";
 import type { EditedFile } from "../../core/protocol";
 import { editedFilesMetaOf, loadEditedFilesFor } from "./edited-files-resource";

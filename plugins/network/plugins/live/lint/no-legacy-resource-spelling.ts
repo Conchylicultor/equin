@@ -70,11 +70,11 @@ type LegacyName = keyof typeof REPLACEMENT;
  * member".
  */
 const LEGACY_BARRELS: Readonly<Record<string, readonly LegacyName[]>> = {
-  "@plugins/primitives/plugins/live-state/core": [
+  "@plugins/network/plugins/live/plugins/live-state/core": [
     "resourceDescriptor",
     "keyedResourceDescriptor",
   ],
-  "@plugins/primitives/plugins/live-state/web": [
+  "@plugins/network/plugins/live/plugins/live-state/web": [
     "resourceDescriptor",
     "keyedResourceDescriptor",
     "useResource",
@@ -85,14 +85,14 @@ const LEGACY_BARRELS: Readonly<Record<string, readonly LegacyName[]>> = {
     // Deleted at the phase-3 Wave 4 barrier; kept so a stale import is flagged.
     "useWindowResource",
   ],
-  "@plugins/infra/plugins/query-resource/core": [
+  "@plugins/network/plugins/live/plugins/query-resource/core": [
     "queryResourceDescriptor",
     // Moved into network/live (internal) at the phase-3 Wave 7 barrier; kept
     // so a stale import is flagged.
     "windowQueryResourceDescriptor",
     "pointQueryResourceDescriptor",
   ],
-  "@plugins/infra/plugins/query-resource/server": [
+  "@plugins/network/plugins/live/plugins/query-resource/server": [
     "queryResource",
     "windowQueryResource",
     "deferredWindowQueryResource",

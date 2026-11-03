@@ -99,6 +99,7 @@ session chain are never written. Refused on main (403). Spawns nothing.
   - Uses:
     - `apps/debug/shell.DebugApp`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/collapsible.Collapsible`
     - `primitives/collapsible.CollapsibleChevron`
     - `primitives/collapsible.CollapsibleContent`
@@ -111,7 +112,6 @@ session chain are never written. Refused on main (403). Spawns nothing.
     - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`

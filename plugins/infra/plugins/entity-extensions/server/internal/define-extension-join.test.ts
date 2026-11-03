@@ -9,7 +9,7 @@ import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/c
 import {
   compileJoins,
   presenceExpr,
-} from "@plugins/infra/plugins/query-resource/server";
+} from "@plugins/network/plugins/live/plugins/query-resource/server";
 import { defineExtension } from "./define-extension";
 
 // `ext.join(alias)`: an extension handle as a join of its parent's collection

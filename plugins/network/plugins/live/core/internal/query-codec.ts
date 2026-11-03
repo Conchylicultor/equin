@@ -1,4 +1,4 @@
-import { ResourceContractError } from "@plugins/packages/plugins/resource-protocol/core";
+import { ResourceContractError } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
 import {
   decodeFilter,
   encodeFilter,

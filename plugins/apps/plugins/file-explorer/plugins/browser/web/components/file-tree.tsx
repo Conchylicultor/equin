@@ -26,7 +26,7 @@ import {
   type HostFsEntry,
 } from "@plugins/infra/plugins/host-fs/core";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { FileTypeIcon } from "@plugins/primitives/plugins/file-type/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";

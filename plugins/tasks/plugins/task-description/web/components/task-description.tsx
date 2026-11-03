@@ -3,7 +3,7 @@ import { useEditableField } from "@plugins/primitives/plugins/editable-field/web
 import {
   ResourceView,
   useCombinedResources,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { mapRow, useLive } from "@plugins/network/plugins/live/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";

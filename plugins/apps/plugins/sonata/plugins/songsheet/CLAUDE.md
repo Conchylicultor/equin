@@ -14,6 +14,7 @@
     - `apps/sonata/session.useCursorSelector`
     - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/center.Center`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
@@ -23,7 +24,6 @@
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/dom/scroll-reveal.revealElement`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
 - Cross-plugin:
   - Uses tokens:

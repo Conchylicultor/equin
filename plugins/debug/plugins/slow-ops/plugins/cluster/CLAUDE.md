@@ -54,6 +54,7 @@ so the pane never imports this component directly.
   - Uses:
     - `debug/trace/pane.SlowEvents`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
     - `primitives/css/meter.Meter`
@@ -65,7 +66,6 @@ so the pane never imports this component directly.
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.FieldDef`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/relative-time.RelativeTime`
 - Server:
   - Contributes: `resource.declare` "debug.slow-ops.cluster.scan"

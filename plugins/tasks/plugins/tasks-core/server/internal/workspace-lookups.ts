@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { WorkspaceSpecSchema } from "@plugins/conversations/plugins/workspace/core";
-import { compileLookup } from "@plugins/infra/plugins/query-resource/server";
+import { compileLookup } from "@plugins/network/plugins/live/plugins/query-resource/server";
 import { _attempts } from "./tables";
 
 // Where an attempt runs: its workspace's path and spec. A compiled lookup

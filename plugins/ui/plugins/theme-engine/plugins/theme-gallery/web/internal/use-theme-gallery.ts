@@ -6,8 +6,8 @@ import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/co
 import {
   combineResources,
   type PortableGateInput,
-} from "@plugins/primitives/plugins/live-state/web";
-import type { ResourceReadiness } from "@plugins/primitives/plugins/live-state/core";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
+import type { ResourceReadiness } from "@plugins/network/plugins/live/plugins/live-state/core";
 import {
   resolveTheme,
   themeSelectionConfig,

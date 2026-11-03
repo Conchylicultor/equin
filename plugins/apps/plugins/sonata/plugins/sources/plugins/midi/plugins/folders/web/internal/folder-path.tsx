@@ -3,7 +3,7 @@ import {
   hostHome,
 } from "@plugins/infra/plugins/host-account/core";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";

@@ -25,7 +25,7 @@ import type {
   LiveDataSource,
   ManualOrderConfig,
 } from "../../core";
-import type { ResourceReadiness } from "@plugins/primitives/plugins/live-state/core";
+import type { ResourceReadiness } from "@plugins/network/plugins/live/plugins/live-state/core";
 import type { DataViewSourceBundle } from "./body-types";
 
 interface Thread {

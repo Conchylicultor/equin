@@ -129,6 +129,7 @@ are no per-interaction round-trips.
     - `primitives/css/ui-kit` ×2
     - `apps/studio/explorer/membership.DIFF_LEGEND`
     - `apps/studio/shell.Studio`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/link-chip.LinkChip`
@@ -136,7 +137,6 @@ are no per-interaction round-trips.
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
   - Exports (values):

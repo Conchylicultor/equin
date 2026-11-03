@@ -36,6 +36,7 @@ A persistent global trigger on `conversationTurnCompleted` (contributed by this 
     - `config_v2.ConfigV2`
     - `conversations/conversation-view.Conversation`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/collapsible.CollapsibleChevron`
     - `primitives/collapsible.FoldMotion`
     - `primitives/collapsible.useCollapsible`
@@ -46,7 +47,6 @@ A persistent global trigger on `conversationTurnCompleted` (contributed by this 
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
-    - `primitives/live-state.ResourceErrorInline`
     - `ui/icons.Icon`
 - Server:
   - Contributes:

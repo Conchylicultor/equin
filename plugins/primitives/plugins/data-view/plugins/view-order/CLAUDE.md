@@ -229,11 +229,11 @@ set). Identical posture to `data_view_custom_values`.
   - Uses:
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
+    - `network/live/live-state.foldResource`
+    - `network/live/live-state.mapResource`
+    - `network/live/live-state.ResourceResult`
     - `primitives/data-view.DataViewSlots`
     - `primitives/latest-ref.useEventCallback`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceResult`
   - Exports (types): `RowOrderState`
   - Exports (values):
     - `useRowOrder`
@@ -264,8 +264,8 @@ set). Identical posture to `data_view_custom_values`.
     - `fields/text/config.textField`
     - `infra/endpoints.defineEndpoint`
     - `infra/entities.entityRef`
-    - `infra/query-resource.compositeKey`
     - `network/live.liveCollection`
+    - `network/live/query-resource.compositeKey`
     - `primitives/rank.Rank`
     - `primitives/rank.RankSchema`
   - Exports (types):

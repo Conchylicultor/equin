@@ -6,7 +6,7 @@ import {
   type PlaceSearchResult,
   type PlaceTag,
 } from "@plugins/apps/plugins/places/plugins/places-core/core";
-import type { ResourceError } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useMapsBudget } from "@plugins/integrations/plugins/google-maps/plugins/usage/web";
 import { MAPS_BILLING_MONTH } from "@plugins/integrations/plugins/google-maps/plugins/usage/core";
 import { useClockParam } from "@plugins/network/plugins/live/web";

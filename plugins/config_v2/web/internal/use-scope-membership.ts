@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { mapResource } from "@plugins/primitives/plugins/live-state/web";
-import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import { mapResource } from "@plugins/network/plugins/live/plugins/live-state/web";
+import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { configScopes } from "@plugins/config_v2/core";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import type { FieldsRecord } from "@plugins/fields/core";

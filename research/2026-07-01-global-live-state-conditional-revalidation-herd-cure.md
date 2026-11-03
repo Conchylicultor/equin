@@ -12,10 +12,10 @@ Update both (and the perfs index) when this lands.
 **The problem.** Every `./equin push` advances `refs/heads/main` → the git-watcher fires
 `refAdvanced` → the `build.run` job → `./equin build` → the **main backend restarts**. Real
 merges happen ~20×/day, so main reboots ~20×/day. Each restart kills every open WebSocket; on
-reconnect the client's `replaySubs` ([`notifications-client.ts:494`](../plugins/primitives/plugins/live-state/web/notifications-client.ts))
+reconnect the client's `replaySubs` ([`notifications-client.ts:494`](../plugins/network/plugins/live/plugins/live-state/web/notifications-client.ts))
 re-subscribes **every** live-state resource for **every** open tab at once, with no jitter and no
 admission control. On the server each fresh sub runs the resource's full loader
-([`runtime.ts:1676`](../plugins/framework/plugins/resource-runtime/core/runtime.ts), `handleSub` →
+([`runtime.ts:1676`](../plugins/network/plugins/live/plugins/resource-runtime/core/runtime.ts), `handleSub` →
 `getResourceValue`). ~30 distinct route-parametrized loaders cold-fire simultaneously against the
 **10-slot DB loader gate + one event loop**, producing the measured **40–75 s tails**
 (`[acquire]` max 75.9 s). The conversation the user opened is a downstream **victim**.
@@ -116,7 +116,7 @@ cleanest fit — same `revalidate` function, standard transport).
   `sub.etag` across reconnect (it currently resets `version`/`lastAckVersion` to `-1`; the etag must
   survive so the resume can fire).
 - HTTP path: `useResource`'s queryFn fallback
-  ([`use-resource.ts`](../plugins/primitives/plugins/live-state/web/use-resource.ts)) sends
+  ([`use-resource.ts`](../plugins/network/plugins/live/plugins/live-state/web/use-resource.ts)) sends
   `If-None-Match` and treats `304` as "keep cached value".
 
 **The four resources** — add `revalidate` to each `defineResource`/`defineExternalResource`:

@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   expr,
   type LookupJoin,
-} from "@plugins/infra/plugins/query-resource/core";
+} from "@plugins/network/plugins/live/plugins/query-resource/core";
 import {
   serveCollection,
   type ServeCollectionOptions,

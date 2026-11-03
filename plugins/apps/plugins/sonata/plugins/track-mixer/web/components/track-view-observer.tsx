@@ -5,7 +5,7 @@ import {
   useWriteSongSetting,
 } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { trackViewScope, trackViews } from "../../shared/resources";
 import { trackViewSetting } from "../track-view-setting";
 

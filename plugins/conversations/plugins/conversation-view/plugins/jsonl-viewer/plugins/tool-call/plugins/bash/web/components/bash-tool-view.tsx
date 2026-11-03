@@ -8,7 +8,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { useJsonlConversationId } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";

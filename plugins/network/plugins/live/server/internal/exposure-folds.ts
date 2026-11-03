@@ -6,8 +6,8 @@ import {
   type ExprField,
   type ExtensionJoin,
   type LookupJoin,
-} from "@plugins/infra/plugins/query-resource/core";
-import { presenceExpr } from "@plugins/infra/plugins/query-resource/server";
+} from "@plugins/network/plugins/live/plugins/query-resource/core";
+import { presenceExpr } from "@plugins/network/plugins/live/plugins/query-resource/server";
 import {
   exposedColumns,
   LIVE_COLUMNS_KEY,

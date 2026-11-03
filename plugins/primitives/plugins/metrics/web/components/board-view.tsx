@@ -5,7 +5,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   ResourceErrorInline,
   ResourceView,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { OutlineRail } from "@plugins/primitives/plugins/outline/plugins/rail/web";
 import {
   boardParamsFor,

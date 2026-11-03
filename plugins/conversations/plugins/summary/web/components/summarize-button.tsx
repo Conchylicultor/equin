@@ -1,4 +1,4 @@
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";

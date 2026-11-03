@@ -126,13 +126,13 @@ are real.
     - `change-feed-exclusion` "chord_videos"
   - Uses:
     - `database.db`
-    - `database/change-feed.ExcludeFromChangeFeed`
     - `database/derived-views.View`
     - `database/sql-column.parsedText`
     - `database/sql-projection.parsed`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `integrations/youtube.checkOembed`
+    - `network/live/change-feed.ExcludeFromChangeFeed`
     - `primitives/log-channels.defineLogSink`
   - DB schema:
     - `plugins/apps/plugins/chord/plugins/video-availability/server/internal/tables.ts`

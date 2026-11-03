@@ -22,7 +22,7 @@ if (state.status === "loading") return <Loading />;
 
 The data-level counterpart to `<Slot.Render>` for consumers that draw their **own** rows (e.g. a menu that reads the slot's contributions directly instead of rendering it). It reads the slot's config tree and applies it over `contributions` — the exact `useReorderTree` + `applyTree` machinery the list middleware uses — and returns the same `ReorderState` (`entries` in layout order + a `hidden` bucket), with **no rendering and no node-type registry**. Hosts branch on entry shape via `isNodeData`, read a header's label off `payload.label`, and respect hidden contributions (routed to `state.hidden`, never surfaced). Throws for a non-reorderable `slotId` (fail loud). Exports the entry types too: `TopLevelEntry`, `ReorderNodeData`, `ReorderState`.
 
-**It is a read, not a value**: `ResourceResult<ReorderState>` (`primitives/live-state`). `useReorderTree` reads `useConfigResult`, never `useConfig` — the latter answers a loading document with the descriptor's defaults (`items: []`), which looks exactly like "no layout", so every slot drew its raw registration order (hidden items included) and then jumped. `loading` while the document loads; a known document without an `items` tree is a real empty layout. On `error`, `stale` is the last-known layout applied; with no stale there is NO order — never fall back to the raw contributions. `useLayoutOrder` has the same arms.
+**It is a read, not a value**: `ResourceResult<ReorderState>` (`network/live/live-state`). `useReorderTree` reads `useConfigResult`, never `useConfig` — the latter answers a loading document with the descriptor's defaults (`items: []`), which looks exactly like "no layout", so every slot drew its raw registration order (hidden items included) and then jumped. `loading` while the document loads; a known document without an `items` tree is a real empty layout. On `error`, `stale` is the last-known layout applied; with no stale there is NO order — never fall back to the raw contributions. `useLayoutOrder` has the same arms.
 
 `useLayoutOrder` is its flat form for the common case — the slot's contributions in layout order, hidden ones and layout nodes dropped, a header's members in its place — contributed by `reorder/slot-middleware` as `SlotRender.Order`, which slot-render's `useSlotOrder(slot)` reads, so a host names slot-render, never reorder. **This replaces per-contribution priority numbers**: a host that draws its own rows orders them by this, never by an `order` field (`defineSlot` rejects a numeric one).
 
@@ -143,13 +143,13 @@ Because the origin default is the materialized catalog, adding/removing a contri
     - `config_v2.ConfigV2`
     - `config_v2.useConfigResult`
     - `config_v2.useSetConfig`
+    - `network/live/live-state.foldResource`
+    - `network/live/live-state.mapResource`
+    - `network/live/live-state.ResourceResult`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/dom/layout-host.flowAxis`
     - `primitives/dom/layout-host.layoutHost`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceResult`
     - `reorder/node-types.useReorderNodeTypes`
   - Exports (types):
     - `ReorderNodeData`

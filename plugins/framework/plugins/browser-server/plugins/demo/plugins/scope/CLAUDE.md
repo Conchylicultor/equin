@@ -71,7 +71,7 @@ in-realm `MessageChannel` standing in for the worker).
     - `framework/browser-server.attachFrameServing`
     - `framework/browser-server.browserServerTransport`
     - `framework/browser-server.FrameServing`
-    - `primitives/live-state.NotificationsProvider`
+    - `network/live/live-state.NotificationsProvider`
     - `primitives/loading.Loading`
     - `primitives/log-channels.clientLog`
     - `primitives/networking.TransportProvider`

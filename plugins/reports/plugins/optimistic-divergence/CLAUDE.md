@@ -3,7 +3,7 @@
 The report kind for **a server-acked optimistic op that diverged from the server's
 snapshots**.
 
-`useOptimisticResource` (`primitives/optimistic-mutation`) predicts a mutation's effect
+`useOptimisticResource` (`network/live/optimistic-mutation`) predicts a mutation's effect
 locally, POSTs it, and drops the prediction once an authoritative live-state push visibly
 reflects it — under the **never-revert** policy
 (`research/2026-07-11-global-never-revert-optimistic-edits.md`): an op leaves the overlay only

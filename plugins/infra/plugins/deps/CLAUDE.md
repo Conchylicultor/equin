@@ -315,6 +315,7 @@ torch.
     - `apps/settings/shell.Settings`
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
+    - `network/live/live-state.foldResource`
     - `primitives/css/badge.Badge`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
@@ -322,7 +323,6 @@ torch.
     - `primitives/data-view.FieldDef`
     - `primitives/data-view.ItemActionProps`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.foldResource`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

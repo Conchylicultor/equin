@@ -1,10 +1,10 @@
-import type { RoutedRecomputeOn } from "@plugins/framework/plugins/resource-runtime/core";
-import type { JoinFamily } from "@plugins/infra/plugins/query-resource/core";
+import type { RoutedRecomputeOn } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+import type { JoinFamily } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import type {
   compileJoins,
   ReadColumn,
-} from "@plugins/infra/plugins/query-resource/server";
-import { ResourceContractError } from "@plugins/packages/plugins/resource-protocol/core";
+} from "@plugins/network/plugins/live/plugins/query-resource/server";
+import { ResourceContractError } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
 import type { Filterable } from "@plugins/network/plugins/live/plugins/filter/core";
 import {
   scopedLiveColumns,

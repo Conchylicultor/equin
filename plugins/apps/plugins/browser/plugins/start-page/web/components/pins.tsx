@@ -1,7 +1,7 @@
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useBrowserNav } from "@plugins/apps/plugins/browser/plugins/shell/web";
 import {

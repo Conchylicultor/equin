@@ -11,9 +11,9 @@
     - `apps/browser/shell` ×3
     - `apps/browser/bookmarks` ×2
     - `apps/browser/omnibox` ×2
+    - `network/live/live-state` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/ui-kit` ×2
-    - `primitives/live-state` ×2
     - `apps/browser/history.browserRecents`
     - `network/live.useLive`
     - `primitives/css/center.Center`

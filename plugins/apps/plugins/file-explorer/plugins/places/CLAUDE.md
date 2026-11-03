@@ -27,13 +27,13 @@
     - `config_v2` ×3
     - `primitives/css/ui-kit` ×2
     - `infra/endpoints.EndpointError`
+    - `network/live/live-state.foldResource`
     - `network/live.useLive`
     - `primitives/css/meter.Meter`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.foldResource`
     - `ui/icons.Icon`
 - Server:
   - Contributes:

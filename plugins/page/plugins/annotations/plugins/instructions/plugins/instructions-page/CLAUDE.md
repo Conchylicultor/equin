@@ -56,12 +56,12 @@ It contributes to two generic seams and names nothing else:
   - Uses:
     - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `page/editor.Editor`
     - `page/page-reference.PageReference`
     - `page/page-reference.PageReferenceDecorationContribution`
     - `page/page-reference.useOpenMadePage`
     - `primitives/css/badge.Badge`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
 - Cross-plugin:

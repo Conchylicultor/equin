@@ -37,11 +37,11 @@ layout stops reading as a list of peers.
     - `apps/studio/compositions.CompositionDetail`
     - `apps/studio/explorer.PluginTree`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `plugin-meta/plugin-view.pluginViewPane`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/scroll.Scroll`
     - `primitives/data-view.defineDataView`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/pane.useOpenPane`
 

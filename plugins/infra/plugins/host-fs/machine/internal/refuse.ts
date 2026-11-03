@@ -1,5 +1,5 @@
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
-import type { ResourceRefusal } from "@plugins/packages/plugins/resource-protocol/core";
+import type { ResourceRefusal } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
 import {
   hostFsArchiveReasonMessage,
   type HostFsArchiveReason,

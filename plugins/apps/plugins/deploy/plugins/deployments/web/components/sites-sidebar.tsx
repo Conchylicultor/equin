@@ -3,7 +3,7 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import {
   matchResource,
   useCombinedResources,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";

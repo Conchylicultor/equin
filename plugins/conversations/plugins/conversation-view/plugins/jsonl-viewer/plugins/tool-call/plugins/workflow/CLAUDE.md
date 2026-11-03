@@ -20,6 +20,7 @@
     - `conversations/conversation-view.conversationPane`
     - `conversations/model-provider.familyClass`
     - `conversations.ConversationFileLinks`
+    - `network/live/live-state.ResourceErrorInline`
     - `network/live.useLive`
     - `primitives/css/card.Card`
     - `primitives/css/center.Center`
@@ -33,7 +34,6 @@
     - `primitives/css/ui-kit.cn`
     - `primitives/css/yield.yieldClass`
     - `primitives/link-gesture.activationProps`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/markdown.Markdown`
     - `primitives/syntax-highlight.HighlightedCode`

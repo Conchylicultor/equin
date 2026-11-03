@@ -22,7 +22,7 @@ import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
 import {

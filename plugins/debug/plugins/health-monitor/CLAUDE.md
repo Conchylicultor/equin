@@ -116,6 +116,7 @@ measured overhead on a real worktree workload is still an open task.
     - `primitives/css/spacing` ×2
     - `primitives/css/text` ×2
     - `apps/debug/shell.DebugApp`
+    - `network/live/live-state.ResourceErrorInline`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
@@ -123,7 +124,6 @@ measured overhead on a real worktree workload is still an open task.
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.Rigid`
     - `primitives/css/status-dot.StatusDot`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/relative-time.RelativeTime`
   - Exports (values): `healthMonitorPane`
 - Server:

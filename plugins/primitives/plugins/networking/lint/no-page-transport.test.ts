@@ -17,7 +17,7 @@ ruleTester.run("no-page-transport", rule, {
   valid: [
     {
       filename: FILE,
-      code: `import { useNotificationsClient } from "@plugins/primitives/plugins/live-state/web";`,
+      code: `import { useNotificationsClient } from "@plugins/network/plugins/live/plugins/live-state/web";`,
     },
     {
       filename: FILE,
@@ -27,7 +27,7 @@ ruleTester.run("no-page-transport", rule, {
   invalid: [
     {
       filename: FILE,
-      code: `import { getNotificationsClient } from "@plugins/primitives/plugins/live-state/web";`,
+      code: `import { getNotificationsClient } from "@plugins/network/plugins/live/plugins/live-state/web";`,
       errors: [{ messageId: "noPageTransport" }],
     },
     {

@@ -3,7 +3,7 @@ import {
   Loading,
   type LoadingVariant,
 } from "@plugins/primitives/plugins/loading/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import {

@@ -54,8 +54,8 @@ trees; no ledger read). Refused `missing` (a sha names no commit) and `no-base`
   - Contributes: `ReviewSlots.Section` "Plugin Changes" → `PluginChangesSection`
   - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/collapsible` ×4
+    - `network/live/live-state` ×2
     - `primitives/css/badge` ×2
-    - `primitives/live-state` ×2
     - `network/live.useLive`
     - `primitives/css/card.Card`
     - `primitives/css/clip.Clip`

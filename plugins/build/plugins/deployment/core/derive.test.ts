@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   resolved,
   unresolved,
-} from "@plugins/primitives/plugins/live-state/core";
+} from "@plugins/network/plugins/live/plugins/live-state/core";
 import { convergenceOf, wantsBuild } from "./derive";
 import { sameCommit } from "./model";
 import type { Carrier, CarrierId, Deployment } from "./model";

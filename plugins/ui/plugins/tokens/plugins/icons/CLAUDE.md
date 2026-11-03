@@ -45,11 +45,11 @@ primitive.
     - `apps-core/theme-scope.RootThemeScopeState`
     - `apps-core/theme-scope.useRootThemeScopeState`
     - `config_v2.useScopeMembership`
+    - `network/live/live-state.foldResource`
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
-    - `primitives/live-state.foldResource`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
     - `ui/icons.Icons`

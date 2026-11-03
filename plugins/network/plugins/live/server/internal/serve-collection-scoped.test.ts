@@ -24,12 +24,12 @@ import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { sql } from "drizzle-orm";
 import { integer, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
-import { familyMember } from "@plugins/infra/plugins/query-resource/core";
-import { familyMemberAlias } from "@plugins/infra/plugins/query-resource/core/testing";
+import { familyMember } from "@plugins/network/plugins/live/plugins/query-resource/core";
+import { familyMemberAlias } from "@plugins/network/plugins/live/plugins/query-resource/core/testing";
 import {
   compileWindowQuery,
   recordingQueryDb,
-} from "@plugins/infra/plugins/query-resource/server/testing";
+} from "@plugins/network/plugins/live/plugins/query-resource/server/testing";
 import {
   liveCollection,
   scopedLiveColumns,

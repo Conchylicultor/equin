@@ -2,7 +2,7 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import type {
   ResourceResult,
   ResourceUnavailable,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   backgroundCatalog,
   backgroundCentralCatalog,

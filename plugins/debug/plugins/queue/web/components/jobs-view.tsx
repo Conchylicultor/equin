@@ -1,7 +1,7 @@
 import {
   matchResource,
   ResourceErrorInline,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import {
   HOLD_SPECS,

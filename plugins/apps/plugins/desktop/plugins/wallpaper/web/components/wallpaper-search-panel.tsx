@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";

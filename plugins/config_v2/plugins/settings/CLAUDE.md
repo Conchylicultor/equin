@@ -92,8 +92,8 @@ renderer, which only the running app has.
     - `Pane.Register` "config-v2-nav"
   - Uses: 47 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `config_v2/fields` ×4
+    - `network/live/live-state` ×4
     - `primitives/data-view` ×4
-    - `primitives/live-state` ×4
     - `primitives/pane` ×4
     - `primitives/css/ui-kit` ×3
     - `apps-core/app-icon.AppIconView`

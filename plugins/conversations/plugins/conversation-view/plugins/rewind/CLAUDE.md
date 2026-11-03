@@ -109,10 +109,10 @@ rename throws before anything has changed.
     - `infra/endpoints.useFetchEndpoint`
     - `infra/endpoints.useMachineAvailability`
     - `network/live.useLiveReader`
+    - `network/live/live-state.ResourceError`
     - `primitives/css/spacing.Stack`
     - `primitives/icon-button.IconButton`
     - `primitives/launch.useLaunchConversation`
-    - `primitives/live-state.ResourceError`
     - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
     - `shell/notifications.Toast`
     - `shell/notifications.useToast`

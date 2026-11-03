@@ -60,7 +60,7 @@ its lines are the schema's: name, source, tags), `list` draws `ThemeSwatch`.
     - `ui/theme-engine` ×7
     - `primitives/css/ui-kit` ×4
     - `infra/endpoints` ×3
-    - `primitives/live-state` ×3
+    - `network/live/live-state` ×3
     - `ui/theme-engine/saved-themes` ×3
     - `config_v2` ×2
     - `apps-core.Apps`

@@ -19,8 +19,8 @@ The keys are a contract with `primitives/file-type` (`fileToneVar(tone)` names
     - `ThemeEngine.TokenGroup` "File types"
     - `ThemeCustomizer.Section` "File types" → `FileTypePaletteSection`
   - Uses:
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/spacing.Stack`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `ui/theme-engine.ThemeEngine`
     - `ui/theme-engine/theme-customizer.ThemeCustomizer`

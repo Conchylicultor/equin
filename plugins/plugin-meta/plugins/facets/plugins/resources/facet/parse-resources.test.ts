@@ -5,7 +5,7 @@ import {
   type DescriptorInfo,
   type FileBindings,
   type SourceFile,
-} from "@plugins/framework/plugins/tooling/plugins/resource-vocabulary/core";
+} from "@plugins/network/plugins/live/plugins/resource-vocabulary/core";
 import { parseRegisterCalls, resolveRegisterCall } from "./parse-resources";
 import { resourceModeLabel } from "../core";
 
@@ -922,7 +922,7 @@ describe("parseRegisterCalls (end to end over runtime sources)", () => {
         return defineResource(descriptor, serverOpts);
       }
     `,
-      "/repo/plugins/infra/plugins/query-resource/server/internal/compile-window.ts",
+      "/repo/plugins/network/plugins/live/plugins/query-resource/server/internal/compile-window.ts",
     );
     expect(parseRegisterCalls([compiler], index, NOTHING_IMPORTED)).toEqual([]);
   });

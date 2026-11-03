@@ -116,6 +116,7 @@ the panel until it is given something to say.
     - `infra/endpoints` ×2
     - `apps/debug/shell.DebugApp`
     - `infra/ndjson-stream.readNdjson`
+    - `network/live/live-state.ResourceErrorInline`
     - `network/live.useLive`
     - `primitives/css/fill.fillClasses`
     - `primitives/css/rigid.rigidClass`
@@ -124,7 +125,6 @@ the panel until it is given something to say.
     - `primitives/css/spinner.Spinner`
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/networking.useTransport`
     - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
     - `shell/toast.showToast`

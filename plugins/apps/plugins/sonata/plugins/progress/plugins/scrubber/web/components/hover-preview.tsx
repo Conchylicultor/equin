@@ -1,5 +1,5 @@
 import { useSlotOrder } from "@plugins/primitives/plugins/slot-render/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Fragment, useSyncExternalStore } from "react";
 import type { ReactNode, RefObject } from "react";
 import type {

@@ -4,21 +4,21 @@ import { bootCrashReport, stackRepoPaths } from "./boot-crash";
 const ROOT = "/repo/wt";
 const STACK = [
   `Error: allCollection("x"): the scope field "songId" is a decoded column`,
-  `    at fail (${ROOT}/plugins/infra/plugins/query-resource/server/internal/compile-alias.ts:283:15)`,
-  `    at <anonymous> (${ROOT}/plugins/infra/plugins/query-resource/server/internal/compile-alias.ts:912:7)`,
+  `    at fail (${ROOT}/plugins/network/plugins/live/plugins/query-resource/server/internal/compile-alias.ts:283:15)`,
+  `    at <anonymous> (${ROOT}/plugins/network/plugins/live/plugins/query-resource/server/internal/compile-alias.ts:912:7)`,
   `    at map (1:11)`,
   `    at parse (${ROOT}/node_modules/zod/index.js:10:2)`,
   `    at compiled (${ROOT}/plugins/network/plugins/live/server/internal/serve-collection.ts:1292:20)`,
-  `    at bind (${ROOT}/plugins/framework/plugins/resource-runtime/core/runtime.ts:4885:11)`,
+  `    at bind (${ROOT}/plugins/network/plugins/live/plugins/resource-runtime/core/runtime.ts:4885:11)`,
   `    at elsewhere (/other/checkout/x.ts:1:1)`,
 ].join("\n");
 
 describe("stackRepoPaths", () => {
   test("the first distinct repo files of the stack, dependencies and other roots skipped", () => {
     expect(stackRepoPaths(STACK, ROOT)).toEqual([
-      "plugins/infra/plugins/query-resource/server/internal/compile-alias.ts",
+      "plugins/network/plugins/live/plugins/query-resource/server/internal/compile-alias.ts",
       "plugins/network/plugins/live/server/internal/serve-collection.ts",
-      "plugins/framework/plugins/resource-runtime/core/runtime.ts",
+      "plugins/network/plugins/live/plugins/resource-runtime/core/runtime.ts",
     ]);
   });
 

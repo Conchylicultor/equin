@@ -11,6 +11,7 @@
     - `apps/pages/page-tree.pageDetailPane`
     - `apps/pages/welcome.PagesWelcome`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `page/editor.PageIcon`
     - `primitives/css/card.Card`
     - `primitives/css/clip.Clip`
@@ -19,7 +20,6 @@
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`

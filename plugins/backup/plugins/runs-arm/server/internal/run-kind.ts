@@ -1,5 +1,5 @@
 import { sql, type SQL } from "drizzle-orm";
-import { expr } from "@plugins/infra/plugins/query-resource/core";
+import { expr } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import {
   nullable,
   parsed,

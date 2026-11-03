@@ -2,7 +2,7 @@ import type { ReactElement, ReactNode } from "react";
 import {
   matchResource,
   ResourceErrorInline,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";

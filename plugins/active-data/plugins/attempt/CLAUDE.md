@@ -36,11 +36,11 @@ kind's `IdKinds.Presenter` (`useAttemptReferent` / `useAttemptTarget`).
     - `active-data/id-chip.idChip`
     - `conversations/conversation-view.useConversationOpener`
     - `network/live.useLive`
+    - `network/live/live-state.foldResource`
+    - `network/live/live-state.matchResource`
+    - `network/live/live-state.useCombinedResources`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/status-dot.StatusDot`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.matchResource`
-    - `primitives/live-state.useCombinedResources`
     - `primitives/pane.useOpenPane`
     - `tasks/attempt-status.ATTEMPT_STATUS_META`
     - `tasks/attempt-status.attemptStatusLabel`

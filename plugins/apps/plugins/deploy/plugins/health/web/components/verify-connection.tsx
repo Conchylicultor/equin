@@ -1,4 +1,4 @@
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { ReactNode } from "react";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";

@@ -37,7 +37,7 @@ import {
   type DeriveSourceFrame,
   type Harness,
   type RecordedFrame,
-} from "@plugins/framework/plugins/resource-runtime/core/testing";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/core/testing";
 import {
   LIVE_ROW_KEY,
   liveValue,

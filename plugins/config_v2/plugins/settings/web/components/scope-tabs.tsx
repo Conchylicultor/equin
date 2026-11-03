@@ -9,7 +9,7 @@ import {
 import type { ConfigV2ConflictLocations } from "@plugins/config_v2/core";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";

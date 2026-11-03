@@ -50,7 +50,7 @@ defaults.
     - `Shortcuts.Shortcut` "desktop.launcher (mod+k)"
   - Uses: 52 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/desktop/windows` ×11
-    - `primitives/live-state` ×4
+    - `network/live/live-state` ×4
     - `apps-core` ×3
     - `primitives/css/ui-kit` ×3
     - `primitives/shortcuts` ×3

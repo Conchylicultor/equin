@@ -1,4 +1,4 @@
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";

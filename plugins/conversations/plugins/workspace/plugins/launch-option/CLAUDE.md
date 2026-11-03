@@ -24,13 +24,13 @@ default, stored as no row) or one registered scratch profile. Design:
     - `infra/endpoints.useFetchEndpoint`
     - `network/live.mapRow`
     - `network/live.useLive`
+    - `network/live/live-state.combineResources`
+    - `network/live/live-state.mapResource`
     - `primitives/css/ui-kit.Select`
     - `primitives/css/ui-kit.SelectContent`
     - `primitives/css/ui-kit.SelectItem`
     - `primitives/css/ui-kit.SelectTrigger`
     - `primitives/css/ui-kit.SelectValue`
-    - `primitives/live-state.combineResources`
-    - `primitives/live-state.mapResource`
     - `primitives/loading.Loading`
     - `primitives/text-editor/composer/picker-pill.PickerPill`
     - `shell/notifications.useToast`

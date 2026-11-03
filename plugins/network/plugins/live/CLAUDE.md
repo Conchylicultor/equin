@@ -207,7 +207,7 @@ with no same-named column is bound in `columns: { name: (j) => j.base.col }`
 - **Projection = the row schema's keys exactly**, so a server-only column
   never reaches the wire.
 - **Joins.** `joins: [songPlayback.join("playback"), …]` (vocabulary:
-  `plugins/infra/plugins/query-resource/CLAUDE.md`, *Joins*). A joined column
+  `plugins/network/plugins/live/plugins/query-resource/CLAUDE.md`, *Joins*). A joined column
   binds via `columns: { x: (j) => j.playback.x }` — `j` offers only base and
   declared-join WIRE columns (tsc). A LEFT-joined field's schema must accept
   null (throws otherwise). A write to a joined table refills only the host
@@ -897,7 +897,7 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));
 - `params` is a const tuple of names (`P` derived). **No `initial`**: not
   known yet is `loading`, never a stand-in.
 - **Optional param** `"x?"`: present iff a non-empty string. `canonicalParams`
-  (`packages/canonical-params`) drops `undefined`/`""` everywhere params enter
+  (`network/live/canonical-params`) drops `undefined`/`""` everywhere params enter
   (client and server), so `{ path }`, `{ path, scopeId: undefined }` and
   `{ path, scopeId: "" }` are ONE tuple.
 - **Typed params** — `params: { window: z.enum(...) }`: every name required; a
@@ -1219,7 +1219,7 @@ functions escaping the file are unflagged (`lint/no-endpoint-read.ts` header
 states the walks). **Residual, held by review:** a POST read from an event
 handler — declare it live and use `useLiveReader`. The rule is `noDebt`
 (`lint/index.ts`): only the substrate's sanctioned entries (`network/live`,
-`primitives/live-state` `web/`). **Never add an entry, debt or sanctioned.**
+`network/live/live-state` `web/`). **Never add an entry, debt or sanctioned.**
 
 ## Internals
 
@@ -1264,16 +1264,16 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `FieldPresentation.Register` ×39
     - `ClientFields.Resolve` ×3
   - Uses:
-    - `primitives/live-state.PagedResourceResult`
-    - `primitives/live-state.ResourceDerivation`
-    - `primitives/live-state.ResourceDescriptor`
-    - `primitives/live-state.ResourceError`
-    - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.ResourceTupleResult`
-    - `primitives/live-state.ResourceUnavailable`
-    - `primitives/live-state.useNotificationsClient`
-    - `primitives/live-state.useResource`
-    - `primitives/live-state.useResources`
+    - `network/live/live-state.PagedResourceResult`
+    - `network/live/live-state.ResourceDerivation`
+    - `network/live/live-state.ResourceDescriptor`
+    - `network/live/live-state.ResourceError`
+    - `network/live/live-state.ResourceResult`
+    - `network/live/live-state.ResourceTupleResult`
+    - `network/live/live-state.ResourceUnavailable`
+    - `network/live/live-state.useNotificationsClient`
+    - `network/live/live-state.useResource`
+    - `network/live/live-state.useResources`
     - `primitives/log-channels.clientLog`
     - `primitives/networking.useTransport`
     - `primitives/slot-render.renderIsolated`
@@ -1333,7 +1333,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `useLiveReader`
 - Server:
   - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra/query-resource` ×38
+    - `network/live/query-resource` ×38
     - `database/sql-column` ×3
     - `network/live/filter.filterSql`
   - Exports (types):
@@ -1389,13 +1389,13 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
   - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/filter` ×7
     - `fields` ×6
-    - `infra/query-resource` ×6
+    - `network/live/live-state` ×6
+    - `network/live/query-resource` ×6
     - `packages/zod-introspect` ×6
-    - `primitives/live-state` ×6
     - `packages/list-bound` ×3
-    - `packages/resource-protocol` ×2
+    - `network/live/resource-protocol` ×2
     - `packages/wall-clock` ×2
-    - `packages/canonical-params.canonicalJson`
+    - `network/live/canonical-params.canonicalJson`
   - Exports (types):
     - `AnyCollection`
     - `AnyExternalCollectionOptions`
@@ -1629,8 +1629,8 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `infra` ×21
     - `page` ×15
     - `active-data` ×13
-    - `primitives` ×11
     - `build` ×10
+    - `primitives` ×10
     - `stats` ×5
     - `code-explorer` ×4
     - `plugin-meta` ×4
@@ -1648,6 +1648,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `backup/runs-arm`
     - `database/query-deadline`
     - `fields/secret/config`
+    - `network/live/optimistic-mutation`
     - `runs`
     - `screenshot`
     - `shell/notifications`
@@ -1661,13 +1662,13 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
   - Exempted by:
     - `framework/central-core` (0 debt)
-    - `framework/resource-runtime` (0 debt)
     - `framework/server-core` (0 debt)
-    - `infra/query-resource` (0 debt)
     - `network/live` (0 debt)
+    - `network/live/live-state` (0 debt)
+    - `network/live/optimistic-mutation` (0 debt)
+    - `network/live/query-resource` (0 debt)
+    - `network/live/resource-runtime` (0 debt)
     - `primitives/data-view` (0 debt)
-    - `primitives/live-state` (0 debt)
-    - `primitives/optimistic-mutation` (0 debt)
 - Machine:
   - Exports (values):
     - `serveCollection`
@@ -1693,6 +1694,16 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `subscribeAsOldDescriptor` — Subscribe `old.key` on the server runtime as an old bundle's tab would — its own socket, `params` (default `{}`: a legacy param-less descriptor sent nothing), its `build` graph when given — and answer what that tab gets: the first `sub-ack` or `sub-error` for the tuple, the ack's value parsed with the OLD schema.
     - Types: `OldDescriptor`, `OldSubscription`, `PagedSourceCheck`
 - Sub-plugins:
+  - **`boot-snapshot`** — Hydrates all boot-critical resources from a single boot snapshot before first paint. Single-request boot snapshot of all boot-critical resources, hydrated client-side before first paint.
+  - **`canonical-params`** — One spelling per live-resource params tuple: canonicalParams drops an undefined param and a "" for a declared-optional one, and canonicalJson spells a structured param (a typed-query value's q) one…
+  - **`change-feed`** — L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations…
   - **`filter`** — The filter language's SQL half: renderOpSql renders one op's dialect-free template over a rendered target (operands as params cast to the domain's SQL type, lists as ONE array param), and filterSql…
+  - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's tab-shared /ws/notifications channel. useQueryResource reads a…
+  - **`live-state-snapshot`** — L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, served only from a usable row (a key the runtime persists now, under its current definition, from a…
+  - **`optimistic-mutation`** — Optimistic-mutation primitive over live-state: useOptimisticResource replays pending ops on server truth (overlay/replay) under the never-revert policy — causal (ack-watermark) and content-based…
+  - **`query-resource`** — Declarative SQL query→resource compiler: one drizzle-based declaration derives the loader, scoped loader, scope policy (the routes the change router serves it by, for a bounded window / point set, a…
+  - **`resource-protocol`** — The live-resource wire protocol, shared by the resource runtime (server, central) and the live-state client: the socket's frame vocabulary declared once as data — ServerFrame / ClientFrame /…
+  - **`resource-runtime`**
+  - **`resource-vocabulary`** — The closed set of ways a plugin declares a live-state resource, as data every build-time resource scanner reads. Its key set is DERIVED from the barrels' own module types, so a factory that exists…
 
 <!-- AUTOGENERATED:END -->

@@ -19,8 +19,8 @@ chord overlay and the progression strip so they label chords identically.
     - `config_v2.useConfig`
     - `config_v2.useConfigResult`
     - `config_v2.useSetConfig`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/ui-kit.Button`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
   - Exports (types): `ChordBoxFace`
   - Exports (values):

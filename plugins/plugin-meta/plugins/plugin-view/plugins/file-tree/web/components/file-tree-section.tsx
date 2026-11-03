@@ -2,7 +2,7 @@ import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import { pluginFacetsTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import { FileBrowser } from "@plugins/apps/plugins/file-explorer/plugins/browser/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";

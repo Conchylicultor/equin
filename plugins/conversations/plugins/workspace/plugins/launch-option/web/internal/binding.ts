@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import {
   combineResources,
   mapResource,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { mapRow, useLive } from "@plugins/network/plugins/live/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useToast } from "@plugins/shell/plugins/notifications/web";

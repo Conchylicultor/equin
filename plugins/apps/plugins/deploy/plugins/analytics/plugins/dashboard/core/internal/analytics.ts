@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
-import { canonicalJson } from "@plugins/packages/plugins/canonical-params/core";
+import { canonicalJson } from "@plugins/network/plugins/live/plugins/canonical-params/core";
 import { HOST_QUERY_FAILURE_ARMS } from "@plugins/apps/plugins/deploy/plugins/host-query/core";
 import {
   AnalyticsQueryResultSchema,

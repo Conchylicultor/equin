@@ -63,6 +63,7 @@ On submit, in order:
     - `conversations/conversation-view/pending-turn.useSendConversationTurn`
     - `conversations/conversation-view/pending-turn.useTurnSendAvailability`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/badge.Badge`
     - `primitives/css/badge.BadgeVariant`
     - `primitives/css/card.Card`
@@ -70,7 +71,6 @@ On submit, in order:
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/expandable.Expandable`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/markdown.Markdown`
     - `primitives/relative-time.RelativeTime`

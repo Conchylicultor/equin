@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { createLiveStateHarness } from "@plugins/primitives/plugins/live-state/web/testing";
+import { createLiveStateHarness } from "@plugins/network/plugins/live/plugins/live-state/web/testing";
 import {
   markDeferredLoadComplete,
   PluginProvider,

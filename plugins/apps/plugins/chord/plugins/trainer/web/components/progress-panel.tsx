@@ -26,7 +26,7 @@ import {
   foldResource,
   matchResource,
   type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";

@@ -279,8 +279,8 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `DebugApp.Sidebar` "Builds"
     - `ConfigV2.WebRegister` "config"
   - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live/live-state` ×4
     - `primitives/css/ui-kit` ×4
-    - `primitives/live-state` ×4
     - `infra/endpoints` ×3
     - `primitives/log-channels` ×2
     - `primitives/pane` ×2

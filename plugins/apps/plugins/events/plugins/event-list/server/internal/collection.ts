@@ -1,6 +1,6 @@
 import { eq, isNull } from "drizzle-orm";
 import { serveCollection } from "@plugins/network/plugins/live/server";
-import type { LookupJoin } from "@plugins/infra/plugins/query-resource/core";
+import type { LookupJoin } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import {
   eventsTable,
   _eventSources,

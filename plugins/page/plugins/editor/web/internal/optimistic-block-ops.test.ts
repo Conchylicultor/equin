@@ -11,7 +11,7 @@
 
 import { test, expect, describe } from "bun:test";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import { OpNoLongerApplies } from "@plugins/primitives/plugins/optimistic-mutation/web";
+import { OpNoLongerApplies } from "@plugins/network/plugins/live/plugins/optimistic-mutation/web";
 import type { Block, RichText } from "../../core";
 import {
   applyOverlayOp,

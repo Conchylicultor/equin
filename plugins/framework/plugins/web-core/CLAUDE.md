@@ -35,7 +35,7 @@ deleted, so a stray `@/` import is now an unresolved-module error at build time.
     after a 3s grace, `BOOT_SCREEN_GRACE_MS`, so a normal boot never shows it), `stuck` (a `block` task
     past the deadline) or `failed` (one rejected), with Retry / Continue anyway.
     A failed / overdue task also files a `client-boot-task` report.
-    `data-boot-state` is the e2e hook (`infra/boot-snapshot/e2e/boot-stall.ts`).
+    `data-boot-state` is the e2e hook (`network/live/boot-snapshot/e2e/boot-stall.ts`).
   - `__tests__/` — render smoke tests
   - `public/` — static assets
 
@@ -131,8 +131,8 @@ bun run test:dom plugins/framework/plugins/web-core/web/__tests__/plugin-render.
     - `primitives/css/ui-kit`
     - `primitives/css/ui-kit.Button`
     - `primitives/dom/element-size/resize-loop-trace.installResizeLoopTrace`
-    - `primitives/live-state.ensureNotificationsClient`
-    - `primitives/live-state.NotificationsProvider`
+    - `network/live/live-state.ensureNotificationsClient`
+    - `network/live/live-state.NotificationsProvider`
     - `primitives/networking.TransportProvider`
     - `primitives/networking/page-transport.pageTransport`
     - `primitives/networking/request-guard.allowAssetRoute`

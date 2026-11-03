@@ -1,6 +1,6 @@
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { pluginViewPane } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import { pluginTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";

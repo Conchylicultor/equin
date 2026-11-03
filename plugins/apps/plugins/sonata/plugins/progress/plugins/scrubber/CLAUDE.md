@@ -26,7 +26,7 @@
     - `primitives/css/coords` ×4
     - `primitives/slot-render` ×3
     - `apps/sonata/session` ×2
-    - `primitives/live-state` ×2
+    - `network/live/live-state` ×2
     - `apps/sonata/player.SonataPlayer`
     - `primitives/css/clip.Clip`
     - `primitives/css/fill.fillClasses`

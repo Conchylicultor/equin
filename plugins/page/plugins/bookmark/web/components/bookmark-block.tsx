@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useAssetSrc } from "@plugins/infra/plugins/endpoints/web";
 import { attachmentUrl } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";

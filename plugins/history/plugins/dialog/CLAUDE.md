@@ -15,10 +15,10 @@
     - `network/live` ×2
     - `primitives/css/spacing` ×2
     - `infra/endpoints.useEndpointMutation`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/column.Column`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/text.SectionLabel`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `shell/notifications.useToast`
   - Exports (types): `VersionHistoryDialogProps`

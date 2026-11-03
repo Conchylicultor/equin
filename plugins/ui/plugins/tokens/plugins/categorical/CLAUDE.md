@@ -10,8 +10,8 @@
     - `ThemeEngine.TokenGroup` "Categorical"
     - `ThemeCustomizer.Section` "Categorical" → `CategoricalSection`
   - Uses:
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/spacing.Stack`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `ui/theme-engine.ThemeEngine`
     - `ui/theme-engine/theme-customizer.ThemeCustomizer`

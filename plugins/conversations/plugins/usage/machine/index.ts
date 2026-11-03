@@ -1,5 +1,5 @@
 import type { MachinePluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { ExcludeFromChangeFeed } from "@plugins/database/plugins/change-feed/server";
+import { ExcludeFromChangeFeed } from "@plugins/network/plugins/live/plugins/change-feed/server";
 import { _conversationUsageFiles } from "@plugins/conversations/plugins/usage/server";
 import {
   usageBackfillJob,

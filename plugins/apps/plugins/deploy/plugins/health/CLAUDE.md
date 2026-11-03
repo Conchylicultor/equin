@@ -41,7 +41,7 @@ verdict is loading, and the SSH-setup card seeds open.
     - `Deploy.Sidebar` "Servers" → `ServersSidebarSection`
   - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/deploy/servers` ×6
-    - `primitives/live-state` ×6
+    - `network/live/live-state` ×6
     - `network/live` ×4
     - `primitives/css/ui-kit` ×4
     - `primitives/setup-steps` ×2

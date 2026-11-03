@@ -13,7 +13,7 @@ import {
   type StatTone,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { matchResource } from "@plugins/primitives/plugins/live-state/web";
+import { matchResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { ContextCard } from "./context-card";
 import { contextLimit } from "./context-math";

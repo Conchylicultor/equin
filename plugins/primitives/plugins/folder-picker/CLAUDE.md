@@ -33,6 +33,7 @@ wraps `FolderPickerPopover`, not the other way around.
 - Web:
   - Uses:
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`
     - `primitives/css/pin.Pin`
@@ -46,7 +47,6 @@ wraps `FolderPickerPopover`, not the other way around.
     - `primitives/css/ui-kit.Input`
     - `primitives/filepath-breadcrumb.FilepathBreadcrumb`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
     - `ui/icons.Icon`

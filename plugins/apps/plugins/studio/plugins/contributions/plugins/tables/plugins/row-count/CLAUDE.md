@@ -10,9 +10,9 @@
   - Uses:
     - `apps/studio/contributions/tables.TableDetail`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/inline.Inline`
     - `primitives/css/text.Text`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
 - Server:
   - Contributes: `resource.declare` "studio.table-row-count"

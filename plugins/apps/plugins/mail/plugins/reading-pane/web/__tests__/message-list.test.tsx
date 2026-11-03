@@ -27,7 +27,7 @@ import {
   mailAccountIdKind,
   type MailMessage,
 } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
-import type { ResourcePaging } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourcePaging } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { MessageList } from "../components/message-list";
 
 afterEach(cleanup);

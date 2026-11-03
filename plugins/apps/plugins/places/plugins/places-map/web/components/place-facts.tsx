@@ -23,7 +23,7 @@ import {
 import {
   ResourceErrorInline,
   type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { NewTabButton } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
 import type { PlaceDetailsResult } from "@plugins/apps/plugins/places/plugins/place-details/core";

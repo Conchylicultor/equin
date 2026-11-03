@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { ResolvedViewInstance } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
-import type { ResourceUnavailable } from "@plugins/primitives/plugins/live-state/core";
+import type { ResourceUnavailable } from "@plugins/network/plugins/live/plugins/live-state/core";
 import type {
   DataViewDensity,
   DataViewId,

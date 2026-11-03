@@ -10,7 +10,7 @@ import {
 import {
   combineResources,
   type ResourceReadiness,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   useLivePagesPaging,

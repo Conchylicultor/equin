@@ -7,7 +7,7 @@ import {
 import type {
   ResourceError,
   ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { InvestigateAction } from "@plugins/primitives/plugins/launch/plugins/investigate/web";
 import {
   BUILD_CATEGORY_ID,

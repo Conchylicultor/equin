@@ -40,7 +40,7 @@ import {
 } from "bun:test";
 import { asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
-import type { QueryDb } from "@plugins/infra/plugins/query-resource/server";
+import type { QueryDb } from "@plugins/network/plugins/live/plugins/query-resource/server";
 import {
   compileCollection,
   subscribeAsOldDescriptor,

@@ -1,7 +1,7 @@
 import {
   pendingMountSnapshot,
   subscribePendingMounts,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { currentRoutePath } from "@plugins/primitives/plugins/pane/web";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import type { Interaction } from "../../core";

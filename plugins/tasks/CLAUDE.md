@@ -55,8 +55,8 @@
   - Uses:
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceResult`
+    - `network/live/live-state.mapResource`
+    - `network/live/live-state.ResourceResult`
   - Exports (types): `TaskPatch`
   - Exports (values):
     - `useActiveDependentCount`

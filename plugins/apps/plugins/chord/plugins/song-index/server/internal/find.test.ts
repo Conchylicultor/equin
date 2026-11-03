@@ -3,7 +3,7 @@ import { PgDialect } from "drizzle-orm/pg-core";
 import { chordTokenFromParts, compactChord, deriveSection } from "../../core";
 import { NextChordsBodySchema } from "../../core/endpoints";
 import { FindLoopsSchema, checkFindLoops } from "../../core/resources";
-import { ResourceRefusal } from "@plugins/packages/plugins/resource-protocol/core";
+import { ResourceRefusal } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
 import { chord, section, windowsOf } from "../../core/test-sections";
 import {
   chordsInWindow,

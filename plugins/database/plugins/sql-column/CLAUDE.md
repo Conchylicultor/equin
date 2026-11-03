@@ -317,11 +317,11 @@ export const bytea = (name: string) =>
   - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×6
     - `fields` ×5
-    - `infra` ×3
     - `conversations` ×2
+    - `infra` ×2
+    - `network` ×2
     - `debug/latency-ledger`
     - `ids`
-    - `network/live`
     - `search/engine`
     - `tasks/orchestration/watch`
     - `ui/theme-engine/saved-themes`

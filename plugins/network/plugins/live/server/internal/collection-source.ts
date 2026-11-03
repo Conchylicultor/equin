@@ -7,7 +7,7 @@ import type { ColumnWire } from "@plugins/database/plugins/sql-column/server";
 import type {
   EntitySource,
   RoutedSource,
-} from "@plugins/infra/plugins/query-resource/server";
+} from "@plugins/network/plugins/live/plugins/query-resource/server";
 
 // What a served collection reads from, and the type-level reads of it every
 // single-table form shares — the window / lookup forms (`./serve-collection`)

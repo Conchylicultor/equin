@@ -23,12 +23,12 @@ import { z } from "zod";
 import {
   queryKeyFor,
   type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   createLiveStateHarness,
   type LiveStateHarness,
   NotificationsClient,
-} from "@plugins/primitives/plugins/live-state/web/testing";
+} from "@plugins/network/plugins/live/plugins/live-state/web/testing";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import type { LiveSnapshotResult } from "../internal/use-live";

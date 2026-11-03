@@ -1,5 +1,5 @@
 import { useLive } from "@plugins/network/plugins/live/web";
-import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { starredPages, type StarredPageRow } from "../../shared/resources";
 
 /** The favorites: not known yet, failed, or the starred page ids. */

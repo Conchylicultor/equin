@@ -13,7 +13,7 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { pgTable, text } from "drizzle-orm/pg-core";
-import { tolerantEnum } from "@plugins/primitives/plugins/live-state/core";
+import { tolerantEnum } from "@plugins/network/plugins/live/plugins/live-state/core";
 import { parsedText } from "./parsed-text";
 import { SqlColumnError } from "./errors";
 

@@ -2,7 +2,7 @@ import {
   isRowUnknown,
   type RowFieldState,
 } from "@plugins/network/plugins/live/core";
-import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { FieldDef, FieldValue } from "../../core";
 import type { ExtensionField } from "./field-extension-types";
 

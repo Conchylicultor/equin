@@ -31,13 +31,13 @@ import {
   queryKeyFor,
   ResourceError,
   resourceErrorReportSink,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   createLiveStateHarness,
   resetResourceContractMismatches,
   type LiveStateHarness,
   type ResourceErrorInfo,
-} from "@plugins/primitives/plugins/live-state/web/testing";
+} from "@plugins/network/plugins/live/plugins/live-state/web/testing";
 import type { Transport } from "@plugins/primitives/plugins/networking/web";
 import {
   createTransportHub,

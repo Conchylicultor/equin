@@ -1,5 +1,5 @@
 import { useLive } from "@plugins/network/plugins/live/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { deployment } from "@plugins/build/plugins/deployment/core";
 
 // Robust stale-tab detection: compare the graph hash baked into the executing

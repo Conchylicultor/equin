@@ -11,7 +11,7 @@
     - `ConfigV2.WebRegister` "config"
   - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/collapsible` ×7
-    - `primitives/live-state` ×3
+    - `network/live/live-state` ×3
     - `config_v2` ×2
     - `conversations/conversation-view/code` ×2
     - `conversations.useConversationById`

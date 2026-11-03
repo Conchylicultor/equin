@@ -16,7 +16,7 @@ import {
   useLiveReader,
   type LiveReader,
 } from "@plugins/network/plugins/live/web";
-import type { ResourceError } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type {
   PathBarSource,
   PathResolution,

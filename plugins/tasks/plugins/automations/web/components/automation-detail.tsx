@@ -1,7 +1,7 @@
 import type { ReactElement, ReactNode } from "react";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import { useConfigResult } from "@plugins/config_v2/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   EndpointError,
   useEndpointMutation,

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { expr } from "@plugins/infra/plugins/query-resource/core";
+import { expr } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import { serveCollection } from "@plugins/network/plugins/live/server";
 import { slowOpById, slowOpCallers, slowOpsList } from "../../core";
 import { _slowOpCallers, _slowOps } from "./tables";

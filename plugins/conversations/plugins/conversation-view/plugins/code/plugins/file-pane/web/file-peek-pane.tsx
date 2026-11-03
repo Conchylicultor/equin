@@ -13,7 +13,7 @@ import { useEditedFile } from "@plugins/conversations/plugins/conversation-view/
 import {
   foldResource,
   ResourceErrorInline,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import {
   useResolvedFile,

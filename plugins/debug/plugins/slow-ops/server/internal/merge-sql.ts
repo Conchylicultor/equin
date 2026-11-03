@@ -3,7 +3,7 @@ import type { PgColumn } from "drizzle-orm/pg-core";
 import type {
   ProducerBuilder,
   ProducerExecutor,
-} from "@plugins/database/plugins/change-feed/server";
+} from "@plugins/network/plugins/live/plugins/change-feed/server";
 import { OTHER_VARIANT, VARIANT_CAP } from "../../core";
 import type { SlowOpCallerValues, SlowOpRowValues } from "./fold-batch";
 import { _slowOpCallers, _slowOps } from "./tables";

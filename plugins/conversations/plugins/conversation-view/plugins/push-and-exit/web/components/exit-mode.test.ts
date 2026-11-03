@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { AttemptWork } from "@plugins/tasks/plugins/attempt-work/core";
-import { ResourceError } from "@plugins/primitives/plugins/live-state/core";
+import { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/core";
 import {
   deriveExitMode,
   type ExitDecision,

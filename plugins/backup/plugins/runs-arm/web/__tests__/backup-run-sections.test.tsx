@@ -12,8 +12,8 @@ vi.mock(
 
 import { cleanup, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { queryKeyFor } from "@plugins/primitives/plugins/live-state/web";
-import { createLiveStateHarness } from "@plugins/primitives/plugins/live-state/web/testing";
+import { queryKeyFor } from "@plugins/network/plugins/live/plugins/live-state/web";
+import { createLiveStateHarness } from "@plugins/network/plugins/live/plugins/live-state/web/testing";
 import { authState } from "@plugins/auth/core";
 import type { RunRow } from "@plugins/runs/core";
 import {

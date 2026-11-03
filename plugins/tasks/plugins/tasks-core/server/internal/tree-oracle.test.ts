@@ -74,8 +74,8 @@ import { z } from "zod";
 import {
   aggregate,
   childrenJoin,
-} from "@plugins/infra/plugins/query-resource/core";
-import type { QueryDb } from "@plugins/infra/plugins/query-resource/server";
+} from "@plugins/network/plugins/live/plugins/query-resource/core";
+import type { QueryDb } from "@plugins/network/plugins/live/plugins/query-resource/server";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import {
   compileCollection,

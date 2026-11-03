@@ -5,7 +5,7 @@ import {
   type Contribution,
 } from "@plugins/framework/plugins/web-sdk/core";
 import type { FieldsRecord } from "@plugins/fields/core";
-import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type {
   ClientFields as ClientFieldsDecl,

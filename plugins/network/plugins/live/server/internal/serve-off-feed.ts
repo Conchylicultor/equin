@@ -2,15 +2,15 @@ import { defineExternalResource } from "@plugins/framework/plugins/server-core/c
 import type {
   ExternalKeyedPolicy,
   ResourceParams,
-} from "@plugins/framework/plugins/resource-runtime/core";
-import type { PointParams } from "@plugins/primitives/plugins/live-state/core";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+import type { PointParams } from "@plugins/network/plugins/live/plugins/live-state/core";
 import type { FilterScalar } from "@plugins/network/plugins/live/plugins/filter/core";
 import {
   compileOffFeedQuery,
   offFeedReach,
   offFeedTablesReach,
   type CompiledOffFeedQuery,
-} from "@plugins/infra/plugins/query-resource/server";
+} from "@plugins/network/plugins/live/plugins/query-resource/server";
 import type {
   LiveCollection,
   LiveCollectionChanges,

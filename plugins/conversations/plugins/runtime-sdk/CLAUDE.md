@@ -236,9 +236,9 @@ Gotchas the spike hit:
     - `primitives/css/meter` ×3
     - `primitives/data-view` ×3
     - `apps-core/tabs` ×2
+    - `network/live/live-state` ×2
     - `primitives/avatar` ×2
     - `primitives/css/control-panel` ×2
-    - `primitives/live-state` ×2
     - `conversations/conversation-view.conversationPane`
     - `network/live.useLive`
     - `primitives/css/clip.Clip`

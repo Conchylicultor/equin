@@ -180,6 +180,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `apps/events/shell.Events`
     - `config_v2/fields.FieldRenderer`
     - `infra/endpoints.getEndpointErrorMessage`
+    - `network/live/live-state.matchResource`
     - `primitives/css/badge.Badge`
     - `primitives/css/control-panel.ControlPanelPane`
     - `primitives/css/fill.Fill`
@@ -192,7 +193,6 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture/new-tab.NewTabButton`
-    - `primitives/live-state.matchResource`
     - `primitives/overlay/imperative-dialog.openDialog`
     - `ui/icons.Icon`
   - Exports (types):

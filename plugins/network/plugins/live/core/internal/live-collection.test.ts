@@ -3,8 +3,8 @@ import type { z } from "zod";
 import { fieldsToZodObject } from "@plugins/fields/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
-import { ResourceContractError } from "@plugins/packages/plugins/resource-protocol/core";
-import { resourceDescriptorByKey } from "@plugins/primitives/plugins/live-state/core";
+import { ResourceContractError } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
+import { resourceDescriptorByKey } from "@plugins/network/plugins/live/plugins/live-state/core";
 import {
   liveCollection,
   type LiveAllCollection,

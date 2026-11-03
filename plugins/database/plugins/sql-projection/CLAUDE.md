@@ -229,7 +229,7 @@ Design: `research/2026-08-25-database-mapped-sql-projections.md`.
     - `infra/claude-cli`
     - `infra/events`
     - `infra/jobs`
-    - `infra/query-resource`
+    - `network/live/query-resource`
     - `page/callout`
     - `page/links`
     - `release/runs-arm`

@@ -25,11 +25,11 @@ import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { defineEntity } from "@plugins/infra/plugins/entities/server";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server";
-import { expr } from "@plugins/infra/plugins/query-resource/core";
+import { expr } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import {
   recordingQueryDb,
   type RecordedQuery,
-} from "@plugins/infra/plugins/query-resource/server/testing";
+} from "@plugins/network/plugins/live/plugins/query-resource/server/testing";
 import {
   exposedColumns,
   liveArm,

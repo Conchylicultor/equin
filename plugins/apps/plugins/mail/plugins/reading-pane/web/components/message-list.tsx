@@ -6,7 +6,7 @@ import {
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import type { ResourcePaging } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourcePaging } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { MailMessage } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 import { MessageCard } from "./message-card";
 

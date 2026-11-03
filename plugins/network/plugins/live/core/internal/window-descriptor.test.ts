@@ -8,8 +8,8 @@
 
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
-import { resourceDescriptorByKey } from "@plugins/primitives/plugins/live-state/core";
-import { ResourceContractError } from "@plugins/packages/plugins/resource-protocol/core";
+import { resourceDescriptorByKey } from "@plugins/network/plugins/live/plugins/live-state/core";
+import { ResourceContractError } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
 import {
   pointQueryResourceDescriptor,
   windowQueryResourceDescriptor,

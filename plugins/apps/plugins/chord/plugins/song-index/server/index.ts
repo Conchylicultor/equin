@@ -4,7 +4,7 @@ import {
   ExcludeFromBackup,
   ExcludeFromFork,
 } from "@plugins/database/plugins/admin/server";
-import { ExcludeFromChangeFeed } from "@plugins/database/plugins/change-feed/server";
+import { ExcludeFromChangeFeed } from "@plugins/network/plugins/live/plugins/change-feed/server";
 import { BackupSource } from "@plugins/backup/server";
 import { SongVideos } from "@plugins/integrations/plugins/youtube/plugins/song-videos/server";
 import {

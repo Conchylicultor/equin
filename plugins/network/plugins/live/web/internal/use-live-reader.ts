@@ -1,9 +1,9 @@
 import { useMemo } from "react";
-import { canonicalParams } from "@plugins/packages/plugins/canonical-params/core";
+import { canonicalParams } from "@plugins/network/plugins/live/plugins/canonical-params/core";
 import {
   useNotificationsClient,
   type ResourceDescriptor,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import type {
   LivePlainValue,
   LiveQueryValue,

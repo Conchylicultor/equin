@@ -19,7 +19,7 @@
     - `primitives/css/text.SectionLabel`
     - `primitives/data-table.ColumnDef`
     - `primitives/data-table.DataTable`
-    - `primitives/live-state.ResourceErrorInline`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
 - Server:
   - Contributes: `resource.declare` "profiling.boot"

@@ -205,8 +205,8 @@ Behavior:
     - `fields/text/config.textField`
     - `infra/endpoints.defineEndpoint`
     - `infra/entities.entityRef`
-    - `infra/query-resource.compositeKey`
     - `network/live.liveCollection`
+    - `network/live/query-resource.compositeKey`
   - Exports (types):
     - `ActiveDataBinding`
     - `PutBindingBody`

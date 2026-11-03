@@ -28,7 +28,7 @@ import { SlotRender } from "@plugins/primitives/plugins/slot-render/web";
 import {
   ResourceError,
   type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import type { DataViewId } from "../../core";
 import { DataView } from "../components/data-view";

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { resolvableSchema } from "@plugins/primitives/plugins/live-state/core";
+import { resolvableSchema } from "@plugins/network/plugins/live/plugins/live-state/core";
 
 // Where an attempt's branch stands relative to `main`, as measured from git.
 // Every arm is a MEASURED fact — the unmeasurable case is the `Resolvable`

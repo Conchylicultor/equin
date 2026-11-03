@@ -53,7 +53,7 @@ data-level twin of the middleware that orders `.Render`; without one,
 registration order, as `.Render` without its list middleware.
 
 `useSlotOrder` returns a **read** — `ResourceResult<readonly SealContributions<P>[]>`
-(`primitives/live-state`), never a bare list. The layout lives in config, which
+(`network/live/live-state`), never a bare list. The layout lives in config, which
 may not be known on the first render; `loading` is that window, and the host
 renders its loading state (or nothing) — never the contributions in raw order,
 which would show hidden items and then jump (the equin.ai first-paint flash).
@@ -322,13 +322,13 @@ the outcome too, with no separate code path.
     - `SlotRender.ItemAttrs` ← `primitives.ui-context.element-picker`
     - `SlotRender.Order` ← `reorder.slot-middleware`
   - Uses:
+    - `network/live/live-state.readyResource`
+    - `network/live/live-state.ResourceResult`
     - `primitives/css/grow-relay.GrowRelay`
     - `primitives/css/ui-kit.ControlSize`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/dom/layout-host.flowAxis`
     - `primitives/dom/layout-host.layoutHost`
-    - `primitives/live-state.readyResource`
-    - `primitives/live-state.ResourceResult`
   - Exports (types):
     - `DerivedIdRenderSlot`
     - `DispatchContribution`

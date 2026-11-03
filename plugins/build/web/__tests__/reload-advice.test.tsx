@@ -17,12 +17,12 @@ import {
   render,
   renderHook,
 } from "@testing-library/react";
-import { queryKeyFor } from "@plugins/primitives/plugins/live-state/web";
+import { queryKeyFor } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   createLiveStateHarness,
   markResourceContractMismatch,
   resetResourceContractMismatches,
-} from "@plugins/primitives/plugins/live-state/web/testing";
+} from "@plugins/network/plugins/live/plugins/live-state/web/testing";
 import { markDeferredPluginsFailed } from "@plugins/framework/plugins/web-sdk/core";
 import { resetDeferredLoadStateForTests } from "@plugins/framework/plugins/web-sdk/core/testing";
 import {

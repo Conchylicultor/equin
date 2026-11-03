@@ -125,8 +125,8 @@ state rather than the previous window's numbers.
   - Uses:
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpointOver`
-    - `primitives/live-state.pendingMountSnapshot`
-    - `primitives/live-state.subscribePendingMounts`
+    - `network/live/live-state.pendingMountSnapshot`
+    - `network/live/live-state.subscribePendingMounts`
     - `primitives/log-channels.clientLog`
     - `primitives/networking/page-transport.pageTransport`
     - `primitives/pane.currentRoutePath`
@@ -150,7 +150,6 @@ state rather than the previous window's numbers.
     - `database.db`
     - `database/admin.ExcludeFromBackup`
     - `database/admin.ExcludeFromFork`
-    - `database/change-feed.ExcludeFromChangeFeed`
     - `database/sql-column.parsedJson`
     - `database/sql-column.parsedText`
     - `debug/health-monitor.onHealthSample`
@@ -161,6 +160,7 @@ state rather than the previous window's numbers.
     - `infra/host/duress/shed.createShedBuffer`
     - `infra/retention.defineRetention`
     - `network/live.serveValue`
+    - `network/live/change-feed.ExcludeFromChangeFeed`
   - DB schema: `plugins/debug/plugins/latency-ledger/server/internal/tables.ts`
   - Register:
     - `defineJob('retention.latency_ledger_minute')`

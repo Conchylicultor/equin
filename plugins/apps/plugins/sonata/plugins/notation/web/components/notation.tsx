@@ -1,4 +1,4 @@
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef } from "react";

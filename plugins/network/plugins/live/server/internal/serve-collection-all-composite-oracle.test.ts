@@ -42,11 +42,11 @@ import {
 import {
   routeChange,
   type FeedChange,
-} from "@plugins/database/plugins/change-feed/server";
+} from "@plugins/network/plugins/live/plugins/change-feed/server";
 import {
   createChangeFeedListener,
   rebuildTriggers,
-} from "@plugins/database/plugins/change-feed/server/testing";
+} from "@plugins/network/plugins/live/plugins/change-feed/server/testing";
 import {
   defineResource,
   notificationsWsHandler,
@@ -58,9 +58,9 @@ import {
   makeClientView,
   type ClientView,
   type RecordedFrame,
-} from "@plugins/framework/plugins/resource-runtime/core/testing";
-import { compositeKey } from "@plugins/infra/plugins/query-resource/core";
-import type { QueryDb } from "@plugins/infra/plugins/query-resource/server";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/core/testing";
+import { compositeKey } from "@plugins/network/plugins/live/plugins/query-resource/core";
+import type { QueryDb } from "@plugins/network/plugins/live/plugins/query-resource/server";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import { compileCollection } from "./serve-collection";
 

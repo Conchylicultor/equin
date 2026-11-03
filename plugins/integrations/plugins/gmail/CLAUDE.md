@@ -46,13 +46,13 @@ for themselves.
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
     - `config_v2.useSetConfig`
+    - `network/live/live-state.foldResource`
+    - `network/live/live-state.ResourceError`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/center.Center`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.ResourceError`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
   - Exports (types):
     - `GmailAccess`

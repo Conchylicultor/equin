@@ -1,7 +1,7 @@
 import { useMemo, type ReactElement } from "react";
 import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   DataView,
   defineDataView,

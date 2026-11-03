@@ -37,7 +37,7 @@ curl -sX POST http://<ns>.localhost:9000/api/events-test/queue-saturate \
     - `Pane.Register` "events-test"
     - `DebugApp.Sidebar` "Events Test"
   - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/live-state` ×4
+    - `network/live/live-state` ×4
     - `primitives/css/ui-kit` ×3
     - `primitives/data-view` ×3
     - `primitives/css/spacing` ×2

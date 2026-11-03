@@ -152,9 +152,10 @@ host first.
     - `conversations` ×3
     - `database` ×3
     - `framework` ×2
-    - `infra` ×2
     - `active-data/report`
     - `backup`
+    - `infra/jobs/deadline-audit`
+    - `network/live/boot-snapshot`
     - `page/place/google`
     - `stats/cost`
     - `tasks/reports-investigation`

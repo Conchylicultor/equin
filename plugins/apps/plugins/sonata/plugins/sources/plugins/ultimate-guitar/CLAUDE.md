@@ -257,7 +257,7 @@ reported) — the kind worth surfacing as crash tasks, not just toasts.
     - `Library.Cover` "ultimate-guitar"
   - Uses: 45 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×6
-    - `primitives/live-state` ×5
+    - `network/live/live-state` ×5
     - `network/live` ×4
     - `apps/sonata/document` ×2
     - `apps/sonata/library` ×2

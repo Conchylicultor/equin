@@ -11,7 +11,7 @@
 // Pure module (no React): unit-tested directly in `optimistic-block-ops.test.ts`.
 
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import { OpNoLongerApplies } from "@plugins/primitives/plugins/optimistic-mutation/web";
+import { OpNoLongerApplies } from "@plugins/network/plugins/live/plugins/optimistic-mutation/web";
 import {
   applyBlockOp,
   childrenOf,

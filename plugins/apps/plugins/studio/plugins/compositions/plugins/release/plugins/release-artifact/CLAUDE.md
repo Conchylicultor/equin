@@ -11,6 +11,7 @@
     - `apps/studio/compositions/release.ReleaseDetail`
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/spacing.Stack`
@@ -18,7 +19,6 @@
     - `primitives/css/ui-kit.Button`
     - `primitives/link-gesture.openInBrowserTab`
     - `primitives/link-gesture/new-tab.NewTabGlyph`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
 - Cross-plugin:

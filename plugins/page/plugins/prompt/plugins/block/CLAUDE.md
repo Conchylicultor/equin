@@ -63,6 +63,7 @@ the join and the order: oldest run first.
   - Uses:
     - `conversations/conversation-ui/chip.ConversationChip`
     - `infra/endpoints.useFetchEndpoint`
+    - `network/live/live-state.ResourceErrorInline`
     - `page/editor.BLOCK_INSET`
     - `page/editor.Editor`
     - `page/prompt/link.createPromptTask`
@@ -74,7 +75,6 @@ the join and the order: oldest run first.
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/launch.LaunchControl`
-    - `primitives/live-state.ResourceErrorInline`
     - `tasks/tasks-core.useTaskConversations`
     - `ui/icons.Icon`
   - Exports (values): `promptBlock`

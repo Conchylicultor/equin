@@ -8,7 +8,7 @@ import {
   flowAxis,
   layoutHost,
 } from "@plugins/primitives/plugins/dom/plugins/layout-host/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { ReorderTree } from "@plugins/fields/plugins/reorder-tree/core";
 import { reorderDescriptors } from "./descriptors";
 import { useReorderTree } from "./use-reorder-config";

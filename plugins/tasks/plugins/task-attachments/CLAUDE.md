@@ -10,11 +10,11 @@
   - Uses:
     - `infra/endpoints.useAssetSrc`
     - `network/live.useLive`
+    - `network/live/live-state.foldResource`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/overlay/image-viewer.AssetThumbnail`
     - `primitives/overlay/image-viewer.ImageGallery`

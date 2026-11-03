@@ -1,4 +1,4 @@
-import { RESOURCE_HTTP_ROUTE } from "@plugins/packages/plugins/resource-protocol/core";
+import { RESOURCE_HTTP_ROUTE } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
 import { handleResourceHttp } from "./resources";
 import type { HttpHandler, LoadedServerPlugin } from "./types";
 

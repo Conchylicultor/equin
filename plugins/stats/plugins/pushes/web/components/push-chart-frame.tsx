@@ -5,7 +5,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type {
   ResourceResult,
   ResourceUnavailable,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { LiveChart, fillGaps } from "@plugins/stats/plugins/commits/web";
 import type { PushBucket } from "../../shared/values";
 

@@ -7,7 +7,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
-import { changeProducerFor } from "@plugins/database/plugins/change-feed/server";
+import { changeProducerFor } from "@plugins/network/plugins/live/plugins/change-feed/server";
 import { defineJob, type JobFactory } from "@plugins/infra/plugins/jobs/server";
 import { declareGrowthBound } from "./growth-bounds";
 import { retentionCutoff, retentionPredicate } from "./retention-sql";

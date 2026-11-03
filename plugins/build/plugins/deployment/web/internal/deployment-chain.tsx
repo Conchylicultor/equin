@@ -1,4 +1,4 @@
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { CommitRowItem } from "@plugins/primitives/plugins/commit-list/web";
 import { OpenCommitConversation } from "@plugins/conversations/plugins/commit-conversation/web";
 import type { CommitRow } from "@plugins/primitives/plugins/commit-list/core";
@@ -12,7 +12,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type React from "react";
-import type { Resolvable } from "@plugins/primitives/plugins/live-state/core";
+import type { Resolvable } from "@plugins/network/plugins/live/plugins/live-state/core";
 import {
   CHAIN_CAP,
   sameCommit,

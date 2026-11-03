@@ -5,7 +5,7 @@ import {
   defineDataView,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";

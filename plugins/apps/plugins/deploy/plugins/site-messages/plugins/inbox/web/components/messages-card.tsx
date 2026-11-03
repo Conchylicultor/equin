@@ -24,7 +24,7 @@ import {
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
 import { linkProps } from "@plugins/primitives/plugins/link-gesture/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";

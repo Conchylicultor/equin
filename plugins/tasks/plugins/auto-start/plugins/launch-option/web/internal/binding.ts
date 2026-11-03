@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import {
   combineResources,
   mapResource,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { mapRow } from "@plugins/network/plugins/live/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import type { ModelChoice } from "@plugins/conversations/plugins/model-provider/core";

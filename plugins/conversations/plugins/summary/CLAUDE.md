@@ -12,7 +12,7 @@
     - `IdKinds.Kind` "summary"
     - `Pane.Register` "conv-summary"
   - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/live-state` ×4
+    - `network/live/live-state` ×4
     - `primitives/pane` ×3
     - `infra/endpoints` ×2
     - `primitives/css/spacing` ×2

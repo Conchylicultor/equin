@@ -9,7 +9,7 @@ import {
   useMachineAvailability,
 } from "@plugins/infra/plugins/endpoints/web";
 import { useLiveReader } from "@plugins/network/plugins/live/web";
-import { ResourceError } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useToast, type Toast } from "@plugins/shell/plugins/notifications/web";
 import { rewindConversationEndpoint, rewindPreview } from "../../core";
 import { LossList } from "../components/loss-list";

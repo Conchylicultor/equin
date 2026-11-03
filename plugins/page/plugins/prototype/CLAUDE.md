@@ -32,11 +32,11 @@ block); a human picks one from the `/prototype` picker.
   - Contributes: `Editor.Block` "prototype" → `PrototypeBlock`
   - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `page/editor` ×3
+    - `network/live/live-state` ×2
     - `primitives/css/layer` ×2
     - `primitives/css/ui-kit` ×2
     - `primitives/embed/frame` ×2
     - `primitives/hover-reveal` ×2
-    - `primitives/live-state` ×2
     - `apps/prototypes/canvas.prototypeDetailPane`
     - `network/live.useLive`
     - `primitives/css/center.Center`

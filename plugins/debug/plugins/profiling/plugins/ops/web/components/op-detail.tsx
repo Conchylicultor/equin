@@ -26,7 +26,7 @@ import {
   type OpRow,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/core";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useNow } from "@plugins/primitives/plugins/relative-time/web";
 import { useSleepNowForFold } from "@plugins/infra/plugins/host/plugins/machine-sleep/web";

@@ -16,7 +16,7 @@
     - `ActionBar.ViewOption` → `ActionBarPlacementControl`
   - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps-core/tabs` ×5
-    - `primitives/live-state` ×3
+    - `network/live/live-state` ×3
     - `primitives/css/toggle-chip` ×2
     - `primitives/slot-render` ×2
     - `apps-core/tab-surface.TabSurface`

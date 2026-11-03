@@ -30,11 +30,11 @@ import {
   type ExprField,
   type ExtensionJoin,
   type LookupJoin,
-} from "@plugins/infra/plugins/query-resource/core";
+} from "@plugins/network/plugins/live/plugins/query-resource/core";
 import {
   compileWindowQuery,
   recordingQueryDb,
-} from "@plugins/infra/plugins/query-resource/server/testing";
+} from "@plugins/network/plugins/live/plugins/query-resource/server/testing";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import { nullable } from "@plugins/fields/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";

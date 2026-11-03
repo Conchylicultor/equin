@@ -59,7 +59,7 @@ never draw their own header (the shell places it; see
   - Uses: 43 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps-core/tabs` ×5
     - `apps-core` ×5
-    - `primitives/live-state` ×4
+    - `network/live/live-state` ×4
     - `primitives/data-view` ×3
     - `apps-core/app-icon` ×2
     - `audience/developer-mark` ×2

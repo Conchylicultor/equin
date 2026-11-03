@@ -120,8 +120,8 @@ so ⌘/middle-click opens a desktop in a new browser tab.
     - `Apps.TabBar` ← `apps-core.tab-bar`
   - Uses:
     - `audience.useAudience`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceResult`
+    - `network/live/live-state.mapResource`
+    - `network/live/live-state.ResourceResult`
     - `primitives/pane.currentRoutePath`
     - `primitives/pane.stripBasePath`
     - `primitives/pane.useSurfaceAppId`

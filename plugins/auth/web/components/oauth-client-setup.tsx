@@ -6,7 +6,7 @@ import {
 import {
   ResourceErrorInline,
   foldResource,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { setConfigField } from "@plugins/config_v2/core";

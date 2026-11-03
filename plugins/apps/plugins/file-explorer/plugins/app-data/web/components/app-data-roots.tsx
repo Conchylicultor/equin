@@ -9,7 +9,7 @@ import {
   defineDataView,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";

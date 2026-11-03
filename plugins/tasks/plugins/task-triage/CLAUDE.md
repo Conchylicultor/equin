@@ -82,9 +82,9 @@ risk, a context for the person, at most one one-click question. Design:
     - `DynamicEnum.Options` "Model"
   - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/endpoints` ×3
+    - `network/live/live-state` ×3
     - `network/live` ×3
     - `primitives/css/ui-kit` ×3
-    - `primitives/live-state` ×3
     - `tasks/automations` ×2
     - `tasks/task-detail` ×2
     - `config_v2.ConfigV2`

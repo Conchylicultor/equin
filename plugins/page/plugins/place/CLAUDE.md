@@ -47,10 +47,10 @@ disagree.
   - Contributes: `Editor.Block` "place" → `PlaceBlock`
   - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `page/editor` ×4
+    - `network/live/live-state` ×2
     - `primitives/avatar` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/ui-kit` ×2
-    - `primitives/live-state` ×2
     - `network/live.useLive`
     - `primitives/copy-to-clipboard.useCopyToClipboard`
     - `primitives/css/card.Card`
@@ -96,8 +96,8 @@ disagree.
 - Core:
   - Uses:
     - `network/live.liveValue`
+    - `network/live/resource-protocol.ResourceRefusal`
     - `packages/list-bound.cappedList`
-    - `packages/resource-protocol.ResourceRefusal`
     - `page/editor.defineBlock`
     - `ui/icons.symbol`
   - Exports (types):

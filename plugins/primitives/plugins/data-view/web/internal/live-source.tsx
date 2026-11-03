@@ -22,8 +22,8 @@ import type {
   LiveWhere,
 } from "@plugins/network/plugins/live/core";
 import { useLive } from "@plugins/network/plugins/live/web";
-import type { ResourceReadiness } from "@plugins/primitives/plugins/live-state/core";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceReadiness } from "@plugins/network/plugins/live/plugins/live-state/core";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type {
   DataViewDeclaredSection,
   DataViewPaging,

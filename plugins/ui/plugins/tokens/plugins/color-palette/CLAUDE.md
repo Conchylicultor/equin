@@ -10,11 +10,11 @@
     - `ThemeEngine.TokenGroup` "Color Palette"
     - `ThemeCustomizer.Section` "Color Palette" → `ColorPaletteSection`
   - Uses:
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/collapsible.Collapsible`
     - `primitives/collapsible.CollapsibleContent`
     - `primitives/css/row.SectionHeaderRow`
     - `primitives/css/spacing.Stack`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `ui/theme-engine.ThemeEngine`
     - `ui/theme-engine/theme-customizer.ThemeCustomizer`
@@ -31,7 +31,7 @@
   - Tokens used by: 530 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×117
     - `conversations` ×89
-    - `primitives` ×78
+    - `primitives` ×77
     - `debug` ×37
     - `page` ×33
     - `plugin-meta` ×29
@@ -63,6 +63,7 @@
     - `layouts/miller`
     - `map`
     - `music/chord-box`
+    - `network/live/live-state`
     - `release/runs-arm`
     - `search/quick-find`
     - `tag-tree/picker`

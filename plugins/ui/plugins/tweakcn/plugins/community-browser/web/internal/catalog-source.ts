@@ -5,7 +5,7 @@ import {
   mapResource,
   type PortableGateInput,
   type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import type { ThemeId } from "@plugins/ui/plugins/theme-engine/core";
 import {

@@ -21,7 +21,7 @@ import {
   mailDraftIdKind,
   mailOutboxIdKind,
 } from "./id-kinds";
-import { tolerantEnum } from "@plugins/primitives/plugins/live-state/core";
+import { tolerantEnum } from "@plugins/network/plugins/live/plugins/live-state/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";

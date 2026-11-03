@@ -1,4 +1,4 @@
-import type { ResourceError } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/web";
 
 /**
  * One per-song setting — transpose, key mode, chord mode, groove, track view —

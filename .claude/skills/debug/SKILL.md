@@ -67,7 +67,7 @@ every hop **and every silent drop** to the `live-state` log channel
 logs/live-state.jsonl`; the gap localizes the dead hop. **Debug → Live State**
 shows live socket/leader/per-resource-version state; a watchdog toasts + files a
 `live-state-wedge` crash on stall.
-→ [`plugins/primitives/plugins/live-state/CLAUDE.md`](../../../plugins/primitives/plugins/live-state/CLAUDE.md)
+→ [`plugins/primitives/plugins/live-state/CLAUDE.md`](../../../plugins/network/plugins/live/plugins/live-state/CLAUDE.md)
 
 ### Crash / error
 Uncaught browser/server errors are recorded + deduped into tasks (handled

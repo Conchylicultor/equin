@@ -19,14 +19,14 @@ import {
 import {
   mapResource,
   type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { LiveLogChannel } from "@plugins/primitives/plugins/log-channels/web";
 import {
   ElapsedTime,
   RelativeTime,
 } from "@plugins/primitives/plugins/relative-time/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   useBlockedReason,
   type SiteBannerAnswer,

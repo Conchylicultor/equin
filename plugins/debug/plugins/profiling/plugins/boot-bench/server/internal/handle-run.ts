@@ -6,8 +6,8 @@ import {
 import {
   assembleBootSnapshot,
   preloadedKeys,
-} from "@plugins/infra/plugins/boot-snapshot/server";
-import { clearPersistedSnapshots } from "@plugins/database/plugins/live-state-snapshot/server";
+} from "@plugins/network/plugins/live/plugins/boot-snapshot/server";
+import { clearPersistedSnapshots } from "@plugins/network/plugins/live/plugins/live-state-snapshot/server";
 import {
   getRuntimeProfile,
   resetRuntimeProfile,

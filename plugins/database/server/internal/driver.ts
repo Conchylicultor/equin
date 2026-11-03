@@ -50,7 +50,7 @@ export interface DatabaseDriverImpl {
   bootDdl<T>(fn: () => Promise<T>, reason?: string): Promise<T>;
   /**
    * Open a LISTEN session on `channels` — the one part of the change feed
-   * (`database/change-feed`) that differs per host. Resolves once LISTEN on
+   * (`network/live/change-feed`) that differs per host. Resolves once LISTEN on
    * every channel has taken effect, as ONE statement, so no transaction is
    * heard on one channel and not another. Each NOTIFY on them reaches
    * `handlers.notification` in delivery order (a host's notifications share

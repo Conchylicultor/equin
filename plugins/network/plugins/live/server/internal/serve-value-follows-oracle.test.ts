@@ -41,11 +41,11 @@ import { quotedRelationsIn } from "@plugins/database/server";
 import {
   routeChange,
   type FeedChange,
-} from "@plugins/database/plugins/change-feed/server";
+} from "@plugins/network/plugins/live/plugins/change-feed/server";
 import {
   createChangeFeedListener,
   rebuildTriggers,
-} from "@plugins/database/plugins/change-feed/server/testing";
+} from "@plugins/network/plugins/live/plugins/change-feed/server/testing";
 import {
   notificationsWsHandler,
   routedTableRequirements,
@@ -58,7 +58,7 @@ import { clearRelationBases } from "@plugins/framework/plugins/server-core/core/
 import "@plugins/infra/plugins/runtime-profiler/server";
 import { recordReadTables } from "@plugins/infra/plugins/runtime-profiler/core";
 import { snapshotWatermark } from "@plugins/database/server/testing";
-import type { QueryDb } from "@plugins/infra/plugins/query-resource/server";
+import type { QueryDb } from "@plugins/network/plugins/live/plugins/query-resource/server";
 import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 import { serveCollection } from "./serve-collection";

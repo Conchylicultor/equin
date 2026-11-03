@@ -5,7 +5,7 @@ import {
   mapResource,
   combineResources,
   type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useTabs } from "@plugins/apps-core/plugins/tabs/web";
 import type { AppIcon } from "@plugins/apps-core/plugins/app-icon/core";
 import { isNodeData, useReorderedEntries } from "@plugins/reorder/web";

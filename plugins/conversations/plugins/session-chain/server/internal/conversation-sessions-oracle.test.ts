@@ -25,7 +25,7 @@ import {
   setDefaultTimeout,
   test,
 } from "bun:test";
-import type { QueryDb } from "@plugins/infra/plugins/query-resource/server";
+import type { QueryDb } from "@plugins/network/plugins/live/plugins/query-resource/server";
 import { compileCollection } from "@plugins/network/plugins/live/server/testing";
 import {
   createTreeOracle,

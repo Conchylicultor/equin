@@ -1,4 +1,4 @@
-import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { ViewModel } from "./use-data-view-model";
 
 /** The error arm of a slot-order read, kept whole (its typed error, Retry). */

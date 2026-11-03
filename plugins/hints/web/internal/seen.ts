@@ -4,7 +4,7 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import {
   mapResource,
   type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   hintsSeen,
   markHintSeenEndpoint,

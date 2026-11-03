@@ -40,11 +40,11 @@ import { z } from "zod";
 import {
   routeChange,
   type FeedChange,
-} from "@plugins/database/plugins/change-feed/server";
+} from "@plugins/network/plugins/live/plugins/change-feed/server";
 import {
   createChangeFeedListener,
   rebuildTriggers,
-} from "@plugins/database/plugins/change-feed/server/testing";
+} from "@plugins/network/plugins/live/plugins/change-feed/server/testing";
 import {
   defineResource,
   notificationsWsHandler,
@@ -57,13 +57,13 @@ import {
   makeClientView,
   type ClientView,
   type RecordedFrame,
-} from "@plugins/framework/plugins/resource-runtime/core/testing";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/core/testing";
 import {
   createTestDb,
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
-import type { ColumnRef } from "@plugins/infra/plugins/query-resource/core";
-import type { QueryDb } from "@plugins/infra/plugins/query-resource/server";
+import type { ColumnRef } from "@plugins/network/plugins/live/plugins/query-resource/core";
+import type { QueryDb } from "@plugins/network/plugins/live/plugins/query-resource/server";
 import {
   LIVE_ROW_KEY,
   LIVE_SCOPED_KEY,

@@ -22,7 +22,7 @@ import {
   type FrameServing,
 } from "@plugins/framework/plugins/browser-server/web";
 import type { DemoScenario } from "@plugins/framework/plugins/browser-server/plugins/demo/core";
-import { NotificationsProvider } from "@plugins/primitives/plugins/live-state/web";
+import { NotificationsProvider } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {

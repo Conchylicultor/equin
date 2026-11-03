@@ -4,7 +4,7 @@ import {
   mapResource,
   readyResource,
   type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useJsonlConversationId } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { foldEvents, type TranscriptFold } from "../core";
 import { useTranscriptRead } from "./read-context";

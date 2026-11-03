@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
 import type { ClaudeCodeStatus } from "@plugins/infra/plugins/claude-cli/plugins/availability/core";
 import { NO_CLAUDE_ACCOUNTS } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";

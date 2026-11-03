@@ -10,12 +10,12 @@
   - Uses:
     - `apps/studio/contributions/tables.TableDetail`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.SectionLabel`
     - `primitives/data-table.ColumnDef`
     - `primitives/data-table.DataTable`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
 - Server:
   - Contributes: `resource.declare` "studio.table-foreign-keys"

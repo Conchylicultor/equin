@@ -19,7 +19,7 @@ import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { clickRow, removeFilter } from "../internal/filters";
 import { RANGE_OPTIONS } from "../internal/format";

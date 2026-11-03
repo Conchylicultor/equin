@@ -1,4 +1,4 @@
-import { defineChangeProducer } from "@plugins/database/plugins/change-feed/server";
+import { defineChangeProducer } from "@plugins/network/plugins/live/plugins/change-feed/server";
 import { _slowOpCallers, _slowOps } from "./tables";
 
 // The change sources of `slow_ops` and `slow_op_callers`. Neither carries a

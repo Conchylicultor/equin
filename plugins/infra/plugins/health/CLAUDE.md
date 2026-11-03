@@ -29,11 +29,11 @@ Watches this page's connection to its backends and says so.
     - `Core.Root` → `WedgeWatchdog`
     - `HealthReport.Row` "Connection"
   - Uses:
-    - `primitives/live-state.getNotificationsClient`
-    - `primitives/live-state.liveStateSocketKind`
-    - `primitives/live-state.LiveStateSocketKind`
-    - `primitives/live-state.unansweredSubReportSink`
-    - `primitives/live-state.useNotificationsChannelStatuses`
+    - `network/live/live-state.getNotificationsClient`
+    - `network/live/live-state.liveStateSocketKind`
+    - `network/live/live-state.LiveStateSocketKind`
+    - `network/live/live-state.unansweredSubReportSink`
+    - `network/live/live-state.useNotificationsChannelStatuses`
     - `primitives/networking.NetDiagEvent`
     - `primitives/networking.subscribeNetDiag`
     - `primitives/networking.subscribeWsStatus`

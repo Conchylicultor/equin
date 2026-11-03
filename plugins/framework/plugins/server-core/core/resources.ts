@@ -2,7 +2,7 @@ import { hash64 } from "@plugins/packages/plugins/string-hash/core";
 import {
   createResourceRuntime,
   ResourceGuardError,
-} from "@plugins/framework/plugins/resource-runtime/core";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/core";
 import type {
   Resource as RtResource,
   ExternalResource as RtExternalResource,
@@ -25,7 +25,7 @@ import type {
   ResourceDelivery as RtDelivery,
   HandoffState as RtHandoffState,
   ResumeRecord as RtResumeRecord,
-} from "@plugins/framework/plugins/resource-runtime/core";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/core";
 import {
   recordEntrySpan,
   recordSpan,
@@ -42,7 +42,7 @@ import { defineServerContribution } from "./contributions";
 import { reportServerError, type ServerErrorReport } from "./error-reporter";
 
 // Live-state primitive — per-worktree server side. The runtime itself lives in
-// @plugins/framework/plugins/resource-runtime/core (shared with central-core);
+// @plugins/network/plugins/live/plugins/resource-runtime/core (shared with central-core);
 // this file is the stable server-core facade: it instantiates the runtime with
 // the server's hooks (profiler spans, error reporting, declare-based debug
 // owners) and re-presents the runtime types as server-core's public surface.
@@ -130,7 +130,7 @@ export interface PersistedCode {
 // `preload` (`"boot"` / `"boot-and-keep"`) is a param-less resource's opt-in to
 // being warmed server-side and hydrated client-side before first paint. It is
 // declared ONCE, on the shared client `ResourceDescriptor`
-// (`@plugins/primitives/plugins/live-state/core`), and threaded through
+// (`@plugins/network/plugins/live/plugins/live-state/core`), and threaded through
 // `defineResource`/`defineExternalResource` onto the resource object — so
 // `Declare` DERIVES it from the resource here rather than restating it. Consumers
 // read the set generically (`Resource.Declare.getContributions().filter(c => c.preload !== undefined)`),
@@ -251,7 +251,7 @@ export function assertDbReadsHaveChangeFeed(): void {
   const keys = dbReadingKeys();
   if (keys.length === 0) return;
   throw new Error(
-    `[resources] DB-backed live reads on a host with no change feed never recompute: ${keys.length} resource(s) read the database (${keys.slice(0, 5).join(", ")}${keys.length > 5 ? ", …" : ""}), but nothing set the relation bases (setRelationBases) — boot \`database/change-feed\` in this host's graph.`,
+    `[resources] DB-backed live reads on a host with no change feed never recompute: ${keys.length} resource(s) read the database (${keys.slice(0, 5).join(", ")}${keys.length > 5 ? ", …" : ""}), but nothing set the relation bases (setRelationBases) — boot \`network/live/change-feed\` in this host's graph.`,
   );
 }
 

@@ -11,7 +11,7 @@
     - `Stats.Chart` "Lines changed" → `LinesChartsSection`
     - `ConfigV2.WebRegister` "config"
   - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/live-state` ×4
+    - `network/live/live-state` ×4
     - `config_v2` ×3
     - `conversations/conversation-category` ×3
     - `primitives/css/toggle-chip` ×2

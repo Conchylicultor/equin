@@ -10,8 +10,8 @@
     - `ThemeEngine.TokenGroup` "Places"
     - `ThemeCustomizer.Section` "Places" → `PlacePaletteSection`
   - Uses:
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/spacing.Stack`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `ui/theme-engine.ThemeEngine`
     - `ui/theme-engine/theme-customizer.ThemeCustomizer`

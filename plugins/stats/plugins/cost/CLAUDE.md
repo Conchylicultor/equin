@@ -238,12 +238,12 @@ it survives, the snapshot fills in where it does not.
     - `primitives/data-view` ×3
     - `stats` ×2
     - `conversations/conversation-view.conversationPane`
+    - `network/live/live-state.foldResource`
     - `network/live.useLive`
     - `primitives/css/grid.Grid`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
-    - `primitives/live-state.foldResource`
     - `primitives/pane.useOpenPane`
 - Server:
   - Contributes:

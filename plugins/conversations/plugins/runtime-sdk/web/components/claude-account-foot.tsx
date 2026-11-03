@@ -5,7 +5,7 @@ import {
   AvatarPresentationProvider,
 } from "@plugins/primitives/plugins/avatar/web";
 import { ControlPanelPopover } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";

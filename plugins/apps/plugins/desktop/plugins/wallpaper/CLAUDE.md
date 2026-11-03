@@ -42,6 +42,7 @@ entry carries the move — `server/internal/store.ts` spells neither path.
     - `primitives/css/ui-kit` ×3
     - `primitives/overlay/cursor-menu` ×2
     - `infra/endpoints.useFetchEndpoint`
+    - `network/live/live-state.ResourceErrorInline`
     - `network/live.useLive`
     - `primitives/css/grid.Grid`
     - `primitives/css/placeholder.Placeholder`
@@ -49,7 +50,6 @@ entry carries the move — `server/internal/store.ts` spells neither path.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog.openDialog`
     - `primitives/search.SearchInput`

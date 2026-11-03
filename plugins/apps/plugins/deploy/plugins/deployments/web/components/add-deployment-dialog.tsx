@@ -19,7 +19,7 @@ import {
 } from "@plugins/infra/plugins/endpoints/web";
 import { useManifestItems } from "@plugins/plugin-meta/plugins/composition/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { servers } from "@plugins/apps/plugins/deploy/plugins/servers/web";
 import {

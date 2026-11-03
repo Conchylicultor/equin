@@ -15,7 +15,7 @@ key-range page's `after` / `until` cuts compile through them (query-resource).
 
 - Description: Field-agnostic keyset pagination machinery: a null-aware keyset seek / at-or-before / order-by compiler over drizzle SQL, over keys the caller builds from declared columns. No data-view dependency, so any server-delegated windowed query can reuse it.
 - Cross-plugin:
-  - Imported by: `infra/query-resource`
+  - Imported by: `network/live/query-resource`
 - Server:
   - Exports (types):
     - `ColumnExpr`

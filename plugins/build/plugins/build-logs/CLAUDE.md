@@ -10,6 +10,7 @@
   - Uses:
     - `build.BuildDetailSlots`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
@@ -23,7 +24,6 @@
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.FieldDef`
     - `primitives/data-view.useLivePagedValuePaging`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/log-channels.LiveLogChannel`
     - `shell/notifications.useToast`

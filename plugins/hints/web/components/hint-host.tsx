@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "@plugins/apps-core/plugins/tabs/web";
 import { useFocusedAppId } from "@plugins/apps-core/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
 import { HintsLayer } from "../internal/layer";

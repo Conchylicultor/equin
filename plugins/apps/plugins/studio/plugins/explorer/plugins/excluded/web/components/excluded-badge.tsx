@@ -1,5 +1,5 @@
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useAppExclusions } from "@plugins/plugin-meta/plugins/composition/web";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";

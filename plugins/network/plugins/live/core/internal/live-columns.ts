@@ -2,7 +2,7 @@ import type {
   FilterColumn,
   Filterable,
 } from "@plugins/network/plugins/live/plugins/filter/core";
-import { KIND_RE } from "@plugins/infra/plugins/query-resource/core";
+import { KIND_RE } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import type { LiveArmsCollection, LiveRowSchema } from "./live-collection";
 import { mintColumnRef, type LiveColumnRef } from "./column-ref";
 import type { LiveFilterable } from "./query";

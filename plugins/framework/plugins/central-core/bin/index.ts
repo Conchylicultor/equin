@@ -15,7 +15,7 @@ import {
   CENTRAL_HOST_ROUTES_ROUTE,
   hostGateFromArgv,
 } from "@plugins/framework/plugins/principal/core";
-import { CENTRAL_RESOURCE_HTTP_ROUTE } from "@plugins/packages/plugins/resource-protocol/core";
+import { CENTRAL_RESOURCE_HTTP_ROUTE } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
 import { centralEntries } from "../core/central.generated";
 import {
   computeLoadWaves,

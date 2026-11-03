@@ -1,5 +1,5 @@
 import { songIdKind } from "@plugins/apps/plugins/sonata/plugins/library/core";
-import { compositeKey } from "@plugins/infra/plugins/query-resource/core";
+import { compositeKey } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import { trackViewEntityRef } from "../core";
 

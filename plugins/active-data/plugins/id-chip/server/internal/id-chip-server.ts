@@ -1,6 +1,6 @@
 import type { ServerContribution } from "@plugins/framework/plugins/server-core/core";
 import type { AnyIdKind } from "@plugins/ids/core";
-import type { RoutedSource } from "@plugins/infra/plugins/query-resource/server";
+import type { RoutedSource } from "@plugins/network/plugins/live/plugins/query-resource/server";
 import { IdKinds, type IdReferent } from "@plugins/ids/server";
 import { Editor } from "@plugins/page/plugins/editor/server";
 import { inlineChipNode } from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/core";

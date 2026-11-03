@@ -6,7 +6,7 @@ import {
 import { useNavigate } from "@plugins/apps-core/plugins/tabs/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { mailApp } from "../../core";
 
 /**

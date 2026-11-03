@@ -1,5 +1,5 @@
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/core";
-import type { FailingResource } from "@plugins/primitives/plugins/live-state/web";
+import type { FailingResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 
 /**
  * The health row's verdict over the reads failing on this page. Never

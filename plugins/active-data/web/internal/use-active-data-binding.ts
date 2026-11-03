@@ -1,7 +1,7 @@
 import type { z } from "zod";
 import { useCallback, useMemo } from "react";
 import { mapRow, useLive } from "@plugins/network/plugins/live/web";
-import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   useFetchEndpoint,
   EndpointError,

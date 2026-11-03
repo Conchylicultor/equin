@@ -451,7 +451,7 @@ default, a left rail revealing each (`useRevealSection`).
   - Uses: 81 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×14
     - `primitives/data-view` ×7
-    - `primitives/live-state` ×6
+    - `network/live/live-state` ×6
     - `primitives/pane` ×6
     - `apps/deploy/servers` ×5
     - `primitives/slot-render` ×4

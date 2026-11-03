@@ -7,7 +7,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type * as LiveStateWeb from "@plugins/primitives/plugins/live-state/web";
+import type * as LiveStateWeb from "@plugins/network/plugins/live/plugins/live-state/web";
 
 // Mounting live-state otherwise schedules real log flushes at module eval —
 // the convention the live-state hazard suites established.
@@ -30,7 +30,7 @@ vi.mock("@plugins/network/plugins/live/web", async (importOriginal) => ({
 }));
 
 vi.mock(
-  "@plugins/primitives/plugins/live-state/web",
+  "@plugins/network/plugins/live/plugins/live-state/web",
   async (importOriginal) => ({
     ...(await importOriginal<typeof LiveStateWeb>()),
     useNotificationsChannelStatuses: () => ({
@@ -46,7 +46,7 @@ import {
   reachableSlots,
   type HoldClass,
 } from "@plugins/infra/plugins/jobs/core";
-import { ResourceError } from "@plugins/primitives/plugins/live-state/core";
+import { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/core";
 import type { QueueClassPulse, QueuePulse, QueueTone } from "../../core";
 import { useQueueHealth } from "../internal/use-queue-health";
 import { QueueGlance } from "../components/queue-glance";

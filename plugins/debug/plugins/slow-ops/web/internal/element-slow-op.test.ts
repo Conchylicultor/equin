@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { SlowResourceInfo } from "@plugins/primitives/plugins/live-state/web";
+import type { SlowResourceInfo } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { elementSlowOp, transportSlowOp } from "./element-slow-op";
 
 const thresholds = {

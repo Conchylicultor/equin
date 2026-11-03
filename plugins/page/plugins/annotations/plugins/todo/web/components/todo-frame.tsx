@@ -1,5 +1,5 @@
 import type { BlockFrameProps } from "@plugins/page/plugins/editor/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { ContainerBackdrop } from "@plugins/page/plugins/container/web";
 import { useTodoTaskState } from "@plugins/page/plugins/annotations/plugins/todo/plugins/task-link/web";
 

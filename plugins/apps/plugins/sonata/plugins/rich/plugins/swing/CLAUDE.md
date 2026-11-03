@@ -18,6 +18,7 @@
     - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
     - `infra/endpoints.useFetchEndpoint`
+    - `network/live/live-state.ResourceErrorInline`
     - `network/live.useLive`
     - `primitives/css/fill.Fill`
     - `primitives/css/slider.Slider`
@@ -25,7 +26,6 @@
     - `primitives/css/switch.Switch`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
   - Exports (values): `usePerformedScore`
 - Server:

@@ -21,6 +21,7 @@ Renders Claude Code's native task tools (TaskCreate, TaskUpdate, TaskGet, TaskLi
     - `conversations/conversation-view/jsonl-viewer.useWholeTranscript`
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+    - `network/live/live-state.matchResource`
     - `primitives/collapsible.FoldMotion`
     - `primitives/collapsible.useCollapsible`
     - `primitives/css/badge.Badge`
@@ -34,7 +35,6 @@ Renders Claude Code's native task tools (TaskCreate, TaskUpdate, TaskGet, TaskLi
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
-    - `primitives/live-state.matchResource`
     - `ui/icons.Icon`
 - Server:
   - Contributes: `resource.declare` "jsonl-viewer.task-tools.aggregate"

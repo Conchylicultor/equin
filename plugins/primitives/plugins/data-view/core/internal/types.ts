@@ -16,7 +16,7 @@ import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import type {
   ResourceReadiness,
   ResourceUnavailable,
-} from "@plugins/primitives/plugins/live-state/core";
+} from "@plugins/network/plugins/live/plugins/live-state/core";
 import type {
   ExpandChange,
   LazyChildren,

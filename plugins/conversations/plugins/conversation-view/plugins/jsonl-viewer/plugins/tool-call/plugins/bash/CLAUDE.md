@@ -14,6 +14,7 @@
     - `conversations/conversation-view/jsonl-viewer/background-shells.useConversationShells`
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/badge.Badge`
     - `primitives/css/clip.Clip`
     - `primitives/css/fill.Fill`
@@ -22,7 +23,6 @@
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture.activationProps`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/pane.useOpenPane`
     - `primitives/select-scope.ContentScope`
 - Cross-plugin:

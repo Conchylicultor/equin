@@ -94,13 +94,13 @@ ones.
     - `conversations.useConversation`
     - `conversations/conversation-ui/chip.ConversationChip`
     - `infra/endpoints.useFetchEndpoint`
+    - `network/live/live-state.ResourceErrorInline`
     - `page/annotations/agent-notes/authorship.useAgentNotesCreator`
     - `page/editor.Editor`
     - `page/page-reference.PageReference`
     - `page/page-reference.PageReferenceDecorationContribution`
     - `page/page-reference.useOpenMadePage`
     - `primitives/css/row.Row`
-    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
 - Cross-plugin:

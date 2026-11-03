@@ -5,7 +5,7 @@ import {
   enumTextField,
   textField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
-import { armKeyCodec } from "@plugins/infra/plugins/query-resource/core";
+import { armKeyCodec } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import {
   clockField,
   liveCollection,

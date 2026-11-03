@@ -11,7 +11,7 @@ import {
   type LoadedPlugin,
 } from "@plugins/framework/plugins/web-sdk/core";
 import { SlotRender } from "@plugins/primitives/plugins/slot-render/web";
-import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { defineZLayer } from "@plugins/primitives/plugins/css/plugins/z-layers/plugins/stack/web";
 import { ZStack } from "@plugins/primitives/plugins/css/plugins/z-layers/plugins/stack/web/testing";
 import { ViewportOverlay } from "../internal/viewport-overlay";
