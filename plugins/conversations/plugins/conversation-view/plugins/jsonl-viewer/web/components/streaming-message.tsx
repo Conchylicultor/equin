@@ -67,6 +67,12 @@ export function StreamingMessage({
  * Eases to its content's height as it grows — so the transcript glides rather
  * than stepping a line at a time. Stamped `FOLLOW_MOTION_ATTR`, so a
  * transcript following the bottom follows the easing frame by frame.
+ *
+ * The measured height is written as `--eased-height`, which the stylesheet
+ * applies only together with the transition (never under reduced motion):
+ * a write from the observer callback must not step the frame's height in
+ * that pass, or the transcript row above it resizes after delivery and the
+ * browser raises a ResizeObserver loop error.
  */
 function EasedHeight({ children }: { children: ReactNode }) {
   const frame = useRef<HTMLDivElement>(null);
@@ -76,7 +82,8 @@ function EasedHeight({ children }: { children: ReactNode }) {
     () => {
       const outer = frame.current;
       const inner = content.current;
-      if (outer && inner) outer.style.height = `${inner.offsetHeight}px`;
+      if (outer && inner)
+        outer.style.setProperty("--eased-height", `${inner.offsetHeight}px`);
     },
     // Undebounced: the easing starts on the frame the content grew.
     { debounce: false },
