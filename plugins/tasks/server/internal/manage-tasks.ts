@@ -10,7 +10,21 @@
  * task and both ends of each dependency — is checked before anything is
  * written, and the write is one transaction, so a refused edit changes
  * nothing.
+ *
+ * `start` decides how the task launches: `armed` queues it for auto-start
+ * (it launches once nothing it runs after is unresolved), whatever its track
+ * — a sidequest is never armed when filed, but its supervisor may start it
+ * here; `manual` disarms it, leaving the launch to a person.
  */
+
+import {
+  assertChoiceLaunchable,
+  type ModelCatalog,
+  type ModelChoice,
+} from "@plugins/conversations/plugins/model-provider/core";
+
+export const EDIT_STARTS = ["armed", "manual"] as const;
+export type EditStart = (typeof EDIT_STARTS)[number];
 
 export interface EditTaskInput {
   task_id: string;
@@ -18,6 +32,10 @@ export interface EditTaskInput {
   description?: string | null;
   add_after?: string[];
   remove_after?: string[];
+  start?: EditStart;
+  /** The model an armed task launches with; absent = the default for the
+   * task. Only with `start: "armed"`. */
+  model?: ModelChoice;
 }
 
 export interface DropTaskInput {
@@ -31,10 +49,18 @@ export interface TaskEdit {
   description?: string | null;
   addAfter: string[];
   removeAfter: string[];
+  /** Arm with this model, or disarm; absent = how it starts is unchanged. */
+  start?: { kind: "armed"; model: ModelChoice } | { kind: "manual" };
 }
 
 export type ManageRefusal =
-  "no-tree" | "not-found" | "not-in-tree" | "root" | "empty" | "conflict";
+  | "no-tree"
+  | "not-found"
+  | "not-in-tree"
+  | "root"
+  | "empty"
+  | "conflict"
+  | "not-armable";
 
 export type ManageOutcome =
   | { kind: "edited"; taskId: string; changed: string[] }
@@ -54,8 +80,19 @@ export interface ManageTasksPorts {
     | { kind: "none" }
     | { kind: "not-found" }
   >;
-  /** Writes the whole edit at once; `{ ok: false }` when the graph refuses it
-   * (a dependency cycle) — nothing written. */
+  /** Why `taskId` cannot be armed (dropped, or an open attempt already IS
+   * its launch), or `null` when it can. */
+  unarmable: (taskId: string) => Promise<string | null>;
+  /** The model an armed task launches with when the caller names none. */
+  defaultModel: (
+    conversationId: string,
+    taskId: string,
+  ) => Promise<ModelChoice>;
+  /** The live model catalog a `model` is checked against. */
+  modelCatalog: () => ModelCatalog;
+  /** Writes the whole edit at once (the start last, so a launch sees the new
+   * dependencies); `{ ok: false }` when the graph refuses it (a dependency
+   * cycle) — nothing written. */
   apply: (
     edit: TaskEdit,
   ) => Promise<{ ok: true } | { ok: false; message: string }>;
@@ -107,11 +144,17 @@ export async function editTask(
     ...(input.description !== undefined ? ["description"] : []),
     ...(addAfter.length > 0 ? ["add_after"] : []),
     ...(removeAfter.length > 0 ? ["remove_after"] : []),
+    ...(input.start !== undefined ? [`start ${input.start}`] : []),
   ];
+  if (input.model !== undefined && input.start !== "armed")
+    return refused(
+      "conflict",
+      '`model` is the model an armed task launches with: pass it with start "armed".',
+    );
   if (changed.length === 0)
     return refused(
       "empty",
-      "Nothing to change: pass title, description, add_after or remove_after.",
+      "Nothing to change: pass title, description, add_after, remove_after or start.",
     );
   const both = addAfter.filter((id) => removeAfter.includes(id));
   if (both.length > 0)
@@ -129,6 +172,20 @@ export async function editTask(
   );
   if (scope) return scope;
 
+  let start: TaskEdit["start"];
+  if (input.start === "armed") {
+    const why = await ports.unarmable(taskId);
+    if (why !== null) return refused("not-armable", why);
+    const model =
+      input.model ?? (await ports.defaultModel(conversationId, taskId));
+    // The schema checks only the id grammar: whether this machine can run the
+    // version is the live catalog's answer, listed in the refusal.
+    assertChoiceLaunchable(model, ports.modelCatalog());
+    start = { kind: "armed", model };
+  } else if (input.start === "manual") {
+    start = { kind: "manual" };
+  }
+
   const out = await ports.apply({
     taskId,
     ...(input.title !== undefined ? { title: input.title } : {}),
@@ -137,6 +194,7 @@ export async function editTask(
       : {}),
     addAfter,
     removeAfter,
+    ...(start ? { start } : {}),
   });
   if (!out.ok) return refused("conflict", out.message);
   return { kind: "edited", taskId, changed };

@@ -21,6 +21,7 @@ const CAUSALITY_VALUES = new Set([
   "user-launch",
   "dep-resolved",
   "mcp-add-task",
+  "mcp-edit-task",
 ]);
 
 // Fires once per conversation.created (server-side) so the new-conversation

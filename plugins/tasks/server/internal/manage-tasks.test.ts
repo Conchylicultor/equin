@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import {
+  BASELINE_MODELS,
+  ModelChoiceSchema,
+  ModelUnavailableError,
+} from "@plugins/conversations/plugins/model-provider/core";
+import {
   dropTask,
   editTask,
   type ManageTasksPorts,
@@ -22,8 +27,14 @@ const roots: Record<string, string> = {
   Y: "X",
 };
 
+const DEFAULT = ModelChoiceSchema.parse("opus");
+
 function store(callerRoot: string | null = "R") {
   const applied: TaskEdit[] = [];
+  // B cannot be armed (an open attempt).
+  const unarmable: Record<string, string> = {
+    B: "B already has an open attempt",
+  };
   const dropped: string[] = [];
   let cycle = false;
   const ports: ManageTasksPorts = {
@@ -32,6 +43,9 @@ function store(callerRoot: string | null = "R") {
       id in roots
         ? { kind: "found", rootTaskId: roots[id]! }
         : { kind: "not-found" },
+    unarmable: async (id) => unarmable[id] ?? null,
+    defaultModel: async () => DEFAULT,
+    modelCatalog: () => BASELINE_MODELS,
     apply: async (edit) => {
       if (cycle)
         return { ok: false, message: "Cycle detected in dependencies" };
@@ -130,6 +144,74 @@ describe("edit_task", () => {
       reason: "conflict",
       message: expect.stringContaining("Cycle"),
     });
+  });
+});
+
+describe("edit_task start", () => {
+  test("arms a task of its tree (any track) with the default model, or the one named", async () => {
+    const s = store();
+    expect(
+      await editTask({ task_id: "A", start: "armed" }, SUP, s.ports),
+    ).toEqual({ kind: "edited", taskId: "A", changed: ["start armed"] });
+    const sonnet = ModelChoiceSchema.parse("sonnet");
+    await editTask(
+      { task_id: "A", start: "armed", model: sonnet, add_after: ["B"] },
+      SUP,
+      s.ports,
+    );
+    expect(s.applied.map((e) => e.start)).toEqual([
+      { kind: "armed", model: DEFAULT },
+      { kind: "armed", model: sonnet },
+    ]);
+    expect(s.applied[1]!.addAfter).toEqual(["B"]);
+  });
+
+  test("manual disarms", async () => {
+    const s = store();
+    expect(
+      await editTask({ task_id: "B", start: "manual" }, SUP, s.ports),
+    ).toMatchObject({ kind: "edited", changed: ["start manual"] });
+    expect(s.applied[0]!.start).toEqual({ kind: "manual" });
+  });
+
+  test("refused before anything is written: unarmable, model without armed, unknown version, outside the tree", async () => {
+    const s = store();
+    expect(
+      await editTask(
+        { task_id: "B", start: "armed", title: "x" },
+        SUP,
+        s.ports,
+      ),
+    ).toMatchObject({ reason: "not-armable" });
+    expect(
+      await editTask(
+        { task_id: "A", model: ModelChoiceSchema.parse("sonnet") },
+        SUP,
+        s.ports,
+      ),
+    ).toMatchObject({ reason: "conflict" });
+    expect(
+      await editTask(
+        { task_id: "A", start: "manual", model: DEFAULT },
+        SUP,
+        s.ports,
+      ),
+    ).toMatchObject({ reason: "conflict" });
+    expect(
+      await editTask({ task_id: "Y", start: "armed" }, SUP, s.ports),
+    ).toMatchObject({ reason: "not-in-tree" });
+    expect(
+      editTask(
+        {
+          task_id: "A",
+          start: "armed",
+          model: ModelChoiceSchema.parse("sonnet-9"),
+        },
+        SUP,
+        s.ports,
+      ),
+    ).rejects.toBeInstanceOf(ModelUnavailableError);
+    expect(s.applied).toEqual([]);
   });
 });
 

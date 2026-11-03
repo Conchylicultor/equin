@@ -20,12 +20,13 @@
     - `trigger` "watch.ingest"
     - `trigger` "watch.ingest"
     - `trigger` "watch.ingest"
-  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×19
+    - `tasks/orchestration/mandate` ×3
     - `infra/endpoints` ×2
     - `primitives/rank` ×2
     - `tasks/auto-start` ×2
-    - `tasks/orchestration/mandate` ×2
+    - `tasks/task-track` ×2
     - `conversations/model-provider/catalog.getModelCatalog`
     - `database.db`
     - `infra/attachments.getAttachment`
@@ -34,7 +35,6 @@
     - `tasks/task-category.setTaskCategory`
     - `tasks/task-source-url.setTaskSourceUrl`
     - `tasks/task-title.scheduleTaskTitleUpdate`
-    - `tasks/task-track.listSidequestIds`
   - Exports (values): `armTaskAutoStart`
   - Register:
     - `mcpTool('edit_task')`

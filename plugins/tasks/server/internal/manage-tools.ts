@@ -4,23 +4,34 @@ import { Mcp } from "@plugins/infra/plugins/mcp/server";
 import { withNotifyBatch } from "@plugins/framework/plugins/server-core/core";
 import { extractAttachmentIds } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/core";
 import {
+  DEFAULT_MODEL_CHOICE,
+  ModelChoiceSchema,
+} from "@plugins/conversations/plugins/model-provider/core";
+import { getModelCatalog } from "@plugins/conversations/plugins/model-provider/plugins/catalog/server";
+import { setTaskAutoStart } from "@plugins/tasks/plugins/auto-start/server";
+import { getTaskTrack } from "@plugins/tasks/plugins/task-track/server";
+import {
   addTaskDependency,
   DependencyCycleError,
   getConversation,
   getTask,
+  listAttemptsForTask,
   nearestMandate,
   removeTaskDependency,
   taskAttachments,
   updateTask,
   withTaskStatusBatch,
 } from "@plugins/tasks/plugins/tasks-core/server";
-import { tasksManage } from "@plugins/tasks/plugins/tasks-core/core";
+import { tasksFile, tasksManage } from "@plugins/tasks/plugins/tasks-core/core";
 import {
   granted,
+  grantOf,
   Mandate,
 } from "@plugins/tasks/plugins/orchestration/plugins/mandate/server";
+import { armTaskAutoStart } from "./arm-auto-start";
 import {
   dropTask,
+  EDIT_STARTS,
   editTask,
   renderManageOutcome,
   type ManageTasksPorts,
@@ -42,6 +53,24 @@ const ports: ManageTasksPorts = {
       ? { kind: "found", rootTaskId: nearest.rootTaskId }
       : { kind: "none" };
   },
+  async unarmable(taskId) {
+    const task = await getTask(taskId);
+    if (task?.droppedAt) return `${taskId} is dropped — it will not run.`;
+    // As the Launch button's arm: an attempt not yet finished with already IS
+    // the task's launch, so the queue would claim the marker and skip it.
+    const attempts = await listAttemptsForTask(taskId);
+    if (attempts.some((a) => a.retained))
+      return `${taskId} already has an open attempt — message its agent with \`message_agent\` instead.`;
+    return null;
+  },
+  async defaultModel(conversationId, taskId) {
+    // The model the caller's filing grant gives the task's track, as add_task
+    // arms with — else the default.
+    const grant = await grantOf(tasksFile, conversationId);
+    const track = await getTaskTrack(taskId);
+    return grant?.[track]?.model ?? DEFAULT_MODEL_CHOICE;
+  },
+  modelCatalog: getModelCatalog,
   async apply(edit) {
     try {
       // One transaction: a cycle on the last edge rolls back the whole edit.
@@ -76,6 +105,15 @@ const ports: ManageTasksPorts = {
         edit.description ? extractAttachmentIds(edit.description) : [],
       );
     }
+    // Last, so a launch it wakes sees the dependencies just written.
+    if (edit.start?.kind === "armed")
+      await armTaskAutoStart({
+        taskId: edit.taskId,
+        model: edit.start.model,
+        cause: "mcp-edit-task",
+      });
+    else if (edit.start?.kind === "manual")
+      await setTaskAutoStart(edit.taskId, null);
     return { ok: true };
   },
   async drop(taskId) {
@@ -89,7 +127,9 @@ export const editTaskTool = Mcp.tool({
   name: "edit_task",
   // Only an agent whose mandate lets it manage its tree sees the tool.
   when: granted(tasksManage),
-  description: `Edit a task of your tree: its title, its description (the problem it states — the prompt its agent launches with), and the tasks it runs after.
+  description: `Edit a task of your tree: its title, its description (the problem it states — the prompt its agent launches with), the tasks it runs after, and how it starts.
+
+\`start: "armed"\` queues it to launch on its own once every task it runs after is done (at once when none is pending) — on any track: a sidequest is never armed when filed, but you may start it here. \`start: "manual"\` disarms it: a person starts it. Arming a dropped task, or one whose agent already launched and is still open, is refused.
 
 ${SCOPE} Every id named (the task and each \`add_after\` / \`remove_after\` id) must be in your tree; a refused edit (or one closing a dependency cycle) changes nothing.
 
@@ -112,6 +152,15 @@ Editing a task whose agent already launched does not reach that agent — messag
       .describe(
         "Task ids it should no longer run after (dependencies to remove).",
       ),
+    start: z
+      .enum(EDIT_STARTS)
+      .optional()
+      .describe(
+        '"armed": launch on its own once nothing it runs after is pending. "manual": disarm — a person starts it.',
+      ),
+    model: ModelChoiceSchema.optional().describe(
+      'The model an armed task launches with (only with start "armed"); absent = your filing default for its track.',
+    ),
   },
   async handler(input, { conversationId }) {
     const out = await editTask(input, conversationId, ports);
@@ -138,5 +187,5 @@ ${SCOPE}`,
 export const tasksManageCapability = Mandate.Capability({
   cap: tasksManage,
   describe: () =>
-    "You may edit (title, description, dependencies) and drop the tasks of this tree with `edit_task` and `drop_task` — only the tasks below its root, never a task outside it.",
+    "You may edit (title, description, dependencies, how it starts — arm or disarm it, sidequests included) and drop the tasks of this tree with `edit_task` and `drop_task` — only the tasks below its root, never a task outside it.",
 });
