@@ -20,7 +20,10 @@ function runsSourceOn(surface: DataViewId) {
     surface,
     unscoped: {
       reason:
-        "a union collection cannot take a column scope yet — its compiler joins no scoped family per arm (item 7, session 2 of research/2026-11-03-global-live-collections-item7-remaining.md)",
+        // Shown in the Fields setting. The union compiler joins no scoped
+        // family per arm yet (C1 of
+        // research/2026-11-03-global-live-collections-item7-remaining.md).
+        "runs come from several ledgers, and a custom column cannot be joined to each of them yet",
     },
   });
 }
@@ -67,7 +70,8 @@ export interface RunsDataViewProps {
    */
   pinnedView?: string;
   /**
-   * The view-instance space this host reads and writes — default `RUNS_VIEW`
+   * The surface this host is — the view-instance space it reads and writes,
+   * named by its live source (`liveDataSource(runs, { surface })`) — default `RUNS_VIEW`
    * (the shared `runs` space: its authored instances, device-local active
    * instance and saved views).
    *
@@ -76,7 +80,7 @@ export interface RunsDataViewProps {
    * instances are then authored in that id's own view config, apart from the
    * shared ones.
    */
-  storageKey?: DataViewId;
+  surface?: DataViewId;
 }
 
 /**
@@ -102,9 +106,9 @@ export function RunsDataView({
   selectedRun,
   onRowActivate,
   pinnedView,
-  storageKey = RUNS_VIEW,
+  surface = RUNS_VIEW,
 }: RunsDataViewProps): ReactNode {
-  const source = useMemo(() => runsSourceOn(storageKey), [storageKey]);
+  const source = useMemo(() => runsSourceOn(surface), [surface]);
   // No `renderRow`: the row body is the list's own, built from the field schema,
   // so it obeys the view's visible fields. The outcome is a state, so the
   // `ledger` recipe leads with its glyph.
@@ -113,7 +117,6 @@ export function RunsDataView({
   // own `onRowActivate` runs after the arm's navigation, on every row.
   return (
     <DataView<RunRow>
-      storageKey={storageKey}
       source={source}
       views={views}
       defaultView={defaultView}

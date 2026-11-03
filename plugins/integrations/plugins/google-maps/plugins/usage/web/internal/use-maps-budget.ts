@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useConfigResult } from "@plugins/config_v2/web";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useClockParam, useLive } from "@plugins/network/plugins/live/web";
 import {
   mapResource,
   useCombinedResources,
@@ -8,6 +8,7 @@ import {
 } from "@plugins/primitives/plugins/live-state/web";
 import type { PlacesSku } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
 import {
+  MAPS_BILLING_MONTH,
   mapsMonthUsage,
   mapsUsageConfig,
   withinBudget,
@@ -21,14 +22,15 @@ import {
  */
 export function useMapsBudget(): ResourceResult<MapsBudget> {
   const both = useCombinedResources({
-    usage: useLive(mapsMonthUsage),
+    usage: useLive(mapsMonthUsage, {
+      month: useClockParam(MAPS_BILLING_MONTH),
+    }),
     budgets: useConfigResult(mapsUsageConfig),
   });
   return useMemo(
     () =>
       mapResource(both, ({ usage, budgets }) => ({
-        withinBudget: (sku: PlacesSku) =>
-          withinBudget(usage, budgets, sku, new Date()),
+        withinBudget: (sku: PlacesSku) => withinBudget(usage, budgets, sku),
         resetsAt: usage.resetsAt,
       })),
     [both],

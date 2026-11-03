@@ -729,7 +729,7 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
       ),
     ).toEqual([]);
     expect(
-      await loadResourceByKey("data-view-custom-values", {
+      await loadResourceByKey("data-view-custom-values.v2", {
         dataViewId: "tasks",
       }),
     ).toEqual([]);

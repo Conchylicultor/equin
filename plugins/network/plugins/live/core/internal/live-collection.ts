@@ -42,6 +42,7 @@ import {
   type LiveMachineSpec,
 } from "./needs-machine";
 import { createLiveQueryCodec } from "./query-codec";
+import type { ClockForm } from "./clock";
 import { mintColumnRef, type LiveColumnRef } from "./column-ref";
 import {
   LIVE_COLUMNS_KEY,
@@ -104,6 +105,15 @@ export interface LiveWindowCodec<F, S extends string> {
    * derives a page from (see the resource runtime's seeded derivation).
    */
   familyOf: (params: LiveWindowParams) => string;
+  /**
+   * The quantum a query (window, grouping or count) pins `now` at — `null`
+   * when its `where` / `orderBy` names no clock field. `useLive` fills `now`
+   * from it and re-pins at the next quantum boundary.
+   */
+  clockQuantum: (query: {
+    where?: object;
+    orderBy?: LiveOrderBy<string>;
+  }) => number | null;
 }
 
 /**
@@ -745,11 +755,16 @@ export function liveCollection<
 export function liveCollection<
   const OF extends FieldsRecord,
   const CF extends FieldsRecord = Record<never, never>,
-  const S extends keyof FieldsRow<undefined, never, never, OF, CF> & string =
-    never,
+  // A clock field (`clockField`) sorts too, though it is no row key.
+  const S extends (
+    keyof FieldsRow<undefined, never, never, OF, CF> | keyof OF
+  ) &
+    string = never,
   // The source field is a LISTED base field: every list of the union shows,
   // filters and groups by it (its options are the arms, derived by the list).
-  const D extends keyof OF & string = never,
+  const D extends keyof OF &
+    keyof FieldsRow<undefined, never, never, OF, CF> &
+    string = never,
   const I extends keyof FieldsRow<undefined, never, never, OF, CF> & string =
     never,
 >(
@@ -786,7 +801,8 @@ export function liveCollection<
   const CF extends FieldsRecord = Record<never, never>,
   const R extends LiveRelated | undefined = undefined,
   const B extends false | undefined = undefined,
-  const S extends keyof FieldsRow<E, P, CP, OF, CF> & string = never,
+  const S extends (keyof FieldsRow<E, P, CP, OF, CF> | keyof OF) & string =
+    never,
   const Cn extends true | undefined = undefined,
   NM extends MachineFeature | undefined = undefined,
   const Cs extends string | undefined = undefined,
@@ -903,10 +919,18 @@ export function liveCollection<Row, F, S extends string>(
     }
     const window = fieldsSpec.default !== undefined;
     const lookup = !window && fieldsSpec.all === undefined;
+    const clocks = Object.keys(resolved.clock);
+    if (clocks.length > 0 && !window) {
+      throw new Error(
+        `liveCollection("${key}"): clock field "${clocks[0]}" on a collection with no window — a clock field is read where a query pins \`now\` (a window's \`where\` / \`orderBy\`); an \`all\` or lookup-only set has none.`,
+      );
+    }
     const minted = mintCollection(key, {
       ...rest,
       row: resolved.row,
-      ...(window ? { filterable: resolved.filterable } : {}),
+      ...(window
+        ? { filterable: resolved.filterable, clock: resolved.clock }
+        : {}),
       // A lookup-only collection folds no exposure (its `:rows` is compiled
       // eagerly, never deferred): its rows are its own fields.
       ...(lookup || resolved.exposes === null
@@ -1335,6 +1359,8 @@ function fullCollection<Row, F, S extends string>(
   if (columnScope !== null && columnScope.length === 0) {
     throw new Error(`liveCollection("${key}"): \`columnScope\` is empty`);
   }
+  const clock =
+    (spec as { clock?: Readonly<Record<string, ClockForm>> }).clock ?? {};
   const codec = createLiveQueryCodec<keyof F & string, S>({
     key,
     id: spec.id,
@@ -1344,6 +1370,7 @@ function fullCollection<Row, F, S extends string>(
     // `LiveFilterable`'s keys are optional; a declared one always holds a column.
     filterable: spec.filterable as unknown as Filterable,
     sortable: spec.sortable,
+    clock,
     defaultOrderBy: spec.default.orderBy,
     defaultLimit: spec.default.limit,
     maxLimit: spec.maxLimit,
@@ -1355,6 +1382,7 @@ function fullCollection<Row, F, S extends string>(
     encode: codec.encode,
     decode: codec.decode,
     familyOf: codec.familyOf,
+    clockQuantum: codec.clockQuantum,
   };
   // Built on the window factory (descriptor registration, keyed `keyOf`,
   // `queryPk`), then its limit-only codec is replaced by the query codec. The

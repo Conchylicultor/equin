@@ -216,7 +216,6 @@ function CallersView({
     <DataView<SlowOpCallerListRow>
       overrides={callerOverrides}
       source={source}
-      storageKey={SLOW_OP_CALLERS}
       views={["table"]}
       defaultView="table"
       emptyState="No caller recorded (page loads carry none)."

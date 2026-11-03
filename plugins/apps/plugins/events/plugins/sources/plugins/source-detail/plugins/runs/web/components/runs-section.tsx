@@ -91,7 +91,6 @@ export function SourceRunsSection({
     // on `outcome` rather than a bespoke chip — including the `unchanged` runs,
     // which are the whole reason a cheap run is recorded at all.
     <DataView<EventSourceRunRow>
-      storageKey={RUNS_VIEW}
       source={source}
       overrides={RUN_OVERRIDES}
       extraFields={RUN_EXTRA_FIELDS}

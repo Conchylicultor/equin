@@ -184,7 +184,6 @@ function HealthSectionInner({ node }: { node: PluginNode }) {
   );
   return (
     <DataView<PluginHealthReview>
-      storageKey={REVIEWS_VIEW}
       source={source}
       overrides={overrides}
       extraFields={extraFields}

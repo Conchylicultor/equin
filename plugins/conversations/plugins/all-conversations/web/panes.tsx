@@ -49,7 +49,6 @@ function AllConversationsView(): ReactElement {
   return (
     <PaneChrome pane={allConversationsPane}>
       <DataView<ConversationListLiveRow>
-        storageKey={ALL_CONVERSATIONS_VIEW}
         views={["table", "list"]}
         source={allConversationsSource}
         // Of its three instants, the last activity is the row's time.

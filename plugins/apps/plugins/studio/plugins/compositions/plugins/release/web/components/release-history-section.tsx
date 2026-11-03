@@ -105,7 +105,6 @@ function ReleaseHistory({
 
   return (
     <DataView<ReleaseHistoryRow>
-      storageKey={RELEASE_HISTORY_VIEW}
       overrides={overrides}
       recipe="ledger"
       views={["list", "table"]}

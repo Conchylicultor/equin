@@ -25,6 +25,7 @@ import {
   type JoinSpec,
 } from "@plugins/infra/plugins/query-resource/core";
 import {
+  assertStableRead,
   compileJoins,
   compileUnionCollection,
   joinRefs,
@@ -40,18 +41,22 @@ import {
 import type { PointParams } from "@plugins/primitives/plugins/live-state/core";
 import type { EntityTable } from "@plugins/infra/plugins/entities/server";
 import {
+  clockInputs,
   LIVE_COLUMNS_KEY,
   LIVE_ROW_KEY,
   LIVE_ROW_KEY_MAX_BYTES,
   type LiveArmColumnsHandle,
+  type ClockForm,
   type LiveArmsCollection,
   type LiveColumnsDeclaration,
   type LiveGroup,
   type LiveGroupParams,
+  type LiveField,
   type LiveWindowParams,
   type WithContributedColumns,
 } from "@plugins/network/plugins/live/core";
 import type { EntityRef } from "@plugins/infra/plugins/entities/core";
+import { clockFieldSql } from "./clock-sql";
 import type { ServedCollection } from "./serve-collection";
 import { LiveColumns, type ExposingExtension } from "./serve-columns";
 import {
@@ -256,9 +261,21 @@ export function compileUnion<
       `the window's key field "${collection.window.queryPk}" is not the id "${idField}".`,
     );
   }
-  const baseFields = (collection.rowKeys as readonly string[]).filter(
-    (f) => f !== idField && f !== discriminator,
+  // A clock field (`clockField`) is a base field every arm derives
+  // (`serveUnionCollection` folds it into `derive`) but no row carries: the
+  // reader computes it from the row's inputs. Read by `where` / `orderBy`
+  // only, against the tuple's pinned `now` — a TRANSIENT outer column.
+  const clocks = new Map<string, ClockForm>(
+    Object.values(collection.fields as Readonly<Record<string, LiveField>>)
+      .filter((f) => f.clock !== null)
+      .map((f) => [f.key, f.clock!] as const),
   );
+  const baseFields = [
+    ...(collection.rowKeys as readonly string[]).filter(
+      (f) => f !== idField && f !== discriminator,
+    ),
+    ...clocks.keys(),
+  ];
   const rowShape = collection.row.shape as Readonly<Record<string, unknown>>;
   const schemaOf = (
     shape: Readonly<Record<string, unknown>>,
@@ -448,7 +465,10 @@ export function compileUnion<
         );
       const binding = base[name]!;
       const col = binding === null ? null : bind(name, binding);
-      nullCheck(name, col, schemaOf(rowShape, name, "row field"));
+      // A clock field is on no row: nothing parses it (the reader computes it).
+      if (!clocks.has(name)) {
+        nullCheck(name, col, schemaOf(rowShape, name, "row field"));
+      }
       if (col !== null) read.set(name, col);
     }
     const extra = b.extra(refs);
@@ -483,7 +503,11 @@ export function compileUnion<
     reads.push(read);
     plans.push(plan);
     armWires.push(wires);
-    armWheres.push(b.where?.(plan.columns()));
+    const armWhere = b.where?.(plan.columns());
+    if (armWhere !== undefined) {
+      assertStableRead(armWhere, `${label}: its \`where\``);
+    }
+    armWheres.push(armWhere);
   }
 
   // ── The outer columns, typed by their first read ─────────────────────────
@@ -497,6 +521,7 @@ export function compileUnion<
     return {
       name,
       sqlType: i === -1 ? "text" : plans[i]!.sqlTypeOf(reads[i]!.get(name)!),
+      ...(clocks.has(name) ? { transient: true as const } : {}),
     };
   });
   const typeOf = new Map(columns.map((c) => [c.name, c.sqlType] as const));
@@ -616,6 +641,10 @@ export function compileUnion<
     return out;
   };
   const readField = (row: Record<string, unknown>, name: string): unknown => {
+    // A clock field is on no row; within one pin its value is a function of
+    // its inputs, so the order signature reads those.
+    const clock = clocks.get(name);
+    if (clock !== undefined) return clockInputs(clock).map((n) => row[n]);
     const owner = wireOwner.get(name);
     if (owner === undefined) return row[name];
     const cols = row[LIVE_COLUMNS_KEY] as Record<
@@ -651,6 +680,7 @@ export function compileUnion<
         };
       },
       familyOf: codec.familyOf,
+      nowOf: (params) => decode(params).now ?? null,
       validateParams: (params) => {
         codec.decode(params as LiveWindowParams, handles);
       },
@@ -666,6 +696,7 @@ export function compileUnion<
           arms: prune(q.where),
           whereOf: (kind) => whereIn(q.where, kind),
           limit: q.limit,
+          now: q.now ?? null,
           check: (value) => {
             if (!schema.safeParse(value).success) {
               fail(
@@ -723,9 +754,30 @@ export function serveUnionCollection<
   opts: ServeUnionOptions<Row, Dv> = {},
 ): ServedUnion<Row, I | D | (keyof Dv & string), DeriveReads<Dv>> {
   const arms = new Map<string, ServedArm>();
-  const derive = (opts.derive ?? {}) as Readonly<
+  const declared = (opts.derive ?? {}) as Readonly<
     Record<string, UnionDerived<string> | undefined>
   >;
+  // Every clock field is derived for every arm from its inputs, rendered from
+  // its one declaration (`clockFieldSql`) — so no arm, and no `derive`,
+  // computes it apart.
+  const derive: Record<string, UnionDerived<string> | undefined> = {
+    ...declared,
+  };
+  for (const field of Object.values(
+    collection.fields as Readonly<Record<string, LiveField>>,
+  )) {
+    const form = field.clock;
+    if (form === null) continue;
+    if (Object.hasOwn(declared, field.key)) {
+      throw new Error(
+        `serveUnionCollection("${collection.key}"): \`derive\` names "${field.key}", a clock field — it is derived from its declaration (\`clockField\`).`,
+      );
+    }
+    derive[field.key] = {
+      reads: clockInputs(form),
+      bind: (reads) => clockFieldSql(form, reads),
+    };
+  }
   const register = (arm: ServedArm): void => {
     if (arms.has(arm.kind)) {
       throw new Error(

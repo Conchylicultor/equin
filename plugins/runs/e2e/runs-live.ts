@@ -4,8 +4,8 @@
  * reload:
  *
  *  1. a running backup seeded into `backup_runs` appears on the Backup pane,
- *     and its "Took" cell TICKS (the browser's elapsed time — the server's
- *     duration is NULL while it runs);
+ *     and its "Took" cell TICKS (a clock field: the browser computes it from
+ *     the row's start, against its own clock — no row carries it);
  *  2. the run finishes (status, finished_at, archive size): its row and the
  *     backup deep link (`/debug/backup/br/<id>`) update in place;
  *  3. a deploy run on a seeded server shows `<composition> on <server name>`
@@ -132,7 +132,8 @@ try {
     await page.goto(pathUrl(`/debug/backup/br/${BACKUP}`));
     const pane = await waitFor(
       () => page.evaluate(() => document.body.textContent ?? ""),
-      (t) => t.includes("4.0 KB"),
+      // 4096 bytes, in the byte formatter's decimal units.
+      (t) => t.includes("4.1 kB"),
       { timeoutMs: 30_000 },
     );
     r.ok("the backup deep link resolves the run (its archive size)", pane.ok);

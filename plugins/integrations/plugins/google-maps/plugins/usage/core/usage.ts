@@ -4,12 +4,13 @@ import { wholeRecord } from "@plugins/packages/plugins/list-bound/core";
 import type { ConfigValues } from "@plugins/config_v2/core";
 import type { PlacesSku } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
 import type { mapsUsageConfig } from "./config";
+import { MAPS_BILLING_MONTH } from "./billing-month";
 
 /**
- * This billing month's Places calls per SKU (`google_maps_usage`), live: every
+ * One billing month's Places calls per SKU (`google_maps_usage`), live: every
  * counted call recomputes it, so a reader steps down the moment a budget is
- * spent. `resetsAt` is when the month starts over — past it, every count is
- * zero whatever this value still says (nothing writes at the turn of a month).
+ * spent. `resetsAt` is when the month starts over — the reader re-pins its
+ * `month` param then, reading the next month's (empty) counts.
  */
 export const MapsMonthUsageSchema = z.object({
   month: z.string(),
@@ -23,6 +24,7 @@ export type MapsMonthUsage = z.infer<typeof MapsMonthUsageSchema>;
 
 export const mapsMonthUsage = liveValue("google-maps.usage", {
   schema: MapsMonthUsageSchema,
+  params: { month: MAPS_BILLING_MONTH },
 });
 
 /** The configured monthly budgets (`mapsUsageConfig`). */
@@ -60,13 +62,9 @@ export function budgetField(sku: PlacesSku): keyof MapsUsageBudgets | null {
   return BUDGET_FIELD[sku];
 }
 
-/** This month's count of `sku` — zero once `resetsAt` has passed. */
-export function monthCalls(
-  usage: MapsMonthUsage,
-  sku: PlacesSku,
-  now: Date,
-): number {
-  return now >= new Date(usage.resetsAt) ? 0 : (usage.calls[sku] ?? 0);
+/** The month's count of `sku`. */
+export function monthCalls(usage: MapsMonthUsage, sku: PlacesSku): number {
+  return usage.calls[sku] ?? 0;
 }
 
 /** Whether one more call of `sku` stays within this month's budget. */
@@ -74,9 +72,8 @@ export function withinBudget(
   usage: MapsMonthUsage,
   budgets: MapsUsageBudgets,
   sku: PlacesSku,
-  now: Date,
 ): boolean {
   const field = BUDGET_FIELD[sku];
   if (field === null) return true;
-  return monthCalls(usage, sku, now) < budgets[field];
+  return monthCalls(usage, sku) < budgets[field];
 }

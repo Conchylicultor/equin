@@ -29,7 +29,6 @@ export function BootProfileList(): ReactElement {
       source={bootTracesSource}
       overrides={overrides}
       views={["list"]}
-      storageKey={BOOT_PROFILES_VIEW}
       rowActivation={(r) =>
         openPane.to(bootProfileDetailPane, { id: r.id }, { mode: "push" })
       }

@@ -40,6 +40,12 @@ export type {
 } from "./internal/compile-union-window";
 export { compileJoins, joinRefs, presenceExpr } from "./internal/joins";
 export {
+  assertStableRead,
+  clockNow,
+  pinClock,
+  readsClockNow,
+} from "./internal/clock-read";
+export {
   compiledValueReach,
   offFeedReach,
   offFeedTablesReach,

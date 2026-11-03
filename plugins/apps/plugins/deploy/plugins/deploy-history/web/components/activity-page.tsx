@@ -35,7 +35,7 @@ export function ActivityPage(): ReactNode {
         </Text>
       </Inset>
       <RunsDataView
-        storageKey={ACTIVITY_VIEW}
+        surface={ACTIVITY_VIEW}
         emptyState="No deploy runs in this view."
       />
     </Stack>

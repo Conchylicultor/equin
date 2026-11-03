@@ -5,6 +5,7 @@ import {
 } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
 import { cappedList } from "@plugins/packages/plugins/list-bound/core";
 import { SEARCH_RUNGS } from "./search-rung";
+import { MAPS_BILLING_MONTH } from "@plugins/integrations/plugins/google-maps/plugins/usage/core";
 
 /**
  * "Google Maps is not set up": no Places API key is stored. An outcome, not an
@@ -37,6 +38,12 @@ export const PlaceSearchQuerySchema = z.object({
    * Google call alone.
    */
   rung: z.enum(SEARCH_RUNGS),
+  /**
+   * The billing month the rung was picked in — a clock param the reader pins
+   * (`useClockParam(MAPS_BILLING_MONTH)`): a downgraded answer says the
+   * richer one comes back when it turns.
+   */
+  month: MAPS_BILLING_MONTH,
   /**
    * One per search round: when the search falls back to autocomplete (`names`),
    * Google bills its keystrokes and the save that follows as one session.

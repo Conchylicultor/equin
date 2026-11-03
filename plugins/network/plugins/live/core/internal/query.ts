@@ -105,6 +105,14 @@ export interface LiveQuery<F, S extends string> {
    * validates those names against. Not part of the wire params.
    */
   columns?: readonly LiveColumnsDeclaration[];
+  /**
+   * The reader's pinned clock (epoch ms, floored to the clock field's
+   * quantum) — present exactly when `where` / `orderBy` names a clock field
+   * (`clockField`): `useLive` fills and re-pins it; a server reader passes
+   * it. A query reading no clock field carries none (the codec refuses both
+   * mistakes).
+   */
+  now?: number;
   /** A grouping is its own query shape — {@link LiveGroupQuery}. */
   groupBy?: never;
   /** A total is its own query shape — {@link LiveCountQuery}. */
@@ -149,6 +157,14 @@ export interface LiveGroupQuery<
    * part of the wire params.
    */
   columns?: readonly LiveColumnsDeclaration[];
+  /**
+   * The reader's pinned clock (epoch ms, floored to the clock field's
+   * quantum) — present exactly when `where` / `orderBy` names a clock field
+   * (`clockField`): `useLive` fills and re-pins it; a server reader passes
+   * it. A query reading no clock field carries none (the codec refuses both
+   * mistakes).
+   */
+  now?: number;
   orderBy?: never;
   id?: never;
   ids?: never;
@@ -165,6 +181,14 @@ export interface LiveCountQuery<F> {
   where?: LiveWhere<F>;
   /** The column sets its `where` names by wire name (see {@link LiveQuery.columns}). */
   columns?: readonly LiveColumnsDeclaration[];
+  /**
+   * The reader's pinned clock (epoch ms, floored to the clock field's
+   * quantum) — present exactly when `where` / `orderBy` names a clock field
+   * (`clockField`): `useLive` fills and re-pins it; a server reader passes
+   * it. A query reading no clock field carries none (the codec refuses both
+   * mistakes).
+   */
+  now?: number;
   groupBy?: never;
   orderBy?: never;
   limit?: never;
@@ -186,6 +210,7 @@ export interface LiveIdsQuery {
   groupBy?: never;
   count?: never;
   columns?: never;
+  now?: never;
 }
 
 /**
@@ -202,6 +227,7 @@ export interface LiveRowQuery {
   groupBy?: never;
   count?: never;
   columns?: never;
+  now?: never;
 }
 
 /**
@@ -264,6 +290,8 @@ export type LiveWindowParams = {
   order?: string;
   after?: string;
   until?: string;
+  /** The pinned clock (canonical epoch-ms integer), exactly when the query reads a clock field. */
+  now?: string;
 };
 
 /**
@@ -286,6 +314,7 @@ export type LiveGroupParams = {
   groupBy: string;
   limit: string;
   where?: string;
+  now?: string;
 };
 
 /**
@@ -295,12 +324,15 @@ export type LiveGroupParams = {
  */
 export type LiveCountParams = {
   where?: string;
+  now?: string;
 };
 
 /** A decoded count query. */
 export interface LiveDecodedCountQuery {
   /** The canonical filter (validated by the strict decode); `undefined` when unfiltered. */
   where: Filter | undefined;
+  /** The pinned clock, exactly when `where` reads a clock field. */
+  now?: number;
 }
 
 /** A decoded query with every default filled in — what a server compiler consumes. */
@@ -313,6 +345,8 @@ export interface LiveDecodedQuery<S extends string> {
   after?: LiveCutKey;
   /** The page's inclusive upper cut; absent = the order's end. */
   until?: LiveCutKey;
+  /** The pinned clock (epoch ms), exactly when `where` / `orderBy` reads a clock field. */
+  now?: number;
 }
 
 /** A decoded grouping query with every default filled in. */
@@ -321,4 +355,6 @@ export interface LiveDecodedGroupQuery<C extends string> {
   limit: number;
   /** The canonical filter (validated by the strict decode); `undefined` when unfiltered. */
   where: Filter | undefined;
+  /** The pinned clock, exactly when `where` reads a clock field. */
+  now?: number;
 }

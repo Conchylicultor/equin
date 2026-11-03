@@ -2,6 +2,7 @@ import { z } from "zod";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
 import { workspaceOfConversation } from "@plugins/conversations/plugins/workspace/server";
 import { mapsBudgetNow } from "@plugins/integrations/plugins/google-maps/plugins/usage/server";
+import { billingMonth } from "@plugins/integrations/plugins/google-maps/plugins/usage/core";
 import {
   searchRung,
   type PlaceBounds,
@@ -54,6 +55,8 @@ export const searchTextTool = Mcp.tool({
       q: query,
       bias,
       rung,
+      // A tool call is a point answer, read once: this month, now.
+      month: billingMonth(new Date()).key,
       session: crypto.randomUUID(),
     });
     if (answer.kind === "maps-not-configured") {

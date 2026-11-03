@@ -54,6 +54,7 @@ hard stop if this count is ever wrong.
     - `config_v2.ConfigV2`
     - `config_v2.useConfigResult`
     - `config_v2/config-link.useConfigLink`
+    - `network/live.useClockParam`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/meter.Meter`
@@ -81,6 +82,7 @@ hard stop if this count is ever wrong.
   - DB schema: `plugins/integrations/plugins/google-maps/plugins/usage/server/internal/tables.ts`
   - Exports (values):
     - `_googleMapsUsage`
+    - `mapsBudgetFor`
     - `mapsBudgetNow`
     - `mapsBudgetReads`
     - `placesMeter`
@@ -89,6 +91,7 @@ hard stop if this count is ever wrong.
   - Uses:
     - `config_v2.defineConfig`
     - `fields/int/config.intField`
+    - `network/live.clockParam`
     - `network/live.liveValue`
     - `packages/list-bound.wholeRecord`
     - `packages/wall-clock.wallClockToInstant`
@@ -101,8 +104,10 @@ hard stop if this count is ever wrong.
     - `MapsUsageBudgets`
   - Exports (values):
     - `billingMonth`
+    - `billingMonthOf`
     - `budgetField`
     - `budgetRung`
+    - `MAPS_BILLING_MONTH`
     - `mapsMonthUsage`
     - `MapsMonthUsageSchema`
     - `mapsUsageConfig`

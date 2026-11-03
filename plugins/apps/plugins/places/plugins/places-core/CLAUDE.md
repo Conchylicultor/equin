@@ -126,12 +126,13 @@ its own.
     - `DELETE /api/places/places/:id`
     - `POST /api/places/places/:id/icon`
 - Core:
-  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tag-tree/engine` ×6
     - `fields` ×4
     - `integrations/google-maps/places-api` ×4
     - `fields/text/config` ×3
     - `ids` ×3
+    - `integrations/google-maps/usage` ×2
     - `network/live` ×2
     - `packages/list-bound` ×2
     - `ui/icons/saved-names` ×2
@@ -141,7 +142,6 @@ its own.
     - `fields/tags/config.tagsField`
     - `infra/endpoints.defineEndpoint`
     - `infra/entities.entityRef`
-    - `integrations/google-maps/usage.budgetRung`
   - Exports (types):
     - `CreateCustomPlaceBody`
     - `Place`

@@ -1,4 +1,5 @@
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useClockParam, useLive } from "@plugins/network/plugins/live/web";
+import { MAPS_BILLING_MONTH } from "@plugins/integrations/plugins/google-maps/plugins/usage/core";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import { placeDetails, type PlaceDetailsResult } from "../../core";
 
@@ -9,8 +10,9 @@ import { placeDetails, type PlaceDetailsResult } from "../../core";
 export function usePlaceDetails(
   googlePlaceId: string | null,
 ): ResourceResult<PlaceDetailsResult> {
+  const month = useClockParam(MAPS_BILLING_MONTH);
   return useLive(
     placeDetails,
-    googlePlaceId === null ? null : { googlePlaceId },
+    googlePlaceId === null ? null : { googlePlaceId, month },
   );
 }

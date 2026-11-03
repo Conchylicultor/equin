@@ -7,6 +7,7 @@ import {
 } from "@plugins/fields/plugins/text/plugins/config/core";
 import { armKeyCodec } from "@plugins/infra/plugins/query-resource/core";
 import {
+  clockField,
   liveCollection,
   type LiveRowsCollection,
 } from "@plugins/network/plugins/live/core";
@@ -41,13 +42,18 @@ const runFields = {
   /** The worktree this run belongs to, where the kind has such a notion. */
   namespace: nullable(textField({ label: "Namespace" })),
   /**
-   * Wall-clock milliseconds, `finishedAt − startedAt` — DERIVED by
-   * the union (`runsServed`'s `derive`), never supplied by an arm, and NULL while the run is in
-   * flight (a running run's elapsed time is the browser's ticker,
-   * `<RunDuration>`, not a value the server would have to re-push every
-   * second).
+   * Wall-clock milliseconds from `startedAt` to `finishedAt` — to the
+   * reader's clock while the run is in flight. A clock field (`clockField`):
+   * no row carries it. The browser computes it from the row's own
+   * `startedAt` / `finishedAt` (so a running run's "Took" ticks with no server
+   * push), and a window sorting or filtering by it pins `now` to the minute,
+   * so an in-flight run sorts by how long it has been going, not last.
    */
-  duration: nullable(durationField({ label: "Took" })),
+  duration: clockField.elapsed(durationField({ label: "Took" }), {
+    from: "startedAt",
+    until: "finishedAt",
+    quantumMs: 60_000,
+  }),
   startedAt: dateField({ label: "Started" }),
   /** Null exactly while the run is in flight. */
   finishedAt: nullable(dateField({ label: "Finished" })),

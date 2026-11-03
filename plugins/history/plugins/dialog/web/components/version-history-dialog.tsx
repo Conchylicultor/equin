@@ -186,7 +186,6 @@ function VersionHistoryBody({
       timeline={
         <RestoreVersionContext.Provider value={onRestore}>
           <DataView<VersionRow>
-            storageKey={VERSIONS_VIEW}
             source={source}
             overrides={overrides}
             views={["list"]}

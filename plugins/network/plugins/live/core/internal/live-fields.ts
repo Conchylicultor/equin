@@ -21,6 +21,12 @@ import {
   type CompositeKey,
 } from "@plugins/infra/plugins/query-resource/core";
 import { fieldDomain, type FieldsFilterable } from "./field-domain";
+import {
+  clockFormOf,
+  clockInputs,
+  type ClockBranded,
+  type ClockForm,
+} from "./clock";
 
 // A collection's FIELDS — the new spelling (phase 2 of fields-declared-once,
 // `research/2026-10-13-global-fields-declared-once-phase2.md` §2): a
@@ -53,6 +59,13 @@ export interface LiveField {
   readonly domain: FilterDomainId | null;
   /** Its column sorts (declared `sortable`). */
   readonly sortable: boolean;
+  /**
+   * Declared against the clock (`clockField`): its value is not on the row —
+   * the reader computes it from the row's inputs (`clockFieldValue`), and a
+   * query naming it in `where` / `orderBy` pins `now`. `null` for an ordinary
+   * field.
+   */
+  readonly clock: ClockForm | null;
 }
 
 // The phantom a field set's ids ride on — a symbol, so it never collides
@@ -114,8 +127,15 @@ export type RequireLabel<F> = {
   [K in keyof F]: F[K] extends Labelled ? F[K] : F[K] & Labelled;
 };
 
-/** A record's row: each field's value. */
-type RowOfFields<F> = { [K in keyof F]: InferFieldValue<F[K]> };
+/**
+ * A record's row: each field's value — but a clock field's (`clockField`),
+ * which never travels: the reader computes it from the row's inputs.
+ */
+type RowOfFields<F> = {
+  [K in keyof F as F[K] extends ClockBranded ? never : K]: InferFieldValue<
+    F[K]
+  >;
+};
 
 type Flatten<T> = { [K in keyof T]: T[K] };
 
@@ -247,6 +267,8 @@ export interface ResolvedFieldsSpec {
   readonly exposes: Readonly<Record<string, EntityRef>> | null;
   /** The listed fields' descriptors, sortable per `sortable`. */
   readonly fields: (sortable: readonly string[]) => LiveFields;
+  /** The clock fields (`clockField`) by name — listed, never on the row. */
+  readonly clock: Readonly<Record<string, ClockForm>>;
 }
 
 /** The spec keys that make a declaration the new spelling. */
@@ -407,6 +429,27 @@ export function resolveFieldsSpec(
       );
     }
   }
+  // A clock field is computed by its reader from the row's inputs: it is no
+  // column of the row, and its inputs must be (instants, on the row).
+  const clocks = new Map<string, ClockForm>();
+  for (const [name, field] of [...listed, ...carried]) {
+    const form = clockFormOf(field);
+    if (form === null) continue;
+    if (carried.some(([n]) => n === name)) {
+      fail(
+        `clock field "${name}" is carried — a clock field is listed (its value is computed by the reader, for a list to show, sort or filter).`,
+      );
+    }
+    for (const input of clockInputs(form)) {
+      const at = [...listed, ...carried].find(([n]) => n === input);
+      if (at === undefined || clockFormOf(at[1]) !== null) {
+        fail(
+          `clock field "${name}" reads "${input}", which is not a field of the row — its inputs travel, it does not.`,
+        );
+      }
+    }
+    clocks.set(name, form);
+  }
   const filterable: Record<string, FilterColumn> = {};
   for (const [name, field] of listed) {
     const domain = fieldDomain(field);
@@ -422,11 +465,14 @@ export function resolveFieldsSpec(
     exposes[alias] = ref;
   }
   const row = fieldsToZodObject(
-    Object.fromEntries([...listed, ...carried]) as FieldsRecord,
+    Object.fromEntries(
+      [...listed, ...carried].filter(([name]) => !clocks.has(name)),
+    ) as FieldsRecord,
   );
   return {
     row,
     filterable,
+    clock: Object.freeze(Object.fromEntries(clocks)),
     exposes: Object.keys(exposes).length === 0 ? null : exposes,
     fields: (sortable) =>
       Object.freeze(
@@ -445,6 +491,7 @@ export function resolveFieldsSpec(
               primary: field.meta.primary === true,
               domain: filterable[name]?.domain ?? null,
               sortable: sortable.includes(name),
+              clock: clocks.get(name) ?? null,
             } satisfies LiveField),
           ]),
         ),

@@ -4,6 +4,7 @@ import { ClientFields as ClientFieldsSlots } from "./internal/client-fields";
 
 export { useLive } from "./internal/use-live";
 export { useLiveReader } from "./internal/use-live-reader";
+export { useClockParam, useClockPin } from "./internal/use-clock";
 export type { LiveAnswer, LiveReader } from "./internal/use-live-reader";
 export { mapRow } from "./internal/map-row";
 export { enqueueOnSendLane, resourceSendLaneKey } from "./internal/send-lane";

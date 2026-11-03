@@ -16,7 +16,7 @@ import type { Song } from "../../core";
 import { Library } from "../slots";
 import { useSongLink } from "../hooks";
 import { useSourceCreators } from "../internal/use-source-creators";
-import { LIBRARY_VIEW, songLibrarySource } from "../source";
+import { songLibrarySource } from "../source";
 import { formatDuration } from "../format-duration";
 import { NowPlayingBar } from "./now-playing-bar";
 import { SonataOnboarding } from "./onboarding";
@@ -171,7 +171,6 @@ export function SongLibrary() {
             overrides={overrides}
             views={["gallery", "list", "table"]}
             defaultView="gallery"
-            storageKey={LIBRARY_VIEW}
             // The song's cover: the card's picture, the list's thumbnail.
             cover={cover}
             // The one per-row action set, rendered by every view: Play/Pause

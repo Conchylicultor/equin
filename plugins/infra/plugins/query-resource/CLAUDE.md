@@ -546,6 +546,31 @@ caller's.
   column's `sqlType` (`canonicalSqlType`); key field / discriminator never
   bound.
 
+- **Transient columns** (`UnionColumn.transient` — a clock field): read by
+  `where` / order only, never on a row. Projected only into a tuple whose
+  order names it (outer `ORDER BY` and the `__p<i>` row-key parts), left off
+  `:rows` and every row; `readField` answers the order signature.
+- **The pinned clock**: `window.nowOf(params)` / a grouping's `now` — every
+  query of the tuple runs through `pinClock`.
+
+### Clock reads — `clock-read.ts`
+
+Compiled live SQL is a pure function of its params and rows: it never reads
+Postgres's clock (network/live, *Clock reads*).
+
+- `assertStableRead(fragment, label)` refuses `now()`, `current_date`,
+  `current_timestamp`, `localtime(stamp)`, `clock_timestamp()`,
+  `statement_timestamp()`, `transaction_timestamp()`, `timeofday()`,
+  `random()`, `gen_random_uuid()` in a fragment's SQL text — at the compile
+  entry points: `JoinPlan.renderExpr`, `renderAggregate`, every join's `on`
+  (`compilePlan`), and network/live's static `where` / `defaults` / arm
+  `where`. Rung 4 at module eval / bind: tsc cannot read SQL text.
+- `clockNow()` — the ONE place a declared clock form reads the time: a
+  placeholder (`__live_now`, cast `timestamptz`).
+- `pinClock(query, now, label)` fills it per tuple at execution; a query
+  reading it with no pin throws, and so does a pin nothing reads (the codec
+  and the compile disagree). `readsClockNow(fragment)` tells.
+
 ### Join families — members joined per tuple (P3)
 
 A `JoinFamily` (`core/`) is a composite-keyed side table whose MEMBERS are data
@@ -763,6 +788,8 @@ query.
     - `WindowOrderKey`
     - `WindowQueryResourceSpec`
   - Exports (values):
+    - `assertStableRead`
+    - `clockNow`
     - `compileAllCollection`
     - `compileCountQuery`
     - `compiledValueReach`
@@ -777,8 +804,10 @@ query.
     - `joinRefs`
     - `offFeedReach`
     - `offFeedTablesReach`
+    - `pinClock`
     - `pointQueryResource`
     - `presenceExpr`
+    - `readsClockNow`
     - `windowQueryResource`
 - Core:
   - Uses: `packages/source-digest.defineSourceSet`

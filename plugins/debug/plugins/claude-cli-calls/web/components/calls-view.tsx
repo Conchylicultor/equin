@@ -49,7 +49,6 @@ export function CallsView({
       recipe="ledger"
       views={["table", "list"]}
       defaultView="table"
-      storageKey={CALLS_VIEW}
       selectedRowId={selectedId}
       rowActivation={(r) => linkTo(r.id)}
       emptyState={<>No claude --print calls recorded yet.</>}

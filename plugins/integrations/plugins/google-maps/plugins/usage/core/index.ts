@@ -1,5 +1,10 @@
 export { mapsUsageConfig } from "./config";
-export { billingMonth, type BillingMonth } from "./billing-month";
+export {
+  billingMonth,
+  billingMonthOf,
+  MAPS_BILLING_MONTH,
+  type BillingMonth,
+} from "./billing-month";
 export {
   MapsMonthUsageSchema,
   mapsMonthUsage,

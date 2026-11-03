@@ -224,10 +224,12 @@ describe("<NotificationsView>", () => {
       n,
     );
 
-  it("hands the DataView the live source, its storage key and the item actions", () => {
+  it("hands the DataView the live source (naming its surface) and the item actions", () => {
     render(<NotificationsView />);
     expect(stub.props!.source).toBe(notificationsSource);
-    expect(stub.props!.storageKey).toBe("shell.notifications");
+    // A live DataView takes no `storageKey`: its surface is the source's.
+    expect(stub.props!.storageKey).toBeUndefined();
+    expect(notificationsSource.surface).toBe("shell.notifications");
     expect(stub.props!.views).toEqual(["list"]);
     expect(stub.props!.itemActions).toBeDefined();
   });

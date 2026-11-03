@@ -16,7 +16,7 @@ import {
   mailAccountIdKind,
 } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 import type { MailThreadRow } from "../core";
-import { MAIL_THREADS_VIEW, mailThreadsSource } from "./internal/source";
+import { mailThreadsSource } from "./internal/source";
 import {
   THREAD_EXTRA_FIELDS,
   THREAD_PLACE,
@@ -93,7 +93,6 @@ function MailThreadsList({
 
   return (
     <DataView<MailThreadRow>
-      storageKey={MAIL_THREADS_VIEW}
       views={["list"]}
       selectedRowId={selectedRowId}
       // Said once the window settled on no thread — never while it loads.

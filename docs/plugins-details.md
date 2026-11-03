@@ -6190,6 +6190,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `integrations/google-maps/places-api.placeFirstPhotoName`
               - `integrations/google-maps/places-api.placePhoto`
               - `integrations/google-maps/places-api.placeRichDetails`
+              - `integrations/google-maps/usage.mapsBudgetFor`
               - `integrations/google-maps/usage.mapsBudgetNow`
               - `integrations/google-maps/usage.mapsBudgetReads`
               - `network/live.serveValue`
@@ -6199,7 +6200,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `GET /api/places/photo`
               - `GET /api/places/thumbnail`
           - Web:
-            - Uses: `network/live.useLive`
+            - Uses:
+              - `network/live.useClockParam`
+              - `network/live.useLive`
             - Exports (values): `usePlaceDetails`
           - Core:
             - Uses:
@@ -6213,6 +6216,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `integrations/google-maps/places-api.richDetailsSku`
               - `integrations/google-maps/places-api.RichDetailsTier`
               - `integrations/google-maps/usage.budgetRung`
+              - `integrations/google-maps/usage.MAPS_BILLING_MONTH`
               - `network/live.liveValue`
             - Exports (types):
               - `PlaceDetailsQuery`
@@ -6304,12 +6308,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DELETE /api/places/places/:id`
               - `POST /api/places/places/:id/icon`
           - Core:
-            - Uses: 33 symbols — full list in [`plugins/apps/plugins/places/plugins/places-core/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-core/REFERENCE.md)
+            - Uses: 34 symbols — full list in [`plugins/apps/plugins/places/plugins/places-core/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-core/REFERENCE.md)
               - `tag-tree/engine` ×6
               - `fields` ×4
               - `integrations/google-maps/places-api` ×4
               - `fields/text/config` ×3
               - `ids` ×3
+              - `integrations/google-maps/usage` ×2
               - `network/live` ×2
               - `packages/list-bound` ×2
               - `ui/icons/saved-names` ×2
@@ -6319,7 +6324,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields/tags/config.tagsField`
               - `infra/endpoints.defineEndpoint`
               - `infra/entities.entityRef`
-              - `integrations/google-maps/usage.budgetRung`
             - Exports (types):
               - `CreateCustomPlaceBody`
               - `Place`
@@ -6407,14 +6411,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `AgentThreadSlots.StepLabel` "places_search_text" → `SearchStepLabel`
               - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
               - `JsonlViewerTool.Renderer` "mcp__equin__places_show_picks" → `PicksToolView`
-            - Uses: 136 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+            - Uses: 137 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
               - `primitives/data-view` ×14
               - `map` ×9
               - `apps/places/places-core` ×8
               - `conversations/agent-thread` ×8
               - `primitives/collapsible` ×6
               - `primitives/live-state` ×6
-              - `network/live` ×4
+              - `network/live` ×5
               - `primitives/css/ui-kit` ×4
               - `primitives/overlay/image-viewer` ×4
               - `primitives/hover-reveal` ×3
@@ -11927,6 +11931,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core.useFocusedAppId`
           - `infra/endpoints.EndpointError`
           - `infra/endpoints.fetchEndpointOver`
+          - `network/live.useClockParam`
           - `network/live.useLive`
           - `primitives/dom/web-storage.defineStore`
           - `primitives/networking/page-transport.pageTransport`
@@ -11947,6 +11952,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Uses:
           - `infra/endpoints.defineEndpoint`
+          - `network/live.clockParam`
           - `network/live.liveValue`
           - `packages/list-bound.wholeList`
         - Exports (types):
@@ -11954,6 +11960,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AppUsageSummaryRow`
           - `FlushAppUsageBody`
         - Exports (values):
+          - `APP_USAGE_TODAY`
           - `AppUsageEntrySchema`
           - `appUsageSummary`
           - `AppUsageSummaryRowSchema`
@@ -32978,6 +32985,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WindowOrderKey`
           - `WindowQueryResourceSpec`
         - Exports (values):
+          - `assertStableRead`
+          - `clockNow`
           - `compileAllCollection`
           - `compileCountQuery`
           - `compiledValueReach`
@@ -32992,8 +33001,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `joinRefs`
           - `offFeedReach`
           - `offFeedTablesReach`
+          - `pinClock`
           - `pointQueryResource`
           - `presenceExpr`
+          - `readsClockNow`
           - `windowQueryResource`
       - Core:
         - Uses: `packages/source-digest.defineSourceSet`
@@ -33986,6 +33997,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2.ConfigV2`
               - `config_v2.useConfigResult`
               - `config_v2/config-link.useConfigLink`
+              - `network/live.useClockParam`
               - `network/live.useLive`
               - `primitives/css/badge.Badge`
               - `primitives/css/meter.Meter`
@@ -34013,6 +34025,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - DB schema: `plugins/integrations/plugins/google-maps/plugins/usage/server/internal/tables.ts`
             - Exports (values):
               - `_googleMapsUsage`
+              - `mapsBudgetFor`
               - `mapsBudgetNow`
               - `mapsBudgetReads`
               - `placesMeter`
@@ -34021,6 +34034,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `config_v2.defineConfig`
               - `fields/int/config.intField`
+              - `network/live.clockParam`
               - `network/live.liveValue`
               - `packages/list-bound.wholeRecord`
               - `packages/wall-clock.wallClockToInstant`
@@ -34033,8 +34047,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `MapsUsageBudgets`
             - Exports (values):
               - `billingMonth`
+              - `billingMonthOf`
               - `budgetField`
               - `budgetRung`
+              - `MAPS_BILLING_MONTH`
               - `mapsMonthUsage`
               - `MapsMonthUsageSchema`
               - `mapsUsageConfig`
@@ -34852,12 +34868,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `renderClientFieldsResolver`
           - `resourceSendLaneKey`
           - `useClientFieldsResolvers`
+          - `useClockParam`
+          - `useClockPin`
           - `useFieldPresentations`
           - `useLive`
           - `useLiveReader`
       - Server:
-        - Uses: 39 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `infra/query-resource` ×35
+        - Uses: 41 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `infra/query-resource` ×37
           - `database/sql-column` ×3
           - `network/live/filter.filterSql`
         - Exports (types):
@@ -34910,14 +34928,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValue`
           - `sliceRange`
       - Core:
-        - Uses: 36 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Uses: 39 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `network/live/filter` ×7
           - `fields` ×6
           - `infra/query-resource` ×6
-          - `network/live/filter` ×6
           - `packages/zod-introspect` ×6
           - `primitives/live-state` ×6
           - `packages/list-bound` ×3
           - `packages/resource-protocol` ×2
+          - `packages/wall-clock` ×2
           - `packages/canonical-params.canonicalJson`
         - Exports (types):
           - `AnyCollection`
@@ -34930,6 +34949,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ClientFieldsOwner`
           - `ClientFieldsOwnerRow`
           - `ClientFieldValue`
+          - `ClockFieldDef`
+          - `ClockForm`
+          - `ClockParam`
+          - `ClockParamForm`
           - `CollectionKindKey`
           - `CollectionRow`
           - `CompiledPagedValue`
@@ -35098,6 +35121,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WithContributedColumns`
         - Exports (values):
           - `clientFields`
+          - `clockField`
+          - `clockFieldTicks`
+          - `clockFieldValue`
+          - `clockFormOf`
+          - `clockInputs`
+          - `clockParam`
+          - `clockParamAt`
           - `COLLECTION_KIND_KEYS`
           - `compileExternalCollection`
           - `compilePagedValue`
@@ -35123,6 +35153,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `liveArm`
           - `liveCollection`
           - `liveValue`
+          - `pinNow`
           - `rowFailed`
           - `rowKind`
           - `rowPending`
@@ -35735,6 +35766,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `integrations/google-maps/usage`
+          - `network/live`
           - `primitives/metrics`
       - Core:
         - Exports (types): `WallClock`
@@ -42538,8 +42570,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×4
           - `DataViewSlots.Setting` ×4
           - `IdKinds.Kind` ×2
-        - Uses: 131 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `network/live` ×20
+        - Uses: 133 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `network/live` ×21
           - `primitives/css/ui-kit` ×17
           - `primitives/data-view/view-core` ×11
           - `primitives/live-state` ×6
@@ -42587,6 +42619,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/overlay/popover.InlinePopover`
           - `primitives/overlay/tooltip.Kbd`
           - `primitives/pane.usePaneViewParam`
+          - `primitives/relative-time.useNow`
           - `ui/icons.Icon`
         - Exports (types):
           - `CardFields`
@@ -46871,19 +46904,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
       - Cross-plugin:
-        - Imported by: 65 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
+        - Imported by: 66 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
           - `apps` ×24
           - `debug` ×13
           - `conversations` ×9
           - `infra` ×4
           - `tasks` ×4
           - `build` ×3
+          - `primitives` ×2
           - `active-data/commit-link`
           - `fields/date/table`
           - `framework/web-core`
           - `page/annotations/agent-notes/authorship`
           - `plugin-meta/plugin-health`
-          - `primitives/sync-status`
           - `runs`
           - `shell/notifications`
       - Web:
@@ -49785,7 +49818,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-body`
 
-- **`runs`** — The merged run surface: <RunsDataView> over the `runs` union window (a live scroll: base fields derived from the collection and presented once, plus every arm's own fields, derived from its liveArm, each bound to its column), and the seams an arm reaches it through: runLinks (where its rows go — data-view's CollectionRowActivation over the arm), investigateRuns; the kind filter's options are the registered arms, derived by every list; an arm presents its fields' cells with FieldPresentation.Register({ owner: arm }). Every row is a single field-driven line; a domain's detail lives in the pane its rows open. Also exports useRun (a live point read of one run by its (kind, id) pair) and <RunDuration> (finished duration, or a running run's ticking elapsed time). The merged run space as ONE routed union window (a Meta-DataView): runsServed serves the `runs` collection's window, its `:rows` point read (useRun) and `:groups` from every arm bound through runsServed.arm — a domain's own ledger typed against the base row and its liveArm, the ledger id and the duration derived by the union — so a write to one ledger refills only the rows it changed. Names no run kind.
+- **`runs`** — The merged run surface: <RunsDataView> over the `runs` union window (a live scroll: base fields derived from the collection and presented once, plus every arm's own fields, derived from its liveArm, each bound to its column), and the seams an arm reaches it through: runLinks (where its rows go — data-view's CollectionRowActivation over the arm), investigateRuns; the kind filter's options are the registered arms, derived by every list; an arm presents its fields' cells with FieldPresentation.Register({ owner: arm }). Every row is a single field-driven line; a domain's detail lives in the pane its rows open. Also exports useRun (a live point read of one run by its (kind, id) pair). The merged run space as ONE routed union window (a Meta-DataView): runsServed serves the `runs` collection's window, its `:rows` point read (useRun) and `:groups` from every arm bound through runsServed.arm — a domain's own ledger typed against the base row and its liveArm, the ledger id and the duration derived by the union — so a write to one ledger refills only the rows it changed. Names no run kind.
   - Web:
     - Contributes: `FieldPresentation.Register` "collection:runs"
     - Uses:
@@ -49802,14 +49835,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/pane.OpenPaneFn`
       - `primitives/pane.useOpenPane`
       - `primitives/relative-time.RelativeTime`
-      - `primitives/relative-time.useNow`
     - Exports (types):
       - `RunInvestigation`
       - `RunRowProps`
       - `RunsDataViewProps`
     - Exports (values):
       - `investigateRuns`
-      - `RunDuration`
       - `runLinks`
       - `RUNS_VIEW`
       - `RunsDataView`
@@ -49833,6 +49864,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `fields/text/config.enumTextField`
       - `fields/text/config.textField`
       - `infra/query-resource.armKeyCodec`
+      - `network/live.clockField`
       - `network/live.liveCollection`
       - `network/live.LiveRowsCollection`
       - `runs/run-outcome.RUN_OUTCOME_OPTIONS_META`

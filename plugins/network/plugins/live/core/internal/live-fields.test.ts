@@ -121,6 +121,7 @@ describe("liveCollection — the fields spelling", () => {
       primary: true,
       domain: "text",
       sortable: true,
+      clock: null,
     });
     expect(window.fields.status.options).toEqual({
       open: { label: "Open" },

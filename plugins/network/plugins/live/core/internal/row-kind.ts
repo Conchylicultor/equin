@@ -144,6 +144,7 @@ export function clientFields<
       primary: false,
       domain: fieldDomain(field),
       sortable: true,
+      clock: null,
     });
   }
   return Object.freeze({

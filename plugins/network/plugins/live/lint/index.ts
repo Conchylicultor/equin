@@ -1,3 +1,4 @@
+import noClockInServed from "./no-clock-in-served";
 import noEndpointRead from "./no-endpoint-read";
 import noGrowInEffect from "./no-grow-in-effect";
 import noLegacyResourceSpelling from "./no-legacy-resource-spelling";
@@ -9,6 +10,7 @@ import type { LintContribution } from "@plugins/framework/plugins/tooling/plugin
 export default {
   name: "live",
   rules: {
+    "no-clock-in-served": noClockInServed,
     "no-endpoint-read": noEndpointRead,
     "no-grow-in-effect": noGrowInEffect,
     "no-legacy-resource-spelling": noLegacyResourceSpelling,
@@ -16,5 +18,5 @@ export default {
     "visible-range-minter": visibleRangeMinter,
     "where-declared": whereDeclared,
   },
-  noDebt: ["no-endpoint-read", "where-declared"],
+  noDebt: ["no-clock-in-served", "no-endpoint-read", "where-declared"],
 } satisfies LintContribution;

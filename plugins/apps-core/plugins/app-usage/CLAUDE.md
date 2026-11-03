@@ -46,6 +46,7 @@ every flush.
     - `apps-core.useFocusedAppId`
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpointOver`
+    - `network/live.useClockParam`
     - `network/live.useLive`
     - `primitives/dom/web-storage.defineStore`
     - `primitives/networking/page-transport.pageTransport`
@@ -66,6 +67,7 @@ every flush.
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
+    - `network/live.clockParam`
     - `network/live.liveValue`
     - `packages/list-bound.wholeList`
   - Exports (types):
@@ -73,6 +75,7 @@ every flush.
     - `AppUsageSummaryRow`
     - `FlushAppUsageBody`
   - Exports (values):
+    - `APP_USAGE_TODAY`
     - `AppUsageEntrySchema`
     - `appUsageSummary`
     - `AppUsageSummaryRowSchema`

@@ -118,7 +118,6 @@ export function QueueView({
 }) {
   return (
     <DataView<JobRow>
-      storageKey={QUEUE_VIEW}
       overrides={queueOverrides}
       recipe="ledger"
       views={["table", "list"]}
@@ -149,7 +148,6 @@ export function HistoryView({
 }) {
   return (
     <DataView<JobRunRow>
-      storageKey={HISTORY_VIEW}
       overrides={historyOverrides}
       recipe="ledger"
       views={["table", "list"]}

@@ -161,6 +161,11 @@ type OwnerFields<O> =
                 [
                   K in LiveFieldIds<O> & keyof CollectionRow<O>
                 ]: CollectionRow<O>[K];
+              } & {
+                // A listed field no row carries is a clock field
+                // (`clockField`): the list computes it, and every clock form
+                // yields a number.
+                [K in Exclude<LiveFieldIds<O>, keyof CollectionRow<O>>]: number;
               }
             : never;
 

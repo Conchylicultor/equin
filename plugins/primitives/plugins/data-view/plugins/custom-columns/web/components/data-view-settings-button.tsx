@@ -71,8 +71,14 @@ function typeIcon(option: TypeOption | undefined): ReactNode {
  */
 export function CustomColumnsFields({
   defs,
+  unsortedBecause = null,
 }: {
   defs: CustomColumnDef[];
+  /**
+   * Why this list's custom columns cannot sort or filter it (its live
+   * source's `unscoped` reason) — said under the fields; `null` when they can.
+   */
+  unsortedBecause?: string | null;
 }): ReactNode {
   const typeOptions = useCustomColumnTypeOptions();
 
@@ -108,6 +114,12 @@ export function CustomColumnsFields({
       >
         New field
       </ControlPanel.Row>
+      {unsortedBecause !== null && (
+        <ControlPanel.Empty>
+          These fields show and edit here, but cannot sort or filter this list:{" "}
+          {unsortedBecause.replace(/\.$/, "")}.
+        </ControlPanel.Empty>
+      )}
     </ControlPanel.Section>
   );
 }

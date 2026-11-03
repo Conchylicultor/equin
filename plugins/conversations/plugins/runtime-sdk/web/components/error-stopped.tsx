@@ -106,7 +106,6 @@ export function ErrorStoppedBanner({
         stopped by an API error · {kindsPhrase(stopped)}
       </Text>
       <DataView<ErrorStoppedConversation>
-        storageKey={ERROR_STOPPED_VIEW}
         views={["list"]}
         source={errorStoppedSource}
         rowActivation={(c) =>

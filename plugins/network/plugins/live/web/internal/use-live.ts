@@ -19,6 +19,7 @@ import type {
   LiveGroupQuery,
   LiveGroupValue,
   LiveIdsQuery,
+  LiveOrderBy,
   LiveQuery,
   LiveRowQuery,
   LiveScopedAllQuery,
@@ -51,6 +52,7 @@ import {
   type LiveValuePagesOptions,
 } from "./use-pages";
 import type { LivePagesQuery } from "./page-source";
+import { useClockPin } from "./use-clock";
 
 // The read half of a `liveCollection`. A consumer asks a QUERY — a window
 // (`where` / `orderBy` / `limit`), a grouping (`groupBy`), a count, an
@@ -927,14 +929,14 @@ export function useLive<Row, F, S extends string>(
       // read nothing (a detached or sectioned DataView), keeping its hooks.
       return useViewportPages(
         source as LiveCollection<Row, F, S> | null,
-        query as LivePagesQuery<F, S> | null,
+        usePinnedClock(source, query as LivePagesQuery<F, S> | null),
         options as LivePagesOptions,
       );
     case "count":
       // `null` source or query: only the count overload takes one.
       return useCount(
         source as LiveCollection<Row, F, S> | null,
-        query as LiveCountQuery<F> | null,
+        usePinnedClock(source, query as LiveCountQuery<F> | null),
       );
     case "value-pages":
       return useValuePages(
@@ -983,7 +985,8 @@ export function useLive<Row, F, S extends string>(
     case "all-pages":
       return useAllPages(
         source as LiveCollection<Row, F, S>,
-        (query ?? undefined) as LiveQuery<F, S> | undefined,
+        usePinnedClock(source, query as LiveQuery<F, S> | null | undefined) ??
+          undefined,
       );
     case "row":
       return useRow(
@@ -993,10 +996,43 @@ export function useLive<Row, F, S extends string>(
     case "collection":
       return useCollection(
         source as LiveCollection<Row, F, S> | LiveRowsCollection<Row>,
-        query as LiveGroupQuery<F> | LiveIdsQuery,
+        usePinnedClock(source, query as LiveGroupQuery<F> | LiveIdsQuery),
       );
   }
   /* eslint-enable react-hooks/rules-of-hooks */
+}
+
+/**
+ * The query with the reader's pinned clock filled in — exactly when its
+ * `where` / `orderBy` names a clock field of the collection (`clockField`):
+ * `now` floored to the field's quantum, re-pinned at the next boundary (a new
+ * tuple: the window reloads). Any other query, an id set, a paged value's
+ * question or a `null` passes through untouched, and arms no timer.
+ */
+function usePinnedClock<Q extends object | null | undefined>(
+  source: object | null,
+  query: Q,
+): Q {
+  const codec =
+    source !== null &&
+    "window" in source &&
+    typeof (source as { window?: { window?: unknown } }).window?.window ===
+      "object"
+      ? (source as LiveCollection<unknown, unknown, string>).window.window
+      : null;
+  const named =
+    query === null || query === undefined || "ids" in query ? null : query;
+  const quantum =
+    codec === null || named === null
+      ? null
+      : codec.clockQuantum(
+          named as { where?: object; orderBy?: LiveOrderBy<string> },
+        );
+  const now = useClockPin(quantum);
+  return useMemo(
+    () => (now === null || named === null ? query : { ...named, now }) as Q,
+    [query, named, now],
+  );
 }
 
 /** What one `useLive` call reads — each a different set of hooks — in words. */

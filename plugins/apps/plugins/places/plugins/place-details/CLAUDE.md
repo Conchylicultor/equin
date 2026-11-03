@@ -85,6 +85,7 @@ budget (above).
     - `integrations/google-maps/places-api.placeFirstPhotoName`
     - `integrations/google-maps/places-api.placePhoto`
     - `integrations/google-maps/places-api.placeRichDetails`
+    - `integrations/google-maps/usage.mapsBudgetFor`
     - `integrations/google-maps/usage.mapsBudgetNow`
     - `integrations/google-maps/usage.mapsBudgetReads`
     - `network/live.serveValue`
@@ -94,7 +95,9 @@ budget (above).
     - `GET /api/places/photo`
     - `GET /api/places/thumbnail`
 - Web:
-  - Uses: `network/live.useLive`
+  - Uses:
+    - `network/live.useClockParam`
+    - `network/live.useLive`
   - Exports (values): `usePlaceDetails`
 - Core:
   - Uses:
@@ -108,6 +111,7 @@ budget (above).
     - `integrations/google-maps/places-api.richDetailsSku`
     - `integrations/google-maps/places-api.RichDetailsTier`
     - `integrations/google-maps/usage.budgetRung`
+    - `integrations/google-maps/usage.MAPS_BILLING_MONTH`
     - `network/live.liveValue`
   - Exports (types):
     - `PlaceDetailsQuery`

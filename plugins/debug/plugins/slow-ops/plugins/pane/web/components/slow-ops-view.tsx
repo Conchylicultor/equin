@@ -95,7 +95,6 @@ export function SlowOpsView(): ReactElement {
     <DataView<SlowOpListRow>
       overrides={overrides}
       source={opsSource}
-      storageKey={SLOW_OPS_LOCAL}
       views={["table", "list"]}
       defaultView="table"
       selectedRowId={selectedId}

@@ -84,6 +84,7 @@ export type ExemptableRuleId =
   | "layout/no-unanchored-has"
   | "live-state/no-handrolled-result"
   | "live-state/no-ready-negation"
+  | "live/no-clock-in-served"
   | "live/no-endpoint-read"
   | "live/no-grow-in-effect"
   | "live/no-legacy-resource-spelling"
@@ -191,6 +192,7 @@ export type ExemptableRuleId =
 export type SanctionedOnlyRuleId = 
   | "endpoints/no-raw-web-fetch"
   | "frame/no-raw-frame"
+  | "live/no-clock-in-served"
   | "live/no-endpoint-read"
   | "live/where-declared"
   | "networking/no-page-transport"

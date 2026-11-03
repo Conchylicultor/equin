@@ -91,7 +91,6 @@ export function NotificationsView(): ReactElement {
   const inAppLink = useAppLink();
   return (
     <DataView<Notification>
-      storageKey={NOTIFICATIONS_VIEW}
       overrides={overrides}
       views={["list"]}
       source={notificationsSource}

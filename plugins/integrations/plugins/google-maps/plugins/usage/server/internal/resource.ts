@@ -4,6 +4,7 @@ import { getConfig } from "@plugins/config_v2/server";
 import { serveValue } from "@plugins/network/plugins/live/server";
 import {
   billingMonth,
+  billingMonthOf,
   mapsMonthUsage,
   mapsUsageConfig,
   withinBudget,
@@ -12,9 +13,9 @@ import {
 } from "../../core";
 import { _googleMapsUsage } from "./tables";
 
-/** This billing month's Places calls per SKU, read now. */
-async function loadMonthUsage(): Promise<MapsMonthUsage> {
-  const { key, resetsAt } = billingMonth(new Date());
+/** One billing month's Places calls per SKU (its `YYYY-MM` key). */
+async function loadMonthUsage(month: string): Promise<MapsMonthUsage> {
+  const { key, resetsAt } = billingMonthOf(month);
   const rows = await db
     .select({ sku: _googleMapsUsage.sku, calls: _googleMapsUsage.calls })
     .from(_googleMapsUsage)
@@ -26,9 +27,10 @@ async function loadMonthUsage(): Promise<MapsMonthUsage> {
   };
 }
 
-// Push over `google_maps_usage`: every counted call recomputes this month's
-// counts (the declared `reads`). Calls come in bursts (a search and its
-// details), hence the throttle.
+// Push over `google_maps_usage`: every counted call recomputes the month's
+// counts (the declared `reads`). The month is the reader's pinned param, never
+// the clock: it re-pins at the turn of the month. Calls come in bursts (a
+// search and its details), hence the throttle.
 export const mapsMonthUsageServed = serveValue(mapsMonthUsage, {
   source: "db",
   reads: {
@@ -36,7 +38,7 @@ export const mapsMonthUsageServed = serveValue(mapsMonthUsage, {
     reason: "the value is this month's rows of the table, one per SKU",
   },
   throttleMs: 1000,
-  loader: loadMonthUsage,
+  loader: ({ month }) => loadMonthUsage(month),
 });
 
 /**
@@ -52,17 +54,25 @@ export const mapsBudgetReads = {
 };
 
 /**
- * Whether one more call of a SKU stays within this month's budget, as of now
- * — the server's own reading of the counts and the configured budgets, for a
- * caller with no live value to hold (an agent's tool). The browser's twin is
- * `useMapsBudget`.
+ * Whether one more call of a SKU stays within a billing month's budget — the
+ * server's own reading of the counts and the configured budgets, for a served
+ * value whose question pins the month (`MAPS_BILLING_MONTH`, place details).
  */
-export async function mapsBudgetNow(): Promise<MapsBudget> {
-  const usage = await loadMonthUsage();
+export async function mapsBudgetFor(month: string): Promise<MapsBudget> {
+  const usage = await loadMonthUsage(month);
   const budgets = getConfig(mapsUsageConfig);
-  const now = new Date();
   return {
-    withinBudget: (sku) => withinBudget(usage, budgets, sku, now),
+    withinBudget: (sku) => withinBudget(usage, budgets, sku),
     resetsAt: usage.resetsAt,
   };
+}
+
+/**
+ * The same, for this month as of now — for a caller that is no live read (an
+ * agent's tool, a photo request): a point answer, read once. The browser's
+ * twin is `useMapsBudget`; a served value pins the month instead
+ * (`mapsBudgetFor`).
+ */
+export async function mapsBudgetNow(): Promise<MapsBudget> {
+  return mapsBudgetFor(billingMonth(new Date()).key);
 }

@@ -8,6 +8,8 @@ import {
 } from "@plugins/apps/plugins/places/plugins/places-core/core";
 import type { ResourceError } from "@plugins/primitives/plugins/live-state/web";
 import { useMapsBudget } from "@plugins/integrations/plugins/google-maps/plugins/usage/web";
+import { MAPS_BILLING_MONTH } from "@plugins/integrations/plugins/google-maps/plugins/usage/core";
+import { useClockParam } from "@plugins/network/plugins/live/web";
 import { usePlaceSearch } from "@plugins/apps/plugins/places/plugins/places-core/web";
 import type { GoogleHit } from "../components/google-result-card";
 import { candidateHit, googleResultVisual } from "./google-result";
@@ -104,11 +106,12 @@ export function useGoogleSearch({
   // The ladder's rung, from this month's live counts: the search is asked at
   // the richest detail the free allowance still covers.
   const budget = useMapsBudget();
+  const month = useClockParam(MAPS_BILLING_MONTH);
   const rung =
     budget.status === "ready" ? searchRung(budget.data.withinBudget) : null;
   const search = usePlaceSearch(
     asking && bias !== null && rung !== null
-      ? { q, bias, session, rung }
+      ? { q, bias, session, rung, month }
       : null,
   );
   // The last answer, held while the next one loads (the render-phase

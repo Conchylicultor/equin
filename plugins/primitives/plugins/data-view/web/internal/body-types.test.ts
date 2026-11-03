@@ -43,7 +43,7 @@ type Accepts<A, B> = [A] extends [B] ? true : false;
 
 type Base = { fields: FieldDef<Thread>[]; storageKey: DataViewId };
 /** A live origin's base: its fields are its collection's. */
-type LiveBase = Omit<Base, "fields">;
+type LiveBase = Omit<Base, "fields" | "storageKey">;
 type Source = LiveDataSource<Thread>;
 type RowKey = (row: Thread, index: number) => string;
 type Props = DataViewProps<Thread>;
@@ -57,6 +57,11 @@ const liveBundle: Accepts<{ source: Source }, Bundle> = true;
 // A live source derives its fields from its collection: hand `fields` beside
 // one has no spelling.
 const fieldsBesideSource: Rejects<Base & { source: Source }, Props> = true;
+// A live source names its surface: a `storageKey` beside it has no spelling.
+const storageKeyBesideSource: Rejects<
+  LiveBase & { source: Source; storageKey: DataViewId },
+  Props
+> = true;
 
 // Stand-ins beside a live origin.
 const rowsBesideSource: Rejects<
@@ -147,6 +152,7 @@ describe("DataView data origin (type-level)", () => {
         live,
         liveBundle,
         fieldsBesideSource,
+        storageKeyBesideSource,
         rowsBesideSource,
         readinessBesideSource,
         twoOrigins,

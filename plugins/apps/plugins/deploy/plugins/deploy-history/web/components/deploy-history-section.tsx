@@ -143,7 +143,6 @@ export function DeployHistorySection({
     <SiteCard title="Deployments">
       <SiteCardBody>
         <DataView<DeployRunRecord>
-          storageKey={DEPLOY_HISTORY_VIEW}
           overrides={overrides}
           extraFields={extraFields}
           views={["list", "table"]}

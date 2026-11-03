@@ -7,7 +7,7 @@ import {
   placeDetails,
   searchText,
 } from "@plugins/integrations/plugins/google-maps/plugins/places-api/server";
-import { billingMonth } from "@plugins/integrations/plugins/google-maps/plugins/usage/core";
+import { billingMonthOf } from "@plugins/integrations/plugins/google-maps/plugins/usage/core";
 import type { PlaceSnapshot } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
 import {
   autoTagsFor,
@@ -64,10 +64,11 @@ export async function searchPlaces({
   bias,
   session,
   rung,
+  month,
 }: PlaceSearchQuery): Promise<PlaceSearchResult> {
   const maps = await getPlacesClient();
   if (!maps.ok) return { kind: "maps-not-configured" };
-  const resumesAt = billingMonth(new Date()).resetsAt.toISOString();
+  const resumesAt = billingMonthOf(month).resetsAt.toISOString();
   if (rung === "names") {
     return {
       kind: "names",

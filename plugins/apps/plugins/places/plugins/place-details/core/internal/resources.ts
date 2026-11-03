@@ -5,9 +5,16 @@ import {
   RICH_DETAILS_TIERS,
 } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
 import { MapsNotConfiguredSchema } from "@plugins/apps/plugins/places/plugins/places-core/core";
+import { MAPS_BILLING_MONTH } from "@plugins/integrations/plugins/google-maps/plugins/usage/core";
 
 export const PlaceDetailsQuerySchema = z.object({
   googlePlaceId: z.string().min(1),
+  /**
+   * The billing month the richest affordable tier is picked by — a clock
+   * param the reader pins (`useClockParam(MAPS_BILLING_MONTH)`), so an open
+   * card steps back up at the turn of the month, not at some later write.
+   */
+  month: MAPS_BILLING_MONTH,
 });
 export type PlaceDetailsQuery = z.infer<typeof PlaceDetailsQuerySchema>;
 

@@ -24,19 +24,32 @@ import { CustomColumnsFields } from "./data-view-settings-button";
  * (`storageKey` is stable per surface → the gate is hook-order-stable).
  */
 export function CustomColumnsFieldsSetting(): ReactNode {
-  const { storageKey } = useDataViewControls();
+  const { storageKey, customColumns } = useDataViewControls();
   const descriptor = getDataViewDescriptor(storageKey);
   if (!descriptor) return null;
-  return <Fields descriptor={descriptor} storageKey={storageKey} />;
+  return (
+    <Fields
+      descriptor={descriptor}
+      storageKey={storageKey}
+      // Under a live source that takes no column scope, the columns still
+      // show and edit — but never sort or filter the list: said here, with
+      // the source's own reason, rather than discovered as a missing option.
+      unsortedBecause={
+        customColumns.kind === "unscoped" ? customColumns.reason : null
+      }
+    />
+  );
 }
 
 function Fields({
   descriptor,
   storageKey,
+  unsortedBecause,
 }: {
   descriptor: ConfigDescriptor<FieldsRecord>;
   storageKey: DataViewId;
+  unsortedBecause: string | null;
 }): ReactNode {
   const { defs } = useCustomColumnDefs(descriptor, storageKey);
-  return <CustomColumnsFields defs={defs} />;
+  return <CustomColumnsFields defs={defs} unsortedBecause={unsortedBecause} />;
 }

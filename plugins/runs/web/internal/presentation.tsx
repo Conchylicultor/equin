@@ -3,7 +3,7 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { FieldPresentation } from "@plugins/network/plugins/live/web";
 import { runs } from "../../core";
-import { RunDuration } from "../components/run-duration";
+import { formatDuration } from "@plugins/fields/plugins/duration/core";
 
 // How the `runs` base fields present in every list of runs — registered once
 // against the collection (its rows are no entity's), so no host builds them.
@@ -35,14 +35,14 @@ export const runsPresentation = FieldPresentation.Register({
       width: "10rem",
     },
     duration: {
-      // Sortable and filterable BECAUSE it is a real projected column, derived
-      // in SQL rather than in the cell — so "the ten slowest runs" is a sort,
-      // not a thing you can only eyeball on the loaded page. It is
-      // finished-only (NULL while running, so a running run sorts last by
-      // "Took"); the cell ticks a running run's elapsed time itself.
-      cell: (_duration, run) => (
+      // A clock field (`clockField.elapsed`): sortable and filterable in SQL
+      // against a pinned minute — "the ten slowest runs" is a sort, and an
+      // in-flight run sorts by how long it has been going. The list hands
+      // this cell the value against its ticking clock, so a running run's
+      // "Took" counts up.
+      cell: (duration) => (
         <span className="text-muted-foreground">
-          <RunDuration run={run} />
+          {formatDuration(duration)}
         </span>
       ),
       width: "6rem",

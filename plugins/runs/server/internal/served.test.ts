@@ -17,6 +17,7 @@ import { defineEntity } from "@plugins/infra/plugins/entities/server";
 import { expr } from "@plugins/infra/plugins/query-resource/core";
 import { liveArm } from "@plugins/network/plugins/live/core";
 import { runs } from "../../core";
+import { compileUnion } from "@plugins/network/plugins/live/server/testing";
 import { runsServed } from "./served";
 
 const ledgerRef = entityRef("rt_type_runs", {
@@ -104,16 +105,19 @@ describe("runsServed.arm — bindings typed by value", () => {
     });
   });
 
-  test("the union's derived fields are never an arm's, and what they read is a column", () => {
-    runsServed.arm(columns, {
+  test("the union's derived fields are never an arm's, and what a clock field reads is a column", () => {
+    // `duration` is a clock field (`clockField.elapsed`) derived from
+    // `startedAt` / `finishedAt`: an arm binding either to an expression is
+    // refused when the union binds its arms (module eval of the union's
+    // compile), never a NULL "Took" at read time.
+    const startedAsExpr = runsServed.arm(columns, {
       from: ledger,
       id: ledger.id,
       base: (j) => ({
         label: j.base.title,
         outcome,
         trigger: null,
-        // @ts-expect-error `duration` is derived from `startedAt` / `finishedAt`, so it must be a column
-        startedAt: expr(sql`now()`, {
+        startedAt: expr(sql`${j.base.startedAt} + interval '0'`, {
           decoder: () => new Date(),
           sqlType: "timestamptz",
           notNull: true,
@@ -124,7 +128,10 @@ describe("runsServed.arm — bindings typed by value", () => {
       }),
       extra: (j) => ({ code: j.base.code, note: j.base.note }),
     });
-    runsServed.arm(columns, {
+    expect(() =>
+      compileUnion(runs, { arms: () => [startedAsExpr.binding] }),
+    ).toThrow(/derives "duration" from it — bind it to a column/);
+    const bindsDuration = runsServed.arm(columns, {
       from: ledger,
       id: ledger.id,
       base: (j) => ({
@@ -135,10 +142,12 @@ describe("runsServed.arm — bindings typed by value", () => {
         finishedAt: j.base.finishedAt,
         namespace: null,
         message: null,
-        // @ts-expect-error the union derives `duration` (and `id`): an arm binding one is refused
         duration: null,
       }),
       extra: (j) => ({ code: j.base.code, note: j.base.note }),
     });
+    expect(() =>
+      compileUnion(runs, { arms: () => [bindsDuration.binding] }),
+    ).toThrow(/binds "duration", which the union derives/);
   });
 });

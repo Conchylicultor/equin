@@ -7,6 +7,7 @@
 import { describe, expect, test } from "bun:test";
 import type { CollectionRow } from "@plugins/network/plugins/live/core";
 import type { LiveDataSource } from "./live-data-source";
+import type { DataViewId } from "./define-data-view";
 import type {
   DataViewDataOrigin,
   DataViewRowsCollection,
@@ -22,6 +23,7 @@ const origin = <TRow>(o: DataViewDataOrigin<TRow>): DataViewDataOrigin<TRow> =>
   o;
 declare const fields: FieldDef<Note>[];
 declare const notes: readonly Note[];
+declare const storageKey: DataViewId;
 declare const collectionNotes: readonly CollectionRow<Note>[];
 declare const collection: DataViewRowsCollection;
 declare const source: LiveDataSource<Note>;
@@ -31,18 +33,20 @@ const spread = () => collectionNotes.map((n) => ({ ...n, extra: 1 }));
 describe("data origin types", () => {
   test("hand fields only over rows of nothing declared", () => {
     const cases = [
-      () => origin({ rows: notes, rowKey, fields }),
-      () => origin({ rows: collectionNotes, rowKey, collection }),
+      () => origin({ storageKey, rows: notes, rowKey, fields }),
+      () => origin({ storageKey, rows: collectionNotes, rowKey, collection }),
       () => origin({ source }),
+      // @ts-expect-error — a live source names its surface: no `storageKey` beside it
+      () => origin({ source, storageKey }),
       // @ts-expect-error — rows read from a collection: pass `collection`
-      () => origin({ rows: collectionNotes, rowKey, fields }),
+      () => origin({ storageKey, rows: collectionNotes, rowKey, fields }),
       // @ts-expect-error — a row spread from a collection row is still one
-      () => origin({ rows: spread(), rowKey, fields: [] }),
+      () => origin({ storageKey, rows: spread(), rowKey, fields: [] }),
       // @ts-expect-error — `fields` beside a declared collection
-      () => origin({ rows: notes, rowKey, collection, fields }),
+      () => origin({ storageKey, rows: notes, rowKey, collection, fields }),
       // @ts-expect-error — `fields` beside a live source
       () => origin({ source, fields }),
     ];
-    expect(cases.length).toBe(7);
+    expect(cases.length).toBe(8);
   });
 });

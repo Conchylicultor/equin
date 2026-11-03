@@ -227,3 +227,87 @@ with C1.
 Not done this session (session 2): A (clock columns + guard + migrations), C1
 (runs scope), C2 step two (no `storageKey` on a live origin), the Fields
 setting's note under `unscoped`.
+
+## As landed — session 2
+
+Task task-1793674206-w8dr0e. Approved by the track supervisor (2026-11-03):
+inputs on the wire (the deviation below), a scope per query for `runs`,
+single-table clock fields refused until one is needed, C1 as the next task.
+
+**Deviation from A1 (approved): a clock field's value never travels.** A
+point read (`useLive(c, { id })`) and a window that only displays the field
+carry no pinned `now`, so the server could not compute a value for them
+without a raw clock read. Instead the row carries the field's INPUTS and the
+browser computes the value from the same declaration (`clockFieldValue`); the
+SQL rendering (`clockFieldSql`) runs only where `now` is pinned (`where` /
+`orderBy`, and the `$key` cut of a tuple ordering by it). One declaration, two
+renderings switching over one closed set — no drift.
+
+**A — clock reads.**
+- `network/live/core` `clock.ts`: `clockField.elapsed(field, { from, until,
+  quantumMs })` (a branded FieldDef: listed, sortable, filterable in its
+  field's domain; never in the row schema — `RowOfFields` drops it, `S`
+  admits it); `clockFieldValue`, `clockFieldTicks`, `pinNow`;
+  `clockParam.day()` (reader's zone) / `clockParam.month({ zone })` (zod
+  string schemas carrying their form) and `clockParamAt` (value + the instant
+  it changes). `LiveField.clock`.
+- Codec: `now` on window / grouping / count params exactly when `where` /
+  `orderBy` names a clock field, floored to its quantum; refused missing,
+  stray, off-quantum, and `groupBy` a clock field; part of `familyOf`.
+  `codec.clockQuantum(query)`.
+- Reader: `useLive` fills `now` (`usePinnedClock` over `useClockPin`, one
+  timer per quantum boundary, no server poll) for every window / viewport /
+  grouping / count read; `useClockParam` for values. Both web exports are
+  listed in `LIVE_WEB_HOOKS` as kind `clock`.
+- data-view: derived clock fields compute `value(row)` against
+  `useClockPin`; a presented cell goes through `ClockCell` (ticks a second
+  while open).
+- Server: `serveUnionCollection` folds every clock field into `derive`
+  (`clockFieldSql` over its inputs' columns); `compileUnion` makes it a
+  TRANSIENT outer column (projected only for a tuple ordering by it, on no
+  row; the order signature reads its inputs); `compileUnionCollection` pins
+  every query (`pinClock`, `window.nowOf`, a grouping's `now`). Single-table
+  `serveCollection` refuses a clock field; `all` / lookup collections refuse
+  one at declaration.
+- Refusals: query-resource `assertStableRead` at `renderExpr`,
+  `renderAggregate`, join `on`, serveCollection `where` / `defaults`, union
+  arm `where`; lint `live/no-clock-in-served` (noDebt; 0 hits repo-wide).
+- Migrated, no exemption: `runs.duration` (`<RunDuration>` deleted — the
+  presentation cell is fed by `ClockCell`); `app-usage.summary` takes `today`
+  (`day > $today::date - 7`); `google-maps.usage` takes `month`
+  (`billingMonthOf`), `withinBudget` / `monthCalls` / `usageRows` lost their
+  `now` stand-in (the reader re-pins at the turn of the month);
+  `places.details` and `places.search` questions carry `month`
+  (`mapsBudgetFor(month)`); `mapsBudgetNow()` stays a point read for callers
+  that are no live read (agent tools, photo requests).
+
+*Trade-off (documented in network/live CLAUDE.md):* sorted by Took, an open
+runs list reloads its window once a minute while it is open; between pins a
+running row's ticking cell may sit up to one minute out of order against
+finished rows.
+
+**C2 step two.** A live DataView takes no `storageKey` (tsc: `storageKey?:
+never` on `DataViewLiveOrigin`, required on the in-memory origin); the host
+reads the surface from `source.surface`. 22 call sites; `RunsDataView`'s prop
+is now `surface`. `DataViewSwitcher` keeps its own `storageKey` (the mount
+assert stays for a live source bundle under it).
+
+**Fields note.** `DataViewControlsContextValue.customColumns`; under an
+`unscoped` source the custom-columns Fields setting says the fields show and
+edit but cannot sort or filter the list, with the source's reason.
+
+**C1 decided, not built (next task):** a scope per QUERY. The asking list
+names its surface in the tuple and the server checks it against the
+`LiveColumns.Scoped` contributions, because one collection genuinely has
+several lists (`runs`: `RUNS_VIEW` and the Deploy Activity page;
+`trash-entries`: every trash surface). Cost: one family route per
+(collection, scope) actually subscribed instead of one per collection. With
+it, the union compiler joins a scoped family per arm (`armKeyCodec` host key).
+
+**Proof.** `server/internal/serve-union-clock-oracle.test.ts` (real
+Postgres): sorted by `took`, desc `[b1 20m, a2 running 10m, a1 5m, b2 running
+2m]`, asc the reverse; SQL (read off `$key`) equals JS on every row; a filter
+`took > 6m` matches the running 10-minute run; one pin answers alike, +15 min
+re-orders (the running run passes the 20-minute one); grouping `where` pinned;
+codec refusals; an arm `where` with `now()` refused. On the deployed runs list
+(e2e, below).

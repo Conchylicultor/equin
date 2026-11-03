@@ -737,9 +737,10 @@ table, in one window (the `runs` of every run kind) — a **Meta-DataView**
   `ExprField`, or `null` for a nullable field — tsc); `extra(j)` binds the
   arm's own fields (picked ones by name unless `from` lacks a matching column).
   - **`derive: { reads, bind(reads, { id }) }`** — base fields computed for
-    every arm so no two arms disagree (`runs`: `duration` from
-    `startedAt`/`finishedAt`). Arms must bind `reads` to columns; binding a
-    derived field is an error.
+    every arm so no two arms disagree (`runs`: the ledger `id`). Arms must
+    bind `reads` to columns; binding a derived field is an error. Every clock
+    field (*Clock reads*) is folded into `derive` from its declaration —
+    naming one in `derive` throws.
   - Compiled deferred at `bindDeferredResources` by query-resource's
     `compileUnionCollection` (its CLAUDE.md, *Union collections*).
     `compileUnion(c, { arms })` (`server/testing`) for tests.
@@ -757,6 +758,70 @@ table, in one window (the `runs` of every run kind) — a **Meta-DataView**
   `exposed`, plus `own` on refs); the codec, data-view and the server switch on
   it exhaustively (an arm set only on its union, an exposed set only where its
   entity is reached, a scoped set only in its scope).
+
+## Clock reads — `clockField` / `clockParam`
+
+Nothing live reads the clock: a served read is a pure function of its params
+and rows, recomputed on a write — a `current_date` would go stale at midnight
+with nothing to recompute it. What varies with time is DECLARED, from a closed
+set of forms (`core/internal/clock.ts`), and pinned by the READER. Design and
+trade-offs: `research/2026-11-03-global-live-collections-item7-remaining.md`
+(A, *As landed — session 2*).
+
+```ts
+// core — a clock field: listed, sortable, filterable; never on the row
+duration: clockField.elapsed(durationField({ label: "Took" }), {
+  from: "startedAt", until: "finishedAt", quantumMs: 60_000,
+}),
+// core — a clock param on a value (or a typed-query field)
+export const APP_USAGE_TODAY = clockParam.day(); // the reader's zone
+liveValue("app-usage.summary", { schema, params: { today: APP_USAGE_TODAY } });
+// web
+useLive(appUsageSummary, { today: useClockParam(APP_USAGE_TODAY) });
+```
+
+- **A clock field's value never travels.** The row carries its inputs; the
+  browser computes the value from the same declaration (`clockFieldValue`):
+  data-view computes `value(row)` against `useClockPin` (re-pinned once per
+  quantum) and draws a presented cell through a ticking clock (`ClockCell`,
+  a second while the value moves, e.g. a run still going). The SQL rendering
+  (`server/internal/clock-sql.ts`, `clockFieldSql`) is used only where a
+  query names the field in `where` / `orderBy`.
+- **`now` rides a query exactly when it names a clock field** (window,
+  grouping or count): `useLive` fills it (`codec.clockQuantum(query)` →
+  `useClockPin`), floored to the field's quantum; the codec refuses a query
+  naming one without `now`, `now` beside a query naming none, a `now` not on
+  the quantum, and `groupBy` a clock field. A pin is part of the page family
+  (`familyOf`): a re-pin is a new tuple, the window reloads.
+- **Between pins**, a still-open row's ticking cell may sit a little out of
+  order against finished rows (sorted by "Took", a running run's place is
+  its elapsed time at the last pin, up to one quantum old). A list that only
+  displays the field pins nothing and reloads nothing.
+- **Server**: a union's arms derive each clock field from its inputs (which
+  every arm binds to columns), a TRANSIENT outer column — projected only
+  into a tuple ordering by it (the outer order and the `$key` parts), on no
+  row; the order signature reads its inputs. Every query of a tuple is
+  pinned at execution (query-resource's `pinClock`), so a query reading the
+  clock with no pin throws. A single-table `serveCollection` refuses a clock
+  field (module eval) until one needs it; an `all` / lookup-only collection
+  refuses one at declaration.
+- **Clock params**: `clockParam.day()` (`YYYY-MM-DD`, the reader's zone) and
+  `clockParam.month({ zone })` (`YYYY-MM`, e.g. the Pacific billing month)
+  — zod string schemas carrying their form. `useClockParam(param)` returns
+  the value now and re-pins it with one timer at the instant it changes
+  (`clockParamAt`). A server caller that is no live read passes the value
+  itself (`mapsBudgetNow()` reads this month once).
+- **Refused**: compiled SQL reading `now()` / `current_date` /
+  `clock_timestamp()` / `random()` / … — query-resource's `assertStableRead`
+  at the compile entry points (expression fields, aggregates, join
+  conditions, a collection's or an arm's static `where`, `defaults`); a
+  hand-written served loader calling `Date.now()` / `new Date()` or a `sql`
+  template reading the clock — lint `live/no-clock-in-served` (inside a
+  `serveValue` / `serveCollection` / `serveUnionCollection` / `*On` call's
+  arguments; a function the loader calls by name is not traced), no debt.
+- Oracle: `server/internal/serve-union-clock-oracle.test.ts` (SQL and JS
+  renderings agree on every row; sort / filter / grouping by the field with
+  an in-flight row; refusals).
 
 ## Values — `liveValue` / `serveValue` / `useLive(value)`
 
@@ -1234,12 +1299,14 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `renderClientFieldsResolver`
     - `resourceSendLaneKey`
     - `useClientFieldsResolvers`
+    - `useClockParam`
+    - `useClockPin`
     - `useFieldPresentations`
     - `useLive`
     - `useLiveReader`
 - Server:
-  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra/query-resource` ×35
+  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/query-resource` ×37
     - `database/sql-column` ×3
     - `network/live/filter.filterSql`
   - Exports (types):
@@ -1292,14 +1359,15 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `serveValue`
     - `sliceRange`
 - Core:
-  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live/filter` ×7
     - `fields` ×6
     - `infra/query-resource` ×6
-    - `network/live/filter` ×6
     - `packages/zod-introspect` ×6
     - `primitives/live-state` ×6
     - `packages/list-bound` ×3
     - `packages/resource-protocol` ×2
+    - `packages/wall-clock` ×2
     - `packages/canonical-params.canonicalJson`
   - Exports (types):
     - `AnyCollection`
@@ -1312,6 +1380,10 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `ClientFieldsOwner`
     - `ClientFieldsOwnerRow`
     - `ClientFieldValue`
+    - `ClockFieldDef`
+    - `ClockForm`
+    - `ClockParam`
+    - `ClockParamForm`
     - `CollectionKindKey`
     - `CollectionRow`
     - `CompiledPagedValue`
@@ -1480,6 +1552,13 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `WithContributedColumns`
   - Exports (values):
     - `clientFields`
+    - `clockField`
+    - `clockFieldTicks`
+    - `clockFieldValue`
+    - `clockFormOf`
+    - `clockInputs`
+    - `clockParam`
+    - `clockParamAt`
     - `COLLECTION_KIND_KEYS`
     - `compileExternalCollection`
     - `compilePagedValue`
@@ -1505,6 +1584,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `liveArm`
     - `liveCollection`
     - `liveValue`
+    - `pinNow`
     - `rowFailed`
     - `rowKind`
     - `rowPending`

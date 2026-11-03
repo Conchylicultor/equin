@@ -1783,8 +1783,9 @@ key of the same config doc (via the `presetsExtraFields` seam).
 
 - `{ rows; readiness?; rowKey; fields | collection }` — in memory;
 - `{ source }` — `liveDataSource` (web), read as `useLive` key-range pages. Refuses
-  `rowKey` (key = collection `id`), `hierarchy`, `manualOrder`, `searchAccessor`
-  (search is `searchable`); `RowOrder` stays off. `DataViewSourceBundle` is a
+  `storageKey` (the surface is `source.surface`), `rowKey` (key = collection
+  `id`), `hierarchy`, `manualOrder`, `searchAccessor` (search is
+  `searchable`); `RowOrder` stays off. `DataViewSourceBundle` is a
   DISTRIBUTIVE `Omit` (pinned by `web/internal/body-types.test.ts`).
 
 ```tsx
@@ -1832,12 +1833,21 @@ const fields = [
   whose `columnScope` IS the surface takes them as scoped columns (sort and
   filter in SQL; another surface is a tsc error — the scope is kept literal);
   one without a scope must say why, `unscoped: { reason }` (custom columns then
-  show and edit, explicitly neither sorting nor filtering). Never a silent
-  display-only fallback. The source mounts only under the `storageKey` it
-  names (asserted at mount); passed to extensions as
+  show and edit, explicitly neither sorting nor filtering — the Fields
+  setting says so, with the reason: `DataViewControlsContextValue.customColumns`).
+  Never a silent display-only fallback. **A live DataView takes no
+  `storageKey`** (tsc): its surface is `source.surface`, stated once. (A
+  `DataViewSwitcher` keeps its own `storageKey`; a live source bundle under it
+  is asserted to name it at mount.) Passed to extensions as
   `FieldExtensionProps.liveColumns`. Opt-outs today: `jobs` (external),
   `trash-entries` (one collection for every trash surface), `runs` (union —
-  item 7 session 2).
+  a scope per query is the next step).
+- **Clock fields** (`network/live`, *Clock reads*): a field declared
+  `clockField.*` is derived like any own field, its `value(row)` computed from
+  the row's inputs against the collection's pinned `now` (`useClockPin`, one
+  timer per quantum), its presented `cell` handed the value against a clock
+  ticking every second while it moves (`ClockCell`). A clock field with no
+  presentation cell draws its pinned value.
 - **Checked where declared** (`web/internal/live-fields.ts`): `sortable` over a
   non-sorting column, a domain mismatch, a foreign ref all throw (extensions inside
   their own `render`). A `column` on an in-memory DataView throws.
@@ -2047,8 +2057,8 @@ list, table and `primitives/tree` share it.
     - `DataViewSlots.Control` ×4
     - `DataViewSlots.Setting` ×4
     - `IdKinds.Kind` ×2
-  - Uses: 131 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `network/live` ×20
+  - Uses: 133 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live` ×21
     - `primitives/css/ui-kit` ×17
     - `primitives/data-view/view-core` ×11
     - `primitives/live-state` ×6
@@ -2096,6 +2106,7 @@ list, table and `primitives/tree` share it.
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/overlay/tooltip.Kbd`
     - `primitives/pane.usePaneViewParam`
+    - `primitives/relative-time.useNow`
     - `ui/icons.Icon`
   - Exports (types):
     - `CardFields`

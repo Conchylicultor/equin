@@ -6,9 +6,10 @@ import { appUsageSummary } from "../../core";
 import { _appUsageDaily } from "./tables";
 
 const t = _appUsageDaily;
-// Today and the six days before it. `current_date` is the server's local day,
-// which is the user's: one instance per user, on their machine.
-const IN_LAST_7_DAYS = sql`${t.day} > current_date - 7`;
+// Today and the six days before it — `today` is the reader's local day (a
+// clock param it pins and re-pins at midnight), the same calendar the
+// browser buckets usage by.
+const inLast7Days = (today: string) => sql`${t.day} > ${today}::date - 7`;
 
 // Push over `app_usage_daily`: a write to it recomputes the summary on every
 // flush (the declared `reads`) — the route notifies nothing. Flushes
@@ -21,16 +22,16 @@ export const appUsageSummaryServed = serveValue(appUsageSummary, {
       "the summary folds every day's row into one row per app, so a write to any row of the table may change any app's totals",
   },
   throttleMs: 2000,
-  loader: async () =>
+  loader: async ({ today }) =>
     db
       .select({
         appId: t.appId,
         launches7d:
-          sql`coalesce(sum(${t.launches}) filter (where ${IN_LAST_7_DAYS}), 0)`.mapWith(
+          sql`coalesce(sum(${t.launches}) filter (where ${inLast7Days(today)}), 0)`.mapWith(
             Number,
           ),
         focusedMs7d:
-          sql`coalesce(sum(${t.focusedMs}) filter (where ${IN_LAST_7_DAYS}), 0)`.mapWith(
+          sql`coalesce(sum(${t.focusedMs}) filter (where ${inLast7Days(today)}), 0)`.mapWith(
             Number,
           ),
         launchesTotal: sql`coalesce(sum(${t.launches}), 0)`.mapWith(Number),

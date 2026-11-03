@@ -5,6 +5,7 @@ import type {
   FieldGrouping,
   ViewState,
   PlacementSpec,
+  SurfaceCustomColumns,
   ViewSlots,
 } from "../../../core";
 import type { ReadyViewModel } from "../../internal/use-data-view-model";
@@ -45,6 +46,13 @@ export interface DataViewExpandAll {
  */
 export interface DataViewControlsContextValue {
   storageKey: DataViewId;
+  /**
+   * How the surface's custom columns reach its rows — in memory, scoped to
+   * its live source's collection, or `unscoped` with the reason its source
+   * states (the Fields setting says it: the columns show and edit, but never
+   * sort or filter that list).
+   */
+  customColumns: SurfaceCustomColumns;
   /** The merged field schema (incl. custom columns + field extensions). */
   fields: FieldDef<unknown>[];
   activeViewId: string;
@@ -123,6 +131,7 @@ const DataViewControlsContext =
 export function DataViewControlsProvider({
   children,
   storageKey,
+  customColumns,
   fields,
   activeViewId,
   activeState,
@@ -144,6 +153,7 @@ export function DataViewControlsProvider({
   const value = useMemo<DataViewControlsContextValue>(
     () => ({
       storageKey,
+      customColumns,
       fields,
       activeViewId,
       activeState,
@@ -164,6 +174,7 @@ export function DataViewControlsProvider({
     }),
     [
       storageKey,
+      customColumns,
       fields,
       activeViewId,
       activeState,

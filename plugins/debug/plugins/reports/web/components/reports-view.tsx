@@ -46,7 +46,6 @@ export function ReportsView({
       extraFields={extraFields}
       views={["table", "list"]}
       defaultView="table"
-      storageKey={REPORTS_VIEW}
       selectedRowId={selectedId}
       rowActivation={(r) => linkTo(r.id)}
       emptyState={<>No reports recorded yet.</>}

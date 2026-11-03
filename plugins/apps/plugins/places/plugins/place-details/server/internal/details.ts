@@ -5,7 +5,7 @@ import {
   type RichDetailsTier,
 } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
 import { placeRichDetails } from "@plugins/integrations/plugins/google-maps/plugins/places-api/server";
-import { mapsBudgetNow } from "@plugins/integrations/plugins/google-maps/plugins/usage/server";
+import { mapsBudgetFor } from "@plugins/integrations/plugins/google-maps/plugins/usage/server";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { detailsTier, type PlaceDetailsResult } from "../../core";
 import { createTtlMemo, DETAILS_TTL_MS } from "./details-cache";
@@ -19,7 +19,7 @@ type Fetched =
 const memo = createTtlMemo<Fetched>(DETAILS_TTL_MS);
 
 /**
- * One place's rich details at the richest tier this month's budget allows
+ * One place's rich details at the richest tier the pinned billing month's budget allows
  * (`detailsTier`): Google's answer, reused for a day per (place, tier) — so a
  * thinner answer fetched once a budget ran out is not served past the turn of
  * the month. Google refusing the id (400 / 404: it no longer knows the place)
@@ -30,10 +30,11 @@ const memo = createTtlMemo<Fetched>(DETAILS_TTL_MS);
  */
 export async function loadPlaceDetails(
   googlePlaceId: string,
+  month: string,
 ): Promise<PlaceDetailsResult> {
   const maps = await getPlacesClient();
   if (!maps.ok) return { kind: "maps-not-configured" };
-  const budget = await mapsBudgetNow();
+  const budget = await mapsBudgetFor(month);
   const tier = detailsTier(budget.withinBudget);
   const fetched = await memo.get(`${tier}:${googlePlaceId}`, async () => {
     log.publish(`fetch ${googlePlaceId} (${tier})`);

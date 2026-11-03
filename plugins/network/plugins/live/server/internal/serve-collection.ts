@@ -41,6 +41,7 @@ import {
   type JoinSpec,
 } from "@plugins/infra/plugins/query-resource/core";
 import {
+  assertStableRead,
   compileCountQuery,
   compileGroupsQuery,
   compileJoins,
@@ -452,6 +453,15 @@ export function compileCollection<
   const fail = (message: string): never => {
     throw new Error(`serveCollection("${collection.key}"): ${message}`);
   };
+  // A clock field (`clockField`) is served by a union today (its arms derive
+  // it against the tuple's pinned `now`); a single-table window has no
+  // rendering of it yet — refused here, at module eval, until one needs it.
+  const clock = Object.values(collection.fields).find((f) => f.clock !== null);
+  if (clock !== undefined) {
+    fail(
+      `"${clock.key}" is a clock field — only a union collection (\`serveUnionCollection\`) serves one yet; a single-table window would project it against no pinned \`now\`.`,
+    );
+  }
   // First (C4): an `all` collection has no window either, so the lookup-only
   // branch below would compile it as `:rows` alone. It is never scoped —
   // what a boot-time compile folds in.
@@ -768,7 +778,13 @@ export function compileCollection<
       : opts.where;
   // Every relation the base predicate reads must be the base or a declared
   // join — checked here, at module eval, for every shape it is ANDed into.
-  if (base) joins.columnsIn(base);
+  if (base) {
+    joins.columnsIn(base);
+    assertStableRead(
+      base,
+      `serveCollection("${collection.key}"): its \`where\``,
+    );
+  }
   // The default scopes, rendered once like the base (and checked the same way).
   const defaults = (opts.defaults ?? []).map((d) => {
     const where =
@@ -776,6 +792,10 @@ export function compileCollection<
         ? d.where(joins.columns() as JoinColumns<TableOf<T>, J>)
         : d.where;
     joins.columnsIn(where);
+    assertStableRead(
+      where,
+      `serveCollection("${collection.key}"): its default unless "${d.unless as string}"`,
+    );
     return { unless: d.unless as string, where };
   });
   const withDb = opts.db ? { db: opts.db } : {};

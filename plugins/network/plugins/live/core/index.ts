@@ -25,6 +25,22 @@ export type {
   WithContributedColumns,
 } from "./internal/live-columns";
 export { exposedColumns } from "./internal/exposed-columns";
+export {
+  clockField,
+  clockFieldTicks,
+  clockFieldValue,
+  clockFormOf,
+  clockInputs,
+  clockParam,
+  clockParamAt,
+  pinNow,
+} from "./internal/clock";
+export type {
+  ClockFieldDef,
+  ClockForm,
+  ClockParam,
+  ClockParamForm,
+} from "./internal/clock";
 export { clientFields, rowKind } from "./internal/row-kind";
 export {
   isRowUnknown,

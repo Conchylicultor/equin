@@ -1504,6 +1504,7 @@ function DataViewBodyInner<TRow>(
         // ambient back door to `viewModel` would be a second undocumented seam.
         const controlsContext: DataViewControlsContextValue = {
           storageKey,
+          customColumns: surfaceCustomColumnsOf(liveSource, storageKey),
           fields: fields as DataViewRenderProps<unknown>["fields"],
           activeViewId,
           activeState,

@@ -71,7 +71,8 @@ describe("deriveBrowserHostGraph over the repo", () => {
 
     // The page side: the composition's home, its web plugins (bundle ∩ web
     // barrels, by dot id, sorted) and what it leaves out.
-    expect(graph.home).toBe("agent-manager");
+    // The app gallery, as on main (the demo still opens on the Agent Manager).
+    expect(graph.home).toBe("home");
     expect(graph.webPlugins).toEqual([...graph.webPlugins].sort());
     expect(graph.webPlugins).toContain(asPluginId("apps.agent-manager.shell"));
     const repo = await ctx.repo();
@@ -98,7 +99,7 @@ describe("deriveBrowserHostGraph over the repo", () => {
     const listed = [...scope.matchAll(/^ {4}"([^"]+)",$/gm)].map((m) => m[1]!);
     expect(listed).toEqual(graph.webPlugins);
     expect(scope).toContain('  id: "agent-manager-demo",');
-    expect(scope).toContain('  home: "agent-manager",');
+    expect(scope).toContain('  home: "home",');
     expect(scope).toContain(`import("@browser-host/${DEMO}")`);
     expect(scope).toContain("} satisfies DemoHost;");
   });

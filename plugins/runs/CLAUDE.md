@@ -102,17 +102,25 @@ network/live's generic arm binding (`serveUnionCollection`'s `served.arm`):
   field may be `null` ("no such notion": backup and deploy have no namespace).
 - `extra(j)` binds exactly the arm column set's fields, each typed the same way (tsc).
 - `id` is the ledger's single-column primary key (the row key encodes it), and
-  the base `id` and `duration` are the union's `derive`d fields
-  (`server/internal/served.ts`) — `duration` is `finishedAt − startedAt`, NULL
-  while running, so `startedAt` / `finishedAt` bind to columns (tsc) and two
-  arms cannot disagree about what a duration is. A running run's elapsed time is
-  `<RunDuration>`'s browser ticker, never a value the server re-pushes.
+  the base `id` is the union's `derive`d field (`server/internal/served.ts`).
+- `duration` ("Took") is a **clock field** (`clockField.elapsed`, core;
+  network/live *Clock reads*): `startedAt` → `finishedAt`, to `now` while a run
+  is in flight. No row carries it — the list computes it from the row's
+  `startedAt` / `finishedAt` (a running run's cell ticks every second), and the
+  union derives its SQL for every arm, so `startedAt` / `finishedAt` must bind
+  to columns (checked when the union binds its arms) and two arms cannot
+  disagree about what a duration is. Sorting or filtering by it pins `now` to
+  the minute (`useLive` re-pins once a minute): an in-flight run sorts by how
+  long it has been going, in both directions, never last.
 - Labels and outcomes are `ExprField`s whose provenance is read off their SQL: a
   correlated subquery over an undeclared table cannot be written — declare it as
   a join.
 
-**What this surface does not have:** user-defined custom columns. A union's
-column vocabulary is its arms' static handles (no `columnScope`).
+**What this surface does not have yet:** custom columns that sort or filter.
+They show and edit (the Fields setting says why they do not sort: the source
+is `unscoped`); a union's compiler joins no scoped family per arm, and `runs`
+is listed on several surfaces (`RUNS_VIEW`, the Deploy Activity page), so its
+scope will be chosen per query by the asking list — the next step of item 7.
 
 ## Adding an arm
 
@@ -148,7 +156,7 @@ row, or on a failed re-read the row as last seen).
 
 ## Plugin reference
 
-- Description: The merged run surface: <RunsDataView> over the `runs` union window (a live scroll: base fields derived from the collection and presented once, plus every arm's own fields, derived from its liveArm, each bound to its column), and the seams an arm reaches it through: runLinks (where its rows go — data-view's CollectionRowActivation over the arm), investigateRuns; the kind filter's options are the registered arms, derived by every list; an arm presents its fields' cells with FieldPresentation.Register({ owner: arm }). Every row is a single field-driven line; a domain's detail lives in the pane its rows open. Also exports useRun (a live point read of one run by its (kind, id) pair) and <RunDuration> (finished duration, or a running run's ticking elapsed time). The merged run space as ONE routed union window (a Meta-DataView): runsServed serves the `runs` collection's window, its `:rows` point read (useRun) and `:groups` from every arm bound through runsServed.arm — a domain's own ledger typed against the base row and its liveArm, the ledger id and the duration derived by the union — so a write to one ledger refills only the rows it changed. Names no run kind.
+- Description: The merged run surface: <RunsDataView> over the `runs` union window (a live scroll: base fields derived from the collection and presented once, plus every arm's own fields, derived from its liveArm, each bound to its column), and the seams an arm reaches it through: runLinks (where its rows go — data-view's CollectionRowActivation over the arm), investigateRuns; the kind filter's options are the registered arms, derived by every list; an arm presents its fields' cells with FieldPresentation.Register({ owner: arm }). Every row is a single field-driven line; a domain's detail lives in the pane its rows open. Also exports useRun (a live point read of one run by its (kind, id) pair). The merged run space as ONE routed union window (a Meta-DataView): runsServed serves the `runs` collection's window, its `:rows` point read (useRun) and `:groups` from every arm bound through runsServed.arm — a domain's own ledger typed against the base row and its liveArm, the ledger id and the duration derived by the union — so a write to one ledger refills only the rows it changed. Names no run kind.
 - Web:
   - Contributes: `FieldPresentation.Register` "collection:runs"
   - Uses:
@@ -165,14 +173,12 @@ row, or on a failed re-read the row as last seen).
     - `primitives/pane.OpenPaneFn`
     - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
-    - `primitives/relative-time.useNow`
   - Exports (types):
     - `RunInvestigation`
     - `RunRowProps`
     - `RunsDataViewProps`
   - Exports (values):
     - `investigateRuns`
-    - `RunDuration`
     - `runLinks`
     - `RUNS_VIEW`
     - `RunsDataView`
@@ -196,6 +202,7 @@ row, or on a failed re-read the row as last seen).
     - `fields/text/config.enumTextField`
     - `fields/text/config.textField`
     - `infra/query-resource.armKeyCodec`
+    - `network/live.clockField`
     - `network/live.liveCollection`
     - `network/live.LiveRowsCollection`
     - `runs/run-outcome.RUN_OUTCOME_OPTIONS_META`

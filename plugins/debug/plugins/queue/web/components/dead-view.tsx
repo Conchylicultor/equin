@@ -39,7 +39,6 @@ export function DeadView({
 }) {
   return (
     <DataView<DeadJobListRow>
-      storageKey={DEAD_VIEW}
       overrides={overrides}
       recipe="ledger"
       views={["table", "list"]}

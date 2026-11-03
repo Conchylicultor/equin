@@ -36,7 +36,6 @@ export function EventsView({
 }) {
   return (
     <DataView<EmissionListRow>
-      storageKey={EVENTS_VIEW}
       overrides={overrides}
       extraFields={extraFields}
       recipe="log"

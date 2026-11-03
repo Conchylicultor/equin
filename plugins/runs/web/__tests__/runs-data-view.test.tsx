@@ -2,9 +2,9 @@
  * The merged run surface over the `runs` union window (step 12c of
  * research/2026-10-01-global-scoped-change-routing-p5-p8-v2.md):
  *
- * - `<RunDuration>` — a finished run reads its server `duration`; a running
- *   one (NULL duration) ticks its elapsed time off the browser clock, once a
- *   second, with the same formatter;
+ * - "Took" is a clock field: the list computes it from the row's own
+ *   `startedAt` / `finishedAt` against the pinned `now` — an in-flight run
+ *   included, never NULL;
  * - the base field schema resolves against the live source exactly as the
  *   DataView resolves it at mount: every base field binds its union column,
  *   a field marked sortable sorts in SQL, every filterable one filters in its
@@ -19,7 +19,7 @@
 
 import { RUNS_VIEW } from "../internal/view-id";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render } from "@testing-library/react";
 import {
   liveDataSource,
   type FilterOperatorSet,
@@ -30,7 +30,6 @@ import {
 } from "@plugins/primitives/plugins/data-view/web/testing";
 import { liveArm } from "@plugins/network/plugins/live/core";
 import { runRowKey, runs, type RunRow } from "../../core";
-import { RunDuration } from "../components/run-duration";
 import { RunsDataView } from "../components/runs-data-view";
 
 /** What the stubbed seams hold for the `<RunsDataView>` suite. */
@@ -69,37 +68,31 @@ const releaseArm = liveArm(runs, "release", {
   fields: {},
 });
 
-describe("<RunDuration>", () => {
-  it("a finished run reads its duration", () => {
-    render(
-      <RunDuration
-        run={{
-          startedAt: new Date(NOW.getTime() - 100_000),
-          finishedAt: NOW,
-          duration: 100_000,
-        }}
-      />,
-    );
-    expect(screen.getByText("1m 40s")).not.toBeNull();
+describe("Took — a clock field", () => {
+  it("is computed from the row's inputs against the pin — an in-flight run against now, never NULL", () => {
+    const { fields } = deriveFields(runs, true, [], [], NOW.getTime());
+    const took = fields.find((f) => f.id === "duration")!;
+    expect(
+      took.value!({
+        startedAt: new Date(NOW.getTime() - 100_000),
+        finishedAt: NOW,
+      }),
+    ).toBe(100_000);
+    expect(
+      took.value!({
+        startedAt: new Date(NOW.getTime() - 90_000),
+        finishedAt: null,
+      }),
+    ).toBe(90_000);
   });
 
-  it("a running run ticks its elapsed time once a second", () => {
-    vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] });
-    vi.setSystemTime(NOW);
-    render(
-      <RunDuration
-        run={{
-          startedAt: new Date(NOW.getTime() - 90_000),
-          finishedAt: null,
-          duration: null,
-        }}
-      />,
-    );
-    expect(screen.getByText("1m 30s")).not.toBeNull();
-    act(() => {
-      vi.advanceTimersByTime(2_000);
+  it("is not on the row: the server sends its inputs", () => {
+    expect(Object.keys(runs.row.shape)).not.toContain("duration");
+    expect(runs.fields.duration.clock).toMatchObject({
+      kind: "elapsed",
+      from: "startedAt",
+      until: "finishedAt",
     });
-    expect(screen.getByText("1m 32s")).not.toBeNull();
   });
 });
 
@@ -123,7 +116,7 @@ describe("the base field schema over the runs source", () => {
       surface: RUNS_VIEW,
       unscoped: { reason: "a union collection takes no column scope yet" },
     });
-    const { fields } = deriveFields(runs, true, []);
+    const { fields } = deriveFields(runs, true, [], [], NOW.getTime());
     // The persisted vocabulary: saved views and presets name these ids.
     expect(fields.map((f) => f.id)).toEqual([
       "label",
@@ -166,10 +159,16 @@ describe("the base field schema over the runs source", () => {
 
   it("the kind source field offers the registered arms, in their order — not the loaded page's kinds", () => {
     // Registered release first (plugin load order); the options follow `order`.
-    const { fields } = deriveFields(runs, true, [
-      { owner: releaseArm, fields: {} },
-      { owner: buildArm, fields: {} },
-    ]);
+    const { fields } = deriveFields(
+      runs,
+      true,
+      [
+        { owner: releaseArm, fields: {} },
+        { owner: buildArm, fields: {} },
+      ],
+      [],
+      NOW.getTime(),
+    );
     expect(fields.find((f) => f.id === "kind")?.options).toEqual([
       { value: "build", label: "Build" },
       { value: "release", label: "Release" },

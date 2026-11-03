@@ -109,7 +109,6 @@ export function PagesTrash() {
           <Scroll axis="y" className="max-h-96">
             <PurgeTrashEntryContext.Provider value={setConfirmEntry}>
               <DataView<TrashEntryRow>
-                storageKey={TRASH_VIEW}
                 source={trashSource}
                 overrides={overrides}
                 views={["list"]}

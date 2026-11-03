@@ -561,6 +561,9 @@ export function liveArm<
           primary: false,
           domain: filterable[name]?.domain ?? null,
           sortable: (sortable as readonly string[]).includes(name),
+          // An arm's own fields are its table's columns; only a union's base
+          // fields may be declared against the clock.
+          clock: null,
         });
         return [id, descriptor];
       }),

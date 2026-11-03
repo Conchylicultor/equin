@@ -37,6 +37,7 @@ import {
   type GroupArmPlan,
 } from "./compile-groups";
 import { compileJoins, type JoinPlan, type ReadColumn } from "./joins";
+import { pinClock } from "./clock-read";
 import {
   allOf,
   anyOf,
@@ -118,6 +119,13 @@ export interface UnionArmSpec {
 export interface UnionColumn {
   name: string;
   sqlType: string;
+  /**
+   * Read by `where` / `orderBy` only, never on the row (a clock field: the
+   * reader computes it from the row's inputs): projected only into a tuple
+   * whose order names it — for the outer order and its row key — and left
+   * off every row. Its read may read the pinned clock (`clockNow`).
+   */
+  transient?: true;
 }
 
 /** One key of a tuple's order, by outer name (a column, the discriminator, or the key field). */
@@ -143,6 +151,8 @@ export interface UnionGroupsQuery {
   limit: number;
   /** Throws on a group value the row type cannot hold. */
   check: (value: unknown) => void;
+  /** The tuple's pinned clock (see `window.nowOf`). */
+  now: number | null;
 }
 
 export interface UnionCollectionSpec<
@@ -170,6 +180,12 @@ export interface UnionCollectionSpec<
     /** The tuple's limit (already clamped). */
     limitOf: (params: WP) => number;
     cutsOf: (params: WP) => UnionCuts;
+    /**
+     * The tuple's pinned clock (epoch ms) — filled into every query of the
+     * tuple that reads `clockNow()`; `null` when it pins none (a query that
+     * reads the clock then throws).
+     */
+    nowOf: (params: WP) => number | null;
     /** The tuple's page family: one string per query, whatever its cuts and limit (see `WindowQueryResourceSpec.rowKey.familyOf`). */
     familyOf: (params: WP) => string;
     validateParams?: (params: ResourceParams) => void;
@@ -206,6 +222,8 @@ interface OuterColumn {
   sqlType: string;
   /** Static, over every registered arm. */
   nullable: boolean;
+  /** Never on the row: projected only where a tuple orders by it (see `UnionColumn.transient`). */
+  transient: boolean;
 }
 
 interface Arm {
@@ -285,6 +303,7 @@ export function compileUnionCollection<
       alias: `__c${i}`,
       sqlType: c.sqlType,
       nullable: false,
+      transient: c.transient === true,
     };
     columns.push(col);
     byName.set(c.name, col);
@@ -294,12 +313,14 @@ export function compileUnionCollection<
     alias: "__kind",
     sqlType: "text",
     nullable: false,
+    transient: false,
   };
   const KEY: OuterColumn = {
     name: spec.keyField,
     alias: "__key",
     sqlType: "text",
     nullable: false,
+    transient: false,
   };
   byName.set(KIND.name, KIND);
   byName.set(KEY.name, KEY);
@@ -362,7 +383,7 @@ export function compileUnionCollection<
     const projection: Record<string, ReadColumn> = { __id: a.id };
     for (const col of columns) {
       const read = readOf(col);
-      if (read !== undefined) projection[col.alias] = read;
+      if (read !== undefined && !col.transient) projection[col.alias] = read;
     }
     const orderColumns = spec.sortable
       .map((name) => colOf(name))
@@ -489,7 +510,8 @@ export function compileUnionCollection<
       return out.data;
     }) as unknown as z.ZodType<Record<string, unknown>>;
   };
-  const allColumns = [KIND, KEY, ...columns];
+  /** What every row carries — a transient column never. */
+  const allColumns = [KIND, KEY, ...columns.filter((c) => !c.transient)];
   const encode = (row: Record<string, unknown>): Row =>
     (spec.encodeRow ? spec.encodeRow(row) : row) as Row;
   /** A decoded positional row → its named row (row key folded when `parts` > 0). */
@@ -499,6 +521,7 @@ export function compileUnionCollection<
   ): Record<string, unknown> => {
     const out: Record<string, unknown> = {};
     for (const col of allColumns) out[col.name] = r[col.alias];
+    // (A transient order key rides only in the row key's parts.)
     if (parts > 0) {
       const values: (string | null)[] = [];
       for (let i = 0; i < parts; i++)
@@ -622,18 +645,39 @@ export function compileUnionCollection<
         sql`(u.${sql.identifier(k.col.alias)})::text AS ${sql.identifier(`__p${i}`)}`,
     );
 
+  /** What a window tuple's arm selects project: the row's columns, and any transient order key. */
+  const projectedOf = perParams((params: WP): OuterColumn[] => [
+    ...allColumns,
+    ...keysOf(params)
+      .map((k) => k.col)
+      .filter((c) => c.transient),
+  ]);
+  /** Run one of the tuple's queries, its clock pinned. */
+  const run = <T>(
+    params: WP,
+    query: SQL,
+    row: z.ZodType<T>,
+    label: string,
+  ): Promise<T[]> =>
+    executeRows(db, {
+      query: pinClock(query, spec.window.nowOf(params), `${spec.key}:${label}`),
+      row,
+      label: `${spec.key}:${label}`,
+    });
   const fullRows = async (params: WP): Promise<Row[]> => {
     const keys = keysOf(params);
     const limit = spec.window.limitOf(params);
+    const projected = projectedOf(params);
     const selects = survivingOf(params).map((arm) =>
-      armSelect(arm, params, allColumns, { limit }),
+      armSelect(arm, params, projected, { limit }),
     );
-    const query = sql`SELECT u.*, ${sql.join(partsSql(params), sql`, `)} FROM (${unioned(selects, allColumns)}) AS u ORDER BY ${sql.join(orderByClauses(outerKeys(params)), sql`, `)} LIMIT ${limit}`;
-    const rows = await executeRows(db, {
+    const query = sql`SELECT u.*, ${sql.join(partsSql(params), sql`, `)} FROM (${unioned(selects, projected)}) AS u ORDER BY ${sql.join(orderByClauses(outerKeys(params)), sql`, `)} LIMIT ${limit}`;
+    const rows = await run(
+      params,
       query,
-      row: parserOf(allColumns, keys.length),
-      label: `${spec.key}:full`,
-    });
+      parserOf(projected, keys.length),
+      "full",
+    );
     return rows.map((r) => encode(named(r, keys.length)));
   };
   /** Decoded `kind:raw` keys, grouped by arm — an unknown kind or bad key dropped. */
@@ -660,15 +704,17 @@ export function compileUnionCollection<
     const keys = keysOf(params);
     const grouped = byArm(affected, survivingOf(params));
     if (grouped.size === 0) return [];
+    const projected = projectedOf(params);
     const selects = [...grouped].map(([arm, ids]) =>
-      armSelect(arm, params, allColumns, { ids }),
+      armSelect(arm, params, projected, { ids }),
     );
     const query = sql`SELECT u.*, ${sql.join(partsSql(params), sql`, `)} FROM (${sql.join(selects, sql` UNION ALL `)}) AS u`;
-    const rows = await executeRows(db, {
+    const rows = await run(
+      params,
       query,
-      row: parserOf(allColumns, keys.length),
-      label: `${spec.key}:scoped`,
-    });
+      parserOf(projected, keys.length),
+      "scoped",
+    );
     return rows.map((r) => encode(named(r, keys.length)));
   };
   const windowIdsOf = async (params: WP): Promise<string[]> => {
@@ -680,11 +726,7 @@ export function compileUnionCollection<
       armSelect(arm, params, projected, { limit }),
     );
     const query = sql`SELECT u."__key" AS "__key" FROM (${unioned(selects, projected)}) AS u ORDER BY ${sql.join(orderByClauses(outerKeys(params)), sql`, `)} LIMIT ${limit}`;
-    const rows = await executeRows(db, {
-      query,
-      row: decodedRow({ __key: String }),
-      label: `${spec.key}:ids`,
-    });
+    const rows = await run(params, query, decodedRow({ __key: String }), "ids");
     return rows.map((r) => r.__key);
   };
   const orderSignatureOf = (row: unknown, params: WP): string =>
@@ -755,7 +797,8 @@ export function compileUnionCollection<
     });
     const query = sql`SELECT u.* FROM (${sql.join(selects, sql` UNION ALL `)}) AS u`;
     const rows = await executeRows(db, {
-      query,
+      // A point read pins no clock: it projects no transient column.
+      query: pinClock(query, null, `${spec.key}:rows`),
       row: parserOf(allColumns, 0),
       label: `${spec.key}:rows`,
     });
@@ -808,7 +851,7 @@ export function compileUnionCollection<
           : nullable(decoderOfRead(reader.valueOf(col)));
       const query = sql`SELECT g."value" AS "value", sum(g."count")::integer AS "count" FROM (${sql.join(selects, sql` UNION ALL `)}) AS g GROUP BY g."value" ORDER BY 2 DESC, 1 ASC NULLS LAST LIMIT ${q.limit}`;
       const out = await executeRows(db, {
-        query,
+        query: pinClock(query, q.now, `${spec.key}:groups`),
         row: decodedRow({ value: decoder, count: Number }),
         label: `${spec.key}:groups`,
       });

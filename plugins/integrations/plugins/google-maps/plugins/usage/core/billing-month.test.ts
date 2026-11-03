@@ -1,5 +1,10 @@
 import { expect, test } from "bun:test";
-import { billingMonth } from "./billing-month";
+import {
+  billingMonth,
+  billingMonthOf,
+  MAPS_BILLING_MONTH,
+} from "./billing-month";
+import { clockParamAt } from "@plugins/network/plugins/live/core";
 
 test("the month is Pacific time: UTC's 1st morning is still last month", () => {
   const m = billingMonth(new Date("2026-11-01T05:00:00Z"));
@@ -12,4 +17,19 @@ test("December rolls over to January", () => {
   const m = billingMonth(new Date("2026-12-15T12:00:00Z"));
   expect(m.key).toBe("2026-12");
   expect(m.resetsAt.toISOString()).toBe("2027-01-01T08:00:00.000Z");
+});
+
+test("a pinned month key names the same month — and the clock param pins it", () => {
+  expect(billingMonthOf("2026-10").resetsAt.toISOString()).toBe(
+    "2026-11-01T07:00:00.000Z",
+  );
+  expect(billingMonthOf("2026-12").resetsAt.toISOString()).toBe(
+    "2027-01-01T08:00:00.000Z",
+  );
+  const at = clockParamAt(
+    MAPS_BILLING_MONTH.clock,
+    new Date("2026-11-01T05:00:00Z"),
+  );
+  expect(at.value).toBe("2026-10");
+  expect(at.changesAt.toISOString()).toBe("2026-11-01T07:00:00.000Z");
 });

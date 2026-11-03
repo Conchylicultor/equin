@@ -102,7 +102,7 @@ function DataViewWithTypes<TRow>(props: {
     [contributions, views, viewOptions, onOrphanType],
   );
   const viewModel = useDataViewModel(
-    props.props.storageKey,
+    surfaceOf(props.props),
     entries,
     props.props.defaultView,
     props.props.pinnedView,
@@ -129,7 +129,7 @@ function DataViewHost<TRow>({
 }): ReactNode {
   return (
     <DataViewShellFrame
-      storageKey={props.storageKey}
+      storageKey={surfaceOf(props)}
       viewModel={viewModel}
       // A needsMachine read on a host without the computer: the shell says so
       // in place of every instance, so a body only sees a read that can arrive.
@@ -158,6 +158,7 @@ function DataViewHost<TRow>({
       renderSections={(instances, chrome, readyModel) => (
         <DataViewSectionsBody<TRow>
           {...availableProps(props)}
+          storageKey={surfaceOf(props)}
           viewModel={readyModel}
           instances={instances}
           chrome={chrome}
@@ -167,6 +168,7 @@ function DataViewHost<TRow>({
       {(activeInstance, chrome, readyModel) => (
         <DataViewBody<TRow>
           {...availableProps(props)}
+          storageKey={surfaceOf(props)}
           viewModel={readyModel}
           activeInstance={activeInstance}
           chrome={chrome}
@@ -174,6 +176,15 @@ function DataViewHost<TRow>({
       )}
     </DataViewShellFrame>
   );
+}
+
+/**
+ * The surface a DataView is: its in-memory origin's `storageKey`, or the
+ * surface its live source names (`liveDataSource(c, { surface })`) — one
+ * statement, so the two can never disagree.
+ */
+function surfaceOf<TRow>(props: DataViewProps<TRow>): DataViewId {
+  return props.source !== undefined ? props.source.surface : props.storageKey;
 }
 
 type UnavailableProps<TRow> = DataViewProps<TRow> & {
@@ -193,7 +204,7 @@ function availableProps<TRow>(
 ): DataViewSourceBundle<TRow> & DataViewProps<TRow> {
   if (isUnavailable(props)) {
     throw new Error(
-      `DataView(${props.storageKey}): a body mounted for an unavailable read — the shell renders that arm`,
+      `DataView(${surfaceOf(props)}): a body mounted for an unavailable read — the shell renders that arm`,
     );
   }
   return props as DataViewSourceBundle<TRow> & DataViewProps<TRow>;

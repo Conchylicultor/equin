@@ -1738,6 +1738,12 @@ interface DataViewPagedRows<TRow> {
 
 /** What every in-memory origin holds, tree or paged. */
 interface DataViewInMemoryRows<TRow> extends DataViewHeldRowProps<TRow> {
+  /**
+   * The surface — a `defineDataView` id: its config file, its views, its
+   * custom columns. A live origin takes none: its source names its surface
+   * (`liveDataSource(c, { surface })`).
+   */
+  storageKey: DataViewId;
   rows: readonly TRow[];
   /**
    * The state of the read backing `rows` — pass the read itself
@@ -1961,7 +1967,10 @@ export interface DataViewPaging<TRow> {
  * its window params, and the rows stay live through the routed runtime.
  */
 export interface DataViewLiveOrigin<TRow> {
+  /** The source also names the surface it is listed on (`source.surface`) — the DataView's config, views and custom columns. */
   source: LiveDataSource<TRow>;
+  /** The surface is the source's (`liveDataSource(c, { surface })`): never stated twice. */
+  storageKey?: never;
   /** Derived from the source's collection — `overrides` / `extraFields` change and add. */
   fields?: never;
   rows?: never;
@@ -2046,7 +2055,6 @@ export interface DataViewBaseProps<TRow> extends PlacementSpec {
    * says so instead of quietly falling back to whatever tab was last used.
    */
   pinnedView?: string;
-  storageKey: DataViewId;
   /**
    * Per-row emphasis — see {@link RowTone}. A data accessor closed over row
    * identity (the `searchAccessor` shape), NOT a declaration about the surface

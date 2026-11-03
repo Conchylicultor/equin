@@ -44,11 +44,10 @@ export interface UsageRow {
 export function usageRows(
   usage: MapsMonthUsage,
   budgets: MapsUsageBudgets,
-  now: Date,
 ): UsageRow[] {
   const rows: UsageRow[] = [];
   for (const sku of PLACES_SKUS) {
-    const calls = monthCalls(usage, sku, now);
+    const calls = monthCalls(usage, sku);
     const field = budgetField(sku);
     if (field === null) {
       if (calls > 0) {

@@ -12,5 +12,5 @@ export const placeDetailsServed = serveValue(placeDetails, {
   changes: "notified",
   reads: mapsBudgetReads,
   throttleMs: 1000,
-  loader: ({ googlePlaceId }) => loadPlaceDetails(googlePlaceId),
+  loader: ({ googlePlaceId, month }) => loadPlaceDetails(googlePlaceId, month),
 });

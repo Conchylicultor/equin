@@ -2,7 +2,9 @@ import { useMemo, type ReactNode } from "react";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import type { FieldOptionMeta } from "@plugins/fields/core";
 import {
+  clockFieldValue,
   exposedColumns,
+  type ClockForm,
   type FieldCellContext,
   type LiveArm,
   type LiveField,
@@ -13,6 +15,7 @@ import {
   presentationOwnerKey,
   renderClientFieldsResolver,
   useClientFieldsResolvers,
+  useClockPin,
   useFieldPresentations,
   type ClientFieldReaders,
   type ClientFieldValues,
@@ -24,6 +27,7 @@ import {
 } from "@plugins/network/plugins/live/web";
 import type { FieldsRecord } from "@plugins/fields/core";
 import { foldFieldRead, splitRowReader } from "./field-read";
+import { ClockCell } from "./clock-cell";
 import type {
   DataViewRowsCollection,
   FieldDef,
@@ -166,6 +170,7 @@ const NO_PEERS: FieldCellContext = { extent: null };
 function renderers(
   spec: FieldPresentationSpec<unknown, unknown> | undefined,
   read: (row: unknown) => unknown,
+  clock: ClockForm | null = null,
 ): Pick<FieldDef<unknown>, "cell" | "token" | "extent"> {
   if (spec === undefined) return {};
   const over =
@@ -177,6 +182,19 @@ function renderers(
       ) => ReactNode,
     ) =>
     (row: unknown, context?: FieldCellContext): ReactNode => {
+      // A clock field's renderer is handed its value against a ticking clock
+      // (`ClockCell`), never the pin the list compares by.
+      if (clock !== null) {
+        return (
+          <ClockCell
+            form={clock}
+            row={row as object}
+            render={(value) =>
+              value === null ? null : render(value, row, context ?? NO_PEERS)
+            }
+          />
+        );
+      }
       const value = read(row);
       return value === undefined
         ? null
@@ -220,7 +238,7 @@ function derivedField(
       ? { values: (row) => (read(row) as string[] | undefined) ?? [] }
       : { value: (row) => (read(row) ?? null) as FieldValue }),
     ...(field.primary ? { primary: true } : {}),
-    ...renderers(spec, read),
+    ...renderers(spec, read, field.clock),
     ...presented(spec),
     ...extra,
   };
@@ -256,10 +274,24 @@ export function useDerivedFields(
 ): DerivedFields {
   const registrations = useFieldPresentations();
   const resolvers = useClientFieldsResolvers();
+  // The `now` a clock field's value is computed against between pins (what
+  // the list groups, extents and elides by; its cell ticks on its own) —
+  // re-pinned at the finest quantum, and no timer for a collection with none.
+  const now = useClockPin(clockQuantumOf(collection));
   return useMemo(
-    () => deriveFields(collection, live, registrations, resolvers),
-    [collection, live, registrations, resolvers],
+    () => deriveFields(collection, live, registrations, resolvers, now),
+    [collection, live, registrations, resolvers, now],
   );
+}
+
+/** The finest quantum of a collection's clock fields, or `null` for none. */
+function clockQuantumOf(
+  collection: DataViewRowsCollection | undefined,
+): number | null {
+  const quanta = Object.values(collection?.fields ?? {})
+    .map((f) => f.clock?.quantumMs)
+    .filter((q): q is number => q !== undefined);
+  return quanta.length === 0 ? null : Math.min(...quanta);
 }
 
 /** {@link useDerivedFields}, pure. */
@@ -268,6 +300,8 @@ export function deriveFields(
   live: boolean,
   registrations: readonly StoredFieldPresentation[],
   resolvers: readonly StoredClientFieldsResolution[] = [],
+  /** The pinned `now` clock fields are computed against (`useClockPin`); required when the collection declares one. */
+  now: number | null = null,
 ): DerivedFields {
   if (collection === undefined)
     return { fields: [], optionReaders: [], clientReaders: [] };
@@ -331,10 +365,18 @@ export function deriveFields(
           `data-view: the presentation of "${collection.key}" reads options for "${field.key}", its source field — a union's source options are its registered arms (\`liveArm({ label, order })\`), never read.`,
         );
       }
+      const clock = field.clock;
+      if (clock !== null && now === null) {
+        throw new Error(
+          `data-view: "${collection.key}" declares clock field "${field.key}", but its fields were derived with no pinned \`now\` (\`useClockPin\`).`,
+        );
+      }
       add(
         derivedField(
           source ? sourceField(field, arms) : field,
-          (row) => (row as Record<string, unknown>)[field.key],
+          clock === null
+            ? (row) => (row as Record<string, unknown>)[field.key]
+            : (row) => clockFieldValue(clock, row as object, now!),
           spec,
           {},
         ),
@@ -378,6 +420,7 @@ export function deriveFields(
             primary: false,
             domain: columns.wireFilterable[wire]?.domain ?? null,
             sortable: columns.wireSortable.includes(wire),
+            clock: null,
           },
           (row) => columns.read(row as Parameters<typeof columns.read>[0])[key],
           spec,
@@ -429,6 +472,7 @@ export function deriveFields(
             primary: false,
             domain: columns.wireFilterable[wire]?.domain ?? null,
             sortable: columns.wireSortable.includes(wire),
+            clock: null,
           },
           // Another arm's row carries no slice of this exposure.
           (row) =>

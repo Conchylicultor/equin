@@ -1,13 +1,17 @@
 import { useMemo } from "react";
 import { useConfigResult } from "@plugins/config_v2/web";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useClockParam, useLive } from "@plugins/network/plugins/live/web";
 import {
   mapResource,
   useCombinedResources,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import type { IntegrationStatus } from "@plugins/auth/web";
-import { mapsMonthUsage, mapsUsageConfig } from "../../core";
+import {
+  MAPS_BILLING_MONTH,
+  mapsMonthUsage,
+  mapsUsageConfig,
+} from "../../core";
 import { usageRows, type UsageRow } from "./usage-rows";
 
 export interface MapsUsageReadout {
@@ -16,16 +20,18 @@ export interface MapsUsageReadout {
   resetsAt: string;
 }
 
-/** This month's live counts as readout rows, against the configured budgets. */
+/** This billing month's live counts (re-pinned at its turn) as readout rows, against the configured budgets. */
 export function useUsageReadout(): ResourceResult<MapsUsageReadout> {
   const both = useCombinedResources({
-    usage: useLive(mapsMonthUsage),
+    usage: useLive(mapsMonthUsage, {
+      month: useClockParam(MAPS_BILLING_MONTH),
+    }),
     budgets: useConfigResult(mapsUsageConfig),
   });
   return useMemo(
     () =>
       mapResource(both, ({ usage, budgets }) => ({
-        rows: usageRows(usage, budgets, new Date()),
+        rows: usageRows(usage, budgets),
         resetsAt: usage.resetsAt,
       })),
     [both],

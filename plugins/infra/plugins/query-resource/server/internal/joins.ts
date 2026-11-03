@@ -1,4 +1,5 @@
 import { utf8ByteLength } from "./utf8";
+import { assertStableRead } from "./clock-read";
 import {
   and,
   Column,
@@ -1167,6 +1168,7 @@ function compilePlan(
     const cached = renderedExprs.get(field);
     if (cached !== undefined) return cached;
     const where = `expression field "${opts.name}"`;
+    assertStableRead(field.sql, `${label}: ${where}`);
     // Re-checked at the boundary every compile passes through: the type is
     // interpolated raw into a cut's cast.
     if (!SQL_TYPE_RE.test(field.sqlType)) {
@@ -1264,6 +1266,7 @@ function compilePlan(
   >();
   const renderAggregate: JoinPlan["renderAggregate"] = (fragment, opts) => {
     const where = `aggregate "${opts.name}"`;
+    assertStableRead(fragment, `${label}: ${where}`);
     const cacheKey = `${opts.relation}\u0000${opts.name}`;
     const text = new PgDialect().sqlToQuery(fragment);
     const cached = renderedAggregates.get(cacheKey);
@@ -1342,6 +1345,9 @@ function compilePlan(
   // An INNER join below a LEFT one: its ancestors are read as membership too
   // (`closure`), since a missing ancestor row drops the host.
 
+  for (const j of joins) {
+    assertStableRead(j.on, `${label}: join "${j.alias}"'s condition`);
+  }
   const conditionColumns = joins.flatMap((j) => columnsIn(j.on));
 
   const routeIdsOf = (alias: string): readonly string[] => {

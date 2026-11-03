@@ -62,7 +62,6 @@ function EventListPaneView(): ReactElement {
   return (
     <PaneChrome pane={eventListPane}>
       <DataView<EventListRow>
-        storageKey={EVENTS_LIST_VIEW}
         overrides={EVENT_LIST_OVERRIDES}
         onRowActivate={openEvent}
         views={["list", "table", "gallery"]}
