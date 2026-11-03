@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.epot.fs-latency-monitor</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <string>-I</string>
+        <string>/Users/epot/.equin/logs/monitors/fs-latency-src/fs-latency-monitor.py</string>
+    </array>
+    <!-- Probes run at the default tier and switch themselves into darwinbg for
+         the darwinbg half; Interactive keeps launchd from throttling the job,
+         so the foreground reading is a real foreground reading. -->
+    <key>ProcessType</key>
+    <string>Interactive</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>MONITOR_HOME</key>
+        <string>/Users/epot</string>
+    </dict>
+    <key>StartInterval</key>
+    <integer>30</integer>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/tmp/fs-latency-monitor.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/fs-latency-monitor.err</string>
+</dict>
+</plist>
