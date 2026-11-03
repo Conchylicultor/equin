@@ -27,7 +27,11 @@ never the row's own worktree.
 
 Each tick sweeps every worktree's boot channel (`readBootEvents(wt, lookbackMs)`)
 for boots with no `ready` line whose un-ready duration has crossed
-`bootReadyBudgetMs` (default 120 s):
+`bootReadyBudgetMs` (default 120 s). A boot that **exited** before ready
+(`exitedAt`, boot-events' `exited` line) is skipped: it crashed, it did not
+wedge — its error is on the backend's stderr, which the build that spawned it
+fails on. Measured to the next start it would read as a wedge as long as the
+agent took to rebuild (a 3 s boot assert filed as "un-ready 172s").
 
 - **superseded** — a later boot attempt already replaced it (`supersededAtMs`
   set). A closed, past outage. Filed **once** (a module-level

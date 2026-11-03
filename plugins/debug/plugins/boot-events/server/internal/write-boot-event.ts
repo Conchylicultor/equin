@@ -6,7 +6,8 @@ import type { BootLine } from "./schema";
 
 // Writes the per-boot lines to the persisted `boot` log channel →
 // ~/.equin/worktrees/<wt>/logs/boot.jsonl: one `start` line at the
-// register phase, one `ready` line from `onReady`. The two pair by
+// register phase, one `ready` line from `onReady` — or, when the process
+// exits before it, one `exited` line from its `exit` event. The two pair by
 // processStartedAt (readBootEvents), so a backend that wedges during
 // migrations / onReadyBlocking leaves an unpaired start — visible on the
 // timeline exactly during deploy-restart bursts, previously a blind spot.
@@ -37,19 +38,43 @@ function publish(line: BootLine): void {
 // phase too, under its parent's worktree name, but never reaches `onReady` —
 // so its `start` would never pair with a `ready`, and the boot watchdog would
 // report the healthy serving backend as wedged for as long as it stayed up.
+//
+// The same token arms the `exited` line: a boot that throws (a failed
+// migration, a boot assert) exits before `ready`, and without a terminal line
+// it reads exactly like a wedge — the boot watchdog filed one, its un-ready
+// time running until the next build's boot. The `exit` listener is
+// synchronous (Bun runs it on a throw out of the boot as on process.exit); a
+// signal kill runs no listener, so a backend killed mid-boot stays "never
+// ready", which is what it is.
+let ready = false;
+
 export const bootStartRegistration: Registration = {
   register() {
     if (getBootMode() !== "serve") return;
+    const worktree = runtimeNamespace();
+    const processStartedAt = Math.round(performance.timeOrigin);
     publish({
       sampledAt: Date.now(),
-      worktree: runtimeNamespace(),
-      processStartedAt: Math.round(performance.timeOrigin),
+      worktree,
+      processStartedAt,
       phase: "start",
+    });
+    process.once("exit", () => {
+      if (ready) return;
+      const now = Date.now();
+      publish({
+        sampledAt: now,
+        worktree,
+        processStartedAt,
+        exitedAt: now,
+        phase: "exited",
+      });
     });
   },
 };
 
 export function writeBootReadyEvent(): void {
+  ready = true;
   const now = Date.now();
   publish({
     sampledAt: now,

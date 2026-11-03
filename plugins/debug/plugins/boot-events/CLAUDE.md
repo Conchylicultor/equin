@@ -17,10 +17,18 @@ Both lines go to the persisted `boot` log channel →
   backup) runs `register` but never `onReady`, so its `start` would never pair.
 - **`phase: "ready"`** — written from `onReady` (post-`onReadyBlocking`
   readiness — a migrated DB and ready registry), carrying `readyAt`.
+- **`phase: "exited"`** — written from the process's `exit` event (armed by
+  the same register token) when it fires before `ready`, carrying `exitedAt`:
+  a boot that threw (a failed migration, a boot assert) exited, it did not
+  wedge. Without it a crashed boot read exactly like a wedge, and the boot
+  watchdog filed one whose "un-ready" time ran until the next build's boot. A
+  signal kill runs no listener, so a backend killed mid-boot writes none and
+  stays "never ready".
 
 ```json
 { "sampledAt": <ms>, "worktree": "<wt>", "processStartedAt": <ms>, "phase": "start" }
 { "sampledAt": <ms>, "worktree": "<wt>", "processStartedAt": <ms>, "readyAt": <ms>, "phase": "ready" }
+{ "sampledAt": <ms>, "worktree": "<wt>", "processStartedAt": <ms>, "exitedAt": <ms>, "phase": "exited" }
 ```
 
 A boot is the wall-clock interval `[processStartedAt, readyAt]`
@@ -40,7 +48,8 @@ here (the plan's "~256 KB tiny cap" is subsumed by the substrate's rotation).
 **Reading**: `readBootEvents(worktree, windowMs)` pairs the lines by
 `processStartedAt` (`pair-boot-lines.ts`, pure + tested) into `BootEvent`s
 whose interval overlaps the window. A start without a ready line is a boot
-that never became ready: `readyAt: null`, bounded by the next attempt's start
+that never became ready: `readyAt: null` — a crash when an exited line pairs
+with it (`exitedAt`, its bar ends there), otherwise bounded by the next attempt's start
 (`supersededAtMs`) when one follows — a crash-loop must not render as a stack
 of eternal open bars — and open-ended (the timeline renders it to the window
 edge, pulsing) when it is the latest attempt. Mirrors health-monitor's

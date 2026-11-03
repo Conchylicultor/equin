@@ -9,12 +9,15 @@ export interface BootEventLike {
   // booting): superseded attempts are bounded by supersededAtMs, the latest
   // one renders open-ended to the window's right edge.
   readyAt: number | null;
+  // Set when the process exited before ready (a boot crash): the bar ends there.
+  exitedAt: number | null;
   supersededAtMs: number | null;
 }
 
 // A boot is the wall-clock interval [processStartedAt, readyAt] — a
 // deploy-restart burst renders as a stack of these bars. A never-ready boot
-// renders to its superseding attempt's start (warning: a failed attempt) or
+// renders to its exit (a boot crash), to its superseding attempt's start
+// (warning: a failed attempt) or
 // open-ended to toMs with the in-flight pulse (possibly booting right now,
 // possibly wedged — the previously-invisible case). `worktree` is the log-dir
 // name the events were read from (== the lane), not the line's own field, so
@@ -41,6 +44,26 @@ export function mapBootEvents(
           processStartedAt: e.processStartedAt,
           readyAt: e.readyAt,
           bootMs: e.readyAt - e.processStartedAt,
+        },
+      });
+      continue;
+    }
+    if (e.exitedAt !== null) {
+      if (!overlapsWindow(e.processStartedAt, e.exitedAt, fromMs, toMs))
+        continue;
+      out.push({
+        id: `boot:${worktree}:start:${e.processStartedAt}`,
+        source: "boot" as const,
+        worktree,
+        startMs: e.processStartedAt,
+        endMs: e.exitedAt,
+        label: "backend boot (crashed)",
+        severity: "warning" as const,
+        detail: {
+          processStartedAt: e.processStartedAt,
+          readyAt: null,
+          exitedAt: e.exitedAt,
+          bootMs: e.exitedAt - e.processStartedAt,
         },
       });
       continue;

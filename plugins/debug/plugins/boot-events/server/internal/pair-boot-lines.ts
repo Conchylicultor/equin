@@ -4,14 +4,18 @@ import type { BootEvent, BootLine } from "./schema";
 //
 // A ready line is authoritative for its boot (pre-cutover history is
 // ready-lines-only, so a ready line must never require a matching start). A
-// start line without a ready line is a boot that never became ready; it is
-// bounded by the next boot attempt's start when one follows (a crash-loop
-// must not render as a stack of eternal open bars), and open-ended when it is
-// the latest line — possibly still booting, possibly wedged right now.
+// start line without a ready line is a boot that never became ready: crashed
+// when an exited line pairs with it (`exitedAt`), else bounded by the next
+// boot attempt's start when one follows (a crash-loop must not render as a
+// stack of eternal open bars), and open-ended when it is the latest line —
+// possibly still booting, possibly wedged right now.
 export function pairBootLines(lines: readonly BootLine[]): BootEvent[] {
   const readyStarts = new Set<number>();
+  const exits = new Map<number, number>();
   for (const line of lines) {
     if ("readyAt" in line) readyStarts.add(line.processStartedAt);
+    else if (line.phase === "exited")
+      exits.set(line.processStartedAt, line.exitedAt);
   }
 
   const events: BootEvent[] = [];
@@ -22,13 +26,18 @@ export function pairBootLines(lines: readonly BootLine[]): BootEvent[] {
         worktree: line.worktree,
         processStartedAt: line.processStartedAt,
         readyAt: line.readyAt,
+        exitedAt: null,
         supersededAtMs: null,
       });
-    } else if (!readyStarts.has(line.processStartedAt)) {
+    } else if (
+      line.phase === "start" &&
+      !readyStarts.has(line.processStartedAt)
+    ) {
       unpaired.push({
         worktree: line.worktree,
         processStartedAt: line.processStartedAt,
         readyAt: null,
+        exitedAt: exits.get(line.processStartedAt) ?? null,
         supersededAtMs: null,
       });
     }
@@ -40,6 +49,7 @@ export function pairBootLines(lines: readonly BootLine[]): BootEvent[] {
   if (unpaired.length > 0) {
     const startsByWorktree = new Map<string, number[]>();
     for (const line of lines) {
+      if (line.phase === "exited") continue;
       const list = startsByWorktree.get(line.worktree) ?? [];
       list.push(line.processStartedAt);
       startsByWorktree.set(line.worktree, list);

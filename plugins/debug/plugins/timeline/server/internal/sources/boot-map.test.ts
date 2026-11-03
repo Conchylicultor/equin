@@ -10,7 +10,14 @@ describe("mapBootEvents", () => {
     const start = T0 + 5 * 60 * 1000;
     const ready = start + 12_000;
     const [ev] = mapBootEvents(
-      [{ processStartedAt: start, readyAt: ready, supersededAtMs: null }],
+      [
+        {
+          processStartedAt: start,
+          readyAt: ready,
+          exitedAt: null,
+          supersededAtMs: null,
+        },
+      ],
       "wt-a",
       fromMs,
       toMs,
@@ -31,11 +38,13 @@ describe("mapBootEvents", () => {
     const straddling = {
       processStartedAt: fromMs - 5000,
       readyAt: fromMs + 5000,
+      exitedAt: null,
       supersededAtMs: null,
     };
     const outside = {
       processStartedAt: fromMs - 60_000,
       readyAt: fromMs - 30_000,
+      exitedAt: null,
       supersededAtMs: null,
     };
     const events = mapBootEvents([straddling, outside], "wt-a", fromMs, toMs);
@@ -46,7 +55,14 @@ describe("mapBootEvents", () => {
   test("a never-ready latest boot renders open-ended to toMs with the in-flight pulse", () => {
     const start = T0 + 5 * 60 * 1000;
     const [ev] = mapBootEvents(
-      [{ processStartedAt: start, readyAt: null, supersededAtMs: null }],
+      [
+        {
+          processStartedAt: start,
+          readyAt: null,
+          exitedAt: null,
+          supersededAtMs: null,
+        },
+      ],
       "wt-a",
       fromMs,
       toMs,
@@ -67,7 +83,14 @@ describe("mapBootEvents", () => {
     const start = T0 + 5 * 60 * 1000;
     const next = start + 30_000;
     const [ev] = mapBootEvents(
-      [{ processStartedAt: start, readyAt: null, supersededAtMs: next }],
+      [
+        {
+          processStartedAt: start,
+          readyAt: null,
+          exitedAt: null,
+          supersededAtMs: next,
+        },
+      ],
       "wt-a",
       fromMs,
       toMs,
@@ -81,10 +104,42 @@ describe("mapBootEvents", () => {
     });
   });
 
+  test("a boot that exited before ready is a crash bar ending at its exit, not at its successor", () => {
+    const start = T0 + 5 * 60 * 1000;
+    const exited = start + 3_000;
+    const [ev] = mapBootEvents(
+      [
+        {
+          processStartedAt: start,
+          readyAt: null,
+          exitedAt: exited,
+          supersededAtMs: start + 170_000,
+        },
+      ],
+      "wt-a",
+      fromMs,
+      toMs,
+    );
+    expect(ev).toMatchObject({
+      startMs: start,
+      endMs: exited,
+      label: "backend boot (crashed)",
+      severity: "warning",
+      detail: { exitedAt: exited, bootMs: 3_000 },
+    });
+  });
+
   test("an old never-ready open boot still overlaps any later window (it is STILL not ready)", () => {
     const start = fromMs - 24 * 60 * 60 * 1000;
     const events = mapBootEvents(
-      [{ processStartedAt: start, readyAt: null, supersededAtMs: null }],
+      [
+        {
+          processStartedAt: start,
+          readyAt: null,
+          exitedAt: null,
+          supersededAtMs: null,
+        },
+      ],
       "wt-a",
       fromMs,
       toMs,
