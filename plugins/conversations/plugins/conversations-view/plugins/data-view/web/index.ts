@@ -6,7 +6,10 @@ import { conversationListConfig } from "../shared/config";
 export { SidebarSources, SIDEBAR_VIEW } from "./host";
 export type { ConversationSidebarProps } from "./host";
 export { ConversationsSidebarDataView } from "./components/conversations-sidebar-data-view";
-export { SidebarConversationItem } from "./components/sidebar-conversation-item";
+export {
+  SidebarConversationDot,
+  SidebarConversationItem,
+} from "./components/sidebar-conversation-item";
 
 export default {
   description:

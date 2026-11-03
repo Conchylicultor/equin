@@ -2,9 +2,16 @@ import type { ReactElement } from "react";
 import { useConfig } from "@plugins/config_v2/web";
 import {
   ConversationItem,
+  ConvStatusDot,
   type ConversationItemConv,
 } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { useTaskShortTitle } from "@plugins/tasks/plugins/task-title/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import {
+  cn,
+  ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useOptimisticConversationStatus } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import { conversationListConfig } from "../../shared/config";
 import { resolveListTitle } from "../internal/list-title";
@@ -42,9 +49,12 @@ type SidebarConv = ConversationItemConv & {
 export function SidebarConversationItem({
   conv: row,
   muted,
+  dot,
 }: {
   conv: SidebarConv;
   muted?: boolean;
+  /** `false`: the host draws the dot as the row's lead ({@link SidebarConversationDot}). */
+  dot?: boolean;
 }): ReactElement {
   const { titleMode } = useConfig(conversationListConfig);
   const conv = { ...row, status: useOptimisticConversationStatus(row) };
@@ -53,25 +63,62 @@ export function SidebarConversationItem({
   const anchorRef = useHintAnchor(conversationRowAnchor.at(row.id));
   // Split so only the short mode subscribes to the short-title rows.
   if (titleMode === "short")
-    return <ShortTitleItem conv={conv} muted={muted} anchorRef={anchorRef} />;
+    return (
+      <ShortTitleItem
+        conv={conv}
+        muted={muted}
+        dot={dot}
+        anchorRef={anchorRef}
+      />
+    );
   return (
     <ConversationItem
       ref={anchorRef}
       conv={conv}
       layout="line"
       muted={muted}
+      dot={dot}
       title={resolveListTitle(titleMode, conv, null)}
     />
+  );
+}
+
+/**
+ * A row's status dot drawn apart from its {@link SidebarConversationItem}
+ * (`dot={false}`) — the list's leading glyph, which a list wraps in its
+ * expand/collapse disclosure (the Queue's supervisors). The same optimistic
+ * status the item paints, so the two never disagree.
+ *
+ * Its box is the tree disclosure's (`size-5`, the merged variant's icon box),
+ * so a row's title starts at the same x whether or not its list draws a
+ * disclosure around the dot — and there, box plus the row's glyph gap lands
+ * the title on the sidebar nav labels' column, as the item's own dot did.
+ */
+export function SidebarConversationDot({
+  conv: row,
+}: {
+  conv: SidebarConv;
+}): ReactElement {
+  const conv = { ...row, status: useOptimisticConversationStatus(row) };
+  return (
+    <Center className={cn("size-5", rigidClass())}>
+      {/* `md`: the dot's own density tier, whatever the list's. */}
+      <ControlSizeProvider size="md">
+        <ConvStatusDot conv={conv} />
+      </ControlSizeProvider>
+    </Center>
   );
 }
 
 function ShortTitleItem({
   conv,
   muted,
+  dot,
   anchorRef,
 }: {
   conv: SidebarConv;
   muted?: boolean;
+  dot?: boolean;
   anchorRef: (el: HTMLElement | null) => void;
 }): ReactElement {
   const short = useTaskShortTitle(conv.taskId);
@@ -81,6 +128,7 @@ function ShortTitleItem({
       conv={conv}
       layout="line"
       muted={muted}
+      dot={dot}
       title={resolveListTitle(
         "short",
         conv,

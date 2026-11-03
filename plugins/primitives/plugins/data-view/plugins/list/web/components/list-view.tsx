@@ -214,6 +214,7 @@ interface ListRowConfig {
   rowSize: "sm" | "md";
   rowChrome: ListViewOptions<unknown>["rowChrome"];
   renderRow: ListViewOptions<unknown>["renderRow"];
+  renderLeading: ListViewOptions<unknown>["renderLeading"];
   /** The action cluster is painted at rest (`ListViewOptions.actionsAtRest`). */
   actionsAtRest: boolean;
   labelClassName: ((row: unknown) => ClassName | undefined) | undefined;
@@ -396,7 +397,13 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     ItemActionsDescriptor<unknown> | undefined;
   const { properties } = props.state;
   const { fields, rowActivation, rowTone, cover } = props;
-  const { rowChrome, renderRow, labelClassName, disclosureVariant } = options;
+  const {
+    rowChrome,
+    renderRow,
+    renderLeading,
+    labelClassName,
+    disclosureVariant,
+  } = options;
   const actionsAtRest = options.actionsAtRest === true;
   // Where every field goes (the surface's recipe and pins, the user's
   // Properties); the section pipeline above keeps using the full
@@ -540,6 +547,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       rowSize,
       rowChrome,
       renderRow,
+      renderLeading,
       actionsAtRest,
       labelClassName,
       detail,
@@ -567,6 +575,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     rowSize,
     rowChrome,
     renderRow,
+    renderLeading,
     actionsAtRest,
     labelClassName,
     detail,
@@ -1249,7 +1258,9 @@ function listRowNode(
     row,
     hasChildren: props.hasChildren,
   });
-  const glyph = thumbnail ? (
+  const glyph = config.renderLeading ? (
+    config.renderLeading(row)
+  ) : thumbnail ? (
     // A rigid leaf: the frame keeps its size however tight the line is.
     <CoverFrame
       size="thumb"

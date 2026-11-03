@@ -11,30 +11,26 @@
     - `SidebarSources` ← `conversations.conversations-view.data-view.history`
     - `SidebarSources` ← `conversations.conversations-view.data-view.queue`
   - Contributes: `ConfigV2.WebRegister` "config"
-  - Uses:
-    - `config_v2.ConfigV2`
-    - `config_v2.useConfig`
-    - `conversations/conversation-ui/item.ConversationItem`
-    - `conversations/conversation-ui/item.ConversationItemConv`
-    - `conversations/conversation-ui/item.conversationTitle`
-    - `conversations/conversation-ui/item.ConvTitleOverride`
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations/conversation-ui/item` ×5
+    - `primitives/css/ui-kit` ×3
+    - `primitives/data-view` ×3
+    - `config_v2` ×2
+    - `primitives/css/spacing` ×2
     - `conversations/conversation-view/pending-turn.useOptimisticConversationStatus`
     - `hints.useHintAnchor`
+    - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/sticky.Sticky`
-    - `primitives/css/ui-kit.Separator`
-    - `primitives/data-view.DataViewSwitcher`
-    - `primitives/data-view.defineDataView`
-    - `primitives/data-view.defineDataViewSources`
     - `tasks/task-title.useTaskShortTitle`
   - Exports (types): `ConversationSidebarProps`
   - Exports (values):
     - `ConversationsSidebarDataView`
     - `SIDEBAR_VIEW`
+    - `SidebarConversationDot`
     - `SidebarConversationItem`
     - `SidebarSources`
 - Server:
@@ -49,6 +45,7 @@
     - `ui/tokens/density --pad-row-x`
     - `ui/tokens/density --pad-row-y`
     - `ui/tokens/density --space-xs`
+    - `ui/tokens/shape --spacing`
     - `ui/tokens/sidebar-palette --sidebar-border`
   - Imported by:
     - `conversations/conversations-view`

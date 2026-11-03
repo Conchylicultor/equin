@@ -18,6 +18,7 @@
     - `queue-actions` "close" → `CloseAction`
   - Uses:
     - `conversations/conversations-view/data-view.ConversationSidebarProps`
+    - `conversations/conversations-view/data-view.SidebarConversationDot`
     - `conversations/conversations-view/data-view.SidebarConversationItem`
     - `conversations/conversations-view/data-view.SidebarSources`
     - `conversations/conversations-view/queue.classifyQueue`

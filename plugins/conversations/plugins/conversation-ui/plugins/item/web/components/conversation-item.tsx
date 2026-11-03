@@ -86,7 +86,28 @@ export type ConversationItemProps = {
   muted?: boolean;
   /** The item's root box — e.g. a hint anchor registering the row. */
   ref?: Ref<HTMLElement>;
+  /**
+   * `line` only: `false` leaves the status dot out — for a host that draws it
+   * itself as the row's leading glyph ({@link ConvStatusDot}), e.g. a list
+   * that wraps it in its expand/collapse disclosure. Default `true`.
+   */
+  dot?: boolean;
 };
+
+/**
+ * The `line` layout's lead: the status dot in an icon-sized box on the
+ * sidebar nav's column (`size-sidebar-icon`), at the dot's own `md` density
+ * whatever the list's.
+ */
+function ConvLeadDot({ conv }: { conv: ConversationItemConv }) {
+  return (
+    <Center className={cn("size-sidebar-icon", rigidClass())}>
+      <ControlSizeProvider size="md">
+        <ConvStatusDot conv={conv} />
+      </ControlSizeProvider>
+    </Center>
+  );
+}
 
 /**
  * A caller-resolved name for the conversation: `label` is shown, `full` is the
@@ -188,6 +209,7 @@ export function ConversationItem({
   title,
   muted,
   ref,
+  dot = true,
 }: ConversationItemProps) {
   const active = conv.status === "working";
   if (layout === "line") {
@@ -209,12 +231,7 @@ export function ConversationItem({
             the row's one flexible cell; the title inside it is what
             truncates. */}
         <Line className={cn("gap-sidebar-icon", fillClasses("x"))}>
-          {/* `md`: the dot's own density tier, whatever the list's. */}
-          <Center className={cn("size-sidebar-icon", rigidClass())}>
-            <ControlSizeProvider size="md">
-              <ConvStatusDot conv={conv} />
-            </ControlSizeProvider>
-          </Center>
+          {dot ? <ConvLeadDot conv={conv} /> : null}
           <Fill>
             {/* `sm`: the title's full `label` role even in a compact (`xs`)
                 list, which would otherwise drop it to the compact rung — so

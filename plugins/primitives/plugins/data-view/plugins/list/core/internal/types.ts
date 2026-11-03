@@ -13,6 +13,15 @@ export interface ListViewOptions<TRow> {
    */
   renderRow?: (row: TRow) => ReactNode;
   /**
+   * The row's leading glyph when `renderRow` owns the body — drawn by the
+   * list, ahead of the body, so the list can wrap it in the row's
+   * expand/collapse disclosure (a merged disclosure puts the chevron in the
+   * glyph's place on hover). A glyph drawn inside `renderRow` instead sits in
+   * the row's own control, where no disclosure can reach it. Default row
+   * chrome only.
+   */
+  renderLeading?: (row: TRow) => ReactNode;
+  /**
    * Row shape: 2 stacks the `line2` slot under the title — adjacent text
    * terms on one line, each chip group on a line of its own — with the
    * trailing fields as one right-aligned column beside them; 1 puts

@@ -217,6 +217,13 @@ conditional hook.
 
 - `renderRow?(row)` — full row-body override (escape hatch); still wrapped in
   the selectable `Row`.
+- `renderLeading?(row)` — the leading glyph of a `renderRow` row, drawn by the
+  list ahead of the body: the glyph the row's disclosure wraps (a merged
+  disclosure swaps it for the chevron on hover). A glyph drawn inside
+  `renderRow` sits in the row's own button, where no disclosure can reach it
+  (the Queue: the status dot is `renderLeading`, the item drawn `dot={false}`).
+- `disclosureVariant?` — the disclosure look this list pins (see "Attached
+  rows").
 - `lines?` — rows per item, `1 | 2` (default: 2 when `line2` holds a field — see above).
 - `columnCaptions?` — a caption row over the list (title label, each trailing
   label over its slot). Default off; also the view type's `configSchema`

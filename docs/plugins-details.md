@@ -18986,30 +18986,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SidebarSources` ← `conversations.conversations-view.data-view.history`
               - `SidebarSources` ← `conversations.conversations-view.data-view.queue`
             - Contributes: `ConfigV2.WebRegister` "config"
-            - Uses:
-              - `config_v2.ConfigV2`
-              - `config_v2.useConfig`
-              - `conversations/conversation-ui/item.ConversationItem`
-              - `conversations/conversation-ui/item.ConversationItemConv`
-              - `conversations/conversation-ui/item.conversationTitle`
-              - `conversations/conversation-ui/item.ConvTitleOverride`
+            - Uses: 24 symbols — full list in [`plugins/conversations/plugins/conversations-view/plugins/data-view/REFERENCE.md`](../plugins/conversations/plugins/conversations-view/plugins/data-view/REFERENCE.md)
+              - `conversations/conversation-ui/item` ×5
+              - `primitives/css/ui-kit` ×3
+              - `primitives/data-view` ×3
+              - `config_v2` ×2
+              - `primitives/css/spacing` ×2
               - `conversations/conversation-view/pending-turn.useOptimisticConversationStatus`
               - `hints.useHintAnchor`
+              - `primitives/css/center.Center`
               - `primitives/css/fill.Fill`
               - `primitives/css/line.Line`
+              - `primitives/css/rigid.rigidClass`
               - `primitives/css/scroll.Scroll`
-              - `primitives/css/spacing.Inset`
-              - `primitives/css/spacing.Stack`
               - `primitives/css/sticky.Sticky`
-              - `primitives/css/ui-kit.Separator`
-              - `primitives/data-view.DataViewSwitcher`
-              - `primitives/data-view.defineDataView`
-              - `primitives/data-view.defineDataViewSources`
               - `tasks/task-title.useTaskShortTitle`
             - Exports (types): `ConversationSidebarProps`
             - Exports (values):
               - `ConversationsSidebarDataView`
               - `SIDEBAR_VIEW`
+              - `SidebarConversationDot`
               - `SidebarConversationItem`
               - `SidebarSources`
           - Server:
@@ -19024,6 +19020,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --pad-row-x`
               - `ui/tokens/density --pad-row-y`
               - `ui/tokens/density --space-xs`
+              - `ui/tokens/shape --spacing`
               - `ui/tokens/sidebar-palette --sidebar-border`
             - Imported by:
               - `conversations/conversations-view`
@@ -19058,6 +19055,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `queue-actions` "close" → `CloseAction`
                 - Uses:
                   - `conversations/conversations-view/data-view.ConversationSidebarProps`
+                  - `conversations/conversations-view/data-view.SidebarConversationDot`
                   - `conversations/conversations-view/data-view.SidebarConversationItem`
                   - `conversations/conversations-view/data-view.SidebarSources`
                   - `conversations/conversations-view/queue.classifyQueue`
@@ -40727,11 +40725,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 130 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+            - Imported by: 131 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
               - `apps` ×42
               - `primitives` ×26
               - `page` ×18
-              - `conversations` ×8
+              - `conversations` ×9
               - `debug` ×6
               - `ui` ×5
               - `apps-core` ×4
@@ -41431,9 +41429,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Imported by: 139 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+            - Imported by: 140 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
               - `apps` ×36
-              - `conversations` ×23
+              - `conversations` ×24
               - `primitives` ×20
               - `debug` ×13
               - `tasks` ×8
@@ -55327,9 +55325,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --radius-chip-compact`
               - `ui/tokens/density --space-sm`
-            - Tokens used by: 408 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 409 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `apps` ×87
-              - `conversations` ×79
+              - `conversations` ×80
               - `primitives` ×69
               - `page` ×36
               - `debug` ×27

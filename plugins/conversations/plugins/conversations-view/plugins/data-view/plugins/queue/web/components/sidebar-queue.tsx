@@ -6,6 +6,7 @@ import type {
 } from "@plugins/primitives/plugins/data-view/web";
 import { conversationsActive } from "@plugins/tasks/plugins/tasks-core/core";
 import {
+  SidebarConversationDot,
   SidebarConversationItem,
   type ConversationSidebarProps,
 } from "@plugins/conversations/plugins/conversations-view/plugins/data-view/web";
@@ -104,9 +105,12 @@ const QUEUE_VIEW_OPTIONS = {
     // mode, hint anchor, close control) — not values of fields.
     // A blocked task's row is muted: it is waiting on another task, not on
     // the user.
+    // The status dot is the list's leading glyph rather than the item's, so
+    // a supervisor's expand/collapse can take its place on hover.
     renderRow: (c: QueueRow) => (
-      <SidebarConversationItem conv={c} muted={c.isBlocked} />
+      <SidebarConversationItem conv={c} muted={c.isBlocked} dot={false} />
     ),
+    renderLeading: (c: QueueRow) => <SidebarConversationDot conv={c} />,
     size: "sm",
     // A supervisor's expand/collapse sits in its status dot's place, shown
     // only on hover (Pages / file-explorer style) — this list only; the rest
