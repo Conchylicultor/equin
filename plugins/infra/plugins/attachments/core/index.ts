@@ -5,6 +5,12 @@ export {
   attachmentFile,
   attachmentBytes,
   attachmentRows,
+  ATTACHMENT_LINKS_MAX,
 } from "./internal/live";
-export { attachmentFields, attachmentsEntityRef } from "./internal/entity";
+export type { AttachmentLinkRow } from "./internal/live";
+export {
+  attachmentFields,
+  attachmentLinkFields,
+  attachmentsEntityRef,
+} from "./internal/entity";
 export { getAttachmentFile } from "./internal/file-endpoint";

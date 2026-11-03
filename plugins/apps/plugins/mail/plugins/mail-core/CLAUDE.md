@@ -127,12 +127,15 @@ imports `@plugins/auth/*` directly — all Gmail auth flows through
   - Uses: `ids.IdKinds`
 - Server:
   - Contributes:
+    - `resource.declare` "mail-account"
+    - `resource.declare` "mail-labels"
+    - `resource.declare` "mail.draft-attachment-links"
+    - `resource.declare` "mail.draft-attachment-links:rows"
+    - `attachments.link` "mail_drafts"
     - `ids.kind` "mailacct"
     - `ids.kind` "mailatt"
     - `ids.kind` "maildraft"
     - `ids.kind` "mailout"
-    - `resource.declare` "mail-account"
-    - `resource.declare` "mail-labels"
     - `fork-data-exclusion` "mail_attachments"
     - `fork-data-exclusion` "mail_message_labels"
     - `fork-data-exclusion` "mail_messages"
@@ -151,6 +154,7 @@ imports `@plugins/auth/*` directly — all Gmail auth flows through
     - `infra/entities.defaultNow`
     - `infra/entities.defineEntity`
     - `integrations/gmail.getGmailToken`
+    - `network/live.serveCollection`
     - `network/live.serveValue`
   - DB schema:
     - `plugins/apps/plugins/mail/plugins/mail-core/server/internal/schema-attachments.ts`
@@ -170,26 +174,22 @@ imports `@plugins/auth/*` directly — all Gmail auth flows through
   - Resources:
     - `mail-account` (push)
     - `mail-labels` (push, whole: the connected account's user labels — Gmail caps an account's labels in the thousands, so the whole list is the working set)
+    - `mail.draft-attachment-links` (keyed)
+    - `mail.draft-attachment-links:rows` (keyed, point)
 - Core:
-  - Uses:
-    - `fields.FieldsRecord`
-    - `fields.fieldsToZodObject`
-    - `fields.nullable`
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ids` ×4
+    - `fields/text/config` ×3
+    - `fields` ×3
+    - `infra/attachments` ×2
+    - `network/live` ×2
+    - `packages/list-bound` ×2
     - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
     - `fields/int/config.intField`
     - `fields/json/config.jsonField`
-    - `fields/text/config.enumTextField`
-    - `fields/text/config.parsedTextField`
-    - `fields/text/config.textField`
-    - `ids.defineIdKind`
-    - `ids.externalIdField`
-    - `ids.idKindField`
-    - `ids.IdOf`
     - `infra/entities.entityRef`
-    - `network/live.liveValue`
-    - `packages/list-bound.wholeList`
-    - `packages/list-bound.wholeRecord`
+    - `infra/query-resource.compositeKey`
     - `primitives/live-state.tolerantEnum`
   - Exports (types):
     - `MailAccount`
@@ -233,6 +233,8 @@ imports `@plugins/auth/*` directly — all Gmail auth flows through
     - `mailAttachmentIdKind`
     - `MailAttachmentSchema`
     - `mailAttachmentsEntityRef`
+    - `mailDraftAttachmentLinks`
+    - `mailDraftAttachmentLinksEntityRef`
     - `mailDraftFields`
     - `mailDraftIdKind`
     - `MailDraftSchema`

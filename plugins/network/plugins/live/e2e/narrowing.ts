@@ -57,8 +57,9 @@
  * fixture-minted conversation ids (deleted after).
  *
  * `--suite byid` (research/2026-11-02-global-live-follow-by-id-and-owner.md)
- * measures six values that `follow` rows by id or owner, each held on a
+ * measures seven values that `follow` rows by id or owner, each held on a
  * subject X: `deploy.server-ssh-key`, `history.version`, `attachments.file`,
+ * `attachments.by-owner` (a fixture task's attachments),
  * `claude-cli.calls-for`, `task-subject.by-subject` and
  * `task-source-url.by-attempt`. Everything is created by the run (fixture
  * deploy servers, versions, attachments, tasks and attempts, and correlation
@@ -858,6 +859,7 @@ const ATTACHMENT_KEY = "attachments.file";
 const CALLS_KEY = "claude-cli.calls-for";
 const SUBJECT_KEY = "task-subject.by-subject";
 const SOURCE_URL_KEY = "task-source-url.by-attempt";
+const BY_OWNER_KEY = "attachments.by-owner";
 const FIXTURE_SOURCE = "narrowing-fixture";
 
 type FixtureRowKind = Extract<
@@ -936,6 +938,11 @@ async function runByid(): Promise<Row[]> {
     await writeRow("task-subject", taskY, subjY);
     await writeRow("task-source-url", taskX, "http://narrowing.invalid/x");
     await writeRow("task-source-url", taskY, "http://narrowing.invalid/y");
+    // Each task links its own attachment (the by-owner tuples hold a row);
+    // the link phases toggle a third attachment on and off.
+    const linked = await make("attachment", { kind: "attachment" });
+    await writeRow("task-attachment-link", taskX, fileX);
+    await writeRow("task-attachment-link", taskY, fileY);
     // Seed one call each, so the held tuples hold a row.
     await writeRow("claude-cli-call", corrX, "");
     await writeRow("claude-cli-call", corrY, "");
@@ -959,6 +966,11 @@ async function runByid(): Promise<Row[]> {
         params: { kind: FIXTURE_SOURCE, id: subjX },
       },
       { label: "X", key: SOURCE_URL_KEY, params: { attemptId: attemptX } },
+      {
+        label: "X",
+        key: BY_OWNER_KEY,
+        params: { ownerType: "tasks", id: taskX },
+      },
     ];
     // Each write a real change: the value flips with `i` (a re-point of a
     // subject link moves it between the subject and an alternate id).
@@ -1011,6 +1023,16 @@ async function runByid(): Promise<Row[]> {
           taskX,
           taskY,
           (_id, i) => `http://narrowing.invalid/${i}`,
+        ),
+        // Toggles `linked` on the task's links (by-owner); `attachment
+        // filename` above renames the held task's own attachment (X) or the
+        // other task's (Y).
+        ...pair(
+          "attachment link",
+          "task-attachment-link",
+          taskX,
+          taskY,
+          () => linked,
         ),
       ],
     });

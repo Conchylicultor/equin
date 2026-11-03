@@ -166,3 +166,34 @@ Baseline: this branch with the six measured values' `serveValue` swapped back to
 - **Unrelated writes no longer reach the values: 10 → 0 loads, 0 frames.** `routeDrifted` was empty throughout.
 - **A related write is one load either way, with the same bytes.** These are values, so they ship `update` frames, and session 3's keyed-delta residual does not apply.
 - **Not measured:** mail.message-body and events.run-events. A fixture for their foreign-key chains (an account / thread / message; a source / run / event / link) was out of scope for the suite. Their routing is the same machinery the six exercise: a lookup by id, a scoped set, and dependent lookups. It is pinned by the unit suites.
+
+## Session 5 — attachments.by-owner (as landed, 2026-11-03)
+
+Plan (A), as approved. The ninth value follows collection tuples; it names no owner.
+
+- **`followsAtBind(follows)`** (network/live core): a value's `follows` built at `bindDeferredResources`, from contributions collected by then. `followsOf` returns a lazy `CompiledFollows` (`atBind: true`) whose `list` / `dependent` / `read` compile on first use. `followsDeferred` answers `true` without compiling, so the value registers deferred. The loader no longer asks `dependent` at serve time: it always hands the note, and `read` calls it only when a follow is dependent. Refused on a paged value.
+- **`Attachments.Link({ link, served })`**: the generic owner contribution. `ownerType` is read off the link handle (`defineLink`'s owner table name), never restated.
+- **The six owners** (tasks, conversations: tasks-core; page_blocks: page/attachment-block; sonata_songs: sonata/library; agents; mail_drafts: mail-core) each declare in their own `core/` the link entity `entityRef("<owner>_attachments", attachmentLinkFields)` and a scoped set over it: `all: { by: ["ownerId"], orderBy: createdAt, max: ATTACHMENT_LINKS_MAX }`, `compositeKey(["ownerId","attachmentId"])`. Each serves it in `server/internal/attachment-links.ts` and contributes it there.
+  - The key is a `liveCollection("…")` literal per owner, not a factory, so the resource scanners see it.
+- **`defineLink(ownerTable, linkRef)`** is `defineEntity` over the ref, and refuses a ref not named `<owner>_attachments`. The DDL is unchanged: the build generated no migration. `list()` and the `getLink` map are deleted (by-owner was their only reader). The `defineLink` registry stays for the orphan sweep.
+- **by-owner**: one follow `link:<ownerType>` per contribution. Its tuple is `{ where: { ownerId: id } }` for its own owner type and `null` otherwise. Then `attachments`, a `follow.from` over every link follow onto `attachments.rows` by the ids the sets name. The answer is in link order (`createdAt`, then id).
+  - **Unknown owner type**: refused `unknown-owner-type`.
+  - **Linked but not contributed** (`defineLink` ran, no `Attachments.Link`): a loud loader error, reported.
+  - **Why the check is at read and not at bind**: a process may load an owner's tables without its plugin. The bun test runner does, and the bind check broke `serve-collection-exposed.test.ts`. With no contribution at all, `attachments` is a plain follow answering `null`.
+- **Bound**: 500 links per owner, loud past it. The most on main is 25 (one conversation's pasted images).
+
+### Numbers (`narrowing.ts --suite byid`, medians of 3, 10 writes per phase)
+
+Baseline: this branch with by-owner's serve swapped back to the old whole-table `reads` (the attachments table plus every link table) and a join loader; the link collections were served. It was built and measured, then restored. Fixture: two fixture tasks, each linking its own fixture attachment. The new `write-fixture-row` target `task-attachment-link` toggles a third attachment's link on a task.
+
+| phase (10 writes) | loads before → after | frames before → after | chars before → after |
+|---|---|---|---|
+| filename of another task's attachment | 10 → **0** | 0 → 0 | 0 → 0 |
+| link toggled on another task | 10 → **0** | 0 → 0 | 0 → 0 |
+| filename of the held task's attachment | 10 → 10 | update×10 → update×10 | 4228 → 4224 |
+| link toggled on the held task | 10 → 10 | update×10 → update×10 | 5021 → 5021 |
+
+- Every other phase stays at 0 loads both ways, and `routeDrifted` is empty throughout.
+- The chars differ by a few bytes because the fixture ids are random per run.
+- The other six values' numbers are unchanged from session 4.
+- **Not measured**: mail.message-body and events.run-events. A fixture for their foreign-key chains is still not cheap (an account, thread and message for one; a source, run, event and link for the other).

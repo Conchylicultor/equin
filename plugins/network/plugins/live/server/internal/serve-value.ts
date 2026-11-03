@@ -758,7 +758,9 @@ export function valueRuntime(
       }
       if (deferredFollows) {
         throw new Error(
-          `${label}: a paged value follows a collection compiled at boot (one folding exposures) — its pages register at once, with no deferred bind to copy that collection's routes at. Follow a collection compiled at once.`,
+          follows.atBind
+            ? `${label}: a paged value's follows are built where it is served — its pages register at once, with no deferred bind to build \`followsAtBind\` at.`
+            : `${label}: a paged value follows a collection compiled at boot (one folding exposures) — its pages register at once, with no deferred bind to copy that collection's routes at. Follow a collection compiled at once.`,
         );
       }
       return defineExternalResource(contract, routed(options, reads));

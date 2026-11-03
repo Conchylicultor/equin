@@ -347,10 +347,13 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `useSongLink`
 - Server:
   - Contributes:
-    - `ids.kind` "song|seed"
+    - `resource.declare` "sonata.song-attachment-links"
+    - `resource.declare` "sonata.song-attachment-links:rows"
     - `resource.declare` "sonata.songs"
     - `resource.declare` "sonata.songs:groups"
     - `resource.declare` "sonata.songs:rows"
+    - `attachments.link` "sonata_songs"
+    - `ids.kind` "song|seed"
   - Uses:
     - `database.db`
     - `ids.IdKinds`
@@ -371,6 +374,8 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `songAttachments`
     - `updateSongMeta`
   - Resources:
+    - `sonata.song-attachment-links` (keyed)
+    - `sonata.song-attachment-links:rows` (keyed, point)
     - `sonata.songs` (keyed, window)
     - `sonata.songs:groups` (push)
     - `sonata.songs:rows` (keyed, point)
@@ -390,8 +395,11 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `ids.defineIdKind`
     - `ids.idKindField`
     - `ids.IdOf`
+    - `infra/attachments.ATTACHMENT_LINKS_MAX`
+    - `infra/attachments.attachmentLinkFields`
     - `infra/endpoints.defineEndpoint`
     - `infra/entities.entityRef`
+    - `infra/query-resource.compositeKey`
     - `network/live.liveCollection`
     - `network/live.LiveRowsCollection`
     - `primitives/pane.defineRoute`
@@ -402,6 +410,8 @@ the title — a chord-grid save endpoint physically cannot carry one.
   - Exports (values):
     - `deleteSong`
     - `sonataPlayerRoute`
+    - `songAttachmentLinks`
+    - `songAttachmentLinksEntityRef`
     - `songIdKind`
     - `songLibrary`
     - `SongSchema`

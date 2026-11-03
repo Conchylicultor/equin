@@ -203,6 +203,23 @@ export interface FollowBuilder<S> {
 /** The `follows` option over a subject `S`, producing `F`. */
 export type FollowsFn<S, F> = (follow: FollowBuilder<S>) => F;
 
+// The mark of a `follows` built at the host's bind (`followsAtBind`).
+const AT_BIND: unique symbol = Symbol("live.follows-at-bind");
+
+/**
+ * A `follows` built at `bindDeferredResources`, once every contribution is
+ * collected, instead of where `serveValue` is called — for a value whose
+ * follows are a REGISTRY's (`attachments.by-owner` follows each owner's link
+ * set, contributed by the owners: the value names none). The value is
+ * deferred to the bind; nothing calls `follows` before it. Not on a paged
+ * value (its pages register at once).
+ */
+export function followsAtBind<S, F>(follows: FollowsFn<S, F>): FollowsFn<S, F> {
+  return Object.assign((b: FollowBuilder<S>) => follows(b), {
+    [AT_BIND]: true as const,
+  });
+}
+
 /** One compiled follow: its name, the collection read and the tuple a subject reads. */
 export interface CompiledFollow {
   readonly name: string;
@@ -225,6 +242,11 @@ export type FollowLoaded = Readonly<Record<string, FollowTuple | null>>;
 
 /** A value's follows, compiled once per `follows` function (`followsOf`). */
 export interface CompiledFollows {
+  /**
+   * Built at the host's bind (`followsAtBind`): `list`, `dependent` and
+   * `read` compile the follows on first use — none of them before the bind.
+   */
+  readonly atBind: boolean;
   readonly list: readonly CompiledFollow[];
   /** Whether any follow is dependent (`follow.from`). */
   readonly dependent: boolean;
@@ -308,7 +330,35 @@ export function followsOf(
   }
   const known = compiled.get(follows);
   if (known !== undefined) return known;
-  const map = (follows as (b: typeof follow) => unknown)(follow);
+  if ((follows as { [AT_BIND]?: true })[AT_BIND] === true) {
+    // Compiled on first use, which is the bind's (see `followsAtBind`).
+    let inner: CompiledFollows | undefined;
+    const now = () =>
+      (inner ??= compileFollows(key, follows as (b: typeof follow) => unknown));
+    const lazy: CompiledFollows = {
+      atBind: true,
+      get list() {
+        return now().list;
+      },
+      get dependent() {
+        return now().dependent;
+      },
+      read: (subject, note) => now().read(subject, note),
+    };
+    compiled.set(follows, lazy);
+    return lazy;
+  }
+  const out = compileFollows(key, follows as (b: typeof follow) => unknown);
+  compiled.set(follows, out);
+  return out;
+}
+
+/** Compile a `follows` function now (`followsOf`'s body). */
+function compileFollows(
+  key: string,
+  follows: (b: typeof follow) => unknown,
+): CompiledFollows {
+  const map = follows(follow);
   if (typeof map !== "object" || map === null) {
     throw new Error(
       `serveValue("${key}"): \`follows\` answered ${JSON.stringify(map)}, not a record of follows by name.`,
@@ -376,7 +426,8 @@ export function followsOf(
     );
   }
   const dependent = list.some((f) => f.deps !== null);
-  const out: CompiledFollows = {
+  return {
+    atBind: false,
     list,
     dependent,
     async read(subject, note) {
@@ -404,8 +455,6 @@ export function followsOf(
       return Object.fromEntries(list.map((f) => [f.name, rows[f.name]!]));
     },
   };
-  compiled.set(follows, out);
-  return out;
 }
 
 /** One follow's rows for its checked tuple, read fresh — none for a `null` one. */
@@ -512,7 +561,11 @@ export function followReaches(
   );
 }
 
-/** Whether any follow reads a deferred collection (its follower binds at `bindDeferredResources`). */
+/**
+ * Whether the follower binds at `bindDeferredResources`: its follows are
+ * built there (`followsAtBind`), or one reads a deferred collection.
+ */
 export function followsDeferred(follows: CompiledFollows): boolean {
+  if (follows.atBind) return true;
   return follows.list.some((f) => f.source.deferred);
 }

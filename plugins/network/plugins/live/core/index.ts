@@ -208,11 +208,13 @@ export type {
 export {
   FOLLOW_SOURCE,
   followReaches,
+  followsAtBind,
   followsDeferred,
   followsOf,
   followSubjectOf,
 } from "./internal/follows";
 export type {
+  Follow,
   FollowBuilder,
   FollowIds,
   FollowIdsSource,

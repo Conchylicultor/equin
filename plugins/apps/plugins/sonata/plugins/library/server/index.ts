@@ -5,6 +5,7 @@ import { deleteSong, updateSong } from "../core";
 import { handleDeleteSong } from "./internal/handle-delete-song";
 import { handleUpdateSong } from "./internal/handle-update-song";
 import { songLibraryServed } from "./internal/resources";
+import { attachmentLinkContributions } from "./internal/attachment-links";
 
 export { _songs } from "./internal/tables";
 export { createSongRow } from "./internal/create-song-row";
@@ -25,6 +26,7 @@ export default {
     [updateSong.route]: handleUpdateSong,
   },
   contributions: [
+    ...attachmentLinkContributions,
     IdKinds.Kind({ kind: songIdKind }),
     ...songLibraryServed.declare,
   ],

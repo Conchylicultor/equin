@@ -918,6 +918,11 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));
       };
     },
     ```
+  - **`followsAtBind(follows)`** (core) — follows built at
+    `bindDeferredResources` from contributions, for a REGISTRY's value that
+    names no contributor (`attachments.by-owner` follows each owner's
+    `Attachments.Link` set). Nothing calls `follows` before the bind; the
+    value is deferred. Not on a paged value (a throw).
   - **`followed[name]`** — the tuple's rows (`readonly Row[]`), read FRESH in
     each hook's call through the collection's own read (resource-runtime's
     `loadResourceFresh`). Handed to the loader, `revalidate` (its own read: a
@@ -1319,6 +1324,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `FieldExtent`
     - `FieldsFilterable`
     - `FieldsRow`
+    - `Follow`
     - `FollowBuilder`
     - `FollowIds`
     - `FollowIdsSource`
@@ -1473,6 +1479,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `externalCollectionRegistrar`
     - `FOLLOW_SOURCE`
     - `followReaches`
+    - `followsAtBind`
     - `followsDeferred`
     - `followsOf`
     - `followSubjectOf`
@@ -1492,13 +1499,13 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `serveValueOn`
     - `sliceRange`
 - Cross-plugin:
-  - Imported by: 314 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 315 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×84
     - `conversations` ×52
     - `debug` ×32
     - `tasks` ×31
     - `infra` ×21
-    - `page` ×14
+    - `page` ×15
     - `active-data` ×13
     - `primitives` ×11
     - `build` ×10

@@ -1,6 +1,6 @@
 # attachments
 
-Polymorphic file attachments on disk, owned by per-consumer link tables. Each consumer plugin declares ownership with `Attachments.defineLink(ownerTable)`; the orphan sweep reclaims unreferenced rows past a TTL.
+Polymorphic file attachments on disk, owned by per-consumer link tables. Each consumer plugin declares ownership with `Attachments.defineLink(ownerTable, linkRef)` and contributes its link set as `Attachments.Link`; the orphan sweep reclaims unreferenced rows past a TTL.
 
 ## Bytes are the host's: `AttachmentBlobs`
 
@@ -14,27 +14,49 @@ data dir); a host without a filesystem boots `plugins/memory-blobs`.
 
 ## API
 
-```ts
-import { _tasks } from "@plugins/tasks/plugins/tasks-core/server";
-import { Attachments } from "@plugins/infra/plugins/attachments/server";
+An owner declares its link entity and link collection in its own `core/`
+(`tasks-core/core/attachment-links.ts` is the reference):
 
-export const taskAttachments = Attachments.defineLink(_tasks);
-// Re-export the underlying pgTable so drizzle-kit's schema glob picks it
-// up. The leading `_` and the `internal/` location keep cross-plugin
-// imports impossible — only `taskAttachments` (the handle) goes in barrels.
-export const _taskAttachmentsTable = taskAttachments.table;
+```ts
+// core/ — the `<owner table>_attachments` entity, and one owner's links as a
+// scoped set by `ownerId` over the table's composite key
+export const taskAttachmentLinksEntityRef = entityRef("tasks_attachments", attachmentLinkFields);
+export const taskAttachmentLinks = liveCollection("tasks.attachment-links", {
+  from: taskAttachmentLinksEntityRef,
+  carry: { pick: ["ownerId", "attachmentId", "createdAt"] },
+  baseExposures: false,
+  id: compositeKey(["ownerId", "attachmentId"]),
+  all: { by: ["ownerId"], orderBy: [["createdAt", "asc"]], max: ATTACHMENT_LINKS_MAX },
+});
 ```
+
+```ts
+// server/internal/schema-attachments.ts (in the drizzle-kit schema glob)
+export const taskAttachments = Attachments.defineLink(_tasks, taskAttachmentLinksEntityRef);
+// Re-export the underlying table so drizzle-kit's schema glob picks it up.
+// The leading `_` and the `internal/` location keep cross-plugin imports
+// impossible — only `taskAttachments` (the handle) goes in barrels.
+export const _taskAttachmentsTable = taskAttachments.table;
+
+// server/internal/attachment-links.ts — spread into the plugin's contributions
+const served = serveCollection(taskAttachmentLinks, { from: taskAttachments.table });
+export const attachmentLinkContributions = [
+  ...served.declare,
+  Attachments.Link({ link: taskAttachments, served }),
+];
+```
+
+`defineLink` builds the table with `defineEntity` (pk `(ownerId, attachmentId)`, both FKs cascading on delete and update) and refuses a ref not named `<owner table>_attachments`. A by-owner read of an owner that `defineLink` registered but never contributed fails loudly (`loader-failed`, reported).
 
 ```ts
 await taskAttachments.set(taskId, ids);   // mirror canonical source (replaces)
 await taskAttachments.setMany(entries);   // the same, for many owners at once
 await taskAttachments.add(taskId, ids);   // append-only union (race-free, atomic)
-const rows = await taskAttachments.list(taskId);  // joined Attachment[]
 ```
 
 The browser reads an attachment's bytes live too — `useLive(attachmentBytes, { id })` (core): a `bytes: true` value, served `immutable` (an upload always mints a new id), refused `missing` when the row or its bytes are gone — for a reader that decodes the file itself (a Sonata song's MIDI / MusicXML). An `<img>` / link still loads `GET /api/attachments/:id` as an asset (`assetPath(getAttachmentFile, …)`).
 
-The browser reads one owner's attachments live: `useLive(attachmentsByOwner, { ownerType: "tasks", id })` (core) — a `db` value over the link table joined with `attachments`, so a link or attachment write recomputes it; an owner type no plugin linked is refused `unknown-owner-type`.
+The browser reads one owner's attachments live: `useLive(attachmentsByOwner, { ownerType: "tasks", id })` (core), in link order. The value names no owner: its `follows` are built at `bindDeferredResources` (`followsAtBind`) from the `Attachments.Link` contributions — one follow per owner type's link set (`null` for every other type), then `attachments.rows` by the ids that set names (`follow.from`). So a link written for another owner, or another attachment's row, reaches no reader; an owner type no plugin contributed is refused `unknown-owner-type`.
 
 `set` reconciles the link set to exactly match `ids` — used when the source of truth is replaceable (e.g. a markdown column). `add` is the atomic append-only union, used when the source grows monotonically (turns in a conversation). They lower to different SQL plans and are not parameter variants of each other.
 
@@ -62,7 +84,7 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
 
 ## Plugin reference
 
-- Description: Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Attachments: rows plus bytes in the host's blob store (AttachmentBlobs — on the desktop UUID-named files under ~/.equin/state/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL. holdAttachments keeps an attachment an unsent draft references alive for the draft's lifetime.
+- Description: Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Attachments: rows plus bytes in the host's blob store (AttachmentBlobs — on the desktop UUID-named files under ~/.equin/state/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable, linkRef) over a link entity their own core declares, serve its scoped link collection and contribute it as Attachments.Link — attachments.by-owner follows each contributed set (built at bind), naming no owner; orphan sweep reclaims unreferenced rows past TTL. holdAttachments keeps an attachment an unsent draft references alive for the draft's lifetime.
 - Load-bearing: yes
 - Server:
   - Contributes:
@@ -79,15 +101,15 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
     - `infra/entities.defaultNow`
     - `infra/entities.defineEntity`
     - `infra/jobs.defineJob`
+    - `network/live.FollowBuilder`
     - `network/live.serveCollection`
     - `network/live.serveValue`
     - `primitives/log-channels.Log`
-  - DB schema:
-    - `plugins/infra/plugins/attachments/server/internal/define-link.ts`
-    - `plugins/infra/plugins/attachments/server/internal/tables.ts`
+  - DB schema: `plugins/infra/plugins/attachments/server/internal/tables.ts`
   - Exports (types):
     - `AttachmentBlobsImpl`
     - `AttachmentLink`
+    - `AttachmentLinkContribution`
   - Exports (values):
     - `_attachments`
     - `AttachmentBlobs`
@@ -121,11 +143,14 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
   - Exports (types):
     - `Attachment`
     - `AttachmentFile`
+    - `AttachmentLinkRow`
   - Exports (values):
+    - `ATTACHMENT_LINKS_MAX`
     - `attachmentBytes`
     - `attachmentFields`
     - `attachmentFile`
     - `AttachmentFileSchema`
+    - `attachmentLinkFields`
     - `attachmentRows`
     - `attachmentsByOwner`
     - `AttachmentSchema`

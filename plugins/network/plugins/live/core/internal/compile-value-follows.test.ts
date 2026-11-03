@@ -22,6 +22,9 @@
  *   read notes every dependent tuple to the runtime's `LoadRun` (no note
  *   without one); one referencing a follow not returned, or one follow under
  *   two names, is refused; a paged value takes none;
+ * - `followsAtBind`: nothing calls `follows` before its first use (the
+ *   bind's), the value reads as deferred without compiling, and a dependent
+ *   follow built there still notes its tuple to the run;
  * - the refusals (a follow on a silent external value, an empty `follows`, a
  *   non-target, `whileFollowing` without follows), and the types (a non-target and a wrong tuple shape are
  *   errors; `followed` is typed per name).
@@ -46,6 +49,10 @@ import {
 } from "./compile-value";
 import {
   FOLLOW_SOURCE,
+  followsAtBind,
+  followsDeferred,
+  followsOf,
+  type Follow,
   type FollowIds,
   type FollowIdsTarget,
   type FollowWhere,
@@ -863,5 +870,74 @@ describe("dependent follows (`follow.from`)", () => {
         loader: () => ({ n: 0 }),
       }),
     ).toThrow(/reads at least one follow/);
+  });
+});
+
+describe("followsAtBind — follows built at the bind", () => {
+  test("not called by compileValue; deferred without compiling; the first load builds and notes", async () => {
+    const rows = new Map([["c1", { id: "c1", path: "/a" }]]);
+    const links = idsTarget(rows);
+    const files = idsTarget(rows);
+    // The registry the follows are built from — empty until "the bind".
+    const registry: FollowIdsTarget<Ws>[] = [];
+    let built = 0;
+    const follows = followsAtBind<{ id: string }, Record<string, Follow<Ws>>>(
+      (follow) => {
+        built++;
+        const out = Object.fromEntries(
+          registry.map((t, i) => [
+            `r${i}`,
+            follow(t, ({ id }) => ({ ids: [id] })),
+          ]),
+        );
+        return {
+          ...out,
+          dep: follow.from(out, files.target, () => ({ ids: ["c1"] })),
+        };
+      },
+    );
+    const v = liveValue(key("at-bind"), { schema: Count, params: ["id"] });
+    const compiled = compileValue(v, {
+      source: "db",
+      follows,
+      loader: (_p, { followed }) => ({ n: followed.dep!.length }),
+    });
+    const lazy = followsOf(v.key, follows)!;
+    expect(lazy.atBind).toBe(true);
+    expect(followsDeferred(lazy)).toBe(true);
+    expect(built).toBe(0);
+    registry.push(links.target);
+    const notes: unknown[] = [];
+    const run = { noteLoaded: (s: unknown) => notes.push(s) };
+    expect(await compiled.options.loader({ id: "c1" }, undefined, run)).toEqual(
+      { n: 1 },
+    );
+    expect(built).toBe(1);
+    expect(links.reads).toEqual([["c1"]]);
+    expect(notes).toEqual([{ dep: { ids: ["c1"] } }]);
+    expect(lazy.list.map((f) => f.name)).toEqual(["r0", "dep"]);
+    await compiled.options.loader({ id: "c1" }, undefined, run);
+    expect(built).toBe(1);
+  });
+
+  test("a paged value takes none", () => {
+    const v = liveValue(key("at-bind-paged"), {
+      query: z.object({}),
+      paged: {
+        item: z.object({ id: z.string(), at: z.string() }),
+        id: "id",
+        key: { of: (i) => [i.at], order: ["asc"] },
+        limit: 10,
+        maxLimit: 20,
+      },
+    });
+    expect(() =>
+      compilePagedValue(v, {
+        source: "external",
+        changes: "notified",
+        follows: followsAtBind(() => ({})),
+        loader: () => [],
+      } as never),
+    ).toThrow(/followsAtBind/);
   });
 });

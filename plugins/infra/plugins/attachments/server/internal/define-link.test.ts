@@ -33,6 +33,8 @@ import {
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
+import { entityRef } from "@plugins/infra/plugins/entities/core";
+import { attachmentLinkFields } from "../../core";
 import { applyLinkDiff, defineLink } from "./define-link";
 
 // A minimal drizzle mapping onto the REAL migrated `agents` table — the owner
@@ -40,7 +42,10 @@ import { applyLinkDiff, defineLink } from "./define-link";
 // Only `id` is named because that is all `defineLink` reads from an owner.
 const owners = pgTable("agents", { id: text("id").primaryKey() });
 
-const link = defineLink(owners);
+const link = defineLink(
+  owners,
+  entityRef("agents_attachments", attachmentLinkFields),
+);
 
 let t: TestDb;
 

@@ -33,6 +33,7 @@ import {
   getConversation,
   insertConversation,
   moveConversationToAttempt,
+  taskAttachments,
   updateConversation,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import {
@@ -228,6 +229,21 @@ async function writeFixtureRow(
       await fixtureTask(id);
       await setTaskSourceUrl(id, value);
       return;
+    case "task-attachment-link": {
+      // Toggles the (task, attachment) link: one insert or one delete.
+      await fixtureTask(id);
+      refuseUnlessFixture("Attachment", value, isFixtureId(value));
+      const links = await db
+        .select({ attachmentId: taskAttachments.table.attachmentId })
+        .from(taskAttachments.table)
+        .where(eq(taskAttachments.table.ownerId, id));
+      const ids = links.map((l) => l.attachmentId);
+      await taskAttachments.set(
+        id,
+        ids.includes(value) ? ids.filter((a) => a !== value) : [...ids, value],
+      );
+      return;
+    }
   }
 }
 

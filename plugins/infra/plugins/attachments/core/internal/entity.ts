@@ -20,3 +20,15 @@ export const attachmentFields = {
 
 /** The `attachments` entity. */
 export const attachmentsEntityRef = entityRef("attachments", attachmentFields);
+
+/**
+ * An attachment link's fields — one row per (owner, attachment) pair of a
+ * `<owner>_attachments` table. Each owner declares its link entity with them
+ * in its own `core/` (`entityRef("tasks_attachments", attachmentLinkFields)`)
+ * and hands the ref to `Attachments.defineLink`, which builds the table.
+ */
+export const attachmentLinkFields = {
+  ownerId: textField(),
+  attachmentId: textField(),
+  createdAt: dateField(),
+} satisfies FieldsRecord;

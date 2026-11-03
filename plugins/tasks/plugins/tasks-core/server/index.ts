@@ -45,6 +45,7 @@ import { PushLedger } from "./internal/push-ledger/service";
 import { LiveColumns } from "@plugins/network/plugins/live/server";
 import { tasksMandate } from "./internal/tables-mandate";
 import { reconcileEffectiveMandates } from "./internal/mutations/mandate";
+import { attachmentLinkContributions } from "./internal/attachment-links";
 
 // Per-domain attachment link handles (FK cascade on owner deletion). In their
 // own file so they don't leak server-only imports into tasks-core/shared.
@@ -318,6 +319,7 @@ export default {
     "Schema + repository layer for the tasks/attempts/conversations FK cluster.",
   loadBearing: true,
   contributions: [
+    ...attachmentLinkContributions,
     IdKinds.Kind({ kind: taskIdKind }),
     IdKinds.Kind({ kind: attemptIdKind }),
     IdKinds.Kind({ kind: conversationIdKind }),

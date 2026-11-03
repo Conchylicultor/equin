@@ -339,10 +339,11 @@ serves them.
     - `useTaskAttempts`
     - `useTaskConversations`
 - Server:
-  - Contributes: 39 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `resource.declare` ×28
+  - Contributes: 45 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `resource.declare` ×32
     - `derived-view` ×4
     - `ids.kind` ×3
+    - `attachments.link` ×2
     - `derived-table` ×2
     - `host-service:tasks-core.push-ledger` "tasks-core.push-ledger"
     - `live.columns.expose` "tasks ← tasks_ext_mandate"
@@ -541,6 +542,8 @@ serves them.
     - `conversations-gone:rows` (keyed, point)
     - `conversations-system` (keyed)
     - `conversations-system:rows` (keyed, point)
+    - `conversations.attachment-links` (keyed)
+    - `conversations.attachment-links:rows` (keyed, point)
     - `conversations.by-id:rows` (keyed, point)
     - `pushes` (keyed, window)
     - `pushes:groups` (push)
@@ -549,13 +552,16 @@ serves them.
     - `task-dropped-states:rows` (keyed, point)
     - `tasks` (keyed)
     - `tasks:rows` (keyed, point)
+    - `tasks.attachment-links` (keyed)
+    - `tasks.attachment-links:rows` (keyed, point)
 - Core:
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/model-provider` ×3
     - `conversations/workspace` ×3
     - `fields/text/config` ×3
     - `fields` ×3
     - `fields/rank/config` ×2
+    - `infra/attachments` ×2
     - `infra/worktree` ×2
     - `network/live` ×2
     - `fields/bool/config.boolField`
@@ -565,6 +571,7 @@ serves them.
     - `framework/product-name.LEGACY_IDS`
     - `infra/entities.entityRef`
     - `infra/entity-extensions.defineExtensionShape`
+    - `infra/query-resource.compositeKey`
     - `packages/list-bound.wholeList`
     - `primitives/pane.defineRoute`
     - `primitives/rank.RankSchema`
@@ -606,6 +613,8 @@ serves them.
     - `BLOCKED_STATUSES`
     - `buildTaskPrompt`
     - `CONVERSATION_TRAILER_KEY`
+    - `conversationAttachmentLinks`
+    - `conversationAttachmentLinksEntityRef`
     - `ConversationKindSchema`
     - `conversationName`
     - `conversationRuntimes`
@@ -633,6 +642,8 @@ serves them.
     - `SETTLED_STATUSES`
     - `TASK_FILING_STARTS`
     - `TASK_STATUS_OPTIONS`
+    - `taskAttachmentLinks`
+    - `taskAttachmentLinksEntityRef`
     - `taskDependenciesEntityRef`
     - `taskDescriptions`
     - `taskDetailRoute`

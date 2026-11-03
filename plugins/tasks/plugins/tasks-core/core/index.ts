@@ -114,3 +114,9 @@ export type {
 // The `tasks.manage` capability: edit and drop the tasks of the mandate's tree.
 export { tasksManage } from "./internal/tasks-manage";
 export { taskMandateShape } from "./task-mandate";
+export {
+  taskAttachmentLinksEntityRef,
+  taskAttachmentLinks,
+  conversationAttachmentLinksEntityRef,
+  conversationAttachmentLinks,
+} from "./attachment-links";

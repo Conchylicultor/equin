@@ -19,6 +19,7 @@ import {
   _mailAttachments,
   _mailSyncState,
 } from "./internal/tables";
+import { attachmentLinkContributions } from "./internal/attachment-links";
 
 // Re-export the physical tables, the attachment-link handle, and the token
 // helper so phase-2 sync code can import them from this barrel. Re-exporting a
@@ -42,6 +43,7 @@ export default {
   description:
     "Schema + token wiring for the mail app (accounts, threads, messages, labels, attachments, drafts, sync-state, outbox), plus the shared connected-account and user-labels live values.",
   contributions: [
+    ...attachmentLinkContributions,
     IdKinds.Kind({ kind: mailAccountIdKind }),
     IdKinds.Kind({ kind: mailAttachmentIdKind }),
     IdKinds.Kind({ kind: mailDraftIdKind }),

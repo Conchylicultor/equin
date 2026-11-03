@@ -154,12 +154,15 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
     - `systemAgentDetailPane`
 - Server:
   - Contributes:
-    - `ids.kind` "agent"
-    - `ids.kind` "launch"
     - `resource.declare` "agent-launches"
     - `resource.declare` "agent-launches:rows"
+    - `resource.declare` "agents.attachment-links"
+    - `resource.declare` "agents.attachment-links:rows"
     - `resource.declare` "agents.roster"
     - `resource.declare` "agents.roster:rows"
+    - `attachments.link` "agents"
+    - `ids.kind` "agent"
+    - `ids.kind` "launch"
     - `derived-view` "agents_v"
     - `derived-table` "task_latest_conversation"
     - `taskCategory` "agents"
@@ -200,6 +203,8 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
   - Resources:
     - `agent-launches` (keyed)
     - `agent-launches:rows` (keyed, point)
+    - `agents.attachment-links` (keyed)
+    - `agents.attachment-links:rows` (keyed, point)
     - `agents.roster` (keyed)
     - `agents.roster:rows` (keyed, point)
   - Routes:
@@ -214,18 +219,20 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
   - Uses: `infra/endpoints.implementMachine`
   - Routes: `POST /api/agents/:id/launch`
 - Core:
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/model-provider` ×3
     - `ids` ×3
     - `fields/rank/config` ×2
     - `fields/text/config` ×2
     - `fields` ×2
+    - `infra/attachments` ×2
     - `ui/icons/saved-names` ×2
     - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
     - `fields/json/config.jsonField`
     - `infra/endpoints.defineEndpoint`
     - `infra/entities.entityRef`
+    - `infra/query-resource.compositeKey`
     - `network/live.liveCollection`
     - `primitives/rank.RankSchema`
     - `tasks/tasks-core.ConversationStatusSchema`
@@ -242,6 +249,8 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
     - `MoveAgentBody`
     - `UpdateAgentBody`
   - Exports (values):
+    - `agentAttachmentLinks`
+    - `agentAttachmentLinksEntityRef`
     - `agentFields`
     - `agentIdKind`
     - `AgentLaunchConversationRefSchema`

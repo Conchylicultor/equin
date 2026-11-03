@@ -75,3 +75,7 @@ export {
   mailDraftFields,
   mailOutboxFields,
 } from "./internal/fields";
+export {
+  mailDraftAttachmentLinksEntityRef,
+  mailDraftAttachmentLinks,
+} from "./internal/attachment-links";

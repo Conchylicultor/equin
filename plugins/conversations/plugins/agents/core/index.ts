@@ -37,3 +37,7 @@ export {
 } from "./entity";
 export { agentRows, agentLaunchRows } from "./resources";
 export type { AgentLaunchConversationRef } from "./schemas";
+export {
+  agentAttachmentLinksEntityRef,
+  agentAttachmentLinks,
+} from "./attachment-links";

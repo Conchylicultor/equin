@@ -120,8 +120,8 @@ session chain are never written. Refused on main (403). Spawns nothing.
   - Exports (values): `readSetPane`
 - Server:
   - Contributes: `resource.declare` "resources.debug"
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `tasks/tasks-core` ×9
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks/tasks-core` ×10
     - `infra/claude-cli` ×3
     - `infra/endpoints` ×2
     - `page/annotations/agent-notes/authorship` ×2

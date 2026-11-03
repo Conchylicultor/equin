@@ -4,9 +4,23 @@ import { attachmentsEntityRef } from "./entity";
 import { AttachmentFileSchema, AttachmentSchema } from "./schema";
 
 /**
+ * The most links one owner's set is read with: past it the read fails loudly
+ * rather than drop rows. An owner's attachments are a handful — 25 at most on
+ * main (a conversation's pasted images), 2026-11-03.
+ */
+export const ATTACHMENT_LINKS_MAX = 500;
+
+/** One row of an owner's link set, as every link collection carries it. */
+export interface AttachmentLinkRow {
+  readonly ownerId: string;
+  readonly attachmentId: string;
+  readonly createdAt: Date;
+}
+
+/**
  * One owner's attachments: `ownerType` is the owner table's name (`"tasks"`),
- * resolved against the `Attachments.defineLink` registry, `id` the owner row's
- * id. An owner type no plugin linked is refused `unknown-owner-type`.
+ * resolved against the owners' `Attachments.Link` contributions, `id` the owner
+ * row's id. An owner type no plugin linked is refused `unknown-owner-type`.
  */
 export const attachmentsByOwner = liveValue("attachments.by-owner", {
   schema: wholeList(AttachmentSchema, {

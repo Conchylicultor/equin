@@ -864,11 +864,14 @@ function loaderOf<T, P extends Record<string, string>, S>(
   follows: CompiledFollows | null,
 ): (params: P, run?: LoadRun) => Promise<T> | T {
   const hook = loader as (...args: unknown[]) => unknown;
-  if (follows === null || !follows.dependent) {
+  if (follows === null) {
     return withFollowed(subjects, hook, follows) as (
       params: P,
     ) => Promise<T> | T;
   }
+  // Every follower's read is handed the note: `read` calls it only when a
+  // follow is dependent — which a `followsAtBind` value cannot tell before
+  // its bind, so nothing asks here.
   return async (params, run) => {
     const subject = subjects.of(params);
     const followed = await follows.read(
@@ -1204,6 +1207,12 @@ function compilePagedOf(
   };
 
   const follows = followsOf(value.key, opts.follows);
+  if (follows?.atBind === true) {
+    // Unreachable through `serveValue` (`valueRuntime` refuses it first).
+    throw new Error(
+      `serveValue("${value.key}"): a paged value's follows are built where it is served — its pages register at once, with no bind to build \`followsAtBind\` at.`,
+    );
+  }
   if (follows?.dependent === true) {
     throw new Error(
       `serveValue("${value.key}"): a paged value follows no dependent follow (\`follow.from\`) — its pages are keyed external windows, whose routes match per question, not per load.`,

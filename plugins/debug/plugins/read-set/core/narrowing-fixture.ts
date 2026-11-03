@@ -30,7 +30,7 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
  *   as `rowId`; `write-fixture-row` makes one real write about a fixture row
  *   (a server's key, a version's snapshot, an attachment's filename, a claude
  *   call recorded under a correlation id, a task's subject link, a task's
- *   source url); `delete-fixture-rows` removes what the run created. Every one
+ *   source url, a task's link to an attachment — toggled); `delete-fixture-rows` removes what the run created. Every one
  *   names a fixture-marked row (`narrowing-fixture` name / source / id prefix /
  *   author) and refuses (409) any other.
  *
@@ -80,11 +80,14 @@ export const NarrowingFixtureBodySchema = z.discriminatedUnion("action", [
       "claude-cli-call",
       "task-subject",
       "task-source-url",
+      "task-attachment-link",
     ]),
     // The fixture row written: a server / version / attachment / task id, or
     // the correlation id of a claude call.
     id: z.string(),
-    // What it is set to (ignored by `claude-cli-call`, which inserts a call).
+    // What it is set to (ignored by `claude-cli-call`, which inserts a call;
+    // for `task-attachment-link`, the fixture attachment whose link to the
+    // task is toggled).
     value: z.string(),
   }),
   z.object({

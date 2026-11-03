@@ -5018,12 +5018,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `ids.IdKinds`
           - Server:
             - Contributes:
+              - `resource.declare` "mail-account"
+              - `resource.declare` "mail-labels"
+              - `resource.declare` "mail.draft-attachment-links"
+              - `resource.declare` "mail.draft-attachment-links:rows"
+              - `attachments.link` "mail_drafts"
               - `ids.kind` "mailacct"
               - `ids.kind` "mailatt"
               - `ids.kind` "maildraft"
               - `ids.kind` "mailout"
-              - `resource.declare` "mail-account"
-              - `resource.declare` "mail-labels"
               - `fork-data-exclusion` "mail_attachments"
               - `fork-data-exclusion` "mail_message_labels"
               - `fork-data-exclusion` "mail_messages"
@@ -5042,6 +5045,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/entities.defaultNow`
               - `infra/entities.defineEntity`
               - `integrations/gmail.getGmailToken`
+              - `network/live.serveCollection`
               - `network/live.serveValue`
             - DB schema:
               - `plugins/apps/plugins/mail/plugins/mail-core/server/internal/schema-attachments.ts`
@@ -5061,26 +5065,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Resources:
               - `mail-account` (push)
               - `mail-labels` (push, whole: the connected account's user labels — Gmail caps an account's labels in the thousands, so the whole list is the working set)
+              - `mail.draft-attachment-links` (keyed)
+              - `mail.draft-attachment-links:rows` (keyed, point)
           - Core:
-            - Uses:
-              - `fields.FieldsRecord`
-              - `fields.fieldsToZodObject`
-              - `fields.nullable`
+            - Uses: 23 symbols — full list in [`plugins/apps/plugins/mail/plugins/mail-core/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/mail-core/REFERENCE.md)
+              - `ids` ×4
+              - `fields/text/config` ×3
+              - `fields` ×3
+              - `infra/attachments` ×2
+              - `network/live` ×2
+              - `packages/list-bound` ×2
               - `fields/bool/config.boolField`
               - `fields/date/config.dateField`
               - `fields/int/config.intField`
               - `fields/json/config.jsonField`
-              - `fields/text/config.enumTextField`
-              - `fields/text/config.parsedTextField`
-              - `fields/text/config.textField`
-              - `ids.defineIdKind`
-              - `ids.externalIdField`
-              - `ids.idKindField`
-              - `ids.IdOf`
               - `infra/entities.entityRef`
-              - `network/live.liveValue`
-              - `packages/list-bound.wholeList`
-              - `packages/list-bound.wholeRecord`
+              - `infra/query-resource.compositeKey`
               - `primitives/live-state.tolerantEnum`
             - Exports (types):
               - `MailAccount`
@@ -5124,6 +5124,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `mailAttachmentIdKind`
               - `MailAttachmentSchema`
               - `mailAttachmentsEntityRef`
+              - `mailDraftAttachmentLinks`
+              - `mailDraftAttachmentLinksEntityRef`
               - `mailDraftFields`
               - `mailDraftIdKind`
               - `MailDraftSchema`
@@ -7787,10 +7789,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSongLink`
           - Server:
             - Contributes:
-              - `ids.kind` "song|seed"
+              - `resource.declare` "sonata.song-attachment-links"
+              - `resource.declare` "sonata.song-attachment-links:rows"
               - `resource.declare` "sonata.songs"
               - `resource.declare` "sonata.songs:groups"
               - `resource.declare` "sonata.songs:rows"
+              - `attachments.link` "sonata_songs"
+              - `ids.kind` "song|seed"
             - Uses:
               - `database.db`
               - `ids.IdKinds`
@@ -7811,6 +7816,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `songAttachments`
               - `updateSongMeta`
             - Resources:
+              - `sonata.song-attachment-links` (keyed)
+              - `sonata.song-attachment-links:rows` (keyed, point)
               - `sonata.songs` (keyed, window)
               - `sonata.songs:groups` (push)
               - `sonata.songs:rows` (keyed, point)
@@ -7830,8 +7837,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ids.defineIdKind`
               - `ids.idKindField`
               - `ids.IdOf`
+              - `infra/attachments.ATTACHMENT_LINKS_MAX`
+              - `infra/attachments.attachmentLinkFields`
               - `infra/endpoints.defineEndpoint`
               - `infra/entities.entityRef`
+              - `infra/query-resource.compositeKey`
               - `network/live.liveCollection`
               - `network/live.LiveRowsCollection`
               - `primitives/pane.defineRoute`
@@ -7842,6 +7852,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `deleteSong`
               - `sonataPlayerRoute`
+              - `songAttachmentLinks`
+              - `songAttachmentLinksEntityRef`
               - `songIdKind`
               - `songLibrary`
               - `SongSchema`
@@ -14778,12 +14790,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `systemAgentDetailPane`
       - Server:
         - Contributes:
-          - `ids.kind` "agent"
-          - `ids.kind` "launch"
           - `resource.declare` "agent-launches"
           - `resource.declare` "agent-launches:rows"
+          - `resource.declare` "agents.attachment-links"
+          - `resource.declare` "agents.attachment-links:rows"
           - `resource.declare` "agents.roster"
           - `resource.declare` "agents.roster:rows"
+          - `attachments.link` "agents"
+          - `ids.kind` "agent"
+          - `ids.kind` "launch"
           - `derived-view` "agents_v"
           - `derived-table` "task_latest_conversation"
           - `taskCategory` "agents"
@@ -14824,6 +14839,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Resources:
           - `agent-launches` (keyed)
           - `agent-launches:rows` (keyed, point)
+          - `agents.attachment-links` (keyed)
+          - `agents.attachment-links:rows` (keyed, point)
           - `agents.roster` (keyed)
           - `agents.roster:rows` (keyed, point)
         - Routes:
@@ -14838,18 +14855,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses: `infra/endpoints.implementMachine`
         - Routes: `POST /api/agents/:id/launch`
       - Core:
-        - Uses: 22 symbols — full list in [`plugins/conversations/plugins/agents/REFERENCE.md`](../plugins/conversations/plugins/agents/REFERENCE.md)
+        - Uses: 25 symbols — full list in [`plugins/conversations/plugins/agents/REFERENCE.md`](../plugins/conversations/plugins/agents/REFERENCE.md)
           - `conversations/model-provider` ×3
           - `ids` ×3
           - `fields/rank/config` ×2
           - `fields/text/config` ×2
           - `fields` ×2
+          - `infra/attachments` ×2
           - `ui/icons/saved-names` ×2
           - `fields/bool/config.boolField`
           - `fields/date/config.dateField`
           - `fields/json/config.jsonField`
           - `infra/endpoints.defineEndpoint`
           - `infra/entities.entityRef`
+          - `infra/query-resource.compositeKey`
           - `network/live.liveCollection`
           - `primitives/rank.RankSchema`
           - `tasks/tasks-core.ConversationStatusSchema`
@@ -14866,6 +14885,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MoveAgentBody`
           - `UpdateAgentBody`
         - Exports (values):
+          - `agentAttachmentLinks`
+          - `agentAttachmentLinksEntityRef`
           - `agentFields`
           - `agentIdKind`
           - `AgentLaunchConversationRefSchema`
@@ -23197,8 +23218,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `readSetPane`
       - Server:
         - Contributes: `resource.declare` "resources.debug"
-        - Uses: 26 symbols — full list in [`plugins/debug/plugins/read-set/REFERENCE.md`](../plugins/debug/plugins/read-set/REFERENCE.md)
-          - `tasks/tasks-core` ×9
+        - Uses: 27 symbols — full list in [`plugins/debug/plugins/read-set/REFERENCE.md`](../plugins/debug/plugins/read-set/REFERENCE.md)
+          - `tasks/tasks-core` ×10
           - `infra/claude-cli` ×3
           - `infra/endpoints` ×2
           - `page/annotations/agent-notes/authorship` ×2
@@ -29329,7 +29350,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineAssetMirror`
           - `runAssetMirrorPrewarm`
           - `seedAssetMirrorCache`
-    - **`attachments`** — Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Attachments: rows plus bytes in the host's blob store (AttachmentBlobs — on the desktop UUID-named files under ~/.equin/state/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL. holdAttachments keeps an attachment an unsent draft references alive for the draft's lifetime.
+    - **`attachments`** — Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Attachments: rows plus bytes in the host's blob store (AttachmentBlobs — on the desktop UUID-named files under ~/.equin/state/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable, linkRef) over a link entity their own core declares, serve its scoped link collection and contribute it as Attachments.Link — attachments.by-owner follows each contributed set (built at bind), naming no owner; orphan sweep reclaims unreferenced rows past TTL. holdAttachments keeps an attachment an unsent draft references alive for the draft's lifetime.
       - Server:
         - Contributes:
           - `resource.declare` "attachments.by-owner"
@@ -29345,15 +29366,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/entities.defaultNow`
           - `infra/entities.defineEntity`
           - `infra/jobs.defineJob`
+          - `network/live.FollowBuilder`
           - `network/live.serveCollection`
           - `network/live.serveValue`
           - `primitives/log-channels.Log`
-        - DB schema:
-          - `plugins/infra/plugins/attachments/server/internal/define-link.ts`
-          - `plugins/infra/plugins/attachments/server/internal/tables.ts`
+        - DB schema: `plugins/infra/plugins/attachments/server/internal/tables.ts`
         - Exports (types):
           - `AttachmentBlobsImpl`
           - `AttachmentLink`
+          - `AttachmentLinkContribution`
         - Exports (values):
           - `_attachments`
           - `AttachmentBlobs`
@@ -29387,11 +29408,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `Attachment`
           - `AttachmentFile`
+          - `AttachmentLinkRow`
         - Exports (values):
+          - `ATTACHMENT_LINKS_MAX`
           - `attachmentBytes`
           - `attachmentFields`
           - `attachmentFile`
           - `AttachmentFileSchema`
+          - `attachmentLinkFields`
           - `attachmentRows`
           - `attachmentsByOwner`
           - `AttachmentSchema`
@@ -30667,11 +30691,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `entityRef`
           - `wireSchema`
       - Cross-plugin:
-        - Imported by: 46 plugins — full list in [`plugins/infra/plugins/entities/REFERENCE.md`](../plugins/infra/plugins/entities/REFERENCE.md)
+        - Imported by: 47 plugins — full list in [`plugins/infra/plugins/entities/REFERENCE.md`](../plugins/infra/plugins/entities/REFERENCE.md)
           - `apps` ×10
           - `conversations` ×7
           - `infra` ×6
-          - `page` ×5
+          - `page` ×6
           - `debug` ×4
           - `primitives` ×3
           - `active-data`
@@ -33038,7 +33062,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `active-data`
           - `apps/events/events-core`
+          - `apps/mail/mail-core`
+          - `apps/sonata/library`
+          - `conversations/agents`
           - `network/live`
+          - `page/attachment-block`
           - `primitives/data-view/custom-columns/values`
           - `primitives/data-view/view-order`
           - `runs`
@@ -34921,6 +34949,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FieldExtent`
           - `FieldsFilterable`
           - `FieldsRow`
+          - `Follow`
           - `FollowBuilder`
           - `FollowIds`
           - `FollowIdsSource`
@@ -35075,6 +35104,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `externalCollectionRegistrar`
           - `FOLLOW_SOURCE`
           - `followReaches`
+          - `followsAtBind`
           - `followsDeferred`
           - `followsOf`
           - `followSubjectOf`
@@ -35094,13 +35124,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 314 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 315 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×84
           - `conversations` ×52
           - `debug` ×32
           - `tasks` ×31
           - `infra` ×21
-          - `page` ×14
+          - `page` ×15
           - `active-data` ×13
           - `primitives` ×11
           - `build` ×10
@@ -36148,12 +36178,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `todoTasks`
     - **`attachment-block`** — Shared web infra for attachment-owning page blocks: the reusable <AttachmentUpload> empty-state (click/drop/paste) funnel. Owns the single block↔attachment link (page_blocks_attachments) and one generic reconcile bound to blocksChanged; FK cascade reclaims on delete.
       - Server:
-        - Contributes: `trigger` "page.attachment-block.reconcile"
+        - Contributes:
+          - `resource.declare` "page.block-attachment-links"
+          - `resource.declare` "page.block-attachment-links:rows"
+          - `attachments.link` "page_blocks"
+          - `trigger` "page.attachment-block.reconcile"
         - Uses:
           - `database.db`
           - `infra/attachments.Attachments`
           - `infra/events.Trigger`
           - `infra/jobs.defineJob`
+          - `network/live.serveCollection`
           - `page/editor._blocks`
           - `page/editor.blocksChanged`
           - `page/editor.liveBlocks`
@@ -36161,6 +36196,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types): `BlockAttachmentCollector`
         - Exports (values): `AttachmentBlock`
         - Register: `defineJob('page.attachment-block.reconcile')`
+        - Resources:
+          - `page.block-attachment-links` (keyed)
+          - `page.block-attachment-links:rows` (keyed, point)
       - Web:
         - Uses:
           - `infra/attachments.uploadAttachment`
@@ -36172,6 +36210,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.cn`
           - `ui/icons.Icon`
         - Exports (values): `AttachmentUpload`
+      - Core:
+        - Uses:
+          - `infra/attachments.ATTACHMENT_LINKS_MAX`
+          - `infra/attachments.attachmentLinkFields`
+          - `infra/entities.entityRef`
+          - `infra/query-resource.compositeKey`
+          - `network/live.liveCollection`
+        - Exports (values):
+          - `blockAttachmentLinks`
+          - `blockAttachmentLinksEntityRef`
+          - `collectBlockAttachmentIds`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --border`
@@ -36193,8 +36242,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/file`
           - `page/image`
           - `page/video`
-      - Core:
-        - Exports (values): `collectBlockAttachmentIds`
     - **`audio`** — Audio block type: upload an audio file and play it inline. Audio block type: registers its `data` schema (attachment) at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "audio" → `AudioBlock`
@@ -53175,10 +53222,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useTaskAttempts`
           - `useTaskConversations`
       - Server:
-        - Contributes: 39 contributions — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
-          - `resource.declare` ×28
+        - Contributes: 45 contributions — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `resource.declare` ×32
           - `derived-view` ×4
           - `ids.kind` ×3
+          - `attachments.link` ×2
           - `derived-table` ×2
           - `host-service:tasks-core.push-ledger` "tasks-core.push-ledger"
           - `live.columns.expose` "tasks ← tasks_ext_mandate"
@@ -53377,6 +53425,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations-gone:rows` (keyed, point)
           - `conversations-system` (keyed)
           - `conversations-system:rows` (keyed, point)
+          - `conversations.attachment-links` (keyed)
+          - `conversations.attachment-links:rows` (keyed, point)
           - `conversations.by-id:rows` (keyed, point)
           - `pushes` (keyed, window)
           - `pushes:groups` (push)
@@ -53385,13 +53435,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `task-dropped-states:rows` (keyed, point)
           - `tasks` (keyed)
           - `tasks:rows` (keyed, point)
+          - `tasks.attachment-links` (keyed)
+          - `tasks.attachment-links:rows` (keyed, point)
       - Core:
-        - Uses: 31 symbols — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Uses: 34 symbols — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations/model-provider` ×3
           - `conversations/workspace` ×3
           - `fields/text/config` ×3
           - `fields` ×3
           - `fields/rank/config` ×2
+          - `infra/attachments` ×2
           - `infra/worktree` ×2
           - `network/live` ×2
           - `fields/bool/config.boolField`
@@ -53401,6 +53454,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/product-name.LEGACY_IDS`
           - `infra/entities.entityRef`
           - `infra/entity-extensions.defineExtensionShape`
+          - `infra/query-resource.compositeKey`
           - `packages/list-bound.wholeList`
           - `primitives/pane.defineRoute`
           - `primitives/rank.RankSchema`
@@ -53442,6 +53496,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BLOCKED_STATUSES`
           - `buildTaskPrompt`
           - `CONVERSATION_TRAILER_KEY`
+          - `conversationAttachmentLinks`
+          - `conversationAttachmentLinksEntityRef`
           - `ConversationKindSchema`
           - `conversationName`
           - `conversationRuntimes`
@@ -53469,6 +53525,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SETTLED_STATUSES`
           - `TASK_FILING_STARTS`
           - `TASK_STATUS_OPTIONS`
+          - `taskAttachmentLinks`
+          - `taskAttachmentLinksEntityRef`
           - `taskDependenciesEntityRef`
           - `taskDescriptions`
           - `taskDetailRoute`

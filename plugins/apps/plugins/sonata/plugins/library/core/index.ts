@@ -8,3 +8,7 @@ export type { Song } from "./resources";
 
 export { deleteSong, updateSong } from "./endpoints";
 export type { UpdateSongBody } from "./endpoints";
+export {
+  songAttachmentLinksEntityRef,
+  songAttachmentLinks,
+} from "./attachment-links";
