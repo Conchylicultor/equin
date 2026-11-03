@@ -125,7 +125,16 @@ report:
 | --- | --- | --- |
 | `DROP DATABASE … WITH (FORCE)` | `dropDatabase` (every sweep, reclaim and reset) | terminates the database's sessions, waits for them to exit, removes gigabytes of files |
 | `CREATE DATABASE` | `ensureDatabase`, `forkDatabase`'s temp | copies the template database; waits on the database-object lock |
-| `ALTER DATABASE … RENAME` | `forkDatabase`'s publish | waits on the database-object lock, e.g. behind a sweep dropping the same temp |
+| `ALTER DATABASE … RENAME` | `forkDatabase`'s publish | waits on the database-object lock |
+
+A fork's temp is **leased** (`server/internal/fork-lease.ts`): a session-held
+advisory lock keyed by the temp name, on its own `fork-lease` connection to
+`postgres`, taken before `CREATE DATABASE` and released after the rename or the
+drop. `database.fork-temp-sweep` drops a temp only through `reclaimForkTemp`,
+which takes that lease first. Zero connections to the temp is NOT liveness — a
+fork has none while it queues for its `db-fork` slot and while `pg_dump` reads
+the source — and gating the sweep on it dropped live temps (pg_restore then
+failed: `database "f_…__forking" does not exist`).
 
 `runDatabaseDdl` checks a client out with `await pool.connect()` rather than
 calling `pool.query`: pg-pool issues a queued `pool.query` from its checkout
@@ -190,6 +199,7 @@ database in `backup-plan.test.ts`. The real dump → restore round trip is in
 - Server:
   - Uses:
     - `database/client-tools.pgClientBin`
+    - `database/connection.createDbClient`
     - `database/connection.createDbPool`
     - `database/connection.withQueryDeadline`
     - `infra/host/host-admission.defineHostPool`
@@ -229,6 +239,7 @@ database in `backup-plan.test.ts`. The real dump → restore round trip is in
     - `isForkTempName`
     - `listDatabases`
     - `openShortLivedClient`
+    - `reclaimForkTemp`
 - Cross-plugin:
   - Imported by:
     - `apps/chord/song-index`

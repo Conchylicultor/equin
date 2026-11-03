@@ -2,14 +2,12 @@ import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import {
   listDatabases,
-  dropDatabase,
-  countActiveConnections,
   isForkTempName,
+  reclaimForkTemp,
 } from "@plugins/database/plugins/admin/server";
 
-// Reaps orphaned `<target>__forking` temp DBs. Most are reaped by the next fork
-// for that target (forkDatabase drops a stale temp first); the lingering case
-// is a temp whose fork job went `dead` and never retries. Runs every 15 min on
+// Reaps orphaned `f_*__forking` temp DBs: those whose fork died before renaming
+// or dropping its temp (killed, crashed, host rebooted). Runs every 15 min on
 // the main runtime only (no perWorktree) — DBs are a global cluster resource,
 // so a single sweep covers all worktrees.
 export const forkTempSweepJob = defineJob({
@@ -27,11 +25,11 @@ export const forkTempSweepJob = defineJob({
   async run() {
     const temps = (await listDatabases()).filter(isForkTempName);
     for (const temp of temps) {
-      // A live fork's pg_restore holds a connection to the temp — protect it.
-      // Only drop temps with zero active connections.
-      if ((await countActiveConnections(temp)) === 0) {
-        await dropDatabase(temp);
-      }
+      // A live fork holds its temp's lease from before CREATE to after the
+      // rename; a temp whose lease is free is an orphan. (Not "zero
+      // connections": a live fork has none while it queues for its slot and
+      // dumps the source.)
+      await reclaimForkTemp(temp);
     }
   },
 });

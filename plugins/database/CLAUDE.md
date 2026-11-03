@@ -102,7 +102,7 @@ pool and standalone client is built by `createDbPool` / `createDbClient`, whose
 `pg.Client` subclass bounds `connect()` and `query()` on the connection itself.
 Each connection is named from a closed list (`app`, `jobs-runner`,
 `jobs-enqueue`, `jobs-schema`, `job-lock`, `admin`, `admin-short-lived`,
-`change-feed`, `events-test`), and every expiry names its pool and phase. The
+`fork-lease`, `change-feed`, `events-test`), and every expiry names its pool and phase. The
 connection plugin's `CLAUDE.md` lists which code builds each one. Whole-database
 DDL on the admin pool (`CREATE` / `DROP` / `RENAME DATABASE`) runs under a 10 min
 bound (`database/admin`'s `runDatabaseDdl`).

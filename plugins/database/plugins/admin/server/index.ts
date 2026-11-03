@@ -35,6 +35,7 @@ export type {
   ForkSchemaExclusion,
 } from "./internal/fork-exclusion";
 export { forkTempPrefix, isForkTempName } from "./internal/temp-name";
+export { reclaimForkTemp } from "./internal/fork-lease";
 export { backupDatabase, inspectBackup } from "./internal/backup";
 export type { BackupInfo, TableStat } from "./internal/backup";
 // `BackupPlanError` is the backup's deterministic refusal, in strict mode only

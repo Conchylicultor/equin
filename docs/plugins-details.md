@@ -20583,6 +20583,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Uses:
           - `database/client-tools.pgClientBin`
+          - `database/connection.createDbClient`
           - `database/connection.createDbPool`
           - `database/connection.withQueryDeadline`
           - `infra/host/host-admission.defineHostPool`
@@ -20622,6 +20623,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isForkTempName`
           - `listDatabases`
           - `openShortLivedClient`
+          - `reclaimForkTemp`
       - Cross-plugin:
         - Imported by:
           - `apps/chord/song-index`
@@ -20952,14 +20954,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `report-kind` "db-fork-failed"
           - `report-kind` "fork-undeclared-schema"
         - Uses:
-          - `database/admin.countActiveConnections`
           - `database/admin.describeUndeclaredSchema`
-          - `database/admin.dropDatabase`
           - `database/admin.forkDatabase`
           - `database/admin.forkExclusions`
           - `database/admin.ForkPlanError`
           - `database/admin.isForkTempName`
           - `database/admin.listDatabases`
+          - `database/admin.reclaimForkTemp`
           - `infra/endpoints.implement`
           - `infra/jobs.defineJob`
           - `infra/jobs.NonRetryableError`

@@ -13,8 +13,7 @@ import { getAdminPool } from "./pool";
  * - `DROP DATABASE … WITH (FORCE)` terminates the database's sessions and waits
  *   for them to exit, then removes every file of a database that can be
  *   gigabytes (a fork, a composition's data).
- * - `ALTER DATABASE … RENAME` waits for that same database-object lock — behind
- *   a sweep dropping the same temp, for instance.
+ * - `ALTER DATABASE … RENAME` waits for that same database-object lock.
  *
  * Under a loaded host (a build, forks and restores running at once) each can
  * legitimately outlast a minute. Ten minutes still turns a truly silent

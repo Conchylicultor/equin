@@ -1,6 +1,9 @@
 import { readFileSync } from "node:fs";
 import type { Pool } from "pg";
-import { createDbPool } from "@plugins/database/plugins/connection/server";
+import {
+  createDbClient,
+  createDbPool,
+} from "@plugins/database/plugins/connection/server";
 import { DATABASE_CONFIG_PATH } from "@plugins/database/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 
@@ -121,6 +124,18 @@ export function openShortLivedClient(dbName: string): Pool {
     connectionString: buildConnString(getConn(), dbName),
     max: 1,
     idleTimeoutMillis: 1_000,
+  });
+}
+
+// A standalone session on the `postgres` system DB, direct (never pgbouncer),
+// for a session-held advisory lock: every process that takes or tests the lock
+// meets on the same database, since advisory locks are per-database.
+export function createAdminSession(
+  name: "fork-lease",
+): ReturnType<typeof createDbClient> {
+  return createDbClient({
+    name,
+    connectionString: buildConnString(getConn(), "postgres"),
   });
 }
 

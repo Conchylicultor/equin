@@ -20,6 +20,12 @@ export const DB_POOL_NAMES = [
   "admin",
   /** One-off admin clients opened and closed around a single operation. */
   "admin-short-lived",
+  /**
+   * The session holding a DB fork's temp lease (`database/admin`): the fork
+   * holds it from before its temp exists to after the rename; the temp sweep
+   * tries it before dropping a temp.
+   */
+  "fork-lease",
   /** The change-feed LISTEN client. */
   "change-feed",
   /**
