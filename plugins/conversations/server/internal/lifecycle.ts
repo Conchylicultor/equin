@@ -868,6 +868,16 @@ export async function ensureResumed(id: string): Promise<ResumeOutcome> {
   if (!row) throw new Error(`Conversation ${id} not found`);
   if (!row.hibernatedAt) return { kind: "not-hibernated" };
 
+  // The stamp says "no process"; a live agent says otherwise, and respawning
+  // would kill it mid-turn (its background sub-agents with it). It came back
+  // by a relaunch that was not this resume, under a stamp a reconcile wrote
+  // in the moment it was absent: the stamp is stale — drop it, resume nothing.
+  // The reconciler drops it too (`planLive`); this guards the window before.
+  if (await Runtime.get(row.runtime).isRunning(id)) {
+    await updateConversation(id, { hibernatedAt: null });
+    return { kind: "not-hibernated" };
+  }
+
   const preflight = await preflightResume(row, await workspaceOf(row));
   if (preflight.kind === "blocked") return preflight;
 

@@ -17,9 +17,13 @@ Names no workflow. Plan: `research/2026-10-30-tasks-message-agents.md`.
   (`submitTurn`; the ledger wraps it in `<equin-event>`, drawn as a system
   card) typed **now**, as a person's turn would be — not held through
   `automatic-turn` readiness (user decision): a working agent reads it at its
-  next tool step, a held question is withdrawn for it. A `gone` / `done`
-  agent is resumed first (`resumeConversation`; a blocked resume is refused
-  with its reason); a hibernated one is resumed by `submitTurn` itself.
+  next tool step, a held question is withdrawn for it. A `gone` agent is
+  resumed first (`resumeConversation`; a blocked resume is refused with its
+  reason); a hibernated one is resumed by `submitTurn` itself. A `done`
+  (closed) one is refused unless the call says `reopen: true`: the agent
+  ended its own work, and a sender usually writes from a view taken just
+  before ("landed, now close" racing the close) — resuming on that reopened
+  the settled task and settled it again, a duplicate `settled` each time.
 - The answer comes back the way the target already reports (its reports and
   flags, as watch events) — the tool does not wait.
 
@@ -27,7 +31,7 @@ Names no workflow. Plan: `research/2026-10-30-tasks-message-agents.md`.
 
 ## Plugin reference
 
-- Description: Message the agents of a task tree, granted by message.tree: list_agents (every task of the caller's mandate tree an agent ran on, with its latest conversation and how it stands) and message_agent (an event turn typed into a task's latest conversation now — a working agent reads it at its next step — resuming it first when it stopped; refused outside the tree, to oneself, or where no agent ran). The capability's describe joins the Mandate section. Names no workflow.
+- Description: Message the agents of a task tree, granted by message.tree: list_agents (every task of the caller's mandate tree an agent ran on, with its latest conversation and how it stands) and message_agent (an event turn typed into a task's latest conversation now — a working agent reads it at its next step — resuming it first when it stopped, a closed one only when the call says reopen; refused outside the tree, to oneself, or where no agent ran). The capability's describe joins the Mandate section. Names no workflow.
 - Server:
   - Contributes: `mandateCapability` "message.tree"
   - Uses:

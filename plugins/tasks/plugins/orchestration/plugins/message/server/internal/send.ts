@@ -4,7 +4,7 @@ import type { TreeAgent, TreeAgents } from "./agents";
 /** What sending a message does outside the tree read: ports, so a test drives
  * the policy with a fake agent. */
 export interface MessagePorts {
-  /** Bring a stopped (`gone` / `done`) conversation back. Returns a refusal's
+  /** Bring a stopped (`gone`, or `done` when reopening) conversation back. Returns a refusal's
    * message when the resume is blocked (its checkout reclaimed…); throws on
    * anything else. */
   resume(
@@ -18,7 +18,12 @@ export type MessageOutcome =
   | {
       kind: "refused";
       reason:
-        "no-tree" | "not-in-tree" | "self" | "no-agent" | "resume-blocked";
+        | "no-tree"
+        | "not-in-tree"
+        | "self"
+        | "no-agent"
+        | "closed"
+        | "resume-blocked";
       message: string;
     }
   | {
@@ -46,7 +51,14 @@ export function messageText(
  * Send `text` from `fromConversationId` to the agent of `to` — a task id (its
  * latest conversation) or a conversation id — in the sender's tree. Typed now,
  * as a person's turn would be: a busy agent reads it at its next step. A
- * stopped one is resumed first, the message held until it is up.
+ * stopped (`gone`) one is resumed first, the message held until it is up.
+ *
+ * A CLOSED (`done`) one is refused unless `reopen` says so. Closing is the
+ * agent's own deliberate end, and a sender usually writes from a view of the
+ * tree taken before it — "landed, now close" arriving just after it closed.
+ * Resuming it on that message reopened its settled task only for the agent to
+ * close it again: a second `settled` for the same work, every time
+ * (conv-1793313534-903j7g, three times in one tree).
  */
 export async function sendAgentMessage(
   tree: TreeAgents,
@@ -54,6 +66,7 @@ export async function sendAgentMessage(
   to: string,
   text: string,
   ports: MessagePorts,
+  { reopen = false }: { reopen?: boolean } = {},
 ): Promise<MessageOutcome> {
   if (tree.kind === "no-tree")
     return {
@@ -83,6 +96,12 @@ export async function sendAgentMessage(
       message: "That is your own conversation.",
     };
   const was = target.conversation;
+  if (was.status === "done" && !reopen)
+    return {
+      kind: "refused",
+      reason: "closed",
+      message: `${was.id} has closed — its agent ended it — so nothing was sent and its task stays as it is. If it still has work to do, send again with \`reopen: true\` to resume it with your message.`,
+    };
   const stopped = was.status === "gone" || was.status === "done";
   if (stopped) {
     const resumed = await ports.resume(was.id);

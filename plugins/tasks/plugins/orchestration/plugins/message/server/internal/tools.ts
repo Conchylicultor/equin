@@ -51,7 +51,7 @@ export const listAgentsTool = Mcp.tool({
 export const messageAgentTool = Mcp.tool({
   name: "message_agent",
   when: granted(messageTree),
-  description: `Send a message to the agent of a task in your tree — a reply to its report, a correction, "push it", "redo X". It goes in now: a working agent reads it at its next step, an idle one starts on it, a stopped one is resumed first. It does not wait for an answer: the agent answers the way it already reports back to you.
+  description: `Send a message to the agent of a task in your tree — a reply to its report, a correction, "push it", "redo X". It goes in now: a working agent reads it at its next step, an idle one starts on it, a stopped one is resumed first. One that has closed is refused (it ended its own work — often just before your message) unless you pass \`reopen: true\`, which resumes it with your message. It does not wait for an answer: the agent answers the way it already reports back to you.
 
 \`to\` is a task id (its latest conversation) or a conversation id, as \`list_agents\` and your event turns name them.`,
   inputSchema: {
@@ -60,14 +60,21 @@ export const messageAgentTool = Mcp.tool({
       .min(1)
       .describe("The task id or conversation id of the agent to message."),
     text: z.string().min(1).describe("What to tell it."),
+    reopen: z
+      .boolean()
+      .optional()
+      .describe(
+        "Resume an agent that has closed, to give it more work. Without it, a closed agent is not messaged.",
+      ),
   },
-  async handler({ to, text }, { conversationId }) {
+  async handler({ to, text, reopen }, { conversationId }) {
     const outcome = await sendAgentMessage(
       await treeAgents(conversationId),
       conversationId,
       to.trim(),
       text,
       productionPorts,
+      { reopen: reopen === true },
     );
     return { content: [{ type: "text", text: renderOutcome(outcome) }] };
   },

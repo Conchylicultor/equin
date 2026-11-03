@@ -2,8 +2,8 @@
  * The tree's agents against the REAL worktree DB, inside rolled-back
  * transactions (`worktreeDbScenario`): every task under the root with its
  * latest conversation, the caller's own marked; and the send policy over that
- * read with a fake agent (resume only a stopped one, refuse outside the tree,
- * oneself, or a task no agent ran on).
+ * read with a fake agent (resume only a stopped one — a closed one only when
+ * reopened — refuse outside the tree, oneself, or a task no agent ran on).
  *
  * Run: `./equin test plugins/tasks/plugins/orchestration/plugins/message`.
  */
@@ -169,6 +169,45 @@ describe("message: send", () => {
       reason: "resume-blocked",
     });
     expect(blocked.sent).toEqual([]);
+  });
+
+  test("a closed agent is refused unless reopened; reopen resumes it first", async () => {
+    async function closed(
+      agent: ReturnType<typeof fakeAgent>,
+      opts?: { reopen?: boolean },
+    ) {
+      return worktreeDbScenario(async (tx) => {
+        const t = await tree(tx);
+        const d = await task(tx, "D", t.root);
+        const dConv = await conversation(tx, d, "done", "2026-01-01T00:04:00Z");
+        const agents = await agentsUnder(tx, t.root, t.sup);
+        return {
+          dConv,
+          out: await sendAgentMessage(
+            { kind: "found", rootTaskId: t.root, agents },
+            t.sup,
+            d,
+            "close with exit_clean",
+            agent.ports,
+            opts,
+          ),
+        };
+      });
+    }
+
+    const refused = fakeAgent();
+    expect((await closed(refused)).out).toMatchObject({
+      kind: "refused",
+      reason: "closed",
+    });
+    expect(refused.resumed).toEqual([]);
+    expect(refused.sent).toEqual([]);
+
+    const reopened = fakeAgent();
+    const got = await closed(reopened, { reopen: true });
+    expect(got.out).toMatchObject({ kind: "sent", resumed: true });
+    expect(reopened.resumed).toEqual([got.dConv]);
+    expect(reopened.sent).toHaveLength(1);
   });
 
   test("refused: outside the tree, oneself, a task no agent ran on, no tree", async () => {

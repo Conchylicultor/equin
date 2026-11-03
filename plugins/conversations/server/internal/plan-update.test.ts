@@ -412,6 +412,34 @@ describe("planConversationUpdate — no live session", () => {
     });
   });
 
+  test("a live process clears a stale hibernation stamp — a relaunch that was not a resume ran under it", () => {
+    expect(
+      planConversationUpdate(
+        row({
+          status: "working",
+          workingOn: "turn",
+          hibernatedAt: new Date(NOW - 1000),
+        }),
+        live({ workingOn: "turn" }),
+        ctx(),
+      ),
+    ).toEqual({
+      kind: "patch",
+      patch: { hibernatedAt: null },
+      adoptedSessionId: null,
+    });
+  });
+
+  test("a dead process keeps the stamp", () => {
+    expect(
+      planConversationUpdate(
+        row({ status: "gone", hibernatedAt: new Date(NOW - 1000) }),
+        live({ dead: true }),
+        ctx(),
+      ),
+    ).toEqual({ kind: "noop" });
+  });
+
   test("a mid-work resumable row hibernates and settles to waiting — nothing computes without a process", () => {
     expect(
       planConversationUpdate(row({ status: "working" }), ABSENT, ctx()),

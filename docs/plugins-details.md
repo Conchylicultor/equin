@@ -51821,7 +51821,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Test helpers:
                 - Core: `@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core/testing`
                   - `rawPolicy` — A policy as raw grants, unchecked by any capability — for a test of how a reader handles a value its capability's schema refuses, which `mandatePolicy` (parsing every grant) can never build.
-        - **`message`** — Message the agents of a task tree, granted by message.tree: list_agents (every task of the caller's mandate tree an agent ran on, with its latest conversation and how it stands) and message_agent (an event turn typed into a task's latest conversation now — a working agent reads it at its next step — resuming it first when it stopped; refused outside the tree, to oneself, or where no agent ran). The capability's describe joins the Mandate section. Names no workflow.
+        - **`message`** — Message the agents of a task tree, granted by message.tree: list_agents (every task of the caller's mandate tree an agent ran on, with its latest conversation and how it stands) and message_agent (an event turn typed into a task's latest conversation now — a working agent reads it at its next step — resuming it first when it stopped, a closed one only when the call says reopen; refused outside the tree, to oneself, or where no agent ran). The capability's describe joins the Mandate section. Names no workflow.
           - Server:
             - Contributes: `mandateCapability` "message.tree"
             - Uses:

@@ -10,6 +10,13 @@ Idle conversations are hibernated (their agent session killed, the row kept
   (`resumeHibernated`, `needsMachine`): `ensureResumed`, answering the
   `ResumeOutcome` (its `blocked` arm is the only place a failed auto-resume is
   observable); the `conversations.hibernate-idle` job; the hibernation config.
+- **`hibernatedAt` means "no process".** A reconcile that finds the agent
+  absent stamps it (the suspend branch), also in the moment a relaunch that is
+  not a hibernation resume (moving off a spent account, Stop's rewind) has the
+  old process gone and the new one not yet up. So a live process clears the
+  stamp (the reconciler's `planLive`), and `ensureResumed` asks the runtime
+  first and resumes nothing when the agent runs: a stale stamp once made an
+  open kill a working agent mid-turn, its background sub-agents with it.
 - `web/` — `useMarkConversationViewed()(conversation)` always stamps, then calls
   resume only when the row's `hibernatedAt` is set. A `blocked` outcome is a
   toast; an `unavailable` one (no computer behind the transport) is a

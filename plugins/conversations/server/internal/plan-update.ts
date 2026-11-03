@@ -321,12 +321,29 @@ function planLive(
   // A hibernation resume's process answered: the agent is up, so turns are no
   // longer held for it (the shell flushes the held ones after this write).
   const resumed = row.resumingSince !== null;
-  if (!sessionChanged && !statusChanged && !waitingForChanged && !resumed)
+  // A live process on a row stamped hibernated: the stamp is stale. A relaunch
+  // that is not a hibernation resume (moving off a spent account, Stop's
+  // rewind) leaves the agent absent for a moment, and a reconcile in that
+  // moment stamps it (`planAbsent`); the new process then runs under the stamp.
+  // Left there, the next open or sent turn takes it for a hibernated
+  // conversation and `ensureResumed` kills the live agent to respawn it —
+  // mid-turn, its background sub-agents with it (conv-1793455067-mhrje1,
+  // 2026-11-02: an hour of work cut off, and its supervisor told the subtree
+  // went quiet). `hibernatedAt` means "no process": a live one clears it.
+  const staleHibernation = row.hibernatedAt !== null;
+  if (
+    !sessionChanged &&
+    !statusChanged &&
+    !waitingForChanged &&
+    !resumed &&
+    !staleHibernation
+  )
     return { kind: "noop" };
 
   const patch: UpdateConversationPatch = {
     ...(statusChanged ? desired : {}),
     ...(resumed ? { resumingSince: null } : {}),
+    ...(staleHibernation ? { hibernatedAt: null } : {}),
     ...(sessionChanged ? { claudeSessionId: desiredSessionId } : {}),
     ...(waitingForChanged ? { waitingFor: desiredWaitingFor } : {}),
     // A live session on a `gone` row resurrects it.
@@ -374,8 +391,9 @@ function planAbsent(row: PlanRow, ctx: PlanContext): UpdatePlan {
   // (idle-killed, lost to a reboot, or a resume that never came up) becomes
   // hibernated rather than gone — it keeps showing as a normal conversation and
   // is silently resumed on open. A missing process never moves a row to a
-  // terminal status; only an explicit close (above) does. The reconciler NEVER clears `hibernatedAt` —
-  // only `ensureResumed` does. See `decideMissingProcessAction` for why coupling
+  // terminal status; only an explicit close (above) does. Here the reconciler
+  // never clears `hibernatedAt` — `ensureResumed` does, and `planLive` when the
+  // process turns out live after all. See `decideMissingProcessAction` for why coupling
   // status to process absence deleted users' worktrees.
   //
   // The one status a missing process does settle is `working`: no process means

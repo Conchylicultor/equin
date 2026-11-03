@@ -51,6 +51,12 @@ export type UpdateConversationPatch = ConversationStatusPatch & {
   closeRequested?: boolean;
   /** See the field: set while a hibernation resume brings the process up. */
   resumingSince?: Date | null;
+  /**
+   * Only ever cleared here: a live process seen on a row still stamped
+   * hibernated (it came back by a relaunch that was not a hibernation resume)
+   * — the stamp is stale. Stamped only by `setConversationHibernated`.
+   */
+  hibernatedAt?: null;
 };
 
 // Resolve the owning task id AND the current status (status + waitingFor) of
@@ -228,6 +234,7 @@ export async function updateConversation(
     dbPatch.closeRequested = patch.closeRequested;
   if (patch.resumingSince !== undefined)
     dbPatch.resumingSince = patch.resumingSince;
+  if (patch.hibernatedAt !== undefined) dbPatch.hibernatedAt = null;
   const alongside = opts.alongside;
   // An empty patch writes nothing (drizzle rejects an empty SET).
   if (Object.keys(dbPatch).length === 0) {
@@ -383,8 +390,11 @@ export async function markConversationGone(id: string): Promise<boolean> {
 // intentionally absent, null to clear it on resume. Status is untouched —
 // a hibernated conversation shows `waiting` (the status reconciler settles a
 // row that still says `working` when it hibernates it). Only the status reconciler (suspend branch)
-// and the idle-kill job set it; only a resume clears it (`claimHibernatedResume`,
-// or this, restoring it when that resume failed).
+// and the idle-kill job set it; a resume clears it (`claimHibernatedResume`,
+// or this, restoring it when that resume failed), and so does the reconciler
+// when it finds the process live after all (`updateConversation`'s
+// `hibernatedAt: null` — the stamp is stale: the agent came back by another
+// relaunch).
 export async function setConversationHibernated(
   id: string,
   hibernatedAt: Date | null,
