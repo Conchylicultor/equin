@@ -1,13 +1,14 @@
-import { readdir, readFile } from "node:fs/promises";
 import { join, relative } from "node:path";
-import type { Dirent } from "node:fs";
-import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
+import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import {
   isTestCodePath,
   TESTS_DIR,
   TESTING_FOLDER,
 } from "@plugins/framework/plugins/plugin-id/core";
-import type { FsSnapshot } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import type {
+  FsSnapshot,
+  SnapshotDirEntry,
+} from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
@@ -15,17 +16,21 @@ import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/c
  *
  * The facet-extraction pass re-reads the whole plugin source tree several times
  * over (once per file-walking facet) via synchronous `readFileSync` /
- * `readdirSync`, monopolizing the single event loop for many seconds. This walks
- * the needed directories ONCE, asynchronously and in parallel (OS-saturating,
- * non-blocking), reading every source file a single time into memory. Wired into
- * the extract loop via `runWithFsSnapshot`, it makes the (still-synchronous)
- * facet `extract()` functions touch zero disk.
+ * `readdirSync`, monopolizing the single event loop for many seconds. This lists
+ * the needed directories ONCE from the repo's file set (no `readdir`: the
+ * entries are derived from the paths) and reads every source file a single time
+ * into memory, asynchronously. Wired into the extract loop via
+ * `runWithFsSnapshot`, it makes the (still-synchronous) facet `extract()`
+ * functions touch zero disk.
  *
  * Coverage mirrors what the parse-utils scanners read: `walkFiles` surfaces
  * `.ts`/`.tsx` (and `.css` for a scanner that asks), and `readIfExists`
  * additionally reads `package.json`. We record
  * every directory we descend into (so an absent file resolves to `null` with no
- * syscall) and read exactly those file kinds. Any directory NOT covered here is
+ * syscall) and read exactly those file kinds. A directory is an entry of its
+ * parent when it holds at least one file of the set — one holding only
+ * gitignored files (`node_modules`, build output) is absent, as it is in a
+ * fresh checkout. Any directory NOT covered here is
  * transparently re-read from disk by the helpers, so the snapshot only ever
  * speeds things up — it can never change a scanner's result.
  *
@@ -65,43 +70,57 @@ function shouldRead(name: string): boolean {
   return /\.(ts|tsx|css)$/.test(name) && !isTestCodePath([name]);
 }
 
-export async function buildFsSnapshot(
-  root: AppPath,
-  pluginDirs: AppPath[],
-): Promise<FsSnapshot> {
-  const repo = await loadRepoFiles(root);
-  const inRepo = (p: string) => repo.has(relative(root, p));
-  const files = new Map<string, string>();
-  const dirs = new Map<string, Dirent[]>();
+function entry(name: string, dir: boolean): SnapshotDirEntry {
+  return { name, isFile: () => !dir, isDirectory: () => dir };
+}
 
-  async function walk(dir: string): Promise<void> {
-    if (dirs.has(dir)) return; // already covered (disjoint roots, but guard)
-    let entries: Dirent[];
-    try {
-      entries = await readdir(dir, { withFileTypes: true });
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code == null) throw err;
-      return;
-    }
-    entries = entries.filter((e) => !e.isFile() || inRepo(join(dir, e.name)));
-    dirs.set(dir, entries);
-    const tasks: Promise<void>[] = [];
-    for (const e of entries) {
-      const p = join(dir, e.name);
-      if (e.isDirectory()) {
-        if (isSkippedDir(e.name)) continue;
-        tasks.push(walk(p));
-      } else if (e.isFile() && shouldRead(e.name)) {
-        tasks.push(
-          readFile(p, "utf8").then((content) => {
-            files.set(p, content);
-          }),
-        );
+export async function buildFsSnapshot(
+  repo: RepoFiles,
+  pluginDirs: readonly AppPath[],
+): Promise<FsSnapshot> {
+  const files = new Map<string, string>();
+  // dir → name → is it a directory. Insertion follows the sorted path list.
+  const listing = new Map<string, Map<string, boolean>>();
+  const reads: Promise<void>[] = [];
+
+  for (const pluginDir of pluginDirs) {
+    const rel = relative(repo.root, pluginDir);
+    if (listing.has(pluginDir)) continue; // disjoint roots, but guard
+    listing.set(pluginDir, new Map());
+    for (const path of repo.under(rel)) {
+      const segs = path.slice(rel.length + 1).split("/");
+      let dir: string = pluginDir;
+      for (let i = 0; i < segs.length; i++) {
+        const name = segs[i]!;
+        const isDir = i < segs.length - 1;
+        listing.get(dir)!.set(name, isDir);
+        if (!isDir) {
+          if (shouldRead(name)) {
+            const abs = join(dir, name);
+            reads.push(
+              repo.read(path).then((content) => {
+                // Null: removed after the set was taken — absent, like a
+                // file the walk never saw.
+                if (content !== null) files.set(abs, content);
+              }),
+            );
+          }
+          break;
+        }
+        if (isSkippedDir(name)) break;
+        dir = join(dir, name);
+        if (!listing.has(dir)) listing.set(dir, new Map());
       }
     }
-    await Promise.all(tasks);
   }
 
-  await Promise.all(pluginDirs.map((d) => walk(d)));
+  await Promise.all(reads);
+  const dirs = new Map<string, SnapshotDirEntry[]>();
+  for (const [dir, names] of listing) {
+    dirs.set(
+      dir,
+      [...names].map(([name, isDir]) => entry(name, isDir)),
+    );
+  }
   return { files, dirs };
 }

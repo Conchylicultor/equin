@@ -1,33 +1,54 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import {
+  loadRepoSnapshot,
+  type RepoSnapshot,
+} from "@plugins/framework/plugins/tooling/core";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   globRootsOf,
   hashedRootsFor,
   isHashedFile,
   listOwnFiles,
+  ownHashFor,
+  type OwnSources,
 } from "./own-files";
+import type { GlobPatternMemo } from "./store";
 
-// A plugin tree with one file per folder, so which folders an artifact HASHES
-// is readable straight off the returned list.
-const dir = mkdtempSync(join(tmpdir(), "own-files-test-"));
-afterAll(() => rmSync(dir, { recursive: true, force: true }));
+// A repo holding one plugin with one file per folder, so which folders an
+// artifact HASHES is readable straight off the returned list.
+const repo = asAppPath(mkdtempSync(join(tmpdir(), "own-files-test-")));
+const dir = join(repo, "p");
+afterAll(() => rmSync(repo, { recursive: true, force: true }));
 
-for (const folder of ["web", "shared", "core", "prewarm", "exhibits"]) {
-  mkdirSync(join(dir, folder), { recursive: true });
-  writeFileSync(join(dir, folder, "index.ts"), `export const ${folder} = 1;\n`);
+function write(rel: string, content: string): void {
+  mkdirSync(dirname(join(repo, rel)), { recursive: true });
+  writeFileSync(join(repo, rel), content);
 }
-writeFileSync(join(dir, "package.json"), "{}\n");
 
-const rel = async (kind: string): Promise<string[]> =>
-  (await listOwnFiles(dir, kind))
+let snapshot!: RepoSnapshot;
+beforeAll(async () => {
+  for (const folder of ["web", "shared", "core", "prewarm", "exhibits"]) {
+    write(`p/${folder}/index.ts`, `export const ${folder} = 1;\n`);
+  }
+  write("p/package.json", "{}\n");
+  write("p/web/testing/index.ts", "export const fixture = 1;\n"); // never hashed
+  write("p/web/ignored.generated.ts", "export const g = 1;\n"); // gitignored
+  write(".gitignore", "*.generated.ts\n");
+  Bun.spawnSync(["git", "init", "-q"], { cwd: repo });
+  snapshot = await loadRepoSnapshot(repo);
+});
+
+const rel = (kind: string): string[] =>
+  listOwnFiles(snapshot, dir, kind)
     .map((abs) => abs.slice(dir.length + 1))
     .sort();
 
-describe("listOwnFiles walks exactly inlinedRootsFor(kind)", () => {
-  test("prewarm: its own folder + shared + package.json — never web or core", async () => {
-    expect(await rel("prewarm")).toEqual([
+describe("listOwnFiles lists exactly inlinedRootsFor(kind)", () => {
+  test("prewarm: its own folder + shared + package.json — never web or core", () => {
+    expect(rel("prewarm")).toEqual([
       "package.json",
       "prewarm/index.ts",
       "shared/index.ts",
@@ -36,8 +57,8 @@ describe("listOwnFiles walks exactly inlinedRootsFor(kind)", () => {
 
   // The `web` hash NARROWS here: own-core is rewritten to the external barrel,
   // so it never enters the bytes and hashing it only forced spurious rebuilds.
-  test("web: web + shared + its co-built exhibits + package.json — NOT core", async () => {
-    expect(await rel("web")).toEqual([
+  test("web: web + shared + its co-built exhibits + package.json — NOT core, test code or gitignored files", () => {
+    expect(rel("web")).toEqual([
       "exhibits/index.ts",
       "package.json",
       "shared/index.ts",
@@ -45,8 +66,8 @@ describe("listOwnFiles walks exactly inlinedRootsFor(kind)", () => {
     ]);
   });
 
-  test("core: core + shared + package.json", async () => {
-    expect(await rel("core")).toEqual([
+  test("core: core + shared + package.json", () => {
+    expect(rel("core")).toEqual([
       "core/index.ts",
       "package.json",
       "shared/index.ts",
@@ -93,8 +114,8 @@ describe("isHashedFile", () => {
     }
   });
 
-  test("agrees with listOwnFiles on a real tree", async () => {
-    const files = await listOwnFiles(dir, "web");
+  test("agrees with listOwnFiles on a real tree", () => {
+    const files = listOwnFiles(snapshot, dir, "web");
     for (const f of files.filter((f) => !f.endsWith("package.json"))) {
       expect(isHashedFile(hashedRootsFor(dir, "web"), f)).toBe(true);
     }
@@ -138,5 +159,88 @@ describe("globRootsOf", () => {
     expect(() =>
       globRootsOf("/repo", "a.ts", 'import.meta.glob("../outside/*.ts")'),
     ).toThrow(/outside the repo/);
+  });
+});
+
+describe("ownHashFor", () => {
+  /** A memo that counts what it had to learn. */
+  function countingMemo(): GlobPatternMemo & { learned: () => number } {
+    const known = new Map<string, readonly string[]>();
+    let learned = 0;
+    return {
+      get: (blob) => known.get(blob),
+      set: (blob, patterns) => {
+        known.set(blob, patterns);
+        learned++;
+      },
+      save: () => {},
+      learned: () => learned,
+    };
+  }
+
+  test("follows content, reads a module only the first time its blob is seen", async () => {
+    const globs = countingMemo();
+    const sources = (): OwnSources => ({ snapshot, globs });
+    const a = await ownHashFor({
+      pluginDir: dir,
+      kind: "web",
+      sources: sources(),
+    });
+    expect(a.globRoots).toEqual([]);
+    const seen = globs.learned();
+    expect(seen).toBe(3); // web, shared, exhibits — package.json is no module
+    const again = await ownHashFor({
+      pluginDir: dir,
+      kind: "web",
+      sources: sources(),
+    });
+    expect(again.ownHash).toBe(a.ownHash);
+    expect(globs.learned()).toBe(seen); // nothing new to read
+
+    write("p/web/index.ts", "export const web = 2;\n");
+    try {
+      snapshot = await loadRepoSnapshot(repo);
+      const edited = await ownHashFor({
+        pluginDir: dir,
+        kind: "web",
+        sources: { snapshot, globs },
+      });
+      expect(edited.ownHash).not.toBe(a.ownHash);
+      expect(globs.learned()).toBe(seen + 1); // only the edited module
+    } finally {
+      write("p/web/index.ts", "export const web = 1;\n");
+      snapshot = await loadRepoSnapshot(repo);
+    }
+  });
+
+  test("a glob root's files join the address", async () => {
+    write("data/a.sql", "select 1;\n");
+    write(
+      "p/core/bundled.ts",
+      'export const sql = import.meta.glob("../../data/*.sql", { eager: true });\n',
+    );
+    try {
+      snapshot = await loadRepoSnapshot(repo);
+      const before = await ownHashFor({
+        pluginDir: dir,
+        kind: "core",
+        sources: { snapshot, globs: countingMemo() },
+      });
+      expect(before.globRoots).toEqual([join(repo, "data")]);
+      expect(before.globFiles).toEqual([join(repo, "data/a.sql")]);
+
+      write("data/b.sql", "select 2;\n");
+      snapshot = await loadRepoSnapshot(repo);
+      const after = await ownHashFor({
+        pluginDir: dir,
+        kind: "core",
+        sources: { snapshot, globs: countingMemo() },
+      });
+      expect(after.ownHash).not.toBe(before.ownHash);
+    } finally {
+      rmSync(join(repo, "data"), { recursive: true, force: true });
+      rmSync(join(repo, "p/core/bundled.ts"));
+      snapshot = await loadRepoSnapshot(repo);
+    }
   });
 });

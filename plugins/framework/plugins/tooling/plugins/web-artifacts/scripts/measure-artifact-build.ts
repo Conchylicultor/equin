@@ -20,6 +20,7 @@ import { join } from "node:path";
 import { setEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
 import { loadBabelContributions } from "@plugins/framework/plugins/web-core/core";
+import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 import {
   asAppPath,
   joinAppPath,
@@ -43,6 +44,7 @@ const root = asAppPath(join(import.meta.dir, "../../../../../../.."));
 const pluginsRoot = joinAppPath(root, "plugins");
 
 const { planFleet } = await import("../core/internal/plan");
+const { loadGlobPatternMemo } = await import("../core/internal/store");
 const { buildArtifact } = await import("../core/internal/vite-builder");
 const { makeArtifactExternal } = await import("../core/externals");
 const { build: viteBuild } = await import("vite");
@@ -51,7 +53,10 @@ const { default: react } = await import("@vitejs/plugin-react");
 const fleet = await planFleet({
   root,
   minify: true,
-  cache: { version: 0, records: {} } as never,
+  sources: {
+    snapshot: await loadRepoSnapshot(root),
+    globs: loadGlobPatternMemo(),
+  },
 });
 const pool = fleet.webTargets.filter(
   (t) => t.kind === kind && t.coEntries.length === 0,

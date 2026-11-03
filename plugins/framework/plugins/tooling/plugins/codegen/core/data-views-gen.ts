@@ -11,7 +11,7 @@ import {
   maskSource,
   parseStaticCallId,
   unresolvableCallIdMessage,
-  walkFilesAsync,
+  sourceFilesIn,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
 import { mainBundle } from "./main-bundle";
@@ -133,7 +133,7 @@ export async function collectDataViews(
   const slice = createTimeSlicer();
   for (const node of tree.byDir.values()) {
     if (!bundle.has(node.id)) continue;
-    for (const file of await walkFilesAsync(join(node.dir, "web"))) {
+    for (const file of sourceFilesIn(tree.repo, join(node.dir, "web"))) {
       const src = await readFile(file, "utf8");
       if (!src.includes(DATA_VIEW_MARKER)) continue;
       await slice();

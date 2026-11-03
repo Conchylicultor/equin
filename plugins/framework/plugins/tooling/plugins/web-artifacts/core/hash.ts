@@ -30,6 +30,26 @@ export function computeOwnHash(files: OwnFile[]): string {
   return h.digest("hex");
 }
 
+/** One file of an address, by content id: its path and its git blob id. */
+export interface BlobFile {
+  /** Path relative to the address's base dir — renames re-address. */
+  rel: string;
+  blob: string;
+}
+
+/**
+ * Hash of a file set by content id (`RepoSnapshot.blobOf`): the sorted
+ * `(rel, blob)` lines. Equal file sets with equal bytes hash equal, so it is
+ * the same function of the files as `computeOwnHash`, computed without
+ * reading them.
+ */
+export function computeBlobListHash(files: readonly BlobFile[]): string {
+  const sorted = [...files].sort((a, b) =>
+    a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0,
+  );
+  return sha256Hex(sorted.map((f) => `${f.rel}\t${f.blob}\n`).join(""));
+}
+
 /**
  * The final store key of one artifact: own content ⊕ artifact kind ⊕ the global
  * builder identity (builder version, minify flag, toolchain versions, babel

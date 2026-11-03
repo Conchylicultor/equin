@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
 import {
   babelPluginsFor,
+  findViteContributions,
+  isViteContributionPath,
   loadBabelContributions,
   type OrderedBabelContributions,
 } from "./vite-contributions";
@@ -71,5 +73,34 @@ describe("the repo's contributions", () => {
 
   test("a lowercase use- word is not a hook", () => {
     expect(count("/p/core/x.ts", "const user = useful + reuse;")).toBe(0);
+  });
+});
+
+describe("isViteContributionPath", () => {
+  test("the filter over the repo's file list finds what the walk finds", async () => {
+    const out = Bun.spawnSync(
+      ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+      { cwd: repoRoot },
+    );
+    const filtered = out.stdout
+      .toString()
+      .split("\0")
+      .filter((p) => p.startsWith("plugins/"))
+      .map((p) => p.slice("plugins/".length))
+      .filter(isViteContributionPath)
+      .map((rel) => join(pluginsRoot, rel))
+      .sort();
+    expect(filtered).toEqual(await findViteContributions(pluginsRoot));
+    expect(filtered.length).toBeGreaterThan(0);
+  });
+
+  test("the walk's exclusions", () => {
+    expect(isViteContributionPath("a/vite/index.ts")).toBe(true);
+    expect(isViteContributionPath("a/vite/other.ts")).toBe(false);
+    expect(isViteContributionPath("a/node_modules/x/vite/index.ts")).toBe(
+      false,
+    );
+    expect(isViteContributionPath("a/dist.live.1/vite/index.ts")).toBe(false);
+    expect(isViteContributionPath("a/vite/b/vite/index.ts")).toBe(false);
   });
 });

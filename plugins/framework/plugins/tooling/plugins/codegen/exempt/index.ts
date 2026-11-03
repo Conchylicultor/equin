@@ -25,7 +25,6 @@ export default [
       "core/space-ramp-gen.ts",
       "core/test-helpers-doc.ts",
       "core/token-group-vars-gen.ts",
-      "core/web-slot-contributions.ts",
       "core/write-generated.ts",
     ],
     kind: "debt",

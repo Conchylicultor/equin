@@ -32,7 +32,6 @@ import { precompressDir } from "./precompress";
 export const WEB_ARTIFACTS_DIR = webArtifactsDir.path;
 export const WEB_ARTIFACTS_STORE_DIR = webArtifactsDir.file("store");
 const STORE_DIR = WEB_ARTIFACTS_STORE_DIR;
-const FINGERPRINTS_DIR = webArtifactsDir.file("fingerprints");
 
 // Pruning bounds. An artifact dir is small (one module + map); one build links
 // ~1600 of them, so these bound the UNREFERENCED population only — an entry a
@@ -90,7 +89,6 @@ export function artifactStorePath(dirName: string): AppPath {
 
 export function ensureStoreDirs(): void {
   mkdirSync(STORE_DIR, { recursive: true });
-  mkdirSync(FINGERPRINTS_DIR, { recursive: true });
 }
 
 /** True iff the artifact completed publishing (meta.json is written last). */
@@ -339,64 +337,96 @@ export function removeCacheEntry(
   }
 }
 
-// ── Per-worktree fingerprint cache ──────────────────────────────────
+// ── Glob patterns per blob ───────────────────────────────────────────
 //
-// The stat-fingerprint fast path (à la `infra/corpus-index`): a worktree-scoped
-// JSON mapping `<pluginPath>|<kind>` → { files: { rel: [mtimeMs, size] },
-// ownHash }. When every stat matches, the recorded ownHash is reused without
-// reading a byte of content.
+// An artifact's address includes the files its modules `import.meta.glob`
+// (`own-files.ts`), so planning must know each own module's glob patterns —
+// a fact of the module's CONTENT alone. Keyed by git blob id, shared by every
+// worktree: a warm build reads none of its source to know them, a fresh
+// worktree from main reads none either, and an edit costs one read of the
+// edited file. Patterns, not roots: a root is resolved against the module's
+// path, which the blob does not know.
 
-export interface FingerprintRecord {
-  files: Record<string, [number, number]>;
-  ownHash: string;
+export interface GlobPatternMemo {
+  /** The recorded patterns of `blob`, or undefined when never read. */
+  get(blob: string): readonly string[] | undefined;
+  set(blob: string, patterns: readonly string[]): void;
   /**
-   * Repo-relative static bases of the files' `import.meta.glob` patterns
-   * (`own-files.ts`), recorded with the hash they were read under. Absent
-   * until first computed; a rewritten record drops it, so it is re-read
-   * exactly when the files change.
+   * Persist what this run learned (merged with what others wrote meanwhile);
+   * nothing to do when it learned nothing.
    */
-  globRoots?: string[];
+  save(): void;
 }
 
-export interface FingerprintCache {
-  version: number;
-  records: Record<string, FingerprintRecord>;
-}
+const GLOB_PATTERNS_FILE = webArtifactsDir.file("glob-patterns.json");
+const GLOB_PATTERNS_VERSION = 1;
+// A blob id set only grows (every version of every file ever planned). Past
+// this many, a save keeps only the blobs this run read or learned: the live
+// tree's, which the next run asks for again.
+const GLOB_PATTERNS_MAX = 100_000;
 
-const FINGERPRINT_CACHE_VERSION = 1;
-
-export function loadFingerprintCache(worktreeName: string): FingerprintCache {
-  const file = joinAppPath(FINGERPRINTS_DIR, `${worktreeName}.json`);
+function readGlobPatterns(): Map<string, readonly string[]> {
   let raw: string;
   try {
-    raw = readFileSync(file, "utf8");
+    raw = readFileSync(GLOB_PATTERNS_FILE, "utf8");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-    return { version: FINGERPRINT_CACHE_VERSION, records: {} };
+    return new Map();
   }
-  let parsed: FingerprintCache;
+  let parsed: { version?: unknown; patterns?: unknown };
   try {
-    parsed = JSON.parse(raw) as FingerprintCache;
+    parsed = JSON.parse(raw) as typeof parsed;
   } catch (err) {
+    // A torn or foreign file holds no fact worth keeping: every blob is read
+    // again, which is what a missing file means too.
     if (!(err instanceof SyntaxError)) throw err;
-    return { version: FINGERPRINT_CACHE_VERSION, records: {} };
+    return new Map();
   }
   if (
-    parsed.version !== FINGERPRINT_CACHE_VERSION ||
-    typeof parsed.records !== "object"
+    parsed.version !== GLOB_PATTERNS_VERSION ||
+    typeof parsed.patterns !== "object" ||
+    parsed.patterns === null
   ) {
-    return { version: FINGERPRINT_CACHE_VERSION, records: {} };
+    return new Map();
   }
-  return parsed;
+  return new Map(
+    Object.entries(parsed.patterns as Record<string, readonly string[]>),
+  );
 }
 
-export function saveFingerprintCache(
-  worktreeName: string,
-  cache: FingerprintCache,
-): void {
-  ensureStoreDirs();
-  const file = joinAppPath(FINGERPRINTS_DIR, `${worktreeName}.json`);
-  const tmp = `${file}.${process.pid}.tmp`;
-  writeFileSync(tmp, JSON.stringify(cache));
-  renameSync(tmp, file);
+export function loadGlobPatternMemo(): GlobPatternMemo {
+  const known = readGlobPatterns();
+  const used = new Map<string, readonly string[]>();
+  let learned = false;
+  return {
+    get(blob) {
+      const hit = known.get(blob);
+      if (hit !== undefined) used.set(blob, hit);
+      return hit;
+    },
+    set(blob, patterns) {
+      known.set(blob, patterns);
+      used.set(blob, patterns);
+      learned = true;
+    },
+    save() {
+      if (!learned) return;
+      learned = false;
+      ensureStoreDirs();
+      // Merge rather than overwrite: another worktree's build may have written
+      // since this one read. A lost race only costs a re-read.
+      const merged = readGlobPatterns();
+      for (const [blob, patterns] of used) merged.set(blob, patterns);
+      const kept = merged.size > GLOB_PATTERNS_MAX ? used : merged;
+      const tmp = `${GLOB_PATTERNS_FILE}.${process.pid}.tmp`;
+      writeFileSync(
+        tmp,
+        JSON.stringify({
+          version: GLOB_PATTERNS_VERSION,
+          patterns: Object.fromEntries(kept),
+        }),
+      );
+      renameSync(tmp, GLOB_PATTERNS_FILE);
+    },
+  };
 }

@@ -14,7 +14,7 @@ export {
   stripTypes,
   unresolvableCallIdMessage,
   walkFiles,
-  walkFilesAsync,
+  sourceFilesIn,
 } from "./helpers";
 export type {
   BarrelExport,
@@ -25,7 +25,7 @@ export type {
 } from "./helpers";
 export { maskSource } from "./mask-source";
 export { runWithFsSnapshot } from "./snapshot-scope";
-export type { FsSnapshot } from "./snapshot-scope";
+export type { FsSnapshot, SnapshotDirEntry } from "./snapshot-scope";
 export {
   hostServicesByName,
   parseHostServiceDeclarations,

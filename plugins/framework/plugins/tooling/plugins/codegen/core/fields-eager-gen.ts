@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "fs";
+import { readFileSync } from "fs";
 import {
   joinAppPath,
   type AppPath,
@@ -82,7 +82,7 @@ export async function collectFieldEagerBarrels(
     if (!CAPABILITY_RE.test(node.path)) continue;
     // A plugin dir of this checkout.
     const barrel = joinAppPath(node.dir, "server", "index.ts");
-    if (!existsSync(barrel) || !hasDefaultExport(barrel)) continue;
+    if (!node.runtimes.server || !hasDefaultExport(barrel)) continue;
     specifiers.push(`@plugins/${node.path}/server`);
   }
   return specifiers.sort();

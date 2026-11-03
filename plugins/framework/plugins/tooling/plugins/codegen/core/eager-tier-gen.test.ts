@@ -16,6 +16,7 @@ import { test, expect, describe } from "bun:test";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {
   globPaths,
+  repoFilesOver,
   type RepoFiles,
 } from "@plugins/framework/plugins/tooling/core";
 import { classifyEdges } from "@plugins/plugin-meta/plugins/closure/core";
@@ -387,6 +388,7 @@ describe("the scan over a file set", () => {
       byPath: new Map(nodes.map((n) => [n.path, n])),
       roots: nodes,
       facets: [],
+      repo: repoFilesOver(asAppPath(root), []),
     };
     const ctx: RegistryGenContext = {
       root,

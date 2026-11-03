@@ -179,6 +179,21 @@ export interface RepoFiles {
 }
 
 /**
+ * A `RepoFiles` that also knows every member's content id: the build's ONE
+ * view of the checkout (`loadRepoSnapshot`), taken once per pass and read by
+ * every step that would otherwise walk the disk or hash files itself.
+ */
+export interface RepoSnapshot extends RepoFiles {
+  /**
+   * The git blob id of `path`'s working-tree content at the moment the
+   * snapshot was taken — the index's id for a clean tracked file, hashed once
+   * for a dirty, untracked or `extra` one. THROWS for a path outside the set:
+   * there is no "no content" answer a caller could hash as if it were one.
+   */
+  blobOf(path: string): string;
+}
+
+/**
  * The scope axis, as values — so a caller that must validate one at runtime (the
  * CLI's `--scope` flag) reads the same closed set the type is derived from, and
  * a new scope can never be accepted by the type but rejected by the flag.

@@ -169,6 +169,7 @@ bun run test:dom plugins/framework/plugins/web-core/web/__tests__/plugin-render.
   - Exports (values):
     - `babelPluginsFor`
     - `findViteContributions`
+    - `isViteContributionPath`
     - `loadBabelContributions`
 - Structure:
   - Composition root: yes

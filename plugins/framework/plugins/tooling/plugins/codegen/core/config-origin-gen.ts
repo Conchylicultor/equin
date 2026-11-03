@@ -95,8 +95,8 @@ async function discoverConfigs(root: AppPath): Promise<DiscoveredConfig[]> {
     // `config-v2:registrations-paired` looks.
     for (const runtime of SERVER_HALF_RUNTIMES) {
       // A plugin dir of this checkout's tree.
+      if (!node.runtimes[runtime]) continue;
       const barrelPath = joinAppPath(node.dir, runtime, "index.ts");
-      if (!existsSync(barrelPath)) continue;
       results.push(...(await configsOfBarrel(barrelPath, node.id)));
     }
   }

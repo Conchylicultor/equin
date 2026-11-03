@@ -48,7 +48,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { basename, dirname, join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import {
   getWorktreeRoot,
   spawnPassthrough,
@@ -150,6 +150,14 @@ export interface EnsureDepsOptions {
    */
   frozenLockfile?: boolean;
   /**
+   * The checkout's file set, repo-relative (a build's repo snapshot, as plain
+   * data — this module cannot import its type). Given, the dep inputs are
+   * filtered out of it instead of walking the workspace roots. Omitted (the
+   * bootstrap, which runs before anything has listed the repo), the roots are
+   * walked: measured cheaper than asking git for an untracked listing.
+   */
+  files?: readonly string[];
+  /**
    * @internal TEST SEAM. Overrides how the install is run, so the test suite can
    * exercise the freshness gate, the under-lock re-check and the failure wording
    * without a real 10–25 s `bun install` (three agents share a checkout;
@@ -240,8 +248,24 @@ function workspaceWalkRoots(root: string): string[] {
 }
 
 /**
- * Collect the workspace-side dep inputs under `dir`: every `package.json` and
- * every `provision/index.ts`.
+ * Whether `rel` (repo-relative, `/`-separated) is a workspace-side dep input:
+ * a `package.json` or a `provision/index.ts` under a workspace root, outside
+ * `node_modules` and `.git`. The ONE rule both listings below apply.
+ */
+function isDepInput(rel: string, walkRoots: readonly string[]): boolean {
+  if (!walkRoots.some((r) => r === "" || rel.startsWith(`${r}/`))) return false;
+  const segs = rel.split("/");
+  if (segs.some((s) => SKIP_DIRS.has(s))) return false;
+  const name = segs[segs.length - 1];
+  return (
+    name === "package.json" ||
+    (name === "index.ts" && segs[segs.length - 2] === "provision")
+  );
+}
+
+/**
+ * Collect the workspace-side dep inputs under `dir` by walking it — the
+ * listing for a caller that holds no file set.
  *
  * A vanished directory is tolerated (`ENOENT` only): codegen and the `dist.*`
  * swap rename directories under `plugins/` while we walk, and a directory that
@@ -250,6 +274,7 @@ function workspaceWalkRoots(root: string): string[] {
 function collectWorkspaceInputs(
   dir: string,
   root: string,
+  walkRoots: readonly string[],
   out: Set<string>,
 ): void {
   let entries: Dirent[];
@@ -263,18 +288,37 @@ function collectWorkspaceInputs(
     const full = join(dir, entry.name);
     if (entry.isDirectory()) {
       if (SKIP_DIRS.has(entry.name)) continue;
-      collectWorkspaceInputs(full, root, out);
+      collectWorkspaceInputs(full, root, walkRoots, out);
       continue;
     }
     // Plain files only — a symlinked dir (`web-core/dist`) is never a dep input,
     // and not following links is what keeps the walk cycle-free.
     if (!entry.isFile()) continue;
-    const isProvisionEntry =
-      entry.name === "index.ts" && basename(dir) === "provision";
-    if (entry.name === "package.json" || isProvisionEntry) {
-      out.add(relative(root, full));
+    const rel = relative(root, full);
+    if (isDepInput(rel, walkRoots)) out.add(rel);
+  }
+}
+
+/**
+ * Every dep input's path, repo-relative: the root manifests plus the
+ * workspace-side inputs — filtered out of `files` when the caller holds the
+ * checkout's set, walked otherwise.
+ */
+function listDepInputs(root: string, files?: readonly string[]): string[] {
+  const rels = new Set<string>([
+    "bun.lock",
+    "package.json",
+    PROVISION_REGISTRY_REL,
+  ]);
+  const walkRoots = workspaceWalkRoots(root);
+  if (files) {
+    for (const rel of files) if (isDepInput(rel, walkRoots)) rels.add(rel);
+  } else {
+    for (const walkRoot of walkRoots) {
+      collectWorkspaceInputs(join(root, walkRoot), root, walkRoots, rels);
     }
   }
+  return [...rels].sort();
 }
 
 /**
@@ -287,16 +331,11 @@ function collectWorkspaceInputs(
  * `readdirSync` order is not stable across filesystems and the stamp must
  * describe the checkout, not the machine that wrote it.
  */
-function computeDepSignature(root: string): DepSignature {
-  const rels = new Set<string>([
-    "bun.lock",
-    "package.json",
-    PROVISION_REGISTRY_REL,
-  ]);
-  for (const walkRoot of workspaceWalkRoots(root)) {
-    collectWorkspaceInputs(join(root, walkRoot), root, rels);
-  }
-  const lines = [...rels].sort().map((rel) => {
+function computeDepSignature(
+  root: string,
+  inputs: readonly string[],
+): DepSignature {
+  const lines = inputs.map((rel) => {
     // `throwIfNoEntry: false` narrows the tolerated error to ENOENT; EACCES and
     // friends still throw. Absent is a legitimate INPUT STATE (no provision
     // registry yet, no `bun.lock` in a hand-made checkout), recorded as its own
@@ -440,8 +479,14 @@ export async function ensureDeps(
   const install = opts.installer ?? runBunInstall;
   const stampPath = join(root, STAMP_REL);
 
+  // Listed once per call: the SET of inputs does not change under an install
+  // (bun writes no workspace manifest); their stats are re-read each time.
+  const inputs = listDepInputs(root, opts.files);
+
   // Fast path: no lock, no subprocess, no output.
-  if (freshness(readStamp(stampPath), computeDepSignature(root)).fresh) {
+  if (
+    freshness(readStamp(stampPath), computeDepSignature(root, inputs)).fresh
+  ) {
     return { kind: "fresh" };
   }
 
@@ -470,7 +515,10 @@ export async function ensureDeps(
     // very likely just done this exact install. NOT `fresh` though — the stamp
     // was stale on this process's first look, so `node_modules` changed under it
     // (see `EnsureDepsResult`).
-    const state = freshness(readStamp(stampPath), computeDepSignature(root));
+    const state = freshness(
+      readStamp(stampPath),
+      computeDepSignature(root, inputs),
+    );
     if (state.fresh) return { kind: "installed-by-other" };
 
     log(`Installing dependencies — ${state.reason}...`);
@@ -479,7 +527,7 @@ export async function ensureDeps(
 
     // Recompute AFTER the install: it rewrites `bun.lock`, and its postinstall
     // provisions can rewrite the provision registry.
-    writeStamp(stampPath, computeDepSignature(root));
+    writeStamp(stampPath, computeDepSignature(root, inputs));
     return { kind: "installed" };
   } finally {
     release();

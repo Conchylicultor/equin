@@ -38,7 +38,7 @@ import { babelContributionsPlugin } from "./babel-transform";
 import { makeArtifactExternal } from "../externals";
 import { inlinedRootsFor } from "../own-roots";
 import { createInlineAudit } from "./inline-audit";
-import { hashedRootsFor, listOwnFiles } from "./own-files";
+import { hashedRootsFor } from "./own-files";
 import { artifactSourcemaps } from "./sourcemaps";
 import type { ArtifactMeta } from "./store";
 import { artifactTmpDir, publishArtifact } from "./store";
@@ -68,6 +68,16 @@ export interface ArtifactBuildTarget {
    * allows them beside the own roots.
    */
   globRoots: readonly string[];
+  /**
+   * Absolute paths of the files the address hashed, as planning read them off
+   * the repo snapshot (`OwnAddress`): the own files (the Tailwind candidates'
+   * scan input) and the glob roots' files. The inline audit holds the bundle to
+   * exactly these, so a file outside the snapshot — gitignored, or written
+   * after it — can never be inlined unaddressed. Plain data, so the target
+   * crosses to a build worker and nothing there lists files again.
+   */
+  ownFiles: readonly string[];
+  globFiles: readonly string[];
   /**
    * Extra entries built into THIS artifact (a co-built folder such as
    * `exhibits/` of a `web` artifact — `COBUILT_FOLDERS` in `../own-roots.ts`).
@@ -432,6 +442,7 @@ export async function buildArtifact(
   const audit = createInlineAudit({
     dirName: target.dirName,
     hashedRoots,
+    hashedFiles: [...target.ownFiles, ...target.globFiles],
     kind: target.kind,
   });
   // A worker (`new SharedWorker(new URL("./x.worker.ts", import.meta.url))`) is
@@ -443,6 +454,7 @@ export async function buildArtifact(
   const workerAudit = createInlineAudit({
     dirName: `${target.dirName} (worker)`,
     hashedRoots,
+    hashedFiles: [...target.ownFiles, ...target.globFiles],
     kind: target.kind,
   });
 
@@ -548,9 +560,7 @@ export async function buildArtifact(
       inputsHash: target.inputsHash,
       staticImportsByFile,
       dynamicImports,
-      tailwindCandidates: await tailwindCandidatesOf(
-        await listOwnFiles(pluginDir, target.kind),
-      ),
+      tailwindCandidates: await tailwindCandidatesOf([...target.ownFiles]),
       builtAtMs: Date.now(),
     };
     await publishArtifact(target.dirName, tmpDir, meta);

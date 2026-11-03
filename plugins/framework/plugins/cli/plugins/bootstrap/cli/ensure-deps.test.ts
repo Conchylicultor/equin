@@ -375,6 +375,44 @@ test("two installs in one process both run — the lock does not outlive a call"
   await expectInstalls(dir); // install #2
 });
 
+test("a file set given: the inputs are filtered out of it, by the walk's rule", async () => {
+  // A build hands its repo snapshot in. The signature must be the one the walk
+  // computes over the same checkout (or every build would reinstall after a
+  // bootstrap), and an input the set lists must still move it.
+  const dir = await seeded(); // stamped by the walk
+  const files = [
+    "package.json",
+    "bun.lock",
+    "packages/alpha/package.json",
+    "packages/beta/package.json",
+    "packages/alpha/src/index.ts", // not an input
+    "packages/alpha/node_modules/x/package.json", // never an input
+    "other/package.json", // outside the workspace roots
+    PROVISION_REGISTRY_REL,
+  ];
+  const fresh = recordingInstaller();
+  expect(
+    await ensureDeps({
+      root: dir,
+      log: silent,
+      installer: fresh.installer,
+      files,
+    }),
+  ).toEqual({ kind: "fresh" });
+
+  touch(join(dir, "packages/gamma/package.json"), '{"name":"gamma"}');
+  const rec = recordingInstaller();
+  expect(
+    await ensureDeps({
+      root: dir,
+      log: silent,
+      installer: rec.installer,
+      files: [...files, "packages/gamma/package.json"],
+    }),
+  ).toEqual({ kind: "installed" });
+  expect(rec.calls()).toBe(1);
+});
+
 test("a root without a workspaces field is a loud error, never a vacuous pass", async () => {
   // Guards the one failure mode the signature cannot self-detect: a wrong root
   // walks nothing, so the signature would be stable and the checkout would never

@@ -46,6 +46,8 @@
 #  W0   warm, nothing changed: the first agent-worktree build (primes the
 #       per-worktree fingerprints: labelled W0-prime, it is also W3-like), then
 #       3 x `build --skip-checks`, then one full `./equin build` (with checks).
+#  FSU  one more unchanged W0 build under sudo fs_usage (file-system call counts
+#       per process; step 3c, research/2026-11-03-global-build-pipeline-step3c-repo-snapshot.md).
 #  W1   plugin body edit x3: a comment line appended to a keyboard-party web file.
 #  W2   schema edit x3: a nullable column added to app_usage_daily (the
 #       migration is generated inside the VM; each run adds another column).
@@ -217,6 +219,33 @@ bp_build W0-full "$P" -- ./equin build
 step_06_w0_DOC="W0: fresh agent worktree + db fork; the priming build (per-worktree fingerprints empty), 3 unchanged --skip-checks builds, one full build with checks."
 step_06_w0_TAG="harness-only"
 
+step_15_fsu() {
+  # One more unchanged build in the (still clean) W0 worktree, under a
+  # system-wide `fs_usage` — the guest is otherwise idle. Counts every
+  # file-system call per (call, process name). The build's processes are bun,
+  # git and the renamed ones (`equin · <kind> · att-…`: the last word is all a
+  # whitespace split keeps, and LC_ALL=C because the `·` is not ASCII).
+  # (No single quote in the guest code: guest_zsh wraps it in zsh -c '…'.)
+  guest_zsh '
+export EQUIN_CONVERSATION_ID=conv-bench-bp-w0
+cd ~/equin/.claude/worktrees/att-bp-w0
+git status --short | head
+sudo fs_usage -w -f filesys > $HOME/bp-out/fsu.raw 2>/dev/null &
+FSU=$!
+sleep 3
+bp_build FSU-W0 "$HOME/.equin/worktrees/att-bp-w0/build-profile-*.json" -- ./equin build --skip-checks
+sleep 1
+sudo pkill -INT -x fs_usage; wait $FSU 2>/dev/null
+echo "== fs_usage: calls by process (top 60)"
+LC_ALL=C awk "NF > 3 { p = \$NF; sub(/\\.[0-9]+\$/, \"\", p); c[\$2 \" \" p]++ } END { for (k in c) print c[k], k }" $HOME/bp-out/fsu.raw | LC_ALL=C sort -rn | tee $HOME/bp-out/fsu-counts.txt | head -60
+echo "== fs_usage: totals for the build (bun, git, att-*)"
+LC_ALL=C awk "\$3 ~ /^(bun|git|att-)/ { t[\$2] += \$1 } END { for (k in t) print t[k], k }" $HOME/bp-out/fsu-counts.txt | LC_ALL=C sort -rn | head -25
+gzip -f $HOME/bp-out/fsu.raw
+'
+}
+step_15_fsu_DOC="FSU: one unchanged build --skip-checks in the W0 worktree under sudo fs_usage -f filesys; per-call counts for the build's processes (bun, git)."
+step_15_fsu_TAG="harness-only"
+
 step_07_w1() {
   guest_zsh '
 export EQUIN_CONVERSATION_ID=conv-bench-bp-w0
@@ -336,6 +365,7 @@ STEPS=(
   step_04_cold_c0
   step_05_cold_c1
   step_06_w0
+  step_15_fsu
   step_07_w1
   step_08_w2
   step_09_w4

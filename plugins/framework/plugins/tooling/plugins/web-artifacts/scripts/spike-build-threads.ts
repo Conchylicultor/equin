@@ -15,6 +15,8 @@ import os from "node:os";
 import { Worker } from "node:worker_threads";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { planFleet } from "../core/internal/plan";
+import { loadGlobPatternMemo } from "../core/internal/store";
+import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 const arg = (name: string, dflt: string) => {
@@ -31,7 +33,10 @@ const root = asAppPath(join(import.meta.dir, "../../../../../../.."));
 const fleet = await planFleet({
   root,
   minify: true,
-  cache: { version: 0, records: {} } as never,
+  sources: {
+    snapshot: await loadRepoSnapshot(root),
+    globs: loadGlobPatternMemo(),
+  },
 });
 const pool = fleet.webTargets.filter((t) => t.coEntries.length === 0);
 const stride = Math.max(1, Math.floor(pool.length / n));

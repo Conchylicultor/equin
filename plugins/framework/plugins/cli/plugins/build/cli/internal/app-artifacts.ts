@@ -7,6 +7,7 @@ import { isPlatformApi } from "@plugins/framework/plugins/tooling/plugins/bounda
 import { rm } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
+  buildBarrelFreeTree,
   generateCompositionRegistry,
   listNamedCompositionRegistries,
   regenerateManifestCodegen,
@@ -33,7 +34,7 @@ import {
   createPooledArtifactBuilder,
   idealArtifactBuildThreads,
 } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/cli";
-import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
 import {
   restampMovedOverrides,
   snapshotConfigOrigins,
@@ -395,8 +396,15 @@ export async function prepareCompositionSources(opts: {
   // Neither non-`fresh` kind re-execs here, exactly as `installed` never did:
   // this caller is mid-build with the CLI already loaded (see
   // `EnsureDepsResult` for the constraint that places on it).
-  let endSpan = hooks.span("bunInstall", "build:setup", "bun install");
-  const deps = await ensureDeps({ root, log: hooks.log });
+  // 0. The checkout's file set, listed ONCE for the whole stage: the dep
+  // inputs, the plugin trees and the registry scans all read it, so no step
+  // walks `plugins/` itself. Stage 2 reuses it through the memoized trees.
+  let endSpan = hooks.span("repoFiles", "build:setup", "repo file set");
+  const repo = await loadRepoFiles(root);
+  endSpan();
+
+  endSpan = hooks.span("bunInstall", "build:setup", "bun install");
+  const deps = await ensureDeps({ root, log: hooks.log, files: repo.all() });
   hooks.log(
     {
       fresh: "Dependencies already up to date.",
@@ -422,6 +430,7 @@ export async function prepareCompositionSources(opts: {
   hooks.log("Generating plugin registry...");
   const { renamedPackages, browserHosts } = await regenerateRegistryCodegen({
     root,
+    repo,
     onStep: codegenStep,
   });
   for (const line of browserHosts) hooks.log(line);
@@ -435,7 +444,13 @@ export async function prepareCompositionSources(opts: {
     hooks.log(
       `Wrote the derived package name in ${renamedPackages.length} package.json file(s):\n  ${renamedPackages.join("\n  ")}`,
     );
-    await ensureDeps({ root, log: hooks.log });
+    // The set was listed before codegen ran: a manifest codegen just CREATED
+    // is not in it, so name the written ones too (a set, duplicates are moot).
+    await ensureDeps({
+      root,
+      log: hooks.log,
+      files: [...repo.all(), ...renamedPackages],
+    });
   }
 
   // 2a'. Composition build-gating. For each named composition, emit gitignored
@@ -490,13 +505,9 @@ export async function prepareCompositionSources(opts: {
   const filtered = plan.build;
   if (filtered.length > 0) {
     const allManifests = opts.manifest.map(manifestItemToManifest);
-    // ONE tree walk for N compositions — the whole reason the list is variadic.
-    // The walk is the expensive part (every plugin dir, faceted); resolving a
-    // closure against an already-built tree is cheap.
-    const tree = await buildPluginTree(joinAppPath(root, "plugins"), {
-      skipBarrelImport: true,
-      facets: true,
-    });
+    // ONE faceted tree for N compositions — the barrel-free tree the registry
+    // codegen above already built; resolving a closure against it is cheap.
+    const tree = await buildBarrelFreeTree(root, repo);
     for (const composition of filtered) {
       // Non-null: `plan.build` holds only ids `byId.has` accepted.
       const item = byId.get(composition)!;

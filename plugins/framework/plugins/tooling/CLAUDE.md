@@ -17,20 +17,22 @@
     - `CheckScope`
     - `GitTreeSnapshot`
     - `RepoFiles`
+    - `RepoSnapshot`
   - Exports (values):
     - `assertRepoPath`
     - `CHECK_SCOPES`
     - `globPaths`
     - `InconclusiveCheckError`
     - `loadRepoFiles`
+    - `loadRepoSnapshot`
     - `pathspecToRegex`
     - `pathsUnder`
     - `repoFilesOver`
 - Cross-plugin:
   - Imported by:
     - `framework/tooling/checks`
-    - `framework/tooling/codegen`
     - `framework/tooling/lint`
+    - `framework/tooling/web-artifacts`
     - `plugin-meta/plugin-tree`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/repo-files.ts` (debt)

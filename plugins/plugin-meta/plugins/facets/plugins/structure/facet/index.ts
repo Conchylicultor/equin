@@ -1,5 +1,4 @@
 import { PLUGIN_MANIFEST_KEY } from "@plugins/framework/plugins/plugin-id/core";
-import { readdirSync, type Dirent } from "fs";
 import { dirname } from "path";
 import {
   createFacet,
@@ -10,6 +9,7 @@ import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/core";
 import {
   readIfExists,
   type FsSnapshot,
+  type SnapshotDirEntry,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { type StructureFacetData, structureFacetDef } from "../core";
 import {
@@ -35,14 +35,22 @@ function standardDirs(fs: FsSnapshot | undefined): Set<string> {
   return standardPluginDirsFromSnapshot(asAppPath(dirname(PLUGINS_DIR)), fs);
 }
 
-/** Read a directory's entries, yielding [] if it is unreadable. */
-function readEntries(dir: string): Dirent[] {
-  try {
-    return readdirSync(dir, { withFileTypes: true });
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code == null) throw err;
-    return [];
+/**
+ * A plugin directory's entries, from the tree build's snapshot (which lists
+ * every plugin directory it was handed) — no `readdir`, and git's membership:
+ * a folder holding only gitignored files is not one of them.
+ */
+function readEntries(
+  fs: FsSnapshot | undefined,
+  dir: string,
+): readonly SnapshotDirEntry[] {
+  const entries = fs?.dirs.get(dir);
+  if (entries === undefined) {
+    throw new Error(
+      `structure facet: ${dir} is not a directory of the tree build's FS snapshot.`,
+    );
   }
+  return entries;
 }
 
 /**
@@ -74,7 +82,7 @@ export default createFacet<StructureFacetData>({
 
   extract(ctx) {
     const STD = standardDirs(ctx.fs);
-    const entries = readEntries(ctx.dir);
+    const entries = readEntries(ctx.fs, ctx.dir);
     const folders = entries
       .filter((e) => e.isDirectory() && !isIgnoredDir(e.name))
       .map((e) => ({ name: e.name, standard: STD.has(e.name) }));

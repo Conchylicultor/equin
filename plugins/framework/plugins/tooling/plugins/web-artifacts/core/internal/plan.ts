@@ -18,7 +18,7 @@ import {
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { dirname, relative } from "node:path";
 import {
   BROWSER_HOST_ENTRY_KIND,
   FORCED_VENDOR_SPECS,
@@ -36,13 +36,12 @@ import {
   type ArtifactKind,
 } from "../own-roots";
 import { computeBuilderIdentity, type BuilderIdentity } from "./identity";
-import { ownHashFor } from "./own-files";
+import { ownHashFor, type OwnSources } from "./own-files";
 import {
   allStaticImports,
   artifactDirName,
   hasArtifact,
   type ArtifactMeta,
-  type FingerprintCache,
 } from "./store";
 import {
   coEntryFileName,
@@ -230,26 +229,27 @@ export function eagerWebTargets(
 
 /**
  * Plan the base fleet (web entries + entry + registry) for the current tree:
- * pure hash computation over the plugins' own files (via the caller's
- * fingerprint cache) plus a store-existence probe per target. No builds, no
- * store writes — the caller owns cache persistence and store mutation.
+ * pure hash computation over the plugins' own files (content ids from the
+ * caller's repo snapshot) plus a store-existence probe per target. No builds,
+ * no store writes — the caller owns the glob memo's persistence and store
+ * mutation.
  */
 export async function planFleet(opts: {
   root: AppPath;
   minify: boolean;
-  cache: FingerprintCache;
+  sources: OwnSources;
   /** Which registry + entry set to plan; defaults to the committed full registry. */
   source?: FleetSource;
 }): Promise<FleetPlan> {
-  const { root, cache } = opts;
+  const { root, sources } = opts;
   const pluginsRoot = joinAppPath(root, "plugins");
   const webSrcDir = joinAppPath(root, WEB_CORE_REL, "web");
 
   const source = opts.source ?? (await defaultFleetSource(root));
   const { webEntries, registryFile } = source;
 
-  const identity = await computeBuilderIdentity({
-    repoRoot: root,
+  const identity = computeBuilderIdentity({
+    snapshot: sources.snapshot,
     pluginsRoot,
     minify: opts.minify,
   });
@@ -264,12 +264,10 @@ export async function planFleet(opts: {
     const pluginDir = pluginPath
       ? joinAppPath(pluginsRoot, pluginPath)
       : webSrcDir;
-    const { ownHash, globRoots } = await ownHashFor({
-      cacheKey: `${pluginPath ?? "__entry"}|${kind}`,
+    const { ownHash, globRoots, ownFiles, globFiles } = await ownHashFor({
       pluginDir,
       kind,
-      cache,
-      repoRoot: root,
+      sources,
     });
     const inputsHash = computeInputsHash({
       ownHash,
@@ -285,15 +283,18 @@ export async function planFleet(opts: {
       entryFile,
       inputsHash,
       globRoots,
+      ownFiles,
+      globFiles,
       coEntries: pluginPath ? coEntriesFor(kind, pluginPath, pluginDir) : [],
       needsBuild: !hasArtifact(dirName),
     };
   };
 
-  // Bounded by `own-files.ts`'s shared IO gate internally (`ownHashFor` →
-  // `withIoSlot`), so firing every plugin's target build concurrently here is
-  // safe — `Promise.all` preserves `webEntries`' order regardless of
-  // resolution order, so target identity/dirName assignment is unchanged.
+  // `ownHashFor` reads the snapshot (in memory) and only a module the glob memo
+  // has not seen (through the snapshot's bounded reads), so firing every
+  // plugin's target concurrently here is safe — `Promise.all` preserves
+  // `webEntries`' order regardless of resolution order, so target
+  // identity/dirName assignment is unchanged.
   const webTargets = await Promise.all(
     webEntries.map((e) =>
       target(
@@ -389,7 +390,7 @@ export function closureSpecsOf(meta: ArtifactMeta): string[] {
 export async function resolveBarrelClosure(opts: {
   pluginsRoot: AppPath;
   identityHash: string;
-  cache: FingerprintCache;
+  sources: OwnSources;
   servedSpecs: ReadonlySet<string | null>;
   seedMetas: ArtifactMeta[];
   ensure: (t: PlannedTarget) => Promise<ArtifactMeta | null>;
@@ -406,9 +407,8 @@ export async function resolveBarrelClosure(opts: {
       }
     }
     for (const spec of nextSpecs) if (covered.has(spec)) nextSpecs.delete(spec);
-    // Same bounded-fan-out reasoning as `webTargets` above: `ownHashFor`'s
-    // actual disk concurrency is capped by own-files.ts's shared gate, so
-    // building every spec in this wave concurrently is safe.
+    // Same reasoning as `webTargets` above: planning every spec in this wave
+    // concurrently is safe.
     const built = await Promise.all(
       [...nextSpecs].sort().map(async (spec) => {
         const rel = spec.slice("@plugins/".length);
@@ -417,7 +417,12 @@ export async function resolveBarrelClosure(opts: {
         const kind = rel.slice(slash + 1);
         const pluginDir = joinAppPath(opts.pluginsRoot, pluginPath);
         const barrelFile = joinAppPath(pluginDir, kind, "index.ts");
-        if (slash <= 0 || !existsSync(barrelFile)) {
+        if (
+          slash <= 0 ||
+          !opts.sources.snapshot.has(
+            relative(opts.sources.snapshot.root, barrelFile),
+          )
+        ) {
           throw new Error(
             `artifact closure: emitted static import "${spec}" is not a folder barrel ` +
               `(expected ${barrelFile}) — cannot compose it into the import map.`,
@@ -430,7 +435,7 @@ export async function resolveBarrelClosure(opts: {
           entryFile: barrelFile,
           specifier: spec,
           identityHash: opts.identityHash,
-          cache: opts.cache,
+          sources: opts.sources,
         });
         return { spec, t };
       }),
@@ -458,16 +463,14 @@ export async function planBarrelTarget(opts: {
   entryFile: AppPath;
   specifier: string | null;
   identityHash: string;
-  cache: FingerprintCache;
+  sources: OwnSources;
 }): Promise<PlannedTarget> {
   const { pluginPath, kind } = opts;
   const pluginDir = joinAppPath(opts.pluginsRoot, pluginPath);
-  const { ownHash, globRoots } = await ownHashFor({
-    cacheKey: `${pluginPath}|${kind}`,
+  const { ownHash, globRoots, ownFiles, globFiles } = await ownHashFor({
     pluginDir,
     kind,
-    cache: opts.cache,
-    repoRoot: dirname(opts.pluginsRoot),
+    sources: opts.sources,
   });
   const inputsHash = computeInputsHash({
     ownHash,
@@ -483,6 +486,8 @@ export async function planBarrelTarget(opts: {
     entryFile: opts.entryFile,
     inputsHash,
     globRoots,
+    ownFiles,
+    globFiles,
     coEntries: coEntriesFor(kind, pluginPath, pluginDir),
     needsBuild: !hasArtifact(dirName),
   };
@@ -500,7 +505,7 @@ export async function planHostClosure(opts: {
   pluginsRoot: AppPath;
   host: BrowserHostPlan;
   identityHash: string;
-  cache: FingerprintCache;
+  sources: OwnSources;
   servedSpecs: ReadonlySet<string | null>;
   ensure: (t: PlannedTarget) => Promise<ArtifactMeta | null>;
 }): Promise<{ entry: PlannedTarget; added: PlannedTarget[] }> {
@@ -511,14 +516,14 @@ export async function planHostClosure(opts: {
     entryFile: opts.host.entryFile,
     specifier: null,
     identityHash: opts.identityHash,
-    cache: opts.cache,
+    sources: opts.sources,
   });
   const entryMeta = await opts.ensure(entry);
   if (entryMeta === null) return { entry, added: [] };
   const added = await resolveBarrelClosure({
     pluginsRoot: opts.pluginsRoot,
     identityHash: opts.identityHash,
-    cache: opts.cache,
+    sources: opts.sources,
     servedSpecs: opts.servedSpecs,
     seedMetas: [entryMeta],
     ensure: opts.ensure,

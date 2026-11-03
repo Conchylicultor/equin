@@ -105,6 +105,33 @@ export async function findViteContributions(
   return out;
 }
 
+/**
+ * Whether `rel` — a file path relative to the plugins root, `/`-separated — is
+ * a contribution `findViteContributions` finds: a `vite/index.ts` at most 12
+ * directories deep, under no `node_modules`, `dist` / `dist.*` or other `vite`
+ * directory. For a caller holding the repo's file set (the artifact builder's
+ * identity), which filters it instead of walking; the two agree by test.
+ */
+export function isViteContributionPath(rel: string): boolean {
+  // Most paths fail here: the identity asks this of every repo file.
+  if (rel !== "vite/index.ts" && !rel.endsWith("/vite/index.ts")) return false;
+  const segs = rel.split("/");
+  const n = segs.length;
+  if (n < 2 || segs[n - 1] !== "index.ts" || segs[n - 2] !== "vite") {
+    return false;
+  }
+  if (n - 2 > 12) return false;
+  return segs
+    .slice(0, n - 2)
+    .every(
+      (s) =>
+        s !== "node_modules" &&
+        s !== "dist" &&
+        !s.startsWith("dist.") &&
+        s !== "vite",
+    );
+}
+
 /** Whether `file` exists (the sync walk's `existsSync`, without blocking). */
 async function isFile(file: string): Promise<boolean> {
   try {

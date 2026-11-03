@@ -160,7 +160,7 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
 
 - Description: Plugin doc generation and registry codegen
 - Core:
-  - Uses: 116 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 114 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `plugin-meta/parse-utils` ×20
     - `config_v2` ×15
     - `framework/plugin-id` ×14
@@ -175,7 +175,6 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `config_v2/ledger` ×2
     - `framework/tooling/boundaries` ×2
     - `framework/tooling/format` ×2
-    - `framework/tooling` ×2
     - `packages/macrotask-yield` ×2
     - `packages/resource-protocol` ×2
     - `fields/reorder-tree.REORDER_NODE_LEGEND`
@@ -364,7 +363,7 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `ui/tokens/shadow --shadow`
 - Exemptions:
   - Exempts itself from:
-    - `boundaries/no-platform-api` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/eager-tier-gen.ts`, `core/fields-eager-gen.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/plugin-registry-gen.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/token-group-vars-gen.ts`, `core/web-slot-contributions.ts`, `core/write-generated.ts` (debt)
+    - `boundaries/no-platform-api` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/eager-tier-gen.ts`, `core/fields-eager-gen.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/plugin-registry-gen.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/token-group-vars-gen.ts`, `core/write-generated.ts` (debt)
     - `marker-scan-safety/no-adhoc-marker-scan` — `core/browser-host-coverage.ts` (sanctioned)
     - `user-path/no-unproven-claim` — `core/test-helpers-doc.ts` (sanctioned)
 

@@ -12,10 +12,7 @@ import {
   maskSource,
   type FsSnapshot,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
-import {
-  loadRepoFiles,
-  type RepoFiles,
-} from "@plugins/framework/plugins/tooling/core";
+import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
 import { createSourceScans, type SourceScans } from "./browser-host-coverage";
@@ -445,7 +442,7 @@ const contextsByRepo = new WeakMap<RepoFiles, Promise<RegistryGenContext>>();
 /**
  * The shared registry-generation context for `root`. A check passes its run's
  * file set as `repo` (so the scans read through it); codegen omits it and the
- * ctx lists the repo from git the first time a scan needs it.
+ * scans read the set the barrel-free tree was built from.
  *
  * Given a `repo`, the ctx is memoized on it: every check of one run asking
  * with the run's set gets the SAME ctx, so its memos (`dirScans`,
@@ -480,8 +477,10 @@ async function buildContext(
   const tree = await buildBarrelFreeTree(root);
   const graph = classifyEdges(tree);
   const main = resolveMainComposition(graph, root);
-  let listing = repo === undefined ? undefined : Promise.resolve(repo);
-  const files = (): Promise<RepoFiles> => (listing ??= loadRepoFiles(root));
+  // Without a run's set, the one the tree was read off: same membership, and
+  // no second listing.
+  const listing = Promise.resolve(repo ?? tree.repo);
+  const files = (): Promise<RepoFiles> => listing;
   let scans: Promise<SourceScans> | undefined;
   return {
     root,

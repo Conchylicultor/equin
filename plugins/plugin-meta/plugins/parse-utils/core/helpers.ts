@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from "fs";
-import { readdir } from "fs/promises";
-import { dirname, join } from "path";
+import { dirname, join, relative } from "path";
+import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import {
   TESTING_FOLDER,
   TESTS_DIR,
@@ -678,32 +678,28 @@ export function walkFiles(
 }
 
 /**
- * {@link walkFiles} without blocking: the same source files (same skipped
- * directories, same test-file exclusion), read one directory at a time with
- * `fs/promises`, and always from disk. For a scan that runs on a shared thread —
- * a check pass — and so must not hold it for a whole-tree `readdirSync` walk.
- * A missing `dir` yields no files, as in `walkFiles`.
+ * {@link walkFiles}' answer read off a repo's file set instead of the disk: the
+ * source files under `dir` (absolute) — same skipped directories, same
+ * test-file exclusion — with no syscall. Membership is git's, so a gitignored
+ * file under `dir` is not among them. For a scan over many plugins (a codegen
+ * collector, a check pass), which the tree it walks already holds the set for
+ * (`PluginTree.repo`).
  */
-export async function walkFilesAsync(dir: string): Promise<string[]> {
+export function sourceFilesIn(repo: RepoFiles, dir: string): string[] {
+  const rel = relative(repo.root, dir);
   const out: string[] = [];
-  const walk = async (current: string): Promise<void> => {
-    let entries;
-    try {
-      entries = await readdir(current, { withFileTypes: true });
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code == null) throw err;
-      return;
-    }
-    for (const e of entries) {
-      const p = join(current, e.name);
-      if (e.isDirectory()) {
-        if (isSkippedWalkDir(e.name)) continue;
-        await walk(p);
-      } else if (e.isFile() && isSourceFile(e.name, false)) {
-        out.push(p);
+  for (const path of repo.under(rel)) {
+    const segs = path.slice(rel.length + 1).split("/");
+    const name = segs[segs.length - 1]!;
+    if (!isSourceFile(name, false)) continue;
+    let skipped = false;
+    for (let i = 0; i < segs.length - 1; i++) {
+      if (isSkippedWalkDir(segs[i]!)) {
+        skipped = true;
+        break;
       }
     }
-  };
-  await walk(dir);
+    if (!skipped) out.push(join(repo.root, path));
+  }
   return out;
 }

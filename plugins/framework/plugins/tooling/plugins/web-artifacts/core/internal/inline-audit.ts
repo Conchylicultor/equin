@@ -1,10 +1,11 @@
 // The rung-4 assert behind the "an artifact's address covers exactly what its
 // bytes inline" invariant: per built artifact, everything rollup ACTUALLY
-// inlined must be a file the artifact's address hashed — inside its hashed
-// roots AND not left out by the hashing walk (`isHashedFile`). The second half
-// matters because test code (`web/testing/`, `__tests__/`) lives inside a root
-// but is never hashed: a shipping file that reached it would bake unhashed
-// content into the bundle, and bare root containment would let that through.
+// inlined must be a file the artifact's address hashed — one of the exact
+// files planning read off the repo snapshot (`hashedFiles`). Bare root
+// containment would not do: test code (`web/testing/`, `__tests__/`) lives
+// inside a root but is never hashed, and neither is a file the snapshot does
+// not hold (gitignored, or written after it was taken) — a shipping file that
+// reached either would bake unaddressed content into the bundle.
 //
 // Deliberately independent of BOTH halves it guards. It does not read
 // `inlinedRootsFor` to decide what should have been inlined, and it does not
@@ -21,7 +22,6 @@
 // and audited — under the new identity.
 
 import type { Plugin as VitePlugin } from "vite";
-import { isHashedFile } from "./own-files";
 
 export interface InlineAudit {
   /** Collects the emitted module ids. Add to the build's `plugins`. */
@@ -35,9 +35,13 @@ const MAX_LISTED = 20;
 
 export function createInlineAudit(opts: {
   dirName: string;
+  /** For the message: where the hashed files live. */
   hashedRoots: string[];
+  /** Absolute paths of every file the address hashed. */
+  hashedFiles: readonly string[];
   kind: string;
 }): InlineAudit {
+  const hashed = new Set(opts.hashedFiles);
   const emitted = new Set<string>();
   const plugin: VitePlugin = {
     name: "web-artifacts:inline-audit",
@@ -61,9 +65,10 @@ export function createInlineAudit(opts: {
         if (id.startsWith("\0")) continue; // virtual module, no source file
         if (!id.startsWith("/")) continue; // non-path virtual id
         if (id.includes("/node_modules/")) continue; // npm code, covered by the identity hash
-        // The address's own file rule, not bare root containment: test code
-        // (`web/testing/`, `__tests__/`) sits inside a root yet is never hashed.
-        if (isHashedFile(opts.hashedRoots, id)) continue;
+        // The exact hashed set, not bare root containment: test code
+        // (`web/testing/`, `__tests__/`) and gitignored files sit inside a
+        // root yet are never hashed.
+        if (hashed.has(id)) continue;
         offenders.add(id);
       }
       if (offenders.size === 0) return;
@@ -76,8 +81,10 @@ export function createInlineAudit(opts: {
           : "";
       throw new Error(
         `web-artifact ${opts.dirName} (kind "${opts.kind}") inlined ${sorted.length} source ` +
-          `file(s) its address does not hash — outside its hashed roots, or test code ` +
-          `(\`testing/\`, \`__tests__/\`, \`*.test.ts\`) that shipping code must never import:\n` +
+          `file(s) its address does not hash — outside its hashed roots, test code ` +
+          `(\`testing/\`, \`__tests__/\`, \`*.test.ts\`) that shipping code must never import, ` +
+          `or a file the build's repo snapshot does not hold (gitignored, or written after ` +
+          `the snapshot was taken):\n` +
           listed.map((p) => `  ${p}`).join("\n") +
           tail +
           `\n  hashed roots: ${opts.hashedRoots.join(", ")}\n` +

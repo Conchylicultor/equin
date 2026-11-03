@@ -4,6 +4,7 @@ import {
   type PluginTree,
 } from "./plugin-tree";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 
 const structureTreeCache = new Map<string, Promise<PluginTree>>();
 
@@ -31,16 +32,22 @@ const structureTreeCache = new Map<string, Promise<PluginTree>>();
  * `Object.freeze`d (a write throws — modules are strict), and the two maps'
  * mutators throw. A caller that needs a different shape builds its own from it.
  *
+ * `repo`: the pass's file set, when the caller holds one (a check run's
+ * `ctx.repo()`, a build's snapshot); the first call's builds the tree.
+ *
  * Check code must come through here (or a codegen memo), never call
  * `buildPluginTree` itself — enforced by the `plugin-tree/no-uncached-tree-in-checks`
  * lint rule.
  */
 export function buildStructureTreeOnce(
   pluginsRoot: AppPath,
+  repo?: RepoFiles,
 ): Promise<PluginTree> {
   let cached = structureTreeCache.get(pluginsRoot);
   if (!cached) {
-    cached = buildPluginTree(pluginsRoot).then(freezePluginTree);
+    cached = buildPluginTree(pluginsRoot, repo ? { repo } : undefined).then(
+      freezePluginTree,
+    );
     structureTreeCache.set(pluginsRoot, cached);
   }
   return cached;

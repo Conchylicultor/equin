@@ -6,6 +6,7 @@ import {
   buildPluginTree,
   type PluginTree,
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 
 const barrelFreeTreeCache = new Map<string, Promise<PluginTree>>();
 
@@ -23,13 +24,20 @@ const barrelFreeTreeCache = new Map<string, Promise<PluginTree>>();
  * needs the guard to have declared slots before anything reads `contributions`.
  * Keeping this tier free of the other two is what lets the enriched tree depend
  * on the declaration pass without closing an import cycle.
+ *
+ * `repo`: the pass's file set when the caller holds one (the build's snapshot);
+ * the first call's builds the tree, so the build hands it to the first.
  */
-export function buildBarrelFreeTree(root: AppPath): Promise<PluginTree> {
+export function buildBarrelFreeTree(
+  root: AppPath,
+  repo?: RepoFiles,
+): Promise<PluginTree> {
   let cached = barrelFreeTreeCache.get(root);
   if (!cached) {
     cached = buildPluginTree(joinAppPath(root, "plugins"), {
       skipBarrelImport: true,
       facets: true,
+      ...(repo ? { repo } : {}),
     });
     barrelFreeTreeCache.set(root, cached);
   }

@@ -12,11 +12,12 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { readFileSync } from "node:fs";
-import { readFile } from "node:fs/promises";
-import { findViteContributions } from "@plugins/framework/plugins/web-core/core";
+import { relative } from "node:path";
+import { isViteContributionPath } from "@plugins/framework/plugins/web-core/core";
+import type { RepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 import { BUILDER_VERSION, INLINE_PACKAGES } from "../constants";
-import { computeIdentityHash, computeOwnHash, sha256Hex } from "../hash";
-import { listOwnFiles, readFilesBounded } from "./own-files";
+import { computeBlobListHash, computeIdentityHash, sha256Hex } from "../hash";
+import { listOwnFiles } from "./own-files";
 
 const require = createRequire(import.meta.url);
 
@@ -26,8 +27,7 @@ const require = createRequire(import.meta.url);
  * deps — omit `fromDir` so they resolve from here; a consumer-side package must
  * pass the dir whose package.json declares it.
  *
- * One small `package.json` read per call — not the whole-tree walk
- * `listOwnFiles`/`builderSourceDigest` do below — so it stays sync.
+ * One small `package.json` read per call, so it stays sync.
  */
 export function packageVersion(pkg: string, fromDir?: AppPath): string {
   const resolver = fromDir
@@ -57,37 +57,41 @@ const WEB_ARTIFACTS_REL = "framework/plugins/tooling/plugins/web-artifacts";
  * source here auto-invalidates the fleet on ANY builder edit, so
  * `BUILDER_VERSION` is only a forced-bump lever, never a thing to remember.
  */
-export async function builderSourceDigest(
+export function builderSourceDigest(
+  snapshot: RepoSnapshot,
   pluginsRoot: AppPath,
-): Promise<string> {
+): string {
   const pluginDir = joinAppPath(pluginsRoot, WEB_ARTIFACTS_REL);
-  const absFiles = await listOwnFiles(pluginDir, "core");
+  const absFiles = listOwnFiles(snapshot, pluginDir, "core");
   if (absFiles.length === 0) {
     throw new Error(
       `builder identity: no own files found under ${pluginDir}/core`,
     );
   }
-  const files = await readFilesBounded(absFiles, (abs, content) => ({
-    rel: abs.slice(pluginDir.length + 1),
-    content,
-  }));
-  return computeOwnHash(files);
+  return computeBlobListHash(
+    absFiles.map((abs) => ({
+      rel: abs.slice(pluginDir.length + 1),
+      blob: snapshot.blobOf(relative(snapshot.root, abs)),
+    })),
+  );
 }
 
 /**
- * Assemble the identity hash. Babel contributions are identified by the sha256
- * of each discovered `vite/index.ts` plus its plugin's `package.json` (which
- * pins the transform package version, e.g. `babel-plugin-react-compiler`).
+ * Assemble the identity hash. Babel contributions are identified by the blob
+ * id of each `vite/index.ts` in the snapshot plus its plugin's `package.json`
+ * (which pins the transform package version, e.g.
+ * `babel-plugin-react-compiler`).
  */
-export async function computeBuilderIdentity(opts: {
-  repoRoot: AppPath;
+export function computeBuilderIdentity(opts: {
+  snapshot: RepoSnapshot;
   pluginsRoot: AppPath;
   minify: boolean;
-}): Promise<BuilderIdentity> {
+}): BuilderIdentity {
+  const { snapshot } = opts;
   // Versions come from package.json reads (require.resolve), NOT module
   // imports — loading vite/esbuild here would put ~1s of module eval on every
   // pipeline run's detect stage (and on docgen's barrel import).
-  const sourceDigest = await builderSourceDigest(opts.pluginsRoot);
+  const sourceDigest = builderSourceDigest(snapshot, opts.pluginsRoot);
   const record: Record<string, string | number | boolean> = {
     builderVersion: BUILDER_VERSION,
     builderSource: sourceDigest,
@@ -100,19 +104,22 @@ export async function computeBuilderIdentity(opts: {
     tailwindOxide: packageVersion("@tailwindcss/oxide"),
   };
   for (const pkg of INLINE_PACKAGES) {
-    record[`inline:${pkg}`] = packageVersion(pkg, opts.repoRoot);
+    record[`inline:${pkg}`] = packageVersion(pkg, snapshot.root);
   }
-  for (const file of await findViteContributions(opts.pluginsRoot)) {
-    const rel = file.slice(opts.pluginsRoot.length + 1);
-    let digest = sha256Hex(await readFile(file));
-    const pkgJson = joinAppPath(
-      appPathParent(appPathParent(joinAppPath(opts.pluginsRoot, rel))),
-      "package.json",
+  const pluginsRel = relative(snapshot.root, opts.pluginsRoot);
+  for (const path of snapshot.under(pluginsRel)) {
+    const rel = path.slice(pluginsRel.length + 1);
+    if (!isViteContributionPath(rel)) continue;
+    let digest = snapshot.blobOf(path);
+    const pkgJson = relative(
+      snapshot.root,
+      joinAppPath(
+        appPathParent(appPathParent(joinAppPath(opts.pluginsRoot, rel))),
+        "package.json",
+      ),
     );
-    try {
-      digest = sha256Hex(digest + (await readFile(pkgJson, "utf8")));
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    if (snapshot.has(pkgJson)) {
+      digest = sha256Hex(`${digest}\n${snapshot.blobOf(pkgJson)}`);
     }
     record[`babel:${rel}`] = digest;
   }

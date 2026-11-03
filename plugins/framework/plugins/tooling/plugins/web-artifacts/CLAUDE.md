@@ -191,8 +191,9 @@ Key invariants:
   folder is external, routed to its own barrel. Backed by an assert that trusts
   neither: `createInlineAudit` reads the module ids rollup actually emitted
   (`generateBundle`) and hard-fails on any first-party file the address did not
-  hash (`isHashedFile` in `internal/own-files.ts`: inside a hashed root AND not
-  skipped by the hashing walk). Root containment alone is not enough: test code
+  hash (the target's `ownFiles` + `globFiles`, exactly what planning read off the
+  repo snapshot — so a gitignored file, or one written after the snapshot, fails
+  too). Root containment alone is not enough: test code
   (`web/testing/`, `__tests__/`, `*.test.ts`) sits inside `web/` but is never
   hashed, so a shipping file that reached it would bake unhashed bytes into the
   bundle. The boundary check already bans that import; the audit catches it
@@ -256,6 +257,18 @@ Key invariants:
   mid-rm, iff the entry is gone; once retried if it is still there). A build
   running code older than this neither pins nor locks, so its prune can still
   remove a new build's entries until every checkout has rebased.
+- **Every address is read off ONE repo snapshot, by content id.** The pipeline
+  takes `loadRepoSnapshot` (tooling `core`) once, after codegen and the
+  formatter wrote, and plans every target from it (`OwnSources`): the file list
+  is `snapshot.under(root)` filtered by `isHashedFile`, the hash is over
+  `(rel, blob id)` lines, the builder identity's source digest and `vite/`
+  contributions are blob ids too. No walk, no stat, no per-worktree cache — a
+  fresh worktree knows every address at once. The one content fact an address
+  needs beyond ids, each module's `import.meta.glob` patterns, is memoized by
+  blob id in the shared `glob-patterns.json` (`GlobPatternMemo`), so only an
+  edited module is ever read. A file outside the snapshot is in no address; the
+  inline audit (above) fails a build that bundles one.
+  (`research/2026-11-03-global-build-pipeline-step3c-repo-snapshot.md`)
 - **Expected vs deployed cannot drift**: the pipeline and the
   `web-artifacts:map-in-sync` check share the same planning code
   (`core/internal/plan.ts`).
@@ -323,12 +336,13 @@ Key invariants:
 
 - Description: Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
 - Core:
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/plugin-id` ×4
     - `framework/web-core` ×4
     - `infra/host-fs/user-path` ×4
     - `packages/flock` ×4
     - `framework/product-name.LEGACY_IDS`
+    - `framework/tooling.loadRepoSnapshot`
     - `infra/namespace.MAIN_COMPOSITION_ID`
     - `infra/paths.worktreesDir`
     - `packages/coalesce.createCoalescer`
@@ -389,7 +403,7 @@ Key invariants:
     - `framework/tooling/codegen`
 - Exemptions:
   - Exempts itself from:
-    - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/expected.ts`, `core/internal/global-css.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/own-files.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/tailwind-candidates.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts` (debt)
+    - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/global-css.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/own-files.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/tailwind-candidates.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts` (debt)
     - `user-path/no-unproven-claim` — `core/internal/identity.ts`, `core/internal/plan.ts`, `core/internal/vendors.ts` (sanctioned)
     - `user-path/no-unproven-claim` — `core/internal/vendor-cache.ts` (sanctioned)
     - `user-path/no-unproven-claim` — `core/internal/global-css.ts`, `core/internal/package-assets.ts`, `core/internal/staged-verify.ts` (sanctioned)

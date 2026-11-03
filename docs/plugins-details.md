@@ -27409,20 +27409,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CheckScope`
           - `GitTreeSnapshot`
           - `RepoFiles`
+          - `RepoSnapshot`
         - Exports (values):
           - `assertRepoPath`
           - `CHECK_SCOPES`
           - `globPaths`
           - `InconclusiveCheckError`
           - `loadRepoFiles`
+          - `loadRepoSnapshot`
           - `pathspecToRegex`
           - `pathsUnder`
           - `repoFilesOver`
       - Cross-plugin:
         - Imported by:
           - `framework/tooling/checks`
-          - `framework/tooling/codegen`
           - `framework/tooling/lint`
+          - `framework/tooling/web-artifacts`
           - `plugin-meta/plugin-tree`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `core/repo-files.ts` (debt)
@@ -27556,12 +27558,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/boundaries` (2 debt)
               - `framework/tooling/checks` (11 debt)
               - `framework/tooling/checks/type-check` (17 debt)
-              - `framework/tooling/codegen` (23 debt)
+              - `framework/tooling/codegen` (22 debt)
               - `framework/tooling/format` (5 debt)
               - `framework/tooling/guards` (10 debt)
               - `framework/tooling/import-closure` (1 debt)
               - `framework/tooling/lint` (2 debt)
-              - `framework/tooling/web-artifacts` (20 debt)
+              - `framework/tooling/web-artifacts` (19 debt)
               - `framework/web-core` (1 debt)
               - `infra/asset-mirror` (3 debt)
               - `infra/audio-analysis` (4 debt)
@@ -27885,7 +27887,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Register: `defineSupervisedJob('type-check.backstop')`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 116 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 114 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `plugin-meta/parse-utils` ×20
               - `config_v2` ×15
               - `framework/plugin-id` ×14
@@ -27900,7 +27902,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2/ledger` ×2
               - `framework/tooling/boundaries` ×2
               - `framework/tooling/format` ×2
-              - `framework/tooling` ×2
               - `packages/macrotask-yield` ×2
               - `packages/resource-protocol` ×2
               - `fields/reorder-tree.REORDER_NODE_LEGEND`
@@ -28089,7 +28090,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shadow --shadow`
           - Exemptions:
             - Exempts itself from:
-              - `boundaries/no-platform-api` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/eager-tier-gen.ts`, `core/fields-eager-gen.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/plugin-registry-gen.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/token-group-vars-gen.ts`, `core/web-slot-contributions.ts`, `core/write-generated.ts` (debt)
+              - `boundaries/no-platform-api` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/eager-tier-gen.ts`, `core/fields-eager-gen.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/plugin-registry-gen.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/token-group-vars-gen.ts`, `core/write-generated.ts` (debt)
               - `marker-scan-safety/no-adhoc-marker-scan` — `core/browser-host-coverage.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/test-helpers-doc.ts` (sanctioned)
         - **`collected-dir`** — Generic loader for build-time collected-dir registries (loadCollectedDir).
@@ -28619,12 +28620,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
         - **`web-artifacts`** — Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
           - Core:
-            - Uses: 21 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
+            - Uses: 22 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
               - `framework/plugin-id` ×4
               - `framework/web-core` ×4
               - `infra/host-fs/user-path` ×4
               - `packages/flock` ×4
               - `framework/product-name.LEGACY_IDS`
+              - `framework/tooling.loadRepoSnapshot`
               - `infra/namespace.MAIN_COMPOSITION_ID`
               - `infra/paths.worktreesDir`
               - `packages/coalesce.createCoalescer`
@@ -28685,7 +28687,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/codegen`
           - Exemptions:
             - Exempts itself from:
-              - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/expected.ts`, `core/internal/global-css.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/own-files.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/tailwind-candidates.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts` (debt)
+              - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/global-css.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/own-files.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/tailwind-candidates.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts` (debt)
               - `user-path/no-unproven-claim` — `core/internal/identity.ts`, `core/internal/plan.ts`, `core/internal/vendors.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/internal/vendor-cache.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/internal/global-css.ts`, `core/internal/package-assets.ts`, `core/internal/staged-verify.ts` (sanctioned)
@@ -28736,6 +28738,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `babelPluginsFor`
           - `findViteContributions`
+          - `isViteContributionPath`
           - `loadBabelContributions`
       - Structure:
         - Composition root: yes
@@ -39646,6 +39649,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MarkerCall`
           - `MarkerCallSpan`
           - `ServerContributionKindDecl`
+          - `SnapshotDirEntry`
           - `StaticCallIdResult`
           - `StringFieldResult`
           - `StringLiteralResult`
@@ -39673,10 +39677,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readStaticCallId`
           - `readStringLiteral`
           - `runWithFsSnapshot`
+          - `sourceFilesIn`
           - `stripTypes`
           - `unresolvableCallIdMessage`
           - `walkFiles`
-          - `walkFilesAsync`
       - Cross-plugin:
         - Imported by:
           - `framework/tooling/boundaries`
@@ -39845,15 +39849,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineWarmup('plugin-tree.trees')`
           - `defineFileWatcher('plugin-tree.plugins-dir')`
       - Core:
-        - Uses: 23 symbols — full list in [`plugins/plugin-meta/plugins/plugin-tree/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-tree/REFERENCE.md)
+        - Uses: 24 symbols — full list in [`plugins/plugin-meta/plugins/plugin-tree/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-tree/REFERENCE.md)
           - `framework/plugin-id` ×6
           - `plugin-meta/parse-utils` ×4
           - `infra/host-fs/user-path` ×3
           - `plugin-meta/facets` ×3
           - `framework/slot-declaration` ×2
+          - `framework/tooling` ×2
           - `packages/macrotask-yield` ×2
           - `plugin-meta/barrel-import` ×2
-          - `framework/tooling.loadRepoFiles`
         - Exports (types):
           - `PluginNode`
           - `PluginTree`

@@ -12,7 +12,7 @@ import {
   asAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { pathsUnder } from "./pathspec";
-import { loadRepoFiles } from "./repo-files";
+import { loadRepoFiles, loadRepoSnapshot } from "./repo-files";
 
 let root!: AppPath;
 
@@ -31,13 +31,20 @@ const EXPECTED = [
   "new.ts",
 ];
 
-async function git(...args: string[]): Promise<void> {
+async function git(...args: string[]): Promise<string> {
   const proc = Bun.spawn(["git", ...args], {
     cwd: root,
     stdout: "pipe",
     stderr: "pipe",
   });
+  const out = await new Response(proc.stdout).text();
   await proc.exited;
+  return out;
+}
+
+/** What git itself says `rel`'s working-tree content hashes to. */
+async function blobOnDisk(rel: string): Promise<string> {
+  return (await git("hash-object", rel)).trim();
 }
 
 function write(rel: string, content: string): void {
@@ -159,6 +166,53 @@ describe("read()", () => {
       Array.from({ length: 2000 }, () => repo.read("a.ts")),
     );
     expect(reads.every((r) => r === "// a.ts\n")).toBe(true);
+  });
+});
+
+describe("loadRepoSnapshot", () => {
+  test("the same set as loadRepoFiles", async () => {
+    const snap = await loadRepoSnapshot(root);
+    expect([...snap.all()]).toEqual(EXPECTED);
+  });
+
+  test("every member's blob is its working-tree content's id", async () => {
+    write("a/c.ts", "// modified after the commit\n"); // tracked, dirty
+    try {
+      const snap = await loadRepoSnapshot(root);
+      for (const p of snap.all()) {
+        expect(snap.blobOf(p)).toBe(await blobOnDisk(p));
+      }
+    } finally {
+      write("a/c.ts", "// a/c.ts\n");
+    }
+  });
+
+  test("a stat-only change keeps the index id", async () => {
+    const before = (await loadRepoSnapshot(root)).blobOf("a.ts");
+    write("a.ts", "// a.ts\n"); // same bytes, new mtime
+    expect((await loadRepoSnapshot(root)).blobOf("a.ts")).toBe(before);
+  });
+
+  test("extra: a named gitignored file becomes a hashed member", async () => {
+    const snap = await loadRepoSnapshot(root, { extra: ["ignored/i.ts"] });
+    expect(snap.has("ignored/i.ts")).toBe(true);
+    expect(snap.blobOf("ignored/i.ts")).toBe(await blobOnDisk("ignored/i.ts"));
+    expect([...snap.all()]).toEqual([...EXPECTED, "ignored/i.ts"].sort());
+  });
+
+  test("a missing extra fails loudly", async () => {
+    expect(
+      (await rejection(loadRepoSnapshot(root, { extra: ["ignored/nope.ts"] })))
+        .message,
+    ).toContain("hash-object");
+  });
+
+  test("blobOf a non-member throws — deleted, ignored, a directory", async () => {
+    const snap = await loadRepoSnapshot(root);
+    expect(() => snap.blobOf("gone.ts")).toThrow("not a file of the snapshot");
+    expect(() => snap.blobOf("ignored/i.ts")).toThrow("not a file");
+    expect(() => snap.blobOf("a")).toThrow("not a file");
+    expect(() => snap.blobOf("./a.ts")).toThrow("repo-relative");
   });
 });
 

@@ -169,6 +169,7 @@ snapshot they read the disk and compute, unchanged.
     - `MarkerCall`
     - `MarkerCallSpan`
     - `ServerContributionKindDecl`
+    - `SnapshotDirEntry`
     - `StaticCallIdResult`
     - `StringFieldResult`
     - `StringLiteralResult`
@@ -196,10 +197,10 @@ snapshot they read the disk and compute, unchanged.
     - `readStaticCallId`
     - `readStringLiteral`
     - `runWithFsSnapshot`
+    - `sourceFilesIn`
     - `stripTypes`
     - `unresolvableCallIdMessage`
     - `walkFiles`
-    - `walkFilesAsync`
 - Cross-plugin:
   - Imported by:
     - `framework/tooling/boundaries`

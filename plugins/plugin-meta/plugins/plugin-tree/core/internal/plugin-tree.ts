@@ -2,9 +2,11 @@ import {
   declarePluginSlots,
   declaredSlotSources,
 } from "@plugins/framework/plugins/slot-declaration/core";
-import { existsSync } from "fs";
-import { readdir, readFile } from "node:fs/promises";
 import { basename, join, relative } from "path";
+import {
+  loadRepoFiles,
+  type RepoFiles,
+} from "@plugins/framework/plugins/tooling/core";
 import {
   registerBarrelStubs,
   importBarrel,
@@ -32,15 +34,6 @@ import {
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
-async function readIfExistsAsync(path: string): Promise<string | null> {
-  try {
-    return await readFile(path, "utf8");
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code == null) throw err;
-    return null;
-  }
-}
-
 // ── Public types ────────────────────────────────────────────────────
 
 export type Runtime = "web" | "server" | "machine" | "central";
@@ -62,6 +55,12 @@ export interface PluginNode {
 
 export interface PluginTree {
   pluginsRoot: AppPath;
+  /**
+   * The repo file set the tree was read off — what a consumer scanning plugin
+   * files lists them from (`sourceFilesIn`), so a scan never walks the disk
+   * and always agrees with the tree on which files exist.
+   */
+  repo: RepoFiles;
   byDir: Map<string, PluginNode>;
   byPath: Map<string, PluginNode>;
   roots: PluginNode[];
@@ -99,7 +98,7 @@ export function resolvePluginSpecifier(
   return { node: best, suffix };
 }
 
-// ── Walk ────────────────────────────────────────────────────────────
+// ── Discovery ───────────────────────────────────────────────────────
 
 // Non-source noise skipped at every plugin position: node_modules and dot-dirs.
 // This is a stable denylist that never grows — unlike the old content gate, every
@@ -108,91 +107,50 @@ function isWalkable(name: string): boolean {
   return name !== "node_modules" && !name.startsWith(".");
 }
 
+// How deep plugin positions nest (a top-level plugin is depth 1).
+const MAX_DEPTH = 10;
+
 /**
- * A directory at a plugin position is a real plugin only if it holds source
- * content — at least one regular file somewhere under it (excluding the
- * `node_modules`/dot-dir noise `isWalkable` already skips).
+ * Every plugin directory, read off the repo's file set — no `readdir`.
  *
- * This guards against *hollow shells*: when a plugin is relocated, `git mv`
- * removes its tracked files but leaves behind the untracked `node_modules/`
- * directory git never tracked. The leftover dir lingers on disk in long-lived
- * checkouts (notably the `main` worktree where `./equin build` runs) while
- * being absent from freshly-created worktrees. Without this gate the purely
- * positional walk resurrects each such shell as a phantom plugin, so discovery —
- * and every check/codegen step built on it — diverges between a clean worktree
- * and a cruft-laden one. That non-determinism is exactly how a branch can pass
- * `push` checks yet break `main`'s build.
+ * Purely positional: each directory directly under `pluginsRoot`, and each
+ * directory directly under a plugin's `plugins/`, sits at a plugin position. It
+ * is a plugin when it holds source content: at least one file of the set
+ * somewhere under it, not inside `node_modules` or a dot-dir.
  *
- * The gate stays positional (it keys on "is this a hollow shell", never on a
- * specific marker file like package.json), so a freshly authored, not-yet-
- * committed plugin — whose real `.ts` files count as content — is still found.
+ * The content gate guards against *hollow shells*: when a plugin is relocated,
+ * `git mv` removes its tracked files but leaves behind the untracked
+ * `node_modules/` directory git never tracked. Membership is git's, so such a
+ * shell holds no file of the set and is no plugin — in a long-lived checkout
+ * exactly as in a fresh worktree, which is what keeps discovery (and every
+ * check/codegen step built on it) from diverging between the two: a branch that
+ * passes `push` checks cannot break `main`'s build on a phantom plugin. A
+ * freshly authored, not-yet-committed plugin is untracked-not-ignored, so it is
+ * in the set and still found.
  */
-async function hasPluginContent(dir: AppPath): Promise<boolean> {
-  let entries;
-  try {
-    entries = await readdir(dir, { withFileTypes: true });
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code == null) throw err;
-    return false;
-  }
-  for (const e of entries) {
-    if (e.isFile()) return true;
-    if (
-      e.isDirectory() &&
-      isWalkable(e.name) &&
-      (await hasPluginContent(joinAppPath(dir, e.name)))
-    ) {
-      return true;
-    }
-  }
-  return false;
-}
-
-async function findAllPluginDirs(pluginsRoot: AppPath): Promise<AppPath[]> {
-  const out: AppPath[] = [];
-  async function walk(dir: AppPath, depth: number): Promise<void> {
-    if (depth > 10) return;
-    // Purely positional: any directory visited here (other than the root itself)
-    // sits at a plugin position, so it is a plugin — provided it actually holds
-    // source content and isn't a hollow shell left behind by a relocation.
-    if (dir !== pluginsRoot && (await hasPluginContent(dir))) out.push(dir);
-
-    let entries;
-    try {
-      entries = await readdir(dir, { withFileTypes: true });
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code == null) throw err;
-      return;
-    }
-    const subWalks: Promise<void>[] = [];
-    for (const e of entries) {
-      if (!e.isDirectory()) continue;
-      if (!isWalkable(e.name)) continue;
-      if (dir === pluginsRoot) {
-        subWalks.push(walk(joinAppPath(dir, e.name), depth + 1));
-      } else if (e.name === "plugins") {
-        const sub = joinAppPath(dir, e.name);
-        subWalks.push(
-          readdir(sub, { withFileTypes: true })
-            .then((childEntries) =>
-              Promise.all(
-                childEntries
-                  .filter((c) => c.isDirectory() && isWalkable(c.name))
-                  .map((c) => walk(joinAppPath(sub, c.name), depth + 1)),
-              ),
-            )
-            .then(() => undefined)
-            .catch((err) => {
-              if ((err as NodeJS.ErrnoException).code != null) return;
-              throw err;
-            }),
-        );
+function findAllPluginDirs(pluginsRoot: AppPath, repo: RepoFiles): AppPath[] {
+  const rel = relative(repo.root, pluginsRoot);
+  const found = new Set<string>();
+  for (const path of repo.under(rel)) {
+    const segs = path.slice(rel.length + 1).split("/");
+    const dirCount = segs.length - 1; // the last segment is the file
+    // `k` indexes a plugin position's own segment; `walkable` holds while every
+    // directory from it down to the file is walkable.
+    for (let k = 0, depth = 1; k < dirCount && depth <= MAX_DEPTH; depth++) {
+      if (!isWalkable(segs[k]!)) break;
+      let walkable = true;
+      for (let i = k + 1; i < dirCount; i++) {
+        if (!isWalkable(segs[i]!)) {
+          walkable = false;
+          break;
+        }
       }
+      if (walkable) found.add(segs.slice(0, k + 1).join("/"));
+      if (segs[k + 1] !== "plugins" || k + 2 >= dirCount) break;
+      k += 2;
     }
-    await Promise.all(subWalks);
   }
-  await walk(pluginsRoot, 0);
-  return out;
+  return [...found].map((d) => joinAppPath(pluginsRoot, ...d.split("/")));
 }
 
 // ── Per-plugin collection ───────────────────────────────────────────
@@ -205,15 +163,19 @@ interface CollectedPlugin {
 async function collectCoreFields(
   dir: AppPath,
   pluginsRoot: AppPath,
+  repo: RepoFiles,
 ): Promise<CollectedPlugin> {
+  const dirRel = relative(repo.root, dir);
   const [webIndex, serverIndex, machineIndex, centralIndex, pkgSrc] =
-    await Promise.all([
-    readIfExistsAsync(join(dir, "web", "index.ts")),
-    readIfExistsAsync(join(dir, "server", "index.ts")),
-      readIfExistsAsync(join(dir, "machine", "index.ts")),
-    readIfExistsAsync(join(dir, "central", "index.ts")),
-    readIfExistsAsync(join(dir, "package.json")),
-  ]);
+    await Promise.all(
+      [
+        "web/index.ts",
+        "server/index.ts",
+        "machine/index.ts",
+        "central/index.ts",
+        "package.json",
+      ].map((f) => repo.read(`${dirRel}/${f}`)),
+    );
 
   // Read each runtime barrel's OWN default-exported object literal from ORIGINAL
   // source — never transpiler output, which re-quotes string literals and silently
@@ -315,13 +277,24 @@ function computeIds(nodes: PluginNode[], parentId: string): void {
   }
 }
 
+/**
+ * The plugin tree under `pluginsRoot`, read off `opts.repo` — the repo's file
+ * set, whose root `pluginsRoot` sits directly under. A caller that holds the
+ * pass's set (a build's snapshot, a check run's `ctx.repo()`) passes it; with
+ * none, the tree asks git for one. Nothing here walks the disk.
+ */
 export async function buildPluginTree(
   pluginsRoot: AppPath,
-  opts?: { skipBarrelImport?: boolean; facets?: boolean },
+  opts?: { skipBarrelImport?: boolean; facets?: boolean; repo?: RepoFiles },
 ): Promise<PluginTree> {
-  // Step 1: find all plugin directories (async fs walk — does not block event loop)
-  // Sort to restore deterministic ordering (parallel walks complete in arbitrary order).
-  const dirs = (await findAllPluginDirs(pluginsRoot)).sort();
+  const repo = opts?.repo ?? (await loadRepoFiles(appPathParent(pluginsRoot)));
+  if (repo.root !== appPathParent(pluginsRoot)) {
+    throw new Error(
+      `buildPluginTree(${pluginsRoot}): the repo set is of ${repo.root}, not of the plugins root's parent.`,
+    );
+  }
+  // Step 1: find all plugin directories, sorted for a deterministic order.
+  const dirs = findAllPluginDirs(pluginsRoot, repo).sort();
 
   // Step 2: collect core fields for each plugin (async parallel reads)
   const byDir = new Map<string, PluginNode>();
@@ -329,7 +302,7 @@ export async function buildPluginTree(
   const parentDirs = new Map<string, AppPath | null>();
 
   const collected = await Promise.all(
-    dirs.map((d) => collectCoreFields(d, pluginsRoot)),
+    dirs.map((d) => collectCoreFields(d, pluginsRoot, repo)),
   );
   for (const c of collected) {
     byDir.set(c.node.dir, c.node);
@@ -365,7 +338,14 @@ export async function buildPluginTree(
 
   computeIds(roots, "");
 
-  const tree: PluginTree = { pluginsRoot, byDir, byPath, roots, facets: [] };
+  const tree: PluginTree = {
+    pluginsRoot,
+    repo,
+    byDir,
+    byPath,
+    roots,
+    facets: [],
+  };
 
   // Step 4a: barrel import (web → server → machine → central) — gated on `facets` (and, as
   // before, skippable within a facet build via `skipBarrelImport`). Only the 2
@@ -386,7 +366,8 @@ export async function buildPluginTree(
       pluginsRoot,
       "framework/plugins/web-sdk/core/index.ts",
     );
-    if (existsSync(webSdkCoreBarrel)) {
+    const pluginsRel = relative(repo.root, pluginsRoot);
+    if (repo.has(`${pluginsRel}/framework/plugins/web-sdk/core/index.ts`)) {
       const coreMod = await importBarrel(webSdkCoreBarrel);
       const webSdkDir = join(pluginsRoot, "framework/plugins/web-sdk");
       if (byDir.has(webSdkDir)) {
@@ -396,8 +377,8 @@ export async function buildPluginTree(
 
     for (const runtime of ["web", "server", "machine", "central"] as const) {
       for (const node of byDir.values()) {
+        if (!node.runtimes[runtime]) continue;
         const barrelPath = join(node.dir, runtime, "index.ts");
-        if (!existsSync(barrelPath)) continue;
 
         const mod = await importBarrel(barrelPath);
 
@@ -430,7 +411,7 @@ export async function buildPluginTree(
     // snapshot build runs in parallel with the (async) facet-module load.
     const [facets, fsSnapshot] = await Promise.all([
       loadFacets(),
-      buildFsSnapshot(appPathParent(pluginsRoot), dirs),
+      buildFsSnapshot(repo, dirs),
     ]);
     tree.facets = facets;
 

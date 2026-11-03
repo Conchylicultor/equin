@@ -16,6 +16,10 @@ import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { serveValue } from "@plugins/network/plugins/live/server";
 import { withHeavyReadSlot } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import {
+  repoFilesOver,
+  type RepoFiles,
+} from "@plugins/framework/plugins/tooling/core";
 import { pushPluginChanges } from "../../shared/resources";
 import { computePluginChanges } from "./compute-plugin-diff";
 import { getMainRoot } from "./main-plugins-dir";
@@ -28,7 +32,9 @@ const EXTRACT_TIMEOUT_MS = 60_000;
 // `git archive -o <file>` then `tar -xf <file>`, never `git archive | tar -x`
 // through `Bun.spawn`: Bun relays a child-to-child pipe through JS and can drop
 // the stream's tail when the writer exits (the same loss that broke the DB fork).
-async function extractPluginsAtSha(sha: string): Promise<AppPath> {
+async function extractPluginsAtSha(
+  sha: string,
+): Promise<{ dir: AppPath; repo: RepoFiles }> {
   const dir = asAppPath(
     await mkdtemp(
       joinAppPath(asAppPath(tmpdir()), `review-${sha.slice(0, 8)}-`),
@@ -64,7 +70,30 @@ async function extractPluginsAtSha(sha: string): Promise<AppPath> {
     throw new Error(`Failed to extract plugins at ${sha}: ${detail}`);
   }
   await rm(archivePath);
-  return dir;
+  // The extracted tree has no `.git`, so its file set is the commit's own
+  // listing — exactly what the archive wrote.
+  const listing = await spawnCaptured(
+    [
+      GIT,
+      "--no-optional-locks",
+      "-C",
+      mainRoot,
+      "ls-tree",
+      "-r",
+      "-z",
+      "--name-only",
+      sha,
+      "--",
+      "plugins/",
+    ],
+    opts,
+  );
+  if (listing.exitCode !== 0) {
+    await rm(dir, { recursive: true, force: true });
+    throw new Error(`Failed to list plugins at ${sha}: ${listing.stderr}`);
+  }
+  const paths = listing.stdout.split("\0").filter((p) => p.length > 0);
+  return { dir, repo: repoFilesOver(dir, paths.sort()) };
 }
 
 /** The push `pushId` as its range (`resolvePushRange`), `baseSha..headSha`. */
@@ -97,10 +126,12 @@ async function loadPushPluginChanges(
   }
 
   return withHeavyReadSlot(async () => {
-    const [baseDir, headDir] = await Promise.all([
+    const [base, head] = await Promise.all([
       extractPluginsAtSha(baseSha),
       extractPluginsAtSha(headSha),
     ]);
+    const baseDir = base.dir;
+    const headDir = head.dir;
 
     try {
       // base/head are immutable historical shas, but distinct per push range —
@@ -111,10 +142,12 @@ async function loadPushPluginChanges(
         buildPluginTree(joinAppPath(headDir, "plugins"), {
           skipBarrelImport: true,
           facets: true,
+          repo: head.repo,
         }),
         buildPluginTree(joinAppPath(baseDir, "plugins"), {
           skipBarrelImport: true,
           facets: true,
+          repo: base.repo,
         }),
       ]);
       const plugins = computePluginChanges(headTree, baseTree, editedFiles);

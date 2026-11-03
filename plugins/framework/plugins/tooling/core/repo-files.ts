@@ -22,7 +22,7 @@ import { join } from "node:path";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { globPaths, pathsUnder } from "./pathspec";
-import type { RepoFiles } from "./types";
+import type { RepoFiles, RepoSnapshot } from "./types";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // Wedge-breaker for a metadata-only git read, not a latency budget: what these
@@ -37,19 +37,29 @@ const GIT_TIMEOUT_MS = 60_000;
 // behind it for long.
 const READ_CONCURRENCY = 64;
 
-async function lsFiles(root: string, args: string[]): Promise<string[]> {
-  const result = await spawnCaptured(["git", "ls-files", "-z", ...args], {
+async function git(
+  root: string,
+  args: string[],
+  stdin?: string,
+): Promise<string> {
+  const result = await spawnCaptured(["git", ...args], {
     cwd: root,
     timeoutMs: GIT_TIMEOUT_MS,
+    ...(stdin === undefined ? {} : { stdin }),
   });
   if (result.exitCode !== 0) {
     // Loud, never `[]`. An absorbed failure here would tell every caller the
     // repo is empty, turning each file rule into a vacuous PASS.
     throw new Error(
-      `git ls-files ${args.join(" ")} failed in ${root} (exit ${result.exitCode}): ${result.stderr.trim()}`,
+      `git ${args.join(" ")} failed in ${root} (exit ${result.exitCode}): ${result.stderr.trim()}`,
     );
   }
-  return result.stdout.split("\0").filter((p) => p.length > 0);
+  return result.stdout;
+}
+
+async function lsFiles(root: string, args: string[]): Promise<string[]> {
+  const out = await git(root, ["ls-files", "-z", ...args]);
+  return out.split("\0").filter((p) => p.length > 0);
 }
 
 /**
@@ -149,11 +159,103 @@ export async function loadRepoFiles(root: AppPath): Promise<RepoFiles> {
     lsFiles(root, ["--cached", "--others", "--exclude-standard"]),
     lsFiles(root, ["--deleted"]),
   ]);
+  return repoFilesOver(root, membership(present, deleted));
+}
+
+/**
+ * The membership rule, once: present minus deleted, deduped (`--cached` and
+ * `--others` are disjoint, but an unmerged path has one index entry per stage)
+ * and sorted.
+ */
+function membership(present: string[], deleted: string[]): string[] {
   const gone = new Set(deleted);
-  // `--cached` and `--others` are disjoint, but an unmerged path has one index
-  // entry per stage — so dedupe rather than assume.
-  return repoFilesOver(
-    root,
-    [...new Set(present.filter((p) => !gone.has(p)))].sort(),
+  return [...new Set(present.filter((p) => !gone.has(p)))].sort();
+}
+
+/**
+ * `loadRepoFiles`' set, plus every member's blob id (`RepoSnapshot.blobOf`):
+ * the build's one view of the checkout, so no step walks the disk to find out
+ * which files exist or reads them to find out whether they changed.
+ *
+ * Cost follows the change, not the repo. A clean tracked file's id is the
+ * index's (`git ls-files -s`, no stat); `git diff-files` names the tracked
+ * files whose working-tree stat no longer matches the index (lstat against
+ * git's stat cache, no lock taken, no untracked walk), and only those, the
+ * untracked files and `extra` are hashed — by one `git hash-object` child. A
+ * file whose stat moved but whose bytes did not is simply hashed again: its id
+ * comes out the same.
+ *
+ * `extra`: gitignored files a step really reads (a codegen writer's
+ * per-composition registry). They are not in git's set, so they are named
+ * here, hashed, and become members — a file a hash covered is never dropped
+ * from it silently. Each must exist: a missing one fails `hash-object`.
+ *
+ * Same lifetime rule as `loadRepoFiles`: a snapshot of the moment it is
+ * called, taken once per pass and handed around, never a module memo.
+ */
+export async function loadRepoSnapshot(
+  root: AppPath,
+  opts?: { extra?: readonly string[] },
+): Promise<RepoSnapshot> {
+  const extra = opts?.extra ?? [];
+  for (const p of extra) assertRepoPath("extra", p, false);
+  const [staged, others, deleted, changedOut] = await Promise.all([
+    lsFiles(root, ["-s"]),
+    lsFiles(root, ["--others", "--exclude-standard"]),
+    lsFiles(root, ["--deleted"]),
+    git(root, ["--no-optional-locks", "diff-files", "-z", "--name-only"]),
+  ]);
+
+  // `<mode> <blob> <stage>\t<path>`. A conflicted path (stage > 0) has no one
+  // index id for its working-tree content: hash it like a modified file.
+  const indexBlob = new Map<string, string>();
+  const unmerged = new Set<string>();
+  const tracked: string[] = [];
+  for (const entry of staged) {
+    const tab = entry.indexOf("\t");
+    const [, blob, stage] = entry.slice(0, tab).split(" ");
+    const path = entry.slice(tab + 1);
+    tracked.push(path);
+    if (stage === "0") indexBlob.set(path, blob!);
+    else unmerged.add(path);
+  }
+  const changed = new Set(changedOut.split("\0").filter((p) => p.length > 0));
+  const paths = membership([...tracked, ...others, ...extra], deleted);
+
+  const toHash = paths.filter(
+    (p) =>
+      changed.has(p) ||
+      unmerged.has(p) ||
+      !indexBlob.has(p) /* untracked or extra */,
   );
+  const blobs = new Map(indexBlob);
+  if (toHash.length > 0) {
+    const out = await git(
+      root,
+      ["hash-object", "--stdin-paths"],
+      toHash.join("\n") + "\n",
+    );
+    const ids = out.split("\n").filter((l) => l.length > 0);
+    if (ids.length !== toHash.length) {
+      throw new Error(
+        `git hash-object answered ${ids.length} ids for ${toHash.length} paths in ${root}`,
+      );
+    }
+    toHash.forEach((p, i) => blobs.set(p, ids[i]!));
+  }
+
+  const files = repoFilesOver(root, paths);
+  return {
+    ...files,
+    blobOf: (path) => {
+      assertRepoPath("blobOf", path, false);
+      const blob = files.has(path) ? blobs.get(path) : undefined;
+      if (blob === undefined) {
+        throw new Error(
+          `RepoSnapshot.blobOf(${JSON.stringify(path)}): not a file of the snapshot of ${root}.`,
+        );
+      }
+      return blob;
+    },
+  };
 }

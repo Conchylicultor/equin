@@ -6,7 +6,6 @@
 // been composed from the current tree — reported as `missing-artifacts` rather
 // than a URL diff, since the closure can't even be completed without the metas.
 
-import { basename } from "node:path";
 import {
   joinAppPath,
   type AppPath,
@@ -14,6 +13,8 @@ import {
 import { BUILDER_VERSION } from "../constants";
 import { buildImportMap } from "../import-map";
 import { hostWorkerSpecifier, type BrowserHostPlan } from "./browser-hosts";
+import type { OwnSources } from "./own-files";
+import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 import {
   artifactUrl,
   collectVendorRequests,
@@ -29,9 +30,8 @@ import {
 } from "./plan";
 import {
   hasArtifact,
-  loadFingerprintCache,
+  loadGlobPatternMemo,
   readArtifactMeta,
-  saveFingerprintCache,
   type ArtifactMeta,
 } from "./store";
 import {
@@ -112,11 +112,14 @@ export async function planExpectedFleet(opts: {
   builderSource: string;
 }> {
   const pluginsRoot = joinAppPath(opts.root, "plugins");
-  const cache = loadFingerprintCache(basename(opts.root));
+  const sources: OwnSources = {
+    snapshot: await loadRepoSnapshot(opts.root),
+    globs: loadGlobPatternMemo(),
+  };
   const plan = await planFleet({
     root: opts.root,
     minify: opts.minify,
-    cache,
+    sources,
     source: opts.source,
   });
 
@@ -137,7 +140,7 @@ export async function planExpectedFleet(opts: {
   const barrelTargets = await resolveBarrelClosure({
     pluginsRoot,
     identityHash: plan.identity.identityHash,
-    cache,
+    sources,
     servedSpecs: servedSpecsOf(plan.webTargets),
     seedMetas: [...metas.values()],
     ensure: async (t) => read(t.dirName),
@@ -158,7 +161,7 @@ export async function planExpectedFleet(opts: {
       pluginsRoot,
       host,
       identityHash: plan.identity.identityHash,
-      cache,
+      sources,
       servedSpecs: served,
       ensure: async (t) => read(t.dirName),
     });
@@ -167,9 +170,8 @@ export async function planExpectedFleet(opts: {
     else if (read(host.dirName) !== null)
       hosts.push({ plan: host, dirName: host.dirName, entry, added });
   }
-  // Persist the (pure, stat-keyed) fingerprint cache so repeated check runs
-  // stay on the fast path even before the next build saves it.
-  saveFingerprintCache(basename(opts.root), cache);
+  // Persist the glob patterns this plan read, so a later run reads none.
+  sources.globs.save();
 
   return {
     targets: [...pageTargets, ...hosts.flatMap((h) => [h.entry, ...h.added])],

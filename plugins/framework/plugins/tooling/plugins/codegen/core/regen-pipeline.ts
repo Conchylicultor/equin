@@ -1,5 +1,6 @@
 import { setPreBarrelImportGuard } from "@plugins/plugin-meta/plugins/barrel-import/core";
 import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import { generateBarrelStubs } from "./barrel-stubs-gen";
 import { generateBrowserHosts } from "./browser-host-gen";
 import { generateConfigOrigins } from "./config-origin-gen";
@@ -73,6 +74,11 @@ const runInline: CodegenStep = (_id, _label, run) => run();
 
 export interface RegenCodegenOptions {
   root: AppPath;
+  /**
+   * The pass's file set (the build's snapshot). The plugin trees are read off
+   * it, so the pipeline lists the repo once; omitted, the first tree asks git.
+   */
+  repo?: RepoFiles;
   /** Optional per-step wrapper (build threads its profiler through this). */
   onStep?: CodegenStep;
 }
@@ -113,13 +119,14 @@ export interface RegistryCodegenResult {
  */
 export async function regenerateRegistryCodegen({
   root,
+  repo,
   onStep = runInline,
 }: RegenCodegenOptions): Promise<RegistryCodegenResult> {
   let renamedPackages: string[] = [];
   await onStep("packageNames", "plugin package names", async () => {
     renamedPackages = await syncPluginPackageNames({
       root,
-      tree: await buildBarrelFreeTree(root),
+      tree: await buildBarrelFreeTree(root, repo),
     });
   });
   await onStep("barrelStubs", "barrel stubs", () =>

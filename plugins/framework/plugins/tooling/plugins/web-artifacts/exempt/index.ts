@@ -7,7 +7,6 @@ export default [
       "core/hash.ts",
       "core/internal/browser-hosts.ts",
       "core/internal/compose.ts",
-      "core/internal/expected.ts",
       "core/internal/global-css.ts",
       "core/internal/identity.ts",
       "core/internal/lease.ts",

@@ -10,6 +10,8 @@ const pluginsRoot = asAppPath(join(dir, "plugins"));
 mkdirSync(join(pluginsRoot, "a", "plugins", "b"), { recursive: true });
 writeFileSync(join(pluginsRoot, "a", "package.json"), "{}");
 writeFileSync(join(pluginsRoot, "a", "plugins", "b", "package.json"), "{}");
+// The tree reads the repo's file set from git.
+Bun.spawnSync(["git", "init", "-q"], { cwd: dir });
 
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 

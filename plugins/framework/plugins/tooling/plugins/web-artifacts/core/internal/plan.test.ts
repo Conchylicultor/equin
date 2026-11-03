@@ -6,6 +6,7 @@ import {
   appPathParent,
   asAppPath,
   joinAppPath,
+  type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { buildImportMap } from "../import-map";
 import {
@@ -21,8 +22,26 @@ import {
   servedSpecsOf,
   type PlannedTarget,
 } from "./plan";
-import type { ArtifactMeta } from "./store";
+import type { ArtifactMeta, GlobPatternMemo } from "./store";
+import type { OwnSources } from "./own-files";
+import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 import type { VendorSetMeta } from "./vendors";
+
+/** A glob memo that persists nothing. */
+function memoryGlobs(): GlobPatternMemo {
+  const known = new Map<string, readonly string[]>();
+  return {
+    get: (blob) => known.get(blob),
+    set: (blob, patterns) => void known.set(blob, patterns),
+    save: () => {},
+  };
+}
+
+/** The address sources of a checkout at `root` (made a git repo if it is not one). */
+async function sourcesOf(root: AppPath): Promise<OwnSources> {
+  Bun.spawnSync(["git", "init", "-q"], { cwd: root });
+  return { snapshot: await loadRepoSnapshot(root), globs: memoryGlobs() };
+}
 
 function target(
   partial: Pick<PlannedTarget, "dirName" | "specifier">,
@@ -34,6 +53,8 @@ function target(
     entryFile: asAppPath("/x/web/index.ts"),
     inputsHash: "0".repeat(64),
     globRoots: [],
+    ownFiles: [],
+    globFiles: [],
     coEntries: [],
     needsBuild: false,
   };
@@ -229,7 +250,10 @@ describe("planFleet with an injected fleet source", () => {
     const plan = await planFleet({
       root: repoRoot,
       minify: false,
-      cache: { version: 1, records: {} },
+      sources: {
+        snapshot: await loadRepoSnapshot(repoRoot),
+        globs: memoryGlobs(),
+      },
       source: {
         webEntries: [{ pluginPath: "shell", id: "shell", dependsOn: [] }],
         deferredPaths,
@@ -258,8 +282,15 @@ describe("planFleet with an injected fleet source", () => {
       registrySlug: "web-registry-other",
     };
     const opts = { root: repoRoot, minify: false, source };
-    const a = await planFleet({ ...opts, cache: { version: 1, records: {} } });
-    const b = await planFleet({ ...opts, cache: { version: 1, records: {} } });
+    const snapshot = await loadRepoSnapshot(repoRoot);
+    const a = await planFleet({
+      ...opts,
+      sources: { snapshot, globs: memoryGlobs() },
+    });
+    const b = await planFleet({
+      ...opts,
+      sources: { snapshot, globs: memoryGlobs() },
+    });
     expect(a.registryTarget.dirName).toBe(b.registryTarget.dirName);
     // Same content as testcomp's registry, different slug ⇒ different store dir.
     expect(
@@ -335,7 +366,7 @@ describe("co-built folders (exhibits/ is a second entry of the web artifact)", (
     const closure = await resolveBarrelClosure({
       pluginsRoot: tmp,
       identityHash: "1".repeat(64),
-      cache: { version: 1, records: {} },
+      sources: await sourcesOf(tmp),
       servedSpecs: new Set(),
       seedMetas: [seed],
       ensure: (t) => {
@@ -366,7 +397,7 @@ describe("co-built folders (exhibits/ is a second entry of the web artifact)", (
     const closure = await resolveBarrelClosure({
       pluginsRoot: tmp,
       identityHash: "1".repeat(64),
-      cache: { version: 1, records: {} },
+      sources: await sourcesOf(tmp),
       servedSpecs: new Set(["@plugins/both/web", "@plugins/both/exhibits"]),
       seedMetas: [seed],
       ensure: () => Promise.resolve(null),

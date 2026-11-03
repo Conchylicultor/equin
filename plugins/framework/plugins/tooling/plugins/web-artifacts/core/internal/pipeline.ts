@@ -10,7 +10,6 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import os from "node:os";
-import { basename } from "node:path";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { BUILDER_VERSION, WORKER_ONLY_KINDS } from "../constants";
 import {
@@ -37,10 +36,9 @@ import {
   allStaticImports,
   artifactStorePath,
   ensureStoreDirs,
-  loadFingerprintCache,
+  loadGlobPatternMemo,
   hasArtifact,
   readArtifactMeta,
-  saveFingerprintCache,
   touchArtifact,
   type ArtifactMeta,
 } from "./store";
@@ -64,6 +62,8 @@ import {
   type BuildLease,
 } from "./lease";
 import { ensureBrowserHost } from "./browser-hosts";
+import type { OwnSources } from "./own-files";
+import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 import { composedHostsOf } from "./expected";
 import {
   assertPortableArtifacts,
@@ -183,7 +183,6 @@ async function runPipeline(
   const { root, log } = opts;
   const pluginsRoot = joinAppPath(root, "plugins");
   const webSrcDir = joinAppPath(root, WEB_CORE_REL, "web");
-  const worktreeName = basename(root);
   // Every stage's wall time in the transcript too: a caller without profiler
   // spans (the hermetic build) still shows where a cold build spent it.
   const stage = async <T>(
@@ -198,7 +197,16 @@ async function runPipeline(
   };
 
   // ── Stage 1: detect ─────────────────────────────────────────────────
-  const cache = loadFingerprintCache(worktreeName);
+  // Every address is read off ONE repo snapshot, taken here — after codegen
+  // and the formatter wrote, so a generated file is addressed by what it now
+  // holds — and its content ids: no walk, no stat, no read of an unchanged
+  // file (`own-files.ts`).
+  const sources: OwnSources = {
+    snapshot: await stage("artifacts:snapshot", "repo snapshot", () =>
+      loadRepoSnapshot(root),
+    ),
+    globs: loadGlobPatternMemo(),
+  };
   const plan = await stage(
     "artifacts:detect",
     "detect changed artifacts",
@@ -209,10 +217,10 @@ async function runPipeline(
       const fleet = await planFleet({
         root,
         minify: opts.minify,
-        cache,
+        sources,
         source: opts.source,
       });
-      saveFingerprintCache(worktreeName, cache);
+      sources.globs.save();
       log(
         `detect: ${fleet.webTargets.length} web artifacts (${fleet.staleWeb} stale), entry ${fleet.entryTarget.needsBuild ? "stale" : "cached"}, registry ${fleet.registryTarget.needsBuild ? "stale" : "cached"}`,
       );
@@ -281,12 +289,12 @@ async function runPipeline(
       const barrelTargets = await resolveBarrelClosure({
         pluginsRoot,
         identityHash: plan.identity.identityHash,
-        cache,
+        sources,
         servedSpecs: servedSpecsOf(plan.webTargets),
         seedMetas: [...metas.values()],
         ensure,
       });
-      saveFingerprintCache(worktreeName, cache);
+      sources.globs.save();
 
       log(
         `build: ${counts.built} built, ${counts.reused} reused (${barrelTargets.size} barrel artifacts)`,
@@ -322,7 +330,7 @@ async function runPipeline(
           pluginsRoot,
           host,
           identityHash: plan.identity.identityHash,
-          cache,
+          sources,
           servedSpecs: served,
           ensure,
         });
@@ -344,7 +352,7 @@ async function runPipeline(
         });
         out.push({ plan: host, dirName, entry, added });
       }
-      saveFingerprintCache(worktreeName, cache);
+      sources.globs.save();
       log(
         `browser hosts: ${out.length} host(s), ${out.reduce((n, h) => n + h.added.length + 1, 0)} worker artifacts planned (${counts.built - before.built} built, ${counts.reused - before.reused} reused)`,
       );

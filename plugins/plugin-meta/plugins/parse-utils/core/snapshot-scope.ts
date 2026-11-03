@@ -1,5 +1,3 @@
-import type { Dirent } from "fs";
-
 /**
  * Build-scoped, read-once in-memory filesystem snapshot.
  *
@@ -12,14 +10,25 @@ import type { Dirent } from "fs";
  * asynchronously and in parallel, before the extract loop.
  *
  * - `files`: absolute path → file content. Only *existing* files are present.
- * - `dirs`:  absolute directory path → its `readdir(withFileTypes)` entries.
- *            Presence of a directory key means "this directory was scanned", so
- *            a path whose directory is keyed but which is not among its entries
- *            is absent — answered with no syscall.
+ * - `dirs`:  absolute directory path → its entries, shaped like
+ *            `readdir(withFileTypes)`'s. Presence of a directory key means "this
+ *            directory was scanned", so a path whose directory is keyed but which
+ *            is not among its entries is absent — answered with no syscall.
  */
 export interface FsSnapshot {
   files: Map<string, string>;
-  dirs: Map<string, Dirent[]>;
+  dirs: Map<string, SnapshotDirEntry[]>;
+}
+
+/**
+ * One entry of a snapshot directory: the slice of a `Dirent` the scanners read.
+ * Derived from the repo's file list, not from `readdir` — a directory is listed
+ * when it holds at least one file of the set.
+ */
+export interface SnapshotDirEntry {
+  name: string;
+  isFile(): boolean;
+  isDirectory(): boolean;
 }
 
 // Ambient snapshot, set synchronously around each (synchronous) facet

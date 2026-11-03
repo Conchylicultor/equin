@@ -2,6 +2,13 @@ import { describe, expect, test } from "bun:test";
 import { createInlineAudit } from "./inline-audit";
 
 const ROOTS = ["/repo/plugins/x/prewarm", "/repo/plugins/x/shared"];
+// What the address hashed: the snapshot's files in those roots.
+const HASHED = [
+  "/repo/plugins/x/prewarm/index.ts",
+  "/repo/plugins/x/prewarm/internal/cases.tsx",
+  "/repo/plugins/x/prewarm/a.css",
+  "/repo/plugins/x/shared/util.ts",
+];
 
 /**
  * Drive the REAL `generateBundle` hook with a synthetic bundle, so the test
@@ -14,6 +21,7 @@ function auditOf(moduleIds: string[]) {
   const audit = createInlineAudit({
     dirName: "x.prewarm.abc123",
     hashedRoots: ROOTS,
+    hashedFiles: HASHED,
     kind: "prewarm",
   });
   const bundle = {
@@ -32,7 +40,7 @@ function auditOf(moduleIds: string[]) {
 }
 
 describe("createInlineAudit", () => {
-  test("passes when every first-party module is inside the hashed roots", () => {
+  test("passes when every first-party module is a hashed file", () => {
     expect(() =>
       auditOf([
         "/repo/plugins/x/prewarm/index.ts",
@@ -74,6 +82,13 @@ describe("createInlineAudit", () => {
         auditOf(["/repo/plugins/x/prewarm/index.ts", id]).verify(),
       ).toThrow(id);
     }
+  });
+
+  test("a file inside a root the snapshot does not hold (gitignored, or written after it) throws", () => {
+    const id = "/repo/plugins/x/prewarm/registry.generated.ts";
+    expect(() =>
+      auditOf(["/repo/plugins/x/prewarm/index.ts", id]).verify(),
+    ).toThrow(id);
   });
 
   test("throws naming the artifact and the offending file", () => {

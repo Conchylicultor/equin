@@ -1,4 +1,3 @@
-import { existsSync } from "fs";
 import {
   joinAppPath,
   type AppPath,
@@ -45,8 +44,8 @@ export async function collectWebSlotContributions<S extends string>(
   for (const node of tree.byDir.values()) {
     if (!bundle.has(node.id)) continue;
     // A plugin dir of this checkout.
+    if (!node.runtimes.web) continue;
     const webIndex = joinAppPath(node.dir, "web", "index.ts");
-    if (!existsSync(webIndex)) continue;
     // An ESM-cache hit: the declaration pass above imported it.
     const mod = await importBarrel(webIndex);
     const def = mod.default as

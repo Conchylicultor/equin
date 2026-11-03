@@ -121,9 +121,8 @@ async function runDeclarationPass(
     // the created-set free of ownerless slots the orphan guard would misread.
     if (bundle !== null && !bundle.has(node.id)) continue;
     // A plugin dir of this checkout.
-    const barrelPath = joinAppPath(node.dir, "web", "index.ts");
-    if (!existsSync(barrelPath)) continue;
-    const mod = await importBarrel(barrelPath);
+    if (!node.runtimes.web) continue;
+    const mod = await importBarrel(joinAppPath(node.dir, "web", "index.ts"));
     const sources = declaredSlotSources(mod);
     if (!sources) continue;
     declaring.push({ id: node.id, slots: sources });

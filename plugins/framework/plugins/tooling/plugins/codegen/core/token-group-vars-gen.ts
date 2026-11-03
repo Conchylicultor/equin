@@ -3,7 +3,6 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { existsSync } from "fs";
 import { relative } from "path";
 import { writeGenerated } from "./write-generated";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
@@ -131,8 +130,8 @@ async function collectTokenGroupsUncached(
   const byGroup: Record<string, CollectedTokenGroup> = {};
   for (const node of tree.byDir.values()) {
     // A plugin dir of this checkout.
+    if (!node.runtimes.web) continue;
     const webIndex = joinAppPath(node.dir, "web", "index.ts");
-    if (!existsSync(webIndex)) continue;
     let mod: Record<string, unknown>;
     try {
       mod = await importBarrel(webIndex);

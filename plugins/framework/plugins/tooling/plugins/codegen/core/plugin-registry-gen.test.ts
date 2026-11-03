@@ -25,6 +25,7 @@ import {
 } from "@plugins/framework/plugins/plugin-id/core";
 import {
   globPaths,
+  repoFilesOver,
   type RepoFiles,
 } from "@plugins/framework/plugins/tooling/core";
 import { classifyEdges } from "@plugins/plugin-meta/plugins/closure/core";
@@ -430,6 +431,7 @@ function bundleFixture(): {
     byPath: new Map(nodes.map((n) => [n.path, n])),
     roots: nodes,
     facets: [],
+    repo: repoFilesOver(asAppPath(fixtureRoot), []),
   };
   const ctx: RegistryGenContext = {
     root: fixtureRoot,
@@ -570,6 +572,7 @@ function machineFixture(): {
     byPath: new Map(nodes.map((n) => [n.path, n])),
     roots: nodes,
     facets: [],
+    repo: repoFilesOver(asAppPath(fixtureRoot), []),
   };
   const ctx: RegistryGenContext = {
     root: fixtureRoot,

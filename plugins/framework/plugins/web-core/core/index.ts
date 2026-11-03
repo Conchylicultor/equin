@@ -7,5 +7,6 @@ export type {
 export {
   babelPluginsFor,
   findViteContributions,
+  isViteContributionPath,
   loadBabelContributions,
 } from "./vite-contributions";

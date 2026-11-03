@@ -13,6 +13,8 @@ import { loadBabelContributions } from "@plugins/framework/plugins/web-core/core
 import { makeArtifactExternal } from "../core/externals";
 import { babelContributionsPlugin } from "../core/internal/babel-transform";
 import { planFleet } from "../core/internal/plan";
+import { loadGlobPatternMemo } from "../core/internal/store";
+import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 import {
   asAppPath,
   joinAppPath,
@@ -26,7 +28,10 @@ const pluginsRoot = joinAppPath(root, "plugins");
 const fleet = await planFleet({
   root,
   minify: true,
-  cache: { version: 0, records: {} } as never,
+  sources: {
+    snapshot: await loadRepoSnapshot(root),
+    globs: loadGlobPatternMemo(),
+  },
 });
 const pool = fleet.webTargets;
 const stride = Math.max(1, Math.floor(pool.length / n));

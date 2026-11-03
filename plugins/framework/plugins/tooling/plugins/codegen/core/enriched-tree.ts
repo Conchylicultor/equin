@@ -6,7 +6,9 @@ import {
   buildPluginTree,
   type PluginTree,
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { buildBarrelFreeTree } from "./barrel-free-tree";
 import { declareSlotsFromBarrels } from "./slot-declaration-guard";
+import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 
 const enrichedTreeCache = new Map<string, Promise<PluginTree>>();
 
@@ -45,12 +47,20 @@ const enrichedTreeCache = new Map<string, Promise<PluginTree>>();
  * `declareSlotsFromBarrels` for why declaring over the full set would break
  * `config-v2:registrations-paired`.
  */
-export function buildEnrichedTree(root: AppPath): Promise<PluginTree> {
+export function buildEnrichedTree(
+  root: AppPath,
+  repo?: RepoFiles,
+): Promise<PluginTree> {
   let cached = enrichedTreeCache.get(root);
   if (!cached) {
     cached = (async () => {
       await declareSlotsFromBarrels(root, "registry");
-      return buildPluginTree(joinAppPath(root, "plugins"), { facets: true });
+      // The set the barrel-free tree was read off (the declaration pass just
+      // built it): one listing per process, not one per tree.
+      return buildPluginTree(joinAppPath(root, "plugins"), {
+        facets: true,
+        repo: repo ?? (await buildBarrelFreeTree(root)).repo,
+      });
     })();
     enrichedTreeCache.set(root, cached);
   }

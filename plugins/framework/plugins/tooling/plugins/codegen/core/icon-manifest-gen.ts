@@ -11,7 +11,7 @@ import {
   maskSource,
   parseStaticCallId,
   unresolvableCallIdMessage,
-  walkFilesAsync,
+  sourceFilesIn,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { createTimeSlicer } from "@plugins/packages/plugins/macrotask-yield/core";
 import { isIconRefModule } from "@plugins/ui/plugins/icons/core";
@@ -127,7 +127,7 @@ export async function collectIconManifest(
   // the repo ships, which costs a symbol, never a missing glyph.
   const tree = await buildBarrelFreeTree(root);
   for (const node of tree.byDir.values()) {
-    for (const file of await walkFilesAsync(node.dir)) {
+    for (const file of sourceFilesIn(tree.repo, node.dir)) {
       if (file.endsWith(".generated.ts")) continue;
       const src = await readFile(file, "utf8");
       if (!MARKER_CALL_RE.test(src)) continue;
