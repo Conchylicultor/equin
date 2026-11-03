@@ -33693,8 +33693,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `stats/cost`
       - Exemptions:
         - Exempts itself from:
+          - `worktree/no-raw-worktree-git` — `.` (sanctioned)
           - `boundaries/no-platform-api` — `server/internal/composition-namespace.ts`, `server/internal/install-checkout.ts`, `server/internal/spare-name.ts`, `server/internal/spare.ts`, `server/internal/spec.ts`, `server/internal/worktree-op.ts`, `server/internal/worktree.ts` (debt)
           - `user-path/no-unproven-claim` — `server/internal/worktree.ts` (sanctioned)
+        - Exempted by: `infra/worktree` (0 debt)
       - Core:
         - Exports (types):
           - `OpKind`

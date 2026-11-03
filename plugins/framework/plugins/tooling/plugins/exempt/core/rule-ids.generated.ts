@@ -182,6 +182,7 @@ export type ExemptableRuleId =
   | "watcher-safety/no-direct-parcel-watcher"
   | "watcher-safety/no-raw-fs-watch"
   | "web-storage/no-raw-web-storage"
+  | "worktree/no-raw-worktree-git"
   | "z-layers/no-adhoc-zindex"
   | "zod-introspect/no-zod-internals"
   | "zod-introspect/no-zod-subpath";

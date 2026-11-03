@@ -2,6 +2,13 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 
 export default [
   {
+    rule: "worktree/no-raw-worktree-git",
+    paths: ["."],
+    kind: "sanctioned",
+    reason:
+      "The worktree plugin is the crash-safe replacement for the worktree-enumerating git commands: its claim's switch builds its argv in steps (adding --ignore-other-worktrees only after its own checked-out-elsewhere check), and it is where any future raw call belongs.",
+  },
+  {
     rule: "boundaries/no-platform-api",
     paths: [
       "server/internal/composition-namespace.ts",

@@ -83,6 +83,13 @@ install: `setupWorktree`'s `existing` path minus the convergence).
     elsewhere" against our list, then passes `--ignore-other-worktrees`.
   The repo has no `post-checkout` hook and no `config.worktree` — the two
   things git's add does that `addCheckout` does not.
+- **Nobody else runs them either** — the `worktree/no-raw-worktree-git` lint
+  rule (`lint/`) rejects `git worktree list|add|move|lock|unlock|remove|repair`
+  and a `git switch` without `--ignore-other-worktrees` / `--detach` / `-c`,
+  as argv lists (`[GIT, …]`, `git(…)` helper arguments, a spread
+  `...checkoutGit(dir)`) and as shell strings, everywhere but this plugin
+  (its `exempt/index.ts`) and test code. A caller reads the list with
+  `listWorktreeEntries` / `listWorktreePaths` / `ensureMainWorktreeRoot`.
 - **Crash convergence.** A crash after the move leaves the dir in place on a
   detached HEAD — before the switch, or inside it. The early return recognises
   it by `isUnfinishedCheckout`: admin dir `spare-*` (the move keeps it), HEAD
@@ -248,8 +255,10 @@ pid liveness.
     - `stats/cost`
 - Exemptions:
   - Exempts itself from:
+    - `worktree/no-raw-worktree-git` — `.` (sanctioned)
     - `boundaries/no-platform-api` — `server/internal/composition-namespace.ts`, `server/internal/install-checkout.ts`, `server/internal/spare-name.ts`, `server/internal/spare.ts`, `server/internal/spec.ts`, `server/internal/worktree-op.ts`, `server/internal/worktree.ts` (debt)
     - `user-path/no-unproven-claim` — `server/internal/worktree.ts` (sanctioned)
+  - Exempted by: `infra/worktree` (0 debt)
 - Core:
   - Exports (types):
     - `OpKind`

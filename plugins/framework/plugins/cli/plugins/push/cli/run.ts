@@ -32,7 +32,10 @@ import {
   type Grant,
   type Priority,
 } from "@plugins/infra/plugins/host/plugins/host-admission/core";
-import { markWorktreeOpStart } from "@plugins/infra/plugins/worktree/server";
+import {
+  listWorktreeEntries,
+  markWorktreeOpStart,
+} from "@plugins/infra/plugins/worktree/server";
 import {
   spawnCaptured,
   spawnPassthrough,
@@ -55,14 +58,14 @@ import {
 } from "./attribution";
 
 // One bound for both capture helpers below, because every command they run is
-// LOCAL git: `rev-parse`, `worktree list`, `status`, and the rebase. Nothing
+// LOCAL git: `rev-parse`, `status`, and the rebase. Nothing
 // that talks to the network goes through them — `git fetch` / `git push` run
 // through `exec` (spawnPassthrough) so the user sees the transfer progress —
 // so no value here has to leave room for a slow remote.
 //
-// Five minutes is sized to the rebase, the longest of the four: it replays this
+// Five minutes is sized to the rebase, the longest of the three: it replays this
 // branch's commits and amends a trailer onto each. The others are metadata
-// reads that finish in milliseconds. Being one generous number rather than four
+// reads that finish in milliseconds. Being one generous number rather than three
 // tuned ones is deliberate — the helpers exist so call sites don't think about
 // spawning, and every one of them is consumed by `process.exit(1)`, where a
 // false positive costs the user a re-run of a push that was working.
@@ -330,15 +333,17 @@ async function getWorktreeRoot(): Promise<AppPath> {
   return asAppPath(stdout);
 }
 
-async function getMainWorktree(): Promise<AppPath> {
-  const stdout = await run(["git", "worktree", "list", "--porcelain"]);
-  // First worktree listed is always the main one
-  const match = stdout.match(/^worktree (.+)$/m);
-  if (!match) {
+// Read from the worktree plugin's admin-file listing, never `git worktree list`:
+// that dies ("failed to read .git/worktrees/<other>/commondir") beside any
+// concurrent `git worktree add` half-way through writing its entry.
+async function getMainWorktree(root: AppPath): Promise<AppPath> {
+  // The main worktree is always listed first.
+  const [main] = await listWorktreeEntries(root);
+  if (!main) {
     console.error("Could not determine main worktree");
     process.exit(1);
   }
-  return asAppPath(match[1]!);
+  return asAppPath(main.path);
 }
 
 const nulList = (out: string): string[] => out.split("\0").filter(Boolean);
@@ -411,7 +416,7 @@ async function assertNoMainCollision(
  *
  * Every step after this writes to `mainWorktree`, and nothing about it is
  * reversible once `main` has advanced (or been pushed). By construction it is
- * the first entry of `git worktree list` for the checkout push was run from, but
+ * the first worktree listed for the checkout push was run from, but
  * an inherited `GIT_DIR` / `GIT_WORK_TREE` / `GIT_COMMON_DIR` — or any future
  * resolver that stops deriving it from `root` — would silently point it at a
  * different repository: a test's temp clone landing on the real `main`, or the
@@ -848,7 +853,7 @@ const pushAction: CliAction<
   // Steps 2–7 touch the shared main worktree and must be serialized
   // across all concurrent agents. The flock is held for the entire
   // critical section so no two pushes can race on main.
-  const mainWorktree = await getMainWorktree();
+  const mainWorktree = await getMainWorktree(root0);
   const gitCommonDir = await assertLandsOnOwnRepository(root0, mainWorktree);
   const pushLock = await pushLockFor(mainWorktree, gitCommonDir);
   try {

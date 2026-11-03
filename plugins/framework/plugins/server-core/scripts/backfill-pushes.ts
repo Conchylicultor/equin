@@ -25,6 +25,11 @@ import {
 } from "drizzle-orm/pg-core";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 import { resolveNamespaceAlias } from "@plugins/infra/plugins/namespace/core";
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
+  ensureMainWorktreeRoot,
+  listWorktreeEntries,
+} from "@plugins/infra/plugins/worktree/server";
 
 const DRY_RUN = !process.argv.includes("--write");
 
@@ -68,13 +73,6 @@ interface CommitInfo {
   subject: string;
 }
 
-async function getMainWorktree(): Promise<string> {
-  const out = await git(["worktree", "list", "--porcelain"]);
-  const match = out.match(/^worktree (.+)$/m);
-  if (!match?.[1]) throw new Error("Cannot find main worktree");
-  return match[1];
-}
-
 async function readAllCommits(cwd: string): Promise<CommitInfo[]> {
   const FORMAT =
     "%H%x00%cI%x00" +
@@ -101,7 +99,7 @@ async function readAllCommits(cwd: string): Promise<CommitInfo[]> {
     .filter((c) => c.sha);
 }
 
-interface WorktreeEntry {
+interface ConversationWorktree {
   conversationId: string;
   ts: number; // unix timestamp parsed from the conversation ID prefix
 }
@@ -110,19 +108,37 @@ interface WorktreeEntry {
 // Multiple worktrees can share the same SHA (e.g. worktrees created after a commit
 // landed on main will also start at that SHA). The caller resolves ambiguity by
 // picking the entry whose timestamp best matches the commit timestamp.
+//
+// The worktrees come from the worktree plugin's admin-file listing, never
+// `git worktree list`, which dies beside a concurrent half-written add; each
+// branch HEAD is resolved through one `for-each-ref`.
 async function buildWorktreeMap(
-  cwd: string,
-): Promise<Map<string, WorktreeEntry[]>> {
-  const raw = await git(["worktree", "list", "--porcelain"], cwd);
-  const map = new Map<string, WorktreeEntry[]>();
-  const stanzas = raw.split("\n\n").filter(Boolean);
-  for (const stanza of stanzas) {
-    const headMatch = stanza.match(/^HEAD ([0-9a-f]+)$/m);
-    const branchMatch = stanza.match(
-      /^branch refs\/heads\/claude-web\/(claude-(\d+)[^)]*?)$/m,
+  repoRoot: AppPath,
+): Promise<Map<string, ConversationWorktree[]>> {
+  const [entries, refs] = await Promise.all([
+    listWorktreeEntries(repoRoot),
+    git(
+      [
+        "for-each-ref",
+        "--format=%(objectname) %(refname)",
+        "refs/heads/claude-web/",
+      ],
+      repoRoot,
+    ),
+  ]);
+  const shaOf = new Map<string, string>();
+  for (const line of refs.split("\n").filter(Boolean)) {
+    const [sha, ref] = line.split(" ");
+    if (sha && ref) shaOf.set(ref, sha);
+  }
+  const map = new Map<string, ConversationWorktree[]>();
+  for (const entry of entries) {
+    if (entry.head?.kind !== "branch") continue;
+    const branchMatch = entry.head.ref.match(
+      /^refs\/heads\/claude-web\/(claude-(\d+)[^)]*?)$/,
     );
-    if (!headMatch?.[1] || !branchMatch?.[1] || !branchMatch[2]) continue;
-    const sha = headMatch[1];
+    const sha = shaOf.get(entry.head.ref);
+    if (!sha || !branchMatch?.[1] || !branchMatch[2]) continue;
     const conversationId = branchMatch[1];
     const ts = parseInt(branchMatch[2], 10);
     const list = map.get(sha) ?? [];
@@ -137,7 +153,7 @@ async function buildWorktreeMap(
 // If all worktrees post-date the commit (shouldn't happen in practice), fall back
 // to the one with the smallest timestamp.
 function resolveConversation(
-  entries: WorktreeEntry[],
+  entries: ConversationWorktree[],
   commitTs: number,
 ): string {
   const before = entries.filter((e) => e.ts <= commitTs);
@@ -168,9 +184,9 @@ import { GIT } from "@plugins/infra/plugins/paths/server";
 import { DATABASE_CONFIG_PATH } from "@plugins/database/core";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
-// Wedge-breaker for this script's local git reads (`log`, `rev-parse`,
-// `worktree list`). One number for all of them: they are metadata reads that
-// finish in milliseconds, and a minute is only ever reached by a wedge.
+// Wedge-breaker for this script's local git reads (`log`, `for-each-ref`).
+// One number for all of them: they are metadata reads that finish in
+// milliseconds, and a minute is only ever reached by a wedge.
 const GIT_TIMEOUT_MS = 60_000;
 
 const dbConfigPath = DATABASE_CONFIG_PATH;
@@ -197,7 +213,7 @@ console.log(`Mode: ${DRY_RUN ? "DRY RUN (pass --write to apply)" : "WRITE"}\n`);
 const pool = new Pool({ connectionString, max: 1 });
 const db = drizzle(pool);
 
-const mainCwd = await getMainWorktree();
+const mainCwd = await ensureMainWorktreeRoot();
 console.log(`Main worktree: ${mainCwd}\n`);
 
 const [allCommits, worktreeMap] = await Promise.all([
