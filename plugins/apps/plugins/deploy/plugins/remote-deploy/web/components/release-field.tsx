@@ -23,7 +23,7 @@ import type { Deployment } from "@plugins/apps/plugins/deploy/plugins/deployment
 import type { PlatformTag } from "@plugins/release/core";
 import type { releaseFields } from "../../core";
 import {
-  releaseStateOf,
+  releaseAnswerOf,
   useReleaseInfo,
   type ReleaseInfo,
 } from "../internal/use-release-info";
@@ -55,8 +55,11 @@ export function ReleaseCell({ row }: { row: Deployment }): ReactNode {
  * The answer is per `(composition, platform)` — one query per row. Hooks cannot
  * be called in a loop, so each pair is asked by its own headless component and
  * folded back into one map; the values read the map synchronously, which keeps
- * filter/group/sort in agreement with the chips instead of trailing them. The
- * value is `null` while unresolved (the column never showed pending).
+ * filter/group/sort in agreement with the chips instead of trailing them. A
+ * row whose probe has not answered is `rowPending` (its cell "checking", the
+ * row in a laid-out view's pending tail — so the list never waits on the
+ * slowest probe), a failed probe `rowFailed` with Retry; a row on a server
+ * with no verified platform has nothing to ask, a KNOWN `null`.
  */
 export function ReleaseFieldResolver({
   rows,
@@ -82,14 +85,17 @@ export function ReleaseFieldResolver({
   const health = useServerHealthMap(serverIds);
 
   // Not known until the servers' platforms are (there is no candidate question
-  // before that): the column is pending, then each row reads its probed state
-  // synchronously — null while that row's probe has not answered.
+  // before that): the column is pending, then each row answers on its own —
+  // pending until its probe answers.
   const values = useMemo<
     ResourceResult<ClientFieldReaders<Deployment, ReleaseFieldsRecord>>
   >(
     () =>
-      mapResource(health, () => ({
-        release: (d: Deployment) => releaseStateOf(infos.get(d.id)),
+      mapResource(health, (platforms) => ({
+        release: (d: Deployment) =>
+          platformOf(platforms, d) === null
+            ? null
+            : releaseAnswerOf(infos.get(d.id)),
       })),
     [health, infos],
   );
@@ -126,8 +132,8 @@ function CandidateProbes({
   return (
     <>
       {rows.map((d) => {
-        const platform = platforms.get(d.serverId)?.platform ?? null;
-        if (!platform) return null;
+        const platform = platformOf(platforms, d);
+        if (platform === null) return null;
         return (
           <CandidateProbe
             key={d.id}
@@ -163,4 +169,12 @@ function CandidateProbe({
     onResolve(deploymentId, info);
   }, [deploymentId, info, onResolve]);
   return null;
+}
+
+/** The verified platform of the row's server — `null` when there is none, so nothing to ask. */
+function platformOf(
+  platforms: ReadonlyMap<string, ServerHealthRow>,
+  d: Deployment,
+): PlatformTag | null {
+  return platforms.get(d.serverId)?.platform ?? null;
 }

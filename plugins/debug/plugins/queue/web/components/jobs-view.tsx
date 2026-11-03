@@ -59,10 +59,16 @@ const cancelIcon = symbol("cancel");
 // loaded rows. A job is a Queue row until its run finishes, then a History
 // row: the two never hold the same run, so they are two lists, not one merge.
 const queueSource = liveDataSource(jobs, {
+  surface: QUEUE_VIEW,
+  unscoped: {
+    reason:
+      "served from the job queue's own snapshot (graphile), outside the change feed — a custom column is a Postgres side table joined into a routed window, which an external window cannot join",
+  },
   searchable: ["jobName", "lastError"],
   facets: ["jobName"],
 });
 const historySource = liveDataSource(jobRuns, {
+  surface: HISTORY_VIEW,
   searchable: ["jobName", "error"],
   facets: ["jobName"],
 });

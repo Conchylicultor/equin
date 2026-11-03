@@ -17,6 +17,7 @@
  * - the `kind` source field's options are the registered arms, in their order.
  */
 
+import { RUNS_VIEW } from "../internal/view-id";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import {
@@ -119,6 +120,8 @@ describe("the base field schema over the runs source", () => {
   it("resolves at mount: every derived field binds a union column, sorts and filters as declared", () => {
     const source = liveDataSource(runs, {
       searchable: ["label", "message", "namespace", "trigger"],
+      surface: RUNS_VIEW,
+      unscoped: { reason: "a union collection takes no column scope yet" },
     });
     const { fields } = deriveFields(runs, true, []);
     // The persisted vocabulary: saved views and presets name these ids.

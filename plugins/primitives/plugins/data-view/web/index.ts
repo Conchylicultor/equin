@@ -248,8 +248,12 @@ export type {
   ItemActionEntry,
   ItemActionsDescriptor,
   CoverContent,
-  FieldExtensionProps,
 } from "../core";
+export type {
+  ExtensionField,
+  FieldExtensionProps,
+  FieldExtensionYield,
+} from "./internal/field-extension-types";
 
 export default {
   description:

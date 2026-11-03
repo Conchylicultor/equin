@@ -16,6 +16,7 @@
  *   whose click re-reads the head (never a bare "Couldn't load" line).
  */
 
+import type { DataViewId } from "../../core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock(
@@ -220,7 +221,7 @@ function mount(
     awaiting?: boolean;
   },
 ) {
-  const all = liveDataSource(c, { searchable: ["subject"] });
+  const all = liveDataSource(c, { searchable: ["subject"], ...TEST_SURFACE });
   const source = initial.awaiting
     ? all.awaitingScope(["unread"])
     : initial.scoped
@@ -491,7 +492,7 @@ function LiveBody(props: {
     server: origin,
     readiness: undefined,
     readFields: [],
-    unavailable: { filter: [], fold: [] },
+    unavailable: { filter: [], fold: [], sort: [] },
     deferredComplete: true,
   });
   return state.kind === "view" ? (
@@ -517,7 +518,10 @@ describe("useLiveSource — a failed head read", () => {
     const c = threads();
     const live = createLiveStateHarness();
     const client = live.queryClient;
-    const source = liveDataSource(c, { searchable: ["subject"] });
+    const source = liveDataSource(c, {
+      searchable: ["subject"],
+      ...TEST_SURFACE,
+    });
     const notifications = live.notifications;
     vi.spyOn(notifications, "hasEverBeenReady").mockReturnValue(true);
     render(
@@ -613,7 +617,7 @@ describe("useLiveSource — server sections", () => {
     c: C,
     initial: { state: ViewState; scoped?: boolean },
   ) {
-    const all = liveDataSource(c, { searchable: ["subject"] });
+    const all = liveDataSource(c, { searchable: ["subject"], ...TEST_SURFACE });
     const source = initial.scoped
       ? all.scoped({ where: { labelIds: { hasAny: ["INBOX"] } } })
       : all;
@@ -816,7 +820,10 @@ describe("useLiveSource — server sections", () => {
 
 describe("liveGroupLowering — what the Group-by control offers under a live source", () => {
   const c = threads();
-  const source = liveDataSource(c, { searchable: ["subject"] });
+  const source = liveDataSource(c, {
+    searchable: ["subject"],
+    ...TEST_SURFACE,
+  });
   const fields: FieldDef<Thread>[] = [
     ...fieldsOf(c),
     // A derived value: bound to no column.
@@ -852,3 +859,8 @@ describe("liveGroupLowering — what the Group-by control offers under a live so
     expect(liveGroupLowering(plan, field("unread"), BY_DAY).kind).toBe("none");
   });
 });
+
+const TEST_SURFACE = {
+  surface: "test.surface" as DataViewId,
+  unscoped: { reason: "a test surface" },
+};

@@ -30,6 +30,7 @@ const DEPLOY_HISTORY_VIEW = defineDataView("deploy.deployment.history");
  * release, the commit and the message.
  */
 const deployHistorySource = liveDataSource(deployRunHistory, {
+  surface: DEPLOY_HISTORY_VIEW,
   searchable: ["releaseRunId", "commitSha", "commitSubject", "message"],
 });
 

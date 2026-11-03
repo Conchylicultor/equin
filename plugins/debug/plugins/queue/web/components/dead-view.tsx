@@ -21,6 +21,7 @@ const DEAD_VIEW = defineDataView("debug.queue.dead");
 // through the change feed. The Job filter options are a facet — a grouping of
 // the whole archive, not of the loaded rows.
 const deadSource = liveDataSource(deadJobs, {
+  surface: DEAD_VIEW,
   searchable: ["jobName", "lastError"],
   facets: ["jobName"],
 });

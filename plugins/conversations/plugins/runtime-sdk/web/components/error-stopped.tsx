@@ -34,6 +34,7 @@ import { formatResets } from "../internal/claude-usage";
 const ERROR_STOPPED_VIEW = defineDataView("runtime-sdk.error-stopped");
 
 const errorStoppedSource = liveDataSource(errorStoppedConversations, {
+  surface: ERROR_STOPPED_VIEW,
   searchable: ["title"],
 });
 

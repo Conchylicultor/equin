@@ -92,6 +92,23 @@ export function FieldCell({
   if (field.pending === true) {
     return <Loading variant="block" className="h-4 w-12" />;
   }
+  // The same two answers for ONE row read on its own (its probe has not
+  // answered, or failed) — before the editor, so a row not known is not
+  // editable.
+  const rowState = field.rowState?.(row);
+  if (rowState?.status === "loading") {
+    return <Loading variant="block" className="h-4 w-12" />;
+  }
+  if (rowState?.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="icon"
+        error={rowState.error}
+        refetch={rowState.refetch}
+        subject={field.label}
+      />
+    );
+  }
   // A value most of the view's rows share says nothing: the cell draws none
   // (its slot keeps its width — the list's slots are sized by the view).
   if (isElidedRead(presentation, field, row)) return null;

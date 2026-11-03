@@ -16,6 +16,7 @@ import {
 import {
   SidebarConversationItem,
   type ConversationSidebarProps,
+  SIDEBAR_VIEW,
 } from "@plugins/conversations/plugins/conversations-view/plugins/data-view/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
@@ -61,6 +62,7 @@ export function CloseConvAction({
  */
 const historySource = liveDataSource(conversationHistory, {
   searchable: CONVERSATION_SEARCHABLE,
+  surface: SIDEBAR_VIEW,
 });
 
 /**

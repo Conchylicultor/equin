@@ -124,7 +124,10 @@ const REVIEWS_VIEW = defineDataView("plugin-health.reviews");
 // One plugin's reviews, live: the collection's window scoped server-side to the
 // plugin (`scoped`, per section). Nothing to search: a plugin has at most one
 // review per axis.
-const reviewsSource = liveDataSource(pluginHealthReviews, { searchable: [] });
+const reviewsSource = liveDataSource(pluginHealthReviews, {
+  surface: REVIEWS_VIEW,
+  searchable: [],
+});
 
 // The collection's fields: the axis shows, the plugin id is the scope's.
 const overrides = fieldOverrides(pluginHealthReviews, {

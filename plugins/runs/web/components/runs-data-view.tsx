@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import {
   DataView,
   liveDataSource,
@@ -9,14 +9,21 @@ import { RUNS_VIEW } from "../internal/view-id";
 import type { DataViewId } from "@plugins/primitives/plugins/data-view/web";
 
 /**
- * The live source: the `runs` union window, read as live key-range pages.
- * Everything a
- * person types into the search box is a name or an error — never an id, which
- * would make the box a lookup rather than a search.
+ * The live source on one surface: the `runs` union window, read as live
+ * key-range pages. Everything a person types into the search box is a name or
+ * an error — never an id, which would make the box a lookup rather than a
+ * search.
  */
-const runsSource = liveDataSource(runs, {
-  searchable: ["label", "message", "namespace", "trigger"],
-});
+function runsSourceOn(surface: DataViewId) {
+  return liveDataSource(runs, {
+    searchable: ["label", "message", "namespace", "trigger"],
+    surface,
+    unscoped: {
+      reason:
+        "a union collection cannot take a column scope yet — its compiler joins no scoped family per arm (item 7, session 2 of research/2026-11-03-global-live-collections-item7-remaining.md)",
+    },
+  });
+}
 
 export interface RunsDataViewProps {
   /** How much room the host gives it — a popover declares `"compact"`. */
@@ -97,6 +104,7 @@ export function RunsDataView({
   pinnedView,
   storageKey = RUNS_VIEW,
 }: RunsDataViewProps): ReactNode {
+  const source = useMemo(() => runsSourceOn(storageKey), [storageKey]);
   // No `renderRow`: the row body is the list's own, built from the field schema,
   // so it obeys the view's visible fields. The outcome is a state, so the
   // `ledger` recipe leads with its glyph.
@@ -106,7 +114,7 @@ export function RunsDataView({
   return (
     <DataView<RunRow>
       storageKey={storageKey}
-      source={runsSource}
+      source={source}
       views={views}
       defaultView={defaultView}
       pinnedView={pinnedView}

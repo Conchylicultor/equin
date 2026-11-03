@@ -1,5 +1,4 @@
 import { and, or, sql, type AnyColumn, type SQL } from "drizzle-orm";
-import type { KeysetSortRule } from "@plugins/primitives/plugins/keyset/core";
 
 /** A physical column, or a SQL expression standing in for one (a cast, a computed
  *  projection). Everything here only interpolates it into a `sql` template, so the
@@ -7,72 +6,15 @@ import type { KeysetSortRule } from "@plugins/primitives/plugins/keyset/core";
 export type ColumnExpr = AnyColumn | SQL;
 
 /**
- * Binds one keyset-orderable field to its column. `nullable` drives the
- * null-aware seek terms (default `false`). Consumers that also compile filters
- * extend this with their own filter domain — the keyset seek reads only
- * `col` + `nullable`.
- */
-export interface KeysetColumnBinding {
-  col: ColumnExpr;
-  nullable?: boolean;
-}
-
-/** fieldId → column binding. Unmapped sort fields are silently dropped (fail-soft). */
-export type KeysetColumnMap = Record<string, KeysetColumnBinding>;
-
-/**
- * One resolved ORDER BY / keyset key. `fieldId` is carried so the caller can
- * extract the matching value from a result row (see `keyValuesOf`) without
- * re-deriving the drop logic that `buildSortKeys` applied.
+ * One resolved ORDER BY / keyset key, built by the compiler from a DECLARED
+ * column (there is no field map here to miss a name in). `fieldId` names the
+ * row field the key's value is read back from.
  */
 export interface SortKey {
   fieldId: string;
   col: ColumnExpr;
   dir: "asc" | "desc";
   nullable: boolean;
-}
-
-/**
- * A non-null, totally-ordered tiebreaker column (the primary key) plus the
- * fieldId under which its value appears on a result row.
- */
-export interface Tiebreaker {
-  col: ColumnExpr;
-  fieldId: string;
-}
-
-/**
- * Resolve `KeysetSortRule[]` → ordered `SortKey[]`, skipping unmapped fields, and
- * ALWAYS appending the PK `tiebreaker` (asc, non-null) as a final total-order
- * key so the keyset seek is strict (no dup/skip at page seams). If a sort rule
- * already targets the tiebreaker column, the redundant append is skipped (it
- * would otherwise risk a conflicting direction on the same column).
- */
-export function buildSortKeys(
-  sort: KeysetSortRule[],
-  map: KeysetColumnMap,
-  tiebreaker: Tiebreaker,
-): SortKey[] {
-  const keys: SortKey[] = [];
-  for (const rule of sort) {
-    const binding = map[rule.fieldId];
-    if (!binding) continue;
-    keys.push({
-      fieldId: rule.fieldId,
-      col: binding.col,
-      dir: rule.direction,
-      nullable: binding.nullable ?? false,
-    });
-  }
-  if (!keys.some((k) => k.col === tiebreaker.col)) {
-    keys.push({
-      fieldId: tiebreaker.fieldId,
-      col: tiebreaker.col,
-      dir: "asc",
-      nullable: false,
-    });
-  }
-  return keys;
 }
 
 /**
@@ -161,8 +103,8 @@ function beforeTerm(key: SortKey, value: unknown): SQL {
  *   OR_i [ eq(k_0)..eq(k_{i-1}) AND before(k_i) ]  OR  eq(k_0)..eq(k_n)
  *
  * The final all-equal branch keeps the cut row itself (the cut is inclusive).
- * The keys must end in a non-null total-order tiebreaker (the pk, as
- * `buildSortKeys` appends), so `seek(c)` and `atOrBefore(c)` split any row set
+ * The keys must end in a non-null total-order tiebreaker (the pk, which every
+ * compiler appends), so `seek(c)` and `atOrBefore(c)` split any row set
  * exactly in two, and each agrees with `ORDER BY … NULLS LAST`.
  *
  * Operands are interpolated as given: a caller whose cut values arrive as text
@@ -185,17 +127,4 @@ export function atOrBeforePredicate(
     branches.push(terms.length === 1 ? terms[0]! : and(...terms)!);
   }
   return or(...branches)!;
-}
-
-/**
- * Extract the cursor key tuple from a result row, in key order. Defaults to
- * reading `row[key.fieldId]` for each key; pass `fieldIdsInKeyOrder` to override
- * (e.g. when the projected row keys differ from the field ids).
- */
-export function keyValuesOf(
-  row: Record<string, unknown>,
-  keys: SortKey[],
-  fieldIdsInKeyOrder: string[] = keys.map((k) => k.fieldId),
-): unknown[] {
-  return keys.map((_, i) => row[fieldIdsInKeyOrder[i]!]);
 }

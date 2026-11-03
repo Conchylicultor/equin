@@ -14,6 +14,7 @@
  *   grid.
  */
 
+import type { DataViewId } from "../../core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock(
@@ -144,6 +145,7 @@ describe("liveDataSource({ facets }) — declaration", () => {
     const c = reports();
     expect(() =>
       liveDataSource(c, {
+        ...TEST_SURFACE,
         searchable: [],
         facets: ["noise" as "kind"],
       }),
@@ -225,7 +227,11 @@ describe("CollectFacetOptions", () => {
     const c = reports();
     const live = createLiveStateHarness();
     const client = live.queryClient;
-    const source = liveDataSource(c, { searchable: [], facets: ["kind"] });
+    const source = liveDataSource(c, {
+      searchable: [],
+      facets: ["kind"],
+      ...TEST_SURFACE,
+    });
     const { optionsOf } = mount(live, source);
 
     expect(optionsOf("kind")).toEqual({ status: "loading" });
@@ -281,7 +287,11 @@ describe("CollectFacetOptions", () => {
     const c = reports();
     const live = createLiveStateHarness();
     const client = live.queryClient;
-    const all = liveDataSource(c, { searchable: [], facets: ["kind"] });
+    const all = liveDataSource(c, {
+      searchable: [],
+      facets: ["kind"],
+      ...TEST_SURFACE,
+    });
     const { optionsOf, rerender } = mount(live, all.awaitingScope(["noise"]));
     const groupTuples = () =>
       client
@@ -318,7 +328,11 @@ describe("CollectFacetOptions", () => {
     const c = reports();
     const live = createLiveStateHarness();
     const client = live.queryClient;
-    const source = liveDataSource(c, { searchable: [], facets: ["kind"] });
+    const source = liveDataSource(c, {
+      searchable: [],
+      facets: ["kind"],
+      ...TEST_SURFACE,
+    });
     const { optionsOf, notifications } = mount(live, source);
     const fetch = vi
       .spyOn(notifications, "fetchOverHttp")
@@ -411,3 +425,8 @@ describe("ChipSelectFilterInput over read options", () => {
     expect(screen.getByText("audit")).toBeTruthy();
   });
 });
+
+const TEST_SURFACE = {
+  surface: "test.surface" as DataViewId,
+  unscoped: { reason: "a test surface" },
+};

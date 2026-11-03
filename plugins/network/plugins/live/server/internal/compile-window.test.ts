@@ -846,7 +846,11 @@ describe("compileWindowQuery — joins", () => {
         rowKey: ROW_KEY,
         db: fakeDb().db,
       }),
-    ).toThrow(/projects a joined column/);
+      // Matched relation-exact: a joined column of the pk's name is not the
+      // base's pk, so the base pk is simply not projected.
+    ).toThrow(
+      /primary-key column "id" is not present in the select projection/,
+    );
   });
 
   test("a per-params where reading outside its declared whereReads fails its load", async () => {

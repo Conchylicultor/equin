@@ -39,6 +39,7 @@ const SLOW_OP_SAMPLES = defineDataView("debug.slow-op.samples");
 // from the server, so an op with hundreds of callers still opens instantly and
 // every one of them stays named.
 const callersSource = liveDataSource(slowOpCallers, {
+  surface: SLOW_OP_CALLERS,
   searchable: ["callerLabel"],
   facets: ["callerKind"],
 });

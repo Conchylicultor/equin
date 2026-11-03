@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { type AnyColumn, type SQL } from "drizzle-orm";
+import { type SQL } from "drizzle-orm";
 import {
   boolean,
   integer,
@@ -8,14 +8,7 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import type { KeysetSortRule } from "@plugins/primitives/plugins/keyset/core";
-import {
-  buildSortKeys,
-  keyValuesOf,
-  orderByClauses,
-  seekPredicate,
-  type KeysetColumnMap,
-} from "./seek";
+import { orderByClauses, seekPredicate, type SortKey } from "./seek";
 
 // Throwaway physical schema purely for SQL rendering in tests.
 const t = pgTable("things", {
@@ -32,64 +25,26 @@ const dialect = new PgDialect();
 const render = (s: SQL) => dialect.sqlToQuery(s);
 const renderSql = (s: SQL | undefined) => (s ? render(s).sql : undefined);
 
-const map: KeysetColumnMap = {
-  title: { col: t.title },
-  status: { col: t.status },
-  createdAt: { col: t.createdAt },
+const cols = {
+  title: { col: t.title, nullable: false },
+  status: { col: t.status, nullable: false },
+  createdAt: { col: t.createdAt, nullable: false },
   endedAt: { col: t.endedAt, nullable: true },
-  active: { col: t.active },
-  score: { col: t.score },
-};
+} as const;
 
-const tiebreaker = { col: t.id as AnyColumn, fieldId: "id" };
-
-describe("buildSortKeys", () => {
-  it("appends the PK tiebreaker (asc, non-null)", () => {
-    const sort: KeysetSortRule[] = [{ fieldId: "createdAt", direction: "desc" }];
-    const keys = buildSortKeys(sort, map, tiebreaker);
-    expect(keys.map((k) => k.fieldId)).toEqual(["createdAt", "id"]);
-    expect(keys[1]).toMatchObject({ fieldId: "id", dir: "asc", nullable: false });
-  });
-
-  it("skips unmapped sort fields", () => {
-    const sort: KeysetSortRule[] = [
-      { fieldId: "ghost", direction: "asc" },
-      { fieldId: "title", direction: "asc" },
-    ];
-    expect(buildSortKeys(sort, map, tiebreaker).map((k) => k.fieldId)).toEqual([
-      "title",
-      "id",
-    ]);
-  });
-
-  it("does not double-append when sort already targets the PK", () => {
-    const sort: KeysetSortRule[] = [{ fieldId: "id", direction: "desc" }];
-    const keys = buildSortKeys(
-      sort,
-      { ...map, id: { col: t.id } },
-      tiebreaker,
-    );
-    expect(keys.map((k) => k.fieldId)).toEqual(["id"]);
-    expect(keys[0]!.dir).toBe("desc");
-  });
-
-  it("carries the nullable flag from the binding", () => {
-    const keys = buildSortKeys(
-      [{ fieldId: "endedAt", direction: "desc" }],
-      map,
-      tiebreaker,
-    );
-    expect(keys[0]).toMatchObject({ fieldId: "endedAt", nullable: true });
-  });
-});
+/** The declared keys, then the pk tiebreaker (asc, non-null) every compiler appends. */
+function keysOf(
+  rules: readonly (readonly [keyof typeof cols, "asc" | "desc"])[],
+): SortKey[] {
+  return [
+    ...rules.map(([fieldId, dir]) => ({ fieldId, dir, ...cols[fieldId] })),
+    { fieldId: "id", col: t.id, dir: "asc" as const, nullable: false },
+  ];
+}
 
 describe("orderByClauses", () => {
   it("emits explicit NULLS LAST on every key, both directions", () => {
-    const keys = buildSortKeys(
-      [{ fieldId: "endedAt", direction: "desc" }],
-      map,
-      tiebreaker,
-    );
+    const keys = keysOf([["endedAt", "desc"]]);
     const rendered = orderByClauses(keys).map(renderSql);
     expect(rendered).toEqual([
       `"things"."ended_at" DESC NULLS LAST`,
@@ -98,11 +53,7 @@ describe("orderByClauses", () => {
   });
 
   it("asc key renders ASC NULLS LAST", () => {
-    const keys = buildSortKeys(
-      [{ fieldId: "title", direction: "asc" }],
-      map,
-      tiebreaker,
-    );
+    const keys = keysOf([["title", "asc"]]);
     expect(orderByClauses(keys).map(renderSql)).toEqual([
       `"things"."title" ASC NULLS LAST`,
       `"things"."id" ASC NULLS LAST`,
@@ -112,20 +63,12 @@ describe("orderByClauses", () => {
 
 describe("seekPredicate", () => {
   it("returns undefined for the first page (null cursor)", () => {
-    const keys = buildSortKeys(
-      [{ fieldId: "createdAt", direction: "desc" }],
-      map,
-      tiebreaker,
-    );
+    const keys = keysOf([["createdAt", "desc"]]);
     expect(seekPredicate(keys, null)).toBeUndefined();
   });
 
   it("single non-nullable desc key + PK tiebreaker", () => {
-    const keys = buildSortKeys(
-      [{ fieldId: "createdAt", direction: "desc" }],
-      map,
-      tiebreaker,
-    );
+    const keys = keysOf([["createdAt", "desc"]]);
     const d = new Date("2026-01-01T00:00:00.000Z");
     const q = render(seekPredicate(keys, [d, "abc"])!);
     // OR_0: after(createdAt) ; OR_1: eq(createdAt) AND after(id)
@@ -136,11 +79,7 @@ describe("seekPredicate", () => {
   });
 
   it("ascending key uses > and ascending PK uses >", () => {
-    const keys = buildSortKeys(
-      [{ fieldId: "title", direction: "asc" }],
-      map,
-      tiebreaker,
-    );
+    const keys = keysOf([["title", "asc"]]);
     const q = render(seekPredicate(keys, ["m", "id-5"])!);
     expect(q.sql).toBe(
       `("things"."title" > $1 or ("things"."title" = $2 and "things"."id" > $3))`,
@@ -152,11 +91,7 @@ describe("seekPredicate", () => {
   // include the trailing NULL rows in the after-term (NULLS LAST), else the
   // entire null region is skipped at the seam.
   it("nullable desc key with a non-null cursor includes OR IS NULL", () => {
-    const keys = buildSortKeys(
-      [{ fieldId: "endedAt", direction: "desc" }],
-      map,
-      tiebreaker,
-    );
+    const keys = keysOf([["endedAt", "desc"]]);
     const d = new Date("2026-03-03T00:00:00.000Z");
     const q = render(seekPredicate(keys, [d, "abc"])!);
     expect(q.sql).toBe(
@@ -170,11 +105,7 @@ describe("seekPredicate", () => {
   // is dropped; the eq-term becomes `IS NULL` and the seek falls through to the
   // PK tiebreaker only.
   it("nullable key with a NULL cursor value falls through to the PK", () => {
-    const keys = buildSortKeys(
-      [{ fieldId: "endedAt", direction: "desc" }],
-      map,
-      tiebreaker,
-    );
+    const keys = keysOf([["endedAt", "desc"]]);
     const q = render(seekPredicate(keys, [null, "abc"])!);
     // OR_0 (after endedAt) dropped; only OR_1: eq(endedAt IS NULL) AND id > $
     expect(q.sql).toBe(`("things"."ended_at" IS NULL and "things"."id" > $1)`);
@@ -182,42 +113,15 @@ describe("seekPredicate", () => {
   });
 
   it("two-level sort: eq-chain across both keys then PK", () => {
-    const keys = buildSortKeys(
-      [
-        { fieldId: "status", direction: "asc" },
-        { fieldId: "createdAt", direction: "desc" },
-      ],
-      map,
-      tiebreaker,
-    );
+    const keys = keysOf([
+      ["status", "asc"],
+      ["createdAt", "desc"],
+    ]);
     const d = new Date("2026-02-02T00:00:00.000Z");
     const q = render(seekPredicate(keys, ["open", d, "abc"])!);
     expect(q.sql).toBe(
       `("things"."status" > $1 or ("things"."status" = $2 and "things"."created_at" < $3) or ("things"."status" = $4 and "things"."created_at" = $5 and "things"."id" > $6))`,
     );
     expect(q.params).toEqual(["open", "open", d, "open", d, "abc"]);
-  });
-});
-
-describe("keyValuesOf", () => {
-  it("extracts the tuple in key order by fieldId", () => {
-    const keys = buildSortKeys(
-      [{ fieldId: "endedAt", direction: "desc" }],
-      map,
-      tiebreaker,
-    );
-    const d = new Date("2026-04-04T00:00:00.000Z");
-    const row = { endedAt: d, id: "abc", title: "ignored" };
-    expect(keyValuesOf(row, keys)).toEqual([d, "abc"]);
-  });
-
-  it("honors an explicit fieldId override list", () => {
-    const keys = buildSortKeys(
-      [{ fieldId: "createdAt", direction: "desc" }],
-      map,
-      tiebreaker,
-    );
-    const row = { ts: 1, pk: "z" };
-    expect(keyValuesOf(row, keys, ["ts", "pk"])).toEqual([1, "z"]);
   });
 });

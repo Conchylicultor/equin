@@ -6,12 +6,12 @@ import {
   type RenderSlot,
 } from "@plugins/primitives/plugins/slot-render/web";
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
+import type { DataViewId, FieldDef, SurfaceCustomColumns } from "../../core";
 import type {
-  DataViewId,
-  FieldDef,
   FieldExtensionProps,
   FieldExtensionsDescriptor,
-} from "../../core";
+} from "./field-extension-types";
+import { stampExtensionRead } from "./field-read";
 
 export interface FieldExtensionContribution<TRow> {
   id: string;
@@ -87,8 +87,8 @@ export function CollectFieldExtensions(props: {
    *  `render`, so a contributor can key its per-row data over the surface. */
   storageKey: DataViewId;
   rowKey: (row: unknown, index: number) => string;
-  /** See `FieldExtensionProps.liveColumnScope`. */
-  liveColumnScope: string | null;
+  /** See `FieldExtensionProps.liveColumns`. */
+  liveColumns: SurfaceCustomColumns;
   /**
    * Checks one contributor's fields against the surface's data origin, and
    * throws on a bad one. Run INSIDE the contributor's `render(fields)` — so
@@ -97,14 +97,13 @@ export function CollectFieldExtensions(props: {
   validate: Validate;
   children: (fields: FieldDef<unknown>[]) => ReactNode;
 }): ReactNode {
-  const { sources, base, storageKey, rowKey, liveColumnScope, validate } =
-    props;
+  const { sources, base, storageKey, rowKey, liveColumns, validate } = props;
   return (
     <FieldExtensionSourceStep
       sources={sources}
       index={0}
       acc={base}
-      surface={{ storageKey, rowKey, liveColumnScope }}
+      surface={{ storageKey, rowKey, liveColumns }}
       validate={validate}
       emit={props.children}
     />
@@ -257,9 +256,14 @@ function FieldExtensionStep(props: {
   );
   const renderProps: FieldExtensionProps<unknown> = {
     ...surface,
-    render: (fields) => {
+    render: (contributed) => {
       // Called during the contributor's own render, so a throw here is caught
-      // by ITS error boundary (the `renderIsolated` below) and names it.
+      // by ITS error boundary (the `renderIsolated` below) and names it. The
+      // read is stamped HERE, never by the contributor (`stampExtensionRead`).
+      const fields =
+        contributed === null
+          ? NO_FIELDS
+          : stampExtensionRead(contributed.fields, contributed.values);
       validate(
         fields,
         `${contribution.id}${
@@ -283,3 +287,5 @@ function FieldExtensionStep(props: {
     renderProps,
   );
 }
+
+const NO_FIELDS: FieldDef<unknown>[] = [];

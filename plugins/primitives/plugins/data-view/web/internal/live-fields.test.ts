@@ -6,6 +6,7 @@
  * Run: `./equin test plugins/primitives/plugins/data-view`.
  */
 
+import type { DataViewId } from "../../core";
 import { describe, expect, test } from "bun:test";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
@@ -24,7 +25,7 @@ import { type FieldDef, type FilterOperatorSet } from "../../core";
 import { liveDataSource } from "./live-data-source";
 import {
   checkFieldColumns,
-  liveColumnScopeOf,
+  surfaceCustomColumnsOf,
   resolveLiveFields,
 } from "./live-fields";
 
@@ -88,7 +89,10 @@ const resolveOperatorSet = (type: string) =>
 describe("resolveLiveFields", () => {
   test("offers fields bound to declared columns, lowering each to its column", () => {
     const c = threads();
-    const source = liveDataSource(c, { searchable: ["subject"] });
+    const source = liveDataSource(c, {
+      searchable: ["subject"],
+      ...TEST_SURFACE,
+    });
     const fields: FieldDef<Thread>[] = [
       {
         id: "subject",
@@ -143,7 +147,7 @@ describe("resolveLiveFields", () => {
 
   test("a field MARKED sortable over a column that does not sort throws", () => {
     const c = threads();
-    const source = liveDataSource(c, { searchable: [] });
+    const source = liveDataSource(c, { searchable: [], ...TEST_SURFACE });
     expect(() =>
       resolveLiveFields(
         [
@@ -164,7 +168,7 @@ describe("resolveLiveFields", () => {
 
   test("a filterable field whose operator set lowers over another domain throws", () => {
     const c = threads();
-    const source = liveDataSource(c, { searchable: [] });
+    const source = liveDataSource(c, { searchable: [], ...TEST_SURFACE });
     expect(() =>
       resolveLiveFields(
         [
@@ -185,7 +189,7 @@ describe("resolveLiveFields", () => {
   test("a ref naming another collection throws — it is not this source's column", () => {
     const a = threads();
     const b = threads();
-    const source = liveDataSource(a, { searchable: [] });
+    const source = liveDataSource(a, { searchable: [], ...TEST_SURFACE });
     expect(() =>
       resolveLiveFields(
         [
@@ -208,7 +212,10 @@ describe("resolveLiveFields", () => {
 
   test("a field over a column the source's scope constrains is not offered to Filter, but still sorts", () => {
     const c = threads();
-    const source = liveDataSource(c, { searchable: [] }).scoped({
+    const source = liveDataSource(c, {
+      searchable: [],
+      ...TEST_SURFACE,
+    }).scoped({
       where: { subject: "acct" },
     });
     const fields: FieldDef<Thread>[] = [
@@ -277,7 +284,10 @@ describe("checkFieldColumns", () => {
 describe("liveDataSource", () => {
   test("scoped ANDs a canonical base filter, validated by the collection's codec", () => {
     const c = threads();
-    const source = liveDataSource(c, { searchable: ["subject"] });
+    const source = liveDataSource(c, {
+      searchable: ["subject"],
+      ...TEST_SURFACE,
+    });
     expect(source.scope).toEqual({ kind: "all" });
     const inbox = source.scoped({ where: { labelIds: { hasAny: ["INBOX"] } } });
     expect(inbox.scope).toEqual({
@@ -299,7 +309,10 @@ describe("liveDataSource", () => {
 
   test("awaitingScope names the columns the coming scope constrains — kept out of Filter already", () => {
     const c = threads();
-    const source = liveDataSource(c, { searchable: ["subject"] });
+    const source = liveDataSource(c, {
+      searchable: ["subject"],
+      ...TEST_SURFACE,
+    });
     expect(source.awaitingScope(["unread"]).scope).toEqual({
       kind: "awaiting",
       columns: ["unread"],
@@ -317,7 +330,7 @@ describe("liveDataSource", () => {
   test("searchable must name declared text columns", () => {
     const c = threads();
     expect(() =>
-      liveDataSource(c, { searchable: ["unread" as never] }),
+      liveDataSource(c, { searchable: ["unread" as never], ...TEST_SURFACE }),
     ).toThrow(/searchable column "unread" must be a declared text column/);
   });
 });
@@ -339,7 +352,10 @@ describe("resolveLiveFields — exposed columns", () => {
       maxLimit: 30,
       from: threadsRef,
     });
-    const source = liveDataSource(c, { searchable: ["subject"] });
+    const source = liveDataSource(c, {
+      searchable: ["subject"],
+      ...TEST_SURFACE,
+    });
     const fields: FieldDef<WithContributedColumns<Thread>>[] = [
       {
         id: "opens",
@@ -389,7 +405,10 @@ describe("scoped columns (a surface's custom columns)", () => {
 
   test("a member of the collection's scope sorts and filters under its wire name, and its set is handed to the codec", () => {
     const c = scopedThreads();
-    const source = liveDataSource(c, { searchable: ["subject"] });
+    const source = liveDataSource(c, {
+      searchable: ["subject"],
+      surface: SCOPED,
+    });
     const set = custom("test.surface");
     const plan = resolveLiveFields(
       [
@@ -414,7 +433,10 @@ describe("scoped columns (a surface's custom columns)", () => {
   });
 
   test("a member of another scope throws where it is declared", () => {
-    const source = liveDataSource(scopedThreads(), { searchable: [] });
+    const source = liveDataSource(scopedThreads(), {
+      searchable: [],
+      surface: SCOPED,
+    });
     expect(() =>
       resolveLiveFields(
         [ccField("cc-1", "int", custom("elsewhere").column("cc-1"))],
@@ -426,7 +448,10 @@ describe("scoped columns (a surface's custom columns)", () => {
   });
 
   test("a collection with no column scope takes no scoped member", () => {
-    const source = liveDataSource(threads(), { searchable: [] });
+    const source = liveDataSource(threads(), {
+      searchable: [],
+      ...TEST_SURFACE,
+    });
     expect(() =>
       resolveLiveFields(
         [ccField("cc-1", "int", custom("test.surface").column("cc-1"))],
@@ -438,7 +463,10 @@ describe("scoped columns (a surface's custom columns)", () => {
   });
 
   test("a scoped member's domain must be its field's operator set's", () => {
-    const source = liveDataSource(scopedThreads(), { searchable: [] });
+    const source = liveDataSource(scopedThreads(), {
+      searchable: [],
+      surface: SCOPED,
+    });
     expect(() =>
       resolveLiveFields(
         [ccField("cc-1", "text", custom("test.surface").column("cc-1"))],
@@ -449,15 +477,59 @@ describe("scoped columns (a surface's custom columns)", () => {
     ).toThrow(/filters over text/);
   });
 
-  test("the surface listing a scoped collection must BE its scope (asserted at mount)", () => {
-    const source = liveDataSource(scopedThreads(), { searchable: [] });
-    expect(liveColumnScopeOf(source, "test.surface")).toBe("test.surface");
-    expect(() => liveColumnScopeOf(source, "another.surface")).toThrow(
-      /whose column scope is "test.surface"/,
+  test("a live source is listed on the surface it names (asserted at mount)", () => {
+    const source = liveDataSource(scopedThreads(), {
+      searchable: [],
+      surface: SCOPED,
+    });
+    expect(surfaceCustomColumnsOf(source, "test.surface")).toEqual({
+      kind: "scoped",
+      scope: "test.surface",
+    });
+    expect(() => surfaceCustomColumnsOf(source, "another.surface")).toThrow(
+      /lists a source declared for "test.surface"/,
     );
     expect(
-      liveColumnScopeOf(liveDataSource(threads(), { searchable: [] }), "x"),
-    ).toBeNull();
-    expect(liveColumnScopeOf(undefined, "x")).toBeNull();
+      surfaceCustomColumnsOf(
+        liveDataSource(threads(), { searchable: [], ...TEST_SURFACE }),
+        "x",
+      ),
+    ).toEqual({ kind: "unscoped", reason: "a test surface" });
+    expect(surfaceCustomColumnsOf(undefined, "x")).toEqual({
+      kind: "in-memory",
+    });
+  });
+
+  test("a scoped collection is bound to its surface; one without a scope says why (tsc + at declaration)", () => {
+    expect(() =>
+      liveDataSource(scopedThreads(), {
+        searchable: [],
+        // @ts-expect-error — the collection's column scope is "test.surface".
+        surface: "x" as DataViewId<"x">,
+      }),
+    ).toThrow(/column scope/);
+    expect(() =>
+      liveDataSource(scopedThreads(), {
+        searchable: [],
+        surface: "x" as DataViewId<"test.surface">,
+      }),
+    ).toThrow(/its column scope is "test.surface", but it is listed on "x"/);
+    expect(() =>
+      // @ts-expect-error — no column scope: the opt-out must be stated.
+      liveDataSource(threads(), { searchable: [], surface: "x" as DataViewId }),
+    ).toThrow(/say why/);
+    expect(() =>
+      liveDataSource(threads(), {
+        searchable: [],
+        surface: "x" as DataViewId,
+        unscoped: { reason: " " },
+      }),
+    ).toThrow(/say why/);
   });
 });
+
+const TEST_SURFACE = {
+  surface: "x" as DataViewId,
+  unscoped: { reason: "a test surface" },
+};
+const SCOPED = "test.surface" as DataViewId<"test.surface">;

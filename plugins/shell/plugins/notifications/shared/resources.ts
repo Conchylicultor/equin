@@ -30,6 +30,8 @@ import { NotificationsUnreadSchema } from "./schema";
 // `type` / `variant` are its facets. `audience` is filterable so the bell can
 // read only what reaches the user (`audience-scope.ts`).
 export const notifications = liveCollection("notifications", {
+  // Its list's DataView surface: custom columns sort and filter in SQL.
+  columnScope: "shell.notifications",
   from: notificationsEntityRef,
   pick: [
     "type",

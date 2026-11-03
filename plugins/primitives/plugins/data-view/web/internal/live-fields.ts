@@ -16,6 +16,7 @@ import type {
   FieldGrouping,
   FilterOperatorSet,
   LiveDataSource,
+  SurfaceCustomColumns,
 } from "../../core";
 
 // A live DataView source's field resolution — pure, so the checks run wherever
@@ -116,10 +117,20 @@ export function liveGroupLowering<TRow>(
   return sortable ? { kind: "buckets" } : { kind: "none" };
 }
 
+/**
+ * What field resolution reads of a live source: its collection, search and
+ * scope — not the surface it is listed on (a narrowing lowers a view onto a
+ * read without listing it anywhere).
+ */
+export type LiveFieldsSource<TRow> = Omit<
+  LiveDataSource<TRow>,
+  "surface" | "customColumns"
+>;
+
 /** The collection column a field reads: its declared ref, else a column of the same name, else none. */
 function columnFor<TRow>(
   field: FieldDef<TRow>,
-  source: LiveDataSource<TRow>,
+  source: LiveFieldsSource<TRow>,
 ): FieldColumn | null {
   const c = source.collection;
   if (field.column !== undefined) {
@@ -191,7 +202,7 @@ function columnFor<TRow>(
  */
 export function resolveLiveFields<TRow>(
   fields: readonly FieldDef<TRow>[],
-  source: LiveDataSource<TRow>,
+  source: LiveFieldsSource<TRow>,
   resolveOperatorSet: ResolveOperatorSet,
   who: string,
 ): LiveFieldPlan<TRow> {
@@ -333,22 +344,24 @@ export function namedColumnSets(
 }
 
 /**
- * The column scope a surface's field extensions bind scoped columns under
- * (`FieldExtensionProps.liveColumnScope`): its live collection's
- * `columnScope`, which must BE the surface's `storageKey` — a scope's members
- * are that one surface's definitions, so listing the collection under another
- * id would sort by columns this surface never defined. `null` without a live
- * source, or for a collection that takes no scoped columns.
+ * How a surface's custom columns reach its rows (`FieldExtensionProps.liveColumns`):
+ * in memory (no live source — every field sorts and filters over the loaded
+ * rows), or as its live source states (`LiveDataSource.customColumns`). A
+ * live source is listed on the surface it names: mounted under another
+ * `storageKey` it throws — a scope's members are that one surface's
+ * definitions.
  */
-export function liveColumnScopeOf<TRow>(
+export function surfaceCustomColumnsOf<TRow>(
   source: LiveDataSource<TRow> | undefined,
   storageKey: string,
-): string | null {
-  const scope = source?.collection.columnScope ?? null;
-  if (scope !== null && scope !== storageKey) {
+): SurfaceCustomColumns {
+  if (source === undefined) return IN_MEMORY;
+  if (source.surface !== storageKey) {
     throw new Error(
-      `data-view: "${storageKey}" lists "${source!.collection.key}", whose column scope is "${scope}" — a collection with a column scope is listed on that one surface.`,
+      `data-view: "${storageKey}" lists a source declared for "${source.surface}" (over "${source.collection.key}") — a live source is listed on the surface it names.`,
     );
   }
-  return scope;
+  return source.customColumns;
 }
+
+const IN_MEMORY: SurfaceCustomColumns = { kind: "in-memory" };

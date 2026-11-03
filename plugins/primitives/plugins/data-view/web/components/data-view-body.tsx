@@ -42,6 +42,9 @@ import {
   useInfiniteScroll,
 } from "@plugins/primitives/plugins/cursor-pagination/web";
 import { fieldsReadByView, resolveBodyState } from "../internal/body-state";
+import { unsortableRules } from "../internal/sort-rows";
+import { partitionKnownRows } from "../internal/field-read";
+import { NotKnownRowsTail } from "./not-known-rows-tail";
 import { BodyFallback } from "./body-fallback";
 import { useHeldHeight } from "../internal/use-held-height";
 import {
@@ -63,7 +66,7 @@ import type { UnavailableRule } from "../internal/evaluate-filter";
 import { useCollectionItemActions } from "../internal/collection-item-actions";
 import {
   checkFieldColumns,
-  liveColumnScopeOf,
+  surfaceCustomColumnsOf,
   liveGroupLowering,
   resolveLiveFields,
   type LiveFieldPlan,
@@ -270,9 +273,10 @@ function CollectBodyFields<TRow>(props: {
   const { source, children } = props;
   const live = source.source;
   const resolveOperatorSet = useResolveOperatorSet();
-  // A collection taking scoped columns (custom columns) names the ONE surface
-  // it is listed on — asserted here, at mount.
-  const liveColumnScope = liveColumnScopeOf(live, source.storageKey);
+  // How the surface's custom columns reach the collection, as its live source
+  // states it; the source is listed on the surface it names — asserted here,
+  // at mount.
+  const liveColumns = surfaceCustomColumnsOf(live, source.storageKey);
   // A live source keys rows by its collection's id — the id the runtime keys
   // its deltas by, so the two cannot disagree.
   const rowKey = useMemo(
@@ -337,7 +341,7 @@ function CollectBodyFields<TRow>(props: {
               base={presented}
               storageKey={source.storageKey}
               rowKey={rowKey as (row: unknown, index: number) => string}
-              liveColumnScope={liveColumnScope}
+              liveColumns={liveColumns}
               validate={validate}
             >
               {(folded) => (
@@ -963,9 +967,29 @@ function DataViewBodyInner<TRow>(
   // Live substitution: when a `source` drives this DataView, the SQL already
   // applied sort/filter/search, so feed the loaded pages' rows and neutralize the client pipeline (`useFlatRows` collapses to a pass-through
   // when sort/filter/query are empty). Absent → the in-memory path is untouched.
-  const effectiveRows: readonly unknown[] = origin
-    ? origin.rows
-    : ((rows ?? NO_ROWS) as readonly unknown[]);
+  // A field the view is laid out by (group / sort / filter / fold) whose own
+  // values are pending or failed holds the body too (see `resolveBodyState`).
+  // The fold passed is the one in EFFECT (`fold` above: suspended while a
+  // search is typed, absent in a view without fold lines), not the stored one.
+  const readFields = fieldsReadByView(
+    fields as FieldDef<unknown>[],
+    activeState,
+    fold,
+  );
+  // In memory, a row whose value of such a field is read on its own and not
+  // known yet (`FieldDef.rowState`: its probe has not answered, or failed) is
+  // kept OUT of the layout — it has no bucket, position or match yet — and
+  // drawn in the pending tail under the view, joining the layout the moment
+  // its value lands. So one slow probe holds one row, never the list.
+  const { laidOut, notKnown } = useMemo(
+    () =>
+      partitionKnownRows(
+        origin ? NO_ROWS : ((rows ?? NO_ROWS) as readonly unknown[]),
+        readFields,
+      ),
+    [origin, rows, readFields],
+  );
+  const effectiveRows: readonly unknown[] = origin ? origin.rows : laidOut;
   // The extents of the `extent: true` fields, once per view over its rows
   // (none asked: no row visited).
   const fieldExtents = useFieldExtents(
@@ -987,15 +1011,6 @@ function DataViewBodyInner<TRow>(
   // What renders in place of the view, if anything: server error > failed
   // read > failed field > loading > pending field > the view (see
   // `resolveBodyState`).
-  // A field the view is laid out by (group / sort / filter / fold) whose own
-  // values are pending or failed holds the body too (see `resolveBodyState`).
-  // The fold passed is the one in EFFECT (`fold` above: suspended while a
-  // search is typed, absent in a view without fold lines), not the stored one.
-  const readFields = fieldsReadByView(
-    fields as FieldDef<unknown>[],
-    activeState,
-    fold,
-  );
   // A rule the in-memory evaluation cannot resolve would be dropped — every
   // row shown (the filter) or nothing folded (the fold IN EFFECT): loading
   // while the deferred tier may still contribute it, the rule error after.
@@ -1009,6 +1024,13 @@ function DataViewBodyInner<TRow>(
         : NO_UNAVAILABLE,
     [origin, activeState.filter, fields, resolveOperatorSet],
   );
+  const sortUnavailable = useMemo(
+    () =>
+      origin == null
+        ? unsortableRules(activeState.sort, fields as FieldDef<unknown>[])
+        : NO_UNSORTABLE,
+    [origin, activeState.sort, fields],
+  );
   const unavailable = useMemo(
     () => ({
       filter: filterUnavailable,
@@ -1016,8 +1038,9 @@ function DataViewBodyInner<TRow>(
         foldKeepFilter.kind === "unavailable"
           ? foldKeepFilter.rules
           : NO_UNAVAILABLE,
+      sort: sortUnavailable,
     }),
-    [filterUnavailable, foldKeepFilter],
+    [filterUnavailable, foldKeepFilter, sortUnavailable],
   );
   // The contributed row order, as the `RowOrderReader` beside the surface
   // last reported it — only ever for the active view, and only while the fold
@@ -1607,6 +1630,7 @@ function DataViewBodyInner<TRow>(
                           placeholders={flatPlaceholders.after}
                         />
                       ) : null}
+                      <NotKnownRowsTail rows={notKnown} />
                     </>
                   )}
                 </PlaceholderHeightContext.Provider>
@@ -1851,6 +1875,7 @@ function isSectionCollapsed(
 }
 const NO_QUERY = { query: "", filter: null };
 const NO_UNAVAILABLE: readonly UnavailableRule[] = [];
+const NO_UNSORTABLE: readonly string[] = [];
 // Every row of a read with no `isPaged` is the read's.
 const ALL_ROWS = (): boolean => true;
 const NOOP = () => {};

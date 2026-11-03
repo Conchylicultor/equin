@@ -5,10 +5,7 @@ import {
   useOpenPane,
   defineRoute,
 } from "@plugins/primitives/plugins/pane/web";
-import {
-  DataView,
-  defineDataView,
-} from "@plugins/primitives/plugins/data-view/web";
+import { DataView } from "@plugins/primitives/plugins/data-view/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { GmailAccessEmptyState } from "@plugins/integrations/plugins/gmail/web";
@@ -19,14 +16,12 @@ import {
   mailAccountIdKind,
 } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 import type { MailThreadRow } from "../core";
-import { mailThreadsSource } from "./internal/source";
+import { MAIL_THREADS_VIEW, mailThreadsSource } from "./internal/source";
 import {
   THREAD_EXTRA_FIELDS,
   THREAD_PLACE,
   threadRowTone,
 } from "./internal/thread-surface";
-
-const MAIL_THREADS_VIEW = defineDataView("mail-threads");
 
 /**
  * The one mail surface: ONE url, ONE DataView, the mailboxes as its TABS.

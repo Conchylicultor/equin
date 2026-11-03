@@ -70,10 +70,13 @@ export { visibleSections } from "./internal/nested-sections";
 
 export type {
   LiveDataSource,
+  LiveCustomColumns,
   LiveDataSourceOf,
   LiveFacetColumn,
   LiveSearchableColumn,
   LiveSourceScope,
+  LiveSurfaceBinding,
+  SurfaceCustomColumns,
 } from "./internal/live-data-source";
 
 export {
@@ -98,6 +101,7 @@ export type {
   ValueCodec,
   ColumnConfigProps,
   ColumnConfigDerive,
+  ColumnConfigDerivation,
   FieldDef,
   FieldOption,
   FieldOptionsResult,
@@ -173,8 +177,6 @@ export type {
   ItemActionsDescriptor,
   ItemActionZone,
   CoverContent,
-  FieldExtensionProps,
-  FieldExtensionsDescriptor,
 } from "./internal/types";
 
 export { presetIdKind, filterNodeIdKind } from "./internal/id-kinds";

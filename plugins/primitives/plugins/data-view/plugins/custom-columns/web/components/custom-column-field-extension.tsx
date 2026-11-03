@@ -3,9 +3,11 @@ import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import type { FieldsRecord } from "@plugins/fields/core";
 import { resolveTypeChain } from "@plugins/fields/core";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { mapResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   getDataViewDescriptor,
+  type ExtensionField,
+  type FieldExtensionProps,
   useResolveValueCodec,
   useResolveOperatorSet,
   useResolveColumnDerive,
@@ -13,8 +15,7 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import type {
   DataViewId,
-  FieldDef,
-  FieldExtensionProps,
+  FieldValue,
 } from "@plugins/primitives/plugins/data-view/core";
 import { scopedLiveColumns } from "@plugins/network/plugins/live/core";
 import { CUSTOM_COLUMNS_SET } from "../../core";
@@ -38,7 +39,7 @@ import {
 export function CustomColumnFieldExtension({
   storageKey,
   rowKey,
-  liveColumnScope,
+  liveColumns,
   render,
 }: FieldExtensionProps<unknown>): ReactNode {
   const descriptor = getDataViewDescriptor(storageKey);
@@ -46,13 +47,13 @@ export function CustomColumnFieldExtension({
   // the old host's `descriptor != null` gate. `storageKey` is stable per surface,
   // so this branch is hook-order-stable (the `Inner` hooks never conditionally
   // appear/disappear within one surface).
-  if (!descriptor) return <>{render([])}</>;
+  if (!descriptor) return <>{render(null)}</>;
   return (
     <Inner
       descriptor={descriptor}
       storageKey={storageKey}
       rowKey={rowKey}
-      liveColumnScope={liveColumnScope}
+      liveColumns={liveColumns}
       render={render}
     />
   );
@@ -60,7 +61,10 @@ export function CustomColumnFieldExtension({
 
 /**
  * The bridge body (formerly the host's `useCustomColumnFields`): read defs +
- * values, map each `CustomColumnDef` → `FieldDef<unknown>`, and emit via `render`.
+ * values, map each `CustomColumnDef` → an `ExtensionField`, and hand the fields
+ * with their values as ONE read through `render` — the host stamps `value` and
+ * the read's state (`pending` while the values load, the failure with Retry),
+ * so a cell never reads as unset while its value is not known yet.
  *
  * `rowKey` is captured via `useLatestRef` to decouple from the consumer's inline
  * arrow identity (re-created every render), so the produced fields stay
@@ -72,14 +76,14 @@ function Inner({
   descriptor,
   storageKey,
   rowKey,
-  liveColumnScope,
+  liveColumns,
   render,
 }: {
   descriptor: ConfigDescriptor<FieldsRecord>;
   storageKey: DataViewId;
   rowKey: (row: unknown, index: number) => string;
-  liveColumnScope: string | null;
-  render: (fields: FieldDef<unknown>[]) => ReactNode;
+  liveColumns: FieldExtensionProps<unknown>["liveColumns"];
+  render: FieldExtensionProps<unknown>["render"];
 }): ReactNode {
   const { defs } = useCustomColumnDefs(descriptor, storageKey);
   const values = useCustomColumnValues(storageKey);
@@ -89,20 +93,6 @@ function Inner({
   const resolveOps = useResolveOperatorSet();
   const deriveFromConfig = useResolveColumnDerive();
   const identities = useFieldIdentities();
-
-  // A failed values read with nothing held: stamped onto every custom field so
-  // its cells render the failure (with Retry) rather than read as unset. A
-  // failure over a held value keeps painting that value (live-state reports it).
-  const readError = useMemo(
-    () =>
-      foldResource(values, {
-        loading: () => undefined,
-        error: (error, stale) =>
-          stale === undefined ? { error, refetch: values.refetch } : undefined,
-        ready: () => undefined,
-      }),
-    [values],
-  );
 
   const fields = useMemo(() => {
     // Capability-derived flags — NO type-name literals. A type is filterable
@@ -129,11 +119,14 @@ function Inner({
     // columns, each column sorts and filters server-side as a member of the
     // `custom` set (`custom.<id>`), declared as the definitions stand now; the
     // server decodes it against ITS definitions.
+    // Under one that cannot take them (`unscoped`, with its stated reason),
+    // they show and edit, and neither sort nor filter — the rows are the
+    // server's, and the server has no column for them.
     const scoped =
-      liveColumnScope === null
+      liveColumns.kind !== "scoped"
         ? null
         : scopedLiveColumns(
-            liveColumnScope,
+            liveColumns.scope,
             CUSTOM_COLUMNS_SET,
             Object.fromEntries(
               [...capabilities].filter(
@@ -141,12 +134,12 @@ function Inner({
               ),
             ),
           );
-    return defs.map((def): FieldDef<unknown> => {
-      // Native↔text codec round-trips the typed cell value through the generic
-      // `TEXT` storage column; string types (text/enum) resolve IDENTITY_CODEC.
+    return defs.map((def): ExtensionField<unknown> => {
       const codec = resolveCodec(def.type);
-      const { domain, sortable } = capabilities.get(def.id)!;
-      const filterable = domain !== null;
+      const capability = capabilities.get(def.id)!;
+      const serverless = liveColumns.kind === "unscoped";
+      const sortable = !serverless && capability.sortable;
+      const filterable = !serverless && capability.domain !== null;
       return {
         // The type's own projection of its opaque config onto GENERIC FieldDef
         // keys (enum's `config.options` → `options`), so downstream consumers
@@ -158,23 +151,6 @@ function Inner({
         // NOT a literal — the field-type registry is the extension seam; the
         // type is dispatched through the generic cell/editor/filter slots.
         type: def.type,
-        // While the values are still loading a cell reads as unset (the
-        // codec's decode of `undefined`) — deliberately: abstaining (no
-        // fields) would drop the columns and leave a view's filter rule on
-        // one dangling, which `lowerFilterGroup` lowers to TRUE (every row).
-        // Same choice, same reason, as the pages `starred` field. A failed
-        // read keeps the last values seen; with none, `readError` below makes
-        // every cell show the failure instead.
-        value: (row) => {
-          const index = foldResource(values, {
-            loading: () => undefined,
-            error: (_error, stale) => stale,
-            ready: (data) => data,
-          });
-          return codec.decode(
-            index?.get(rowKeyRef.current(row, 0))?.get(def.id),
-          );
-        },
         onEdit: (row, next) =>
           setValue({
             dataViewId: storageKey,
@@ -190,13 +166,10 @@ function Inner({
         ...(scoped !== null && (filterable || sortable)
           ? { column: scoped.column(def.id) }
           : {}),
-        ...(readError === undefined ? {} : { readError }),
       };
     });
   }, [
     defs,
-    values,
-    readError,
     setValue,
     storageKey,
     rowKeyRef,
@@ -204,8 +177,31 @@ function Inner({
     resolveOps,
     deriveFromConfig,
     identities,
-    liveColumnScope,
+    liveColumns,
   ]);
 
-  return <>{render(fields)}</>;
+  // Each column's value per row, as the ONE values read: while it loads every
+  // column is pending (kept, so a view's filter rule on one is not left
+  // dangling), a failure over held values keeps painting them.
+  const read = useMemo(
+    () =>
+      mapResource(values, (index) =>
+        Object.fromEntries(
+          defs.map((def) => {
+            // Native↔text codec round-trips the typed cell value through the
+            // generic `TEXT` storage column; string types (text/enum) resolve
+            // IDENTITY_CODEC.
+            const codec = resolveCodec(def.type);
+            return [
+              def.id,
+              (row: unknown): FieldValue =>
+                codec.decode(index.get(rowKeyRef.current(row, 0))?.get(def.id)),
+            ];
+          }),
+        ),
+      ),
+    [values, defs, resolveCodec, rowKeyRef],
+  );
+
+  return <>{render({ fields, values: read })}</>;
 }

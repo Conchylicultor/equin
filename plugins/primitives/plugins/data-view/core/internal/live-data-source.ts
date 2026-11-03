@@ -6,6 +6,7 @@ import type {
   LiveCollection,
   LiveWhere,
 } from "@plugins/network/plugins/live/core";
+import type { DataViewId } from "./define-data-view";
 
 // A DataView's LIVE data origin: a `network/live` collection's window, read
 // as key-range pages (`useLive`), the pages near the rows on screen live. The view's sort, filter, search and group-by lower onto
@@ -60,7 +61,39 @@ export interface LiveDataSource<TRow> {
    */
   readonly facets: readonly string[];
   readonly scope: LiveSourceScope;
+  /** The DataView surface this source is listed on (`defineDataView`) — the `storageKey` it mounts under. */
+  readonly surface: DataViewId;
+  /** How the surface's custom columns reach the collection (see {@link LiveCustomColumns}). */
+  readonly customColumns: LiveCustomColumns;
 }
+
+/**
+ * How a live surface's custom columns (user-defined fields) reach its
+ * collection — stated by every live source, never a silent fallback:
+ *
+ * - `scoped` — the collection's `columnScope` IS the surface: each custom
+ *   column joins the window as a scoped column, sorting and filtering in SQL;
+ * - `unscoped` — the collection cannot take the surface's scoped columns, for
+ *   the written `reason` (served outside Postgres, shared by several
+ *   surfaces): custom columns show and edit, and do not sort or filter.
+ */
+export type LiveCustomColumns =
+  | { readonly kind: "scoped"; readonly scope: string }
+  | { readonly kind: "unscoped"; readonly reason: string };
+
+/** How a surface's custom columns reach its rows: in memory, or as its live source states. */
+export type SurfaceCustomColumns =
+  LiveCustomColumns | { readonly kind: "in-memory" };
+
+/**
+ * What a live source states about its surface, from its collection's literal
+ * `columnScope` (`Cs`): a scoped collection is bound to THAT surface
+ * (`DataViewId<Cs>` — another surface's id is a tsc error); one without a
+ * scope names its surface and says why it takes no custom columns.
+ */
+export type LiveSurfaceBinding<Cs extends string | null> = [Cs] extends [string]
+  ? { surface: DataViewId<Cs>; unscoped?: never }
+  : { surface: DataViewId; unscoped: { reason: string } };
 
 /** A live source typed to its collection's filterable columns — what `scoped` narrows by. */
 export interface LiveDataSourceOf<TRow, F> extends LiveDataSource<TRow> {

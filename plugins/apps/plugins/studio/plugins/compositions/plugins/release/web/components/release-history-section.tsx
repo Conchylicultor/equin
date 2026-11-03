@@ -23,6 +23,7 @@ const RELEASE_HISTORY_VIEW = defineDataView("studio.release.history");
 // The live source: this namespace's release runs, scoped per composition by the
 // pane. The search box matches these text columns (any of).
 const releaseHistorySource = liveDataSource(releaseHistory, {
+  surface: RELEASE_HISTORY_VIEW,
   searchable: ["composition", "target", "platform"],
 });
 

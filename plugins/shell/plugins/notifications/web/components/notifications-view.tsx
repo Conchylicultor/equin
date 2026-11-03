@@ -39,6 +39,7 @@ const NOTIFICATIONS_VIEW = defineDataView("shell.notifications");
 // only in old rows is still offered. `category` is NOT a facet: it is a closed
 // list whose options (with their labels) the entity field declares.
 export const notificationsSource = liveDataSource(notifications, {
+  surface: NOTIFICATIONS_VIEW,
   searchable: ["title"],
   facets: ["type", "variant"],
 });

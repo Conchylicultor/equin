@@ -19057,6 +19057,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `history-actions` "close" → `CloseConvAction`
                 - Uses:
                   - `conversations/conversations-view/data-view.ConversationSidebarProps`
+                  - `conversations/conversations-view/data-view.SIDEBAR_VIEW`
                   - `conversations/conversations-view/data-view.SidebarConversationItem`
                   - `conversations/conversations-view/data-view.SidebarSources`
                   - `primitives/data-view.defineItemActions`
@@ -34980,6 +34981,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveColumnFilter`
           - `LiveColumnRef`
           - `LiveColumnRefOwner`
+          - `LiveColumnScopeOf`
           - `LiveColumnsDeclaration`
           - `LiveColumnsOwner`
           - `LiveCountCodec`
@@ -35075,6 +35077,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `NotCollectionRow`
           - `PagedChanges`
           - `RequireLabel`
+          - `RowFieldState`
           - `RowKind`
           - `ScopedColumnMember`
           - `ServedExternalAll`
@@ -35110,6 +35113,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `followsOf`
           - `followSubjectOf`
           - `isPointId`
+          - `isRowUnknown`
           - `LIVE_COLUMNS_KEY`
           - `LIVE_QUERY_MAX_BYTES`
           - `LIVE_ROW_KEY`
@@ -35119,7 +35123,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `liveArm`
           - `liveCollection`
           - `liveValue`
+          - `rowFailed`
           - `rowKind`
+          - `rowPending`
+          - `RowUnknown`
           - `scopedLiveColumns`
           - `serveCollectionOn`
           - `serveValueOn`
@@ -42619,10 +42626,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewViewEdits`
           - `DataViewViewportSink`
           - `DropTargetProps`
+          - `ExtensionField`
           - `FieldCellProps`
           - `FieldDef`
           - `FieldExtensionContribution`
           - `FieldExtensionProps`
+          - `FieldExtensionYield`
           - `FieldGrouping`
           - `FieldGroupingSet`
           - `FieldOption`
@@ -42813,6 +42822,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ids.IdOf`
         - Exports (types):
           - `CellEditorProps`
+          - `ColumnConfigDerivation`
           - `ColumnConfigDerive`
           - `ColumnConfigProps`
           - `CoverContent`
@@ -42852,8 +42862,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewViewportSink`
           - `DataViewVisibleRows`
           - `FieldDef`
-          - `FieldExtensionProps`
-          - `FieldExtensionsDescriptor`
           - `FieldGrouping`
           - `FieldGroupingSet`
           - `FieldOption`
@@ -42892,11 +42900,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ItemActionsDescriptor`
           - `ItemActionTarget`
           - `ItemActionZone`
+          - `LiveCustomColumns`
           - `LiveDataSource`
           - `LiveDataSourceOf`
           - `LiveFacetColumn`
           - `LiveSearchableColumn`
           - `LiveSourceScope`
+          - `LiveSurfaceBinding`
           - `ManualOrderConfig`
           - `Nesting`
           - `PlacementMatch`
@@ -42922,6 +42932,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SortPreset`
           - `SortRule`
           - `SubItemsKind`
+          - `SurfaceCustomColumns`
           - `TableCellProps`
           - `ToolbarArrangement`
           - `ToolbarPartForms`
@@ -43040,11 +43051,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `IdKinds.Kind` "cc"
               - `DataViewSlots.FieldExtension` "custom-columns" → `CustomColumnFieldExtension`
               - `DataViewSlots.Setting` "custom-columns" → `CustomColumnsFieldsSetting`
-            - Uses: 22 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/custom-columns/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/custom-columns/REFERENCE.md)
-              - `primitives/data-view` ×9
-              - `primitives/live-state` ×3
+            - Uses: 23 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/custom-columns/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/custom-columns/REFERENCE.md)
+              - `primitives/data-view` ×11
               - `config_v2` ×2
               - `primitives/css/control-panel` ×2
+              - `primitives/live-state` ×2
               - `ids.IdKinds`
               - `infra/endpoints.useEndpointMutation`
               - `network/live.useLive`
@@ -44642,26 +44653,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/markdown-extensions`
           - `infra/claude-cli`
           - `primitives/text-editor/paste-images`
-    - **`keyset`** — Field-agnostic keyset pagination machinery: the sort-rule types (core) and a null-aware keyset seek / at-or-before / order-by compiler over drizzle SQL (server). No data-view dependency, so any server-delegated windowed query can reuse it.
+    - **`keyset`** — Field-agnostic keyset pagination machinery: a null-aware keyset seek / at-or-before / order-by compiler over drizzle SQL, over keys the caller builds from declared columns. No data-view dependency, so any server-delegated windowed query can reuse it.
       - Cross-plugin:
         - Imported by: `infra/query-resource`
       - Server:
         - Exports (types):
           - `ColumnExpr`
-          - `KeysetColumnBinding`
-          - `KeysetColumnMap`
           - `SortKey`
-          - `Tiebreaker`
         - Exports (values):
           - `atOrBeforePredicate`
-          - `buildSortKeys`
-          - `keyValuesOf`
           - `orderByClauses`
           - `seekPredicate`
-      - Core:
-        - Exports (types):
-          - `KeysetSortRule`
-          - `SortDirection`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
         - Imported by: 78 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)

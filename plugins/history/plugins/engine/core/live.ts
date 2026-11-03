@@ -20,6 +20,8 @@ import { VersionWithSnapshotSchema } from "./schemas";
  * dialog's DataView reads it as live key-range pages.
  */
 export const historyVersions = liveCollection("history.versions", {
+  // Its list's DataView surface: custom columns sort and filter in SQL.
+  columnScope: "history.versions",
   from: entityVersionsEntityRef,
   pick: ["label", "createdAt", "author", "sourceId", "entityId"],
   carry: { pick: ["id", "pinned"] },

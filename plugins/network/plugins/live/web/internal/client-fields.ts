@@ -10,6 +10,7 @@ import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type {
   ClientFields as ClientFieldsDecl,
   ClientFieldValue,
+  RowUnknown,
 } from "@plugins/network/plugins/live/core";
 
 // The web half of client fields (`../../core/internal/row-kind.ts`): the
@@ -18,9 +19,16 @@ import type {
 // A resolver is a COMPONENT, not a hook: it is handed the list's rows and may
 // read per row (a probe per deployment) as well as once per surface.
 
-/** Each field's value per row, as a resolver hands them back. */
+/**
+ * Each field's value per row, as a resolver hands them back — or, for a row
+ * read on its own (a probe per row), `rowPending` while that row's answer has
+ * not come and `rowFailed(error, retry)` when it failed. Never a stand-in
+ * value: `null` is a KNOWN empty answer.
+ */
 export type ClientFieldReaders<Row, F extends FieldsRecord> = {
-  readonly [K in keyof F & string]: (row: Row) => ClientFieldValue<F[K]>;
+  readonly [K in keyof F & string]: (
+    row: Row,
+  ) => ClientFieldValue<F[K]> | RowUnknown;
 };
 
 /**

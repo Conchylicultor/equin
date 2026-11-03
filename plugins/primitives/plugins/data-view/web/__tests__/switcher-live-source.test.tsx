@@ -157,7 +157,10 @@ const Sources = defineDataViewSources<Host>();
 
 function mount(c: C, state: ViewState, activeId: string | null = null) {
   currentModel = model(state);
-  const source = liveDataSource(c, { searchable: ["title"] });
+  const source = liveDataSource(c, {
+    searchable: ["title"],
+    surface: STORAGE_KEY,
+  });
   function HistorySource({
     hostProps,
     render: renderBundle,

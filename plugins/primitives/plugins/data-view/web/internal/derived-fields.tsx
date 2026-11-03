@@ -23,6 +23,7 @@ import {
   type StoredFieldPresentation,
 } from "@plugins/network/plugins/live/web";
 import type { FieldsRecord } from "@plugins/fields/core";
+import { foldFieldRead, splitRowReader } from "./field-read";
 import type {
   DataViewRowsCollection,
   FieldDef,
@@ -555,17 +556,17 @@ function ClientValuesLevel(props: {
 }): ReactNode {
   const { reader, values, fields, render } = props;
   const resolved = useMemo(() => {
-    const readers: ClientFieldReaders<unknown, FieldsRecord> | undefined =
-      values.status === "ready"
-        ? values.data
-        : values.status === "error"
-          ? values.stale
-          : undefined;
+    const read =
+      foldFieldRead<ClientFieldReaders<unknown, FieldsRecord>>(values);
     return fields.map((f): FieldDef<unknown> => {
       const entry = reader.resolve.get(f.id);
       if (entry === undefined) return f;
-      const read = readers?.[f.id];
-      const built = entry.build(read === undefined ? () => undefined : read);
+      const own = read.kind === "known" ? read.data[f.id] : undefined;
+      // A per-row answer (`rowPending` / `rowFailed`) is split out once: the
+      // derivation is built over the known values, the row's state stamped
+      // beside them (`FieldDef.rowState`).
+      const split = own === undefined ? undefined : splitRowReader(own);
+      const built = entry.build(split?.value ?? (() => undefined));
       // Replace only what the derivation set (an override's cell stands).
       const next: FieldDef<unknown> = {
         ...f,
@@ -576,12 +577,9 @@ function ClientValuesLevel(props: {
         ...(f.cell === entry.placeholder.cell ? { cell: built.cell } : {}),
         ...(f.token === entry.placeholder.token ? { token: built.token } : {}),
       } as FieldDef<unknown>;
-      if (read !== undefined) return next;
-      return values.status === "error"
-        ? {
-            ...next,
-            readError: { error: values.error, refetch: values.refetch },
-          }
+      if (split !== undefined) return { ...next, rowState: split.rowState };
+      return read.kind === "failed"
+        ? { ...next, readError: read.readError }
         : { ...next, pending: true };
     });
   }, [fields, reader, values]);

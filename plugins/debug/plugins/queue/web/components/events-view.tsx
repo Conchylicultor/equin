@@ -21,6 +21,7 @@ const EVENTS_VIEW = defineDataView("debug.queue.events");
 // The emit() log as a live source. Event names are a facet (a grouping of the
 // whole log); `match` is derived server-side from `matchedCount`.
 const emissionsSource = liveDataSource(eventEmissions, {
+  surface: EVENTS_VIEW,
   searchable: ["eventName"],
   facets: ["eventName"],
 });

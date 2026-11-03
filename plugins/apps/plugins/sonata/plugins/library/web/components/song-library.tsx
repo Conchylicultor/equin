@@ -4,7 +4,6 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   DataView,
-  defineDataView,
   fieldOverrides,
 } from "@plugins/primitives/plugins/data-view/web";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
@@ -17,7 +16,7 @@ import type { Song } from "../../core";
 import { Library } from "../slots";
 import { useSongLink } from "../hooks";
 import { useSourceCreators } from "../internal/use-source-creators";
-import { songLibrarySource } from "../source";
+import { LIBRARY_VIEW, songLibrarySource } from "../source";
 import { formatDuration } from "../format-duration";
 import { NowPlayingBar } from "./now-playing-bar";
 import { SonataOnboarding } from "./onboarding";
@@ -29,8 +28,6 @@ import { SongCover } from "../internal/song-cover";
 const composerIcon = symbol("person");
 const durationIcon = symbol("timer");
 const addedIcon = symbol("calendar-today");
-
-const LIBRARY_VIEW = defineDataView("sonata.library");
 
 /**
  * The Sonata landing surface: the saved-song collection rendered through the

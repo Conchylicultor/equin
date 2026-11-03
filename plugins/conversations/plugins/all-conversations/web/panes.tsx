@@ -28,6 +28,7 @@ const CONVERSATION_PLACE = { updatedAt: "edge" } as const;
  * tick and no refetch of the loaded pages.
  */
 const allConversationsSource = liveDataSource(allConversations, {
+  surface: ALL_CONVERSATIONS_VIEW,
   searchable: CONVERSATION_SEARCHABLE,
 });
 

@@ -31,11 +31,13 @@ import {
  * each a claim about the rows that then reverses.
  *
  * `unavailable`: the rules of the view's filter and of its fold IN EFFECT
- * that name a field or operator that does not resolve, evaluated in memory
- * (the filter only on the in-memory path — a live source lowers its own and
- * reports the same failure as its `error`; the fold on both, since it always
- * runs over the loaded rows). Running without them would show rows the view
- * hides, or fold nothing, so the body never renders the view:
+ * that name a field or operator that does not resolve, and the sort rules
+ * naming a field that does not, evaluated in memory (the filter and the sort
+ * only on the in-memory path — a live source lowers its own and reports the
+ * same failure as its `error`; the fold on both, since it always runs over the
+ * loaded rows). Running without them would show rows the view hides, fold
+ * nothing, or order the rows otherwise than the view says, so the body never
+ * renders the view:
  *
  * - while `deferredComplete` is false it is `loading` — the plugin
  *   contributing the field may still be in the deferred load tier (measured:
@@ -80,6 +82,8 @@ export function resolveBodyState(input: {
   unavailable: {
     filter: readonly UnavailableRule[];
     fold: readonly UnavailableRule[];
+    /** The field ids of the sort rules that do not resolve (`unsortableRules`). */
+    sort: readonly string[];
   };
   deferredComplete: boolean;
 }): BodyState {
@@ -96,7 +100,9 @@ export function resolveBodyState(input: {
   // the one hiding rows), or `pending` while the deferred tier may still
   // contribute the field.
   const local: BodyState | "pending" | null =
-    unavailable.filter.length === 0 && unavailable.fold.length === 0
+    unavailable.filter.length === 0 &&
+    unavailable.fold.length === 0 &&
+    unavailable.sort.length === 0
       ? null
       : !deferredComplete
         ? "pending"
@@ -105,7 +111,9 @@ export function resolveBodyState(input: {
             error:
               unavailable.filter.length > 0
                 ? new UnavailableFilterRuleError(unavailable.filter, "filter")
-                : new UnavailableFilterRuleError(unavailable.fold, "fold"),
+                : unavailable.fold.length > 0
+                  ? new UnavailableFilterRuleError(unavailable.fold, "fold")
+                  : new UnavailableSortRuleError(unavailable.sort),
           };
   const failedField = readFields.find((f) => f.readError !== undefined);
   const fieldFailure: BodyState | null =

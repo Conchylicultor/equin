@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import type { FieldDef, SortRule } from "../../core";
-import { makeSortComparator } from "./sort-rows";
+import { makeSortComparator, unsortableRules } from "./sort-rows";
 
 interface Row {
   id: string;
@@ -220,5 +220,19 @@ describe("makeSortComparator", () => {
       "f-new",
       "f-old",
     ]);
+  });
+});
+
+describe("unsortableRules", () => {
+  it("names the rules whose field is gone or has no value, in rule order", () => {
+    const rules: SortRule[] = [
+      { fieldId: "ghost", direction: "asc" },
+      { fieldId: "num", direction: "desc" },
+      { fieldId: "novalue", direction: "asc" },
+    ];
+    expect(unsortableRules(rules, fields)).toEqual(["ghost", "novalue"]);
+    expect(
+      unsortableRules([{ fieldId: "num", direction: "asc" }], fields),
+    ).toEqual([]);
   });
 });

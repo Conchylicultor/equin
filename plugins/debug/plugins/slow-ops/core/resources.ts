@@ -17,6 +17,8 @@ import {
  * a new slow occurrence reaches an open list without a per-write cascade.
  */
 export const slowOpsList = liveCollection("slow-ops.ops", {
+  // Its list's DataView surface: custom columns sort and filter in SQL.
+  columnScope: "debug.slow-ops.local",
   from: slowOpsEntityRef,
   pick: [
     "operationKind",
@@ -78,6 +80,8 @@ export const slowOpById = liveCollection("slow-ops.op", {
  * by total time and paged. Every caller keeps its own row: nothing is folded.
  */
 export const slowOpCallers = liveCollection("slow-ops.callers", {
+  // Its list's DataView surface: custom columns sort and filter in SQL.
+  columnScope: "debug.slow-op.callers",
   from: slowOpCallersEntityRef,
   pick: [
     "operationKind",

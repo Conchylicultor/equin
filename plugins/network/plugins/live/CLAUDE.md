@@ -631,9 +631,15 @@ export const gitFields = clientFields(fileEntry, "git", {
 // web — resolved once by the declaring plugin
 ClientFields.Resolve({ fields: gitFields, component: GitResolver });
 // GitResolver: ({ rows, render }) => render(read)
-//   read: ResourceResult<{ git: (row) => value | null }>
+//   read: ResourceResult<{ git: (row) => value | null | RowUnknown }>
 <DataView rows={entries} collection={fileEntry} … />;
 ```
+
+- **A row read on its own answers per row**: a reader returns `rowPending`
+  while that row's answer has not come and `rowFailed(error, retry)` when it
+  failed (`core/internal/row-unknown.ts`) — never a stand-in value; `null` is
+  a KNOWN empty answer. data-view draws it "checking" and keeps it out of a
+  layout by the field (data-view CLAUDE.md, *Field extensions*).
 
 - A **row kind** has a collection's `key` / `fields` / `rowKeys`; a DataView's
   in-memory origin takes it as `collection`. Needing server filtering later, it
@@ -691,8 +697,11 @@ SET is data — one DataView's custom columns.
   `customColumnValues` — only sort/filter joins a member.
 - **`recomputeOn(scope)`**: adding/dropping/retyping a column FULLs every
   subscribed tuple once.
-- **Browser**: `scopedLiveColumns(scope, name, members)`. A DataView listing a
-  scoped collection must BE its scope (`storageKey`, asserted at mount).
+- **Browser**: `scopedLiveColumns(scope, name, members)`. The scope stays
+  LITERAL on the collection's type (`LiveColumnScopeOf`), so a live DataView
+  source is bound to it in tsc (`liveDataSource(c, { surface })` — data-view);
+  a collection with none must say why its surface takes no custom columns
+  (`unscoped: { reason }`).
 
 ## Union collections — `arms` / `liveArm`
 
@@ -1354,6 +1363,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LiveColumnFilter`
     - `LiveColumnRef`
     - `LiveColumnRefOwner`
+    - `LiveColumnScopeOf`
     - `LiveColumnsDeclaration`
     - `LiveColumnsOwner`
     - `LiveCountCodec`
@@ -1449,6 +1459,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `NotCollectionRow`
     - `PagedChanges`
     - `RequireLabel`
+    - `RowFieldState`
     - `RowKind`
     - `ScopedColumnMember`
     - `ServedExternalAll`
@@ -1484,6 +1495,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `followsOf`
     - `followSubjectOf`
     - `isPointId`
+    - `isRowUnknown`
     - `LIVE_COLUMNS_KEY`
     - `LIVE_QUERY_MAX_BYTES`
     - `LIVE_ROW_KEY`
@@ -1493,7 +1505,10 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `liveArm`
     - `liveCollection`
     - `liveValue`
+    - `rowFailed`
     - `rowKind`
+    - `rowPending`
+    - `RowUnknown`
     - `scopedLiveColumns`
     - `serveCollectionOn`
     - `serveValueOn`

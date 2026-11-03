@@ -42,6 +42,8 @@ export const errorStoppedConversations = liveCollection(
   "runtime-sdk.error-stopped",
   {
     from: conversationsEntityRef,
+    // Its list's DataView surface: custom columns sort and filter in SQL.
+    columnScope: "runtime-sdk.error-stopped",
     pick: ["title", "status"],
     fields: {
       // Never NULL: the base `where` keeps only rows that hold one (a LEFT

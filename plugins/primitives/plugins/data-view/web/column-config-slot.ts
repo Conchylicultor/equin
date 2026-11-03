@@ -6,7 +6,11 @@ import {
 } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import { resolveTypeChain } from "@plugins/fields/core";
-import type { ColumnConfigDerive, ColumnConfigProps, FieldDef } from "../core";
+import type {
+  ColumnConfigDerivation,
+  ColumnConfigDerive,
+  ColumnConfigProps,
+} from "../core";
 import { useFieldIdentities } from "./internal/use-field-identities";
 
 /**
@@ -73,7 +77,7 @@ export function useResolveColumnConfig(): (
 export function useResolveColumnDerive(): (
   typeId: string,
   config: unknown,
-) => Partial<FieldDef<unknown>> {
+) => ColumnConfigDerivation {
   const identities = useFieldIdentities();
   const lookup = useCompanionLookup(
     ColumnConfig,

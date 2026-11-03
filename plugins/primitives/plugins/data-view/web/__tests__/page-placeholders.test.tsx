@@ -20,6 +20,7 @@
  *   placeholders — every row of the read accounted for.
  */
 
+import type { DataViewId } from "../../core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock(
@@ -286,7 +287,7 @@ function windowOf(params: Record<string, string>) {
 describe("page placeholders — a live source scrolled deep", () => {
   it("the rows drawn stay bounded however deep the read goes; the rest stand as placeholders", async () => {
     const c = items_();
-    const source = liveDataSource(c, { searchable: [] });
+    const source = liveDataSource(c, { searchable: [], ...TEST_SURFACE });
     const view = mount(() => ({ source }));
     const { notifications, queryClient } = view;
     // Every subscribed tuple is answered a tick later, as a sub-ack would.
@@ -358,3 +359,8 @@ describe("page placeholders — a live source scrolled deep", () => {
     );
   }, 60_000);
 });
+
+const TEST_SURFACE = {
+  surface: "test-paged-data-view" as DataViewId,
+  unscoped: { reason: "a test surface" },
+};

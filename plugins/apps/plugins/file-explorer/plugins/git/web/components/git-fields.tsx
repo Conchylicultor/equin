@@ -127,6 +127,18 @@ export function GitFieldsResolver({
         refetch: () => Promise.resolve(),
       };
     }
+    // A row's path is resolved against the home dir: until it is known the
+    // fields are pending too — never a badge-less (clean-looking) row.
+    if (homeDir.kind === "pending") {
+      return { status: "loading", refetch: () => Promise.resolve() };
+    }
+    if (homeDir.kind === "failed") {
+      return {
+        status: "error",
+        error: homeDir.error,
+        refetch: homeDir.refetch,
+      };
+    }
     return {
       status: "ready",
       data: {
@@ -135,7 +147,7 @@ export function GitFieldsResolver({
       },
       refetch: () => Promise.resolve(),
     };
-  }, [view, home]);
+  }, [view, homeDir, home]);
 
   return <>{render(values)}</>;
 }

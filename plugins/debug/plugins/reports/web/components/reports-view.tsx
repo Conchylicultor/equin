@@ -27,6 +27,7 @@ const REPORTS_VIEW = defineDataView("debug.reports");
 // whole table (not the loaded rows), value-sorted, so a new kind appears in its
 // alphabetical place.
 const reportsSource = liveDataSource(reportsList, {
+  surface: REPORTS_VIEW,
   searchable: REPORTS_SEARCHABLE,
   facets: ["kind", "source"],
 });

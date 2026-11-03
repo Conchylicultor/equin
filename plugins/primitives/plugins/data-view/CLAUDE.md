@@ -1594,9 +1594,24 @@ also buys sort, filter, a column).
 interface FieldExtensionProps<TRow> {
   storageKey: DataViewId;
   rowKey: (row: TRow, index: number) => string;
-  render: (fields: FieldDef<TRow>[]) => ReactNode;
+  liveColumns: SurfaceCustomColumns; // in-memory | scoped | unscoped (+ reason)
+  render: (contributed: FieldExtensionYield<TRow> | null) => ReactNode;
+}
+interface FieldExtensionYield<TRow> {
+  fields: ExtensionField<TRow>[]; // no value / values / pending / readError / rowState (tsc)
+  values: ResourceResult<Record<string, (row: TRow) => FieldValue>>; // ONE read
 }
 ```
+
+**A contributor hands a read, never finished fields.** The host
+(`stampExtensionRead`, `web/internal/field-read.ts`) stamps each field's
+`value` and its read state from `values` — `pending` while it loads with
+nothing held, `readError` once failed with nothing held, the held values on a
+failure over them — so a column never reads "unset" while its values load.
+Authoring `value` / `pending` on an `ExtensionField` is a tsc error; a reader
+for an undeclared id, or a field without one, throws inside the contributor's
+boundary. A type's config derivation (`ColumnConfigDerivation`) can spell
+vocabulary only, never values.
 
 **Derived fields come before the fold, with no contributor.** A list over a
 collection declared by fields (`liveCollection({ from, pick, fields })`,
@@ -1629,6 +1644,18 @@ order:
     throw.
   - Only a live source binds exposed/arm `column`s (exposed groupable columns
     group as server sections).
+
+**A row read on its own: `rowState`, never a stand-in value.** A client-field
+reader may answer one row with `rowPending` / `rowFailed(error, retry)`
+(`network/live` core) instead of a value — a probe per deployment. The fold
+splits it once (`splitRowReader`: `value` and the host-stamped
+`FieldDef.rowState` from ONE call per row). The row's cell draws the loading
+block or the failure (not editable); a view laid out by the field (group /
+sort / filter / fold) keeps the row OUT of the layout — no bucket, position or
+match it does not have — and draws it in the pending tail under the view
+(`NotKnownRowsTail`: "Checking N rows…", failures with one Retry), joining the
+layout when its value lands. One slow probe holds one row, never the body. A
+`null` stays a KNOWN empty answer. (Case: the deploy Release column.)
 
 **A field's own read: `pending` and `readError`, never a stand-in value.**
 
@@ -1709,7 +1736,8 @@ is a new child plugin with zero consumer changes.
   rules and empty groups are TRUE. Returns `{ filter, readsClock, unavailable }`;
   relative time is lowered here to ISO instants (the language has no clock).
 - **A dangling rule is reported, never silently dropped.** `useRowFilter` returns
-  `all` | `match` | `unavailable`.
+  `all` | `match` | `unavailable`; an in-memory sort rule on a field that does
+  not resolve is `unsortableRules` — the same `rule-error` arm.
   - The body refuses to render while the in-memory filter or the fold in effect
     names one: loading while the deferred plugin tier loads (the contributor may
     not have registered yet), then the `rule-error` arm with **Remove**
@@ -1799,8 +1827,17 @@ const fields = [
     derived ⇒ display-only.
   - Scoped refs (`scopedLiveColumns(...).column(member)`) resolve only on a
     collection whose `columnScope` matches.
-- **A `columnScope` collection is listed on that one surface** (asserted equal to
-  `storageKey`); passed to extensions as `FieldExtensionProps.liveColumnScope`.
+- **A live source names its surface and how custom columns reach it**
+  (`liveDataSource(c, { surface, … })`, `LiveSurfaceBinding`): a collection
+  whose `columnScope` IS the surface takes them as scoped columns (sort and
+  filter in SQL; another surface is a tsc error — the scope is kept literal);
+  one without a scope must say why, `unscoped: { reason }` (custom columns then
+  show and edit, explicitly neither sorting nor filtering). Never a silent
+  display-only fallback. The source mounts only under the `storageKey` it
+  names (asserted at mount); passed to extensions as
+  `FieldExtensionProps.liveColumns`. Opt-outs today: `jobs` (external),
+  `trash-entries` (one collection for every trash surface), `runs` (union —
+  item 7 session 2).
 - **Checked where declared** (`web/internal/live-fields.ts`): `sortable` over a
   non-sorting column, a domain mismatch, a foreign ref all throw (extensions inside
   their own `render`). A `column` on an in-memory DataView throws.
@@ -2098,10 +2135,12 @@ list, table and `primitives/tree` share it.
     - `DataViewViewEdits`
     - `DataViewViewportSink`
     - `DropTargetProps`
+    - `ExtensionField`
     - `FieldCellProps`
     - `FieldDef`
     - `FieldExtensionContribution`
     - `FieldExtensionProps`
+    - `FieldExtensionYield`
     - `FieldGrouping`
     - `FieldGroupingSet`
     - `FieldOption`
@@ -2292,6 +2331,7 @@ list, table and `primitives/tree` share it.
     - `ids.IdOf`
   - Exports (types):
     - `CellEditorProps`
+    - `ColumnConfigDerivation`
     - `ColumnConfigDerive`
     - `ColumnConfigProps`
     - `CoverContent`
@@ -2331,8 +2371,6 @@ list, table and `primitives/tree` share it.
     - `DataViewViewportSink`
     - `DataViewVisibleRows`
     - `FieldDef`
-    - `FieldExtensionProps`
-    - `FieldExtensionsDescriptor`
     - `FieldGrouping`
     - `FieldGroupingSet`
     - `FieldOption`
@@ -2371,11 +2409,13 @@ list, table and `primitives/tree` share it.
     - `ItemActionsDescriptor`
     - `ItemActionTarget`
     - `ItemActionZone`
+    - `LiveCustomColumns`
     - `LiveDataSource`
     - `LiveDataSourceOf`
     - `LiveFacetColumn`
     - `LiveSearchableColumn`
     - `LiveSourceScope`
+    - `LiveSurfaceBinding`
     - `ManualOrderConfig`
     - `Nesting`
     - `PlacementMatch`
@@ -2401,6 +2441,7 @@ list, table and `primitives/tree` share it.
     - `SortPreset`
     - `SortRule`
     - `SubItemsKind`
+    - `SurfaceCustomColumns`
     - `TableCellProps`
     - `ToolbarArrangement`
     - `ToolbarPartForms`

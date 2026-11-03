@@ -26,6 +26,13 @@ export type {
 } from "./internal/live-columns";
 export { exposedColumns } from "./internal/exposed-columns";
 export { clientFields, rowKind } from "./internal/row-kind";
+export {
+  isRowUnknown,
+  rowFailed,
+  rowPending,
+  RowUnknown,
+} from "./internal/row-unknown";
+export type { RowFieldState } from "./internal/row-unknown";
 export type {
   ClientFields,
   ClientFieldsOwner,
@@ -110,6 +117,7 @@ export type {
   LiveCountDescriptor,
   LiveCountedCollection,
   LiveExposes,
+  LiveColumnScopeOf,
   LiveFieldsDefault,
   LiveFieldsForm,
   LiveGroupCodec,

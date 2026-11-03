@@ -13,6 +13,7 @@
     - `history-actions` "close" → `CloseConvAction`
   - Uses:
     - `conversations/conversations-view/data-view.ConversationSidebarProps`
+    - `conversations/conversations-view/data-view.SIDEBAR_VIEW`
     - `conversations/conversations-view/data-view.SidebarConversationItem`
     - `conversations/conversations-view/data-view.SidebarSources`
     - `primitives/data-view.defineItemActions`

@@ -18,7 +18,7 @@ import {
   type JoinFamily,
   type JoinSpec,
 } from "@plugins/infra/plugins/query-resource/core";
-import { resolveIdentity, wireFieldFor } from "./identity";
+import { resolveIdentity } from "./identity";
 import {
   compileJoins,
   familyRoute,
@@ -550,7 +550,7 @@ export function planArm<Row, P extends ResourceParams>(
       ? projectedField(selectMap, col)
       : joins.isComputed(col)
         ? undefined
-        : wireFieldFor(undefined, columns, joins.columnOf(col));
+        : projectedField(columns, joins.columnOf(col));
     guard(
       field !== undefined,
       key,
@@ -579,7 +579,7 @@ export function planArm<Row, P extends ResourceParams>(
   };
 
   // Declared order keys + the pk tiebreaker (skipped when a key already targets
-  // the pk column — same rule as keyset's `buildSortKeys`), rendered with
+  // the pk column, which would otherwise risk two directions on one column), rendered with
   // explicit NULLS LAST so a cut's seek stays symmetric. ONE key list per
   // order feeds the ORDER BY, a page's cuts and its row keys, so the three
   // cannot disagree about what the order is.

@@ -13,8 +13,15 @@
  * through `defineDataView`, which is what makes the id discoverable by codegen
  * (an un-scraped id would have no registered descriptor and `useConfig` would
  * throw on read).
+ *
+ * The id's literal rides along (`DataViewId<"runs">`), so a live source can be
+ * bound to the surface its collection's `columnScope` names in tsc
+ * (`liveDataSource`'s `surface`). `DataViewId` alone is any surface's id.
  */
-export type DataViewId = string & { readonly __dataViewId: unique symbol };
+declare const dataViewBrand: unique symbol;
+export type DataViewId<Id extends string = string> = Id & {
+  readonly [dataViewBrand]: true;
+};
 
 /**
  * Mark a string as a DataView surface id and brand it `DataViewId`.
@@ -24,11 +31,13 @@ export type DataViewId = string & { readonly __dataViewId: unique symbol };
  * already used by existing config names; colon is the only novel char). Calls
  * must live under a plugin's `web/` (where codegen scans).
  */
-export function defineDataView(id: string): DataViewId {
+export function defineDataView<const Id extends string>(
+  id: Id,
+): DataViewId<Id> {
   if (!/^[a-zA-Z0-9._-]+$/.test(id)) {
     throw new Error(
       `defineDataView: id "${id}" must match [a-zA-Z0-9._-] (no ":" — ids are config filenames)`,
     );
   }
-  return id as DataViewId;
+  return id as DataViewId<Id>;
 }

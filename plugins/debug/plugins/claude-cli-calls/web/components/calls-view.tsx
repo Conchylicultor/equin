@@ -29,6 +29,7 @@ const CALLS_VIEW = defineDataView("debug.claude-cli-calls");
 // Source and Model filter options are facets — a grouping of the whole log,
 // not the loaded rows, so a source seen only in older calls is still offered.
 const callsSource = liveDataSource(claudeCliCalls, {
+  surface: CALLS_VIEW,
   searchable: ["sourceName", "prompt", "output", "error"],
   facets: ["sourceName", "model"],
 });

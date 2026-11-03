@@ -31,6 +31,7 @@ const RUNS_VIEW = defineDataView("events.source-runs");
  * matches the error and the outcome.
  */
 const runsSource = liveDataSource(eventSourceRuns, {
+  surface: RUNS_VIEW,
   searchable: ["error", "outcome"],
 });
 

@@ -1,4 +1,9 @@
 import { useMemo } from "react";
+import {
+  rowFailed,
+  rowPending,
+  type RowUnknown,
+} from "@plugins/network/plugins/live/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
   combineResources,
@@ -48,15 +53,22 @@ export type ReleaseSnapshot =
  */
 export type ReleaseInfo = ResourceResult<ReleaseSnapshot>;
 
-/** The release state a resolved info settles on; `null` for every other state. */
-export function releaseStateOf(
+/**
+ * One deployment's `release` field value, as its row's answer: the probe not
+ * mounted yet or loading is `rowPending` (drawn "checking", kept out of a
+ * layout by the field — never the `null` a known-empty row is), a failed
+ * probe is `rowFailed` with its Retry, and a settled one is its state —
+ * `null` only for a known answer with no state (no verified platform).
+ */
+export function releaseAnswerOf(
   info: ReleaseInfo | undefined,
-): ReleaseState | null {
-  if (info === undefined) return null;
+): ReleaseState | null | RowUnknown {
+  if (info === undefined) return rowPending;
   return foldResource(info, {
-    loading: () => null,
-    error: () => null,
-    ready: (snapshot) => (snapshot.kind === "resolved" ? snapshot.state : null),
+    loading: () => rowPending,
+    error: (error) => rowFailed(error, info.refetch),
+    ready: (snapshot): ReleaseState | null | RowUnknown =>
+      snapshot.kind === "resolved" ? snapshot.state : null,
   });
 }
 

@@ -27,6 +27,7 @@ const SLOW_OPS_LOCAL = defineDataView("debug.slow-ops.local");
 // flush per 2 s) — no Refresh. The Kind filter's options are a facet: a
 // grouping of the whole table, not the loaded rows.
 const opsSource = liveDataSource(slowOpsList, {
+  surface: SLOW_OPS_LOCAL,
   searchable: ["operation"],
   facets: ["operationKind"],
 });

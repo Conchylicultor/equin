@@ -15,10 +15,29 @@ export function compareScalar(a: number | string, b: number | string): number {
 }
 
 /**
+ * The field ids of the sort rules that do not resolve against `fields` — the
+ * field is gone (a deleted custom column, a renamed id, a contributor that did
+ * not load) or has no `value` to order by. A view with any is never run with
+ * them dropped: the body renders its `rule-error` (`resolveBodyState`, loading
+ * while the deferred tier may still contribute the field), the same arm a live
+ * source's `UnavailableSortRuleError` takes.
+ */
+export function unsortableRules<TRow>(
+  rules: readonly SortRule[],
+  fields: readonly FieldDef<TRow>[],
+): string[] {
+  return rules
+    .filter((rule) => !fields.find((f) => f.id === rule.fieldId)?.value)
+    .map((rule) => rule.fieldId);
+}
+
+/**
  * Build a stable multi-level comparator from the rule list. Resolves each rule to
- * its field's `value` projection ONCE (outside the hot compare loop), dropping
- * rules whose field is missing or has no `value`. Returns `null` when no rule
- * resolves (caller skips sorting → preserves source order).
+ * its field's `value` projection ONCE (outside the hot compare loop). A rule
+ * that does not resolve never reaches here in a rendered view — the body
+ * refuses it first ({@link unsortableRules}) — so skipping it is only the
+ * shape of the loop. Returns `null` when no rule resolves (caller skips
+ * sorting → preserves source order).
  *
  * Stability: relies on `Array.prototype.sort` being stable (guaranteed in modern
  * V8/Bun) so a full tie (every rule compares equal) preserves the incoming source

@@ -31,6 +31,7 @@ const EVENTS_LIST_VIEW = defineDataView("events.list");
  * and no refetch. The search box matches what an event is and where it is.
  */
 const eventsListSource = liveDataSource(eventsList, {
+  surface: EVENTS_LIST_VIEW,
   searchable: EVENT_LIST_SEARCHABLE,
 });
 

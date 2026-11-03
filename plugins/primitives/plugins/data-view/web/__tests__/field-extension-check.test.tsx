@@ -18,14 +18,19 @@ import { SlotRender } from "@plugins/primitives/plugins/slot-render/web";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { liveCollection } from "@plugins/network/plugins/live/core";
+import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import {
   type DataViewId,
   type FieldDef,
-  type FieldExtensionProps,
-  type FieldExtensionsDescriptor,
+  type FieldValue,
   type FilterOperatorSet,
   type LiveDataSource,
 } from "../../core";
+import type {
+  ExtensionField,
+  FieldExtensionProps,
+  FieldExtensionsDescriptor,
+} from "../internal/field-extension-types";
 import { CollectFieldExtensions } from "../internal/field-extensions";
 import { liveDataSource } from "../internal/live-data-source";
 import { checkFieldColumns } from "../internal/live-fields";
@@ -79,16 +84,38 @@ const songs = liveCollection("test.data-view.field-extension-check", {
   default: { orderBy: [["title", "asc"]], limit: 2 },
   maxLimit: 6,
 });
-const source = liveDataSource(songs, { searchable: ["title"] });
+const source = liveDataSource(songs, {
+  searchable: ["title"],
+  surface: "songs" as DataViewId,
+  unscoped: { reason: "a test surface" },
+});
 
 const resolveOperatorSet = (type: string): FilterOperatorSet | undefined =>
   type === "bool"
     ? { match: "bool", domain: "boolean", operators: [] }
     : { match: "text", domain: "text", operators: [] };
 
-function contributor(id: string, fields: FieldDef<unknown>[]) {
+type Readers = Readonly<Record<string, (row: unknown) => FieldValue>>;
+
+/** A contributor handing `fields` back: their `value`s as its readers, read as `values` (default: ready). */
+function contributor(
+  id: string,
+  fields: FieldDef<unknown>[],
+  values?: ResourceResult<Readers>,
+) {
+  const declared = fields.map(
+    ({ value: _value, ...rest }) => rest as ExtensionField<unknown>,
+  );
+  const readers: Readers = Object.fromEntries(
+    fields.map((f) => [f.id, f.value ?? (() => undefined)]),
+  );
+  const read: ResourceResult<Readers> = values ?? {
+    status: "ready",
+    data: readers,
+    refetch: async () => {},
+  };
   const Fields = ({ render: emit }: FieldExtensionProps<unknown>) => (
-    <>{emit(fields)}</>
+    <>{emit({ fields: declared, values: read })}</>
   );
   return {
     _pluginId: "test.contributor-plugin",
@@ -141,7 +168,7 @@ describe("field-extension checks", () => {
         base={[]}
         storageKey={"songs" as DataViewId}
         rowKey={(r) => (r as Song).id}
-        liveColumnScope={null}
+        liveColumns={{ kind: "in-memory" }}
         validate={validate}
       >
         {(fields) => (
@@ -173,7 +200,7 @@ describe("field-extension checks", () => {
         base={[]}
         storageKey={"songs" as DataViewId}
         rowKey={(r) => (r as Song).id}
-        liveColumnScope={null}
+        liveColumns={{ kind: "in-memory" }}
         validate={validate}
       >
         {(fields) => (
@@ -182,5 +209,71 @@ describe("field-extension checks", () => {
       </CollectFieldExtensions>,
     );
     expect(screen.getByTestId("surface").textContent).toBe("title");
+  });
+
+  it("while the values read loads, every contributed field is pending — never the decode of an unknown value", () => {
+    const loading = contributor(
+      "loading",
+      [{ id: "title", label: "Title", type: "text" }],
+      { status: "loading", refetch: async () => {} },
+    );
+    renderWithBoundary(
+      <CollectFieldExtensions
+        sources={[descriptor([loading])]}
+        base={[]}
+        storageKey={"songs" as DataViewId}
+        rowKey={(r) => (r as Song).id}
+        liveColumns={{ kind: "in-memory" }}
+        validate={validate}
+      >
+        {(fields) => (
+          <div data-testid="surface">
+            {fields.map((f) => `${f.id}:${String(f.pending)}`).join(",")}
+          </div>
+        )}
+      </CollectFieldExtensions>,
+    );
+    // Kept (a view's rule on it does not dangle), and pending.
+    expect(screen.getByTestId("surface").textContent).toBe("title:true");
+  });
+
+  it("a reader for a field the contributor does not declare is refused, inside its own boundary", () => {
+    const stray = contributor("stray", [], {
+      status: "ready",
+      data: { ghost: () => 1 },
+      refetch: async () => {},
+    });
+    renderWithBoundary(
+      <CollectFieldExtensions
+        sources={[descriptor([stray])]}
+        base={[]}
+        storageKey={"songs" as DataViewId}
+        rowKey={(r) => (r as Song).id}
+        liveColumns={{ kind: "in-memory" }}
+        validate={validate}
+      >
+        {() => <div data-testid="surface" />}
+      </CollectFieldExtensions>,
+    );
+    expect(screen.getByTestId("contained").textContent).toMatch(
+      /"ghost", which it declares no field for/,
+    );
+    expect(screen.queryByTestId("surface")).toBeNull();
+  });
+
+  it("a contributed field cannot author its value or its read state (tsc)", () => {
+    const field: ExtensionField<unknown> = {
+      id: "x",
+      label: "X",
+      // @ts-expect-error — the host stamps `value` from the values read.
+      value: () => 1,
+    };
+    const pending: ExtensionField<unknown> = {
+      id: "y",
+      label: "Y",
+      // @ts-expect-error — `pending` is the read's state, never authored.
+      pending: false,
+    };
+    expect([field.id, pending.id]).toEqual(["x", "y"]);
   });
 });

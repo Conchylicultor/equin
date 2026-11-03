@@ -137,7 +137,11 @@ const Sources = defineDataViewSources<Record<string, never>>();
 
 function mount(c: C, state: ViewState) {
   currentModel = model(state);
-  const source = liveDataSource(c, { searchable: ["title"] });
+  const source = liveDataSource(c, {
+    searchable: ["title"],
+    surface: STORAGE_KEY,
+    unscoped: { reason: "a test surface" },
+  });
   function AllSource({
     render: renderBundle,
   }: {

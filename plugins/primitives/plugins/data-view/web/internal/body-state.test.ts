@@ -16,7 +16,7 @@ import {
 
 const refetch = () => Promise.resolve();
 const failure = new ResourceError("loader-failed", "boom", null);
-const NONE = { filter: [], fold: [] };
+const NONE = { filter: [], fold: [], sort: [] };
 const DANGLING = { id: "r1", fieldId: "gone", operatorId: "is" };
 
 describe("resolveBodyState", () => {
@@ -61,7 +61,7 @@ describe("resolveBodyState", () => {
     expect(
       resolveBodyState({
         readFields: [],
-        unavailable: { filter: [DANGLING], fold: [] },
+        unavailable: { filter: [DANGLING], fold: [], sort: [] },
         deferredComplete: false,
         server: null,
         readiness: { status: "ready" },
@@ -72,7 +72,7 @@ describe("resolveBodyState", () => {
   test("a filter rule that never resolves → the rule error, naming it", () => {
     const state = resolveBodyState({
       readFields: [],
-      unavailable: { filter: [DANGLING], fold: [] },
+      unavailable: { filter: [DANGLING], fold: [], sort: [] },
       deferredComplete: true,
       server: null,
       readiness: { status: "ready" },
@@ -86,7 +86,7 @@ describe("resolveBodyState", () => {
   });
 
   test("a fold rule that never resolves → the rule error on both paths", () => {
-    const fold = { filter: [], fold: [DANGLING] };
+    const fold = { filter: [], fold: [DANGLING], sort: [] };
     const inMemory = resolveBodyState({
       readFields: [],
       unavailable: fold,
@@ -118,6 +118,33 @@ describe("resolveBodyState", () => {
     ).toBe("loading");
   });
 
+  test("an in-memory sort rule on a field that does not resolve → the sort rule error, never a silent drop", () => {
+    const sort = { filter: [], fold: [], sort: ["gone"] };
+    const state = resolveBodyState({
+      readFields: [],
+      unavailable: sort,
+      deferredComplete: true,
+      server: null,
+      readiness: { status: "ready" },
+    });
+    expect(state.kind).toBe("rule-error");
+    if (state.kind !== "rule-error") throw new Error("unreachable");
+    expect(state.error).toBeInstanceOf(UnavailableSortRuleError);
+    expect((state.error as UnavailableSortRuleError).fieldIds).toEqual([
+      "gone",
+    ]);
+    // Loading while the deferred tier may still contribute the field.
+    expect(
+      resolveBodyState({
+        readFields: [],
+        unavailable: sort,
+        deferredComplete: false,
+        server: null,
+        readiness: { status: "ready" },
+      }).kind,
+    ).toBe("loading");
+  });
+
   test("a live source's unavailable rule is the same rule-error arm", () => {
     for (const error of [
       new UnavailableFilterRuleError([DANGLING], "filter"),
@@ -138,7 +165,7 @@ describe("resolveBodyState", () => {
     expect(
       resolveBodyState({
         readFields: [],
-        unavailable: { filter: [DANGLING], fold: [] },
+        unavailable: { filter: [DANGLING], fold: [], sort: [] },
         deferredComplete: true,
         server: null,
         readiness: { status: "error", error: failure, refetch },

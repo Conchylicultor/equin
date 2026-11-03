@@ -1,5 +1,6 @@
-import { Column, getTableColumns, getTableName, is } from "drizzle-orm";
+import { getTableColumns, is } from "drizzle-orm";
 import { PgTable, getTableConfig, type PgColumn } from "drizzle-orm/pg-core";
+import { projectedField } from "./joins";
 import type { EntitySource, RoutedSource, SelectMap } from "./spec";
 
 // The resolved identity of a routed source: the table to select from, the
@@ -13,7 +14,7 @@ export interface ResolvedIdentity {
   /**
    * The relation's full column record (JS property name → column) — the wire
    * field namespace when no projection is declared. Lets consumers resolve
-   * OTHER columns' wire fields with `wireFieldFor` (compile-window's
+   * OTHER columns' wire fields with `projectedField` (arm-plan's
    * order-signature derivation) without re-deriving the source shape.
    */
   columns: Record<string, PgColumn>;
@@ -62,38 +63,6 @@ function singlePrimary(
   return primaries[0]!;
 }
 
-/**
- * The JS/alias key under which `column` is projected, or undefined when it is
- * not projected. Matched by column identity first, else by DB column NAME —
- * preferring the column's own relation, so a joined `id` is never taken for
- * the base's while the base's is projected. With a select projection, the
- * alias key is returned; without one, the JS property name off the relation's
- * column record. Shared by the pk keyField derivation below and
- * compile-window's order-signature field resolution.
- */
-export function wireFieldFor(
-  selectMap: SelectMap | undefined,
-  columns: Record<string, PgColumn>,
-  column: PgColumn,
-): string | undefined {
-  const map: Record<string, unknown> = selectMap ?? columns;
-  const entries = Object.entries(map);
-  for (const [key, value] of entries) if (value === column) return key;
-  // By name: first within the column's own relation — a joined `id` (rendered
-  // against its join's alias) is not the base's — then across relations, so a
-  // key field that projects only a joined column of the pk's name is still
-  // found, and refused by name (arm-plan's "projects a joined column") rather
-  // than reported as an unprojected pk.
-  const relation = getTableName(column.table);
-  const byName = entries.filter(
-    ([, value]) => is(value, Column) && value.name === column.name,
-  );
-  const own = byName.find(
-    ([, value]) => getTableName((value as Column).table) === relation,
-  );
-  return (own ?? byName[0])?.[0];
-}
-
 // The pk's wire field, or a loud throw — a keyed resource must project its
 // identity column so the client keyOf can read it.
 function keyFieldFor(
@@ -102,7 +71,9 @@ function keyFieldFor(
   pkColumn: PgColumn,
   label: string,
 ): string {
-  const field = wireFieldFor(selectMap, columns, pkColumn);
+  // Relation-exact: the pk is the base table's own column, so a joined column
+  // of the same name never stands for it (`projectedField`).
+  const field = projectedField(selectMap ?? columns, pkColumn);
   if (field !== undefined) return field;
   throw new Error(
     `query-resource: ${label} — the primary-key column "${pkColumn.name}" is not ` +

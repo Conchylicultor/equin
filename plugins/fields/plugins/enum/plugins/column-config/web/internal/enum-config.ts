@@ -1,7 +1,4 @@
-import type {
-  ColumnConfigDerive,
-  FieldDef,
-} from "@plugins/primitives/plugins/data-view/web";
+import type { ColumnConfigDerive } from "@plugins/primitives/plugins/data-view/web";
 import type { BadgeVariant } from "@plugins/primitives/plugins/css/plugins/badge/core";
 
 /**
@@ -36,6 +33,6 @@ export function readOptions(config: unknown): EnumOption[] {
  * cell, inline editor, filter input, group-by section label). Without it those
  * consumers see only the stored value — a minted option id, not the label.
  */
-export const deriveEnumFieldDef: ColumnConfigDerive = (
-  config,
-): Partial<FieldDef<unknown>> => ({ options: readOptions(config) });
+export const deriveEnumFieldDef: ColumnConfigDerive = (config) => ({
+  options: readOptions(config),
+});

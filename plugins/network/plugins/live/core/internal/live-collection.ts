@@ -622,6 +622,16 @@ export type LiveAllSpec<Row> = LiveNoWindowSpec<Row, LiveAllOrder<Row>> & {
   all: LiveAllOrder<Row>;
 };
 
+/**
+ * A window collection's `columnScope`, as its literal: the DataView surface id
+ * its scoped columns resolve in (`null` = none). Kept literal so the surface a
+ * live source is bound to (`liveDataSource`'s `surface`) is checked against it
+ * in tsc.
+ */
+export type LiveColumnScopeOf<Cs extends string | undefined> = {
+  readonly columnScope: [Cs] extends [string] ? Cs : null;
+};
+
 /** A window's default, in the fields spelling (its order over `S`). */
 export interface LiveFieldsDefault<S extends string> {
   readonly orderBy: LiveOrderBy<S>;
@@ -645,7 +655,6 @@ export type LiveFieldsForm<W, Al, S extends string, Cn, R> = [W] extends [
   ? {
       sortable?: never;
       maxLimit?: never;
-      columnScope?: never;
       count?: never;
       preload?: [Al] extends [undefined]
         ? never
@@ -658,7 +667,6 @@ export type LiveFieldsForm<W, Al, S extends string, Cn, R> = [W] extends [
       sortable: readonly S[];
       maxLimit: number;
       preload?: LivePreload;
-      columnScope?: string;
       count?: Cn;
       all?: never;
     };
@@ -704,7 +712,7 @@ export function liveCollection<
   key: string,
   spec: Omit<
     LiveFieldsSpec<E, P, CP, OF, CF, R>,
-    "related" | "fields" | "id"
+    "related" | "fields" | "id" | "columnScope"
   > & {
     /**
      * What identifies a row — a picked, carried or own field; declared `all`,
@@ -718,6 +726,8 @@ export function liveCollection<
     arms?: never;
     default?: never;
     all?: Al;
+    /** A column scope joins a window's scoped columns — this declares none. */
+    columnScope?: never;
   } & LiveFieldsForm<undefined, Al, never, undefined, R> &
     LiveMachineSpec<NM>,
 ): LiveNoWindowCollection<
@@ -779,9 +789,13 @@ export function liveCollection<
   const S extends keyof FieldsRow<E, P, CP, OF, CF> & string = never,
   const Cn extends true | undefined = undefined,
   NM extends MachineFeature | undefined = undefined,
+  const Cs extends string | undefined = undefined,
 >(
   key: string,
-  spec: Omit<LiveFieldsSpec<E, P, CP, OF, CF, R>, "related" | "fields"> & {
+  spec: Omit<
+    LiveFieldsSpec<E, P, CP, OF, CF, R>,
+    "related" | "fields" | "columnScope"
+  > & {
     /** The row field that identifies a row — a picked, carried or own field. */
     id: NoInfer<keyof FieldsRow<E, P, CP, OF, CF> & string>;
     fields?: OF & RequireLabel<OF>;
@@ -789,6 +803,12 @@ export function liveCollection<
     baseExposures?: B;
     arms?: never;
     default: LiveFieldsDefault<S>;
+    /**
+     * The DataView surface this window's scoped columns resolve in (see
+     * {@link LiveFieldsSpec.columnScope}) — kept literal on the collection
+     * (`LiveColumnScopeOf`). Outside the form conditional so tsc infers it.
+     */
+    columnScope?: Cs;
   } & LiveFieldsForm<LiveFieldsDefault<S>, undefined, S, Cn, R> &
     LiveMachineSpec<NM>,
 ): LiveCollectionOf<
@@ -797,7 +817,8 @@ export function liveCollection<
   S,
   Cn,
   FieldsSpecExposes<E, R, B>
-> & {
+> &
+  LiveColumnScopeOf<Cs> & {
   fields: LiveFields<P | (keyof OF & string)>;
   from: FromEntity<E>;
 } & LiveMachineBrand<NM>;

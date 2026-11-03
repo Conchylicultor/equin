@@ -17,6 +17,7 @@ const BOOT_PROFILES_VIEW = defineDataView("debug.boot-profiles");
 // and search compile to SQL server-side, and a save or the 30-day sweep reaches
 // the list through the change feed.
 const bootTracesSource = liveDataSource(bootTraces, {
+  surface: BOOT_PROFILES_VIEW,
   searchable: ["worktree"],
 });
 

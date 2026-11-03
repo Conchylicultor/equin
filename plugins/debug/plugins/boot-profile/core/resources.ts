@@ -12,6 +12,8 @@ import { bootTracesEntityRef } from "./fields";
  * sweep reaches it through the change feed.
  */
 export const bootTraces = liveCollection("debug.boot-traces", {
+  // Its list's DataView surface: custom columns sort and filter in SQL.
+  columnScope: "debug.boot-profiles",
   from: bootTracesEntityRef,
   pick: ["worktree", "id", "createdAt"],
   id: "id",

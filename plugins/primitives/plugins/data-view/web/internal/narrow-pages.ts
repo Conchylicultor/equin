@@ -11,17 +11,14 @@ import type {
   LiveCollection,
   LiveColumnsDeclaration,
 } from "@plugins/network/plugins/live/core";
-import type {
-  DataViewRowsCollection,
-  LiveDataSource,
-  ViewState,
-} from "../../core";
+import type { DataViewRowsCollection, ViewState } from "../../core";
 import { useResolveOperatorSet } from "../filter-slot";
 import { useDerivedFields } from "./derived-fields";
 import {
   namedColumnSets,
   renameColumns,
   resolveLiveFields,
+  type LiveFieldsSource,
 } from "./live-fields";
 import { useWidenedViewFilter } from "./live-filter";
 
@@ -72,7 +69,7 @@ export function usePagesNarrowing<Row, F, S extends string>(
   );
   const resolveOperatorSet = useResolveOperatorSet();
   const source = useMemo(
-    (): LiveDataSource<unknown> | null =>
+    (): LiveFieldsSource<unknown> | null =>
       narrowed === null
         ? null
         : {

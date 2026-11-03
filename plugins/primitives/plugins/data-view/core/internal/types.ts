@@ -1,6 +1,4 @@
-import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
 import { type ComponentType, type ReactNode } from "react";
-import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
 import type {
   Filter,
   FilterDomainId,
@@ -12,6 +10,7 @@ import type {
   LiveColumnRef,
   LiveRowsCollection,
   NotCollectionRow,
+  RowFieldState,
 } from "@plugins/network/plugins/live/core";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import type {
@@ -106,9 +105,32 @@ export interface ColumnConfigProps {
  * belong here — `custom-columns` re-applies `id`/`type`/`value`/`onEdit` on top,
  * so a derivation can never redefine a column's identity or storage.
  */
-export type ColumnConfigDerive = (
-  config: unknown,
-) => Partial<FieldDef<unknown>>;
+export type ColumnConfigDerive = (config: unknown) => ColumnConfigDerivation;
+
+/**
+ * What a type derives from its config: vocabulary only — never the column's
+ * identity or storage (`id`, `type`, `config`, the write-backs) and never its
+ * values or their read state (`value`, `values`, `pending`, `readError`,
+ * `rowState`, which the host stamps from the values read).
+ */
+export type ColumnConfigDerivation = DistributivePartialOmit<
+  FieldDef<unknown>,
+  | "id"
+  | "type"
+  | "config"
+  | "onEdit"
+  | "onEditValues"
+  | "value"
+  | "values"
+  | "pending"
+  | "readError"
+  | "rowState"
+>;
+
+/** `Partial<Omit<T, K>>` over each arm of a union, so `options` / `optionsResult` stay exclusive. */
+type DistributivePartialOmit<T, K extends PropertyKey> = T extends unknown
+  ? Partial<Omit<T, K>>
+  : never;
 
 /**
  * A row's projected filter value: a scalar `FieldValue` for normal fields, or a
@@ -439,72 +461,6 @@ export interface ItemActionsDescriptor<TRow> {
 }
 
 /**
- * Props a field-extension contribution receives. A contribution is a **component**
- * (not a plain `FieldDef[]`) so it can gather hook-loaded data (e.g. a live
- * resource keyed by row id) and close its field `value` projections over it,
- * then hand the resulting fields back via `render`. The host folds each
- * contributor's fields into the DataView's schema. The render-callback shape is
- * the generic lift of Sonata's old `Library.Sort` ordering-component slot.
- *
- * Every contributor also receives the surface coordinates — the `storageKey`
- * (which surface) and `rowKey` (how to identify a row) — so a cross-cutting
- * contributor (e.g. custom-columns) can key its per-row data over the surface. A
- * contributor that doesn't need them (e.g. Sonata's play-count, which closes over
- * its own live resource) simply ignores them.
- */
-/** Method-position parameter ⇒ checked bivariantly (see `FieldExtensionProps.rowKey`). */
-type BivariantRowKey<TRow> = {
-  key(row: TRow, index: number): string;
-}["key"];
-
-export interface FieldExtensionProps<TRow> {
-  /** Which surface this DataView is (the `defineDataView` id). */
-  storageKey: DataViewId;
-  /** How to identify a row — used to key per-row data. Bivariant on purpose:
-   *  with a plain `(row: TRow) => …` this one member made the whole descriptor
-   *  invariant, so a surface whose rows EXTEND `R` (the deps tree's
-   *  `DepsTreeRow extends TaskListItem`) could not take extensions declared for
-   *  `R`. Sound: a contributor only ever keys rows the host handed it, which are
-   *  the host's own. `render` stays strict, so the reverse (an extension for a
-   *  narrower row on a wider surface) is still a type error. */
-  rowKey: BivariantRowKey<TRow>;
-  /**
-   * The column scope of the live collection this surface reads — its
-   * `columnScope`, which the host asserts IS this surface's `storageKey` — or
-   * `null` (not a live source, or a collection that takes no scoped columns).
-   * A contributor serving scoped columns (custom columns) binds its fields to
-   * them (`FieldDef.column`) only under a scope; anywhere else a `column` ref
-   * would mean nothing (and is refused).
-   */
-  liveColumnScope: string | null;
-  /** Hand the host this contributor's extra fields (called in render — the
-   *  component is mounted, so it may load hook-backed data first). */
-  render: (fields: FieldDef<TRow>[]) => ReactNode;
-}
-
-/**
- * Minimal field-extensions surface the host consumes. `defineFieldExtensions`
- * (web) returns a value satisfying this (the `RenderSlot`'s own `id` +
- * `useContributions`) PLUS the callable contribution-registrar — mirroring
- * `ItemActionsDescriptor`. The host (`CollectFieldExtensions`) reads
- * `useContributions()` and mounts each contribution isolated under `id`.
- */
-export interface FieldExtensionsDescriptor<TRow> extends SlotHandle {
-  /** All contributed field-extension components (sealed, like any slot). */
-  useContributions: Hook<
-    () => readonly SealContributions<{
-      id: string;
-      /** The heading this contributor's fields are listed under (`null` = they are
-       *  ordinary fields of the host's own schema). The host STAMPS it onto every
-       *  field the contributor returns — see `FieldDef.section`. */
-      section: string | null;
-      component: ComponentType<FieldExtensionProps<TRow>>;
-      order?: number;
-    }>[]
-  >;
-}
-
-/**
  * One member of a field's closed value set — and how that member PRESENTS.
  *
  * An option describes itself: the chip cell reads `variant`/`hint` straight off
@@ -678,6 +634,18 @@ interface FieldDefBase<TRow> {
    * the field renders in place of its rows).
    */
   pending?: boolean;
+  /**
+   * How much is known about ONE row's value — HOST-STAMPED, never authored:
+   * set by the client-values fold for a field whose reader answers per row
+   * (`rowPending` / `rowFailed`, `network/live`), from the same call as
+   * `value`, so the two cannot disagree. A row not `known`: its cell draws the
+   * loading block or the failure (and is not editable), and a view laid out by
+   * the field keeps it OUT of the layout — drawn in the pending tail under the
+   * view until its value lands — rather than file it under a bucket, a
+   * position or a match it does not have. Absent = every row is known (or the
+   * whole field is `pending` / failed).
+   */
+  rowState?: (row: TRow) => RowFieldState;
   /**
    * Inline-edit write-back. Present → the table cell for this field becomes
    * editable (click-to-edit); absent → the cell stays read-only (the default for

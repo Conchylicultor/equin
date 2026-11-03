@@ -58,7 +58,10 @@ const VERSIONS_VIEW = defineDataView("history.versions");
 // snapshot recorded, a restore's "Before restore" point and the retention sweep
 // all reach the open timeline through the change feed, and the scroll pages
 // the whole history. Nothing to search: a version is a label and a time.
-const versionsSource = liveDataSource(historyVersions, { searchable: [] });
+const versionsSource = liveDataSource(historyVersions, {
+  surface: VERSIONS_VIEW,
+  searchable: [],
+});
 
 // The timeline's fields are the collection's (sort / Properties dimensions);
 // `createdAt` is the one that sorts. The `timeline` recipe draws the row: the
