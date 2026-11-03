@@ -27658,6 +27658,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types):
               - `CandidateSource`
               - `CheckCache`
+              - `CheckCachePruneReport`
               - `CheckRunProgress`
               - `CodeMatch`
               - `ContentHashMemo`
@@ -27697,6 +27698,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `maskedSource`
               - `openCheckCache`
               - `parsedTsSource`
+              - `pruneCheckCache`
               - `readCheckProgress`
               - `readTranscriptVerdict`
               - `readTreeSnapshot`
@@ -27724,6 +27726,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exempts itself from:
                   - `spawn-safety/no-raw-bun-spawn` — `check/internal/fd-double-close-probe.ts` (sanctioned)
                   - `check-thread-safety/no-blocking-check-work` — `check/internal/fd-double-close-probe.ts` (debt)
+            - **`cache-prune`** — The hourly checks.cache-prune job: ages out and caps the shared check-result cache and reclaims idle flight files, so no check run lists the whole cache.
+              - Server:
+                - Uses:
+                  - `infra/jobs/supervised-job.defineSupervisedJob`
+                  - `primitives/log-channels.defineLogSink`
+                - Register: `defineSupervisedJob('checks.cache-prune')`
             - **`class-token-walk-single-source`**
             - **`color-token-ref-in-sync`**
             - **`composition-closure`**
@@ -28643,6 +28651,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FleetSource`
               - `ImportMapEntry`
               - `OwnFile`
+              - `PruneReport`
               - `VendorSetMeta`
               - `WebArtifactsPipelineOptions`
               - `WebArtifactsPipelineResult`
@@ -28672,6 +28681,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `isWorkerChunkPath`
               - `makeArtifactExternal`
               - `packageNameOf`
+              - `pruneWebArtifactCaches`
               - `readFleetVendorMeta`
               - `runWebArtifactsPipeline`
               - `sha256Hex`
@@ -28695,6 +28705,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `user-path/no-unproven-claim` — `core/internal/identity.ts`, `core/internal/plan.ts`, `core/internal/vendors.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/internal/vendor-cache.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/internal/global-css.ts`, `core/internal/package-assets.ts`, `core/internal/staged-verify.ts` (sanctioned)
+          - Plugins:
+            - **`prune`** — The hourly web-artifacts.prune job: prunes the shared write-once web caches (artifact store, vendor sets, CSS cache, package assets) off every build's path — dist links read unlocked, only changed dists re-read under the store lock.
+              - Server:
+                - Uses:
+                  - `infra/jobs/supervised-job.defineSupervisedJob`
+                  - `primitives/log-channels.defineLogSink`
+                - Register: `defineSupervisedJob('web-artifacts.prune')`
     - **`web-core`**
       - Web:
         - Uses:
@@ -32169,7 +32186,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/release`
               - `framework/cli/serve-app`
               - `framework/cli/start`
+              - `framework/tooling/checks/cache-prune`
               - `framework/tooling/checks/type-check/backstop`
+              - `framework/tooling/web-artifacts/prune`
               - `infra/audio-analysis`
               - `infra/deps`
               - `infra/events-test`
@@ -45229,14 +45248,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 57 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 59 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `apps` ×12
           - `debug` ×9
           - `infra` ×8
           - `database` ×7
+          - `framework` ×4
           - `conversations` ×3
           - `build` ×2
-          - `framework` ×2
           - `primitives` ×2
           - `reports` ×2
           - `tasks` ×2

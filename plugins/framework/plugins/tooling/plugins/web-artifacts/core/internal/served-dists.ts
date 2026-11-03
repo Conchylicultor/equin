@@ -8,9 +8,12 @@
 // link target of every dist on disk as a root.
 //
 // Cost: one readdir of the worktrees dir, one of each worktree dir, one readdir
-// plus readlinks of each dist's `artifacts/` — bounded, and run once per build.
+// plus readlinks of each dist's `artifacts/` — O(every link of every dist:
+// ~450k on a host with 120 worktrees), so it is never on a build's path: the
+// scheduled prune (`pruneWebArtifactCaches`) reads it unlocked and re-reads
+// only the dists that changed under the store lock (`refreshServedDists`).
 
-import { readdirSync, readlinkSync, realpathSync } from "node:fs";
+import { readdirSync, readlinkSync, realpathSync, statSync } from "node:fs";
 import {
   asAppPath,
   joinAppPath,
@@ -77,6 +80,87 @@ function distRoots(worktrees: AppPath): AppPath[] {
 }
 
 /**
+ * When a dist's links last changed: its `artifacts/` dir's inode and mtime
+ * (adding, removing or replacing a link changes the dir's mtime), or `none`
+ * when it has no such dir.
+ */
+function linksStamp(root: AppPath): string {
+  try {
+    const st = statSync(joinAppPath(root, "artifacts"), { bigint: true });
+    return `${st.ino}:${st.mtimeNs}`;
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code !== "ENOENT" && code !== "ENOTDIR") throw err;
+    return "none";
+  }
+}
+
+/** Add every cache entry the dist at `root` links to `targets`. */
+function addLinkTargets(root: AppPath, targets: Set<string>): void {
+  const artifacts = joinAppPath(root, "artifacts");
+  for (const name of readdirOrEmpty(artifacts)) {
+    const target = readLinkOrNull(joinAppPath(artifacts, name));
+    if (target === null) continue;
+    targets.add(target);
+    // A worker tree is itself a dir of links into the store: what it links
+    // is served too. (Write-once, like every store entry.)
+    if (basename(target).startsWith(WORKER_TREE_PREFIX)) {
+      for (const child of readdirOrEmpty(target)) {
+        const linked = readLinkOrNull(joinAppPath(target, child));
+        if (linked !== null) targets.add(linked);
+      }
+    }
+  }
+}
+
+/**
+ * Every link target of every dist, with each dist's {@link linksStamp} taken
+ * BEFORE its links were read — so a dist that changed during or after the
+ * read shows a different stamp to {@link refreshServedDists}.
+ */
+export interface ServedDistScan {
+  targets: Set<string>;
+  stamps: Map<AppPath, string>;
+}
+
+/**
+ * Scan every dist under a worktrees dir: one readdir plus a readlink per link
+ * of every dist — O(the fleet's dists), so a prune runs it WITHOUT the store
+ * lock and then calls {@link refreshServedDists} under it.
+ */
+export function scanServedDists(
+  worktrees: AppPath = worktreesDir(),
+): ServedDistScan {
+  const scan: ServedDistScan = { targets: new Set(), stamps: new Map() };
+  for (const root of distRoots(worktrees)) {
+    scan.stamps.set(root, linksStamp(root));
+    addLinkTargets(root, scan.targets);
+  }
+  return scan;
+}
+
+/**
+ * Bring a scan up to date: list the dist roots again and re-read only the
+ * dists that are new or whose links changed since the scan (their stamp
+ * differs) — O(dists) metadata calls plus the links of what changed. A dist
+ * removed since keeps its targets in the set, which only keeps more.
+ */
+export function refreshServedDists(
+  scan: ServedDistScan,
+  worktrees: AppPath = worktreesDir(),
+): { reread: number } {
+  let reread = 0;
+  for (const root of distRoots(worktrees)) {
+    const stamp = linksStamp(root);
+    if (scan.stamps.get(root) === stamp) continue;
+    scan.stamps.set(root, stamp);
+    addLinkTargets(root, scan.targets);
+    reread++;
+  }
+  return { reread };
+}
+
+/**
  * Absolute paths of every cache entry some dist under `worktrees` links via
  * `artifacts/<name>`. A materialized (non-symlink) artifact is a copy, not a
  * reference, and is skipped.
@@ -84,22 +168,5 @@ function distRoots(worktrees: AppPath): AppPath[] {
 export function servedDistTargets(
   worktrees: AppPath = worktreesDir(),
 ): ReadonlySet<string> {
-  const targets = new Set<string>();
-  for (const root of distRoots(worktrees)) {
-    const artifacts = joinAppPath(root, "artifacts");
-    for (const name of readdirOrEmpty(artifacts)) {
-      const target = readLinkOrNull(joinAppPath(artifacts, name));
-      if (target === null) continue;
-      targets.add(target);
-      // A worker tree is itself a dir of links into the store: what it links
-      // is served too.
-      if (basename(target).startsWith(WORKER_TREE_PREFIX)) {
-        for (const child of readdirOrEmpty(target)) {
-          const linked = readLinkOrNull(joinAppPath(target, child));
-          if (linked !== null) targets.add(linked);
-        }
-      }
-    }
-  }
-  return targets;
+  return scanServedDists(worktrees).targets;
 }

@@ -53,6 +53,7 @@ import {
   artifactStorePath,
   artifactTmpDir,
   hasArtifact,
+  indexArtifact,
   listArtifacts,
   publishArtifact,
   touchArtifact,
@@ -229,12 +230,17 @@ export function matchHostRecord<R extends HostInputsRecord>(
   return null;
 }
 
+/** The store-name group of every build of one host (`artifactDirName`'s prefix). */
+function hostGroup(slug: string): string {
+  return `${slug}.browser-host.`;
+}
+
 /** The input records of every stored build of a host, most recently used first. */
 function* storedHostRecords(
   pluginPath: string,
 ): Generator<HostInputsRecord & { dirName: string }> {
   const slug = slugOf(pluginPath);
-  for (const dirName of listArtifacts(`${slug}.browser-host.`)) {
+  for (const dirName of listArtifacts(hostGroup(slug))) {
     const file = joinAppPath(artifactStorePath(dirName), HOST_INPUTS_FILE);
     let text: string;
     try {
@@ -455,6 +461,7 @@ export async function ensureBrowserHost(opts: {
     );
     await opts.pin([artifactStorePath(dirName)]);
     await publishArtifact(dirName, tmpDir, meta);
+    indexArtifact(hostGroup(slug), dirName);
     opts.log(
       `browser host ${plan.pluginPath}: host module + Service Worker (${files.length} repo modules, ${(bytes / 1024).toFixed(0)} KB) (${dirName})`,
     );

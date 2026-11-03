@@ -1,7 +1,8 @@
 // Build leases: what keeps a build's in-flight cache entries out of the prune.
 //
 // Every write-once cache (artifact store, vendor sets, global-CSS cache) is
-// shared by every checkout and pruned at the start of every checkout's build.
+// shared by every checkout and pruned by the scheduled `web-artifacts.prune`
+// job (it used to be pruned at the start of every checkout's build).
 // A served dist protects the entries it links (`servedDistTargets`), but a build
 // in progress links nothing until compose — minutes after it reused or
 // published the entries it will compose. Without a lease, a concurrent build's
@@ -61,13 +62,14 @@ import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import { webArtifactsDir } from "../../data-dirs";
 import {
   pruneCacheDir,
+  surveyCacheDir,
   STORE_PRUNE_POLICY,
   type CachePrunePolicy,
 } from "./store";
 import { VENDOR_PRUNE_POLICY } from "./vendors";
 import { CSS_PRUNE_POLICY } from "./global-css";
 import { PACKAGE_ASSETS_PRUNE_POLICY } from "./package-assets";
-import { servedDistTargets } from "./served-dists";
+import { refreshServedDists, scanServedDists } from "./served-dists";
 
 /** Where the store lock and the leases live (a test passes its own). */
 export interface LeaseLayout {
@@ -243,11 +245,39 @@ export function liveLeaseTargets(leasesDir: AppPath): Set<string> {
   return targets;
 }
 
+/** What one prune did, phase by phase (wall ms; counts of what it read). */
+export interface PruneReport {
+  /** Unlocked: every dist's links, then a stat of every non-root entry. */
+  surveyMs: number;
+  dists: number;
+  distTargets: number;
+  surveyedEntries: number;
+  /** Waiting for the exclusive store lock. */
+  lockWaitMs: number;
+  /** Under the lock: leases, the dists that changed since, the deletes. */
+  lockedMs: number;
+  distsReread: number;
+  removed: number;
+}
+
 /**
- * The ONE prune of every write-once cache, under the exclusive store lock: the
- * roots are every entry a dist on disk links (`servedDistTargets`) plus every
- * entry a live build lease pins; each cache is then pruned by its own policy
- * (`pruneCacheDir`). Concurrent prunes are serialized by the same lock.
+ * The ONE prune of every write-once cache. The roots are every entry a dist on
+ * disk links (`servedDistTargets`) plus every entry a live build lease pins;
+ * each cache is then pruned by its own policy (`pruneCacheDir`).
+ *
+ * Two phases, so the exclusive store lock — which every build's pins wait on —
+ * is held for O(dists + victims), never O(every link of every dist):
+ *
+ * 1. Unlocked: scan every dist's links (`scanServedDists`, each dist stamped
+ *    before it is read) and survey every cache dir (`surveyCacheDir`).
+ * 2. Locked: read the live leases, re-read only the dists that are new or
+ *    changed since their stamp (`refreshServedDists`), then judge the surveys
+ *    against those roots and delete. Nothing that became a root after phase 1
+ *    is lost: a lease is read here, a dist composed and published since phase 1
+ *    has a new stamp, and an entry published since is in no survey.
+ *
+ * Not on any build's path: the scheduled `web-artifacts.prune` job runs it.
+ * Concurrent prunes are serialized by the lock.
  */
 export async function pruneWebArtifactCaches(
   opts: {
@@ -255,7 +285,7 @@ export async function pruneWebArtifactCaches(
     worktrees?: AppPath;
     policies?: readonly CachePrunePolicy[];
   } = {},
-): Promise<void> {
+): Promise<PruneReport> {
   const layout = opts.layout ?? DEFAULT_LAYOUT;
   const policies = opts.policies ?? [
     STORE_PRUNE_POLICY,
@@ -263,9 +293,34 @@ export async function pruneWebArtifactCaches(
     CSS_PRUNE_POLICY,
     PACKAGE_ASSETS_PRUNE_POLICY,
   ];
-  await withStoreLock(layout, "exclusive", () => {
-    const referenced = new Set(servedDistTargets(opts.worktrees));
+  const t0 = performance.now();
+  const dists = scanServedDists(opts.worktrees);
+  const surveys = policies.map((policy) => ({
+    policy,
+    survey: surveyCacheDir(policy.root, dists.targets),
+  }));
+  const t1 = performance.now();
+  let t2 = t1;
+  const locked = await withStoreLock(layout, "exclusive", () => {
+    t2 = performance.now();
+    const referenced = new Set(dists.targets);
     for (const t of liveLeaseTargets(layout.leasesDir)) referenced.add(t);
-    for (const policy of policies) pruneCacheDir({ ...policy, referenced });
+    const { reread } = refreshServedDists(dists, opts.worktrees);
+    for (const t of dists.targets) referenced.add(t);
+    let removed = 0;
+    for (const { policy, survey } of surveys) {
+      removed += pruneCacheDir({ ...policy, referenced, survey });
+    }
+    return { reread, removed };
   });
+  return {
+    surveyMs: t1 - t0,
+    dists: dists.stamps.size,
+    distTargets: dists.targets.size,
+    surveyedEntries: surveys.reduce((n, s) => n + s.survey.entries.length, 0),
+    lockWaitMs: t2 - t1,
+    lockedMs: performance.now() - t2,
+    distsReread: locked.reread,
+    removed: locked.removed,
+  };
 }

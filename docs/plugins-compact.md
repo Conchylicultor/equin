@@ -134,7 +134,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`tooling`** [exempt] — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
       - Plugins:
         - **`boundaries`** [exempt] — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
-        - **`checks`** [test helpers] [exempt] [56 sub-plugins] — Check runner and built-in checks for ./equin check
+        - **`checks`** [test helpers] [exempt] [57 sub-plugins] — Check runner and built-in checks for ./equin check
         - **`codegen`** [exempt] — Plugin doc generation and registry codegen
         - **`collected-dir`** — Generic loader for build-time collected-dir registries (loadCollectedDir).
         - **`e2e-harness`** [exempt] — Shared Playwright harness for the per-plugin e2e/ scripts: argv parsing, worktree-derived target URL, browser/session lifecycle, error capture, pass/fail reporting, screenshots, and Chromium on…
@@ -151,6 +151,8 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`resource-vocabulary`** — The closed set of ways a plugin declares a live-state resource, as data every build-time resource scanner reads. Its key set is DERIVED from the barrels' own module types, so a factory that exists…
         - **`test-layout`** [exempt] — The canonical bun:test ⇄ vitest split as data (core), enforced as the test-layout:runner-split check.
         - **`web-artifacts`** [exempt] — Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
+          - Plugins:
+            - **`prune`** — The hourly web-artifacts.prune job: prunes the shared write-once web caches (artifact store, vendor sets, CSS cache, package assets) off every build's path — dist links read unlocked, only changed…
     - **`web-core`** [exempt]
     - **`web-sdk`** [test helpers] — Web plugin runtime: slots, contributions, loader
 

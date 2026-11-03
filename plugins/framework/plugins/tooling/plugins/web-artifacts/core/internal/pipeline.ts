@@ -56,11 +56,7 @@ import {
   hasGlobalCssCache,
   unionCandidates,
 } from "./global-css";
-import {
-  openBuildLease,
-  pruneWebArtifactCaches,
-  type BuildLease,
-} from "./lease";
+import { openBuildLease, type BuildLease } from "./lease";
 import { ensureBrowserHost } from "./browser-hosts";
 import type { OwnSources } from "./own-files";
 import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
@@ -211,14 +207,17 @@ async function runPipeline(
     "artifacts:detect",
     "detect changed artifacts",
     async () => {
+      // No prune here: it reads every dist of every checkout (O(the host's
+      // caches), not O(this change)), so it runs as the scheduled
+      // `web-artifacts.prune` job — the build's lease keeps what it composes.
       ensureStoreDirs();
-      await pruneWebArtifactCaches();
-
       const fleet = await planFleet({
         root,
         minify: opts.minify,
         sources,
         source: opts.source,
+        step: (id, run) =>
+          stage(`artifacts:detect:${id}`, `detect: ${id}`, run),
       });
       sources.globs.save();
       log(

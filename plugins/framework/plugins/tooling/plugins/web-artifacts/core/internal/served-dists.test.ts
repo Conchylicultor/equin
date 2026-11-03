@@ -13,8 +13,12 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { pruneCacheDir } from "./store";
-import { servedDistTargets } from "./served-dists";
+import { pruneCacheDir, surveyCacheDir } from "./store";
+import {
+  refreshServedDists,
+  scanServedDists,
+  servedDistTargets,
+} from "./served-dists";
 
 const MINUTE = 60 * 1000;
 const DAY = 24 * 60 * 60 * 1000;
@@ -151,5 +155,72 @@ describe("pruneCacheDir keeps entries a served dist links", () => {
     });
     expect(existsSync(ref)).toBe(true);
     expect(spares.map((p) => existsSync(p))).toEqual([false, false, true]);
+  });
+});
+
+describe("refreshServedDists re-reads only what changed since the scan", () => {
+  test("a link added after the scan is a root after the refresh", () => {
+    const f = fixture();
+    const a = f.entry("a", 0);
+    f.link("a", a);
+    const scan = scanServedDists(f.worktrees);
+    const b = f.entry("b", 0);
+    f.link("b", b);
+    expect(scan.targets.has(b)).toBe(false);
+    expect(refreshServedDists(scan, f.worktrees).reread).toBe(1);
+    expect(scan.targets.has(b)).toBe(true);
+  });
+
+  test("a dist published after the scan is read; unchanged ones are not", () => {
+    const f = fixture();
+    const scan = scanServedDists(f.worktrees);
+    const c = f.entry("c", 0);
+    const other = joinAppPath(f.worktrees, "ns2", "web.live.2");
+    mkdirSync(joinAppPath(other, "artifacts"), { recursive: true });
+    symlinkSync(c, joinAppPath(other, "artifacts", "c"));
+    expect(refreshServedDists(scan, f.worktrees).reread).toBe(1);
+    expect(scan.targets.has(c)).toBe(true);
+    expect(refreshServedDists(scan, f.worktrees).reread).toBe(0);
+  });
+});
+
+describe("pruneCacheDir over an unlocked survey", () => {
+  const policy = (store: AppPath) => ({
+    root: store,
+    maxAgeMs: 14 * DAY,
+    maxUnreferenced: 0,
+    trimTo: 0,
+  });
+
+  test("an entry reused since the survey is kept; one published since is not judged", () => {
+    const f = fixture();
+    const reused = f.entry("reused", 20 * DAY);
+    const idle = f.entry("idle", 20 * DAY);
+    const survey = surveyCacheDir(f.store, new Set());
+    const now = new Date();
+    utimesSync(reused, now, now); // touchArtifact
+    const fresh = f.entry("fresh", 2 * MINUTE);
+    const removed = pruneCacheDir({
+      ...policy(f.store),
+      referenced: new Set(),
+      survey,
+    });
+    expect(removed).toBe(1);
+    expect(existsSync(idle)).toBe(false);
+    expect(existsSync(reused)).toBe(true);
+    expect(existsSync(fresh)).toBe(true);
+  });
+
+  test("an entry that became a root after the survey is kept", () => {
+    const f = fixture();
+    const linked = f.entry("linked", 20 * DAY);
+    const survey = surveyCacheDir(f.store, new Set());
+    f.link("linked", linked);
+    pruneCacheDir({
+      ...policy(f.store),
+      referenced: servedDistTargets(f.worktrees),
+      survey,
+    });
+    expect(existsSync(linked)).toBe(true);
   });
 });

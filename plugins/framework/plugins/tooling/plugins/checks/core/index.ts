@@ -8,8 +8,8 @@ export type { ContentHashMemo } from "./content-hash";
 export { listRepoFiles } from "./repo-files";
 export { computeTreeHash } from "./tree-hash";
 export { readTranscriptVerdict } from "./transcript";
-export { openCheckCache } from "./cache";
-export type { CheckCache } from "./cache";
+export { openCheckCache, pruneCheckCache } from "./cache";
+export type { CheckCache, CheckCachePruneReport } from "./cache";
 export { readCheckProgress } from "./progress-log";
 export type {
   CheckRunProgress,

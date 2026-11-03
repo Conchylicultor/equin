@@ -3508,6 +3508,10 @@
       "name": "@equin/plugin-framework-tooling-checks-bun-runtime",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/cache-prune": {
+      "name": "@equin/plugin-framework-tooling-checks-cache-prune",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/class-token-walk-single-source": {
       "name": "@equin/plugin-framework-tooling-checks-class-token-walk-single-source",
       "version": "0.0.1",
@@ -3933,6 +3937,10 @@
       "devDependencies": {
         "@types/babel__core": "^7.20.5",
       },
+    },
+    "plugins/framework/plugins/tooling/plugins/web-artifacts/plugins/prune": {
+      "name": "@equin/plugin-framework-tooling-web-artifacts-prune",
+      "version": "0.0.1",
     },
     "plugins/framework/plugins/web-core": {
       "name": "@equin/web",
@@ -8830,6 +8838,8 @@
 
     "@equin/plugin-framework-tooling-checks-bun-runtime": ["@equin/plugin-framework-tooling-checks-bun-runtime@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/bun-runtime"],
 
+    "@equin/plugin-framework-tooling-checks-cache-prune": ["@equin/plugin-framework-tooling-checks-cache-prune@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/cache-prune"],
+
     "@equin/plugin-framework-tooling-checks-class-token-walk-single-source": ["@equin/plugin-framework-tooling-checks-class-token-walk-single-source@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/class-token-walk-single-source"],
 
     "@equin/plugin-framework-tooling-checks-color-token-ref-in-sync": ["@equin/plugin-framework-tooling-checks-color-token-ref-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/color-token-ref-in-sync"],
@@ -9033,6 +9043,8 @@
     "@equin/plugin-framework-tooling-test-layout": ["@equin/plugin-framework-tooling-test-layout@workspace:plugins/framework/plugins/tooling/plugins/test-layout"],
 
     "@equin/plugin-framework-tooling-web-artifacts": ["@equin/plugin-framework-tooling-web-artifacts@workspace:plugins/framework/plugins/tooling/plugins/web-artifacts"],
+
+    "@equin/plugin-framework-tooling-web-artifacts-prune": ["@equin/plugin-framework-tooling-web-artifacts-prune@workspace:plugins/framework/plugins/tooling/plugins/web-artifacts/plugins/prune"],
 
     "@equin/plugin-framework-web-sdk": ["@equin/plugin-framework-web-sdk@workspace:plugins/framework/plugins/web-sdk"],
 

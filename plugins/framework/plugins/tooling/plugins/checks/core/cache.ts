@@ -30,15 +30,17 @@ import type { ReadSet } from "./read-set";
 // pressing the cap, and a trim to 4000 evicts entries recorded hours earlier —
 // which is exactly what makes the cross-day (and cross-worktree) reuse this cache
 // exists for impossible. 4× headroom at ~4.5 KB/entry bounds the dir at ~90 MB.
+//
+// Pruning is NOT on a check run's path: it lists and stats every entry (and the
+// flights dir), O(the whole cache) — measured 18k entries + 56k flight files, a
+// 127 s readdir during a host file-metadata stall. The scheduled
+// `checks.cache-prune` job (`checks/plugins/cache-prune`) runs it hourly, so a
+// run's cost is only the slots it reads and writes. Between two sweeps the dir
+// can outgrow MAX_ENTRIES only by an hour of check runs (each run adds ~1 slot
+// per check), which the next sweep trims.
 const MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 const MAX_ENTRIES = 20000;
 const TRIM_TO = 16000;
-// How often the age sweep is allowed to run. `prune()` is called eagerly on every
-// open, and its per-entry `statSync` pass dominates the cost (~95%; the readdir
-// itself is a rounding error). Against a 14-day age bound an hourly sweep is
-// plenty, so the common path stops after the readdir. See `prune()`.
-const PRUNE_INTERVAL_MS = 60 * 60 * 1000;
-const MARKER_FILE = ".last-prune";
 // A temp file is live only for the microseconds between its write and its
 // rename, so anything past this window was orphaned by a hard kill. See
 // `sweepOrphanTemps`.
@@ -55,7 +57,7 @@ const FLIGHTS_SUBDIR = "flights";
  * The per-check single-flight directory (`runCheckFlight`): host-global like
  * the cache itself, so concurrent check runs in every worktree coalesce on one
  * `(check, sig, treeHash)`. A subdirectory, so its files are never read as
- * cache entries by `prune()`'s `.json` pass.
+ * cache entries by `pruneCheckCache()`'s `.json` pass.
  */
 export function checkFlightDir(): AppPath {
   return checkCacheDir.file(FLIGHTS_SUBDIR);
@@ -126,7 +128,7 @@ function publishAtomic(file: AppPath, contents: string): void {
  * entries it was raised to abandon. To undo `v2`, go to `v3`.
  *
  * Orphaned entries under an old version are not deleted — they simply become
- * unreachable and age out under the existing 14-day `prune()` sweep, well
+ * unreachable and age out under the existing 14-day `pruneCheckCache()` sweep, well
  * inside the 20 000-entry backstop. The cost of a bump is one cold pass per
  * tree.
  */
@@ -152,7 +154,7 @@ function entryFile(checkId: string, treeHash: string, sig: string): AppPath {
 // treeHash — holding the latest recorded read-set. Validate-by-replay
 // (`read-set.ts` `validate`) checks it against a fresh snapshot, so one slot
 // serves the monotonic-forward push-rebase path. Suffixed `.readset.json` so it
-// still ends in `.json` and is swept by the same `prune()` as the legacy slots,
+// still ends in `.json` and is swept by the same `pruneCheckCache()` as the legacy slots,
 // while never colliding with a legacy `${sha256(key)}.json` name.
 function readSetFile(checkId: string, sig: string): AppPath {
   return slotName([checkId, sha256(sig)], ".readset.json");
@@ -181,7 +183,6 @@ export interface CheckCache {
 export function openCheckCache(): CheckCache {
   // A genuinely unwritable home is a real fault and should surface loudly.
   checkCacheDir.ensure();
-  prune();
   return {
     has(checkId, treeHash, sig) {
       return existsSync(entryFile(checkId, treeHash, sig));
@@ -208,30 +209,14 @@ export function openCheckCache(): CheckCache {
   };
 }
 
-// True iff the age sweep is due (marker absent or older than the interval). The
-// marker is `.last-prune`, which does not end in `.json` and so is never itself
-// listed as an entry.
-function ageSweepDue(now: number): boolean {
-  try {
-    return (
-      now - statSync(checkCacheDir.file(MARKER_FILE)).mtimeMs >
-      PRUNE_INTERVAL_MS
-    );
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-    return true; // never swept
-  }
-}
-
 // Reclaim temp files orphaned by a HARD kill between write and rename — the
 // in-process failure paths already clean up in `publishAtomic`'s `finally`.
 // Necessary because the temp name is now unique per writer: the old
 // destination-derived name self-limited the leak to one file per destination,
-// whereas a unique name would accumulate one per killed build forever. Runs on
-// the same gated cadence as the age sweep (temps are `.tmp`, so they are neither
-// counted as entries nor swept by the `.json` pass below); orphans are rare
-// enough that hourly reclamation is ample, and this keeps the common path's work
-// to just the readdir.
+// whereas a unique name would accumulate one per killed build forever. Part of
+// the hourly sweep (temps are `.tmp`, so they are neither counted as entries nor
+// swept by the `.json` pass); orphans are rare enough that hourly reclamation is
+// ample.
 function sweepOrphanTemps(all: string[], now: number): void {
   for (const name of all) {
     if (!name.endsWith(".tmp")) continue;
@@ -246,24 +231,29 @@ function sweepOrphanTemps(all: string[], now: number): void {
   }
 }
 
-// Opportunistic pruning: age-out stale entries, then cap total count. Cheap
-// stat-based pass; tolerates the readdir/stat race (a concurrent writer may
-// delete an entry between listing and stat). Both legacy `.json` slots and the
-// input-keyed `.readset.json` slots end in `.json`, so one sweep ages/caps both.
-//
-// The readdir is cheap but the per-entry stat pass is not, so the sweep runs only
-// when it can actually do something: either the count backstop is genuinely
-// breached (checked straight off the readdir, so it still triggers the instant it
-// must) or the hourly age sweep is due. Both bounds are preserved exactly; only
-// the cadence of the age sweep changes.
-function prune(): void {
+/** What one {@link pruneCheckCache} sweep saw and removed. */
+export interface CheckCachePruneReport {
+  entries: number;
+  removed: number;
+  flightFiles: number;
+}
+
+/**
+ * Sweep the check cache: age out stale entries, cap the total count, reclaim
+ * orphaned temps and idle flight files. O(the whole cache) — the scheduled
+ * `checks.cache-prune` job's work, never a check run's. Tolerates the
+ * readdir/stat race (a concurrent writer may replace an entry between listing
+ * and stat). Both legacy `.json` slots and the input-keyed `.readset.json`
+ * slots end in `.json`, so one sweep ages/caps both.
+ */
+export function pruneCheckCache(): CheckCachePruneReport {
+  checkCacheDir.ensure();
   const all = readdirSync(checkCacheDir.path);
   const names = all.filter((n) => n.endsWith(".json"));
   const now = Date.now();
-  if (names.length <= MAX_ENTRIES && !ageSweepDue(now)) return;
-  writeFileSync(checkCacheDir.file(MARKER_FILE), "");
   sweepOrphanTemps(all, now);
-  sweepIdleFlights(now);
+  const flightFiles = sweepIdleFlights(now);
+  let removed = 0;
   const live: { path: AppPath; mtimeMs: number }[] = [];
   for (const name of names) {
     const path = checkCacheDir.file(name);
@@ -276,6 +266,7 @@ function prune(): void {
     }
     if (now - mtimeMs > MAX_AGE_MS) {
       rmSync(path, { force: true });
+      removed++;
     } else {
       live.push({ path, mtimeMs });
     }
@@ -284,8 +275,10 @@ function prune(): void {
     live.sort((a, b) => a.mtimeMs - b.mtimeMs); // oldest first
     for (const { path } of live.slice(0, live.length - TRIM_TO)) {
       rmSync(path, { force: true });
+      removed++;
     }
   }
+  return { entries: names.length, removed, flightFiles };
 }
 
 /**
@@ -302,13 +295,13 @@ function prune(): void {
  * idle for a day to come back within that instant, and the key carries the
  * tree hash, so in practice it is never reused at all.
  */
-function sweepIdleFlights(now: number): void {
+function sweepIdleFlights(now: number): number {
   const dir = checkFlightDir();
   let names: string[];
   try {
     names = readdirSync(dir);
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return; // no flight yet
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return 0; // no flight yet
     throw err;
   }
   const mtimeOf = (name: string): number | null => {
@@ -349,4 +342,5 @@ function sweepIdleFlights(now: number): void {
       closeSync(fd);
     }
   }
+  return names.length;
 }

@@ -96,21 +96,49 @@ export function hasArtifact(dirName: string): boolean {
   return existsSync(joinAppPath(artifactStorePath(dirName), "meta.json"));
 }
 
+// ── Artifact groups ──────────────────────────────────────────────────
+//
+// A planner that must try every stored build of something (a browser host's
+// records, `browser-hosts.ts`) needs the store names in one group. Listing the
+// store for a prefix reads every entry of every checkout's builds (~27k names)
+// on every build, so each group is an index dir instead: one empty file per
+// member, written when the member is published (`indexArtifact`), dropped by
+// the prune once the member is gone (`pruneArtifactIndex`).
+
+const INDEX_DIR = webArtifactsDir.file("index");
+
+/** A group's index dir; the group is a store-name prefix (`<slug>.browser-host.`). */
+function groupIndexDir(group: string): AppPath {
+  return joinAppPath(INDEX_DIR, group);
+}
+
+/** Record that `dirName` (a published store entry) belongs to `group`. */
+export function indexArtifact(group: string, dirName: string): void {
+  if (!dirName.startsWith(group)) {
+    throw new Error(`artifact ${dirName} is not in group ${group}`);
+  }
+  const dir = groupIndexDir(group);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(joinAppPath(dir, dirName), "");
+}
+
 /**
- * Every complete artifact whose store name starts with `prefix`, most recently
- * used first (reuse bumps a dir's mtime — {@link touchArtifact}), ties by name.
+ * Every complete artifact of `group`, most recently used first (reuse bumps a
+ * dir's mtime — {@link touchArtifact}), ties by name. Reads the group's index,
+ * never the store's listing — except once, when the index does not exist yet:
+ * it is then built from the store (entries published before indexes existed).
  */
-export function listArtifacts(prefix: string): string[] {
+export function listArtifacts(group: string): string[] {
   let names: string[];
   try {
-    names = readdirSync(STORE_DIR);
+    names = readdirSync(groupIndexDir(group));
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-    return [];
+    names = backfillGroupIndex(group);
   }
   const found: { name: string; mtimeMs: number }[] = [];
   for (const name of names) {
-    if (!name.startsWith(prefix) || !hasArtifact(name)) continue;
+    if (!hasArtifact(name)) continue;
     let mtimeMs: number;
     try {
       mtimeMs = statSync(artifactStorePath(name)).mtimeMs;
@@ -130,6 +158,42 @@ export function listArtifacts(prefix: string): string[] {
           : 0,
   );
   return found.map((f) => f.name);
+}
+
+/** The store's members of `group`, recorded into its (new) index. */
+function backfillGroupIndex(group: string): string[] {
+  let names: string[];
+  try {
+    names = readdirSync(STORE_DIR);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    names = [];
+  }
+  const members = names.filter((n) => n.startsWith(group) && hasArtifact(n));
+  mkdirSync(groupIndexDir(group), { recursive: true });
+  for (const name of members) indexArtifact(group, name);
+  return members;
+}
+
+/**
+ * Drop every record of a group index whose entry under `root` is gone. Run by
+ * `pruneCacheDir` after its deletes, for a policy that names an `index`.
+ */
+function pruneGroupIndex(indexDir: AppPath, root: AppPath): void {
+  let groups: string[];
+  try {
+    groups = readdirSync(indexDir);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    return;
+  }
+  for (const group of groups) {
+    const dir = joinAppPath(indexDir, group);
+    for (const name of readdirSync(dir)) {
+      if (existsSync(joinAppPath(root, name))) continue;
+      rmSync(joinAppPath(dir, name), { force: true });
+    }
+  }
 }
 
 export function readArtifactMeta(dirName: string): ArtifactMeta {
@@ -220,6 +284,8 @@ export interface CachePrunePolicy {
   maxUnreferenced: number;
   /** …down to this many. */
   trimTo: number;
+  /** A group index naming entries of `root` (`indexArtifact`): its records of removed entries go too. */
+  index?: AppPath;
 }
 
 /** The artifact store's bounds (pruned by `pruneWebArtifactCaches`, `lease.ts`). */
@@ -228,7 +294,65 @@ export const STORE_PRUNE_POLICY: CachePrunePolicy = {
   maxAgeMs: MAX_AGE_MS,
   maxUnreferenced: MAX_UNREFERENCED,
   trimTo: TRIM_TO,
+  index: INDEX_DIR,
 };
+
+/** Entries younger than this may belong to a build that publishes without a lease. */
+const SNAPSHOT_MARGIN_MS = 60 * 1000;
+
+/** One cache entry as a survey saw it: its path and its mtime then. */
+export interface SurveyedEntry {
+  path: AppPath;
+  name: string;
+  mtimeMs: number;
+}
+
+/** A cache dir as {@link surveyCacheDir} saw it, and when it started looking. */
+export interface CacheSurvey {
+  /** Ages are judged as of this instant, however long ago the survey ran. */
+  atMs: number;
+  entries: SurveyedEntry[];
+}
+
+/**
+ * List one cache dir and stat every entry not already known to be a root —
+ * the expensive half of a prune (one stat per entry), and safe to run WITHOUT
+ * the store lock: it decides nothing. {@link pruneCacheDir} then judges the
+ * survey under the lock against the final roots, and re-stats only the entries
+ * it is about to delete. An entry published after the survey is not in it, so
+ * it is never a victim.
+ */
+export function surveyCacheDir(
+  root: AppPath,
+  knownRoots: ReadonlySet<string>,
+): CacheSurvey {
+  const atMs = Date.now();
+  let names: string[];
+  try {
+    names = readdirSync(root);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    return { atMs, entries: [] };
+  }
+  const entries: SurveyedEntry[] = [];
+  for (const name of names) {
+    const path = joinAppPath(root, name);
+    if (knownRoots.has(path)) continue;
+    const mtimeMs = mtimeOrNull(path);
+    if (mtimeMs !== null) entries.push({ path, name, mtimeMs });
+  }
+  return { atMs, entries };
+}
+
+/** The entry's mtime, or null when it vanished underneath us. */
+function mtimeOrNull(path: AppPath): number | null {
+  try {
+    return statSync(path).mtimeMs;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    return null;
+  }
+}
 
 /**
  * The ONE prune policy of every write-once cache dir (artifact store, vendor
@@ -249,52 +373,52 @@ export const STORE_PRUNE_POLICY: CachePrunePolicy = {
  * before it publishes, so its entries are always roots; an entry modified
  * within `SNAPSHOT_MARGIN_MS` of this call is still never deleted (it counts
  * toward the cap, never as a victim), for a build running older code that
- * publishes without a lease.
+ * publishes without a lease. (With an unlocked `survey`, "this call" is the
+ * survey: an entry published since is not in it at all.)
  */
-
-/** Entries younger than this may belong to a build that publishes without a lease. */
-const SNAPSHOT_MARGIN_MS = 60 * 1000;
-
 export function pruneCacheDir(
-  opts: CachePrunePolicy & { referenced: ReadonlySet<string> },
-): void {
-  let names: string[];
-  try {
-    names = readdirSync(opts.root);
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-    return;
-  }
-  const now = Date.now();
-  const candidates: { path: AppPath; mtimeMs: number }[] = [];
+  opts: CachePrunePolicy & {
+    referenced: ReadonlySet<string>;
+    /**
+     * What an unlocked {@link surveyCacheDir} saw. Omitted: the dir is
+     * surveyed here, under the caller's lock.
+     */
+    survey?: CacheSurvey;
+  },
+): number {
+  const survey = opts.survey ?? surveyCacheDir(opts.root, opts.referenced);
+  const now = survey.atMs;
+  const aged: SurveyedEntry[] = [];
+  const candidates: SurveyedEntry[] = [];
   let unjudged = 0;
-  for (const name of names) {
-    const path = joinAppPath(opts.root, name);
-    if (opts.referenced.has(path)) continue;
-    let mtimeMs: number;
-    try {
-      mtimeMs = statSync(path).mtimeMs;
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-      continue; // vanished underneath us — nothing to prune
-    }
-    const isTmp = name.startsWith(".tmp.");
-    if (now - mtimeMs > (isTmp ? 60 * 60 * 1000 : opts.maxAgeMs)) {
-      removeCacheEntry(path);
+  for (const entry of survey.entries) {
+    if (opts.referenced.has(entry.path)) continue;
+    const isTmp = entry.name.startsWith(".tmp.");
+    if (now - entry.mtimeMs > (isTmp ? 60 * 60 * 1000 : opts.maxAgeMs)) {
+      aged.push(entry);
     } else if (!isTmp) {
-      if (now - mtimeMs < SNAPSHOT_MARGIN_MS) unjudged++;
-      else candidates.push({ path, mtimeMs });
+      if (now - entry.mtimeMs < SNAPSHOT_MARGIN_MS) unjudged++;
+      else candidates.push(entry);
     }
   }
+  const victims = aged;
   const total = candidates.length + unjudged;
   if (total > opts.maxUnreferenced) {
     candidates.sort((a, b) => a.mtimeMs - b.mtimeMs); // oldest first
     // Young entries count toward the bound but are never victims.
     const excess = Math.min(candidates.length, total - opts.trimTo);
-    for (const { path } of candidates.slice(0, excess)) {
-      removeCacheEntry(path);
-    }
+    victims.push(...candidates.slice(0, excess));
   }
+  let removed = 0;
+  for (const { path, mtimeMs } of victims) {
+    // A reuse since the survey bumped its mtime (`touchArtifact`): it was
+    // judged on a stale age, so it stays until the next prune judges it again.
+    if (mtimeOrNull(path) !== mtimeMs) continue;
+    removeCacheEntry(path);
+    removed++;
+  }
+  if (opts.index !== undefined) pruneGroupIndex(opts.index, opts.root);
+  return removed;
 }
 
 /** True iff nothing (not even a dangling link) is at `path`. */

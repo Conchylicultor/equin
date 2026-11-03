@@ -34,6 +34,8 @@ export type {
   ArtifactBuilder,
   ArtifactBuildRequest,
 } from "./internal/artifact-builder";
+export { pruneWebArtifactCaches } from "./internal/lease";
+export type { PruneReport } from "./internal/lease";
 export { runWebArtifactsPipeline } from "./internal/pipeline";
 export type {
   WebArtifactsPipelineOptions,

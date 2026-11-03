@@ -234,25 +234,39 @@ export function eagerWebTargets(
  * no store writes — the caller owns the glob memo's persistence and store
  * mutation.
  */
+/** Runs one named planning step (`planFleet`'s `step`). */
+export type PlanStep = <T>(id: string, run: () => Promise<T>) => Promise<T>;
+
 export async function planFleet(opts: {
   root: AppPath;
   minify: boolean;
   sources: OwnSources;
   /** Which registry + entry set to plan; defaults to the committed full registry. */
   source?: FleetSource;
+  /**
+   * Wraps each planning step (`source`, `identity`, `targets`, `registry`,
+   * `browser-hosts`) — the pipeline times them as `detect`'s sub-steps.
+   */
+  step?: PlanStep;
 }): Promise<FleetPlan> {
   const { root, sources } = opts;
+  const step: PlanStep = opts.step ?? ((_id, run) => run());
   const pluginsRoot = joinAppPath(root, "plugins");
   const webSrcDir = joinAppPath(root, WEB_CORE_REL, "web");
 
-  const source = opts.source ?? (await defaultFleetSource(root));
+  const source = await step(
+    "source",
+    async () => opts.source ?? (await defaultFleetSource(root)),
+  );
   const { webEntries, registryFile } = source;
 
-  const identity = computeBuilderIdentity({
-    snapshot: sources.snapshot,
-    pluginsRoot,
-    minify: opts.minify,
-  });
+  const identity = await step("identity", async () =>
+    computeBuilderIdentity({
+      snapshot: sources.snapshot,
+      pluginsRoot,
+      minify: opts.minify,
+    }),
+  );
 
   const target = async (
     kind: ArtifactKind,
@@ -295,50 +309,60 @@ export async function planFleet(opts: {
   // plugin's target concurrently here is safe — `Promise.all` preserves
   // `webEntries`' order regardless of resolution order, so target
   // identity/dirName assignment is unchanged.
-  const webTargets = await Promise.all(
-    webEntries.map((e) =>
-      target(
-        "web",
-        e.pluginPath,
-        joinAppPath(pluginsRoot, e.pluginPath, "web", "index.ts"),
-        `@plugins/${e.pluginPath}/web`,
+  const { webTargets, entryTarget } = await step("targets", async () => ({
+    webTargets: await Promise.all(
+      webEntries.map((e) =>
+        target(
+          "web",
+          e.pluginPath,
+          joinAppPath(pluginsRoot, e.pluginPath, "web", "index.ts"),
+          `@plugins/${e.pluginPath}/web`,
+        ),
       ),
     ),
-  );
-  const entryTarget = await target(
-    "entry",
-    null,
-    joinAppPath(webSrcDir, "main.tsx"),
-    null,
-  );
+    entryTarget: await target(
+      "entry",
+      null,
+      joinAppPath(webSrcDir, "main.tsx"),
+      null,
+    ),
+  }));
 
   // The registry artifact is the one composition module, addressed by its source.
-  const registrySource = await readFile(registryFile, "utf8");
-  const registryInputsHash = computeInputsHash({
-    ownHash: sha256Hex(registrySource),
-    kind: "registry",
-    identityHash: identity.identityHash,
-  });
-  const registryTarget: RegistryTargetPlan = {
-    dirName: artifactDirName(
-      source.registrySlug,
-      "registry",
-      registryInputsHash,
-    ),
-    inputsHash: registryInputsHash,
-    registryFile,
-    needsBuild: !hasArtifact(
-      artifactDirName(source.registrySlug, "registry", registryInputsHash),
-    ),
-  };
+  const registryTarget = await step(
+    "registry",
+    async (): Promise<RegistryTargetPlan> => {
+      const registrySource = await readFile(registryFile, "utf8");
+      const registryInputsHash = computeInputsHash({
+        ownHash: sha256Hex(registrySource),
+        kind: "registry",
+        identityHash: identity.identityHash,
+      });
+      const dirName = artifactDirName(
+        source.registrySlug,
+        "registry",
+        registryInputsHash,
+      );
+      return {
+        dirName,
+        inputsHash: registryInputsHash,
+        registryFile,
+        needsBuild: !hasArtifact(dirName),
+      };
+    },
+  );
 
-  return {
-    webEntries,
-    hosts: planBrowserHosts({
+  const hosts = await step("browser-hosts", async () =>
+    planBrowserHosts({
       root,
       pluginPaths: webEntries.map((e) => e.pluginPath),
       identityHash: identity.identityHash,
     }),
+  );
+
+  return {
+    webEntries,
+    hosts,
     deferredPaths: source.deferredPaths,
     identity,
     webTargets,

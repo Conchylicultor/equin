@@ -405,6 +405,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
   - Exports (types):
     - `CandidateSource`
     - `CheckCache`
+    - `CheckCachePruneReport`
     - `CheckRunProgress`
     - `CodeMatch`
     - `ContentHashMemo`
@@ -444,6 +445,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `maskedSource`
     - `openCheckCache`
     - `parsedTsSource`
+    - `pruneCheckCache`
     - `readCheckProgress`
     - `readTranscriptVerdict`
     - `readTreeSnapshot`
@@ -467,6 +469,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
   - **`app-declarations-in-sync`**
   - **`barrel-stubs-in-sync`**
   - **`bun-runtime`** [exempt]
+  - **`cache-prune`** — The hourly checks.cache-prune job: ages out and caps the shared check-result cache and reclaims idle flight files, so no check run lists the whole cache.
   - **`class-token-walk-single-source`**
   - **`color-token-ref-in-sync`**
   - **`composition-closure`** [exempt]

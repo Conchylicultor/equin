@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-framework-tooling-web-artifacts-prune",
+  "description": "The hourly web-artifacts.prune job: prunes the shared write-once web caches (artifact store, vendor sets, CSS cache, package assets) off every build's path — dist links read unlocked, only changed dists re-read under the store lock.",
+  "version": "0.0.1",
+  "private": true
+}
