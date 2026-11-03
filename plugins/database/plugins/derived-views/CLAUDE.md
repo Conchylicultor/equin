@@ -71,6 +71,23 @@ changed together in one edit — the dependency-ordered rebuild handles it. To a
 **new** view, define the `pgView` in `views.ts` and add `View({ view })` to the
 owning plugin's server `contributions`.
 
+## Read aliases (`agent_read`)
+
+A view named `<table>_v` over a real public `<table>` (`tasks_v` over `tasks`,
+same rows plus the computed columns) also gets an alias in the
+`READ_ALIAS_SCHEMA` (`agent_read`) schema: `agent_read.tasks` is
+`SELECT * FROM public.tasks_v`. A reader that sets
+`search_path = agent_read, public` (only `database/query`'s `query_db` does) gets
+the view under the table's name, which is what agents guess from the code's
+`tasks` view object and the `status` field — `public.tasks` still reaches the
+table. The app's own SQL never sees the schema.
+
+The schema is part of this layer: the rebuild drops it whole before the public
+views and recreates it after them (its views read them), `dropDerivedViews` drops
+it first, and the signature and presence check cover it, so the steady-state
+restart still skips. It holds only views, so forks copy no rows for it. No
+declaration: a new `<table>_v` view is aliased by its name.
+
 ## Materialized views
 
 Materialized views hold data and are stateful — they stay in the migration layer
@@ -150,6 +167,8 @@ and re-export it from `core/index.ts`. See
     - `LIVE_STATE_TRIGGER_STATE_TABLE`
     - `MIGRATIONS_TABLE_NAME`
     - `PAGE_CONTENT_EDITED_AT_TABLE`
+    - `READ_ALIAS_SCHEMA`
+    - `readAliasStem`
     - `TASK_LATEST_CONVERSATION_TABLE`
     - `topoSortViews`
 - Cross-plugin:

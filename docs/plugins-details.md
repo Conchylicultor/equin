@@ -20920,6 +20920,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LIVE_STATE_TRIGGER_STATE_TABLE`
           - `MIGRATIONS_TABLE_NAME`
           - `PAGE_CONTENT_EDITED_AT_TABLE`
+          - `READ_ALIAS_SCHEMA`
+          - `readAliasStem`
           - `TASK_LATEST_CONVERSATION_TABLE`
           - `topoSortViews`
       - Cross-plugin:

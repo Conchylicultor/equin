@@ -6,6 +6,8 @@ import {
   topoSortViews,
   compileCreateView,
   DERIVED_VIEW_STATE_TABLE_NAME,
+  READ_ALIAS_SCHEMA,
+  readAliasStem,
   type RegisteredView,
 } from "@plugins/database/plugins/derived-views/core";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
@@ -57,15 +59,10 @@ export async function rebuildDerivedViews(
   const ordered = topoSortViews(declared);
   if (ordered.length === 0) return;
 
-  // Content signature of the whole view layer: each view's name + compiled DDL,
-  // in dependency order. Identical signature ⇒ identical views ⇒ nothing to do.
   const compiled = ordered.map((v) => ({
     name: v.name,
     ddl: compileCreateView(v),
   }));
-  const signature = sha256Hex(
-    compiled.map((c) => `${c.name}\n${c.ddl}`).join("\n--\n"),
-  );
 
   await db.transaction(async (tx) => {
     // Bookkeeping for the derived-view layer's content signature. Created
@@ -108,7 +105,49 @@ export async function rebuildDerivedViews(
     const existing = new Set(existingRows.map((r) => r.table_name));
     const allPresent = ordered.every((v) => existing.has(v.name));
 
-    if (prior === signature && allPresent) {
+    // The read aliases this layer owes (core/internal/read-aliases.ts): one per
+    // `<table>_v` view whose `<table>` is a real public table.
+    const tableRows = await executeRows(tx, {
+      query: drizzleSql.raw(
+        `SELECT c.relname::text AS name FROM pg_class c
+           JOIN pg_namespace n ON n.oid = c.relnamespace
+          WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p')`,
+      ),
+      row: z.object({ name: z.string() }),
+      label: "derived-views: list public tables",
+    });
+    const tables = new Set(tableRows.map((r) => r.name));
+    const aliases = ordered.flatMap((v) => {
+      const stem = readAliasStem(v.name);
+      return stem !== undefined && tables.has(stem)
+        ? [
+            {
+              name: stem,
+              ddl: `CREATE VIEW "${READ_ALIAS_SCHEMA}"."${stem}" AS SELECT * FROM "public"."${v.name}"`,
+            },
+          ]
+        : [];
+    });
+    const liveAliasRows = await executeRows(tx, {
+      query: drizzleSql`SELECT table_name::text AS table_name FROM information_schema.views WHERE table_schema = ${READ_ALIAS_SCHEMA}`,
+      row: z.object({ table_name: z.string() }),
+      label: "derived-views: list live read aliases",
+    });
+    const liveAliases = new Set(liveAliasRows.map((r) => r.table_name));
+    const aliasesPresent =
+      liveAliases.size === aliases.length &&
+      aliases.every((a) => liveAliases.has(a.name));
+
+    // Content signature of the whole view layer: each view's name + compiled DDL,
+    // in dependency order, then the read aliases. Identical signature ⇒
+    // identical views ⇒ nothing to do.
+    const signature = sha256Hex(
+      [...compiled, ...aliases]
+        .map((c) => `${c.name}\n${c.ddl}`)
+        .join("\n--\n"),
+    );
+
+    if (prior === signature && allPresent && aliasesPresent) {
       log.publish(
         `[derived-views] up to date (${ordered.length} view(s), signature unchanged) — skipping rebuild`,
       );
@@ -118,9 +157,16 @@ export async function rebuildDerivedViews(
     log.publish(
       `[derived-views] rebuilding ${ordered.length} view(s): ${ordered
         .map((v) => v.name)
-        .join(", ")}`,
+        .join(
+          ", ",
+        )} (+ ${aliases.length} read alias(es) in ${READ_ALIAS_SCHEMA})`,
     );
 
+    // The aliases read the views, so they go first and come back last. The
+    // schema is wholly this layer's, so it is dropped whole.
+    await tx.execute(
+      drizzleSql.raw(`DROP SCHEMA IF EXISTS "${READ_ALIAS_SCHEMA}" CASCADE`),
+    );
     for (const v of [...ordered].reverse()) {
       await tx.execute(
         drizzleSql.raw(`DROP VIEW IF EXISTS "public"."${v.name}"`),
@@ -128,6 +174,10 @@ export async function rebuildDerivedViews(
     }
     for (const v of compiled) {
       await tx.execute(drizzleSql.raw(v.ddl));
+    }
+    await tx.execute(drizzleSql.raw(`CREATE SCHEMA "${READ_ALIAS_SCHEMA}"`));
+    for (const a of aliases) {
+      await tx.execute(drizzleSql.raw(a.ddl));
     }
 
     await tx.execute(
@@ -157,7 +207,13 @@ export async function rebuildDerivedViews(
 // One statement naming every view, so Postgres resolves dependents among them
 // with no ordering and no CASCADE. `rebuildDerivedViews` then sees views missing
 // and rebuilds regardless of its stored signature.
+//
+// The read-alias schema goes first: its views read the public ones, so a live
+// alias would block the drop below.
 export async function dropDerivedViews(db: NodePgDatabase): Promise<void> {
+  await db.execute(
+    drizzleSql.raw(`DROP SCHEMA IF EXISTS "${READ_ALIAS_SCHEMA}" CASCADE`),
+  );
   const rows = await executeRows(db, {
     // `information_schema.views.table_name` is a domain over `name`; the cast
     // keeps the decoded type the one the schema declares.

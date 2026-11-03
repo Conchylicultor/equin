@@ -1,6 +1,7 @@
 export type { RegisteredView } from "./internal/registry";
 export { topoSortViews } from "./internal/topo-sort";
 export { compileCreateView } from "./internal/compile";
+export { READ_ALIAS_SCHEMA, readAliasStem } from "./internal/read-aliases";
 export {
   MIGRATIONS_TABLE_NAME,
   DERIVED_VIEW_STATE_TABLE_NAME,
