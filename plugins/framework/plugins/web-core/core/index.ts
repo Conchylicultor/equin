@@ -1,6 +1,11 @@
 export type {
+  BabelContribution,
   BabelPluginItem,
-  OrderedBabelContribution,
-  ViteContributionReturn,
+  BabelSource,
+  OrderedBabelContributions,
 } from "./vite-contributions";
-export { findViteContributions, loadBabelContributions } from "./vite-contributions";
+export {
+  babelPluginsFor,
+  findViteContributions,
+  loadBabelContributions,
+} from "./vite-contributions";

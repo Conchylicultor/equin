@@ -94,7 +94,8 @@ export async function computeBuilderIdentity(opts: {
     minify: opts.minify,
     vite: packageVersion("vite"),
     esbuild: packageVersion("esbuild"),
-    pluginReact: packageVersion("@vitejs/plugin-react"),
+    // Runs the babel contributions (`babel-transform.ts`).
+    babelCore: packageVersion("@babel/core"),
     // Extracts every artifact's Tailwind candidates (`tailwind-candidates.ts`).
     tailwindOxide: packageVersion("@tailwindcss/oxide"),
   };

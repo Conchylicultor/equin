@@ -118,7 +118,10 @@ export default defineBoundaries({
     check: ["core", "shared", "data-dirs", "server", "machine", "deps"],
     facet: ["core"],
     bin: ["core", "shared", "data-dirs", "server", "central", "cli", "deps"],
-    scripts: ["core", "shared", "data-dirs", "server", "deps"],
+    // A script is a host process run by path (`./equin run`), like `bin`: it
+    // may drive the same CLI machinery a command does (a measurement script
+    // running the build's pooled artifact builder).
+    scripts: ["core", "shared", "data-dirs", "server", "cli", "deps"],
     // Exhibits (`plugin-meta/exhibits`) render a plugin's own real components
     // standalone. Co-built into the plugin's web artifact, so its own `web/`
     // may be imported deeply (runtime-isolation/no-deep-own-folder-import).

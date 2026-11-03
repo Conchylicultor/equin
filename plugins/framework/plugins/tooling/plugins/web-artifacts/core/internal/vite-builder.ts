@@ -1,6 +1,6 @@
 // Per-plugin builder: Vite programmatic `build()` in lib mode, in-process, one
-// Rolldown graph per plugin. Reuses today's exact semantics: `@vitejs/plugin-react`
-// with the discovered babel contributions, CSS imports (local + npm package CSS,
+// Rolldown graph per plugin. The discovered babel contributions run through
+// `babelContributionsPlugin` (only on the modules each applies to), CSS imports (local + npm package CSS,
 // injected from JS so styles load atomically with the module), `define`,
 // names kept through minification (`KEEP_NAMES_MINIFY`). NO `@tailwindcss/vite` here — utilities come from the
 // single global pass (see `global-css.ts`).
@@ -31,9 +31,10 @@ import {
   parse as esLexerParse,
 } from "es-module-lexer/minimal";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
-import type { BabelPluginItem } from "@plugins/framework/plugins/web-core/core";
+import type { OrderedBabelContributions } from "@plugins/framework/plugins/web-core/core";
 import { COMPOSITION_REGISTRY_SPECIFIER } from "../composition-modules";
 import { WORKER_ASSETS_DIR } from "../constants";
+import { babelContributionsPlugin } from "./babel-transform";
 import { makeArtifactExternal } from "../externals";
 import { inlinedRootsFor } from "../own-roots";
 import { createInlineAudit } from "./inline-audit";
@@ -46,7 +47,7 @@ import { tailwindCandidatesOf } from "./tailwind-candidates";
 export interface BuilderCtx {
   repoRoot: AppPath;
   pluginsRoot: AppPath;
-  babelPlugins: BabelPluginItem[];
+  babelContributions: OrderedBabelContributions;
   minify: boolean;
 }
 
@@ -415,10 +416,7 @@ export async function buildArtifact(
 ): Promise<ArtifactMeta> {
   // Lazy: the vite/babel toolchain (~2s of module eval) must load only when an
   // artifact actually builds, never on plain CLI startup or docgen barrel import.
-  const [{ build: viteBuild }, { default: react }] = await Promise.all([
-    import("vite"),
-    import("@vitejs/plugin-react"),
-  ]);
+  const { build: viteBuild } = await import("vite");
   const tmpDir = artifactTmpDir(target.dirName);
   // The dir the artifact's own-hash was taken against: the plugin dir for a
   // plugin target, and (for `entry`) web-core's `web/` — which is exactly what
@@ -480,7 +478,7 @@ export async function buildArtifact(
       configFile: false,
       logLevel: "error",
       root: ctx.repoRoot,
-      plugins: [...plugins, react({ babel: { plugins: ctx.babelPlugins } })],
+      plugins: [...plugins, babelContributionsPlugin(ctx.babelContributions)],
       define: ARTIFACT_DEFINE,
       resolve: { alias: { "@plugins": ctx.pluginsRoot } },
       // Relative: an artifact is served from a content-addressed store dir, so

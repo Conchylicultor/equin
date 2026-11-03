@@ -161,10 +161,12 @@ bun run test:dom plugins/framework/plugins/web-core/web/__tests__/plugin-render.
     - `networking/no-request-guard-capability` — `web/install-request-guard.ts` (sanctioned)
 - Core:
   - Exports (types):
+    - `BabelContribution`
     - `BabelPluginItem`
-    - `OrderedBabelContribution`
-    - `ViteContributionReturn`
+    - `BabelSource`
+    - `OrderedBabelContributions`
   - Exports (values):
+    - `babelPluginsFor`
     - `findViteContributions`
     - `loadBabelContributions`
 - Structure:

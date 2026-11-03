@@ -8,3 +8,7 @@
 // would rebuild the whole fleet on every host.
 export { carryForwardServedEntries } from "./internal/carry-forward";
 export type { CarryForwardResult } from "./internal/carry-forward";
+export {
+  createPooledArtifactBuilder,
+  idealArtifactBuildThreads,
+} from "./internal/pooled-builder";

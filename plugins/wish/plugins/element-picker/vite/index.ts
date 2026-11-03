@@ -1,8 +1,8 @@
 // element-picker's build-time contribution: a source-location Babel plugin.
 //
-// `web-core/vite.config.ts` discovers every `**/vite/index.ts` generically (it
+// web-core's `loadBabelContributions` discovers every `**/vite/index.ts` generically (it
 // never names this plugin) and passes each default export's result to
-// `@vitejs/plugin-react`'s `babel.plugins`. The transform stamps host DOM
+// the artifact builder's Babel pass. The transform stamps host DOM
 // elements with `data-source="<file>:<line>"`; the element-picker read side
 // emits that as the `source=` attribute on the picked `<ui-context …>` tag, so a
 // picked element resolves to the exact `file:line` it renders from — even plain
@@ -21,6 +21,9 @@
 // at runtime.
 
 import { relative, sep } from "node:path";
+
+// JSX only parses in a `.tsx` / `.jsx` file: no other file has an element to stamp.
+const JSX_FILE_RE = /\.[jt]sx$/;
 
 // Minimal structural types for the babel surface we touch (we don't import
 // `@babel/types`, see CONSTRAINTS above).
@@ -142,17 +145,23 @@ function enclosingComponentName(
 }
 
 /**
- * Factory consumed by the vite config. `repoRoot` lets the transform compute
- * repo-relative paths. Returns a babel plugin function `({ types }) => pluginObj`
- * accepted by `react({ babel: { plugins: [...] } })`, which stamps
- * `data-source="<repo-relative-posix-path>:<line>"` on host JSX elements.
+ * Factory consumed by the artifact builder. `repoRoot` lets the transform
+ * compute repo-relative paths. Returns the contribution: a babel plugin function
+ * `({ types }) => pluginObj` that stamps
+ * `data-source="<repo-relative-posix-path>:<line>"` on host JSX elements, applied
+ * only to the files that can hold JSX (`.tsx` / `.jsx`).
  */
 export default function sourceLocationBabelPlugin({
   repoRoot,
 }: {
   repoRoot: string;
 }) {
-  return function sourceLocationBabelPluginInner({
+  return {
+    appliesTo: ({ id }: { id: string; code: string }) =>
+      JSX_FILE_RE.test(id.split("?")[0]!),
+    plugin: sourceLocationBabelPluginInner,
+  };
+  function sourceLocationBabelPluginInner({
     types: t,
   }: {
     types: BabelTypes;
@@ -210,5 +219,5 @@ export default function sourceLocationBabelPlugin({
         },
       },
     };
-  };
+  }
 }

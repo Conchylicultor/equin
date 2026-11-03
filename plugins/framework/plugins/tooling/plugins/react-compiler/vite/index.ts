@@ -1,9 +1,9 @@
 // react-compiler's build-time contribution: enable the React Compiler (v1.0, GA
 // Oct 2025) as a Babel plugin across the entire frontend.
 //
-// `web-core/vite.config.ts` discovers every `**/vite/index.ts` generically (it
-// never names this plugin) and passes each default export's result to
-// `@vitejs/plugin-react`'s `babel.plugins`. The React Compiler auto-inserts the
+// web-core's `loadBabelContributions` discovers every `**/vite/index.ts`
+// generically (it never names this plugin) and the artifact builder runs each
+// contribution's Babel plugin on the files its `appliesTo` accepts. The React Compiler auto-inserts the
 // memoization that ~654 `useMemo` / ~475 `useCallback` call sites maintain by
 // hand today — with correct deps by construction — retiring the per-subtree
 // manual-memo treadmill. It still respects existing manual memoization via
@@ -20,7 +20,8 @@
 // ORDERING (CRITICAL) — the React Compiler MUST run FIRST in the Babel plugin
 // list. Other contributors (e.g. element-picker's source-location transform)
 // stamp JSX *after* the compiler has restructured component bodies. We return the
-// ordered wrapper shape `{ order, plugin }` consumed by vite.config.ts and reserve
+// contribution shape `{ order, plugin, appliesTo }` (web-core's
+// `BabelContribution`) and reserve
 // `order: -100` ("must run first") so the compiler always precedes the default
 // `order: 0` contributions, regardless of filesystem discovery order.
 //
@@ -47,16 +48,43 @@ import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
 
+// A hook call or definition always spells `use<Upper|digit>` (`useState`,
+// `React.useMemo`, `function useThing`): the compiler identifies hooks by that
+// name alone.
+const HOOK_TOKEN_RE = /\buse[A-Z0-9]/;
+// The opt-in directive compiles the function holding it whatever its name.
+const USE_MEMO_RE = /["']use memo["']/;
+
+/**
+ * Whether a module can hold a function `compilationMode: "infer"` compiles: a
+ * component (PascalCase, renders JSX or calls a hook) or a hook (`use*`). JSX
+ * parses only in `.tsx` / `.jsx`, so any such file may; anything else must name
+ * a hook (or opt in with `"use memo"`). A `.ts` file with neither — about half the shipped source bytes — is
+ * handed back unchanged by the compiler, so it skips Babel entirely.
+ */
+function mayDefineComponentOrHook({
+  id,
+  code,
+}: {
+  id: string;
+  code: string;
+}): boolean {
+  if (/\.[jt]sx$/.test(id.split("?")[0]!)) return true;
+  return HOOK_TOKEN_RE.test(code) || USE_MEMO_RE.test(code);
+}
+
 /**
  * Factory consumed by the vite config. The React Compiler does not need
  * `repoRoot`, but the signature must match the generic contribution contract.
- * Returns the ordered wrapper `{ order, plugin }`: `order: -100` guarantees the
- * compiler runs first, and `plugin` is the `[resolvedPath, options]` Babel tuple.
+ * Returns the contribution: `order: -100` guarantees the compiler runs first,
+ * `plugin` is the `[resolvedPath, options]` Babel tuple, and `appliesTo` keeps
+ * Babel off the files the compiler cannot change (see `mayDefineComponentOrHook`).
  */
 export default function reactCompilerVitePlugin(_opts: { repoRoot: string }) {
   const pluginPath = require.resolve("babel-plugin-react-compiler");
   return {
     order: -100,
+    appliesTo: mayDefineComponentOrHook,
     plugin: [pluginPath, { target: "19", compilationMode: "infer" }] as const,
   };
 }

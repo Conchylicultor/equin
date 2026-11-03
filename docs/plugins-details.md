@@ -26643,14 +26643,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `takeReexecBudget`
         - **`build`** — `./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
           - Cli:
-            - Uses: 45 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
+            - Uses: 47 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
               - `framework/cli/op-runtime` ×34
               - `framework/cli/bootstrap` ×4
               - `framework/cli/migrations` ×3
+              - `framework/tooling/web-artifacts` ×3
               - `build/run-ledger.createBuildRunRecorder`
               - `framework/cli/doctor.assertPrerequisites`
               - `framework/cli/git-artifacts.registerMergeDrivers`
-              - `framework/tooling/web-artifacts.carryForwardServedEntries`
           - Plugins:
             - **`experimental-marks`** — The Show experimental marks setting (view-options popover and Settings → Config, on an experimental build): useShowExperimentalMarks() is true when the build stamped this document experimental and the marks are on; the frame and the Wish banner both follow it. Registers the Show experimental marks config and, while it is off, serves a head script that hides the marks before the first frame.
               - Web:
@@ -28587,28 +28587,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
         - **`web-artifacts`** — Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
           - Core:
-            - Uses:
-              - `framework/plugin-id.isTestCodePath`
-              - `framework/plugin-id.LEAF_FOLDERS`
-              - `framework/plugin-id.TESTING_FOLDER`
-              - `framework/plugin-id.TESTS_DIR`
+            - Uses: 21 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
+              - `framework/plugin-id` ×4
+              - `framework/web-core` ×4
+              - `infra/host-fs/user-path` ×4
+              - `packages/flock` ×4
               - `framework/product-name.LEGACY_IDS`
-              - `framework/web-core.findViteContributions`
-              - `framework/web-core.loadBabelContributions`
-              - `infra/host-fs/user-path.AppPath`
-              - `infra/host-fs/user-path.appPathParent`
-              - `infra/host-fs/user-path.asAppPath`
-              - `infra/host-fs/user-path.joinAppPath`
               - `infra/namespace.MAIN_COMPOSITION_ID`
               - `infra/paths.worktreesDir`
               - `packages/coalesce.createCoalescer`
-              - `packages/flock.flockRelease`
-              - `packages/flock.flockTry`
-              - `packages/flock.flockTryShared`
-              - `packages/flock.waitForFlock`
               - `packages/semaphore.createSemaphore`
             - Exports (types):
+              - `ArtifactBuilder`
+              - `ArtifactBuildRequest`
               - `ArtifactKind`
+              - `ArtifactMeta`
               - `FleetSource`
               - `ImportMapEntry`
               - `OwnFile`
@@ -28626,6 +28619,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `computeInputsHash`
               - `computeOwnHash`
               - `computePreloadClosure`
+              - `createArtifactBuildHandler`
               - `defaultFleetSource`
               - `findUnmappedDynamicWarnings`
               - `findUnmappedSpecifiers`
@@ -28645,6 +28639,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `sha256Hex`
               - `SHARED_ROOT`
               - `WORKER_ASSETS_DIR`
+          - Cli:
+            - Uses: `packages/thread-pool.createThreadPool`
+            - Exports (types): `CarryForwardResult`
+            - Exports (values):
+              - `carryForwardServedEntries`
+              - `createPooledArtifactBuilder`
+              - `idealArtifactBuildThreads`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shadow --shadow`
             - Imported by:
@@ -28656,9 +28657,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `user-path/no-unproven-claim` — `core/internal/identity.ts`, `core/internal/plan.ts`, `core/internal/vendors.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/internal/vendor-cache.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/internal/global-css.ts`, `core/internal/package-assets.ts`, `core/internal/staged-verify.ts` (sanctioned)
-          - Cli:
-            - Exports (types): `CarryForwardResult`
-            - Exports (values): `carryForwardServedEntries`
     - **`web-core`**
       - Web:
         - Uses:
@@ -28698,10 +28696,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `networking/no-request-guard-capability` — `web/install-request-guard.ts` (sanctioned)
       - Core:
         - Exports (types):
+          - `BabelContribution`
           - `BabelPluginItem`
-          - `OrderedBabelContribution`
-          - `ViteContributionReturn`
+          - `BabelSource`
+          - `OrderedBabelContributions`
         - Exports (values):
+          - `babelPluginsFor`
           - `findViteContributions`
           - `loadBabelContributions`
       - Structure:
@@ -35656,6 +35656,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Exports (types): `ThreadCpuReading`
         - Exports (values): `readThreadCpu`
+    - **`thread-pool`**
+      - Cross-plugin:
+        - Imported by: `framework/tooling/web-artifacts`
+      - Cli:
+        - Exports (types): `ThreadPool`
+        - Exports (values):
+          - `createThreadPool`
+          - `serveThreadPool`
     - **`ticket-line`** — Crash-safe cross-process FIFO line: createTicketLine(dir).join() resolves once every caller that joined earlier has left, in arrival order — each ticket a flocked file named by the machine-wide monotonic clock, each waiter blocked (push-based, one flock-wait child) on the ticket just ahead of it, so a dead waiter's place frees itself.
       - Core:
         - Uses:

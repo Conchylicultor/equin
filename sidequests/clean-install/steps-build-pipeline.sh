@@ -52,8 +52,17 @@
 #  W4   server body edit x3: a comment line appended to a server file of a
 #       browser-host graph member (apps-core/app-usage) — the host's rebuild case.
 #  W3   fresh worktree from main, stores warm x2 (db fork + build --skip-checks).
+#  CF   cold x3: the frontend pipeline alone from an empty data root
+#       (web-artifacts/scripts/measure-frontend-cold.ts), without the cold
+#       checks competing for the cores; BUILD_PIPELINE_CF_ARGS is appended
+#       (step 3b, research/2026-10-30-global-build-pipeline-step3b-batched-artifacts-and-repo-snapshot.md).
+#  RUN  $BUILD_PIPELINE_RUN (guest zsh code, run in ~/equin with bp.zsh loaded),
+#       for a spike or measurement script. Skipped when unset.
 #  ISO  measure-build-steps.ts, one run per step-order preset, in a clean worktree.
 #       BUILD_PIPELINE_SKIP_ISO=1 skips it (for a step that leaves codegen alone).
+#
+# BUILD_PIPELINE_STEPS="baseline install lib cf": run only the named steps (by
+# slug), e.g. one scenario on a fresh VM. Unset: every step.
 #
 # Profiling: every build runs with BUN_OPTIONS="--cpu-prof-md --cpu-prof-dir=...";
 # Bun forwards it to every bun child (build, drizzle-kit probe, workers), one .md
@@ -151,6 +160,9 @@ bp_build() {
 bp_worktree() {
   export EQUIN_CONVERSATION_ID=conv-bench-$1
   cd ~/equin
+  # Idempotent: a resumed run (--from) may find a half-made one from before.
+  if [ -d .claude/worktrees/att-$1 ]; then git worktree remove --force .claude/worktrees/att-$1; fi
+  git branch -D $1 2>/dev/null
   git worktree add -q .claude/worktrees/att-$1 -b $1
   cd .claude/worktrees/att-$1
   ./equin db fork
@@ -294,6 +306,29 @@ CMD
 step_12_collect_DOC="Tars $HOME/bp-out (build logs, profile JSONs, cpu-prof md, step JSONs) to /tmp/bp-out.tgz for scp."
 step_12_collect_TAG="harness-only"
 
+step_13_cf() {
+  # The frontend pipeline alone, cold (measure-frontend-cold.ts: an empty data
+  # root per run, nothing else running). `build --hermetic` refuses
+  # --skip-checks, so a cold build always ran its checks beside the frontend.
+  # BUILD_PIPELINE_CF_ARGS: e.g. "--threads auto" (the build's pooled builder).
+  guest_zsh '
+cd ~/equin
+bp_sys "cf before"
+./equin run plugins/framework/plugins/tooling/plugins/web-artifacts/scripts/measure-frontend-cold.ts --runs 3 --json $HOME/bp-out/cf.json '"${BUILD_PIPELINE_CF_ARGS:-}"' 2>&1 | grep -E "cold frontend|^  artifacts:"
+bp_sys "cf after"
+echo "== cf.json"; cat $HOME/bp-out/cf.json; echo
+'
+}
+step_13_cf_DOC="CF x3: the frontend pipeline alone from an empty data root (measure-frontend-cold.ts), \$BUILD_PIPELINE_CF_ARGS appended."
+step_13_cf_TAG="harness-only"
+
+step_14_run() {
+  if [ -z "${BUILD_PIPELINE_RUN:-}" ]; then echo 'echo "RUN skipped (BUILD_PIPELINE_RUN unset)"'; return; fi
+  guest_zsh "cd ~/equin; $BUILD_PIPELINE_RUN"
+}
+step_14_run_DOC="RUN: \$BUILD_PIPELINE_RUN in ~/equin (a spike or measurement script)."
+step_14_run_TAG="harness-only"
+
 STEPS=(
   step_01_baseline
   step_02_install
@@ -306,5 +341,17 @@ STEPS=(
   step_09_w4
   step_10_w3
   step_11_iso
+  step_13_cf
+  step_14_run
   step_12_collect
 )
+
+if [ -n "${BUILD_PIPELINE_STEPS:-}" ]; then
+  _bp_kept=()
+  for _bp_fn in "${STEPS[@]}"; do
+    for _bp_slug in $BUILD_PIPELINE_STEPS; do
+      [[ "$_bp_fn" == step_[0-9]*_"$_bp_slug" ]] && _bp_kept+=("$_bp_fn")
+    done
+  done
+  STEPS=("${_bp_kept[@]}")
+fi

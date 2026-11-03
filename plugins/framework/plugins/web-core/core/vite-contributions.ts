@@ -1,5 +1,6 @@
 // Shared discovery + loading of per-plugin `vite/index.ts` build contributions
-// (Babel plugins handed to `@vitejs/plugin-react`). Originally extracted from
+// (Babel plugins the artifact builder runs, each on the modules its
+// `appliesTo` accepts — web-artifacts' `babel-transform.ts`). Originally extracted from
 // `web-core/vite.config.ts` so the per-plugin artifact builder
 // (`tooling/web-artifacts`) reused the EXACT same transform set as the
 // monolithic build; that build is gone, so web-artifacts is now the sole
@@ -24,34 +25,35 @@ type ReactBabelObject = Exclude<
 >;
 export type BabelPluginItem = NonNullable<ReactBabelObject["plugins"]>[number];
 
-// A contribution's default export may return EITHER a bare `BabelPluginItem`
-// (back-compat) OR an ordered wrapper `{ order?: number; plugin }`. The numeric
-// `order` is the ONLY ordering knob the consumer reads — it never names an
-// individual contributor (collection-consumer separation). Lower `order` runs
-// FIRST in Babel's plugin list; a bare return normalizes to `order: 0`.
-// Convention: reserve a low value like `-100` for "must run first" transforms
-// (e.g. a whole-program compiler that other JSX-stamping transforms must follow).
-export type OrderedBabelContribution = {
+// A contribution's default export returns a `BabelContribution`:
+//
+// - `order` is the ONLY ordering knob the consumer reads — it never names an
+//   individual contributor (collection-consumer separation). Lower `order` runs
+//   FIRST in Babel's plugin list; omitted means `0`. Convention: reserve a low
+//   value like `-100` for "must run first" transforms (e.g. a whole-program
+//   compiler that other JSX-stamping transforms must follow).
+// - `appliesTo` says which files the plugin can change. A file no contribution
+//   applies to never goes through Babel (a whole parse + regenerate of a file
+//   the plugins would hand back as is — about half the shipped bytes, and the
+//   biggest single cost of a cold artifact build). It must be exact in one
+//   direction: false only for a file the plugin would leave unchanged. Required,
+//   so a new contribution cannot silently run on everything.
+export interface BabelContribution {
   order?: number;
   plugin: BabelPluginItem;
-};
-export type ViteContributionReturn = BabelPluginItem | OrderedBabelContribution;
-
-// Robustly discriminate the ordered wrapper from a bare `BabelPluginItem`. A bare
-// item can be a string, a function, a tuple `[plugin, options]` (array), or a
-// plugin object `{ name, visitor }`. The wrapper is the only non-array object that
-// carries a `plugin` key — a plugin object has `name`/`visitor` but no `plugin`,
-// so it correctly falls through to the bare branch.
-function isOrderedContribution(
-  ret: ViteContributionReturn,
-): ret is OrderedBabelContribution {
-  return (
-    typeof ret === "object" &&
-    ret !== null &&
-    !Array.isArray(ret) &&
-    "plugin" in ret
-  );
+  appliesTo: (source: BabelSource) => boolean;
 }
+
+/** One module as the builder hands it to `appliesTo`: its id (path, maybe a `?query`) and its code. */
+export interface BabelSource {
+  id: string;
+  code: string;
+}
+
+/** The loaded contributions, in run order (ascending `order`, stable). */
+export type OrderedBabelContributions = ReadonlyArray<
+  Required<Pick<BabelContribution, "order">> & BabelContribution
+>;
 
 /**
  * Discover every plugin's `vite/index.ts` build contribution generically — never
@@ -115,11 +117,10 @@ async function isFile(file: string): Promise<boolean> {
 }
 
 /**
- * Load every discovered contribution and return the final ordered Babel plugin
- * list. Collects each contribution as a normalized `{ order, plugin }` record,
- * then STABLE-sorts ascending by `order` so the list is deterministic regardless
- * of filesystem discovery order — ordering is load-bearing for transforms that
- * REQUIRE a relative position (e.g. a whole-program compiler that must precede
+ * Load every discovered contribution and return them in run order. STABLE-sorts
+ * ascending by `order` so the list is deterministic regardless of filesystem
+ * discovery order — ordering is load-bearing for transforms that REQUIRE a
+ * relative position (e.g. a whole-program compiler that must precede
  * JSX-stamping transforms). Contributions are imported by ABSOLUTE path, so the
  * `@plugins` alias (which the esbuild config loader does not resolve) is never
  * needed.
@@ -127,19 +128,30 @@ async function isFile(file: string): Promise<boolean> {
 export async function loadBabelContributions(opts: {
   pluginsRoot: string;
   repoRoot: string;
-}): Promise<BabelPluginItem[]> {
-  const ordered: { order: number; plugin: BabelPluginItem }[] = [];
+}): Promise<OrderedBabelContributions> {
+  const ordered: Array<
+    Required<Pick<BabelContribution, "order">> & BabelContribution
+  > = [];
   for (const file of await findViteContributions(opts.pluginsRoot)) {
     const mod = (await import(file)) as {
-      default: (o: { repoRoot: string }) => ViteContributionReturn;
+      default: (o: { repoRoot: string }) => BabelContribution;
     };
     const ret = mod.default({ repoRoot: opts.repoRoot });
-    ordered.push(
-      isOrderedContribution(ret)
-        ? { order: ret.order ?? 0, plugin: ret.plugin }
-        : { order: 0, plugin: ret },
-    );
+    if (typeof ret?.appliesTo !== "function") {
+      throw new Error(
+        `${file}: a vite/ contribution must return { plugin, appliesTo, order? } — appliesTo is missing`,
+      );
+    }
+    ordered.push({ ...ret, order: ret.order ?? 0 });
   }
   ordered.sort((a, b) => a.order - b.order);
-  return ordered.map((o) => o.plugin);
+  return ordered;
+}
+
+/** The Babel plugins that apply to one module, in run order (empty: leave it to oxc). */
+export function babelPluginsFor(
+  contributions: OrderedBabelContributions,
+  source: BabelSource,
+): BabelPluginItem[] {
+  return contributions.filter((c) => c.appliesTo(source)).map((c) => c.plugin);
 }

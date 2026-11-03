@@ -28,7 +28,11 @@ import {
   compositionFleetSource,
   runWebArtifactsPipeline,
 } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/core";
-import { carryForwardServedEntries } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/cli";
+import {
+  carryForwardServedEntries,
+  createPooledArtifactBuilder,
+  idealArtifactBuildThreads,
+} from "@plugins/framework/plugins/tooling/plugins/web-artifacts/cli";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
   restampMovedOverrides,
@@ -1075,26 +1079,44 @@ export async function buildAndPublishWebDist(
       const source = composition
         ? await compositionFleetSource({ root, name: composition })
         : undefined;
-      const result = await grant.run(() =>
-        runWebArtifactsPipeline({
-          root,
-          stagingDir: stagingPath,
-          minify: opts.minify,
-          buildId,
-          buildCommit: opts.headAtStart,
-          source,
-          materialize: opts.materialize,
-          log: (line) => lines.push({ text: line, stream: "stdout" }),
-          isPlatformApi,
-          onStage: async (id, label, run) => {
-            const endStage = hooks.span(id, "build:frontend", label);
-            try {
-              return await run();
-            } finally {
-              endStage();
-            }
-          },
-        }),
+      // The artifact compiles run on a pool of worker threads (about two per
+      // three cores, measured — see web-artifacts' pooled-builder.ts), clamped
+      // to the grant; the pipeline is admitted for that many units, so the
+      // grant bounds the threads.
+      const threads = Math.min(idealArtifactBuildThreads(), grant.units);
+      const builder = createPooledArtifactBuilder({
+        repoRoot: root,
+        minify: opts.minify,
+        threads,
+      });
+      const result = await grant.run(
+        async () => {
+          try {
+            return await runWebArtifactsPipeline({
+              builder,
+              root,
+              stagingDir: stagingPath,
+              minify: opts.minify,
+              buildId,
+              buildCommit: opts.headAtStart,
+              source,
+              materialize: opts.materialize,
+              log: (line) => lines.push({ text: line, stream: "stdout" }),
+              isPlatformApi,
+              onStage: async (id, label, run) => {
+                const endStage = hooks.span(id, "build:frontend", label);
+                try {
+                  return await run();
+                } finally {
+                  endStage();
+                }
+              },
+            });
+          } finally {
+            await builder.close();
+          }
+        },
+        { units: threads },
       );
       graphHash = result.graphHash;
       lines.push({

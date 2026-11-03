@@ -12,7 +12,6 @@ import {
 import os from "node:os";
 import { basename } from "node:path";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
-import { loadBabelContributions } from "@plugins/framework/plugins/web-core/core";
 import { BUILDER_VERSION, WORKER_ONLY_KINDS } from "../constants";
 import {
   findUnmappedDynamicWarnings,
@@ -45,11 +44,7 @@ import {
   touchArtifact,
   type ArtifactMeta,
 } from "./store";
-import {
-  buildArtifact,
-  buildRegistryArtifact,
-  type BuilderCtx,
-} from "./vite-builder";
+import { buildRegistryArtifact } from "./vite-builder";
 import {
   ensureVendorSet,
   vendorSetDirName,
@@ -79,6 +74,10 @@ import {
   workerTreeOf,
 } from "./worker-link";
 import { composeDist } from "./compose";
+import {
+  createArtifactBuildHandler,
+  type ArtifactBuilder,
+} from "./artifact-builder";
 import { scanStagedModules } from "./staged-verify";
 
 export interface WebArtifactsPipelineOptions {
@@ -119,6 +118,12 @@ export interface WebArtifactsPipelineOptions {
    * depends on no checker.
    */
   isPlatformApi: (specifier: string) => boolean;
+  /**
+   * Where stale artifacts compile. Omitted: in this process, a few at a time —
+   * which shares its one JS thread. The build CLI passes a pooled builder
+   * (`cli/`'s `createPooledArtifactBuilder`).
+   */
+  builder?: ArtifactBuilder;
   /** Stage wrapper — the caller records profiler spans here. */
   onStage: <T>(id: string, label: string, run: () => Promise<T>) => Promise<T>;
 }
@@ -136,6 +141,20 @@ export interface WebArtifactsPipelineResult {
    * is still the one being served.
    */
   graphHash: string;
+}
+
+/**
+ * The default builder: this process, a few builds at a time. Their vite and
+ * Rolldown work overlaps; their Babel pass does not (one JS thread).
+ */
+function inProcessBuilder(repoRoot: AppPath, minify: boolean): ArtifactBuilder {
+  const handle = createArtifactBuildHandler();
+  const gate = createSemaphore(
+    Math.min(8, Math.max(2, Math.floor(os.cpus().length / 2))),
+  );
+  return {
+    build: (target) => gate.run(() => handle({ repoRoot, minify, target })),
+  };
 }
 
 export async function runWebArtifactsPipeline(
@@ -204,18 +223,7 @@ async function runPipeline(
   // ── Stage 2: build (webs + entry + registry, then the core closure) ─
   // One builder for every artifact, page and worker alike: the host stage
   // below builds its closure through the same `ensure`.
-  const ctx: BuilderCtx = {
-    repoRoot: root,
-    pluginsRoot,
-    babelPlugins: await loadBabelContributions({
-      pluginsRoot,
-      repoRoot: root,
-    }),
-    minify: opts.minify,
-  };
-  const gate = createSemaphore(
-    Math.min(8, Math.max(2, Math.floor(os.cpus().length / 2))),
-  );
+  const builder = opts.builder ?? inProcessBuilder(root, opts.minify);
   const metas = new Map<string, ArtifactMeta>(); // dirName → meta
   const counts = { built: 0, reused: 0 };
   // Pin first, then look: planning read the store before this build held
@@ -224,7 +232,7 @@ async function runPipeline(
   const ensure = async (t: PlannedTarget): Promise<ArtifactMeta> => {
     await lease.pin([artifactStorePath(t.dirName)]);
     if (t.needsBuild || !hasArtifact(t.dirName)) {
-      const meta = await gate.run(() => buildArtifact(t, ctx));
+      const meta = await builder.build(t);
       metas.set(t.dirName, meta);
       counts.built++;
       return meta;

@@ -29,6 +29,11 @@ export {
 export type { ImportMapEntry } from "./import-map";
 export { computePreloadClosure } from "./internal/compose";
 export { readFleetVendorMeta } from "./internal/expected";
+export { createArtifactBuildHandler } from "./internal/artifact-builder";
+export type {
+  ArtifactBuilder,
+  ArtifactBuildRequest,
+} from "./internal/artifact-builder";
 export { runWebArtifactsPipeline } from "./internal/pipeline";
 export type {
   WebArtifactsPipelineOptions,
@@ -39,3 +44,4 @@ export type { FleetSource } from "./internal/plan";
 export { firstSegmentOf, inlinedRootsFor, SHARED_ROOT } from "./own-roots";
 export type { ArtifactKind } from "./own-roots";
 export type { VendorSetMeta } from "./internal/vendors";
+export type { ArtifactMeta } from "./internal/store";
