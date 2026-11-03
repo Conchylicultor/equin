@@ -111,7 +111,7 @@ portable `server/` half.
   owns the header — ONE row, the whole of it the drag handle (a press on an
   action still clicks: `useDragGesture` drags from a control only past its
   threshold): the mark and the question, then Open in Agent Manager
-  (`OpenConversationButton display="icon"`), New question (lets go of the run;
+  (`OpenConversationButton`), New question (lets go of the run;
   it stays in the Agent Manager), Agent instructions, Minimize and Close (×, `EndThreadButton`: ends the conversation if it is still open — dropping its
   task — then lets go of the run and closes the card; always there, so an
   ended thread still closes). No

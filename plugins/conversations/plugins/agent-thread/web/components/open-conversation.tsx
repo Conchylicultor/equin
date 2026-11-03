@@ -1,4 +1,3 @@
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { linkProps } from "@plugins/primitives/plugins/link-gesture/web";
@@ -7,12 +6,6 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 
 export interface OpenConversationButtonProps {
   conversationId: string;
-  /**
-   * `label` — the ghost "Open conversation" button the default header ends
-   * with; `icon` — an icon button ("Open in Agent Manager"), for a host's
-   * own, tighter header.
-   */
-  display?: "label" | "icon";
   /**
    * Called after a plain click opened the conversation here — for a host
    * that should get out of the way once it is on screen (a floating card).
@@ -24,12 +17,11 @@ export interface OpenConversationButtonProps {
 
 /**
  * Open the thread's full conversation in the Agent Manager (it crosses apps
- * by itself) — the default header's link, exported for a host that draws its
+ * by itself) as the standard expand icon — the default header's link, exported for a host that draws its
  * own header (`AgentThread`'s `header`).
  */
 export function OpenConversationButton({
   conversationId,
-  display = "label",
   onOpened,
 }: OpenConversationButtonProps) {
   const openPane = useOpenPane();
@@ -45,15 +37,11 @@ export function OpenConversationButton({
     },
     href: target.href,
   });
-  return display === "icon" ? (
+  return (
     <IconButton
       icon={navIcons.expand}
       label="Open in Agent Manager"
       {...link}
     />
-  ) : (
-    <Button variant="ghost" {...link}>
-      Open conversation
-    </Button>
   );
 }

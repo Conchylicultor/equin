@@ -136,7 +136,6 @@ export function AskThreadCard({
             <CardHeader drag={drag} title={question}>
               <OpenConversationButton
                 conversationId={conversationId}
-                display="icon"
                 onOpened={minimizeAsk}
               />
               <IconButton

@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { navIcons } from "@plugins/ui/plugins/icons/core";
 import { groupThread, threadStateOf } from "../../core";
 import { AgentThreadView } from "../../web/components/agent-thread-view";
 import { ThreadComposerView } from "../../web/components/composer";
@@ -11,7 +12,7 @@ import { showPicks, type ThreadFixture } from "./fixtures";
 /**
  * The thread over a fixture transcript, through the real `groupThread` and
  * `AgentThreadView`. The live parts are inert here: the composer types but
- * sends nothing, Open conversation goes nowhere, and a pending question shows
+ * sends nothing, Open in Agent Manager goes nowhere, and a pending question shows
  * no answer form (that card reads the conversation's held question live).
  */
 export function ThreadExhibit({
@@ -61,7 +62,9 @@ export function ThreadExhibit({
             ))}
           </Stack>
         )}
-        headerAction={<Button variant="ghost">Open conversation</Button>}
+        headerAction={
+          <IconButton icon={navIcons.expand} label="Open in Agent Manager" />
+        }
         composer={
           <ThreadComposerView
             value={draft}

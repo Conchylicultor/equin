@@ -66,8 +66,8 @@ newest turn's finished steps, its running step, its accepted results, and
   owns the whole row (the Ask equin card, whose header is its drag handle).
   Exclusive by type (`ThreadHeaderOptions`): a `header` takes no `title` /
   `headerAction`. A host header composes the exported pieces:
-  `<OpenConversationButton conversationId display="label" | "icon" />` (the
-  Agent Manager link; `icon` is "Open in Agent Manager") and
+  `<OpenConversationButton conversationId />` (the
+  Agent Manager link: the standard expand icon, "Open in Agent Manager") and
   `EndThreadButton`. Status is
   `useOptimisticConversationStatus`; `prepareTurn?: (text) => string` is the
   host's hook on every turn sent from the thread (Enter, a `<go>`'s ▶), called
