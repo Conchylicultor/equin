@@ -30,7 +30,7 @@ a complete one over with `adoptCompleteCheckout(path)` (re-lock + non-frozen
 install: `setupWorktree`'s `existing` path minus the convergence).
 
 - **The lock reason is the readiness marker.** A spare is written
-  (`add --detach`, sharing `addCheckout` with the cold path: one
+  (detached, sharing `addCheckout` with the cold path: one
   `checkout.workers=0`, one timeout, one partial-tree cleanup), **installed**
   (`installCheckout`, below), and only then locked with reason
   `SPARE_LOCK_REASON` (`LEGACY_IDS.spareLockReason`). `listReadySpares` lists only spares
@@ -40,11 +40,11 @@ install: `setupWorktree`'s `existing` path minus the convergence).
 - **`spare-*` is non-canonical on purpose.** It fails `isCanonicalWorktreeName` (not an attempt id), so the
   reaper, the namespace passes and the registry filters ignore it. Do not widen
   the regex.
-- **The claim** (inside the mutate-gate hold): `unlock` → `git worktree move` →
+- **The claim** (inside the mutate-gate hold): `unlock` → move →
   `git switch [-c] claude-web/<id>` (a two-tree checkout: it writes only the diff
   since the spare's commit) → lock. Two claimers of one spare are told apart by
-  the filesystem: the first `unlock` wins, and `move` is a rename; the loser
-  tries the next spare, then the cold add.
+  the filesystem: the first `unlock` wins; the loser tries the next spare, then
+  the cold add.
 - **A lock is its file, not a git command.** `lockWorktree` / `unlockWorktree`
   create (`wx`) / unlink `.git/worktrees/<id>/locked`, the entry found by its
   `gitdir`. `git worktree lock` / `unlock` resolve their argument through the
@@ -61,9 +61,29 @@ install: `setupWorktree`'s `existing` path minus the convergence).
   over (as git does); one without `HEAD` yet is listed with `head: null`, its
   `initializing` lock still read — crash convergence depends on it. `head` is
   the HEAD file as written (a branch ref, unresolved, or a detached commit).
-  `git worktree add` / `move` / `switch` still enumerate every worktree and can
-  die the same way beside a concurrent add.
-- **Crash convergence.** A crash after `move` leaves the dir in place on a
+- **No git command here enumerates the worktrees.** `git worktree add`,
+  `git worktree move` and `git switch <existing branch>` (its "already checked
+  out" refusal) all read every worktree's HEAD first and die the same way —
+  beside our own adds or anyone's (Claude Code's `agent-*` worktrees live in
+  this repo too), so no lock of ours could exclude them all. So:
+  - **`addCheckout` writes the admin entry itself** (`CheckoutHead`: detached,
+    existing branch, or a new branch made create-only by `update-ref`): filled
+    in a staging dir beside `.git/worktrees/` and renamed in whole — so no
+    reader, git's included, sees it half-written — locked `initializing`
+    (`ADD_IN_PROGRESS_LOCK`) from its first instant, exactly as git's add is;
+    then the dir and its `.git` file, then `git reset --hard` (the child git's
+    add runs) writes the tree, then the lock goes. A crash before the dir
+    exists leaves a locked entry and no dir: the next add at that path discards
+    it. The release checkout (`release/source-checkout`) uses it too.
+  - **The claim's move is a rename + the admin `gitdir` rewrite** — `gitdir`
+    first, so a crash between leaves a prunable entry the cold add discards
+    (git's own order would leave the dir at the attempt's path with an entry
+    naming the spare's, which nothing recognises).
+  - **The claim's switch onto an existing branch** checks "checked out
+    elsewhere" against our list, then passes `--ignore-other-worktrees`.
+  The repo has no `post-checkout` hook and no `config.worktree` — the two
+  things git's add does that `addCheckout` does not.
+- **Crash convergence.** A crash after the move leaves the dir in place on a
   detached HEAD — before the switch, or inside it. The early return recognises
   it by `isUnfinishedCheckout`: admin dir `spare-*` (the move keeps it), HEAD
   detached, and NO lock — a finished claim is always locked, so a working
@@ -72,7 +92,7 @@ install: `setupWorktree`'s `existing` path minus the convergence).
   never re-runs the switch in place: a switch killed mid-write leaves the files
   it added untracked under the old HEAD, which blocks any further switch
   (`--discard-changes` covers tracked changes only). The same check catches a
-  cold add killed mid-checkout — git's own `initializing` lock
+  cold add killed mid-checkout — its `initializing` lock
   (`ADD_IN_PROGRESS_LOCK`) still on it — whose discard releases that lock first.
 - **Pruning.** `pruneSpares` removes `spare-*` dirs that are unregistered or
   unlocked and older than 15 minutes (newest of the dir's and its admin dir's
@@ -167,6 +187,7 @@ pid liveness.
     - `infra/paths.worktreesDir`
     - `packages/flock.flockTry`
   - Exports (types):
+    - `CheckoutHead`
     - `CheckoutSource`
     - `CheckoutState`
     - `CompositionMarker`
@@ -180,6 +201,7 @@ pid liveness.
     - `WorktreeSetup`
     - `WorktreeSpec`
   - Exports (values):
+    - `addCheckout`
     - `adoptCompleteCheckout`
     - `appCheckoutOf`
     - `checkoutState`

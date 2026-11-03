@@ -13,14 +13,16 @@ one sha. This plugin gives a release a tree nothing else can move.
 ## The three calls
 
 - **`acquireReleaseCheckout({ sourceRoot, sha, name })`** → `{ name, root, dispose() }`.
-  Sweeps leaked checkouts, takes this checkout's lock, runs
-  `git worktree add --detach <dir>/<name> <sha>` under the host-wide
-  `worktree-mutate` slot, asserts `HEAD` really is `sha`, and runs a best-effort
+  Sweeps leaked checkouts, takes this checkout's lock, adds a detached checkout
+  of `sha` at `<dir>/<name>` with `infra/worktree`'s `addCheckout` (not
+  `git worktree add`, which dies beside another add half-way through writing its
+  admin entry) under the host-wide `worktree-mutate` slot, asserts `HEAD` really is `sha`, and runs a best-effort
   `mise trust`. `name` is the release run id: unique by construction, and a valid
   namespace label, because the checkout's basename becomes the scratch namespace
   the inner build files its artifacts under.
-- **`dispose()`** removes the checkout (`git worktree remove --force`, or a plain
-  `rm` once git no longer knows the dir), prunes git's registration, removes the
+- **`dispose()`** removes the checkout (a plain `rm` of the tree, then
+  `git worktree prune` drops the registration its absence leaves stale — not
+  `git worktree remove` or `list`, which die the same way as `add`), removes the
   scratch namespace's data dir (`worktrees/<name>/`: the release web dist and
   check transcripts), then drops the lock. Idempotent.
 - **`sweepLeakedReleaseCheckouts(repoRoot)`** removes every checkout whose lock
@@ -58,7 +60,7 @@ Two details that look fussy and are not:
   lives outside `.claude/worktrees/` — the directory Claude Code sweeps, and the
   only one `worktree-cleanup` reaps. So the reaper never sees it, which is
   intended.
-- **Not a clone:** `worktree add` shares the object store, so creating one costs
+- **Not a clone:** a linked worktree shares the object store, so creating one costs
   a checkout of the files, not a fetch.
 
 The removal path guard (`assertReleaseCheckoutPath`) sits at the destructive
@@ -96,8 +98,8 @@ anything is removed — the counterpart of `infra/worktree`'s
   - Uses:
     - `infra/paths.GIT`
     - `infra/paths.worktreeDataDir`
+    - `infra/worktree.addCheckout`
     - `infra/worktree.withWorktreeMutateSlot`
-    - `infra/worktree.WorktreeGitTimeoutError`
   - Exports (types):
     - `ReleaseCheckout`
     - `SweepResult`

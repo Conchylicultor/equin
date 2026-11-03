@@ -8,7 +8,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { createSpareIn, pruneSparesIn } from "./spare";
@@ -64,6 +64,17 @@ function plantHalfWrittenAdd(id: string): void {
   writeFileSync(join(half, "gitdir"), `${wtFor(id)}/.git\n`);
   writeFileSync(join(half, "HEAD"), `${"0".repeat(40)}\n`);
   writeFileSync(join(half, "commondir"), "");
+}
+
+// Runs `setupWorktree`'s cold path again after a crash, and checks it landed.
+async function checkAttemptAgain(id: string, wt: string): Promise<string> {
+  const source = await checkoutAttempt(repo, id, wt);
+  expect(await git(wt, "symbolic-ref", "HEAD")).toBe(
+    `refs/heads/claude-web/${id}`,
+  );
+  expect(await git(wt, "status", "--porcelain")).toBe("");
+  expect(await lockOf(wt)).toBe(LEGACY_IDS.worktreeLockReason);
+  return source;
 }
 
 async function lockOf(path: string): Promise<string | null | undefined> {
@@ -219,6 +230,127 @@ describe("spare claim", () => {
       throw new Error(`removed ${path}`);
     };
     expect(await pruneSparesIn(repo, Date.now(), noRemove)).toEqual([]);
+  });
+
+  test("claims and cold adds hold while another worktree's add is half-written", async () => {
+    // `git worktree add` / `move` / `switch <branch>` enumerate every worktree
+    // and die on the same state as `list` — a claim's move and the cold add
+    // fell over beside a concurrent refill (task-1793664733-b6mwon).
+    const spare = await createSpareIn(repo, noInstall);
+    plantHalfWrittenAdd("att-half");
+    for (const argv of [
+      ["worktree", "add", "--detach", wtFor("att-raw"), "main"],
+      ["worktree", "move", spare, wtFor("att-raw")],
+    ]) {
+      const raced = await spawnCaptured([GIT, "-C", repo, ...argv], {
+        timeoutMs: 60_000,
+      });
+      expect(raced.stderr).toContain("commondir");
+    }
+
+    // A claim (the switch creates the branch) …
+    const claimed = wtFor("att-claim");
+    expect(await checkoutAttempt(repo, "att-claim", claimed)).toBe("spare");
+    // … a claim onto a branch that already exists …
+    await git(repo, "branch", "claude-web/att-old", "main");
+    await createSpareIn(repo, noInstall);
+    const reclaimed = wtFor("att-old");
+    expect(await checkoutAttempt(repo, "att-old", reclaimed)).toBe("spare");
+    // … a cold add of a new branch, and one of an existing branch.
+    const fresh = wtFor("att-fresh");
+    expect(await checkoutAttempt(repo, "att-fresh", fresh)).toBe("fresh");
+    await git(repo, "branch", "claude-web/att-kept", "main");
+    const kept = wtFor("att-kept");
+    expect(await checkoutAttempt(repo, "att-kept", kept)).toBe("fresh");
+
+    for (const [id, wt] of [
+      ["att-claim", claimed],
+      ["att-old", reclaimed],
+      ["att-fresh", fresh],
+      ["att-kept", kept],
+    ] as const) {
+      expect(await git(wt, "symbolic-ref", "HEAD")).toBe(
+        `refs/heads/claude-web/${id}`,
+      );
+      expect(await git(wt, "status", "--porcelain")).toBe("");
+      expect(await lockOf(wt)).toBe(LEGACY_IDS.worktreeLockReason);
+    }
+    // git itself reads every entry written here, once the planted one is gone.
+    rmSync(join(repo, ".git", "worktrees", "att-half"), { recursive: true });
+    const listed = await git(repo, "worktree", "list", "--porcelain");
+    for (const wt of [claimed, reclaimed, fresh, kept]) {
+      expect(listed).toContain(`worktree ${wt}\n`);
+    }
+    expect(listed).not.toContain(spare);
+  });
+
+  test("a new checkout is registered as git would: same files, same admin entry", async () => {
+    const wt = wtFor("att-shape");
+    expect(await checkoutAttempt(repo, "att-shape", wt)).toBe("fresh");
+    const admin = await git(wt, "rev-parse", "--absolute-git-dir");
+    expect(admin).toBe(join(repo, ".git", "worktrees", "att-shape"));
+    expect(
+      await git(wt, "rev-parse", "--path-format=absolute", "--git-common-dir"),
+    ).toBe(join(repo, ".git"));
+    expect(existsSync(join(wt, "a.txt"))).toBe(true);
+    expect(
+      await git(repo, "reflog", "-1", "--format=%gs", "claude-web/att-shape"),
+    ).toBe("branch: Created from main");
+    // git can take it apart again.
+    await git(repo, "worktree", "unlock", wt);
+    await git(repo, "worktree", "remove", wt);
+    expect(existsSync(admin)).toBe(false);
+  });
+
+  test("a claim refuses a branch already checked out elsewhere, as git would", async () => {
+    await git(repo, "branch", "claude-web/att-dup", "main");
+    await git(
+      repo,
+      "worktree",
+      "add",
+      "-q",
+      wtFor("elsewhere"),
+      "claude-web/att-dup",
+    );
+    await createSpareIn(repo, noInstall);
+    expect(
+      await checkoutAttempt(repo, "att-dup", wtFor("att-dup")).then(
+        () => "ok",
+        (err: Error) => err.message,
+      ),
+    ).toContain("already checked out at");
+  });
+
+  test("an add killed before its dir was made is discarded by the next add", async () => {
+    // The entry is published (locked "initializing") before the dir exists.
+    const wt = wtFor("att-early");
+    expect(await checkoutAttempt(repo, "att-early", wt)).toBe("fresh");
+    await git(repo, "worktree", "unlock", wt);
+    writeFileSync(
+      join(repo, ".git", "worktrees", "att-early", "locked"),
+      `${ADD_IN_PROGRESS_LOCK}\n`,
+    );
+    rmSync(wt, { recursive: true });
+    expect(await checkAttemptAgain("att-early", wt)).toBe("fresh");
+  });
+
+  test("a claim cut off between its gitdir rewrite and its move converges", async () => {
+    // The claim unlocks the spare, rewrites its entry's gitdir to the
+    // attempt's path, then moves the dir: a crash between leaves an unlocked
+    // entry naming an absent path, and the spare dir stranded, unregistered.
+    const spare = await createSpareIn(repo, noInstall);
+    const wt = wtFor("att-cut");
+    const admin = join(repo, ".git", "worktrees", basename(spare));
+    rmSync(join(admin, "locked"));
+    writeFileSync(join(admin, "gitdir"), `${join(wt, ".git")}\n`);
+
+    expect(await checkAttemptAgain("att-cut", wt)).toBe("fresh");
+    // The stranded spare is debris the prune reclaims.
+    const removed: string[] = [];
+    await pruneSparesIn(repo, Date.now() + 20 * 60_000, async (p) => {
+      removed.push(p);
+    });
+    expect(removed).toEqual([spare]);
   });
 
   test("the listing reads what `git worktree list` reports", async () => {

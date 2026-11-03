@@ -16,6 +16,8 @@ export {
   type CheckoutState,
   adoptCompleteCheckout,
   type CheckoutSource,
+  addCheckout,
+  type CheckoutHead,
   removeWorktree,
   emptyWorktreeTrash,
   WorktreeGitTimeoutError,

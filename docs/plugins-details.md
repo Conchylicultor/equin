@@ -33632,6 +33632,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/paths.worktreesDir`
           - `packages/flock.flockTry`
         - Exports (types):
+          - `CheckoutHead`
           - `CheckoutSource`
           - `CheckoutState`
           - `CompositionMarker`
@@ -33645,6 +33646,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WorktreeSetup`
           - `WorktreeSpec`
         - Exports (values):
+          - `addCheckout`
           - `adoptCompleteCheckout`
           - `appCheckoutOf`
           - `checkoutState`
@@ -48547,8 +48549,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `infra/paths.GIT`
           - `infra/paths.worktreeDataDir`
+          - `infra/worktree.addCheckout`
           - `infra/worktree.withWorktreeMutateSlot`
-          - `infra/worktree.WorktreeGitTimeoutError`
         - Exports (types):
           - `ReleaseCheckout`
           - `SweepResult`

@@ -155,7 +155,7 @@ describe("acquireReleaseCheckout", () => {
       await rejectionOf(
         acquireReleaseCheckout({ sourceRoot: repo, sha: "0".repeat(40), name }),
       ),
-    ).toMatch(/git worktree add/);
+    ).toMatch(/rev-parse/);
     expect(existsSync(releaseCheckoutPath(name))).toBe(false);
     expect(existsSync(`${releaseCheckoutPath(name)}.lock`)).toBe(false);
   });

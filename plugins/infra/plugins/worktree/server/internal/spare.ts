@@ -60,7 +60,7 @@ export async function createSpareIn(
     basename(path),
     repoRoot,
     path,
-    ["--detach", path, "main"],
+    { kind: "detached", rev: "main" },
     signal,
   );
   // Before the lock, so ready == installed. A failed install throws and leaves

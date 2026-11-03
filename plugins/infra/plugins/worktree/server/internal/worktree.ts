@@ -6,6 +6,7 @@ import {
 import {
   access,
   mkdir,
+  mkdtemp,
   readdir,
   readFile,
   realpath,
@@ -43,7 +44,7 @@ let cachedRepoRoot: AppPath | null = null;
 // looser than "a bit above p99". Every one of them is consumed by a `throw`, and
 // a false positive is expensive in both directions: `listWorktreeEntries` treats a
 // failure as fatal precisely because absence must never be read as evidence
-// (see its docblock), and a false timeout on `worktree add` triggers the
+// (see its docblock), and a false timeout on a checkout write triggers the
 // destructive partial-checkout cleanup below. Being late to break a real wedge
 // costs one more hourly tick; firing early costs a failed checkout or removal.
 //
@@ -66,7 +67,6 @@ const PRUNE_TIMEOUT_MS = 60_000; // metadata-only, same starvation exposure as l
 // races a removal still deleting its own entry.
 const TRASH_RM_TIMEOUT_MS = 30 * 60_000;
 const REF_TIMEOUT_MS = 60_000; // one ref read, same starvation exposure as list
-const MOVE_TIMEOUT_MS = 60_000; // a rename + admin-dir rewrite, same exposure as prune
 
 // A git subprocess in this file blew its bound and was KILLED. Its own type,
 // not a bare Error, because the distinction is load-bearing for callers: a
@@ -367,7 +367,8 @@ const WORKTREE_LOCK_REASON = LEGACY_IDS.worktreeLockReason;
 // file only; nothing here reads any other worktree's HEAD.
 
 /**
- * The admin dir (`<common>/worktrees/<id>`) registered for the checkout at
+ * The admin dir (`<common>/worktrees/<id>`, `common` the repo's common git
+ * dir) registered for the checkout at
  * `wtPath`, found the way git finds it — the entry whose `gitdir` file names
  * `<wtPath>/.git` — so it is found even when the checkout's own `.git` file was
  * never written (an add killed early). An entry whose `gitdir` is not written
@@ -376,10 +377,10 @@ const WORKTREE_LOCK_REASON = LEGACY_IDS.worktreeLockReason;
  * another claimer moved away).
  */
 async function adminDirOf(
-  repoRoot: AppPath,
+  common: string,
   wtPath: string,
 ): Promise<string | null> {
-  const adminRoot = join(repoRoot, ".git", "worktrees");
+  const adminRoot = join(common, "worktrees");
   const target = join(wtPath, ".git");
   for (const id of await readdir(adminRoot)) {
     const admin = join(adminRoot, id);
@@ -410,7 +411,7 @@ export async function lockWorktree(
   wtPath: string,
   reason: string,
 ): Promise<"locked" | "already-locked" | "unregistered"> {
-  const admin = await adminDirOf(repoRoot, wtPath);
+  const admin = await adminDirOf(join(repoRoot, ".git"), wtPath);
   if (admin === null) return "unregistered";
   const file = join(admin, "locked");
   try {
@@ -436,7 +437,7 @@ export async function unlockWorktree(
   repoRoot: AppPath,
   wtPath: string,
 ): Promise<"unlocked" | "not-locked" | "unregistered"> {
-  const admin = await adminDirOf(repoRoot, wtPath);
+  const admin = await adminDirOf(join(repoRoot, ".git"), wtPath);
   if (admin === null) return "unregistered";
   const file = join(admin, "locked");
   try {
@@ -595,12 +596,13 @@ async function unlockWorktreeForRemoval(
 /**
  * Whether the attempt's branch already exists in the main repo.
  *
- * `git worktree add -b` creates the branch BEFORE it writes the checkout, so an
- * add that dies part-way leaves the branch standing with no checkout — git's own
- * cleanup deletes the half-written directory and keeps the branch. That is the
+ * A new-branch add creates the branch BEFORE it writes the checkout (as
+ * `git worktree add -b` does), so an add that dies part-way leaves the branch
+ * standing with no checkout — the partial-checkout cleanup deletes the
+ * half-written directory and keeps the branch. That is the
  * state a backend restart produces (the gateway signals the backend's whole
  * process group, so the checkout child dies with it), and a retry that runs
- * `add -b` again can only fail with "a branch named … already exists".
+ * a create-only branch write again can only fail.
  *
  * Throws on anything but "exists" / "does not exist": reading a git failure as
  * "no branch" would pick `-b` and fail the same way, and reading it as "branch
@@ -636,14 +638,14 @@ async function attemptBranchExists(
 }
 
 /**
- * The argv prefix every checkout write in this plugin runs under — the cold
- * `worktree add`, the spare refill's `add --detach`, and the claim's `switch`.
+ * The argv prefix every checkout write in this plugin runs under — the
+ * `reset --hard` that writes a new checkout (`addCheckout`: the cold path, the
+ * spare refill, the release checkout) and the claim's `switch`.
  *
  * `checkout.workers=0` (one worker per core): a checkout's cost is the
  * filesystem creating ~16k files (~0.6 ms each), not git — a plain `tar -x` of
  * the same tree takes as long. Writing them in parallel halves the add
- * (measured 10 s → 5 s). `-c` rides GIT_CONFIG_PARAMETERS into the
- * `git reset --hard` child that does the actual write.
+ * (measured 10 s → 5 s).
  */
 export function checkoutGit(cwd: string): string[] {
   return [GIT, "-C", cwd, "-c", "checkout.workers=0"];
@@ -679,11 +681,17 @@ async function discardPartialCheckout(
   // entry behind and the re-add would refuse ("a missing but locked worktree").
   // Released only when it is that lock, before the dir goes: one we did not
   // expect stays loud (the re-add names it). Not signal-bound, like the prune.
-  const entry = (await listWorktreeEntries(repoRoot)).find(
+  // Through the common dir, so it works from any checkout of the repo (a
+  // release checkout's source may be a linked worktree).
+  const common = await commonGitDir(repoRoot);
+  const entry = (await readWorktreeEntries(common)).find(
     (e) => e.path === wtPath,
   );
-  if (entry?.locked === ADD_IN_PROGRESS_LOCK) {
-    await unlockWorktreeForRemoval(repoRoot, wtPath);
+  const admin = await adminDirOf(common, wtPath);
+  if (entry?.locked === ADD_IN_PROGRESS_LOCK && admin !== null) {
+    await unlink(join(admin, "locked")).catch((err: unknown) => {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    });
   }
   await rm(wtPath, { recursive: true, force: true });
   // Deliberately NOT signal-bound. This is the cleanup that keeps a killed
@@ -707,47 +715,250 @@ async function discardPartialCheckout(
   }
 }
 
+/** What a new checkout's HEAD is — the three shapes `git worktree add` takes. */
+export type CheckoutHead =
+  /** Detached at the commit `rev` names (`add --detach <path> <rev>`). */
+  | { kind: "detached"; rev: string }
+  /** On `branch`, which exists (`add <path> <branch>`). */
+  | { kind: "branch"; branch: string }
+  /** On `branch`, created at `from` (`add -b <branch> <path> <from>`). */
+  | { kind: "new-branch"; branch: string; from: string };
+
+// One git command expected to succeed, bounded by `timeoutMs`; its stdout.
+async function gitOk(
+  argv: string[],
+  timeoutMs: number,
+  signal?: AbortSignal,
+): Promise<string> {
+  const r = await spawnCaptured(argv, { timeoutMs, signal });
+  if (r.timedOut) {
+    throw new WorktreeGitTimeoutError({
+      message: `git did not finish within ${timeoutMs} ms and was killed: ${argv.join(" ")}`,
+      command: argv.join(" "),
+      timeoutMs,
+    });
+  }
+  if (r.exitCode !== 0) {
+    throw new Error(
+      `${argv.join(" ")} failed (exit ${r.exitCode}): ${r.stderr.trim() || "<no stderr>"}`,
+    );
+  }
+  return r.stdout.trim();
+}
+
+// The commit `rev` names in `repoRoot`; throws when it names none.
+function resolveCommit(
+  repoRoot: AppPath,
+  rev: string,
+  signal?: AbortSignal,
+): Promise<string> {
+  return gitOk(
+    [
+      GIT,
+      "-C",
+      repoRoot,
+      "rev-parse",
+      "--verify",
+      "--quiet",
+      "--end-of-options",
+      `${rev}^{commit}`,
+    ],
+    REF_TIMEOUT_MS,
+    signal,
+  );
+}
+
 /**
- * Run one `git worktree add <rest…>` (under `checkoutGit`) and leave no partial
- * checkout behind when it fails. Called inside a mutate-gate hold, by
- * `setupWorktree`'s cold path and by the spare refill.
+ * Move the filled admin dir `staging` into `<adminRoot>/<name>` — or
+ * `<name>1`, `<name>2`, … when taken, as git numbers its ids — and return
+ * where it landed. The id is reserved by an exclusive `mkdir` first, because
+ * a `rename` onto an EMPTY directory replaces it: that empty dir could be
+ * another adder's, created a moment ago. The rename then replaces our own
+ * reservation, so the entry appears whole, in one step.
+ */
+async function publishAdminEntry(
+  staging: string,
+  adminRoot: string,
+  name: string,
+): Promise<string> {
+  for (let n = 0; ; n++) {
+    const admin = join(adminRoot, n === 0 ? name : `${name}${n}`);
+    try {
+      await mkdir(admin);
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === "EEXIST") continue;
+      throw err;
+    }
+    await rename(staging, admin);
+    return admin;
+  }
+}
+
+/**
+ * Create a checkout of `head` at `wtPath`, registered as a linked worktree of
+ * `repoRoot` (any checkout of the repo), and leave no partial checkout behind
+ * when it fails. Called inside a mutate-gate hold, by `setupWorktree`'s cold
+ * path, the spare refill and the release checkout.
+ *
+ * NOT `git worktree add`, and the reason is the race `listWorktreeEntries`
+ * describes: `add` enumerates every worktree (reading each HEAD through its
+ * `commondir`) before it writes anything, and dies ("fatal: failed to read
+ * .git/worktrees/<other>/commondir") beside another add half-way through
+ * writing its admin entry — ours (the gate admits three) or anyone's (Claude
+ * Code's own `agent-*` worktrees live in this repo). So the entry is written
+ * here, as gitrepository-layout(5) defines it, and nothing reads any other
+ * worktree's HEAD but our own race-safe listing:
+ *
+ * 1. The admin entry (`locked`, `commondir`, `HEAD`, `gitdir`) is filled in a
+ *    staging dir and renamed into `.git/worktrees/<id>` — it appears whole, so
+ *    no reader, git's included, ever sees it half-written.
+ * 2. It carries `ADD_IN_PROGRESS_LOCK` from its first instant, exactly as git's
+ *    own add does: `prune` skips it, and crash convergence recognises an add
+ *    killed anywhere below (`isUnfinishedCheckout` → `discardPartialCheckout`).
+ * 3. The dir and its `.git` file, then `git reset --hard` writes the tree —
+ *    the same child `git worktree add` runs, under `checkoutGit`.
+ * 4. The lock goes once the tree is written.
+ *
+ * A crash between 1 and 3 leaves the entry, locked, with no dir: the next add
+ * at that path discards it first. What git's add does that this does not: run
+ * the `post-checkout` hook (the repo has none) and copy the main worktree's
+ * `config.worktree` (it has none).
  */
 export async function addCheckout(
   label: string,
   repoRoot: AppPath,
   wtPath: string,
-  rest: string[],
+  head: CheckoutHead,
   signal?: AbortSignal,
 ): Promise<void> {
-  const argv = [...checkoutGit(repoRoot), "worktree", "add", ...rest];
-  // Demoted (`tier: "background"` applies backgroundArgv/darwinbg): a checkout
-  // runs in a deferred job — always background work relative to the
-  // interactive backends.
-  const r = await spawnCaptured(argv, {
-    tier: "background",
-    timeoutMs: ADD_TIMEOUT_MS,
-    signal,
-  });
-  if (r.timedOut) {
-    await discardPartialCheckout(label, repoRoot, wtPath);
-    throw new WorktreeGitTimeoutError({
-      message:
-        `git worktree add for ${label} did not finish within ${ADD_TIMEOUT_MS} ms and was ` +
-        `killed; the partial checkout at ${wtPath} was removed so the retry starts clean`,
-      command: argv.join(" "),
-      timeoutMs: ADD_TIMEOUT_MS,
-      worktreePath: wtPath,
-    });
-  }
-  // Fail loudly on a genuine checkout failure so the durable spawn job retries
-  // instead of handing `runtime.create` a nonexistent worktree dir (the latent
-  // swallowed-failure bug this replaces: the old code awaited `.exited` and
-  // ignored `exitCode`). A nonzero exit where the dir now exists is a benign
-  // "already exists" race (a concurrent creator won) — treat it as success.
-  if (r.exitCode !== 0 && !(await pathExists(wtPath))) {
+  // Never written into: an existing dir is someone's checkout (or a retry's
+  // to converge), and every cleanup below deletes `wtPath`.
+  if (await pathExists(wtPath)) {
     throw new Error(
-      `git worktree add for ${label} failed (exit ${r.exitCode}): ${r.stderr.trim() || "<no stderr>"}`,
+      `cannot add a checkout for ${label}: ${wtPath} already exists`,
     );
+  }
+  const common = await commonGitDir(repoRoot, signal);
+  const entries = await readWorktreeEntries(common);
+  const stale = entries.find((e) => e.path === wtPath);
+  if (stale !== undefined) {
+    // An add of ours killed before its dir was made, or a registration whose
+    // dir went: debris. Anything else (locked by someone) stays loud, as in git.
+    if (stale.locked !== ADD_IN_PROGRESS_LOCK && !stale.prunable) {
+      throw new Error(
+        `cannot add a checkout for ${label}: ${wtPath} is already registered, locked (${stale.locked})`,
+      );
+    }
+    await discardPartialCheckout(label, repoRoot, wtPath);
+  }
+
+  let headText: string;
+  if (head.kind === "detached") {
+    headText = await resolveCommit(repoRoot, head.rev, signal);
+  } else {
+    const ref = `refs/heads/${head.branch}`;
+    if (head.kind === "branch") {
+      // git's own refusal (die_if_checked_out), read from the race-safe list
+      // — the stale entry at `wtPath` discarded above excepted.
+      const holder = entries.find(
+        (e) =>
+          e.path !== wtPath && e.head?.kind === "branch" && e.head.ref === ref,
+      );
+      if (holder !== undefined) {
+        throw new Error(
+          `cannot add a checkout for ${label}: ${head.branch} is already checked out at ${holder.path}`,
+        );
+      }
+      await resolveCommit(repoRoot, ref, signal);
+    } else {
+      // Created before the checkout, as `add -b` does — `setupWorktree`'s
+      // branch probe converges a branch whose checkout never landed. The empty
+      // old value makes it create-only.
+      const commit = await resolveCommit(repoRoot, head.from, signal);
+      await gitOk(
+        [
+          GIT,
+          "-C",
+          repoRoot,
+          "update-ref",
+          "-m",
+          `branch: Created from ${head.from}`,
+          ref,
+          commit,
+          "",
+        ],
+        REF_TIMEOUT_MS,
+        signal,
+      );
+    }
+    headText = `ref: ${ref}`;
+  }
+
+  // Staged beside `worktrees/`, not in it: nothing enumerates it there, and a
+  // crash leaves a stray dir git ignores.
+  const adminRoot = join(common, "worktrees");
+  await mkdir(adminRoot, { recursive: true });
+  const staging = await mkdtemp(join(common, "worktree-add-"));
+  let admin: string;
+  try {
+    await writeFile(join(staging, "locked"), `${ADD_IN_PROGRESS_LOCK}\n`);
+    await writeFile(join(staging, "commondir"), "../..\n");
+    await writeFile(join(staging, "HEAD"), `${headText}\n`);
+    await writeFile(join(staging, "gitdir"), `${join(wtPath, ".git")}\n`);
+    admin = await publishAdminEntry(staging, adminRoot, basename(wtPath));
+  } catch (err) {
+    await rm(staging, { recursive: true, force: true });
+    throw err;
+  }
+
+  await mkdir(dirname(wtPath), { recursive: true });
+  try {
+    await mkdir(wtPath);
+  } catch (err) {
+    // Not ours to delete (made since the check above): drop only our entry.
+    await rm(admin, { recursive: true, force: true });
+    throw err;
+  }
+  try {
+    await writeFile(join(wtPath, ".git"), `gitdir: ${admin}\n`);
+    // Demoted (`tier: "background"` applies backgroundArgv/darwinbg): a
+    // checkout runs in a deferred job — always background work relative to
+    // the interactive backends.
+    const argv = [
+      ...checkoutGit(wtPath),
+      "reset",
+      "--hard",
+      "--quiet",
+      "--no-recurse-submodules",
+    ];
+    const r = await spawnCaptured(argv, {
+      tier: "background",
+      timeoutMs: ADD_TIMEOUT_MS,
+      signal,
+    });
+    if (r.timedOut) {
+      throw new WorktreeGitTimeoutError({
+        message:
+          `writing the checkout for ${label} did not finish within ${ADD_TIMEOUT_MS} ms and was ` +
+          `killed; the partial checkout at ${wtPath} was removed so the retry starts clean`,
+        command: argv.join(" "),
+        timeoutMs: ADD_TIMEOUT_MS,
+        worktreePath: wtPath,
+      });
+    }
+    // Fail loudly so the durable spawn job retries instead of handing
+    // `runtime.create` a half-written worktree.
+    if (r.exitCode !== 0) {
+      throw new Error(
+        `writing the checkout for ${label} failed (exit ${r.exitCode}): ${r.stderr.trim() || "<no stderr>"}`,
+      );
+    }
+    await unlink(join(admin, "locked"));
+  } catch (err) {
+    // Any failure — a killed or failed write, an abort — leaves no partial
+    // tree for a retry to adopt.
+    await discardPartialCheckout(label, repoRoot, wtPath);
+    throw err;
   }
 }
 
@@ -802,9 +1013,26 @@ async function switchToAttemptBranch(
 ): Promise<void> {
   const branch = attemptBranchName(id);
   const sw = [...checkoutGit(wtPath), "switch"];
-  const argv = (await attemptBranchExists(repoRoot, id, signal))
-    ? [...sw, branch]
-    : [...sw, "-c", branch, "main"];
+  let argv: string[];
+  if (await attemptBranchExists(repoRoot, id, signal)) {
+    // git's "already checked out" refusal (die_if_checked_out) enumerates
+    // every worktree's HEAD and dies beside a half-written add (see
+    // `addCheckout`), so it is asked of the race-safe list instead and git is
+    // told not to ask again. `switch -c` creates the branch: nothing to check.
+    const ref = attemptBranchRef(id);
+    const holder = (await listWorktreeEntries(repoRoot, signal)).find(
+      (e) =>
+        e.path !== wtPath && e.head?.kind === "branch" && e.head.ref === ref,
+    );
+    if (holder !== undefined) {
+      throw new Error(
+        `cannot switch the claimed spare ${wtPath} to ${branch}: it is already checked out at ${holder.path}`,
+      );
+    }
+    argv = [...sw, "--ignore-other-worktrees", branch];
+  } else {
+    argv = [...sw, "-c", branch, "main"];
+  }
   const r = await spawnCaptured(argv, {
     tier: "background",
     timeoutMs: ADD_TIMEOUT_MS,
@@ -835,14 +1063,48 @@ async function switchToAttemptBranch(
 }
 
 /**
- * Claim one ready spare as the attempt's checkout: unlock → `git worktree move`
- * → switch to the attempt branch. Returns false when no spare could be claimed
- * (none ready, or every one taken by a concurrent claimer), so the caller falls
- * back to the cold add. Called inside a mutate-gate hold; the caller locks.
+ * Move the spare at `spare` — unlocked by this claimer, so its own — to
+ * `wtPath`, keeping its admin dir (as `git worktree move` does). Returns false
+ * when it is no registered worktree any more.
  *
- * Two claimers of one spare are told apart by git itself: the first `unlock`
- * wins (the second sees "is not locked"), and `move` is a rename, so only one
- * can land. The loser tries the next spare.
+ * NOT `git worktree move`, which enumerates every worktree and dies beside a
+ * half-written add (see `addCheckout`). Its two writes, in the order a crash
+ * converges from: the admin `gitdir` first (atomically, by rename), then the
+ * dir. A crash between them leaves an unlocked entry naming the absent
+ * `wtPath` — prunable: the cold add discards it, and the stranded spare dir,
+ * unregistered now, is the prune's. git's own order (the dir first) would
+ * leave the dir at `wtPath` with an entry naming its old path, which nothing
+ * recognises as unfinished.
+ *
+ * Unlocked throughout, as `git worktree move` requires: a lock written here
+ * would be a lock a losing claimer's `unlock` takes for the spare's.
+ */
+async function moveClaimedSpare(
+  repoRoot: AppPath,
+  spare: string,
+  wtPath: string,
+): Promise<boolean> {
+  const admin = await adminDirOf(join(repoRoot, ".git"), spare);
+  if (admin === null) return false;
+  const tmp = join(admin, "gitdir.tmp");
+  await writeFile(tmp, `${join(wtPath, ".git")}\n`);
+  await rename(tmp, join(admin, "gitdir"));
+  await rename(spare, wtPath);
+  // Absolute already, unless written relative (`worktree.useRelativePaths`)
+  // — rewritten so it names the admin dir from the new place either way.
+  await writeFile(join(wtPath, ".git"), `gitdir: ${admin}\n`);
+  return true;
+}
+
+/**
+ * Claim one ready spare as the attempt's checkout: unlock → move → switch to
+ * the attempt branch. Returns false when no spare could be claimed (none ready, or every one taken
+ * by a concurrent claimer), so the caller falls back to the cold add. Called
+ * inside a mutate-gate hold; the caller locks.
+ *
+ * Two claimers of one spare are told apart by the filesystem: the first
+ * `unlock` wins (the second sees `not-locked`), and the loser tries the next
+ * spare.
  */
 async function claimSpare(
   repoRoot: AppPath,
@@ -855,31 +1117,7 @@ async function claimSpare(
     const unlocked = await unlockWorktree(repoRoot, spare);
     // Another claimer unlocked (or already moved) it first.
     if (unlocked !== "unlocked") continue;
-    const moveArgv = [GIT, "-C", repoRoot, "worktree", "move", spare, wtPath];
-    const moved = await spawnCaptured(moveArgv, {
-      tier: "background",
-      timeoutMs: MOVE_TIMEOUT_MS,
-      signal,
-    });
-    if (moved.timedOut) {
-      throw new WorktreeGitTimeoutError({
-        message: `git worktree move did not finish within ${MOVE_TIMEOUT_MS} ms and was killed: ${moveArgv.join(" ")}`,
-        command: moveArgv.join(" "),
-        timeoutMs: MOVE_TIMEOUT_MS,
-        worktreePath: wtPath,
-      });
-    }
-    if (moved.exitCode !== 0) {
-      // A lost race leaves the spare gone. One still standing failed for
-      // another reason: say so, and leave it to the prune (it is unlocked now).
-      if (await pathExists(spare)) {
-        console.warn(
-          `[worktree] could not move spare ${spare} to ${wtPath} ` +
-            `(exit ${moved.exitCode}): ${moved.stderr.trim() || "<no stderr>"} — falling back`,
-        );
-      }
-      continue;
-    }
+    if (!(await moveClaimedSpare(repoRoot, spare, wtPath))) continue;
     await switchToAttemptBranch(repoRoot, id, wtPath, signal);
     return true;
   }
@@ -887,13 +1125,12 @@ async function claimSpare(
 }
 
 /**
- * The lock reason git itself writes while `git worktree add` runs: the admin
- * dir is locked "initializing" before the checkout is written and unlocked once
- * it is complete. So a worktree still locked with it is an add that died
- * mid-checkout (a backend restart kills git with the process group) — or one
- * still running. git localizes the text; our adds run under the server's own
- * (English) locale, so this is the reason they leave. We never `add --lock`,
- * which would write the caller's reason instead.
+ * The lock reason a checkout carries while it is being written: git's own
+ * `git worktree add` locks its admin dir "initializing" before the checkout is
+ * written and unlocks it once complete, and `addCheckout` (which writes the
+ * entry itself) does the same. So a worktree still locked with it is a checkout that died
+ * mid-write (a backend restart kills git with the process group) — or one
+ * still being written.
  */
 export const ADD_IN_PROGRESS_LOCK = "initializing";
 
@@ -901,10 +1138,10 @@ export const ADD_IN_PROGRESS_LOCK = "initializing";
  * Whether the checkout at `wtPath` was killed before it was finished, so it
  * must be discarded and checked out again rather than adopted:
  *
- * - a cold add that never completed: git's own `ADD_IN_PROGRESS_LOCK` is still
- *   on it (the tree is partly written — not even the CLI may be there);
- * - a claimed spare whose switch never landed (a crash between `move` and
- *   `switch`): its admin dir is `spare-*` (kept by the move), its HEAD is
+ * - an add that never completed: `ADD_IN_PROGRESS_LOCK` is still on it (the
+ *   tree is partly written — not even the CLI may be there);
+ * - a claimed spare whose switch never landed (a crash between the move and
+ *   the switch): its admin dir is `spare-*` (kept by the move), its HEAD is
  *   detached, and it holds no lock (the claim unlocked it, and only a finished
  *   claim re-locks). All three, so a working checkout — even one made from a
  *   spare, mid-rebase on a detached HEAD — is never touched: a finished claim
@@ -997,10 +1234,10 @@ export async function checkoutAttempt(
     // and `git worktree add <path> claude-web/<name>` is how one is recovered.
     // Read inside the gate, like the registration check in `removeWorktree`.
     const branch = attemptBranchName(id);
-    const rest = (await attemptBranchExists(repoRoot, id, signal))
-      ? [wtPath, branch]
-      : ["-b", branch, wtPath, "main"];
-    await addCheckout(id, repoRoot, wtPath, rest, signal);
+    const head: CheckoutHead = (await attemptBranchExists(repoRoot, id, signal))
+      ? { kind: "branch", branch }
+      : { kind: "new-branch", branch, from: "main" };
+    await addCheckout(id, repoRoot, wtPath, head, signal);
   }
   // Locked inside the same gate hold as the checkout that created it: the
   // window between "the directory exists" and "the directory is protected" is

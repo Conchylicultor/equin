@@ -9,7 +9,7 @@ import {
   statSync,
   unlinkSync,
 } from "node:fs";
-import { realpath, rm } from "node:fs/promises";
+import { rm } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import {
   MAIN_COMPOSITION_ID,
@@ -19,8 +19,8 @@ import { GIT, worktreeDataDir } from "@plugins/infra/plugins/paths/server";
 import { flockRelease, flockTry } from "@plugins/packages/plugins/flock/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import {
+  addCheckout,
   withWorktreeMutateSlot,
-  WorktreeGitTimeoutError,
 } from "@plugins/infra/plugins/worktree/server";
 import { findMiseBin } from "@plugins/toolchain/core";
 import { releaseCheckoutsDir } from "../../data-dirs";
@@ -31,12 +31,9 @@ import {
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // Bounds for every git child, mirroring `infra/worktree`'s values and for the
-// same reason: `add` and `remove` run while one of the host-wide
-// `worktree-mutate` slots is held, so an unbounded wedge there stalls worktree
-// checkouts on every backend on the machine. Wedge-breakers, not latency police.
-const ADD_TIMEOUT_MS = 600_000;
-const REMOVE_TIMEOUT_MS = 300_000;
-const LIST_TIMEOUT_MS = 60_000;
+// same reason: the prune runs while one of the host-wide `worktree-mutate`
+// slots is held, so an unbounded wedge there stalls worktree checkouts on every
+// backend on the machine. Wedge-breakers, not latency police.
 const PRUNE_TIMEOUT_MS = 60_000;
 const REV_PARSE_TIMEOUT_MS = 60_000;
 const MISE_TRUST_TIMEOUT_MS = 30_000;
@@ -112,7 +109,12 @@ export async function acquireReleaseCheckout(opts: {
   const fd = takeOwnLock(lockPath);
 
   try {
-    await withWorktreeMutateSlot(() => addCheckout(sourceRoot, root, sha));
+    // `infra/worktree`'s add: no `git worktree add`, which dies beside another
+    // add half-way through writing its admin entry. It leaves no partial
+    // checkout behind when it fails.
+    await withWorktreeMutateSlot(() =>
+      addCheckout(name, sourceRoot, root, { kind: "detached", rev: sha }),
+    );
     await assertCheckoutAt(root, sha);
   } catch (err) {
     // Removes whatever the add left (its own cleanup ran for a timeout or a
@@ -284,47 +286,6 @@ function dropLock(lockPath: AppPath, fd: number): void {
   closeSync(fd);
 }
 
-/**
- * `git worktree add --detach <root> <sha>` with no partial checkout left behind
- * when it fails. The shape of `infra/worktree`'s `addCheckout` without a branch,
- * a namespace probe or a worktree lock: a release checkout has no branch to
- * converge to, claims no served namespace, and lives outside the directory
- * Claude Code sweeps.
- *
- * Called inside the mutate-slot hold, so its cleanup uses a plain `rm` + prune
- * rather than {@link removeCheckoutArtifacts}, which would take a second slot.
- */
-async function addCheckout(
-  repoRoot: string,
-  root: AppPath,
-  sha: string,
-): Promise<void> {
-  const argv = [GIT, "-C", repoRoot, "worktree", "add", "--detach", root, sha];
-  const r = await spawnCaptured(argv, {
-    tier: "background",
-    timeoutMs: ADD_TIMEOUT_MS,
-  });
-  if (r.timedOut || r.exitCode !== 0) {
-    assertReleaseCheckoutPath(root);
-    await rm(root, { recursive: true, force: true });
-    await pruneWorktrees(repoRoot, root);
-    if (r.timedOut) {
-      throw new WorktreeGitTimeoutError({
-        message:
-          `git worktree add for release checkout ${root} did not finish within ` +
-          `${ADD_TIMEOUT_MS} ms and was killed; the partial checkout was removed`,
-        command: argv.join(" "),
-        timeoutMs: ADD_TIMEOUT_MS,
-        worktreePath: root,
-      });
-    }
-    throw new Error(
-      `git worktree add for release checkout ${root} at ${sha} failed (exit ${r.exitCode}): ` +
-        `${r.stderr.trim() || "<no stderr>"}`,
-    );
-  }
-}
-
 /** The checkout really is at `sha` — the whole point of pinning. */
 async function assertCheckoutAt(root: AppPath, sha: string): Promise<void> {
   const r = await spawnCaptured([GIT, "-C", root, "rev-parse", "HEAD"], {
@@ -389,33 +350,11 @@ export async function removeCheckoutArtifacts(
   assertReleaseCheckoutPath(root);
   const name = basename(root);
 
+  // The tree, then the registration its absence leaves stale. Not `git worktree
+  // remove` (nor a `git worktree list` to choose it): both enumerate every
+  // worktree and die beside another add half-way through writing its admin
+  // entry. A release checkout is never locked, so the prune drops it.
   await withWorktreeMutateSlot(async () => {
-    // Chosen from an explicit registration check rather than from a nonzero
-    // `remove` exit, which could not be told apart from a real failure. Read
-    // inside the gate: registration is what a concurrent add/remove mutates.
-    if (await isRegistered(repoRoot, root)) {
-      const argv = [GIT, "-C", repoRoot, "worktree", "remove", "--force", root];
-      const r = await spawnCaptured(argv, {
-        tier: "background",
-        timeoutMs: REMOVE_TIMEOUT_MS,
-      });
-      if (r.timedOut) {
-        throw new WorktreeGitTimeoutError({
-          message: `git worktree remove for release checkout ${root} did not finish within ${REMOVE_TIMEOUT_MS} ms and was killed`,
-          command: argv.join(" "),
-          timeoutMs: REMOVE_TIMEOUT_MS,
-          worktreePath: root,
-        });
-      }
-      if (r.exitCode !== 0) {
-        throw new Error(
-          `git worktree remove for release checkout ${root} failed (exit ${r.exitCode}): ` +
-            `${r.stderr.trim() || "<no stderr>"}`,
-        );
-      }
-    }
-    // Unregistered (git forgot it, or `remove` left ignored files behind): the
-    // directory itself is all that is left to reclaim.
     await rm(root, { recursive: true, force: true });
     await pruneWorktrees(repoRoot, root);
   });
@@ -426,47 +365,6 @@ export async function removeCheckoutArtifacts(
     ),
     { recursive: true, force: true },
   );
-}
-
-/** Whether git lists `root` as one of its worktrees. Throws when git fails. */
-async function isRegistered(repoRoot: string, root: string): Promise<boolean> {
-  const argv = [GIT, "-C", repoRoot, "worktree", "list", "--porcelain"];
-  const r = await spawnCaptured(argv, { timeoutMs: LIST_TIMEOUT_MS });
-  if (r.timedOut) {
-    throw new WorktreeGitTimeoutError({
-      message: `git worktree list did not finish within ${LIST_TIMEOUT_MS} ms and was killed`,
-      command: argv.join(" "),
-      timeoutMs: LIST_TIMEOUT_MS,
-    });
-  }
-  if (r.exitCode !== 0) {
-    // Absence must never be read from a failed list: here it would pick the
-    // plain `rm`, leaving the registration behind.
-    throw new Error(
-      `git worktree list failed (exit ${r.exitCode}): ${r.stderr.trim() || "<no stderr>"}`,
-    );
-  }
-  // Async: git lists every worktree of the repo, wherever its owner put one
-  // (a user's folder included), so their real paths are never read on the
-  // JS thread.
-  const target = await realOrSelfAsync(root);
-  const listed = await Promise.all(
-    r.stdout
-      .split("\n")
-      .filter((l) => l.startsWith("worktree "))
-      .map((l) => realOrSelfAsync(l.slice("worktree ".length).trim())),
-  );
-  return listed.includes(target);
-}
-
-/** {@link realOrSelf}, asked off the JS thread for a path git listed. */
-async function realOrSelfAsync(path: string): Promise<string> {
-  try {
-    return await realpath(path);
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return resolve(path);
-    throw err;
-  }
 }
 
 /**
