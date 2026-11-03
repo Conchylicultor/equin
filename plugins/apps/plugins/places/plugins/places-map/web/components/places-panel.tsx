@@ -7,6 +7,7 @@ import {
   type CoverContent,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
+import type { GalleryViewOptions } from "@plugins/primitives/plugins/data-view/plugins/gallery/web";
 import type {
   HostedToolbar,
   HostedToolbarParts,
@@ -63,6 +64,15 @@ function PanelFrame({ body }: HostedToolbarParts): ReactNode {
 }
 
 const PANEL_TOOLBAR: HostedToolbar = { kind: "hosted", frame: PanelFrame };
+
+/**
+ * The gallery's cards are posters (`GalleryViewOptions.card`): a place is
+ * told apart by its picture, its name and type written on it, and what the
+ * user noted about it under it.
+ */
+const PANEL_VIEW_OPTIONS = {
+  gallery: { card: "poster" } satisfies GalleryViewOptions,
+};
 
 // Icon-only segments, named for assistive tech (and scripts) by hidden text.
 const LAYOUT_OPTIONS = [
@@ -365,6 +375,7 @@ function PanelRows(
       pinnedView={layout}
       toolbar={PANEL_TOOLBAR}
       cover={placeCover}
+      viewOptions={PANEL_VIEW_OPTIONS}
       onRowActivate={onSelect}
       selectedRowId={selectedId ?? undefined}
       hoveredRowId={hoveredId}

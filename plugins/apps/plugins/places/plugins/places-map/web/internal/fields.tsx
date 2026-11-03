@@ -5,8 +5,6 @@ import {
 } from "@plugins/network/plugins/live/web";
 import {
   fieldOverrides,
-  QuietOption,
-  useFieldPresentation,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
@@ -26,12 +24,9 @@ import {
   type PlaceTag,
 } from "@plugins/apps/plugins/places/plugins/places-core/core";
 import { usePlaceTags } from "@plugins/apps/plugins/places/plugins/places-core/web";
-import {
-  tagColor,
-  tagFieldOptions,
-} from "@plugins/tag-tree/plugins/engine/core";
+import { tagFieldOptions } from "@plugins/tag-tree/plugins/engine/core";
 import { PlaceStatusBadges } from "../components/place-glyph";
-import { PlaceTagChips } from "../components/tag-chip";
+import { TagChip } from "../components/tag-chip";
 
 /**
  * The tags field's options: the LIVE tag tree, in tree order (`tagFieldOptions`)
@@ -48,26 +43,18 @@ function useTagFieldOptions(): LiveFieldOptionsRead {
 /** A place's tags as chips, the tree read where the cell is drawn. */
 function PlaceTagsCell({ tagIds }: { tagIds: readonly string[] }) {
   const tags = usePlaceTags();
-  // A row view's term (the side panel's list) draws quiet, as every tags
-  // field does there: a dot in the tag's colour and its name. A card or a
-  // table draws the tinted chips.
-  const quiet = useFieldPresentation().presentation === "quiet";
+  // The same tinted chips wherever the field is drawn — the side panel's
+  // list, its gallery card, a table — so a tag reads the same everywhere.
   return (
     <ResourceView resource={tags} fallback={<Loading variant="block" />}>
-      {(all) =>
-        quiet ? (
-          <QuietPlaceTags tagIds={tagIds} tags={all} />
-        ) : (
-          <PlaceTagChips tagIds={tagIds} tags={all} />
-        )
-      }
+      {(all) => <PlaceTagChipLine tagIds={tagIds} tags={all} />}
     </ResourceView>
   );
 }
 
-/** A place's tags as quiet terms on one clipped line, Been / Want to go left
- *  out (each has its own pill). */
-function QuietPlaceTags({
+/** A place's tags as chips on ONE clipped line (never wrapping into a row's
+ *  next line), Been / Want to go left out (each has its own pill). */
+function PlaceTagChipLine({
   tagIds,
   tags,
 }: {
@@ -77,21 +64,13 @@ function QuietPlaceTags({
   const byId = new Map<string, PlaceTag>(tags.map((t) => [t.id, t]));
   return (
     <Clip className="whitespace-nowrap">
-      <Stack direction="row" gap="sm">
+      <Stack direction="row" gap="2xs">
         {tagIds
           .filter((id) => !isRoleTag(id, tags))
           .map((id) => byId.get(id))
           .filter((t): t is PlaceTag => t !== undefined)
           .map((t) => (
-            <QuietOption
-              key={t.id}
-              option={{
-                value: t.id,
-                label: t.name,
-                swatch: tagColor(t.id, tags) ?? undefined,
-              }}
-              label={t.name}
-            />
+            <TagChip key={t.id} tag={t} tags={tags} />
           ))}
       </Stack>
     </Clip>
@@ -117,6 +96,14 @@ export const placePresentation = FieldPresentation.Register({
     createdAt: { visible: false },
   },
 });
+
+/** A place's Google primary type in words, its first letter capitalised
+ *  (`french_restaurant` → "French restaurant"); null when it has none. */
+function placeKindLabel(p: Place): string | null {
+  if (p.primaryType === null) return null;
+  const words = p.primaryType.replaceAll("_", " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
 
 /**
  * What the search box matches a place on — the DataView's `searchAccessor`,
@@ -146,6 +133,18 @@ export function placeExtraFields(tags: readonly PlaceTag[]): FieldDef<Place>[] {
       value: (p) => placeName(p),
       sortable: true,
       filterable: true,
+    },
+    {
+      // What the place is, in words: Google's primary type ("French
+      // restaurant"); nothing for a custom place or one Google gives no type.
+      id: "kind",
+      label: "Type",
+      type: "text",
+      value: (p) => placeKindLabel(p),
+      sortable: true,
+      filterable: true,
+      groupable: true,
+      visible: false,
     },
     {
       id: "want",

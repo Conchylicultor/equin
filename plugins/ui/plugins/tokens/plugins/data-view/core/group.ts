@@ -295,6 +295,20 @@ export const dataViewGroup = defineTokenGroup("data-view", {
     label: "Card subtitle ink",
   },
   cardTokenInk: { default: "var(--muted-foreground)", label: "Card token ink" },
+  // A card's excerpt (the `excerpt` slot: a note, a description) and the rule
+  // down its start edge that sets it apart from the card's own lines.
+  cardExcerptInk: {
+    default: "var(--muted-foreground)",
+    label: "Card excerpt ink",
+  },
+  cardExcerptRule: { default: "var(--border)", label: "Card excerpt rule" },
+  // A poster card's caption, written on its cover over the scrim: the title's
+  // ink and the subtitle's.
+  cardOnCoverInk: { default: "#ffffff", label: "Card caption ink" },
+  cardOnCoverSubtleInk: {
+    default: "rgb(255 255 255 / 0.86)",
+    label: "Card caption subtitle ink",
+  },
   cardTokenIconInk: {
     default: "var(--muted-foreground)",
     label: "Card token icon ink",
@@ -468,6 +482,10 @@ export const dataViewGroup = defineTokenGroup("data-view", {
   cardSubtitleLines: { default: "1", label: "Card subtitle lines" },
   // Between two tokens (`gap-md`), and a token's icon (`size-3.5`, which
   // scales with the shape group's base `--spacing`, so the default does too).
+  // How many lines a card's excerpt may take before it is cut (it wraps, and
+  // takes only the lines it needs), and the room above it.
+  cardExcerptLines: { default: "3", label: "Card excerpt lines" },
+  cardExcerptGap: { default: "var(--space-xs)", label: "Card excerpt gap" },
   cardTokenGap: { default: "var(--space-md)", label: "Card token gap" },
   cardTokenIconSize: {
     default: "calc(var(--spacing) * 3.5)",
@@ -495,6 +513,13 @@ export const dataViewGroup = defineTokenGroup("data-view", {
     label: "Cover hover lift",
   },
   coverZoom: { default: "1", label: "Cover hover zoom" },
+  // A poster card's scrim: the shade rising from the cover's foot that its
+  // caption is written on.
+  coverScrim: {
+    default:
+      "linear-gradient(to top, rgb(0 0 0 / 0.64), rgb(0 0 0 / 0.28) 55%, transparent)",
+    label: "Cover caption scrim",
+  },
   // The frame's own fill behind its picture (`bg-muted`), and its hairline
   // on the card's hover (default: the resting one).
   coverFill: { default: "var(--muted)", label: "Cover fill" },

@@ -60,6 +60,7 @@ const PROMOTABLE: ReadonlySet<FieldKind> = new Set([
  *  nor a trail, so its name would otherwise never be drawn). */
 const PROMOTABLE_FROM: ReadonlySet<Slot> = new Set([
   "line2",
+  "excerpt",
   "trail",
   "hidden",
 ]);

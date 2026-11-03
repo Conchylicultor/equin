@@ -75,6 +75,7 @@ export const GALLERY_SLOTS: ViewSlots = {
   title: { capacity: 1 },
   afterTitle: {},
   line2: {},
+  excerpt: {},
   trail: { capacity: 3, form: "token" },
   edge: { capacity: 1, form: "token" },
 };
@@ -189,6 +190,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
   // the host.
   const options = props.options as GalleryViewOptions | undefined;
   const panel = options?.card === "panel";
+  const poster = options?.card === "poster";
   const gridMin = panel ? PANEL_MIN : cardMin;
 
   // Single source of cell markup — shared by the plain and windowed branches.
@@ -268,8 +270,22 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
                 own: undefined,
               })
             : undefined,
-          titleText(cardFields, row),
+          // A poster's caption sits where the monogram would: its frame
+          // stays the blank tint instead.
+          poster ? null : titleText(cardFields, row),
         )}
+        caption={
+          poster ? (
+            <CardMeta
+              fields={cardFields}
+              row={row}
+              resolveCell={resolveCell}
+              resolveEditor={resolveEditor}
+              titleClassName={cn(rowToneClass(tone))}
+              part="caption"
+            />
+          ) : undefined
+        }
         // A non-visual lead (a state's glyph) and an aggregate representative's
         // `×N`: corner marks, top-left, clear of the action chip at top-right.
         badge={cornerBadge(
@@ -298,6 +314,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
           resolveCell={resolveCell}
           resolveEditor={resolveEditor}
           titleClassName={cn(rowToneClass(tone))}
+          part={poster ? "body" : "all"}
         />
       </DataCard>
     );

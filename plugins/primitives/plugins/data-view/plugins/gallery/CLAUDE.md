@@ -20,9 +20,13 @@ One card shape, everywhere — `DataCard`, built at ONE site in `GalleryView`:
   the cover (`coverHoverGroup` on the card root).
 - **Its text is `<CardMeta>`**: `cardFieldsOf(placement)` (`GALLERY_SLOTS`;
   data-view CLAUDE.md, "Placement"), computed once per view — the title (+ its
-  `afterTitle` marks), the `line2` subtitle joined with ·, one line of up to
-  three `trail` tokens (icon + value) ending in the `edge` field. Fixed line
-  heights; an empty value is omitted, never "Empty". The fields follow the
+  `afterTitle` marks), the `line2` subtitle joined with ·, the `excerpt` (a
+  paragraph wrapped and clamped to `cardExcerptLines`, set apart by a rule
+  down its start edge — its box reserved whenever the view places a field
+  there), one line of up to three `trail` tokens (icon + value; a chip —
+  `useIsChipField` — draws no type icon, it says what it is itself) ending in
+  the `edge` field. Fixed line heights; an empty value is omitted, never
+  "Empty". The fields follow the
   view's Properties.
 - **Actions sit on the cover** (`useItemActionZones(desc, { hasPersistentSlot:
   true, hasPrimarySlot: true })`):
@@ -85,6 +89,18 @@ card's SHAPE from a closed set, not its body:
   top-right); no primary slot and no cover — the schema's cover field is not
   drawn. Its grid minimum is the theme's card minimum but at least 20rem
   (`PANEL_MIN`), so the head's one line fits.
+
+- `card: "poster"` — the picture first, its words on it (Places' side panel):
+  the same `DataCard` and cover, with `<CardMeta part="caption">` (title +
+  `afterTitle` marks + `line2` subtitle, in the on-cover inks
+  `cardOnCoverInk` / `cardOnCoverSubtleInk`) pinned at the cover's foot over a
+  scrim (`coverScrim`, `dv.cover-scrim`), and `<CardMeta part="body">` under
+  it: the `excerpt` ONLY when the row has one, then the tokens. So poster
+  cards differ in height — the one shape that drops the same-height rule: a
+  note is its point, and three blank lines under every note-less card is what
+  it avoids. Windowing still holds (`VirtualRows` measures each line). The
+  monogram is not drawn (the caption sits there); actions, badge, primary,
+  selection, hover and tone are the cover card's.
 
 ## Grouping + windowing
 
@@ -184,8 +200,8 @@ taking `{song, onOpen}` never trips it.
     - `GalleryViewOptions`
   - Exports (values): `DataCard`
 - Cross-plugin:
-  - Uses tokens: 21 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/data-view` ×7
+  - Uses tokens: 22 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/data-view` ×8
     - `ui/tokens/density` ×7
     - `ui/tokens/color-palette` ×5
     - `ui/tokens/shadow --shadow`

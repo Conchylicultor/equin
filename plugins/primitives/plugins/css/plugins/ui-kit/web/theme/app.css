@@ -106,6 +106,10 @@
     --color-card-subtitle-ink: var(--card-subtitle-ink);
     --color-card-token-ink: var(--card-token-ink);
     --color-card-token-icon-ink: var(--card-token-icon-ink);
+    --color-card-excerpt-ink: var(--card-excerpt-ink);
+    --color-card-excerpt-rule: var(--card-excerpt-rule);
+    --color-card-on-cover-ink: var(--card-on-cover-ink);
+    --color-card-on-cover-subtle-ink: var(--card-on-cover-subtle-ink);
     --color-group-count-ink: var(--group-count-ink);
     --color-column-header-ink: var(--column-header-ink);
     --color-column-header-sorted-ink: var(--column-header-sorted-ink);
@@ -506,6 +510,9 @@
 @utility gap-card-token { gap: var(--card-token-gap); } /* twmerge: extend gap */
 @utility gap-card-token-icon { gap: var(--card-token-icon-gap); } /* twmerge: extend gap */
 @utility size-card-token-icon { width: var(--card-token-icon-size); height: var(--card-token-icon-size); } /* twmerge: sg-dv-size */
+@utility pt-card-excerpt { padding-top: var(--card-excerpt-gap); } /* twmerge: extend pt */
+@utility line-clamp-card-excerpt { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--card-excerpt-lines); } /* twmerge: standalone -- a multi-line clamp read from a token; no built-in line-clamp class sits beside it on the excerpt. */
+@utility bg-cover-scrim { background-image: var(--cover-scrim); } /* twmerge: standalone -- a gradient read from a token; no other background-image class sits beside it on the scrim layer. */
 @utility line-clamp-card-subtitle { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--card-subtitle-lines); } /* twmerge: standalone -- a multi-line clamp read from a token; no built-in line-clamp class sits beside it on the subtitle. */
 /* The cover on its card's hover: lift, zoom and filter (spelled with the
  * individual `translate` / `scale` / `filter` properties so they compose with

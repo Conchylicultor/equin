@@ -319,7 +319,7 @@ field type (kind)  →  recipe rules  →  surface `place`  →  user's Property
   data-view decides (`useResolveFieldKind`), naming no type. `primary: true` is
   the row's **identity**.
 - **Slots** (`core/internal/placement.ts`): `lead`, `title`, `afterTitle`,
-  `line2`, `trail`, `edge`, `hidden`. **Each view declares the slots it draws**
+  `line2`, `excerpt`, `trail`, `edge`, `hidden`. **Each view declares the slots it draws**
   as data (`ViewSlots`: capacity, form, kinds it takes), passes it to
   `usePlacement(fields, properties, props.placement, SLOTS)` and publishes the
   same table on its contribution (`DataViewContribution.slots`) for the slot
@@ -329,7 +329,8 @@ field type (kind)  →  recipe rules  →  surface `place`  →  user's Property
   first state leads; the others trail (outside `log`) — a coloured enum (a
   priority, a category) is a state too, and after a title of varying length
   it would sit at a different x on every row. `afterTitle` is for a surface's
-  own pins. The engine
+  own pins. `prose` goes to the `excerpt` where a view draws one (the
+  gallery), else to `line2`. The engine
   (`resolvePlacement`, `web/internal/placement.ts`) walks rule by rule, then
   field by field: a field takes the first matching rule whose slot the view
   draws and has room in, so a second instant falls through to its next rule.
@@ -360,6 +361,7 @@ field type (kind)  →  recipe rules  →  surface `place`  →  user's Property
 | `title` | label | title column | title | name |
 | `afterTitle` | marks after the label (not the tree: trails) | stacked in the title cell | after the title | — |
 | `line2` | subtitle run (2 lines when present; not the tree: trails) | stacked under the title | subtitle | — |
+| `excerpt` | — (prose falls to `line2`) | — (falls to `line2`) | a paragraph, clamped to `cardExcerptLines` | — |
 | `trail` | aligned trailing slots | columns | ≤ 3 tokens | — |
 | `edge` | far right, faint | last column, faint | token line end | — |
 
@@ -2497,8 +2499,8 @@ list, table and `primitives/tree` share it.
     - `UNGROUPED_FOLD_KEY`
     - `visibleSections`
 - Cross-plugin:
-  - Uses tokens: 92 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/data-view` ×46
+  - Uses tokens: 98 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/data-view` ×52
     - `ui/tokens/density` ×16
     - `ui/tokens/color-palette` ×15
     - `ui/tokens/type-scale` ×9

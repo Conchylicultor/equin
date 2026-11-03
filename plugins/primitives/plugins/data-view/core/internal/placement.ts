@@ -10,6 +10,7 @@ import type { FieldKind } from "@plugins/fields/core";
  * | `title` | the label | title column | title |
  * | `afterTitle` | marks after the label | inline in the title cell | after the title |
  * | `line2` | the subtitle run | stacked under the title | subtitle |
+ * | `excerpt` | — (falls to line 2) | — (falls to line 2) | a clamped paragraph under the caption (poster card) |
  * | `trail` | aligned trailing slots | columns | the first three tokens |
  * | `edge` | far right, faint | last column | footer right |
  * | `hidden` | filter / sort / group only | same | same |
@@ -19,6 +20,7 @@ export const SLOTS = [
   "title",
   "afterTitle",
   "line2",
+  "excerpt",
   "trail",
   "edge",
   "hidden",
@@ -62,6 +64,7 @@ export const SLOT_RANK: readonly Exclude<Slot, "hidden">[] = [
   "edge",
   "afterTitle",
   "line2",
+  "excerpt",
   "trail",
 ];
 
@@ -87,7 +90,8 @@ const TRAIL_REST = [
  * data: a recipe is one word on the surface.
  *
  * - `record` (the default) — identity → title, state → lead, instant → edge,
- *   prose / identifier → line 2, the rest trailing.
+ *   prose → the excerpt where the view draws one (a poster card), else line 2;
+ *   identifier → line 2, the rest trailing.
  *
  * Only the first state leads; every other one TRAILS (never `afterTitle`,
  * outside `log`): a coloured enum — a priority, a category — is a state too,
@@ -105,6 +109,7 @@ export const RECIPES = {
     ["visual", "lead"],
     ["flag", "afterTitle"],
     ["instant", "edge"],
+    ["prose", "excerpt"],
     ["prose", "line2"],
     ["identifier", "line2"],
     ...TRAIL_REST,
@@ -136,6 +141,7 @@ export const RECIPES = {
     ["flag", "afterTitle"],
     ["instant", "line2"],
     ["person", "line2"],
+    ["prose", "excerpt"],
     ["prose", "line2"],
     ["identifier", "trail"],
     ["label", "trail"],
@@ -154,6 +160,7 @@ export const RECIPES = {
     ["state", "lead"],
     ["flag", "afterTitle"],
     ["instant", "edge"],
+    ["prose", "excerpt"],
     ["prose", "line2"],
     ["label", "trail"],
     ["identifier", "trail"],

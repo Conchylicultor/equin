@@ -38,6 +38,7 @@ const SLOT_LABELS: Record<Slot, string> = {
   title: "Title",
   afterTitle: "After title",
   line2: "Second line",
+  excerpt: "Excerpt",
   trail: "Trailing",
   edge: "Edge",
   hidden: "Hidden",

@@ -29,6 +29,12 @@ const CHIP_INSET = `var(${dataViewGroup.vars.coverChipInset})`;
 const PRIMARY_INSET_LEN = `var(${dataViewGroup.vars.coverPrimaryInset})`;
 const CHIP_TOP_LEFT: CSSProperties = { top: CHIP_INSET, left: CHIP_INSET };
 const CHIP_TOP_RIGHT: CSSProperties = { top: CHIP_INSET, right: CHIP_INSET };
+/** A poster caption: inset like the chips, across the cover's whole width. */
+const CAPTION_INSET: CSSProperties = {
+  left: CHIP_INSET,
+  right: CHIP_INSET,
+  bottom: CHIP_INSET,
+};
 const PRIMARY_INSET: CSSProperties = {
   bottom: PRIMARY_INSET_LEN,
   right: PRIMARY_INSET_LEN,
@@ -98,6 +104,12 @@ export interface DataCardProps {
   cover: CoverContent | null;
   /** A corner mark over the cover's top-left (the aggregate `×N`). */
   badge?: ReactNode;
+  /**
+   * Words written ON the cover, at its foot over the scrim (`coverScrim`) —
+   * the poster card's title and subtitle (`<CardMeta part="caption">`).
+   * Absent: the cover carries no words.
+   */
+  caption?: ReactNode;
   actions?: DataCardActions;
   /** The text under the cover — the gallery's `<CardMeta>`. */
   children: ReactNode;
@@ -115,6 +127,8 @@ export interface DataCardProps {
  * - **Bottom-right**: the primary action (the action draws its own round
  *   button for `placement: "primary"`) — on hover, or at rest while active.
  * - **Top-left**: the `badge`.
+ * - **Bottom**: the `caption` (a poster card's title and subtitle) over a
+ *   scrim rising from the cover's foot.
  *
  * Hovering anywhere on the card lifts the cover (`coverHoverGroup`) and reveals
  * the hover arms (`rowActionsAnchor`); every reveal is `RowActions`', so the
@@ -131,6 +145,7 @@ export function DataCard({
   dimmed,
   cover,
   badge,
+  caption,
   actions,
   children,
 }: DataCardProps): ReactNode {
@@ -186,6 +201,18 @@ export function DataCard({
             decorative
             className="bg-background/50 transition-opacity group-hover/cover:opacity-0 group-data-[cover-held=true]/cover:opacity-0"
           />
+        ) : null}
+        {caption ? (
+          <>
+            <Layer
+              decorative
+              className="bg-cover-scrim"
+              {...dataPart("dv.cover-scrim")}
+            />
+            <Pin to="bottom-left" style={CAPTION_INSET}>
+              {caption}
+            </Pin>
+          </>
         ) : null}
         {badge ? (
           <Pin to="top-left" style={CHIP_TOP_LEFT}>

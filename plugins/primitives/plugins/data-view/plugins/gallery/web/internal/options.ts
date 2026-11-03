@@ -16,6 +16,11 @@ export interface GalleryViewOptions {
    *   (the mark) beside the title + indicators and the subtitle, with the
    *   tokens line as a hairline-ruled footer (`PanelCard`). The schema's cover
    *   is not drawn.
+   * - `"poster"` — the picture first, its words on it: the cover with the
+   *   title and subtitle written over a scrim at its foot, then under it the
+   *   `excerpt` (a note, a description — only when the row has one, so cards
+   *   differ in height) and the tokens line. For records a person tells apart
+   *   by their picture and annotates (places, trips).
    */
-  card?: "cover" | "panel";
+  card?: "cover" | "panel" | "poster";
 }

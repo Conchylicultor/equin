@@ -593,8 +593,8 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `useSingleLine`
     - `WithTooltip`
 - Cross-plugin:
-  - Uses tokens: 379 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/data-view` ×98
+  - Uses tokens: 386 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/data-view` ×105
     - `ui/tokens/density` ×89
     - `ui/tokens/color-palette` ×62
     - `ui/tokens/type-scale` ×42

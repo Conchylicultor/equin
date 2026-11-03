@@ -6416,8 +6416,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `AgentThreadSlots.StepLabel` "places_search_text" → `SearchStepLabel`
               - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
               - `JsonlViewerTool.Renderer` "mcp__equin__places_show_picks" → `PicksToolView`
-            - Uses: 137 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
-              - `primitives/data-view` ×14
+            - Uses: 135 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+              - `primitives/data-view` ×12
               - `map` ×9
               - `apps/places/places-core` ×8
               - `conversations/agent-thread` ×8
@@ -42415,8 +42415,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSingleLine`
               - `WithTooltip`
           - Cross-plugin:
-            - Uses tokens: 379 vars — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
-              - `ui/tokens/data-view` ×98
+            - Uses tokens: 386 vars — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+              - `ui/tokens/data-view` ×105
               - `ui/tokens/density` ×89
               - `ui/tokens/color-palette` ×62
               - `ui/tokens/type-scale` ×42
@@ -43159,8 +43159,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UNGROUPED_FOLD_KEY`
           - `visibleSections`
       - Cross-plugin:
-        - Uses tokens: 92 vars — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ui/tokens/data-view` ×46
+        - Uses tokens: 98 vars — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ui/tokens/data-view` ×52
           - `ui/tokens/density` ×16
           - `ui/tokens/color-palette` ×15
           - `ui/tokens/type-scale` ×9
@@ -43376,8 +43376,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `GalleryViewOptions`
             - Exports (values): `DataCard`
           - Cross-plugin:
-            - Uses tokens: 21 vars — full list in [`plugins/primitives/plugins/data-view/plugins/gallery/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/gallery/REFERENCE.md)
-              - `ui/tokens/data-view` ×7
+            - Uses tokens: 22 vars — full list in [`plugins/primitives/plugins/data-view/plugins/gallery/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/gallery/REFERENCE.md)
+              - `ui/tokens/data-view` ×8
               - `ui/tokens/density` ×7
               - `ui/tokens/color-palette` ×5
               - `ui/tokens/shadow --shadow`

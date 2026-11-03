@@ -12,22 +12,24 @@
       "icon": "grid-view",
       "view": {
         "type": "gallery",
-        // The fields in reading order: the place's name first, then the stored
-        // fields the list derives, then its own yes / no flags — the list's
-        // computed fields would otherwise follow every derived one.
+        // A poster card (the panel's `viewOptions`): the place's photo with
+        // its name and "type · address" written on it, then the user's note
+        // as the card's excerpt and the tags as chips. Want to go / Been are
+        // the pills the cover draws itself, so the two flags are hidden.
         "properties": [
           { "id": "glyph" },
           { "id": "tile", "hidden": true },
           { "id": "name" },
-          { "id": "address" },
+          { "id": "kind", "slot": "line2" },
+          { "id": "address", "slot": "line2" },
+          { "id": "note", "slot": "excerpt" },
           { "id": "tags" },
-          { "id": "want" },
-          { "id": "been" },
+          { "id": "want", "hidden": true },
+          { "id": "been", "hidden": true },
           { "id": "status", "hidden": true },
           { "id": "businessStatus", "hidden": true },
           { "id": "googleLost", "hidden": true },
           { "id": "location", "hidden": true },
-          { "id": "note", "hidden": true },
           { "id": "createdAt", "hidden": true }
         ]
       }
@@ -54,6 +56,7 @@
           { "id": "tags", "slot": "line2" },
           { "id": "status", "slot": "trail" },
           { "id": "glyph", "hidden": true },
+          { "id": "kind", "hidden": true },
           { "id": "want", "hidden": true },
           { "id": "been", "hidden": true },
           { "id": "businessStatus", "hidden": true },

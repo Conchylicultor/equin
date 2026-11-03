@@ -19,6 +19,7 @@ import type { useResolveCell } from "../cell-slot";
 import type { useResolveCellEditor } from "../cell-editor-slot";
 import type { CardFields } from "../internal/card-fields";
 import { useResolveFieldIcon } from "../internal/use-field-icon";
+import { useIsChipField } from "../cell-slot";
 import { FieldCell } from "./field-cell";
 import { isFieldValueEmpty } from "./editable-cell";
 
@@ -36,6 +37,18 @@ export interface CardMetaProps {
    * `panel` card puts it in its footer) renders {@link CardTokens} itself.
    */
   omitTokens?: boolean;
+  /**
+   * Which of the card's text to draw:
+   *
+   * - `"all"` (default) — every line under the cover: title, subtitle, the
+   *   excerpt (its box reserved whenever the view has excerpt fields, so
+   *   every card of the view stays the same height) and the tokens.
+   * - `"caption"` — the title and subtitle alone, in the on-cover inks: the
+   *   poster card writes them on its cover, over the scrim.
+   * - `"body"` — what a poster card draws under its cover: the excerpt (only
+   *   when this row has one) and the tokens.
+   */
+  part?: "all" | "caption" | "body";
 }
 
 /**
@@ -78,7 +91,10 @@ const SUBTITLE_CLAMP =
  * 1. **Title** — the title slot, truncated, then the `afterTitle` marks.
  * 2. **Subtitle** — the `line2` slot, joined with "·" (clamped to
  *    `cardSubtitleLines`, its box that many lines tall).
- * 3. **Tokens** — the `trail` slot as icon + value (numbers in their own
+ * 3. **Excerpt** — the `excerpt` slot, wrapped and clamped to
+ *    `cardExcerptLines` (`CardExcerpt`).
+ * 4. **Tokens** — the `trail` slot as icon + value — no icon before a chip —
+ *    (numbers in their own
  *    pick), on ONE line that never wraps and fades out at its end, then the
  *    `edge` field at its far end. Each value is drawn in the `token` context
  *    (`FieldDef.token` first).
@@ -95,6 +111,7 @@ export function CardMeta({
   resolveEditor,
   titleClassName,
   omitTokens,
+  part = "all",
 }: CardMetaProps): ReactNode {
   const cell = (field: FieldDef<unknown>, context?: "token") => (
     <FieldCell
@@ -111,9 +128,39 @@ export function CardMeta({
   const indicators = present(fields.afterTitle);
   const subtitle = present(fields.line2);
   const P = DATA_VIEW_PICKS;
+  const onCover = part === "caption";
+  const tokens = omitTokens ? null : (
+    <CardTokens
+      fields={fields}
+      row={row}
+      resolveCell={resolveCell}
+      resolveEditor={resolveEditor}
+    />
+  );
+
+  if (part === "body") {
+    const excerpt = (
+      <CardExcerpt
+        fields={fields}
+        row={row}
+        resolveCell={resolveCell}
+        resolveEditor={resolveEditor}
+        reserve={false}
+      />
+    );
+    return (
+      <Stack gap="none" {...dataPart("dv.card-meta")}>
+        {excerpt}
+        {tokens}
+      </Stack>
+    );
+  }
 
   return (
-    <Stack gap="none" {...dataPart("dv.card-meta")}>
+    <Stack
+      gap="none"
+      {...dataPart(onCover ? "dv.card-caption" : "dv.card-meta")}
+    >
       <PickedLine part={P.cardTitle}>
         <Line
           className={cn(
@@ -124,7 +171,10 @@ export function CardMeta({
           <Fill>
             <Text
               pick={P.cardTitle}
-              className={titleClassName}
+              className={cn(
+                onCover && "text-card-on-cover-ink",
+                titleClassName,
+              )}
               {...dataPart("dv.card-title")}
             >
               {fields.title && !isFieldValueEmpty(fields.title, row)
@@ -149,7 +199,12 @@ export function CardMeta({
           >
             <Text
               pick={P.cardSubtitle}
-              className={cn("text-card-subtitle-ink", SUBTITLE_CLAMP)}
+              className={cn(
+                onCover
+                  ? "text-card-on-cover-subtle-ink"
+                  : "text-card-subtitle-ink",
+                SUBTITLE_CLAMP,
+              )}
               {...dataPart("dv.card-subtitle")}
             >
               {subtitle.map((f, i) => (
@@ -162,15 +217,73 @@ export function CardMeta({
           </Line>
         </PickedLine>
       ) : null}
-      {omitTokens ? null : (
-        <CardTokens
+      {onCover ? null : (
+        <CardExcerpt
           fields={fields}
           row={row}
           resolveCell={resolveCell}
           resolveEditor={resolveEditor}
+          reserve
         />
       )}
+      {onCover ? null : tokens}
     </Stack>
+  );
+}
+
+/**
+ * A card's excerpt: the `excerpt` slot (a note, a description) as one
+ * paragraph that wraps and is cut at `cardExcerptLines` lines, set apart by a
+ * rule down its start edge. Several excerpt fields follow one another,
+ * joined with " · ". With `reserve`, its box is always the full
+ * `cardExcerptLines` lines tall while the VIEW places a field there — every
+ * card the same height, as the other lines are; without it (a poster card), a
+ * row with no excerpt draws nothing and its card is that much shorter.
+ */
+function CardExcerpt({
+  fields,
+  row,
+  resolveCell,
+  resolveEditor,
+  reserve,
+}: Pick<CardMetaProps, "fields" | "row" | "resolveCell" | "resolveEditor"> & {
+  reserve: boolean;
+}): ReactNode {
+  if (fields.excerpt.length === 0) return null;
+  const present = fields.excerpt.filter((f) => !isFieldValueEmpty(f, row));
+  if (present.length === 0 && !reserve) return null;
+  const P = DATA_VIEW_PICKS;
+  return (
+    <PickedLine part={P.cardSubtitle} className="pt-card-excerpt">
+      <div
+        className={cn(
+          reserve && "h-[calc(var(--card-excerpt-lines)*1lh)]",
+          rolePickClass(P.cardSubtitle.fallback),
+        )}
+      >
+        {present.length > 0 ? (
+          <Text
+            as="div"
+            pick={P.cardSubtitle}
+            className="line-clamp-card-excerpt whitespace-normal border-l-2 border-card-excerpt-rule pl-sm text-card-excerpt-ink"
+            {...dataPart("dv.card-excerpt")}
+          >
+            {present.map((f, i) => (
+              <Fragment key={f.id}>
+                {i > 0 ? " · " : null}
+                <FieldCell
+                  field={f}
+                  row={row}
+                  resolveCell={resolveCell}
+                  resolveEditor={resolveEditor}
+                  display="inline"
+                />
+              </Fragment>
+            ))}
+          </Text>
+        ) : null}
+      </div>
+    </PickedLine>
   );
 }
 
@@ -193,6 +306,7 @@ export function CardTokens({
   spaced?: boolean;
 }): ReactNode {
   const resolveIcon = useResolveFieldIcon();
+  const isChip = useIsChipField();
   if (fields.trail.length === 0 && !fields.edge) return null;
   const tokens = fields.trail.filter((f) => !isFieldValueEmpty(f, row));
   const edge =
@@ -222,7 +336,10 @@ export function CardTokens({
           {...dataPart("dv.card-tokens")}
         >
           {tokens.map((f) => {
-            const icon = f.icon ?? resolveIcon(f.type ?? "text");
+            // A chip says what it is itself (its colour, its label): the
+            // type's icon before it would only repeat that.
+            const icon =
+              f.icon ?? (isChip(f) ? undefined : resolveIcon(f.type ?? "text"));
             const numeric = typeof f.value?.(row) === "number";
             return (
               <Line

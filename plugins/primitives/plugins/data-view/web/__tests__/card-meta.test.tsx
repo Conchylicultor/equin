@@ -47,6 +47,7 @@ const CARD: CardFields<Row> = {
   title: FIELDS[0],
   afterTitle: [],
   line2: [FIELDS[1]!],
+  excerpt: [],
   trail: [FIELDS[2]!],
   edge: undefined,
 };

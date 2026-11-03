@@ -72,6 +72,34 @@ describe("resolvePlacement", () => {
     });
   });
 
+  it("puts prose in the excerpt where the view draws one, else on line 2", () => {
+    const fields = [
+      f("title", "label", { primary: true }),
+      f("note", "prose"),
+      f("city", "label"),
+    ];
+    const withExcerpt = place(fields, {}, { slots: { ...LIST, excerpt: {} } });
+    expect(withExcerpt.ids).toMatchObject({
+      excerpt: ["note"],
+      line2: [],
+      trail: ["city"],
+    });
+    // A view that draws no excerpt (the list) keeps prose on its second line.
+    expect(place(fields).ids).toMatchObject({ excerpt: [], line2: ["note"] });
+  });
+
+  it("pins a non-prose field to the excerpt", () => {
+    const { ids } = place(
+      [f("title", "label", { primary: true }), f("note", "label")],
+      {},
+      {
+        slots: { ...LIST, excerpt: {} },
+        properties: [{ id: "title" }, { id: "note", slot: "excerpt" }],
+      },
+    );
+    expect(ids).toMatchObject({ excerpt: ["note"], trail: [] });
+  });
+
   it("falls a second instant through to its next rule, and says so", () => {
     const { ids, p } = place([
       f("name", "label", { primary: true }),

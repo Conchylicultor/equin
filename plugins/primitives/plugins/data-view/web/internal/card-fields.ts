@@ -13,6 +13,8 @@ export interface CardFields<TRow> {
   afterTitle: FieldDef<TRow>[];
   /** The subtitle line, joined with "·". */
   line2: FieldDef<TRow>[];
+  /** The excerpt: a paragraph under the card's lines, wrapped and clamped. */
+  excerpt: FieldDef<TRow>[];
   /** The token line: icon + value each. */
   trail: FieldDef<TRow>[];
   /** The token line's far end. */
@@ -36,6 +38,7 @@ export function cardFieldsOf<TRow>(
     title: text(slots.title)[0],
     afterTitle: text(slots.afterTitle),
     line2: text(slots.line2),
+    excerpt: text(slots.excerpt),
     trail: text(slots.trail),
     edge: text(slots.edge)[0],
   };
@@ -51,6 +54,7 @@ export function drawnFields<TRow>(
     ...slots.title,
     ...slots.afterTitle,
     ...slots.line2,
+    ...slots.excerpt,
     ...slots.trail,
     ...slots.edge,
   ];
