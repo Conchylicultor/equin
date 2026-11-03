@@ -6660,6 +6660,10 @@
       "name": "@equin/plugin-tasks-task-list",
       "version": "0.0.1",
     },
+    "plugins/tasks/plugins/task-mandate": {
+      "name": "@equin/plugin-tasks-task-mandate",
+      "version": "0.0.1",
+    },
     "plugins/tasks/plugins/task-preprompt": {
       "name": "@equin/plugin-tasks-task-preprompt",
       "version": "0.0.1",
@@ -10279,6 +10283,8 @@
     "@equin/plugin-tasks-task-ids": ["@equin/plugin-tasks-task-ids@workspace:plugins/tasks/plugins/task-ids"],
 
     "@equin/plugin-tasks-task-list": ["@equin/plugin-tasks-task-list@workspace:plugins/tasks/plugins/task-list"],
+
+    "@equin/plugin-tasks-task-mandate": ["@equin/plugin-tasks-task-mandate@workspace:plugins/tasks/plugins/task-mandate"],
 
     "@equin/plugin-tasks-task-preprompt": ["@equin/plugin-tasks-task-preprompt@workspace:plugins/tasks/plugins/task-preprompt"],
 

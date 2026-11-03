@@ -24,6 +24,7 @@
     - `tasks/task-detail.taskDetailPane`
     - `tasks/task-detail.TaskDetailSlots`
     - `tasks/task-detail.useRegisterFlush`
+    - `tasks/task-mandate.TaskMandateControl`
     - `tasks/task-status.StatusSignal`
     - `tasks/task-track.TaskTrackControl`
 - Cross-plugin:

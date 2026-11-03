@@ -13,6 +13,7 @@ import { usePatchTask, useTask } from "@plugins/tasks/web";
 import { useRegisterFlush } from "@plugins/tasks/plugins/task-detail/web";
 import { StatusSignal } from "@plugins/tasks/plugins/task-status/web";
 import { TaskTrackControl } from "@plugins/tasks/plugins/task-track/web";
+import { TaskMandateControl } from "@plugins/tasks/plugins/task-mandate/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { AuthorDisplay } from "./author-display";
@@ -78,6 +79,10 @@ export function TaskHeader({ taskId }: { taskId: string }) {
       <Stack direction="row" align="center" gap="md">
         <SectionLabel as="span">Track</SectionLabel>
         <TaskTrackControl taskId={taskId} />
+      </Stack>
+      <Stack direction="row" align="center" gap="md">
+        <SectionLabel as="span">Mandate</SectionLabel>
+        <TaskMandateControl taskId={taskId} />
       </Stack>
       <Stack direction="row" align="center" gap="md">
         <SectionLabel as="span">Author</SectionLabel>

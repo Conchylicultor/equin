@@ -1,4 +1,5 @@
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { liveCollection } from "@plugins/network/plugins/live/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 import { tasksEntityRef } from "./entity-refs";
 
@@ -21,4 +22,14 @@ export const taskMandateShape = defineExtensionShape({
     name: "mandate",
     fields: { mandateId: { as: "mandate" } },
   },
+});
+
+/**
+ * One task's effective mandate, read by id (`useLive(taskMandates, { id })`):
+ * the task detail's Mandate row. Lookup-only — a list reads the exposed
+ * `mandate` field instead.
+ */
+export const taskMandates = liveCollection("task-mandates", {
+  from: taskMandateShape,
+  id: "taskId",
 });

@@ -322,9 +322,9 @@ DataView (`web/components/notifications-view.tsx`):
     - `ui/tokens/type-scale` ×10
     - `ui/tokens/density` ×5
     - `ui/tokens/shape` ×2
-  - Imported by: 34 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 35 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×13
-    - `tasks` ×5
+    - `tasks` ×6
     - `build` ×3
     - `apps` ×2
     - `debug` ×2

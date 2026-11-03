@@ -44,6 +44,7 @@ import { sweepOrphanedAttempts } from "./internal/sweep-orphaned-attempts";
 import { PushLedger } from "./internal/push-ledger/service";
 import { LiveColumns } from "@plugins/network/plugins/live/server";
 import { tasksMandate } from "./internal/tables-mandate";
+import { taskMandatesServed } from "./internal/resource-mandate";
 import { reconcileEffectiveMandates } from "./internal/mutations/mandate";
 import { attachmentLinkContributions } from "./internal/attachment-links";
 
@@ -348,6 +349,7 @@ export default {
     // Every task's effective mandate, folded into every list whose rows
     // reach a task (`mandate`).
     LiveColumns.Expose(tasksMandate),
+    ...taskMandatesServed.declare,
   ],
   register: [
     pushLanded,

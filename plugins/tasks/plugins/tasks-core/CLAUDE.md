@@ -339,8 +339,8 @@ serves them.
     - `useTaskAttempts`
     - `useTaskConversations`
 - Server:
-  - Contributes: 45 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `resource.declare` ×32
+  - Contributes: 46 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `resource.declare` ×33
     - `derived-view` ×4
     - `ids.kind` ×3
     - `attachments.link` ×2
@@ -550,6 +550,7 @@ serves them.
     - `pushes:rows` (keyed, point)
     - `task-descriptions:rows` (keyed, point)
     - `task-dropped-states:rows` (keyed, point)
+    - `task-mandates:rows` (keyed, point)
     - `tasks` (keyed)
     - `tasks:rows` (keyed, point)
     - `tasks.attachment-links` (keyed)
@@ -651,6 +652,7 @@ serves them.
     - `TaskFilingStartSchema`
     - `TaskGraph`
     - `TaskListItemSchema`
+    - `taskMandates`
     - `taskMandateShape`
     - `taskRows`
     - `TaskSchema`
@@ -664,9 +666,9 @@ serves them.
     - `TRAILER_LOG_FORMAT`
     - `UNATTRIBUTED_TRAILER_KEY`
 - Cross-plugin:
-  - Imported by: 76 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 77 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×28
-    - `tasks` ×23
+    - `tasks` ×24
     - `active-data` ×5
     - `debug` ×5
     - `page` ×3
