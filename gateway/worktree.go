@@ -433,22 +433,18 @@ func (w *Worktree) Ensure(ctx context.Context, reason StartReason) (*backend, er
 		if joined {
 			w.promoteBackend(bk)
 		}
-		stats.Escalated, stats.RespondedHTTP, spawnErr = w.awaitBackendReady(bk, socketPath)
+		var wait readyWait
+		wait, spawnErr = w.awaitBackendReady(bk, socketPath)
+		stats.Escalated, stats.RespondedHTTP = wait.escalated, wait.respondedHTTP
 		if spawnErr == nil {
 			stats.ReadyObservedAt = time.Now().UnixMilli()
+		} else {
+			w.abandonUnreadyBackend(bk, "cold start", wait, spawnErr)
 		}
 	}
 
 	if spawnErr != nil {
 		wrapped := fmt.Errorf("%w: %v", ErrSpawnFailed, spawnErr)
-		// Kill if the process started; wait (bounded) for the exit goroutine.
-		if bk != nil && bk.cmd != nil && bk.cmd.Process != nil {
-			signalBackend(bk, syscall.SIGKILL, w.Name)
-			waitBackendExit(bk, w.Name, postKillTimeout)
-		}
-		if bk != nil {
-			_ = removeBackendArtifacts(bk.socketPath)
-		}
 		w.mu.Lock()
 		w.active = nil
 		w.state = StateBroken
@@ -537,26 +533,25 @@ func (w *Worktree) Restart(ctx context.Context) error {
 		stats.SpawnedAt = time.Now().UnixMilli()
 		// Snapshot before any promote clears it (escalation or post-ready).
 		stats.Demoted = newBk.demoted
-		stats.Escalated, stats.RespondedHTTP, spawnErr = w.awaitBackendReady(newBk, newSocketPath)
+		var wait readyWait
+		wait, spawnErr = w.awaitBackendReady(newBk, newSocketPath)
+		stats.Escalated, stats.RespondedHTTP = wait.escalated, wait.respondedHTTP
 		if spawnErr == nil {
 			stats.ReadyObservedAt = time.Now().UnixMilli()
+		} else {
+			w.abandonUnreadyBackend(newBk, "hot restart", wait, spawnErr)
 		}
 	}
 
 	// --- Step 4 (failure): keep old backend, revert state ---
 	if spawnErr != nil {
-		if newBk != nil && newBk.cmd != nil && newBk.cmd.Process != nil {
-			signalBackend(newBk, syscall.SIGKILL, w.Name)
-			waitBackendExit(newBk, w.Name, postKillTimeout)
-		}
-		if newBk != nil {
-			_ = removeBackendArtifacts(newBk.socketPath)
-		}
 		w.mu.Lock()
 		if w.state == StateRestarting {
 			w.state = StateRunning
 		}
 		w.mu.Unlock()
+		slog.Warn("hot restart failed; old backend intact",
+			"worktree", w.Name, "old_socket", oldBk.socketPath, "err", spawnErr)
 		return fmt.Errorf("hot restart failed (old backend intact): %w", spawnErr)
 	}
 
@@ -597,15 +592,7 @@ func (w *Worktree) drainAndStop(bk *backend) {
 		slog.Info("hot restart: cutting WebSocket connections; clients will reconnect",
 			"worktree", w.Name, "wsConns", n)
 	}
-	if bk.cmd != nil && bk.cmd.Process != nil {
-		signalBackend(bk, syscall.SIGTERM, w.Name)
-		select {
-		case <-bk.exitCh:
-		case <-time.After(w.cfg.ShutdownGrace):
-			signalBackend(bk, syscall.SIGKILL, w.Name)
-			waitBackendExit(bk, w.Name, postKillTimeout)
-		}
-	}
+	w.terminateBackend(bk, "hot restart drain")
 	_ = removeBackendArtifacts(bk.socketPath)
 	slog.Info("hot restart: old backend drained and stopped",
 		"worktree", w.Name, "socket", bk.socketPath)
@@ -647,14 +634,8 @@ func (w *Worktree) Stop(ctx context.Context) error {
 	bk := w.active
 	w.mu.Unlock()
 
-	if bk != nil && bk.cmd != nil && bk.cmd.Process != nil {
-		signalBackend(bk, syscall.SIGTERM, w.Name)
-		select {
-		case <-bk.exitCh:
-		case <-time.After(w.cfg.ShutdownGrace):
-			signalBackend(bk, syscall.SIGKILL, w.Name)
-			waitBackendExit(bk, w.Name, postKillTimeout)
-		}
+	if bk != nil {
+		w.terminateBackend(bk, "stop")
 	}
 
 	if bk != nil {
@@ -950,29 +931,89 @@ func logAdaptiveTimeout(worktree string, base, chosen time.Duration) {
 		"base", base, "chosen", chosen)
 }
 
+// readyWait is what a readiness wait did, for the boot report and — when it
+// fails — the log line that says the backend is being abandoned.
+type readyWait struct {
+	escalated     bool          // the base deadline expired and the wait was extended
+	respondedHTTP bool          // the backend had answered HTTP by escalation time
+	deadline      time.Duration // the deadline in force at the end: base, or base + extension once escalated
+	waited        time.Duration // how long the wait ran
+}
+
 // awaitBackendReady waits for a freshly-spawned backend to pass its readiness
 // probe. Slow boots escalate (lift the darwinbg demotion, extend the wait)
 // instead of being killed — see waitReady for the wedge-vs-slow reasoning.
-// Reports whether the wait escalated, and whether the backend had answered
-// HTTP by escalation time, so the caller can include both in the boot report.
-func (w *Worktree) awaitBackendReady(bk *backend, socketPath string) (escalated, respondedHTTP bool, err error) {
+// Reports whether the wait escalated, whether the backend had answered HTTP by
+// escalation time (both go in the boot report), the deadline in force and how
+// long it waited (both go in the abandon log line).
+func (w *Worktree) awaitBackendReady(bk *backend, socketPath string) (wait readyWait, err error) {
 	base := adaptiveTimeout(w.cfg.ReadyTimeout, w.cfg.ReadyTimeoutMax)
 	logAdaptiveTimeout(w.Name, w.cfg.ReadyTimeout, base)
 	w.mu.Lock()
 	demoted := bk.demoted
 	w.mu.Unlock()
+	wait.deadline = base
+	start := time.Now()
 	err = waitReady(socketPath, base, w.cfg.ReadyTimeoutMax, demoted, func(responded bool) {
-		escalated = true
-		respondedHTTP = responded
+		wait.escalated = true
+		wait.respondedHTTP = responded
+		wait.deadline = time.Since(start) + w.cfg.ReadyTimeoutMax
 		slog.Warn("backend slow to become ready; lifting demotion and extending wait instead of killing",
-			"worktree", w.Name, "respondedHTTP", responded,
+			"worktree", w.Name, "pid", backendPID(bk), "respondedHTTP", responded,
 			"base", base, "extension", w.cfg.ReadyTimeoutMax)
 		w.promoteBackend(bk)
 	}, bk.exitCh)
+	wait.waited = time.Since(start)
 	if errors.Is(err, errExitedBeforeReady) {
 		err = withStderrTail(err, w.logBuf.Tail(exitTailLines, "stderr", bk.startedAt))
 	}
-	return escalated, respondedHTTP, err
+	return wait, err
+}
+
+// abandonUnreadyBackend tears down a backend that failed its readiness wait —
+// SIGKILL (a no-op if it already exited), bounded wait for the exit, socket and
+// sidecar removed — and logs it. The log line is the gateway's whole record of
+// the kill: the backend's own log just stops, and the error otherwise reaches
+// only the caller's response body, so without it a killed boot reads as one
+// that silently hung. phase names the spawn path ("cold start", "hot restart").
+func (w *Worktree) abandonUnreadyBackend(bk *backend, phase string, wait readyWait, cause error) {
+	outcome := "exited on its own before ready"
+	if !errors.Is(cause, errExitedBeforeReady) {
+		signalBackend(bk, syscall.SIGKILL, w.Name)
+		if waitBackendExit(bk, w.Name, postKillTimeout) {
+			outcome = "killed (SIGKILL), exited"
+		} else {
+			outcome = fmt.Sprintf("killed (SIGKILL), still running after %s", postKillTimeout)
+		}
+	}
+	_ = removeBackendArtifacts(bk.socketPath)
+	slog.Warn("backend abandoned: not ready by its deadline",
+		"worktree", w.Name, "phase", phase, "pid", backendPID(bk), "socket", bk.socketPath,
+		"deadline", wait.deadline, "waited", wait.waited,
+		"escalated", wait.escalated, "respondedHTTP", wait.respondedHTTP,
+		"outcome", outcome, "err", cause)
+}
+
+// terminateBackend stops a ready backend: SIGTERM, then SIGKILL if it outlives
+// ShutdownGrace. The escalation is logged with how long it waited, since the
+// stop's own log line cannot tell a clean exit from a kill. why names the caller.
+func (w *Worktree) terminateBackend(bk *backend, why string) {
+	if bk.cmd == nil || bk.cmd.Process == nil {
+		return
+	}
+	signalBackend(bk, syscall.SIGTERM, w.Name)
+	select {
+	case <-bk.exitCh:
+	case <-time.After(w.cfg.ShutdownGrace):
+		signalBackend(bk, syscall.SIGKILL, w.Name)
+		outcome := "exited"
+		if !waitBackendExit(bk, w.Name, postKillTimeout) {
+			outcome = fmt.Sprintf("still running after %s", postKillTimeout)
+		}
+		slog.Warn("backend killed: still running after SIGTERM grace",
+			"worktree", w.Name, "phase", why, "pid", backendPID(bk), "socket", bk.socketPath,
+			"grace", w.cfg.ShutdownGrace, "outcome", outcome)
+	}
 }
 
 // exitTailLines is how much of a backend's own stderr an early exit reports:
@@ -1156,13 +1197,16 @@ func signalBackend(bk *backend, sig syscall.Signal, worktree string) {
 
 // waitBackendExit blocks until the backend's cmd.Wait goroutine closes exitCh,
 // bounded by timeout. Without the bound, a kill that never lands would hang the
-// caller forever; we cap it and log loudly so the leak is visible.
-func waitBackendExit(bk *backend, worktree string, timeout time.Duration) {
+// caller forever; we cap it and log loudly so the leak is visible. Reports
+// whether the backend exited.
+func waitBackendExit(bk *backend, worktree string, timeout time.Duration) bool {
 	select {
 	case <-bk.exitCh:
+		return true
 	case <-time.After(timeout):
 		slog.Error("backend did not exit after SIGKILL; possible leak",
 			"worktree", worktree, "socket", bk.socketPath, "pid", backendPID(bk))
+		return false
 	}
 }
 

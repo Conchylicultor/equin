@@ -232,7 +232,7 @@ If `database.json` is missing or has an empty `services` array, the supervisor d
 
 Each channel gets its own size-rotated file under `-log-dir` (default `~/.equin/logs/gateway/`), so one channel's volume can't bury another:
 
-- `gateway.log` — the gateway's own `slog` output (lifecycle, routing, supervisor). Written directly by the Go process via a rotating writer.
+- `gateway.log` — the gateway's own `slog` output (lifecycle, routing, supervisor). Written directly by the Go process via a rotating writer. Every backend the gateway kills or abandons leaves a line here: `backend abandoned: not ready by its deadline` (cold start or hot restart — pid, socket, deadline, waited, escalated, outcome, error; `abandonUnreadyBackend`), `backend killed: still running after SIGTERM grace` (stop / drain; `terminateBackend`), and `hot restart failed; old backend intact`. The backend's own log just stops at a kill, so this is the only record of it.
 - `<name>.log` — one file per worktree, holding that backend's stdout/stderr (`central.log`, `<worktree>.log`, …). Each line is `<RFC3339> [stdout|stderr] <line>`. Backend output never lands in `gateway.log`. This is the durable counterpart to the in-memory `logRing` that feeds the live UI.
 - `gateway-stdio.log` — the daemon's raw stdout/stderr (Go panics, any crash before `slog` is wired up). Owned by the launcher (`./equin start`), truncated on each start.
 
