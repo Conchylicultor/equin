@@ -1,1 +1,1 @@
-export { putTaskMandate } from "./internal/endpoints";
+export { deleteTaskMandate, putTaskMandate } from "./internal/endpoints";

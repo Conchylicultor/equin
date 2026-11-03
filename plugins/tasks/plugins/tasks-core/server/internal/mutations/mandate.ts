@@ -38,7 +38,8 @@ export async function reconcileEffectiveMandates(
 }
 
 /** `starts`: a query selecting `id` — the tops of the subtrees to write. Each
- * top's effective mandate is read up its chain, then carried down. */
+ * top's effective mandate (and the task stating it) is read up its chain,
+ * then carried down. */
 async function writeEffective(starts: SQL, exec: DbExecutor): Promise<void> {
   const ext = tasksMandate.table;
   await exec.execute(sql`
@@ -53,21 +54,26 @@ async function writeEffective(starts: SQL, exec: DbExecutor): Promise<void> {
          WHERE u.mandate_ref IS NULL
       ),
       top AS (
-        SELECT DISTINCT ON (start_id) start_id AS id, mandate_ref AS eff
+        SELECT DISTINCT ON (start_id) start_id AS id, mandate_ref AS eff,
+               up.id AS src
           FROM up
          WHERE mandate_ref IS NOT NULL
          ORDER BY start_id, depth
       ),
-      down(id, eff) AS (
-        SELECT id, eff FROM top
+      down(id, eff, src) AS (
+        SELECT id, eff, src FROM top
         UNION ALL
-        SELECT c.id, COALESCE(c.mandate_ref, d.eff)
+        SELECT c.id,
+               COALESCE(c.mandate_ref, d.eff),
+               CASE WHEN c.mandate_ref IS NULL THEN d.src ELSE c.id END
           FROM ${_tasks} c JOIN down d ON c.folder_id = d.id
       )
-    INSERT INTO ${ext} (parent_id, mandate_id)
-    SELECT DISTINCT ON (id) id, eff FROM down
+    INSERT INTO ${ext} (parent_id, mandate_id, source_task_id)
+    SELECT DISTINCT ON (id) id, eff, src FROM down
     ON CONFLICT (parent_id) DO UPDATE
-       SET mandate_id = EXCLUDED.mandate_id
-     WHERE ${ext}.mandate_id IS DISTINCT FROM EXCLUDED.mandate_id
+       SET mandate_id = EXCLUDED.mandate_id,
+           source_task_id = EXCLUDED.source_task_id
+     WHERE (${ext}.mandate_id, ${ext}.source_task_id)
+           IS DISTINCT FROM (EXCLUDED.mandate_id, EXCLUDED.source_task_id)
   `);
 }

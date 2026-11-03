@@ -10,3 +10,11 @@ export const putTaskMandate = defineEndpoint({
   route: "PUT /api/tasks/:taskId/mandate",
   body: z.object({ mandateId: z.string().min(1) }),
 });
+
+/**
+ * Drop the task's own mandate, so it inherits its nearest ancestor's again.
+ * Refused on a root: a root always states one.
+ */
+export const deleteTaskMandate = defineEndpoint({
+  route: "DELETE /api/tasks/:taskId/mandate",
+});

@@ -12,28 +12,47 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
+import { useTask } from "@plugins/tasks/web";
 import { taskMandates } from "@plugins/tasks/plugins/tasks-core/core";
 import { mandateDefinitions } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/definitions/core";
-import { putTaskMandate } from "../../core";
+import { deleteTaskMandate, putTaskMandate } from "../../core";
+import { MandateSource } from "./mandate-source";
+
+/** The select's value for "no mandate of its own — follow the parent". */
+const INHERIT = "inherit";
+
+interface EffectiveMandate {
+  mandateId: string;
+  /** The task stating it: this task itself, or the ancestor it inherits from. */
+  sourceTaskId: string;
+}
 
 /**
- * The task detail's Mandate value: the task's effective mandate (its own, else
- * its nearest ancestor's) as a select over every named mandate. Picking one
- * states it as the task's own, so it governs the task's subtree.
+ * The task detail's Mandate value: the task's effective mandate as a select
+ * over every named mandate. Picking one states it as the task's own (it then
+ * governs the task's subtree); on a nested task, "Inherit from parent" drops
+ * it again. An inherited mandate reads "<label> (inherited)" and names the
+ * task it comes from.
  */
 export function TaskMandateControl({ taskId }: { taskId: string }) {
   const row = useLive(taskMandates, { id: taskId });
-  const mandate: ResourceResult<string | null> = useMemo(
-    () => mapRow(row, (r) => (r ? r.mandateId : null)),
+  const mandate: ResourceResult<EffectiveMandate | null> = useMemo(
+    () => mapRow(row, (r) => r ?? null),
     [row],
   );
+  const task = useTask(taskId);
   const definitions = useLive(mandateDefinitions);
   const fetchEndpoint = useFetchEndpoint();
   const toast = useToast();
 
-  if (mandate.status === "loading" || definitions.status === "loading") {
+  if (
+    mandate.status === "loading" ||
+    definitions.status === "loading" ||
+    task.status === "loading"
+  ) {
     return <Loading variant="block" className="h-5 w-24" />;
   }
   if (mandate.status === "error") {
@@ -56,39 +75,77 @@ export function TaskMandateControl({ taskId }: { taskId: string }) {
       />
     );
   }
-
-  const onChange = (mandateId: string | null) => {
-    if (!mandateId || mandateId === mandate.data) return;
-    fetchEndpoint(putTaskMandate, { taskId }, { body: { mandateId } }).catch(
-      (err: unknown) => {
-        toast({
-          type: "task",
-          category: "other",
-          title: "Failed to change the task's mandate",
-          description: err instanceof Error ? err.message : String(err),
-          variant: "error",
-        });
-      },
+  if (task.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        subject="the task"
+        error={task.error}
+        refetch={task.refetch}
+      />
     );
+  }
+
+  const effective = mandate.data;
+  const isRoot = task.data?.folderId == null;
+  const inherited = effective !== null && effective.sourceTaskId !== taskId;
+  const labelOf = (id: string) =>
+    definitions.data.find((d) => d.id === id)?.label ?? id;
+  const inheritLabel =
+    inherited && effective
+      ? `${labelOf(effective.mandateId)} (inherited)`
+      : "Inherit from parent";
+  const value =
+    effective === null ? null : inherited ? INHERIT : effective.mandateId;
+
+  const fail = (err: unknown) => {
+    toast({
+      type: "task",
+      category: "other",
+      title: "Failed to change the task's mandate",
+      description: err instanceof Error ? err.message : String(err),
+      variant: "error",
+    });
+  };
+  const onChange = (next: string | null) => {
+    if (!next || next === value) return;
+    if (next === INHERIT) {
+      fetchEndpoint(deleteTaskMandate, { taskId }).catch(fail);
+      return;
+    }
+    fetchEndpoint(
+      putTaskMandate,
+      { taskId },
+      { body: { mandateId: next } },
+    ).catch(fail);
   };
 
   return (
-    <Select
-      // base-ui resolves the collapsed trigger label from `items`.
-      items={Object.fromEntries(definitions.data.map((d) => [d.id, d.label]))}
-      value={mandate.data}
-      onValueChange={onChange}
-    >
-      <SelectTrigger aria-label="Mandate">
-        <SelectValue placeholder="None" />
-      </SelectTrigger>
-      <SelectContent>
-        {definitions.data.map((d) => (
-          <SelectItem key={d.id} value={d.id}>
-            {d.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <Stack direction="row" align="center" gap="sm">
+      <Select
+        // base-ui resolves the collapsed trigger label from `items`.
+        items={{
+          ...(isRoot ? {} : { [INHERIT]: inheritLabel }),
+          ...Object.fromEntries(definitions.data.map((d) => [d.id, d.label])),
+        }}
+        value={value}
+        onValueChange={onChange}
+      >
+        <SelectTrigger aria-label="Mandate">
+          <SelectValue placeholder="None" />
+        </SelectTrigger>
+        <SelectContent>
+          {!isRoot && <SelectItem value={INHERIT}>{inheritLabel}</SelectItem>}
+          {definitions.data.map((d) => (
+            <SelectItem key={d.id} value={d.id}>
+              {d.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {inherited && effective && (
+        <MandateSource sourceTaskId={effective.sourceTaskId} />
+      )}
+    </Stack>
   );
 }

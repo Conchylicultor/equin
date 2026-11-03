@@ -41740,7 +41740,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 429 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 430 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×109
               - `conversations` ×69
               - `primitives` ×55
@@ -41748,7 +41748,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui` ×31
               - `page` ×25
               - `plugin-meta` ×16
-              - `tasks` ×13
+              - `tasks` ×14
               - `fields` ×9
               - `infra` ×7
               - `apps-core` ×6
@@ -41983,7 +41983,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 410 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 411 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×111
               - `conversations` ×75
               - `primitives` ×47
@@ -41991,7 +41991,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page` ×24
               - `ui` ×18
               - `plugin-meta` ×15
-              - `tasks` ×14
+              - `tasks` ×15
               - `fields` ×11
               - `infra` ×7
               - `stats` ×6
@@ -46551,12 +46551,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-md`
           - `ui/tokens/shape --spacing`
-        - Imported by: 191 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Imported by: 192 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `apps` ×72
           - `conversations` ×30
           - `debug` ×27
           - `active-data` ×10
-          - `tasks` ×9
+          - `tasks` ×10
           - `apps-core` ×7
           - `plugin-meta` ×6
           - `layouts` ×4
@@ -51257,6 +51257,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `tasks/task-graph`
       - `tasks/task-header`
       - `tasks/task-list`
+      - `tasks/task-mandate`
     - Endpoint callers:
       - `menu-bar-task`
       - `task-mandate`
@@ -52476,6 +52477,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-events`
           - `tasks/task-graph`
           - `tasks/task-header`
+          - `tasks/task-mandate`
           - `tasks/task-triage`
     - **`task-draft-form`** — Reusable popover + chain form for drafting one or more tasks. Powers the Wish toolbar button and the conversation new-child-task button.
       - Web:
@@ -52782,12 +52784,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/auto-start`
           - `tasks/task-deps-tree`
           - `tasks/task-detail`
-    - **`task-mandate`** — The task detail's Mandate control: the task's effective mandate (Interactive / Supervisor / an automation's) as a select; picking one states it as the task's own, governing its subtree. The endpoint that states a named mandate as a task's own (PUT /api/tasks/:taskId/mandate), refusing an id no definition names.
+    - **`task-mandate`** — The task detail's Mandate control: the task's effective mandate (Interactive / Supervisor / an automation's) as a select, an inherited one marked so and linked to the ancestor it comes from; picking a mandate states it as the task's own (governing its subtree), Inherit from parent drops it again. The endpoints that change a task's mandate: PUT /api/tasks/:taskId/mandate states a named mandate as the task's own (refusing an id no definition names), DELETE drops it so the task inherits its nearest ancestor's again (refused on a root).
       - Web:
         - Uses:
           - `infra/endpoints.useFetchEndpoint`
           - `network/live.mapRow`
           - `network/live.useLive`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.Text`
           - `primitives/css/ui-kit.Select`
           - `primitives/css/ui-kit.SelectContent`
           - `primitives/css/ui-kit.SelectItem`
@@ -52796,20 +52800,31 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/live-state.ResourceErrorInline`
           - `primitives/live-state.ResourceResult`
           - `primitives/loading.Loading`
+          - `primitives/pane.useOpenPane`
           - `shell/notifications.useToast`
+          - `tasks.useTask`
+          - `tasks/task-detail.taskDetailPane`
         - Exports (values): `TaskMandateControl`
       - Server:
         - Uses:
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `tasks/orchestration/mandate/definitions.mandateDefinitionEntries`
+          - `tasks/tasks-core.clearMandate`
+          - `tasks/tasks-core.getTask`
           - `tasks/tasks-core.setMandate`
-        - Routes: `PUT /api/tasks/:taskId/mandate`
+        - Routes:
+          - `PUT /api/tasks/:taskId/mandate`
+          - `DELETE /api/tasks/:taskId/mandate`
       - Core:
         - Uses: `infra/endpoints.defineEndpoint`
-        - Exports (values): `putTaskMandate`
+        - Exports (values):
+          - `deleteTaskMandate`
+          - `putTaskMandate`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
+        - Uses tokens:
+          - `ui/tokens/color-palette --foreground`
+          - `ui/tokens/shape --spacing`
         - Imported by: `tasks/task-header`
     - **`task-preprompt`** — Per-task preprompt picker, contributed as a launch option of both the task detail's Prompt card and the task-draft popover; the selection is added to the agent's system prompt on launch. Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, added to the agent's system prompt at launch, after Claude Code's own, as a <special_instructions> block.
       - Web:
@@ -54987,7 +55002,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-sm`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 529 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 530 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×117
               - `conversations` ×89
               - `primitives` ×78
@@ -54995,7 +55010,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page` ×33
               - `plugin-meta` ×29
               - `ui` ×26
-              - `tasks` ×16
+              - `tasks` ×17
               - `fields` ×13
               - `reports` ×13
               - `active-data` ×8

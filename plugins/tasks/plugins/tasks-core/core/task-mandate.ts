@@ -5,7 +5,9 @@ import { tasksEntityRef } from "./entity-refs";
 
 /**
  * Every task's EFFECTIVE mandate: the id of the named mandate it runs under —
- * its own `mandate_ref`, else its nearest ancestor's (nearest wins). One row
+ * its own `mandate_ref`, else its nearest ancestor's (nearest wins) — and the
+ * task it comes from (`sourceTaskId`: itself when it states one, so a reader
+ * tells "set here" from "inherited"). One row
  * per task in `tasks_ext_mandate`, kept exact by tasks-core in the same
  * transaction as every write that can move it (a task created, re-filed, or a
  * mandate stated or cleared — `refreshEffectiveMandates`).
@@ -16,7 +18,12 @@ import { tasksEntityRef } from "./entity-refs";
  */
 export const taskMandateShape = defineExtensionShape({
   key: "taskId",
-  fields: { mandateId: textField({ label: "Mandate" }) },
+  fields: {
+    mandateId: textField({ label: "Mandate" }),
+    // The task whose own `mandate_ref` is in effect: the task itself when it
+    // states one, else the ancestor it inherits from.
+    sourceTaskId: textField({ label: "Mandate source" }),
+  },
   exposes: {
     parent: tasksEntityRef,
     name: "mandate",

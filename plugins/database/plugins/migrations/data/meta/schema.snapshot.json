@@ -1,6 +1,6 @@
 {
-  "id": "409d9e32-4a9f-4e9c-99e7-e221f7422695",
-  "prevId": "18710111-d80a-4024-813c-2813d22ace91",
+  "id": "abb0a4f2-74ab-45cb-a572-867943fc2c87",
+  "prevId": "409d9e32-4a9f-4e9c-99e7-e221f7422695",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -15614,6 +15614,12 @@
         },
         "mandate_id": {
           "name": "mandate_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_task_id": {
+          "name": "source_task_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
