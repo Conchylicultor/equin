@@ -201,10 +201,9 @@ describe("loadRepoSnapshot", () => {
   });
 
   test("a missing extra fails loudly", async () => {
-    expect(
-      (await rejection(loadRepoSnapshot(root, { extra: ["ignored/nope.ts"] })))
-        .message,
-    ).toContain("hash-object");
+    await expect(
+      loadRepoSnapshot(root, { extra: ["ignored/nope.ts"] }),
+    ).rejects.toThrow("hash-object");
   });
 
   test("blobOf a non-member throws — deleted, ignored, a directory", async () => {
