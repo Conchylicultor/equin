@@ -590,6 +590,22 @@ export const worktreeArtifacts = {
    */
   checkoutOwner: (name: Namespace): AppPath =>
     joinAppPath(worktreeDataDir(name), "checkout.json"),
+  /**
+   * Which backend minted this agent checkout — `{ minter }`, the namespace whose
+   * database holds its attempt row. Written by `setupWorktree` (infra/worktree) once
+   * the checkout exists (`stampCheckoutMinter`); read by the reaper, for a
+   * checkout main's attempts table does not name.
+   */
+  checkoutMinter: (name: Namespace): AppPath =>
+    joinAppPath(worktreeDataDir(name), "minted-by.json"),
+  /**
+   * The reaper's proof that this checkout is still dirty: the first dirty path
+   * `git status` named, with that path's, the index's and HEAD's state then.
+   * While all three read the same, the tree cannot have become clean, so the
+   * hourly sweep skips re-walking it. Owned by debug/worktree-cleanup.
+   */
+  hygieneWitness: (name: Namespace): AppPath =>
+    joinAppPath(worktreeDataDir(name), "hygiene-witness.json"),
 } as const;
 
 /**

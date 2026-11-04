@@ -19,8 +19,15 @@ import {
 } from "@plugins/packages/plugins/timed-fs/core";
 import { randomUUID } from "node:crypto";
 import { basename, dirname, join, resolve } from "node:path";
-import { asNamespace } from "@plugins/infra/plugins/namespace/core";
+import {
+  asNamespace,
+  type Namespace,
+} from "@plugins/infra/plugins/namespace/core";
 import { GIT } from "@plugins/infra/plugins/paths/server";
+import {
+  readCheckoutMinter,
+  stampCheckoutMinter,
+} from "@plugins/infra/plugins/paths/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { attemptBranchName, attemptBranchRef } from "../../core";
 import { namespaceCollision, probeNamespace } from "./composition-namespace";
@@ -1307,6 +1314,13 @@ export async function convergeExistingCheckout(
  * `infra/worktree` also has no business knowing what a composition is; the
  * caller, which runs in a backend, does.
  *
+ * @param minter the namespace whose backend makes this checkout — the one
+ * whose database holds its attempt row (`runtimeNamespace()` of the caller).
+ * REQUIRED: it is stamped beside the checkout (`stampCheckoutMinter`) so main's
+ * reaper can tell a checkout a worktree build minted — whose row it cannot
+ * read — from an abandoned one. First mint wins: a retry or reuse never
+ * re-attributes it.
+ *
  * @param signal ambient cancellation, optional. A job handler passes its
  * `ctx.signal`: it is forwarded to the host-wide `worktree-mutate` acquire AND to
  * every git child below, so giving up on the handler actually frees the flock
@@ -1320,6 +1334,7 @@ export async function setupWorktree(
   id: string,
   wtPath: string,
   compositionIds: ReadonlySet<string>,
+  minter: Namespace,
   signal?: AbortSignal,
 ): Promise<WorktreeSetup> {
   const repoRoot = await ensureMainWorktreeRoot(signal);
@@ -1347,6 +1362,7 @@ export async function setupWorktree(
     // ~140 ms of freshness check when already installed. Not frozen: its
     // package.jsons are the agent's own edits (see installCheckout).
     await installCheckout(wtPath, { frozen: false }, signal);
+    stampMinter(id, minter);
     return setup;
   }
 
@@ -1382,7 +1398,16 @@ export async function setupWorktree(
   // a fresh add installs from scratch. Thrown, so the launch fails loudly with
   // install's own output.
   await installCheckout(wtPath, { frozen: true }, signal);
+  stampMinter(id, minter);
   return { source };
+}
+
+// Once the checkout exists, never before: a stamp-only `<ns>/` dir with no
+// checkout beside it reads as a registry orphan, and the sweep removes it.
+function stampMinter(id: string, minter: Namespace): void {
+  const checkout = asNamespace(id);
+  if (readCheckoutMinter(checkout).kind === "absent")
+    stampCheckoutMinter(checkout, minter);
 }
 
 /**

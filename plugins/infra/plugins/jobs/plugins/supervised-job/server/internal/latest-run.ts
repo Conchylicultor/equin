@@ -18,7 +18,8 @@ import {
  * the work's own result (a checkout on disk) stays the authority; this says
  * only whether a run is still going and, once over, why it failed.
  *
- * Only for a built-in-ledger job that declared `lock`; any other job throws.
+ * Only for a single-child built-in-ledger job (its `lock`, or the job-wide
+ * lock when it declared none); any other job throws.
  */
 export async function latestSupervisedRun<
   N extends string,
@@ -31,7 +32,7 @@ export async function latestSupervisedRun<
   const locked = builtinLockedJobOf(job);
   if (locked === null) {
     throw new Error(
-      `[supervised-job] ${job.name}: latestSupervisedRun needs a built-in-ledger job that declares \`lock\` — an own ledger reads its runs from its own table.`,
+      `[supervised-job] ${job.name}: latestSupervisedRun needs a single-child built-in-ledger job — an own ledger reads its runs from its own table.`,
     );
   }
   return builtinLedgerFor(locked.jobName, conn).latest(locked.lock(input));

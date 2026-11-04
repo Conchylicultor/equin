@@ -7,6 +7,7 @@ import type { OwnedNamespace } from "@plugins/infra/plugins/worktree/plugins/rec
 import {
   AUTO_REAP_AGE_MS,
   classifyAttempt,
+  classifyMintedCheckout,
   classifyOwnedNamespace,
   classifyStampedNamespace,
   NEEDS_HYGIENE,
@@ -335,6 +336,82 @@ describe("classifyStampedNamespace", () => {
         checkoutExists: false,
         now: NOW,
       }),
+    ).toBeNull();
+  });
+});
+
+describe("classifyMintedCheckout — a checkout another backend minted", () => {
+  const dir = {
+    name: "att-1793716446-9gpf56",
+    path: "/repo/.claude/worktrees/att-1793716446-9gpf56",
+  };
+  const stamped = {
+    kind: "stamped" as const,
+    minter: asNamespace("att-1793668451-09c9rz"),
+  };
+  const gone = {
+    minterDirExists: false,
+    minterRetained: false,
+    ageMs: SAFE_REAP_AGE_MS,
+  };
+
+  test("minter gone, old enough, clean → reclaimed", () => {
+    expect(classifyMintedCheckout(dir, stamped, gone)).toBe(NEEDS_HYGIENE);
+    expect(
+      classifyMintedCheckout(dir, stamped, { ...gone, hygiene: CLEAN }),
+    ).toEqual({ id: dir.name, worktreePath: dir.path });
+  });
+
+  test("dirty → kept (left to the 90-day floor)", () => {
+    expect(
+      classifyMintedCheckout(dir, stamped, { ...gone, hygiene: DIRTY }),
+    ).toBeNull();
+  });
+
+  test("minter still on disk, or retained → kept, without a probe", () => {
+    expect(
+      classifyMintedCheckout(dir, stamped, { ...gone, minterDirExists: true }),
+    ).toBeNull();
+    expect(
+      classifyMintedCheckout(dir, stamped, { ...gone, minterRetained: true }),
+    ).toBeNull();
+  });
+
+  test("younger than the clean path's 72 h → kept, without a probe", () => {
+    expect(
+      classifyMintedCheckout(dir, stamped, {
+        ...gone,
+        ageMs: SAFE_REAP_AGE_MS - 1,
+        hygiene: CLEAN,
+      }),
+    ).toBeNull();
+  });
+
+  test("unknown owner is not an absent owner: no stamp, malformed, main, a non-checkout", () => {
+    const withClean = { ...gone, hygiene: CLEAN };
+    expect(
+      classifyMintedCheckout(dir, { kind: "absent" }, withClean),
+    ).toBeNull();
+    expect(
+      classifyMintedCheckout(
+        dir,
+        { kind: "malformed", reason: "x" },
+        withClean,
+      ),
+    ).toBeNull();
+    expect(
+      classifyMintedCheckout(
+        dir,
+        { kind: "stamped", minter: asNamespace(MAIN_WORKTREE_NAME) },
+        withClean,
+      ),
+    ).toBeNull();
+    expect(
+      classifyMintedCheckout(
+        dir,
+        { kind: "stamped", minter: asNamespace("sonata") },
+        withClean,
+      ),
     ).toBeNull();
   });
 });

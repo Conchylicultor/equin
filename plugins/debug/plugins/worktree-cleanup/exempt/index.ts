@@ -18,6 +18,7 @@ export default [
     rule: "boundaries/no-platform-api",
     paths: [
       "server/internal/dirs.ts",
+      "server/internal/hygiene-witness.ts",
       "server/internal/reap-policy.ts",
       "server/internal/reap.ts",
     ],

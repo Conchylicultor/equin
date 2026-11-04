@@ -313,6 +313,7 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `AppIdentity`
     - `CheckoutDeploy`
     - `CheckoutDeployResolution`
+    - `CheckoutMinterRead`
     - `CheckoutOwnerRead`
     - `DataDir`
     - `DataDirArea`
@@ -362,6 +363,7 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `pruneWorktreeCheckArtifacts`
     - `pruneWorktreeTestArtifacts`
     - `publishedLogClaim`
+    - `readCheckoutMinter`
     - `readCheckoutOwner`
     - `readHomeDataRootLayout`
     - `relativeToDataRoot`
@@ -370,6 +372,7 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `resolveCheckoutDeploy`
     - `SERVER_CORE_RELATIVE`
     - `setReleaseIdentity`
+    - `stampCheckoutMinter`
     - `toolchainPin`
     - `WORKTREE_SPEC_FILE`
     - `worktreeArtifacts`
@@ -396,7 +399,7 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `paths:no-hardcoded-paths` — `check/index.ts`, `core/internal/paths.ts` (sanctioned)
     - `paths:no-inlined-worktree-artifacts` — `.` (sanctioned)
     - `paths:data-root-not-joined` — `.` (sanctioned)
-    - `boundaries/no-platform-api` — `core/internal/checkout-deploys.ts`, `core/internal/checkout-owner.ts`, `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/data-root-layout.ts`, `core/internal/data-dirs-manifest.ts`, `core/internal/paths.ts`, `core/internal/prune-artifacts.ts`, `core/internal/toolchain-pin.ts`, `core/internal/worktree-dirs.ts` (debt)
+    - `boundaries/no-platform-api` — `core/internal/checkout-deploys.ts`, `core/internal/checkout-minter.ts`, `core/internal/checkout-owner.ts`, `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/data-root-layout.ts`, `core/internal/data-dirs-manifest.ts`, `core/internal/paths.ts`, `core/internal/prune-artifacts.ts`, `core/internal/toolchain-pin.ts`, `core/internal/worktree-dirs.ts` (debt)
     - `user-path/no-unproven-claim` — `core/internal/paths.ts`, `core/internal/data-root-layout.ts` (sanctioned)
     - `user-path/no-unproven-claim` — `core/internal/checkout-deploys.ts` (sanctioned)
 - Server:

@@ -23,6 +23,24 @@ Only `checkout: "<name>"` can ever be a target — `null` means main owns it, an
 an absent field means a marker older than the field, so the owner is unknown.
 Unknown is not absent, and guessing drops a database.
 
+## A checkout another backend minted
+
+Every agent checkout lands in the one shared `.claude/worktrees/`, but a
+worktree build that launches agents writes their attempt rows into its OWN
+forked database. To main's table such a checkout is a dir with no row, which the
+dir-orphan branch could only take at the 90-day floor — with a full fork DB
+beside each one.
+
+`setupWorktree` takes a REQUIRED `minter` (the caller's `runtimeNamespace()`)
+and stamps it once the checkout exists: `worktreeArtifacts.checkoutMinter`
+(`<ns>/minted-by.json`, `{ minter }`). Not before — a stamp-only `<ns>/` dir
+reads as a registry orphan and the sweep removes it. `classifyMintedCheckout` is the pure rule:
+the minter is the owner, like a composition marker's `checkout`. While the
+minter is on disk or retained, nothing is decided (its database holds the
+record). Once it is gone, nothing can resume the checkout, and it is reclaimed
+on the clean path's terms — clean, at least 72 h old. No stamp, a malformed
+one, `main`, or a non-checkout minter is UNKNOWN and stays under the floor.
+
 ## What `reapAttempt` reclaims, and what it delegates
 
 1. the git worktree,
@@ -58,6 +76,18 @@ stderr through `log`; the supervising backend tails them into the
 `worktree-cleanup` channel (`logs/worktree-cleanup.jsonl`), so the child never
 publishes to the sink itself. There is no time limit on a sweep; each git call
 keeps its own timeout.
+
+Main's boot enqueues a sweep only when the schedule is overdue (no run started
+since the latest top-of-hour tick — `enqueueReapIfOverdue`): the cron does not backfill, and main
+boots on every push, so an unconditional boot enqueue tripled the sweeps.
+
+A dirty checkout stays a hygiene candidate until the 90-day floor, so the sweep
+does not re-walk it with `git status` every hour: a dirty verdict leaves a
+**witness** (`worktreeArtifacts.hygieneWitness` — the first dirty path's stat,
+the index's stat, HEAD and its loose ref), and while all of it reads the same
+the tree is still dirty (`sweepHygiene`, `hygiene-witness.ts`). Only dirty is
+witnessed: a stale witness can defer a reap, never cause one. The panel's scan
+still walks every checkout — a human asked.
 
 The manual delete endpoints still run `reapAttempt` inside the request.
 
@@ -135,16 +165,16 @@ the panel until it is given something to say.
     - `report-kind` "worktree-reap-failed"
     - `resource.declare` "debug.worktree-cleanup.worktrees"
     - `resource.declare` "debug.worktree-cleanup.worktrees:meta"
-  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/worktree` ×10
     - `infra/worktree/reclaim` ×4
     - `tasks/tasks-core` ×4
     - `database/admin` ×3
     - `infra/endpoints` ×3
     - `infra/host/host-read-pool` ×2
+    - `infra/jobs/supervised-job` ×2
     - `infra/paths` ×2
     - `network/live` ×2
-    - `infra/jobs/supervised-job.defineSupervisedJob`
     - `infra/ndjson-stream.ndjsonResponse`
     - `primitives/log-channels.defineLogSink`
     - `reports.ReportKind`
@@ -168,7 +198,7 @@ the panel until it is given something to say.
   - Exempts itself from:
     - `no-db-backed-notify` — `server/internal/scan-served.ts` (sanctioned)
     - `endpoints:no-raw-json-handlers` — `server/internal/handle-delete.ts` (sanctioned)
-    - `boundaries/no-platform-api` — `server/internal/dirs.ts`, `server/internal/reap-policy.ts`, `server/internal/reap.ts` (debt)
+    - `boundaries/no-platform-api` — `server/internal/dirs.ts`, `server/internal/hygiene-witness.ts`, `server/internal/reap-policy.ts`, `server/internal/reap.ts` (debt)
 - Shared:
   - Exports (types): `BulkDeleteWorktreesBody`
   - Exports (values):

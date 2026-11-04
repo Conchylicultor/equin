@@ -51,6 +51,12 @@ export {
 // Who acts as a namespace: stamped by the CLI, read by the reaper.
 export { readCheckoutOwner } from "./internal/checkout-owner";
 export type { CheckoutOwnerRead } from "./internal/checkout-owner";
+// Which backend minted an agent checkout: stamped by worktree.prepare, read by the reaper.
+export {
+  readCheckoutMinter,
+  stampCheckoutMinter,
+} from "./internal/checkout-minter";
+export type { CheckoutMinterRead } from "./internal/checkout-minter";
 export {
   deploysForCheckout,
   resolveCheckoutDeploy,

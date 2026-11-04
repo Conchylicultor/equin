@@ -1,10 +1,11 @@
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
+import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { rawEndpointHandler } from "@plugins/infra/plugins/endpoints/server";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { worktreeScanServed } from "./internal/scan-served";
 import { handleDelete } from "./internal/handle-delete";
 import { handleBulkDelete } from "./internal/handle-bulk-delete";
-import { worktreeReapJob } from "./internal/reap-job";
+import { enqueueReapIfOverdue, worktreeReapJob } from "./internal/reap-job";
 import { worktreeReapFailedKind } from "./internal/reap-failed-kind";
 import { bulkDeleteWorktrees, deleteWorktree } from "../shared/endpoints";
 
@@ -20,13 +21,13 @@ export default {
   },
   register: [worktreeReapJob],
   contributions: [worktreeReapFailedKind, ...worktreeScanServed.declare],
-  // Drain the stale-registry backlog promptly after boot rather than waiting up
-  // to an hour for the next scheduled tick. The reap job is main-only (DBs +
-  // the registry are global cluster resources). A sweep that survived the
-  // restart is still running detached, so this enqueue's claim loses and it
-  // returns; steady-state runs find nothing to do.
+  // Catch up after boot only when main was down across an hourly tick (the
+  // cron does not backfill). The reap job is main-only (DBs + the registry are
+  // global cluster resources).
   onReady: () => {
     if (!isMain()) return;
-    void worktreeReapJob.enqueue({});
+    void runTracked("worktree-cleanup:boot-catch-up", () =>
+      enqueueReapIfOverdue(Date.now()),
+    );
   },
 } satisfies ServerPluginDefinition;

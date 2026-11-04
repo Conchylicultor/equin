@@ -24,14 +24,40 @@ describe("classifyGitStatus", () => {
     expect(classifyGitStatus(CLEAN_HEADER)).toEqual({ isDirty: false });
   });
 
-  test("a modified file reads dirty", () => {
+  test("a modified file reads dirty, naming it", () => {
     const out =
-      CLEAN_HEADER + "1 .M N... 100644 100644 100644 abc def plugins/foo.ts\n";
-    expect(classifyGitStatus(out)).toEqual({ isDirty: true });
+      CLEAN_HEADER +
+      "1 .M N... 100644 100644 100644 abc def plugins/my foo.ts\n";
+    expect(classifyGitStatus(out)).toEqual({
+      isDirty: true,
+      dirtyPath: "plugins/my foo.ts",
+    });
   });
 
-  test("an untracked file reads dirty", () => {
+  test("an untracked file reads dirty, naming it", () => {
     expect(classifyGitStatus(CLEAN_HEADER + "? notes.md\n")).toEqual({
+      isDirty: true,
+      dirtyPath: "notes.md",
+    });
+  });
+
+  test("a rename names its new path; an unmerged line its path", () => {
+    expect(
+      classifyGitStatus(
+        CLEAN_HEADER +
+          "2 R. N... 100644 100644 100644 abc def R100 new.ts\told.ts\n",
+      ),
+    ).toEqual({ isDirty: true, dirtyPath: "new.ts" });
+    expect(
+      classifyGitStatus(
+        CLEAN_HEADER +
+          "u UU N... 100644 100644 100644 100644 a b c conflicted.ts\n",
+      ),
+    ).toEqual({ isDirty: true, dirtyPath: "conflicted.ts" });
+  });
+
+  test("a path git quoted is dirty with no witness path", () => {
+    expect(classifyGitStatus(CLEAN_HEADER + '? "caf\\303\\251.md"\n')).toEqual({
       isDirty: true,
     });
   });

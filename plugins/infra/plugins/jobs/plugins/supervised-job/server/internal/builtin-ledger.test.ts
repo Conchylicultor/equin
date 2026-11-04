@@ -318,18 +318,7 @@ describe("endAttempt", () => {
 describe("cancelSupervisedJobByLock", () => {
   const channel = { publishAll: () => {} } as unknown as LogChannel;
 
-  test("a job with no lock, or with an own ledger, throws", async () => {
-    const unlocked = defineSupervisedJob({
-      name: "supervised-job.test.unlocked",
-      description: "Test job.",
-      input: z.object({}),
-      channel,
-      argv: () => ({ argv: ["true"] }),
-    });
-    expect(cancelSupervisedJobByLock(unlocked, {})).rejects.toThrow(
-      "declares `lock`",
-    );
-
+  test("a job with an own ledger throws", async () => {
     const own = defineSupervisedJob({
       name: "supervised-job.test.ownledger",
       description: "Test job.",
@@ -345,12 +334,11 @@ describe("cancelSupervisedJobByLock", () => {
       },
     });
     expect(cancelSupervisedJobByLock(own, {})).rejects.toThrow(
-      "declares `lock`",
+      "single-child built-in-ledger",
     );
-    expect(latestSupervisedRun(unlocked, {})).rejects.toThrow(
-      "declares `lock`",
+    expect(latestSupervisedRun(own, {})).rejects.toThrow(
+      "single-child built-in-ledger",
     );
-    expect(latestSupervisedRun(own, {})).rejects.toThrow("declares `lock`");
   });
 });
 
@@ -402,6 +390,22 @@ describe("the built-in ledger (real DB)", () => {
     );
 
     expect(await ledger.claim({ ...meta, lockKey: "target-a" })).not.toBeNull();
+  });
+
+  test("a job with no lock is named by the job-wide lock", async () => {
+    const unlocked = defineSupervisedJob({
+      name: "supervised-job.test.unlocked",
+      description: "Test job.",
+      input: z.object({}),
+      channel: { publishAll: () => {} } as unknown as LogChannel,
+      argv: () => ({ argv: ["true"] }),
+    });
+    expect(await latestSupervisedRun(unlocked, {}, t.db)).toBeNull();
+    const runId = await builtinLedgerFor(
+      "supervised-job.test.unlocked",
+      t.db,
+    ).claim({ attempt: 1, workflowRunId: "wf", lockKey: JOB_WIDE_LOCK_KEY });
+    expect((await latestSupervisedRun(unlocked, {}, t.db))?.id).toBe(runId!);
   });
 
   test("a failed run that recorded no error gets its transcript's end", async () => {

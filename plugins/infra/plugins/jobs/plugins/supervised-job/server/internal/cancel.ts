@@ -67,8 +67,9 @@ export type CancelByLockResult =
  * way (a reboot, `cancelSupervisedJob`) carries no stamp and stays a retryable
  * failure.
  *
- * Only for a built-in-ledger job that declared `lock` — the lock is how a
- * caller names the run without holding its id. Any other job throws.
+ * Only for a single-child built-in-ledger job — its `lock` (or the job-wide
+ * lock when it declared none) is how a caller names the run without holding
+ * its id. Any other job throws.
  *
  * A run stamped while its child is still being spawned answers
  * `outcome: { ok: false, reason: "not-spawned" }`: the child then runs on, and
@@ -85,7 +86,7 @@ export async function cancelSupervisedJobByLock<
   const locked = builtinLockedJobOf(job);
   if (locked === null) {
     throw new Error(
-      `[supervised-job] ${job.name}: cancelSupervisedJobByLock needs a built-in-ledger job that declares \`lock\` — cancel an own-ledger run by id with cancelSupervisedJob.`,
+      `[supervised-job] ${job.name}: cancelSupervisedJobByLock needs a single-child built-in-ledger job — cancel an own-ledger run by id with cancelSupervisedJob.`,
     );
   }
   const runId = await builtinLedgerFor(locked.jobName, conn).markCancelled(

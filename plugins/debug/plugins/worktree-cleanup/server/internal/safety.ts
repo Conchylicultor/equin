@@ -18,6 +18,11 @@ import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 // reaped — while the term protected nothing the branch ref does not already keep.
 export interface GitHygiene {
   isDirty: boolean;
+  // The first changed path `git status` named, repo-relative — the reaper's
+  // witness that the tree is still dirty (hygiene-witness.ts). Absent when the
+  // tree is clean, when the answer is the conservative unknown, or when git
+  // quoted the path (an unusual name: no witness, the tree is just re-probed).
+  dirtyPath?: string;
 }
 
 // The conservative answer: "assume there is something to lose". Returned for
@@ -44,7 +49,26 @@ export function classifyGitStatus(statusOut: string): GitHygiene {
   if (!lines.some((l) => l.startsWith("# branch.oid "))) return HYGIENE_UNKNOWN;
 
   // Any non-header line is a file change.
-  return { isDirty: lines.some((l) => l.length > 0 && !l.startsWith("#")) };
+  const changes = lines.filter((l) => l.length > 0 && !l.startsWith("#"));
+  if (changes.length === 0) return { isDirty: false };
+  const dirtyPath = changedPath(changes[0]!);
+  return dirtyPath === undefined
+    ? { isDirty: true }
+    : { isDirty: true, dirtyPath };
+}
+
+// The path of one `--porcelain=v2` change line: `1` (ordinary, 8 fields before
+// the path), `2` (rename/copy, 9 fields, then `path<TAB>origPath`), `u`
+// (unmerged, 10 fields), `?` (untracked). A path git had to quote, or a line
+// of any other shape, has none.
+function changedPath(line: string): string | undefined {
+  const fields = line.split(" ");
+  const skip = { "1": 8, "2": 9, u: 10, "?": 1 }[fields[0]!];
+  if (skip === undefined) return undefined;
+  const rest = fields.slice(skip).join(" ");
+  const path = fields[0] === "2" ? rest.split("\t")[0]! : rest;
+  if (path === "" || path.startsWith('"')) return undefined;
+  return path;
 }
 
 // A `git status` over a 690 MB checkout is a CPU/IO-heavy read (measured ~0.4 s

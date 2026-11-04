@@ -24533,16 +24533,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `report-kind` "worktree-reap-failed"
           - `resource.declare` "debug.worktree-cleanup.worktrees"
           - `resource.declare` "debug.worktree-cleanup.worktrees:meta"
-        - Uses: 34 symbols — full list in [`plugins/debug/plugins/worktree-cleanup/REFERENCE.md`](../plugins/debug/plugins/worktree-cleanup/REFERENCE.md)
+        - Uses: 35 symbols — full list in [`plugins/debug/plugins/worktree-cleanup/REFERENCE.md`](../plugins/debug/plugins/worktree-cleanup/REFERENCE.md)
           - `infra/worktree` ×10
           - `infra/worktree/reclaim` ×4
           - `tasks/tasks-core` ×4
           - `database/admin` ×3
           - `infra/endpoints` ×3
           - `infra/host/host-read-pool` ×2
+          - `infra/jobs/supervised-job` ×2
           - `infra/paths` ×2
           - `network/live` ×2
-          - `infra/jobs/supervised-job.defineSupervisedJob`
           - `infra/ndjson-stream.ndjsonResponse`
           - `primitives/log-channels.defineLogSink`
           - `reports.ReportKind`
@@ -24566,7 +24566,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `no-db-backed-notify` — `server/internal/scan-served.ts` (sanctioned)
           - `endpoints:no-raw-json-handlers` — `server/internal/handle-delete.ts` (sanctioned)
-          - `boundaries/no-platform-api` — `server/internal/dirs.ts`, `server/internal/reap-policy.ts`, `server/internal/reap.ts` (debt)
+          - `boundaries/no-platform-api` — `server/internal/dirs.ts`, `server/internal/hygiene-witness.ts`, `server/internal/reap-policy.ts`, `server/internal/reap.ts` (debt)
       - Shared:
         - Exports (types): `BulkDeleteWorktreesBody`
         - Exports (values):
@@ -27652,7 +27652,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/sentinel/status-file` (3 debt)
               - `debug/timeline` (2 debt)
               - `debug/trace/engine` (1 debt)
-              - `debug/worktree-cleanup` (3 debt)
+              - `debug/worktree-cleanup` (4 debt)
               - `framework/cli` (4 debt)
               - `framework/cli/op-runtime` (1 debt)
               - `framework/cli/release` (1 debt)
@@ -27692,7 +27692,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/jobs/supervised-job` (3 debt)
               - `infra/launcher` (2 debt)
               - `infra/mcp/browser` (2 debt)
-              - `infra/paths` (10 debt)
+              - `infra/paths` (11 debt)
               - `infra/request-origin/agent-write-ledger` (1 debt)
               - `infra/runtime-profiler` (1 debt)
               - `infra/safe-fetch` (1 debt)
@@ -32796,6 +32796,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AppIdentity`
           - `CheckoutDeploy`
           - `CheckoutDeployResolution`
+          - `CheckoutMinterRead`
           - `CheckoutOwnerRead`
           - `DataDir`
           - `DataDirArea`
@@ -32845,6 +32846,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `pruneWorktreeCheckArtifacts`
           - `pruneWorktreeTestArtifacts`
           - `publishedLogClaim`
+          - `readCheckoutMinter`
           - `readCheckoutOwner`
           - `readHomeDataRootLayout`
           - `relativeToDataRoot`
@@ -32853,6 +32855,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resolveCheckoutDeploy`
           - `SERVER_CORE_RELATIVE`
           - `setReleaseIdentity`
+          - `stampCheckoutMinter`
           - `toolchainPin`
           - `WORKTREE_SPEC_FILE`
           - `worktreeArtifacts`
@@ -32879,7 +32882,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `paths:no-hardcoded-paths` — `check/index.ts`, `core/internal/paths.ts` (sanctioned)
           - `paths:no-inlined-worktree-artifacts` — `.` (sanctioned)
           - `paths:data-root-not-joined` — `.` (sanctioned)
-          - `boundaries/no-platform-api` — `core/internal/checkout-deploys.ts`, `core/internal/checkout-owner.ts`, `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/data-root-layout.ts`, `core/internal/data-dirs-manifest.ts`, `core/internal/paths.ts`, `core/internal/prune-artifacts.ts`, `core/internal/toolchain-pin.ts`, `core/internal/worktree-dirs.ts` (debt)
+          - `boundaries/no-platform-api` — `core/internal/checkout-deploys.ts`, `core/internal/checkout-minter.ts`, `core/internal/checkout-owner.ts`, `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/data-root-layout.ts`, `core/internal/data-dirs-manifest.ts`, `core/internal/paths.ts`, `core/internal/prune-artifacts.ts`, `core/internal/toolchain-pin.ts`, `core/internal/worktree-dirs.ts` (debt)
           - `user-path/no-unproven-claim` — `core/internal/paths.ts`, `core/internal/data-root-layout.ts` (sanctioned)
           - `user-path/no-unproven-claim` — `core/internal/checkout-deploys.ts` (sanctioned)
       - Server:

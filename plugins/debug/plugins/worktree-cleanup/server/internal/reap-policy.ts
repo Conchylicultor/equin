@@ -14,7 +14,9 @@ import {
 } from "@plugins/infra/plugins/namespace/core";
 import {
   listWorktreeDirs,
+  readCheckoutMinter,
   readCheckoutOwner,
+  type CheckoutMinterRead,
   type CheckoutOwnerRead,
 } from "@plugins/infra/plugins/paths/core";
 import {
@@ -31,11 +33,12 @@ import {
 import { worktreesDir } from "@plugins/infra/plugins/paths/server";
 import { dirExists } from "./reap";
 import { canClassifyOrphans, dirAgeMs, readWorktreeDirIndex } from "./dirs";
+import { sweepHygiene } from "./hygiene-witness";
 import {
-  getGitHygiene,
   isSafeToReap,
   isTaskDeletable,
   needsHygiene,
+  SAFE_REAP_AGE_MS,
   type GitHygiene,
 } from "./safety";
 
@@ -84,9 +87,10 @@ export interface ReapScan {
   // Rows with anything left to reclaim — a dir, a fork DB, or a registry entry.
   // The gap between this and `scanned` is the history the scan no longer pays for.
   candidates: number;
-  // Git hygiene probes actually spawned. This is K: the number A4's negative
-  // cache would exist to reduce, and the number that decides whether it is
-  // needed at all.
+  // Rows whose verdict hangs on git hygiene (finished, past 72 h, dir present).
+  hygieneCandidates: number;
+  // `git status` walks actually spawned for them — the rest were answered by a
+  // still-holding dirty witness (hygiene-witness.ts).
   hygieneProbes: number;
 }
 
@@ -265,6 +269,60 @@ export function classifyStampedNamespace(
   return { id: ns };
 }
 
+export interface ClassifyMintedContext {
+  // Whether the minting checkout's dir is still on disk — a CONFIRMED absence,
+  // per the readdir invariant in collectReapable.
+  minterDirExists: boolean;
+  // Whether main's attempts table still retains the minting checkout's attempt.
+  minterRetained: boolean;
+  // Age of the checkout's own dir (birthtime): no attempt row here dates it.
+  ageMs: number;
+  // Obtained only when the verdict hangs on it — see NEEDS_HYGIENE.
+  hygiene?: GitHygiene;
+}
+
+// The decision for a canonical checkout main's attempts table does NOT name,
+// whose minter stamp says another backend made it — as a PURE function.
+//
+// Such a checkout was launched by a worktree build: its task, conversation and
+// attempt rows live in THAT build's forked database, which this reaper cannot
+// read. Without this rule it could only wait out the 90-day floor, with a full
+// fork DB beside it. The minter is its owner the way a composition marker's
+// `checkout` owns a namespace (classifyOwnedNamespace): while the minter is
+// here, its database still holds the record and nothing is decided; once the
+// minter is gone (reaped, so its database dropped with it), nothing anywhere
+// can resume the checkout's conversation, and it is reclaimed on the same
+// terms as the clean path — no uncommitted change, at least 72 h old.
+//
+// Never a target:
+//   - no stamp (every checkout older than the stamp), or a malformed one:
+//     unknown is not absent — those stay under the 90-day floor.
+//   - minted by MAIN: its row belongs in main's table, and a missing one is a
+//     different fault this rule must not paper over.
+//   - minted by a name that is not a checkout (no dir to look for): unknown.
+//   - the minter retained, or still on disk.
+//   - younger than SAFE_REAP_AGE_MS, or dirty.
+export function classifyMintedCheckout(
+  checkout: WorktreeDirTarget,
+  minter: CheckoutMinterRead,
+  ctx: ClassifyMintedContext,
+): ReapTarget | null | typeof NEEDS_HYGIENE {
+  if (minter.kind !== "stamped") return null;
+  if (minter.minter === MAIN_WORKTREE_NAME) return null;
+  if (!isCanonicalWorktreeName(minter.minter)) return null;
+  if (ctx.minterRetained) return null;
+  if (ctx.minterDirExists) return null;
+  if (ctx.ageMs < SAFE_REAP_AGE_MS) return null;
+  if (!ctx.hygiene) return NEEDS_HYGIENE;
+  if (ctx.hygiene.isDirty) return null;
+  return { id: checkout.name, worktreePath: checkout.path };
+}
+
+export interface WorktreeDirTarget {
+  name: string;
+  path: string;
+}
+
 // Run `fn` over `items` with at most `limit` concurrent executions.
 async function pMap<T, R>(
   items: T[],
@@ -391,12 +449,19 @@ export async function collectReapable(now: number): Promise<ReapScan> {
   // verdict. Driven at the host heavy-read pool's own width so the pool is the
   // regulator — `getGitHygiene` takes a slot per probe, so a wider local cap
   // would only queue waiters, and a narrower one would leave slots idle.
+  //
+  // A checkout whose dirty verdict is still witnessed is not walked again —
+  // see hygiene-witness.ts; `hygieneProbes` counts only real walks.
   const hygiene = await pMap(needProbe, heavyReadSlotCount(), (attempt) =>
-    getGitHygiene(attempt.worktreePath, { background: true }),
+    sweepHygiene(asNamespace(attempt.id), attempt.worktreePath),
   );
+  let hygieneProbes = hygiene.filter((h) => h.probed).length;
   needProbe.forEach((attempt, i) => {
     const ctx = probeCtx.get(attempt.id)!;
-    const decision = classifyAttempt(attempt, { ...ctx, hygiene: hygiene[i]! });
+    const decision = classifyAttempt(attempt, {
+      ...ctx,
+      hygiene: hygiene[i]!.hygiene,
+    });
     // A probed row always has its dir present, so NEEDS_HYGIENE cannot recur.
     if (decision !== null && decision !== NEEDS_HYGIENE) {
       targets.set(decision.id, decision);
@@ -445,12 +510,51 @@ export async function collectReapable(now: number): Promise<ReapScan> {
   // this is the one branch that removes a dir git still tracks and a task may
   // still own, so an absent attempt row must mean "abandoned", not "this DB is a
   // fork that never saw the row". Belt-and-braces against a future perWorktree.
+  //
+  // MINTED BY ANOTHER BACKEND — the one case where the missing row is
+  // explained: the checkout's stamp names the worktree build whose forked
+  // database holds it (classifyMintedCheckout). Decided before the floor, and
+  // only ever adds a target the floor would have taken later.
+  // Attempts the user has not finished with — the guard both owner-gone
+  // branches below share with classifyAttempt.
+  const retainedCheckouts = new Set(
+    attempts.filter((a) => a.retained).map((a) => a.id),
+  );
   if (canClassifyOrphans()) {
-    for (const { name, path } of dirIndex.canonical) {
+    for (const dir of dirIndex.canonical) {
+      const { name, path } = dir;
       if (seenAttemptIds.has(name) || targets.has(name)) continue;
-      if ((await dirAgeMs(path, now)) >= AUTO_REAP_AGE_MS) {
+      const ageMs = await dirAgeMs(path, now);
+      if (ageMs >= AUTO_REAP_AGE_MS) {
         targets.set(name, { id: name, worktreePath: path });
+        continue;
       }
+      const minter = readCheckoutMinter(asNamespace(name));
+      // Unstamped is every checkout older than the stamp — the floor's case.
+      // A minter that is no checkout has no dir to confirm gone: the
+      // classifier refuses it, so skip resolving a path for it.
+      if (minter.kind !== "stamped" || !isCanonicalWorktreeName(minter.minter))
+        continue;
+      const ctx: ClassifyMintedContext = {
+        // The readdir set may SKIP the stat when it FINDS the dir; an absence
+        // is confirmed with a real stat (invariant above).
+        minterDirExists:
+          allNames.has(minter.minter) ||
+          (await dirExists(await worktreePathFor(minter.minter))),
+        minterRetained: retainedCheckouts.has(minter.minter),
+        ageMs,
+      };
+      let decision = classifyMintedCheckout(dir, minter, ctx);
+      if (decision === NEEDS_HYGIENE) {
+        const swept = await sweepHygiene(asNamespace(name), path);
+        if (swept.probed) hygieneProbes++;
+        decision = classifyMintedCheckout(dir, minter, {
+          ...ctx,
+          hygiene: swept.hygiene,
+        });
+      }
+      if (decision !== null && decision !== NEEDS_HYGIENE)
+        targets.set(decision.id, decision);
     }
   }
 
@@ -474,9 +578,6 @@ export async function collectReapable(now: number): Promise<ReapScan> {
   // is a fork taken at checkout time and cannot see any attempt created since.
   const namespaceTargets: NamespaceReapTarget[] = [];
   if (canClassifyOrphans()) {
-    const retainedCheckouts = new Set(
-      attempts.filter((a) => a.retained).map((a) => a.id),
-    );
     for (const owned of await listCompositionNamespaces()) {
       const { checkout } = owned.marker;
       // Already covered: a checkout in `targets` reclaims everything it owns
@@ -536,6 +637,7 @@ export async function collectReapable(now: number): Promise<ReapScan> {
     namespaceTargets,
     scanned: attempts.length,
     candidates,
-    hygieneProbes: needProbe.length,
+    hygieneCandidates: needProbe.length,
+    hygieneProbes,
   };
 }

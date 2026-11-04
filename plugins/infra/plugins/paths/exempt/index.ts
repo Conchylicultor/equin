@@ -25,6 +25,7 @@ export default [
     rule: "boundaries/no-platform-api",
     paths: [
       "core/internal/checkout-deploys.ts",
+      "core/internal/checkout-minter.ts",
       "core/internal/checkout-owner.ts",
       "core/internal/checkout-ref.ts",
       "core/internal/data-dir.ts",

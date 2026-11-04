@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { defineSupervisedJob } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
+import {
+  defineSupervisedJob,
+  latestSupervisedRun,
+} from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/core";
 import {
@@ -67,7 +70,7 @@ export const worktreeReapJob = defineSupervisedJob({
     "Reclaims stale worktrees and orphaned forked databases, and reports any that could not be cleaned up.",
   input: z.object({}),
   channel: reapLog,
-  schedule: { cron: "0 * * * *" }, // hourly
+  schedule: { cron: "0 * * * *" }, // hourly — REAP_PERIOD_MS below
   runAttempts: 1,
   // The sweep reaps in its child, so the panel's held scans (this backend's
   // memory) are told here, at its end: their rows the sweep moved re-read.
@@ -88,12 +91,12 @@ export const worktreeReapJob = defineSupervisedJob({
     let reclaimed = 0;
 
     // The scan's own shape, logged every tick. `scanned` vs `candidates` shows
-    // how much of the attempt table has nothing left to reclaim (the cost the
-    // readdir inversion removed), and `hygieneProbes` is K — the residual git
-    // fan-out. K is what decides whether a negative hygiene cache is worth any
-    // state at all; if it stays single-digit, the answer is no.
+    // how much of the attempt table has nothing left to reclaim, and
+    // `hygieneCandidates` vs `hygieneProbes` how many of the checkouts whose
+    // verdict hangs on git were really walked — the rest still witnessed dirty
+    // (hygiene-witness.ts).
     log(
-      `auto-reap scan: scanned=${scan.scanned} candidates=${scan.candidates} hygieneProbes=${scan.hygieneProbes} targets=${targets.length} namespaceTargets=${namespaceTargets.length}`,
+      `auto-reap scan: scanned=${scan.scanned} candidates=${scan.candidates} hygieneCandidates=${scan.hygieneCandidates} hygieneProbes=${scan.hygieneProbes} targets=${targets.length} namespaceTargets=${namespaceTargets.length}`,
     );
 
     // Failures of the REPORTING path, not of a reap. Collected rather than
@@ -197,3 +200,18 @@ export const worktreeReapJob = defineSupervisedJob({
     }
   },
 });
+
+// The schedule's period: the cron above fires at the top of every UTC hour.
+const REAP_PERIOD_MS = 60 * 60 * 1000;
+
+// Main's boot: run the sweep now only when the schedule is OVERDUE — no run has
+// started since its latest due tick (main was down across it; the cron does
+// not backfill). This used to enqueue on every boot, and main boots on every
+// push: 40–80 sweeps a day instead of 24. A sweep still running detached
+// started after its tick, so it is not overdue.
+export async function enqueueReapIfOverdue(now: number): Promise<void> {
+  const lastTick = Math.floor(now / REAP_PERIOD_MS) * REAP_PERIOD_MS;
+  const last = await latestSupervisedRun(worktreeReapJob, {});
+  if (last !== null && last.startedAt.getTime() >= lastTick) return;
+  await worktreeReapJob.enqueue({});
+}

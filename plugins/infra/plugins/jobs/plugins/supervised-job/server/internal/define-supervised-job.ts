@@ -312,8 +312,8 @@ export interface SupervisedJob<
 
 /**
  * What `cancelSupervisedJobByLock` needs of a job: its built-in ledger and the
- * `lock` it declared. Held off the public `SupervisedJob` type so the cancel
- * verb is the only reader; a job missing here has an own ledger or no `lock`.
+ * `lock` it declared (job-wide when it declared none). Held off the public
+ * `SupervisedJob` type; a job missing here has an own ledger or `steps`.
  */
 export interface BuiltinLockedJob {
   readonly jobName: string;
@@ -511,13 +511,17 @@ export function defineSupervisedJob<N extends string, S extends z.ZodType>(
       await job.register();
     },
   };
-  if (ledger.builtin && spec.steps === undefined && spec.lock !== undefined) {
+  if (ledger.builtin && spec.steps === undefined) {
     const lock = spec.lock;
     builtinLockedJobs.set(supervised, {
       jobName: spec.name,
       // The caller hands `z.infer<S>` (the cancel verb's signature), the same
-      // parsed shape `claim` locked on.
-      lock: (input) => lock(input as z.infer<S>),
+      // parsed shape `claim` locked on. No `lock` is the job-wide lock — the
+      // key `claim` stamps for it, so its runs are named the same way.
+      lock:
+        lock === undefined
+          ? () => JOB_WIDE_LOCK_KEY
+          : (input) => lock(input as z.infer<S>),
     });
   }
   return supervised;
