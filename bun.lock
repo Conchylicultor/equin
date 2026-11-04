@@ -2085,6 +2085,10 @@
       "name": "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-flag-raise",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/orchestration-tools": {
+      "name": "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-orchestration-tools",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/page-tools": {
       "name": "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-page-tools",
       "version": "0.0.1",
@@ -8173,6 +8177,8 @@
     "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-edit": ["@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-edit@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/edit"],
 
     "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-flag-raise": ["@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-flag-raise@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/flag-raise"],
+
+    "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-orchestration-tools": ["@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-orchestration-tools@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/orchestration-tools"],
 
     "@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-page-tools": ["@equin/plugin-conversations-conversation-view-jsonl-viewer-tool-call-page-tools@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/page-tools"],
 

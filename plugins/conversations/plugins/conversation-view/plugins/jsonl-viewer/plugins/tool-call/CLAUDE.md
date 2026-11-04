@@ -17,6 +17,7 @@
     - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.bash`
     - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.edit`
     - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.flag-raise`
+    - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.orchestration-tools`
     - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.page-tools.edit-page`
     - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.page-tools.read-page`
     - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.page-tools.write-note`
@@ -81,6 +82,7 @@
     - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
     - `conversations/conversation-view/jsonl-viewer/tool-call/edit`
     - `conversations/conversation-view/jsonl-viewer/tool-call/flag-raise`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/orchestration-tools`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/read-page`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/write-note`
@@ -99,6 +101,7 @@
   - **`bash`** — Renders Bash tool calls with a syntax-highlighted command, optional description label, and ANSI-stripped output.
   - **`edit`** — Renders Edit and MultiEdit tool calls as side-by-side syntax-highlighted diffs.
   - **`flag-raise`** — Renders flag_raise MCP tool calls with the flagged reason displayed as a warning banner.
+  - **`orchestration-tools`** — Renders the task-orchestration MCP tool calls an agent manages its task tree with: edit_task (the task's chip and the edit in words — renamed, prerequisites added or removed, armed or disarmed; the…
   - **`page-tools`** [3 sub-plugins] — Shared appearance for the equin page MCP tool rows (read_page / write_agent_note / edit_page): the page-identity chip, the apply-report chips, the markdown body, and the refusal block. Contributes…
   - **`read`** — Renders Read tool calls with syntax-highlighted file content, line-number gutter, and image thumbnails.
   - **`skill`** — Renders Skill tool calls with skill name, args preview, and injected context.

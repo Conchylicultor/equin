@@ -50,6 +50,7 @@ which renders `<task>prompt</task>` *block* tags as editable creation cards.
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/font-family --font-mono`
+  - Imported by: `conversations/conversation-view/jsonl-viewer/tool-call/orchestration-tools`
 - Core:
   - Exports (values): `TASK_CHIP_SURFACES`
 

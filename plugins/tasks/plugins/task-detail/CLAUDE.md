@@ -54,6 +54,7 @@
     - `active-data/task-link`
     - `apps/pages/prompt-origin`
     - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/orchestration-tools`
     - `conversations/conversation-view/tasks-panel`
     - `hints/ask`
     - `tasks/automations`

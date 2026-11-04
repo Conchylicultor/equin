@@ -64,10 +64,10 @@ follow.
   - Uses tokens:
     - `ui/tokens/density --space-sm`
     - `ui/tokens/font-family --font-mono`
-  - Tokens used by: 230 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Tokens used by: 231 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×60
+    - `conversations` ×38
     - `primitives` ×38
-    - `conversations` ×37
     - `debug` ×15
     - `plugin-meta` ×14
     - `page` ×12
