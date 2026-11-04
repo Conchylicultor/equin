@@ -65,9 +65,6 @@ slots-as-props, which is what `<Frame>` did before it was deleted.
     - `Rigid`
     - `rigidClass`
 - Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/font-family --font-mono`
-    - `ui/tokens/shape --spacing`
   - Imported by: 142 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×36
     - `conversations` ×26

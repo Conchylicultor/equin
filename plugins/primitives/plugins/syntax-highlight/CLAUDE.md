@@ -34,7 +34,6 @@
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/density --space-lg`
     - `ui/tokens/density --space-md`
-    - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shape --radius`

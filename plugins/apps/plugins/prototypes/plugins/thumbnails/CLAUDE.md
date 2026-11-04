@@ -267,7 +267,6 @@ Design: `research/2026-08-16-apps-prototype-gallery-thumbnails.md`.
     - `infra/jobs/supervised-job.cliExecContext`
   - Exports (values): `renderThumbnailsAction`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shadow --shadow`
   - Imported by:
     - `apps/prototypes/fixtures`
     - `apps/prototypes/gallery`

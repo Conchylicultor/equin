@@ -162,7 +162,6 @@ spawn / control-file / banner helpers both scripts share are `e2e/synthetic.ts`.
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --primary-text`
     - `ui/tokens/color-palette --warning`
-    - `ui/tokens/density --chrome-pad-x`
     - `ui/tokens/density --op-status-icon`
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-md`

@@ -25,7 +25,6 @@
     - `primitives/icon-button.IconButton`
 - Cross-plugin:
   - Uses tokens:
-    - `ui/tokens/color-palette --background`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/density --chrome-bar-h`
     - `ui/tokens/density --space-2xs`

@@ -368,7 +368,6 @@ the outcome too, with no separate code path.
     - `useDispatchOutcome`
     - `useSlotOrder`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/density --control-height-sm`
   - Imported by: 93 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×31
     - `primitives` ×15

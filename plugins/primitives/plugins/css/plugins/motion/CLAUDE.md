@@ -84,9 +84,6 @@ Design: [`research/2026-10-25-global-surface-motion.md`](../../../../../../resea
     - `Presence`
     - `useSizeMotion`
 - Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/overlay --overlay-enter-duration`
-    - `ui/tokens/overlay --overlay-enter-easing`
   - Imported by:
     - `apps-core/pane-morph`
     - `apps/desktop/launcher`

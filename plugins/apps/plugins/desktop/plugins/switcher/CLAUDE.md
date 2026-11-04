@@ -70,7 +70,6 @@ character on a US keyboard.
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xs`
-    - `ui/tokens/shadow --shadow`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-semibold`

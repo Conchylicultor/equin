@@ -213,6 +213,7 @@ snapshot they read the disk and compute, unchanged.
     - `network/live/resource-vocabulary`
     - `plugin-meta/plugin-refs`
     - `plugin-meta/plugin-tree`
+    - `plugin-meta/token-usage`
 - Exemptions:
   - Exempts itself from:
     - `import-scan-safety/no-adhoc-import-scan` — `core/find-imports.ts` (sanctioned)

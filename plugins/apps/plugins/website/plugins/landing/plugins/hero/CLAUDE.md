@@ -36,7 +36,6 @@ and the paragraph says what it means.
     - `ui/tokens/color-palette --primary`
     - `ui/tokens/color-palette --primary-text`
     - `ui/tokens/density --space-lg`
-    - `ui/tokens/shadow --shadow`
     - `ui/tokens/shape --radius`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --font-weight-semibold`

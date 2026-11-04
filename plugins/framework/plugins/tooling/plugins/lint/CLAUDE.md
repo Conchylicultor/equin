@@ -198,9 +198,6 @@ its disable does not cover. Parameters and imports have no in-file value.
     - `ownClass`
     - `typeAwareLintGroups`
 - Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/shape --radius`
-    - `ui/tokens/shape --spacing`
   - Imported by: `framework/tooling/codegen`
 - Exemptions:
   - Exempts itself from:

@@ -61,18 +61,16 @@ follow.
   - Exports (types): `TypeScaleTokenValues`
   - Exports (values): `typeScaleGroup`
 - Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/density --space-sm`
-    - `ui/tokens/font-family --font-mono`
-  - Tokens used by: 231 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×60
+  - Uses tokens: `ui/tokens/density --space-sm`
+  - Tokens used by: 228 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×59
     - `conversations` ×38
     - `primitives` ×38
     - `debug` ×15
     - `plugin-meta` ×14
     - `page` ×12
-    - `ui` ×10
     - `tasks` ×9
+    - `ui` ×8
     - `fields` ×4
     - `review` ×4
     - `auth` ×3

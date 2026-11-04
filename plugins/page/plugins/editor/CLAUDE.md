@@ -2546,10 +2546,10 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `xmlTextContentLength`
     - `xmlTextToRuns`
 - Cross-plugin:
-  - Uses tokens: 29 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 23 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/color-palette` ×11
-    - `ui/tokens/type-scale` ×9
-    - `ui/tokens/density` ×5
+    - `ui/tokens/density` ×4
+    - `ui/tokens/type-scale` ×4
     - `ui/tokens/shape` ×2
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shadow --shadow`

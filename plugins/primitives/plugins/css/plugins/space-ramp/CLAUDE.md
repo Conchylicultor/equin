@@ -123,8 +123,6 @@ only when another file happens to spell the same class. Pass the step to
 - Description: The spacing ramp's one declaration: the closed step set and the literal class each step-keyed @utility family gives each step, generated from app.css so a step that exists in TypeScript but has no @utility behind it is unspellable. Read by every consumer (Stack, Inset, Column, railClass, Sticky, Pin) instead of re-spelling the steps.
 - Cross-plugin:
   - Uses tokens:
-    - `ui/tokens/density --pad-chip-x`
-    - `ui/tokens/density --pad-chip-y`
     - `ui/tokens/density --space-2xl`
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-lg`
@@ -134,7 +132,6 @@ only when another file happens to spell the same class. Pass the step to
     - `ui/tokens/density --space-xl`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/density --space-xsm`
-    - `ui/tokens/shape --spacing`
   - Imported by: `primitives/css/rail`
 - Core:
   - Exports (types):

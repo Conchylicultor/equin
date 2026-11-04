@@ -30,18 +30,18 @@
   - Exports (values): `fontFamilyGroup`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/density --space-sm`
-  - Tokens used by: 156 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Tokens used by: 151 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×38
     - `plugin-meta` ×23
-    - `apps` ×22
+    - `apps` ×21
     - `debug` ×19
-    - `primitives` ×16
+    - `primitives` ×14
     - `reports` ×7
-    - `ui` ×5
     - `infra` ×4
     - `tasks` ×4
     - `fields` ×3
     - `page` ×3
+    - `ui` ×3
     - `active-data` ×2
     - `auth` ×2
     - `build` ×2

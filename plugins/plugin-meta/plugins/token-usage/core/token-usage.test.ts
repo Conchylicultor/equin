@@ -3,6 +3,7 @@ import { test, expect } from "bun:test";
 
 import { tokenGroupsDeclaredIn } from "./token-groups";
 import { tokenVarsUsedBy } from "./token-usage";
+import type { SourceText } from "./token-usage";
 
 const root = REPO_ROOT;
 
@@ -56,6 +57,61 @@ test("words in a file no page renders are not classes", async () => {
     ],
   ]);
   expect([...server!]).toEqual(["--chart-1"]);
+});
+
+test("a group reads the same alone as inside any batch", async () => {
+  // Prose that names classes: a list in a comment, and a glob oxide does not
+  // extract on its own (`pr-floating-bar*`), beside a real use of the class.
+  const prose: SourceText[] = [
+    {
+      file: "chip.tsx",
+      classes: true,
+      content: `// The chip is \`md\` (control-sm, px-control-sm, text-caption).
+/* like the \`pr-floating-bar*\` headers */
+export const c = <div className="text-chart-2" />;`,
+    },
+  ];
+  const user: SourceText[] = [
+    {
+      file: "user.tsx",
+      classes: true,
+      content: `cn("px-control-sm text-caption pr-floating-bar")`,
+    },
+  ];
+  const [alone] = await tokenVarsUsedBy(root, [prose]);
+  const [first, other] = await tokenVarsUsedBy(root, [prose, user]);
+  const [, last] = await tokenVarsUsedBy(root, [user, prose]);
+  expect([...alone!].sort()).toEqual(["--chart-2"]);
+  expect([...first!].sort()).toEqual([...alone!].sort());
+  expect([...last!].sort()).toEqual([...alone!].sort());
+  // …while the group that really spells the classes reads their vars.
+  expect(other!.has("--font-size-caption")).toBe(true);
+});
+
+test("a class or var() named only in a comment is no use", async () => {
+  const [ts, css] = await tokenVarsUsedBy(root, [
+    [
+      {
+        file: "a.tsx",
+        classes: true,
+        content: `// bg-categorical-1 and var(--chart-1)
+/** hover:text-chart-2, var(--chart-3) */
+const url = "https://x.test"; // var(--chart-4)
+export const a = cn("rounded-card");
+export const b = <p><b>x</b> y <i className="text-chart-2">z</i></p>;`,
+      },
+    ],
+    [
+      {
+        file: "b.css",
+        classes: true,
+        content: `/* var(--chart-1) bg-categorical-1 */
+.x { background: url(https://x.test/a.png); color: var(--chart-3); }`,
+      },
+    ],
+  ]);
+  expect([...ts!].sort()).toEqual(["--chart-2", "--radius-card"]);
+  expect([...css!].sort()).toEqual(["--chart-3"]);
 });
 
 test("tokenGroupsDeclaredIn reads an inline or same-file const schema", () => {

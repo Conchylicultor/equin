@@ -23,8 +23,6 @@
     - `ui/tokens/color-palette --border`
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted`
-    - `ui/tokens/color-palette --primary-text`
-    - `ui/tokens/font-family --font-mono`
     - `ui/tokens/type-scale --font-scale`
     - `ui/tokens/type-scale --font-size-caption`
     - `ui/tokens/type-scale --font-size-label`

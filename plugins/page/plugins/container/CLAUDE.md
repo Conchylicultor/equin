@@ -347,9 +347,7 @@ they describe.
     - `ui/tokens/color-palette --accent`
     - `ui/tokens/color-palette --background`
     - `ui/tokens/color-palette --foreground`
-    - `ui/tokens/color-palette --info`
     - `ui/tokens/color-palette --ring`
-    - `ui/tokens/density --avatar-sm`
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --radius`

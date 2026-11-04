@@ -95,7 +95,6 @@ rendered whether or not there is a detent, so that routing never moves.
     - `ui/tokens/color-palette --slider-knob-ring`
     - `ui/tokens/density --slider-knob-size`
     - `ui/tokens/density --slider-track-h`
-    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/chord/piano`
     - `apps/prototypes/canvas`

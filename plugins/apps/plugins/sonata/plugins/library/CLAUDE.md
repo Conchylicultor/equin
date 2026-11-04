@@ -418,13 +418,13 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `songsEntityRef`
     - `updateSong`
 - Cross-plugin:
-  - Uses tokens: 36 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 35 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/density` ×11
     - `ui/tokens/categorical` ×10
     - `ui/tokens/type-scale` ×6
     - `ui/tokens/color-palette` ×5
-    - `ui/tokens/shadow` ×2
     - `ui/tokens/shape` ×2
+    - `ui/tokens/shadow --shadow-cover`
   - Imported by:
     - `active-data/song`
     - `apps/sonata/audio/engine`

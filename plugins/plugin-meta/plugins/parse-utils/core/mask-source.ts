@@ -50,6 +50,7 @@ const NL = 0x0a;
 const DQUOTE = 0x22;
 const SQUOTE = 0x27;
 const RPAREN = 0x29;
+const LT = 0x3c;
 const STAR = 0x2a;
 const SLASH = 0x2f;
 const LBRACKET = 0x5b;
@@ -155,9 +156,13 @@ function maskUncached(src: string, maskStrings: boolean): string {
    * a regex unless the previous significant token produced a value — an
    * identifier/number, `)`, `]`, `}`, or a string/regex literal — except after a
    * keyword that takes an expression on its right (`return`, `typeof`, …).
+   * Never after `<`: in TSX `</` closes an element or a fragment (`</b>`,
+   * `</>`), and read as a regex it blanked the markup after it up to the next
+   * `/` (`a < /re/` has no realistic use).
    */
   const regexCanStart = (): boolean => {
     if (prevSig === SIG_NONE) return true;
+    if (prevSig === LT) return false;
     if (prevSig === SIG_VALUE) return false;
     if (prevSig === RPAREN || prevSig === RBRACKET || prevSig === RBRACE)
       return false;

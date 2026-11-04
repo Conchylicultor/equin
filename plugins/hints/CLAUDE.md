@@ -424,7 +424,6 @@ Exhibits: `hints/card`, `hints/caption`, `hints/spotlight`, `hints/welcome`.
     - `ui/tokens/color-palette --popover-border`
     - `ui/tokens/color-palette --popover-foreground`
     - `ui/tokens/font-family --font-sans`
-    - `ui/tokens/shadow --shadow`
     - `ui/tokens/shadow --shadow-popover`
   - Imported by:
     - `active-data/id-chip`

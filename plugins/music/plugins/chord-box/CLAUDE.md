@@ -23,8 +23,6 @@
     - `chordToneStyle`
 - Cross-plugin:
   - Uses tokens:
-    - `ui/tokens/chord-palette --chord-1`
-    - `ui/tokens/chord-palette --chord-7`
     - `ui/tokens/chord-palette --chord-outside`
     - `ui/tokens/color-palette --faint-foreground`
     - `ui/tokens/color-palette --foreground`

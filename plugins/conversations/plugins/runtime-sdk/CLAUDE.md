@@ -403,7 +403,6 @@ Gotchas the spike hit:
     - `ui/tokens/color-palette --faint-foreground`
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --warning`
-    - `ui/tokens/density --avatar-sm`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-smd`
     - `ui/tokens/density --space-xs`

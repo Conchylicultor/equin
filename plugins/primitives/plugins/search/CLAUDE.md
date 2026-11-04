@@ -55,7 +55,6 @@ emoji search) is drawn through `render={<Lib.Search />}`, keeping this chrome.
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted`
     - `ui/tokens/color-palette --muted-foreground`
-    - `ui/tokens/density --control-height-sm`
     - `ui/tokens/density --panel-row-h`
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-sm`

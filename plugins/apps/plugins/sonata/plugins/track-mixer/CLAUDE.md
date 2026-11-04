@@ -191,7 +191,6 @@ plus a per-song reset.
     - `ui/tokens/color-palette --muted`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --popover`
-    - `ui/tokens/color-palette --primary`
     - `ui/tokens/color-palette --primary-text`
     - `ui/tokens/density --control-height-sm`
     - `ui/tokens/density --space-sm`

@@ -360,14 +360,7 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `writeGenerated`
     - `writePreBarrelManifest`
 - Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/density --control-height-xs`
-    - `ui/tokens/density --pad-card`
-    - `ui/tokens/density --pad-chip-x`
-    - `ui/tokens/density --pad-chip-y`
-    - `ui/tokens/density --pad-row-x`
-    - `ui/tokens/density --pad-row-y`
-    - `ui/tokens/shadow --shadow`
+  - Uses tokens: `ui/tokens/shadow --shadow`
 - Exemptions:
   - Exempts itself from:
     - `boundaries/no-platform-api` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/fields-eager-gen.ts`, `core/file-scans.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/plugin-registry-gen.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (debt)

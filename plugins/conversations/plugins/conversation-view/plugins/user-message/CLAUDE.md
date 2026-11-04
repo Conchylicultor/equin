@@ -19,7 +19,6 @@
     - `ui/tokens/color-palette --message-card-border`
     - `ui/tokens/density --pad-thread-card-x`
     - `ui/tokens/density --pad-thread-card-y`
-    - `ui/tokens/shape --radius`
     - `ui/tokens/shape --radius-card`
   - Imported by:
     - `conversations/agent-thread`

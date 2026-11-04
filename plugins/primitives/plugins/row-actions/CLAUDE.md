@@ -177,7 +177,6 @@ construction; *visibility* rests on this signal, and only the runtime asserts it
   - Uses tokens:
     - `ui/tokens/density --control-height-xs`
     - `ui/tokens/density --space-2xs`
-    - `ui/tokens/shadow --shadow`
   - Imported by:
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/row-actions`

@@ -98,7 +98,6 @@ layout, graphite tone, underline tabs).
   - Uses tokens:
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --popover`
-    - `ui/tokens/shadow --shadow`
     - `ui/tokens/shadow --shadow-2xl`
     - `ui/tokens/shadow --shadow-popover`
   - Imported by:

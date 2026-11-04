@@ -342,7 +342,6 @@ Sizes: `research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md`.
     - `TYPE_CHECK_WORKER_UNITS`
     - `TypeCheckDivergencePayloadSchema`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shadow --shadow`
   - Imported by: `framework/tooling/checks/type-check/backstop`
 - Exemptions:
   - Exempts itself from:

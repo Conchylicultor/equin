@@ -158,7 +158,6 @@ hover.
     - `ui/tokens/color-palette --primary-foreground`
     - `ui/tokens/color-palette --primary-text`
     - `ui/tokens/density --space-2xl`
-    - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-bold`
     - `ui/tokens/type-scale --font-weight-normal`

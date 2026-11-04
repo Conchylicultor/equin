@@ -38,24 +38,24 @@
   - Uses tokens:
     - `ui/tokens/density --radius-chip-compact`
     - `ui/tokens/density --space-sm`
-  - Tokens used by: 413 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×87
-    - `conversations` ×83
-    - `primitives` ×69
-    - `page` ×36
-    - `debug` ×27
-    - `ui` ×27
+  - Tokens used by: 389 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×82
+    - `conversations` ×82
+    - `primitives` ×60
+    - `page` ×35
+    - `debug` ×26
+    - `ui` ×26
     - `tasks` ×11
-    - `plugin-meta` ×10
-    - `fields` ×9
+    - `plugin-meta` ×9
+    - `fields` ×8
     - `infra` ×6
     - `reorder` ×6
-    - `apps-core` ×5
+    - `apps-core` ×4
     - `review` ×4
     - `shell` ×4
-    - `active-data` ×3
     - `build` ×3
     - `stats` ×3
+    - `active-data` ×2
     - `backup` ×2
     - `config_v2` ×2
     - `menu-bar` ×2
@@ -63,12 +63,10 @@
     - `audience/developer-mark`
     - `auth`
     - `code-explorer/commit-detail`
-    - `framework/tooling/lint`
     - `hints/ask`
     - `history/dialog`
     - `integrations/google-maps`
     - `layouts/miller`
-    - `map/pin-layer`
     - `reports/launch-fix`
     - `search/quick-find`
     - `tag-tree/picker`

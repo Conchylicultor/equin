@@ -42,8 +42,6 @@
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/density --chrome-pad-x`
-    - `ui/tokens/density --pad-row-x`
-    - `ui/tokens/density --pad-row-y`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/sidebar-palette --sidebar-border`

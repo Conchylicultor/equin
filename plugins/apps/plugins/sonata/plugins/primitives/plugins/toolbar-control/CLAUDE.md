@@ -51,7 +51,6 @@ by the same rule, owned here so it is never re-spelled:
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/density --control-height-lg`
     - `ui/tokens/density --space-xs`
-    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/sonata/audio/engine`
     - `apps/sonata/primitives/jog-wheel`

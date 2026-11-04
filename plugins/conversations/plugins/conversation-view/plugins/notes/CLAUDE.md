@@ -52,7 +52,6 @@
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --radius`
-    - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-scale`
     - `ui/tokens/type-scale --font-size-3xs`
     - `ui/tokens/type-scale --font-size-caption`

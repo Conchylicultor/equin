@@ -449,9 +449,7 @@ somehow is not.
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.Input`
 - Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/density --chrome-pad-x`
-    - `ui/tokens/density --space-lg`
+  - Uses tokens: `ui/tokens/density --chrome-pad-x`
 - Exemptions:
   - Exempts itself from:
     - `boundaries/no-platform-api` — `web/internal/build-measurer-page.ts`, `web/internal/build-page.ts`, `web/internal/measure-page.ts` (debt)

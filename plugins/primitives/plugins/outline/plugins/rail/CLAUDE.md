@@ -158,9 +158,6 @@ closed panel `inert` and fades it out rather than unmounting it.
   - Uses tokens:
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted-foreground`
-    - `ui/tokens/density --pad-row-x`
-    - `ui/tokens/density --pad-row-y`
-    - `ui/tokens/shadow --shadow`
     - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/pages/page-outline`

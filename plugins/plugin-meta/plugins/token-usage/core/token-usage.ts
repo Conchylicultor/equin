@@ -8,6 +8,7 @@ import {
   yieldMacrotask,
 } from "@plugins/packages/plugins/macrotask-yield/core";
 import { hash53 } from "@plugins/packages/plugins/string-hash/core";
+import { maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /** One source file's text and path (the path picks oxide's extractor by extension). */
@@ -39,8 +40,17 @@ function varsOfCss(css: string, into: Set<string>): void {
   for (const m of css.matchAll(VAR_RE)) into.add(m[1]!);
 }
 
-function escapeRegExp(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
+const CSS_COMMENT_RE = /\/\*[\s\S]*?\*\//g;
+
+/**
+ * The file's text with its comments blanked (same length): a class or a
+ * `var()` named in prose styles nothing, so it is no use. CSS has only block
+ * comments — `maskSource`'s JS grammar would read `url(https://…)` as one.
+ */
+function codeOf({ file, content }: SourceText): string {
+  return extname(file) === ".css"
+    ? content.replace(CSS_COMMENT_RE, (c) => " ".repeat(c.length))
+    : maskSource(content, { strings: false });
 }
 
 // Keyed by app.css's text, not by root: the design system is a function of
@@ -64,8 +74,9 @@ function resolverFor(root: AppPath): Promise<Resolver> {
 
 /**
  * For each group of source files (one group per plugin), every CSS custom
- * property its text reads: each literal `var(--x)`, plus each var the Tailwind
- * classes it spells compile to (in the files marked `classes`).
+ * property its code reads: each literal `var(--x)`, plus each var the Tailwind
+ * classes it spells compile to (in the files marked `classes`). Comments are
+ * not code: what they name is not counted.
  *
  * Classes are resolved by Tailwind itself, over the checkout's own app.css: the
  * candidates are what oxide — the extractor Tailwind's own CSS pass uses —
@@ -75,12 +86,13 @@ function resolverFor(root: AppPath): Promise<Resolver> {
  * modifiers all resolve exactly as in the shipped stylesheet; there is no
  * second parser of app.css to drift from it.
  *
- * Oxide runs ONCE over every group (a per-group scan costs ~2 ms of fixed
- * overhead each, seconds over the repo); the classes that read a var are then
- * attributed back to their groups by one exact-text match. A candidate is a
- * token oxide already found, so matching its text cannot invent a class — at
- * worst it finds the same class written in a comment, which Tailwind would
- * generate CSS for too.
+ * Each group is scanned on its own, and its classes are exactly the candidates
+ * oxide finds in it: a group's answer is a function of its own files (and
+ * app.css), never of what else is in the call — an incremental docgen over a
+ * few plugins and a full scan over all of them agree by construction. (One
+ * oxide call over every group is ~4x faster on a cold full scan, but leaves
+ * only text matching to attribute its candidates back, which credits a group
+ * with a class another group spells.)
  */
 export async function tokenVarsUsedBy(
   root: AppPath,
@@ -88,17 +100,27 @@ export async function tokenVarsUsedBy(
 ): Promise<Set<string>[]> {
   const { design, byCandidate } = await resolverFor(root);
 
-  const candidates = new Scanner({}).scanFiles(
-    groups.flatMap((files) =>
-      files
-        .filter((f) => f.classes)
-        .map(({ file, content }) => ({
-          content,
-          extension: extname(file).slice(1),
-        })),
+  const slice = createTimeSlicer();
+  const scanned: { code: string[]; candidates: string[] }[] = [];
+  for (const files of groups) {
+    const code = files.map(codeOf);
+    const styled = files.flatMap((f, i) =>
+      f.classes
+        ? [{ content: code[i]!, extension: extname(f.file).slice(1) }]
+        : [],
+    );
+    scanned.push({
+      code,
+      candidates: styled.length === 0 ? [] : new Scanner({}).scanFiles(styled),
+    });
+    await slice();
+  }
+
+  const fresh = [
+    ...new Set(
+      scanned.flatMap((g) => g.candidates.filter((c) => !byCandidate.has(c))),
     ),
-  );
-  const fresh = candidates.filter((c) => !byCandidate.has(c));
+  ];
   for (const c of fresh)
     if (design.parseCandidate(c).length === 0) byCandidate.set(c, []);
   const toCompile = fresh.filter((c) => !byCandidate.has(c));
@@ -114,31 +136,11 @@ export async function tokenVarsUsedBy(
     await yieldMacrotask();
   }
 
-  // The classes that read a var, longest first so an alternation prefers
-  // `bg-muted-foreground` over its prefix `bg-muted` at the same position.
-  const reading = candidates
-    .filter((c) => byCandidate.get(c)!.length > 0)
-    .sort((a, b) => b.length - a.length);
-  const classRe =
-    reading.length === 0
-      ? null
-      : new RegExp(
-          `(?<![\\w-])(?:${reading.map(escapeRegExp).join("|")})(?![\\w-])`,
-          "g",
-        );
-
-  const slice = createTimeSlicer();
-  const out: Set<string>[] = [];
-  for (const files of groups) {
+  return scanned.map(({ code, candidates }) => {
     const vars = new Set<string>();
-    for (const { content, classes } of files) {
-      varsOfCss(content, vars);
-      if (classRe && classes)
-        for (const m of content.matchAll(classRe))
-          for (const v of byCandidate.get(m[0])!) vars.add(v);
-    }
-    out.push(vars);
-    await slice();
-  }
-  return out;
+    for (const text of code) varsOfCss(text, vars);
+    for (const c of candidates)
+      for (const v of byCandidate.get(c)!) vars.add(v);
+    return vars;
+  });
 }

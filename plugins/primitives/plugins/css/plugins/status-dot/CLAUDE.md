@@ -44,9 +44,6 @@ same paint through `statusDotPaintClass(paint)`.
     - `statusDotPaintClass`
 - Cross-plugin:
   - Uses tokens:
-    - `ui/tokens/color-palette --muted-foreground`
-    - `ui/tokens/color-palette --success`
-    - `ui/tokens/color-palette --warning`
     - `ui/tokens/density --status-dot-lg`
     - `ui/tokens/density --status-dot-md`
     - `ui/tokens/density --status-dot-sm`

@@ -177,7 +177,6 @@ back the same way.
     - `ui/icons.Icon`
 - Cross-plugin:
   - Uses tokens:
-    - `ui/tokens/color-palette --border`
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --outline-border`

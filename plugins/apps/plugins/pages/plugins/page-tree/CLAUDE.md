@@ -264,9 +264,9 @@ it, so an id means the same thing wherever it is clicked.
     - `pageDetailRoute`
     - `pagesTreeRoute`
 - Cross-plugin:
-  - Uses tokens: 31 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/type-scale` ×12
+  - Uses tokens: 28 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/density` ×9
+    - `ui/tokens/type-scale` ×9
     - `ui/tokens/color-palette` ×7
     - `ui/tokens/shape` ×3
   - Imported by:

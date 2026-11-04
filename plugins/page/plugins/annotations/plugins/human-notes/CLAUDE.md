@@ -233,7 +233,6 @@ second rendering path here (the step deferred in
     - `humanNotesDataSchema`
 - Cross-plugin:
   - Uses tokens:
-    - `ui/tokens/color-palette --info`
     - `ui/tokens/color-palette --muted`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/shape --radius`

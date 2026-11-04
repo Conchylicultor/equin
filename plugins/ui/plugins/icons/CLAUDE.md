@@ -444,9 +444,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `useWantedSprites`
     - `useWantedStyleKeys`
 - Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/shadow --shadow`
-    - `ui/tokens/shape --spacing`
+  - Uses tokens: `ui/tokens/shadow --shadow`
   - Imported by: 362 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×96
     - `conversations` ×58

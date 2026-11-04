@@ -218,8 +218,6 @@ here.
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
-    - `ui/tokens/density --pad-row-x`
-    - `ui/tokens/density --pad-row-y`
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xs`

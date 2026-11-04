@@ -119,7 +119,6 @@ gap in that plugin.
     - `useAgentNotesAuthors`
     - `useAgentNotesCreator`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `debug/read-set`
     - `page/annotations/agent-access`

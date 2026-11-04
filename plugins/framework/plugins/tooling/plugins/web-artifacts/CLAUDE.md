@@ -426,7 +426,6 @@ Key invariants:
     - `createPooledArtifactBuilder`
     - `idealArtifactBuildThreads`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shadow --shadow`
   - Imported by:
     - `framework/cli/build`
     - `framework/tooling/codegen`

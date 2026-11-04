@@ -776,7 +776,6 @@ export const browserHost = {
     "ui.tokens.icons",
     "ui.tokens.material",
     "ui.tokens.overlay",
-    "ui.tokens.place-palette",
     "ui.tokens.rich-text-palette",
     "ui.tokens.scrollbar",
     "ui.tokens.shadow",

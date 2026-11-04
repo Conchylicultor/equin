@@ -134,6 +134,11 @@ test("division after identifier is not a regex", () => {
   expect(out).toBe(src);
 });
 
+test("a JSX closing tag is not a regex", () => {
+  const src = `<p><b className="x">a</b> b <i className="y">c</i><>d</></p>;`;
+  expect(maskSource(src, { strings: false })).toBe(src);
+});
+
 test("division after number is not a regex", () => {
   const src = "const x = 10 / 2;";
   const out = mask(src);

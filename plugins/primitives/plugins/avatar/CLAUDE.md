@@ -156,13 +156,11 @@ color palette.
     - `DEFAULT_AGENT_AVATAR`
     - `useAvatarPresentation`
 - Cross-plugin:
-  - Uses tokens: 25 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 23 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/categorical` ×11
     - `ui/tokens/color-palette` ×5
     - `ui/tokens/density` ×4
     - `ui/tokens/type-scale` ×2
-    - `ui/tokens/place-palette --place-food`
-    - `ui/tokens/shadow --shadow`
     - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps-core/app-icon`

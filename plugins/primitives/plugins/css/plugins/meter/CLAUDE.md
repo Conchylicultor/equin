@@ -57,7 +57,6 @@ Exhibit: `meter/gallery`.
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`
     - `ui/tokens/color-palette --foreground`
-    - `ui/tokens/color-palette --muted`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --primary-text`
     - `ui/tokens/color-palette --warning`

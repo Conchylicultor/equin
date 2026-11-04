@@ -91,7 +91,6 @@ reads what is on screen rather than a per-app flag.
     - `useSidebarDrawnOn`
 - Cross-plugin:
   - Uses tokens:
-    - `ui/tokens/density --chrome-pad-x`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/sidebar-metrics --sidebar-brand-height`

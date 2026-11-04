@@ -2500,11 +2500,11 @@ list, table and `primitives/tree` share it.
     - `UNGROUPED_FOLD_KEY`
     - `visibleSections`
 - Cross-plugin:
-  - Uses tokens: 98 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 91 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/data-view` ×52
-    - `ui/tokens/density` ×16
-    - `ui/tokens/color-palette` ×15
-    - `ui/tokens/type-scale` ×9
+    - `ui/tokens/density` ×14
+    - `ui/tokens/color-palette` ×13
+    - `ui/tokens/type-scale` ×6
     - `ui/tokens/shadow` ×3
     - `ui/tokens/shape` ×3
   - Imported by: 122 plugins — full list in [REFERENCE.md](./REFERENCE.md)

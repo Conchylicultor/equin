@@ -103,9 +103,7 @@ toggle, silently resetting any child component state (e.g. an inner
     - `stickyClasses`
     - `stickyOffsetPx`
 - Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/color-palette --background`
-    - `ui/tokens/density --sticky-fade-tail`
+  - Uses tokens: `ui/tokens/density --sticky-fade-tail`
   - Imported by:
     - `apps/chord/curriculum`
     - `apps/deploy/deployments`

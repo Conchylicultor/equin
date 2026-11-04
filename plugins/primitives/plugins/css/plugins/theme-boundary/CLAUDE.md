@@ -189,8 +189,6 @@ the code:
     - `useEnclosingAppThemeScope`
 - Cross-plugin:
   - Uses tokens:
-    - `ui/tokens/color-palette --background`
-    - `ui/tokens/color-palette --muted`
     - `ui/tokens/sidebar-palette --sidebar`
     - `ui/tokens/sidebar-palette --sidebar-accent`
   - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)

@@ -499,12 +499,11 @@ surface isn't viewport-capped, it fails loudly.
     - `useControlPanelHost`
     - `usePanelStack`
 - Cross-plugin:
-  - Uses tokens: 35 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/density` ×13
-    - `ui/tokens/color-palette` ×12
+  - Uses tokens: 30 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/density` ×12
+    - `ui/tokens/color-palette` ×9
     - `ui/tokens/type-scale` ×7
     - `ui/tokens/shape` ×2
-    - `ui/tokens/shadow --shadow`
   - Imported by: 47 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×16
     - `page` ×5

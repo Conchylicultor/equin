@@ -25,7 +25,6 @@
   - Exports (values): `VersionHistoryDialog`
 - Cross-plugin:
   - Uses tokens:
-    - `ui/tokens/density --space-lg`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --spacing`
   - Imported by: `apps/pages/history`

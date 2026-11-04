@@ -66,8 +66,6 @@ read-surface chip for a bare id written anywhere active-data renders.
     - `database.db`
     - `page/editor._blocks`
     - `page/editor.liveBlocks`
-- Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
 - Core:
   - Exports (values): `BLOCK_CHIP_SURFACES`
 

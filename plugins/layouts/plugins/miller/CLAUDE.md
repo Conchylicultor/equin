@@ -147,7 +147,6 @@ not yet supported — see the open question in
     - `ui/tokens/color-palette --background`
     - `ui/tokens/color-palette --border`
     - `ui/tokens/color-palette --foreground`
-    - `ui/tokens/color-palette --muted`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --primary`
     - `ui/tokens/density --space-sm`

@@ -90,7 +90,6 @@ popover width roles (the `panel` padding role).
     - `ui/tokens/shadow --shadow-md`
     - `ui/tokens/shape --radius`
   - Tokens used by:
-    - `primitives/css/motion`
     - `primitives/css/surface`
     - `primitives/css/ui-kit`
 

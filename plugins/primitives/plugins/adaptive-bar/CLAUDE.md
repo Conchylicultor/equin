@@ -532,9 +532,6 @@ deliberately not round-robin.
     - `adaptiveBarReportSink`
     - `AdaptiveBarYield`
 - Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/color-palette --foreground`
-    - `ui/tokens/density --space-sm`
   - Imported by:
     - `apps-core/tab-bar`
     - `apps/prototypes/canvas`
