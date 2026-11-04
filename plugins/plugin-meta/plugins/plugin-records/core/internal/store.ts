@@ -20,6 +20,9 @@ export const RECORD_TABLES = [
   "evaluated",
   // The slots one module's top-level evaluation created, keyed by its Merkle key.
   "module",
+  // A tool's answer that only one outcome is ever stored for (drizzle-kit's
+  // "no schema change"), keyed by everything the tool reads.
+  "verdict",
 ] as const;
 export type RecordTable = (typeof RECORD_TABLES)[number];
 

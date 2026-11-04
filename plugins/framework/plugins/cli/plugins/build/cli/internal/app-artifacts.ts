@@ -579,6 +579,11 @@ export async function generateAppSources(opts: {
   });
   endSpan({ maxRssBytes: migration.maxRssBytes });
   hooks.recordFootprint("drizzle generate", migration.maxRssBytes);
+  // Its phases as child spans: whether drizzle-kit ran (`drizzleKit`,
+  // `schemaLoadProbe`) or its verdict answered (`migrationVerdict` alone).
+  for (const p of migration.phases)
+    hooks.pushSpan(p.id, "build:database", p.label, p.durationMs, p.startMs);
+  hooks.log(`DB migrations: drizzle-kit verdict ${migration.verdict}.`);
 
   // 4–4b. Manifest-level repo-tree codegen: plugin docs → reorderable-slots
   // → data-views → token-group-vars → config-origins. Run AFTER migrations

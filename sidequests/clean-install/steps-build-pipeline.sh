@@ -358,6 +358,57 @@ step_14_run() {
 step_14_run_DOC="RUN: \$BUILD_PIPELINE_RUN in ~/equin (a spike or measurement script)."
 step_14_run_TAG="harness-only"
 
+step_16_cc() {
+  # Cold codegen alone (step 5, research/2026-11-04-global-build-pipeline-step5-migrations-verdict-and-cold-records.md):
+  # measure-build-steps.ts --order pipeline from an EMPTY data root and an
+  # empty transpiler cache, OS file cache warm, under --cpu-prof-md, in two
+  # trees: the tree under test (with the shared SQLite record store: --records,
+  # and without it: every record made in memory) and $BUILD_PIPELINE_CC_BASE
+  # (a commit of the bundle's history, e.g. main before plugin records),
+  # checked out as a second worktree and installed. x$BUILD_PIPELINE_CC_RUNS (2).
+  guest_zsh '
+bp_cc() {
+  local label=$1 dir=$2; shift 2
+  local out="$HOME/bp-out/$label" n
+  for n in $(seq 1 '"${BUILD_PIPELINE_CC_RUNS:-2}"'); do
+    rm -rf "$out-$n" $HOME/bp-ccd $HOME/bp-cct; mkdir -p "$out-$n/prof" $HOME/bp-ccd $HOME/bp-cct
+    bp_sys "$label-$n before" > "$out-$n/sys.txt"
+    echo "== cc $label-$n: $*"
+    (cd $dir && /usr/bin/time -l env EQUIN_DIR=$HOME/bp-ccd BUN_RUNTIME_TRANSPILER_CACHE_PATH=$HOME/bp-cct BUN_OPTIONS="--cpu-prof-md --cpu-prof-dir=$out-$n/prof" ./equin run plugins/framework/plugins/tooling/plugins/codegen/scripts/measure-build-steps.ts --order pipeline --json "$out-$n/steps.json" "$@") 2>&1 | bp_stamp | tail -40
+    echo "== steps.json ($label-$n)"; cat "$out-$n/steps.json"; echo
+    (cd $dir && git status --short | head -5)
+  done
+}
+cd ~/equin
+if [ -n "'"${BUILD_PIPELINE_CC_BASE:-}"'" ]; then
+  if [ ! -d $HOME/bp-base ]; then git worktree add -q --detach $HOME/bp-base "'"${BUILD_PIPELINE_CC_BASE:-}"'"; (cd $HOME/bp-base && ./equin install 2>&1 | tail -3); fi
+  bp_cc CC-base $HOME/bp-base
+fi
+bp_cc CC-records ~/equin --records
+bp_cc CC-memory ~/equin
+'
+}
+step_16_cc_DOC="CC: cold codegen alone (measure-build-steps --order pipeline, empty data root and transpiler cache, cpu-prof) in the tree under test (--records and in-memory) and in \$BUILD_PIPELINE_CC_BASE."
+step_16_cc_TAG="harness-only"
+
+step_17_w5() {
+  # A body edit inside the schema files' import closure, in no schema file
+  # (step 5): the drizzle-kit verdict misses, and the load probe's tip
+  # comparison answers "nothing to generate" without drizzle-kit.
+  guest_zsh '
+export EQUIN_CONVERSATION_ID=conv-bench-bp-w0
+cd ~/equin/.claude/worktrees/att-bp-w0
+P="$HOME/.equin/worktrees/att-bp-w0/build-profile-*.json"
+F=plugins/fields/plugins/text/plugins/config/core/internal/text.ts
+for n in 1 2 3; do
+  echo "// bp-w5-$n" >> $F
+  bp_build W5-$n "$P" -- ./equin build --skip-checks
+done
+'
+}
+step_17_w5_DOC="W5 x3: one comment line appended to a module the schema files import (fields/text/config), in no schema file, then build --skip-checks."
+step_17_w5_TAG="harness-only"
+
 STEPS=(
   step_01_baseline
   step_02_install
@@ -369,10 +420,12 @@ STEPS=(
   step_07_w1
   step_08_w2
   step_09_w4
+  step_17_w5
   step_10_w3
   step_11_iso
   step_13_cf
   step_14_run
+  step_16_cc
   step_12_collect
 )
 

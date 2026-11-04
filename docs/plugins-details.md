@@ -21156,6 +21156,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PublishedRef`
           - `RejectOp`
           - `SchemaLoadFailure`
+          - `SchemaProbe`
           - `Snapshot`
           - `SnapshotBodies`
           - `SnapshotConflict`
@@ -21188,6 +21189,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MissingSnapshotBodyError`
           - `NULL_SNAPSHOT_ID`
           - `phaseStatements`
+          - `probeSchema`
           - `PUBLISHED_MIGRATION_HINT`
           - `publishedMergeBases`
           - `publishedMigrationBasenames`
@@ -21200,6 +21202,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `renderLegacySnapshots`
           - `renderStatements`
           - `SCHEMA_SNAPSHOT_FILE`
+          - `schemaFilesIn`
           - `schemaGlobFiles`
           - `schemaLoadFailures`
           - `schemaMigrationFiles`
@@ -26912,6 +26915,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `JournalEntry`
               - `KeyedAnswerEntry`
               - `MigrationAnswer`
+              - `MigrationPhase`
               - `PromptOption`
               - `RenameResult`
             - Exports (values):

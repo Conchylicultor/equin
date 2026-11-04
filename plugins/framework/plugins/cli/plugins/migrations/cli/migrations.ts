@@ -41,11 +41,12 @@ import {
   publishedMigrationOrigins,
   renderStatements,
   SCHEMA_SNAPSHOT_FILE,
-  schemaLoadFailures,
+  probeSchema,
   schemaMigrationFiles,
   schemaSnapshotPath,
   type Snapshot,
   snapshotBodies,
+  type SnapshotBodies,
   stageDrizzleOut,
 } from "@plugins/database/plugins/migrations/core";
 import {
@@ -77,6 +78,7 @@ import {
   type ResetPrior,
 } from "./reset-lineage";
 import { dropLegacyEntries, settleSnapshotFiles } from "./snapshot-files";
+import { drizzleVerdict } from "./drizzle-verdict";
 
 // The interactive drizzle-kit runner (the CLI's one sanctioned streaming-stdio
 // child) and its prompt model live in ./migrations-interactive.ts; re-exported
@@ -268,6 +270,26 @@ const DRIZZLE_CUSTOM_PLACEHOLDER =
 export interface GenerateMigrationResult {
   /** Peak RSS (bytes) of the drizzle-kit child, when the runtime reported rusage. */
   maxRssBytes: number | undefined;
+  /**
+   * Whether drizzle-kit ran: `hit` — its "no schema change" verdict was already
+   * recorded for these exact inputs (`drizzle-verdict.ts`), so neither the
+   * load probe nor drizzle-kit ran; `schema-equal` — the probe found the
+   * loaded schema to be the tip snapshot, so drizzle-kit did not run; `miss` —
+   * drizzle-kit ran; `bypassed` — a run that exists to make drizzle-kit emit
+   * something (`--custom`, answers) reads neither.
+   */
+  verdict: "hit" | "schema-equal" | "miss" | "bypassed";
+  /** Wall time of each phase, in order, for the caller's profile. */
+  phases: MigrationPhase[];
+}
+
+/** One timed phase of `generateMigration`. */
+export interface MigrationPhase {
+  id: string;
+  label: string;
+  /** Start, on the `performance.now()` clock (ms). */
+  startMs: number;
+  durationMs: number;
 }
 
 /**
@@ -320,6 +342,19 @@ export async function generateMigration(opts: {
   }
 
   const migrationsDir = asAppPath(resolve(root, MIGRATIONS_DATA_DIR));
+
+  const phases: MigrationPhase[] = [];
+  let phaseStart = performance.now();
+  const phaseEnd = (id: string, label: string): void => {
+    const now = performance.now();
+    phases.push({
+      id,
+      label,
+      startMs: phaseStart,
+      durationMs: now - phaseStart,
+    });
+    phaseStart = now;
+  };
 
   // Every step below splits data/ into published (immutable) and this branch's
   // own. Read once, before anything is generated: the set is a property of the
@@ -401,13 +436,37 @@ export async function generateMigration(opts: {
   // main's favour. NOT about drizzle-kit's inputs: it picks the prior snapshot
   // off a sorted `readdir(meta)`, and reads the journal only for `idx`.
   regenerateJournal(migrationsDir);
+  phaseEnd("migrationBookkeeping", "migrations: published set, join, settle");
+
+  // Was "nothing to generate" already answered for exactly these inputs?
+  // Read after the bookkeeping above, which may rewrite the tip and the
+  // journal the key covers. A run meant to emit something never reads it.
+  const verdict =
+    customMigration || migrationAnswers ? null : await drizzleVerdict(root);
+  phaseEnd("migrationVerdict", "migrations: drizzle-kit verdict key");
+  if (verdict?.hit) {
+    console.log(
+      `  no schema input changed (${verdict.schemaFiles} schema files): drizzle-kit not run`,
+    );
+    await noSchemaChange({ migrationName, migrationsDir, resetPrior, bodies });
+    return { maxRssBytes: undefined, verdict: "hit", phases };
+  }
 
   // drizzle-kit loads every schema-glob file with a synchronous require() and,
   // when one throws, skips it and exits 0 — generating a migration with that
   // file's tables silently missing, whatever the error was. Its output names
   // only the error kinds someone listed below; this asks the question itself,
   // by loading each file the way drizzle-kit will, before trusting a run.
-  const loadFailures = await schemaLoadFailures(root);
+  //
+  // The same child answers whether the loaded schema IS the tip snapshot
+  // (drizzle-kit's own snapshot of it, `probeSchema`): then a generate has
+  // nothing to diff, and drizzle-kit — most of this step's cost — does not
+  // run. Not asked by a run meant to emit something (`--custom`, answers).
+  const probe = await probeSchema(
+    root,
+    verdict === null ? undefined : { tip: schemaSnapshotPath(migrationsDir) },
+  );
+  const loadFailures = probe.failures;
   if (loadFailures.length > 0) {
     console.error(
       `\nError: ${loadFailures.length} schema file(s) cannot be loaded the way drizzle-kit\n` +
@@ -417,6 +476,15 @@ export async function generateMigration(opts: {
         "the same files); never generate around it.",
     );
     process.exit(1);
+  }
+  phaseEnd("schemaLoadProbe", "migrations: schema load probe");
+  if (probe.matchesTip === true) {
+    console.log(
+      "  the schema is the tip snapshot: nothing to generate, drizzle-kit not run",
+    );
+    verdict?.record();
+    await noSchemaChange({ migrationName, migrationsDir, resetPrior, bodies });
+    return { maxRssBytes: undefined, verdict: "schema-equal", phases };
   }
 
   const before = new Set(readdirSync(migrationsDir));
@@ -464,6 +532,7 @@ export async function generateMigration(opts: {
   } finally {
     stage.dispose();
   }
+  phaseEnd("drizzleKit", "migrations: drizzle-kit generate");
 
   if (result.exitCode !== 0) {
     discardGenerated(
@@ -585,35 +654,16 @@ export async function generateMigration(opts: {
   );
 
   if (added.length === 0) {
-    if (migrationName) {
-      console.warn(
-        "--migration-name was provided but no schema change was detected; ignoring.",
-      );
-    }
-    // The reset regenerated nothing: the deleted delta is already in the
-    // published schema, through migrations a database that applied the deleted
-    // ones has not run. Name them in an adoption file, so such a database
-    // records them instead of redoing their DDL.
-    if (resetPrior !== null) {
-      const adoption = await resetAdoption(migrationsDir, resetPrior, bodies);
-      if (adoption.kind === "adopts") {
-        const file = writeAdoptionMigration(
-          migrationsDir,
-          adoption.adopts,
-          adoption.supersedes,
-        );
-        console.log(
-          `  wrote ${file}: adopts ${adoption.files.join(", ")} (main's migrations made the change the deleted ${adoption.supersedes.direct.join(", ")} made: a database that applied those records these without running their DDL)`,
-        );
-        regenerateJournal(migrationsDir);
-      } else if (adoption.reason !== null) {
-        warnUnsuperseded(
-          resetPrior,
-          `the reset regenerated no schema migration, and ${adoption.reason}`,
-        );
-      }
-    }
-    return { maxRssBytes: result.maxRssBytes };
+    // The one outcome a verdict stands for: every file loaded, and drizzle-kit
+    // emitted nothing, asked nothing and reported nothing (each of those
+    // exited above). Recorded before anything below can rewrite an input.
+    verdict?.record();
+    await noSchemaChange({ migrationName, migrationsDir, resetPrior, bodies });
+    return {
+      maxRssBytes: result.maxRssBytes,
+      verdict: verdict === null ? "bypassed" : "miss",
+      phases,
+    };
   }
 
   if (!migrationName) {
@@ -736,7 +786,52 @@ export async function generateMigration(opts: {
   // leaves behind describes the `.sql` files on disk.
   regenerateJournal(migrationsDir);
 
-  return { maxRssBytes: result.maxRssBytes };
+  return {
+    maxRssBytes: result.maxRssBytes,
+    verdict: verdict === null ? "bypassed" : "miss",
+    phases,
+  };
+}
+
+/**
+ * drizzle-kit has nothing to generate — answered by running it, or by its
+ * recorded verdict for the same inputs; both take this one path.
+ */
+async function noSchemaChange(opts: {
+  migrationName: string | undefined;
+  migrationsDir: AppPath;
+  resetPrior: ResetPrior | null;
+  bodies: SnapshotBodies;
+}): Promise<void> {
+  const { migrationName, migrationsDir, resetPrior, bodies } = opts;
+  if (migrationName) {
+    console.warn(
+      "--migration-name was provided but no schema change was detected; ignoring.",
+    );
+  }
+  // The reset regenerated nothing: the deleted delta is already in the
+  // published schema, through migrations a database that applied the deleted
+  // ones has not run. Name them in an adoption file, so such a database
+  // records them instead of redoing their DDL.
+  if (resetPrior !== null) {
+    const adoption = await resetAdoption(migrationsDir, resetPrior, bodies);
+    if (adoption.kind === "adopts") {
+      const file = writeAdoptionMigration(
+        migrationsDir,
+        adoption.adopts,
+        adoption.supersedes,
+      );
+      console.log(
+        `  wrote ${file}: adopts ${adoption.files.join(", ")} (main's migrations made the change the deleted ${adoption.supersedes.direct.join(", ")} made: a database that applied those records these without running their DDL)`,
+      );
+      regenerateJournal(migrationsDir);
+    } else if (adoption.reason !== null) {
+      warnUnsuperseded(
+        resetPrior,
+        `the reset regenerated no schema migration, and ${adoption.reason}`,
+      );
+    }
+  }
 }
 
 /**

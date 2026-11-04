@@ -31,6 +31,7 @@ export type {
   GenerateMigrationResult,
   JournalEntry,
   KeyedAnswerEntry,
+  MigrationPhase,
   RenameResult,
 } from "./migrations";
 

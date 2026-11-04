@@ -83,6 +83,7 @@ through `./equin build`.
     - `JournalEntry`
     - `KeyedAnswerEntry`
     - `MigrationAnswer`
+    - `MigrationPhase`
     - `PromptOption`
     - `RenameResult`
   - Exports (values):

@@ -4,14 +4,18 @@ import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { schemaGlobFiles } from "./schema-glob";
 import { MIGRATIONS_PLUGIN_DIR } from "./schema-glob-patterns";
 
-const SchemaLoadFailuresSchema = z.array(
-  z.object({ file: z.string(), error: z.string() }),
-);
+const SchemaLoadFailureSchema = z.object({
+  file: z.string(),
+  error: z.string(),
+});
+const SchemaProbeSchema = z.object({
+  failures: z.array(SchemaLoadFailureSchema),
+  matchesTip: z.boolean().nullable(),
+});
 /** One schema-glob file drizzle-kit could not load, with the error it threw. */
-export type SchemaLoadFailure = z.infer<
-  typeof SchemaLoadFailuresSchema
->[number];
-
+export type SchemaLoadFailure = z.infer<typeof SchemaLoadFailureSchema>;
+/** What one probe answered: the files that failed to load, and (when asked) whether the schema is the tip. */
+export type SchemaProbe = z.infer<typeof SchemaProbeSchema>;
 /**
  * Every schema-glob file that drizzle-kit's synchronous `require()` cannot
  * load, as `{ file, error }` — empty when all of them load.
@@ -36,12 +40,30 @@ export type SchemaLoadFailure = z.infer<
 export async function schemaLoadFailures(
   root: string,
 ): Promise<SchemaLoadFailure[]> {
+  return (await probeSchema(root)).failures;
+}
+
+/**
+ * The same probe, and — given `tip`, the absolute path of the tip snapshot —
+ * whether the schema the loaded files declare IS that snapshot: drizzle-kit's
+ * own `generateDrizzleJson` over their exports, compared with the tip's body
+ * (key order and the two ids aside). `matchesTip: true` means a `generate`
+ * has nothing to diff, so `generateMigration` need not run it; it is null
+ * when not asked, or when a file failed to load. One child for both answers:
+ * loading the 127 files is the probe's whole cost, and drizzle-kit would load
+ * them again.
+ */
+export async function probeSchema(
+  root: string,
+  opts?: { tip?: string },
+): Promise<SchemaProbe> {
   const absFiles = (await schemaGlobFiles(root)).map((f) => resolve(root, f));
   const result = await spawnCaptured(
     [
       process.execPath,
       "--bun",
       resolve(root, MIGRATIONS_PLUGIN_DIR, "scripts/require-probe.ts"),
+      ...(opts?.tip === undefined ? [] : ["--tip", opts.tip]),
       ...absFiles,
     ],
     {
@@ -57,7 +79,7 @@ export async function schemaLoadFailures(
   // A non-zero exit with parseable stdout is fine (per-file errors are in the
   // array); only output that does not parse is the probe itself failing.
   try {
-    return SchemaLoadFailuresSchema.parse(JSON.parse(result.stdout));
+    return SchemaProbeSchema.parse(JSON.parse(result.stdout));
   } catch (parseErr) {
     throw new Error(
       `schema-load probe produced unparseable output (${String(parseErr)}).\n` +

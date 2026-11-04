@@ -520,6 +520,28 @@ invocation and is not flagged. It always passes `--config=core/drizzle.config.ts
 because a plugin has no loose root files, and drizzle-kit only finds a config on its
 own when it sits in the cwd.
 
+## When drizzle-kit runs at all
+
+Only when the schema may really have changed. `generateMigration` asks two
+cheaper questions first (`research/2026-11-04-global-build-pipeline-step5-migrations-verdict-and-cold-records.md`):
+
+1. **The verdict** (`framework/cli/plugins/migrations/cli/drizzle-verdict.ts`): a
+   record in the shared plugin-record store, keyed by the module Merkle keys of
+   every schema file's import closure, the schema file set, the tip, the journal,
+   the lockfile and the code that computes it. A hit means these exact inputs
+   already answered "nothing to generate": no child runs.
+2. **The tip comparison** (`probeSchema(root, { tip })`): the load probe's child,
+   having loaded every schema file, builds drizzle-kit's own snapshot of them
+   (`drizzle-kit/api`'s `generateDrizzleJson`) and compares it with
+   `schema.snapshot.json` (key order and ids aside). Equal: a `generate` has
+   nothing to diff, and drizzle-kit does not run. This answer is exact, not
+   cached, so it covers the cold build too.
+
+Only a "nothing to generate" answer is ever recorded; `--custom` and
+`--migration-answers` runs skip both. The probe refuses a `drizzle.config.ts`
+key the comparison does not pass on (casing, filters). `migrations-in-sync`
+still runs drizzle-kit itself on every check pass.
+
 ## Where drizzle-kit runs from
 
 `MIGRATIONS_PLUGIN_DIR` lives in the same module as `SCHEMA_GLOBS` and is **exported
@@ -622,6 +644,7 @@ only agreement that matters.
     - `PublishedRef`
     - `RejectOp`
     - `SchemaLoadFailure`
+    - `SchemaProbe`
     - `Snapshot`
     - `SnapshotBodies`
     - `SnapshotConflict`
@@ -654,6 +677,7 @@ only agreement that matters.
     - `MissingSnapshotBodyError`
     - `NULL_SNAPSHOT_ID`
     - `phaseStatements`
+    - `probeSchema`
     - `PUBLISHED_MIGRATION_HINT`
     - `publishedMergeBases`
     - `publishedMigrationBasenames`
@@ -666,6 +690,7 @@ only agreement that matters.
     - `renderLegacySnapshots`
     - `renderStatements`
     - `SCHEMA_SNAPSHOT_FILE`
+    - `schemaFilesIn`
     - `schemaGlobFiles`
     - `schemaLoadFailures`
     - `schemaMigrationFiles`
