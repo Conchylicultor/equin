@@ -38,17 +38,24 @@ const errorStoppedSource = liveDataSource(errorStoppedConversations, {
   searchable: ["title"],
 });
 
-/** `2 usage limit · 1 server error`: the stops counted by kind, most first. */
-function kindsPhrase(stopped: readonly ErrorStoppedConversation[]): string {
+/**
+ * `3 stopped · 2 usage limit · 1 server error` (one kind: `2 stopped · server
+ * error`): the stops counted by kind, most first. Short, as it is the list's
+ * toolbar title, sharing its row with the list's options.
+ */
+function stoppedPhrase(stopped: readonly ErrorStoppedConversation[]): string {
   const counts = new Map<string, number>();
   for (const c of stopped) {
     const label = stopErrorLabel(c.stopError);
     counts.set(label, (counts.get(label) ?? 0) + 1);
   }
-  return [...counts]
-    .sort((a, b) => b[1] - a[1])
-    .map(([label, n]) => `${String(n)} ${label}`)
-    .join(" · ");
+  const kinds =
+    counts.size === 1
+      ? [...counts.keys()]
+      : [...counts]
+          .sort((a, b) => b[1] - a[1])
+          .map(([label, n]) => `${String(n)} ${label}`);
+  return [`${String(stopped.length)} stopped`, ...kinds].join(" · ");
 }
 
 const percent = (fraction: number) => `${Math.round(fraction * 100)}%`;
@@ -95,44 +102,51 @@ export function ErrorStoppedBanner({
     setFailed(answer.value.results.flatMap(failureOf));
   };
   return (
-    <Stack
-      gap="xs"
-      className="rounded-md border border-warning/30 bg-warning/10 p-sm"
-    >
-      <Text variant="caption">
-        {stopped.length === 1
-          ? "1 conversation"
-          : `${stopped.length} conversations`}{" "}
-        stopped by an API error · {kindsPhrase(stopped)}
-      </Text>
-      <DataView<ErrorStoppedConversation>
-        views={["list"]}
-        source={errorStoppedSource}
-        rowActivation={(c) =>
-          openPane.to(conversationPane, { convId: c.id }, { mode: "push" })
-        }
-      />
-      <Line>
-        {limited && reached ? (
-          <Text variant="caption" tone="muted">
-            No account has room · {launchAccountName}{" "}
-            {formatResets(reached.id, reached.resetsAt, now)}
+    // The card's tint is opaque and republished as `--chrome-mask`, so the
+    // list's toolbar band (masked with it) is the card's colour, not a strip
+    // of the surface under it. `--tint-under` holds that surface's mask, read
+    // one element up: a property cannot mix in its own inherited value.
+    <div className="[--tint-under:var(--chrome-mask)]">
+      <Stack
+        gap="xs"
+        className="rounded-md border border-warning/30 bg-chrome-mask p-sm [--chrome-mask:color-mix(in_oklab,var(--warning)_10%,var(--tint-under))]"
+      >
+        <DataView<ErrorStoppedConversation>
+          // The caption is the toolbar's title, so the list's options
+          // trigger rides its row instead of a band of its own.
+          title={stoppedPhrase(stopped)}
+          density="compact"
+          views={["list"]}
+          source={errorStoppedSource}
+          rowActivation={(c) =>
+            openPane.to(conversationPane, { convId: c.id }, { mode: "push" })
+          }
+        />
+        <Line>
+          {limited && reached ? (
+            <Text variant="caption" tone="muted">
+              No account has room · {launchAccountName}{" "}
+              {formatResets(reached.id, reached.resetsAt, now)}
+            </Text>
+          ) : null}
+          <Fill />
+          <Button
+            disabled={onlyLimited && reached !== null}
+            onClick={resumeAll}
+          >
+            Resume all
+            {limited ? ` on ${launchAccountName}` : ""}
+            {limited && room.kind === "known"
+              ? ` · ${percent(room.left)} left`
+              : ""}
+          </Button>
+        </Line>
+        {failed.map((f) => (
+          <Text key={f.id} variant="caption" tone="destructive">
+            {f.id}: {f.message}
           </Text>
-        ) : null}
-        <Fill />
-        <Button disabled={onlyLimited && reached !== null} onClick={resumeAll}>
-          Resume all
-          {limited ? ` on ${launchAccountName}` : ""}
-          {limited && room.kind === "known"
-            ? ` · ${percent(room.left)} left`
-            : ""}
-        </Button>
-      </Line>
-      {failed.map((f) => (
-        <Text key={f.id} variant="caption" tone="destructive">
-          {f.id}: {f.message}
-        </Text>
-      ))}
-    </Stack>
+        ))}
+      </Stack>
+    </div>
   );
 }
