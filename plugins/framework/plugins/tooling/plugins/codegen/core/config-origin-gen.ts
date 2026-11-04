@@ -26,7 +26,8 @@ import {
   propagateGitLayerDocument,
   readonlyProxy,
   readTypedConfig,
-  resolveGitLayer,
+  checkoutCommittedFiles,
+  committedDocument,
   stringifyConfigValue,
   APP_SCOPE_DIR,
   CONFIG_HASH_RE,
@@ -754,6 +755,13 @@ export function readEffectiveConfigFromDisk<F extends FieldsRecord>(
 export async function propagateConfigToUser(opts: {
   root: AppPath;
   userConfigDir: AppPath;
+  /**
+   * Whether the owner's committed layer (`owner-config/`) rides on top of
+   * `config/`. True for the owner's own namespaces (build, a composition reset);
+   * false for what ships to someone else (a release), which gets the shipping
+   * layer alone — a fresh install's config.
+   */
+  ownerLayer: boolean;
 }): Promise<{ migrations: AppliedConfigMigration[] }> {
   // The checkout root and the namespace's user-config dir (or the release
   // bundle's staged one): both the app's own.
@@ -766,44 +774,29 @@ export async function propagateConfigToUser(opts: {
   // Returned, so the build can say what it rewrote.
   const migrations = applyConfigMigrations({ userConfigDir, configs });
 
-  for (const { hierarchyPath, descriptor } of configs) {
-    const gitOrigin = fileConfigProxy(
-      joinAppPath(
-        root,
-        "config",
-        hierarchyPath,
-        `${descriptor.name}.origin.jsonc`,
-      ),
-    );
-    const gitOverwrites = fileConfigProxy(
-      joinAppPath(root, "config", hierarchyPath, `${descriptor.name}.jsonc`),
-    );
+  // The committed layer this namespace propagates from: `config/`, with the
+  // owner's `owner-config/` on top when the caller asks for it. The same
+  // resolution (`committedDocument`) a host's ConfigGitLayer answers with, so the
+  // desktop's propagated origins and its committed layer cannot disagree.
+  const committed = checkoutCommittedFiles(
+    root,
+    { existsSync, readFileSync, readdirSync },
+    { ownerLayer: opts.ownerLayer },
+  );
 
+  for (const { hierarchyPath, descriptor } of configs) {
     // Per-app scoped overrides expressed in git: config/<hier>/@app/<id>/<name>.jsonc.
     // Each is a base-anchored DELTA (only the fields that differ for that app),
-    // resolved over the base-effective config by `resolveGitLayer` and propagated
+    // resolved over the base-effective config by `committedDocument` and propagated
     // as the user scoped origin, mirroring the base layer — so a committed scope
     // reaches a fresh install. No scoped origin is ever committed (codegen has no
     // scoped defaults; the base origin is the hash anchor for the scoped override).
-    const gitAppDir = joinAppPath(root, "config", hierarchyPath, APP_SCOPE_DIR);
-    const gitScopedDeltas = new Map<string, ConfigProxy>();
-    if (existsSync(gitAppDir)) {
-      for (const appEntry of readdirSync(gitAppDir, { withFileTypes: true })) {
-        if (!appEntry.isDirectory()) continue;
-        gitScopedDeltas.set(
-          appEntry.name,
-          fileConfigProxy(
-            joinAppPath(gitAppDir, appEntry.name, `${descriptor.name}.jsonc`),
-          ),
-        );
-      }
-    }
-    const gitLayer = resolveGitLayer(gitOrigin, gitOverwrites, gitScopedDeltas);
+    const storePath = `${hierarchyPath}/${descriptor.name}.jsonc`;
+    const gitLayer = committedDocument(storePath, committed);
     if (gitLayer === undefined) continue;
 
     // The one propagation (config_v2 core), shared with a memory store seeding
     // itself from a bundled committed layer — the two cannot disagree.
-    const storePath = `${hierarchyPath}/${descriptor.name}.jsonc`;
     const { conflicts } = propagateGitLayerDocument(
       storePath,
       gitLayer,

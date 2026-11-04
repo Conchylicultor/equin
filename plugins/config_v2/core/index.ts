@@ -62,9 +62,19 @@ export {
   resolveGitLayer,
   committedDocument,
   committedFilesFromMap,
+  committedFilesIn,
+  checkoutCommittedFiles,
+  committedLayerOf,
+  withOwnerLayer,
+  OWNER_CONFIG_DIR,
+  SHIPPING_CONFIG_DIR,
   propagateGitLayerDocument,
 } from "./internal/git-layer";
-export type { CommittedFiles, GitLayerDocument } from "./internal/git-layer";
+export type {
+  CommittedFiles,
+  CommittedFs,
+  GitLayerDocument,
+} from "./internal/git-layer";
 export { CONFIG_HASH_RE, parseConfigFile } from "./internal/config-file";
 export { createMemoryConfigStore } from "./internal/memory-store";
 export {

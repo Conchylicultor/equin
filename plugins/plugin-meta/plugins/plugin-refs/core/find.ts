@@ -5,6 +5,7 @@ import {
 } from "@plugins/framework/plugins/plugin-id/core";
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import { createTimeSlicer } from "@plugins/packages/plugins/macrotask-yield/core";
+import { committedLayerOf } from "@plugins/config_v2/core";
 import {
   scanCompositionManifestRefs,
   scanReorderItemRefs,
@@ -91,7 +92,8 @@ export async function findPluginRefs(
       }
     } else if (
       kinds.has("dot") &&
-      path.startsWith("config/") &&
+      // A reorder key can sit in either committed root (shipping or owner).
+      committedLayerOf(path) !== null &&
       path.endsWith(".jsonc")
     ) {
       if (path === COMPOSITIONS_MANIFEST) {

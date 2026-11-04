@@ -12,6 +12,7 @@ import {
   type PluginId,
 } from "@plugins/framework/plugins/plugin-id/core";
 import { withPackageName } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { OWNER_CONFIG_DIR, SHIPPING_CONFIG_DIR } from "@plugins/config_v2/core";
 import {
   isWithinDir,
   pluginDirOfRef,
@@ -36,13 +37,16 @@ export interface PluginLocation {
   dir: string;
   /** The config store dir, repo-relative: `config/a/b` (`asPath`). */
   configDir: string;
+  /** The owner's committed config for it, repo-relative: `owner-config/a/b`. */
+  ownerConfigDir: string;
 }
 
 export function locationOf(id: PluginId): PluginLocation {
   return {
     id,
     dir: `${PLUGINS_DIR}/${asFsPath(id)}`,
-    configDir: `config/${asPath(id)}`,
+    configDir: `${SHIPPING_CONFIG_DIR}/${asPath(id)}`,
+    ownerConfigDir: `${OWNER_CONFIG_DIR}/${asPath(id)}`,
   };
 }
 
@@ -97,13 +101,14 @@ function swapPrefix(value: string, from: string, to: string): string | null {
 
 /**
  * Where a repo path lands after the move: under the moved plugin dir or its
- * config dir it is re-rooted, anything else stays. Covers every descendant,
+ * config dirs (shipping and owner) it is re-rooted, anything else stays. Covers every descendant,
  * since both trees nest.
  */
 export function mapRepoPath(move: Move, path: string): string {
   return (
     swapPrefix(path, move.from.dir, move.to.dir) ??
     swapPrefix(path, move.from.configDir, move.to.configDir) ??
+    swapPrefix(path, move.from.ownerConfigDir, move.to.ownerConfigDir) ??
     path
   );
 }
@@ -307,7 +312,7 @@ export interface MovePlan {
   move: Move;
   /** Every moved plugin, old → new id. */
   plugins: Array<{ from: PluginId; to: PluginId }>;
-  /** `git mv` pairs: the plugin dir, then its config dir when it has one. */
+  /** `git mv` pairs: the plugin dir, then its config dirs (shipping, owner) when it has them. */
   renames: Array<{ from: string; to: string }>;
   rewrites: FileRewrite[];
   packages: PackageRename[];
@@ -332,6 +337,8 @@ export interface MovePlanInput {
   compositionRoots: ReadonlySet<PluginId>;
   /** Whether `config/<old slash path>` holds any file. */
   hasConfigDir: boolean;
+  /** Whether `owner-config/<old slash path>` holds any file. */
+  hasOwnerConfigDir: boolean;
   refs: readonly PluginRef[];
   /** `findPluginMentions` of the moved plugin's id: path and fs-path
    *  mentions no ref covers are rewritten, dot mentions are reported
@@ -362,6 +369,12 @@ export function planMove(input: MovePlanInput): MovePlan {
   const renames = [{ from: move.from.dir, to: move.to.dir }];
   if (input.hasConfigDir) {
     renames.push({ from: move.from.configDir, to: move.to.configDir });
+  }
+  if (input.hasOwnerConfigDir) {
+    renames.push({
+      from: move.from.ownerConfigDir,
+      to: move.to.ownerConfigDir,
+    });
   }
 
   const byFile = new Map<string, PlannedEdit[]>();

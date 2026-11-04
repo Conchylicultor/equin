@@ -12,6 +12,9 @@ import {
   computeHash,
   APP_SCOPE_DIR,
   CONFIG_HASH_RE,
+  committedLayerOf,
+  OWNER_CONFIG_DIR,
+  SHIPPING_CONFIG_DIR,
 } from "@plugins/config_v2/core";
 import { parse as parseJsonc } from "jsonc-parser";
 import type { ConfigDescriptor, JsonValue } from "@plugins/config_v2/core";
@@ -35,6 +38,9 @@ const SCOPE_SEG_RE = new RegExp(`/${APP_SCOPE_DIR}/[^/]+/([^/]+)$`);
 function stripScopeSegment(p: string): string {
   return p.replace(SCOPE_SEG_RE, "/$1");
 }
+
+// An override file name: `<name>.jsonc`, never a generated sibling.
+const OVERRIDE_FILE_RE = /(?<!\.origin|\.ancestor)\.jsonc$/;
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -68,7 +74,7 @@ function validateSchema(
 const check: Check = {
   id: "config-origins-in-sync",
   description:
-    "config/ origin files match defineConfig defaults, overwrite hashes are consistent, and all content validates against its schema",
+    "config/ origin files match defineConfig defaults, overwrite hashes (config/ and owner-config/) are consistent, and all content validates against its schema",
   async run() {
     const root = await getWorktreeRoot();
     const configDir = join(root, "config");
@@ -112,7 +118,15 @@ const check: Check = {
     if (!existsSync(configDir)) return { ok: true };
 
     const result = await spawnCaptured(
-      ["git", "ls-files", "--others", "--cached", "--", "config/"],
+      [
+        "git",
+        "ls-files",
+        "--others",
+        "--cached",
+        "--",
+        `${SHIPPING_CONFIG_DIR}/`,
+        `${OWNER_CONFIG_DIR}/`,
+      ],
       { cwd: root, timeoutMs: GIT_TIMEOUT_MS },
     );
     const allConfigFiles = result.stdout.trim().split("\n").filter(Boolean);
@@ -133,6 +147,7 @@ const check: Check = {
     // `allConfigFiles` are relative to root — normalize via relative().
     const orphans: string[] = [];
     for (const relFromRoot of allConfigFiles) {
+      if (committedLayerOf(relFromRoot)?.layer !== "shipping") continue;
       if (!relFromRoot.endsWith(".origin.jsonc")) continue;
       if (!existsSync(join(root, relFromRoot))) continue;
       const relPath = relative(configDir, join(root, relFromRoot));
@@ -147,14 +162,29 @@ const check: Check = {
     }
 
     for (const relFromRoot of allConfigFiles) {
+      const filePath = join(root, relFromRoot);
+      if (!existsSync(filePath)) continue;
+      // The owner's layer holds hand-written overrides only: its origin is
+      // always `config/`'s, and the build never generates (nor prunes) a file
+      // there.
+      const layer = committedLayerOf(relFromRoot);
+      const inOwnerLayer = layer?.layer === "owner";
+      if (
+        inOwnerLayer &&
+        relFromRoot.endsWith(".jsonc") &&
+        !OVERRIDE_FILE_RE.test(relFromRoot)
+      ) {
+        return {
+          ok: false,
+          message: `${relFromRoot} is not an override: ${OWNER_CONFIG_DIR}/ holds only <name>.jsonc overrides`,
+          hint: `Origins are generated into ${SHIPPING_CONFIG_DIR}/ alone; delete it.`,
+        };
+      }
       if (
         !relFromRoot.endsWith(".jsonc") ||
         relFromRoot.endsWith(".origin.jsonc")
       )
         continue;
-
-      const filePath = join(root, relFromRoot);
-      if (!existsSync(filePath)) continue;
 
       const raw = readFileSync(filePath, "utf8");
       const match = CONFIG_HASH_RE.exec(raw);
@@ -167,17 +197,27 @@ const check: Check = {
       }
       const hash = match[1]!;
 
-      const originPath = stripScopeSegment(filePath).replace(
+      // Both layers anchor to the shipping origin.
+      const shippingRel = layer
+        ? `${SHIPPING_CONFIG_DIR}/${layer.rel}`
+        : relFromRoot;
+      const originPath = stripScopeSegment(join(root, shippingRel)).replace(
         /\.jsonc$/,
         ".origin.jsonc",
       );
       const originRel = relative(root, originPath);
       if (!existsSync(originPath)) {
-        return {
-          ok: false,
-          message: `${relFromRoot} references a hash but ${originRel} does not exist`,
-          hint: "Run `./equin build` to regenerate origin files.",
-        };
+        return inOwnerLayer
+          ? {
+              ok: false,
+              message: `${relFromRoot} is orphaned: ${originRel} does not exist (its config was moved or removed)`,
+              hint: `The build never prunes ${OWNER_CONFIG_DIR}/ (it is hand-written): move the file to the config's new path, or delete it.`,
+            }
+          : {
+              ok: false,
+              message: `${relFromRoot} references a hash but ${originRel} does not exist`,
+              hint: "Run `./equin build` to regenerate origin files.",
+            };
       }
 
       const originRaw = readFileSync(originPath, "utf8");
@@ -201,7 +241,7 @@ const check: Check = {
       // not that its values still satisfy the current *schema*. This is the gap
       // that let a legacy spacer node sit in a committed override until it blew
       // up at runtime.
-      const overrideOriginRel = stripScopeSegment(relFromRoot)
+      const overrideOriginRel = stripScopeSegment(shippingRel)
         .replace(/^config\//, "")
         .replace(/\.jsonc$/, ".origin.jsonc");
       const descriptor = descriptorsByOriginRel.get(overrideOriginRel);

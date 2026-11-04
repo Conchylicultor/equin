@@ -601,7 +601,7 @@ export async function generateAppSources(opts: {
   // whose origin changed by nothing but a recorded move, so neither the
   // re-mark below nor `config-origins-in-sync` reads a pure rename as stale.
   for (const rel of restampMovedOverrides({ root, prior: priorOrigins })) {
-    hooks.log(`[config-v2] re-stamped config/${rel} (plugin move)`);
+    hooks.log(`[config-v2] re-stamped ${rel} (plugin move)`);
   }
 
   // 4b'. Seed / re-mark the MANDATORY config overrides (descriptors that set

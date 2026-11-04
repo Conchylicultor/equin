@@ -35,5 +35,7 @@ export async function repropagateConfig(
   root: AppPath,
   userConfigDir: AppPath,
 ): Promise<void> {
-  await propagateConfigToUser({ root, userConfigDir });
+  // The served namespace is the owner's own (served from their checkout):
+  // the same layers its serve build propagated.
+  await propagateConfigToUser({ root, userConfigDir, ownerLayer: true });
 }

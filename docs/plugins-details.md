@@ -13953,6 +13953,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/rank.Rank`
     - Exports (types):
       - `CommittedFiles`
+      - `CommittedFs`
       - `ConfigDescriptor`
       - `ConfigDocRef`
       - `ConfigDocumentFile`
@@ -13989,9 +13990,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Exports (values):
       - `APP_SCOPE_DIR`
       - `appScopeId`
+      - `checkoutCommittedFiles`
       - `codeConfigProxy`
       - `committedDocument`
       - `committedFilesFromMap`
+      - `committedFilesIn`
+      - `committedLayerOf`
       - `computeHash`
       - `CONFIG_HASH_RE`
       - `configConflict`
@@ -14031,6 +14035,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `orphanReasonSchema`
       - `orphanReportSchema`
       - `orphanRiskClassSchema`
+      - `OWNER_CONFIG_DIR`
       - `parseConfigFile`
       - `parseConfigFileRelPath`
       - `propagate`
@@ -14044,13 +14049,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `scopeAppId`
       - `scopeSegment`
       - `setConfigField`
+      - `SHIPPING_CONFIG_DIR`
       - `storePathParts`
       - `stringifyConfigValue`
       - `threeWayMerge`
       - `validationIssues`
       - `withOverrideLegend`
+      - `withOwnerLayer`
   - Cross-plugin:
-    - Imported by: 125 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+    - Imported by: 126 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×35
       - `conversations` ×14
       - `backup` ×13
@@ -14059,11 +14066,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `auth` ×6
       - `config_v2` ×6
       - `tasks` ×5
+      - `plugin-meta` ×3
       - `primitives` ×3
       - `framework` ×2
       - `infra` ×2
       - `integrations` ×2
-      - `plugin-meta` ×2
       - `reports` ×2
       - `shell` ×2
       - `stats` ×2
@@ -27908,9 +27915,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Register: `defineSupervisedJob('type-check.backstop')`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 132 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 133 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `plugin-meta/parse-utils` ×20
-              - `config_v2` ×15
+              - `config_v2` ×16
               - `framework/plugin-id` ×14
               - `network/live/resource-vocabulary` ×10
               - `plugin-meta/plugin-records` ×10
@@ -40365,6 +40372,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`plugin-refs`** — The one plugin-reference locator: every place the repo names a plugin (path literals, @plugins specifiers, structurally-read dot ids, relative markdown/CSS links), each with an exact character range a mover rewrites by.
       - Core:
         - Uses:
+          - `config_v2.committedLayerOf`
           - `framework/plugin-id.asFsPath`
           - `framework/plugin-id.asPath`
           - `framework/plugin-id.asPluginId`
@@ -40677,8 +40685,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape --spacing`
     - **`relocate`** — `./equin plugin move <from> <to>` — relocate or rename a plugin (and every descendant) in one step: git mv the folder and its config dir, then rewrite every reference the plugin-refs locator finds (path literals, @plugins specifiers, dot ids, relative links) by exact range. Records each move in a committed ledger that every build replays onto its namespace's saved user config (folder moved, reorder keys re-rooted, hash chain kept).
       - Core:
-        - Uses: 25 symbols — full list in [`plugins/plugin-meta/plugins/relocate/REFERENCE.md`](../plugins/plugin-meta/plugins/relocate/REFERENCE.md)
-          - `config_v2` ×9
+        - Uses: 26 symbols — full list in [`plugins/plugin-meta/plugins/relocate/REFERENCE.md`](../plugins/plugin-meta/plugins/relocate/REFERENCE.md)
+          - `config_v2` ×10
           - `config_v2/ledger` ×6
           - `framework/plugin-id` ×3
           - `infra/host-fs/user-path` ×3

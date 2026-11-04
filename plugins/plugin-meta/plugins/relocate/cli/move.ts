@@ -247,10 +247,12 @@ const run: CliAction<[string, string], { dryRun?: boolean }> = async (
         `a plugin lives directly under plugins/ or in an existing plugin's plugins/ folder`,
     );
   }
-  if (existsSync(join(root, to.configDir))) {
-    refuse(
-      `${to.configDir} already exists — the moved plugin's config dir would land on it`,
-    );
+  for (const dir of [to.configDir, to.ownerConfigDir]) {
+    if (existsSync(join(root, dir))) {
+      refuse(
+        `${dir} already exists — the moved plugin's config dir would land on it`,
+      );
+    }
   }
 
   const moved = [...tree.byDir.values()].filter(
@@ -286,6 +288,7 @@ const run: CliAction<[string, string], { dryRun?: boolean }> = async (
       moved.filter((n) => n.compositionRoot).map((n) => n.id),
     ),
     hasConfigDir: repo.under(from.configDir).length > 0,
+    hasOwnerConfigDir: repo.under(from.ownerConfigDir).length > 0,
     refs,
     mentions,
     read: (f) => texts.get(f) ?? null,
@@ -326,9 +329,11 @@ const run: CliAction<[string, string], { dryRun?: boolean }> = async (
     // at both paths, every rewrite, and the lockfile the next install rewrites
     // from the renamed workspaces.
     recordTouched(gitDir, entry, [
-      ...[...repo.under(from.dir), ...repo.under(from.configDir)].flatMap(
-        (f) => [f, mapRepoPath(move, f)],
-      ),
+      ...[
+        ...repo.under(from.dir),
+        ...repo.under(from.configDir),
+        ...repo.under(from.ownerConfigDir),
+      ].flatMap((f) => [f, mapRepoPath(move, f)]),
       ...plan.rewrites.flatMap((r) => [r.file, r.newFile]),
       ...plan.packages.map((p) => p.newFile),
       PLUGIN_MOVES_FILE,

@@ -13,7 +13,10 @@ const CONFIG_PREFIX = "/config/";
 /**
  * The repo's whole `config/`, inlined into the bundle as text by the bundler
  * that builds a browser host (vite rewrites `import.meta.glob` with `?raw`
- * wherever it is written). All of it, not a composition's share: the committed
+ * wherever it is written). `config/` is the SHIPPING layer — a fresh install's
+ * config; the owner's committed values live in another root (`owner-config/`,
+ * config_v2's `OWNER_CONFIG_DIR`) that this glob cannot name, so no browser host
+ * carries them. All of it, not a composition's share: the committed
  * layer is composition-invariant, and a document no registered descriptor reads
  * is never parsed (the memory store seeds per storePath, on first touch).
  *

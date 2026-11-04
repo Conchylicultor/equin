@@ -43,13 +43,11 @@ import {
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
-  APP_SCOPE_DIR,
+  checkoutCommittedFiles,
   committedDocument,
   computeHash,
-  configFileRelPath,
   parseConfigFileRelPath,
   scopeAppId,
-  storePathParts,
   type CommittedFiles,
   type JsonValue,
 } from "@plugins/config_v2/core";
@@ -129,28 +127,6 @@ export function rewriteKeys(
   return out;
 }
 
-/** The checkout's `config/` as the committed layer propagation reads. */
-function repoCommittedFiles(configDir: AppPath): CommittedFiles {
-  return {
-    read(ref) {
-      const file = joinAppPath(configDir, configFileRelPath(ref));
-      return existsSync(file) ? readFileSync(file, "utf8") : null;
-    },
-    appIds(storePath) {
-      const appDir = joinAppPath(
-        configDir,
-        storePathParts(storePath).hier,
-        APP_SCOPE_DIR,
-      );
-      if (!existsSync(appDir)) return [];
-      return readdirSync(appDir, { withFileTypes: true })
-        .filter((e) => e.isDirectory())
-        .map((e) => e.name)
-        .sort();
-    },
-  };
-}
-
 /**
  * The hash a re-rooted user snapshot is stamped with: for an origin that is the
  * git-layer document propagation writes next but for order, that document's
@@ -187,7 +163,12 @@ export function applyPluginMoves(opts: {
   userConfigDir: AppPath;
 }): AppliedMove[] {
   const { root, userConfigDir } = opts;
-  const committed = repoCommittedFiles(joinAppPath(root, "config"));
+  // The committed layer the build's propagation reads (owner layer included).
+  const committed = checkoutCommittedFiles(
+    root,
+    { existsSync, readFileSync, readdirSync },
+    { ownerLayer: true },
+  );
   return runConfigLedger({
     userConfigDir,
     markerFile: APPLIED_MOVES_FILE,

@@ -545,6 +545,8 @@ export async function deployNamespace(
         const { migrations } = await propagateConfigToUser({
           root,
           userConfigDir: configDir.file(ns),
+          // The owner's own namespace: their committed values ride on top.
+          ownerLayer: true,
         });
         for (const m of migrations) {
           console.log(

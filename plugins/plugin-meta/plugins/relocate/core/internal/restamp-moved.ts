@@ -31,7 +31,11 @@ import {
   type AppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { APP_SCOPE_DIR } from "@plugins/config_v2/core";
+import {
+  APP_SCOPE_DIR,
+  OWNER_CONFIG_DIR,
+  SHIPPING_CONFIG_DIR,
+} from "@plugins/config_v2/core";
 import {
   configTextHash,
   parseConfigText,
@@ -76,7 +80,8 @@ function overridesOf(configDir: AppPath, originRel: string): string[] {
  * Re-stamp every committed override whose origin changed under it by nothing
  * but a recorded plugin move. `prior` is `snapshotConfigOrigins` taken before
  * codegen regenerated the origins; `root` is the checkout (its move ledger).
- * Returns the re-stamped overrides, `config/`-relative, sorted.
+ * Returns the re-stamped overrides, repo-relative (`config/…` or
+ * `owner-config/…`), sorted.
  */
 export function restampMovedOverrides(opts: {
   root: AppPath;
@@ -84,7 +89,7 @@ export function restampMovedOverrides(opts: {
 }): string[] {
   const moves = readPluginMoves(opts.root);
   if (moves.length === 0) return [];
-  const configDir = joinAppPath(opts.root, "config");
+  const configDir = joinAppPath(opts.root, SHIPPING_CONFIG_DIR);
   const restamped: string[] = [];
   for (const [rel, before] of opts.prior) {
     const path = joinAppPath(configDir, rel);
@@ -108,12 +113,16 @@ export function restampMovedOverrides(opts: {
     )
       continue;
 
-    for (const override of overridesOf(configDir, rel)) {
-      const file = joinAppPath(configDir, override);
-      const text = readFileSync(file, "utf8");
-      if (configTextHash(text) !== oldHash) continue;
-      writeFileSync(file, withConfigTextHash(text, newHash));
-      restamped.push(override);
+    // Both committed roots anchor their overrides to `config/`'s origin.
+    for (const layerDir of [SHIPPING_CONFIG_DIR, OWNER_CONFIG_DIR]) {
+      const dir = joinAppPath(opts.root, layerDir);
+      for (const override of overridesOf(dir, rel)) {
+        const file = joinAppPath(dir, override);
+        const text = readFileSync(file, "utf8");
+        if (configTextHash(text) !== oldHash) continue;
+        writeFileSync(file, withConfigTextHash(text, newHash));
+        restamped.push(`${layerDir}/${override}`);
+      }
     }
   }
   return restamped.sort();

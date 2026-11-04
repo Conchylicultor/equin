@@ -1,4 +1,7 @@
-import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
+import {
+  existsSync,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { relative } from "node:path";
 import { configFileRelPath, configRawFile } from "../../core";
 import { serveValue } from "@plugins/network/plugins/live/machine";
@@ -18,22 +21,29 @@ import {
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { CONFIG_DIR } from "./config-dir";
 import { userFilePath } from "./file-store";
+import { committedRoots, ownerConfigDir } from "./repo-layer";
 
 // The git-layer files of one document. Git-layer files live in the repo, not
 // the per-worktree user dir. A scoped override is expressed in git at
 // config/<dir>/@app/<id>/<name>.jsonc, but its origin anchor is always the BASE
 // origin (config/<dir>/<name>.origin.jsonc) — no scoped origin is ever
 // committed. So the override path takes the scope segment while the origin path
-// stays base.
+// stays base. The override shown is the one that applies: the owner's
+// (`owner-config/`) when it commits one, else the shipping layer's.
 function gitLayerPaths(
   storePath: string,
   scopeId: string | undefined,
 ): { gitOverridePath: AppPath; gitOriginPath: AppPath } {
+  const overrideRel = configFileRelPath({
+    storePath,
+    scopeId,
+    file: "override",
+  });
+  const ownerOverride = joinAppPath(ownerConfigDir(), overrideRel);
   return {
-    gitOverridePath: joinAppPath(
-      repoConfigDir(),
-      configFileRelPath({ storePath, scopeId, file: "override" }),
-    ),
+    gitOverridePath: existsSync(ownerOverride)
+      ? ownerOverride
+      : joinAppPath(repoConfigDir(), overrideRel),
     gitOriginPath: joinAppPath(
       repoConfigDir(),
       configFileRelPath({ storePath, file: "origin" }),
@@ -62,19 +72,32 @@ async function watchGitLayer(
   scopeId: string | undefined,
   notify: () => void,
 ): Promise<() => void> {
-  const { gitOverridePath, gitOriginPath } = gitLayerPaths(storePath, scopeId);
-  const release = await acquireDirWatch({
-    dir: repoConfigDir(),
-    scope: "subtree",
-    onChange: (events) => {
-      if (
-        events.some(
-          (e) => e.path === gitOverridePath || e.path === gitOriginPath,
-        )
-      )
-        notify();
-    },
+  // Every path the document's git files can sit at, in either root: the
+  // override may move between them (an owner override added or removed).
+  const overrideRel = configFileRelPath({
+    storePath,
+    scopeId,
+    file: "override",
   });
+  const watched = new Set<string>([
+    joinAppPath(repoConfigDir(), overrideRel),
+    joinAppPath(ownerConfigDir(), overrideRel),
+    gitLayerPaths(storePath, scopeId).gitOriginPath,
+  ]);
+  const releases = await Promise.all(
+    committedRoots().map((dir) =>
+      acquireDirWatch({
+        dir,
+        scope: "subtree",
+        onChange: (events) => {
+          if (events.some((e) => watched.has(e.path))) notify();
+        },
+      }),
+    ),
+  );
+  const release = (): void => {
+    for (const r of releases) r();
+  };
   // A write between the first load and either watch opening (this git-layer
   // one, or the user-layer config-files watcher armed in `onReady`) produced
   // no event; one re-read once both are live closes that gap.

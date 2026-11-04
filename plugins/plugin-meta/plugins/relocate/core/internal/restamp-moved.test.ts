@@ -59,10 +59,12 @@ describe("restampMovedOverrides", () => {
       "config/s/item.origin.jsonc": OLD_ORIGIN,
       "config/s/item.jsonc": OVERRIDE,
       "config/s/@app/home/item.jsonc": OVERRIDE,
+      "owner-config/s/item.jsonc": OVERRIDE,
     });
     expect(run(root, NEW_ORIGIN)).toEqual([
-      "s/@app/home/item.jsonc",
-      "s/item.jsonc",
+      "config/s/@app/home/item.jsonc",
+      "config/s/item.jsonc",
+      "owner-config/s/item.jsonc",
     ]);
     expect(read(root, "s/item.jsonc")).toBe(
       `// @hash bbb\n// note\n{ "items": ["zed:y", "b:x"] }`,
