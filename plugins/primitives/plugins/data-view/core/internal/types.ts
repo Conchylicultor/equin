@@ -1530,8 +1530,20 @@ export interface FilterOperator {
   hidden?: boolean;
   /** false → no value editor (is-empty / is-not-empty). */
   hasValue: boolean;
-  /** Present iff `hasValue`. The operand editor for a single rule. */
+  /**
+   * Present iff `hasValue`. The operand editor for a single rule. Its identity
+   * is the operand's shape: switching a rule between two operators sharing one
+   * `ValueInput` keeps the operand as is (`carryOperand`).
+   */
   ValueInput?: ComponentType<FilterValueInputProps>;
+  /**
+   * The operand is ONE item (`"one"`) or a list of the same items (`"many"`)
+   * — declared by the operators of a set whose single and multi editors pick
+   * the same items (enum `is` / `is any of`, tags `contains` / `contains any
+   * of`), so switching between them converts the operand (`x` ↔ `[x]`)
+   * instead of dropping it.
+   */
+  arity?: "one" | "many";
   /**
    * The rule as a filter-language `Filter` over `ctx.column` (whose domain is
    * the set's `domain`), or `undefined` when the rule is INCOMPLETE — it

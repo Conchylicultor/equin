@@ -13,6 +13,7 @@ export const enumOperatorSet: Omit<FilterOperatorSet, "match"> = {
       label: "Is",
       hasValue: true,
       ValueInput: EnumSingleInput,
+      arity: "one",
       lower: enumLower.is,
     },
     {
@@ -20,6 +21,7 @@ export const enumOperatorSet: Omit<FilterOperatorSet, "match"> = {
       label: "Is not",
       hasValue: true,
       ValueInput: EnumSingleInput,
+      arity: "one",
       lower: enumLower["is-not"],
     },
     {
@@ -27,6 +29,7 @@ export const enumOperatorSet: Omit<FilterOperatorSet, "match"> = {
       label: "Is any of",
       hasValue: true,
       ValueInput: EnumMultiInput,
+      arity: "many",
       lower: enumLower["is-any-of"],
     },
     {
@@ -34,6 +37,7 @@ export const enumOperatorSet: Omit<FilterOperatorSet, "match"> = {
       label: "Is none of",
       hasValue: true,
       ValueInput: EnumMultiInput,
+      arity: "many",
       lower: enumLower["is-none-of"],
     },
     {

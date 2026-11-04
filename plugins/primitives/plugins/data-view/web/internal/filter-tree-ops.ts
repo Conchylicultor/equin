@@ -193,6 +193,22 @@ export function findGroup(
   return undefined;
 }
 
+/** Find the rule with `id` anywhere in the tree, or `undefined`. */
+export function findRule(
+  root: FilterGroup,
+  id: string,
+): FilterRule | undefined {
+  for (const child of root.children) {
+    if (child.kind === "rule") {
+      if (child.id === id) return child;
+      continue;
+    }
+    const found = findRule(child, id);
+    if (found) return found;
+  }
+  return undefined;
+}
+
 /**
  * How many rules a node holds, at any depth — what a collapsed group row counts
  * when it says "Group · 3 conditions". Every rule counts, complete or not: the

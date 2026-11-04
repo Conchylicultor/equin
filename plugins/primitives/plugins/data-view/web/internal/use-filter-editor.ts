@@ -11,10 +11,12 @@ import {
   addRule,
   deleteNode,
   emptyGroup,
+  findRule,
   setConjunction,
   updateRule,
   wrapRuleInGroup,
 } from "./filter-tree-ops";
+import { carryOperand } from "./carry-operand";
 
 /**
  * Everything the filter panel's rows need to read the schema and mutate the tree
@@ -43,7 +45,8 @@ export interface FilterEditor {
 
   /** Set a rule's field, resetting operator → default and clearing value. */
   changeRuleField: (ruleId: string, fieldId: string) => void;
-  /** Set a rule's operator, clearing value when `hasValue` toggled off. */
+  /** Set a rule's operator, keeping its value when the new operator edits
+   *  the same operand shape (`carryOperand`), else clearing it. */
   changeRuleOperator: (ruleId: string, operatorId: string) => void;
   /** Write a rule's operand value. */
   setRuleValue: (ruleId: string, value: unknown) => void;
@@ -114,7 +117,22 @@ export function useFilterEditor(): FilterEditor {
         );
       },
       changeRuleOperator: (ruleId, operatorId) =>
-        commit((r) => updateRule(r, ruleId, { operatorId, value: undefined })),
+        commit((r) => {
+          const rule = findRule(r, ruleId);
+          if (!rule) return r;
+          const field = controller.filterableFields.find(
+            (f) => f.id === rule.fieldId,
+          );
+          const operators = field
+            ? controller.resolveOperatorSet(field.type ?? "text")?.operators
+            : undefined;
+          const value = carryOperand(
+            operators?.find((o) => o.id === rule.operatorId),
+            operators?.find((o) => o.id === operatorId),
+            rule.value,
+          );
+          return updateRule(r, ruleId, { operatorId, value });
+        }),
       setRuleValue: (ruleId, value) =>
         commit((r) => updateRule(r, ruleId, { value })),
       clear: () => controller.setFilter(null),
