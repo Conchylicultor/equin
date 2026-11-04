@@ -12,6 +12,10 @@ import {
 } from "../../core";
 import type { UnfinishedRun } from "./run/registry";
 import { _supervisedJobRuns, SUPERVISED_JOB_RUNS_INFLIGHT_UQ } from "./tables";
+import { readTranscriptEnd } from "./run/tail";
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
+import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
  * The lock key of a job that declared no `lock`: every run of the job contends
@@ -115,14 +119,41 @@ export function builtinLedgerFor(
         .where(eq(_supervisedJobRuns.id, runId));
     },
 
-    /** Bare, idempotent, first-writer-wins: the only writer of the outcome. */
+    /**
+     * Bare, idempotent, first-writer-wins: the only writer of the outcome.
+     *
+     * A failed run is closed WITH its error: when its child recorded none —
+     * it died before its body's catch: a boot crash, a kill, an uncaught
+     * throw — the same write gives the row the end of its transcript, where
+     * the child said why. The row is what every surface quotes (the
+     * dead-letter, a waiter's own message), so a crash is never recorded as
+     * merely "crashed". One statement, so no reader sees the row closed
+     * without its error. A cancelled run keeps none: the user stopped it.
+     */
     async closeRow(runId, terminal) {
+      const unrecorded =
+        terminal.exitCode === 0
+          ? null
+          : unrecordedFailureMessage(
+              // This backend's own runs dir: a run's row and its files share
+              // a namespace (the table is excluded from forks).
+              worktreeArtifacts.runTranscript(
+                runtimeNamespace(),
+                builtinKindIdFor(jobName),
+                runId,
+              ),
+            );
       await conn
         .update(_supervisedJobRuns)
         .set({
           finishedAt: terminal.finishedAt,
           exitCode: terminal.exitCode,
           signalCode: terminal.signalCode,
+          ...(unrecorded === null
+            ? {}
+            : {
+                errorMessage: sql`COALESCE(${_supervisedJobRuns.errorMessage}, CASE WHEN ${_supervisedJobRuns.cancelledAt} IS NULL THEN ${unrecorded}::text END)`,
+              }),
         })
         .where(
           and(
@@ -184,6 +215,28 @@ export function builtinLedgerFor(
       };
     },
   };
+}
+
+/** How much of a transcript's end a failed run's row quotes. */
+export const UNRECORDED_FAILURE_EXCERPT_BYTES = 2048;
+
+/**
+ * The error of a failed run whose child recorded none, in the child's own
+ * words: the end of its transcript, with the path to the whole of it.
+ */
+export function unrecordedFailureMessage(transcript: AppPath): string {
+  const end = readTranscriptEnd(transcript, UNRECORDED_FAILURE_EXCERPT_BYTES);
+  switch (end.kind) {
+    case "text":
+      return `recorded no error; its transcript (${transcript}) ends:\n${end.text}`;
+    case "empty":
+      return `recorded no error and wrote nothing to its transcript (${transcript})`;
+    case "missing":
+      // A spawn that failed before creating it, or the artifact prune.
+      return `recorded no error and has no transcript at ${transcript}`;
+    case "unreadable":
+      return `recorded no error, and its transcript (${transcript}) could not be read: ${end.message}`;
+  }
 }
 
 /**
@@ -297,11 +350,13 @@ export function applyFailurePolicy(args: {
     terminal.signalCode !== null
       ? `was killed by ${terminal.signalCode} (exit ${terminal.exitCode})`
       : `exited ${terminal.exitCode}`;
+  // EX_TEMPFAIL first: the status itself says why — the child could not
+  // write its row, so what the row holds is only its transcript's end.
   const why =
-    args.failure.errorMessage ??
-    (terminal.exitCode === SUPERVISED_EXIT_TEMPFAIL
+    terminal.exitCode === SUPERVISED_EXIT_TEMPFAIL
       ? "the database refused its connection because it was full (EX_TEMPFAIL) — a temporary failure, see the transcript"
-      : "killed or crashed before recording an error — see the transcript");
+      : (args.failure.errorMessage ??
+        "killed or crashed before recording an error — see the transcript");
   throw new NonRetryableError(
     `[supervised-job] ${args.jobName}: run ${args.runId} ${ended} on attempt ` +
       `${args.attempt}/${args.runAttempts}` +

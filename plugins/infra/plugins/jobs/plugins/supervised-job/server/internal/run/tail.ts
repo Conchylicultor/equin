@@ -171,3 +171,56 @@ export function createTranscriptTail(opts: {
     },
   };
 }
+
+/** What {@link readTranscriptEnd} found at a run's transcript path. */
+export type TranscriptEnd =
+  | { readonly kind: "text"; readonly text: string }
+  | { readonly kind: "empty" }
+  /** ENOENT: never created (a spawn that failed first), or pruned. */
+  | { readonly kind: "missing" }
+  /** Any other read failure, named — the caller is closing a run's row. */
+  | { readonly kind: "unreadable"; readonly message: string };
+
+/**
+ * The last `maxBytes` of a run's transcript, cut at a line start and trimmed —
+ * the lines a dead child wrote last, which for a crash are the ones that say
+ * why. One read of a bounded window, however long the transcript.
+ *
+ * Never throws: its caller is the ledger's terminal write, which must not be
+ * kept from closing a row by the file beside it, so a failed read is an answer
+ * that names the failure.
+ */
+export function readTranscriptEnd(
+  path: AppPath,
+  maxBytes: number,
+): TranscriptEnd {
+  let fd: number;
+  try {
+    fd = openSync(path, "r");
+  } catch (err) {
+    const e = err as NodeJS.ErrnoException;
+    if (e.code === "ENOENT") return { kind: "missing" };
+    return { kind: "unreadable", message: e.message };
+  }
+  try {
+    const size = fstatSync(fd).size;
+    const start = Math.max(0, size - maxBytes);
+    const buf = Buffer.allocUnsafe(size - start);
+    const read = readSync(fd, buf, 0, buf.length, start);
+    let text = buf.subarray(0, read).toString("utf-8").trimEnd();
+    // A window opened mid-file starts mid-line (maybe mid-character): drop
+    // that fragment so the excerpt opens on a whole line — unless the window
+    // holds no other line, when the fragment is all there is.
+    const firstBreak = text.indexOf("\n");
+    if (start > 0 && firstBreak !== -1) text = text.slice(firstBreak + 1);
+    text = text.trim();
+    return text === "" ? { kind: "empty" } : { kind: "text", text };
+  } catch (err) {
+    return {
+      kind: "unreadable",
+      message: err instanceof Error ? err.message : String(err),
+    };
+  } finally {
+    closeSync(fd);
+  }
+}

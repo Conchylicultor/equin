@@ -157,7 +157,7 @@ export async function prepareWorktree(
           (run === null
             ? "No worktree.prepare run ever claimed it — check Debug → Queue."
             : `Last run ${run.id} ${run.exitCode === -1 ? "was killed (no exit marker)" : `exited ${String(run.exitCode)}`}: ` +
-              `${run.errorMessage ?? "killed or crashed before recording an error — see the worktree-prepare log"}`),
+              `${run.errorMessage ?? "killed or crashed before recording an error — see its transcript in the runs directory"}`),
       );
     }
     const after: string | null = run?.id ?? null;

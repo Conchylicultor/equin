@@ -14,7 +14,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { appendFileSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createTranscriptTail } from "./tail";
+import { createTranscriptTail, readTranscriptEnd } from "./tail";
 import {
   type AppPath,
   asAppPath,
@@ -158,5 +158,41 @@ describe("createTranscriptTail", () => {
     // Nothing after the notice — a reader told the log has stopped must not
     // then see more output arrive on it.
     expect(lines.length).toBe(afterCeiling);
+  });
+});
+
+describe("readTranscriptEnd", () => {
+  test("a short transcript is quoted whole, trimmed", () => {
+    expect(readTranscriptEnd(scratchFile("boot\nerror: x\n\n"), 2048)).toEqual({
+      kind: "text",
+      text: "boot\nerror: x",
+    });
+  });
+
+  test("a long one is cut at a line start inside the window", () => {
+    const path = scratchFile(`${"a".repeat(100)}\nlast line\n`);
+    expect(readTranscriptEnd(path, 15)).toEqual({
+      kind: "text",
+      text: "last line",
+    });
+  });
+
+  test("a last line longer than the window is kept, not dropped", () => {
+    const path = scratchFile(`head\nerror: ${"x".repeat(50)}\n`);
+    expect(readTranscriptEnd(path, 20)).toEqual({
+      kind: "text",
+      text: "x".repeat(19),
+    });
+  });
+
+  test("empty and missing transcripts say so", () => {
+    expect(readTranscriptEnd(scratchFile("  \n"), 2048)).toEqual({
+      kind: "empty",
+    });
+    const gone = joinAppPath(
+      asAppPath(tmpdir()),
+      `sg-tail-gone-${process.pid}`,
+    );
+    expect(readTranscriptEnd(gone, 2048)).toEqual({ kind: "missing" });
   });
 });

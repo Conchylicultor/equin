@@ -88,7 +88,12 @@ the `@ts-expect-error` for each.
   - `UNIQUE (job_name, lock_key) WHERE finished_at IS NULL` is the lock; `claim`
     is an INSERT against it (a 23505 on that index answers `null`). No `lock` ⇒
     one job-wide key, so at most one run of the job at a time.
-  - `closeRow` is the only writer of the outcome. Excluded from forks, so no
+  - `closeRow` is the only writer of the outcome. A failed run whose child
+    recorded no error (it died before its body's catch: a boot crash, a kill,
+    an uncaught throw) gets the end of its transcript as its `error_message`,
+    in the same write as its terminal (not a cancelled one) — so the dead-letter and any
+    waiter quoting the row (`latestSupervisedRun`) say why, never just
+    "crashed". Excluded from forks, so no
     namespace column; kept 30 days after `finished_at` (`defineRetention`, per
     worktree).
   - Kind id derived from the name (`database.fork` → `databasefork`), asserted
@@ -97,8 +102,8 @@ the `@ts-expect-error` for each.
     exit 0 → done; failed but cancelled (`cancelled_at` stamped by
     `cancelSupervisedJobByLock`) → done, no retry and no alert; failed and (not
     retryable, or the last attempt) → throw
-    `NonRetryableError` naming the job, run, exit and the recorded error (or
-    "killed or crashed before recording an error — see the transcript"); failed
+    `NonRetryableError` naming the job, run, exit and the recorded error (the
+    child's, else its transcript's end); failed
     otherwise → retry. A hard kill or a reboot's TERM records no flag, so it stays
     retryable. Deterministic on replay: it re-runs for earlier attempts with the
     same row and attempt number, so it answers the same.
@@ -237,7 +242,9 @@ closed row. Two consequences for a consumer:
 
 - `closeRow` must be a bare, idempotent, first-writer-wins write
   (`WHERE finished_at IS NULL`). No notification, no enqueue, no reconcile: it
-  runs in backends that know nothing about the workflow.
+  runs in backends that know nothing about the workflow. What the outcome is may
+  include more than the terminal — the built-in ledger's write also carries a
+  failed run's transcript end as its error — but it stays that one statement.
 - By the time `onEnded` runs, the row is **already closed** in the ordinary case.
   Do not gate anything there on the row still being open, and read the row back
   rather than assuming who stamped it.
@@ -696,7 +703,7 @@ connection for being full (`isConnectionCapacityRefusal`, `database/connection`
 its row (the row lives in the database that refused it), so the status carries
 it: a waiter reads it as back-pressure — retry later, not a failed run
 (`worktree.prepare`'s `prepareWorktree`) — and the built-in failure policy names
-it instead of "killed or crashed before recording an error".
+it ahead of the transcript excerpt `closeRow` recorded.
 
 ### Admission before boot (`admission`)
 

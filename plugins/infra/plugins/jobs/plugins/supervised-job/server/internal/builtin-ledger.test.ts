@@ -6,7 +6,18 @@
  * (the DB half requires the running embedded cluster — `./equin build`
  * first, which is also what generates the `supervised_job_runs` migration).
  */
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  test,
+} from "bun:test";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
@@ -345,6 +356,12 @@ describe("cancelSupervisedJobByLock", () => {
 
 describe("the built-in ledger (real DB)", () => {
   let t: TestDb;
+  const transcripts: string[] = [];
+
+  afterEach(async () => {
+    for (const path of transcripts.splice(0)) rmSync(path, { force: true });
+    await t.db.execute(sql`DELETE FROM supervised_job_runs`);
+  });
 
   beforeAll(async () => {
     t = await createTestDb({ prefix: "supervised_job_runs_test" });
@@ -385,6 +402,68 @@ describe("the built-in ledger (real DB)", () => {
     );
 
     expect(await ledger.claim({ ...meta, lockKey: "target-a" })).not.toBeNull();
+  });
+
+  test("a failed run that recorded no error gets its transcript's end", async () => {
+    const ledger = builtinLedgerFor("t.silent", t.db);
+    const claim = async (lockKey: string): Promise<string> => {
+      const id = await ledger.claim({
+        attempt: 1,
+        workflowRunId: "wf",
+        lockKey,
+      });
+      if (id === null) throw new Error("the claim must win");
+      return id;
+    };
+    const transcript = (runId: string): AppPath => {
+      const path = worktreeArtifacts.runTranscript(
+        runtimeNamespace(),
+        builtinKindIdFor("t.silent"),
+        runId,
+      );
+      transcripts.push(path);
+      return path;
+    };
+    const errorOf = async (runId: string): Promise<string | null> =>
+      (await readRecordedFailure(runId, t.db)).errorMessage;
+
+    // A boot crash: the child died before its body's catch could record.
+    const crashed = await claim("crashed");
+    mkdirSync(worktreeArtifacts.runsDir(runtimeNamespace()), {
+      recursive: true,
+    });
+    writeFileSync(
+      transcript(crashed),
+      '[exec] failed\nerror: [fs-wait] already records as "cli"\n',
+    );
+    await ledger.closeRow(crashed, ended(1));
+    expect(await errorOf(crashed)).toBe(
+      `recorded no error; its transcript (${transcript(crashed)}) ends:\n` +
+        '[exec] failed\nerror: [fs-wait] already records as "cli"',
+    );
+
+    // The child's own error wins; a success records none; a lost transcript
+    // is named as such.
+    const recorded = await claim("recorded");
+    await recordRunError(recorded, new Error("bad plan"), t.db);
+    await ledger.closeRow(recorded, ended(1));
+    expect(await errorOf(recorded)).toBe("bad plan");
+
+    const ok = await claim("ok");
+    await ledger.closeRow(ok, ended(0));
+    expect(await errorOf(ok)).toBeNull();
+
+    const gone = await claim("gone");
+    await ledger.closeRow(gone, ended(-1));
+    expect(await errorOf(gone)).toBe(
+      `recorded no error and has no transcript at ${transcript(gone)}`,
+    );
+
+    // A cancelled run was stopped, not failed: it keeps no error.
+    const cancelled = await claim("cancelled");
+    await ledger.markCancelled("cancelled");
+    await ledger.closeRow(cancelled, ended(143, "TERM"));
+    expect(await errorOf(cancelled)).toBeNull();
   });
 
   test("no lock means one run of the job at a time", async () => {
