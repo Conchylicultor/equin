@@ -20970,6 +20970,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PG_DIR`
           - `PG_LOG_FILE`
           - `PG_PORT`
+          - `PG_SERVICE_NAME`
           - `PG_SOCKET_DIR`
           - `PG_USER`
           - `pgPostmasterPidFile`
@@ -20984,10 +20985,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PG_BASE_DATABASE`
           - `PG_DATA_DIR`
           - `PG_DIR`
+          - `PG_LEGACY_LOG_FILE`
           - `PG_LOG_FILE`
           - `PG_MAJOR`
           - `PG_PID_FILE`
           - `PG_PORT`
+          - `PG_SERVICE_NAME`
           - `PG_SOCKET_DIR`
           - `PG_USER`
           - `pgPostmasterPidFile`
@@ -21258,6 +21261,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `PGBOUNCER_LOG_FILE`
           - `PGBOUNCER_PORT`
+          - `PGBOUNCER_SERVICE_NAME`
           - `PGBOUNCER_SOCKET_DIR`
           - `pgbouncerConfigFiles`
           - `pgbouncerPidFileUnder`
@@ -21284,9 +21288,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Shared:
         - Exports (values):
           - `PGBOUNCER_CONFIG_FILE`
+          - `PGBOUNCER_LEGACY_LOG_FILE`
           - `PGBOUNCER_LOG_FILE`
           - `PGBOUNCER_PID_FILE`
           - `PGBOUNCER_PORT`
+          - `PGBOUNCER_SERVICE_NAME`
           - `PGBOUNCER_SOCKET_DIR`
           - `PGBOUNCER_USERLIST_FILE`
           - `pgbouncerPidFileUnder`
@@ -32298,10 +32304,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/admin.ensureDatabase`
           - `database/admin.getAdminPool`
           - `database/embedded.PG_PORT`
+          - `database/embedded.PG_SERVICE_NAME`
           - `database/embedded.PG_SOCKET_DIR`
           - `database/embedded.PG_USER`
           - `database/embedded.pgPostmasterPidFile`
           - `database/pgbouncer.PGBOUNCER_PORT`
+          - `database/pgbouncer.PGBOUNCER_SERVICE_NAME`
           - `database/pgbouncer.PGBOUNCER_SOCKET_DIR`
           - `database/pgbouncer.pgbouncerPidFileUnder`
           - `infra/asset-mirror/bundle.seedAssetMirrorCache`
@@ -32463,6 +32471,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `GatewayDriftSchema`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
+        - **`gateway-logs`** — The gateway's log directory (logs/gateway: its slog sink, each namespace's channel, each supervised service's channel under services/) with the bound every channel rotates at, and the service log relay's contract: the --log-fd flag a service's start command receives its relay fd by (serviceLogTarget), and the one-shot move of a daemon's pre-relay log file into its channel's rotation (adoptLegacyLog). A leaf importing only infra/paths and host-fs/user-path, so the database plugins the launcher boots can import it without a cycle.
+          - Core:
+            - Exports (types): `ServiceLogTarget`
+            - Exports (values):
+              - `SERVICE_LOG_FD_FLAG`
+              - `serviceLogTarget`
         - **`login-services`** — Per-user login services, generalized from the gateway's: a LoginService over a LoginServiceSpec (label, argv, cwd, env, stdio log, session background | graphical), rendered as a launchd LaunchAgent on macOS (graphical → LimitLoadToSessionType=Aqua) or a systemd user unit on Linux (graphical → graphical-session.target, no lingering); defineLoginService and the collected login-services/ registry, so ./equin start / stop bring every declared service up and down without naming one. On main's boot, every declared service a start registered follows main: reloaded when main's build of its dependency changed its job (rewritten only, when stopped), the dependency requested through deps first when it is not built yet. On macOS every service (the gateway too) runs from ONE app bundle, equin.app (bundle id dev.equin, signed with the machine's identity, at a stable path under state/macos-app): installServiceExecutable copies a component's build in and swaps the re-signed bundle in whole, so every permission prompt, System Settings row and tccutil reset names one app, equin.
           - Core:
             - Uses:
@@ -32769,6 +32783,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataDirSpec`
           - `DataRootLayout`
           - `LegacyMove`
+          - `LogBound`
+          - `LogClaim`
           - `MigrationStep`
           - `MovedFrom`
           - `ReclaimPolicy`
@@ -32800,10 +32816,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isRelease`
           - `LEGACY_LAYOUT`
           - `listWorktreeDirs`
+          - `LOG_FILE_RE`
+          - `logPatternMatches`
           - `planMigration`
           - `PLUGINS_DIR`
           - `pruneWorktreeCheckArtifacts`
           - `pruneWorktreeTestArtifacts`
+          - `publishedLogClaim`
           - `readCheckoutOwner`
           - `readHomeDataRootLayout`
           - `relativeToDataRoot`

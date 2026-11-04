@@ -68,6 +68,7 @@ Worktree backends read connection params from `~/.equin/state/db-config/database
     - `PG_DIR`
     - `PG_LOG_FILE`
     - `PG_PORT`
+    - `PG_SERVICE_NAME`
     - `PG_SOCKET_DIR`
     - `PG_USER`
     - `pgPostmasterPidFile`
@@ -82,10 +83,12 @@ Worktree backends read connection params from `~/.equin/state/db-config/database
     - `PG_BASE_DATABASE`
     - `PG_DATA_DIR`
     - `PG_DIR`
+    - `PG_LEGACY_LOG_FILE`
     - `PG_LOG_FILE`
     - `PG_MAJOR`
     - `PG_PID_FILE`
     - `PG_PORT`
+    - `PG_SERVICE_NAME`
     - `PG_SOCKET_DIR`
     - `PG_USER`
     - `pgPostmasterPidFile`
