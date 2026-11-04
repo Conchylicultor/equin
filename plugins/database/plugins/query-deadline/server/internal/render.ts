@@ -1,6 +1,7 @@
 import type { ReportRow } from "@plugins/reports/server";
 import { PG_LOG_FILE } from "@plugins/database/plugins/embedded/server";
 import { PGBOUNCER_LOG_FILE } from "@plugins/database/plugins/pgbouncer/server";
+import { DB_POOLS_THROUGH_PGBOUNCER } from "@plugins/database/plugins/connection/core";
 import {
   DB_ABANDON_CAP_KIND,
   DB_QUERY_DEADLINE_KIND,
@@ -77,16 +78,16 @@ export function queryDeadlineMessage(d: DbQueryDeadlinePayload): string {
 }
 
 /**
- * The log that saw the other end of this pool's socket. Only the app pool goes
- * through pgbouncer; every other pool dials Postgres's own socket directly, so
- * its client-side EOFs are in Postgres's log, not pgbouncer's.
+ * The log that saw the other end of this pool's socket. Only the app's lane
+ * pools go through pgbouncer; every other pool dials Postgres's own socket
+ * directly, so its client-side EOFs are in Postgres's log, not pgbouncer's.
  */
 function serverLogFor(d: DbQueryDeadlinePayload): {
   file: string;
   signature: string;
   leak: string;
 } {
-  return d.pool === "app"
+  return DB_POOLS_THROUGH_PGBOUNCER.has(d.pool)
     ? {
         file: PGBOUNCER_LOG_FILE,
         signature: "`client unexpected eof`",

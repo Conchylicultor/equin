@@ -6,9 +6,10 @@ export {
   PGBOUNCER_LOG_FILE,
   pgbouncerPidFileUnder,
 } from "../shared";
+export { pgbouncerConfigFiles } from "./internal/config";
 
 export default {
   description:
-    "PgBouncer connection pooler for the embedded Postgres cluster. Provides path constants for connection routing.",
+    "PgBouncer connection pooler for the embedded Postgres cluster: path constants for connection routing, and this machine's config rendered from the lane table (one server pool per connection lane).",
   loadBearing: true,
 } satisfies ServerPluginDefinition;

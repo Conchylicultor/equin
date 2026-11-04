@@ -51,6 +51,7 @@ Worktree backends read connection params from `~/.equin/state/db-config/database
 - Load-bearing: yes
 - Cross-plugin:
   - Imported by:
+    - `database/pgbouncer`
     - `database/query-deadline`
     - `debug/sentinel`
     - `infra/launcher`
@@ -58,6 +59,7 @@ Worktree backends read connection params from `~/.equin/state/db-config/database
   - Exempts itself from: `boundaries/no-platform-api` — `shared/internal/paths.ts` (debt)
 - Server:
   - Exports (values):
+    - `MAX_CONNECTIONS`
     - `PG_DATA_DIR`
     - `PG_DIR`
     - `PG_LOG_FILE`

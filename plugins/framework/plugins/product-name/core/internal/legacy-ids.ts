@@ -107,10 +107,7 @@ export const LEGACY_ID_NOTES: Readonly<Record<LegacyIdKey, LegacyIdNote>> = {
   },
   pgUser: {
     kept: "the role every worktree database is owned by",
-    mirrors: [
-      "plugins/database/plugins/pgbouncer/scripts/start.ts",
-      "sidequests/clean-install/steps.sh",
-    ],
+    mirrors: ["sidequests/clean-install/steps.sh"],
   },
   pgBaseDatabase: {
     kept: "the cluster's existing base database",

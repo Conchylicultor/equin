@@ -129,7 +129,7 @@ pool and standalone client is built by `createDbPool` / `createDbClient`, whose
 `pg.Client` subclass bounds `connect()` and `query()` on the connection itself.
 Each connection is named from a closed list (`app`, `jobs-runner`,
 `jobs-enqueue`, `jobs-schema`, `job-lock`, `admin`, `admin-short-lived`,
-`fork-lease`, `change-feed`, `events-test`), and every expiry names its pool and phase. The
+`fork-lease`, `change-feed`, `events-test`, `app-background`, …), and every expiry names its pool and phase. The
 connection plugin's `CLAUDE.md` lists which code builds each one. Whole-database
 DDL on the admin pool (`CREATE` / `DROP` / `RENAME DATABASE`) runs under a 10 min
 bound (`database/admin`'s `runDatabaseDdl`).
@@ -175,9 +175,10 @@ thundering herd hits warm connections instead of paying establishment cost.
 node-postgres `min` does **not** pre-connect, so this explicit step is required.
 **Serving backends only**: `DatabaseDriver.ready({ warm })` takes the decision
 as a required option, and the barrier passes `getBootMode() === "serve"`. An
-`exec` child (a supervised job's body) serves nobody, and warming 16
-connections per child is what ran pgbouncer out of `max_client_conn` when a
-launch storm booted twenty children at once (2026-10-28).
+`exec` child (a supervised job's body) serves nobody, and warming a full pool
+per child (then 16 connections) is what ran pgbouncer out of `max_client_conn`
+when a launch storm booted twenty children at once (2026-10-28). A serving
+backend warms both lane pools (8 + 10).
 
 `isTransientDbError` — what `awaitDbReady` waits out — includes a connect
 refused because the database is full (`database/connection`'s
@@ -203,6 +204,39 @@ load from a cascade recompute — and queued the human behind hundreds of them.
 `runInBackgroundLane(fn)` overrides the walk for work that is background whatever
 triggered it (the observability writes; job cleanup).
 
+### Each lane is its own pool, down to PgBouncer
+
+The lane is not only a gate: each lane has its **own app `pg.Pool` and its own
+PgBouncer server pool**. PgBouncer pools by (database, user), so the background
+lane logs in as its own role, `<cluster user>_background` (`laneUser`), whose
+sessions run as the cluster user (`ALTER ROLE … SET role`) — same ownership and
+privileges — while `pg_stat_activity.usename` names the lane. The lane table
+(`PGBOUNCER_LANES` in `database/pgbouncer/core`: per-database `pool_size`,
+cluster-wide `max_user_connections`) sizes both the PgBouncer pools and the app
+pools (`INTERACTIVE_POOL_SIZE` = 8 → pool `app`, `BACKGROUND_POOL_SIZE` = 10 →
+pool `app-background`), so the two cannot disagree. drizzle is built over the
+interactive pool; `installQueryWrapper(front, background)` routes a
+background-origin statement or transaction to the background pool.
+
+Why: a connection lost to a deadline is abandoned and keeps its PgBouncer server
+slot while it sits idle in a transaction. On 2026-11-03, 16 of them took the one
+shared pool and `/home` hung. Now background trouble can exhaust only the
+background pool — loudly, its calls missing their deadline on `app-background` —
+and the interactive pool is never shared with it. Isolation, not headroom:
+`research/2026-11-04-global-pgbouncer-pool-per-lane.md`.
+
+`ready()` makes the lane exist before anything uses it. In the **host
+singleton** only (`isHostSingleton()`: main in dev, the one backend of a
+release) — these are machine-wide, and a worktree's code must never rewrite
+them: the background role (created on the interactive pool under an advisory
+lock, only when missing) and the PgBouncer config (`convergePgbouncerConfig`:
+rewritten and `SIGHUP`-reloaded only when it differs — the gateway re-runs
+PgBouncer's start script only at its own start). Then, in every serving backend,
+a background login, which fails the boot naming the lane if PgBouncer refuses
+it after a short wait for a pending reload (the host singleton re-sends the
+reload once on a refusal). Without PgBouncer (a system Postgres) both lanes dial the cluster
+directly as its user.
+
 Two gates, both on `createSemaphore`, both read synchronously before any await:
 
 - **`backgroundQueryGate`** (`BACKGROUND_QUERY_MAX = 7`) — every background-origin
@@ -212,31 +246,34 @@ Two gates, both on `createSemaphore`, both read synchronously before any await:
 - **`backgroundTxGate`** (`BACKGROUND_TX_MAX = 3`) — a **lease**, not a scope, over
   `pool.connect()`: taken when the client is handed out, freed when
   `client.release()` is called. This is the path `db.transaction()` takes, which
-  until now bypassed both the wrapper *and* the reservation — inflated background
-  transactions ate all 16 connections including the reserved 6. Wait charged as
+  once bypassed both the wrapper *and* the reservation — inflated background
+  transactions ate every connection of the then-shared pool. Wait charged as
   `background-tx-acquire`.
 
-Interactive and context-less work runs **ungated**, so boot can never deadlock on a
-gate and a human always finds a connection. Interactive demand is already bounded
-upstream by `readLoadGate` (`READ_LOAD_CONCURRENCY = 6`) and the per-route endpoint
+Interactive and context-less work runs **ungated** on the interactive pool, so
+boot can never deadlock on a gate. Interactive demand is bounded upstream by
+`readLoadGate` (`READ_LOAD_CONCURRENCY = 6`) and the per-route endpoint
 concurrency gates.
 
 ### The lane-capacity invariant is a deadlock proof
 
 ```
-BACKGROUND_TX_MAX + BACKGROUND_QUERY_MAX ≤ POOL_MAX − RESERVED_INTERACTIVE
-        3         +          7           ≤    16    −         6
+BACKGROUND_TX_MAX + BACKGROUND_QUERY_MAX ≤ BACKGROUND_POOL_SIZE  (= PgBouncer's background pool_size)
+        3         +          7           ≤         10
 ```
 
 A background transaction pins a connection for its whole life and may `await` a
 plain `pool.query` inside its callback. Under **one** shared background gate, N
 transactions each holding a slot while awaiting a slot for their inner query
 deadlock the lane permanently. Under **two**, the wait-for graph is acyclic by
-construction — `bg-tx → bg-query → pool connection → {interactive, boot}` — and
+construction — `bg-tx → bg-query → background pool connection` — and
 the terminal holders always complete: bg-tx holders pin ≤3 connections and
-bg-query holders ≤7, so ≥`RESERVED_INTERACTIVE` connections always remain free for
-the query holders to finish and release the slots the transactions wait on. The
-inequality is asserted at module load, not left in prose. **Never raise either cap
+bg-query holders ≤7, so every query holder finds a background connection — in the
+app pool and in PgBouncer, the same number — to finish and release the slots the
+transactions wait on. The inequality is asserted at module load, not left in
+prose. (An abandoned connection keeps its PgBouncer slot and shrinks the lane;
+that is the abandon rule's flaw, task 2 of the 2026-11-04 vision, and it wedges
+the background lane only.) **Never raise either cap
 without re-checking it.**
 
 The proof also needs background transaction leases **never to nest**: a holder of
@@ -370,6 +407,8 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `readTag`
     - `schemaChangedAtBoot`
     - `snapshotWatermark`
+- Machine:
+  - Uses: `database/pgbouncer.convergePgbouncerConfig`
 - Core:
   - Uses: `packages/timed-fs.readFileSync`
   - Exports (types):
@@ -412,6 +451,9 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
 - Test helpers:
   - Server: `@plugins/database/server/testing`
     - `snapshotWatermark`
+  - Machine: `@plugins/database/machine/testing`
+    - `createLanePools` — Build both lane pools for one database, the wrapper installed.
+    - Types: `LanePools`
 - Sub-plugins:
   - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
   - **`client-tools`** — Postgres client tools (pg_dump, pg_restore) built from the same release as the embedded server: pgClientBin resolves the vendored binary, never the PATH.
@@ -423,9 +465,10 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
   - **`embedded`** — Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.
   - **`fork`** — Durable, self-healing worktree DB fork: a graphile job that forks the base DB per worktree (idempotent, atomic), plus a scheduled sweep of orphaned temp forks.
   - **`fork-point`** — Reads when this database was forked from another (databaseForkedAt): the instant the fork stamped on it, or null for a database never forked.
+  - **`lane-isolation`** — The end-to-end proof that the app's connection lanes are isolated all the way down to PgBouncer: with every background server slot of a throwaway database held idle in a transaction (the 2026-11-03…
   - **`lock-watch`** — Database lock watch: a per-worktree job that looks at pg_stat_activity + pg_blocking_pids once a minute (Postgres has no change signal for lock waits), on a direct connection that a saturated…
   - **`migrations`** — DDL lifecycle: migration runner and SQL files.
-  - **`pgbouncer`** — PgBouncer connection pooler for the embedded Postgres cluster. Provides path constants for connection routing.
+  - **`pgbouncer`** — PgBouncer connection pooler for the embedded Postgres cluster: path constants for connection routing, and this machine's config rendered from the lane table (one server pool per connection lane).
   - **`pglite`** (excluded) — The PGlite database driver: provides the DatabaseDriver host service with Postgres compiled to WASM, in memory, for a host without the computer's Postgres cluster (the browser composition, the…
   - **`query`** — MCP tool for agents to query worktree databases for debugging and inspection.
   - **`query-deadline`** — Query-deadline presence: the health report's Database row (attention while a database call on any pool got no reply in the last 10 minutes, naming the latest's pool and caller, read from the…

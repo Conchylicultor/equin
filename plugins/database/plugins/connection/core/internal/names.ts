@@ -6,8 +6,10 @@
 
 /** Every backend connection's name, in no particular order. */
 export const DB_POOL_NAMES = [
-  /** The app pool behind `db` (through pgbouncer). */
+  /** The app pool behind `db` (through pgbouncer): the interactive lane, and context-less work (boot, migrations). */
   "app",
+  /** The app's background-lane pool (through pgbouncer, as the background lane's own login role and server pool). */
+  "app-background",
   /** graphile-worker's job-running pool. */
   "jobs-runner",
   /** graphile-worker's `WorkerUtils` pool (`addJob` and friends). */
@@ -42,6 +44,16 @@ export const DB_POOL_NAMES = [
 ] as const;
 
 export type DbPoolName = (typeof DB_POOL_NAMES)[number];
+
+/**
+ * The pools that reach Postgres through pgbouncer — the app's two lanes. Every
+ * other pool dials Postgres's own socket, so the other end of its socket (and
+ * of a stray close) is in Postgres's log, not pgbouncer's.
+ */
+export const DB_POOLS_THROUGH_PGBOUNCER: ReadonlySet<DbPoolName> = new Set([
+  "app",
+  "app-background",
+]);
 
 /**
  * The two calls a deadline bounds: opening a connection (`connect`) and a

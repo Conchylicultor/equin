@@ -25,6 +25,8 @@ import { mintTestDbName } from "../../core/internal/scratch-name";
 // `database.test-db-sweep` job (db-test-fixture/plugins/sweep) reclaims what a
 // dead process left behind. See `../../core/internal/scratch-name.ts`.
 export interface TestDb {
+  /** The throwaway database's name, for a suite that builds its own pools on it. */
+  name: string;
   db: NodePgDatabase;
   /**
    * Raw libpq connection string to THIS test database, for suites that open their
@@ -77,6 +79,7 @@ export async function createTestDb(
   );
 
   return {
+    name,
     db,
     connectionString,
     async drop() {

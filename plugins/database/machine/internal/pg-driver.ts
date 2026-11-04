@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import type { Pool, PoolClient } from "pg";
 import {
@@ -30,7 +31,14 @@ import {
   withQueryDeadline,
 } from "@plugins/database/plugins/connection/server";
 import { tagSqlWithOrigin } from "@plugins/database/plugins/connection/core";
+import {
+  laneUser,
+  PGBOUNCER_LANES,
+  type PgbouncerLane,
+} from "@plugins/database/plugins/pgbouncer/core";
+import { convergePgbouncerConfig } from "@plugins/database/plugins/pgbouncer/machine";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
+import { isHostSingleton } from "@plugins/infra/plugins/paths/core";
 import {
   isTransientDbError,
   type DatabaseDriverImpl,
@@ -60,26 +68,40 @@ const direct = {
   port: Number(process.env.PGPORT ?? config.connection.port),
   user: process.env.PGUSER ?? config.connection.user,
 };
-const conn = config.pgbouncer
-  ? {
-      host: config.pgbouncer.host,
-      port: config.pgbouncer.port,
-      user: config.connection.user,
-    }
-  : direct;
+// The app's two connection LANES, each its own pool all the way down: an app
+// `pg.Pool` per lane, and behind it a PgBouncer server pool per lane — the lane
+// logs in as its own role (`laneUser`), and PgBouncer pools by (database, user).
+// Background trouble (a leak, a lock chain) can therefore exhaust only the
+// background pool; the interactive one, which `/home` and every human's request
+// use, is never shared with it. Without PgBouncer (a plain system Postgres) both
+// lanes dial the cluster directly as its user: there is no shared server pool to
+// split. See research/2026-11-04-global-pgbouncer-pool-per-lane.md.
+const viaPgbouncer = config.pgbouncer !== undefined;
 
-export const POOL_MAX = 16;
+function laneConnection(lane: PgbouncerLane) {
+  return config.pgbouncer
+    ? {
+        host: config.pgbouncer.host,
+        port: config.pgbouncer.port,
+        user: laneUser(config.connection.user, lane),
+      }
+    : direct;
+}
+
+// Each app pool is exactly its lane's PgBouncer `pool_size`: read from the one
+// lane table, so the app can never hold more connections than PgBouncer serves
+// the lane (they would only queue in PgBouncer, invisible to the gates below).
+export const INTERACTIVE_POOL_SIZE = PGBOUNCER_LANES.interactive.poolSize;
+export const BACKGROUND_POOL_SIZE = PGBOUNCER_LANES.background.poolSize;
 
 // The concurrency gates, at the only place the scarce resource is consumed.
 //
-// Of the pool's `max` connections, RESERVED_INTERACTIVE are always kept free for
-// interactive work; the rest is the ceiling for background work. The partition
-// is by ORIGIN CLASS — the lane of the outermost entry that triggered the query
-// (`currentOriginClass()`), not the kind of the innermost one. Inside a resource
-// load the innermost kind is `loader` regardless of *why* the load runs, so a
-// caller-kind gate cannot tell a human's cold sub-ack load from a cascade
-// recompute and queues the human behind hundreds of machine recomputes. Origin
-// class can. See research/2026-07-09-global-interactive-lane-under-load.md.
+// The lane is the ORIGIN CLASS — the lane of the outermost entry that triggered
+// the query (`currentOriginClass()`), not the kind of the innermost one. Inside
+// a resource load the innermost kind is `loader` regardless of *why* the load
+// runs, so a caller-kind gate cannot tell a human's cold sub-ack load from a
+// cascade recompute and queues the human behind hundreds of machine recomputes.
+// Origin class can. See research/2026-07-09-global-interactive-lane-under-load.md.
 //
 // Gating at the query (rather than around whole loader bodies) means an
 // in-memory loader that issues no query never waits, and a query holds a slot
@@ -90,40 +112,43 @@ export const POOL_MAX = 16;
 //
 // TWO background gates, not one, and the split is a deadlock proof rather than a
 // tuning knob. A background transaction (`pool.connect()` → `client.query`, the
-// path drizzle's `db.transaction()` takes) holds a pool connection for its whole
-// life and may `await` a plain `pool.query` inside its callback. Under ONE shared
-// background gate, N transactions each holding a slot while awaiting a slot for
-// their inner query deadlock the background lane permanently — the classic
-// hold-and-wait cycle. Under two, the wait-for graph is acyclic by construction:
+// path drizzle's `db.transaction()` takes) holds a background connection for its
+// whole life and may `await` a plain `pool.query` inside its callback. Under ONE
+// shared background gate, N transactions each holding a slot while awaiting a
+// slot for their inner query deadlock the background lane permanently — the
+// classic hold-and-wait cycle. Under two, the wait-for graph is acyclic by
+// construction:
 //
-//     bg-tx → bg-query → pool connection → {interactive, boot}
+//     bg-tx → bg-query → background pool connection
 //
 // and the terminal holders always complete. Concretely: bg-tx holders pin at most
 // BACKGROUND_TX_MAX connections and bg-query holders at most BACKGROUND_QUERY_MAX,
 // so as long as
 //
-//     BACKGROUND_TX_MAX + BACKGROUND_QUERY_MAX ≤ POOL_MAX − RESERVED_INTERACTIVE
+//     BACKGROUND_TX_MAX + BACKGROUND_QUERY_MAX ≤ BACKGROUND_POOL_SIZE
 //
-// at least RESERVED_INTERACTIVE connections always remain free — the bg-query
-// holders can therefore always finish and release the slots the transactions are
-// waiting on, and no cycle can close. That inequality IS the proof, so it is
-// asserted below at module load rather than left in prose.
+// every bg-query holder finds a connection — in the app pool and, since the two
+// are the same number, in PgBouncer's background pool — so it can always finish
+// and release the slots the transactions wait on, and no cycle can close. That
+// inequality IS the proof, so it is asserted below at module load rather than
+// left in prose. (It assumes the lane's PgBouncer slots are the app's to use: an
+// ABANDONED connection keeps its server slot, shrinking the lane until the
+// abandon is fixed — research/2026-11-04-global-db-connection-failure-vision.md,
+// task 2. Then the background lane wedges loudly, its calls missing their
+// deadline on pool `app-background`, and the interactive pool is untouched.)
 // Exported for co-located unit testing: the deadlock proof is an arithmetic
-// relation between these four, so the test asserts the relation rather than
-// re-deriving the numbers.
-export const RESERVED_INTERACTIVE = 6;
-const BACKGROUND_MAX = POOL_MAX - RESERVED_INTERACTIVE;
+// relation, so the test asserts the relation rather than re-deriving numbers.
 export const BACKGROUND_TX_MAX = 3;
-export const BACKGROUND_QUERY_MAX = BACKGROUND_MAX - BACKGROUND_TX_MAX;
+export const BACKGROUND_QUERY_MAX = BACKGROUND_POOL_SIZE - BACKGROUND_TX_MAX;
 
 if (
-  BACKGROUND_TX_MAX + BACKGROUND_QUERY_MAX >
-  POOL_MAX - RESERVED_INTERACTIVE
+  BACKGROUND_QUERY_MAX < 1 ||
+  BACKGROUND_TX_MAX + BACKGROUND_QUERY_MAX > BACKGROUND_POOL_SIZE
 ) {
   throw new Error(
     `DB lane invariant violated: BACKGROUND_TX_MAX (${BACKGROUND_TX_MAX}) + ` +
-      `BACKGROUND_QUERY_MAX (${BACKGROUND_QUERY_MAX}) exceeds POOL_MAX (${POOL_MAX}) - ` +
-      `RESERVED_INTERACTIVE (${RESERVED_INTERACTIVE}). The background lane can deadlock: ` +
+      `BACKGROUND_QUERY_MAX (${BACKGROUND_QUERY_MAX}) must fit BACKGROUND_POOL_SIZE ` +
+      `(${BACKGROUND_POOL_SIZE}), with at least one query slot. The background lane can deadlock: ` +
       `a transaction holding a connection can wait forever for a query slot that never frees.`,
   );
 }
@@ -226,9 +251,10 @@ function describeAcquirer(site: string): string {
 // Occupancy gauges for the flight recorder's gate snapshot: layer names join to
 // the corresponding `chargeWait` layers in span `waits`. `background-acquire` is
 // the background query gate and `background-tx-acquire` the background
-// transaction gate; `db-pool` is the gauge for the `db-acquire` wait layer —
-// occupancy of the raw pg pool (held connections + queued checkouts), not either
-// gate. pg.Pool's totalCount/idleCount/waitingCount are free property reads.
+// transaction gate; `db-pool` / `db-pool-background` are the gauges for the
+// `db-acquire` wait layer — occupancy of each lane's raw pg pool (held
+// connections + queued checkouts), not either gate. pg.Pool's
+// totalCount/idleCount/waitingCount are free property reads.
 //
 // `background-acquire` is the former `loader-acquire`, renamed with the gate's
 // semantics: the gate no longer means "a loader is querying" — jobs, flush's own
@@ -237,15 +263,20 @@ function describeAcquirer(site: string): string {
 // every trace lie about who is queueing.
 registerGateGauge("background-acquire", () => backgroundQueryGate.stats());
 registerGateGauge("background-tx-acquire", () => backgroundTxGate.stats());
-registerGateGauge("db-pool", () => {
-  const p = poolSingleton;
-  if (!p) return { active: 0, queued: 0, max: POOL_MAX };
+function poolGauge(p: Pool | undefined, max: number) {
+  if (!p) return { active: 0, queued: 0, max };
   return {
     active: p.totalCount - p.idleCount,
     queued: p.waitingCount,
-    max: POOL_MAX,
+    max,
   };
-});
+}
+registerGateGauge("db-pool", () =>
+  poolGauge(poolsSingleton?.front, INTERACTIVE_POOL_SIZE),
+);
+registerGateGauge("db-pool-background", () =>
+  poolGauge(poolsSingleton?.background, BACKGROUND_POOL_SIZE),
+);
 
 // Postgres deadlock-victim (40P01) and serialization-failure (40001) are, by
 // definition, retryable: the conflicting statement was rolled back whole and
@@ -277,16 +308,20 @@ function retryableSqlState(err: unknown): string | null {
 // `[acquire]` spans, read-set capture — plus the one piece of lease bookkeeping
 // that must end with a lost connection: the background-transaction gate slot.
 
-// Install the timing/gating wrapper onto a freshly-built pool's `query` and
-// `connect`. Called exactly once, from `pool()`, so the wrapper is bound to the
-// same pool instance `db` and `awaitDbReady`/`warmPool` use. See the block
-// comment on each concern. Exported for co-located unit testing: the invariants
-// it enforces (lane partition, tx lease accounting) are testable against a fake
-// `pg.Pool`-shaped object, with no database; the lost-connection path against a
-// real `DbClient` with a short `deadlineMs`.
-export function installQueryWrapper(pool: Pool): void {
+// Install the timing/gating wrapper onto the FRONT pool's `query` and
+// `connect` — the interactive lane's pool, the one genuine `pg.Pool` drizzle is
+// built over (`db.transaction()` needs `instanceof Pool`). A background-origin
+// call is routed to the `background` pool's connections; every other call
+// (interactive, and context-less boot work) stays on the front's. Called exactly
+// once, from `lanePools()`. See the block comment on each concern. Exported for
+// co-located unit testing: the invariants it enforces (lane routing, lane
+// partition, tx lease accounting) are testable against fake `pg.Pool`-shaped
+// objects, with no database; the lost-connection path against a real `DbClient`
+// with a short `deadlineMs`.
+export function installQueryWrapper(pool: Pool, background: Pool): void {
   const origQuery = pool.query.bind(pool);
   const origConnect = pool.connect.bind(pool);
+  const backgroundConnect = background.connect.bind(background);
 
   // Time every query that flows through pool.query (all drizzle ORM queries).
   // The promise form is reimplemented to split the two phases that node-postgres
@@ -318,14 +353,18 @@ export function installQueryWrapper(pool: Pool): void {
     if (typeof last === "function") return origQuery(...a); // callback form, untimed + ungated
 
     const text = queryText(a[0]);
+    // The lane, read synchronously while the caller's ambient context is
+    // current: it picks both the gate (below) and the pool the statement runs on.
+    const inBackground = currentOriginClass() === "background";
+    const laneConnect = inBackground ? backgroundConnect : origConnect;
 
     const runOnce = async () => {
       const acq0 = performance.now();
-      // `origConnect`, so this checkout takes no transaction lease and applies
-      // no read-set patch. A client still carrying one from an earlier
+      // The lane's raw connect, so this checkout takes no transaction lease and
+      // applies no read-set patch. A client still carrying one from an earlier
       // transaction checkout records its tables twice here; a read-set is a
       // Set, so the repeat costs nothing.
-      const client = await origConnect();
+      const client = await laneConnect();
       const acqMs = performance.now() - acq0;
       // The leaf "[acquire]" span keeps rate visibility; the chargeWait ALSO
       // lands the same duration in the enclosing entry's waits ("db-acquire"
@@ -401,7 +440,7 @@ export function installQueryWrapper(pool: Pool): void {
     // would only re-serialize the lane we are trying to keep free.
     // Context-less work (boot, migrations, `warmPool`, the change-feed listener)
     // has no ambient entry and stays UNGATED, so boot can never deadlock on a gate.
-    if (currentOriginClass() === "background") {
+    if (inBackground) {
       return backgroundQueryGate.run(runRetrying, {
         onWait: (waitMs) => chargeWait("background-acquire", waitMs, "queue"),
       });
@@ -424,9 +463,11 @@ export function installQueryWrapper(pool: Pool): void {
   //
   // The gate is a LEASE, not a scope: the slot is taken when the client is handed
   // out and freed when the caller releases it, because that is exactly the window
-  // in which the connection is pinned. `origConnect` was captured above, before
-  // this override, and `runOnce` calls it — so a query-path checkout is charged to
-  // the query gate only and is never double-gated here.
+  // in which the connection is pinned. `origConnect` / `backgroundConnect` were
+  // captured above, before this override, and `runOnce` calls them — so a
+  // query-path checkout is charged to the query gate only and is never
+  // double-gated here. A background transaction checks out of the BACKGROUND
+  // pool: the lane split holds for transactions as it does for statements.
   //
   // Every query on the checked-out client is bounded by the client itself; a lost
   // one abandons it, and the lease's slot is freed with it (`armLease`).
@@ -438,9 +479,9 @@ export function installQueryWrapper(pool: Pool): void {
 
     // Read the lane synchronously, before any await, while the ambient entry
     // context is still the caller's. Interactive checkouts (HTTP mutations) and
-    // context-less ones (`awaitDbReady`, `warmPool`) take no gate: the former are
-    // allowed the reserved floor, and the latter must never be able to wait on a
-    // gate at boot. Both still get read-set capture — a loader that reads inside
+    // context-less ones (`awaitDbReady`, `warmPool`) take no gate and run on the
+    // interactive pool: the former have that pool to themselves, and the latter
+    // must never be able to wait on a gate at boot. Both still get read-set capture — a loader that reads inside
     // a transaction has a read-set whichever lane it runs in.
     if (currentOriginClass() !== "background") {
       return origConnect().then(wrapClientQueryForReadSet);
@@ -465,7 +506,7 @@ export function installQueryWrapper(pool: Pool): void {
       });
       let client: PoolClient;
       try {
-        client = await origConnect();
+        client = await backgroundConnect();
       } catch (err) {
         // The checkout failed, so nothing will ever call `release()` on a client
         // we never got. Hand the slot back before rethrowing, or the gate leaks a
@@ -610,25 +651,57 @@ function armLease(client: PoolClient, releaseSlot: () => void): PoolClient {
   return client;
 }
 
-// Lazily-constructed singleton pool. Importing this module never builds a pool or
-// asks for this process's namespace; the worktree name is required only when the
-// first real query/connection is issued (`pool()` → `runtimeNamespace()`). node-postgres
-// pools connect lazily, so building the pool opens no connection either — the warm
-// step in `warmPool()` does that explicitly at boot.
-let poolSingleton: Pool | null = null;
+/** The app's two lane pools: `front` (interactive, and what drizzle is built over) and `background`. */
+export interface LanePools {
+  readonly front: Pool;
+  readonly background: Pool;
+}
 
-function pool(): Pool {
-  if (poolSingleton) return poolSingleton;
-  const p = createDbPool({
+/**
+ * Build both lane pools for one database, the wrapper installed. Exported for
+ * the lane-isolation test, which runs it against a throwaway database.
+ */
+export function createLanePools(database: string): LanePools {
+  const front = createDbPool({
     name: "app",
-    connectionString: buildConnectionString(conn, runtimeNamespace()),
-    max: POOL_MAX,
+    connectionString: buildConnectionString(
+      laneConnection("interactive"),
+      database,
+    ),
+    max: INTERACTIVE_POOL_SIZE,
     idleTimeoutMillis: 20_000,
   });
-  p.on("connect", tagClientQueriesWithOrigin);
-  installQueryWrapper(p);
-  poolSingleton = p;
-  return p;
+  const background = createDbPool({
+    name: "app-background",
+    connectionString: buildConnectionString(
+      laneConnection("background"),
+      database,
+    ),
+    max: BACKGROUND_POOL_SIZE,
+    idleTimeoutMillis: 20_000,
+  });
+  // Every connection of either lane tags its statements with their origin.
+  front.on("connect", tagClientQueriesWithOrigin);
+  background.on("connect", tagClientQueriesWithOrigin);
+  installQueryWrapper(front, background);
+  return { front, background };
+}
+
+// Lazily-constructed singleton pools. Importing this module never builds a pool
+// or asks for this process's namespace; the worktree name is required only when
+// the first real query/connection is issued (`lanePools()` →
+// `runtimeNamespace()`). node-postgres pools connect lazily, so building the
+// pools opens no connection either — the warm step in `warmPool()` does that
+// explicitly at boot.
+let poolsSingleton: LanePools | null = null;
+
+function lanePools(): LanePools {
+  poolsSingleton ??= createLanePools(runtimeNamespace());
+  return poolsSingleton;
+}
+
+function pool(): Pool {
+  return lanePools().front;
 }
 
 // Lazily-built real drizzle instance over the real per-worktree pool, so that:
@@ -690,19 +763,25 @@ async function awaitDbReady(): Promise<void> {
   return readyPromise;
 }
 
-// Eagerly open and validate connections up to the pool's `max` so the first
-// real-query wave (the onReady thundering herd + the frontend's first loaders)
-// hits live connections instead of paying connection-establishment cost. The
-// SELECT 1 on each forces pgbouncer to attach a backend now, not on the first
-// user query. node-postgres `min` does NOT pre-connect — it only avoids
-// destroying idle connections — so this explicit warm step is required. Called
-// from the database plugin's onReadyBlocking (`ready({ warm: true })`), after
-// awaitDbReady() and before migrations — in a SERVING backend only: an `exec`
-// child passes `warm: false`, since a full pool per short-lived child is what
-// ran pgbouncer out of client connections when many launched at once. awaitDbReady() leaves 1 connection idle, so we
-// only open the remainder; self-healing if `max` is small (e.g. 1 in tests).
+// Eagerly open and validate connections up to each lane pool's `max` so the
+// first real-query wave (the onReady thundering herd + the frontend's first
+// loaders, and the cascade behind them) hits live connections instead of paying
+// connection-establishment cost. The SELECT 1 on each forces pgbouncer to attach
+// a backend now, not on the first user query. node-postgres `min` does NOT
+// pre-connect — it only avoids destroying idle connections — so this explicit
+// warm step is required. Called from the database plugin's onReadyBlocking
+// (`ready({ warm: true })`), after awaitDbReady() and before migrations — in a
+// SERVING backend only: an `exec` child passes `warm: false`, since a full pool
+// per short-lived child is what ran pgbouncer out of client connections when
+// many launched at once. awaitDbReady() leaves 1 connection idle in each pool,
+// so we only open the remainder; self-healing if `max` is small (e.g. 1 in
+// tests). Each pool's raw connect: warming is context-less and takes no gate.
 async function warmPool(): Promise<void> {
-  const p = pool();
+  const { front, background } = lanePools();
+  await Promise.all([warmOne(front), warmOne(background)]);
+}
+
+async function warmOne(p: Pool): Promise<void> {
   const target = p.options.max ?? 5;
   const need = target - p.idleCount;
   if (need <= 0) return;
@@ -713,9 +792,123 @@ async function warmPool(): Promise<void> {
   for (const c of clients) c.release();
 }
 
+// The background lane's login role, made to exist. It is a cluster-wide object
+// the app owns (PgBouncer only names it), so the driver creates it at boot, on
+// the interactive pool, before anything logs in as it. LOGIN and a member of the
+// cluster user, with `role` defaulted to the cluster user: every background
+// session runs as `current_user = <cluster user>` — the same ownership and
+// privileges as the interactive lane — while its `session_user`, what
+// `pg_stat_activity.usename` shows, names the lane.
+//
+// Run by the host singleton only (see `ready`), so its one concurrent twin is
+// its own hot-swap successor, on the same database — which is what makes a
+// per-database advisory lock enough to serialize them. Each step runs only when
+// missing, so a boot against a converged cluster writes nothing.
+const LANE_ROLE_LOCK_KEY = "equin.database.lane-roles";
+const PG_IDENTIFIER = /^[a-z_][a-z0-9_]*$/;
+
+async function ensureBackgroundRole(): Promise<void> {
+  const base = config.connection.user;
+  const role = laneUser(base, "background");
+  for (const name of [base, role]) {
+    if (!PG_IDENTIFIER.test(name)) {
+      throw new Error(
+        `[database] lane role ${JSON.stringify(name)} is not a plain Postgres identifier`,
+      );
+    }
+  }
+  await realDb().transaction(async (tx) => {
+    await tx.execute(
+      sql`SELECT pg_advisory_xact_lock(hashtext(${LANE_ROLE_LOCK_KEY}))`,
+    );
+    await tx.execute(
+      sql.raw(`DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${role}') THEN
+    CREATE ROLE "${role}" LOGIN;
+  END IF;
+  IF NOT pg_has_role('${role}', '${base}', 'MEMBER') THEN
+    GRANT "${base}" TO "${role}";
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_db_role_setting s JOIN pg_roles r ON r.oid = s.setrole
+    WHERE r.rolname = '${role}' AND s.setdatabase = 0 AND 'role=${base}' = ANY (s.setconfig)
+  ) THEN
+    ALTER ROLE "${role}" SET role = '${base}';
+  END IF;
+END $$`),
+    );
+  });
+}
+
+// PgBouncer applies a reload (SIGHUP) on its own event loop, a moment after the
+// signal, and the config may have been converged by another boot that signalled
+// it — so a refused background login is waited on, briefly, before it is the
+// boot's error.
+const PGBOUNCER_RELOAD_WAIT_MS = 5_000;
+
+// What PgBouncer 1.25 answers a login whose user is not in its loaded userlist
+// (`auth_type = trust`), measured: SQLSTATE 08P01, `"trust" authentication failed`.
+function isPgbouncerUnknownUser(err: unknown): boolean {
+  const { code, message } = (err ?? {}) as {
+    code?: unknown;
+    message?: unknown;
+  };
+  return (
+    code === "08P01" &&
+    typeof message === "string" &&
+    message.includes("authentication failed")
+  );
+}
+
+// The background lane's first login: through its own PgBouncer pool as its own
+// role. A lane that cannot log in fails the boot here, naming itself, instead of
+// at the first background statement. `mayReload`: this backend owns PgBouncer's
+// config (the host singleton), so on a refusal it re-sends the reload once — a
+// daemon that missed it (the files were written, the signal never sent) stays on
+// its old config however often the files are compared.
+async function awaitBackgroundLane(mayReload: boolean): Promise<void> {
+  const { background } = lanePools();
+  const user = laneUser(config.connection.user, "background");
+  let lastErr: unknown = null;
+  let reloadSent = false;
+  await retryUntil(
+    async () => {
+      try {
+        const client = await background.connect();
+        try {
+          await client.query("SELECT 1");
+          return true;
+        } finally {
+          client.release();
+        }
+      } catch (err) {
+        if (!(viaPgbouncer && isPgbouncerUnknownUser(err))) throw err;
+        lastErr = err;
+        if (mayReload && !reloadSent) {
+          reloadSent = true;
+          await convergePgbouncerConfig({ reload: "always" });
+        }
+        return null;
+      }
+    },
+    {
+      delay: exponential({ initial: 50, max: 500 }),
+      deadline: PGBOUNCER_RELOAD_WAIT_MS,
+      onDeadline: () => {
+        throw new Error(
+          `[database] the background lane's role (${user}) cannot log in through PgBouncer: ` +
+            `PgBouncer's loaded config does not list it. The host's main backend converges ` +
+            `PgBouncer onto the lane table at its boot (database/pgbouncer#machine).`,
+          { cause: lastErr },
+        );
+      },
+    },
+  );
+}
+
 /**
- * The desktop's database driver: the per-worktree pool above, behind the lane
- * gates, the deadlock retry and read-set capture, every connection bounded by
+ * The desktop's database driver: the per-worktree lane pools above, behind the
+ * lane gates, the deadlock retry and read-set capture, every connection bounded by
  * the query deadline (`database/plugins/connection`).
  */
 // The direct socket, like `listen`'s: a session-held lock.
@@ -728,6 +921,21 @@ export const pgDriver: DatabaseDriverImpl = {
   db: realDb,
   async ready({ warm }) {
     await awaitDbReady();
+    // `warm` is true exactly in a serving backend (an exec child passes false).
+    // The background lane's own PgBouncer pool needs its role in Postgres and
+    // its user in PgBouncer's config. Both are machine-wide, so only the host
+    // singleton (main in dev, the one backend of a release) makes them so — a
+    // no-op once they are; it has to happen at a backend boot because the
+    // gateway re-runs PgBouncer's start script only when the gateway itself
+    // starts. A worktree's code never rewrites the machine's PgBouncer config.
+    const ownsLaneSetup = viaPgbouncer && warm && isHostSingleton();
+    if (ownsLaneSetup) {
+      await ensureBackgroundRole();
+      await convergePgbouncerConfig({ reload: "if-changed" });
+    }
+    // Every serving backend checks its background lane logs in; an exec child
+    // meets a broken lane at its first background statement, just as loudly.
+    if (warm) await awaitBackgroundLane(ownsLaneSetup);
     if (warm) await warmPool();
   },
   // Boot DDL can wait minutes on the previous backend's locks during a

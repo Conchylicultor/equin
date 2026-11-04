@@ -179,7 +179,8 @@ runtimes read, not a slot:
 
 | name | connection | built in |
 | --- | --- | --- |
-| `app` | the app pool behind `db` (through pgbouncer) | `database/server` `client.ts` |
+| `app` | the app's interactive-lane pool behind `db` (through pgbouncer); also boot and other context-less work | `database#machine` `pg-driver.ts` |
+| `app-background` | the app's background-lane pool (through pgbouncer, as the background role, its own server pool) | `database#machine` `pg-driver.ts` |
 | `jobs-runner` | graphile-worker's job-running pool, shared by the three runners | `infra/jobs` `worker.ts` |
 | `jobs-enqueue` | graphile-worker's `WorkerUtils` pool (`addJob`), handed over as `pgPool` | `infra/jobs` `worker.ts` |
 | `jobs-schema` | the boot-time job-queue schema installer (boot-DDL bound) | `infra/jobs` `queue-schema.ts` |
@@ -301,6 +302,7 @@ deadline sees it go silent. That needs a heartbeat.
   - Exports (values):
     - `DB_CALL_PHASES`
     - `DB_POOL_NAMES`
+    - `DB_POOLS_THROUGH_PGBOUNCER`
     - `DB_TX_STATES`
     - `IN_FLIGHT_REPORT_MAX`
     - `isConnectionCapacityRefusal`

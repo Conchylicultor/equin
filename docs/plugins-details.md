@@ -20584,6 +20584,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `readTag`
       - `schemaChangedAtBoot`
       - `snapshotWatermark`
+  - Machine:
+    - Uses: `database/pgbouncer.convergePgbouncerConfig`
   - Core:
     - Uses: `packages/timed-fs.readFileSync`
     - Exports (types):
@@ -20626,6 +20628,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Test helpers:
     - Server: `@plugins/database/server/testing`
       - `snapshotWatermark`
+    - Machine: `@plugins/database/machine/testing`
+      - `createLanePools` — Build both lane pools for one database, the wrapper installed.
+      - Types: `LanePools`
   - Plugins:
     - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
       - Server:
@@ -20757,6 +20762,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `DB_CALL_PHASES`
           - `DB_POOL_NAMES`
+          - `DB_POOLS_THROUGH_PGBOUNCER`
           - `DB_TX_STATES`
           - `IN_FLIGHT_REPORT_MAX`
           - `isConnectionCapacityRefusal`
@@ -20910,6 +20916,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`embedded`** — Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.
       - Cross-plugin:
         - Imported by:
+          - `database/pgbouncer`
           - `database/query-deadline`
           - `debug/sentinel`
           - `infra/launcher`
@@ -20917,6 +20924,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `boundaries/no-platform-api` — `shared/internal/paths.ts` (debt)
       - Server:
         - Exports (values):
+          - `MAX_CONNECTIONS`
           - `PG_DATA_DIR`
           - `PG_DIR`
           - `PG_LOG_FILE`
@@ -20981,6 +20989,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by: `conversations`
       - Core:
         - Exports (values): `FORKED_AT_SETTING`
+    - **`lane-isolation`** — The end-to-end proof that the app's connection lanes are isolated all the way down to PgBouncer: with every background server slot of a throwaway database held idle in a transaction (the 2026-11-03 shape), interactive queries still answer. Test only — a child of database so it can use the throwaway-database fixture, which itself depends on database.
     - **`lock-watch`** — Database lock watch: a per-worktree job that looks at pg_stat_activity + pg_blocking_pids once a minute (Postgres has no change signal for lock waits), on a direct connection that a saturated pgbouncer cannot starve, and names every session holding others back or idle inside a transaction past 60 s by the origin its statement's comment carries — a db-lock-holder report (one row per origin) and the db-lock-watch push value behind the health report's Database row. It never ends a session.
       - Server:
         - Contributes:
@@ -21178,19 +21187,38 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `snapshotLineage`
           - Cross-plugin:
             - Imported by: `database/migrations`
-    - **`pgbouncer`** — PgBouncer connection pooler for the embedded Postgres cluster. Provides path constants for connection routing.
-      - Cross-plugin:
-        - Imported by:
-          - `database/query-deadline`
-          - `infra/launcher`
-      - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `shared/internal/paths.ts` (debt)
+    - **`pgbouncer`** — PgBouncer connection pooler for the embedded Postgres cluster: path constants for connection routing, and this machine's config rendered from the lane table (one server pool per connection lane).
       - Server:
+        - Uses:
+          - `database/embedded.MAX_CONNECTIONS`
+          - `database/embedded.PG_PORT`
+          - `database/embedded.PG_USER`
         - Exports (values):
           - `PGBOUNCER_LOG_FILE`
           - `PGBOUNCER_PORT`
           - `PGBOUNCER_SOCKET_DIR`
+          - `pgbouncerConfigFiles`
           - `pgbouncerPidFileUnder`
+      - Cross-plugin:
+        - Imported by:
+          - `database`
+          - `database/query-deadline`
+          - `infra/launcher`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `shared/internal/paths.ts` (debt)
+      - Machine:
+        - Exports (types): `PgbouncerConvergence`
+        - Exports (values): `convergePgbouncerConfig`
+      - Core:
+        - Exports (types):
+          - `PgbouncerConfigFiles`
+          - `PgbouncerConfigInputs`
+          - `PgbouncerLane`
+          - `PgbouncerLaneSpec`
+        - Exports (values):
+          - `laneUser`
+          - `PGBOUNCER_LANES`
+          - `renderPgbouncerConfig`
       - Shared:
         - Exports (values):
           - `PGBOUNCER_CONFIG_FILE`

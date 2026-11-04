@@ -4,6 +4,7 @@ export {
   DB_TX_STATES,
   IN_FLIGHT_REPORT_MAX,
   isInTransaction,
+  DB_POOLS_THROUGH_PGBOUNCER,
   type DbPoolName,
   type DbCallPhase,
   type DbTxState,

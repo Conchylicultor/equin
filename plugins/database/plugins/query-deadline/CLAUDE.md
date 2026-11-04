@@ -12,7 +12,8 @@ report, ring hit and row message carries that name:
 
 | pool | what it is | reaches Postgres through | log to read |
 | --- | --- | --- | --- |
-| `app` | the pool behind `db` | pgbouncer | `PGBOUNCER_LOG_FILE` |
+| `app` | the interactive lane's pool behind `db` | pgbouncer | `PGBOUNCER_LOG_FILE` |
+| `app-background` | the background lane's pool behind `db` | pgbouncer | `PGBOUNCER_LOG_FILE` |
 | `jobs-runner` | graphile-worker's job-running pool | the direct socket | `PG_LOG_FILE` |
 | `jobs-enqueue` | graphile-worker's `WorkerUtils` pool (`addJob`) | the direct socket | `PG_LOG_FILE` |
 | `jobs-schema` | the boot-time job-queue schema installer | the direct socket | `PG_LOG_FILE` |
@@ -22,8 +23,8 @@ report, ring hit and row message carries that name:
 | `change-feed` | the change-feed LISTEN client | the direct socket | `PG_LOG_FILE` |
 
 The investigation task points at the log in the last column: a stray close
-shows up at the other end of the socket, and only the app pool's other end is
-pgbouncer. Both paths are imported as constants (`database/pgbouncer`,
+shows up at the other end of the socket, and only the app's lane pools have
+pgbouncer at the other end (`DB_POOLS_THROUGH_PGBOUNCER`). Both paths are imported as constants (`database/pgbouncer`,
 `database/embedded`), never spelled.
 
 Each call is in one of two phases: `connect` (opening the connection; its label

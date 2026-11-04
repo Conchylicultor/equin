@@ -21,10 +21,9 @@ import { getReadSetIndex } from "@plugins/framework/plugins/server-core/core/tes
 import {
   BACKGROUND_QUERY_MAX,
   BACKGROUND_TX_MAX,
+  BACKGROUND_POOL_SIZE,
   installQueryWrapper,
   NestedBackgroundTxLeaseError,
-  POOL_MAX,
-  RESERVED_INTERACTIVE,
   tagClientQueriesWithOrigin,
   withTxLeaseScope,
 } from "./pg-driver";
@@ -86,24 +85,27 @@ function unconnectedClient(
 }
 
 /**
- * A `pg.Pool`-shaped object whose queries block until the test releases them.
- * `installQueryWrapper` binds `query`/`connect` off this object *before*
- * overriding them, so the wrapper's internal `origConnect` reaches the fake the
- * same way it reaches the real pool.
+ * The two lane pools as `pg.Pool`-shaped objects whose queries block until the
+ * test releases them. `installQueryWrapper` binds `query`/`connect` off the
+ * front *before* overriding them (and `connect` off the background), so the
+ * wrapper's internal connects reach the fakes the same way they reach the real
+ * pools. Every checkout is counted per lane pool.
  */
 function createFakePool() {
   const blocked: Deferred[] = [];
   let queriesInFlight = 0;
   let peakQueriesInFlight = 0;
   let clientReleases = 0;
+  const checkouts = { front: 0, background: 0 };
 
-  const fake = {
+  const fakeLanePool = (lane: keyof typeof checkouts) => ({
     // Only the callback form ever reaches `origQuery`; the promise form is
     // reimplemented by the wrapper on top of `connect` + `client.query`.
     query: () => {
       throw new Error("promise-form pool.query must not reach origQuery");
     },
     connect: (): Promise<PoolClient> => {
+      checkouts[lane]++;
       const client = unconnectedClient();
       client.query = async () => {
         queriesInFlight++;
@@ -120,10 +122,10 @@ function createFakePool() {
       };
       return Promise.resolve(client as unknown as PoolClient);
     },
-  };
+  });
 
-  const pool = fake as unknown as Pool;
-  installQueryWrapper(pool);
+  const pool = fakeLanePool("front") as unknown as Pool;
+  installQueryWrapper(pool, fakeLanePool("background") as unknown as Pool);
 
   return {
     pool,
@@ -134,6 +136,8 @@ function createFakePool() {
     peakQueriesInFlight: () => peakQueriesInFlight,
     blockedCount: () => blocked.length,
     clientReleases: () => clientReleases,
+    /** Checkouts so far, per lane pool. */
+    checkouts: () => ({ ...checkouts }),
   };
 }
 
@@ -183,16 +187,45 @@ describe("lane capacity invariant", () => {
   // connection may wait forever for a query slot that can never free. The
   // module-load assertion in pg-driver.ts is the production guard; this names the
   // property it guards.
-  it("keeps background holders under the pool minus the interactive floor", () => {
-    expect(BACKGROUND_TX_MAX + BACKGROUND_QUERY_MAX).toBe(
-      POOL_MAX - RESERVED_INTERACTIVE,
-    );
+  it("keeps background holders within the background pool", () => {
+    expect(BACKGROUND_TX_MAX + BACKGROUND_QUERY_MAX).toBe(BACKGROUND_POOL_SIZE);
   });
 
   it("exposes an occupancy gauge sized to each background gate's cap", () => {
     const gauges = readGateGauges();
     expect(gauges["background-acquire"]?.max).toBe(BACKGROUND_QUERY_MAX);
     expect(gauges["background-tx-acquire"]?.max).toBe(BACKGROUND_TX_MAX);
+  });
+});
+
+describe("lane routing", () => {
+  it("runs a background-origin statement and transaction on the background pool", async () => {
+    const fake = createFakePool();
+    const query = recordEntrySpan("job", "some.job", () =>
+      fake.pool.query("select 1"),
+    );
+    const client = await recordEntrySpan("job", "some.job", () =>
+      fake.pool.connect(),
+    );
+    await settle();
+    expect(fake.checkouts()).toEqual({ front: 0, background: 2 });
+    fake.releaseAll();
+    await query;
+    client.release();
+  });
+
+  it("runs interactive and context-less work on the front pool", async () => {
+    const fake = createFakePool();
+    const work = [
+      interactiveLoader(() => fake.pool.query("select 1")),
+      recordEntrySpan("http", "POST /x", () => fake.pool.connect()),
+      fake.pool.query("select 1"),
+      fake.pool.connect(),
+    ];
+    await settle();
+    expect(fake.checkouts()).toEqual({ front: 4, background: 0 });
+    fake.releaseAll();
+    await Promise.all(work);
   });
 });
 
@@ -431,7 +464,8 @@ describe("pool.connect transaction lease (Gap B)", () => {
       },
       connect: () => Promise.resolve(lostClient as unknown as PoolClient),
     } as unknown as Pool;
-    installQueryWrapper(fake);
+    // The same fake as both lanes: these exercise the background checkout.
+    installQueryWrapper(fake, fake);
 
     const client = await recordEntrySpan("job", "j", () => fake.connect());
     expect(txGauge().active).toBe(1);
@@ -463,7 +497,8 @@ describe("pool.connect transaction lease (Gap B)", () => {
       },
       connect: () => Promise.reject(boom),
     } as unknown as Pool;
-    installQueryWrapper(fake);
+    // The same fake as both lanes: these exercise the background checkout.
+    installQueryWrapper(fake, fake);
 
     let caught: unknown;
     try {

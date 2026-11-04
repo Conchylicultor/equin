@@ -1,6 +1,7 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
 export {
+  MAX_CONNECTIONS,
   PG_DATA_DIR,
   PG_DIR,
   PG_LOG_FILE,
