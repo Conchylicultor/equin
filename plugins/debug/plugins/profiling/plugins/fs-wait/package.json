@@ -2,5 +2,5 @@
   "name": "@equin/plugin-debug-profiling-fs-wait",
   "private": true,
   "version": "0.0.1",
-  "description": "Writes down every slow file call (packages/timed-fs: a read, listing, stat or glob scan past its floor) of a backend, an exec child or a CLI run (build, check, test) as one line of the fs-wait log channel of its namespace, with the process, the wait layer, the call, its target and the profiler entry it ran under — one record, the same shape wherever a disk stall lands."
+  "description": "Writes down every slow file call (packages/timed-fs: a read, listing, stat or glob scan past its floor) of a backend or a CLI run (build, check, test, supervised-exec) as one line of the fs-wait log channel of its namespace, with the process, the wait layer, the call, its target and the profiler entry it ran under — one record, the same shape wherever a disk stall lands."
 }

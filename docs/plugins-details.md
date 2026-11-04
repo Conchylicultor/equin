@@ -22714,7 +22714,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape --radius`
             - Imported by: `debug/profiling/ops`
         - **`cold-start`** — Cold-start benchmark: stops the worktree's server, loads a page in a fresh browser and splits page request → first screen with data across the gateway, the server's boot phases and the browser's boot trace.
-        - **`fs-wait`** — Records a backend's and an exec child's slow file calls to their namespace's fs-wait log channel from the register phase on; recordFsWaits does the same for a CLI run.
+        - **`fs-wait`** — recordFsWaits: a process root (the backend's bin, the CLI's bin) writes its slow file calls to its namespace's fs-wait log channel under one name per process.
           - Server:
             - Uses:
               - `primitives/log-channels/log-files.logEnvelope`

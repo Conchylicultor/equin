@@ -6,10 +6,12 @@ or glob scan past `FS_WAIT_FLOOR_MS`). Each one becomes a line of the
 `~/.equin/worktrees/<ns>/logs/fs-wait.jsonl`, in the log-channel envelope,
 so Debug → Logs reads it.
 
-- **Who writes.** A backend and an exec child write from their register
-  phase on (`fsWaitRegistration`, labelled `backend` / `exec`). Every CLI
-  run writes from its start (`recordFsWaits` in `framework/cli/bin/cli.ts`,
-  labelled `cli <verb>`) into its checkout's namespace. Every process uses
+- **Who writes.** Each process root names itself, once: the backend's
+  `server-core/bin/index.ts` (`backend`) and the CLI's
+  `framework/cli/bin/cli.ts` (`cli <verb>`, into its checkout's namespace).
+  An `exec` boot (`runExec`) always runs inside a CLI process
+  (`supervised-exec`, …) and is recorded under that verb; the plugin graph
+  never names the process, so no process can get two names. Every process uses
   the same line shape, so lining the files up shows whether the stalls at
   boot, in a live read and in a build had one cause or several.
 - **The lines** (`FsWaitLineSchema`): overlapping slow calls are one **episode** — a `call` line for its first call, written as it returns, and an `episode` summary (calls, layers, slowest, `maxConcurrent`) when it closes; a `call` carries `at` (wall ms), `process`, `pid`,
@@ -27,7 +29,7 @@ the cross-process record.
 
 ## Plugin reference
 
-- Description: Records a backend's and an exec child's slow file calls to their namespace's fs-wait log channel from the register phase on; recordFsWaits does the same for a CLI run.
+- Description: recordFsWaits: a process root (the backend's bin, the CLI's bin) writes its slow file calls to its namespace's fs-wait log channel under one name per process.
 - Server:
   - Uses:
     - `primitives/log-channels/log-files.logEnvelope`

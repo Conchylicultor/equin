@@ -41,7 +41,9 @@ import {
 import {
   isMain,
   readServingSocket,
+  runtimeNamespace,
 } from "@plugins/infra/plugins/runtime-identity/core";
+import { recordFsWaits } from "@plugins/debug/plugins/profiling/plugins/fs-wait/server";
 import { createRequestHandler } from "@plugins/framework/plugins/http-router/core";
 import {
   channelFileSink,
@@ -52,6 +54,13 @@ import {
   hostGateFromArgv,
   type HostGate,
 } from "@plugins/framework/plugins/principal/core";
+
+// ── Slow file calls (fs-wait) ───────────────────────────────────
+// A process root names its own fs-wait record, once: this one is a serving
+// backend. The CLI root (`framework/cli/bin/cli.ts`) does the same for every
+// `./equin <verb>`, which is also where an `exec` boot (`runExec`) runs — so
+// the plugin graph never names the process, and no process gets two names.
+recordFsWaits({ process: "backend", namespace: runtimeNamespace() });
 
 // ── QoS boost (main backend only) ───────────────────────────────
 // Raise the event-loop thread to user-interactive QoS BEFORE any boot work, so
