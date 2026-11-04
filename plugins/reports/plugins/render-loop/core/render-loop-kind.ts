@@ -24,7 +24,9 @@ export const RENDER_LOOP = {
   MIN_VALUE_REPEAT: 3,
   // bounded `nth-of-type` path depth from the node up to the marker anchor.
   PATH_MAX_DEPTH: 4,
-  // Hard cap on the serialized signature string length.
+  // Hard cap on the serialized signature string length. An over-long signature
+  // keeps whole head/tail segments and folds the elided middle into a hash of
+  // the whole (web/internal/cap-signature.ts), so the cap never merges two nodes.
   SIGNATURE_CAP: 256,
   // Drop a per-signature counter once it's been idle longer than this (GC).
   GC_IDLE_MS: 5000,

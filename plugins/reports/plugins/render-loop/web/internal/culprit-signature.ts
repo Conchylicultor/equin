@@ -5,6 +5,7 @@ import {
 } from "@plugins/primitives/plugins/ui-context/web";
 
 import { RENDER_LOOP } from "../../core";
+import { capSignature } from "./cap-signature";
 
 /**
  * The stable build/composition markers that survive a React teardown→rebuild
@@ -135,10 +136,7 @@ export function culpritMeta(node: Node): CulpritMeta {
     paneId ? `pane:${paneId}` : "",
     path,
   ];
-  let signature = parts.join(" | ");
-  if (signature.length > RENDER_LOOP.SIGNATURE_CAP) {
-    signature = signature.slice(0, RENDER_LOOP.SIGNATURE_CAP);
-  }
+  const signature = capSignature(parts.join(" | "), RENDER_LOOP.SIGNATURE_CAP);
 
   // The aggregate root drops all per-node variance, keeping only the coarse
   // container identity so a whole subtree shares one rollup key. Prefer the pane
