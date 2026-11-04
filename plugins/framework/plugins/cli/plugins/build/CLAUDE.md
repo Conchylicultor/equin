@@ -46,9 +46,14 @@ and compares after the last one (the formatter). Every generated file on main
 was already checked in sync by the push that landed it, so a difference means
 main read an input no worktree had: a stray untracked file, typically. The build
 **fails**, names every path it changed and every untracked suspect, and restores
-the paths that were clean before the build and are generated artifacts by
-`.gitattributes` (`merge=regen-*`). Anything else stays as it is, untracked
-files included. Left dirty, main's checkout made every push's `git merge
+to HEAD every tracked path that was clean before the build (modified or deleted
+— `planRestore`, a pure function of the snapshot diff), generated or
+hand-authored alike: it matched HEAD when the build started, so no edit can be
+lost. Paths dirty before the build stay as they are; untracked files are never
+removed (they are the evidence). Restoring only `merge=regen-*` artifacts was not
+enough: 2026-11-04 a main build raced a push's fast-forward, codegen read a mixed
+tree and re-stamped 135 hand-authored `config/` overrides, which stayed dirty and
+failed every later main build. Left dirty, main's checkout made every push's `git merge
 --ff-only` abort (2026-10-17;
 [`research/2026-10-17-global-main-checkout-read-only-build.md`](../../../../../../research/2026-10-17-global-main-checkout-read-only-build.md)).
 

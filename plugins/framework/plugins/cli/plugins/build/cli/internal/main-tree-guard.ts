@@ -17,12 +17,17 @@
 //
 // So a main build snapshots the tree before its first writer and compares after
 // its last one (the formatter). A difference FAILS the build, naming every path
-// and every untracked suspect — and restores what is safe to restore, so the
-// failure stays this build's and never becomes every pusher's. Safe means: clean
-// before this build (no one's edit is lost) AND a generated artifact by
-// `.gitattributes` (a pure function of committed sources, so HEAD's bytes are
-// the right ones). Anything else is reported and left alone. Untracked files are
-// never removed: they are the evidence.
+// and every untracked suspect — and restores every tracked path this build
+// dirtied, so the failure stays this build's and never becomes every pusher's.
+// Restorable means: clean before this build (it matched HEAD when the build
+// started, so no one's edit can be lost) and present in HEAD (a modified or
+// deleted tracked file, which `git checkout HEAD --` puts back). Whether the file
+// is generated does not matter: 2026-11-04 a main build raced a push's
+// fast-forward, codegen read a mixed tree, and seedAuthoredOverrides rewrote 135
+// hand-authored `config/` overrides — restoring only `merge=regen-*` paths left
+// them dirty and failed every later main build. Paths dirty before the build are
+// reported and left alone; untracked files are never removed: they are the
+// evidence.
 //
 // A snapshot pair rather than a write-mode switch on every generator: one check
 // after all writers catches every one of them, including ones not written yet.
@@ -131,30 +136,55 @@ export async function snapshotTree(root: string): Promise<TreeSnapshot> {
   return snapshot;
 }
 
+/** Why a written path was left as it is rather than restored to HEAD. */
+export type KeptReason =
+  /** Dirty before this build: restoring could lose someone's edit. */
+  | "dirty-before"
+  /** No HEAD version to return to (untracked, added, renamed or copied to), or unmerged. */
+  | "not-restorable";
+
+export interface RestorePlan {
+  /** Clean before the build and present in HEAD: `git checkout HEAD --` them. */
+  restore: TreeDrift["written"];
+  kept: Array<TreeDrift["written"][number] & { reason: KeptReason }>;
+}
+
 /**
- * The subset of `paths` `.gitattributes` routes to a generated-artifact merge
- * driver (`merge=regen-*`) — the files a build derives from committed sources,
- * whose HEAD bytes are therefore exactly what main should hold.
+ * Porcelain codes of a path that exists in HEAD and differs from it only by
+ * modification, deletion or type change, in the index or the worktree — what
+ * `git checkout HEAD -- <path>` returns to HEAD's bytes, index included.
+ * Anything else (`??`, `A`, `R`, `C`, unmerged) names a path HEAD lacks or a
+ * merge in progress.
  */
-async function generatedPaths(
-  root: string,
-  paths: readonly string[],
-): Promise<Set<string>> {
-  if (paths.length === 0) return new Set();
-  const out = await git(root, ["check-attr", "-z", "merge", "--", ...paths]);
-  // `-z` output: path NUL attr NUL value NUL, repeated.
-  const fields = out.split("\0");
-  const generated = new Set<string>();
-  for (let i = 0; i + 2 < fields.length; i += 3) {
-    if (fields[i + 2]!.startsWith("regen-")) generated.add(fields[i]!);
+const RESTORABLE_SIDE = new Set([" ", "M", "D", "T"]);
+function inHeadAndRestorable(status: string): boolean {
+  return (
+    status !== "  " &&
+    RESTORABLE_SIDE.has(status[0]!) &&
+    RESTORABLE_SIDE.has(status[1]!)
+  );
+}
+
+/**
+ * Split the build's writes into what to restore to HEAD and what to leave: a
+ * pure function of the snapshot diff. Every path clean before the build that
+ * HEAD holds is restored, generated or hand-authored alike.
+ */
+export function planRestore(written: TreeDrift["written"]): RestorePlan {
+  const plan: RestorePlan = { restore: [], kept: [] };
+  for (const w of written) {
+    if (!w.wasClean) plan.kept.push({ ...w, reason: "dirty-before" });
+    else if (!inHeadAndRestorable(w.status))
+      plan.kept.push({ ...w, reason: "not-restorable" });
+    else plan.restore.push(w);
   }
-  return generated;
+  return plan;
 }
 
 /**
  * Compare main's tree after the build's last writer against `before`. Returns
- * normally when the build wrote nothing git sees. Otherwise restores the safe
- * subset (see the file comment), prints the full account and exits 1 — the
+ * normally when the build wrote nothing git sees. Otherwise restores every
+ * restorable write (planRestore; see the file comment), prints the full account and exits 1 — the
  * build's exit hooks close its receipt and ledger row as failed, and the backend
  * keeps serving the previous deploy.
  */
@@ -165,21 +195,18 @@ export async function assertMainTreeUntouched(
   const drift = diffSnapshots(before, await snapshotTree(root));
   if (drift.written.length === 0) return;
 
-  const generated = await generatedPaths(
-    root,
-    drift.written.map((w) => w.path),
-  );
-  const restorable = drift.written.filter(
-    (w) => w.wasClean && w.status !== "??" && generated.has(w.path),
-  );
-  const kept = drift.written.filter((w) => !restorable.includes(w));
-  if (restorable.length > 0) {
-    await git(root, [
-      "checkout",
-      "HEAD",
-      "--",
-      ...restorable.map((w) => w.path),
-    ]);
+  const { restore, kept } = planRestore(drift.written);
+  if (restore.length > 0) {
+    await git(root, ["checkout", "HEAD", "--", ...restore.map((w) => w.path)]);
+    // The restore is the guarantee this guard exists for: prove it held.
+    const after = await snapshotTree(root);
+    const stillDirty = restore.filter((w) => after.has(w.path));
+    if (stillDirty.length > 0) {
+      throw new Error(
+        `main-tree guard: git checkout HEAD left ${stillDirty.length} path(s) dirty: ` +
+          stillDirty.map((w) => w.path).join(", "),
+      );
+    }
   }
 
   const lines = [
@@ -188,23 +215,34 @@ export async function assertMainTreeUntouched(
     "Main's checkout is read-only to its own build: every generated file here was",
     "checked in sync by the push that landed it, so a difference means this checkout",
     "read an input no pushing worktree had — usually a stray untracked file left by an",
-    "older build, or one a later .gitignore change stopped ignoring. Left in place, the",
+    "older build, or one a later .gitignore change stopped ignoring — or the tree moved",
+    "under the build (a push fast-forwarding main mid-build). Left in place, the",
     "change would make every push's merge into main abort.",
   ];
-  if (restorable.length > 0) {
+  if (restore.length > 0) {
     lines.push(
       "",
-      "Written by this build, restored to HEAD (generated artifacts):",
+      "Written by this build, restored to HEAD (clean before the build):",
     );
-    for (const w of restorable) lines.push(`  ${w.status} ${w.path}`);
+    for (const w of restore) lines.push(`  ${w.status} ${w.path}`);
   }
-  if (kept.length > 0) {
+  const dirtyBefore = kept.filter((w) => w.reason === "dirty-before");
+  if (dirtyBefore.length > 0) {
     lines.push(
       "",
-      "Written by this build, NOT restored (not a generated artifact, or already",
-      "modified before the build — restoring could lose someone's edit):",
+      "Written by this build, NOT restored (already modified before the build —",
+      "restoring could lose someone's edit):",
     );
-    for (const w of kept) lines.push(`  ${w.status} ${w.path}`);
+    for (const w of dirtyBefore) lines.push(`  ${w.status} ${w.path}`);
+  }
+  const notRestorable = kept.filter((w) => w.reason === "not-restorable");
+  if (notRestorable.length > 0) {
+    lines.push(
+      "",
+      "Written by this build, NOT restored (no HEAD version to return to — new,",
+      "added or renamed — or unmerged; kept as evidence):",
+    );
+    for (const w of notRestorable) lines.push(`  ${w.status} ${w.path}`);
   }
   if (drift.untracked.length > 0) {
     lines.push(

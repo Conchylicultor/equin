@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   diffSnapshots,
   parsePorcelainZ,
+  planRestore,
   type TreeEntry,
 } from "./main-tree-guard";
 
@@ -77,5 +78,59 @@ describe("diffSnapshots", () => {
     expect(drift.untracked).toEqual([
       "plugins/config_v2/web/internal/git-layer.generated.ts",
     ]);
+  });
+});
+
+describe("planRestore", () => {
+  const w = (path: string, status: string, wasClean: boolean) => ({
+    path,
+    status,
+    wasClean,
+  });
+
+  test("a hand-authored (non-regen) file clean before the build is restored", () => {
+    // 2026-11-04: seedAuthoredOverrides re-stamped config overrides on main.
+    const modified = w("config/apps-core/app.jsonc", " M", true);
+    expect(planRestore([modified])).toEqual({ restore: [modified], kept: [] });
+  });
+
+  test("a generated artifact clean before the build is restored", () => {
+    const doc = w("docs/plugins-details.md", " M", true);
+    expect(planRestore([doc]).restore).toEqual([doc]);
+  });
+
+  test("a tracked file the build deleted, staged or not, is restored", () => {
+    const deleted = [
+      w("a.ts", " D", true),
+      w("b.ts", "D ", true),
+      w("c.ts", "MM", true),
+      w("d.ts", " T", true),
+    ];
+    expect(planRestore(deleted)).toEqual({ restore: deleted, kept: [] });
+  });
+
+  test("a path dirty before the build is never restored", () => {
+    const edited = w("config/apps-core/app.jsonc", " M", false);
+    const reverted = w("b.ts", " D", false);
+    expect(planRestore([edited, reverted])).toEqual({
+      restore: [],
+      kept: [
+        { ...edited, reason: "dirty-before" },
+        { ...reverted, reason: "dirty-before" },
+      ],
+    });
+  });
+
+  test("a path with no HEAD version, or unmerged, is kept", () => {
+    const created = [
+      w("new.generated.ts", "??", true),
+      w("staged.ts", "A ", true),
+      w("moved.ts", "R ", true),
+      w("conflict.ts", "UU", true),
+    ];
+    expect(planRestore(created)).toEqual({
+      restore: [],
+      kept: created.map((c) => ({ ...c, reason: "not-restorable" })),
+    });
   });
 });
