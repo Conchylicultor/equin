@@ -726,7 +726,7 @@ export async function openPreparation({
 
     /**
      * A file's typed results under its result key `r`: each part ran (fresh)
-     * or known under that key (reused) — anything else is a part nobody
+     * or known under that key — anything else is a part nobody
      * linted, which the worker's own check should have refused.
      */
     const typedOf = (
@@ -736,7 +736,6 @@ export async function openPreparation({
       res: LintFileResult | undefined,
       known: LintEntry | undefined,
       fresh: Map<string, RawLintMessage[]>,
-      reused: Set<string>,
     ): Record<string, RawLintMessage[]> => {
       const parts = directive ? wholeParts : typedParts;
       const keyed = parts.map((p) => ({
@@ -767,7 +766,6 @@ export async function openPreparation({
             `type-check: ${rel}'s typed part ${group} is stale under its result key and the worker did not lint it`,
           );
         }
-        reused.add(key);
         out[group] = known.messages[key] ?? [];
       }
       return out;
@@ -839,10 +837,9 @@ export async function openPreparation({
         }
       }
       const freshT = new Map<string, RawLintMessage[]>();
-      const reusedT = new Set<string>();
-      const t = typedOf(rel, st.directive, r, res, st.known, freshT, reusedT);
+      const t = typedOf(rel, st.directive, r, res, st.known, freshT);
       tally(st.directive, freshS.size, freshT.size);
-      // Fresh results first, then the keys reused — or, for a text the store
+      // Fresh results first, then the stored keys — or, for a text the store
       // has no entry for, its whole result, so the next run on this text in
       // any tree finds it.
       record(
@@ -863,8 +860,6 @@ export async function openPreparation({
                   t[p.group]!,
                 ]),
               ),
-              reusedSyntactic: new Set(),
-              reusedTyped: new Set(),
               keepSyntactic,
               keepTyped,
             }
@@ -872,8 +867,6 @@ export async function openPreparation({
               directive: st.directive,
               syntactic: freshS,
               typed: freshT,
-              reusedSyntactic: st.reusedSyntactic,
-              reusedTyped: reusedT,
               keepSyntactic,
               keepTyped,
             },
@@ -903,16 +896,13 @@ export async function openPreparation({
       }
       const stored = store.read(rel, b.v);
       const freshT = new Map<string, RawLintMessage[]>();
-      const reusedT = new Set<string>();
       const directive = b.d === 1;
-      const t = typedOf(rel, directive, r, res, stored, freshT, reusedT);
+      const t = typedOf(rel, directive, r, res, stored, freshT);
       tally(directive, 0, freshT.size);
       record(rel, b.v, stored, {
         directive,
         syntactic: new Map(),
         typed: freshT,
-        reusedSyntactic: new Set(),
-        reusedTyped: reusedT,
         keepSyntactic,
         keepTyped,
       });

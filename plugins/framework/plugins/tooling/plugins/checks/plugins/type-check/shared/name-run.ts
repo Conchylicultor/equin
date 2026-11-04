@@ -58,7 +58,6 @@ import { ProbeFs, RecordingResolver, resolutionHolds } from "./name-resolve";
 import {
   coldWriteThrough,
   MAX_VARIANTS,
-  REFRESH_AFTER_MS,
   type FileEntry,
   type NameStore,
   type StoredVariant,
@@ -1115,7 +1114,6 @@ async function walkAndCheck(a: Attempt): Promise<NameRunOutput> {
   const results = new Map<string, NameResult>();
   const keys = new Map<string, string>();
   const states = new Map<string, WalkFileState>();
-  const now = Date.now();
   for (const p of files.keys()) {
     const r = fin.keys.get(p)!;
     keys.set(p, r);
@@ -1176,11 +1174,9 @@ async function walkAndCheck(a: Attempt): Promise<NameRunOutput> {
     }
     const result = storedResult(p, v.r);
     results.set(p, result);
-    // An entry in use is re-written when old, so the age bound means "unused".
-    if (
-      e !== undefined &&
-      (rewrite.has(p) || now - (e.recordedAt ?? 0) > REFRESH_AFTER_MS)
-    ) {
+    // Only a refreshed resolution key changed the entry. One only read is
+    // marked used by the read (a promotion, never a rewrite).
+    if (e !== undefined && rewrite.has(p)) {
       store.writeEntry(p, versions.get(p)!, e);
     }
     const b = baseOf(p);
@@ -1197,7 +1193,7 @@ async function walkAndCheck(a: Attempt): Promise<NameRunOutput> {
         uses: f.uses ?? [],
         reads: fin.reads.get(p)!,
         res:
-          e !== undefined ? e.res : { dirs: b?.pd ?? [], files: b?.pf ?? [] },
+          e !== undefined ? e.res : { probes: b?.pd ?? [], files: b?.pf ?? [] },
         meaning,
       }),
     );
@@ -1316,7 +1312,7 @@ function stateOf(
     star: readonly string[];
     uses: readonly string[];
     reads: readonly string[];
-    res: { dirs: readonly string[]; files: readonly string[] };
+    res: { probes: readonly string[]; files: readonly string[] };
     meaning(key: string): string;
   },
 ): WalkFileState {
@@ -1342,7 +1338,7 @@ function stateOf(
   if (s.star.length > 0) out.x = [...s.star];
   const extra = s.reads.filter((k) => !uses.has(k));
   if (extra.length > 0) out.k = extra;
-  if (s.res.dirs.length > 0) out.pd = [...s.res.dirs];
+  if (s.res.probes.length > 0) out.pd = [...s.res.probes];
   if (s.res.files.length > 0) out.pf = [...s.res.files];
   return out;
 }

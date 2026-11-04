@@ -114,7 +114,7 @@ The rules that follow:
     - `whole` (check/build) discards the attempt and re-checks everything over an empty-read store; `spawnTypeCheckWorker` files a `type-check-divergence` report (kind `prediction`, `server/internal/miss-reports.ts`) + a `PREDICTION MISSED` line. Do not throw there (a failed run records nothing, so every later run would fail alike).
     - backstop, `dual-check` and tests use `throw`.
 - **The store** (`shared/name-store.ts`) is host-wide, content-addressed per file TEXT:
-  - `type-check-name-records` (key H(path, version)): imports, resolution record, global flag, up to four results each under its R.
+  - `type-check-name-records` (key H(path, version)): imports, resolution record, global flag, up to four results each under its R. Written only for a file checked, or whose resolution key moved while its targets did not — never for one only read (the read promotes it).
   - `type-check-contracts`: raw `.d.ts` by hash, program-level diagnostics per global hash.
   - Entries in use are rewritten after 3 days, so the 14-day age bound means "unused".
 - **Every store is a pass set** (`shared/pass-set.ts`): one JSON file per entry, in age generations (`generations/g<N>/`, N = floor(now / (maxAge / generations))).
@@ -122,7 +122,8 @@ The rules that follow:
   - An open lists only `generations/` and drops the generations that left the window whole (renamed aside, then unlinked at most 2000 entries per open): O(1) at any store size. The count backstop reads one write counter per generation.
   - The run and walk bases assert at load that a shard outlives every root that can name it (`assertShardsOutliveRoots`).
   - An edit to `pass-set.ts` moves the global hash (it is in `producerSources()` through `name-store.ts`). See `research/2026-10-27-global-type-check-store-generations.md`.
-- **Resolutions** (`shared/name-resolve.ts`) are keyed on what they PROBED: the view's listing of every consulted repo directory (a missing one counts its nearest existing ancestor) and the version of every repo file read.
+- **Resolutions** (`shared/name-resolve.ts`) are keyed on what they PROBED: each existence question's stem in its directory (`dir/x` answers `x`, `x.ts`, `x.d.ts`, `x/`; in a missing directory, its first missing segment in the nearest existing ancestor) and the version of every repo file read.
+  - **Never key on a whole directory listing.** A file added beside a hub's barrel (a `CLAUDE.md`) re-keyed and rewrote every importer's entry — 1,516 on one `.md`, 5,059 record files in 30 s on 2026-11-04 — and the next worktree on the other listing rewrote them back.
   - A moved target puts the file in program 1.
   - A `node_modules` lookup records nothing (the lockfile's).
 - **Generated registries need nothing special** (no `isolatedDeclarations` requirement): a program holds all its sources at once and a batch never splits a cycle.
@@ -192,7 +193,7 @@ Results are stored per **(file, blob version)** (`shared/lint-results.ts`, `type
   - Null-id messages (parse failures) belong to the syntactic base part.
 - `check/lint-verdict.ts` assembles messages under the CURRENT exemptions: an exemption edit re-lints nothing; an unused file-level exemption is reported.
 - **A file with an eslint directive is one unit** (~4 %): unused-directive detection depends on every rule, so it re-lints whole on any rule or key change.
-- Each entry keeps a few keys per part, most recently USED first, so worktrees on two versions of a hub keep each other's results.
+- Each entry keeps a few keys per part, most recently RECORDED first, so worktrees on two versions of a hub keep each other's results. A reuse never reorders them: a run that only reuses results writes nothing (a most-recently-used order made two worktrees rewrite every entry for each other, run after run).
 - The flat config comes from `buildLintConfig` (`@plugins/framework/plugins/tooling/plugins/lint/core`), the same builder as root `eslint.config.ts`.
 
 What a change costs:

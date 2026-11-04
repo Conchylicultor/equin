@@ -24,14 +24,14 @@
 //            result key R, the chosen result (contract hash, signature,
 //            diagnostics), per name [meaning, text hash, name-use edges], star
 //            targets, uses, every other key its key or its names read, its
-//            resolution's probed directories and read files, its rank and
-//            component;
+//            resolution's probes (`./name-resolve.ts`) and read files, its
+//            rank and component;
 //       `ir` every key OWNED by a file of the shard that some file reads →
 //            [its meaning when the base ended, the readers] — the reverse
 //            read-set, held by the target so "who reads this changed name" is
 //            one shard read;
-//       `id` every directory of the shard some resolution probed → the files
-//            whose resolution probed it;
+//       `id` every probe (`dir/stem`) in a directory of the shard some
+//            resolution made → the files whose resolution made it;
 //       `if` every file of the shard some resolution read (a `package.json`)
 //            → those files.
 //
@@ -107,7 +107,7 @@ export const walkFileSchema = z.object({
   u: z.array(z.string()),
   /** Every other key its result key or its names' meanings read (star recursion, name-use edges). */
   k: z.array(z.string()).optional(),
-  /** Its resolution's probed directories, and read files. */
+  /** Its resolution's probes (`dir/stem`, `./name-resolve.ts`), and read files. */
   pd: z.array(z.string()).optional(),
   pf: z.array(z.string()).optional(),
   /** Its rank: above everything it reads, below everything that reads it (equal within a component). */
@@ -296,9 +296,11 @@ export const emptyWalkShard = (): WalkShard => ({
   if: {},
 });
 
-/** The shard a directory's probe index lives in: the one its files would. */
-export const dirShard = (dir: string): string =>
-  shardOf(dir === "" ? "_" : `${dir}/_`);
+/** The shard a probe's index lives in: the one its directory's files would. */
+export const probeShard = (probe: string): string => {
+  const i = probe.lastIndexOf("/");
+  return shardOf(i < 0 ? "_" : `${probe.slice(0, i)}/_`);
+};
 
 /** The shard a name key's reverse reads live in: its owner's. */
 export const keyShard = (key: string): string => shardOf(splitKey(key)[0]);
@@ -383,9 +385,9 @@ export class WalkBase {
     return (index.get(owner) ?? []).map((k) => [k, ir[k]![0], ir[k]![1]]);
   }
 
-  /** The files whose resolution probed `dir`. */
-  dirReaders(dir: string): readonly string[] {
-    return this.shard(dirShard(dir)).id[dir] ?? [];
+  /** The files whose resolution made `probe`. */
+  probeReaders(probe: string): readonly string[] {
+    return this.shard(probeShard(probe)).id[probe] ?? [];
   }
 
   /** The files whose resolution read `path`. */
@@ -629,7 +631,7 @@ export function writeWalkBase(w: WalkBaseWrite): WalkBaseWritten {
     for (const p of w.removed) {
       const old = base.file(p);
       for (const k of readsOf(old)) dropReader(k, p);
-      indexDiff(old?.pd ?? [], [], dirShard, (s) => s.id, p);
+      indexDiff(old?.pd ?? [], [], probeShard, (s) => s.id, p);
       indexDiff(old?.pf ?? [], [], shardOf, (s) => s.if, p);
       delete at(shardOf(p)).f[p];
     }
@@ -642,7 +644,7 @@ export function writeWalkBase(w: WalkBaseWrite): WalkBaseWritten {
     const now = new Set(readsOf(f));
     for (const k of readsOf(old)) if (!now.has(k)) dropReader(k, p);
     for (const k of now) addReader(k, p, w.meaning(k));
-    indexDiff(old?.pd ?? [], f.pd ?? [], dirShard, (s) => s.id, p);
+    indexDiff(old?.pd ?? [], f.pd ?? [], probeShard, (s) => s.id, p);
     indexDiff(old?.pf ?? [], f.pf ?? [], shardOf, (s) => s.if, p);
   }
   // Every key a walked file owns now means its final meaning (to its fixed

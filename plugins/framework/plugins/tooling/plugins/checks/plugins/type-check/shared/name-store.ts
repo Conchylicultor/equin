@@ -2,7 +2,10 @@
 // content-addressed, one entry per file TEXT — no per-run or per-worktree
 // state. A fresh worktree on a main tree reads the entries main's build wrote;
 // a run writes only the files it checked (and the few whose resolution key it
-// refreshed).
+// refreshed: an entry that can shadow an import appeared or went, and the
+// targets did not move). A valid entry it only read is never rewritten: the
+// read itself marks it used (`./pass-set.ts` promotes it into the current
+// generation, a hard link).
 //
 //   - `type-check-name-records`, key H(path, version — the git blob sha): the
 //     file's imports (text only), its resolution record (`./name-resolve.ts`),
@@ -58,21 +61,17 @@ export const entrySchema = z.object({
   imports: z.array(z.tuple([z.string(), z.number(), z.string()])),
   res: z.object({
     targets: z.array(z.tuple([z.string(), z.number(), z.string()])),
-    dirs: z.array(z.string()),
+    probes: z.array(z.string()),
     files: z.array(z.string()),
     key: z.string(),
   }),
   variants: z.array(variantSchema),
-  recordedAt: z.number().optional(),
 });
 
 export type FileEntry = z.infer<typeof entrySchema>;
 
 /** Variants kept per text: two worktrees on two versions of a hub's API keep both. */
 export const MAX_VARIANTS = 4;
-
-/** An entry older than this is re-written when read valid, so the age bound means "unused". */
-export const REFRESH_AFTER_MS = 3 * 24 * 60 * 60 * 1000;
 
 export interface NameStore {
   readEntry(path: string, version: string): FileEntry | undefined;
@@ -152,8 +151,7 @@ export function openNameStore(): NameStore {
       return raw === undefined ? undefined : entrySchema.parse(raw);
     },
     writeEntry(path, version, entry) {
-      const { recordedAt: _drop, ...rest } = entry;
-      entries.record(entryKey(path, version), rest);
+      entries.record(entryKey(path, version), entry);
     },
     readContract(hash) {
       const hit = memo.get(hash);

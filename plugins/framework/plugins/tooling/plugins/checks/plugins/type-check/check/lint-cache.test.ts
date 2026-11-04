@@ -80,13 +80,10 @@ const update = (
   typed: [string, RawLintMessage[]][] = [],
   keepSyntactic = 3,
   keepTyped = 2,
-  reused: { syntactic?: string[]; typed?: string[] } = {},
 ) => ({
   directive: false,
   syntactic: new Map(syntactic),
   typed: new Map(typed),
-  reusedSyntactic: new Set(reused.syntactic),
-  reusedTyped: new Set(reused.typed),
   keepSyntactic,
   keepTyped,
 });
@@ -186,24 +183,26 @@ test("only directive-carrying text makes a file one unit", () => {
   expect(hasLintDirective("export const eslintConfig = 1;")).toBe(false);
 });
 
-test("a reused key moves up, so it outlives keys nobody uses", () => {
-  // t1 is in use (reused every run) while a sibling writes t2, then t3.
+test("a reused key keeps its place: a run that only reuses writes nothing", () => {
+  // t1 is in use (reused every run) while a sibling writes t2: two worktrees on
+  // two rule sets. Reusing t1 behind t2 changes nothing, so neither rewrites
+  // the entry for the other's order.
   const e1 = mergeLintEntry(undefined, update([], [["t1", [msg("x/typed")]]]));
   const e2 = mergeLintEntry(e1, update([], [["t2", []]]));
   expect(e2.typed).toEqual(["t2", "t1"]);
-  const e3 = mergeLintEntry(e2, update([], [], 3, 2, { typed: ["t1"] }));
-  expect(e3.typed).toEqual(["t1", "t2"]);
-  const e4 = mergeLintEntry(e3, update([], [["t3", []]]));
-  // Without the move, t1 would have been the oldest and gone.
-  expect(e4).toEqual({
+  expect(sameEntry(e2, mergeLintEntry(e2, update([], [])))).toBe(true);
+  // A third fresh key evicts the oldest RECORDED, in use or not: the worktree
+  // on t1 re-lints that part once and records it again.
+  const e3 = mergeLintEntry(e2, update([], [["t3", []]]));
+  expect(e3).toEqual({
     directive: false,
     syntactic: [],
-    typed: ["t3", "t1"],
-    messages: { t1: [msg("x/typed")] },
+    typed: ["t3", "t2"],
+    messages: {},
   });
 });
 
-test("reusing keys already in front changes nothing, so nothing is written", () => {
+test("reusing stored keys changes nothing, so nothing is written", () => {
   const e1 = mergeLintEntry(
     undefined,
     update(
@@ -214,10 +213,7 @@ test("reusing keys already in front changes nothing, so nothing is written", () 
       [["t1", []]],
     ),
   );
-  const again = mergeLintEntry(
-    e1,
-    update([], [], 3, 2, { syntactic: ["s1", "s2"], typed: ["t1"] }),
-  );
+  const again = mergeLintEntry(e1, update([], []));
   expect(sameEntry(e1, again)).toBe(true);
   // A fresh result for a key it already holds, with other messages, is a change.
   expect(

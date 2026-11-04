@@ -500,6 +500,27 @@ test("a file added in a probed directory moves a resolution", async () => {
   expect(steps[1]!.inc.checked).not.toContain("far.ts");
 });
 
+test("an entry added beside an import that cannot shadow it walks nothing", async () => {
+  const files = {
+    "pkg/index.ts": "export const v: number = 1;\n",
+    "use.ts": 'import { v } from "./pkg";\nexport const w: number = v;\n',
+  };
+  const steps = await series([
+    files,
+    { ...files, "pkg/other.ts": "export const o = 1;\n" },
+    files,
+  ]);
+  // The new file alone is walked, then nothing once it goes; `use.ts`'s
+  // resolution is neither probed nor re-keyed.
+  expect(steps[1]!.inc.checked).toEqual(["pkg/other.ts"]);
+  expect(walked(steps[1]!)).toBe(1);
+  expect(walked(steps[2]!)).toBe(0);
+  for (const s of steps.slice(1)) {
+    expect(s.inc.report.walk.mode).toContain("incremental");
+    expect(s.inc.report.refreshed).toBe(0);
+  }
+});
+
 test("a run that throws writes no base: the next run walks from the last one", async () => {
   const root = freshRoot();
   const store = memoryNameStore();

@@ -7,7 +7,8 @@
 //   D₀ — the sources whose version moved or that are new, the readers of every
 //        file that left the tree or of a non-source file that changed (a JSON
 //        module: its meaning is its version), and the files whose resolution
-//        probed a directory whose listing moved or read a file that moved —
+//        made a probe whose answer moved (an entry of its stem appeared or
+//        went: `./name-resolve.ts`) or read a file that moved —
 //        each pulled in with its whole COMPONENT, so a cycle of names is
 //        always hashed together, as the full walk hashes it.
 //   growth — after each phase, every key a walked file owns whose meaning is
@@ -33,6 +34,7 @@ import {
   type FixedFiles,
   type FixedRec,
 } from "./name-walk";
+import { listingProbe, probeOf } from "./name-resolve";
 import type { RepoView } from "./repo-view";
 import { listingHash } from "./run-base";
 import type { Listings, WalkBase } from "./walk-base";
@@ -43,7 +45,7 @@ export interface DirtyPlan {
   changed: Set<string>;
   /** Source files of the base that are not sources any more. */
   removed: string[];
-  /** Files in D₀ because their resolution probed a directory, or read a file, that moved. */
+  /** Files in D₀ because a probe of their resolution, or a file it read, moved. */
   probed: Set<string>;
   /** D₀: whole components. */
   d0: Set<string>;
@@ -116,23 +118,32 @@ export function planDirty(
     return out;
   };
   const dirs = new Set<string>();
+  // Every entry that appeared or went — the files, and each directory that
+  // started or stopped existing — is the answer of its stem's probe moving.
+  const flipped = new Set<string>();
   for (const p of added) {
+    flipped.add(probeOf(p));
     let d = parentOf(p);
     dirs.add(d);
     // `d` is new when nothing in it predates this tree.
     while (d !== "" && !removedDirs.has(d) && !holdsKept(d)) {
+      flipped.add(probeOf(d));
       d = parentOf(d);
       dirs.add(d);
     }
   }
   for (const p of removed) {
+    flipped.add(probeOf(p));
     let d = parentOf(p);
     dirs.add(d);
     while (d !== "" && !view.isDir(d)) {
+      flipped.add(probeOf(d));
       d = parentOf(d);
       dirs.add(d);
     }
   }
+  // A whole-listing probe (`getDirectories`) moves with any of its entries.
+  for (const d of dirs) flipped.add(listingProbe(d));
 
   const d0 = new Set<string>();
   const probed = new Set<string>();
@@ -157,8 +168,8 @@ export function planDirty(
   for (const p of [...added, ...removed, ...modified]) {
     for (const x of base.fileReaders(p)) take(x, probed);
   }
-  for (const d of dirs) {
-    for (const x of base.dirReaders(d)) take(x, probed);
+  for (const q of flipped) {
+    for (const x of base.probeReaders(q)) take(x, probed);
   }
   for (const x of probed) d0.add(x);
   for (const p of [...d0]) {

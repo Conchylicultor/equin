@@ -625,6 +625,39 @@ test("a file on disk and not in the tree moves no key, and shadows nothing", asy
   expect(out.results.get("use.ts")!.diagnostics).toEqual([]);
 });
 
+test("an entry added beside an import that cannot shadow it moves no key, and rewrites nothing", async () => {
+  // `./pkg` asks for `pkg`, `pkg.ts`, `pkg.d.ts`, `pkg/index.ts`, …: a
+  // `pkg/other.ts` and a `pkg-util.ts` beside it are in the tree, but neither
+  // is a name it tries. Keyed on whole listings, both moved `use.ts`'s key, and
+  // its entry was rewritten by a run that checked nothing of it.
+  const root = freshRoot();
+  const store = memoryNameStore();
+  const files = {
+    "pkg/index.ts": "export const v: number = 1;\n",
+    "use.ts": 'import { v } from "./pkg";\nexport const w: number = v;\n',
+  };
+  writeTree(root, files);
+  await run(root, files, store);
+  const more = {
+    ...files,
+    "pkg/other.ts": "export const o = 1;\n",
+    "pkg-util.ts": "export const u = 1;\n",
+  };
+  writeTree(root, more, files);
+  const written: string[] = [];
+  const out = await run(root, more, {
+    ...store,
+    writeEntry: (p, v, e) => {
+      written.push(p);
+      store.writeEntry(p, v, e);
+    },
+  });
+  expect(out.report.moved).toBe(0);
+  expect(out.report.refreshed).toBe(0);
+  expect(out.checked).toEqual(["pkg-util.ts", "pkg/other.ts"]);
+  expect(written.sort()).toEqual(["pkg-util.ts", "pkg/other.ts"]);
+});
+
 test("a version is the file's git blob sha", async () => {
   const root = freshRoot();
   const store = memoryNameStore();
@@ -663,8 +696,9 @@ test("a file whose bytes changed after the tree was taken fails the run", async 
 });
 
 test("a probed directory that starts to exist moves the key", async () => {
-  // `./later/thing` probes `later/`, which does not exist: the key holds the
-  // listing of its nearest existing ancestor, which creating it changes.
+  // `./later/thing` probes inside `later/`, which does not exist: the key
+  // holds the stem `later` of its nearest existing ancestor, which creating
+  // the directory changes.
   const files = {
     "use.ts": 'import { v } from "./later/thing";\nexport const w = v;\n',
   };

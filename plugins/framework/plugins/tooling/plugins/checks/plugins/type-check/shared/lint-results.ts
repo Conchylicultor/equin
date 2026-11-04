@@ -83,18 +83,12 @@ const entrySchema = z.object({
 
 export type LintEntry = z.infer<typeof entrySchema>;
 
-/**
- * Fresh results for one file, by key; the stored keys this run REUSED (they
- * move up, so a result in use is never the one evicted); and how many keys of
- * each part to keep.
- */
+/** Fresh results for one file, by key, and how many keys of each part to keep. */
 export interface LintEntryUpdate {
   /** The text's directive flag: what the plan ran it as. */
   directive: boolean;
   syntactic: ReadonlyMap<string, readonly RawLintMessage[]>;
   typed: ReadonlyMap<string, readonly RawLintMessage[]>;
-  reusedSyntactic: ReadonlySet<string>;
-  reusedTyped: ReadonlySet<string>;
   keepSyntactic: number;
   keepTyped: number;
 }
@@ -118,22 +112,22 @@ export interface LintResultStore {
 }
 
 /**
- * Fresh keys first, then the prior ones this run reused, then the rest — each
- * group in its prior order, so a run that only reuses keys already in front
- * changes nothing — `keep` in all.
+ * Fresh keys first, then the prior ones in their prior order — most recently
+ * RECORDED first, `keep` in all. A run that only reuses keys changes nothing,
+ * so writes nothing: until 2026-11-04 a reused key moved to the front (most
+ * recently used), and two worktrees on two rule sets swapped the order back
+ * on every run — 13,423 entries rewritten by a run that linted 3 files. The
+ * order a reuse would set only decides which key a later fresh one evicts.
  */
 function mergeKeys(
   prior: readonly string[],
   fresh: ReadonlyMap<string, unknown>,
-  reused: ReadonlySet<string>,
   keep: number,
 ): string[] {
-  const old = prior.filter((k) => !fresh.has(k));
-  return [
-    ...fresh.keys(),
-    ...old.filter((k) => reused.has(k)),
-    ...old.filter((k) => !reused.has(k)),
-  ].slice(0, keep);
+  return [...fresh.keys(), ...prior.filter((k) => !fresh.has(k))].slice(
+    0,
+    keep,
+  );
 }
 
 /** Merge fresh results into an entry: per part, fresh first, then the rest. */
@@ -144,15 +138,9 @@ export function mergeLintEntry(
   const syntactic = mergeKeys(
     prior?.syntactic ?? [],
     update.syntactic,
-    update.reusedSyntactic,
     update.keepSyntactic,
   );
-  const typed = mergeKeys(
-    prior?.typed ?? [],
-    update.typed,
-    update.reusedTyped,
-    update.keepTyped,
-  );
+  const typed = mergeKeys(prior?.typed ?? [], update.typed, update.keepTyped);
   const messages: LintEntry["messages"] = {};
   const keep = (
     key: string,
