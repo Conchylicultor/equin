@@ -2,3 +2,4 @@
 // fixture files into the refs a mover plans over without a repo on disk.
 export { scanPathRefs } from "../ts-refs";
 export { scanCssRefs, scanMarkdownRefs } from "../relative-refs";
+export { mentionScanner } from "../mentions";

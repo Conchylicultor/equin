@@ -37,15 +37,18 @@ export function pluginMoveKey(m: PluginMove): string {
   return `${m.at} ${m.from} ${m.to}`;
 }
 
+/** A ledger's text (the file, or a revision of it), parsed. */
+export function parsePluginMoves(text: string): PluginMove[] {
+  return z.array(pluginMoveSchema).parse(JSON.parse(text));
+}
+
 /** The ledger as committed in the checkout at `root`, in the order moves were made. */
 export function readPluginMoves(root: AppPath): PluginMove[] {
   const file = join(root, PLUGIN_MOVES_FILE);
   // The ledger ships with the plugin; a checkout without it predates it and
   // has no moves to replay.
   if (!existsSync(file)) return [];
-  return z
-    .array(pluginMoveSchema)
-    .parse(JSON.parse(readFileSync(file, "utf8")));
+  return parsePluginMoves(readFileSync(file, "utf8"));
 }
 
 /** Append one move to the ledger in the checkout at `root`. */

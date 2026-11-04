@@ -108,6 +108,7 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "page/plugins/editor", id: "page.editor", loader: () => import("@plugins/page/plugins/editor/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen", "plugin-meta/plugins/facets"] },
   { pluginPath: "plugin-meta/plugins/facets", id: "plugin-meta.facets", loader: () => import("@plugins/plugin-meta/plugins/facets/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen"] },
   { pluginPath: "plugin-meta/plugins/plugin-refs", id: "plugin-meta.plugin-refs", loader: () => import("@plugins/plugin-meta/plugins/plugin-refs/check"), dependsOn: [] },
+  { pluginPath: "plugin-meta/plugins/relocate", id: "plugin-meta.relocate", loader: () => import("@plugins/plugin-meta/plugins/relocate/check"), dependsOn: ["plugin-meta/plugins/plugin-refs"] },
   { pluginPath: "primitives/plugins/css", id: "primitives.css", loader: () => import("@plugins/primitives/plugins/css/check"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/layout-harness", id: "primitives.css.layout-harness", loader: () => import("@plugins/primitives/plugins/css/plugins/layout-harness/check"), dependsOn: [] },
   { pluginPath: "primitives/plugins/dom/plugins/web-storage", id: "primitives.dom.web-storage", loader: () => import("@plugins/primitives/plugins/dom/plugins/web-storage/check"), dependsOn: [] },

@@ -21,7 +21,9 @@ export default defineCliCommand({
         "Finds every reference first (path literals, @plugins specifiers, dot ids, relative " +
         "markdown/CSS links — the plugin-refs locator the checks validate), then `git mv`s the " +
         "plugin dir and its config/ dir, rewrites each reference by its exact range, and " +
-        "re-derives the moved package.json names. Refuses in the main checkout, on a dirty tree, " +
+        "re-derives the moved package.json names; other free-text mentions of its path are rewritten, " +
+        "of its dot id listed for review. Refuses in the main checkout, on a tree dirty with anything " +
+        "but earlier uncommitted moves, " +
         "when <to> exists, sits inside <from>, or has a parent that is not a plugin. Records the " +
         "move in the plugin-move ledger, from which each namespace's next build moves its saved " +
         "settings. Registries and docs are left to " +

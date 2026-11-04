@@ -10,7 +10,7 @@
 // again with the popover CLOSED (append path, draft restored from localStorage)
 // → assert the typed text survived both and each pick added its own chip.
 //
-// Usage: bun plugins/improve/plugins/element-picker/e2e/preserve-draft.ts [--url <deploy>] [--headed]
+// Usage: bun plugins/wish/plugins/element-picker/e2e/preserve-draft.ts [--url <deploy>] [--headed]
 import {
   pathUrl,
   report,

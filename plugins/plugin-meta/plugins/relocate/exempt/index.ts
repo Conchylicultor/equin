@@ -9,6 +9,13 @@ export default [
       "The plugin-move ledger is history: each entry names the old plugin id it moved saved settings from.",
   },
   {
+    rule: "relocate:moved-plugins-unnamed",
+    paths: ["core/plugin-moves.json"],
+    kind: "sanctioned",
+    reason:
+      "The plugin-move ledger is the record of every move: each entry names the id the plugin moved away from.",
+  },
+  {
     rule: "boundaries/no-platform-api",
     paths: [
       "core/internal/apply-moves.ts",

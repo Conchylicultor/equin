@@ -5,7 +5,7 @@
 // real paste event carrying the tag as text/plain → assert the chip rendered
 // (and that no literal "<ui-context" text survived in the editor).
 //
-// Usage: bun plugins/improve/plugins/element-picker/e2e/paste-ui-context.ts [--url <deploy>] [--headed]
+// Usage: bun plugins/wish/plugins/element-picker/e2e/paste-ui-context.ts [--url <deploy>] [--headed]
 import {
   pathUrl,
   report,
@@ -20,7 +20,7 @@ const OUT = "/tmp/paste-ui-context";
 const TAG =
   '<ui-context url="http://equin.localhost:9000/agents" plugin="improve" ' +
   'slot="action-bar.item" contribution="improve:improve" selector="div>div>span" ' +
-  'source="plugins/improve/web/components/improve-button.tsx:16">' +
+  'source="plugins/wish/web/components/wish-button.tsx:16">' +
   "<hint>picked in the live app</hint><picked-content>Improve</picked-content></ui-context>";
 
 await withBrowser(async (h) => {

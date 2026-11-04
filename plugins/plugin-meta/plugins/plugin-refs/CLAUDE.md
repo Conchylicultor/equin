@@ -22,10 +22,11 @@ private scan in a check.
 | `dot` | `a.b` | compositions manifest `entryPoints` / `selectedContributors` (via `parseEntryPattern`), in the generated origin and in its `defineConfig` source (`composition/core/config.ts`: the array literal of an `entryPoints:` / `selectedContributors:` property — `plugin-refs:compositions-source-covers-origin` fails on an id spelled any other way); reorder `items` keys in `config/**.jsonc`; `asPluginId("…")` in non-test code; boundary-config `runtimeExceptions` (via `parseRuntimeException`) |
 | `relative` | `../x/CLAUDE.md` | markdown `[x](rel)`, `[x]: rel`, `<img src>` / `<a href>` in every `*.md`; CSS `@source` / `@import` |
 
-- **Dot ids are read structurally, never by free-text regex.** A top-level id
+- **Dot refs are read structurally, never by free-text regex.** A top-level id
   like `search` has no dot, so a regex over prose cannot tell it from a word — and
   a mover rewriting prose would corrupt it. Each site parses the structure the id
-  lives in (a JSONC node, a call argument, a named array's element).
+  lives in (a JSONC node, a call argument, a named array's element). (Free text
+  is searched only for KNOWN names — see Mentions below.)
 - **`@plugins/…` counts only in a specifier position** — or as a lint rule's
   data. Test fixtures spell fake specifiers as data (`"@plugins/a/web"`);
   `findImports` and the call scan see the real ones only. A rule's own source is
@@ -40,6 +41,28 @@ private scan in a check.
   `.core` folder are outside it); a relative ref's range excludes `#anchor` /
   `?query`. So the rewrite is always "replace the range", applied back-to-front
   per file.
+
+## Mentions: known names in free text
+
+`findPluginMentions(repo, ids)` is the other half: every place a GIVEN set of
+plugins is written in any text file — a comment, a lint message, a test
+fixture, a specifier held as data (`LIVE_STATE_CORE =
+"@plugins/…/live-state/core"`, which the resource scanners match imports
+against and nothing else validated), prose. Two spellings: the path
+`plugins/a/plugins/b` (inside `@plugins/…` too; nothing path-like may sit
+before it, nothing extending its last segment after it) and, for an id with a
+dot, the dot id `a.b`. A mention inside a markdown/CSS relative link's target is
+not one (that is a `relative` ref). Nothing is excluded by policy — each
+consumer drops what it does not own (research, derived files).
+
+Free text is safe here only because the caller names the plugins: a fixture's
+fake `plugins/a/web` is never looked for, and a mention is never *resolved*.
+Consumers:
+
+- the mover asks for the plugin it moves, rewrites the **path** mentions no ref
+  covers, and only reports the **dot** ones (a dot id can be a stored identity);
+- `relocate:moved-plugins-unnamed` asks for every plugin the move ledger moved
+  away, and fails on any mention left.
 
 ## Helpers for a mover
 
@@ -73,6 +96,7 @@ links **into** research from anywhere else are.
     - `framework/plugin-id.asPluginId`
     - `framework/plugin-id.isTestCodePath`
     - `framework/plugin-id.PLUGIN_FOLDERS`
+    - `framework/plugin-id.PluginId`
     - `framework/tooling/boundaries.parseRuntimeException`
     - `packages/macrotask-yield.createTimeSlicer`
     - `plugin-meta/closure.parseEntryPattern`
@@ -86,6 +110,7 @@ links **into** research from anywhere else are.
     - `FindPluginRefsOptions`
     - `PathRef`
     - `PathRefSyntax`
+    - `PluginMention`
     - `PluginRef`
     - `PluginRefKind`
     - `RefRange`
@@ -96,6 +121,7 @@ links **into** research from anywhere else are.
     - `BOUNDARY_CONFIG`
     - `COMPOSITIONS_MANIFEST`
     - `COMPOSITIONS_SOURCE`
+    - `findPluginMentions`
     - `findPluginRefs`
     - `isWithinDir`
     - `maskMarkdown`
@@ -116,6 +142,7 @@ links **into** research from anywhere else are.
   - Exempts itself from: `boundaries/no-platform-api` — `core/resolve.ts` (debt)
 - Test helpers:
   - Core: `@plugins/plugin-meta/plugins/plugin-refs/core/testing`
+    - `mentionScanner` — The per-file half of `findPluginMentions`: a scanner for the mentions of `ids` in one file's text (none in a binary one), in offset order.
     - `scanCssRefs` — Relative paths in one CSS source: `@source "rel"` (and `@source not "rel"`) and `@import "rel"`.
     - `scanMarkdownRefs` — Relative targets in one markdown source: `[x](rel)` / `![x](rel)`, `[x]: rel` definitions, and `<img src>` / `<a href>` attributes.
     - `scanPathRefs` — `path` refs in one TS/TSX source: every string literal that is wholly a `plugins/…` path, and every `@plugins/…` module specifier (static, dynamic and mocked imports).

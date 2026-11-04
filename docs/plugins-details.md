@@ -40315,6 +40315,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/plugin-id.asPluginId`
           - `framework/plugin-id.isTestCodePath`
           - `framework/plugin-id.PLUGIN_FOLDERS`
+          - `framework/plugin-id.PluginId`
           - `framework/tooling/boundaries.parseRuntimeException`
           - `packages/macrotask-yield.createTimeSlicer`
           - `plugin-meta/closure.parseEntryPattern`
@@ -40328,6 +40329,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FindPluginRefsOptions`
           - `PathRef`
           - `PathRefSyntax`
+          - `PluginMention`
           - `PluginRef`
           - `PluginRefKind`
           - `RefRange`
@@ -40338,6 +40340,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BOUNDARY_CONFIG`
           - `COMPOSITIONS_MANIFEST`
           - `COMPOSITIONS_SOURCE`
+          - `findPluginMentions`
           - `findPluginRefs`
           - `isWithinDir`
           - `maskMarkdown`
@@ -40358,6 +40361,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `boundaries/no-platform-api` — `core/resolve.ts` (debt)
       - Test helpers:
         - Core: `@plugins/plugin-meta/plugins/plugin-refs/core/testing`
+          - `mentionScanner` — The per-file half of `findPluginMentions`: a scanner for the mentions of `ids` in one file's text (none in a binary one), in offset order.
           - `scanCssRefs` — Relative paths in one CSS source: `@source "rel"` (and `@source not "rel"`) and `@import "rel"`.
           - `scanMarkdownRefs` — Relative targets in one markdown source: `[x](rel)` / `![x](rel)`, `[x]: rel` definitions, and `<img src>` / `<a href>` attributes.
           - `scanPathRefs` — `path` refs in one TS/TSX source: every string literal that is wholly a `plugins/…` path, and every `@plugins/…` module specifier (static, dynamic and mocked imports).
@@ -40634,6 +40638,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `applyPluginMoves`
           - `movedPluginId`
           - `namespacesHolding`
+          - `parsePluginMoves`
           - `PLUGIN_MOVES_FILE`
           - `pluginMoveKey`
           - `readPluginMoves`
@@ -40642,6 +40647,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from:
           - `product-name:legacy-id` — `core/plugin-moves.json` (sanctioned)
+          - `relocate:moved-plugins-unnamed` — `core/plugin-moves.json` (sanctioned)
           - `boundaries/no-platform-api` — `core/internal/apply-moves.ts`, `core/internal/ledger.ts`, `core/internal/restamp-moved.ts` (debt)
     - **`token-usage`** — Which theme tokens a plugin's source uses, and which plugin owns each one: the static defineTokenGroup reader (owner + CSS vars) and the token-usage scanner (literal var(--x) plus Tailwind classes resolved by Tailwind's own design system over app.css). Feeds the cross-refs facet's tokenUses, which the closure engine turns into hard edges.
       - Core:

@@ -7,7 +7,7 @@
 // instead. That is the regression this guards: the overlay's highlight label
 // must name `improve.element-picker · button`, not `shell.global-action-bar · div`.
 //
-// Usage: bun plugins/improve/plugins/element-picker/e2e/pick-pointer-events-none.ts [--url <deploy>] [--headed]
+// Usage: bun plugins/wish/plugins/element-picker/e2e/pick-pointer-events-none.ts [--url <deploy>] [--headed]
 import {
   pathUrl,
   report,

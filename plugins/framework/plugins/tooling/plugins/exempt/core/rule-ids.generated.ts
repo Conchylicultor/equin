@@ -135,6 +135,7 @@ export type ExemptableRuleId =
   | "radius/no-adhoc-radius"
   | "rail/no-panel-bleed"
   | "reactive-server-io/no-reactive-server-io"
+  | "relocate:moved-plugins-unnamed"
   | "repo-walk-safety/no-adhoc-repo-walk"
   | "resize-observer-safety/no-raw-resize-observer"
   | "resource-runtime:compiled-routes"

@@ -1,7 +1,7 @@
 # task-draft-form
 
 Reusable popover + chain form for drafting one or more tasks. Drives both the
-toolbar Wish button (`plugins/improve`, formerly Improve) and the conversation `+` button
+toolbar Wish button (`plugins/wish`, formerly Improve) and the conversation `+` button
 (`plugins/conversations/.../new-child-task`).
 
 The form is a chain of cards: index 0 is the head, each later card is blocked

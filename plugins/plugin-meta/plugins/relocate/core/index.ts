@@ -2,6 +2,7 @@ export {
   PLUGIN_MOVES_FILE,
   appendPluginMove,
   movedPluginId,
+  parsePluginMoves,
   pluginMoveKey,
   readPluginMoves,
 } from "./internal/ledger";

@@ -19,11 +19,12 @@ import {
   resolveRelativeRef,
   type DotRefSite,
   type PathRefSyntax,
+  type PluginMention,
   type PluginRef,
   type RelativeRef,
   type RelativeRefSyntax,
 } from "@plugins/plugin-meta/plugins/plugin-refs/core";
-import { movedPluginId } from "../../core";
+import { movedPluginId, PLUGIN_MOVES_FILE } from "../../core";
 
 const PLUGINS_DIR = "plugins";
 const SEGMENT_RE = /^[A-Za-z0-9_-]+$/;
@@ -112,9 +113,10 @@ export function mapPluginId(move: Move, id: PluginId): PluginId | null {
   return movedPluginId(id, move.from.id, move.to.id);
 }
 
-/** A `[start, end)` replacement in one file's text. */
+/** A `[start, end)` replacement in one file's text: a located ref, or a
+ *  free-text mention of the moved plugin's path. */
 export interface PlannedEdit {
-  ref: PluginRef;
+  ref: PluginRef | PluginMention;
   replacement: string;
 }
 
@@ -122,9 +124,11 @@ export interface PlannedEdit {
 export type EditKind =
   | `path:${PathRefSyntax}`
   | `dot:${DotRefSite}`
-  | `relative:${RelativeRefSyntax}`;
+  | `relative:${RelativeRefSyntax}`
+  | "mention:path";
 
-export function editKind(ref: PluginRef): EditKind {
+export function editKind(ref: PluginRef | PluginMention): EditKind {
+  if (!("kind" in ref)) return "mention:path";
   switch (ref.kind) {
     case "path":
       return `path:${ref.syntax}`;
@@ -148,6 +152,17 @@ function isDerivedFile(file: string): boolean {
     file === "bun.lock" ||
     file.endsWith(".origin.jsonc") ||
     file.endsWith(".ancestor.jsonc")
+  );
+}
+
+/** Whether a move edits names in `file` at all: never a derived file or the
+ *  move ledger (the record of every old name), and in `research/` (dated
+ *  records) only its relative links. */
+function rewritable(file: string): boolean {
+  return (
+    !isDerivedFile(file) &&
+    file !== PLUGIN_MOVES_FILE &&
+    !file.startsWith("research/")
   );
 }
 
@@ -199,8 +214,8 @@ function rewriteRelative(move: Move, ref: RelativeRef): string | null {
  * but links in `research/` (dated prose is never rewritten; its links are).
  */
 export function editFor(move: Move, ref: PluginRef): PlannedEdit | null {
+  if (!rewritable(ref.file) && ref.kind !== "relative") return null;
   if (isDerivedFile(ref.file)) return null;
-  if (ref.file.startsWith("research/") && ref.kind !== "relative") return null;
   let replacement: string | null;
   switch (ref.kind) {
     case "path":
@@ -294,6 +309,15 @@ export interface MovePlan {
   packages: PackageRename[];
   counts: Map<EditKind, number>;
   narrowedGlobs: NarrowedGlob[];
+  /**
+   * Free-text mentions of the moved plugin's DOT id that no located ref
+   * covers — left as written. A dot id can be a persisted identity (a job
+   * name, a stored row's plugin id), and renaming it in code would orphan the
+   * data under the old name, so each is a decision for whoever moves:
+   * rewrite it, migrate what is stored under it, or exempt it.
+   * `relocate:moved-plugins-unnamed` fails on every one left.
+   */
+  dotMentions: PluginMention[];
 }
 
 export interface MovePlanInput {
@@ -305,6 +329,9 @@ export interface MovePlanInput {
   /** Whether `config/<old slash path>` holds any file. */
   hasConfigDir: boolean;
   refs: readonly PluginRef[];
+  /** `findPluginMentions` of the moved plugin's id: path mentions no ref
+   *  covers are rewritten, dot mentions are reported (`dotMentions`). */
+  mentions: readonly PluginMention[];
   /** Text of every file a ref sits in and every moved `package.json`. */
   read: (file: string) => string | null;
 }
@@ -356,6 +383,31 @@ export function planMove(input: MovePlanInput): MovePlan {
     }
   }
 
+  // A mention a located ref already edits is that ref's (a specifier's range
+  // is exactly the moved dir); the rest of the path mentions are rewritten.
+  const covered = (m: PluginMention) =>
+    (byFile.get(m.file) ?? []).some(
+      (e) => m.range.start < e.ref.range.end && e.ref.range.start < m.range.end,
+    );
+  const dotMentions: PluginMention[] = [];
+  for (const m of input.mentions) {
+    if (!rewritable(m.file) || covered(m)) continue;
+    if (m.form === "dot") {
+      dotMentions.push(m);
+      continue;
+    }
+    const replacement = swapPrefix(m.value, move.from.dir, move.to.dir);
+    if (replacement === null) {
+      throw new Error(
+        `${m.file}:${m.line}: mention ${m.value} is not ${move.from.dir}`,
+      );
+    }
+    const list = byFile.get(m.file) ?? [];
+    list.push({ ref: m, replacement });
+    byFile.set(m.file, list);
+    counts.set("mention:path", (counts.get("mention:path") ?? 0) + 1);
+  }
+
   const rewrites: FileRewrite[] = [];
   for (const [file, edits] of [...byFile].sort(([a], [b]) =>
     a.localeCompare(b),
@@ -391,5 +443,14 @@ export function planMove(input: MovePlanInput): MovePlan {
     });
   }
 
-  return { move, plugins, renames, rewrites, packages, counts, narrowedGlobs };
+  return {
+    move,
+    plugins,
+    renames,
+    rewrites,
+    packages,
+    counts,
+    narrowedGlobs,
+    dotMentions,
+  };
 }

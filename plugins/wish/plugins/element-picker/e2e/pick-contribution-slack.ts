@@ -13,7 +13,7 @@
 // changed is which element carries the identity, and the honest live question is
 // whether the element under that slack carries it.
 //
-// Usage: bun plugins/improve/plugins/element-picker/e2e/pick-contribution-slack.ts \
+// Usage: bun plugins/wish/plugins/element-picker/e2e/pick-contribution-slack.ts \
 //          [--url <page with a small widget in a row slot>] [--headed]
 import {
   pageUrl,

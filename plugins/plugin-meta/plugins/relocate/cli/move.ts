@@ -16,21 +16,34 @@ import {
   getWorktreeRoot,
   spawnExpectOk,
 } from "@plugins/infra/plugins/spawn/core";
-import { findPluginRefs } from "@plugins/plugin-meta/plugins/plugin-refs/core";
+import {
+  findPluginMentions,
+  findPluginRefs,
+} from "@plugins/plugin-meta/plugins/plugin-refs/core";
 import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
   PLUGIN_MOVES_FILE,
   appendPluginMove,
   namespacesHolding,
+  parsePluginMoves,
+  pluginMoveKey,
+  readPluginMoves,
 } from "../core";
 import {
   editFor,
   locationOf,
+  mapRepoPath,
   parsePluginArg,
   planMove,
   type Move,
   type MovePlan,
 } from "./internal/plan";
+import {
+  judgeDirt,
+  parsePorcelainZ,
+  readTouched,
+  recordTouched,
+} from "./internal/touched";
 
 /** Local git metadata reads and renames. */
 const GIT_TIMEOUT_MS = 60_000;
@@ -94,6 +107,21 @@ function printPlan(plan: MovePlan, dryRun: boolean): void {
   for (const p of plan.packages)
     console.log(`  ${p.newFile}: ${p.from} → ${p.to}`);
 
+  if (plan.dotMentions.length > 0) {
+    console.log(``);
+    console.log(
+      `REVIEW — these name ${move.from.id} by its dot id in free text, and are left as written.`,
+    );
+    console.log(
+      `A dot id can be a stored identity (a job name, a row's plugin id): rewrite each, migrate`,
+    );
+    console.log(
+      `the data stored under it, or exempt it — \`relocate:moved-plugins-unnamed\` fails until then:`,
+    );
+    for (const m of plan.dotMentions)
+      console.log(`  ${m.file}:${m.line}  ${m.value}`);
+  }
+
   if (plan.narrowedGlobs.length > 0) {
     console.log(``);
     console.log(
@@ -119,6 +147,23 @@ function selfLocatingFiles(
 ): string[] {
   const re = /import\.meta\.(?:dir|dirname|url)\b|__dirname/;
   return files.filter((f) => re.test(texts.get(f) ?? ""));
+}
+
+/** Ledger entries the working tree has and HEAD does not: this diff's moves. */
+async function uncommittedMoves(root: string) {
+  const working = readPluginMoves(asAppPath(root));
+  // A HEAD that predates the ledger has committed no move.
+  const tracked =
+    (await git(root, ["ls-tree", "HEAD", "--", PLUGIN_MOVES_FILE])).trim() !==
+    "";
+  const committed = new Set(
+    tracked
+      ? parsePluginMoves(
+          await git(root, ["show", `HEAD:${PLUGIN_MOVES_FILE}`]),
+        ).map(pluginMoveKey)
+      : [],
+  );
+  return working.filter((m) => !committed.has(pluginMoveKey(m)));
 }
 
 /** Remove `dir` and each parent up to (not including) `stop` while empty. */
@@ -153,17 +198,40 @@ const run: CliAction<[string, string], { dryRun?: boolean }> = async (
   const to = parseOrRefuse(toArg);
   const move: Move = { from, to };
 
-  const dirty = (await git(root, ["status", "--porcelain"])).trim();
-  if (dirty !== "") {
+  const gitDir = join(
+    root,
+    (await git(root, ["rev-parse", "--git-dir"])).trim(),
+  );
+  const verdict = judgeDirt({
+    dirty: parsePorcelainZ(
+      await git(root, [
+        "status",
+        "--porcelain=v1",
+        "-z",
+        "--untracked-files=all",
+      ]),
+    ),
+    uncommitted: await uncommittedMoves(root),
+    touched: readTouched(gitDir),
+    always: [PLUGIN_MOVES_FILE],
+  });
+  if (verdict.kind === "unexplained") {
     const message =
-      "the tree has uncommitted changes. A move rewrites hundreds of files; on a clean tree " +
-      "`git diff HEAD` shows exactly what it did, and nothing else.";
+      "the tree has uncommitted changes no earlier move in this diff made. A move rewrites hundreds " +
+      "of files; on a tree holding only moves, `git diff HEAD` shows exactly what they did, and nothing else.";
+    const listed = verdict.paths.map((p) => `  ${p}`).join("\n");
     if (!dryRun)
       refuse(
-        `${message}\n\n${dirty}\n\nLand or set those changes aside first.`,
+        `${message}\n\n${listed}\n\nLand or set those changes aside first.`,
       );
     console.log(
       `note: ${message} (dry run — continuing, nothing is written)\n`,
+    );
+  } else if (verdict.kind === "chained") {
+    console.log(
+      `Chaining after ${plural(verdict.moves.length, "uncommitted move")} (${verdict.moves
+        .map((m) => `${m.from} → ${m.to}`)
+        .join(", ")}): every dirty path is one of theirs.\n`,
     );
   }
 
@@ -205,11 +273,13 @@ const run: CliAction<[string, string], { dryRun?: boolean }> = async (
   // Locate BEFORE anything moves: the refs carry old paths and old offsets.
   const repo = await loadRepoFiles(root);
   const refs = await findPluginRefs(repo);
+  const mentions = await findPluginMentions(repo, [from.id]);
   const texts = new Map<string, string>();
   const need = new Set<string>([
     // Only files that get an edit are read; the rest of the repo's refs are
     // still handed to the planner (glob-coverage warnings read them all).
     ...refs.filter((r) => editFor(move, r) !== null).map((r) => r.file),
+    ...mentions.map((m) => m.file),
     ...moved.map((n) => `${locationOf(n.id).dir}/package.json`),
   ]);
   const movedFiles = repo.under(from.dir);
@@ -230,6 +300,7 @@ const run: CliAction<[string, string], { dryRun?: boolean }> = async (
     ),
     hasConfigDir: repo.under(from.configDir).length > 0,
     refs,
+    mentions,
     read: (f) => texts.get(f) ?? null,
   });
 
@@ -275,7 +346,21 @@ const run: CliAction<[string, string], { dryRun?: boolean }> = async (
   // Saved settings are not moved here: each namespace's copy is migrated by its
   // own next build, from the ledger entry committed alongside this move — so the
   // settings change exactly when the code that reads them does.
-  if (!dryRun) appendPluginMove(root, { from: from.id, to: to.id });
+  if (!dryRun) {
+    const entry = appendPluginMove(root, { from: from.id, to: to.id });
+    // What the next move may find dirty because of this one: every moved file
+    // at both paths, every rewrite, and the lockfile the next install rewrites
+    // from the renamed workspaces.
+    recordTouched(gitDir, entry, [
+      ...[...repo.under(from.dir), ...repo.under(from.configDir)].flatMap(
+        (f) => [f, mapRepoPath(move, f)],
+      ),
+      ...plan.rewrites.flatMap((r) => [r.file, r.newFile]),
+      ...plan.packages.map((p) => p.newFile),
+      PLUGIN_MOVES_FILE,
+      "bun.lock",
+    ]);
+  }
   const holding = namespacesHolding(configDir.path, from.id);
   console.log(``);
   console.log(

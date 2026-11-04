@@ -5,6 +5,7 @@ import {
   type PluginRef,
 } from "@plugins/plugin-meta/plugins/plugin-refs/core";
 import {
+  mentionScanner,
   scanCssRefs,
   scanMarkdownRefs,
   scanPathRefs,
@@ -45,12 +46,17 @@ function plan(
     else if (file.endsWith(".jsonc"))
       refs.push(...scanReorderItemRefs(file, text));
   }
+  const scanMentions = mentionScanner([m.from.id]);
+  const mentions = Object.entries(files).flatMap(([file, text]) =>
+    scanMentions(file, text),
+  );
   return planMove({
     move: m,
     movedIds: [m.from.id],
     compositionRoots: new Set(),
     hasConfigDir: false,
     refs,
+    mentions,
     read: (f) => files[f] ?? null,
     ...extra,
   });
@@ -283,6 +289,39 @@ describe("package names", () => {
       [P("z/plugins/a/plugins/b/package.json"), "@equin/plugin-z-a-b"],
     ]);
     expect(p.packages[0]!.text).toBe(pkg("@equin/plugin-z-a"));
+  });
+});
+
+describe("free-text mentions", () => {
+  test("path mentions are rewritten once, dot mentions only reported", () => {
+    const src = [
+      `import "@plugins/db/plugins/feed/core";`,
+      `const CORE = "@plugins/db/plugins/feed/core";`,
+      `// see plugins/db/plugins/feed/plugins/sub/CLAUDE.md`,
+      `const id = asPluginId("db.feed");`,
+      `const job = "db.feed.sweep";`,
+    ].join("\n");
+    const p = plan(move("db.feed", "net.feed"), {
+      [P("x/web/a.test.ts")]: src,
+      "research/r.md": "`" + P("db/plugins/feed") + "`",
+      "bun.lock": P("db/plugins/feed"),
+    });
+    expect(textOf(p, P("x/web/a.test.ts"))).toBe(
+      [
+        `import "@plugins/net/plugins/feed/core";`,
+        `const CORE = "@plugins/net/plugins/feed/core";`,
+        `// see plugins/net/plugins/feed/plugins/sub/CLAUDE.md`,
+        `const id = asPluginId("db.feed");`,
+        `const job = "db.feed.sweep";`,
+      ].join("\n"),
+    );
+    expect(p.counts.get("path:specifier")).toBe(1);
+    expect(p.counts.get("mention:path")).toBe(2);
+    expect(p.dotMentions.map((m) => `${m.line} ${m.value}`)).toEqual([
+      "4 db.feed",
+      "5 db.feed",
+    ]);
+    expect(p.rewrites.map((r) => r.file)).toEqual([P("x/web/a.test.ts")]);
   });
 });
 
