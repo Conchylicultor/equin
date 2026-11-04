@@ -16,7 +16,7 @@ import {
   type SlowOpListRow,
 } from "@plugins/debug/plugins/slow-ops/core";
 import { slowOpDetailPane } from "../panes";
-import { TraceChip } from "./trace-chip";
+import { TraceChip } from "@plugins/debug/plugins/trace/plugins/engine/web";
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
 const SLOW_OPS_LOCAL = defineDataView("debug.slow-ops.local");
@@ -61,7 +61,7 @@ const overrides = fieldOverrides(slowOpsList, {
         >
           {r.operation}
         </Text>
-        {r.lastTraceId && <TraceChip traceId={r.lastTraceId} />}
+        {r.lastTraceId && <TraceChip traceId={r.lastTraceId}>trace</TraceChip>}
       </Stack>
     ),
     width: "minmax(0,1fr)",

@@ -39,23 +39,27 @@ same `SlowEvents.View` slot; it fans out across every worktree DB fork.
   - Contributes:
     - `SlowEvents.View` "Aggregates" → `SlowOpsView`
     - `Pane.Register` "slow-op-detail"
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×5
-    - `primitives/pane` ×3
-    - `apps-core/tabs.useAppLink`
+  - Uses:
+    - `debug/trace/engine.TraceChip`
     - `debug/trace/pane.SlowEvents`
-    - `network/live/live-state.ResourceErrorInline`
     - `network/live.useLive`
+    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
-    - `primitives/css/link-chip.LinkChip`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/yield.yieldClass`
+    - `primitives/data-view.DataView`
+    - `primitives/data-view.defineDataView`
+    - `primitives/data-view.FieldDef`
+    - `primitives/data-view.fieldOverrides`
+    - `primitives/data-view.liveDataSource`
     - `primitives/loading.Loading`
+    - `primitives/pane.Pane`
+    - `primitives/pane.PaneChrome`
+    - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
-    - `ui/icons.Icon`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`

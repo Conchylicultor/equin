@@ -139,12 +139,10 @@ run no `onReady`, so no watchdog.
 - Web:
   - Contributes: `Reports.KindView` → `SpanStuckSummary`
   - Uses:
-    - `apps-core/tabs.useAppLink`
+    - `debug/trace/engine.TraceChip`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
-    - `primitives/css/link-chip.LinkChip`
     - `reports.Reports`
-    - `ui/icons.Icon`
 - Server:
   - Contributes: `report-kind` "span-stuck"
   - Uses:

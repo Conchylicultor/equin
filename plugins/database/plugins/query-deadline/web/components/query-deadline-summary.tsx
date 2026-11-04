@@ -1,13 +1,8 @@
 import type { Report } from "@plugins/reports/core";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
-import { useAppLink } from "@plugins/apps-core/plugins/tabs/web";
-import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
-import { traceDetailRoute } from "@plugins/debug/plugins/trace/plugins/engine/core";
+import { TraceChip } from "@plugins/debug/plugins/trace/plugins/engine/web";
 import { isInTransaction } from "@plugins/database/plugins/connection/core";
-import { symbol } from "@plugins/ui/plugins/icons/core";
-import { Icon } from "@plugins/ui/plugins/icons/web";
 import { DbQueryDeadlinePayloadSchema } from "../../core";
 import { formatDurationMs } from "../../shared/format-duration";
 
@@ -20,10 +15,7 @@ import { formatDurationMs } from "../../shared/format-duration";
 // an `in tx` chip when the call was sent inside a transaction (its locks stay
 // held), how many other calls were waiting, and a View-trace chip.
 
-const boltIcon = symbol("bolt");
-
 export function QueryDeadlineSummary({ report }: { report: Report }) {
-  const inAppLink = useAppLink();
   const parsed = DbQueryDeadlinePayloadSchema.safeParse(report.data);
   if (!parsed.success) return <>{report.message}</>;
   const d = parsed.data;
@@ -66,16 +58,7 @@ export function QueryDeadlineSummary({ report }: { report: Report }) {
           waiting
         </span>
       )}
-      {d.traceId !== null && (
-        <LinkChip
-          leading={<Icon icon={boltIcon} className="icon-auto" />}
-          activation={inAppLink(
-            traceDetailRoute.link(debugApp, { id: d.traceId }),
-          )}
-        >
-          View trace
-        </LinkChip>
-      )}
+      {d.traceId !== null && <TraceChip traceId={d.traceId} />}
     </Inline>
   );
 }

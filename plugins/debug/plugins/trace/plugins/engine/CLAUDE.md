@@ -197,7 +197,7 @@ expandable JSON.
 
 ## Plugin reference
 
-- Description: Trace-engine web surface: the Trace.Lane / Trace.TriggerSummary dispatch slots (with generic fallbacks so a new event class or trigger kind is visible by default), plus the trace config registration for Settings → Config. The generic slow-event trace engine: the TraceEventClass registry, captureTrace() admission + coherent-instant capture + async enrich/persist into the durable traces table (fed to live readers by an in-process change producer), the debug.traces list window and debug.trace by-id lookup, a daily 7-day sweep, and the test-trigger verification endpoint.
+- Description: Trace-engine web surface: the Trace.Lane / Trace.TriggerSummary dispatch slots (with generic fallbacks so a new event class or trigger kind is visible by default), the TraceChip every surface links a trace with, plus the trace config registration for Settings → Config. The generic slow-event trace engine: the TraceEventClass registry, captureTrace() admission + coherent-instant capture + async enrich/persist into the durable traces table (fed to live readers by an in-process change producer), the debug.traces list window and debug.trace by-id lookup, a daily 7-day sweep, and the test-trigger verification endpoint.
 - Web:
   - Slots:
     - `Trace.Lane`
@@ -211,17 +211,22 @@ expandable JSON.
     - `Trace.Lane` ← `debug.trace.stall`
   - Contributes: `ConfigV2.WebRegister` "trace"
   - Uses:
+    - `apps-core/tabs.useAppLink`
     - `config_v2.ConfigV2`
+    - `primitives/css/link-chip.LinkChip`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`
     - `primitives/slot-render.defineDispatchSlot`
+    - `ui/icons.Icon`
   - Exports (types):
     - `TraceLaneProps`
     - `TraceSelection`
     - `TraceSelectionField`
     - `TraceTriggerSummaryProps`
-  - Exports (values): `Trace`
+  - Exports (values):
+    - `Trace`
+    - `TraceChip`
 - Server:
   - Contributes:
     - `ConfigV2.Register` "trace"
@@ -306,6 +311,7 @@ expandable JSON.
     - `debug/op-rate`
     - `debug/sentinel`
     - `debug/slow-ops`
+    - `debug/slow-ops/pane`
     - `debug/stall-monitor`
     - `debug/stuck-spans`
     - `debug/trace/boot`

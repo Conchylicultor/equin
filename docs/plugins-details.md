@@ -12216,10 +12216,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceMode`
           - `useTabs`
       - Cross-plugin:
-        - Imported by: 44 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+        - Imported by: 39 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
           - `apps` ×13
           - `apps-core` ×9
-          - `debug` ×7
+          - `debug` ×3
           - `hints` ×2
           - `primitives` ×2
           - `shell` ×2
@@ -12228,7 +12228,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build`
           - `config_v2/config-link`
           - `conversations/runtime-sdk`
-          - `database/query-deadline`
           - `menu-bar/app-grid`
           - `ui/theme-engine/quick-theme`
     - **`theme-scope`** — Theme-scope helpers: the single definition of the focused full-surface app's theme scope, which decides the :root token layer and the document's light/dark (useRootThemeScopeState: a state that keeps the not-registered-yet window apart from 'no app owns the surface'), and useAppSettingsScope — the app:<id> config scope per-app theme settings (variants) are read in: the nearest app theme boundary's (a pane's home app), else the focused app's.
@@ -21266,14 +21265,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Reports.KindView` → `AbandonCapSummary`
           - `HealthReport.Row` "Database"
         - Uses:
-          - `apps-core/tabs.useAppLink`
+          - `debug/trace/engine.TraceChip`
           - `network/live.useLive`
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
-          - `primitives/css/link-chip.LinkChip`
           - `reports.Reports`
           - `shell/health-report.HealthReport`
-          - `ui/icons.Icon`
       - Server:
         - Contributes:
           - `report-kind` "db-abandon-cap"
@@ -22473,13 +22470,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Reports.KindView` → `OpRateSummary`
           - `Reports.KindView` → `OpTimeSummary`
         - Uses:
-          - `apps-core/tabs.useAppLink`
           - `config_v2.ConfigV2`
+          - `debug/trace/engine.TraceChip`
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
-          - `primitives/css/link-chip.LinkChip`
           - `reports.Reports`
-          - `ui/icons.Icon`
       - Server:
         - Contributes:
           - `ConfigV2.Register` "op-rate"
@@ -23675,21 +23670,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Core.Root` → `SlowOpCollector`
           - `Reports.KindView` → `SlowOpKindView`
         - Uses:
-          - `apps-core/tabs.useAppLink`
           - `config_v2.ConfigV2`
           - `config_v2.useConfig`
+          - `debug/trace/engine.TraceChip`
           - `infra/endpoints.fetchEndpointOver`
           - `network/live/live-state.slowResourceReportSink`
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
-          - `primitives/css/link-chip.LinkChip`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/networking/page-transport.pageTransport`
           - `primitives/pane.currentRoutePath`
           - `primitives/perfs/boot-trace.getBootTrace`
           - `primitives/perfs/page-pauses.pausesDuring`
           - `reports.Reports`
-          - `ui/icons.Icon`
       - Server:
         - Contributes:
           - `resource.declare` "slow-ops.callers"
@@ -23854,23 +23847,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `SlowEvents.View` "Aggregates" → `SlowOpsView`
               - `Pane.Register` "slow-op-detail"
-            - Uses: 22 symbols — full list in [`plugins/debug/plugins/slow-ops/plugins/pane/REFERENCE.md`](../plugins/debug/plugins/slow-ops/plugins/pane/REFERENCE.md)
-              - `primitives/data-view` ×5
-              - `primitives/pane` ×3
-              - `apps-core/tabs.useAppLink`
+            - Uses:
+              - `debug/trace/engine.TraceChip`
               - `debug/trace/pane.SlowEvents`
-              - `network/live/live-state.ResourceErrorInline`
               - `network/live.useLive`
+              - `network/live/live-state.ResourceErrorInline`
               - `primitives/css/badge.Badge`
               - `primitives/css/center.Center`
-              - `primitives/css/link-chip.LinkChip`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/yield.yieldClass`
+              - `primitives/data-view.DataView`
+              - `primitives/data-view.defineDataView`
+              - `primitives/data-view.FieldDef`
+              - `primitives/data-view.fieldOverrides`
+              - `primitives/data-view.liveDataSource`
               - `primitives/loading.Loading`
+              - `primitives/pane.Pane`
+              - `primitives/pane.PaneChrome`
+              - `primitives/pane.useOpenPane`
               - `primitives/relative-time.RelativeTime`
-              - `ui/icons.Icon`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --muted-foreground`
@@ -23887,13 +23884,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ConfigV2.WebRegister` "stall-monitor"
           - `Reports.KindView` → `StallSummary`
         - Uses:
-          - `apps-core/tabs.useAppLink`
           - `config_v2.ConfigV2`
+          - `debug/trace/engine.TraceChip`
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
-          - `primitives/css/link-chip.LinkChip`
           - `reports.Reports`
-          - `ui/icons.Icon`
       - Server:
         - Contributes:
           - `ConfigV2.Register` "stall-monitor"
@@ -23922,12 +23917,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Contributes: `Reports.KindView` → `SpanStuckSummary`
         - Uses:
-          - `apps-core/tabs.useAppLink`
+          - `debug/trace/engine.TraceChip`
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
-          - `primitives/css/link-chip.LinkChip`
           - `reports.Reports`
-          - `ui/icons.Icon`
       - Server:
         - Contributes: `report-kind` "span-stuck"
         - Uses:
@@ -24120,7 +24113,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-lg`
               - `ui/tokens/density --space-sm`
               - `ui/tokens/density --space-xs`
-        - **`engine`** — Trace-engine web surface: the Trace.Lane / Trace.TriggerSummary dispatch slots (with generic fallbacks so a new event class or trigger kind is visible by default), plus the trace config registration for Settings → Config. The generic slow-event trace engine: the TraceEventClass registry, captureTrace() admission + coherent-instant capture + async enrich/persist into the durable traces table (fed to live readers by an in-process change producer), the debug.traces list window and debug.trace by-id lookup, a daily 7-day sweep, and the test-trigger verification endpoint.
+        - **`engine`** — Trace-engine web surface: the Trace.Lane / Trace.TriggerSummary dispatch slots (with generic fallbacks so a new event class or trigger kind is visible by default), the TraceChip every surface links a trace with, plus the trace config registration for Settings → Config. The generic slow-event trace engine: the TraceEventClass registry, captureTrace() admission + coherent-instant capture + async enrich/persist into the durable traces table (fed to live readers by an in-process change producer), the debug.traces list window and debug.trace by-id lookup, a daily 7-day sweep, and the test-trigger verification endpoint.
           - Web:
             - Slots:
               - `Trace.Lane`
@@ -24134,17 +24127,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Trace.Lane` ← `debug.trace.stall`
             - Contributes: `ConfigV2.WebRegister` "trace"
             - Uses:
+              - `apps-core/tabs.useAppLink`
               - `config_v2.ConfigV2`
+              - `primitives/css/link-chip.LinkChip`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.SectionLabel`
               - `primitives/css/text.Text`
               - `primitives/slot-render.defineDispatchSlot`
+              - `ui/icons.Icon`
             - Exports (types):
               - `TraceLaneProps`
               - `TraceSelection`
               - `TraceSelectionField`
               - `TraceTriggerSummaryProps`
-            - Exports (values): `Trace`
+            - Exports (values):
+              - `Trace`
+              - `TraceChip`
           - Server:
             - Contributes:
               - `ConfigV2.Register` "trace"
@@ -24229,6 +24227,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/op-rate`
               - `debug/sentinel`
               - `debug/slow-ops`
+              - `debug/slow-ops/pane`
               - `debug/stall-monitor`
               - `debug/stuck-spans`
               - `debug/trace/boot`
@@ -41873,16 +41872,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-medium`
               - `ui/tokens/type-scale --line-height-caption`
               - `ui/tokens/type-scale --line-height-label`
-            - Imported by: 33 plugins — full list in [`plugins/primitives/plugins/css/plugins/link-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/link-chip/REFERENCE.md)
+            - Imported by: 28 plugins — full list in [`plugins/primitives/plugins/css/plugins/link-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/link-chip/REFERENCE.md)
               - `active-data` ×10
               - `conversations` ×5
-              - `debug` ×5
               - `apps` ×4
               - `primitives` ×3
               - `page` ×2
               - `plugin-meta` ×2
               - `build/serve-composition`
-              - `database/query-deadline`
+              - `debug/trace/engine`
         - **`meter`** — Linear meter / progress-bar primitive: <Meter value label tone size marker role> draws a fully-rounded track filling its container's width, filled to a 0..1 fraction (clamped) in a tone (default accent text colour, warning, destructive, muted) with a smooth width transition, plus an optional target/pace tick overhanging the bar. role meter (a measurement) or progressbar (a task's progress), with the aria value attributes.
           - Web:
             - Uses:
@@ -54300,13 +54298,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 367 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 362 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×96
           - `conversations` ×58
           - `primitives` ×42
           - `fields` ×41
           - `page` ×41
-          - `debug` ×15
+          - `debug` ×11
           - `tasks` ×9
           - `ui` ×8
           - `active-data` ×6
@@ -54324,7 +54322,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework` ×2
           - `reports` ×2
           - `auth`
-          - `database/query-deadline`
           - `fullscreen`
           - `layouts/miller`
           - `map`

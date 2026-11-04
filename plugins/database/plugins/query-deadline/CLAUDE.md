@@ -226,14 +226,12 @@ effect with no timer to fire again.
     - `Reports.KindView` → `AbandonCapSummary`
     - `HealthReport.Row` "Database"
   - Uses:
-    - `apps-core/tabs.useAppLink`
+    - `debug/trace/engine.TraceChip`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
-    - `primitives/css/link-chip.LinkChip`
     - `reports.Reports`
     - `shell/health-report.HealthReport`
-    - `ui/icons.Icon`
 - Server:
   - Contributes:
     - `report-kind` "db-abandon-cap"

@@ -28,7 +28,7 @@ import {
   SPAN_MEASURES,
   type SpanMeasure,
 } from "@plugins/infra/plugins/runtime-profiler/core";
-import { TraceChip } from "./trace-chip";
+import { TraceChip } from "@plugins/debug/plugins/trace/plugins/engine/web";
 import { formatDuration } from "@plugins/fields/plugins/duration/core";
 
 // Markers scraped by codegen (data-views.generated.ts). Must live in web/**.
@@ -281,7 +281,8 @@ const sampleFields: FieldDef<SampleRow>[] = [
     label: "Trace",
     type: "identifier",
     value: (r) => r.traceId ?? "",
-    cell: (r) => (r.traceId ? <TraceChip traceId={r.traceId} /> : null),
+    cell: (r) =>
+      r.traceId ? <TraceChip traceId={r.traceId}>trace</TraceChip> : null,
     width: "5rem",
   },
 ];
