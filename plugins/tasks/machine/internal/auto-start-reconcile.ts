@@ -14,10 +14,10 @@ import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 // TypeScript (a migration, a hand-run psql).
 //
 // It deliberately re-derives NOTHING. `maybeLaunchTaskJob` is already the
-// single gate (dropped/held → bail, no marker → bail, blocked → bail, claim,
-// existing attempt → bail); a "launchable" pre-filter here would be a second
-// copy of that gate that can drift, which is the disease this whole change
-// cures. So: every armed id, unconditionally.
+// single gate (no marker → bail, the status's AUTO_START_DECISIONS → wait /
+// disarm / launch, claim, open attempt → bail); a "launchable" pre-filter here
+// would be a second copy of that gate that can drift, which is the disease
+// this whole change cures. So: every armed id, unconditionally.
 //
 // Cost is one indexed job row per marker (~180 today), collapsed by
 // maybeLaunchTaskJob's `taskId` dedup key. Host-scoped, so it runs on the main

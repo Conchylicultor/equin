@@ -54,6 +54,8 @@ function makeStore(
   const armed = new Map<string, ModelChoice>();
   const tracks = new Map<string, TaskTrack>();
   const titles = new Map<string, string>();
+  /** Tasks that are done or dropped. */
+  const settled = new Set<string>();
   let seq = 0;
 
   const graph: DependencyGraph = {
@@ -73,6 +75,7 @@ function makeStore(
         .map((e) => e.split("->") as [string, string])
         .filter(([a]) => a === id)
         .map(([, b]) => b),
+    unsettled: async (ids) => ids.filter((id) => !settled.has(id)),
   };
 
   const ports: AddTaskPorts = {
@@ -117,7 +120,7 @@ function makeStore(
       ports,
     );
 
-  return { tasks, edges, armed, tracks, watches, file };
+  return { tasks, edges, armed, tracks, watches, settled, file };
 }
 
 describe("add_task filing: main track vs sidequest", () => {
@@ -183,6 +186,21 @@ describe("add_task filing: main track vs sidequest", () => {
         `${D}->${m.task_id}`,
         `${q.task_id}->${T}`,
       ]),
+    );
+  });
+
+  test("a settled dependent is not spliced: it keeps waiting on T, the unsettled one moves", async () => {
+    // 2026-11-04: a follow-up's splice rewired a task that had landed hours
+    // earlier onto the new task, giving it a phantom blocker.
+    const s = makeStore();
+    const E = "E"; // a second dependent of T, still to run
+    s.tasks.add(E);
+    s.edges.add(`${E}->${T}`);
+    s.settled.add(D);
+
+    const m = await s.file({ title: "Main", track: "main" });
+    expect(s.edges).toEqual(
+      new Set([`${m.task_id}->${T}`, `${D}->${T}`, `${E}->${m.task_id}`]),
     );
   });
 

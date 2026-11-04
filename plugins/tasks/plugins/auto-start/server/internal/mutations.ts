@@ -1,9 +1,7 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db, type DbExecutor } from "@plugins/database/server";
-import {
-  _tasks,
-  hasBlockingDep,
-} from "@plugins/tasks/plugins/tasks-core/server";
+import { _tasks, tasksView } from "@plugins/tasks/plugins/tasks-core/server";
+import { statusesDeciding } from "../../core";
 import { tasksAutoStart, _tasksAutoStartExt } from "./tables";
 import type { ModelChoice } from "@plugins/conversations/plugins/model-provider/core";
 
@@ -22,30 +20,25 @@ export async function listArmedTaskIds(): Promise<string[]> {
   return rows.map((r) => r.taskId);
 }
 
-// Of `taskIds`, the armed ones that can launch on their own: neither held nor
-// dropped, and with no blocking prerequisite — what will start an agent without
+// Of `taskIds`, the armed ones that can launch on their own: their status
+// decides `launch` (AUTO_START_DECISIONS) — what will start an agent without
 // anyone acting. On `exec`, so a caller's transaction sees its own writes.
 export async function listLaunchableArmedIn(
   taskIds: readonly string[],
   exec: DbExecutor = db,
 ): Promise<string[]> {
   if (taskIds.length === 0) return [];
-  const armed = await exec
+  const rows = await exec
     .select({ taskId: _tasksAutoStartExt.taskId })
     .from(_tasksAutoStartExt)
-    .innerJoin(_tasks, eq(_tasks.id, _tasksAutoStartExt.taskId))
+    .innerJoin(tasksView, eq(tasksView.id, _tasksAutoStartExt.taskId))
     .where(
       and(
         inArray(_tasksAutoStartExt.taskId, [...taskIds]),
-        isNull(_tasks.heldAt),
-        isNull(_tasks.droppedAt),
+        inArray(tasksView.status, statusesDeciding("launch")),
       ),
     );
-  const out: string[] = [];
-  for (const { taskId } of armed) {
-    if (!(await hasBlockingDep(taskId, exec))) out.push(taskId);
-  }
-  return out;
+  return rows.map((r) => r.taskId);
 }
 
 // Arm (or, with `null`, disarm) a task. An arm REPLACES the whole marker:

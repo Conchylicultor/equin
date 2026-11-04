@@ -901,12 +901,12 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
   test("the settled phase drained the warm-ups, host-scoped ones included", async () => {
     await host.settled;
     // Worktree-scoped (the pages search and links backfills) and host-scoped
-    // (auto-start's dropped sweep): a sole host runs every scope, so none is
+    // (auto-start's disarm sweep): a sole host runs every scope, so none is
     // skipped and each ran to success.
     for (const name of [
       "pages.search.backfill",
       "page.links.backfill",
-      "tasks.auto-start-dropped-sweep",
+      "tasks.auto-start-disarm-sweep",
     ]) {
       expect({ name, outcome: warmupRunOf(name)?.outcome }).toEqual({
         name,

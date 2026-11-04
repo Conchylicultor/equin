@@ -114,6 +114,27 @@ async function seedAttemptWithConversation(
   return attemptId;
 }
 
+/** A run that landed: its conversation closed, one push. The task reads `done`. */
+async function seedLandedRun(taskId: string): Promise<void> {
+  const attemptId = await seedAttemptWithConversation(taskId);
+  await t.db.execute(sql`
+    UPDATE conversations SET status = 'done', ended_at = now()
+     WHERE attempt_id = ${attemptId}
+  `);
+  const pushId = nextId("push");
+  await t.db.execute(sql`
+    INSERT INTO pushes (id, push_id, attempt_id, sha, message)
+    VALUES (${pushId}, ${pushId}, ${attemptId}, ${pushId}, 'landed')
+  `);
+}
+
+async function taskStatus(taskId: string): Promise<string> {
+  const { rows } = await t.db.execute(
+    sql`SELECT status FROM tasks_v WHERE id = ${taskId}`,
+  );
+  return (rows[0] as { status: string }).status;
+}
+
 function prepared(taskId: string): PreparedConversation {
   const attemptId = nextId("att");
   return {
@@ -301,6 +322,63 @@ describe("launchArmedTask", () => {
     expect(await attemptCount(taskId)).toBe(1);
     expect(await conversationCount(taskId)).toBe(1);
     expect(await launchJobCount(p.target.attemptId)).toBe(0);
+  });
+
+  // The queue asks the task's status (AUTO_START_DECISIONS) on the launch
+  // transaction: 2026-11-04 launched five tasks that had landed in June.
+  test("a done task is never launched by the queue: the marker is disarmed", async () => {
+    const taskId = await seedArmedTask();
+    await seedLandedRun(taskId);
+    expect(await taskStatus(taskId)).toBe("done");
+    const p = prepared(taskId);
+
+    expect(await launch(taskId, p)).toBe(false);
+
+    expect(await markerCount(taskId)).toBe(0);
+    expect(await attemptCount(taskId)).toBe(1);
+    expect(await launchJobCount(p.target.attemptId)).toBe(0);
+  });
+
+  test("a dropped task is never launched by the queue: the marker is disarmed", async () => {
+    const taskId = await seedArmedTask();
+    await t.db.execute(
+      sql`UPDATE tasks SET dropped_at = now() WHERE id = ${taskId}`,
+    );
+    expect(await taskStatus(taskId)).toBe("dropped");
+
+    expect(await launch(taskId, prepared(taskId))).toBe(false);
+
+    expect(await markerCount(taskId)).toBe(0);
+    expect(await attemptCount(taskId)).toBe(0);
+  });
+
+  test("a blocked task waits: no launch, the marker stays", async () => {
+    const taskId = await seedArmedTask();
+    const blocker = nextId("task");
+    await t.db.execute(sql`
+      INSERT INTO tasks (id, title, rank, mandate_ref) VALUES (${blocker}, 'blocker', ${`b${seq}`}, 'interactive')
+    `);
+    await t.db.execute(sql`
+      INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES (${taskId}, ${blocker})
+    `);
+    expect(await taskStatus(taskId)).toBe("blocked");
+
+    expect(await launch(taskId, prepared(taskId))).toBe(false);
+
+    expect(await markerCount(taskId)).toBe(1);
+    expect(await attemptCount(taskId)).toBe(0);
+  });
+
+  test("an explicit launch of a done task starts another run", async () => {
+    const taskId = await seedArmedTask();
+    await seedLandedRun(taskId);
+    const p = prepared(taskId);
+
+    expect(await launch(taskId, p, undefined, "launch")).toBe(true);
+
+    expect(await markerCount(taskId)).toBe(0);
+    expect(await attemptCount(taskId)).toBe(2);
+    expect(await launchJobCount(p.target.attemptId)).toBe(2);
   });
 
   test("an explicit launch of a task that already has an attempt starts another run", async () => {

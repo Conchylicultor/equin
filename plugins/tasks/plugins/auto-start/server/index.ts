@@ -2,9 +2,9 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { Trigger } from "@plugins/infra/plugins/events/server";
 import { taskStatusChanged } from "@plugins/tasks/plugins/tasks-core/server";
 import { taskAutoStartServed } from "./internal/resource";
-import { cancelAutoStartOnDropJob } from "./internal/cancel-on-drop";
+import { disarmAutoStartOnStatusJob } from "./internal/disarm-on-status";
 import { taskAutoStartArmed } from "./internal/tables-events";
-import { autoStartDroppedSweepWarmup } from "./internal/dropped-sweep";
+import { autoStartDisarmSweepWarmup } from "./internal/disarm-sweep";
 
 export {
   setTaskAutoStart,
@@ -21,19 +21,19 @@ export type { TaskAutoStartArmedPayload } from "./internal/tables-events";
 
 export default {
   description:
-    "Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart, and the tasks.autoStartArmed trigger event whatever launches agents subscribes to, and a host-scoped boot warm-up that clears leftover markers from already-dropped tasks.",
+    "Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart, and the tasks.autoStartArmed trigger event whatever launches agents subscribes to, and the job and host-scoped boot warm-up that clear the marker of every task whose status decides `disarm` (AUTO_START_DECISIONS: dropped, done, or an agent running).",
   contributions: [
     ...taskAutoStartServed.declare,
     Trigger({
       on: taskStatusChanged,
-      do: cancelAutoStartOnDropJob,
+      do: disarmAutoStartOnStatusJob,
       with: {},
       oneShot: false,
     }),
   ],
   register: [
     taskAutoStartArmed,
-    cancelAutoStartOnDropJob,
-    autoStartDroppedSweepWarmup,
+    disarmAutoStartOnStatusJob,
+    autoStartDisarmSweepWarmup,
   ],
 } satisfies ServerPluginDefinition;

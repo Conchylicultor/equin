@@ -51539,8 +51539,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `trigger` "watch.ingest"
       - `trigger` "watch.ingest"
       - `trigger` "watch.ingest"
-    - Uses: 38 symbols — full list in [`plugins/tasks/REFERENCE.md`](../plugins/tasks/REFERENCE.md)
-      - `tasks/tasks-core` ×19
+    - Uses: 39 symbols — full list in [`plugins/tasks/REFERENCE.md`](../plugins/tasks/REFERENCE.md)
+      - `tasks/tasks-core` ×20
       - `tasks/orchestration/mandate` ×3
       - `infra/endpoints` ×2
       - `primitives/rank` ×2
@@ -51783,7 +51783,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `standingOf`
       - Cross-plugin:
         - Imported by: `conversations/conversation-view/drop-and-exit`
-    - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive; the model picker over it is the launch-option sub-plugin. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart, and the tasks.autoStartArmed trigger event whatever launches agents subscribes to, and a host-scoped boot warm-up that clears leftover markers from already-dropped tasks.
+    - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive; the model picker over it is the launch-option sub-plugin. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart, and the tasks.autoStartArmed trigger event whatever launches agents subscribes to, and the job and host-scoped boot warm-up that clear the marker of every task whose status decides `disarm` (AUTO_START_DECISIONS: dropped, done, or an agent running).
       - Web:
         - Contributes: `Tasks.TaskActions` "queued-chip" → `QueuedChipAction`
         - Uses:
@@ -51799,7 +51799,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Contributes:
           - `resource.declare` "tasks-auto-start:rows"
-          - `trigger` "tasks.auto-start-cancel-on-drop"
+          - `trigger` "tasks.auto-start-disarm-on-status"
         - Uses:
           - `database.db`
           - `database.DbExecutor`
@@ -51810,8 +51810,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/warmup.defineWarmup`
           - `network/live.serveCollection`
           - `tasks/tasks-core._tasks`
-          - `tasks/tasks-core.hasBlockingDep`
           - `tasks/tasks-core.taskStatusChanged`
+          - `tasks/tasks-core.tasksView`
         - DB schema:
           - `plugins/tasks/plugins/auto-start/server/internal/tables-events.ts`
           - `plugins/tasks/plugins/auto-start/server/internal/tables.ts`
@@ -51827,8 +51827,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskAutoStartArmed`
         - Register:
           - `defineTriggerEvent('tasks.autoStartArmed')`
-          - `defineJob('tasks.auto-start-cancel-on-drop')`
-          - `defineWarmup('tasks.auto-start-dropped-sweep')`
+          - `defineJob('tasks.auto-start-disarm-on-status')`
+          - `defineWarmup('tasks.auto-start-disarm-sweep')`
         - Resources: `tasks-auto-start:rows` (keyed, point)
       - Core:
         - Uses:
@@ -51843,12 +51843,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/entity-extensions.defineExtensionShape`
           - `network/live.liveCollection`
         - Exports (types):
+          - `AutoStartDecision`
           - `SetAutoStartBody`
           - `TaskAutoStartRow`
         - Exports (values):
+          - `AUTO_START_DECISIONS`
+          - `autoStartDecision`
           - `clearTaskAutoStart`
           - `SetAutoStartBodySchema`
           - `setTaskAutoStart`
+          - `statusesDeciding`
           - `taskAutoStart`
           - `taskAutoStartShape`
       - Cross-plugin:
@@ -53883,6 +53887,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `pushLanded`
           - `PushLedger`
           - `PushSchema`
+          - `readTaskStatuses`
           - `RECENT_GONE_LIMIT`
           - `recordScratchDelivery`
           - `refreshEffectiveMandates`

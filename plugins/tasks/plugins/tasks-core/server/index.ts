@@ -149,6 +149,7 @@ export {
   isDescendant,
   nearestMandate,
   taskDependsOn,
+  readTaskStatuses,
 } from "./internal/queries/tasks";
 export type { NearestMandate } from "./internal/queries/tasks";
 

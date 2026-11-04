@@ -20,8 +20,8 @@
     - `trigger` "watch.ingest"
     - `trigger` "watch.ingest"
     - `trigger` "watch.ingest"
-  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `tasks/tasks-core` ×19
+  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks/tasks-core` ×20
     - `tasks/orchestration/mandate` ×3
     - `infra/endpoints` ×2
     - `primitives/rank` ×2

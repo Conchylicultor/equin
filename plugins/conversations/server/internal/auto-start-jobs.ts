@@ -2,12 +2,11 @@ import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import { z } from "zod";
 import { sql } from "drizzle-orm";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
-import { db } from "@plugins/database/server";
 import {
   getConversation,
   getTask,
-  hasBlockingDep,
   listAttemptsForTask,
+  readTaskStatuses,
   withTaskStatusBatch,
   type DbExecutor,
 } from "@plugins/tasks/plugins/tasks-core/server";
@@ -19,6 +18,7 @@ import {
   claimAutoStart,
   getTaskAutoStart,
 } from "@plugins/tasks/plugins/auto-start/server";
+import { autoStartDecision } from "@plugins/tasks/plugins/auto-start/core";
 import {
   commitConversation,
   finishConversation,
@@ -56,6 +56,12 @@ import { resolveLaunchPrompt } from "./launch-prompt";
 // (a second "Fix this crash" on the same report reuses the report's task), so
 // an attempt is no reason to refuse. The claim stays the exactly-once gate in
 // both modes: it is what stops two runners launching one ARM.
+//
+// The queue (`skip`) also asks the task's status what to do
+// (AUTO_START_DECISIONS), on this transaction so nothing can move it between
+// the read and the claim: `wait` leaves the marker, `disarm` consumes it and
+// launches nothing — a done, dropped or running task is never launched by the
+// queue. An explicit launch does not ask: a person may run a done task again.
 export type IfAlreadyStarted = "skip" | "launch";
 
 export async function launchArmedTask(
@@ -71,14 +77,27 @@ export async function launchArmedTask(
   // the hang as a job-deadline report, so it stays visible.
   await tx.execute(sql`SET LOCAL idle_in_transaction_session_timeout = '30s'`);
 
+  if (opts.ifAlreadyStarted === "skip") {
+    const row = (await readTaskStatuses([taskId], tx)).get(taskId);
+    if (!row) throw new Error(`launchArmedTask: task ${taskId} not found`);
+    const decision = autoStartDecision(row.status);
+    if (decision === "wait") return false;
+    if (decision === "disarm") {
+      await claimAutoStart(taskId, tx);
+      return false;
+    }
+  }
+
   // Another runner claimed it (and committed), or it was cancelled.
   if (!(await claimAutoStart(taskId, tx))) return false;
 
   // Queue only: a manual start raced in before our claim. Returning commits
   // the consumed marker, as before: the task already has its launch, just not
-  // ours. Only a `retained` attempt (the user has not finished with it) counts:
-  // a closed attempt is a past run, and re-arming a task whose runs are all
-  // closed asks for another one — skipping it would silently eat the marker.
+  // ours. The status cannot say this one: a DORMANT attempt (its conversation
+  // gone but resumable — the user has not finished with it) reads `attempted`
+  // like a closed one. Only a `retained` attempt counts: a closed attempt is a
+  // past run, and re-arming a task whose runs are all closed asks for another
+  // one — skipping it would silently eat the marker.
   if (
     opts.ifAlreadyStarted === "skip" &&
     (await listAttemptsForTask(taskId, tx)).some((a) => a.retained)
@@ -111,9 +130,9 @@ export type LaunchTaskNowResult =
 // (`buildTaskPrompt`) — `resolveLaunchPrompt`. So a task an automation armed
 // launches with the automation's prompt whichever path claims it.
 //
-// The caller owns the policy gates (main-only, dropped / held, blocking deps):
-// the queue must wait on them, while an inline launch the user asked for has
-// nothing to wait for. Likewise `ifAlreadyStarted` (see `launchArmedTask`):
+// The caller owns the main-only gate; the status gate (AUTO_START_DECISIONS)
+// is `launchArmedTask`'s in queue mode — the queue must wait on it, while an
+// inline launch the user asked for has nothing to wait for. Likewise `ifAlreadyStarted` (see `launchArmedTask`):
 // required, because the queue and a user launch mean opposite things by it.
 export async function launchTaskNow(
   taskId: string,
@@ -173,7 +192,8 @@ export async function launchTaskNow(
   return { started: true, conversation };
 }
 
-// Job that launches a queued task once all its dependencies are non-blocking.
+// Job that launches a queued task once its status decides `launch`
+// (AUTO_START_DECISIONS) — in particular, once nothing blocks it.
 // Invoked by maybeLaunchOnStatusJob (static trigger on taskStatusChanged), by
 // armTaskAutoStart when a task is armed, and by the boot reconcile warm-up.
 //
@@ -217,10 +237,22 @@ export const maybeLaunchTaskJob = defineJob({
       );
       return;
     }
-    // dropTaskTree drops a whole subtree then emits taskStatusChanged for each
-    // node — the dependents (also dropped) would pass hasBlockingDep because
-    // dropped deps are non-blocking. Bail if the task itself is dropped/held.
-    if (t.droppedAt || t.heldAt) return;
+    // What auto-start does with this task is its status's decision, never a
+    // re-derivation from raw columns (the one that launched five landed tasks
+    // on 2026-11-04 had no clause for `done`). `wait` (blocked, held): a later
+    // status change wakes this job again. `disarm` (done, dropped, an agent
+    // running): the marker is spent. Read here as well as on the launch
+    // transaction so a doomed task never prepares a conversation or files a
+    // model report; the transaction's read is the authoritative one.
+    const decision = autoStartDecision(t.status);
+    if (decision === "wait") return;
+    if (decision === "disarm") {
+      if (await claimAutoStart(taskId))
+        console.warn(
+          `[tasks.maybe-launch] task ${taskId} is ${t.status}: auto-start disarmed, nothing launched`,
+        );
+      return;
+    }
     const ext = await getTaskAutoStart(taskId);
     if (!ext) {
       console.warn(
@@ -228,8 +260,6 @@ export const maybeLaunchTaskJob = defineJob({
       );
       return;
     }
-    // Some other dep is still blocking; another trigger will fire later.
-    if (await hasBlockingDep(taskId, db)) return;
     // Claude Code missing or signed out: leave the task armed rather than
     // throw (graphile would retry into a dead letter). When Claude Code turns
     // ready, `onClaudeCodeReady` re-runs the armed-task reconcile, which wakes
@@ -297,16 +327,13 @@ export const maybeLaunchTaskJob = defineJob({
 // The armed-marker guard below is what keeps the now-wider event stream from
 // amplifying into launch jobs: a settle on a task with 47 dependents emits up
 // to 48 events, and all but the armed ones stop here on one indexed read.
-// maybeLaunchTaskJob remains the exactly-once gate (dropped/held? armed?
-// unblocked? unclaimed? no existing attempt?), so waking it for a task that
-// turns out to be ineligible is a safe no-op.
+// maybeLaunchTaskJob remains the exactly-once gate (armed? its status's
+// decision? unclaimed? no open attempt?), so waking it for a task that turns
+// out to be ineligible is a safe no-op.
 //
-// A consequence worth naming: this rule keys on NO status at all, so a new
-// status is not something it has to be taught. `in_progress_blocked` arrived
-// while this change was in flight and needed an `isBlockedStatus` predicate in
-// the old `previousStatus === "blocked"` condition; here it needs nothing —
-// maybeLaunchTaskJob asks `hasBlockingDep` directly rather than reading a
-// status, so the gate cannot fall out of step with the status vocabulary.
+// A consequence worth naming: this trigger keys on NO status at all, so a new
+// status is not something it has to be taught. The gate it wakes reads the
+// status through AUTO_START_DECISIONS, which tsc forces to decide every status.
 //
 // This intermediary job cannot be collapsed into maybeLaunchTaskJob itself: a
 // Trigger's `with` is a static input, and `taskId` arrives on the separate

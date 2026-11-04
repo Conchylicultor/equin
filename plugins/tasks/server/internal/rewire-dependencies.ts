@@ -3,8 +3,10 @@ import {
   removeTaskDependency,
   listDependentIds,
   getTaskDependencyIds,
+  readTaskStatuses,
   withTaskStatusBatch,
 } from "@plugins/tasks/plugins/tasks-core/server";
+import { isSettled } from "@plugins/tasks/plugins/tasks-core/core";
 import { listSidequestIds } from "@plugins/tasks/plugins/task-track/server";
 
 export interface RewireOptions {
@@ -39,6 +41,8 @@ export interface DependencyGraph {
   spliceableDependentsOf(taskId: string): Promise<string[]>;
   /** The tasks `taskId` depends on. */
   dependenciesOf(taskId: string): Promise<string[]>;
+  /** Of `ids`, the ones not settled (neither done nor dropped), in order. */
+  unsettled(ids: readonly string[]): Promise<string[]>;
 }
 
 /** The rewire itself, over any {@link DependencyGraph}. */
@@ -48,9 +52,16 @@ export async function rewireOn(
 ): Promise<void> {
   if (opts.relation === "followup") {
     await graph.add(opts.newTaskId, opts.targetId);
-    const idsToRewire =
+    // A settled dependent is never moved: it has already run (or never will),
+    // so waiting on the new task means nothing — and that phantom blocker is
+    // what kept stale auto-start markers on landed tasks dormant until a later
+    // drop unblocked them (2026-11-04). Its edge stays on the target, where it
+    // is already satisfied. Applies to an explicit `selectiveInsertBefore`
+    // too: nothing can be inserted before work that is already done.
+    const idsToRewire = await graph.unsettled(
       opts.selectiveInsertBefore ??
-      (await graph.spliceableDependentsOf(opts.targetId));
+        (await graph.spliceableDependentsOf(opts.targetId)),
+    );
     for (const depId of idsToRewire) {
       if (depId === opts.newTaskId) continue;
       await graph.remove(depId, opts.targetId);
@@ -90,6 +101,14 @@ export async function rewireDependencies(opts: RewireOptions): Promise<void> {
           return dependents.filter((d) => !sidequests.has(d));
         },
         dependenciesOf: (id) => getTaskDependencyIds(id, tx),
+        unsettled: async (ids) => {
+          const statuses = await readTaskStatuses(ids, tx);
+          return ids.filter((id) => {
+            const row = statuses.get(id);
+            if (!row) throw new Error(`rewire: task ${id} not found`);
+            return !isSettled(row.status);
+          });
+        },
       },
       opts,
     );

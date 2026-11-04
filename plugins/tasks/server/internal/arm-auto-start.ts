@@ -2,6 +2,9 @@ import {
   setTaskAutoStart,
   taskAutoStartArmed,
 } from "@plugins/tasks/plugins/auto-start/server";
+import { autoStartDecision } from "@plugins/tasks/plugins/auto-start/core";
+import { getTask } from "@plugins/tasks/plugins/tasks-core/server";
+import { HttpError } from "@plugins/infra/plugins/endpoints/core";
 import type { ModelChoice } from "@plugins/conversations/plugins/model-provider/core";
 
 // Mark a task as queued for auto-launch, then wake the launcher.
@@ -12,11 +15,16 @@ import type { ModelChoice } from "@plugins/conversations/plugins/model-provider/
 // it — and a host with no launcher (an in-browser server) arms the task and
 // wakes nothing.
 //
-// The wake-up is unconditional. `maybeLaunchTaskJob` already checks whether
-// anything is blocking the task (along with dropped/held, the marker, the CAS
-// and existing attempts), so a `hasBlockingDep` pre-check here would be a
-// second copy of that gate — one that can only drift from the real one. A wake
-// for a task that turns out to be blocked costs one indexed read and stops.
+// The wake-up is unconditional. `maybeLaunchTaskJob` decides from the task's
+// status (AUTO_START_DECISIONS: launch / wait / disarm), the marker, the CAS
+// and open attempts, so a blocked pre-check here would be a second copy of
+// that gate — one that can only drift from the real one. A wake for a task
+// that turns out to be blocked costs one read and stops.
+//
+// The one refusal: a task whose status decides `disarm` (done, dropped, an
+// agent running) cannot be armed — the launcher would only delete the marker,
+// so the arm would vanish without a word. Another run of such a task is a
+// person's explicit launch (POST /api/tasks/launch), which does not arm.
 //
 // Setting the marker first is load-bearing: the job bails when it finds no
 // marker, so waking it before the write would race a fast worker.
@@ -37,6 +45,14 @@ export async function armTaskAutoStart(args: {
   cause: string;
 }): Promise<void> {
   const { taskId, model, prompt, cause } = args;
+  const task = await getTask(taskId);
+  if (!task) throw new HttpError(404, `task ${taskId} not found`);
+  if (autoStartDecision(task.status) === "disarm") {
+    throw new HttpError(
+      409,
+      `Task ${taskId} is ${task.status}: auto-start cannot be armed (launch it explicitly to run it again)`,
+    );
+  }
   await setTaskAutoStart(taskId, { model, prompt });
   await taskAutoStartArmed.emit({ taskId, cause });
 }
