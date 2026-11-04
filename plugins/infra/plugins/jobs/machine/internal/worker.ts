@@ -788,6 +788,7 @@ async function dispatch(
           message: `[jobs] ${payload.jobName} failed (attempt ${meta.attempt}): ${errObj.message}`,
           stack: errObj.stack ?? null,
           errorType: errObj.name,
+          scope: payload.jobName,
         });
         // A NonRetryableError signals a DETERMINISTIC failure — the same stored
         // input will fail identically on every retry. Collapse the retry budget so

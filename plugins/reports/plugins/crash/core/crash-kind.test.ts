@@ -66,6 +66,39 @@ describe("crashFingerprint", () => {
     expect(first).toBe(second);
   });
 
+  test("a scope splits one shared throw site per subject, and its absence changes nothing", async () => {
+    // Every supervised job dead-letters through the same throw: same type, same frames.
+    const failure = (job: string) => ({
+      errorType: "NonRetryableError",
+      stack: `NonRetryableError: [supervised-job] ${job}: run 1 exited 1\n    at applyFailurePolicy (/repo/plugins/infra/plugins/jobs/plugins/supervised-job/server/internal/builtin-ledger.ts:361:9)`,
+    });
+    const reap = await crashFingerprint(
+      {
+        ...failure("worktree-cleanup.reap-stale"),
+        scope: "worktree-cleanup.reap-stale",
+      },
+      ctx("[jobs] worktree-cleanup.reap-stale failed (attempt 1)"),
+    );
+    const prune = await crashFingerprint(
+      { ...failure("checks.cache-prune"), scope: "checks.cache-prune" },
+      ctx("[jobs] checks.cache-prune failed (attempt 1)"),
+    );
+    const reapAgain = await crashFingerprint(
+      {
+        ...failure("worktree-cleanup.reap-stale"),
+        scope: "worktree-cleanup.reap-stale",
+      },
+      ctx("[jobs] worktree-cleanup.reap-stale failed (attempt 2)"),
+    );
+    expect(reap).not.toBe(prune);
+    expect(reap).toBe(reapAgain);
+
+    const unscoped = failure("x");
+    expect(await crashFingerprint({ ...unscoped, scope: null }, ctx("m"))).toBe(
+      await crashFingerprint(unscoped, ctx("m")),
+    );
+  });
+
   test("a stack's frames are the identity — pinned, so existing rows keep theirs", async () => {
     // Re-pinned 2026-11-02 when the origin / content hash / checkout prefix
     // left the frame (research/2026-11-02-reports-host-independent-crash-fingerprint.md);

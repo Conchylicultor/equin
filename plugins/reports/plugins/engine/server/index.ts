@@ -74,7 +74,11 @@ export default {
         kind: "crash",
         source: "server-caught",
         message: report.message,
-        data: { errorType: report.errorType, stack: report.stack },
+        data: {
+          errorType: report.errorType,
+          stack: report.stack,
+          scope: report.scope ?? null,
+        },
       });
     });
     // The synchronous twin, for a backend on its way out of a deliberate exit.

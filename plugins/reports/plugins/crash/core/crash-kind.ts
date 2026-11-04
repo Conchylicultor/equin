@@ -18,6 +18,11 @@ export const CrashPayloadSchema = z.object({
   // human label). Omitted for window-level errors — we don't know then.
   slot: z.string().nullable().optional(),
   label: z.string().nullable().optional(),
+  // The subject a shared throw site failed for (server-core's
+  // ServerErrorReport.scope — a job's name). Part of the fingerprint: one
+  // framework throw acting for many jobs is one bug PER job, never one row
+  // for all of them.
+  scope: z.string().nullable().optional(),
   // The composition lineage of the crashed subtree, collected by the boundary's
   // fallback from its own mount point. Kept ALONGSIDE slot/label rather than
   // replacing them: those are the boundary's own view, available with no DOM
@@ -54,6 +59,12 @@ export type CrashPayload = z.infer<typeof CrashPayloadSchema>;
 //     months — the wrong source, the wrong task and whichever message arrived
 //     last.
 //
+// Whatever the branch, a `scope` (the subject a shared throw site failed for —
+// a job's name) is prefixed to the material: on 2026-11-04 every supervised
+// job's dead-letter, thrown from the one applyFailurePolicy, sat on a single
+// row titled "worktree-cleanup.reap-stale … killed by TERM" (×75), most of it
+// other jobs' unrelated exit-1 runs.
+//
 // Branch 2 and 3 inputs are pinned in crash-kind.test.ts. Branch 1's input
 // changed once, on 2026-11-02, when the location noise below was stripped
 // (research/2026-11-02-reports-host-independent-crash-fingerprint.md): framed
@@ -64,12 +75,14 @@ export async function crashFingerprint(
   ctx: ReportFingerprintContext,
 ): Promise<string> {
   const frames = normalizeFrames(data.stack ?? "");
-  const input =
+  const identity =
     frames.length > 0
       ? `${data.errorType ?? "Error"}|${frames.slice(0, 3).join("|")}`
       : data.errorType
         ? `${data.errorType}|`
         : `Error|msg:${normalizeMessage(ctx.message)}`;
+  // Prefixed only when present, so every unscoped report keeps its row.
+  const input = data.scope ? `scope:${data.scope}|${identity}` : identity;
   return sha256Hex(input).then((h) => h.slice(0, 16));
 }
 

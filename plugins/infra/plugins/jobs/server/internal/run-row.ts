@@ -74,6 +74,7 @@ export async function UNSAFE_runJobRow(
       message: `[jobs] ${payload.jobName} failed (attempt ${meta.attempt}): ${errObj.message}`,
       stack: errObj.stack ?? null,
       errorType: errObj.name,
+      scope: payload.jobName,
     });
     const finality = classifyFailure({
       err,

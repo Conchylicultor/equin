@@ -7,6 +7,14 @@ export interface ServerErrorReport {
   message: string;
   stack?: string | null;
   errorType?: string | null;
+  /**
+   * What the error is ABOUT when the throw site is shared code acting for many
+   * subjects — a job's name, for a failure the jobs worker reports. Part of the
+   * report's identity: without it every job that fails through the same
+   * framework throw (supervised-job's dead-letter) lands on ONE row, titled
+   * with whichever job failed last.
+   */
+  scope?: string | null;
 }
 
 type ErrorReporter = (report: ServerErrorReport) => void;
