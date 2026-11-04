@@ -80,6 +80,7 @@ double close in our own code loud at its source.
     - `owned-fd/no-raw-fd-close` — `core/internal/owned-fd.ts` (sanctioned)
   - Exempted by:
     - `framework/tooling/checks/bun-runtime` (0 debt)
+    - `infra/host/io-health/monitor` (0 debt)
     - `packages/owned-fd` (0 debt)
 - Core:
   - Exports (types): `OwnedFd`

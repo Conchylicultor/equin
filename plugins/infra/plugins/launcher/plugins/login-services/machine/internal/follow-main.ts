@@ -147,6 +147,6 @@ function describeFollow(outcome: ReconcileOutcome): string | null {
     case "rewritten":
       return `stopped; its definition now names main's build (${outcome.path})`;
     case "started":
-      return `reloaded onto main's build (PID ${outcome.pid})`;
+      return `reloaded onto main's build (PID ${outcome.pid ?? "none between runs"})`;
   }
 }

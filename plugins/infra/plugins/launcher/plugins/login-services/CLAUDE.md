@@ -146,6 +146,20 @@ non-zero exit only, 10 s throttle, 20 s stop budget, `KillMode=process`. A
 `background` spec renders byte-identical to the gateway's plist / unit from
 before this was generic — the renderer tests pin it.
 
+## Periodic services and platforms
+
+- `schedule: { everySeconds }` — a periodic job, not a kept-alive one: launchd
+  `StartInterval` + `RunAtLoad`, no `KeepAlive` / `ThrottleInterval` (each run
+  exits on its own; launchd never overlaps two). It is part of the service's
+  `LoginServiceId`, like `session`: `load` resolves once launchd holds it
+  (`pid` null between runs), and `start` treats "held" as running. systemd has
+  no renderer for it yet (a `.timer` unit) and refuses. The fs-latency monitor
+  (`infra/host/io-health/monitor`) is the first.
+- `interactive: true` (the job) — launchd `ProcessType Interactive`, no
+  manager resource limits, for a job that measures the machine.
+- `platforms` (the declaration) — the OSes it exists on; elsewhere the
+  registry does not list it, so `start`, `stop` and main's boot never see it.
+
 ## Why a leaf folder
 
 No existing collected dir carries it: `deps/`'s default export is strictly
@@ -168,6 +182,7 @@ folder needs only its boundary row, not a barrel's doc and shipping policy.
     - `ComponentBuild`
     - `LoginServiceId`
     - `LoginServiceJob`
+    - `LoginServiceSchedule`
     - `LoginServiceSession`
     - `LoginServiceSpec`
     - `ServiceExecutable`

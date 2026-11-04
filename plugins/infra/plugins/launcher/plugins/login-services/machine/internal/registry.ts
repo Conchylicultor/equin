@@ -9,7 +9,8 @@ import {
  * Every declared login service: each plugin's `login-services/index.ts` default
  * export (an array of `defineLoginService` values), collected by codegen into
  * `core/login-services.generated.ts`. Known statically, so `./equin start` /
- * `stop` read it without booting a backend — and name no service.
+ * `stop` read it without booting a backend — and name no service. Only the
+ * services declared for this OS (`platforms`).
  */
 let loaded: Promise<LoginServiceDeclaration[]> | undefined;
 
@@ -36,5 +37,8 @@ async function loadDeclared(): Promise<LoginServiceDeclaration[]> {
     }
     byId.set(decl.id, decl);
   }
-  return [...byId.values()];
+  // A service declared for other OSes only does not exist here.
+  return [...byId.values()].filter(
+    (d) => d.platforms === undefined || d.platforms.includes(process.platform),
+  );
 }

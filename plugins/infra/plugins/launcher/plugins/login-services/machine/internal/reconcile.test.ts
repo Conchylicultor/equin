@@ -85,7 +85,12 @@ type Registration = "unregistered" | "registered-unloaded" | "loaded";
  * An in-memory LoginService: the definition is a string, the manager's state
  * a field, every call recorded in order.
  */
-function fakeService(registration: Registration, writtenFrom: typeof oldBuild) {
+function fakeService(
+  registration: Registration,
+  writtenFrom: typeof oldBuild,
+  d: typeof decl = decl,
+  loadedPid: number | null = DEAD_PID,
+) {
   const calls: string[] = [];
   const render = (job: LoginServiceJob) => JSON.stringify(job);
   let definition: string | null =
@@ -93,14 +98,14 @@ function fakeService(registration: Registration, writtenFrom: typeof oldBuild) {
       ? null
       : render(
           loginServiceJob(
-            decl,
+            d,
             writtenFrom,
-            unbundledExecutable(decl.executable.build(writtenFrom)),
+            unbundledExecutable(d.executable.build(writtenFrom)),
           ),
         );
   let state: LoginServiceState =
     registration === "loaded"
-      ? { kind: "loaded", pid: DEAD_PID, lastExit: null }
+      ? { kind: "loaded", pid: loadedPid, lastExit: null }
       : { kind: "not-loaded" };
   const definitionPath = joinAppPath(
     dir,
@@ -109,7 +114,7 @@ function fakeService(registration: Registration, writtenFrom: typeof oldBuild) {
   if (definition !== null) writeFileSync(definitionPath, definition);
 
   const service: LoginService = {
-    id: loginServiceId(decl),
+    id: loginServiceId(d),
     manager: "fake",
     startsAt: "login",
     definitionPath: () => definitionPath,
@@ -246,6 +251,27 @@ describe("reconcileLoginService — start", () => {
     const { fake, outcome } = run("loaded", "changed", "start");
     expect(await outcome).toMatchObject({ kind: "started", reloaded: true });
     expect(fake.calls).toEqual(["write", "unload", "load"]);
+  });
+});
+
+describe("reconcileLoginService — a periodic service", () => {
+  const periodic = defineLoginService({
+    ...decl,
+    id: "dev.equin.example-monitor",
+    schedule: { everySeconds: 30 },
+  });
+
+  test("held by the manager between runs (no pid) counts as running", async () => {
+    const fake = fakeService("loaded", oldBuild, periodic, null);
+    const outcome = await reconcileLoginService(
+      fake.service,
+      periodic,
+      oldBuild,
+      "start",
+      { host: unbundled, log: () => {} },
+    );
+    expect(outcome).toEqual({ kind: "unchanged", pid: null });
+    expect(fake.calls).toEqual(["write"]);
   });
 });
 

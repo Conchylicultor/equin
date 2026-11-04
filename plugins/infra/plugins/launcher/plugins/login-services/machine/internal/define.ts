@@ -5,6 +5,7 @@ import {
   type ComponentBuild,
   type LoginServiceId,
   type LoginServiceJob,
+  type LoginServiceSchedule,
   type LoginServiceSession,
   type ServiceExecutable,
 } from "../../core";
@@ -24,6 +25,14 @@ export interface DefineLoginServiceSpec<S extends DepSource> {
   /** One line, as a user reads it in `systemctl status`. */
   description: string;
   session: LoginServiceSession;
+  /** When it runs: always (absent), or periodically (`LoginServiceId.schedule`). */
+  schedule?: LoginServiceSchedule;
+  /**
+   * The OSes it exists on (`process.platform`); absent: every one. A service
+   * that only means something on one OS (a macOS disk monitor) is not
+   * declared anywhere else — `start`, `stop` and main's boot never see it.
+   */
+  platforms?: readonly NodeJS.Platform[];
   /**
    * The dependency the service runs. `start` ensures it from the main checkout
    * and holds it, so the deps sweep never deletes the binary the job names.
@@ -79,7 +88,11 @@ export function defineLoginService<S extends DepSource>(
 
 /** The service a manager is asked about — known without ensuring anything. */
 export function loginServiceId(decl: LoginServiceDeclaration): LoginServiceId {
-  return { label: decl.id, session: decl.session };
+  return {
+    label: decl.id,
+    session: decl.session,
+    ...(decl.schedule === undefined ? {} : { schedule: decl.schedule }),
+  };
 }
 
 /**

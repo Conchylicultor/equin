@@ -18,6 +18,7 @@ export const depsEntries: CollectedEntry[] = [
   { pluginPath: "apps/plugins/website/plugins/promo-film", id: "apps.website.promo-film", loader: () => import("@plugins/apps/plugins/website/plugins/promo-film/deps"), dependsOn: [] },
   { pluginPath: "infra/plugins/audio-analysis", id: "infra.audio-analysis", loader: () => import("@plugins/infra/plugins/audio-analysis/deps"), dependsOn: [] },
   { pluginPath: "infra/plugins/codesign", id: "infra.codesign", loader: () => import("@plugins/infra/plugins/codesign/deps"), dependsOn: [] },
+  { pluginPath: "infra/plugins/host/plugins/io-health/plugins/monitor", id: "infra.host.io-health.monitor", loader: () => import("@plugins/infra/plugins/host/plugins/io-health/plugins/monitor/deps"), dependsOn: [] },
   { pluginPath: "infra/plugins/launcher", id: "infra.launcher", loader: () => import("@plugins/infra/plugins/launcher/deps"), dependsOn: ["infra/plugins/codesign"] },
   { pluginPath: "infra/plugins/safe-fetch/plugins/browser-fetch", id: "infra.safe-fetch.browser-fetch", loader: () => import("@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/deps"), dependsOn: [] },
   { pluginPath: "integrations/plugins/youtube", id: "integrations.youtube", loader: () => import("@plugins/integrations/plugins/youtube/deps"), dependsOn: [] },

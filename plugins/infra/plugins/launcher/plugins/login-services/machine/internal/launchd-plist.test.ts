@@ -151,6 +151,38 @@ describe("renderLaunchAgentPlist — a graphical service", () => {
   });
 });
 
+describe("renderLaunchAgentPlist — a periodic service", () => {
+  const xml = renderLaunchAgentPlist({
+    ...job,
+    label: "dev.equin.fs-latency-monitor",
+    schedule: { everySeconds: 30 },
+    interactive: true,
+  });
+
+  test("runs at load and every StartInterval, never kept alive", () => {
+    expect(xml).toContain(
+      "<key>RunAtLoad</key>\n\t<true/>\n\t<key>StartInterval</key>\n\t<integer>30</integer>\n\t<key>ProcessType</key>\n\t<string>Interactive</string>\n\t<key>ExitTimeOut</key>",
+    );
+    expect(xml).not.toContain("KeepAlive");
+    expect(xml).not.toContain("ThrottleInterval");
+  });
+
+  test("refuses an interval launchd cannot express", () => {
+    expect(() =>
+      renderLaunchAgentPlist({ ...job, schedule: { everySeconds: 0.5 } }),
+    ).toThrow(/whole number of seconds/);
+  });
+
+  test.skipIf(process.platform !== "darwin")("plutil accepts it", async () => {
+    const path = join(mkdtempSync(join(tmpdir(), "plist-")), "job.plist");
+    writeFileSync(path, xml);
+    const res = await spawnCaptured(["plutil", "-lint", path], {
+      timeoutMs: 10_000,
+    });
+    expect(res.exitCode).toBe(0);
+  });
+});
+
 describe("parseLaunchAgentPlist", () => {
   test("reads back the argv and cwd it rendered, unescaped", () => {
     const argv = [...job.argv, `a&b<c>"d"`];

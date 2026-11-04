@@ -4,7 +4,7 @@ export {
   MonitorTickSchema,
   parseTickLine,
 } from "./internal/tick";
-export type { MonitorTick } from "./internal/tick";
+export type { MonitorTick, ProbeReading, WrittenTick } from "./internal/tick";
 export {
   EVIDENCE_MAX,
   FindingSchema,

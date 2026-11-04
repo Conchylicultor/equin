@@ -13,6 +13,7 @@ export interface CollectedEntry {
 }
 
 export const loginServicesEntries: CollectedEntry[] = [
+  { pluginPath: "infra/plugins/host/plugins/io-health/plugins/monitor", id: "infra.host.io-health.monitor", loader: () => import("@plugins/infra/plugins/host/plugins/io-health/plugins/monitor/login-services"), dependsOn: [] },
   { pluginPath: "menu-bar", id: "menu-bar", loader: () => import("@plugins/menu-bar/login-services"), dependsOn: [] },
 ];
 

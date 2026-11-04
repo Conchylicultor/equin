@@ -28,6 +28,19 @@ export interface LoginServiceId {
    * register a second copy of the service beside the running one.
    */
   installedAs?: readonly string[];
+  /**
+   * When the manager runs the program. Absent: always — started at load and
+   * relaunched when it dies (the gateway, the menu-bar helper). Periodic: run
+   * at load, then every `everySeconds`, each run exiting on its own (a
+   * monitor's tick). A fact of the declaration, like `session`: the manager's
+   * `load` waits for a running pid only for an always-running service.
+   */
+  schedule?: LoginServiceSchedule;
+}
+
+/** A periodic service's schedule: launchd's `StartInterval`. */
+export interface LoginServiceSchedule {
+  readonly everySeconds: number;
 }
 
 /** What the service runs — computed only once its binary is ensured. */
@@ -40,6 +53,13 @@ export interface LoginServiceJob {
   env: Readonly<Record<string, string>>;
   /** stdout and stderr both land here (appended by the manager). */
   stdioLog: AppPath;
+  /**
+   * Run with no resource limits from the manager (launchd `ProcessType`
+   * `Interactive`; a systemd user unit has none to lift): for a job that
+   * MEASURES the machine, whose foreground reading must not be its manager's
+   * throttling.
+   */
+  interactive?: true;
 }
 
 /** A per-user OS service as data: what both renderers and both managers take. */

@@ -28627,6 +28627,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `debug/trace/gates` (0 debt)
                   - `debug/trace/spans` (0 debt)
                   - `infra/file-sink` (0 debt)
+                  - `infra/host/io-health/monitor` (0 debt)
                   - `reports/engine` (0 debt)
             - **`trigger-render-safety`** — trigger-render-safety lint rule: no-provider-trigger-render
             - **`vitest-mock-safety`** — vitest-mock-safety lint rules: a vi.mock of a plugin barrel is partial (spreads importOriginal), and a hoisted vi.mock / vi.hoisted callback reads none of the file's imports — the two ways a jsdom suite rots silently between runs
@@ -30250,6 +30251,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/audio-analysis`
           - `infra/codesign`
           - `infra/deps/build`
+          - `infra/host/io-health/monitor`
           - `infra/launcher`
           - `infra/mcp/browser`
           - `infra/safe-fetch/browser-fetch`
@@ -30313,6 +30315,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `infra/deps/rust`
+              - `infra/host/io-health/monitor`
               - `infra/launcher`
               - `packages/signal-origin`
               - `packages/spawn-disclaim`
@@ -31532,6 +31535,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `IoHealthRule`
               - `LatestTick`
               - `MonitorTick`
+              - `ProbeReading`
+              - `WrittenTick`
             - Exports (values):
               - `ACTIVE_FINDINGS_MAX`
               - `createIoHealthDetector`
@@ -31550,6 +31555,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `MONITOR_INTERVAL_MS`
               - `MonitorTickSchema`
               - `parseTickLine`
+          - Plugins:
+            - **`monitor`** — The fs-latency monitor, provisioned by equin: a standalone binary (bun build --compile of bin/) that a user LaunchAgent runs every 30 s, appending one tick per run to the monitors' log io-health reads — typed against io-health's tick schema, its log rotated into kept gzip archives; a root LaunchDaemon of the same binary is an opt-in for attribution.
+              - Deps:
+                - Uses:
+                  - `infra/deps.defineDep`
+                  - `infra/deps/build.build`
+                - Exports (values): `fsLatencyMonitorBinary`
+              - Exemptions:
+                - Exempts itself from:
+                  - `timed-fs/no-untimed-fs-read` — `bin/fs-latency-monitor.ts`, `bin/rotate.ts` (sanctioned)
+                  - `owned-fd/no-raw-fd-close` — `bin/fs-latency-monitor.ts`, `bin/native.ts` (sanctioned)
+                  - `sink-safety/no-adhoc-file-sink` — `bin/fs-latency-monitor.ts` (sanctioned)
+              - Core:
+                - Exports (values):
+                  - `FS_LATENCY_MONITOR_LABEL`
+                  - `LEGACY_MONITOR_LABEL`
+                  - `ROOT_DAEMON_PLISTS`
+                  - `rootDaemonPlist`
+                  - `START_MONITOR_COMMAND`
         - **`machine-sleep`** — useSleepNow(): the machine.sleep live value (and useSleepNowForFold: the reading as op-log's `sleepNow` fold parameter, unknown while loading or where the computer cannot be read) — the box's sleep clock, so a live surface can count a nap as asleep rather than as work. The machine's sleep clock, read and published: publishSleepReading() re-reads it and tells its listeners only when it changed — called by an existing periodic observer, so a wake reaches the browser without a poller of its own — with currentSleepReading() and onSleepReadingChanged() for the machine half that serves it as the machine.sleep live value, and sleptDuring(start, end) — the sleep this process saw inside a wall-clock span.
           - Server:
             - Contributes: `resource.declare` "machine.sleep"
@@ -32464,6 +32488,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ComponentBuild`
               - `LoginServiceId`
               - `LoginServiceJob`
+              - `LoginServiceSchedule`
               - `LoginServiceSession`
               - `LoginServiceSpec`
               - `ServiceExecutable`
@@ -36135,6 +36160,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `owned-fd/no-raw-fd-close` — `core/internal/owned-fd.ts` (sanctioned)
         - Exempted by:
           - `framework/tooling/checks/bun-runtime` (0 debt)
+          - `infra/host/io-health/monitor` (0 debt)
           - `packages/owned-fd` (0 debt)
       - Core:
         - Exports (types): `OwnedFd`
@@ -36415,6 +36441,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `timed-fs/no-untimed-fs-read` — `core/internal/timed-fs.ts` (sanctioned)
         - Exempted by:
           - `framework/tooling/guards` (0 debt)
+          - `infra/host/io-health/monitor` (0 debt)
           - `packages/timed-fs` (0 debt)
       - Core:
         - Exports (types):

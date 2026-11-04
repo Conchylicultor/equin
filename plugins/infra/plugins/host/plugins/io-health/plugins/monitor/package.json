@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-infra-host-io-health-monitor",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The fs-latency monitor, provisioned by equin: a standalone binary (bun build --compile of bin/) that a user LaunchAgent runs every 30 s, appending one tick per run to the monitors' log io-health reads — typed against io-health's tick schema, its log rotated into kept gzip archives; a root LaunchDaemon of the same binary is an opt-in for attribution."
+}

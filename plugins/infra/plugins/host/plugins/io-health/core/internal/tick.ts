@@ -2,13 +2,13 @@ import { z } from "zod";
 
 /**
  * The file the fs-latency monitor appends one tick to every 30 s, relative to
- * the monitors' log directory (`debug`'s `monitorLogsDir`). The monitor is a
- * launchd job outside the build (`sidequests/monitors/fs-latency`), so this
- * name and the schema below are the whole contract between it and the app.
+ * the monitors' log directory (`debug`'s `monitorLogsDir`). The monitor is this
+ * plugin's `monitor` sub-plugin: it builds every line as a {@link WrittenTick},
+ * which tsc holds to the reader's {@link MonitorTickSchema} below.
  */
 export const FS_LATENCY_LOG_NAME = "fs-latency.jsonl";
 
-/** How often the monitor ticks (its plist's `StartInterval`). */
+/** How often the monitor ticks (its login service's schedule, launchd's `StartInterval`). */
 export const MONITOR_INTERVAL_MS = 30_000;
 
 const ProcSchema = z.object({ pid: z.number(), age_s: z.number() });
@@ -55,3 +55,68 @@ export type MonitorTick = z.infer<typeof MonitorTickSchema>;
 export function parseTickLine(line: string): MonitorTick {
   return MonitorTickSchema.parse(JSON.parse(line));
 }
+
+/** A reader field the monitor no longer writes, kept so the recorded history parses. */
+type LegacyTickField = "corecaptured";
+
+/** One cold-probe tier's readings (ms). */
+export interface ProbeReading {
+  lstat_p50: number;
+  lstat_max: number;
+  lstat_sum: number;
+  readdir500: number;
+  max_op: number;
+}
+
+type DaemonProc = z.infer<typeof ProcSchema>;
+
+/**
+ * One line exactly as the monitor writes it today — what the reader parses
+ * plus the evidence it only carries along (`report.ts`, a human reading the
+ * log). Held to the reader by the two assertions below: every line written
+ * parses, and every field the reader knows (but the legacy one) is written, so
+ * a renamed or added reader field is a tsc error in the monitor, not a
+ * detector that silently reads `undefined`.
+ */
+export interface WrittenTick {
+  t: number;
+  iso: string;
+  fg: ProbeReading;
+  bg: ProbeReading;
+  max_op_ms: number;
+  stall: boolean;
+  canary: { age_s: number; resident: number }[];
+  vnodes: number;
+  maxvnodes: number;
+  /** Rates are deltas: absent on a monitor's first tick. */
+  new_vnodes_s?: number;
+  recycled_vnodes_s?: number;
+  disk_read_ops_s?: number;
+  disk_write_ops_s?: number;
+  disk_read_mb_s?: number;
+  disk_read_ms_per_op?: number | null;
+  load1: number;
+  daemon_cpu: Record<string, number>;
+  daemon_procs: Record<string, DaemonProc>;
+  /** Root only (absent otherwise); null on the first root tick (no delta yet). */
+  disk_readers_mb_s?: Record<string, number> | null;
+  disk_read_attributed_mb_s?: number | null;
+  disk_read_born_mb_s?: number | null;
+  fseventsd_logs?: string[] | null;
+  /** Root only: the `fs_usage` capture taken on a stall. */
+  incident?: string;
+}
+
+type Holds<T extends true> = T;
+/** Every line the monitor writes parses as a tick. */
+export type _WrittenTickParses = Holds<
+  WrittenTick extends z.input<typeof MonitorTickSchema> ? true : false
+>;
+/** Every field the reader reads is one the monitor writes. */
+export type _ReaderFieldsWritten = Holds<
+  [Exclude<keyof MonitorTick, keyof WrittenTick | LegacyTickField>] extends [
+    never,
+  ]
+    ? true
+    : false
+>;

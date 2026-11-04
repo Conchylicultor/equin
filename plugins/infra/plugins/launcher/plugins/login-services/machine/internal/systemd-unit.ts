@@ -28,6 +28,12 @@ import type { InstalledJob } from "./login-service";
  *   runs without a display and needs no lingering.
  */
 export function renderSystemdUserUnit(spec: LoginServiceSpec): string {
+  // A periodic job is a `.timer` beside a oneshot unit: two files, which this
+  // one-file renderer does not write. No Linux service is periodic yet.
+  if (spec.schedule !== undefined)
+    throw new Error(
+      `${spec.label} is periodic; a periodic systemd user service (a .timer unit) is not implemented — declare it for the OSes it runs on (platforms)`,
+    );
   const env = Object.keys(spec.env)
     .sort()
     .map((k) => `Environment=${quote(`${k}=${spec.env[k]!}`)}`)

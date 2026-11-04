@@ -52,8 +52,12 @@ export interface LoginService {
   installedJob(): InstalledJob | null;
   /** Delete the definition, so the service no longer starts by itself. */
   remove(): Promise<boolean>;
-  /** Load (and so start) the written job; resolves with its pid once it runs. */
-  load(): Promise<number>;
+  /**
+   * Load (and so start) the written job; resolves with its pid once it runs —
+   * or, for a periodic service (`id.schedule`), with null once the manager
+   * holds it: its first run may already have exited.
+   */
+  load(): Promise<number | null>;
   /** Stop the service through the manager. The definition stays. */
   unload(): Promise<void>;
 }

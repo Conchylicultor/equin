@@ -37,8 +37,11 @@ export type ReconcileOutcome =
   | { kind: "unchanged"; pid: number | null }
   /** The definition was updated but not loaded (`follow`, service stopped). */
   | { kind: "rewritten"; path: string }
-  /** Loaded — `reloaded` when a running generation was unloaded first. */
-  | { kind: "started"; pid: number; path: string; reloaded: boolean };
+  /**
+   * Loaded — `reloaded` when a running generation was unloaded first. `pid`
+   * is null for a periodic service between its runs.
+   */
+  | { kind: "started"; pid: number | null; path: string; reloaded: boolean };
 
 /**
  * Bring one declared login service to `ready`'s job under `policy`: hold the
@@ -74,6 +77,12 @@ export async function reconcileLoginService<S extends DepSource>(
   const job = loginServiceJob(decl, ready, executable);
   const written = service.write(job);
   const runningPid = before.kind === "loaded" ? before.pid : null;
+  // An always-running service runs while it has a pid; a periodic one while
+  // the manager holds it (it has a pid only mid-run).
+  const running =
+    service.id.schedule === undefined
+      ? runningPid !== null
+      : before.kind === "loaded";
 
   if (policy === "follow") {
     if (before.kind !== "loaded")
@@ -81,7 +90,7 @@ export async function reconcileLoginService<S extends DepSource>(
         ? { kind: "rewritten", path: written.path }
         : { kind: "unchanged", pid: null };
     if (!written.changed) return { kind: "unchanged", pid: runningPid };
-  } else if (policy === "start" && runningPid !== null && !written.changed) {
+  } else if (policy === "start" && running && !written.changed) {
     return { kind: "unchanged", pid: runningPid };
   }
 

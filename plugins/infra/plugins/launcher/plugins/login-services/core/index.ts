@@ -4,6 +4,7 @@
 export type {
   LoginServiceId,
   LoginServiceJob,
+  LoginServiceSchedule,
   LoginServiceSession,
   LoginServiceSpec,
 } from "./internal/spec";

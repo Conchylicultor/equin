@@ -75,6 +75,7 @@ const path = builtFile(ready);
 - Cross-plugin:
   - Imported by:
     - `infra/deps/rust`
+    - `infra/host/io-health/monitor`
     - `infra/launcher`
     - `packages/signal-origin`
     - `packages/spawn-disclaim`

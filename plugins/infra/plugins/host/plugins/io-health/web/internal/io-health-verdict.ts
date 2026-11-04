@@ -4,6 +4,7 @@ import type {
 } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
 import { MONITOR_INTERVAL_MS, type IoHealth } from "../../core";
+import { START_MONITOR_COMMAND } from "@plugins/infra/plugins/host/plugins/io-health/plugins/monitor/core";
 
 /**
  * How old the monitor's newest tick may be before the row says it stopped:
@@ -70,8 +71,7 @@ export function ioHealthVerdict(
     return {
       status: {
         state: "attention",
-        summary:
-          "Disk health is not watched: the fs-latency monitor is not installed (sidequests/monitors/fs-latency)",
+        summary: `Disk health is not watched: the fs-latency monitor is not installed — run \`${START_MONITOR_COMMAND}\``,
       },
       nextChangeAt: null,
     };

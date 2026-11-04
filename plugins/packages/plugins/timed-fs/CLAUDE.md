@@ -87,6 +87,7 @@ its boot journal attribute that.
     - `timed-fs/no-untimed-fs-read` — `core/internal/timed-fs.ts` (sanctioned)
   - Exempted by:
     - `framework/tooling/guards` (0 debt)
+    - `infra/host/io-health/monitor` (0 debt)
     - `packages/timed-fs` (0 debt)
 - Core:
   - Exports (types):

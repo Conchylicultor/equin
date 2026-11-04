@@ -4,9 +4,10 @@ import { parseTickLine, type MonitorTick } from "../../core";
 
 /**
  * At most this much of the log is read in one go: the detector needs the
- * trailing hour (~120 ticks of ~1.7 KB), and the log grows without a bound
- * (~3 MB a day), so a read starting further back than this starts here
- * instead — at boot, and after any gap the reader was not watching.
+ * trailing hour (~120 ticks of ~1.7 KB), and the log runs to 4 MB before the
+ * monitor rotates it, so a read starting further back than this starts here
+ * instead — at boot, after any gap the reader was not watching, and after a
+ * rotation (a replaced file holding the trailing two hours).
  */
 export const TAIL_BYTES = 512 * 1024;
 

@@ -57,6 +57,12 @@ describe("renderSystemdUserUnit", () => {
     expect(unit).toContain("WantedBy=default.target");
   });
 
+  test("refuses a periodic service (no .timer unit yet)", () => {
+    expect(() =>
+      renderSystemdUserUnit({ ...job, schedule: { everySeconds: 30 } }),
+    ).toThrow(/periodic/);
+  });
+
   test("refuses a value with a newline", () => {
     expect(() =>
       renderSystemdUserUnit({ ...job, env: { BAD: "a\nb" } }),

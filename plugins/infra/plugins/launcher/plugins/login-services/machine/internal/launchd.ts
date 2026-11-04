@@ -89,15 +89,25 @@ function launchdService(id: LoginServiceId): LoginService {
 
   /**
    * Load the plist into launchd, which starts the job (RunAtLoad) and returns
-   * its pid once launchd reports one.
+   * its pid once launchd reports one — for a periodic job, null once launchd
+   * holds it (its first run is short, and may be over before we look).
    *
    * Fails loudly when there is no GUI login session for this user (e.g. a bare
    * SSH login on a Mac nobody is logged into): launchctl's own error says so.
    */
-  async function load(): Promise<number> {
+  async function load(): Promise<number | null> {
     await spawnExpectOk(["launchctl", "bootstrap", domain(), plistPath()], {
       timeoutMs: LAUNCHCTL_TIMEOUT_MS,
     });
+    if (id.schedule !== undefined) {
+      // bootstrap returned 0, so launchd holds the job; a refused plist fails above.
+      const s = await state();
+      if (s.kind !== "loaded")
+        throw new Error(
+          `launchd accepted ${id.label} but does not hold it; see \`launchctl print ${target()}\``,
+        );
+      return s.pid;
+    }
     let lastExit: string | null = null;
     return retryUntil(
       async () => {

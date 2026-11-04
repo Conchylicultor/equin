@@ -197,6 +197,9 @@ async function startAsLoginService(
   // The manager appends; truncate so the tail quoted on a failed start is this boot's.
   writeFileSync(spec.stdioLog, "");
   const pid = await loginService.load();
+  // The gateway's service id carries no schedule: it always runs.
+  if (pid === null)
+    throw new Error(`${loginService.id.label} loaded with no running process`);
   await awaitGatewayReady({ pid, port: DEV_GATEWAY_PORT });
   printRunning(
     `Gateway started under ${manager} (PID ${pid}); it starts again at every ${loginService.startsAt}`,
@@ -270,9 +273,13 @@ function describeStart(
 ): string {
   switch (outcome.kind) {
     case "unchanged":
-      return `is already running under ${service.manager} (PID ${outcome.pid ?? "none"})`;
+      return service.id.schedule === undefined
+        ? `is already running under ${service.manager} (PID ${outcome.pid ?? "none"})`
+        : `is already scheduled under ${service.manager} (every ${service.id.schedule.everySeconds} s)`;
     case "started":
-      return `${outcome.reloaded ? "restarted" : "started"} under ${service.manager} (PID ${outcome.pid}); it starts again at every ${service.startsAt} (${outcome.path})`;
+      return service.id.schedule === undefined
+        ? `${outcome.reloaded ? "restarted" : "started"} under ${service.manager} (PID ${outcome.pid ?? "none"}); it starts again at every ${service.startsAt} (${outcome.path})`
+        : `${outcome.reloaded ? "rescheduled" : "scheduled"} under ${service.manager}: runs every ${service.id.schedule.everySeconds} s, from every ${service.startsAt} on (${outcome.path})`;
     // Only `follow` stops short of loading.
     case "unregistered":
     case "rewritten":

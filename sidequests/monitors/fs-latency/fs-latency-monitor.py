@@ -1,5 +1,11 @@
 #!/usr/bin/python3 -I
-"""File-metadata latency monitor — one tick per launchd invocation (StartInterval).
+"""LEGACY — FROZEN. Do not edit. The fs-latency monitor is now equin's
+`plugins/infra/plugins/host/plugins/io-health/plugins/monitor` (a login service
+installed by `./equin start`). This copy only keeps the hand-installed root
+daemon `com.epot.fs-latency-monitor` ticking until it is removed (that
+plugin's CLAUDE.md, "Migrating"); delete it with that daemon.
+
+File-metadata latency monitor — one tick per launchd invocation (StartInterval).
 
 Answers: how long does a file-metadata operation take on this machine right
 now, at the two scheduling tiers equin runs at (foreground and darwinbg), and
