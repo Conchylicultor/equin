@@ -150,7 +150,7 @@ export interface ServerPluginDefinition {
    */
   register?: Registration[];
   /**
-   * Runs after the socket binds but BEFORE the server reports ready and before
+   * Runs after the routes are installed but BEFORE the server reports ready and before
    * any plugin's `onReady`. The phase is graph-driven by `dependsOn` (exactly
    * like `onReady`): a plugin's blocking hook starts only after all its
    * `dependsOn` parents' blocking hooks have resolved — so a DB-touching plugin

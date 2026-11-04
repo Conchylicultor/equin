@@ -17,7 +17,9 @@ A backend process boots in one of three modes. All run the ONE sequence in
 there, not in a composition root, unless it is genuinely serve-only.
 
 - **`serve`** — the gateway-spawned, long-lived backend (`bin/index.ts`). Runs
-  everything: the shared sequence, with the socket bind interleaved into it, then
+  everything: the socket bind FIRST (before the plugin graph loads, answering 503 so the
+  gateway reads a slow boot as alive, not wedged), the shared sequence with the
+  route install interleaved into it, then
   the post-ready phases (`runPostReadyPhases`: the change-feed assertion,
   `onReady`, `onAllReady`), signal handlers and the orphan poll, then the
   settled phase (`runSettledPhase`: every plugin's `onSettled` — the warm-up
@@ -57,7 +59,7 @@ there, not in a composition root, unless it is genuinely serve-only.
 | load waves, `collectContributions`, host-service assert, `register` | yes | yes | yes |
 | `bindDeferredResources`                        | yes     | yes    | yes       |
 | preload-declare assert                         | yes     | yes    | yes       |
-| socket bind                                    | yes     | no     | no        |
+| socket bind (first, 503 until routes) + route install | yes | no | no |
 | `onReadyBlocking`                              | yes     | yes    | yes       |
 | `markServerReady()`                            | yes     | no     | no        |
 | change-feed assertion (D3), `onReady` / `onAllReady` | yes | no   | yes       |
@@ -339,7 +341,7 @@ const plugin: ServerPluginDefinition = {
 export default plugin;
 ```
 
-The type is intentionally flat — no base classes. A plugin is a data object with optional route maps and lifecycle hooks. Two readiness hooks: **`onReadyBlocking`** runs as a hard barrier after the socket binds but before the server reports ready (and before any `onReady`) — use only for work that must finish before the backend can correctly serve requests (DB migrations + warmup, registry init); the gateway gates its hot-swap on the barrier completing. **`onReady`** runs after the barrier, so it observes a migrated DB and ready registry — use it for background work like pollers or watchers.
+The type is intentionally flat — no base classes. A plugin is a data object with optional route maps and lifecycle hooks. Two readiness hooks: **`onReadyBlocking`** runs as a hard barrier after the routes are installed but before the server reports ready (and before any `onReady`) — use only for work that must finish before the backend can correctly serve requests (DB migrations + warmup, registry init); the gateway gates its hot-swap on the barrier completing. **`onReady`** runs after the barrier, so it observes a migrated DB and ready registry — use it for background work like pollers or watchers.
 
 **Barrier fatality is not gated on `loadBearing`.** A throw in _any_ plugin's `onReadyBlocking` aborts boot — the barrier's contract is "this completes before we serve", so failing to complete is fatal by definition; gating it on `loadBearing` would promote degraded backends behind a green `/api/health/ready`. If blocking work is genuinely optional-for-correctness (failure should _degrade_, not crash), catch the error **inside** the hook and continue — pattern: `plugins/network/plugins/live/plugins/live-state-snapshot/server/internal/boot-init.ts`. `loadBearing` still gates the post-serving `onReady` / `onAllReady` phases, where killing a live backend is reserved for critical plugins.
 

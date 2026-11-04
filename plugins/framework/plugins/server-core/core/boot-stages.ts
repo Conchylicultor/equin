@@ -30,7 +30,8 @@ import type { LoadedServerPlugin, ServerPluginDefinition } from "./types";
 // they cannot drift:
 //
 // - `serve` — the gateway-spawned, long-lived backend (`../bin/index.ts`). Runs
-//   every phase: this file's sequence, plus the socket bind interleaved into it
+//   every phase: this file's sequence, plus the route install interleaved into
+//   it (its socket is bound before the sequence starts, answering 503)
 //   and the post-ready phases (`runPostReadyPhases`: `onReady`, `onAllReady`)
 //   and the settled phase (`runSettledPhase`: `onSettled`) after it.
 // - `browser` — a page's Web Worker (`./browser-host.ts`), the other SERVING
@@ -101,9 +102,10 @@ export type BootSpec = {
       mode: "serve";
       /**
        * Runs after contributions are collected and BEFORE the ready barrier.
-       * This is where `serve` populates its route tables and binds the unix
-       * socket, so the gateway sees the process accept connections while the
-       * barrier (migrations, config registry) is still running. `exec` has no
+       * This is where `serve` installs its route tables into the unix socket it
+       * bound before the graph loaded (answering 503 until now), so the
+       * frontend reaches the backend while the barrier (migrations, config
+       * registry) is still running. `exec` has no
        * such interlude, and the union makes that unspellable rather than
        * optional.
        */
@@ -175,7 +177,8 @@ export async function bootPluginGraph(
   // which `exec` runs too) deletes every persisted row whose key the Declare set
   // does not list as preloaded, so it must never run on a mis-declared graph.
   // A pure in-memory read, so it costs an `exec` child nothing, and it lands
-  // before serve's socket bind, so such a graph never accepts a connection.
+  // before serve installs its routes, so such a graph never serves a request
+  // (its early socket only ever answers 503, and the throw exits the process).
   assertPreloadedResourcesDeclared();
 
   if (spec.mode === "serve") await spec.beforeReadyBarrier(ordered);

@@ -22,8 +22,9 @@ import type {
   LoadedServerPlugin,
 } from "@plugins/framework/plugins/server-core/core";
 // The one boot sequence, shared with the `exec` mode. Everything below this
-// import is what `serve` adds to it: the socket bind interleaved into the
-// sequence, and the post-serving phases after it. See `core/boot-stages.ts`
+// import is what `serve` adds to it: the socket bound before it (503 until the
+// routes go in), the route install interleaved into the sequence, and the
+// post-serving phases after it. See `core/boot-stages.ts`
 // for the mode split and `cli/run-exec.ts` for what `exec` skips.
 import {
   bootPluginGraph,
@@ -167,90 +168,110 @@ function populateRoutes(
   return handle;
 }
 
-// ── Bind socket ─────────────────────────────────────────────────
-// Bind immediately after migrations so the gateway detects readiness and
-// starts proxying. onReady hooks run background work (graphile-worker DDL,
-// git-log reconcile, file watchers, trigger setup) that isn't needed for
-// serving HTTP/WS. Without this, the frontend loads instantly (static files)
-// but stays stuck on "Server: Reconnecting" for the entire onReady phase.
-//
-// SERVE ONLY, and this is the one phase that interleaves INTO the shared boot
-// sequence — hence `beforeReadyBarrier` below rather than a call after it.
-// The socket is read here and nowhere else: an `exec` child has no socket and
-// must not need one. It arrives as `--socket <path>` from the gateway
-// (runtime-identity's readServingSocket, which also records it for code that
-// must reach this backend over HTTP).
-function bindSocket(ordered: LoadedServerPlugin[]): void {
-  // Does the gateway stamp the principal? Its `--principal-stamped` on argv
-  // says so; without it the gate is off (see principal's `core/stamp.ts`).
-  const gate = hostGateFromArgv(process.argv);
-  const handleHttp = populateRoutes(ordered, gate);
-
-  const socketPath = readServingSocket(process.argv);
-
-  const endSocketBind = profilerStart(
-    "socketBind",
-    "socketBind",
-    "Socket Bind",
-  );
-  Bun.serve<WsData>({
-    unix: socketPath,
-    // Was Bun's default 10s. Under a host-saturation event-loop stall, an in-flight
-    // HTTP handler or a WS-upgrade attempt writes no bytes for >10s and Bun drops it,
-    // triggering a reconnect/resubscribe storm that amplifies the stall. This is a
-    // gateway-fronted unix-socket-only listener, so 60s still reaps genuinely dead
-    // HTTP conns within a minute while sitting above the gateway's load-scaled
-    // readiness timeout. (The live WS is separately governed by the unset,
-    // 120s-default websocket.idleTimeout — not this key.)
-    idleTimeout: 60,
-    fetch(req, server) {
-      const url = new URL(req.url);
-
-      // WebSocket upgrade
-      if (req.headers.get("upgrade") === "websocket") {
-        const handler = wsRoutes[url.pathname];
-        if (handler) {
-          // No socket is public: an anonymous upgrade is refused here too,
-          // behind the gateway's own refusal.
-          const refused = gate.refuseUpgrade(req, url.pathname);
-          if (refused) return refused;
-          server.upgrade(req, { data: { path: url.pathname } });
-          return;
-        }
-      }
-
-      return handleHttp(req);
-    },
-    websocket: {
-      open(ws) {
-        wsRoutes[ws.data.path]?.open(ws);
-      },
-      message(ws, msg) {
-        wsRoutes[ws.data.path]?.message(ws, msg);
-      },
-      close(ws, code, reason) {
-        wsRoutes[ws.data.path]?.close(ws, code, reason);
-      },
-      drain(ws) {
-        wsRoutes[ws.data.path]?.drain?.(ws);
-      },
-    },
-  });
-
-  endSocketBind();
-  console.log(`Server listening on ${socketPath}`);
+// ── Install routes ──────────────────────────────────────────────
+// The socket is already open (below, before the plugin graph loads), answering
+// 503 to everything. Once the graph is loaded and its contributions collected,
+// the routes go in here — before the `onReadyBlocking` barrier, so the frontend
+// reaches the backend for the whole barrier + onReady phase instead of sitting
+// on "Server: Reconnecting" (`/api/health/ready` itself stays 503 until the
+// barrier completes). This is the one serve-only phase that interleaves INTO
+// the shared boot sequence — hence `beforeReadyBarrier` rather than a call
+// after it.
+function installRoutes(ordered: LoadedServerPlugin[]): void {
+  handleHttp = populateRoutes(ordered, gate);
+  console.log(`[boot] routes installed on ${socketPath}`);
 }
+
+// ── Bind socket, FIRST ──────────────────────────────────────────
+// The socket opens before the plugin graph loads and answers every request
+// with 503 until `installRoutes` swaps the real router in. The gateway reads
+// ANY HTTP answer as "alive and mid-boot": past its base readiness deadline it
+// extends the wait instead of killing (gateway/worktree.go's waitReady). A
+// backend that bound only after loading every plugin wave answered nothing
+// before that deadline, read as wedged and was SIGKILLed — on 2026-11-04 main's
+// load waves took ~13 s, its boot sat just past the 15 s base, and every main
+// hot restart but one failed. A boot that throws still exits at once (an open
+// server does not keep a failed entry-module evaluation alive), so the gateway
+// still sees a crash instantly; only a boot that hangs now waits out the
+// escalated deadline instead of the base one.
+//
+// SERVE ONLY: the socket is read here and nowhere else — an `exec` child has
+// no socket and must not need one. It arrives as `--socket <path>` from the
+// gateway (runtime-identity's readServingSocket, which also records it for code
+// that must reach this backend over HTTP).
+//
+// Does the gateway stamp the principal? Its `--principal-stamped` on argv says
+// so; without it the gate is off (see principal's `core/stamp.ts`).
+const gate = hostGateFromArgv(process.argv);
+const socketPath = readServingSocket(process.argv);
+// null until `installRoutes`: the plugin graph is still loading.
+let handleHttp: ((req: Request) => Promise<Response>) | null = null;
+const endSocketBind = profilerStart("socketBind", "socketBind", "Socket Bind");
+Bun.serve<WsData>({
+  unix: socketPath,
+  // Was Bun's default 10s. Under a host-saturation event-loop stall, an in-flight
+  // HTTP handler or a WS-upgrade attempt writes no bytes for >10s and Bun drops it,
+  // triggering a reconnect/resubscribe storm that amplifies the stall. This is a
+  // gateway-fronted unix-socket-only listener, so 60s still reaps genuinely dead
+  // HTTP conns within a minute while sitting above the gateway's load-scaled
+  // readiness timeout. (The live WS is separately governed by the unset,
+  // 120s-default websocket.idleTimeout — not this key.)
+  idleTimeout: 60,
+  fetch(req, server) {
+    // Still loading the plugin graph: no route exists yet, the readiness
+    // probe included. Not ready, but alive — which is what the gateway reads.
+    if (!handleHttp) {
+      return Response.json(
+        { error: "server not ready: loading plugins" },
+        { status: 503 },
+      );
+    }
+
+    const url = new URL(req.url);
+
+    // WebSocket upgrade
+    if (req.headers.get("upgrade") === "websocket") {
+      const handler = wsRoutes[url.pathname];
+      if (handler) {
+        // No socket is public: an anonymous upgrade is refused here too,
+        // behind the gateway's own refusal.
+        const refused = gate.refuseUpgrade(req, url.pathname);
+        if (refused) return refused;
+        server.upgrade(req, { data: { path: url.pathname } });
+        return;
+      }
+    }
+
+    return handleHttp(req);
+  },
+  websocket: {
+    open(ws) {
+      wsRoutes[ws.data.path]?.open(ws);
+    },
+    message(ws, msg) {
+      wsRoutes[ws.data.path]?.message(ws, msg);
+    },
+    close(ws, code, reason) {
+      wsRoutes[ws.data.path]?.close(ws, code, reason);
+    },
+    drain(ws) {
+      wsRoutes[ws.data.path]?.drain?.(ws);
+    },
+  },
+});
+endSocketBind();
+console.log(`Server listening on ${socketPath}`);
 
 // ── The shared boot sequence ────────────────────────────────────
 // Load waves → register → collectContributions → the preload-declare assert →
-// [bind socket] → the `onReadyBlocking` barrier. Identical to what `exec` runs,
-// minus the bind.
+// [install routes] → the `onReadyBlocking` barrier. Identical to what `exec`
+// runs, minus the route install (and the socket bound above).
 const ordered = await bootPluginGraph({
   mode: "serve",
   // A desktop host boots both halves of every plugin as one graph.
   entries: [...serverEntries, ...machineEntries],
   coreBarrel,
-  beforeReadyBarrier: bindSocket,
+  beforeReadyBarrier: installRoutes,
 });
 markServerReady();
 
