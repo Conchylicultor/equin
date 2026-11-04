@@ -30,7 +30,8 @@ Findings and benchmarks live on the investigation's track page, not here.
 | `canary` | `[{age_s, resident}]` per canary group: page residency vs time since it was last read. The age where residency drops is the cache lifetime |
 | `vnodes`, `maxvnodes`, `new_vnodes_s`, `recycled_vnodes_s` | vnode table and churn |
 | `disk_read_ops_s`, `disk_write_ops_s`, `disk_read_mb_s`, `disk_read_ms_per_op` | IOBlockStorageDriver statistics delta (`ms_per_op` = device time, so device slowness is told apart from throttling) |
-| `load1`, `daemon_cpu` | load and %CPU of fseventsd, syspolicyd, XprotectService, mds, mds_stores |
+| `load1`, `daemon_cpu` | load and %CPU of fseventsd, syspolicyd, XprotectService, mds, mds_stores, corecaptured |
+| `corecaptured` | `{pid, age_s}` of corecaptured, or null. No root needed. A pid that changes every ~5 min (age never past ~300 s) is its relaunch loop, the client behind the fseventsd history replay (below) |
 | `disk_readers_mb_s` | root only: the top 8 processes by disk bytes read since the last tick (`proc_pid_rusage`, root daemons included), MB/s by process name |
 | `fseventsd_logs` | root only: the `.fseventsd` log files fseventsd holds open (hex event ids). The newest is the one being written; one far behind it, advancing tick after tick, is a history replay for a client that subscribed from an old event id |
 | `incident` | root only: path of a 5 s `fs_usage -w -f filesys` capture taken on a stall (cooldown `INCIDENT_COOLDOWN_S`, 600 s) — who is doing the lookups |
@@ -134,6 +135,23 @@ verdict. `--fseventsd` adds a restart of fseventsd itself as the last step,
 which proves the mechanism but names no client. Writes
 `captures/fseventsd-bisect-<stamp>.json` and `captures/fseventsd-debug-<stamp>.log`.
 Takes 6 min per step, at most 24 min.
+
+Its 2026-11-04 run named no client (every suspect restart left the replay
+running); the unified log did. **The client is `corecaptured`** (CoreCapture,
+Apple's Wi-Fi/Bluetooth diagnostics daemon). On every launch its CacheDelete
+client calls `_CacheDeleteEnumerateRemovedFiles` for `/Library/Logs/CoreCapture`
+and `/Library/Logs/CrashReporter/CoreCapture`, which opens an FSEvents stream
+from its saved purge marker (`com.apple.corecaptured.purge.purge_markers`) and
+reads the whole history from there. Neither directory exists, so no event ever
+matches and the marker is saved back unchanged after `historyDone`; it exits,
+and launchd relaunches it at once (`because xpc event`). See it without root:
+
+```sh
+/usr/bin/log show --last 15m --predicate 'process == "corecaptured" AND (eventMessage CONTAINS "Time taken" OR eventMessage CONTAINS "consuming stream" OR eventMessage CONTAINS "setPurgeMarker")'
+```
+
+`consumeStream Time taken` is one replay (seconds); `consuming stream … from
+ID:` is the marker it replays from.
 
 ## Uninstall
 

@@ -23,7 +23,10 @@ one JSON line to ~/.equin/logs/monitors/fs-latency.jsonl, and exits):
               size vs kern.maxvnodes), disk ops/bytes and device time per op
               (IOBlockStorageDriver Statistics), load average.
   daemons     %CPU of the system daemons that were suspects (fseventsd,
-              syspolicyd, XprotectService, mds, mds_stores).
+              syspolicyd, XprotectService, mds, mds_stores, corecaptured), and
+              corecaptured's pid and age: a pid that changes every ~5 min is
+              its relaunch loop, each launch replaying fseventsd's history
+              from a purge marker that never advances (CLAUDE.md).
   readers     root only: the processes reading the most from disk since the
               last tick (proc_pid_rusage, root daemons included), and the
               fseventsd log files fseventsd holds open. A history replay
@@ -207,7 +210,8 @@ def disk_stats():
 
 def daemon_cpu():
     out = run_out(["/bin/ps", "-Ao", "pcpu=,comm="], check=True)
-    want = {"fseventsd": 0.0, "syspolicyd": 0.0, "XprotectService": 0.0, "mds": 0.0, "mds_stores": 0.0}
+    want = {"fseventsd": 0.0, "syspolicyd": 0.0, "XprotectService": 0.0, "mds": 0.0, "mds_stores": 0.0,
+            "corecaptured": 0.0}
     for line in out.splitlines():
         parts = line.strip().split(None, 1)
         if len(parts) != 2:
@@ -262,6 +266,25 @@ def fseventsd_logs():
         return None
     out = run_out(["/usr/sbin/lsof", "-nP", "-p", pid[0], "-Fn"])
     return sorted({ln.rsplit("/", 1)[1] for ln in out.splitlines() if ln.startswith("n") and "/.fseventsd/" in ln})
+
+
+def corecaptured_proc():
+    """corecaptured's pid and age (s), or None when it is not running. No root needed."""
+    out = run_out(["/bin/ps", "-Ao", "pid=,etime=,comm="])
+    for line in out.splitlines():
+        parts = line.split(None, 2)
+        if len(parts) == 3 and os.path.basename(parts[2]) == "corecaptured":
+            return {"pid": int(parts[0]), "age_s": etime_s(parts[1])}
+    return None
+
+
+def etime_s(etime):
+    """ps's [[dd-]hh:]mm:ss as seconds."""
+    days, _, rest = etime.rpartition("-")
+    secs = 0
+    for part in rest.split(":"):
+        secs = secs * 60 + int(part)
+    return secs + int(days or 0) * 86400
 
 
 def maybe_incident(now, state):
@@ -337,6 +360,7 @@ def main():
         **rates,
         "load1": float(load[0]),
         "daemon_cpu": daemon_cpu(),
+        "corecaptured": corecaptured_proc(),
     }
     if os.geteuid() == 0:
         rec["disk_readers_mb_s"] = disk_readers(now, state)
