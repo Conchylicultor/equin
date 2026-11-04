@@ -2,7 +2,7 @@ export {
   RESIZABLE_EXTENSIONS,
   RESIZED_EDGES,
   hostFsImageResized,
-  hostResizedUrl,
+  hostResizedAsset,
   isResizableName,
   parseEdge,
   resizedVersion,

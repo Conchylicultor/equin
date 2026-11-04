@@ -1,9 +1,14 @@
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import {
+  assetUrlOver,
   EndpointError,
   type FetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
-import { endpointPath } from "@plugins/infra/plugins/endpoints/core";
+import {
+  assetPath,
+  unavailableMessage,
+} from "@plugins/infra/plugins/endpoints/core";
+import type { Transport } from "@plugins/primitives/plugins/networking/web";
 import {
   disconnect as disconnectEndpoint,
   oauthStart,
@@ -22,6 +27,10 @@ import {
  * is the owner (the gateway's principal; the start route is owner-only). The
  * provider then redirects it to the callback on bare localhost (the
  * registered, host-independent `redirect_uri`), which posts the result back.
+ *
+ * The popup is a sink that loads by URL on its own, so its URL comes from the
+ * caller's transport (`assetUrlOver`): under a transport no URL reaches (an
+ * in-browser server) there is no popup, and the flow fails with the reason.
  */
 export interface ConnectArgs {
   providerId: string;
@@ -44,19 +53,37 @@ const POPUP_NAME = LEGACY_IDS.authPopupName;
 const CALLBACK_ORIGIN = "http://localhost:9000";
 const POPUP_TIMEOUT_MS = 5 * 60 * 1000;
 
-export function startConnectFlow(args: ConnectArgs): Promise<ConnectResult> {
-  const url = new URL(
-    endpointPath(oauthStart, { provider: args.providerId }),
-    window.location.origin,
+export function startConnectFlow(
+  transport: Transport,
+  args: ConnectArgs,
+): Promise<ConnectResult> {
+  const start = assetUrlOver(
+    transport,
+    assetPath(
+      oauthStart,
+      { provider: args.providerId },
+      {
+        worktree: args.worktree,
+        // Where the result is posted back: this page's own origin, since a
+        // namespace answers on more than one host.
+        origin: window.location.origin,
+        scopes:
+          args.scopes && args.scopes.length > 0
+            ? args.scopes.join(",")
+            : undefined,
+      },
+    ),
   );
-  url.searchParams.set("worktree", args.worktree);
-  // Where the result is posted back: this page's own origin, since a namespace
-  // answers on more than one host.
-  url.searchParams.set("origin", window.location.origin);
-  if (args.scopes && args.scopes.length > 0) {
-    url.searchParams.set("scopes", args.scopes.join(","));
+  if (start.kind !== "ready") {
+    return Promise.reject(
+      new Error(
+        start.kind === "unavailable"
+          ? start.message
+          : unavailableMessage({ feature: "Connecting an account" }),
+      ),
+    );
   }
-  const popup = window.open(url.toString(), POPUP_NAME, POPUP_FEATURES);
+  const popup = window.open(start.url, POPUP_NAME, POPUP_FEATURES);
   if (!popup) {
     return Promise.reject(
       new Error("Popup blocked. Allow popups for this site and try again."),

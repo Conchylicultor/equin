@@ -13,6 +13,6 @@ export default [
     paths: ["web/internal/boot.ts"],
     kind: "sanctioned",
     reason:
-      "The boot snapshot is a substrate read of live itself — it seeds the live-state cache before first paint, so it cannot be a useLive read. It is the page transport's raw fetch kept on the contract (endpointRequest + readEndpointResponse decode bootSnapshot's own codec).",
+      "The boot snapshot is a substrate read of live itself — it seeds the live-state cache before first paint, so it cannot be a useLive read. It is the page transport's raw fetch kept on the contract (sendEndpointRequest + readEndpointResponse decode bootSnapshot's own codec).",
   },
 ] satisfies Exemptions;

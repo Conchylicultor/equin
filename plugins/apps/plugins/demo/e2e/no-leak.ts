@@ -15,7 +15,14 @@
  *  3. switches the embed to Prototypes and opens a seeded prototype's canvas:
  *     its frames load from the host's Service Worker, so every frame `src` is
  *     under `/artifacts/*\/frames/` and no `/api/prototypes…` request reaches
- *     the page's origin.
+ *     the page's origin;
+ *  4. opens every app the embed's launcher lists, one after the other, and
+ *     lets each landing settle: what an app draws on arrival (Sonata's covers,
+ *     a transcript image, an icon) loads through the scope, never from the
+ *     page's origin. An element load (`<img>`, `<link>`) is a request the page
+ *     sends, so a route handed to an element as a plain string fails here —
+ *     the class the Sonata covers fell into (research/2026-11-04-global-no-
+ *     route-string-in-scoped-code.md).
  *
  * And asserts that the demo's own writes RENDER — the worker's change feed
  * recomputes its live reads (research/2026-10-22-global-demo-writes-render-
@@ -25,8 +32,9 @@
  *    in the tree and in the task detail's header;
  *  - the new prerequisite shows in the detail's Dependencies card;
  *  - each launch-option pick reads back from its side table (the control is
- *    not optimistic: it shows the row the worker serves) — workspace and
- *    auto-start only when the host offers them, noted otherwise;
+ *    not optimistic: it shows the row the worker serves) — a control the host
+ *    does not offer (absent, disabled) is a SKIP, reported
+ *    and counted apart, never a pass;
  *  - the pasted image shows in the read-only description once the editor
  *    closes, and the task's Attachments card lists it;
  *  - a SECOND SUBSCRIBER sees all of it: the detail is closed and reopened
@@ -358,7 +366,12 @@ await withBrowser(async (h) => {
   // From here on, every /api request the page itself sends is recorded.
   const leaked: string[] = [];
   const sanctioned: string[] = [];
+  // When the page last sent anything: step 4 waits for each landing to go
+  // quiet (the harness's network-idle cannot: the host's SharedWorker script
+  // load never finishes in Playwright's view).
+  let lastRequestAt = Date.now();
   const onRequest = (req: Request): void => {
+    lastRequestAt = Date.now();
     const url = new URL(req.url());
     if (!url.pathname.startsWith("/api/")) return;
     const line = `${req.method()} ${url.pathname}`;
@@ -497,7 +510,10 @@ await withBrowser(async (h) => {
       option.optional &&
       (outcome.kind === "absent" || outcome.kind === "disabled")
     ) {
-      r.note(`${option.label}: ${outcome.kind} on this host — not asserted`);
+      r.skip(
+        `${option.label}: a pick renders from its side table`,
+        `${outcome.kind} on this host`,
+      );
     } else {
       r.fail(`${option.label}: pick another value`, JSON.stringify(outcome));
     }
@@ -683,6 +699,66 @@ await withBrowser(async (h) => {
   await page.waitForTimeout(1_500);
   noteSubs("prototypes");
   await snap(page, OUT, "prototypes");
+
+  // ── 4. every app the launcher lists: what it draws stays in the scope ───
+  const embed = page.locator("[data-app-embed]").first();
+  const openLauncher = async (): Promise<Locator> => {
+    await embed.getByRole("button", { name: "All apps" }).first().hover();
+    const menu = page.locator('[aria-label="Apps"]').last();
+    await menu.waitFor({ timeout: 5_000 });
+    return menu;
+  };
+  const tiles = await (
+    await openLauncher()
+  )
+    .locator('[data-row-key][role="button"]')
+    .evaluateAll((els) =>
+      els.map((el) => ({
+        key: el.getAttribute("data-row-key") ?? "",
+        name: (el.textContent ?? "").replace(/\s+/g, " ").trim(),
+      })),
+    );
+  const closeLauncher = async (): Promise<void> => {
+    await page.keyboard.press("Escape");
+    await page.mouse.move(0, 0);
+    // Shut before the next hover, so `openLauncher` never finds the closing one.
+    await page
+      .locator('[aria-label="Apps"]')
+      .last()
+      .waitFor({ state: "hidden", timeout: 5_000 });
+  };
+  await closeLauncher();
+  r.ok(
+    "the launcher lists apps to visit",
+    tiles.length > 0,
+    JSON.stringify(tiles),
+  );
+  for (const tile of tiles) {
+    const leakedBefore = leaked.length;
+    await (
+      await openLauncher()
+    )
+      .locator(`[data-row-key="${tile.key}"][role="button"]`)
+      .first()
+      .click();
+    await closeLauncher();
+    // The landing's own reads and loads (covers, thumbnails), and what renders
+    // once they answer: until the page has sent nothing for two seconds.
+    const quiet = await waitFor(
+      () => Promise.resolve(Date.now() - lastRequestAt),
+      (idleMs) => idleMs >= 2_000,
+      { timeoutMs: RENDER_TIMEOUT_MS },
+    );
+    if (!quiet.ok)
+      r.note(`${tile.name}: the page never went quiet (${quiet.value} ms idle)`);
+    r.ok(
+      `${tile.name}: its landing (${(await embed.getAttribute("data-app-embed")) ?? "?"}) loads nothing from the page's origin`,
+      leaked.length === leakedBefore,
+      leaked.slice(leakedBefore).join(", "),
+    );
+    await snap(page, OUT, `app-${tile.key.replace(/[^\w-]/g, "_")}`);
+  }
+  noteSubs("every app");
 
   page.off("request", onRequest);
   page.off("websocket", onSocket);

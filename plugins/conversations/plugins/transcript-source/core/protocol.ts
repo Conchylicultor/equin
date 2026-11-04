@@ -50,7 +50,7 @@ export type TokenUsage = z.infer<typeof TokenUsageSchema>;
 /**
  * An image the transcript shows, by reference: its bytes stay where they are
  * (inline in a transcript line, or the file a prompt names) and the page loads
- * them from their own URL (`transcriptImageUrl`). `key` is opaque to the page —
+ * them from their own URL (`transcriptImage`). `key` is opaque to the page —
  * the server's encoding of where the bytes are — and immutable: a key always
  * names the same bytes, so the URL is cached forever.
  *

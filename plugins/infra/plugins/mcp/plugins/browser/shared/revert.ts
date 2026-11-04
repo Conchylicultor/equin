@@ -1,5 +1,5 @@
 import {
-  endpointRequest,
+  sendEndpointRequest,
   readEndpointResponse,
 } from "@plugins/infra/plugins/endpoints/core";
 import { agentOriginHeaders } from "@plugins/infra/plugins/request-origin/core";
@@ -26,7 +26,8 @@ export async function revertSessionWrites(
   // Built and read through the endpoint's contract; sent with a raw fetch
   // because this module also runs in the agent-browser host, which cannot
   // import `endpoints/server`'s callEndpoint (see exempt/).
-  const { path, init } = endpointRequest(
+  const res = await sendEndpointRequest(
+    (path, init) => fetch(`${origin}${path}`, init),
     revertAgentWrites,
     {},
     {
@@ -35,7 +36,6 @@ export async function revertSessionWrites(
       signal: AbortSignal.timeout(REVERT_MS),
     },
   );
-  const res = await fetch(`${origin}${path}`, init);
   await readEndpointResponse(
     revertAgentWrites,
     res,

@@ -3,7 +3,7 @@ import type {
   EndpointAnswer,
   EndpointRequestOpts,
 } from "../../core";
-import { endpointRequest, readEndpointResponse } from "../../core";
+import { readEndpointResponse, sendEndpointRequest } from "../../core";
 
 type CallOpts<TBody, TQuery> = EndpointRequestOpts<TBody, TQuery> & {
   /**
@@ -38,15 +38,22 @@ export async function callEndpoint<
   params: TParams,
   opts: CallOpts<TBody, TQuery>,
 ): Promise<EndpointAnswer<TResponse>> {
-  const { path, init } = endpointRequest<
+  let url = opts.origin;
+  const res = await sendEndpointRequest<
     Route,
     TParams,
     TBody,
     TResponse,
     TQuery
-  >(endpoint, params, opts);
-  const url = `${opts.origin}${path}`;
-  const res = await fetch(url, init);
+  >(
+    (path, init) => {
+      url = `${opts.origin}${path}`;
+      return fetch(url, init);
+    },
+    endpoint,
+    params,
+    opts,
+  );
   return readEndpointResponse(
     endpoint,
     res,

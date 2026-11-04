@@ -5,7 +5,7 @@ import {
   EndpointError,
 } from "./endpoint-error";
 import { isAgentWriteRefusal, SAFE_METHODS } from "./agent-write";
-import { interpolatePath } from "./route-params";
+import { extractPath, interpolatePath } from "./route-params";
 
 /** Any kind of endpoint — a request is built and read the same way. */
 type AnyEndpointDef<
@@ -42,8 +42,14 @@ export type EndpointAnswer<TResponse> = TResponse extends void
 /**
  * An endpoint's path, built from its contract: the route's params interpolated
  * (typed by the route) and the query appended. For a URL handed to someone
- * else rather than fetched here — an agent's MCP URL, a link — so it cannot
- * drift from the route either.
+ * else rather than fetched here — an agent's MCP URL, a `<link>` in served
+ * HTML, an e2e script's request — so it cannot drift from the route either.
+ *
+ * OFF THE PAGE ONLY: exported from the `server` and `e2e` barrels, never from
+ * `core`. On a page a route's string is a leak — an element loading it reaches
+ * the page's server, not the subtree's (a demo scope's worker). There, what an
+ * element loads is an `AssetPath` (`assetPath` + `useAssetSrc` /
+ * `assetUrlOver`), and a request goes through {@link sendEndpointRequest}.
  */
 export function endpointPath<
   Route extends string,
@@ -57,7 +63,7 @@ export function endpointPath<
   query?: TQuery,
 ): string {
   let path = interpolatePath(
-    endpoint.path,
+    extractPath(endpoint.route),
     (params ?? {}) as Record<string, string>,
   );
   if (query != null) {
@@ -122,6 +128,35 @@ export function endpointRequest<
       keepalive: opts?.keepalive,
     },
   };
+}
+
+/** What sends a built request: a `Transport`'s `fetch`, or `fetch` against an origin. */
+export type RequestFetch = (
+  path: string,
+  init: RequestInit,
+) => Promise<Response>;
+
+/**
+ * Send one request to an endpoint, built from its contract
+ * ({@link endpointRequest}), through `send` — the path goes to the sender
+ * and nowhere else, so a module composing its own request (the boot snapshot,
+ * a health probe, a host process) never holds a route's string. Read the reply
+ * with {@link readEndpointResponse}.
+ */
+export function sendEndpointRequest<
+  Route extends string,
+  TParams,
+  TBody,
+  TResponse,
+  TQuery,
+>(
+  send: RequestFetch,
+  endpoint: AnyEndpointDef<Route, TParams, TBody, TResponse, TQuery>,
+  params: TParams,
+  opts?: EndpointRequestOpts<TBody, TQuery>,
+): Promise<Response> {
+  const { path, init } = endpointRequest(endpoint, params, opts);
+  return send(path, init);
 }
 
 /**

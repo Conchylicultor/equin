@@ -1,6 +1,7 @@
 import { declaredApps } from "@plugins/apps-core/server";
 import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
-import { appManifestFor, getAppManifest, installableApp } from "../../core";
+import { getAppManifest, installableApp } from "../../core";
+import { appManifestFor } from "./manifest";
 
 /** `GET /api/apps/:appId/manifest.webmanifest` — 404 for an app that cannot be installed. */
 export const handleAppManifest = implement(getAppManifest, ({ params }) => {

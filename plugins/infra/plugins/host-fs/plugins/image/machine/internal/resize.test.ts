@@ -10,7 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import sharp from "sharp";
 import { makeResizedHandler } from "./resize";
-import { sizeOf, uprightSize } from "./sizes";
+import { sizeOf, uprightSize } from "../../server/internal/sizes";
 import {
   asAppPath,
   asUserPath,

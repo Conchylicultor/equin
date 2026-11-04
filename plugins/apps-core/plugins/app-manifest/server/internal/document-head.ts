@@ -4,7 +4,7 @@ import {
   DocumentHead,
   type HeadFragments,
 } from "@plugins/shell/plugins/document-head/server";
-import { appIconPath, appManifestPath } from "../../core";
+import { appIconPath, appManifestPath } from "./manifest";
 
 /** Attribute-safe text (the values are ours, but an app name is free text). */
 function attr(value: string): string {

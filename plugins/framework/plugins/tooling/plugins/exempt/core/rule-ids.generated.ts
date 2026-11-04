@@ -49,6 +49,7 @@ export type ExemptableRuleId =
   | "e2e-harness/no-networkidle"
   | "element-type-safety/no-post-mount-element-type"
   | "endpoints/fetch-endpoint-binding-name"
+  | "endpoints/no-asset-path-read"
   | "endpoints/no-raw-endpoint-call"
   | "endpoints/no-raw-web-fetch"
   | "endpoints/no-void-fetch-endpoint"
@@ -199,6 +200,7 @@ export type ExemptableRuleId =
 
 /** Declared `noDebt` by their owner: a sanctioned exemption only. */
 export type SanctionedOnlyRuleId = 
+  | "endpoints/no-asset-path-read"
   | "endpoints/no-raw-web-fetch"
   | "frame/no-raw-frame"
   | "live/no-clock-in-served"

@@ -170,7 +170,6 @@ The dashboard's Events panel expands an event into these rows.
     - `AnalyticsFilterSchema`
     - `analyticsQueryEndpoint`
     - `AnalyticsQueryParamSchema`
-    - `analyticsQueryPath`
     - `AnalyticsQueryResultSchema`
     - `AnalyticsQuerySchema`
     - `AnalyticsRangeSchema`

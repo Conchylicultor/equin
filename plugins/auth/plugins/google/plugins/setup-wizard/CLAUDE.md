@@ -6,27 +6,19 @@
 
 - Description: Guided setup steps for Google OAuth credentials (project → Drive API → consent screen → OAuth client → paste → connect), rendered inline in the Google Accounts pane.
 - Web:
-  - Uses:
-    - `auth.currentWorktreeName`
-    - `auth.startConnectFlow`
-    - `auth.useAccountStatus`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/setup-steps` ×6
+    - `auth` ×3
+    - `network/live/live-state` ×2
+    - `primitives/css/ui-kit` ×2
     - `config_v2.useConfigRegistrations`
     - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`
-    - `network/live/live-state.ResourceErrorInline`
-    - `network/live/live-state.useCombinedResources`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.Input`
     - `primitives/loading.Loading`
-    - `primitives/setup-steps.Step`
-    - `primitives/setup-steps.StepCommand`
-    - `primitives/setup-steps.StepDone`
-    - `primitives/setup-steps.StepLink`
-    - `primitives/setup-steps.StepNote`
-    - `primitives/setup-steps.Steps`
+    - `primitives/networking.useTransport`
   - Exports (values): `GoogleSetup`
 - Cross-plugin:
   - Uses tokens:

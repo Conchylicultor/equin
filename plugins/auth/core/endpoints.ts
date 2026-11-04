@@ -57,6 +57,13 @@ export type GetTokenBody = z.infer<typeof GetTokenBodySchema>;
 /** Owner-only: the popup opens it at the page's own origin (same-origin). */
 export const oauthStart = defineEndpoint({
   route: "GET /api/auth/start/:provider",
+  // Read off the URL by the raw handler: the namespace asking, the origin the
+  // result is posted back to, and the scopes to request (comma-separated).
+  query: z.object({
+    worktree: z.string(),
+    origin: z.string(),
+    scopes: z.string().optional(),
+  }),
 });
 
 /**

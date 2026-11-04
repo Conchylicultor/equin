@@ -1,4 +1,5 @@
 import fetchEndpointBindingName from "./fetch-endpoint-binding-name";
+import noAssetPathRead from "./no-asset-path-read";
 import noRawEndpointCall from "./no-raw-endpoint-call";
 import noRawWebFetch from "./no-raw-web-fetch";
 import noVoidFetchEndpoint from "./no-void-fetch-endpoint";
@@ -8,9 +9,10 @@ export default {
   name: "endpoints",
   rules: {
     "fetch-endpoint-binding-name": fetchEndpointBindingName,
+    "no-asset-path-read": noAssetPathRead,
     "no-raw-endpoint-call": noRawEndpointCall,
     "no-raw-web-fetch": noRawWebFetch,
     "no-void-fetch-endpoint": noVoidFetchEndpoint,
   },
-  noDebt: ["no-raw-web-fetch"],
+  noDebt: ["no-raw-web-fetch", "no-asset-path-read"],
 } satisfies LintContribution;

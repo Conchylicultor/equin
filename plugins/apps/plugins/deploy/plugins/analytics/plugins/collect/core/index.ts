@@ -133,8 +133,4 @@ export {
   RECORDED_FIELDS,
 } from "./internal/recorded-fields";
 export type { RecordedColumn, RecordedField } from "./internal/recorded-fields";
-export {
-  analyticsQueryEndpoint,
-  analyticsQueryPath,
-  collectEndpoint,
-} from "./internal/endpoints";
+export { analyticsQueryEndpoint, collectEndpoint } from "./internal/endpoints";

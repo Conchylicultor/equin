@@ -25,6 +25,7 @@ import {
 import type { AuthAccountState } from "@plugins/auth/core";
 import type { ProviderSetup } from "../slots";
 import { currentWorktreeName, startConnectFlow } from "../connect";
+import { useTransport } from "@plugins/primitives/plugins/networking/web";
 
 /**
  * Bare localhost, not the worktree subdomain: the gateway forwards
@@ -52,6 +53,7 @@ export function OAuthClientSetup({
   status: AuthAccountState;
 }) {
   const fetchEndpoint = useFetchEndpoint();
+  const transport = useTransport();
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
   const [saving, setSaving] = useState(false);
@@ -107,7 +109,7 @@ export function OAuthClientSetup({
     setConnecting(true);
     setConnectError(null);
     try {
-      const result = await startConnectFlow({
+      const result = await startConnectFlow(transport, {
         providerId,
         worktree: currentWorktreeName(),
       });

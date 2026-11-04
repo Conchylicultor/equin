@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { ASSET_PATH } from "@plugins/infra/plugins/endpoints/core";
 import {
-  hostResizedUrl,
+  hostResizedAsset,
   isResizableName,
   parseEdge,
   snapEdge,
@@ -32,11 +33,12 @@ test("isResizableName", () => {
   expect(isResizableName("jpg")).toBe(false);
 });
 
-test("hostResizedUrl snaps the edge and names the version", () => {
-  const url = new URL(
-    hostResizedUrl("/p/a b.jpg", 300, { mtimeMs: 12.5, size: 99 }),
-    "http://x",
-  );
+test("hostResizedAsset snaps the edge and names the version", () => {
+  const asset = hostResizedAsset("/p/a b.jpg", 300, {
+    mtimeMs: 12.5,
+    size: 99,
+  });
+  const url = new URL(asset[ASSET_PATH], "http://x");
   expect(url.pathname).toBe("/api/host-fs/image/resized");
   expect(url.searchParams.get("path")).toBe("/p/a b.jpg");
   expect(url.searchParams.get("edge")).toBe("320");

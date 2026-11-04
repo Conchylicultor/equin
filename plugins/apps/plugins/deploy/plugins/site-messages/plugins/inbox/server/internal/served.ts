@@ -1,9 +1,10 @@
+import { endpointPath } from "@plugins/infra/plugins/endpoints/server";
 import { serveValue } from "@plugins/network/plugins/live/server";
 import { hostOnlyQueryOverSsh } from "@plugins/apps/plugins/deploy/plugins/host-query/server";
 import {
   SITE_MESSAGES_PAGE_MAX,
+  siteMessagesListEndpoint,
   SiteMessagesPageSchema,
-  siteMessagesListPath,
 } from "@plugins/apps/plugins/deploy/plugins/site-messages/plugins/intake/core";
 import { deploymentSiteMessages } from "../../core";
 
@@ -22,7 +23,11 @@ export const deploymentSiteMessagesServed = serveValue(deploymentSiteMessages, {
   loader: async ({ deploymentId }) => {
     const result = await hostOnlyQueryOverSsh(
       deploymentId,
-      siteMessagesListPath({ limit: SITE_MESSAGES_PAGE_MAX }),
+      endpointPath(
+        siteMessagesListEndpoint,
+        {},
+        { limit: SITE_MESSAGES_PAGE_MAX },
+      ),
       SiteMessagesPageSchema,
     );
     if (result.kind === "not-found") {

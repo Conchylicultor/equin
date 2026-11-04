@@ -20,6 +20,6 @@ export default [
     paths: ["web/internal/client.ts"],
     kind: "sanctioned",
     reason:
-      "The health probe must answer while the live socket is wedged (the wedge watchdog asks it), so it cannot be a live read. It is the page transport's raw fetch kept on the contract (endpointRequest + readEndpointResponse decode getHealth's own codec).",
+      "The health probe must answer while the live socket is wedged (the wedge watchdog asks it), so it cannot be a live read. It is the page transport's raw fetch kept on the contract (sendEndpointRequest + readEndpointResponse decode getHealth's own codec).",
   },
 ] satisfies Exemptions;

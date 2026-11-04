@@ -91,6 +91,13 @@ export interface Report {
   eq(name: string, actual: unknown, expected: unknown): void;
   /** Unconditional failure — for a branch that should have been unreachable. */
   fail(name: string, detail?: string): void;
+  /**
+   * A check this run could not make, and why — the host offers nothing to
+   * check (an absent control, an empty choice). Printed as SKIP and counted
+   * apart: never a pass, so a run whose checks were skipped says so in its
+   * verdict instead of passing with fewer of them.
+   */
+  skip(name: string, reason: string): void;
   /** A transcript line that is not itself an assertion. */
   note(line: string): void;
   readonly failures: readonly string[];
@@ -109,6 +116,7 @@ export interface Report {
 
 export function report(title?: string): Report {
   const failures: string[] = [];
+  const skipped: string[] = [];
   let passed = 0;
   watchAsyncFailures();
   if (title) console.log(`\n=== ${title} ===`);
@@ -146,6 +154,11 @@ export function report(title?: string): Report {
 
     fail(name, detail) {
       record(name, detail);
+    },
+
+    skip(name, reason) {
+      skipped.push(`${name} — ${reason}`);
+      console.log(`SKIP  ${name} — ${reason}`);
     },
 
     note(line) {
@@ -187,11 +200,17 @@ export function report(title?: string): Report {
         for (const d of diagnostics) console.log(`  - ${d}`);
       }
 
+      // Skips are listed, never counted as passes.
+      const skips = skipped.length === 0 ? "" : `, ${skipped.length} skipped`;
+      if (skipped.length > 0) {
+        console.log(`\nSKIPPED: ${skipped.length}`);
+        for (const s of skipped) console.log(`  - ${s}`);
+      }
       if (failures.length === 0) {
-        console.log(`\nALL CHECKS PASSED (${total})`);
+        console.log(`\nALL CHECKS PASSED (${total}${skips})`);
         process.exit(0);
       }
-      console.log(`\nFAILURES: ${failures.length}/${total}`);
+      console.log(`\nFAILURES: ${failures.length}/${total}${skips}`);
       for (const f of failures) console.log(`  - ${f}`);
       process.exit(1);
     },

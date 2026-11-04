@@ -126,10 +126,10 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `Auth.ScopeRequirement` ← `integrations.gmail`
     - `accountsPane.Actions` ← `primitives.pane`
     - `accountPane.Actions` ← `primitives.pane`
-  - Uses: 43 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 45 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/endpoints` ×6
     - `primitives/pane` ×6
     - `primitives/setup-steps` ×6
-    - `infra/endpoints` ×5
     - `network/live/live-state` ×5
     - `primitives/collapsible` ×4
     - `primitives/css/ui-kit` ×3
@@ -142,6 +142,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/loading.Loading`
+    - `primitives/networking.useTransport`
     - `primitives/section-card.SectionCard`
     - `shell/notifications.useToast`
     - `ui/icons.Icon`

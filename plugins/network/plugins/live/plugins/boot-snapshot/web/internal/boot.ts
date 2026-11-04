@@ -1,6 +1,6 @@
 import { Core } from "@plugins/framework/plugins/web-sdk/core";
 import {
-  endpointRequest,
+  sendEndpointRequest,
   readEndpointResponse,
 } from "@plugins/infra/plugins/endpoints/core";
 import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/page-transport/web";
@@ -28,10 +28,9 @@ export async function runBootSnapshot(): Promise<void> {
   // server. A substrate read of live itself (it seeds the cache `useLive`
   // reads), so it is the transport's raw fetch, kept on the contract: the
   // request built and the reply decoded by the endpoint's own codec.
-  const { path, init } = endpointRequest(bootSnapshot, {});
   const { resources, tuples, timings } = await readEndpointResponse(
     bootSnapshot,
-    await pageTransport.fetch(path, init),
+    await sendEndpointRequest(pageTransport.fetch, bootSnapshot, {}),
   );
   const reqMs = performance.now() - reqStart;
   recordBootSpan({

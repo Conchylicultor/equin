@@ -1,8 +1,10 @@
+import { endpointPath } from "@plugins/infra/plugins/endpoints/server";
 import { serveValue } from "@plugins/network/plugins/live/server";
 import { hostOnlyQueryOverSsh } from "@plugins/apps/plugins/deploy/plugins/host-query/server";
 import {
+  analyticsQueryEndpoint,
   AnalyticsQueryResultSchema,
-  analyticsQueryPath,
+  encodeAnalyticsQuery,
 } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
 import { deploymentAnalytics } from "../../core";
 
@@ -33,7 +35,7 @@ export const deploymentAnalyticsServed = serveValue(deploymentAnalytics, {
   loader: async ({ deploymentId, query }) => {
     const result = await hostOnlyQueryOverSsh(
       deploymentId,
-      analyticsQueryPath(query),
+      `${endpointPath(analyticsQueryEndpoint, {})}?q=${encodeAnalyticsQuery(query)}`,
       AnalyticsQueryResultSchema,
     );
     if (result.kind === "not-found") {

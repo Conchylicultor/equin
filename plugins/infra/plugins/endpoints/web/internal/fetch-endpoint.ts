@@ -18,8 +18,8 @@ import type {
 import {
   EndpointAgentWriteRefusedError,
   EndpointError,
-  endpointRequest,
   readEndpointResponse,
+  sendEndpointRequest,
   unavailableMessage,
 } from "../../core";
 import { endpointErrorSink } from "./error-reporter";
@@ -151,13 +151,16 @@ async function request<Route extends string, TParams, TBody, TResponse, TQuery>(
   params: TParams,
   opts?: FetchOpts<TBody, TQuery>,
 ): Promise<Answer<TResponse>> {
-  const { path, init } = endpointRequest(endpoint, params, opts);
-  const res = opts?.retry
-    ? await fetchWithRetry(path, init, {
-        ...opts.retry,
-        fetch: transport.fetch,
-      })
-    : await transport.fetch(path, init);
+  const retry = opts?.retry;
+  const res = await sendEndpointRequest(
+    retry
+      ? (path, init) =>
+          fetchWithRetry(path, init, { ...retry, fetch: transport.fetch })
+      : transport.fetch,
+    endpoint,
+    params,
+    opts,
+  );
   // Before the body is read: the entry is recorded at its end.
   if (opts?.onTiming) opts.onTiming(requestTimingOf(res, transport));
 

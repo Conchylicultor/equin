@@ -20,10 +20,14 @@ export type {
   MachineUnavailable,
 } from "./needs-machine";
 export type { ExtractParams } from "./route-params";
-export { extractMethod, extractPath, interpolatePath } from "./route-params";
 export { implement, rawEndpointHandler, HttpError } from "./implement";
-export { endpointPath, endpointRequest, readEndpointResponse } from "./request";
-export type { EndpointAnswer, EndpointRequestOpts } from "./request";
+export { readEndpointResponse, sendEndpointRequest } from "./request";
+export type {
+  EndpointAnswer,
+  EndpointRequestOpts,
+  RequestFetch,
+} from "./request";
+export { documentLink } from "./document-link";
 export {
   EndpointError,
   EndpointAgentWriteRefusedError,

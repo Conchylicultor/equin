@@ -2,9 +2,9 @@ import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-vie
 import { CodeListing } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
 import type { AttachmentRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/core";
-import { ViewerThumbnail } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
+import { AssetThumbnail } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 import type { TranscriptImage } from "@plugins/conversations/plugins/transcript-source/core";
-import { transcriptImageUrl } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
+import { transcriptImage } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 
 interface ImageContent {
   type: "image";
@@ -104,9 +104,9 @@ export function AttachedFileView({ event }: AttachmentRendererProps) {
         ])}
         defaultOpen
       >
-        <ViewerThumbnail
+        <AssetThumbnail
+          asset={transcriptImage(image.key)}
           image={{
-            src: transcriptImageUrl(image.key),
             // The `<uuid>.png` blob name: meaningless on the row, but it is
             // the file a download saves as.
             name: path

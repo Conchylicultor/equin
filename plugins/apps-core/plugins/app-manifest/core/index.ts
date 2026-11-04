@@ -8,9 +8,4 @@ export {
   type AppIconSize,
   type WebAppManifest,
 } from "./endpoints";
-export {
-  appIconPath,
-  appManifestFor,
-  appManifestPath,
-  installableApp,
-} from "./manifest";
+export { installableApp } from "./manifest";

@@ -13,6 +13,7 @@ import {
   currentWorktreeName,
 } from "@plugins/auth/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useTransport } from "@plugins/primitives/plugins/networking/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { setConfigField } from "@plugins/config_v2/core";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
@@ -40,6 +41,7 @@ function extractProjectId(raw: string): string {
 /** Google's setup, rendered inline in the Google Accounts pane (`setup: { kind: "steps" }`). */
 export function GoogleSetup() {
   const fetchEndpoint = useFetchEndpoint();
+  const transport = useTransport();
   const [projectId, setProjectId] = useState("");
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
@@ -117,7 +119,7 @@ export function GoogleSetup() {
     setConnecting(true);
     setConnectError(null);
     try {
-      const result = await startConnectFlow({
+      const result = await startConnectFlow(transport, {
         providerId: "google",
         worktree: currentWorktreeName(),
       });

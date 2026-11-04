@@ -18,7 +18,7 @@ the transcript's other images. Nothing expands inline.
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.SectionLabel`
-    - `primitives/overlay/image-viewer.ViewerThumbnail`
+    - `primitives/overlay/image-viewer.AssetThumbnail`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --background`

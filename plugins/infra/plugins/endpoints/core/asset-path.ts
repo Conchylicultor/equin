@@ -1,6 +1,6 @@
 import type { EndpointDef, MachineEndpointDef } from "./define-endpoint";
 import type { MachineFeature } from "./needs-machine";
-import { interpolatePath } from "./route-params";
+import { extractPath, interpolatePath } from "./route-params";
 
 declare const assetPathBrand: unique symbol;
 declare const assetBaseBrand: unique symbol;
@@ -55,7 +55,7 @@ export function assetPath<TParams, TQuery>(
   ...query: [TQuery] extends [void] ? [] : [query: TQuery]
 ): AssetPath {
   let path = interpolatePath(
-    endpoint.path,
+    extractPath(endpoint.route),
     (params ?? {}) as Record<string, string>,
   );
   const [q] = query;
@@ -106,8 +106,9 @@ export function assetBase<TParams>(
 ): AssetBase {
   const given = (params ?? {}) as Record<string, string>;
   const open = /\/:([A-Za-z_][\w]*)/g;
+  const template = extractPath(endpoint.route);
   let cut = -1;
-  for (const m of endpoint.path.matchAll(open)) {
+  for (const m of template.matchAll(open)) {
     if (!(m[1]! in given)) {
       cut = m.index;
       break;
@@ -118,7 +119,7 @@ export function assetBase<TParams>(
       `assetBase(${endpoint.route}): every param is given — a whole path is an AssetPath (assetPath)`,
     );
   }
-  const prefix = endpoint.path.slice(0, cut);
+  const prefix = template.slice(0, cut);
   for (const name of Object.keys(given)) {
     if (!new RegExp(`:${name}(?!\\w)`).test(prefix)) {
       throw new Error(

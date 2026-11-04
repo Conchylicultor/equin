@@ -224,12 +224,13 @@ built on them — see
     - `useTransport`
     - `useTransportScoped`
 - Cross-plugin:
-  - Imported by: 33 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 36 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×10
+    - `primitives` ×6
     - `conversations` ×5
-    - `primitives` ×5
     - `framework` ×3
     - `network` ×3
+    - `auth` ×2
     - `infra` ×2
     - `page` ×2
     - `debug/worktree-cleanup`

@@ -14,6 +14,7 @@ import {
   type InstallLayout,
 } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
 import { deploySecretsVisibilityEndpoint } from "@plugins/apps/plugins/deploy/plugins/deploy-secrets/core";
+import { endpointPath } from "@plugins/infra/plugins/endpoints/server";
 import { sq } from "./converge-script";
 import { READY_ATTEMPTS, READY_INTERVAL_SEC } from "./target";
 
@@ -62,7 +63,7 @@ CACHE=${sq(`${install.runtimeDir}/equin-release`)}
 STALE=${sq(`${install.runtimeDir}/.stale-`)}$$
 READY_URL=${sq(`${base}/api/health/ready`)}
 HEALTH_URL=${sq(`${base}/api/health`)}
-SECRETS_URL=${sq(`${base}${deploySecretsVisibilityEndpoint.path}`)}
+SECRETS_URL=${sq(`${base}${endpointPath(deploySecretsVisibilityEndpoint, {})}`)}
 CRED_DIR=${sq(install.credentialsDir)}
 RUN_ID=${sq(runId)}
 

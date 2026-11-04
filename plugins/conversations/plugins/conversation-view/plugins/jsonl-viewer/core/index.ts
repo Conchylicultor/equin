@@ -15,4 +15,4 @@ export type {
   JsonlEventsQuery,
 } from "./protocol";
 export { eventKey } from "./event-key";
-export { getTranscriptImage, transcriptImageUrl } from "./image-url";
+export { getTranscriptImage, transcriptImage } from "./image-url";

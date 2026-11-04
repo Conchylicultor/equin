@@ -12,7 +12,7 @@ the report is the remote site's data, which changes with every visit and has
 no change signal here, so it is measured when a reader asks (each mount, and
 Refresh = `refresh()`), never on a timer. Its loader is one call to
 [`host-query`](../../../host-query/CLAUDE.md)'s
-`hostOnlyQueryOverSsh(deploymentId, analyticsQueryPath(query), AnalyticsQueryResultSchema)`,
+`hostOnlyQueryOverSsh(deploymentId, path, AnalyticsQueryResultSchema)`, the path being `analyticsQueryEndpoint`'s (`endpointPath`, `endpoints/server`) with `?q=<encodeAnalyticsQuery(query)>`,
 which resolves the deployment's server and pinned SSH target and runs
 
 ```
@@ -129,6 +129,7 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/analytics/plugins/das
   - Contributes: `resource.declare` "deploy-analytics.report"
   - Uses:
     - `apps/deploy/host-query.hostOnlyQueryOverSsh`
+    - `infra/endpoints.endpointPath`
     - `network/live.serveValue`
   - Resources: `deploy-analytics.report` (invalidate, snapshot)
 - Core:

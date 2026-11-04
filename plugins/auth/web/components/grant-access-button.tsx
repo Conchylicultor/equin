@@ -7,6 +7,7 @@ import {
 import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { useAccountStatus } from "../hooks";
 import { currentWorktreeName, startConnectFlow } from "../connect";
+import { useTransport } from "@plugins/primitives/plugins/networking/web";
 import { mergeScopes } from "../scopes";
 
 /**
@@ -28,6 +29,7 @@ export function GrantAccessButton(props: {
     label = "Grant access",
     variant = "outline",
   } = props;
+  const transport = useTransport();
   const toast = useToast();
   const status = useAccountStatus(providerId);
   const [busy, setBusy] = useState(false);
@@ -44,7 +46,7 @@ export function GrantAccessButton(props: {
   async function handleGrant() {
     setBusy(true);
     try {
-      const result = await startConnectFlow({
+      const result = await startConnectFlow(transport, {
         providerId,
         worktree: currentWorktreeName(),
         scopes: mergeScopes(grantedScopes ?? undefined, scopes),

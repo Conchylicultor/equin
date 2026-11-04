@@ -243,12 +243,26 @@ describe("resolveHostCoverage", () => {
     expect(unrouted).rejects.toThrow("nothing in the repo serves it");
   });
 
-  test("a raw URL to a member's prefix is covered; prose naming a route is no URL", async () => {
+  test("a raw URL to a member's prefix throws too: an element loading it reaches the page's server", async () => {
+    const rejected = resolveHostCoverage(
+      inputs({
+        ...BASE,
+        [pj("app/web/view.tsx")]:
+          'const src = "/api/app/cover/" + id + ".svg";',
+      }),
+    );
+    expect(rejected).rejects.toThrow(
+      'a raw "/api/app" URL is built by hand in scoped code',
+    );
+    expect(rejected).rejects.toThrow("plugins/app/web/view.tsx:1");
+  });
+
+  test("prose naming a route is no URL; the resource runtime's own read is allowed", async () => {
     await resolveHostCoverage(
       inputs({
         ...BASE,
         [pj("app/web/view.tsx")]:
-          'fetch("/api/app/other"); // "GET /api/disk/raw" in prose is no URL',
+          'transport.fetch("/api/resources/" + key); // "GET /api/disk/raw" in prose is no URL',
       }),
     );
   });
@@ -313,8 +327,10 @@ describe("resolveHostCoverage", () => {
         ...BASE,
         [pj("app/server/index.ts")]:
           `import { ping } from "../core";\nexport default { httpRoutes: { [ping.route]: wrap<Req, Res>((r) => r.n >= 1 ? a : b), "GET /api/app/x": wrap<Map<string, number>>(h) } };`,
+        [pj("app/core/extra.ts")]:
+          `import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";\nexport const x = defineEndpoint({ route: "GET /api/app/x" });`,
         [pj("app/web/view.tsx")]:
-          `import { ping } from "@plugins/app/core";\nuse(ping);\nfetch("/api/app/x");`,
+          `import { ping } from "@plugins/app/core";\nimport { x } from "../core/extra";\nuse(ping, x);`,
       }),
     );
     expect(reads).toEqual([]);
@@ -325,11 +341,11 @@ describe("resolveHostCoverage", () => {
       inputs({
         ...BASE,
         [pj("app/core/extra.ts")]:
-          `import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";\nexport const lit = defineEndpoint({ route: "GET /api/lit/x" });`,
+          `import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";\nexport const lit = defineEndpoint({ route: "GET /api/lit/x" });\nexport const quoted = defineEndpoint({ route: "GET /api/lit/y" });`,
         [pj("app/server/index.ts")]:
           `import { ping } from "../core";\nexport default { httpRoutes: { [ping.route]: h, "GET /api/lit/x": h, 'GET /api/lit/y': h } };`,
         [pj("app/web/view.tsx")]:
-          `import { lit } from "../core/extra";\nuse(lit);\nfetch("/api/lit/y");`,
+          `import { lit, quoted } from "../core/extra";\nuse(lit, quoted);`,
       }),
     );
   });

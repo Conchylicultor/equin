@@ -44,10 +44,12 @@ head tags linking them from the app's pages.
   - Contributes: `DocumentHead.Fragment` "app-manifest"
   - Uses:
     - `apps-core.declaredApps`
+    - `infra/endpoints.endpointPath`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `shell/document-head.DocumentHead`
     - `shell/document-head.HeadFragments`
+  - Exports (values): `appIconPath`
   - Routes: `GET /api/apps/:appId/manifest.webmanifest`
 - Machine:
   - Uses: `infra/endpoints.machineHandler`
@@ -57,20 +59,14 @@ head tags linking them from the app's pages.
   - Routes: `GET /api/apps/:appId/icon/:file`
 - Core:
   - Uses:
-    - `apps-core/app-icon.appIcon`
-    - `apps-core/app-icon.appTileFill`
     - `infra/endpoints.blob`
     - `infra/endpoints.defineEndpoint`
-    - `infra/endpoints.endpointPath`
   - Exports (types):
     - `AppIconSize`
     - `WebAppManifest`
   - Exports (values):
     - `APP_ICON_SIZES`
     - `appIconFile`
-    - `appIconPath`
-    - `appManifestFor`
-    - `appManifestPath`
     - `getAppIconPng`
     - `getAppManifest`
     - `installableApp`

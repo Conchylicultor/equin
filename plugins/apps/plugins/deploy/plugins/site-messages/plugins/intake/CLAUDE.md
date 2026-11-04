@@ -76,8 +76,8 @@ before confirmations read `skipped`). Same job shape and the same
 ## The host-only list — `GET /api/host-only/site-messages`
 
 `hostOnly()`, `?verdict=&limit=` (default 100, max 200), newest first,
-`{ kind: "messages", messages, hasMore }`. `siteMessagesListPath(query)` builds
-the path the inbox curls.
+`{ kind: "messages", messages, hasMore }`. The inbox builds the path it curls
+with `endpointPath(siteMessagesListEndpoint, {}, query)` (`endpoints/server`).
 
 ## Tests
 
@@ -165,7 +165,6 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/site-messages`.
     - `SiteMessageRecordSchema`
     - `SiteMessageResponseSchema`
     - `siteMessagesListEndpoint`
-    - `siteMessagesListPath`
     - `SiteMessagesListQuerySchema`
     - `SiteMessagesPageSchema`
     - `SiteMessageVerdictSchema`

@@ -1,4 +1,4 @@
-import { endpointPath } from "@plugins/infra/plugins/endpoints/core";
+import { endpointPath } from "@plugins/infra/plugins/endpoints/server";
 import { mcpRequest } from "@plugins/infra/plugins/mcp/core";
 import { existsSync, access } from "@plugins/packages/plugins/timed-fs/core";
 import { mkdir } from "node:fs/promises";

@@ -7,7 +7,7 @@ import {
 } from "@plugins/infra/plugins/host-fs/core";
 import {
   hostFsFolderImageSizes,
-  hostResizedUrl,
+  hostResizedAsset,
   type FolderImageSize,
   isResizableName,
 } from "@plugins/infra/plugins/host-fs/plugins/image/core";
@@ -22,7 +22,14 @@ import {
   type FileRef,
 } from "@plugins/primitives/plugins/file-viewer/core";
 import type { ViewerImage } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
-import { useAssetSrcs } from "@plugins/infra/plugins/endpoints/web";
+import {
+  assetUrlOver,
+  useAssetSrcs,
+} from "@plugins/infra/plugins/endpoints/web";
+import {
+  useTransport,
+  type Transport,
+} from "@plugins/primitives/plugins/networking/web";
 import { supportsImage } from "./supports";
 
 /** The folder a file sits in, in the same spelling as the file's path. */
@@ -54,6 +61,7 @@ function viewerImage(
   file: FileRef,
   src: string,
   host: HostFacts | null,
+  transport: Transport,
 ): ViewerImage {
   const image: ViewerImage = { src, name: fileRefName(file) };
   if (host === null || file.source !== "host") return image;
@@ -61,7 +69,15 @@ function viewerImage(
   return {
     ...image,
     ...(host.size ?? {}),
-    resized: (edge) => hostResizedUrl(path, edge, host.version),
+    // The viewer loads a copy by URL on its own: where no URL reaches the
+    // copy (an in-browser server), it keeps the original it already holds.
+    resized: (edge) => {
+      const copy = assetUrlOver(
+        transport,
+        hostResizedAsset(path, edge, host.version),
+      );
+      return copy.kind === "ready" ? copy.url : src;
+    },
   };
 }
 
@@ -181,11 +197,12 @@ export function useFolderImages(file: FileRef): {
       : names.map((name) => ({ ref: siblingRef(file, dir, name), name }));
   // Each image's bytes over the subtree's transport (`useAssetSrcs`); one not
   // loadable yet (or here) joins the set once it is.
+  const transport = useTransport();
   const srcs = useAssetSrcs(members.map((m) => fileUrl(m.ref)));
   const images = members.flatMap((m, i) => {
     const src = srcs[i];
     return src?.kind === "ready"
-      ? [viewerImage(m.ref, src.src, facts?.get(m.name) ?? null)]
+      ? [viewerImage(m.ref, src.src, facts?.get(m.name) ?? null, transport)]
       : [];
   });
   // A refusal (missing, denied, …) is the folder's answer — the file alone;

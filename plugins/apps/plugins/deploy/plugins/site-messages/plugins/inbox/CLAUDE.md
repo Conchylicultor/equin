@@ -53,6 +53,7 @@ box. It stores nothing.
   - Contributes: `resource.declare` "deploy-site-messages.list"
   - Uses:
     - `apps/deploy/host-query.hostOnlyQueryOverSsh`
+    - `infra/endpoints.endpointPath`
     - `network/live.serveValue`
   - Resources: `deploy-site-messages.list` (invalidate, snapshot)
 - Core:

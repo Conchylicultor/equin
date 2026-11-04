@@ -1,6 +1,6 @@
 import {
   assetPath,
-  interpolatePath,
+  documentLink,
   type AssetPath,
 } from "@plugins/infra/plugins/endpoints/core";
 import { getAttachmentFile } from "@plugins/infra/plugins/attachments/core";
@@ -29,21 +29,22 @@ export function attachmentUrl(id: string): AssetPath {
 }
 
 /**
- * The address an attachment is PERSISTED under in markdown — the route it is
- * served at (`/api/attachments/<id>`), written into a document, never handed to
- * an element (the reader converts it back: `isAttachmentUrl` → `attachmentUrl`).
+ * An attachment as it is PERSISTED in markdown — a link to the route it is
+ * served at (`/api/attachments/<id>`), written into a document, never handed
+ * to an element (the reader converts it back: `isAttachmentUrl` →
+ * `attachmentUrl`).
  */
-function persistedAttachmentAddress(id: string): string {
-  return interpolatePath(getAttachmentFile.path, { id });
-}
-
 export function attachmentMarkdown(id: string, alt = ""): string {
-  return `![${label(alt)}](${persistedAttachmentAddress(id)})`;
+  return documentLink(
+    getAttachmentFile,
+    { id },
+    { text: label(alt), image: true },
+  );
 }
 
 /** A non-image file reference: `[name](/api/attachments/<id>)`. */
 export function attachmentFileMarkdown(id: string, filename: string): string {
-  return `[${label(filename)}](${persistedAttachmentAddress(id)})`;
+  return documentLink(getAttachmentFile, { id }, { text: label(filename) });
 }
 
 /**

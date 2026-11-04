@@ -1,7 +1,7 @@
 import type { z } from "zod";
 import { type Codec, isCodec, json } from "./codec";
 import type { ExtractParams } from "./route-params";
-import { extractMethod, extractPath } from "./route-params";
+import { extractMethod } from "./route-params";
 import type { MachineFeature } from "./needs-machine";
 import type { AgentWrite } from "./agent-write";
 import type { EndpointAccess } from "@plugins/framework/plugins/principal/core";
@@ -61,7 +61,6 @@ interface EndpointContract<
 > {
   readonly route: Route;
   readonly method: string;
-  readonly path: string;
   /**
    * Derived from the route, never declared: `undefined` on a write, the
    * {@link ReadMarker} sentence on a read. The browser's write clients take
@@ -372,7 +371,6 @@ export function defineEndpoint<
   return {
     route: opts.route,
     method: extractMethod(opts.route),
-    path: extractPath(opts.route),
     read: readMarkerOf(opts.route) as ReadOf<Route>,
     bodyCodec: bodyCodec as Codec<SpecType<B>> | undefined,
     responseCodec: responseCodec as Codec<SpecType<R>> | undefined,

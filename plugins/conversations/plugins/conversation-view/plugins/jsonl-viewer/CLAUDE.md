@@ -42,7 +42,8 @@ desktop host reads only the bytes appended since its last read
 (`transcript-watcher`'s `readChain`).
 
 **Images ride by reference.** An event carries `TranscriptImage { key, mime }`;
-the page loads the bytes from `transcriptImageUrl(key)` (`GET
+the page loads the bytes from the asset `transcriptImage(key)` through
+`AssetThumbnail` — over the subtree's transport, never a bare URL (`GET
 /api/transcript-images/:key`, cached immutably — the key names its line by
 offset and uuid, or its file by mtime and size, and a changed source is a 410,
 never other bytes). Design and measurements:
@@ -273,9 +274,10 @@ back.
 - Core:
   - Uses:
     - `conversations/transcript-source.JsonlEventSchema`
+    - `infra/endpoints.assetPath`
+    - `infra/endpoints.AssetPath`
     - `infra/endpoints.blob`
     - `infra/endpoints.defineEndpoint`
-    - `infra/endpoints.interpolatePath`
     - `network/live.liveValue`
     - `packages/list-bound.wholeList`
   - Exports (types):
@@ -291,7 +293,7 @@ back.
     - `JsonlEventsQuerySchema`
     - `seqKey`
     - `TranscriptEventRowSchema`
-    - `transcriptImageUrl`
+    - `transcriptImage`
     - `TranscriptMetaSchema`
     - `transcriptPrompts`
     - `transcriptToolCall`

@@ -22,6 +22,7 @@ import { useAuthState } from "../hooks";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { currentWorktreeName, disconnect, startConnectFlow } from "../connect";
+import { useTransport } from "@plugins/primitives/plugins/networking/web";
 import { ScopeGrantNotice } from "./scope-grant-notice";
 import { PasswordSignInForm } from "./password-sign-in-form";
 import { OAuthClientSetup } from "./oauth-client-setup";
@@ -234,13 +235,14 @@ function AccountControls({
 }) {
   const toast = useToast();
   const fetchEndpoint = useFetchEndpoint();
+  const transport = useTransport();
   const providerId = provider.id;
   const [busy, setBusy] = useState(false);
 
   async function handleReconnect() {
     setBusy(true);
     try {
-      const result = await startConnectFlow({
+      const result = await startConnectFlow(transport, {
         providerId,
         worktree: currentWorktreeName(),
       });

@@ -35,5 +35,4 @@ export type {
 export {
   sendSiteMessageEndpoint,
   siteMessagesListEndpoint,
-  siteMessagesListPath,
 } from "./internal/endpoints";

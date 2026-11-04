@@ -64,7 +64,7 @@ throws `` `${route}: ${read}` `` if a cast gets one through (the
 (`network/live`). A generic wrapper over the fetcher constrains its def with
 `& WriteEndpoint` too. GET contracts stay for everyone else: `callEndpoint`
 (CLI, servers, MCP), `implement`, `assetPath` / `useAssetSrc` / `useAssetUrl`,
-`endpointRequest` and e2e scripts ignore the marker.
+`sendEndpointRequest` and e2e scripts ignore the marker.
 
 Imperative calls go through a `FetchEndpoint` — the client bound to ONE transport (there is no transportless fetcher). Non-2xx responses throw `EndpointError(status, body)`.
 
@@ -112,7 +112,7 @@ await callEndpoint(secretsSet, {}, { origin, body });          // void endpoint 
 const s = await callEndpoint(queueHealthSummaryEndpoint, {}, { origin: namespaceUrl(ns) });
 ```
 
-Params, body, query and the decoded answer come from the contract, so a contract change is a tsc error at the caller (the bug class: `secretsSet` went 204 while its caller still parsed `{ ok: true }`). No answer → fetch's `TypeError`; a non-2xx → `EndpointError` whose message names the request and the reply. Retry / offline policy is the caller's, over those two. Both clients share one fetch-free request core in `core/request.ts` (`endpointRequest` / `readEndpointResponse`), which a module that cannot import `server/` (a `shared/` helper run by a host process) composes around its own sanctioned `fetch`. A hand-written `/api/…` path or a `fetch` to an endpoint's `.path` off the page is the `endpoints/no-raw-endpoint-call` lint; a genuine exception (a hook process that must not load zod) is an inline disable with the reason. A URL handed to someone else rather than fetched (an agent's MCP URL) is built with `endpointPath(endpoint, params)`. A reply read across code generations (any worktree's backend, through the gateway) is not an exception: its contract defaults every field added since (`.default(…)`), so an older backend's reply parses — `profiling/runtime`'s schemas are the example.
+Params, body, query and the decoded answer come from the contract, so a contract change is a tsc error at the caller (the bug class: `secretsSet` went 204 while its caller still parsed `{ ok: true }`). No answer → fetch's `TypeError`; a non-2xx → `EndpointError` whose message names the request and the reply. Retry / offline policy is the caller's, over those two. Both clients share one request core in `core/request.ts`: `sendEndpointRequest(send, endpoint, params, opts)` builds the request from the contract and hands its path to `send` alone (a `Transport`'s `fetch`, or `(path, init) => fetch(origin + path, init)`), and `readEndpointResponse` decodes the reply — what a module that cannot import `server/` (a `shared/` helper run by a host process, the page's boot snapshot) composes around its own sanctioned sender. A hand-written `/api/…` path or a `fetch` built by hand off the page is the `endpoints/no-raw-endpoint-call` lint; a genuine exception (a hook process that must not load zod) is an inline disable with the reason. A URL handed to someone else rather than fetched (an agent's MCP URL, a `<link>` in served HTML) is built with `endpointPath(endpoint, params, query?)` — see *A route is never a string on a page* below. A reply read across code generations (any worktree's backend, through the gateway) is not an exception: its contract defaults every field added since (`.default(…)`), so an older backend's reply parses — `profiling/runtime`'s schemas are the example.
 
 **Endpoints are for writes.** A server read a surface renders is a live resource — a `liveValue` (`params`, a typed `query`, `paged` by key ranges, or `bytes`) or a `liveCollection`, read with `useLive` (`plugins/network/plugins/live/CLAUDE.md`) as a `ResourceResult` (loading / error / ready), never React Query's own result. There is no request/response read hook: `useEndpoint`, live-state's `useEndpointResource`, `hydrateEndpoint`, `useCursorPagination`, `useEndpointMutation`'s `invalidates:` and the exported `endpointQueryKey` are deleted (`research/2026-10-11-global-endpoint-reads-onto-live.md`). A GET `fetchEndpoint` / `useEndpointMutation` / `readNdjson` does not compile anywhere in the browser (the `read` marker, above): a read is `useLive`, or `useLiveReader` in an event handler. The `live/no-endpoint-read` lint bans, in `web/` code, TanStack's `useQuery` family, `fetchEndpoint` inside a `queryFn`, a `fetchEndpoint` / `mutateAsync` of any method whose answer is used where it runs as a read (render, a hook body, an effect, module load), and a `LiveReader` call there — sanctioned only inside `network/live` and `network/live/live-state`, and never a debt entry. A write an effect fires and forgets (`void`-ed) passes. Its residual, held by review: a POST read issued from an event handler (nothing static tells it from a write showing its result) — declare it live and read it with `useLiveReader`. A structured question (once a POST body) is a typed-query `liveValue` (`{ query }`), a type-ahead search over a third party a param'd or typed-query value served `fixed` (`wallpaper.search`, `sonata.ultimate-guitar.search`); `useQueryResource` (live-state) remains only for local async loads (a code-split module), never a server read.
 
@@ -175,9 +175,11 @@ return <img src={src.src} />;
 - **Opaque on purpose.** `AssetPath` is not a string, so `src={attachmentUrl(id)}`
   is a tsc error — every sink resolves it — and it has no `path` field: the
   path sits under the `ASSET_PATH` symbol, read only by `useAssetSrc` /
-  `useAssetUrl`.
-  Persisting an address into a document (an attachment's markdown) spells it
-  from the route itself (`interpolatePath(endpoint.path, params)`).
+  `useAssetUrl` (the `endpoints/no-asset-path-read` lint refuses it anywhere
+  outside this plugin but test code).
+  Persisting an address into a document (an attachment's markdown) writes it
+  as markdown with `documentLink(endpoint, params, { text, image? })` (core):
+  the answer is a document's text, never a `src`.
 - **Decided by the transport.** `servesUrls` (the page's own server): `ready`
   with the path itself, synchronously. Otherwise (an in-browser server):
   fetched through `transport.fetch`, handed out as a blob URL shared by every
@@ -224,6 +226,30 @@ return <img src={src.src} />;
   (`conversation-view/markdown-extensions`); everywhere else the base
   `<Markdown>` `img` / `a` (`primitives/markdown`) render such an address as
   text under a transport no URL reaches, so it never loads from the page.
+
+## A route is never a string on a page
+
+Inside a demo scope every server call goes through the subtree's transport, but
+an element that loads a URL by itself (`<img src>`, a popup, `<link href>`,
+a library's own `fetch`) does not: a plain `/api/…` string loads from the
+PAGE's origin, the real server. So a route has no string spelling a page can
+reach (`research/2026-11-04-global-no-route-string-in-scoped-code.md`):
+
+- An endpoint declaration carries no `path`; `endpointPath` /
+  `interpolatePath` are exported only by the `server` barrel (server, machine,
+  cli, check, bin, scripts) and the `e2e` barrel (scripts that drive the
+  deployed app). `core` exports none of them, so `web/`, `core/` and `shared/`
+  have no import path to a route's string.
+- What an element loads is an `AssetPath` (above); a request goes through
+  `sendEndpointRequest`, whose path reaches only the sender; a document
+  persists an address as markdown (`documentLink`).
+- A hand-typed `"/api/…"` literal cannot be made unspellable: in a browser
+  host's scoped code the coverage guard refuses it, served by the worker or
+  not (codegen's `browser-host-coverage.ts`), and the demo's `no-leak` e2e
+  opens every app and fails on any page-origin `/api` request, element loads
+  included.
+- Residual, recorded: string surgery on a declaration's `route`
+  (`"GET /api/x".split(" ")[1]`).
 
 ## Main is read-only for agent sessions — `agentWrite`
 
@@ -437,7 +463,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
   refused (tsc and `exempt:manifests-valid`) — a raw fetch is fixed, never
   tracked.
 - **Off the page, endpoints are called with `callEndpoint`.** A hand-written
-  `/api/…` path or a `fetch` built from an endpoint's `.path` in server /
+  `/api/…` path or a `fetch` built from an endpoint's route by hand in server /
   central / machine / cli / shared / core code is forbidden — enforced by the
   `no-raw-endpoint-call` lint rule.
 - **No `void fetchEndpoint(...)` for user-triggered mutations.** A discarded
@@ -526,6 +552,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `MachineUnavailable`
     - `ReadMarker`
     - `ReadOf`
+    - `RequestFetch`
     - `WriteEndpoint`
   - Exports (values):
     - `agentWriteRefusedMessage`
@@ -536,28 +563,25 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `contentPath`
     - `dateString`
     - `defineEndpoint`
+    - `documentLink`
     - `EndpointAgentWriteRefusedError`
     - `EndpointError`
-    - `endpointPath`
-    - `endpointRequest`
-    - `extractMethod`
-    - `extractPath`
     - `getRouteSlowThresholdMs`
     - `HttpError`
     - `implement`
-    - `interpolatePath`
     - `isAgentWriteRefusal`
     - `isCodec`
     - `multipart`
     - `rawEndpointHandler`
     - `readEndpointResponse`
+    - `sendEndpointRequest`
     - `unavailableMessage`
     - `unmatchedApiResponse`
     - `unsupportedEndpointResponse`
 - Cross-plugin:
-  - Imported by: 235 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×66
-    - `conversations` ×34
+  - Imported by: 240 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×68
+    - `conversations` ×35
     - `infra` ×21
     - `page` ×19
     - `debug` ×18
@@ -566,6 +590,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `reports` ×6
     - `ui` ×6
     - `auth` ×5
+    - `network` ×3
     - `active-data` ×2
     - `apps-core` ×2
     - `build` ×2
@@ -573,11 +598,11 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `config_v2` ×2
     - `history` ×2
     - `integrations` ×2
-    - `network` ×2
     - `screenshot` ×2
     - `tag-tree` ×2
     - `backup`
     - `database/fork`
+    - `framework/tooling/e2e-harness`
     - `hints`
     - `menu-bar`
     - `release`
@@ -607,8 +632,10 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
 - Server:
   - Exports (values):
     - `callEndpoint`
+    - `endpointPath`
     - `HttpError`
     - `implement`
+    - `interpolatePath`
     - `rawEndpointHandler`
 - Machine:
   - Exports (values):

@@ -77,7 +77,6 @@ changes to existing `kind: "symbol"` authors.
 - Cross-plugin:
   - Imported by:
     - `apps-core/app-launcher`
-    - `apps-core/app-manifest`
     - `apps-core/app-rail`
     - `apps/desktop/shell`
     - `config_v2/settings`

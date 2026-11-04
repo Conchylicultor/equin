@@ -3,7 +3,7 @@ import {
   endpointErrorSink,
 } from "@plugins/infra/plugins/endpoints/web";
 import {
-  endpointRequest,
+  sendEndpointRequest,
   type EndpointDef,
   type EndpointRequestOpts,
   type WriteEndpoint,
@@ -35,8 +35,12 @@ export async function* readNdjson<
   if (endpoint.read !== undefined) {
     throw new Error(`${endpoint.route}: ${endpoint.read}`);
   }
-  const { path, init } = endpointRequest(endpoint, params, opts);
-  const res = await transport.fetch(path, init);
+  const res = await sendEndpointRequest(
+    transport.fetch,
+    endpoint,
+    params,
+    opts,
+  );
   if (!res.ok) {
     const body = await res.text().catch(() => null);
     if (transport.telemetry) {

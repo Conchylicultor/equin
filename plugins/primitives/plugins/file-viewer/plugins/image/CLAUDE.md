@@ -8,6 +8,7 @@
 - Web:
   - Contributes: `FileViewer.Renderer` "Image" → `ImageView`
   - Uses:
+    - `infra/endpoints.assetUrlOver`
     - `infra/endpoints.useAssetSrc`
     - `infra/endpoints.useAssetSrcs`
     - `network/live.useLive`
@@ -16,6 +17,8 @@
     - `primitives/file-viewer.FileViewer`
     - `primitives/file-viewer.UnloadedFile`
     - `primitives/loading.Loading`
+    - `primitives/networking.Transport`
+    - `primitives/networking.useTransport`
     - `primitives/overlay/image-viewer.ImageViewer`
     - `primitives/overlay/image-viewer.MissingImage`
     - `primitives/overlay/image-viewer.useImageLoad`

@@ -71,6 +71,7 @@
  *
  *   ./equin run plugins/network/plugins/live/e2e/narrowing.ts --suite byid [--runs 3]
  */
+import { endpointPath } from "@plugins/infra/plugins/endpoints/e2e";
 import { PROTOCOL } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
 import { canonicalJson } from "@plugins/network/plugins/live/plugins/canonical-params/core";
 import { pageBlocks } from "@plugins/page/plugins/editor/core";
@@ -208,7 +209,7 @@ async function loads(): Promise<Map<string, Loads>> {
         byParent: { parent: { kind: string }; count: number }[];
       }[];
     };
-  }>(getRuntimeProfile.path);
+  }>(endpointPath(getRuntimeProfile, {}));
   const out = new Map<string, Loads>();
   for (const a of p.aggregates.loader) {
     const byParent = new Map<string, number>();
@@ -271,7 +272,7 @@ async function toggleTitle(id: string): Promise<void> {
 const alive = new Set<string>();
 async function fixture(body: NarrowingFixtureBody): Promise<string | null> {
   const { conversationId } = await json<{ conversationId: string | null }>(
-    narrowingFixture.path,
+    endpointPath(narrowingFixture, {}),
     {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -878,7 +879,7 @@ type DeleteKind = Extract<
 const createRow = async (row: FixtureRowKind): Promise<string> => {
   const body: NarrowingFixtureBody = { action: "create-fixture-row", row };
   const { rowId } = await json<{ rowId: string | null }>(
-    narrowingFixture.path,
+    endpointPath(narrowingFixture, {}),
     {
       method: "POST",
       headers: { "content-type": "application/json" },

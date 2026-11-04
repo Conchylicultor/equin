@@ -2,6 +2,7 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { currentWorktreeName, startConnectFlow } from "../connect";
+import { useTransport } from "@plugins/primitives/plugins/networking/web";
 
 export interface ConnectButtonProps {
   providerId: string;
@@ -17,6 +18,7 @@ export function ConnectButton({
   onConnected,
 }: ConnectButtonProps) {
   const toast = useToast();
+  const transport = useTransport();
   const [busy, setBusy] = useState(false);
   return (
     <Button
@@ -24,7 +26,7 @@ export function ConnectButton({
       onClick={async () => {
         setBusy(true);
         try {
-          const result = await startConnectFlow({
+          const result = await startConnectFlow(transport, {
             providerId,
             worktree: currentWorktreeName(),
             scopes,

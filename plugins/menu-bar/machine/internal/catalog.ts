@@ -2,9 +2,9 @@ import { declaredApps } from "@plugins/apps-core/server";
 import { appIconSvg } from "@plugins/apps-core/plugins/app-manifest/machine";
 import {
   APP_ICON_SIZES,
-  appIconPath,
   installableApp,
 } from "@plugins/apps-core/plugins/app-manifest/core";
+import { appIconPath } from "@plugins/apps-core/plugins/app-manifest/server";
 import { implementMachine } from "@plugins/infra/plugins/endpoints/machine";
 import { hashHex } from "@plugins/packages/plugins/string-hash/core";
 import type { AppRef } from "@plugins/primitives/plugins/pane/core";

@@ -3,7 +3,7 @@ import type {
   TranscriptImage,
   UserTextSegment,
 } from "@plugins/conversations/plugins/transcript-source/core";
-import { transcriptImageUrl } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
+import { transcriptImage } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import {
   useRowMarkdown,
   useSectionExpand,
@@ -15,7 +15,7 @@ import {
 } from "@plugins/conversations/plugins/conversation-view/plugins/user-message/web";
 import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Expandable } from "@plugins/primitives/plugins/expandable/web";
-import { ViewerThumbnail } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
+import { AssetThumbnail } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 
 type UserTextEvent = Extract<JsonlEvent, { kind: "user-text" }>;
 
@@ -23,9 +23,9 @@ function InlineImage({ image }: { image: TranscriptImage }) {
   // `image/svg+xml` → `svg`: the name is also the download's file name.
   const ext = image.mime.slice(image.mime.indexOf("/") + 1).split("+")[0];
   return (
-    <ViewerThumbnail
+    <AssetThumbnail
+      asset={transcriptImage(image.key)}
       image={{
-        src: transcriptImageUrl(image.key),
         name: `pasted-image.${ext}`,
         sourceLabel: "Pasted",
         alt: "Attached image",

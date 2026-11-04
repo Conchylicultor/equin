@@ -7,7 +7,7 @@ import type { TSESTree } from "@typescript-eslint/utils";
  * Code that is not a page — a server, central, a machine half, the CLI, a
  * shared or core module — calls one of our endpoints through `callEndpoint`
  * (`@plugins/infra/plugins/endpoints/server`; a `shared/` module composes
- * `endpointRequest` / `readEndpointResponse` from `core`), never by hand. A hand-rolled call
+ * `sendEndpointRequest` / `readEndpointResponse` from `core`), never by hand. A hand-rolled call
  * (`fetch(url)` + `res.json() as T`) restates the contract's path, method, body
  * and answer, so a contract change breaks it at runtime with nothing to catch
  * it: when `secretsSet` started answering 204, every `setSecret` threw

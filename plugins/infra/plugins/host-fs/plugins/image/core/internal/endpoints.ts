@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { blob, defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import { HOST_FS_MACHINE } from "@plugins/infra/plugins/host-fs/core";
+import {
+  assetPath,
+  blob,
+  defineEndpoint,
+  type AssetPath,
+} from "@plugins/infra/plugins/endpoints/core";
 
 // ── which files, which sizes ─────────────────────────────────────────────────
 
@@ -64,29 +70,35 @@ export function resizedVersion(file: {
  * {@link resizedVersion}. 404 missing, 403 denied, 400 for a directory or an
  * edge outside the set, 422 for an unreadable archive member, 415 when the
  * bytes cannot be decoded — the caller then shows the original. Build URLs
- * with {@link hostResizedUrl}.
+ * with {@link hostResizedAsset}.
  */
 export const hostFsImageResized = defineEndpoint({
   route: "GET /api/host-fs/image/resized",
   query: z.object({ path: z.string(), edge: z.string(), v: z.string() }),
   response: blob(),
+  needsMachine: HOST_FS_MACHINE,
 });
 
 /**
- * The URL of the host image at `path` with a long edge of at least `px`
+ * The asset of the host image at `path` with a long edge of at least `px`
  * (snapped up to an edge in {@link RESIZED_EDGES}), for the file version
- * `file` (from its listing).
+ * `file` (from its listing). A sink loading it by URL gets the URL from
+ * `assetUrlOver` (`endpoints/web`).
  */
-export function hostResizedUrl(
+export function hostResizedAsset(
   path: string,
   px: number,
   file: { mtimeMs: number; size: number },
-): string {
-  return `${hostFsImageResized.path}?${new URLSearchParams({
-    path,
-    edge: String(snapEdge(px)),
-    v: resizedVersion(file),
-  }).toString()}`;
+): AssetPath {
+  return assetPath(
+    hostFsImageResized,
+    {},
+    {
+      path,
+      edge: String(snapEdge(px)),
+      v: resizedVersion(file),
+    },
+  );
 }
 
 // ── sizes ────────────────────────────────────────────────────────────────────

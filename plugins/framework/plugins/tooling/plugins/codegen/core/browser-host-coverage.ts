@@ -9,9 +9,11 @@
 //   graph member's `server/` — or declares `needsMachine`, and the page renders
 //   it "not available". A central read (`origin: "central"`) must declare
 //   `needsMachine` for now: no browser host runs central.
-// - an ENDPOINT (a `defineEndpoint` it imports, or a raw `/api/<prefix>`
-//   literal) is served by a graph member's `server/` route — or declares
-//   `needsMachine` (a raw literal cannot, so it must be served).
+// - an ENDPOINT (a `defineEndpoint` it imports) is served by a graph member's
+//   `server/` route — or declares `needsMachine`. A raw `/api/<prefix>`
+//   literal fails whether served or not (but for the resource runtime's own
+//   reads): a fetch of it is refused already, so it is a URL something loads
+//   by itself, from the page's server rather than the worker.
 // - a CONFIG document a scoped web plugin registers (`ConfigV2.WebRegister`)
 //   is registered (`ConfigV2.Register`) by a graph member's `server/` barrel.
 //   There is no `needsMachine` escape for config. This arm reads the barrels'
@@ -716,17 +718,33 @@ export async function resolveHostCoverage(
   const servedPrefixes = new Set(
     [...servedRoutes, CENTRAL_RESOURCE_HTTP_ROUTE].map(routePrefix),
   );
+  // The resource runtime's own reads, which the live-state client builds and
+  // sends through the subtree's transport — the one hand-built URL a scope's
+  // code holds that never reaches an element.
+  const runtimePrefixes = new Set(
+    [RESOURCE_HTTP_ROUTE, CENTRAL_RESOURCE_HTTP_ROUTE].map(routePrefix),
+  );
   for (const [prefix, at] of [...rawApi].sort(([a], [b]) =>
     a.localeCompare(b),
   )) {
-    // Every route is read (`httpRoutes` throws on a key it cannot), so a
-    // prefix no member serves is unserved — whether another barrel serves it
-    // or none does.
-    if (servedPrefixes.has(prefix)) continue;
+    if (runtimePrefixes.has(prefix)) continue;
     const where = at
       .slice(0, 3)
       .map((r) => `${r.file}:${r.line}`)
       .join(", ");
+    // Served is not enough: a fetch of it is already refused (the
+    // `no-raw-web-fetch` lint, the page request guard), so a hand-built URL in
+    // scoped code is one an element, a popup or a library loads by itself —
+    // from the PAGE's server, never the host's worker (the Sonata covers).
+    if (servedPrefixes.has(prefix)) {
+      problems.push(
+        `a raw "/api/${prefix}" URL is built by hand in scoped code: whatever loads it by URL (an element, a popup, a library) reaches the page's server, not the host — build an \`AssetPath\` from the endpoint serving it (\`assetPath\` + \`useAssetSrc\` / \`assetUrlOver\`)\n      named at ${where}${at.length > 3 ? ` (+${at.length - 3} more)` : ""}`,
+      );
+      continue;
+    }
+    // Every route is read (`httpRoutes` throws on a key it cannot), so a
+    // prefix no member serves is unserved — whether another barrel serves it
+    // or none does.
     problems.push(
       `a raw "/api/${prefix}" URL is not served by the graph (a URL built by hand cannot declare \`needsMachine\` — call the endpoint through \`useFetchEndpoint\`, or build an \`AssetPath\` from it): ${await explain({ prefix })}\n      named at ${where}${at.length > 3 ? ` (+${at.length - 3} more)` : ""}`,
     );

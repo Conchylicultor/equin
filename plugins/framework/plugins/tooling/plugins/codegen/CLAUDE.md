@@ -102,13 +102,17 @@ fetcher (`useFetchEndpoint`, a `FetchEndpoint`, `useEndpointMutation`) — a mod
   central).
 - **Endpoints** — a declaration it imports (`endpointExports`, parse-utils) is
   served when a member's `server/` `httpRoutes` routes it, or declares
-  `needsMachine`; a raw `"/api/<prefix>…` literal must hit a prefix a member
-  routes, or a core-owned one: the resource runtime's own
+  `needsMachine`. A raw `"/api/<prefix>…` literal is refused even when a
+  member routes its prefix: fetching it is already refused (the
+  `no-raw-web-fetch` lint, the request guard), so a hand-built URL in scoped
+  code is one an element, a popup or a library loads by itself — from the
+  page's server, never the worker (build an `AssetPath`; see `infra/endpoints`,
+  *A route is never a string on a page*). The one exception is a core-owned
+  prefix: the resource runtime's own
   (`RESOURCE_HTTP_ROUTE`) or central's (`CENTRAL_RESOURCE_HTTP_ROUTE`, mounted
   by central-core's boot, not a barrel — the one route no `httpRoutes` holds;
   its live-state URL is only built for a central read, which this guard
-  already requires `needsMachine`) — whether
-  another barrel routes it or none does. A route is read only from a barrel's
+  already requires `needsMachine`). A route is read only from a barrel's
   `httpRoutes` object: every key must be `[decl.route]` (a `defineEndpoint`
   with a literal `route:`) or a `"METHOD /path"` literal, and any other key
   (a constant, a template with a substitution, a spread) THROWS naming the

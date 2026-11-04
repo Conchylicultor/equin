@@ -8,7 +8,7 @@ import {
   prototypeDetailRoute,
   prototypesApp,
 } from "@plugins/apps/plugins/prototypes/plugins/shell/core";
-import { interpolatePath } from "@plugins/infra/plugins/endpoints/core";
+import { endpointPath } from "@plugins/infra/plugins/endpoints/server";
 import {
   PROTOTYPE_ENTRY_FILE,
   getPrototypeFile,
@@ -55,7 +55,7 @@ export async function prototypeDocumentUrlFormatter(): Promise<{
   const url = (id: string, picks: OptionPicks) => {
     const qs = new URLSearchParams(prototypeDocumentQuery({ picks }));
     const query = qs.size === 0 ? "" : `?${qs.toString()}`;
-    const path = interpolatePath(getPrototypeFile.path, {
+    const path = endpointPath(getPrototypeFile, {
       name: id,
       file: PROTOTYPE_ENTRY_FILE,
     });

@@ -2,6 +2,8 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 
 export { implement, rawEndpointHandler, HttpError } from "../core";
 export { callEndpoint } from "./internal/call-endpoint";
+// A route as a string — off the page only (see `endpointPath`).
+export { endpointPath, interpolatePath } from "./internal/route-path";
 
 export default {
   description:

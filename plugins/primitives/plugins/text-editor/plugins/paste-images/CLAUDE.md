@@ -70,7 +70,7 @@ a hook conditionally inside one component.
     - `infra/attachments.getAttachmentFile`
     - `infra/endpoints.assetPath`
     - `infra/endpoints.AssetPath`
-    - `infra/endpoints.interpolatePath`
+    - `infra/endpoints.documentLink`
     - `primitives/text-editor/token-extension/node.defineInlineTokenNode`
   - Exports (types):
     - `AttachmentSegment`

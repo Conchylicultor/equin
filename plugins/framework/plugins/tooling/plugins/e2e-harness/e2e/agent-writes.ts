@@ -20,7 +20,8 @@
  * Design: `research/2026-08-30-global-agent-config-write-revert-ledger.md`,
  * generalized in `research/2026-09-16-global-shared-prototype-option-picks.md`.
  */
-import type { Codec } from "@plugins/infra/plugins/endpoints/core";
+import type { AnyEndpointDef } from "@plugins/infra/plugins/endpoints/core";
+import { endpointPath } from "@plugins/infra/plugins/endpoints/e2e";
 import {
   agentWrites,
   revertAgentWrites,
@@ -45,12 +46,13 @@ import { pushDiagnostic } from "./diagnostics";
  * — but the route still comes from the contract, so a renamed endpoint is a
  * type error here instead of a 404 at run time.
  */
-async function callEndpoint<T, B = never>(
-  def: { method: string; path: string; responseCodec?: Codec<T> },
+async function callEndpoint<T, B>(
+  def: AnyEndpointDef<string, Record<string, never>, B, T, void>,
   phase: string,
   body?: B,
 ): Promise<T> {
-  const res = await agentFetch(def.path, {
+  const path = endpointPath(def, {});
+  const res = await agentFetch(path, {
     method: def.method,
     ...(body === undefined
       ? {}
@@ -62,14 +64,14 @@ async function callEndpoint<T, B = never>(
   if (!res.ok) {
     const body = await res.text();
     throw new Error(
-      `[e2e] agent-write ${phase} failed: ${def.method} ${def.path} → HTTP ${res.status} ${body}\n` +
+      `[e2e] agent-write ${phase} failed: ${def.method} ${path} → HTTP ${res.status} ${body}\n` +
         `  If this is a 404, the deployed server predates the shared agent-write ledger —\n` +
         `  run \`./equin build\` to redeploy this worktree.`,
     );
   }
   if (!def.responseCodec) {
     throw new Error(
-      `[e2e] ${def.method} ${def.path} declares no response schema to decode.`,
+      `[e2e] ${def.method} ${path} declares no response schema to decode.`,
     );
   }
   return def.responseCodec.decodeResponse(res);
