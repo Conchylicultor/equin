@@ -4,6 +4,7 @@ export {
   fetchEndpointOver,
   useFetchEndpoint,
   getEndpointErrorMessage,
+  tapRequestTiming,
 } from "./internal/fetch-endpoint";
 export { EndpointError, EndpointAgentWriteRefusedError } from "../core";
 export type { FetchEndpoint } from "./internal/fetch-endpoint";

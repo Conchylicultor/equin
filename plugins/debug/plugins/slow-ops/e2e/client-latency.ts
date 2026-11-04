@@ -6,8 +6,11 @@
  * a throwaway page (optimistic write -> confirm; server pushes -> update) must
  * land `update` and `confirm` rows in the deploy's `slow_ops` table through the
  * slow-op beacon, carrying the documented wait phases:
- *   update  : server-notice / server-deliver / transport / client-apply
- *   confirm : send-lane / retry / server-ack / confirm-frame (variant mode/edge)
+ *   update  : server-notice / server-deliver / transport / page-wait / client-apply
+ *   confirm : send-lane / retry / request-queue / network / server /
+ *             page-resume / ack-unsplit / confirm-frame (variant mode/edge)
+ * — and every confirm's ack split by its request's own timing (Resource Timing
+ * + the server's Server-Timing): `server` time recorded, nothing `ack-unsplit`.
  *
  * WRITES: the two thresholds (agent-marked; withBrowser reverts them) and one
  * throwaway blank page left in the worktree fork DB.
@@ -113,12 +116,21 @@ try {
         (p) => uw.has(p),
       ),
     );
+    r.ok("update waits carry page-wait", uw.has("page-wait"));
     r.ok(
       "confirm waits name a documented phase",
-      ["send-lane", "retry", "server-ack", "confirm-frame"].some((p) =>
-        cw.has(p),
-      ),
+      ["send-lane", "retry", "server", "confirm-frame"].some((p) => cw.has(p)),
     );
+    const confirmWait = (layer: string) =>
+      of("confirm").reduce((sum, x) => sum + Number(x.waits?.[layer] ?? 0), 0);
+    r.note(
+      `confirm ack split: request-queue ${confirmWait("request-queue")} ms, network ${confirmWait("network")} ms, server ${confirmWait("server")} ms, page-resume ${confirmWait("page-resume")} ms, ack-unsplit ${confirmWait("ack-unsplit")} ms`,
+    );
+    r.ok(
+      "confirm acks are split by the request's own timing (server time recorded)",
+      confirmWait("server") > 0,
+    );
+    r.ok("no confirm ack left unsplit", confirmWait("ack-unsplit") === 0);
     r.ok(
       "confirm variants look like <mode>/<edge>",
       of("confirm").some((x) => JSON.stringify(x.variants).includes("/")),

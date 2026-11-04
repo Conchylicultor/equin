@@ -15,6 +15,17 @@ import type {
   SharedWorkerLike,
 } from "./transport-types";
 
+/**
+ * One server frame as a socket hands it to its consumer. `arrivedAt`
+ * (`Date.now()`) is when it reached the browser — stamped by whatever holds
+ * the real socket (the SharedWorker; an in-page server's delivery), not by the
+ * consumer's handler, which a busy main thread delays.
+ */
+export interface SocketMessage {
+  readonly data: string;
+  readonly arrivedAt: number;
+}
+
 /** The page-lifecycle events a tab detaches and re-attaches its port on. */
 export interface PageLifecycleLike {
   addEventListener(
@@ -126,7 +137,7 @@ export class SharedWebSocket {
   readyState: number = SharedWebSocket.CONNECTING;
 
   onopen: ((ev: Event) => void) | null = null;
-  onmessage: ((ev: MessageEvent<string>) => void) | null = null;
+  onmessage: ((msg: SocketMessage) => void) | null = null;
   onclose: ((ev: CloseEvent) => void) | null = null;
   onerror: ((ev: Event) => void) | null = null;
 
@@ -365,7 +376,7 @@ export class SharedWebSocket {
       case "rx":
         this.testHook?.onEvent({ url: this.url, kind: "rx", data: msg.data });
         this.dispatch(() =>
-          this.onmessage?.(new MessageEvent("message", { data: msg.data })),
+          this.onmessage?.({ data: msg.data, arrivedAt: msg.arrivedAt }),
         );
         return;
       case "ws-error":

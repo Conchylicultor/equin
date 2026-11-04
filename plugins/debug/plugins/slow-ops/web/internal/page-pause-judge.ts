@@ -11,9 +11,14 @@ export interface SpanWindow {
   endMs: number;
 }
 
-/** The window of a measurement that ended now and lasted `durationMs`. */
-export function endingNow(durationMs: number): SpanWindow {
-  const endMs = Date.now();
+/**
+ * The window of a measurement that lasted `durationMs` and ended at `endMs` —
+ * now, unless its producer emitted it later than its end.
+ */
+export function endingNow(
+  durationMs: number,
+  endMs: number = Date.now(),
+): SpanWindow {
   return { startMs: endMs - durationMs, endMs };
 }
 

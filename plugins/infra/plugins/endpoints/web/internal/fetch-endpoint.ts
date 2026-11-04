@@ -1,8 +1,10 @@
 import {
   fetchWithRetry,
+  requestTimingOf,
   transportScoped,
   useTransportScoped,
   type FetchWithRetryOptions,
+  type RequestTiming,
   type Transport,
 } from "@plugins/primitives/plugins/networking/web";
 import type {
@@ -55,6 +57,15 @@ export type FetchOpts<TBody, TQuery> = EndpointRequestOpts<TBody, TQuery> & {
    * one the server dedupes) should ask for it.
    */
   retry?: FetchWithRetryOptions;
+  /**
+   * Handed the timing of the request (`requestTimingOf`, networking): where
+   * its round trip went, from the browser's Resource Timing entry and the
+   * server's own handler time — never from this page's clock around the
+   * `await`. Called once the response's headers are in (with retry, for the
+   * final attempt's); not called when the request itself failed (no
+   * response). What an optimistic write's `confirm` sample splits its ack by.
+   */
+  onTiming?: (timing: Promise<RequestTiming>) => void;
 };
 
 type Answer<TResponse> = EndpointAnswer<TResponse>;
@@ -147,6 +158,8 @@ async function request<Route extends string, TParams, TBody, TResponse, TQuery>(
         fetch: transport.fetch,
       })
     : await transport.fetch(path, init);
+  // Before the body is read: the entry is recorded at its end.
+  if (opts?.onTiming) opts.onTiming(requestTimingOf(res, transport));
 
   try {
     return await readEndpointResponse(endpoint, res);
@@ -167,6 +180,35 @@ async function request<Route extends string, TParams, TBody, TResponse, TQuery>(
     }
     throw err;
   }
+}
+
+/**
+ * `fetchEndpoint` with every request's timing also handed to `onTiming` (after
+ * the caller's own `opts.onTiming`, if any) — how a caller that hands a fetcher
+ * to code it does not own learns what that code's requests cost.
+ */
+export function tapRequestTiming(
+  fetchEndpoint: FetchEndpoint,
+  onTiming: (timing: Promise<RequestTiming>) => void,
+): FetchEndpoint {
+  return ((
+    endpoint: AnyEndpoint<string, unknown, unknown, unknown, unknown>,
+    params: unknown,
+    opts?: Partial<FetchOpts<unknown, unknown>>,
+  ) =>
+    (
+      fetchEndpoint as (
+        e: typeof endpoint,
+        p: unknown,
+        o?: Partial<FetchOpts<unknown, unknown>>,
+      ) => Promise<unknown>
+    )(endpoint, params, {
+      ...opts,
+      onTiming: (timing) => {
+        opts?.onTiming?.(timing);
+        onTiming(timing);
+      },
+    })) as FetchEndpoint;
 }
 
 /**

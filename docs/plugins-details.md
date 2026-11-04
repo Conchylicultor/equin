@@ -27131,14 +27131,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`hook-value`** — A React hook carried as a value: the Hook<F> brand, and the two lint rules that keep every binding holding one named use* (the React Compiler recognises hooks by name only and memoizes any other call).
       - Core:
         - Exports (types): `Hook`
-    - **`http-router`** — The one HTTP request router every host mounts: createRequestHandler turns "METHOD /path/:param" route pairs into a (req) => Promise<Response> — literal fast path, then :param matching in registration order, a default cache-control: no-store, and a logged generic 500 on a throw. A duplicate route key throws at construction.
+    - **`http-router`** — The one HTTP request router every host mounts: createRequestHandler turns "METHOD /path/:param" route pairs into a (req) => Promise<Response> — literal fast path, then :param matching in registration order, a default cache-control: no-store, a Server-Timing stamp of the handler's own time with a per-response id on every response (readServerTiming parses it back), and a logged generic 500 on a throw. A duplicate route key throws at construction.
       - Cross-plugin:
         - Imported by: `framework/server-core`
       - Core:
         - Exports (types):
           - `RequestHandlerOptions`
           - `RouteHandler`
-        - Exports (values): `createRequestHandler`
+          - `ServerTimingStamp`
+        - Exports (values):
+          - `createRequestHandler`
+          - `readServerTiming`
+          - `SERVER_TIMING_METRIC`
+          - `serverTimingValue`
     - **`plugin-id`** — Canonical plugin identity: the branded PluginId type and its derived path encodings.
       - Core:
         - Uses: `framework/product-name.PRODUCT_NAME`
@@ -30523,6 +30528,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `primitives/networking.fetchWithRetry`
           - `primitives/networking.FetchWithRetryOptions`
+          - `primitives/networking.RequestTiming`
+          - `primitives/networking.requestTimingOf`
           - `primitives/networking.Transport`
           - `primitives/networking.transportScoped`
           - `primitives/networking.useTransport`
@@ -30545,6 +30552,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `endpointErrorSink`
           - `fetchEndpointOver`
           - `getEndpointErrorMessage`
+          - `tapRequestTiming`
           - `useAssetSrc`
           - `useAssetSrcs`
           - `useAssetUrl`
@@ -35556,12 +35564,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pruneChangelog` — Prune the durable changelog, and record what it deleted in the SAME statement: the prune horizon (`max_pruned_xid`) moves to the highest xid this run deleted, never down.
         - **`optimistic-mutation`** — Optimistic-mutation primitive over live-state: useOptimisticResource replays pending ops on server truth (overlay/replay) under the never-revert policy — causal (ack-watermark) and content-based confirmation, denial only under causal proof, keep-rendered transient failures with reconnect auto-retry, and permanent (4xx) rejections dropped and reported.
           - Web:
-            - Uses: 23 symbols — full list in [`plugins/network/plugins/live/plugins/optimistic-mutation/REFERENCE.md`](../plugins/network/plugins/live/plugins/optimistic-mutation/REFERENCE.md)
+            - Uses: 27 symbols — full list in [`plugins/network/plugins/live/plugins/optimistic-mutation/REFERENCE.md`](../plugins/network/plugins/live/plugins/optimistic-mutation/REFERENCE.md)
               - `network/live` ×9
               - `network/live/live-state` ×8
-              - `infra/endpoints` ×3
+              - `infra/endpoints` ×6
+              - `primitives/networking` ×2
               - `primitives/latest-ref.useLatestRef`
-              - `primitives/networking.subscribeWsStatus`
               - `primitives/sync-status.useReportSync`
             - Exports (types):
               - `AwaitResourceWrite`
@@ -46233,9 +46241,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ReconnectingWsData`
           - `ReconnectingWsHandle`
           - `ReconnectingWsOptions`
+          - `RequestTiming`
           - `SharedWebSocketHooks`
           - `SharedWebSocketOptions`
           - `SharedWorkerLike`
+          - `SocketMessage`
           - `Transport`
           - `TransportScoped`
           - `TransportSocket`
@@ -46247,6 +46257,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `probeUrlStatus`
           - `publishNetDiag`
           - `publishWsStatus`
+          - `requestTimingOf`
+          - `RESOURCE_TIMING_WAIT_MS`
           - `SharedWebSocket`
           - `subscribeNetDiag`
           - `subscribeWsStatus`
@@ -46303,7 +46315,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FakeWebSocket` — A `WebSocketLike` with no network.
           - `FakeWsServer` — A no-network WebSocket server: `connect` is the bound `makeWebSocket` factory; every socket it ever handed out is retained for introspection (`all`), and the currently-OPEN subset (`openSockets`) is derived live from `readyState` so it is the single source of truth for the one-socket invariant.
           - `renderWithTransport` — `render(ui)` under a `<TransportProvider>` — what every component reading `useTransport()` (the endpoints hooks, `useLive`) needs, since the context has no default.
-          - `testTransport` — A page-shaped transport for a test: same-origin sockets (`SharedWebSocket`), the global `fetch` read at call time (so a fetch the test stubs answers), assets loaded by their own path, the computer behind it, and its telemetry reported — each overridable.
+          - `testTransport` — A page-shaped transport for a test: same-origin sockets (`SharedWebSocket`), the global `fetch` read at call time (so a fetch the test stubs answers), assets loaded by their own path, no request timing (a stubbed fetch has no Resource Timing entry), the computer behind it, and its telemetry reported — each overridable.
           - `transportWrapper` — A `wrapper` (`render` / `renderHook`) mounting `transport` above the tree.
           - Types: `FakeWsServerOptions`, `RenderWithTransportOptions`, `TabHandle`, `TransportHub`
       - Plugins:

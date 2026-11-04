@@ -10,7 +10,8 @@ import { TransportProvider, type Transport } from "../transport";
 /**
  * A page-shaped transport for a test: same-origin sockets (`SharedWebSocket`),
  * the global `fetch` read at call time (so a fetch the test stubs answers),
- * assets loaded by their own path, the computer behind it, and its telemetry reported —
+ * assets loaded by their own path, no request timing (a stubbed fetch has no
+ * Resource Timing entry), the computer behind it, and its telemetry reported —
  * each overridable. Every call makes a new transport, so a per-transport store
  * (`transportScoped`) starts empty per test.
  */
@@ -20,6 +21,7 @@ export function testTransport(overrides: Partial<Transport> = {}): Transport {
     openSocket: (url, options) => new SharedWebSocket(url, undefined, options),
     fetch: (input, init) => globalThis.fetch(input, init),
     servesUrls: true,
+    requestTiming: false,
     content: null,
     machine: true,
     telemetry: true,

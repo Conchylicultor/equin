@@ -13,20 +13,23 @@ describe("splitPhases", () => {
     const changedAt = 1000;
     const deliverMs = 15;
     const sentAt = 1040;
+    const arrivedAt = 1049;
     const receivedAt = 1052;
     const appliedAt = 1060;
     const phases = splitPhases("update", {
       "server-notice": sentAt - deliverMs - changedAt,
       "throttle-hold": 0,
       "server-deliver": deliverMs,
-      transport: receivedAt - sentAt,
+      transport: arrivedAt - sentAt,
+      "page-wait": receivedAt - arrivedAt,
       "client-apply": appliedAt - receivedAt,
     });
     expect(phases).toEqual({
       "server-notice": 25,
       "throttle-hold": 0,
       "server-deliver": 15,
-      transport: 12,
+      transport: 9,
+      "page-wait": 3,
       "client-apply": 8,
     });
     const sum = Object.values<number>(phases).reduce((a, b) => a + b, 0);
@@ -37,19 +40,27 @@ describe("splitPhases", () => {
     const phases = splitPhases("confirm", {
       "send-lane": 3,
       retry: 0,
-      "server-ack": 40,
+      "request-queue": 2,
+      network: 5,
+      server: 30,
+      "page-resume": 3,
+      "ack-unsplit": 0,
       "confirm-frame": -12,
     });
     expect(phases["confirm-frame"]).toBe(0);
-    expect(phases["server-ack"]).toBe(40);
+    expect(phases.server).toBe(30);
   });
 
   test("returns exactly the signal's phases, in table order", () => {
     const phases = splitPhases("confirm", {
-      "send-lane": 1,
-      retry: 2,
-      "server-ack": 3,
       "confirm-frame": 4,
+      "ack-unsplit": 0,
+      "page-resume": 6,
+      server: 5,
+      network: 4,
+      "request-queue": 3,
+      retry: 2,
+      "send-lane": 1,
     });
     expect(Object.keys(phases)).toEqual([...CLIENT_LATENCY_SIGNALS.confirm]);
   });
@@ -61,13 +72,14 @@ describe("splitPhases", () => {
       "throttle-hold": 0,
       "server-deliver": 0,
       transport: 0,
+      "page-wait": 0,
     });
     const sample: ClientLatencySample = {
       signal: "confirm",
       key: "k",
       params: {},
       // @ts-expect-error — an update phase on a confirm sample
-      phases: { "send-lane": 0, retry: 0, "server-ack": 0, transport: 0 },
+      phases: { "send-lane": 0, retry: 0, server: 0, transport: 0 },
       totalMs: 0,
     };
     expect(sample.signal).toBe("confirm");
@@ -79,7 +91,7 @@ describe("censored samples", () => {
     const phases = splitReachedPhases("confirm", {
       retry: -1,
       "send-lane": 4,
-      "server-ack": undefined,
+      server: undefined,
     });
     expect(phases).toEqual({ "send-lane": 4, retry: 0 });
     expect(Object.keys(phases)).toEqual(["send-lane", "retry"]);
@@ -127,6 +139,7 @@ describe("clientLatencySink", () => {
         "throttle-hold": 0,
         "server-deliver": 2,
         transport: 3,
+        "page-wait": 0,
         "client-apply": 4,
       },
       totalMs: 10,
@@ -149,6 +162,7 @@ describe("ownMsOf", () => {
         "throttle-hold": 998,
         "server-deliver": 1,
         transport: 1,
+        "page-wait": 0,
         "client-apply": 1,
       }),
       totalMs: 1002,
@@ -169,6 +183,7 @@ describe("ownMsOf", () => {
         "throttle-hold": 0,
         "server-deliver": 3295,
         transport: 100,
+        "page-wait": 0,
         "client-apply": 9,
       }),
       totalMs: 3424,
@@ -176,19 +191,25 @@ describe("ownMsOf", () => {
     expect(ownMsOf(sample)).toBe(129);
   });
 
-  test("a signal with no excluded phase is all own time", () => {
+  test("a confirm's handler time is the server's to judge, the rest is the write's own", () => {
+    // page-blocks.v2 on 2026-11-04: ~107 ms read as `server-ack`, 13 ms of it
+    // the handler — the rest was the page's main thread.
     const sample: ClientLatencySample = {
       signal: "confirm",
-      key: "k",
+      key: "page-blocks.v2",
       params: {},
       phases: splitPhases("confirm", {
         "send-lane": 1,
         retry: 0,
-        "server-ack": 40,
+        "request-queue": 40,
+        network: 2,
+        server: 13,
+        "page-resume": 52,
+        "ack-unsplit": 0,
         "confirm-frame": 0,
       }),
-      totalMs: 41,
+      totalMs: 108,
     };
-    expect(ownMsOf(sample)).toBe(41);
+    expect(ownMsOf(sample)).toBe(95);
   });
 });

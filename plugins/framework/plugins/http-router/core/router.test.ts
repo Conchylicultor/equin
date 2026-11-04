@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createRequestHandler, type RouteHandler } from "./router";
+import { readServerTiming } from "./server-timing";
 
 const ok =
   (body: string): RouteHandler =>
@@ -156,5 +157,47 @@ describe("createRequestHandler", () => {
     const res = await handle(req("GET", "/api/b"));
     expect(res.status).toBe(409);
     expect(await res.json()).toEqual({ missing: "GET /api/b" });
+  });
+
+  test("stamps the handler's time as Server-Timing, with a per-response id", async () => {
+    const handle = createRequestHandler({
+      routes: [
+        [
+          "POST /api/slow",
+          async () => {
+            await Bun.sleep(20);
+            return Response.json({});
+          },
+        ],
+        ["GET /api/redirect", () => Response.redirect("http://x/", 302)],
+      ],
+      onError: noError,
+    });
+    const a = readServerTiming(
+      (await handle(req("POST", "/api/slow"))).headers.get("server-timing"),
+    );
+    const b = readServerTiming(
+      (await handle(req("POST", "/api/slow"))).headers.get("server-timing"),
+    );
+    if (a.kind !== "stamped" || b.kind !== "stamped")
+      throw new Error("expected both responses stamped");
+    expect(a.stamp.handlerMs).toBeGreaterThanOrEqual(15);
+    expect(a.stamp.id).not.toBe(b.stamp.id);
+    // A response with immutable headers is re-wrapped to carry it.
+    const redirect = await handle(req("GET", "/api/redirect"));
+    expect(redirect.status).toBe(302);
+    expect(readServerTiming(redirect.headers.get("server-timing")).kind).toBe(
+      "stamped",
+    );
+  });
+});
+
+describe("readServerTiming", () => {
+  test("finds our stamp among a proxy's metrics, and says why when it cannot", () => {
+    expect(
+      readServerTiming('cdn;dur=2, equin;dur=13.4;desc="r1", db;dur=3'),
+    ).toEqual({ kind: "stamped", stamp: { handlerMs: 13.4, id: "r1" } });
+    expect(readServerTiming(null).kind).toBe("unstamped");
+    expect(readServerTiming("cdn;dur=2").kind).toBe("unstamped");
   });
 });

@@ -211,10 +211,10 @@ through the pure `latencySlowOp` (`web/internal/latency-slow-op.ts`):
 | `operationKind` | the signal (`update`, `confirm`) |
 | `operation` | the resource key only, so one resource stays one row |
 | `detail.variant` | the sample's `variant` (a confirm's `mode/edge`), else `canonicalJson(params)` — merged into the row's `variants` |
-| `waits` | the signal's phases (`server-notice` / `throttle-hold` / `server-deliver` / `transport` / `client-apply`; `send-lane` / `retry` / `server-ack` / `confirm-frame`) — merged into the row's durable `waits` |
+| `waits` | the signal's phases (`server-notice` / `throttle-hold` / `server-deliver` / `transport` / `page-wait` / `client-apply`; `send-lane` / `retry` / `request-queue` / `network` / `server` / `page-resume` / `ack-unsplit` / `confirm-frame`) — merged into the row's durable `waits` (rows from before 2026-11-04 also hold the old unsplit `server-ack`) |
 | `caller` | the current route |
 | `durationMs` | `totalMs` (measured end − start; the clamped phases can sum to more) |
-| `ownMs` | `ownMsOf(sample)`: `totalMs` less its held phases (an update's `throttle-hold`) |
+| `ownMs` | `ownMsOf(sample)`: `totalMs` less its excluded phases (an update's `throttle-hold` and `server-deliver`, a confirm's `server`) |
 
 - **Thresholds** are the `updateMs` (1000, the ledger's calm p95 bar) and
   `confirmMs` (2000) knobs, picked per signal by `CLIENT_SIGNAL_THRESHOLD` in

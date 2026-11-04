@@ -78,9 +78,9 @@ function backend(who: string, watermark: string) {
                 : [];
           for (const sub of subs) {
             queueMicrotask(() =>
-              socket.onmessage?.(
-                new MessageEvent("message", {
-                  data: JSON.stringify({
+              socket.onmessage?.({
+                arrivedAt: Date.now(),
+                data: JSON.stringify({
                     kind: "sub-ack",
                     key: sub.key,
                     params: sub.params,
@@ -88,8 +88,7 @@ function backend(who: string, watermark: string) {
                     version: 1,
                     watermark,
                   }),
-                }),
-              ),
+              }),
             );
           }
         },
@@ -112,6 +111,7 @@ function backend(who: string, watermark: string) {
       );
     },
     servesUrls: true,
+    requestTiming: false,
     content: null,
     machine: true,
     telemetry: false,

@@ -27,6 +27,7 @@ const page: Transport = {
   },
   fetch: (input, init) => globalThis.fetch(input, init),
   servesUrls: true,
+  requestTiming: false,
   content: null,
   machine: true,
   telemetry: true,
@@ -219,5 +220,39 @@ describe("fetchEndpointOver", () => {
   test("is one fetcher per transport", () => {
     expect(fetchEndpointOver(page)).toBe(fetchEndpoint);
     expect(fetchEndpointOver({ ...page })).not.toBe(fetchEndpoint);
+  });
+});
+
+describe("fetchEndpoint onTiming", () => {
+  test("hands the request's timing once the response is in; says why it is unmeasured", async () => {
+    stubFetch([ok(), ok()]);
+    const timings: Promise<unknown>[] = [];
+    await fetchEndpoint(
+      ping,
+      {},
+      { body: { n: 1 }, onTiming: (t) => timings.push(t) },
+    );
+    expect(await timings[0]).toEqual({
+      kind: "unmeasured",
+      reason: "the transport's requests are not network fetches",
+    });
+    // A network transport, but a response the router did not stamp.
+    await fetchEndpointOver({ ...page, requestTiming: true })(
+      ping,
+      {},
+      { body: { n: 1 }, onTiming: (t) => timings.push(t) },
+    );
+    expect(await timings[1]).toEqual({
+      kind: "unmeasured",
+      reason: "the response has no Server-Timing",
+    });
+  });
+
+  test("a request that failed before any response hands no timing", async () => {
+    stubFetch([networkError()]);
+    const onTiming = mock(() => {});
+    const call = fetchEndpoint(ping, {}, { body: { n: 1 }, onTiming });
+    expect(call).rejects.toMatchObject({ message: "Failed to fetch" });
+    expect(onTiming).not.toHaveBeenCalled();
   });
 });

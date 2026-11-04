@@ -130,7 +130,10 @@ export function createSharedWsHost(deps: SharedWsHostDeps): SharedWsHost {
       const socketUrl = url;
       owner = new SocketOwner(socketUrl, deps.makeWebSocket, {
         onStatus: () => broadcastStatus(),
-        onMessage: (data) => broadcast({ kind: "rx", data }),
+        // Stamped here, in the worker: a busy tab delays only its own
+        // handler, never this.
+        onMessage: (data) =>
+          broadcast({ kind: "rx", data, arrivedAt: Date.now() }),
         onError: () => broadcast({ kind: "ws-error" }),
         onDiag: diag,
       });

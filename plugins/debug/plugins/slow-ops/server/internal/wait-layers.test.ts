@@ -32,4 +32,22 @@ describe("describeWaits", () => {
     expect(describeWaits({ durationMs: 100 })).toEqual([]);
     expect(describeWaits({ durationMs: 100, waits: { retry: 0 } })).toEqual([]);
   });
+
+  test("a confirm dominated by the page's wait points at the page, not the server", () => {
+    // page-blocks.v2 on 2026-11-04: 13 ms of handler inside ~107 ms.
+    const [head] = describeWaits({
+      durationMs: 108,
+      waits: {
+        "send-lane": 1,
+        "request-queue": 40,
+        network: 2,
+        server: 13,
+        "page-resume": 52,
+        "ack-unsplit": 0,
+        "confirm-frame": 0,
+      },
+    });
+    expect(head).toStartWith("**Where the time went:** `page-resume` — 52ms");
+    expect(head).toContain("not the server");
+  });
 });

@@ -12,7 +12,6 @@
 //     reducer), so op/patch semantics are byte-identical.
 
 import { useCallback, useMemo, useRef, useState } from "react";
-import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import type { LiveWhereOf } from "@plugins/network/plugins/live/core";
 import {
   OpNoLongerApplies,
@@ -138,9 +137,6 @@ export const NOTHING_FAILED: ReadonlyMap<string, BelowFailure> = new Map();
 // ---------------------------------------------------------------------------
 
 export function useServerBlockStore(pageId: string): BlockStore {
-  // The page's writes go to the host this editor is served by (its subtree's
-  // transport), never a page-global one.
-  const fetchEndpoint = useFetchEndpoint();
   // Structural keystroke ops apply optimistically: the client runs the SAME
   // `applyBlockOp` reducer the server runs, overlaid on live-state truth and
   // reconciled by the WS push. The captured `effect` drives both the idempotency
@@ -179,8 +175,10 @@ export function useServerBlockStore(pageId: string): BlockStore {
     // generic `patch` endpoint. Both flow through this one instance so the
     // overlay + freeze pipeline (and confirmation) is shared — and so both ride
     // the primitive's per-`(resource, params)` send lane, which is what keeps
-    // causally dependent writes in issue order on the wire.
-    mutate: (v) =>
+    // causally dependent writes in issue order on the wire. Sent with the
+    // fetcher the primitive hands over — the subtree's transport, timed, so a
+    // slow confirm says whether the page, the network or the handler took it.
+    mutate: (v, { fetchEndpoint }) =>
       v.tag === "patch"
         ? fetchEndpoint(patchBlocks, { pageId }, { body: v.patch }).then(
             (r) => ({

@@ -40,6 +40,7 @@ export const pageTransport: Transport = {
   openSocket: (url, options) => new SharedWebSocket(url, undefined, options),
   fetch: (input, init) => nativeFetch(input, init),
   servesUrls: true,
+  requestTiming: true,
   content: pageContentServing(),
   machine: true,
   telemetry: true,

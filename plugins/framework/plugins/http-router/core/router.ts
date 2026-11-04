@@ -1,3 +1,5 @@
+import { serverTimingValue } from "./server-timing";
+
 /** A route's handler: the request and the values of its `:param` segments. */
 export type RouteHandler = (
   req: Request,
@@ -71,6 +73,26 @@ function withDefaultCacheControl(res: Response): Response {
   return res;
 }
 
+// Stamp the handler's time (`server-timing.ts`). A response whose headers are
+// immutable (a `Response.redirect`, a fetched response passed through, under a
+// browser host) is re-wrapped once to carry it.
+function withServerTiming(res: Response, handlerMs: number): Response {
+  const value = serverTimingValue({ handlerMs, id: crypto.randomUUID() });
+  try {
+    res.headers.append("server-timing", value);
+    return res;
+  } catch (err) {
+    if (!(err instanceof TypeError)) throw err;
+    const headers = new Headers(res.headers);
+    headers.append("server-timing", value);
+    return new Response(res.body, {
+      status: res.status,
+      statusText: res.statusText,
+      headers,
+    });
+  }
+}
+
 function notFound(): Response {
   return new Response("Not found", { status: 404 });
 }
@@ -78,8 +100,9 @@ function notFound(): Response {
 /**
  * Builds the request handler for a set of routes: literal fast path, then the
  * `:param` matcher (filtered by method, in registration order). Every handled
- * response (the 500 included) defaults to `cache-control: no-store`; a throw
- * goes to `onError` and answers a generic JSON 500.
+ * response (the 500 included) defaults to `cache-control: no-store` and carries
+ * the handler's time as `Server-Timing` (`server-timing.ts`); a throw goes to
+ * `onError` and answers a generic JSON 500.
  */
 export function createRequestHandler(
   opts: RequestHandlerOptions,
@@ -107,16 +130,24 @@ export function createRequestHandler(
     params: Record<string, string>,
     pathname: string,
   ): Promise<Response> {
+    const startedAt = performance.now();
     try {
-      return withDefaultCacheControl(await handler(req, params));
+      const res = await handler(req, params);
+      return withServerTiming(
+        withDefaultCacheControl(res),
+        performance.now() - startedAt,
+      );
     } catch (err) {
       const errObj = err instanceof Error ? err : new Error(String(err));
       // Fail loudly: the host's onError emits a durable log line BEFORE the
       // generic 500 is returned. A 500 with zero log line made this class of
       // bug invisible.
       opts.onError(errObj, req, pathname);
-      return withDefaultCacheControl(
-        Response.json({ error: "Internal server error" }, { status: 500 }),
+      return withServerTiming(
+        withDefaultCacheControl(
+          Response.json({ error: "Internal server error" }, { status: 500 }),
+        ),
+        performance.now() - startedAt,
       );
     }
   }

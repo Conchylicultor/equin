@@ -30,15 +30,25 @@ const WAIT_LAYER_HINTS: Readonly<Record<string, string>> = {
   "server-deliver":
     "The server's notify → send — not counted against this update: the server judges that window itself (its `push deliver:<key>` span, and the loader or flush it waited on, each filed on its own).",
   transport:
-    "The frame took long on the wire (send → receipt) — the one phase measured across two clocks, so skew lands here too; on one machine it is socket backpressure or a busy browser main thread.",
+    "The frame took long on the wire (server send → the browser's socket received it, stamped by its SharedWorker off the page's main thread) — the one phase measured across two clocks, so skew lands here too; on one machine it is socket backpressure.",
+  "page-wait":
+    "The frame had reached the browser, but this tab's main thread was busy (socket arrival → its handler ran): look at the page's long tasks around it, not the server.",
   "client-apply":
     "The browser took long to apply the frame (receipt → cache written): a busy main thread.",
   // perfs/latency-signal `confirm` phases.
   "send-lane":
     "The write queued behind earlier writes on its send lane before leaving the browser.",
   retry: "The write failed and was retried before it went through.",
-  "server-ack":
-    "The server took long to answer the write (last send → ack): look at the endpoint's handler and its DB time.",
+  "request-queue":
+    "The write's request had not left the browser yet (send → request started, from its Resource Timing entry): the page's main thread was busy, or the request waited for a connection — not the server.",
+  network:
+    "The round trip outside the handler (request sent → last byte back, less the server's own time): the gateway hop or a slow connection.",
+  server:
+    "The server's handler took long (its own Server-Timing) — not counted against this write: the server judges its route span itself; look at the endpoint's handler and its DB time.",
+  "page-resume":
+    "The response had arrived, but the page's main thread was busy before the write's continuation ran (last byte back → ack): look at the page's long tasks, not the server.",
+  "ack-unsplit":
+    "The write's round trip (last send → ack) could not be split into page, network and server: its request was not sent through the fetcher `mutate` is handed, it made several requests, or the browser recorded no Resource Timing entry for it.",
   "confirm-frame":
     "The confirming push frame arrived long after the ack: the same path as a slow live update.",
 };

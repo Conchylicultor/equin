@@ -108,8 +108,10 @@ export function SlowOpCollector() {
     () =>
       clientLatencySink.subscribe((sample) => {
         const item = latencySlowOp(sample, cfgRef.current, currentRoutePath());
-        // Emitted at its end: the window is the last `totalMs` of wall time.
-        if (item) enqueueSlowOp(item, endingNow(sample.totalMs));
+        // Its window: the `totalMs` before its end (the emit, unless the
+        // producer says it ended earlier — `endedAt`).
+        if (item)
+          enqueueSlowOp(item, endingNow(sample.totalMs, sample.endedAt));
       }),
     [],
   );

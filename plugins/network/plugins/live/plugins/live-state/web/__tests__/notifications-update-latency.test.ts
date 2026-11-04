@@ -4,9 +4,11 @@
  * samples read off `clientLatencySink`.
  *
  * Pins:
- *   - an applied update / delta carrying `timing` emits ONE sample whose four
+ *   - an applied update / delta carrying `timing` emits ONE sample whose
  *     phases split change → applied (server-notice, server-deliver, transport,
- *     client-apply) and whose total is measured, not summed;
+ *     page-wait, client-apply) and whose total is measured, not summed;
+ *   - `transport` ends where the SharedWorker received the frame, so a tab
+ *     whose main thread was busy charges the wait to `page-wait`, not the wire;
  *   - frames no change stands behind (sub-ack, timing-less update) emit nothing;
  *   - a delta that dead-ends in a forced resubscribe (no base, drifted base)
  *     wrote nothing, so it emits nothing (the false-sample regression);
@@ -144,6 +146,7 @@ describe("NotificationsClient — update latency sample", () => {
           "throttle-hold": 0,
           "server-deliver": 40,
           transport: 60,
+          "page-wait": 0,
           "client-apply": 0, // the fake clock does not move inside one frame
         },
         totalMs: 300,
@@ -191,9 +194,35 @@ describe("NotificationsClient — update latency sample", () => {
       "throttle-hold": 0,
       "server-deliver": 10,
       transport: 0,
+      "page-wait": 0,
       "client-apply": 0,
     });
     expect(samples[0]!.totalMs).toBe(100);
+  });
+
+  test("a frame the tab handled late charges the wait to page-wait, not transport", async () => {
+    const { client, socket } = await setup();
+    await seedValue(client, socket);
+    listen();
+    // The worker receives (and stamps) the frame synchronously; the tab's
+    // handler runs on a later task — 25 ms later, its main thread busy.
+    socket.serverSend({
+      kind: "update",
+      key: "k",
+      params: { a: "1" },
+      value: { status: "v2" },
+      version: 2,
+      timing,
+    });
+    vi.setSystemTime(NOW + 25);
+    await flush();
+    expect(samples).toHaveLength(1);
+    expect(samples[0]!.phases).toMatchObject({
+      transport: 60,
+      "page-wait": 25,
+      "client-apply": 0,
+    });
+    expect(samples[0]!.totalMs).toBe(325);
   });
 
   test("an applied delta with timing emits one sample", async () => {

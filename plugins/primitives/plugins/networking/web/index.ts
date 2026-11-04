@@ -11,6 +11,7 @@ export type {
   SharedWebSocketHooks,
   SharedWebSocketOptions,
   PageLifecycleLike,
+  SocketMessage,
 } from "./shared-websocket";
 export type {
   LockManagerLike,
@@ -22,6 +23,8 @@ export { TransportProvider, useTransport } from "./transport";
 export type { ContentServing, Transport, TransportSocket } from "./transport";
 export { transportScoped, useTransportScoped } from "./transport-scoped";
 export type { TransportScoped } from "./transport-scoped";
+export { requestTimingOf, RESOURCE_TIMING_WAIT_MS } from "./request-timing";
+export type { RequestTiming } from "./request-timing";
 export { fetchWithRetry } from "./fetch-with-retry";
 export type { FetchWithRetryOptions } from "./fetch-with-retry";
 export { probeUrlStatus, type UrlStatus } from "./probe-url-status";

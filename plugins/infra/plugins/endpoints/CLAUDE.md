@@ -463,6 +463,8 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
   - Uses:
     - `primitives/networking.fetchWithRetry`
     - `primitives/networking.FetchWithRetryOptions`
+    - `primitives/networking.RequestTiming`
+    - `primitives/networking.requestTimingOf`
     - `primitives/networking.Transport`
     - `primitives/networking.transportScoped`
     - `primitives/networking.useTransport`
@@ -485,6 +487,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `endpointErrorSink`
     - `fetchEndpointOver`
     - `getEndpointErrorMessage`
+    - `tapRequestTiming`
     - `useAssetSrc`
     - `useAssetSrcs`
     - `useAssetUrl`

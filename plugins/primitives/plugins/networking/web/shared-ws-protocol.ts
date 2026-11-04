@@ -7,7 +7,7 @@
 import type { NetDiagEvent } from "./net-diag-bus";
 import type { WsStatus } from "./ws-status-bus";
 
-export const SHARED_WS_PROTO = 2;
+export const SHARED_WS_PROTO = 3;
 
 /** Tab → worker. */
 export type TabToWorker =
@@ -43,8 +43,12 @@ export type WorkerToTab =
    * (a fresh id per real open: consumers replay their state once per `conn`).
    */
   | { kind: "status"; status: WsStatus; conn: string | null; ports: number }
-  /** A server frame, fanned out to every port (consumers filter their own). */
-  | { kind: "rx"; data: string }
+  /**
+   * A server frame, fanned out to every port (consumers filter their own).
+   * `arrivedAt`: `Date.now()` when the worker's socket received it — stamped
+   * off every tab's main thread, so a tab can tell the wire from its own wait.
+   */
+  | { kind: "rx"; data: string; arrivedAt: number }
   /** The real socket fired `error`. */
   | { kind: "ws-error" }
   /** A diagnostic event for the tab's net-diag bus (the worker has no bus). */

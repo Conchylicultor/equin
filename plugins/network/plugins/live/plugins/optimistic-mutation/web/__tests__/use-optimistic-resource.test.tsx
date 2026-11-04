@@ -47,8 +47,12 @@ import {
 } from "@plugins/primitives/plugins/sync-status/web";
 import {
   useOptimisticResource,
+  type MutateContext,
   type OptimisticOptions,
 } from "../internal/use-optimistic-resource";
+import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import { fakeFetchEndpoint } from "@plugins/infra/plugins/endpoints/web/testing";
+import type { RequestTiming } from "@plugins/primitives/plugins/networking/web";
 import {
   enqueueDetachedWrite,
   enqueueResourceWrite,
@@ -120,6 +124,7 @@ const isConfirmedBy = (serverData: number[], n: number): boolean =>
 const sameTarget = (a: number, b: number): boolean => a === b;
 
 type MutateResult = void | { watermark?: string };
+type Mutate = (n: number, ctx: MutateContext) => Promise<MutateResult>;
 
 /** A `mutate` whose promise the test resolves by hand, to order push vs resolve. */
 function deferredMutate() {
@@ -192,7 +197,7 @@ function settledArm<R extends { status: string }>(
  * correlated.
  */
 function rowsOptions(
-  mutate: (n: number) => Promise<MutateResult>,
+  mutate: Mutate,
   contentBased: boolean,
 ): OptimisticOptions<number[], number> {
   return contentBased
@@ -201,7 +206,7 @@ function rowsOptions(
 }
 
 function useRows(
-  mutate: (n: number) => Promise<MutateResult>,
+  mutate: Mutate,
   contentBased: boolean,
   value: NumbersValue = rowsValue,
 ) {
@@ -216,7 +221,7 @@ function useRows(
  */
 async function mountRows(
   live: LiveStateHarness,
-  mutate: (n: number) => Promise<MutateResult>,
+  mutate: Mutate,
   {
     contentBased = false,
     value = rowsValue,
@@ -607,14 +612,14 @@ describe("useOptimisticResource", () => {
     });
     // Only the FIRST op re-fired; the second waits on its outcome.
     await waitFor(() => expect(mutate).toHaveBeenCalledTimes(3));
-    expect(mutate).toHaveBeenLastCalledWith(2);
+    expect(mutate.mock.lastCall?.[0]).toBe(2);
     expect(releases).toHaveLength(1);
 
     await act(async () => {
       releases[0]!(undefined);
     });
     await waitFor(() => expect(mutate).toHaveBeenCalledTimes(4));
-    expect(mutate).toHaveBeenLastCalledWith(3);
+    expect(mutate.mock.lastCall?.[0]).toBe(3);
     await act(async () => {
       releases[1]!(undefined);
     });
@@ -647,7 +652,7 @@ describe("useOptimisticResource", () => {
     await waitFor(() => expect(mutate).toHaveBeenCalledTimes(3));
     await new Promise((r) => setTimeout(r, 20));
     expect(mutate).toHaveBeenCalledTimes(3);
-    expect(mutate).toHaveBeenLastCalledWith(2);
+    expect(mutate.mock.lastCall?.[0]).toBe(2);
     expect(rows().saving).toBe(true);
 
     offline = false;
@@ -1586,7 +1591,16 @@ describe("useOptimisticResource — the unconfirmed deadline", () => {
         key: value.key,
         params: {},
         variant: "unconfirmed/awaiting-confirm-frame",
-        phases: { "send-lane": 0, retry: 0, "server-ack": 50 },
+        // `mutate` sent nothing through the fetcher it was handed: unsplit.
+        phases: {
+          "send-lane": 0,
+          retry: 0,
+          "request-queue": 0,
+          network: 0,
+          server: 0,
+          "page-resume": 0,
+          "ack-unsplit": 50,
+        },
         totalMs: UNCONFIRMED_MS,
         detail: { ackWatermark: "777" },
       },
@@ -1597,7 +1611,7 @@ describe("useOptimisticResource — the unconfirmed deadline", () => {
     expect(samples).toHaveLength(1); // at most once per op
   });
 
-  it("an op never acked reports it stalled before the ack: no server-ack phase", async () => {
+  it("an op never acked reports it stalled before the ack: no ack phase", async () => {
     const value = deadlineValue("unacked");
     const live = createLiveStateHarness();
     const { mutate } = deferredMutate(); // never released
@@ -1619,7 +1633,8 @@ describe("useOptimisticResource — the unconfirmed deadline", () => {
       phases: { "send-lane": 0, retry: 0 },
       totalMs: UNCONFIRMED_MS + 5,
     });
-    expect(samples[0]!.phases).not.toHaveProperty("server-ack");
+    expect(samples[0]!.phases).not.toHaveProperty("ack-unsplit");
+    expect(samples[0]!.phases).not.toHaveProperty("server");
     expect(samples[0]).not.toHaveProperty("detail");
   });
 
@@ -1642,7 +1657,7 @@ describe("useOptimisticResource — the unconfirmed deadline", () => {
       release();
     });
     clock = 180;
-    act(() => {
+    await act(async () => {
       live.queryClient.setQueryData(queryKeyFor(value.key, undefined), [2]);
     });
     act(() => {
@@ -1734,6 +1749,7 @@ describe("useOptimisticResource — confirm latency samples", () => {
     act(() => {
       live.queryClient.setQueryData(queryKeyFor(value.key, undefined), [2]);
     });
+    await waitFor(() => expect(samples).toHaveLength(1));
     expect(samples).toEqual([
       {
         signal: "confirm",
@@ -1743,10 +1759,15 @@ describe("useOptimisticResource — confirm latency samples", () => {
         phases: {
           "send-lane": 0,
           retry: 0,
-          "server-ack": 50,
+          "request-queue": 0,
+          network: 0,
+          server: 0,
+          "page-resume": 0,
+          "ack-unsplit": 50,
           "confirm-frame": 30,
         },
         totalMs: 80,
+        endedAt: expect.any(Number),
       },
     ]);
   });
@@ -1776,7 +1797,7 @@ describe("useOptimisticResource — confirm latency samples", () => {
     await waitFor(() => expect(samples).toHaveLength(1));
     expect(samples[0]).toMatchObject({
       variant: "content/resolve",
-      phases: { "server-ack": 50, "confirm-frame": 0 },
+      phases: { "ack-unsplit": 50, "confirm-frame": 0 },
       totalMs: 50,
     });
   });
@@ -1802,10 +1823,10 @@ describe("useOptimisticResource — confirm latency samples", () => {
     act(() => {
       noteResourceTxAcks(value.key, undefined, ["555"]);
     });
-    expect(samples).toHaveLength(1);
+    await waitFor(() => expect(samples).toHaveLength(1));
     expect(samples[0]).toMatchObject({
       variant: "exact-ack/ack",
-      phases: { "server-ack": 40, "confirm-frame": 60 },
+      phases: { "ack-unsplit": 40, "confirm-frame": 60 },
       totalMs: 100,
     });
   });
@@ -1835,13 +1856,13 @@ describe("useOptimisticResource — confirm latency samples", () => {
     act(() => {
       live.queryClient.setQueryData(queryKeyFor(value.key, undefined), [2]);
     });
-    expect(samples).toHaveLength(1);
+    await waitFor(() => expect(samples).toHaveLength(1));
     expect(samples[0]).toMatchObject({
       variant: "tokenless/push",
       phases: {
         "send-lane": 0,
         retry: 200,
-        "server-ack": 0,
+        "ack-unsplit": 0,
         "confirm-frame": 60,
       },
       totalMs: 260,
@@ -1878,10 +1899,133 @@ describe("useOptimisticResource — confirm latency samples", () => {
     act(() => {
       live.queryClient.setQueryData(queryKeyFor(value.key, undefined), [2, 3]);
     });
+    await waitFor(() => expect(samples).toHaveLength(2));
     expect(samples.map((s) => s.phases)).toEqual([
-      { "send-lane": 0, retry: 0, "server-ack": 100, "confirm-frame": 100 },
-      { "send-lane": 100, retry: 0, "server-ack": 60, "confirm-frame": 40 },
+      {
+        "send-lane": 0,
+        retry: 0,
+        "request-queue": 0,
+        network: 0,
+        server: 0,
+        "page-resume": 0,
+        "ack-unsplit": 100,
+        "confirm-frame": 100,
+      },
+      {
+        "send-lane": 100,
+        retry: 0,
+        "request-queue": 0,
+        network: 0,
+        server: 0,
+        "page-resume": 0,
+        "ack-unsplit": 60,
+        "confirm-frame": 40,
+      },
     ]);
+  });
+
+  it("an op sent through the handed fetcher splits its ack by the request's own timing", async () => {
+    // page-blocks.v2 on 2026-11-04, in miniature: the page's main thread held
+    // the request 40 ms and the response 52 ms; the handler took 13.
+    const value = latencyValue("split");
+    const write = defineEndpoint({
+      route: "POST /api/test/optimistic-split",
+      body: z.object({ n: z.number() }),
+      response: z.object({}),
+    });
+    let respond!: () => void;
+    const measured: RequestTiming = {
+      kind: "measured",
+      requestStart: 140,
+      responseEnd: 155,
+      serverMs: 13,
+    };
+    const fake = fakeFetchEndpoint(
+      (call) =>
+        new Promise((resolve) => {
+          respond = () => {
+            call.opts?.onTiming?.(Promise.resolve(measured));
+            resolve({});
+          };
+        }),
+    );
+    const live = createLiveStateHarness({ transport: fake.transport });
+    const { rows } = await mountRows(
+      live,
+      async (n, { fetchEndpoint }) => {
+        await fetchEndpoint(write, {}, { body: { n } });
+      },
+      { contentBased: true, value },
+    );
+
+    clock = 100;
+    act(() => {
+      rows().dispatch(2);
+    });
+    await waitFor(() => expect(fake.calls).toHaveLength(1));
+    clock = 207;
+    await act(async () => {
+      respond();
+    });
+    await waitFor(() => expect(rows().saving).toBe(false));
+    act(() => {
+      live.queryClient.setQueryData(queryKeyFor(value.key, undefined), [2]);
+    });
+    await waitFor(() => expect(samples).toHaveLength(1));
+    expect(samples[0]!.phases).toEqual({
+      "send-lane": 0,
+      retry: 0,
+      "request-queue": 40,
+      network: 2,
+      server: 13,
+      "page-resume": 52,
+      "ack-unsplit": 0,
+      "confirm-frame": 0,
+    });
+  });
+
+  it("an op whose attempt made several requests leaves its ack unsplit", async () => {
+    const value = latencyValue("several");
+    const write = defineEndpoint({
+      route: "POST /api/test/optimistic-several",
+      body: z.object({ n: z.number() }),
+      response: z.object({}),
+    });
+    const fake = fakeFetchEndpoint((call) => {
+      call.opts?.onTiming?.(
+        Promise.resolve({
+          kind: "measured",
+          requestStart: 1,
+          responseEnd: 2,
+          serverMs: 1,
+        }),
+      );
+      return {};
+    });
+    const live = createLiveStateHarness({ transport: fake.transport });
+    const { rows } = await mountRows(
+      live,
+      async (n, { fetchEndpoint }) => {
+        await fetchEndpoint(write, {}, { body: { n } });
+        await fetchEndpoint(write, {}, { body: { n } });
+      },
+      { contentBased: true, value },
+    );
+    clock = 100;
+    await act(async () => {
+      rows().dispatch(2);
+    });
+    await waitFor(() => expect(rows().saving).toBe(false));
+    act(() => {
+      live.queryClient.setQueryData(queryKeyFor(value.key, undefined), [2]);
+    });
+    await waitFor(() => expect(samples).toHaveLength(1));
+    // Split, `server` would be 1: two round trips are one window, not two.
+    expect(samples[0]!.phases).toMatchObject({
+      "request-queue": 0,
+      server: 0,
+      "page-resume": 0,
+    });
   });
 
   it("a rejected op emits nothing", async () => {

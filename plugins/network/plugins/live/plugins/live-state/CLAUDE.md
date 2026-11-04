@@ -671,12 +671,15 @@ Details:
   | ---------------- | ------------------------------------------ |
   | `server-notice`  | `sentAt − deliverMs − changedAt`           |
   | `server-deliver` | `deliverMs`                                |
-  | `transport`      | `receivedAt − sentAt` (two clocks)         |
+  | `transport`      | `arrivedAt − sentAt` (two clocks)          |
+  | `page-wait`      | `receivedAt − arrivedAt` (this tab busy)   |
   | `client-apply`   | `appliedAt − receivedAt` (decode included) |
   - `totalMs = appliedAt − changedAt`, measured (not the sum).
-  - `receivedAt` is stamped in `onmessage` before `JSON.parse`.
-  - `hidden` if the page is or was hidden since `changedAt` (`lastHiddenAt`);
-    consumers drop those.
+  - `arrivedAt` is the socket holder's stamp (`SocketMessage.arrivedAt`: the
+    SharedWorker's, off this tab's main thread); `receivedAt` is stamped in
+    `onmessage` before `JSON.parse`. So a busy tab's wait is `page-wait`, never
+    the wire's.
+  - Whether the tab was hidden is the consumer's to ask (page-pauses).
   - One sample per tab; no work without subscribers.
   - live-state owns no threshold (`debug/slow-ops`, `debug/latency-ledger`
     consume).

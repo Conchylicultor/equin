@@ -627,17 +627,16 @@ function pageBackend(): Transport {
                 : [];
           for (const sub of subs) {
             queueMicrotask(() =>
-              socket.onmessage?.(
-                new MessageEvent("message", {
-                  data: JSON.stringify({
+              socket.onmessage?.({
+                arrivedAt: Date.now(),
+                data: JSON.stringify({
                     kind: "sub-ack",
                     key: sub.key,
                     params: sub.params,
                     value,
                     version: 1,
                   }),
-                }),
-              ),
+              }),
             );
           }
         },
@@ -652,6 +651,7 @@ function pageBackend(): Transport {
         }),
       ),
     servesUrls: true,
+    requestTiming: false,
     content: null,
     machine: true,
     telemetry: false,

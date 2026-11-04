@@ -568,6 +568,21 @@ export const rootLiveRegistries: LiveRegistries = {
   txAcks: rootTxAcks,
 };
 
+/**
+ * When one pushed frame reached the browser (`arrivedAt`: the socket holder's
+ * stamp — the SharedWorker, off this tab's main thread) and this tab's handler
+ * (`receivedAt`), both `Date.now()`.
+ */
+interface FrameReceipt {
+  readonly arrivedAt: number;
+  readonly receivedAt: number;
+}
+
+function nowReceipt(): FrameReceipt {
+  const now = Date.now();
+  return { arrivedAt: now, receivedAt: now };
+}
+
 export class NotificationsClient {
   // Lazily-populated: the worktree channel is opened eagerly in the constructor,
   // but the central channel is created only when a central-origin resource is
@@ -1923,8 +1938,13 @@ export class NotificationsClient {
     };
     channel.ws.onmessage = (ev) => {
       // Receipt stamp BEFORE the parse: decoding is client work, so it lands
-      // in an update sample's `client-apply` phase, not in `transport`.
-      const receivedAt = Date.now();
+      // in an update sample's `client-apply` phase. `arrivedAt` is the
+      // socket holder's (the SharedWorker's) stamp: arrival → here is this
+      // tab's wait (`page-wait`), never the wire's.
+      const receipt: FrameReceipt = {
+        arrivedAt: ev.arrivedAt,
+        receivedAt: Date.now(),
+      };
       let msg: ServerMsg;
       try {
         msg = JSON.parse(ev.data);
@@ -1934,7 +1954,7 @@ export class NotificationsClient {
         return;
       }
       try {
-        this.handleServerMessage(channel, msg, receivedAt);
+        this.handleServerMessage(channel, msg, receipt);
       } catch (err) {
         // A schema.parse failure would otherwise silently leave the cache at
         // its empty default. Re-throw asynchronously so the global browser
@@ -2243,14 +2263,14 @@ export class NotificationsClient {
   }
 
   /**
-   * `receivedAt`: wall-clock epoch ms the frame reached this tab (stamped by
-   * `onmessage` before decoding; defaults to now for a frame handed in
+   * `receipt`: when the frame reached the browser and this tab's handler
+   * (stamped by `onmessage` before decoding; both now for a frame handed in
    * directly). Read only to time an update sample.
    */
   private handleServerMessage(
     channel: SocketChannel,
     msg: ServerMsg,
-    receivedAt: number = Date.now(),
+    receipt: FrameReceipt = nowReceipt(),
   ): void {
     if (msg.kind === "ping") {
       // Server keepalive: never answered (per-tab duplicate `pong`s would be N×
@@ -2523,7 +2543,7 @@ export class NotificationsClient {
         msg.kind === "update" ? msg.ackTx : undefined,
       );
       if (msg.kind === "update")
-        this.reportUpdateLatency(msg.key, msg.params, msg.timing, receivedAt);
+        this.reportUpdateLatency(msg.key, msg.params, msg.timing, receipt);
       return;
     }
     if (msg.kind === "patch" && patchBase !== undefined) {
@@ -2537,7 +2557,7 @@ export class NotificationsClient {
         msg.watermark,
         msg.ackTx,
       );
-      this.reportUpdateLatency(msg.key, msg.params, msg.timing, receivedAt);
+      this.reportUpdateLatency(msg.key, msg.params, msg.timing, receipt);
       return;
     }
     if (msg.kind === "delta") {
@@ -2555,7 +2575,7 @@ export class NotificationsClient {
       // value its change stands behind reaches this tab only with the
       // recovery sub-ack, which carries no timing.
       if (outcome === "applied")
-        this.reportUpdateLatency(msg.key, msg.params, msg.timing, receivedAt);
+        this.reportUpdateLatency(msg.key, msg.params, msg.timing, receipt);
       return;
     }
     // Only remaining case: "invalidate"
@@ -2577,7 +2597,7 @@ export class NotificationsClient {
     key: string,
     params: ResourceParams,
     timing: FrameTiming | undefined,
-    receivedAt: number,
+    receipt: FrameReceipt,
   ): void {
     if (
       timing === undefined ||
@@ -2596,9 +2616,12 @@ export class NotificationsClient {
         // The resource's own declared throttle — held by design, not slow.
         "throttle-hold": holdMs,
         "server-deliver": deliverMs - holdMs,
-        // The one phase across two clocks (server send → browser receipt).
-        transport: receivedAt - sentAt,
-        "client-apply": appliedAt - receivedAt,
+        // The one phase across two clocks (server send → the frame reached
+        // the browser's socket).
+        transport: receipt.arrivedAt - sentAt,
+        // Reached the browser → this tab's handler ran: its main thread busy.
+        "page-wait": receipt.receivedAt - receipt.arrivedAt,
+        "client-apply": appliedAt - receipt.receivedAt,
       }),
       totalMs: appliedAt - changedAt,
     });

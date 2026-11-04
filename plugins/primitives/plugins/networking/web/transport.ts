@@ -70,6 +70,15 @@ export interface Transport {
    */
   readonly servesUrls: boolean;
   /**
+   * Whether this transport's requests are network fetches the browser times
+   * (Resource Timing) and the server answers with its `Server-Timing` stamp —
+   * the page's own server — so `requestTimingOf` can split one's round trip
+   * into the page's wait, the network and the server. `false` (an in-browser
+   * server): no request crosses the network, nothing records one. Required,
+   * so every transport states it.
+   */
+  readonly requestTiming: boolean;
+  /**
    * Where this transport's untrusted CONTENT documents load — the pages an
    * `access: { content }` route serves (an agent-written prototype), framed
    * by `ContentFrame` (`primitives/embed/frame`). Read through `contentUrlOver`

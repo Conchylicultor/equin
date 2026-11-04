@@ -48,9 +48,11 @@ function connectedSocket(server: BrowserServer, url: string): TransportSocket {
   // client's `send` that caused it.
   const end = server.connect({
     deliver(frame) {
+      // Arrived when the server handed it over, before the microtask hop.
+      const arrivedAt = Date.now();
       queueMicrotask(() => {
         if (closed) return;
-        socket.onmessage?.(new MessageEvent("message", { data: frame }));
+        socket.onmessage?.({ data: frame, arrivedAt });
       });
     },
     // The server went away (disposed): nothing more is sent, the will
@@ -126,6 +128,8 @@ export function browserServerTransport(
     // No URL reaches a server in the page: an element's asset is fetched
     // through `fetch` above and handed over as a blob URL (`useAssetSrc`).
     servesUrls: false,
+    // Its requests never cross the network: no Resource Timing records them.
+    requestTiming: false,
     // A content document is served apart from the page's elements: through
     // the frame-serving Service Worker, under its own prefix — on the page's
     // origin, which is safe here and only here (below).

@@ -8,11 +8,22 @@ import { defineObservationSink } from "@plugins/primitives/plugins/report-sink/c
  * - `update`: a server-side change → its pushed frame applied to the client
  *   cache. `server-notice` (change → first notify), `throttle-hold` (the
  *   resource's own declared `throttleMs` holding the drain), `server-deliver`
- *   (the rest of notify → send), `transport` (send → receipt; the one phase
- *   that crosses clocks), `client-apply` (receipt → cache written).
+ *   (the rest of notify → send), `transport` (send → the frame reached the
+ *   browser: the socket's SharedWorker stamps its arrival, off the page's main
+ *   thread; the one phase that crosses clocks), `page-wait` (arrival → this
+ *   tab's handler ran: the page's main thread was busy), `client-apply`
+ *   (handler → cache written).
  * - `confirm`: an optimistic write dispatched → confirmed by the server.
- *   `send-lane` (dispatch → first send), `retry` (first → last send),
- *   `server-ack` (last send → ack), `confirm-frame` (ack → confirmation).
+ *   `send-lane` (dispatch → first send), `retry` (first → last send), then the
+ *   last send's round trip split by stamps the page's main thread does not
+ *   take — the browser's Resource Timing entry for the request and the
+ *   server's own `Server-Timing` handler time: `request-queue` (send → the
+ *   request left the browser), `network` (request out → last byte back, less
+ *   the server's time), `server` (the handler, as the server timed it),
+ *   `page-resume` (last byte back → the page's continuation ran); or, when the
+ *   request could not be timed so, all of it in `ack-unsplit` (the split
+ *   phases then 0, and `ack-unsplit` 0 whenever the split exists). Then
+ *   `confirm-frame` (ack → confirmation).
  */
 export const CLIENT_LATENCY_SIGNALS = {
   update: [
@@ -20,9 +31,19 @@ export const CLIENT_LATENCY_SIGNALS = {
     "throttle-hold",
     "server-deliver",
     "transport",
+    "page-wait",
     "client-apply",
   ],
-  confirm: ["send-lane", "retry", "server-ack", "confirm-frame"],
+  confirm: [
+    "send-lane",
+    "retry",
+    "request-queue",
+    "network",
+    "server",
+    "page-resume",
+    "ack-unsplit",
+    "confirm-frame",
+  ],
 } as const;
 
 export type ClientLatencySignal = keyof typeof CLIENT_LATENCY_SIGNALS;
@@ -38,7 +59,9 @@ export type PhaseOf<S extends ClientLatencySignal> =
  * - `server`: a window the server judges itself, on its own spans — the
  *   update's notify → send is the server's `push deliver:<key>` span (and the
  *   loader or flush it waited on), each filed there when slow. Counting it here
- *   too filed one server slowness twice, once per side.
+ *   too filed one server slowness twice, once per side. Likewise a confirm's
+ *   `server` phase is the handler's time, which the server files as its own
+ *   route span (`POST /api/…`) when slow.
  */
 export type ExcludedPhaseOwner = "declared" | "server";
 
@@ -53,7 +76,8 @@ export const EXCLUDED_PHASES: {
   >;
 } = {
   update: { "throttle-hold": "declared", "server-deliver": "server" },
-  confirm: {},
+  // The handler's own time: the server files its route span when slow.
+  confirm: { server: "server" },
 };
 
 /**
@@ -75,12 +99,18 @@ interface SampleBase<S extends ClientLatencySignal> {
   /** A free-form sub-kind (e.g. a confirm's `mode/edge`); consumers fall back to the params. */
   readonly variant?: string;
   /**
-   * Measured end − start. The sample is emitted synchronously at its end, so a
-   * consumer places it on the wall clock as `[Date.now() − totalMs, Date.now()]`
-   * and asks `primitives/perfs/page-pauses` whether the page was hidden, frozen
-   * or stalled inside it — no producer tracks visibility itself.
+   * Measured end − start. A consumer places the sample on the wall clock as
+   * `[endedAt − totalMs, endedAt]` and asks `primitives/perfs/page-pauses`
+   * whether the page was hidden, frozen or stalled inside it — no producer
+   * tracks visibility itself.
    */
   readonly totalMs: number;
+  /**
+   * When the operation ended (epoch ms) — set by a producer that emits LATER
+   * than that (a confirm waits for its request's Resource Timing entry).
+   * Absent: emitted at its end, so `Date.now()` at the emit is its end.
+   */
+  readonly endedAt?: number;
 }
 
 /** A finished operation's sample: every phase of its signal present, no other. */

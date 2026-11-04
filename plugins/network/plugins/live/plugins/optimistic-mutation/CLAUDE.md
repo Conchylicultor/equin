@@ -144,7 +144,7 @@ picks.dispatch(change);                  // the ready arm: data, serverData, err
 // options:
 {
   apply,               // (current: Data, vars: Vars) => Data — PURE predicted next state
-  mutate,              // (vars: Vars) => Promise<void | { watermark?: string }> — the network call
+  mutate,              // (vars: Vars, { fetchEndpoint }) => Promise<void | { watermark?: string }> — the network call, sent with the handed fetcher
   // Content-based confirmation is an all-or-nothing PAIR (omit both for coarse):
   isConfirmedBy,       // (serverData, vars) => boolean — content-based confirmation
   sameTarget,          // (a, b) => boolean — op identity; REQUIRED with isConfirmedBy (the ordering rule)
@@ -567,10 +567,26 @@ that drops it from the overlay — is emitted on `clientLatencySink`
   the real wire departure, and every retry re-enters there), `ackedAt`
   (`markResolved`, the latest 2xx). No verdict reads them.
 - **Phases**: `send-lane` = firstSent − dispatched (the head-of-line wait),
-  `retry` = lastSent − firstSent, `server-ack` = acked − lastSent,
-  `confirm-frame` = confirmed − acked (clamped ≥ 0 by `splitPhases`).
-  `totalMs` = confirmed − dispatched. A confirmed op is always resolved, hence
-  sent: a missing stamp throws (`confirmSample`).
+  `retry` = lastSent − firstSent, then lastSent → acked split by the request's
+  own timing, `confirm-frame` = confirmed − acked (all clamped ≥ 0 by
+  `splitPhases`). `totalMs` = confirmed − dispatched. A confirmed op is always
+  resolved, hence sent: a missing stamp throws (`confirmSample`).
+- **The ack is split by stamps this page does not take.** `mutate` is handed
+  `{ fetchEndpoint }` (`MutateContext`): the subtree's fetcher, wrapped per
+  attempt to collect the request's timing (`FetchOpts.onTiming` →
+  `requestTimingOf`, `primitives/networking`: the Resource Timing entry found
+  by the router's `Server-Timing` stamp id). With exactly one timed request in
+  the attempt: `request-queue` = requestStart − lastSent, `server` = the
+  handler's Server-Timing, `network` = responseEnd − requestStart − server,
+  `page-resume` = acked − responseEnd. Otherwise — the write went out another
+  way, the attempt made several requests, the transport is not a network
+  (`Transport.requestTiming` false: a demo's in-browser server), or the browser
+  recorded no entry — all of it is `ack-unsplit`. Measured 2026-11-04 on
+  page-blocks typing: ~107 ms read as the server's, 13 ms of it the handler.
+  The sample waits for the timing (the entry is handed over after the
+  response), so it carries `endedAt` — the instant it confirmed.
+  `server` is excluded from the sample's own time (`EXCLUDED_PHASES`): the
+  server files its route span when the handler is slow.
 - **Variant** `<mode>/<edge>`. Mode (`ConfirmMode`): `exact-ack`, `watermark`
   (coarse, snapshot past the token), `content`, `tokenless` — the last is not
   causal, so its numbers are no proof the push carried the commit. Edge:
@@ -578,7 +594,7 @@ that drops it from the overlay — is emitted on `clientLatencySink`
   the response — `confirm-frame` is 0), `ack` (a standalone ack frame; the ack
   edge calls `reportOutcomes(next, "ack")` like the other two).
 - **Hidden**: not the producer's concern. A consumer places the sample on the
-  wall clock at emit (`[now − totalMs, now]`) and asks
+  wall clock (`[endedAt − totalMs, endedAt]`) and asks
   `primitives/perfs/page-pauses` whether the tab was hidden inside it.
 - **No normal sample** for an op that never confirms (denied, denied-silent,
   rejected, stalled, unmounted while pending) — rejections and stalls already
@@ -587,7 +603,8 @@ that drops it from the overlay — is emitted on `clientLatencySink`
   `armUnconfirmedDeadline` at dispatch (telemetry-gated like the sample): if it
   has not left the overlay `UNCONFIRMED_MS` (10 s) later, ONE **censored**
   `confirm` sample is emitted (`censored: true`, `totalMs` = elapsed, only the
-  phases reached — `send-lane` / `retry` once sent, `server-ack` once acked,
+  phases reached — `send-lane` / `retry` once sent, the ack's split once acked
+  (by the request's timing if it has settled by then, else `ack-unsplit`),
   never `confirm-frame`), variant `unconfirmed/awaiting-send` |
   `awaiting-ack` | `awaiting-confirm-frame`, the ack watermark in `detail`.
   slow-ops files it as `<key> (unconfirmed)`, its own report. Every exit from
@@ -605,12 +622,12 @@ that drops it from the overlay — is emitted on `clientLatencySink`
 
 - Description: Optimistic-mutation primitive over live-state: useOptimisticResource replays pending ops on server truth (overlay/replay) under the never-revert policy — causal (ack-watermark) and content-based confirmation, denial only under causal proof, keep-rendered transient failures with reconnect auto-retry, and permanent (4xx) rejections dropped and reported.
 - Web:
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live` ×9
     - `network/live/live-state` ×8
-    - `infra/endpoints` ×3
+    - `infra/endpoints` ×6
+    - `primitives/networking` ×2
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/networking.subscribeWsStatus`
     - `primitives/sync-status.useReportSync`
   - Exports (types):
     - `AwaitResourceWrite`

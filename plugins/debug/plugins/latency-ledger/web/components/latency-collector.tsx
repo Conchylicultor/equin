@@ -19,7 +19,7 @@ export function LatencyCollector() {
     () =>
       clientLatencySink.subscribe((sample) => {
         if (sample.signal !== "update") return;
-        const end = Date.now();
+        const end = sample.endedAt ?? Date.now();
         const { hiddenMs } = pausesDuring(end - sample.totalMs, end);
         recordSample("update-e2e", sample.totalMs, { excluded: hiddenMs > 0 });
       }),

@@ -23,6 +23,7 @@ const update = (over: Partial<ClientLatencySample> = {}): ClientLatencySample =>
       "throttle-hold": 0,
       "server-deliver": 300,
       transport: 2,
+      "page-wait": 0,
       "client-apply": 4,
     },
     totalMs: 1506.4,
@@ -37,7 +38,11 @@ const confirm = (totalMs: number): ClientLatencySample => ({
   phases: {
     "send-lane": 0,
     retry: 0,
-    "server-ack": totalMs - 100,
+    "request-queue": 0,
+    network: 0,
+    server: 0,
+    "page-resume": 0,
+    "ack-unsplit": totalMs - 100,
     "confirm-frame": 100,
   },
   totalMs,
@@ -58,6 +63,7 @@ describe("latencySlowOp", () => {
         "throttle-hold": 0,
         "server-deliver": 300,
         transport: 2,
+        "page-wait": 0,
         "client-apply": 4,
       },
     });
@@ -102,6 +108,7 @@ describe("latencySlowOp", () => {
         "throttle-hold": 998,
         "server-deliver": 1,
         transport: 1,
+        "page-wait": 0,
         "client-apply": 1,
       },
     });
@@ -115,6 +122,7 @@ describe("latencySlowOp", () => {
           "throttle-hold": 998,
           "server-deliver": 100,
           transport: 1,
+          "page-wait": 0,
           "client-apply": 1,
         },
       }),
@@ -137,6 +145,7 @@ describe("latencySlowOp", () => {
             "throttle-hold": 0,
             "server-deliver": 3295,
             transport: 100,
+            "page-wait": 0,
             "client-apply": 9,
           },
         }),
@@ -153,7 +162,7 @@ describe("latencySlowOp", () => {
       key: "page.blocks",
       params: { pageId: "p1" },
       variant: "unconfirmed/awaiting-confirm-frame",
-      phases: { "send-lane": 0, retry: 0, "server-ack": 80 },
+      phases: { "send-lane": 0, retry: 0, "ack-unsplit": 80 },
       totalMs: 10_000.4,
       detail: { ackWatermark: "123" },
     };
@@ -170,7 +179,7 @@ describe("latencySlowOp", () => {
         censored: true,
         evidence: { ackWatermark: "123" },
       },
-      waits: { "send-lane": 0, retry: 0, "server-ack": 80 },
+      waits: { "send-lane": 0, retry: 0, "ack-unsplit": 80 },
     });
     // Distinct from the slow-but-confirmed row (and so its report fingerprint).
     expect(item?.operation).not.toBe(

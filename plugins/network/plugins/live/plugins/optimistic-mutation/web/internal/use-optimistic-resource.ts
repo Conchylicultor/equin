@@ -20,11 +20,17 @@ import type {
   LiveScopedAllQuery,
   LiveValue,
 } from "@plugins/network/plugins/live/core";
-import { subscribeWsStatus } from "@plugins/primitives/plugins/networking/web";
+import {
+  subscribeWsStatus,
+  type RequestTiming,
+} from "@plugins/primitives/plugins/networking/web";
 import {
   EndpointAgentWriteRefusedError,
   EndpointError,
   getEndpointErrorMessage,
+  tapRequestTiming,
+  useFetchEndpoint,
+  type FetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
 import { useReportSync } from "@plugins/primitives/plugins/sync-status/web";
 import {
@@ -32,6 +38,7 @@ import {
   splitPhases,
   splitReachedPhases,
   type ClientLatencySample,
+  type PhaseOf,
 } from "@plugins/primitives/plugins/perfs/plugins/latency-signal/core";
 import {
   armUnconfirmedDeadline,
@@ -80,10 +87,72 @@ function ackParamsKey(params: Record<string, string> | undefined): string {
 type ConfirmEdge = "push" | "resolve" | "ack";
 
 /**
+ * The requests one `mutate` attempt sent through the fetcher it was handed
+ * (`MutateContext.fetchEndpoint`): how many, and the timing of the latest
+ * (`settled` once known). Reset by every attempt, so it describes the last
+ * send — the one whose ack the `confirm` sample splits.
+ */
+interface AttemptTiming {
+  requests: number;
+  timing: Promise<RequestTiming> | null;
+  settled: RequestTiming | null;
+}
+
+/** The phases the last send's round trip (last send → ack) splits into. */
+type AckPhases = Pick<
+  Record<PhaseOf<"confirm">, number>,
+  "request-queue" | "network" | "server" | "page-resume" | "ack-unsplit"
+>;
+
+/**
+ * The last send → ack window split by the request's own timing: the browser's
+ * Resource Timing stamps and the server's handler time, none taken by this
+ * page's main thread. Unsplit (all of it in `ack-unsplit`) when the attempt
+ * sent no request through its fetcher, sent several (one window, several
+ * round trips), or its one request could not be timed.
+ */
+function ackPhasesOf(
+  attempt: AttemptTiming | undefined,
+  timing: RequestTiming | null,
+  lastSentAt: number,
+  ackedAt: number,
+): AckPhases {
+  if (attempt?.requests === 1 && timing?.kind === "measured") {
+    const { requestStart, responseEnd, serverMs } = timing;
+    return {
+      "request-queue": requestStart - lastSentAt,
+      network: responseEnd - requestStart - serverMs,
+      server: serverMs,
+      "page-resume": ackedAt - responseEnd,
+      "ack-unsplit": 0,
+    };
+  }
+  return {
+    "request-queue": 0,
+    network: 0,
+    server: 0,
+    "page-resume": 0,
+    "ack-unsplit": ackedAt - lastSentAt,
+  };
+}
+
+/** The attempt's one request's timing, once known — null when there is none to wait for. */
+function attemptTimingOf(
+  attempt: AttemptTiming | undefined,
+): Promise<RequestTiming | null> {
+  return attempt?.requests === 1 && attempt.timing
+    ? attempt.timing
+    : Promise.resolve(null);
+}
+
+/**
  * Times one confirmed op as a `confirm` latency sample. Every phase is on the
- * client's monotonic clock (`performance.now()`), so none carries skew. A
- * confirmed op was resolved, and a resolved op was sent — a missing stamp is a
- * lifecycle bug, so it throws rather than emitting a made-up phase.
+ * client's monotonic clock (`performance.now()`) — the Resource Timing stamps
+ * included — or a duration (the server's handler time), so none carries skew.
+ * A confirmed op was resolved, and a resolved op was sent — a missing stamp is
+ * a lifecycle bug, so it throws (here, synchronously) rather than emitting a
+ * made-up phase. The sample waits for the request's timing (the browser hands
+ * a Resource Timing entry over after the response), so it carries `endedAt`.
  */
 function confirmSample<Vars>(
   { op, mode }: ConfirmedOp<Vars>,
@@ -91,7 +160,8 @@ function confirmSample<Vars>(
   key: string,
   params: Readonly<Record<string, string>>,
   confirmedAt: number,
-): Extract<ClientLatencySample, { signal: "confirm" }> {
+  attempt: AttemptTiming | undefined,
+): Promise<Extract<ClientLatencySample, { signal: "confirm" }>> {
   const { dispatchedAt, firstSentAt, lastSentAt, ackedAt } = op;
   if (
     firstSentAt === undefined ||
@@ -101,7 +171,8 @@ function confirmSample<Vars>(
     throw new Error(
       `optimistic-mutation: confirmed op ${op.opId} on ${key} is missing a send/ack stamp`,
     );
-  return {
+  const endedAt = Date.now();
+  return attemptTimingOf(attempt).then((timing) => ({
     signal: "confirm",
     key,
     params,
@@ -109,17 +180,19 @@ function confirmSample<Vars>(
     phases: splitPhases("confirm", {
       "send-lane": firstSentAt - dispatchedAt,
       retry: lastSentAt - firstSentAt,
-      "server-ack": ackedAt - lastSentAt,
+      ...ackPhasesOf(attempt, timing, lastSentAt, ackedAt),
       "confirm-frame": confirmedAt - ackedAt,
     }),
     totalMs: confirmedAt - dispatchedAt,
-  };
+    endedAt,
+  }));
 }
 
 /**
  * The CENSORED `confirm` sample of an op still unconfirmed at its deadline
  * (`armUnconfirmedDeadline`): the phases it reached — `send-lane` once sent,
- * `retry` once sent, `server-ack` once acked; `confirm-frame` never, it has not
+ * `retry` once sent, the ack's split once acked (by the request's timing if it
+ * has settled by now, else unsplit); `confirm-frame` never, it has not
  * confirmed — and `totalMs` the time since dispatch. The variant says which
  * part stalled: `unconfirmed/awaiting-send` (still queued behind the lane),
  * `unconfirmed/awaiting-ack` (sent, no 2xx yet — or failed and awaiting a
@@ -131,6 +204,7 @@ function unconfirmedSample<Vars>(
   key: string,
   params: Readonly<Record<string, string>>,
   now: number,
+  attempt: AttemptTiming | undefined,
 ): UnconfirmedSample {
   const { dispatchedAt, firstSentAt, lastSentAt, ackedAt } = op;
   const stage =
@@ -152,16 +226,26 @@ function unconfirmedSample<Vars>(
         firstSentAt === undefined || lastSentAt === undefined
           ? undefined
           : lastSentAt - firstSentAt,
-      "server-ack":
-        ackedAt === undefined || lastSentAt === undefined
-          ? undefined
-          : ackedAt - lastSentAt,
+      ...(ackedAt === undefined || lastSentAt === undefined
+        ? {}
+        : ackPhasesOf(attempt, attempt?.settled ?? null, lastSentAt, ackedAt)),
     }),
     totalMs: now - dispatchedAt,
     ...(op.ackWatermark === undefined
       ? {}
       : { detail: { ackWatermark: op.ackWatermark } }),
   };
+}
+
+/**
+ * What `mutate` is handed beside its vars. `fetchEndpoint` is the subtree's
+ * fetcher, timing the request it sends: send the op's write through it, and
+ * the `confirm` sample splits the ack into the page's wait, the network and
+ * the server's handler time. A write sent any other way (or several requests
+ * in one attempt) leaves the ack unsplit (`ack-unsplit`).
+ */
+export interface MutateContext {
+  readonly fetchEndpoint: FetchEndpoint;
 }
 
 /**
@@ -183,9 +267,13 @@ interface OptimisticOpArgs<Data, Vars> {
    * `{ watermark }` — the commit's `pg_current_xact_id()::text` read inside the
    * write transaction (Rule A) — to upgrade this op to exact causal
    * confirmation/denial; a plain `Promise<void>` stays tokenless (legacy
-   * coarse / content-only confirmation, no denial).
+   * coarse / content-only confirmation, no denial). Send the request with
+   * `ctx.fetchEndpoint` (`MutateContext`).
    */
-  mutate: (vars: Vars) => Promise<void | { watermark?: string }>;
+  mutate: (
+    vars: Vars,
+    ctx: MutateContext,
+  ) => Promise<void | { watermark?: string }>;
   /**
    * Fires on every `mutate` rejection. `outcome.rejected` is true when the
    * server PERMANENTLY rejected the op (`classifyRejection`) and it has already
@@ -480,9 +568,16 @@ function useOptimisticCore<Data, Vars>(
   // confirmed, permanently rejected, denied — which every edge funnels through
   // `commitPending`, so no exit route can leave a timer behind.
   const deadlinesRef = useRef(new Map<string, UnconfirmedDeadline>());
+  // Each op's latest `mutate` attempt's requests (`AttemptTiming`), by opId:
+  // set by every attempt, dropped when the op leaves the overlay (a confirmed
+  // op's sample holds its own reference).
+  const attemptsRef = useRef(new Map<string, AttemptTiming>());
   const commitPending = useCallback((next: ReadonlyArray<PendingOp<Vars>>) => {
     pendingRef.current = next;
     setPending(next);
+    for (const opId of attemptsRef.current.keys())
+      if (!next.some((op) => op.opId === opId))
+        attemptsRef.current.delete(opId);
     const deadlines = deadlinesRef.current;
     if (deadlines.size === 0) return;
     for (const [opId, deadline] of deadlines) {
@@ -510,6 +605,9 @@ function useOptimisticCore<Data, Vars>(
   const labelRef = useLatestRef(label);
   const paramsRef = useLatestRef(params);
   const mutateRef = useLatestRef(mutate);
+  // The subtree's fetcher, which each attempt wraps to time its request.
+  const fetchEndpoint = useFetchEndpoint();
+  const fetchEndpointRef = useLatestRef(fetchEndpoint);
   const onErrorRef = useLatestRef(onError);
 
   const queryKey = useMemo(
@@ -565,9 +663,14 @@ function useOptimisticCore<Data, Vars>(
         const confirmedAt = performance.now();
         const params = paramsRef.current ?? {};
         for (const confirmed of next.confirmed)
-          clientLatencySink.emit(
-            confirmSample(confirmed, edge, resource.key, params, confirmedAt),
-          );
+          void confirmSample(
+            confirmed,
+            edge,
+            resource.key,
+            params,
+            confirmedAt,
+            attemptsRef.current.get(confirmed.op.opId),
+          ).then((sample) => clientLatencySink.emit(sample));
       }
     },
     // The latest-ref handles are stable; only these participate.
@@ -700,7 +803,20 @@ function useOptimisticCore<Data, Vars>(
       // is its `send-lane` phase and every retry (which re-enters here) moves
       // `lastSentAt`.
       commitPending(markSent(pendingRef.current, opId, performance.now()));
-      return mutateRef.current(vars).then(
+      const attempt: AttemptTiming = {
+        requests: 0,
+        timing: null,
+        settled: null,
+      };
+      attemptsRef.current.set(opId, attempt);
+      const timed = tapRequestTiming(fetchEndpointRef.current, (timing) => {
+        attempt.requests++;
+        attempt.timing = timing;
+        void timing.then((t) => {
+          if (attempt.timing === timing) attempt.settled = t;
+        });
+      });
+      return mutateRef.current(vars, { fetchEndpoint: timed }).then(
         (res) => {
           const ackedAt = performance.now();
           // Confirm against what the cache ALREADY holds: the confirming push
@@ -839,6 +955,7 @@ function useOptimisticCore<Data, Vars>(
                 resource.key,
                 paramsRef.current ?? {},
                 performance.now(),
+                attemptsRef.current.get(opId),
               );
             },
           }),

@@ -40,6 +40,12 @@ others — there is no leader to lose. Design:
   newer one, while every other deploy keeps all tabs on one socket — a module
   URL (its old dialect) split the socket on every rebuild of live-state. No
   dialect = every tab of this networking build.
+- **A frame says when it arrived.** The worker stamps each server frame
+  (`rx.arrivedAt`, `Date.now()`) as its socket receives it, and the tab hands
+  consumers a `SocketMessage` `{ data, arrivedAt }` — so a consumer timing a
+  frame can tell the wire from its own main thread's wait (live-state's
+  `update` sample: `transport` vs `page-wait`). Any `TransportSocket` gives it
+  (an in-page server: when its server delivered).
 - **`onopen` fires once per server connection per tab** (consumers replay their
   state there): the worker re-sends its status on every port join/leave, and the
   tab dispatches only when the connection id changes (or after a re-attach).
@@ -71,6 +77,16 @@ elements load (`useAssetSrc(assetPath)`, `infra/endpoints`). `socketUrl` doubles
 the page-global ws-status bus, so two transports must never map one path to
 the same URL. `fetchWithRetry` takes the transport's `fetch` as an option.
 
+- **`requestTiming`** — whether its requests are network fetches the browser
+  times (Resource Timing) and the router stamps (`Server-Timing`,
+  `framework/http-router`): the page's own server. `requestTimingOf(res,
+  transport)` (`web/request-timing.ts`) then answers where one request's round
+  trip went — `measured { requestStart, responseEnd, serverMs }`, its Resource
+  Timing entry found by the stamp's per-response id through ONE page-wide
+  `PerformanceObserver` (not the 250-entry buffer), waited for at most
+  `RESOURCE_TIMING_WAIT_MS` — or `unmeasured { reason }` (an in-browser server,
+  no stamp, no entry). Endpoints' `FetchOpts.onTiming` hands it to a caller
+  (the optimistic `confirm` sample's ack split).
 - **`machine`** — whether the computer is behind the transport (`needsMachine`
   declarations answer `unavailable` without asking when it is not).
 - **`servesUrls`** — whether an element can load the transport's `/api/…`
@@ -181,9 +197,11 @@ built on them — see
     - `ReconnectingWsData`
     - `ReconnectingWsHandle`
     - `ReconnectingWsOptions`
+    - `RequestTiming`
     - `SharedWebSocketHooks`
     - `SharedWebSocketOptions`
     - `SharedWorkerLike`
+    - `SocketMessage`
     - `Transport`
     - `TransportScoped`
     - `TransportSocket`
@@ -195,6 +213,8 @@ built on them — see
     - `probeUrlStatus`
     - `publishNetDiag`
     - `publishWsStatus`
+    - `requestTimingOf`
+    - `RESOURCE_TIMING_WAIT_MS`
     - `SharedWebSocket`
     - `subscribeNetDiag`
     - `subscribeWsStatus`
@@ -251,7 +271,7 @@ built on them — see
     - `FakeWebSocket` — A `WebSocketLike` with no network.
     - `FakeWsServer` — A no-network WebSocket server: `connect` is the bound `makeWebSocket` factory; every socket it ever handed out is retained for introspection (`all`), and the currently-OPEN subset (`openSockets`) is derived live from `readyState` so it is the single source of truth for the one-socket invariant.
     - `renderWithTransport` — `render(ui)` under a `<TransportProvider>` — what every component reading `useTransport()` (the endpoints hooks, `useLive`) needs, since the context has no default.
-    - `testTransport` — A page-shaped transport for a test: same-origin sockets (`SharedWebSocket`), the global `fetch` read at call time (so a fetch the test stubs answers), assets loaded by their own path, the computer behind it, and its telemetry reported — each overridable.
+    - `testTransport` — A page-shaped transport for a test: same-origin sockets (`SharedWebSocket`), the global `fetch` read at call time (so a fetch the test stubs answers), assets loaded by their own path, no request timing (a stubbed fetch has no Resource Timing entry), the computer behind it, and its telemetry reported — each overridable.
     - `transportWrapper` — A `wrapper` (`render` / `renderHook`) mounting `transport` above the tree.
     - Types: `FakeWsServerOptions`, `RenderWithTransportOptions`, `TabHandle`, `TransportHub`
 - Sub-plugins:
