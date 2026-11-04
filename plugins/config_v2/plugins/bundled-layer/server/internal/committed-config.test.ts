@@ -9,27 +9,19 @@ import {
   APP_SCOPE_DIR,
   committedDocument,
   committedFilesFromMap,
-  OWNER_CONFIG_DIR,
   parseConfigFile,
-  SHIPPING_CONFIG_DIR,
 } from "@plugins/config_v2/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { reorderableSlots } from "@plugins/reorder/server/testing";
 
-function readLayer(dir: string): Map<string, string> {
-  const out = new Map<string, string>();
-  for (const rel of readdirSync(dir, { recursive: true }) as string[]) {
-    if (rel.endsWith(".jsonc") && statSync(join(dir, rel)).isFile())
-      out.set(rel, readFileSync(join(dir, rel), "utf8"));
-  }
-  return out;
+const CONFIG_DIR = join(REPO_ROOT, "config");
+const raw = new Map<string, string>();
+for (const rel of readdirSync(CONFIG_DIR, { recursive: true }) as string[]) {
+  if (rel.endsWith(".jsonc") && statSync(join(CONFIG_DIR, rel)).isFile())
+    raw.set(rel, readFileSync(join(CONFIG_DIR, rel), "utf8"));
 }
-
-// What the bundle globs: `/config/**/*.jsonc`, the shipping layer.
-const raw = readLayer(join(REPO_ROOT, SHIPPING_CONFIG_DIR));
 const files = committedFilesFromMap(raw);
-const owner = readLayer(join(REPO_ROOT, OWNER_CONFIG_DIR));
 
 describe("the committed config layer", () => {
   test("every file parses, with its header (indexing proved each is a layout path)", () => {
@@ -81,30 +73,6 @@ describe("the committed config layer", () => {
     for (const { storePath, appId } of deltas) {
       const doc = committedDocument(storePath, files);
       expect(Object.keys(doc?.scopes ?? {})).toContain(appId);
-    }
-  });
-});
-
-describe("the owner's layer stays out of what a browser host bundles", () => {
-  test("the owner commits overrides only, each over a shipping origin", () => {
-    expect(owner.size).toBeGreaterThan(0);
-    for (const rel of owner.keys()) {
-      expect(rel).not.toMatch(/\.(origin|ancestor)\.jsonc$/);
-      const origin = rel.replace(/\.jsonc$/, ".origin.jsonc");
-      expect(raw.has(origin) || rel.includes(`/${APP_SCOPE_DIR}/`)).toBe(true);
-    }
-  });
-
-  test("no owner override is also in the shipping layer, and no owner value resolves from it", () => {
-    for (const [rel, text] of owner) {
-      expect(raw.has(rel)).toBe(false);
-      const ownerDoc = parseConfigFile(text, rel).content as object;
-      const scope = new RegExp(`/${APP_SCOPE_DIR}/([^/]+)/`).exec(rel);
-      const storePath = scope ? rel.replace(scope[0], "/") : rel;
-      const shipped = committedDocument(storePath, files);
-      // A scoped delta: the shipped scope does not carry the owner's fields.
-      const resolved = scope ? shipped?.scopes[scope[1]!] : shipped?.base;
-      expect(resolved).not.toMatchObject(ownerDoc);
     }
   });
 });

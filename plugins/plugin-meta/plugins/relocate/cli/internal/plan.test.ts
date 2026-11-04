@@ -55,7 +55,6 @@ function plan(
     movedIds: [m.from.id],
     compositionRoots: new Set(),
     hasConfigDir: false,
-    hasOwnerConfigDir: false,
     refs,
     mentions,
     read: (f) => files[f] ?? null,
@@ -75,7 +74,6 @@ describe("parsePluginArg", () => {
       id: asPluginId("kit.overlay.hint"),
       dir: P("kit/plugins/overlay/plugins/hint"),
       configDir: "config/kit/overlay/hint",
-      ownerConfigDir: "owner-config/kit/overlay/hint",
     });
   });
 

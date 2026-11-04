@@ -1324,9 +1324,6 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
   await propagateConfigToUser({
     root,
     userConfigDir: joinAppPath(out, "config-seed", "config", opts.composition),
-    // A release ships to someone else: a fresh install's config, never the
-    // owner's committed values (`owner-config/`).
-    ownerLayer: false,
   });
 
   // ── 4. Tauri target: wrap the staged bundle in the desktop shell ─────

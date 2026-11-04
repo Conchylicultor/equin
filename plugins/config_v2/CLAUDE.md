@@ -78,21 +78,6 @@ Code (defineConfig)  →  git config/  →  ~/.equin/state/config/
    defaults + schema      repo defaults     user config
 ```
 
-### The git layer has two roots: shipping and owner
-
-`config/` is the **shipping** layer — origins plus the overrides every install
-gets (authored layouts, views, app themes). `owner-config/` is the **owner's**:
-the same layout, override files only, each anchored to the `config/` origin, for
-values that are this instance's owner's own (prompt templates, preprompts,
-categories). The checkout's committed layer is `config/` with `owner-config/` on
-top — `withOwnerLayer` (core), an owner override replacing the shipping one, origins
-from `config/` alone — read by the desktop's `repoConfigLayer` and by
-`propagateConfigToUser({ ownerLayer: true })` (the build). A browser host
-(`bundled-layer`) globs `config/` only and a release propagates with
-`ownerLayer: false`, so what ships to someone else is a fresh install's config.
-`committedFilesIn(dir, fs)` / `checkoutCommittedFiles(root, fs, { ownerLayer })`
-are the one reader of a root on disk. See [`owner-config/CLAUDE.md`](../../owner-config/CLAUDE.md).
-
 ### Layer 1: Code → git (build-time)
 
 `./equin build` generates `config/<plugin-tree>/<name>.origin.jsonc` from `defineConfig` defaults. First line: `// @hash <12-hex>` (content hash).
@@ -394,10 +379,12 @@ other key: the worker boots `config_v2/server` (portable) over two host
 services, both portable providers in the host's graph:
 
 - **Committed layer** — `config_v2/plugins/bundled-layer` (`ConfigGitLayer`):
-  the repo's whole `config/` — the shipping layer, never `owner-config/` — inlined as text (`import.meta.glob`, root-absolute),
+  the repo's whole `config/` inlined as text (`import.meta.glob`, root-absolute),
   resolved per storePath by `committedDocument` (core) — `resolveGitLayer` over
   strictly parsed files (`parseConfigFile`; a hashless file throws). The same
-  rule the desktop's `repoConfigLayer` reads the checkout with.
+  rule the desktop's `repoConfigLayer`, the build's `propagateConfigToUser` and
+  the plugin-move ledger read the checkout with — all three over
+  `committedFilesIn(dir, fs)` (core), the one disk reader of a committed dir.
 - **User layer** — `config_v2/plugins/browser-store` (`ConfigStore`):
   `createMemoryConfigStore({ propagatedFrom })` (core). The first time the
   registry touches a storePath, the store propagates its committed document
@@ -555,12 +542,10 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
   - Exports (values):
     - `APP_SCOPE_DIR`
     - `appScopeId`
-    - `checkoutCommittedFiles`
     - `codeConfigProxy`
     - `committedDocument`
     - `committedFilesFromMap`
     - `committedFilesIn`
-    - `committedLayerOf`
     - `computeHash`
     - `CONFIG_HASH_RE`
     - `configConflict`
@@ -600,7 +585,6 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `orphanReasonSchema`
     - `orphanReportSchema`
     - `orphanRiskClassSchema`
-    - `OWNER_CONFIG_DIR`
     - `parseConfigFile`
     - `parseConfigFileRelPath`
     - `propagate`
@@ -614,15 +598,13 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `scopeAppId`
     - `scopeSegment`
     - `setConfigField`
-    - `SHIPPING_CONFIG_DIR`
     - `storePathParts`
     - `stringifyConfigValue`
     - `threeWayMerge`
     - `validationIssues`
     - `withOverrideLegend`
-    - `withOwnerLayer`
 - Cross-plugin:
-  - Imported by: 126 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 125 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×35
     - `conversations` ×14
     - `backup` ×13
@@ -631,11 +613,11 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `auth` ×6
     - `config_v2` ×6
     - `tasks` ×5
-    - `plugin-meta` ×3
     - `primitives` ×3
     - `framework` ×2
     - `infra` ×2
     - `integrations` ×2
+    - `plugin-meta` ×2
     - `reports` ×2
     - `shell` ×2
     - `stats` ×2

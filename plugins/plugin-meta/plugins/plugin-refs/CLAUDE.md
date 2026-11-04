@@ -19,7 +19,7 @@ private scan in a check.
 | kind | what | where it is found |
 | --- | --- | --- |
 | `path` | `plugins/a/plugins/b` | a string literal that is wholly a `plugins/…` path; a `@plugins/…` module specifier (static / dynamic `import()` / `mock(…)`); in a lint rule's own source (non-test code under a plugin's `lint/`), a specifier-shaped `@plugins/…` string — the import source the rule matches (`rule-source`, carrying the `barrel` that must hold an `index.ts`) — in every `.ts`/`.tsx` except `*.generated.ts` |
-| `dot` | `a.b` | compositions manifest `entryPoints` / `selectedContributors` (via `parseEntryPattern`), in the generated origin and in its `defineConfig` source (`composition/core/config.ts`: the array literal of an `entryPoints:` / `selectedContributors:` property — `plugin-refs:compositions-source-covers-origin` fails on an id spelled any other way); reorder `items` keys in `config/**.jsonc` and the owner's `owner-config/**.jsonc`; `asPluginId("…")` in non-test code; boundary-config `runtimeExceptions` (via `parseRuntimeException`) |
+| `dot` | `a.b` | compositions manifest `entryPoints` / `selectedContributors` (via `parseEntryPattern`), in the generated origin and in its `defineConfig` source (`composition/core/config.ts`: the array literal of an `entryPoints:` / `selectedContributors:` property — `plugin-refs:compositions-source-covers-origin` fails on an id spelled any other way); reorder `items` keys in `config/**.jsonc`; `asPluginId("…")` in non-test code; boundary-config `runtimeExceptions` (via `parseRuntimeException`) |
 | `relative` | `../x/CLAUDE.md` | markdown `[x](rel)`, `[x]: rel`, `<img src>` / `<a href>` in every `*.md`; CSS `@source` / `@import` |
 
 - **Dot refs are read structurally, never by free-text regex.** A top-level id
@@ -96,7 +96,6 @@ links **into** research from anywhere else are.
 - Description: The one plugin-reference locator: every place the repo names a plugin (path literals, @plugins specifiers, structurally-read dot ids, relative markdown/CSS links), each with an exact character range a mover rewrites by.
 - Core:
   - Uses:
-    - `config_v2.committedLayerOf`
     - `framework/plugin-id.asFsPath`
     - `framework/plugin-id.asPath`
     - `framework/plugin-id.asPluginId`

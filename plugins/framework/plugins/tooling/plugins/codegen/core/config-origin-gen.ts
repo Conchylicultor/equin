@@ -26,8 +26,8 @@ import {
   propagateGitLayerDocument,
   readonlyProxy,
   readTypedConfig,
-  checkoutCommittedFiles,
   committedDocument,
+  committedFilesIn,
   stringifyConfigValue,
   APP_SCOPE_DIR,
   CONFIG_HASH_RE,
@@ -755,13 +755,6 @@ export function readEffectiveConfigFromDisk<F extends FieldsRecord>(
 export async function propagateConfigToUser(opts: {
   root: AppPath;
   userConfigDir: AppPath;
-  /**
-   * Whether the owner's committed layer (`owner-config/`) rides on top of
-   * `config/`. True for the owner's own namespaces (build, a composition reset);
-   * false for what ships to someone else (a release), which gets the shipping
-   * layer alone — a fresh install's config.
-   */
-  ownerLayer: boolean;
 }): Promise<{ migrations: AppliedConfigMigration[] }> {
   // The checkout root and the namespace's user-config dir (or the release
   // bundle's staged one): both the app's own.
@@ -774,15 +767,14 @@ export async function propagateConfigToUser(opts: {
   // Returned, so the build can say what it rewrote.
   const migrations = applyConfigMigrations({ userConfigDir, configs });
 
-  // The committed layer this namespace propagates from: `config/`, with the
-  // owner's `owner-config/` on top when the caller asks for it. The same
-  // resolution (`committedDocument`) a host's ConfigGitLayer answers with, so the
-  // desktop's propagated origins and its committed layer cannot disagree.
-  const committed = checkoutCommittedFiles(
-    root,
-    { existsSync, readFileSync, readdirSync },
-    { ownerLayer: opts.ownerLayer },
-  );
+  // The checkout's committed layer, resolved by the same `committedDocument` a
+  // host's ConfigGitLayer answers with, so the desktop's propagated origins and
+  // its committed layer cannot disagree.
+  const committed = committedFilesIn(joinAppPath(root, "config"), {
+    existsSync,
+    readFileSync,
+    readdirSync,
+  });
 
   for (const { hierarchyPath, descriptor } of configs) {
     // Per-app scoped overrides expressed in git: config/<hier>/@app/<id>/<name>.jsonc.

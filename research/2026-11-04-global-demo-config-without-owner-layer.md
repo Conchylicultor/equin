@@ -1,5 +1,16 @@
 # The browser demo gets a fresh install's config, not the owner's
 
+> **SUPERSEDED (2026-11-04, user's decision; task-1793815416-2se0k2).** The premise
+> below is wrong: the six committed overrides it calls the owner's (preprompts, prompt
+> templates, conversation categories, turn summaries off, code-review and commit-stats
+> paths) are **product defaults**, committed on purpose. `config/` is exactly what a fresh
+> install, a release and the demo get, so the demo ships it and there is nothing
+> owner-specific to hide. `owner-config/` and the owner layer (`withOwnerLayer`, the
+> `ownerLayer` propagation flag, the owner branches of the config checks, relocate and
+> plugin-refs) were removed. Kept from this design: `committedFilesIn` (config_v2/core),
+> the one disk reader of a committed config dir, and the build's propagation resolving
+> through `committedDocument`. Kept as a record only.
+
 Track: "apps running in the browser, on fake or local data" (wiki
 `block-d04c6c0d-56fd-49f2-88f4-914e059cc83b`), lane B step 1. Prior designs:
 `2026-10-16-global-config-git-layer-per-composition.md`,

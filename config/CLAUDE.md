@@ -1,8 +1,8 @@
 # config/
 
-Git-committed config defaults and overrides — the SHIPPING layer: what every install gets, and what a browser host (the demo) and a release bundle. Structure mirrors `~/.equin/state/config/` by plugin hierarchy.
+Git-committed config defaults and overrides. Structure mirrors `~/.equin/state/config/` by plugin hierarchy.
 
-A value that is the owner's own (their prompt templates, preprompts, categories) does not belong here: it goes in [`owner-config/`](../owner-config/CLAUDE.md), the owner's layer the desktop reads on top of this one and nothing ships.
+Everything here is a **product default**: what a fresh install, a release and the browser demo get. There is no owner-specific layer — a value that should not ship to every user does not belong in `config/` (it is a user-layer setting, saved from the UI).
 
 ## File layout
 

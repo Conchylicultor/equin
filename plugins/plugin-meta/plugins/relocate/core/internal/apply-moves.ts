@@ -43,8 +43,8 @@ import {
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
-  checkoutCommittedFiles,
   committedDocument,
+  committedFilesIn,
   computeHash,
   parseConfigFileRelPath,
   scopeAppId,
@@ -163,12 +163,12 @@ export function applyPluginMoves(opts: {
   userConfigDir: AppPath;
 }): AppliedMove[] {
   const { root, userConfigDir } = opts;
-  // The committed layer the build's propagation reads (owner layer included).
-  const committed = checkoutCommittedFiles(
-    root,
-    { existsSync, readFileSync, readdirSync },
-    { ownerLayer: true },
-  );
+  // The committed layer the build's propagation reads.
+  const committed = committedFilesIn(joinAppPath(root, "config"), {
+    existsSync,
+    readFileSync,
+    readdirSync,
+  });
   return runConfigLedger({
     userConfigDir,
     markerFile: APPLIED_MOVES_FILE,

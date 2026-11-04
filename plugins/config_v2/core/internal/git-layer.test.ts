@@ -3,9 +3,9 @@ import { computeHash, readonlyProxy, type ConfigProxy } from "./config-proxy";
 import {
   committedDocument,
   committedFilesFromMap,
+  committedFilesIn,
   propagateGitLayerDocument,
   resolveGitLayer,
-  withOwnerLayer,
 } from "./git-layer";
 import { createMemoryConfigStore } from "./memory-store";
 import type { JsonValue } from "./types";
@@ -151,45 +151,44 @@ describe("propagateGitLayerDocument", () => {
   });
 });
 
-describe("withOwnerLayer", () => {
-  const h = computeHash(ORIGIN);
-  const shipping = committedFilesFromMap(
-    new Map([
-      ["p/config.origin.jsonc", `// @hash ${h}\n{ "a": 1, "b": "x" }`],
-      ["p/config.jsonc", `// @hash ${h}\n{ "a": 2, "b": "x" }`],
-      ["p/@app/home/config.jsonc", `// @hash ${h}\n{ "b": "home" }`],
-      ["q/config.origin.jsonc", `// @hash ${h}\n{ "a": 1, "b": "x" }`],
-    ]),
-  );
-  const owner = committedFilesFromMap(
-    new Map([
-      ["p/config.jsonc", `// @hash ${h}\n{ "a": 9, "b": "mine" }`],
-      ["p/@app/pages/config.jsonc", `// @hash ${h}\n{ "a": 7 }`],
-      // An origin in the owner's root is never read: origins are config/'s.
-      ["q/config.origin.jsonc", `// @hash ${h}\n{ "a": 100, "b": "no" }`],
-    ]),
-  );
-  const both = withOwnerLayer(shipping, owner);
-
-  test("the owner's override replaces the shipping one; the shipping layer alone is untouched", () => {
-    expect(committedDocument("p/config.jsonc", both)?.base).toEqual({
-      a: 9,
-      b: "mine",
-    });
-    expect(committedDocument("p/config.jsonc", shipping)?.base).toEqual({
-      a: 2,
-      b: "x",
-    });
+describe("committedFilesIn", () => {
+  // A dir on a stubbed fs: the reader's paths, not a real disk.
+  const files = new Map<string, string>([
+    ["/c/top.jsonc", "T"],
+    ["/c/a/b/config.origin.jsonc", "O"],
+    ["/c/a/b/@app/home/config.jsonc", "H"],
+  ]);
+  const dirs = new Map<string, string[]>([
+    ["/c/@app", ["pages"]],
+    ["/c/a/b/@app", ["home"]],
+  ]);
+  const read = committedFilesIn("/c", {
+    existsSync: (p) => files.has(p) || dirs.has(p),
+    readFileSync: (p) => files.get(p)!,
+    readdirSync: (p) =>
+      (dirs.get(p) ?? []).map((name) => ({ name, isDirectory: () => true })),
   });
 
-  test("origins come from the shipping layer alone", () => {
-    expect(committedDocument("q/config.jsonc", both)?.base).toEqual(ORIGIN);
+  test("reads a file by its layout path, null when absent", () => {
+    expect(read.read({ storePath: "top.jsonc", file: "override" })).toBe("T");
+    expect(read.read({ storePath: "a/b/config.jsonc", file: "origin" })).toBe(
+      "O",
+    );
+    expect(read.read({ storePath: "a/b/config.jsonc", file: "override" })).toBe(
+      null,
+    );
+    expect(
+      read.read({
+        storePath: "a/b/config.jsonc",
+        scopeId: "app:home",
+        file: "override",
+      }),
+    ).toBe("H");
   });
 
-  test("a scope committed in either root is a scope, over the owner's base", () => {
-    expect(committedDocument("p/config.jsonc", both)?.scopes).toEqual({
-      home: { a: 9, b: "home" },
-      pages: { a: 7, b: "mine" },
-    });
+  test("lists the app scopes under a nested and a top-level hierarchy", () => {
+    expect(read.appIds("a/b/config.jsonc")).toEqual(["home"]);
+    expect(read.appIds("top.jsonc")).toEqual(["pages"]);
+    expect(read.appIds("x/config.jsonc")).toEqual([]);
   });
 });

@@ -141,63 +141,6 @@ function hierOf(storePath: string): string {
   return storePath.slice(0, Math.max(0, storePath.lastIndexOf("/")));
 }
 
-/**
- * The checkout's two committed config roots, repo-relative.
- *
- * - `config/` is the SHIPPING layer: the code defaults (`.origin.jsonc`) and the
- *   overrides every install gets — authored layouts, views, app themes. A browser
- *   host bundles it, a release vendors it.
- * - `owner-config/` is the OWNER's layer: values that are this instance's owner's
- *   own (their prompt templates, preprompts, categories), committed so every
- *   worktree of the checkout reads them, but never shipped. Override files only —
- *   the origin is always `config/`'s, and each owner file's `// @hash` is anchored
- *   to it.
- */
-export const SHIPPING_CONFIG_DIR = "config";
-export const OWNER_CONFIG_DIR = "owner-config";
-
-/**
- * Which committed root a repo-relative path sits in, and its path inside it
- * (the layer-relative path `configFileRelPath` spells) — `null` outside both.
- * The one spelling of "is this a committed config file, and of whose layer", for
- * every repo walker (checks, the plugin-ref locator).
- */
-export function committedLayerOf(
-  repoRelPath: string,
-): { layer: "shipping" | "owner"; rel: string } | null {
-  for (const [layer, dir] of [
-    ["shipping", SHIPPING_CONFIG_DIR],
-    ["owner", OWNER_CONFIG_DIR],
-  ] as const) {
-    if (repoRelPath.startsWith(`${dir}/`))
-      return { layer, rel: repoRelPath.slice(dir.length + 1) };
-  }
-  return null;
-}
-
-/**
- * A checkout's committed layer: the shipping layer with the owner's on top. An
- * owner override replaces the shipping one (overrides are whole documents);
- * origins are the shipping layer's alone; a scope committed in either is a scope.
- * Read by the desktop and its build — never by a browser host, which only has
- * `config/`.
- */
-export function withOwnerLayer(
-  shipping: CommittedFiles,
-  owner: CommittedFiles,
-): CommittedFiles {
-  return {
-    read: (ref) =>
-      ref.file === "override"
-        ? (owner.read(ref) ?? shipping.read(ref))
-        : shipping.read(ref),
-    appIds: (storePath) =>
-      [
-        ...new Set([...shipping.appIds(storePath), ...owner.appIds(storePath)]),
-      ].sort(),
-  };
-}
-
 /** The synchronous fs calls {@link committedFilesIn} reads a directory with. */
 export interface CommittedFs {
   existsSync(path: string): boolean;
@@ -209,9 +152,11 @@ export interface CommittedFs {
 }
 
 /**
- * One committed root on disk (`dir`, absolute) as raw files, read per call. The fs
- * is handed in, so this core module stays host-free; an absent `dir` is a layer
- * holding nothing (a checkout without an owner layer).
+ * A committed config dir on disk (`dir`, absolute — the checkout's `config/`, or
+ * a release's vendored copy) as raw files, read per call. The fs is handed in, so
+ * this core module stays host-free. The one disk reader every desktop-side
+ * consumer of the committed layer shares (the repo layer, the build's
+ * propagation, the plugin-move ledger).
  */
 export function committedFilesIn(dir: string, fs: CommittedFs): CommittedFiles {
   return {
@@ -230,25 +175,6 @@ export function committedFilesIn(dir: string, fs: CommittedFs): CommittedFiles {
         .sort();
     },
   };
-}
-
-/**
- * The committed layer of the checkout at `root`: `config/` with `owner-config/`
- * on top ({@link withOwnerLayer}) — or, with `ownerLayer: false`, the shipping
- * layer alone (what a release ships to someone else).
- */
-export function checkoutCommittedFiles(
-  root: string,
-  fs: CommittedFs,
-  opts: { ownerLayer: boolean },
-): CommittedFiles {
-  const shipping = committedFilesIn(`${root}/${SHIPPING_CONFIG_DIR}`, fs);
-  return opts.ownerLayer
-    ? withOwnerLayer(
-        shipping,
-        committedFilesIn(`${root}/${OWNER_CONFIG_DIR}`, fs),
-      )
-    : shipping;
 }
 
 /**

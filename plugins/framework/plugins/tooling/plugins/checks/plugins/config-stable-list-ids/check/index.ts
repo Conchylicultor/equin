@@ -7,10 +7,7 @@ import { loadConfigDescriptorsByOriginPath } from "@plugins/framework/plugins/to
 import {
   APP_SCOPE_DIR,
   CONFIG_HASH_RE,
-  committedLayerOf,
   mapConfigLists,
-  OWNER_CONFIG_DIR,
-  SHIPPING_CONFIG_DIR,
 } from "@plugins/config_v2/core";
 import { parse as parseJsonc } from "jsonc-parser";
 import {
@@ -60,16 +57,7 @@ const check: Check = {
     });
 
     const result = await spawnCaptured(
-      // Both committed roots: the owner's overrides are committed rows too.
-      [
-        "git",
-        "ls-files",
-        "--others",
-        "--cached",
-        "--",
-        `${SHIPPING_CONFIG_DIR}/`,
-        `${OWNER_CONFIG_DIR}/`,
-      ],
+      ["git", "ls-files", "--others", "--cached", "--", "config/"],
       { cwd: root, timeoutMs: GIT_TIMEOUT_MS },
     );
     const allConfigFiles = result.stdout.trim().split("\n").filter(Boolean);
@@ -82,12 +70,9 @@ const check: Check = {
       // Resolve the file to its owning descriptor via the same anchor trick the
       // sibling uses: a base override, an @app/<id>/ scoped delta, and an origin
       // all anchor to the base origin.
-      const layer = committedLayerOf(relFromRoot);
-      if (layer === null) continue;
-      const originRel = stripScopeSegment(layer.rel).replace(
-        /\.jsonc$/,
-        ".origin.jsonc",
-      );
+      const originRel = stripScopeSegment(relFromRoot)
+        .replace(/^config\//, "")
+        .replace(/\.jsonc$/, ".origin.jsonc");
       const descriptor = descriptorsByOriginRel.get(originRel);
       if (!descriptor) continue;
 

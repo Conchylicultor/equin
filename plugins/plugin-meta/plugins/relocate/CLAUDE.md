@@ -10,7 +10,7 @@ and every descendant in one step. Design:
    earlier uncommitted moves (`--dry-run` only notes it — see *Chaining moves*),
    when `<from>` is not a plugin, `<to>` exists, `<to>` sits inside
    `<from>`, `<to>`'s parent is neither `plugins/` nor an existing plugin, or
-   `config/<to slash path>` or `owner-config/<to slash path>` exists.
+   `config/<to slash path>` exists.
 2. **Locates before moving**: `findPluginRefs` (plugin-refs) over the repo file
    set, and `findPluginMentions` of the moved plugin (its path and dot id
    written anywhere in free text). Both carry old paths and old offsets, so
@@ -36,8 +36,8 @@ and every descendant in one step. Design:
    snapshots (`*.origin.jsonc` / `*.ancestor.jsonc`; the compositions origin's
    ids are rewritten in its `defineConfig` source instead). In `research/` only
    links are.
-4. **Applies**: `git mv` the plugin dir, `config/<old slash path>` and the
-   owner's `owner-config/<old slash path>` (each if tracked), writes each rewritten file at its new path, and re-derives every
+4. **Applies**: `git mv` the plugin dir and `config/<old slash path>` (if
+   tracked), writes each rewritten file at its new path, and re-derives every
    moved `package.json` `"name"` (`packageNameFor` + codegen's
    `withPackageName`) so no install sees a stale or duplicate workspace name.
 5. **Reports**: per-kind edit counts and per-file edits; `@source` globs that
@@ -132,8 +132,8 @@ moving anything.
 
 - Description: `./equin plugin move <from> <to>` — relocate or rename a plugin (and every descendant) in one step: git mv the folder and its config dir, then rewrite every reference the plugin-refs locator finds (path literals, @plugins specifiers, dot ids, relative links) by exact range. Records each move in a committed ledger that every build replays onto its namespace's saved user config (folder moved, reorder keys re-rooted, hash chain kept).
 - Core:
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `config_v2` ×10
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `config_v2` ×8
     - `config_v2/ledger` ×6
     - `framework/plugin-id` ×3
     - `infra/host-fs/user-path` ×3

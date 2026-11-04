@@ -199,35 +199,13 @@ const RENDER_TIMEOUT_MS = 20_000;
  * The task detail's launch options, by the row label the Prompt card paints
  * and the aria-label its control carries (each option's own control file).
  * `optional` ones are noted, not asserted, when the host does not offer them
- * (no row, or a disabled control). `userChoices` ones list what the user
- * configured (preprompts): the demo runs a fresh install's config, which
- * configures none, so "no other value" is noted, not failed.
+ * (no row, or a disabled control).
  */
 const LAUNCH_OPTIONS = [
-  {
-    label: "Thinking mode",
-    control: "Task thinking mode",
-    optional: false,
-    userChoices: false,
-  },
-  {
-    label: "Preprompt",
-    control: "Task preprompt",
-    optional: false,
-    userChoices: true,
-  },
-  {
-    label: "Workspace",
-    control: "Task workspace",
-    optional: true,
-    userChoices: false,
-  },
-  {
-    label: "Auto-start",
-    control: "Auto-start model",
-    optional: true,
-    userChoices: false,
-  },
+  { label: "Thinking mode", control: "Task thinking mode", optional: false },
+  { label: "Preprompt", control: "Task preprompt", optional: false },
+  { label: "Workspace", control: "Task workspace", optional: true },
+  { label: "Auto-start", control: "Auto-start model", optional: true },
 ] as const;
 type LaunchOption = (typeof LAUNCH_OPTIONS)[number];
 
@@ -499,10 +477,6 @@ await withBrowser(async (h) => {
       (outcome.kind === "absent" || outcome.kind === "disabled")
     ) {
       r.note(`${option.label}: ${outcome.kind} on this host — not asserted`);
-    } else if (option.userChoices && outcome.kind === "no-other") {
-      r.note(
-        `${option.label}: nothing to pick — a fresh install configures none — not asserted`,
-      );
     } else {
       r.fail(`${option.label}: pick another value`, JSON.stringify(outcome));
     }

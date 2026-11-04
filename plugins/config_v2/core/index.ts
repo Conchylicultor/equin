@@ -63,11 +63,6 @@ export {
   committedDocument,
   committedFilesFromMap,
   committedFilesIn,
-  checkoutCommittedFiles,
-  committedLayerOf,
-  withOwnerLayer,
-  OWNER_CONFIG_DIR,
-  SHIPPING_CONFIG_DIR,
   propagateGitLayerDocument,
 } from "./internal/git-layer";
 export type {
