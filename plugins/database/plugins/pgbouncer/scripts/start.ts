@@ -8,6 +8,7 @@ import {
   type ServiceLogTarget,
 } from "@plugins/infra/plugins/launcher/plugins/gateway-logs/core";
 import { adoptLegacyLog } from "@plugins/infra/plugins/launcher/plugins/gateway-logs/data-dirs";
+import { adoptFd } from "@plugins/packages/plugins/owned-fd/core";
 import { writeFileSync, rmSync } from "node:fs";
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join, dirname } from "node:path";
@@ -123,10 +124,13 @@ function launch(binary: string, target: ServiceLogTarget): Launched {
       console.log(
         `pgbouncer: left ${PGBOUNCER_LEGACY_LOG_FILE} in place: every backup slot of ${PGBOUNCER_LOG_FILE} is taken`,
       );
+    // The relay fd is this script's to close once PgBouncer holds its copies.
+    const relay = adoptFd(target.fd);
     const child = spawn(binary, [PGBOUNCER_CONFIG_FILE], {
       detached: true,
-      stdio: ["ignore", target.fd, target.fd],
+      stdio: ["ignore", relay.fd, relay.fd],
     });
+    relay.close();
     // A foreground daemon that dies at once (a config it refuses) says why on
     // the relay, not here: the readiness wait stops at its exit, naming the log.
     const launched: Launched = { exit: null };

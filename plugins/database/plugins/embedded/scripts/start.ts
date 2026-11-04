@@ -21,6 +21,7 @@ import {
   serviceLogTarget,
   type ServiceLogTarget,
 } from "@plugins/infra/plugins/launcher/plugins/gateway-logs/core";
+import { adoptFd, type OwnedFd } from "@plugins/packages/plugins/owned-fd/core";
 import { adoptLegacyLog } from "@plugins/infra/plugins/launcher/plugins/gateway-logs/data-dirs";
 import { mkdirSync, rmSync, symlinkSync } from "node:fs";
 import {
@@ -217,6 +218,8 @@ function postmasterLog(target: ServiceLogTarget): {
   /** The file a person reads the log in. */
   file: string;
   stdio: Array<"ignore" | "pipe" | number>;
+  /** The relay fd, owned: closed once pg_ctl has run (the postmaster holds its own copy). */
+  relay: OwnedFd | null;
 } {
   if (target.kind === "relay") {
     // Fresh start, so nothing writes the pre-relay file any more: move it into
@@ -230,10 +233,12 @@ function postmasterLog(target: ServiceLogTarget): {
       );
     // pg_ctl runs `exec postgres … >> "<path>" 2>&1` in a shell, so the path
     // must name the inherited relay fd; it is passed as pg_ctl's fd 3.
+    const relay = adoptFd(target.fd);
     return {
       path: "/dev/fd/3",
       file: PG_LOG_FILE,
-      stdio: ["ignore", "pipe", "pipe", target.fd],
+      stdio: ["ignore", "pipe", "pipe", relay.fd],
+      relay,
     };
   }
   console.log(
@@ -243,6 +248,7 @@ function postmasterLog(target: ServiceLogTarget): {
     path: PG_LEGACY_LOG_FILE,
     file: PG_LEGACY_LOG_FILE,
     stdio: ["ignore", "pipe", "pipe"],
+    relay: null,
   };
 }
 
@@ -320,6 +326,7 @@ function startPostmaster(binDir: string, target: ServiceLogTarget): void {
       },
     },
   );
+  log.relay?.close();
   if (result.status !== 0) {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; SpawnSyncReturns fields may be null
     const out = result.stderr?.toString() || result.stdout?.toString() || "";
