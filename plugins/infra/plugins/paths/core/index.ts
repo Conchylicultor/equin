@@ -1,5 +1,4 @@
 export {
-  REPO_ROOT,
   repoConfigDir,
   PLUGINS_DIR,
   SERVER_CORE_RELATIVE,

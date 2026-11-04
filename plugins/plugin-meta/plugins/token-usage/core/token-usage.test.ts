@@ -1,10 +1,10 @@
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { test, expect } from "bun:test";
-import { join } from "path";
-import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+
 import { tokenGroupsDeclaredIn } from "./token-groups";
 import { tokenVarsUsedBy } from "./token-usage";
 
-const root = asAppPath(join(import.meta.dir, "../../../../.."));
+const root = REPO_ROOT;
 
 test("Tailwind classes resolve to the vars the shipped stylesheet reads", async () => {
   const [vars] = await tokenVarsUsedBy(root, [

@@ -75,10 +75,10 @@
 import { resolveBuildReceipt } from "@plugins/framework/plugins/cli/plugins/op-runtime/core";
 import type { ResolvedReceipt } from "@plugins/framework/plugins/cli/plugins/op-runtime/core";
 import {
-  REPO_ROOT,
   resolveCheckoutDeploy,
   worktreesDir,
 } from "@plugins/infra/plugins/paths/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import type {
   CheckoutDeploy,
   CheckoutDeployResolution,

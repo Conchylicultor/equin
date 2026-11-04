@@ -21,6 +21,7 @@
  * the move in relocate's ledger, and every build migrates its own namespace
  * (`applyPluginMoves`) — no hand-run step.
  */
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { renameSync } from "fs";
 import {
   existsSync,
@@ -39,18 +40,7 @@ interface Move {
 
 const VARIANTS = ["", ".origin", ".ancestor"] as const;
 
-// Resolved from THIS file: plugins/framework/plugins/tooling/plugins/codegen/scripts/
-// → up 6 to `plugins/`, then reorder's shared dir.
-const TABLE = join(
-  import.meta.dir,
-  "..",
-  "..",
-  "..",
-  "..",
-  "..",
-  "..",
-  "reorder/shared/slot-id-rename.json",
-);
+const TABLE = join(REPO_ROOT, "plugins/reorder/shared/slot-id-rename.json");
 
 function loadTable(): Move[] {
   return JSON.parse(readFileSync(TABLE, "utf-8")) as Move[];

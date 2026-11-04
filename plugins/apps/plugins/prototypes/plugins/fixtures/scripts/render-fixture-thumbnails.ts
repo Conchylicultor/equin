@@ -21,7 +21,7 @@ import {
 import { tmpdir } from "node:os";
 import { join, resolve, sep } from "node:path";
 import { parseArgs } from "node:util";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import {
   auditPrototypeFixtureThumbnails,
   parsePrototypeTree,

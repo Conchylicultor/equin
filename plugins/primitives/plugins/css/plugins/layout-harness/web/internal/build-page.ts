@@ -1,3 +1,4 @@
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
@@ -18,7 +19,6 @@ import { build } from "vite";
 // built page loads over `file://` (no server).
 
 const HERE = resolve(fileURLToPath(import.meta.url), "..");
-const REPO_ROOT = resolve(HERE, "../../../../../../../..");
 const PLUGINS_DIR = join(REPO_ROOT, "plugins");
 
 const outDir = process.argv[2];

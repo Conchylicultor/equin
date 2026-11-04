@@ -9,6 +9,7 @@
 //
 // Plan: research/2026-10-30-global-build-pipeline-step3b-batched-artifacts-and-repo-snapshot.md (Phase 0).
 
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { join } from "node:path";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import os from "node:os";
@@ -17,7 +18,6 @@ import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { planFleet } from "../core/internal/plan";
 import { loadGlobPatternMemo } from "../core/internal/store";
 import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
-import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 const arg = (name: string, dflt: string) => {
   const at = process.argv.indexOf(`--${name}`);
@@ -28,7 +28,7 @@ const threadCounts = arg("threads", "1,3,6").split(",").map(Number);
 const filter = process.argv.includes("--filter");
 // --processes: each chunk in its own bun process instead of a worker thread.
 const processes = process.argv.includes("--processes");
-const root = asAppPath(join(import.meta.dir, "../../../../../../.."));
+const root = REPO_ROOT;
 
 const fleet = await planFleet({
   root,

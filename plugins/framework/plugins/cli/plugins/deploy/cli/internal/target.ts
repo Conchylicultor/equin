@@ -17,10 +17,8 @@ import {
   namespaceUrl,
   type Namespace,
 } from "@plugins/infra/plugins/namespace/core";
-import {
-  REPO_ROOT,
-  checkoutNamespace,
-} from "@plugins/infra/plugins/paths/core";
+import { checkoutNamespace } from "@plugins/infra/plugins/paths/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { openShortLivedClient } from "@plugins/database/plugins/admin/server";
 import {
   _deployServers,

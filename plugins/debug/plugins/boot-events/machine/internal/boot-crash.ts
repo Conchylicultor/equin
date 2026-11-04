@@ -4,7 +4,7 @@ import {
   type Registration,
 } from "@plugins/framework/plugins/server-core/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
   fileReportFromProcess,

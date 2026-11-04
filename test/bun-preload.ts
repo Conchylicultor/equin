@@ -3,9 +3,9 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   PLUGINS_DIR,
-  REPO_ROOT,
   checkoutNamespace,
 } from "@plugins/infra/plugins/paths/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import type { ServerContribution } from "@plugins/framework/plugins/server-core/core";
 
 // `bun test` preload (registered in the root bunfig.toml `[test]` section).

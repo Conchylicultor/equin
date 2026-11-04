@@ -7,7 +7,8 @@
 //
 //   ./equin run plugins/framework/plugins/tooling/plugins/web-artifacts/scripts/babel-equivalence.ts [--n 120]
 
-import { join } from "node:path";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
+
 import type { Rolldown } from "vite";
 import { loadBabelContributions } from "@plugins/framework/plugins/web-core/core";
 import { makeArtifactExternal } from "../core/externals";
@@ -15,14 +16,11 @@ import { babelContributionsPlugin } from "../core/internal/babel-transform";
 import { planFleet } from "../core/internal/plan";
 import { loadGlobPatternMemo } from "../core/internal/store";
 import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
-import {
-  asAppPath,
-  joinAppPath,
-} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 const at = process.argv.indexOf("--n");
 const n = at > 0 ? Number(process.argv[at + 1]) : 120;
-const root = asAppPath(join(import.meta.dir, "../../../../../../.."));
+const root = REPO_ROOT;
 const pluginsRoot = joinAppPath(root, "plugins");
 
 const fleet = await planFleet({

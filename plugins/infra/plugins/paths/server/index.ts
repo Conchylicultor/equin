@@ -1,5 +1,4 @@
 export {
-  REPO_ROOT,
   repoConfigDir,
   PLUGINS_DIR,
   WEB_CORE_RELATIVE,

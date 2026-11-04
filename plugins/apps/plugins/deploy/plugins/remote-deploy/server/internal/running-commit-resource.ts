@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { refHeadServed } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
 import { serveValue } from "@plugins/network/plugins/live/server";
 import {

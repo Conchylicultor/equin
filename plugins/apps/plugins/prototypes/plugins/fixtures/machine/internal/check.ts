@@ -1,7 +1,7 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { relative } from "node:path";
 import type { Check } from "@plugins/framework/plugins/tooling/core";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import {
   auditPrototypeFixtureThumbnails,
   parsePrototypeTree,

@@ -2,7 +2,7 @@ import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import { fileHint } from "@plugins/framework/plugins/tooling/plugins/guards/core";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 
 const GUIDE = "prototypes/CLAUDE.md";
 

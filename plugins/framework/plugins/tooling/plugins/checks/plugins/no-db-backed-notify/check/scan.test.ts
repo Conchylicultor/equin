@@ -1,3 +1,4 @@
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -640,7 +641,7 @@ describe("scanDbBackedNotify — derived feed-exclusion exemption", () => {
   // imported (./query) and reads the excluded tables through raw SQL, on the
   // real files.
   test("the latency ledger's real summary value passes", async () => {
-    const repoRoot = resolve(import.meta.dir, "../../../../../../../../..");
+    const repoRoot = REPO_ROOT;
     const disk = new ModuleIndex({
       has: (r) => existsSync(resolve(repoRoot, r)),
       read: async (r) => readFileSync(resolve(repoRoot, r), "utf8"),
@@ -676,7 +677,7 @@ describe("scanDbBackedNotify — derived feed-exclusion exemption", () => {
   // names, which its raw-SQL summary query uses), so its summary value may
   // read them while served external.
   test("the latency ledger's real contributions exclude its four tables", async () => {
-    const repoRoot = resolve(import.meta.dir, "../../../../../../../../..");
+    const repoRoot = REPO_ROOT;
     const rel = `${ledger}/server/internal/contributions.ts`;
     const disk = new ModuleIndex({
       has: (r) => existsSync(resolve(repoRoot, r)),

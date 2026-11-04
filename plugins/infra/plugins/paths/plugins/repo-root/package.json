@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-infra-paths-repo-root",
+  "version": "0.0.1",
+  "private": true,
+  "description": "REPO_ROOT — the checkout this code runs from, the one place any file gets it. Derived without counting ../ (its own repo-relative dir is a literal `./equin plugin move` rewrites; a stale one throws at load), and the repo-root/no-depth-counted-path lint rejects a ../ chain from a file's own location that leaves its plugin, so moving a plugin cannot silently re-aim a path."
+}

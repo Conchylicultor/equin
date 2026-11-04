@@ -1,6 +1,6 @@
 import type { z } from "zod";
 import { join } from "node:path";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import type { Ready } from "@plugins/infra/plugins/deps/deps";
 import type { PythonEnvSource } from "./python-env";

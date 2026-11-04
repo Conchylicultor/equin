@@ -14,6 +14,7 @@
  *   dismiss through the endpoint and open only a linked row.
  */
 
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse as parseJsonc, type ParseError } from "jsonc-parser";
@@ -189,9 +190,7 @@ describe("the field schema over the notifications source", () => {
 
 describe("the authored view (config/shell/notifications)", () => {
   const CONFIG_PATH = join(
-    __dirname,
-    // __tests__ → web → notifications → plugins → shell → plugins → repo root
-    "../../../../../..",
+    REPO_ROOT,
     "config/shell/notifications/shell.notifications.jsonc",
   );
 

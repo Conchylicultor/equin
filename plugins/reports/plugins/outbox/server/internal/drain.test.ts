@@ -9,7 +9,7 @@ import {
 import { mkdtemp, readdir, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { fileReportFromProcess, repositoryOf } from "../../core";
 import type { OutboxCode, OutboxEntry } from "../../core";
 import { UNKNOWN_KIND_TTL_MS, drainOutbox, type DrainDeps } from "./drain";

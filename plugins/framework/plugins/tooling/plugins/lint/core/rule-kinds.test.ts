@@ -3,9 +3,10 @@
 // under which a type-aware rule must THROW, never silently pass, since a pass
 // there would be cached as a syntactic result keyed on the file's text alone.
 
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { describe, expect, it } from "bun:test";
 import { join } from "path";
-import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+
 import { Linter } from "eslint";
 import {
   buildLintConfig,
@@ -14,8 +15,7 @@ import {
   type LintRuleSelection,
 } from "./build-lint-config";
 
-// This file's location, seven folders down from the repo root.
-const ROOT = asAppPath(join(import.meta.dir, "../../../../../../.."));
+const ROOT = REPO_ROOT;
 const BUTTON_SAFETY =
   "framework/plugins/tooling/plugins/lint/plugins/button-safety";
 // A web file of a real plugin (a fake plugin path fails plugin-refs-resolve),

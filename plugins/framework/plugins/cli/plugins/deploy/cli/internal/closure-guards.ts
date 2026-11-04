@@ -7,10 +7,8 @@
  * cannot see, and the guard should fire when the exposure is actually created.
  */
 import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import {
-  REPO_ROOT,
-  checkoutNamespace,
-} from "@plugins/infra/plugins/paths/server";
+import { checkoutNamespace } from "@plugins/infra/plugins/paths/server";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { configDir } from "@plugins/config_v2/data-dirs";
 import {
   classifyEdges,

@@ -1,7 +1,7 @@
 import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 import { z } from "zod";
 import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { defineSupervisedJob } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 import { isMainCompositionBuild } from "@plugins/build/core";

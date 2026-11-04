@@ -2,7 +2,7 @@ import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import {
   isSuspendSignal,
   NonRetryableError,

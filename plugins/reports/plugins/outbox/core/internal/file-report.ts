@@ -1,7 +1,7 @@
 import { mkdir, rename, writeFile } from "node:fs/promises";
 import { readdir, realpath } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, join } from "node:path";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { getMainRepoRoot } from "@plugins/infra/plugins/spawn/core";
 import { reportOutboxDir } from "../../data-dirs";
 import {

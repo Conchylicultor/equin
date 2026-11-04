@@ -1,3 +1,4 @@
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { trackSlotSites } from "@plugins/framework/plugins/slot-declaration/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { asNamespace } from "@plugins/infra/plugins/namespace/core";
@@ -7,7 +8,7 @@ import {
 } from "@plugins/infra/plugins/runtime-identity/core";
 import { withThreadActivity } from "@plugins/infra/plugins/stack-sampler/core";
 import { yieldMacrotask } from "@plugins/packages/plugins/macrotask-yield/core";
-import { relative, resolve } from "node:path";
+import { relative } from "node:path";
 import { registerAutoStubs } from "./auto-stubs.generated";
 
 let registered = false;
@@ -244,9 +245,6 @@ export function setPreBarrelImportGuard(fn: () => void | Promise<void>): void {
  */
 const barrelImportLane = createSemaphore(1);
 
-/** This file's checkout — only to name an import repo-relatively in a sample. */
-const CHECKOUT_ROOT = resolve(import.meta.dir, "../../../../../..");
-
 /**
  * Dynamically import a barrel file. Throws on failure so missing stubs
  * surface as build errors rather than silently omitting plugin metadata.
@@ -280,7 +278,7 @@ export function importBarrel(
       // most stack samples — a thread watch sees only `(anonymous) [Unknown
       // Executable]`, and with the mark it can say which barrel was loading.
       mod = await withThreadActivity(
-        { name: "barrel import", detail: relative(CHECKOUT_ROOT, barrelPath) },
+        { name: "barrel import", detail: relative(REPO_ROOT, barrelPath) },
         async () => (await import(barrelPath)) as Record<string, unknown>,
       );
     } catch (e) {

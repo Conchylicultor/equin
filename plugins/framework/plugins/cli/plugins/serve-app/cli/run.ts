@@ -7,9 +7,9 @@ import { resolve } from "path";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import {
   dataRoot,
-  REPO_ROOT,
   SERVER_CORE_RELATIVE,
 } from "@plugins/infra/plugins/paths/server";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import {
   bootSelfContainedApp,
   gatewayPidFile,

@@ -12,6 +12,7 @@
 // host's generated entry list) — run it after a build or an install.
 // Plan: research/2026-10-30-global-build-pipeline-step3b-batched-artifacts-and-repo-snapshot.md.
 
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { isPlatformApi } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
@@ -60,7 +61,7 @@ if (process.env.BP_COLD_CHILD !== "1") {
 }
 
 const { runWebArtifactsPipeline } = await import("../core/internal/pipeline");
-const root = asAppPath(join(import.meta.dir, "../../../../../../.."));
+const root = REPO_ROOT;
 const stagingDir = asAppPath(mkdtempSync(join(HOME_DIR, ".bp-cold-staging-")));
 const stages: Array<{ id: string; s: number }> = [];
 const t0 = performance.now();

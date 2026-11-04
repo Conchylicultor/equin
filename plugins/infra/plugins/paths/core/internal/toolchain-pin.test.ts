@@ -6,7 +6,7 @@ import {
 import { afterEach, describe, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { REPO_ROOT } from "./paths";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { toolchainPin } from "./toolchain-pin";
 
 const saved = readEnv("RELEASE");

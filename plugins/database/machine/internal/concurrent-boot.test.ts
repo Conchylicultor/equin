@@ -22,7 +22,7 @@
  */
 import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import { z } from "zod";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { sql } from "drizzle-orm";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";

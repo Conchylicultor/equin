@@ -22,12 +22,12 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join, relative } from "node:path";
 import { Resvg } from "@resvg/resvg-js";
 import {
-  REPO_ROOT,
   checkoutNamespace,
   checkoutRef,
   checkoutWorktreeName,
   worktreeArtifacts,
 } from "@plugins/infra/plugins/paths/server";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import {
   asNamespace,
   namespaceUrl,

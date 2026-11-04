@@ -1,4 +1,4 @@
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import {
   resolved,
   unresolved,

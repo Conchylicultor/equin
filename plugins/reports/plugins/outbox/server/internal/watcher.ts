@@ -5,7 +5,7 @@ import {
 } from "@plugins/infra/plugins/file-watcher/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { getMainRepoRoot } from "@plugins/infra/plugins/spawn/core";
 import { isReportKindRegistered } from "@plugins/reports/server";
 import { recordReport } from "@plugins/reports/plugins/engine/server";

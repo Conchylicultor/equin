@@ -1,8 +1,9 @@
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { describe, expect, test } from "bun:test";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   computeGlobalCssKey,
   parseCssImports,
@@ -49,7 +50,7 @@ describe("unionCandidates", () => {
 });
 
 describe("computeGlobalCssKey", () => {
-  const pluginsRoot = asAppPath(join(import.meta.dir, "../../../../../../.."));
+  const pluginsRoot = joinAppPath(REPO_ROOT, "plugins");
   const key = (candidates: string[]) =>
     computeGlobalCssKey({ pluginsRoot, minify: true, candidates });
 

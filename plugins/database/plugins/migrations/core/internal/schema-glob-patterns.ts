@@ -49,7 +49,11 @@ export const MIGRATIONS_PLUGIN_DIR = "plugins/database/plugins/migrations";
 /**
  * Hop from `MIGRATIONS_PLUGIN_DIR` back to the repo root. drizzle-kit resolves a
  * relative `schema` glob against its CWD (not against the config file), so
- * drizzle.config.ts must re-anchor each repo-relative pattern with this prefix. The hop
- * count is NOT eyeballed — the guard check asserts it lands exactly on the repo root.
+ * drizzle.config.ts must re-anchor each repo-relative pattern with this prefix.
+ * Derived from the dir itself, one `..` per segment, so a move of this plugin
+ * (which rewrites `MIGRATIONS_PLUGIN_DIR`) cannot leave a stale count; the
+ * guard check still asserts it lands exactly on the repo root.
  */
-export const REPO_ROOT_FROM_MIGRATIONS_DIR = "../../../..";
+export const REPO_ROOT_FROM_MIGRATIONS_DIR = MIGRATIONS_PLUGIN_DIR.split("/")
+  .map(() => "..")
+  .join("/");

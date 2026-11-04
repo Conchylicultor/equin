@@ -20,7 +20,7 @@ import {
   type Ready,
 } from "@plugins/infra/plugins/deps/deps";
 import { execContextForTests } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core/testing";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { BROWSER_EXECUTABLES_FILE } from "../../core";
 import {
   launchChromium,

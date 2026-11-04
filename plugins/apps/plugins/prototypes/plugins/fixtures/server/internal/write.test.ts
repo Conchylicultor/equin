@@ -48,7 +48,8 @@ import {
 } from "@plugins/framework/plugins/server-core/core/testing";
 import { createRequestHandler } from "@plugins/framework/plugins/http-router/core";
 import { unmatchedApiResponse } from "@plugins/infra/plugins/endpoints/core";
-import { PLUGINS_DIR, REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { injectFrameAgent } from "@plugins/primitives/plugins/embed/plugins/frame/plugins/agent/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import {
@@ -80,8 +81,8 @@ const SUBJECT_ENTRY = serverEntryFor(SUBJECT, [
 // and its companion pruner (`live-state-snapshot`'s `ChangelogRetention`),
 // without which the feed's `onReady` refuses to start.
 const HOST_PLUMBING = [
-  "database/plugins/change-feed",
-  "database/plugins/live-state-snapshot",
+  "network/plugins/live/plugins/change-feed",
+  "network/plugins/live/plugins/live-state-snapshot",
 ];
 
 // The providers of a host without the computer, as registry entries: none is

@@ -37,7 +37,8 @@ import {
   serverEntryFor,
 } from "@plugins/framework/plugins/server-core/core/testing";
 import { unmatchedApiResponse } from "@plugins/infra/plugins/endpoints/core";
-import { PLUGINS_DIR, REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { settleJobQueue } from "@plugins/infra/plugins/jobs/plugins/in-process/server";
 import { db } from "@plugins/database/server";
@@ -78,8 +79,8 @@ const CONSUMERS = [
  * which the feed's `onReady` refuses to start.
  */
 const HOST = [
-  "database/plugins/change-feed",
-  "database/plugins/live-state-snapshot",
+  "network/plugins/live/plugins/change-feed",
+  "network/plugins/live/plugins/live-state-snapshot",
 ];
 
 // The portable providers, as registry entries: none is in the app's registry

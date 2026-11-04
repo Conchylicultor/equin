@@ -1,6 +1,6 @@
 import { basename } from "path";
 import { defineFileSink } from "@plugins/infra/plugins/file-sink/core";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import {
   claimStackSampler,
   type StackSampler,

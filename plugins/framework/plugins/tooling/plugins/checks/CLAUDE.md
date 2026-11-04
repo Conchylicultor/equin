@@ -412,14 +412,15 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `packages/timed-fs` ×5
     - `infra/host-fs/user-path` ×4
     - `infra/launcher/env-names` ×3
-    - `infra/paths` ×3
     - `infra/spawn` ×3
     - `plugin-meta/parse-utils` ×3
     - `framework/tooling/collected-dir` ×2
+    - `infra/paths` ×2
     - `packages/macrotask-yield` ×2
     - `packages/thread-cpu-clock` ×2
     - `reports/outbox` ×2
     - `infra/file-sink.defineFileSink`
+    - `infra/paths/repo-root.REPO_ROOT`
     - `packages/flock.flockTry`
     - `packages/semaphore.createSemaphore`
     - `packages/single-flight.singleFlight`

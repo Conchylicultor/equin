@@ -437,19 +437,19 @@ remote is built here.
     - `resource.declare` "release.previews"
     - `resource.declare` "release.run-logs"
     - `resource.declare` "release.runs:rows"
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `release/bundles` ×6
     - `infra/jobs/supervised-job` ×3
     - `network/live` ×3
     - `infra/endpoints` ×2
     - `infra/entities` ×2
     - `infra/launcher` ×2
-    - `infra/paths` ×2
     - `database.db`
     - `ids.IdKinds`
     - `infra/file-watcher.acquireDirWatch`
     - `infra/git/git-read-cache.createSignedMemo`
     - `infra/git/git-watcher.refHeadServed`
+    - `infra/paths.worktreeArtifacts`
     - `infra/spawn/daemon.defineDaemon`
     - `primitives/log-channels.defineLogSink`
     - `tasks/task-category.TaskCategory`

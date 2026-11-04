@@ -1,3 +1,4 @@
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
 import {
@@ -8,7 +9,7 @@ import {
   type OrderedBabelContributions,
 } from "./vite-contributions";
 
-const repoRoot = join(import.meta.dir, "../../../../..");
+const repoRoot = REPO_ROOT;
 const pluginsRoot = join(repoRoot, "plugins");
 
 describe("babelPluginsFor", () => {

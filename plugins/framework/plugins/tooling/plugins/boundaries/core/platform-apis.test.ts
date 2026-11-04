@@ -1,3 +1,4 @@
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { builtinModules } from "node:module";
@@ -153,7 +154,7 @@ describe("platformValueUsesIn", () => {
   });
 
   // Real modules that use these names safely: they must stay clean.
-  const REPO = join(import.meta.dir, "../../../../../../..");
+  const REPO = REPO_ROOT;
   test("macrotask-yield reads setImmediate off globalThis, cleanly", () => {
     const path =
       "plugins/packages/plugins/macrotask-yield/core/internal/yield.ts";

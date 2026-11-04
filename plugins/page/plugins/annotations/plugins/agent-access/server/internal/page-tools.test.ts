@@ -30,7 +30,8 @@ import {
   serverEntries,
   serverEntryFor,
 } from "@plugins/framework/plugins/server-core/core/testing";
-import { PLUGINS_DIR, REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { db } from "@plugins/database/server";

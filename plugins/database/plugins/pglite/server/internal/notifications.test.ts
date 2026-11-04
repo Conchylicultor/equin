@@ -10,7 +10,7 @@ import { sql } from "drizzle-orm";
 import type { PGlite } from "@electric-sql/pglite";
 import type { TableLayoutRequirement } from "@plugins/framework/plugins/server-core/core";
 import { rebuildTriggers } from "@plugins/network/plugins/live/plugins/change-feed/server/testing";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { currentTxId, type Db } from "@plugins/database/server";
 import { snapshotWatermark } from "@plugins/database/server/testing";

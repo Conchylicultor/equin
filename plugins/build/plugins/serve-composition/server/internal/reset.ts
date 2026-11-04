@@ -53,7 +53,8 @@ import {
   assertServableCompositionNamespace,
   compositionsConfig,
 } from "@plugins/plugin-meta/plugins/composition/core";
-import { REPO_ROOT, checkoutRef } from "@plugins/infra/plugins/paths/server";
+import { checkoutRef } from "@plugins/infra/plugins/paths/server";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { configDir } from "@plugins/config_v2/data-dirs";
 import {
   namespaceFor,

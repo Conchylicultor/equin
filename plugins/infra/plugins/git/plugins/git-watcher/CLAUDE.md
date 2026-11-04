@@ -37,7 +37,6 @@ the durable emit that follows.
     - `infra/file-watcher.defineFileWatcher`
     - `infra/file-watcher.FileWatcher`
     - `infra/paths.GIT`
-    - `infra/paths.REPO_ROOT`
     - `infra/worktree.ensureMainWorktreeRoot`
     - `network/live.serveValue`
     - `primitives/commit-list.GitError`

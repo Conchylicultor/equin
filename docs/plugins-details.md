@@ -2383,20 +2383,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resource.declare` "deploy.run-history:groups"
               - `resource.declare` "deploy.run-history:rows"
               - `resource.declare` "deploy.runs"
-            - Uses: 26 symbols — full list in [`plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md)
+            - Uses: 25 symbols — full list in [`plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md)
               - `infra/jobs` ×3
               - `release/bundles` ×3
               - `release` ×3
               - `infra/endpoints` ×2
               - `infra/entities` ×2
               - `infra/jobs/supervised-job` ×2
-              - `infra/paths` ×2
               - `network/live` ×2
               - `apps/deploy/health.serverHealth`
               - `apps/deploy/servers._deployServers`
               - `config_v2.getConfig`
               - `database.db`
               - `ids.IdKinds`
+              - `infra/paths.worktreeArtifacts`
               - `infra/retention.defineRetention`
               - `primitives/log-channels.defineLogSink`
             - DB schema: `plugins/apps/plugins/deploy/plugins/deployments/server/internal/tables.ts`
@@ -2773,7 +2773,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/deployments._deployRuns`
               - `database.db`
               - `infra/git/git-watcher.refHeadServed`
-              - `infra/paths.REPO_ROOT`
               - `network/live.serveValue`
               - `release/bundles.countCommitsBehind`
               - `release/bundles.readCommitSubject`
@@ -13599,7 +13598,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/admin.ensureDatabase`
           - `infra/endpoints.implement`
           - `infra/paths.checkoutRef`
-          - `infra/paths.REPO_ROOT`
           - `infra/worktree.ensureMainWorktreeRoot`
           - `infra/worktree.hasCompositionMarker`
           - `infra/worktree.loadCompositionMarker`
@@ -13688,7 +13686,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `infra/host-fs.serveHostPath`
       - `infra/host/host-read-pool.withHeavyReadSlot`
       - `infra/paths.GIT`
-      - `infra/paths.REPO_ROOT`
       - `infra/worktree.ensureMainWorktreeRoot`
       - `network/live.serveValue`
       - `primitives/commit-list.parseDiffNameStatusZ`
@@ -27658,14 +27655,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/timed-fs` ×5
               - `infra/host-fs/user-path` ×4
               - `infra/launcher/env-names` ×3
-              - `infra/paths` ×3
               - `infra/spawn` ×3
               - `plugin-meta/parse-utils` ×3
               - `framework/tooling/collected-dir` ×2
+              - `infra/paths` ×2
               - `packages/macrotask-yield` ×2
               - `packages/thread-cpu-clock` ×2
               - `reports/outbox` ×2
               - `infra/file-sink.defineFileSink`
+              - `infra/paths/repo-root.REPO_ROOT`
               - `packages/flock.flockTry`
               - `packages/semaphore.createSemaphore`
               - `packages/single-flight.singleFlight`
@@ -28257,14 +28255,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: 23 symbols — full list in [`plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md)
               - `framework/cli/cli-name` ×3
               - `infra/host-fs/user-path` ×3
-              - `infra/paths` ×3
               - `packages/timed-fs` ×3
               - `framework/cli/foreground-handoff` ×2
               - `framework/tooling/collected-dir` ×2
               - `framework/tooling/guards/refusal-format` ×2
               - `infra/launcher/env-names` ×2
               - `infra/namespace` ×2
+              - `infra/paths` ×2
               - `framework/plugin-id.PLUGIN_MANIFEST_KEY`
+              - `infra/paths/repo-root.REPO_ROOT`
             - Exports (types):
               - `AllowVerdict`
               - `BuiltinTool`
@@ -28386,6 +28385,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/exempt.ruleIdProblems`
               - `infra/host-fs/user-path.AppPath`
               - `infra/host-fs/user-path.joinAppPath`
+              - `infra/paths/repo-root.REPO_ROOT`
               - `packages/timed-fs.existsSync`
               - `packages/timed-fs.readdirSync`
               - `packages/timed-fs.readFileSync`
@@ -31156,7 +31156,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/file-watcher.defineFileWatcher`
               - `infra/file-watcher.FileWatcher`
               - `infra/paths.GIT`
-              - `infra/paths.REPO_ROOT`
               - `infra/worktree.ensureMainWorktreeRoot`
               - `network/live.serveValue`
               - `primitives/commit-list.GitError`
@@ -31677,9 +31676,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/resize.ts`, `server/internal/sweep.ts` (debt)
         - **`user-path`** — Which host paths a synchronous fs call may touch: AppPath (a path the app owns — its data dirs, its checkout; the only kind a sync fs call in runtime code may take) and UserPath (one the user or their config chose), with the type-aware lint that refuses a sync fs call on any path not proven app-owned — so a macOS Files & Folders prompt can never freeze a backend's JS thread, whether or not anyone marked the user's path.
           - Cross-plugin:
-            - Imported by: 27 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
+            - Imported by: 28 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
               - `framework` ×8
-              - `infra` ×7
+              - `infra` ×8
               - `packages` ×3
               - `plugin-meta` ×3
               - `fields` ×2
@@ -31705,6 +31704,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/launcher/env-names` (0 debt)
               - `infra/launcher/login-services` (0 debt)
               - `infra/paths` (0 debt)
+              - `infra/paths/repo-root` (0 debt)
               - `infra/spawn` (0 debt)
               - `infra/worktree` (0 debt)
               - `packages/signal-origin` (0 debt)
@@ -32050,9 +32050,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`supervised-job`** — Out-of-process work as an ordinary job: defineSupervisedJob composes defineJob + a supervised-run kind into a handler that claims, spawns detached and SUSPENDS — so no worker slot is held while the child runs — then wakes on the supervisedRun.ended event, re-reads the child's exit marker (the authority; the event is only a wake-up) and records the outcome, surviving any number of backend restarts in between.
           - Server:
             - Contributes: `fork-data-exclusion` "supervised_job_runs"
-            - Uses: 22 symbols — full list in [`plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md`](../plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md)
+            - Uses: 21 symbols — full list in [`plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md`](../plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md)
               - `infra/jobs` ×8
-              - `infra/paths` ×5
+              - `infra/paths` ×4
               - `infra/file-watcher` ×2
               - `infra/host/host-admission` ×2
               - `database/admin.ExcludeFromFork`
@@ -32600,7 +32600,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `ndjsonResponse`
     - **`paths`** — Canonical machine paths, plus the boot-time publication of this namespace's declared data-dir set so an audit running in another checkout can tell one of this branch's directories from an orphan.
       - Core:
-        - Uses: 28 symbols — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Uses: 29 symbols — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `packages/timed-fs` ×8
           - `infra/namespace` ×7
           - `infra/launcher/env-names` ×4
@@ -32608,6 +32608,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/product-name` ×2
           - `infra/runtime-identity` ×2
           - `framework/tooling/collected-dir.defineCollectedDir`
+          - `infra/paths/repo-root.REPO_ROOT`
           - `infra/spawn.getMainRepoRoot`
         - Exports (types):
           - `AppIdentity`
@@ -32661,7 +32662,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readHomeDataRootLayout`
           - `relativeToDataRoot`
           - `releaseIdentity`
-          - `REPO_ROOT`
           - `repoConfigDir`
           - `resolveCheckoutDeploy`
           - `SERVER_CORE_RELATIVE`
@@ -32672,19 +32672,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 41 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 39 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `debug` ×8
           - `infra` ×6
           - `framework` ×5
           - `backup` ×4
           - `release` ×3
-          - `apps` ×2
           - `build` ×2
           - `conversations` ×2
           - `plugin-meta` ×2
           - `primitives` ×2
+          - `apps/deploy/deployments`
           - `code-explorer`
-          - `reports/outbox`
           - `review/plugin-changes`
           - `stats/cost`
           - `toolchain`
@@ -32740,7 +32739,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `publishDataDirsManifest`
           - `relativeToDataRoot`
           - `releaseIdentity`
-          - `REPO_ROOT`
           - `repoConfigDir`
           - `RUN_ARTIFACTS_RETENTION`
           - `RUN_TERMINAL_SUFFIX`
@@ -32894,6 +32892,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SECRETS_DIR_DISPLAY`
               - `USER_CONFIG_DIR_DISPLAY`
               - `WORKTREES_DIR_DISPLAY`
+        - **`repo-root`** — REPO_ROOT — the checkout this code runs from, the one place any file gets it. Derived without counting ../ (its own repo-relative dir is a literal `./equin plugin move` rewrites; a stale one throws at load), and the repo-root/no-depth-counted-path lint rejects a ../ chain from a file's own location that leaves its plugin, so moving a plugin cannot silently re-aim a path.
+          - Core:
+            - Uses:
+              - `infra/host-fs/user-path.AppPath`
+              - `infra/host-fs/user-path.asAppPath`
+            - Exports (values): `REPO_ROOT`
+          - Cross-plugin:
+            - Imported by:
+              - `framework/tooling/checks`
+              - `framework/tooling/guards`
+              - `framework/tooling/lint`
+              - `infra/paths`
+              - `plugin-meta/barrel-import`
+              - `reports/outbox`
+          - Exemptions:
+            - Exempts itself from: `user-path/no-unproven-claim` — `core/internal/repo-root.ts` (sanctioned)
         - **`root-migration`** — `./equin data-dir migrate`: moves an install's data root from the legacy home dir to ~/.equin (and its local backups beside it) in one run, with every other process of the app stopped — rewrites every stored copy of the old path (each database in the cluster, the files under the root, Claude Code's transcript dirs), drops the cache entries that hold it, removes the legacy name once a scan finds none left and no checkout of the repo still runs code from before the move (otherwise keeps it as a link and names those checkouts), and relabels the gateway's login service dev.equin.gateway. A dry run by default; --apply executes.
     - **`request-origin`** — Who caused a request: the two provenance headers an automated browser session stamps on every request it issues, the WriteOrigin type a durable write records, and the single reading of those headers. A leaf — string literals and one Request read, no node:*, no db — so the e2e harness that SETS the headers and the server plugins that ACT on them share one spelling.
       - Core:
@@ -39200,6 +39214,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `framework/slot-declaration.trackSlotSites`
           - `infra/namespace.asNamespace`
+          - `infra/paths/repo-root.REPO_ROOT`
           - `infra/runtime-identity.declareRuntimeNamespace`
           - `infra/runtime-identity.hasRuntimeNamespace`
           - `infra/stack-sampler.withThreadActivity`
@@ -48888,19 +48903,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `resource.declare` "release.previews"
       - `resource.declare` "release.run-logs"
       - `resource.declare` "release.runs:rows"
-    - Uses: 28 symbols — full list in [`plugins/release/REFERENCE.md`](../plugins/release/REFERENCE.md)
+    - Uses: 27 symbols — full list in [`plugins/release/REFERENCE.md`](../plugins/release/REFERENCE.md)
       - `release/bundles` ×6
       - `infra/jobs/supervised-job` ×3
       - `network/live` ×3
       - `infra/endpoints` ×2
       - `infra/entities` ×2
       - `infra/launcher` ×2
-      - `infra/paths` ×2
       - `database.db`
       - `ids.IdKinds`
       - `infra/file-watcher.acquireDirWatch`
       - `infra/git/git-read-cache.createSignedMemo`
       - `infra/git/git-watcher.refHeadServed`
+      - `infra/paths.worktreeArtifacts`
       - `infra/spawn/daemon.defineDaemon`
       - `primitives/log-channels.defineLogSink`
       - `tasks/task-category.TaskCategory`
@@ -49809,7 +49824,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register: `defineFileWatcher('reports-outbox.outbox-dir')`
       - Core:
         - Uses:
-          - `infra/paths.REPO_ROOT`
+          - `infra/paths/repo-root.REPO_ROOT`
           - `infra/spawn.getMainRepoRoot`
           - `infra/spawn.spawnCaptured`
           - `packages/timed-fs.readdir`

@@ -3,10 +3,8 @@ import { loadCollectedDir } from "@plugins/framework/plugins/tooling/plugins/col
 import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
 import { recordFsWaits } from "@plugins/debug/plugins/profiling/plugins/fs-wait/server";
-import {
-  checkoutNamespace,
-  REPO_ROOT,
-} from "@plugins/infra/plugins/paths/core";
+import { checkoutNamespace } from "@plugins/infra/plugins/paths/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { isCliCommand, isCliEntryPresent, type CliCommand } from "../core";
 import { cliEntries } from "../core/cli.generated";
 import { registerCommands } from "./register-commands";

@@ -8,12 +8,8 @@ import { dirname, join, relative, sep } from "node:path";
 // Relative sibling import: this file lives INSIDE the `paths` plugin, so the
 // `@plugins/infra/plugins/paths/core` alias would cycle back through the barrel
 // that re-exports it.
-import {
-  isHostSingleton,
-  isRelease,
-  REPO_ROOT,
-  resolveDataRoot,
-} from "./paths";
+import { isHostSingleton, isRelease, resolveDataRoot } from "./paths";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 
 // The declared-directory registry for `~/.equin/`.
 //

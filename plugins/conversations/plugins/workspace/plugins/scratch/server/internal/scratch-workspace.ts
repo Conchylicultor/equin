@@ -9,7 +9,7 @@ import {
 } from "@plugins/conversations/plugins/workspace/server";
 import { GUARD_SCRIPTS } from "@plugins/framework/plugins/tooling/plugins/guards/plugins/agent-policy/core";
 import { namespaceUrl } from "@plugins/infra/plugins/namespace/core";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { scratchWorkspacesDir } from "../../data-dirs";
 import { assertDirTrusted } from "../../core";

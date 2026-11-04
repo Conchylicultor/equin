@@ -113,7 +113,7 @@ pass the same `code` field.
   - Register: `defineFileWatcher('reports-outbox.outbox-dir')`
 - Core:
   - Uses:
-    - `infra/paths.REPO_ROOT`
+    - `infra/paths/repo-root.REPO_ROOT`
     - `infra/spawn.getMainRepoRoot`
     - `infra/spawn.spawnCaptured`
     - `packages/timed-fs.readdir`

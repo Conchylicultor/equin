@@ -7,7 +7,7 @@ import {
 } from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
 import { and, eq, like } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { defineServerContribution } from "@plugins/framework/plugins/server-core/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { _tasks } from "@plugins/tasks/plugins/tasks-core/server";

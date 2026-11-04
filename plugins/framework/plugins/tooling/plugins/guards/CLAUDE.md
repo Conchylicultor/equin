@@ -231,14 +231,15 @@ can blind or deafen all of them at once.
   - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/cli/cli-name` ×3
     - `infra/host-fs/user-path` ×3
-    - `infra/paths` ×3
     - `packages/timed-fs` ×3
     - `framework/cli/foreground-handoff` ×2
     - `framework/tooling/collected-dir` ×2
     - `framework/tooling/guards/refusal-format` ×2
     - `infra/launcher/env-names` ×2
     - `infra/namespace` ×2
+    - `infra/paths` ×2
     - `framework/plugin-id.PLUGIN_MANIFEST_KEY`
+    - `infra/paths/repo-root.REPO_ROOT`
   - Exports (types):
     - `AllowVerdict`
     - `BuiltinTool`

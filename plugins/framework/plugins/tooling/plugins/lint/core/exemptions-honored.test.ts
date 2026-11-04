@@ -8,10 +8,11 @@
 //   - "report" (the type-check worker): the rule stays on, and the exemption
 //     index the worker filters messages through matches the target.
 
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { describe, expect, it } from "bun:test";
 import { statSync } from "fs";
 import { join } from "path";
-import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+
 import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
 import {
   createExemptionIndex,
@@ -25,8 +26,7 @@ import {
   loadLintContributions,
 } from "./build-lint-config";
 
-// This file's location, seven folders down from the repo root.
-const ROOT = asAppPath(join(import.meta.dir, "../../../../../../.."));
+const ROOT = REPO_ROOT;
 
 /** A file the exemption covers: the target itself, or one inside it. */
 function probeOf(e: ResolvedExemption): string {

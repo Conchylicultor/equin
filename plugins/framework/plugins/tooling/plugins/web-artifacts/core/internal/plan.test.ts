@@ -1,3 +1,4 @@
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -235,7 +236,7 @@ describe("eagerWebTargets (the preload-seed selection, a pure membership test)",
 });
 
 describe("planFleet with an injected fleet source", () => {
-  const repoRoot = asAppPath(join(import.meta.dir, "../".repeat(8)));
+  const repoRoot = REPO_ROOT;
   const tmp = asAppPath(mkdtempSync(join(tmpdir(), "fleet-source-test-")));
   afterAll(() => rmSync(tmp, { recursive: true, force: true }));
 

@@ -5,6 +5,7 @@
 //
 //   ./equin run plugins/framework/plugins/tooling/plugins/web-artifacts/scripts/own-files-equivalence.ts
 
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import {
   readdirSync,
   existsSync,
@@ -12,17 +13,14 @@ import {
 import { join, relative } from "node:path";
 import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
-import {
-  asAppPath,
-  joinAppPath,
-} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   hashedRootsFor,
   isHashedFile,
   listOwnFiles,
 } from "../core/internal/own-files";
 
-const root = asAppPath(join(import.meta.dir, "../../../../../../.."));
+const root = REPO_ROOT;
 const pluginsRoot = joinAppPath(root, "plugins");
 const snapshot = await loadRepoSnapshot(root);
 

@@ -40,9 +40,8 @@ and every descendant in one step. Design:
    moved `package.json` `"name"` (`packageNameFor` + codegen's
    `withPackageName`) so no install sees a stale or duplicate workspace name.
 5. **Reports**: per-kind edit counts and per-file edits; `@source` globs that
-   covered the old location and will not cover the new one; moved files that
-   compute paths from their own location (`import.meta.dir` / `__dirname`) when
-   the depth changes; the namespaces whose saved settings sit under the old
+   covered the old location and will not cover the new one; the namespaces
+   whose saved settings sit under the old
    slash path; the `plugin_health_reviews` ids that orphan.
 6. **Records the move** in the committed ledger `core/plugin-moves.json`
    (`appendPluginMove`), in the same diff as the code.

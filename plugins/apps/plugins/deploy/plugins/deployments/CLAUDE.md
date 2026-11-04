@@ -524,20 +524,20 @@ default, a left rail revealing each (`useRevealSection`).
     - `resource.declare` "deploy.run-history:groups"
     - `resource.declare` "deploy.run-history:rows"
     - `resource.declare` "deploy.runs"
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/jobs` ×3
     - `release/bundles` ×3
     - `release` ×3
     - `infra/endpoints` ×2
     - `infra/entities` ×2
     - `infra/jobs/supervised-job` ×2
-    - `infra/paths` ×2
     - `network/live` ×2
     - `apps/deploy/health.serverHealth`
     - `apps/deploy/servers._deployServers`
     - `config_v2.getConfig`
     - `database.db`
     - `ids.IdKinds`
+    - `infra/paths.worktreeArtifacts`
     - `infra/retention.defineRetention`
     - `primitives/log-channels.defineLogSink`
   - DB schema: `plugins/apps/plugins/deploy/plugins/deployments/server/internal/tables.ts`

@@ -6,7 +6,7 @@ import {
   pushFiles,
   type CommitFiles,
 } from "@plugins/code-explorer/plugins/code-api/core";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { resolveCheckoutRoot } from "./checkout-root";
 import { getRangeFiles } from "./get-push-files";
 import { pushRangeReads, resolvePushRange } from "./push-range";

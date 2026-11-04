@@ -6,11 +6,12 @@
 //
 //   ./equin run plugins/framework/plugins/tooling/plugins/web-artifacts/scripts/spike-multi-entry.ts [--n 40] [--one-by-one]
 
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import type { Rolldown } from "vite";
 
-const root = join(import.meta.dir, "../../../../../../..");
+const root = REPO_ROOT;
 const nAt = process.argv.indexOf("--n");
 const n = nAt > 0 ? Number(process.argv[nAt + 1]) : 40;
 const generated = readFileSync(

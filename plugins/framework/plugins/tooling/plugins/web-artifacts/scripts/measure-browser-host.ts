@@ -6,13 +6,14 @@
 //
 //   ./equin run plugins/framework/plugins/tooling/plugins/web-artifacts/scripts/measure-browser-host.ts [--minify] [--json <file>]
 
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { writeFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { gzipSync } from "node:zlib";
 import type { Rolldown } from "vite";
 import { isBrowserHostSpecifier } from "../core/browser-host-specifier";
 
-const root = join(import.meta.dir, "../../../../../../..");
+const root = REPO_ROOT;
 const entry = join(
   root,
   "plugins/apps/plugins/website/plugins/demos/plugins/lumen/bin/browser-host.ts",

@@ -3,7 +3,8 @@ import { relative } from "node:path";
 import { configFileRelPath, configRawFile } from "../../core";
 import { serveValue } from "@plugins/network/plugins/live/machine";
 import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
-import { REPO_ROOT, repoConfigDir } from "@plugins/infra/plugins/paths/server";
+import { repoConfigDir } from "@plugins/infra/plugins/paths/server";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import {
   configRegistryReady,
   configWatcherArmed,

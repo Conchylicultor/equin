@@ -11,6 +11,7 @@
  * (research/2026-10-22-global-live-bounds-independent-of-freshness.md, B5).
  */
 
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -21,7 +22,7 @@ import {
 import type { ListShape } from "@plugins/packages/plugins/list-bound/core";
 import type { LiveValueShape } from "./live-value";
 
-const ROOT = resolve(import.meta.dir, "../../../../../..");
+const ROOT = REPO_ROOT;
 
 /** A declaration statement (`… = liveValue("key"` / `liveCollection("key"`), never a doc comment's example. */
 const DECLARATION_RE =

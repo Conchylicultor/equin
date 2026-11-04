@@ -15,16 +15,14 @@
 //
 // Plan: research/2026-10-30-global-build-pipeline-step3b-batched-artifacts-and-repo-snapshot.md (Phase 0).
 
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { setEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
 import { loadBabelContributions } from "@plugins/framework/plugins/web-core/core";
 import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
-import {
-  asAppPath,
-  joinAppPath,
-} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 // The store's dirs freeze at first import (store.ts): point the data root at a
 // throwaway dir BEFORE any web-artifacts module loads (they load below, by
@@ -40,7 +38,7 @@ const n = Number(arg("n", "60"));
 const kind = arg("kind", "web");
 const only = arg("only", "");
 
-const root = asAppPath(join(import.meta.dir, "../../../../../../.."));
+const root = REPO_ROOT;
 const pluginsRoot = joinAppPath(root, "plugins");
 
 const { planFleet } = await import("../core/internal/plan");

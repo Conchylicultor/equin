@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { ServerContribution } from "@plugins/framework/plugins/server-core/core";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { committedDocument, committedFilesFromMap } from "../../core";
 import { ConfigGitLayer } from "../internal/host-services";
 

@@ -136,19 +136,6 @@ function printPlan(plan: MovePlan, dryRun: boolean): void {
   }
 }
 
-/**
- * Files in the moved subtree that locate other files relative to their own
- * directory at runtime. A depth change breaks them and no locator can rewrite
- * them (the path is computed, not written), so they are listed for review.
- */
-function selfLocatingFiles(
-  files: readonly string[],
-  texts: Map<string, string>,
-): string[] {
-  const re = /import\.meta\.(?:dir|dirname|url)\b|__dirname/;
-  return files.filter((f) => re.test(texts.get(f) ?? ""));
-}
-
 /** Ledger entries the working tree has and HEAD does not: this diff's moves. */
 async function uncommittedMoves(root: string) {
   const working = readPluginMoves(asAppPath(root));
@@ -305,19 +292,6 @@ const run: CliAction<[string, string], { dryRun?: boolean }> = async (
   });
 
   printPlan(plan, dryRun);
-
-  const selfLocating = selfLocatingFiles(movedFiles, texts);
-  const depthChange = to.dir.split("/").length !== from.dir.split("/").length;
-  if (depthChange && selfLocating.length > 0) {
-    console.log(``);
-    console.log(
-      `REVIEW — the plugin changes depth, and these files compute paths from their own location`,
-    );
-    console.log(
-      `(import.meta.dir / __dirname); a "../" count in them may now be off:`,
-    );
-    for (const f of selfLocating) console.log(`  ${f}`);
-  }
 
   if (!dryRun) {
     for (const r of plan.renames) {

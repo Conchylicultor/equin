@@ -1,3 +1,4 @@
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { afterEach, describe, expect, test } from "bun:test";
 import { dlopen } from "bun:ffi";
 import { closeSync, mkdirSync, openSync, rmSync, writeFileSync } from "node:fs";
@@ -34,13 +35,8 @@ function isSlotHeld(slotsDir: string, i: number): boolean {
 // `packages/flock`). Tests spawn it directly to stand in for an out-of-process
 // slot holder.
 const FLOCK_WAIT_PATH = join(
-  import.meta.dir,
-  "..",
-  "..",
-  "..",
-  "flock",
-  "scripts",
-  "flock-wait.ts",
+  REPO_ROOT,
+  "plugins/packages/plugins/flock/scripts/flock-wait.ts",
 );
 
 // This very module, imported by the separate-process probe below. The probe must run
@@ -53,17 +49,8 @@ const HOST_SEMAPHORE_MODULE = join(import.meta.dir, "host-semaphore.ts");
 // `bun -e` snippet has no file of its own for an `@plugins/*` alias to resolve
 // against.
 const PATHS_CORE_MODULE = join(
-  import.meta.dir,
-  "..",
-  "..",
-  "..",
-  "..",
-  "..",
-  "infra",
-  "plugins",
-  "paths",
-  "core",
-  "index.ts",
+  REPO_ROOT,
+  "plugins/infra/plugins/paths/core/index.ts",
 );
 
 // A one-shot fixture (run via `bun -e`): construct the named pool and acquire+release

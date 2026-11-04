@@ -12,7 +12,8 @@ import { experimentalMarksConfig } from "@plugins/framework/plugins/cli/plugins/
 import { db } from "@plugins/database/server";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { namespaceFor } from "@plugins/infra/plugins/namespace/core";
-import { REPO_ROOT, checkoutRef } from "@plugins/infra/plugins/paths/server";
+import { checkoutRef } from "@plugins/infra/plugins/paths/server";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { interactiveMandate } from "@plugins/tasks/plugins/mandate-presets/core";
 import {
   _attempts,

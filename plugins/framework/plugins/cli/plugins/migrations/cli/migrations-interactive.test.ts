@@ -17,7 +17,7 @@ import {
   drizzleGenerateArgv,
   MIGRATIONS_PLUGIN_DIR,
 } from "@plugins/database/plugins/migrations/core";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import {
   runDrizzleKitWithPrompts,
   type MigrationAnswer,

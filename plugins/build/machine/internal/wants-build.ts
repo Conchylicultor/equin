@@ -5,7 +5,8 @@ import {
 import { and, arrayContains, desc, eq, isNotNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { getConfig } from "@plugins/config_v2/server";
-import { REPO_ROOT, checkoutRef } from "@plugins/infra/plugins/paths/server";
+import { checkoutRef } from "@plugins/infra/plugins/paths/server";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { _buildRuns } from "@plugins/build/plugins/run-ledger/server";
 import {
   MAIN_COMPOSITION_ID,

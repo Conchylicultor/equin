@@ -23,7 +23,7 @@ Design: `research/2026-10-31-global-sync-fs-app-path.md`.
 
 ## Where `AppPath` comes from
 
-- **Named sources** — `infra/paths` (`REPO_ROOT`, `PLUGINS_DIR`, the data
+- **Named sources** — `infra/paths/repo-root` (`REPO_ROOT`); `infra/paths` (`PLUGINS_DIR`, the data
   root, `worktreesDir()` / `worktreeDataDir()` / `worktreeArtifacts.*`,
   `webDistDir()`, `repoConfigDir()`, the backups dirs, `CLAUDE_*`, every data
   dir's `.path` / `.file()` / `.ensure()` and `subdir()` area); `infra/spawn`'s
@@ -110,9 +110,9 @@ out-of-scope folders.
 
 - Description: Which host paths a synchronous fs call may touch: AppPath (a path the app owns — its data dirs, its checkout; the only kind a sync fs call in runtime code may take) and UserPath (one the user or their config chose), with the type-aware lint that refuses a sync fs call on any path not proven app-owned — so a macOS Files & Folders prompt can never freeze a backend's JS thread, whether or not anyone marked the user's path.
 - Cross-plugin:
-  - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework` ×8
-    - `infra` ×7
+    - `infra` ×8
     - `packages` ×3
     - `plugin-meta` ×3
     - `fields` ×2
@@ -138,6 +138,7 @@ out-of-scope folders.
     - `infra/launcher/env-names` (0 debt)
     - `infra/launcher/login-services` (0 debt)
     - `infra/paths` (0 debt)
+    - `infra/paths/repo-root` (0 debt)
     - `infra/spawn` (0 debt)
     - `infra/worktree` (0 debt)
     - `packages/signal-origin` (0 debt)

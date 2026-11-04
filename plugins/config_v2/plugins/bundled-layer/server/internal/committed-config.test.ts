@@ -11,7 +11,7 @@ import {
   committedFilesFromMap,
   parseConfigFile,
 } from "@plugins/config_v2/core";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { reorderableSlots } from "@plugins/reorder/server/testing";
 

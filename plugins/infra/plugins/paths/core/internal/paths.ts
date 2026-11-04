@@ -27,14 +27,12 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import {
   readHomeDataRootLayout,
   type DataRootLayout,
 } from "./data-root-layout";
 
-export const REPO_ROOT = asAppPath(
-  resolve(import.meta.dir, "..", "..", "..", "..", "..", ".."),
-);
 export const PLUGINS_DIR = joinAppPath(REPO_ROOT, "plugins");
 
 /**

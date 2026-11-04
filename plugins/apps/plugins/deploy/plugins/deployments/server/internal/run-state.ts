@@ -38,7 +38,7 @@ import {
 } from "./verb-outcome";
 import { _deployRuns } from "./tables";
 import { deployRunIdKind } from "../../core/id-kinds";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { _releaseRuns } from "@plugins/release/server";
 import { readCommitSubject } from "@plugins/release/plugins/bundles/server";
 import { releaseRunIdKind } from "@plugins/release/plugins/bundles/core";

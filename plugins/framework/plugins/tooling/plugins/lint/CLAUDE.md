@@ -159,6 +159,7 @@ its disable does not cover. Parameters and imports have no in-file value.
     - `framework/tooling/exempt.ruleIdProblems`
     - `infra/host-fs/user-path.AppPath`
     - `infra/host-fs/user-path.joinAppPath`
+    - `infra/paths/repo-root.REPO_ROOT`
     - `packages/timed-fs.existsSync`
     - `packages/timed-fs.readdirSync`
     - `packages/timed-fs.readFileSync`

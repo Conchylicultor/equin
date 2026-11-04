@@ -1,5 +1,6 @@
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
-import { REPO_ROOT, checkoutRef } from "@plugins/infra/plugins/paths/server";
+import { checkoutRef } from "@plugins/infra/plugins/paths/server";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { loadCompositionMarker } from "@plugins/infra/plugins/worktree/server";
 import {
   namespaceFor,

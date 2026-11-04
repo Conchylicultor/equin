@@ -5,17 +5,15 @@
 //
 //   ./equin run plugins/framework/plugins/tooling/plugins/web-artifacts/scripts/css-scope-diff.ts <deployed.css>
 
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
-import {
-  asAppPath,
-  joinAppPath,
-} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { dirname, join } from "node:path";
+import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { dirname } from "node:path";
 import { compile, optimize } from "@tailwindcss/node";
 import { Scanner } from "@tailwindcss/oxide";
 import { globalCssSource } from "../core/internal/global-css";
 
-const root = asAppPath(join(import.meta.dir, "../../../../../../.."));
+const root = REPO_ROOT;
 const appCssFile = globalCssSource(joinAppPath(root, "plugins"));
 const compiler = await compile(readFileSync(appCssFile, "utf8"), {
   base: dirname(appCssFile),

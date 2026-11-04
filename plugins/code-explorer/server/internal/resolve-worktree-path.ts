@@ -6,7 +6,7 @@ import {
   type WorkspaceKind,
 } from "@plugins/conversations/plugins/workspace/core";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { resolveCheckoutRoot } from "./checkout-root";
 
 export const MAIN_WORKTREE = "main";

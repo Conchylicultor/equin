@@ -171,7 +171,6 @@ remote health gate.
     - `apps/deploy/deployments._deployRuns`
     - `database.db`
     - `infra/git/git-watcher.refHeadServed`
-    - `infra/paths.REPO_ROOT`
     - `network/live.serveValue`
     - `release/bundles.countCommitsBehind`
     - `release/bundles.readCommitSubject`

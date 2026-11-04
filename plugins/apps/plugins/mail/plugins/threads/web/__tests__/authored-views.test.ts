@@ -1,3 +1,4 @@
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -40,9 +41,7 @@ import { mailThreadsSource } from "../internal/source";
  * Spam tab showing the inbox.
  */
 const CONFIG_PATH = join(
-  __dirname,
-  // __tests__ → web → threads → plugins → mail → plugins → apps → plugins → repo root
-  "../../../../../../../..",
+  REPO_ROOT,
   "config/apps/mail/threads/mail-threads.jsonc",
 );
 

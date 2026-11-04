@@ -1,9 +1,7 @@
 import { ESLintUtils } from "@typescript-eslint/utils";
 import { SOURCE_REPO_URL } from "@plugins/framework/plugins/product-name/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import type { LintRuleDocs } from "./build-lint-config";
-
-/** The repo root as a URL, from this file's own place in it (`plugins/framework/plugins/tooling/plugins/lint/core/`). */
-const REPO_ROOT = new URL("../../../../../../../", import.meta.url).href;
 
 /**
  * The one rule creator every lint rule is made with:
@@ -16,11 +14,13 @@ const REPO_ROOT = new URL("../../../../../../../", import.meta.url).href;
  * `rule-kind-safety/no-raw-rule-creator` keeps `ESLintUtils.RuleCreator` out of rule files.
  */
 export function lintRuleCreator(ruleModuleUrl: string) {
-  if (!ruleModuleUrl.startsWith(REPO_ROOT)) {
+  const file = decodeURIComponent(new URL(ruleModuleUrl).pathname);
+  const root = `${REPO_ROOT}/`;
+  if (!file.startsWith(root)) {
     throw new Error(
       `lintRuleCreator: ${ruleModuleUrl} is outside the repo root ${REPO_ROOT}; pass the rule file's own import.meta.url`,
     );
   }
-  const url = `${SOURCE_REPO_URL}/blob/main/${ruleModuleUrl.slice(REPO_ROOT.length)}`;
+  const url = `${SOURCE_REPO_URL}/blob/main/${file.slice(root.length)}`;
   return ESLintUtils.RuleCreator<LintRuleDocs>(() => url);
 }

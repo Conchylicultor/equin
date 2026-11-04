@@ -12,6 +12,7 @@
  *   must notice — while its main thread is stuck in synchronous work, which is
  *   the type-check worker's shape.
  */
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { afterEach, expect, test } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
@@ -22,8 +23,8 @@ import { spawnPassthrough } from "./internal/spawn-passthrough";
 
 const SPAWN_MODULE = join(import.meta.dir, "index.ts");
 const LIFELINE_MODULE = join(
-  import.meta.dir,
-  "../../../../packages/plugins/flock/core/index.ts",
+  REPO_ROOT,
+  "plugins/packages/plugins/flock/core/index.ts",
 );
 
 /** Bounded wait for a test-only condition (a readiness gate, not app logic). */

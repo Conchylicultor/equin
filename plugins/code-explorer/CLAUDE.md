@@ -77,7 +77,6 @@ list, push and resolve GET routes are deleted. Only the image route stays — an
     - `infra/host-fs.serveHostPath`
     - `infra/host/host-read-pool.withHeavyReadSlot`
     - `infra/paths.GIT`
-    - `infra/paths.REPO_ROOT`
     - `infra/worktree.ensureMainWorktreeRoot`
     - `network/live.serveValue`
     - `primitives/commit-list.parseDiffNameStatusZ`

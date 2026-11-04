@@ -2,7 +2,7 @@ import { chmod, copyFile, mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { defineScratchProfile } from "@plugins/conversations/plugins/workspace/server";
 import { getAttachment } from "@plugins/infra/plugins/attachments/server";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { transcriptionDep } from "../../deps";
 import { awaitDepReady } from "./dep-ready";
 import { transcriptionInstructions } from "./instructions";

@@ -5,7 +5,7 @@ import {
   spawnCaptured,
   spawnPassthrough,
 } from "@plugins/infra/plugins/spawn/core";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import type { Grant } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import type { Dep, DepSource, Ready } from "./dep";
 import { readyNow } from "./ensure";

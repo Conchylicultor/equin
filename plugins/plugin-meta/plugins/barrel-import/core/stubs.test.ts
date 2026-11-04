@@ -1,3 +1,4 @@
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
 import { importBarrel, registerBarrelStubs } from "./internal/stubs";
@@ -8,7 +9,7 @@ import { importBarrel, registerBarrelStubs } from "./internal/stubs";
 // React stub fails here instead of in codegen.
 describe("registerBarrelStubs", () => {
   test("a barrel importing any real React / react-dom export loads", async () => {
-    registerBarrelStubs(resolve(import.meta.dir, "../../../../.."));
+    registerBarrelStubs(REPO_ROOT);
     const mod = await importBarrel(
       resolve(import.meta.dir, "testing/react-exports-fixture.ts"),
     );

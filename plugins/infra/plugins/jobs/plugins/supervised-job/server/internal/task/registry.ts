@@ -1,7 +1,7 @@
 import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 import type { z } from "zod";
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import type { HostPoolId } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import {

@@ -9,18 +9,16 @@
 //
 //   ./equin run plugins/framework/plugins/tooling/plugins/web-artifacts/scripts/measure-tailwind.ts [--runs 3]
 
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { writeFileSync } from "node:fs";
 import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
-import {
-  asAppPath,
-  joinAppPath,
-} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { dirname, join } from "node:path";
 import { compile, optimize } from "@tailwindcss/node";
 import { Scanner } from "@tailwindcss/oxide";
 import { globalCssSource } from "../core/internal/global-css";
 
-const root = asAppPath(join(import.meta.dir, "../../../../../../.."));
+const root = REPO_ROOT;
 const runsAt = process.argv.indexOf("--runs");
 const runs = runsAt > 0 ? Number(process.argv[runsAt + 1]) : 3;
 const appCssFile = globalCssSource(joinAppPath(root, "plugins"));

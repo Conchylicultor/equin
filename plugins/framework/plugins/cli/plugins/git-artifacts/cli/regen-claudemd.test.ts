@@ -1,3 +1,4 @@
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { afterAll, describe, expect, test } from "bun:test";
 import {
   existsSync,
@@ -15,12 +16,8 @@ import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 // matters is what GIT concludes from the driver (clean vs `UU`), which no
 // direct invocation of the script can show.
 const DRIVER = join(
-  import.meta.dir,
-  "..",
-  "..",
-  "..",
-  "scripts",
-  "regen-claudemd.sh",
+  REPO_ROOT,
+  "plugins/framework/plugins/cli/scripts/regen-claudemd.sh",
 );
 
 const BEGIN =

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import type {
   StackSample,
   StackSampler,

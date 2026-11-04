@@ -5,9 +5,10 @@
  * fails here rather than leaving the lint message pointing at nothing.
  */
 
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+
 import ts from "typescript";
 import {
   RESULT_CONSTRUCTORS,
@@ -15,8 +16,7 @@ import {
   resultConstructorsMessage,
 } from "./result-constructors";
 
-/** The repo root: this file sits at plugins/network/plugins/live/plugins/live-state/lint/. */
-const ROOT = fileURLToPath(new URL("../../../../../../../", import.meta.url));
+const ROOT = `${REPO_ROOT}/`;
 
 /** The value (non-type) names a barrel exports. */
 function valueExports(barrel: string): Set<string> {

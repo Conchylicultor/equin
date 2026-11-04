@@ -50,6 +50,7 @@ mark the check-thread watch could only call that time `native (anonymous)`.
   - Uses:
     - `framework/slot-declaration.trackSlotSites`
     - `infra/namespace.asNamespace`
+    - `infra/paths/repo-root.REPO_ROOT`
     - `infra/runtime-identity.declareRuntimeNamespace`
     - `infra/runtime-identity.hasRuntimeNamespace`
     - `infra/stack-sampler.withThreadActivity`

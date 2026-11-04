@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createContext } from "../context";
 import type { Verdict } from "../types";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { bunScriptGuard } from "./bun-script";
 import {
   asAppPath,

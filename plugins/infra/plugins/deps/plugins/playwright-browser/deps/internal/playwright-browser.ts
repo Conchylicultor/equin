@@ -7,7 +7,7 @@ import type {
   BrowserType,
   LaunchOptions,
 } from "playwright";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 import type {
   DepSource,

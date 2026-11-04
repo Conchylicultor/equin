@@ -4313,6 +4313,10 @@
       "name": "@equin/plugin-infra-paths-display",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/paths/plugins/repo-root": {
+      "name": "@equin/plugin-infra-paths-repo-root",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/paths/plugins/root-migration": {
       "name": "@equin/plugin-infra-paths-root-migration",
       "version": "0.0.1",
@@ -9233,6 +9237,8 @@
     "@equin/plugin-infra-paths-data-files-memory": ["@equin/plugin-infra-paths-data-files-memory@workspace:plugins/infra/plugins/paths/plugins/data-files/plugins/memory"],
 
     "@equin/plugin-infra-paths-display": ["@equin/plugin-infra-paths-display@workspace:plugins/infra/plugins/paths/plugins/display"],
+
+    "@equin/plugin-infra-paths-repo-root": ["@equin/plugin-infra-paths-repo-root@workspace:plugins/infra/plugins/paths/plugins/repo-root"],
 
     "@equin/plugin-infra-paths-root-migration": ["@equin/plugin-infra-paths-root-migration@workspace:plugins/infra/plugins/paths/plugins/root-migration"],
 

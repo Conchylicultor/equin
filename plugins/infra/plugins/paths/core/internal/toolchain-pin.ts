@@ -1,5 +1,6 @@
 import { join } from "node:path";
-import { isRelease, REPO_ROOT } from "./paths";
+import { isRelease } from "./paths";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 
 /**
  * The environment that makes a mise shim resolve THIS checkout's toolchain from
