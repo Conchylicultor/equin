@@ -52,6 +52,7 @@ inch above it.
     - `apps/events/events-core.useEventSourceRun`
     - `apps/events/events-core.useRunEvents`
     - `apps/events/sources/source-detail/runs.EventSourceRunDetail`
+    - `network/live.rowOrStale`
     - `network/live/live-state.foldResource`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`

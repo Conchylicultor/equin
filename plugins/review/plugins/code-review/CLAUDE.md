@@ -9,13 +9,13 @@
   - Contributes:
     - `ReviewSlots.Section` "Code Review" → `CodeReviewSection`
     - `ConfigV2.WebRegister` "config"
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/collapsible` ×7
     - `network/live/live-state` ×3
     - `config_v2` ×2
     - `conversations/conversation-view/code` ×2
+    - `network/live` ×2
     - `conversations.useConversationById`
-    - `network/live.useLive`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`

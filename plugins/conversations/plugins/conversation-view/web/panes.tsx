@@ -1,4 +1,4 @@
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useLive, rowOrStale } from "@plugins/network/plugins/live/web";
 import {
   Pane,
   resolveRow,
@@ -38,5 +38,5 @@ function useConversationTitle({
 }: {
   convId: string;
 }): string | undefined {
-  return useConversationById(convId)?.title ?? undefined;
+  return rowOrStale(useConversationById(convId))?.title ?? undefined;
 }

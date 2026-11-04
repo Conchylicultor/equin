@@ -5,7 +5,11 @@ import {
   useCombinedResources,
   type ResourceResult,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { mapRow, useLive } from "@plugins/network/plugins/live/web";
+import {
+  mapRow,
+  useLive,
+  type LiveRowResult,
+} from "@plugins/network/plugins/live/web";
 import {
   conversationsActive,
   conversationsById,
@@ -120,24 +124,17 @@ export function useActiveConversations(): ResourceResult<ConversationEntry[]> {
   return useLive(conversationsActive);
 }
 
-// Point lookup by id, as a row or `null` — for a surface whose contract is
-// "the conversation, or nothing to show yet". `null` while the by-id read
-// loads, when no conversation has the id, and when the read failed with
-// nothing seen (its last-seen row first). Any conversation resolves live,
-// however old (W9) — there is no REST fallback, and a close no longer moves
-// the row between two lists, so there is no in-transit gap to paper over.
+// Point lookup by id, as the read itself: `loading`, `error` (its last-seen
+// row as `stale`), then `ready` and `found: true` with the row, or `found:
+// false` when no conversation has the id — so "not loaded yet" and "no such
+// conversation" never reach a caller as the same value. Any conversation
+// resolves live, however old (W9). A `null` id is `found: false` from the
+// first render. A body under the conversation pane's resolve guard (which
+// paints Loading / error / Not Found itself) reduces it with `rowOrStale`.
 export function useConversationById(
   id: string | null,
-): ConversationEntry | null {
-  const row = useLive(conversationsById, { id });
-  switch (row.status) {
-    case "loading":
-      return null;
-    case "error":
-      return row.stale ?? null;
-    case "ready":
-      return row.found ? row.row : null;
-  }
+): LiveRowResult<ConversationEntry> {
+  return useLive(conversationsById, { id });
 }
 
 // A worktree's slug is the basename of its checkout path — the key the op log

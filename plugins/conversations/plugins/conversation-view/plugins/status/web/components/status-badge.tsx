@@ -8,7 +8,7 @@ import {
   STUCK_TURN_WAITING_FOR,
   type ConversationEntry,
 } from "@plugins/conversations/core";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useLive, rowOrStale } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   Button,
@@ -59,7 +59,7 @@ function prettify(status: ConversationStatus): string {
 
 export function StatusBadge() {
   const { convId } = conversationPane.useParams();
-  const conversation = useConversationById(convId);
+  const conversation = rowOrStale(useConversationById(convId));
   if (!conversation) return null;
   return <StatusChip conversation={conversation} />;
 }
@@ -151,7 +151,7 @@ function FailedToStartChip({
   conversationId: string;
   failure: SpawnFailure;
 }) {
-  const conversation = useConversationById(conversationId);
+  const conversation = rowOrStale(useConversationById(conversationId));
   const retry = useRetryLaunch();
   const machine = useMachineAvailability(retryLaunchEndpoint);
   const [open, setOpen] = useState(false);

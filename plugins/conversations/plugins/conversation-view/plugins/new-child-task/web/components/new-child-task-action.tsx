@@ -1,3 +1,4 @@
+import { rowOrStale } from "@plugins/network/plugins/live/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
@@ -9,7 +10,7 @@ const addIcon = symbol("add");
 
 export function NewChildTaskAction() {
   const { convId } = conversationPane.useParams();
-  const conversation = useConversationById(convId);
+  const conversation = rowOrStale(useConversationById(convId));
   if (!conversation) return null;
   return (
     <TaskDraftPopover

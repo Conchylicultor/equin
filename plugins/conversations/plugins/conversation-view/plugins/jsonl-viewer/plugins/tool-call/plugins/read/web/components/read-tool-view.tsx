@@ -1,3 +1,4 @@
+import { rowOrStale } from "@plugins/network/plugins/live/web";
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
@@ -54,7 +55,7 @@ export function ReadToolView({ event }: ToolRendererProps) {
     limit,
   } = (event.input ?? {}) as Partial<ReadInput>;
   const { convId } = conversationPane.useParams();
-  const conversation = useConversationById(convId);
+  const conversation = rowOrStale(useConversationById(convId));
 
   if (!conversation) return null;
 

@@ -2,7 +2,7 @@ import {
   ResourceErrorInline,
   useCombinedResources,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useLive, rowOrStale } from "@plugins/network/plugins/live/web";
 import {
   Avatar,
   DEFAULT_AGENT_AVATAR,
@@ -20,7 +20,7 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 export function AgentAvatarTitlePrefix() {
   const { convId } = conversationPane.useParams();
-  const conversation = useConversationById(convId);
+  const conversation = rowOrStale(useConversationById(convId));
   const launchesResult = useLive(agentLaunchRows);
   const agentsResult = useLive(agentRows);
   const combined = useCombinedResources({

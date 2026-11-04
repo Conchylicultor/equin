@@ -10,6 +10,7 @@
     - `conversations.useConversationById`
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view/code/file-pane.filePeekPane`
+    - `network/live.rowOrStale`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/inline.Inline`
     - `primitives/css/text.Text`

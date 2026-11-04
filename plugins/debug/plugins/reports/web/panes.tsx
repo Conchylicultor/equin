@@ -5,7 +5,7 @@ import {
   useOpenPane,
   type ResolveResult,
 } from "@plugins/primitives/plugins/pane/web";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useLive, rowOrStale } from "@plugins/network/plugins/live/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import {
   reportsList,
@@ -37,8 +37,7 @@ function useReportTitle({
 }: {
   reportId: string;
 }): string | undefined {
-  const row = useLive(reportsList, { id: reportId });
-  return row.status === "ready" && row.found ? row.row.kind : undefined;
+  return rowOrStale(useLive(reportsList, { id: reportId }))?.kind;
 }
 
 export const reportDetailPane = Pane.define({

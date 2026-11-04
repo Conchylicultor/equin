@@ -1,3 +1,4 @@
+import { rowOrStale } from "@plugins/network/plugins/live/web";
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
@@ -17,7 +18,7 @@ export function FloatingTemplateChips({
 }: PromptEditorActionProps) {
   const { convId } = conversationPane.useParams();
   // `useConversationById` answers with the live row (its by-id read).
-  const live = useConversationById(convId);
+  const live = rowOrStale(useConversationById(convId));
   const { templates, pinnedCount } = useConfig(promptTemplatesConfig);
   const sendConversationTurn = useSendConversationTurn();
   const sendAvailability = useTurnSendAvailability();

@@ -23,7 +23,10 @@ import {
   eventRunIdKind,
   type EventSourceRun,
 } from "@plugins/apps/plugins/events/plugins/events-core/core";
-import type { LiveRowResult } from "@plugins/network/plugins/live/web";
+import {
+  rowOrStale,
+  type LiveRowResult,
+} from "@plugins/network/plugins/live/web";
 import {
   RUN_OUTCOME_LABEL,
   RUN_OUTCOME_VARIANT,
@@ -79,28 +82,9 @@ function useResolveRun({ runId }: { runId: string }): ResolveResult {
   return resolveRow(useEventSourceRun(runId));
 }
 
-/**
- * The run the pane is showing, if any: the fresh row, or — on a failed read
- * that already saw it — the last-seen one (the resolve hook keeps the pane up
- * on it). The title and the summary both read this, so they cannot disagree
- * about whether there is a run on screen.
- */
-function shownRun(
-  row: LiveRowResult<EventSourceRun>,
-): EventSourceRun | undefined {
-  switch (row.status) {
-    case "loading":
-      return undefined;
-    case "error":
-      return row.stale;
-    case "ready":
-      return row.found ? row.row : undefined;
-  }
-}
-
 /** The outcome — how a person picks one run out of a ledger. */
 function useRunTitle({ runId }: { runId: string }): string | undefined {
-  const run = shownRun(useEventSourceRun(runId));
+  const run = rowOrStale(useEventSourceRun(runId));
   return run && `${RUN_OUTCOME_LABEL[run.outcome]} run`;
 }
 
@@ -137,7 +121,7 @@ function RunSummaryArm({
 }: {
   row: LiveRowResult<EventSourceRun>;
 }): ReactNode {
-  const run = shownRun(row);
+  const run = rowOrStale(row);
   if (run !== undefined) return <RunSummary run={run} />;
   switch (row.status) {
     case "loading":

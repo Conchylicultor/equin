@@ -17,6 +17,7 @@
     - `conversations/conversation-view/pending-turn.useOptimisticConversationStatus`
     - `conversations/conversation-view/resume.useRetryLaunch`
     - `infra/endpoints.useMachineAvailability`
+    - `network/live.rowOrStale`
     - `network/live.useLive`
     - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/badge.formatStatusLabel`

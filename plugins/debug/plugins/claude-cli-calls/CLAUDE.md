@@ -17,12 +17,12 @@
     - `Pane.Register` "claude-cli-calls"
     - `DebugApp.Sidebar` "Claude CLI Calls"
   - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/pane` ×7
+    - `primitives/pane` ×6
     - `primitives/data-view` ×4
     - `infra/claude-cli` ×2
+    - `network/live` ×2
     - `apps/debug/shell.DebugApp`
     - `conversations/model-provider.familyClass`
-    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Inset`

@@ -11,6 +11,7 @@
   - Uses:
     - `conversations.useConversationById`
     - `conversations/conversation-view/code.gitStatusBadge`
+    - `network/live.RowView`
     - `primitives/collapsible.CollapsibleChevron`
     - `primitives/collapsible.FoldMotion`
     - `primitives/collapsible.useCollapsible`

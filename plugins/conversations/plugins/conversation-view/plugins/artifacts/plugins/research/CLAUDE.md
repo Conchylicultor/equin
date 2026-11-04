@@ -39,6 +39,7 @@ so only the date comes off those.
     - `conversations/conversation-view/artifacts.ArtifactRow`
     - `conversations/conversation-view/artifacts.ConversationArtifacts`
     - `conversations/conversation-view/code/file-pane.filePeekPane`
+    - `network/live.rowOrStale`
     - `primitives/css/spacing.Stack`
     - `primitives/pane.useOpenPane`
 - Server:

@@ -10,7 +10,7 @@ import {
   type RefObject,
 } from "react";
 import { growClass } from "@plugins/primitives/plugins/css/plugins/grow/web";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useLive, rowOrStale } from "@plugins/network/plugins/live/web";
 import {
   Pane,
   PaneChrome,
@@ -502,7 +502,7 @@ function useBlockCrumb(blockId: string, type: string): string {
   const row = useLive(pageBlocks, { id: blockId });
   // Not known yet, failed, or gone: the type's label — the editor below reads
   // the page's forest and renders the failure.
-  const block = row.status === "ready" && row.found ? row.row : undefined;
+  const block = rowOrStale(row);
   const text = block === undefined ? "" : textOf(block).trim();
   return text === "" ? label : text;
 }

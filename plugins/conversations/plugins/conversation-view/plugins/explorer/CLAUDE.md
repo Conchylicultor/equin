@@ -44,6 +44,7 @@ reverse. The pane's id and segment predate this plugin (it moved out of
     - `conversations.useConversationById`
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view/action-bar.Conversation`
+    - `network/live.rowOrStale`
     - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/icon-button.IconButton`

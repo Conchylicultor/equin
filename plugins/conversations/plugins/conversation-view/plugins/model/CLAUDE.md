@@ -11,6 +11,7 @@
     - `conversations.useConversationById`
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view/header.HeaderChip`
+    - `network/live.rowOrStale`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`

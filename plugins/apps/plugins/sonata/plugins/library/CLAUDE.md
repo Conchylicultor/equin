@@ -289,14 +289,14 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `Library.SongActions` "delete" → `DeleteSongAction`
     - `Pane.Register` "sonata-library"
     - `Pane.Register` "sonata-player"
-  - Uses: 93 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 94 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×13
     - `primitives/data-view` ×7
     - `apps/sonata/shell` ×6
     - `network/live/live-state` ×6
+    - `network/live` ×6
     - `primitives/css/ui-kit` ×6
     - `apps/sonata/player` ×5
-    - `network/live` ×5
     - `apps/sonata/document` ×4
     - `infra/endpoints` ×3
     - `primitives/persistent-draft` ×3

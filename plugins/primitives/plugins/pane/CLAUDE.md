@@ -115,6 +115,8 @@ export const taskDetailPane = Pane.define({
     `found`.
   - Over a live read use `resolveFrom(result, isFound)`, over a row read
     (`useLive(c, { id })`) `resolveRow(row)`.
+    The body then reads the same row with live/web's `rowOrStale(row)`
+    (`undefined` = loading: the guard has answered absence).
   - The guard paints Loading / error with Retry / Not Found; once `found` it
     stays mounted through later `pending`/`error` (only `missing` unmounts).
   - Never answer `found` or `pending` for a failed read.
@@ -904,7 +906,6 @@ with an empty route.
     - `resolveRow`
     - `restoreRoute`
     - `routeHomeApp`
-    - `rowOrStale`
     - `setBasePath`
     - `setHistoryAdapter`
     - `setLiveStore`

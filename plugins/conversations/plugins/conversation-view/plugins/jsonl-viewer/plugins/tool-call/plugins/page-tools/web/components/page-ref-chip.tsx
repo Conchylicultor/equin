@@ -1,12 +1,8 @@
-import { type LiveRowResult, useLive } from "@plugins/network/plugins/live/web";
+import { useLive, rowOrStale } from "@plugins/network/plugins/live/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
-import {
-  pageData,
-  pagesTree,
-  type PageRow,
-} from "@plugins/page/plugins/editor/core";
+import { pageData, pagesTree } from "@plugins/page/plugins/editor/core";
 import { pageDetailPane } from "@plugins/apps/plugins/pages/plugins/page-tree/web";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -15,22 +11,6 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 function shortenBlockId(id: string): string {
   const body = id.startsWith("block-") ? id.slice("block-".length) : id;
   return body.length > 8 ? `${body.slice(0, 8)}…` : body;
-}
-
-/**
- * The page row as far as it is known: the found row, or — on a failed re-read —
- * the row as last seen. `undefined` while loading, when absent, or when it
- * failed before it was ever seen.
- */
-function seenPage(result: LiveRowResult<PageRow>): PageRow | undefined {
-  switch (result.status) {
-    case "loading":
-      return undefined;
-    case "error":
-      return result.stale;
-    case "ready":
-      return result.found ? result.row : undefined;
-  }
 }
 
 /** The row's target as the only thing known about it: its id. */
@@ -77,7 +57,7 @@ export function PageRefChip({
   if (!id) return null;
   // A failed read keeps the page as last seen, else falls back to the same
   // raw id — the honest partial answer, as while loading.
-  const page = seenPage(byPage) ?? seenPage(byBlock);
+  const page = rowOrStale(byPage) ?? rowOrStale(byBlock);
   if (!page) return <BlockIdBadge id={id} />;
 
   const { title: rawTitle, icon } = pageData(page);

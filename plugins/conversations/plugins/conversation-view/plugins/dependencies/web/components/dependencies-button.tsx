@@ -1,4 +1,4 @@
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useLive, rowOrStale } from "@plugins/network/plugins/live/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, useMemo, useCallback, type ReactElement } from "react";
 import {
@@ -48,7 +48,7 @@ const resolvedIcon = symbol("swap-vert");
  */
 export function DependenciesButton(): ReactElement | null {
   const { convId } = conversationPane.useParams();
-  const conversation = useConversationById(convId);
+  const conversation = rowOrStale(useConversationById(convId));
   const tasksResult = useLive(taskRows);
   const activeResult = useActiveConversations();
   const combined = useCombinedResources({

@@ -20,6 +20,13 @@ export default [
       "The substrate: the live API's serve and read halves are compiled onto the old live-resource spellings (the runtime's resources, query-resource's compilers, live-state's useResource / useResources).",
   },
   {
+    rule: "live/no-row-absence-collapse",
+    paths: ["web/internal/row-or-stale.ts"],
+    kind: "sanctioned",
+    reason:
+      "rowOrStale is the one named spelling of a row read reduced to the row as far as known (loading and absent both undefined), for the surfaces whose rendering is the same either way; the rule points everyone else here.",
+  },
+  {
     rule: "live/no-endpoint-read",
     paths: ["web"],
     kind: "sanctioned",

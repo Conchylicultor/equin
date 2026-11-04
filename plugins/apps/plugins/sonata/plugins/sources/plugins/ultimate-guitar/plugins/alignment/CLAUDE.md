@@ -225,10 +225,10 @@ The job's transcript goes to the `sonata-ug-alignment` log channel.
     - `Sonata.Effect` "ug-recording-video" → `UgRecordingVideo`
     - `SonataRecording.Refused` "ug-video-refused" → `ReportVideoRefused`
     - `FieldPresentation.Register` "exposure:sonata_songs_ext_ug_alignment"
-  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/sonata/recording` ×5
+    - `network/live` ×4
     - `infra/endpoints` ×3
-    - `network/live` ×3
     - `primitives/css/spacing` ×3
     - `primitives/css/ui-kit` ×3
     - `primitives/css/badge` ×2

@@ -1,3 +1,4 @@
+import { rowOrStale } from "@plugins/network/plugins/live/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -7,7 +8,9 @@ import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 
 export function AuthorDisplay({ author }: { author: string | null }) {
   const isUser = !author || author === "user";
-  const authorConversation = useConversationById(isUser ? null : author);
+  const authorConversation = rowOrStale(
+    useConversationById(isUser ? null : author),
+  );
   const authorTask = useTask(authorConversation?.taskId);
   const openPane = useOpenPane();
 

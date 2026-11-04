@@ -7,7 +7,7 @@ import {
   useOpenPane,
   type ResolveResult,
 } from "@plugins/primitives/plugins/pane/web";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useLive, rowOrStale } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   deployApp,
@@ -75,13 +75,13 @@ export const sitePane = Pane.define({
 
 function SiteBody(): ReactElement {
   const { deploymentId } = sitePane.useParams();
-  const row = useLive(deployments, { id: deploymentId });
+  const deployment = rowOrStale(useLive(deployments, { id: deploymentId }));
   return (
     <PaneChrome pane={sitePane}>
       {/* `useResolve` has already gated loading / error / gone: the body only
           ever renders once the row is found. */}
-      {row.status === "ready" && row.found ? (
-        <SitePage deployment={row.row} />
+      {deployment !== undefined ? (
+        <SitePage deployment={deployment} />
       ) : (
         <Loading variant="rows" />
       )}

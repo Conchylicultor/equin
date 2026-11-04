@@ -1,4 +1,4 @@
-import { useLive } from "@plugins/network/plugins/live/web";
+import { RowView, useLive } from "@plugins/network/plugins/live/web";
 import { combineResources } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -24,15 +24,23 @@ export function CodeReviewSummary({
   conversationId: string;
   source: unknown;
 }) {
-  const conversation = useConversationById(conversationId);
   // Render nothing until the conversation — and so its attempt — is known: the
-  // stats row's visibility depends on that attempt's pushes.
-  if (!conversation) return null;
+  // stats row's visibility depends on that attempt's pushes. A deleted one is
+  // answered by the review pane itself.
   return (
-    <AttemptCodeReviewSummary
-      conversationId={conversationId}
-      attemptId={conversation.attemptId}
-    />
+    <RowView
+      row={useConversationById(conversationId)}
+      fallback={null}
+      missing={null}
+      subject="the conversation"
+    >
+      {(conversation) => (
+        <AttemptCodeReviewSummary
+          conversationId={conversationId}
+          attemptId={conversation.attemptId}
+        />
+      )}
+    </RowView>
   );
 }
 

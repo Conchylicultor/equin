@@ -62,23 +62,3 @@ export function resolveRow<Row>(row: LiveRowResult<Row>): ResolveResult {
       return row.found ? FOUND : MISSING;
   }
 }
-
-/**
- * The row a pane BODY renders off a by-id row read (`useLive(c, { id })`) its resolve
- * guard already answered: the found row, else — on a failed re-read — the row
- * as last seen (`stale`), else `undefined`, which the body renders as its
- * loading state (never an empty one: the guard has said the row exists).
- *
- * The body's twin of {@link resolveRow}: where that keeps a pane whose read
- * failed but still holds its row `found`, this hands the body that row.
- */
-export function rowOrStale<Row>(row: LiveRowResult<Row>): Row | undefined {
-  switch (row.status) {
-    case "loading":
-      return undefined;
-    case "error":
-      return row.stale;
-    case "ready":
-      return row.found ? row.row : undefined;
-  }
-}

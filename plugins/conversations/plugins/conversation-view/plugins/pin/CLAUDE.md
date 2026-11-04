@@ -11,6 +11,7 @@
     - `conversations.useConversationById`
     - `conversations/conversation-view.conversationPane`
     - `infra/endpoints.useFetchEndpoint`
+    - `network/live.rowOrStale`
     - `network/live.useLive`
     - `network/live/live-state.ResourceErrorInline`
     - `primitives/hover-reveal.hoverRevealTargetInAnchor`

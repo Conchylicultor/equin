@@ -1,3 +1,4 @@
+import { rowOrStale } from "@plugins/network/plugins/live/web";
 import type { ReactNode } from "react";
 import {
   ConversationItem,
@@ -79,18 +80,17 @@ export function ConversationRow({ conv, ...chrome }: ConversationRowProps) {
 /**
  * The same row for a surface that holds only an id it has not resolved.
  *
- * `useConversationById` resolves any conversation live (its by-id read). It
- * answers `null` both while that read loads and when the conversation is
- * genuinely gone, and those two are indistinguishable from here — so the row
- * shows the raw id rather than claiming either. It stays clickable in that
- * state on purpose: the common `null` is "still loading", and going dead on it
- * would make a live link dead for its first frame.
+ * `useConversationById` resolves any conversation live (its by-id read).
+ * Until it has the row — while it loads, and when there is no such
+ * conversation — the row shows the raw id: the true value, claiming neither.
+ * It stays clickable on purpose: the common case is "still loading", and the
+ * conversation pane it opens answers a missing one with its own Not Found.
  */
 export function ConversationRowById({
   convId,
   ...chrome
 }: ConversationRowByIdProps) {
-  const conv = useConversationById(convId);
+  const conv = rowOrStale(useConversationById(convId));
   if (conv) return <ConversationRow conv={conv} {...chrome} />;
   return (
     <ConversationRowShell convId={convId} title={convId} {...chrome}>

@@ -108,6 +108,7 @@ rename throws before anything has changed.
     - `infra/endpoints.getEndpointErrorMessage`
     - `infra/endpoints.useFetchEndpoint`
     - `infra/endpoints.useMachineAvailability`
+    - `network/live.rowOrStale`
     - `network/live.useLiveReader`
     - `network/live/live-state.ResourceError`
     - `primitives/css/spacing.Stack`

@@ -1,3 +1,4 @@
+import { rowOrStale } from "@plugins/network/plugins/live/web";
 import { useEffect, useRef } from "react";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { useMarkConversationViewed } from "@plugins/conversations/plugins/hibernation/web";
@@ -21,7 +22,7 @@ import { FileLinksWorkspaceProvider } from "@plugins/primitives/plugins/file-lin
 
 export function ConversationView() {
   const { convId } = conversationPane.useParams();
-  const conversation = useConversationById(convId);
+  const conversation = rowOrStale(useConversationById(convId));
   const markConversationViewed = useMarkConversationViewed();
 
   // Selection signal for idle hibernation: opening (or switching to) a
@@ -33,7 +34,8 @@ export function ConversationView() {
   // transcript (which renders from disk, independent of the live process).
   const markedId = useRef<string | null>(null);
   useEffect(() => {
-    if (conversation === null || markedId.current === conversation.id) return;
+    if (conversation === undefined || markedId.current === conversation.id)
+      return;
     markedId.current = conversation.id;
     void markConversationViewed(conversation);
   }, [conversation, markConversationViewed]);

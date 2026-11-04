@@ -352,6 +352,15 @@ state or limit change.
     on one: an explicit set is code-built, the caller's to get right.
   - Runtime dispatch is by value — `query.id !== undefined` (a `null` id still
     counts) — after the value branch.
+  - **Not found is an answer, never loading.** Render the arms with
+    `<RowView row missing fallback? subject?>` (`missing` required); a pane
+    with a `:param` answers them in its resolve guard (`resolveRow`). The
+    one reduction of a row read to `Row | undefined` (loading and absent
+    alike) is `rowOrStale(row)` — for a body under a resolve guard, a title
+    with a fallback, a chip showing nothing or the raw id. Hand-writing that
+    reduction (or drawing `<Loading>` on `!found`) is the lint
+    `live/no-row-absence-collapse` (no debt; `rowOrStale`'s own file is the
+    sanctioned exemption).
 - **One collection signature.** Every 2-argument collection read — window,
   grouping, count, `{ ids }`, `{ id }`, `all`'s `{ select }`, a scope's
   `{ where }` — is ONE `useLive` signature (`web/internal/use-live.ts`), and a
@@ -1255,7 +1264,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
 
 ## Plugin reference
 
-- Description: Unified live-resource API, read half: useLive (a collection's window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, grown by its limit, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — an explicit id set, or one row by id — `{ id }`: loading, failed, found, or determinately absent — all through one collection signature, so a wrong option errors on its own property), useLiveReader (the one read function beside useLive: one answer to one tuple of a liveValue, for a question an event asks and its own await consumes — its pushed value when observed, else one deduped HTTP read never written to the cache; refused / unavailable typed by the declaration), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple); every collection's window — and a key-range-paged liveValue — is read as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small — given a measured viewport (useLive(c, q, { viewport })) with no depth limit, the pages near it live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows, and without one every page live, capped at maxLimit rows; FieldPresentation.Register presents an owner's fields — an entity's own, an extension's exposed ones, a union arm's, a collection's own — with their cells, widths and live options in every list that reaches the owner, read by useFieldPresentations. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven — or from an external source with notify(); the serve call decides only the freshness, never the shape: every list's bound is the liveValue's own (its schema's list-bound markers), so a serve call takes no `unbounded`; pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a key-range-paged one — external only — is loaded one key range at a time, each answer checked against its range and minted its `$key`, notify(q) reaching every subscribed page and the per-question meta sibling, and sliceRange answers a range for a list held in memory) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a collection reaching an entity compiles at boot, folding every LiveColumns.Expose contribution of an extension exposing fields of it — and a `scopedColumns` collection every LiveColumns.Scoped set, in the scope each query names — into its rows' `$columns`; routed through the change feed, or — with `changes` — the same compiled SQL served off it, for a table its owner opted out) — or, `source: "external"`, from a source outside Postgres that answers window / rows / groups / count / all by hand (core's serveCollectionOn: every answer checked against the row schema, every window row's `$key` minted, notify() re-reading the subscribed tuples); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
+- Description: Unified live-resource API, read half: useLive (a collection's window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, grown by its limit, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — an explicit id set, or one row by id — `{ id }`: loading, failed, found, or determinately absent — all through one collection signature, so a wrong option errors on its own property), useLiveReader (the one read function beside useLive: one answer to one tuple of a liveValue, for a question an event asks and its own await consumes — its pushed value when observed, else one deduped HTTP read never written to the cache; refused / unavailable typed by the declaration), with mapRow reducing a row read to a ResourceResult of what the row means, RowView rendering one with a required not-found arm, and rowOrStale the one sanctioned reduction of it to the row as far as known (for a guarded pane body, a title, a chip); useLive also reads a typed-query liveValue (its question encoded to one canonical tuple); every collection's window — and a key-range-paged liveValue — is read as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small — given a measured viewport (useLive(c, q, { viewport })) with no depth limit, the pages near it live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows, and without one every page live, capped at maxLimit rows; FieldPresentation.Register presents an owner's fields — an entity's own, an extension's exposed ones, a union arm's, a collection's own — with their cells, widths and live options in every list that reaches the owner, read by useFieldPresentations. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven — or from an external source with notify(); the serve call decides only the freshness, never the shape: every list's bound is the liveValue's own (its schema's list-bound markers), so a serve call takes no `unbounded`; pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a key-range-paged one — external only — is loaded one key range at a time, each answer checked against its range and minted its `$key`, notify(q) reaching every subscribed page and the per-question meta sibling, and sliceRange answers a range for a list held in memory) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a collection reaching an entity compiles at boot, folding every LiveColumns.Expose contribution of an extension exposing fields of it — and a `scopedColumns` collection every LiveColumns.Scoped set, in the scope each query names — into its rows' `$columns`; routed through the change feed, or — with `changes` — the same compiled SQL served off it, for a table its owner opted out) — or, `source: "external"`, from a source outside Postgres that answers window / rows / groups / count / all by hand (core's serveCollectionOn: every answer checked against the row schema, every window row's `$key` minted, notify() re-reading the subscribed tuples); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
 - Web:
   - Slots:
     - `FieldPresentation.Register`
@@ -1268,12 +1277,14 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `network/live/live-state.ResourceDerivation`
     - `network/live/live-state.ResourceDescriptor`
     - `network/live/live-state.ResourceError`
+    - `network/live/live-state.ResourceErrorInline`
     - `network/live/live-state.ResourceResult`
     - `network/live/live-state.ResourceTupleResult`
     - `network/live/live-state.ResourceUnavailable`
     - `network/live/live-state.useNotificationsClient`
     - `network/live/live-state.useResource`
     - `network/live/live-state.useResources`
+    - `primitives/loading.Loading`
     - `primitives/log-channels.clientLog`
     - `primitives/networking.useTransport`
     - `primitives/slot-render.renderIsolated`
@@ -1301,6 +1312,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LiveValuePagesOptions`
     - `PagesTruncation`
     - `PresentationOwner`
+    - `RowViewProps`
     - `SendLaneKey`
     - `StoredClientFieldsResolution`
     - `StoredFieldPresentation`
@@ -1325,6 +1337,8 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `REJECTION_MESSAGE_MAX`
     - `renderClientFieldsResolver`
     - `resourceSendLaneKey`
+    - `rowOrStale`
+    - `RowView`
     - `useClientFieldsResolvers`
     - `useClockParam`
     - `useClockPin`
@@ -1621,11 +1635,11 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `serveValueOn`
     - `sliceRange`
 - Cross-plugin:
-  - Imported by: 318 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×84
-    - `conversations` ×52
+  - Imported by: 340 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×86
+    - `conversations` ×69
+    - `tasks` ×33
     - `debug` ×32
-    - `tasks` ×32
     - `infra` ×22
     - `page` ×15
     - `active-data` ×13
@@ -1634,11 +1648,12 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `stats` ×5
     - `code-explorer` ×4
     - `plugin-meta` ×4
+    - `review` ×4
     - `auth` ×3
     - `reports` ×3
-    - `review` ×3
     - `ui` ×3
     - `apps-core` ×2
+    - `backup` ×2
     - `config_v2` ×2
     - `database` ×2
     - `hints` ×2
@@ -1646,7 +1661,6 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `integrations` ×2
     - `release` ×2
     - `search` ×2
-    - `backup/runs-arm`
     - `fields/secret/config`
     - `network/live/optimistic-mutation`
     - `runs`
@@ -1656,6 +1670,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
 - Exemptions:
   - Exempts itself from:
     - `live/no-legacy-resource-spelling` — `central/internal/serve-value.ts`, `server/internal/serve-collection.ts`, `server/internal/serve-off-feed.ts`, `server/internal/serve-union.ts`, `server/internal/serve-value.ts`, `web/internal/use-live.ts`, `web/internal/use-pages.ts` (sanctioned)
+    - `live/no-row-absence-collapse` — `web/internal/row-or-stale.ts` (sanctioned)
     - `live/no-endpoint-read` — `web` (sanctioned)
     - `no-db-backed-notify` — `server/internal/serve-off-feed.ts` (sanctioned)
     - `no-raw-websocket` — `e2e/narrowing.ts` (sanctioned)

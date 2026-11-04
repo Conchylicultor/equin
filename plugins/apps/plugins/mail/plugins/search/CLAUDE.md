@@ -69,16 +69,16 @@ bounded 30-day sync window. Web-only; it reads `sync`'s `mail.search` and
     - `Mail.Sidebar` "Search"
     - `Pane.Register` "mail-message"
     - `Pane.Register` "mail-search"
-  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×4
     - `apps/mail/threads` ×3
     - `integrations/gmail` ×3
     - `network/live/live-state` ×3
     - `primitives/data-view` ×3
+    - `network/live` ×2
     - `primitives/css/spacing` ×2
     - `apps/mail/shell.Mail`
     - `apps/mail/sync.MessageBodyState`
-    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/cluster.Cluster`

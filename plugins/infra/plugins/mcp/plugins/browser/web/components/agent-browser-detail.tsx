@@ -1,3 +1,4 @@
+import { rowOrStale } from "@plugins/network/plugins/live/web";
 import { useMemo, type ReactElement, type ReactNode } from "react";
 import { useConversationById } from "@plugins/conversations/web";
 import {
@@ -43,11 +44,12 @@ const SESSIONS_TOOLBAR: HostedToolbar = {
 
 /** What the session is for: its task's title, else the conversation's own. */
 function SessionName({ conversationId }: { conversationId: string }) {
-  const entry = useConversationById(conversationId);
+  const entry = rowOrStale(useConversationById(conversationId));
   // Plain text: InlineText's file-links walker needs a pane surface, and the
-  // health report is global chrome. Until the row resolves, the id names it.
+  // health report is global chrome. Until the row resolves — or when there is
+  // none — the id names it: the true value, just not described.
   const name =
-    entry === null
+    entry === undefined
       ? conversationId
       : entry.taskTitle.trim() || entry.title?.trim() || conversationId;
   return (

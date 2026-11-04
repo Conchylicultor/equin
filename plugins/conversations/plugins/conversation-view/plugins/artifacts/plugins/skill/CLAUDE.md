@@ -29,6 +29,7 @@ tooltip says why, never a clickable chip that would land on "file not found".
     - `conversations/conversation-view/artifacts.ConversationArtifacts`
     - `conversations/conversation-view/artifacts.useCloseArtifacts`
     - `conversations/conversation-view/code/file-pane.filePeekPane`
+    - `network/live.rowOrStale`
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/link-chip.LinkChip`

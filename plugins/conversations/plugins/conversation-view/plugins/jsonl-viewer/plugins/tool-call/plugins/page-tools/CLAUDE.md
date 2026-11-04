@@ -8,7 +8,7 @@
 - Web:
   - Uses:
     - `apps/pages/page-tree.pageDetailPane`
-    - `network/live.LiveRowResult`
+    - `network/live.rowOrStale`
     - `network/live.useLive`
     - `page/editor.PageIcon`
     - `primitives/css/badge.Badge`

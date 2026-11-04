@@ -1,4 +1,4 @@
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useLive, rowOrStale } from "@plugins/network/plugins/live/web";
 import { useId, useRef, useState } from "react";
 import { z } from "zod";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -41,7 +41,7 @@ export function TaskCard({
   const initial = content.trim();
   const editorNs = useId();
   const { convId } = conversationPane.useParams();
-  const conversation = useConversationById(convId);
+  const conversation = rowOrStale(useConversationById(convId));
   const hostTaskId = conversation?.taskId ?? null;
 
   const binding = useActiveDataBinding<TaskBinding>(TaskBindingSchema);
@@ -229,7 +229,7 @@ function LaunchedAttempts({ taskId }: { taskId: string }) {
 
 function TaskChip({ taskId }: { taskId: string }) {
   const { convId } = conversationPane.useParams();
-  const conversation = useConversationById(convId);
+  const conversation = rowOrStale(useConversationById(convId));
   const tasksResult = useLive(taskRows);
   const openPane = useOpenPane();
   if (!conversation) return null;

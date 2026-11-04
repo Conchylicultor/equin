@@ -1,3 +1,4 @@
+import { rowOrStale } from "@plugins/network/plugins/live/web";
 import { useEffect, useRef } from "react";
 import { setActiveRelateContext } from "@plugins/tasks/plugins/task-draft-form/web";
 import { useSurfaceTabId } from "@plugins/primitives/plugins/scope/plugins/surface-id/web";
@@ -6,7 +7,7 @@ import { conversationPane } from "../panes";
 
 export function ActiveRelateSync() {
   const { convId } = conversationPane.useParams();
-  const conversation = useConversationById(convId);
+  const conversation = rowOrStale(useConversationById(convId));
   const surfaceId = useSurfaceTabId();
   const ownerRef = useRef(Symbol());
 

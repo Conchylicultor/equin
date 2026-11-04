@@ -1,3 +1,4 @@
+import { rowOrStale } from "@plugins/network/plugins/live/web";
 import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -20,7 +21,7 @@ const checklistIcon = symbol("checklist");
  */
 export function TasksButton() {
   const { convId } = conversationPane.useParams();
-  const conversation = useConversationById(convId);
+  const conversation = rowOrStale(useConversationById(convId));
   const taskId = conversation?.taskId;
   const { isOpen, toggle } = taskDetailPane.useToggle({ taskId: taskId ?? "" });
 

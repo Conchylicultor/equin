@@ -44,6 +44,7 @@ address of a worktree image; nothing here can reach the other two.
     - `conversations.useConversationById`
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view/artifacts.ConversationArtifacts`
+    - `network/live.rowOrStale`
     - `primitives/css/grid.Grid`
     - `primitives/loading.Loading`
     - `primitives/overlay/image-viewer.AssetThumbnail`

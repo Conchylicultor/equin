@@ -11,7 +11,8 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { RowView, useLive } from "@plugins/network/plugins/live/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { pushRows } from "@plugins/tasks/plugins/tasks-core/core";
@@ -38,28 +39,41 @@ function ConvReviewBody() {
 
   if (!convId) return null;
 
+  const body = <Review.Host conversationId={convId} source={source} />;
   return (
     <PaneChrome pane={convReviewPane}>
-      <Stack gap="none" className="h-full">
-        {conversation ? (
-          <AttemptSourceTabs
-            attemptId={conversation.attemptId}
-            source={source}
-            onChange={setSource}
-          />
-        ) : (
+      <RowView
+        row={conversation}
+        subject="the conversation"
+        fallback={
           // The conversation (and so its attempt) is not known yet: its push
-          // tabs are too.
-          <SourceTabs
-            source={source}
-            onChange={setSource}
-            pushGroups="pending"
-          />
+          // tabs are not either. The sections render their own loading state.
+          <Stack gap="none" className="h-full">
+            <SourceTabs
+              source={source}
+              onChange={setSource}
+              pushGroups="pending"
+            />
+            <Scroll axis="both" fill>
+              {body}
+            </Scroll>
+          </Stack>
+        }
+        missing={<Placeholder>This conversation no longer exists.</Placeholder>}
+      >
+        {(conv) => (
+          <Stack gap="none" className="h-full">
+            <AttemptSourceTabs
+              attemptId={conv.attemptId}
+              source={source}
+              onChange={setSource}
+            />
+            <Scroll axis="both" fill>
+              {body}
+            </Scroll>
+          </Stack>
         )}
-        <Scroll axis="both" fill>
-          <Review.Host conversationId={convId} source={source} />
-        </Scroll>
-      </Stack>
+      </RowView>
     </PaneChrome>
   );
 }

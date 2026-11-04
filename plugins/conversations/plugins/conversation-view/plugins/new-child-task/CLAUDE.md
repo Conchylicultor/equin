@@ -9,6 +9,7 @@
   - Uses:
     - `conversations.useConversationById`
     - `conversations/conversation-view.conversationPane`
+    - `network/live.rowOrStale`
     - `primitives/css/ui-kit.Button`
     - `tasks/task-draft-form.TaskDraftPopover`
     - `ui/icons.Icon`

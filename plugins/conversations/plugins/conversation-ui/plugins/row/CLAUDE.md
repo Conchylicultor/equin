@@ -61,6 +61,7 @@ records with a surface of its own is a `data-view` — see
     - `conversations/conversation-ui/item.ConversationItemConv`
     - `conversations/conversation-ui/item.conversationTitle`
     - `conversations/conversation-view.useConversationOpener`
+    - `network/live.rowOrStale`
     - `primitives/css/fill.Fill`
     - `primitives/css/row.Row`
     - `primitives/css/text.Text`

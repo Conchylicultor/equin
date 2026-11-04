@@ -5,11 +5,10 @@ import {
   defineRoute,
   resolveFrom,
   resolveRow,
-  rowOrStale,
   useOpenPane,
   type ResolveResult,
 } from "@plugins/primitives/plugins/pane/web";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useLive, rowOrStale } from "@plugins/network/plugins/live/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { deadJobs, jobRuns, jobs } from "@plugins/infra/plugins/jobs/core";
 import {
@@ -359,8 +358,7 @@ function useResolveDeadJob({ deadId }: { deadId: string }): ResolveResult {
 }
 
 function useDeadJobTitle({ deadId }: { deadId: string }): string | undefined {
-  const row = useLive(deadJobs, { id: deadId });
-  return row.status === "ready" && row.found ? row.row.jobName : undefined;
+  return rowOrStale(useLive(deadJobs, { id: deadId }))?.jobName;
 }
 
 export const deadDetailPane = Pane.define({
@@ -399,8 +397,7 @@ function useEmissionTitle({
 }: {
   emissionId: string;
 }): string | undefined {
-  const row = useLive(eventEmissions, { id: emissionId });
-  return row.status === "ready" && row.found ? row.row.eventName : undefined;
+  return rowOrStale(useLive(eventEmissions, { id: emissionId }))?.eventName;
 }
 
 export const emissionDetailPane = Pane.define({

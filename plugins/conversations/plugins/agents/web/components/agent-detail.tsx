@@ -8,11 +8,9 @@ import {
   Inset,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useCallback, useMemo, useState } from "react";
-import {
-  foldResource,
-  ResourceView,
-} from "@plugins/network/plugins/live/plugins/live-state/web";
-import { mapRow, useLive } from "@plugins/network/plugins/live/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
+import { RowView, useLive } from "@plugins/network/plugins/live/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   SectionLabel,
@@ -62,18 +60,19 @@ async function patchAgent(
 }
 
 export function AgentDetail({ agentId }: { agentId: string }) {
-  const agentResult = mapRow(useLive(agentRows, { id: agentId }), (row) => row);
+  // Under the detail pane's resolve guard and in the unguarded side pane
+  // alike: a deleted agent is its own state, never a spinner.
   return (
-    <ResourceView resource={agentResult} fallback={<Loading variant="text" />}>
-      {(agent) => {
-        // Not in the roster: the pane's resolve guard answers that (the side
-        // pane has none, and keeps the loading state).
-        if (!agent) return <Loading />;
-        return (
-          <AgentDetailInner key={agentId} agentId={agentId} agent={agent} />
-        );
-      }}
-    </ResourceView>
+    <RowView
+      row={useLive(agentRows, { id: agentId })}
+      fallback={<Loading variant="text" />}
+      subject="the agent"
+      missing={<Placeholder>This agent no longer exists.</Placeholder>}
+    >
+      {(agent) => (
+        <AgentDetailInner key={agentId} agentId={agentId} agent={agent} />
+      )}
+    </RowView>
   );
 }
 

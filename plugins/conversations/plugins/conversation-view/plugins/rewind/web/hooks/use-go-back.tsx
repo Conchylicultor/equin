@@ -8,7 +8,7 @@ import {
   useFetchEndpoint,
   useMachineAvailability,
 } from "@plugins/infra/plugins/endpoints/web";
-import { useLiveReader } from "@plugins/network/plugins/live/web";
+import { useLiveReader, rowOrStale } from "@plugins/network/plugins/live/web";
 import { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useToast, type Toast } from "@plugins/shell/plugins/notifications/web";
 import { rewindConversationEndpoint, rewindPreview } from "../../core";
@@ -45,7 +45,7 @@ export function useGoBackToMessage({
   busy: boolean;
   run: (mode: RewindMode) => Promise<void>;
 } {
-  const conversation = useConversationById(convId);
+  const conversation = rowOrStale(useConversationById(convId));
   const fetchEndpoint = useFetchEndpoint();
   const read = useLiveReader();
   const machine = useMachineAvailability(rewindPreview);

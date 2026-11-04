@@ -124,6 +124,7 @@ row with a rising count and a new source starting to fail mints its own.
     - `config_v2.ConfigV2`
     - `config_v2/config-link.ConfigGearButton`
     - `infra/endpoints.useEndpointMutation`
+    - `network/live.rowOrStale`
     - `primitives/css/rail.useRailGuard`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.selfClass`
@@ -136,7 +137,6 @@ row with a rising count and a new source starting to fail mints its own.
     - `primitives/pane.PaneChrome`
     - `primitives/pane.ResolveResult`
     - `primitives/pane.resolveRow`
-    - `primitives/pane.rowOrStale`
     - `runs.RunsDataView`
     - `runs.useRun`
     - `ui/icons.Icon`

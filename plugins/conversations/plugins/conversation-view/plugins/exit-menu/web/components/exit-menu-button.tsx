@@ -1,3 +1,4 @@
+import { rowOrStale } from "@plugins/network/plugins/live/web";
 import {
   Button,
   DropdownMenu,
@@ -15,7 +16,7 @@ const logoutIcon = symbol("logout");
 
 export function ExitMenuButton(_: PromptEditorActionProps) {
   const { convId } = conversationPane.useParams();
-  const conversation = useConversationById(convId);
+  const conversation = rowOrStale(useConversationById(convId));
 
   if (!conversation) return null;
 

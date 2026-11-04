@@ -185,6 +185,7 @@ nor closed under it. Bounded, because the host cannot see the script end.
   - Contributes: `HealthReport.Row` "Agent browser" → `AgentBrowserDetail`
   - Uses:
     - `conversations.useConversationById`
+    - `network/live.rowOrStale`
     - `network/live.useLive`
     - `network/live/live-state.foldResource`
     - `primitives/css/spacing.Stack`

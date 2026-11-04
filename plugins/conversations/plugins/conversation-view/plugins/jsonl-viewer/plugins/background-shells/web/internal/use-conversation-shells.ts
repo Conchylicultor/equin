@@ -1,4 +1,4 @@
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useLive, rowOrStale } from "@plugins/network/plugins/live/web";
 import {
   combineResources,
   type ResourceResult,
@@ -46,14 +46,14 @@ export function useConversationShells(
 ): ConversationShells {
   const params = conversationId === null ? null : { id: conversationId };
   const facts = useLive(conversationShellFacts, params);
-  const conversation = useConversationById(conversationId);
+  const conversation = rowOrStale(useConversationById(conversationId));
 
   // Gate FIRST, derive after — nothing below may run on a half-arrived read.
   const reads = combineResources({ events: facts });
   if (reads.status === "error") {
     return { kind: "failed", error: reads.error, refetch: reads.refetch };
   }
-  if (reads.status === "loading" || conversation === null) {
+  if (reads.status === "loading" || conversation === undefined) {
     return { kind: "pending" };
   }
   return {

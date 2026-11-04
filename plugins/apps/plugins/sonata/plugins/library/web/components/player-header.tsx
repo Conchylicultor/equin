@@ -1,3 +1,4 @@
+import { rowOrStale } from "@plugins/network/plugins/live/web";
 import { useContext, type ReactNode } from "react";
 import {
   SurfaceChromeContext,
@@ -68,8 +69,7 @@ export function PlayerHeader({ tools }: { tools: ReactNode }) {
 /** The song's title (inline-editable) over its composer. */
 function TitleBlock() {
   const current = useCurrentSong();
-  const composer =
-    current.status === "ready" && current.found ? current.row.composer : null;
+  const composer = rowOrStale(current)?.composer ?? null;
   return (
     <Stack gap="none" className={yieldClass("x")}>
       <SongTitle appearance="heading" />

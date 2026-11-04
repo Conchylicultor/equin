@@ -1,4 +1,4 @@
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useLive, rowOrStale } from "@plugins/network/plugins/live/web";
 import { combineResources } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/core";
 import { useConversationById } from "@plugins/conversations/web";
@@ -175,7 +175,7 @@ export function useConversationSubagents(
     conversationParentFacts,
     activity.status === "unavailable" ? null : params,
   );
-  const conversation = useConversationById(conversationId);
+  const conversation = rowOrStale(useConversationById(conversationId));
 
   // Gate FIRST, derive after — nothing below may run on a half-arrived read.
   // The parent transcript is where a BACKGROUND sub-agent's completion lives,
@@ -190,7 +190,7 @@ export function useConversationSubagents(
   if (reads.status === "error") {
     return { kind: "failed", error: reads.error, refetch: reads.refetch };
   }
-  if (reads.status === "loading" || conversation === null) {
+  if (reads.status === "loading" || conversation === undefined) {
     return { kind: "pending" };
   }
 

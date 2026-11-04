@@ -1,9 +1,9 @@
+import { rowOrStale } from "@plugins/network/plugins/live/web";
 import type { ReactElement } from "react";
 import {
   Pane,
   PaneChrome,
   resolveRow,
-  rowOrStale,
   type ResolveResult,
 } from "@plugins/primitives/plugins/pane/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";

@@ -112,16 +112,16 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
     - `Item.Avatar` → `AgentAvatarRow`
     - `conversationPane.Actions` "agent-avatar" → `AgentAvatarTitlePrefix`
     - `Agents.AgentActions` "delete" → `DeleteAgentAction`
-  - Uses: 61 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/pane` ×8
+  - Uses: 60 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×7
     - `primitives/data-view` ×5
     - `conversations/conversation-ui/item` ×4
-    - `network/live/live-state` ×4
     - `primitives/avatar` ×4
     - `primitives/collapsible` ×4
     - `infra/endpoints` ×3
+    - `network/live/live-state` ×3
+    - `network/live` ×3
     - `primitives/css/ui-kit` ×3
-    - `network/live` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/status-dot` ×2
     - `primitives/css/text` ×2

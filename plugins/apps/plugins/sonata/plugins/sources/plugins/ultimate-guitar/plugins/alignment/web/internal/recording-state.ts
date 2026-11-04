@@ -1,3 +1,4 @@
+import { rowOrStale } from "@plugins/network/plugins/live/web";
 import type { LiveRowResult } from "@plugins/network/plugins/live/web";
 import type { UgTab } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/tab/core";
 import {
@@ -166,8 +167,7 @@ export function recordingVideoId(
   raw: UgSourceRaw,
   result: LiveRowResult<UgAlignmentRow>,
 ): string | null {
-  const found = result.status === "ready" && result.found ? result.row : null;
-  return raw.alignment?.videoId ?? found?.videoId ?? null;
+  return raw.alignment?.videoId ?? rowOrStale(result)?.videoId ?? null;
 }
 
 export function recordingState(

@@ -1,3 +1,4 @@
+import { rowOrStale } from "@plugins/network/plugins/live/web";
 import type { ReactElement } from "react";
 import { useConfig } from "@plugins/config_v2/web";
 import {
@@ -129,11 +130,7 @@ function ShortTitleItem({
       layout="line"
       muted={muted}
       dot={dot}
-      title={resolveListTitle(
-        "short",
-        conv,
-        short.status === "ready" && short.found ? short.row : null,
-      )}
+      title={resolveListTitle("short", conv, rowOrStale(short) ?? null)}
     />
   );
 }

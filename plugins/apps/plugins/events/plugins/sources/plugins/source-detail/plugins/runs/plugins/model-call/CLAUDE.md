@@ -58,6 +58,7 @@ resume and no turn history to go looking for.
     - `apps/events/sources/source-detail/runs.EventSourceRunDetail`
     - `infra/claude-cli.ClaudeCliCallDetail`
     - `infra/claude-cli.useClaudeCliCalls`
+    - `network/live.rowOrStale`
     - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Inset`

@@ -1,5 +1,5 @@
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { RowView, useLive } from "@plugins/network/plugins/live/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
@@ -26,10 +26,18 @@ const BEHIND_COLOR =
 export function CommitsGraphBody() {
   const convId = conversationPane.useEnclosing()?.params.convId;
   const conversation = useConversationById(convId ?? null);
+  if (convId === undefined) return null;
   // No conversation row → no attempt to draw. Split rather than subscribe with a
   // placeholder id: the graph is read only once the attempt id is known.
-  if (!conversation) return null;
-  return <AttemptCommitsGraph attemptId={conversation.attemptId} />;
+  return (
+    <RowView
+      row={conversation}
+      subject="the conversation"
+      missing={<Placeholder>This conversation no longer exists.</Placeholder>}
+    >
+      {(conv) => <AttemptCommitsGraph attemptId={conv.attemptId} />}
+    </RowView>
+  );
 }
 
 function AttemptCommitsGraph({ attemptId }: { attemptId: string }) {

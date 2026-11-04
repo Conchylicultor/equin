@@ -11,9 +11,10 @@
   - Contributes:
     - `Pane.Register` "attempt"
     - `Conversation.ActionBar` → `AttemptSwitchButton`
-  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×7
     - `conversations/conversation-ui/item` ×2
+    - `network/live` ×2
     - `primitives/css/fill` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/ui-kit` ×2
@@ -21,7 +22,6 @@
     - `conversations/conversation-view.conversationPane`
     - `conversations.useConversationById`
     - `network/live/live-state.ResourceErrorInline`
-    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
     - `primitives/css/line.Line`

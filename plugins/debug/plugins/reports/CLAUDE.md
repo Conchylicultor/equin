@@ -51,9 +51,10 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
     - `Pane.Register` "reports"
     - `DebugApp.Sidebar` "Reports"
     - `Notifications.Action` "fix-report"
-  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×5
     - `primitives/pane` ×5
+    - `network/live` ×2
     - `primitives/launch/investigate` ×2
     - `reports` ×2
     - `apps-core/tab-origin.TabOriginBadge`
@@ -61,7 +62,6 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
     - `build.useStaleFrontend`
     - `infra/endpoints.useFetchEndpoint`
     - `network/live/live-state.ResourceErrorInline`
-    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/cluster.Cluster`

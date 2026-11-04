@@ -1,3 +1,4 @@
+import { rowOrStale } from "@plugins/network/plugins/live/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import {
@@ -8,7 +9,7 @@ import { HeaderChip } from "@plugins/conversations/plugins/conversation-view/plu
 
 export function ModelBadge() {
   const { convId } = conversationPane.useParams();
-  const conversation = useConversationById(convId);
+  const conversation = rowOrStale(useConversationById(convId));
   if (!conversation) return null;
   const model = normalizeModel(conversation.model);
   const meta = modelMeta(model);

@@ -9,7 +9,7 @@
   - Contributes:
     - `PromptEditorSlots.FloatingAction` → `FloatingTemplateChips`
     - `ConfigV2.WebRegister` "config"
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×4
     - `config_v2` ×2
     - `conversations/conversation-view/pending-turn` ×2
@@ -19,6 +19,7 @@
     - `config_v2/config-link.ConfigGearButton`
     - `conversations/conversation-view.conversationPane`
     - `conversations.useConversationById`
+    - `network/live.rowOrStale`
     - `primitives/adaptive-bar.AdaptiveBar`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/scroll.Scroll`

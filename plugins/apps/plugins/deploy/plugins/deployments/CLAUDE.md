@@ -448,7 +448,7 @@ default, a left rail revealing each (`useRevealSection`).
     - `DeploymentDetail.Section` "Danger zone" → `DangerZone`
     - `DeploymentItemActions` "deploy" → `DeployAction`
     - `DeploymentItemActions` "delete" → `DeleteDeploymentAction`
-  - Uses: 81 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 82 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×14
     - `primitives/data-view` ×7
     - `network/live/live-state` ×6
@@ -456,6 +456,7 @@ default, a left rail revealing each (`useRevealSection`).
     - `apps/deploy/servers` ×5
     - `primitives/slot-render` ×4
     - `infra/endpoints` ×3
+    - `network/live` ×2
     - `primitives/app-shell` ×2
     - `primitives/css/badge` ×2
     - `primitives/css/spacing` ×2
@@ -463,7 +464,6 @@ default, a left rail revealing each (`useRevealSection`).
     - `apps/deploy/health.useServerHealth`
     - `apps/deploy/shell.Deploy`
     - `ids.IdKinds`
-    - `network/live.useLive`
     - `plugin-meta/composition.useManifestItems`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/bouncing-dots.BouncingDots`

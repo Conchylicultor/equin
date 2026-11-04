@@ -1,3 +1,4 @@
+import { rowOrStale } from "@plugins/network/plugins/live/web";
 import { useState } from "react";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -31,7 +32,7 @@ function useRecordingState(): {
       "The Recording section rendered without an open Ultimate Guitar song — its useAvailable gate should prevent this.",
     );
   }
-  const found = row.status === "ready" && row.found ? row.row : null;
+  const found = rowOrStale(row) ?? null;
   return {
     songId,
     state: recordingState(row, raw.tab),

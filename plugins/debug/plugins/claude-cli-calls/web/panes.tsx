@@ -4,11 +4,10 @@ import {
   PaneChrome,
   defineRoute,
   resolveRow,
-  rowOrStale,
   useOpenPane,
   type ResolveResult,
 } from "@plugins/primitives/plugins/pane/web";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useLive, rowOrStale } from "@plugins/network/plugins/live/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { claudeCliCalls } from "@plugins/infra/plugins/claude-cli/core";
 import { ClaudeCliCallDetail } from "@plugins/infra/plugins/claude-cli/web";
@@ -44,8 +43,7 @@ function useResolveCall({ callId }: { callId: string }): ResolveResult {
 
 /** The call's source once it is read; the pane falls back to "Call" until then. */
 function useCallTitle({ callId }: { callId: string }): string | undefined {
-  const row = useLive(claudeCliCalls, { id: callId });
-  return row.status === "ready" && row.found ? row.row.sourceName : undefined;
+  return rowOrStale(useLive(claudeCliCalls, { id: callId }))?.sourceName;
 }
 
 export const claudeCliCallDetailPane = Pane.define({

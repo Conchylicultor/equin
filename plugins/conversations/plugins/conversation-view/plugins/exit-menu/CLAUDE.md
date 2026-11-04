@@ -37,6 +37,7 @@ hide itself based on conversation state.
   - Uses:
     - `conversations.useConversationById`
     - `conversations/conversation-view.conversationPane`
+    - `network/live.rowOrStale`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.DropdownMenu`
     - `primitives/css/ui-kit.DropdownMenuContent`

@@ -28,7 +28,8 @@ import {
 } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import { useConversationById } from "@plugins/conversations/web";
-import { useLive } from "@plugins/network/plugins/live/web";
+import type { ConversationEntry } from "@plugins/conversations/core";
+import { RowView, useLive } from "@plugins/network/plugins/live/web";
 import {
   COMMIT_FILES_MAX,
   pushFiles,
@@ -44,12 +45,24 @@ export function CodeReviewSection({
   conversationId: string;
   source: Source;
 }) {
-  const conversation = useConversationById(conversationId);
+  // The review pane answers a deleted conversation for the whole pane; this
+  // section draws nothing in its place.
+  return (
+    <RowView row={useConversationById(conversationId)} missing={null}>
+      {(conversation) => (
+        <CodeReviewBody conversation={conversation} source={source} />
+      )}
+    </RowView>
+  );
+}
 
-  if (!conversation) {
-    return <Loading />;
-  }
-
+function CodeReviewBody({
+  conversation,
+  source,
+}: {
+  conversation: ConversationEntry;
+  source: Source;
+}) {
   return (
     <Stack gap="none" className="min-h-0">
       {source.kind === "working" ? (

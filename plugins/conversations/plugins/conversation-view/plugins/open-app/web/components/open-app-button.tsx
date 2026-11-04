@@ -9,7 +9,7 @@ import { useHintAnchor, useHintMoment } from "@plugins/hints/web";
 import { useAttemptSourceUrl } from "@plugins/tasks/plugins/task-source-url/web";
 import { linkGestureProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useLive, rowOrStale } from "@plugins/network/plugins/live/web";
 import { opsHistory } from "@plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/core";
 import { useConfig } from "@plugins/config_v2/web";
 import { appPreviewPane, appPreviewUrl } from "../app-preview-pane";
@@ -20,7 +20,7 @@ const rocketLaunchIcon = symbol("rocket-launch");
 
 export function OpenAppButton() {
   const { convId } = conversationPane.useParams();
-  const conversation = useConversationById(convId);
+  const conversation = rowOrStale(useConversationById(convId));
   if (!conversation) return null;
   return (
     <OpenAppAction

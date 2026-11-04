@@ -1,5 +1,5 @@
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useLive, rowOrStale } from "@plugins/network/plugins/live/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -13,7 +13,7 @@ const publishIcon = symbol("publish");
 
 export function CommitsChip() {
   const { convId } = conversationPane.useParams();
-  const conversation = useConversationById(convId);
+  const conversation = rowOrStale(useConversationById(convId));
   // No conversation row → no attempt to measure. Split rather than subscribe
   // with a placeholder id: the standing is read only once the attempt id is
   // known.

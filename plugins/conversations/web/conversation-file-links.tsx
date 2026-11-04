@@ -1,3 +1,4 @@
+import { rowOrStale } from "@plugins/network/plugins/live/web";
 import type { ReactNode } from "react";
 import { FileLinksWorkspaceProvider } from "@plugins/primitives/plugins/file-links/web";
 import { useConversationById } from "./use-conversations";
@@ -16,7 +17,7 @@ export function ConversationFileLinks({
   conversationId: string | null;
   children: ReactNode;
 }) {
-  const conversation = useConversationById(conversationId);
+  const conversation = rowOrStale(useConversationById(conversationId));
   return (
     <FileLinksWorkspaceProvider
       workspace={conversation?.attemptId}

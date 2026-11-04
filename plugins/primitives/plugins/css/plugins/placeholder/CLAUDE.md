@@ -19,22 +19,22 @@
     - `ui/tokens/type-scale --font-size-body`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-body`
-  - Imported by: 90 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 92 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×29
     - `debug` ×18
     - `primitives` ×12
     - `page` ×7
-    - `conversations` ×5
+    - `conversations` ×6
     - `build` ×4
     - `auth` ×2
     - `config_v2` ×2
     - `plugin-meta` ×2
+    - `review` ×2
     - `code-explorer/commit-detail`
     - `history/dialog`
     - `infra/background/catalog`
     - `map`
     - `network/live/live-state`
-    - `review/code-review`
     - `search/quick-find`
     - `stats/commits`
     - `tasks/automations`

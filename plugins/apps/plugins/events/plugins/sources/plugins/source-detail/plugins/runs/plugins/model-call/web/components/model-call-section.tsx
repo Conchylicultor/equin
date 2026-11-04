@@ -1,3 +1,4 @@
+import { rowOrStale } from "@plugins/network/plugins/live/web";
 import type { ReactNode } from "react";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import {
@@ -27,7 +28,7 @@ export function ModelCallSection({ runId }: { runId: string }): ReactNode {
   // called" from "called, then trimmed" — so the section reads the run rather
   // than asking with a bare correlation id and accepting a wrong answer.
   const row = useEventSourceRun(runId);
-  const run = row.status === "ready" && row.found ? row.row : undefined;
+  const run = rowOrStale(row);
   // Both reads gate the answer: asking before `startedAt` has landed would
   // report `none` for a run whose call merely aged out — so nothing is asked
   // (the read stays `loading`) until the run is in hand.

@@ -12,6 +12,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { RowView } from "@plugins/network/plugins/live/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { DiffOrImageView } from "@plugins/primitives/plugins/diff-view/web";
 import { gitStatusBadge } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
@@ -122,23 +123,28 @@ export function FileChangesSection({
   plugin,
 }: PluginReviewProps) {
   const conversation = useConversationById(conversationId);
-
-  if (!conversation) {
-    return <Loading className="px-xs" />;
-  }
-
   if (plugin.files.length === 0) return null;
 
+  // The review pane answers a deleted conversation for the whole pane; this
+  // section draws nothing in its place.
   return (
-    <Clip className="rounded-md border border-border/40">
-      {plugin.files.map((file) => (
-        <FileRow
-          key={file.path}
-          file={file}
-          worktree={conversation.attemptId}
-        />
-      ))}
-    </Clip>
+    <RowView
+      row={conversation}
+      fallback={<Loading className="px-xs" />}
+      missing={null}
+    >
+      {(conversation) => (
+        <Clip className="rounded-md border border-border/40">
+          {plugin.files.map((file) => (
+            <FileRow
+              key={file.path}
+              file={file}
+              worktree={conversation.attemptId}
+            />
+          ))}
+        </Clip>
+      )}
+    </RowView>
   );
 }
 

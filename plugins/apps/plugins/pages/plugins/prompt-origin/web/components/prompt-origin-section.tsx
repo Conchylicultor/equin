@@ -1,4 +1,4 @@
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useLive, rowOrStale } from "@plugins/network/plugins/live/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
@@ -27,8 +27,7 @@ function useOriginPage(
 ): { pageId: string; title: string } | null {
   const origin = usePromptTaskLink(taskId);
   // The page row is looked up only once the link names it.
-  const linked =
-    origin.status === "ready" && origin.found ? origin.row.pageId : null;
+  const linked = rowOrStale(origin)?.pageId ?? null;
   const page = useLive(pagesTree, { id: linked });
 
   if (linked === null) return null;

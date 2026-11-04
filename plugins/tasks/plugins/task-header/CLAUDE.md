@@ -9,6 +9,7 @@
   - Contributes: `TaskDetailSlots.Section` "Task" → `TaskHeader`
   - Uses:
     - `conversations.useConversationById`
+    - `network/live.rowOrStale`
     - `network/live/live-state.foldResource`
     - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/fill.Fill`

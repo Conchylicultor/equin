@@ -16,6 +16,8 @@
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view/action-bar.Conversation`
     - `debug/profiling/ops.WorktreeOpGantt`
+    - `network/live.RowView`
+    - `primitives/css/placeholder.Placeholder`
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
     - `primitives/pane.defineRoute`

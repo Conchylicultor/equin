@@ -1,3 +1,4 @@
+import { rowOrStale } from "@plugins/network/plugins/live/web";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -23,7 +24,7 @@ interface FilePathProps {
 
 export function FilePath({ filePath }: FilePathProps) {
   const { convId } = conversationPane.useParams();
-  const conversation = useConversationById(convId);
+  const conversation = rowOrStale(useConversationById(convId));
   const openPane = useOpenPane();
 
   if (!conversation) return null;

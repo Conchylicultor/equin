@@ -1,3 +1,4 @@
+import { rowOrStale } from "@plugins/network/plugins/live/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { HeaderChip } from "@plugins/conversations/plugins/conversation-view/plugins/header/web";
@@ -12,7 +13,7 @@ import { useTaskTrack } from "@plugins/tasks/plugins/task-track/web";
  */
 export function TrackChip() {
   const { convId } = conversationPane.useParams();
-  const conversation = useConversationById(convId);
+  const conversation = rowOrStale(useConversationById(convId));
   if (!conversation) return null;
   return <TaskTrackChip taskId={conversation.taskId} />;
 }

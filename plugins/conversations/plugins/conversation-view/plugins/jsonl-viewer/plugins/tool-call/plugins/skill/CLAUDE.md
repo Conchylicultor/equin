@@ -18,6 +18,7 @@ Expanded: shows the full args text block + the injected skill context (the SKILL
     - `conversations/conversation-view/code/file-pane.filePeekPane`
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+    - `network/live.rowOrStale`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`

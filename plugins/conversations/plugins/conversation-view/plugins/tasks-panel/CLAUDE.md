@@ -11,6 +11,7 @@
     - `conversations.useConversationById`
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view/action-bar.Conversation`
+    - `network/live.rowOrStale`
     - `network/live/live-state.foldResource`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`

@@ -7,17 +7,17 @@
 - Description: The task's links in the conversation header: ↑ open blockers · ↓ open dependents (shown only on header hover when none is open: a faint ↕ when all are resolved, a link icon when there are none), one popover listing and editing every link of both directions.
 - Web:
   - Contributes: `conversationPane.Actions` "dependencies" → `DependenciesButton`
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×2
     - `infra/endpoints` ×2
     - `network/live/live-state` ×2
+    - `network/live` ×2
     - `primitives/css/control-panel` ×2
     - `primitives/css/text` ×2
     - `primitives/css/ui-kit` ×2
     - `primitives/search` ×2
     - `conversations/conversation-ui/item.ConversationItem`
     - `conversations/conversation-view.conversationPane`
-    - `network/live.useLive`
     - `primitives/css/clip.Clip`
     - `primitives/css/fill.Fill`
     - `primitives/css/row.Row`

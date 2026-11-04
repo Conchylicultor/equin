@@ -6,7 +6,7 @@ import {
   queueRanks,
 } from "@plugins/conversations/plugins/conversations-view/plugins/queue/core";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useLive, rowOrStale } from "@plugins/network/plugins/live/web";
 import { hoverRevealTargetInAnchor } from "@plugins/primitives/plugins/hover-reveal/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -27,7 +27,7 @@ const keepIcon = symbol("keep");
  */
 export function PinButton(): ReactElement | null {
   const { convId } = conversationPane.useParams();
-  const conversation = useConversationById(convId);
+  const conversation = rowOrStale(useConversationById(convId));
   if (!conversation) return null;
   if (
     (conversation.status !== "waiting" &&

@@ -1,3 +1,4 @@
+import { rowOrStale } from "@plugins/network/plugins/live/web";
 import { useMemo, type ReactNode } from "react";
 import {
   DataView,
@@ -152,7 +153,7 @@ export function ExtractedEventsSection({
   });
   // Only a found run words the empty state; loading, failed or absent fall back
   // to the plain sentence (the summary above and the pane's resolve own those).
-  const run = row.status === "ready" && row.found ? row.row : undefined;
+  const run = rowOrStale(row);
 
   return (
     <DataView<RunEvent>

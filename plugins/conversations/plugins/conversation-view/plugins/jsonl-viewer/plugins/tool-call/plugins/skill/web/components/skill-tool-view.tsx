@@ -1,3 +1,4 @@
+import { rowOrStale } from "@plugins/network/plugins/live/web";
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -23,7 +24,7 @@ export function SkillToolView({ event }: ToolRendererProps) {
   const injected = event.injectedContext ?? [];
 
   const { convId } = conversationPane.useParams();
-  const conversation = useConversationById(convId);
+  const conversation = rowOrStale(useConversationById(convId));
   const openPane = useOpenPane();
 
   // Project skills live at `.claude/skills/<name>/SKILL.md` (git-tracked, so the

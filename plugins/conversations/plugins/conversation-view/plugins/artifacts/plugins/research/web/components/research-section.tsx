@@ -1,3 +1,4 @@
+import { rowOrStale } from "@plugins/network/plugins/live/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useConversationById } from "@plugins/conversations/web";
@@ -28,7 +29,7 @@ export const RESEARCH_ICON = scienceIcon;
  */
 export function ResearchSection({ items }: { items: ArtifactItem[] }) {
   const { convId } = conversationPane.useParams();
-  const conversation = useConversationById(convId);
+  const conversation = rowOrStale(useConversationById(convId));
   const openPane = useOpenPane();
 
   // Until the conversation row arrives there is no worktree to open the doc in,

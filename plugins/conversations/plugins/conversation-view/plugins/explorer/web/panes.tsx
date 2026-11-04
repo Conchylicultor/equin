@@ -1,3 +1,4 @@
+import { rowOrStale } from "@plugins/network/plugins/live/web";
 import {
   Pane,
   PaneChrome,
@@ -38,12 +39,19 @@ function useOpenInFilesTarget(params: {
   open?: string;
 }): PaneExpandTarget {
   const convId = conversationPane.useEnclosing()?.params.convId ?? null;
-  const worktree = useConversationById(convId)?.worktreePath;
+  const conversation = useConversationById(convId);
+  const worktree = rowOrStale(conversation)?.worktreePath;
   const target = useOpenInFiles(
     locationOf({ dir: params.dir ?? worktree ?? "", open: params.open }),
   );
   // Never `none`: its fallback is the pane's own promote, which drops convId.
-  if (params.dir === undefined && worktree === undefined) {
+  // Pending only while the worktree may still arrive: a conversation that is
+  // not there (or a read that failed with nothing seen) opens Files at its root.
+  if (
+    params.dir === undefined &&
+    worktree === undefined &&
+    conversation.status === "loading"
+  ) {
     return { kind: "pending" };
   }
   return { kind: "ready", target };

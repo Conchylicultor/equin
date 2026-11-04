@@ -1,3 +1,4 @@
+import { rowOrStale } from "@plugins/network/plugins/live/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
@@ -38,11 +39,11 @@ export const SCREENSHOT_ICON = photoCameraIcon;
  */
 export function ScreenshotSection({ items }: { items: ArtifactItem[] }) {
   const { convId } = conversationPane.useParams();
-  const conversation = useConversationById(convId);
+  const conversation = rowOrStale(useConversationById(convId));
   // A picture's address depends on its worktree (a path inside it reads from
   // the checkout, any other from the host), so until the conversation row
   // arrives there is no image to show — a loading state, not an empty grid.
-  if (conversation === null) {
+  if (conversation === undefined) {
     return <Loading variant="cards" count={items.length} />;
   }
 

@@ -46,6 +46,7 @@ has moved on. So it is NOT read per turn:
     - `conversations/conversation-ui/item.Item`
     - `conversations/conversation-view.conversationPane`
     - `network/live.LiveRowResult`
+    - `network/live.rowOrStale`
     - `network/live.useLive`
     - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/inline.Inline`

@@ -1,3 +1,4 @@
+import { rowOrStale } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { SegmentedProgressBar } from "@plugins/ui/plugins/segmented-progress-bar/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
@@ -8,7 +9,7 @@ import { useProgressFor } from "../internal/use-progress";
 
 export function ProgressBarToolbar() {
   const { convId } = conversationPane.useParams();
-  const conversation = useConversationById(convId);
+  const conversation = rowOrStale(useConversationById(convId));
   const result = useProgressFor(convId);
   if (!conversation) return null;
   if (conversation.kind === "agent") return null;
