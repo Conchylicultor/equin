@@ -22,6 +22,7 @@ export { getForfeitedSlots } from "./internal/forfeit";
 export type { ForfeitedSlot } from "./internal/forfeit";
 export {
   queryDeadJobStats,
+  queryDeadJobsByError,
   queryQueueBacklog,
   queryBacklogByJobName,
   queryRunningJobs,
@@ -32,6 +33,7 @@ export {
 } from "./internal/introspection";
 export type {
   DeadJobStat,
+  DeadJobErrorStat,
   QueueBacklogStat,
   QueueClassBacklogStat,
   BacklogJobStat,

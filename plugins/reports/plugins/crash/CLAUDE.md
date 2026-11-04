@@ -47,6 +47,8 @@ Add a case there before changing any of this.
   - Uses:
     - `packages/list-bound.cappedList`
     - `primitives/ui-context.UiContextMetaSchema`
+    - `reports.normalizeMessage`
+    - `reports.ReportFingerprintContext`
   - Exports (types):
     - `CrashPayload`
     - `ResizeLoopTrace`

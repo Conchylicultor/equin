@@ -134,6 +134,7 @@ host first.
   - Exports (values):
     - `CLIENT_REPORT_SOURCES`
     - `investigateReport`
+    - `normalizeMessage`
     - `REPORT_RECENT_MAX`
     - `reportDetailRoute`
     - `reportFields`

@@ -23208,6 +23208,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/jobs.onQueueActivity`
           - `infra/jobs.PICKUP_WINDOW_MS`
           - `infra/jobs.queryBacklogByJobName`
+          - `infra/jobs.queryDeadJobsByError`
           - `infra/jobs.queryDeadJobStats`
           - `infra/jobs.queryOldestWaiting`
           - `infra/jobs.queryQueueBacklog`
@@ -31946,6 +31947,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Machine:
         - Exports (types):
           - `BacklogJobStat`
+          - `DeadJobErrorStat`
           - `DeadJobGroupStat`
           - `DeadJobStat`
           - `ForfeitedSlot`
@@ -31970,6 +31972,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `onQueueActivity`
           - `PICKUP_WINDOW_MS`
           - `queryBacklogByJobName`
+          - `queryDeadJobsByError`
           - `queryDeadJobStats`
           - `queryOldestWaiting`
           - `queryQueueBacklog`
@@ -49433,6 +49436,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Exports (values):
       - `CLIENT_REPORT_SOURCES`
       - `investigateReport`
+      - `normalizeMessage`
       - `REPORT_RECENT_MAX`
       - `reportDetailRoute`
       - `reportFields`
@@ -49576,6 +49580,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `packages/list-bound.cappedList`
           - `primitives/ui-context.UiContextMetaSchema`
+          - `reports.normalizeMessage`
+          - `reports.ReportFingerprintContext`
         - Exports (types):
           - `CrashPayload`
           - `ResizeLoopTrace`

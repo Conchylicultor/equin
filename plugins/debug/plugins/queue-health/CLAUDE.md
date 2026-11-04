@@ -173,10 +173,20 @@ the two came from different snapshots. Reports fire only when a threshold trips:
   exact, free, and true of the class rather than of this instant's occupancy.
 - **`queue-dead-job`** (variant `error`) — terminally-failed jobs
   (`attempts >= max_attempts AND locked_at IS NULL`, the same predicate
-  `reconcileDeadJobs` uses), grouped by `payload->>'jobName'`. **One report per
-  distinct jobName** (fingerprint `queue-dead-job:<jobName>`), so a retry-storm of
-  one broken job collapses to a single report while distinct broken jobs get
-  distinct reports (investigation task on demand).
+  `reconcileDeadJobs` uses). **One report per (jobName, cause)** (fingerprint
+  `queue-dead-job:<jobName>:<cause hash>`, `machine/internal/dead-job-cause.ts`):
+  `queryDeadJobsByError` groups the dead rows by their exact last error, and the
+  watchdog folds those by the error normalized the way a crash's message
+  identity is (`normalizeMessage`, `reports/core` — run ids, job ids and
+  numbers stripped). So a retry-storm of one broken job collapses to a single
+  report, and a NEW reason the same job dies opens its own report, task and
+  triage instead of piling onto the first reason's. Keyed on the job alone, it
+  did exactly that on 2026-11-04: `worktree.prepare` deaths from a fresh
+  `ALTER DATABASE` race landed on a week-old report linked to an unrelated task.
+  A cause is only as distinct as the error recorded for it: a supervised child
+  that recorded none is dead-lettered with its transcript's end
+  (`infra/jobs/supervised-job`'s ledger), which sits after a ~200-character
+  prefix, so the cause keeps up to 4000 normalized characters, not crash's 200.
 - **`queue-backlog`** (variant `warning`, escalates to STALLED) — depth/stall.
   Trips when `readyCount > backlogDepthThreshold` **or** the oldest ready job is
   overdue past `oldestOverdueMinutes`. `stalled = lockedCount === 0 && overdue`
@@ -406,6 +416,7 @@ them to include 1, which would put the warning on the same instant as the abort.
     - `infra/jobs.onQueueActivity`
     - `infra/jobs.PICKUP_WINDOW_MS`
     - `infra/jobs.queryBacklogByJobName`
+    - `infra/jobs.queryDeadJobsByError`
     - `infra/jobs.queryDeadJobStats`
     - `infra/jobs.queryOldestWaiting`
     - `infra/jobs.queryQueueBacklog`

@@ -6,7 +6,7 @@ import {
   type HoldClass,
 } from "@plugins/infra/plugins/jobs/server";
 import {
-  queryDeadJobStats,
+  queryDeadJobsByError,
   queryQueueBacklog,
   queryBacklogByJobName,
   queryRunningJobs,
@@ -21,6 +21,7 @@ import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/ser
 import { queueHealthConfig } from "../../core";
 import { formatDurationMs } from "../../shared/format-duration";
 import { blockedTrip, sampleOf, type JobSpanSample } from "./profile-delta";
+import { foldDeadJobsByCause } from "./dead-job-cause";
 
 // The queue-health watchdog: a raw `setInterval` on the backend's own event
 // loop, started from `onReady` and stopped in `onShutdown`.
@@ -392,10 +393,10 @@ async function checkClassStarvation(
   }
 }
 
-// Terminally-dead jobs grouped by jobName → one report per distinct jobName.
+// Terminally-dead jobs grouped by (jobName, cause) → one report per distinct
+// cause of each job's deaths (`foldDeadJobsByCause`).
 async function checkDeadJobs(): Promise<void> {
-  const stats = await queryDeadJobStats();
-  for (const s of stats) {
+  for (const s of foldDeadJobsByCause(await queryDeadJobsByError())) {
     await recordReport({
       kind: "queue-dead-job",
       source: "server-queue-monitor",

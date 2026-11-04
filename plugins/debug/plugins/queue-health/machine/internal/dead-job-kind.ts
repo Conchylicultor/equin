@@ -4,6 +4,7 @@ import {
   QueueDeadJobPayloadSchema,
   type QueueDeadJobPayload,
 } from "../../core";
+import { deadJobFingerprint } from "./dead-job-cause";
 
 // Re-alert the bell at most once per 10 minutes while a job stays terminally
 // dead. A dead-job storm is a persistent condition (it keeps retrying until
@@ -11,15 +12,16 @@ import {
 // it periodically without spamming — same rationale as slow-op's cooldown.
 const DEAD_JOB_NOTIF_COOLDOWN_MS = 600_000;
 
-// The `queue-dead-job` report kind. Dedups per distinct `jobName`, so a
-// retry-storm of one broken job collapses onto a single report while distinct
-// broken jobs (e.g. a missing-relation job vs an unknown-job-name job) get
-// distinct reports. Variant `error`: terminally-failed jobs are silently clogging
-// the queue and never running.
+// The `queue-dead-job` report kind. Dedups per (jobName, cause)
+// (`deadJobFingerprint`), so a retry-storm of one broken job collapses onto a
+// single report, while a NEW reason the same job dies opens a report (and, on
+// demand, a task and a triage) of its own instead of piling onto the first
+// reason's. Variant `error`: terminally-failed jobs are silently clogging the
+// queue and never running.
 export const deadJobKind = ReportKind({
   kind: "queue-dead-job",
   schema: QueueDeadJobPayloadSchema,
-  fingerprint: (d: QueueDeadJobPayload) => `queue-dead-job:${d.jobName}`,
+  fingerprint: deadJobFingerprint,
   // Every queue kind is duressExempt, for the same reason `duress-shed` and
   // `duress-episode` are: a queue in trouble and a host under duress are
   // overwhelmingly the same event, so the shed gate in `recordReport` would
@@ -50,6 +52,12 @@ function renderDescription(row: ReportRow, d: QueueDeadJobPayload): string {
     `The job \`${d.jobName}\` has terminally-failed rows in the queue ` +
       "(exhausted retries, not currently locked). They never run and clog " +
       "`graphile_worker._private_jobs` until the hourly dead-job GC archives them.",
+  );
+  lines.push("");
+  lines.push(
+    "This report covers ONE cause: the deaths below whose last error matches " +
+      "(ids and numbers aside). The same job dying for another reason files " +
+      "a report of its own.",
   );
   lines.push("");
   lines.push(`**Job:** \`${d.jobName}\``);

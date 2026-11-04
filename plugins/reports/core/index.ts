@@ -5,6 +5,7 @@ export { SERVER_REPORT_SOURCES, CLIENT_REPORT_SOURCES } from "./sources";
 export { reportsConfig } from "./config";
 export type { ReportSource } from "./sources";
 export type { ReportFingerprintContext } from "./fingerprint";
+export { normalizeMessage } from "./message-identity";
 export { reportIdKind } from "./id-kind";
 export type { ReportId } from "./id-kind";
 export {

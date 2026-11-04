@@ -198,6 +198,62 @@ export async function queryDeadJobStats(): Promise<DeadJobStat[]> {
   }));
 }
 
+// Terminally-dead rows grouped by (jobName, exact last error): the raw material
+// for attributing deaths to their CAUSE rather than to their job alone. One job
+// can die for several unrelated reasons at once (2026-11-04: `worktree.prepare`
+// dying of a new boot race while an older cause's report was still open), and a
+// per-job rollup keeps only the latest error, so the others vanish from it.
+//
+// The exact text still carries per-occurrence tokens (run ids, job ids), so the
+// caller folds these rows by a normalized cause; that normalization belongs to
+// the reports layer, which this plugin cannot import. Newest death first, so a
+// fold that keeps a cause's first group keeps its latest error and sample.
+// Bounded by the dead rows themselves, which the hourly dead-job GC archives.
+export interface DeadJobErrorStat {
+  jobName: string;
+  lastError: string | null;
+  deadCount: number;
+  attempts: number;
+  maxAttempts: number;
+  sampleJobId: string;
+}
+
+const DeadJobErrorStatRowSchema = z.object({
+  job_name: z.string(),
+  last_error: z.string().nullable(),
+  dead_count: z.number(),
+  attempts: z.number(),
+  max_attempts: z.number(),
+  sample_job_id: z.string(),
+});
+
+export async function queryDeadJobsByError(): Promise<DeadJobErrorStat[]> {
+  const rows = await executeRows(db, {
+    label: "queryDeadJobsByError",
+    row: DeadJobErrorStatRowSchema,
+    query: sql`
+    SELECT ${jobNameExpr}                                          AS job_name,
+           j.last_error                                            AS last_error,
+           count(*)::int                                           AS dead_count,
+           max(j.attempts)::int                                    AS attempts,
+           max(j.max_attempts)::int                                AS max_attempts,
+           (array_agg(j.id::text ORDER BY j.updated_at DESC))[1]   AS sample_job_id
+      FROM ${queueJobsFrom}
+     WHERE ${deadJobPredicate}
+     GROUP BY 1, 2
+     ORDER BY max(j.updated_at) DESC
+  `,
+  });
+  return rows.map((r) => ({
+    jobName: r.job_name,
+    lastError: r.last_error,
+    deadCount: r.dead_count,
+    attempts: r.attempts,
+    maxAttempts: r.max_attempts,
+    sampleJobId: r.sample_job_id,
+  }));
+}
+
 // Collapse a job's retry budget to the attempts already spent, so the next
 // graphile `get_job` scan skips it (`attempts < max_attempts` is now false) and
 // it falls straight into the terminally-dead set above — `deadJobPredicate`

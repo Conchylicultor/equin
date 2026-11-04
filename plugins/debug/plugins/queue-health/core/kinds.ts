@@ -17,10 +17,10 @@ const ClassOccupancySchema = z.object({
   lockedCount: z.number().int(),
 });
 
-// The jsonb payload for a `queue-dead-job` report. One report per distinct
-// `jobName` (a retry-storm of one broken job collapses to a single task), so the
-// payload carries the per-job rollup: how many terminally-dead rows, the
-// attempt counters, the latest error text, and a sample graphile job id for
+// The jsonb payload for a `queue-dead-job` report. One report per (jobName,
+// cause) — the cause being `lastError` normalized (`deadJobFingerprint`) — so
+// the payload carries that group's rollup: how many terminally-dead rows, the
+// attempt counters, the error text, and a sample graphile job id for
 // hand-inspection in the queue pane.
 export const QueueDeadJobPayloadSchema = z.object({
   jobName: z.string(),
