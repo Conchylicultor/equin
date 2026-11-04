@@ -1,7 +1,10 @@
 # Database connection failures: a failure must clean up after itself, and say so
 
-Status: incident fixed on main; first fix (awake-time deadline) and an interim
-backstop landed with this doc; the rest is proposed tasks below.
+Status: **done.** All five proposed tasks below have landed on main. A lost
+connection is now closed, not abandoned, and the interim idle-in-transaction
+backstop is retired (task 2). The stray-fd-close culprit had been found on
+2026-09-16 (commit 0d5b373dd6): Bun ≤ 1.3.14 double-closed a finished child's
+extra stdio fds at GC (oven-sh/bun#33828).
 
 ## The incident (2026-11-03 → 04, main)
 
