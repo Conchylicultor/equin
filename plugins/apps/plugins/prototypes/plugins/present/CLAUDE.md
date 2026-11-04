@@ -10,7 +10,8 @@ first one again on every gallery card:
   action bar) in a new browser tab, at the Responsive size
   (`present/<id>/<version>/responsive`) whatever size the canvas is at — at Fit
   that is the page laid out at the tab's own width, filling it. A source frame
-  (the real app) opens its own `href`, which already is that, and the button is
+  (the real app) opens its own `href` — the page itself at its in-app path,
+  with the app's chrome, so one navigates from it — and the button is
   disabled when it has none. The href comes from `BrowserTabOpener`
   (`components/frame-link.tsx`), opened as a `NewTabButton`.
 - **Open in a new tab on a gallery card** (`OpenCardNewTabAction`, a

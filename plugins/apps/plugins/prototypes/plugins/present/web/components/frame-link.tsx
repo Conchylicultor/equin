@@ -24,7 +24,8 @@ function frameTarget(frame: PrototypeFrame, meta: PrototypeMeta) {
  * Where a frame opens in a new browser tab, handed to `children` as an href —
  * `undefined` when it cannot. A prototype frame opens its present page
  * chromeless at the Responsive size, so it fills the tab at the tab's own
- * width; a source frame opens its own `href`, which already is that.
+ * width; a source frame opens its own `href` (the real app's page
+ * itself, with its chrome, to navigate from).
  */
 export function BrowserTabOpener({
   frame,

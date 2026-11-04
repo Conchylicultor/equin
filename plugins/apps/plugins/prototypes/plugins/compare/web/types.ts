@@ -20,8 +20,9 @@ export type CounterpartResolution =
       /** Identifier for the frame's tag (the ref, as declared). */
       badge?: string;
       /**
-       * A URL that opens the counterpart on its own (an app screen's path on
-       * this deploy) — absent for one that is not a page.
+       * A URL that opens the counterpart on its own (an app screen's in-app
+       * path, the page itself with its chrome, to navigate from) — absent for
+       * one that is not a page.
        */
       href?: string;
       /**

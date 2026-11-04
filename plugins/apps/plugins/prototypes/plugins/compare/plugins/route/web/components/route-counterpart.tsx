@@ -148,7 +148,9 @@ function resolve(
     title: TITLES[embed],
     subtitle: resolved.app.app.name,
     badge: target,
-    href: embedUrl(target, embed),
+    // The page itself, as the address bar spells it — with the app's own
+    // chrome, so the new tab is the real app to navigate, not a framed screen.
+    href: target,
     render: (width, height) => (
       <RealAppFrame
         target={target}
