@@ -102,8 +102,10 @@ per physical connection on pg-pool's `connect` event, so it is the innermost
 layer of both `pool.query` and the checked-out-client path `db.transaction()`
 takes). It is what lets the database side name who holds a lock:
 `pg_stat_activity.query` shows the comment, and `database/lock-watch` reads it.
-Not `application_name`: pgbouncer runs in transaction mode, so no session
-setting survives into the next client's transaction.
+Not `application_name`: pgbouncer runs in transaction mode, so no `SET`
+survives into the next client's transaction. (A client's startup
+`application_name` does survive, and every connection carries `equin:<pool>`
+there — but that names the connection, not the caller.)
 
 - The format is `database/connection` core's (`tagSqlWithOrigin` /
   `parseSqlOrigin`); the label is reduced to `[A-Za-z0-9._:/@=+-]` (anything
@@ -380,11 +382,24 @@ connection, Postgres rolls that transaction back, and the cluster's
 10 s. What the deadline does not cover is a head whose client is alive but not
 talking: `idle in transaction` with no call pending — the app holding a
 transaction open between two statements (awaiting something else, or wedged
-in its own code), or a caller under a long `withQueryDeadline` bound (boot DDL:
-15 min), or a connection built outside `database/connection`
-(`db-connection/no-raw-pg-connection` bans one). A chain standing for more
-than a minute past its members' deadlines is one of those: the origin names
-the code — fix that, then free the database.
+in its own code). That one is BOUNDED by the cluster's
+`idle_in_transaction_session_timeout` (5 min, `database/embedded`): Postgres
+ends the session and rolls it back, and the reap files a
+`db-idle-transaction-ended` report naming the origin (`database/lock-watch`).
+So a chain whose head is idle clears within 5 min, and the report is where to
+start. What neither bound covers: a head `active` on something slow, a caller
+under a long `withQueryDeadline` bound (boot DDL: 15 min), or a connection
+built outside `database/connection` (`db-connection/no-raw-pg-connection`
+bans one). A chain standing for more than 5 min is one of those: the origin
+names the code — fix that, then free the database.
+
+Why a bound and not only a report: an idle transaction holds its row locks
+and a lane slot; a migration altering a table it touched — even only read —
+waits on it (and queues every other statement on that table behind its own
+lock request), so main's next boot could reach the 15-min boot-DDL bound and
+fail to deploy; and if it wrote, its xid pins the live-update watermark
+(`snapshotWatermark`) of EVERY database on the cluster, xids being
+cluster-wide (all measured 2026-11-04). 5 min keeps all three short.
 
 To free it now: end the **whole chain** older than the deadline — the head and
 every waiter — not only the head:

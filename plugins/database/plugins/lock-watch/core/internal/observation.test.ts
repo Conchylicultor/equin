@@ -12,6 +12,7 @@ function session(over: Partial<SessionRow> & { pid: number }): SessionRow {
     xactMs: 1_000,
     stateMs: 1_000,
     blockedBy: [],
+    backendStartMs: 0,
     ...over,
   };
 }

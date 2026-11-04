@@ -5,6 +5,7 @@ import { openShortLivedClient } from "@plugins/database/plugins/admin/server";
 import { dbLog } from "@plugins/database/server";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import {
+  DB_IDLE_TRANSACTION_ENDED_KIND,
   DB_LOCK_HOLDER_KIND,
   LOCK_WATCH_THRESHOLD_MS,
   lockHolders,
@@ -13,8 +14,10 @@ import {
 import { readClusterActivity } from "./cluster-activity";
 import { CONNECT_STALL_MS, probeNewConnection } from "./connect-probe";
 import { heldSession } from "./held-session";
-import { readSessions } from "./read-sessions";
+import { readSessionEnds, readSessions } from "./read-sessions";
 import { lockHolderMessage, stalledConnectLines } from "./render";
+import { noticeIdleEnds } from "./idle-ended-watch";
+import { idleTransactionEndedMessage } from "./idle-ended-render";
 import { publishObservation } from "./state";
 
 // The lock watch: once a minute, who on this worktree's database holds other
@@ -37,6 +40,10 @@ import { publishObservation } from "./state";
 // the whole cluster is doing while the stall is on, into `db.jsonl`. The
 // probe's own missed deadline fails the job as loudly as before.
 //
+// It sees the sessions the cluster's idle-in-transaction timeout ended since
+// its last look (`idle-ended-watch.ts`) and reports the ones no app client
+// owns — the app's own clients report theirs.
+//
 // It never ends a session. Its job is to name the code that left a transaction
 // open so that code gets fixed; terminating the session would make the symptom
 // go away and leave the cause where it is.
@@ -56,8 +63,9 @@ export const lockWatchJob = defineJob({
   run: async () => {
     const held = heldSession();
     const rows = await readSessions(held);
+    const observedAt = Date.now();
     const observation: LockWatchObservation = {
-      observedAt: Date.now(),
+      observedAt,
       thresholdMs: LOCK_WATCH_THRESHOLD_MS,
       holders: lockHolders(rows, LOCK_WATCH_THRESHOLD_MS),
     };
@@ -80,6 +88,28 @@ export const lockWatchJob = defineJob({
         source: "server-db-lock-watch",
         data: r.data,
         message: r.message,
+      });
+    }
+
+    // Sessions the cluster's idle-in-transaction timeout ended since the last
+    // look. One the app's own client owned is that client's to report (it saw
+    // the server's 25P03, with the exact statement): logged here only, so one
+    // end is one report. Read after the holders are out, so a failed read
+    // cannot cost the look they already made.
+    const ends = await readSessionEnds(held);
+    for (const end of noticeIdleEnds(rows, ends, observedAt)) {
+      const message = idleTransactionEndedMessage(end.data);
+      dbLog.publish(
+        `[lock-watch] ${message} (pid ${end.data.pid}` +
+          `${end.clientReports ? ", reported by its client" : ""})`,
+        "stderr",
+      );
+      if (end.clientReports) continue;
+      void recordReport({
+        kind: DB_IDLE_TRANSACTION_ENDED_KIND,
+        source: "server-db-lock-watch",
+        data: end.data,
+        message,
       });
     }
 

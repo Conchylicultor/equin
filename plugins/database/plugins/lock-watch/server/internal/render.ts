@@ -15,7 +15,8 @@ const VISION_DOC = "research/2026-11-04-global-db-connection-failure-vision.md";
 
 const TITLE_MAX = 120;
 
-function clampOneLine(value: string, max: number): string {
+/** `value` on one line (whitespace folded), cut to `max` with an ellipsis. */
+export function clampOneLine(value: string, max: number): string {
   const flat = value.replace(/\s+/g, " ").trim();
   return flat.length <= max ? flat : `${flat.slice(0, max - 1)}…`;
 }

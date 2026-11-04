@@ -15,6 +15,13 @@ export const LOCK_WATCH_HOLDERS_MAX = 20;
 /** The longest stretch of a holder's statement an observation carries. */
 export const LOCK_WATCH_SQL_MAX = 500;
 
+/** A statement cut to {@link LOCK_WATCH_SQL_MAX}, as every payload carries one. */
+export function cutLockWatchSql(sql: string): string {
+  return sql.length > LOCK_WATCH_SQL_MAX
+    ? sql.slice(0, LOCK_WATCH_SQL_MAX)
+    : sql;
+}
+
 /** One `pg_stat_activity` row, as the watch reads it (its own database's client backends). */
 export interface SessionRow {
   pid: number;
@@ -29,6 +36,8 @@ export interface SessionRow {
   stateMs: number | null;
   /** `pg_blocking_pids(pid)`: the sessions this one waits on, directly. */
   blockedBy: readonly number[];
+  /** Epoch ms its backend started — with the pid, the session's identity across looks. */
+  backendStartMs: number | null;
 }
 
 /** A session holding its transaction where the watch names it. */
@@ -128,10 +137,7 @@ export function lockHolders(
     holders.push({
       pid,
       origin,
-      sql:
-        sql.length > LOCK_WATCH_SQL_MAX
-          ? sql.slice(0, LOCK_WATCH_SQL_MAX)
-          : sql,
+      sql: cutLockWatchSql(sql),
       state: row.state,
       applicationName: row.applicationName,
       xactMs: row.xactMs,

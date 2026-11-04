@@ -22,7 +22,41 @@ Vision and incident: [`research/2026-11-04-global-db-connection-failure-vision.m
 The watch never ends a session. Its job is to point at the code that left a
 transaction open so that code gets fixed; terminating the session would make
 the symptom disappear and keep the cause. Freeing a wedged database by hand is
-the vision doc's runbook.
+the runbook in `plugins/database/CLAUDE.md`.
+
+The CLUSTER does end one: `idle_in_transaction_session_timeout` (5 min,
+`database/embedded`) is the bound around app code that stalls between two
+statements of a transaction. So a session the watch names idle for minutes is
+reaped at 5 — and every reap is reported, below.
+
+## Sessions the idle-in-transaction timeout ends
+
+The `db-idle-transaction-ended` report: `variant: "error"`, `duressExempt`,
+one row per origin (untagged: per pool, or per `application_name`), every end
+bumping it. The payload names the transaction's LAST statement and its origin
+(the code that went quiet with the transaction open), its age and idle time.
+Every reap files one, from whichever observer can see it — each misses what
+the other sees (`core/internal/idle-ended.ts`):
+
+| observer | sees | cannot see |
+|---|---|---|
+| **the session's own client** (`database/connection`'s `DbClient`: Postgres's `FATAL 25P03`, reached as an `error` event, directly and through PgBouncer) → `idleTransactionEndedSink` → `server/internal/idle-ended-handler.ts`, source `server-caught` | exact, at once: origin of the last and first statements, the statement, the pool | a session it did not open (psql, a raw client); a process whose event loop never runs again |
+| **the watch** (`idle-ended-watch.ts`): a session it saw idle in a transaction on one look is gone on the next (no session with that pid AND backend start), had been idle long enough by then to reach the bound it reads from `pg_settings`, and `pg_stat_database.sessions_fatal` rose in between (a reap is a FATAL end; a closed client counts as abandoned, `pg_terminate_backend` as killed) — longest idle first, no more than the FATAL count; source `server-db-lock-watch` | any session on its database, app or not — the last statement and origin as `pg_stat_activity` showed them | an inference, a minute coarse; another FATAL end in the same minute could be counted; blind while the watch does not run (a backend's first look compares with nothing) |
+| Postgres's own log (`postgres.log`: `FATAL: terminating connection due to idle-in-transaction timeout`) | every reap on the cluster | only the pid and time (`log_line_prefix` `%m [%p]`) — read it next to the `[lock-watch]` lines, which carry the pid; nothing reads it |
+
+One reap, one report: a session whose `application_name` is a reporting app
+client's (`equin:<pool>`, `isDbApplicationName` — a backend, serving or exec;
+a CLI process logs in as `equin-cli:<pool>` and is reported by the watch) is
+that client's to report, so the watch only logs it (`[lock-watch] … reported
+by its client`) — every reap the watch concludes is in `db.jsonl` either way.
+The handler registers in `onReadyBlocking`, not `onReady`, because an exec
+child (a supervised job's body) skips `onReady` and its ends would sit in the
+sink's hold. Left to the client and so unreported: a backend whose event loop
+never runs again — its session was named by `db-lock-holder` every minute
+before the end. Lost to the watch: an end between a backend's last look and
+its successor's first (`previous` lives in memory), and an unrelated FATAL in
+the same minute can be attributed to a session that committed — it is an
+inference.
 
 ## How a look works (`server/internal/watch-job.ts`)
 
@@ -100,6 +134,13 @@ The words are `describeLockHolder` (core), shared by the report and the row.
   an origin-tagged `UPDATE` left idle in its transaction, a second `UPDATE`
   queued on it, the watch's read naming the holder and the report it files;
   and the cluster look naming a sleeping backend with its wait event.
+- `core/internal/idle-ended.test.ts` — which ended sessions the watch
+  attributes to the timeout, pure (FATAL count, pid reuse, bound not reached).
+- `server/internal/idle-ended.test.ts` — the timeout end to end, on a throwaway
+  database whose own bound is 1 s: a transaction left idle is ended, its client
+  files the report with its origin and statement, its write is rolled back,
+  its next call fails with `IdleTransactionEndedError`, and the watch's two
+  looks conclude the same session ended (and leave the report to its client).
 - `server/internal/connect-probe.test.ts` — the probe, pure: no look when the
   connect answers in time, a look while it is still pending when it does not,
   and every failure still loud.
@@ -108,15 +149,19 @@ The words are `describeLockHolder` (core), shared by the report and the row.
 
 ## Plugin reference
 
-- Description: Database lock watch: a per-worktree job that looks at pg_stat_activity + pg_blocking_pids once a minute (Postgres has no change signal for lock waits), on a held direct session that neither a saturated pgbouncer nor a stall of new connections can starve, and names every session holding others back or idle inside a transaction past 60 s by the origin its statement's comment carries — a db-lock-holder report (one row per origin) and the db-lock-watch push value behind the health report's Database row. Each look also probes a new connection; one still unanswered after 5 s gets a snapshot of every busy backend on the cluster, read on the held session, in db.jsonl. It never ends a session.
+- Description: Database lock watch: a per-worktree job that looks at pg_stat_activity + pg_blocking_pids once a minute (Postgres has no change signal for lock waits), on a held direct session that neither a saturated pgbouncer nor a stall of new connections can starve, and names every session holding others back or idle inside a transaction past 60 s by the origin its statement's comment carries — a db-lock-holder report (one row per origin) and the db-lock-watch push value behind the health report's Database row. Each look also probes a new connection; one still unanswered after 5 s gets a snapshot of every busy backend on the cluster, read on the held session, in db.jsonl. It never ends a session. Every session the cluster's idle-in-transaction timeout ends is reported (db-idle-transaction-ended, one row per origin): from the session's own client (database/connection's idleTransactionEndedSink, SQLSTATE 25P03) or, for a session no app client owns, from the watch seeing it gone between two looks with pg_stat_database.sessions_fatal up.
 - Server:
   - Contributes:
+    - `report-kind` "db-idle-transaction-ended"
     - `report-kind` "db-lock-holder"
     - `resource.declare` "db-lock-watch"
   - Uses:
     - `database.dbLog`
     - `database/admin.openHeldClient`
     - `database/admin.openShortLivedClient`
+    - `database/connection.formatIdleTransactionEndedLogLine`
+    - `database/connection.IdleTransactionEndedEvent`
+    - `database/connection.idleTransactionEndedSink`
     - `infra/jobs.defineJob`
     - `network/live.serveValue`
     - `reports.ReportKind`
@@ -129,17 +174,25 @@ The words are `describeLockHolder` (core), shared by the report and the row.
     - `database/connection.parseSqlOrigin`
     - `network/live.liveValue`
   - Exports (types):
+    - `DbIdleTransactionEndedPayload`
     - `DbLockHolderPayload`
+    - `IdleSessionSeen`
     - `LockHolder`
     - `LockWatchObservation`
     - `LockWatchState`
     - `SessionRow`
   - Exports (values):
+    - `cutLockWatchSql`
+    - `DB_IDLE_TRANSACTION_ENDED_KIND`
     - `DB_LOCK_HOLDER_KIND`
+    - `DbIdleTransactionEndedPayloadSchema`
     - `DbLockHolderPayloadSchema`
     - `dbLockWatch`
     - `describeLockHolder`
     - `holderName`
+    - `idleEndedPayloadFromWatch`
+    - `idleSessionsEnded`
+    - `idleSessionsSeen`
     - `LOCK_WATCH_HOLDERS_MAX`
     - `LOCK_WATCH_SQL_MAX`
     - `LOCK_WATCH_THRESHOLD_MS`

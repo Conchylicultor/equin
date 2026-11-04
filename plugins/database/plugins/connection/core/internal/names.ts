@@ -1,3 +1,4 @@
+import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
 // The closed set of backend database connections. Every pool and standalone
 // client built through `createDbPool` / `createDbClient` names itself with one
 // of these, and every deadline report names the pool it came from. A closed
@@ -90,3 +91,41 @@ export function isInTransaction(state: DbTxState | null): boolean {
  * is read for the head.
  */
 export const IN_FLIGHT_REPORT_MAX = 10;
+
+const APPLICATION_NAME_PREFIX = `${PRODUCT_NAME}:`;
+const CLI_APPLICATION_NAME_PREFIX = `${PRODUCT_NAME}-cli:`;
+
+/**
+ * The `application_name` every connection built by `createDbPool` /
+ * `createDbClient` logs in with: `equin:<pool>` from a process that reports
+ * the end of its own sessions (a backend, serving or exec: it has a runtime
+ * namespace and drains `idleTransactionEndedSink`), `equin-cli:<pool>` from
+ * one that cannot (a CLI process: stderr only). It marks the session in
+ * `pg_stat_activity` as one whose idle-in-transaction end its own client
+ * reports — so the lock watch leaves it to that client — as opposed to any
+ * other session (a CLI's, a psql shell's), which only the database side can
+ * report.
+ *
+ * It survives PgBouncer: a client's STARTUP `application_name` is one of the
+ * parameters PgBouncer re-applies to whichever server session it links the
+ * client to (a `SET` would not survive transaction pooling). Every client of
+ * one pool carries the same value, so it never churns. It names the
+ * connection, never the caller: that is the origin comment's
+ * (`tagSqlWithOrigin`).
+ */
+export function dbApplicationName(
+  pool: DbPoolName,
+  reportsOwnEnds: boolean,
+): string {
+  return `${reportsOwnEnds ? APPLICATION_NAME_PREFIX : CLI_APPLICATION_NAME_PREFIX}${pool}`;
+}
+
+/** Whether a session's `application_name` says its own client reports its end (`dbApplicationName(pool, true)`). */
+export function isDbApplicationName(applicationName: string): boolean {
+  return (
+    applicationName.startsWith(APPLICATION_NAME_PREFIX) &&
+    (DB_POOL_NAMES as readonly string[]).includes(
+      applicationName.slice(APPLICATION_NAME_PREFIX.length),
+    )
+  );
+}

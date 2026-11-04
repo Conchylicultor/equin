@@ -20806,7 +20806,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `pgClientBin`
           - `PgClientToolMissingError`
-    - **`connection`** — Every backend database connection, built one way: createDbPool / createDbClient give each pool or standalone client a name from the closed pool-name set and a pg.Client subclass that bounds connect() and every query() with a deadline (60 s, widened per scope by withQueryDeadline). A call with no reply rejects with QueryDeadlineExceededError (pool, phase, sql, origin), and its connection is closed — handed back to its pool as broken and its socket destroyed, so Postgres rolls back its transaction and PgBouncer frees its slot — and announced on queryDeadlineSink. Every pool also carries its own connection-error listeners (pool and per client), which report a broken connection once instead of letting it crash the process — so a library handed the pool (graphile-worker) installs none of its own.
+    - **`connection`** — Every backend database connection, built one way: createDbPool / createDbClient give each pool or standalone client a name from the closed pool-name set and a pg.Client subclass that bounds connect() and every query() with a deadline (60 s, widened per scope by withQueryDeadline). A call with no reply rejects with QueryDeadlineExceededError (pool, phase, sql, origin), and its connection is closed — handed back to its pool as broken and its socket destroyed, so Postgres rolls back its transaction and PgBouncer frees its slot — and announced on queryDeadlineSink. A session the server ends for idling inside its transaction (25P03) is announced on idleTransactionEndedSink with the origin and statement of the transaction's last statement, and every later call on that connection fails with IdleTransactionEndedError. Every connection logs in as application_name equin:<pool> (equin-cli:<pool> from a process with no runtime namespace, which reports nothing). Every pool also carries its own connection-error listeners (pool and per client), which report a broken connection once instead of letting it crash the process — so a library handed the pool (graphile-worker) installs none of its own.
+      - Core:
+        - Uses: `framework/product-name.PRODUCT_NAME`
+        - Exports (types):
+          - `DbCallPhase`
+          - `DbPoolName`
+          - `DbTxState`
+          - `SqlOrigin`
+        - Exports (values):
+          - `DB_CALL_PHASES`
+          - `DB_POOL_NAMES`
+          - `DB_POOLS_THROUGH_PGBOUNCER`
+          - `DB_TX_STATES`
+          - `dbApplicationName`
+          - `IN_FLIGHT_REPORT_MAX`
+          - `isConnectionCapacityRefusal`
+          - `isDbApplicationName`
+          - `isInTransaction`
+          - `ORIGIN_LABEL_MAX`
+          - `originCommentLabel`
+          - `parseSqlOrigin`
+          - `tagSqlWithOrigin`
       - Cross-plugin:
         - Imported by:
           - `database/admin`
@@ -20818,6 +20839,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `CreateDbClientOptions`
           - `CreateDbPoolOptions`
+          - `IdleTransactionEndedEvent`
           - `ListenSessionHandlers`
           - `OpenListenSessionOptions`
           - `QueryDeadlineEvent`
@@ -20830,6 +20852,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `createSchemaGenerationLocks`
           - `currentQueryDeadline`
           - `formatDeadlineLogLine`
+          - `formatIdleTransactionEndedLogLine`
+          - `idleTransactionEndedSink`
           - `onClientLost`
           - `openListenSession`
           - `QUERY_DEADLINE_MS`
@@ -20841,26 +20865,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `db-connection/no-raw-pg-connection` — `.` (sanctioned)
           - `boundaries/no-platform-api` — `server/internal/client.ts`, `server/internal/deadline.ts` (debt)
         - Exempted by: `database/connection` (0 debt)
-      - Core:
-        - Exports (types):
-          - `DbCallPhase`
-          - `DbPoolName`
-          - `DbTxState`
-          - `SqlOrigin`
-        - Exports (values):
-          - `DB_CALL_PHASES`
-          - `DB_POOL_NAMES`
-          - `DB_POOLS_THROUGH_PGBOUNCER`
-          - `DB_TX_STATES`
-          - `IN_FLIGHT_REPORT_MAX`
-          - `isConnectionCapacityRefusal`
-          - `isInTransaction`
-          - `ORIGIN_LABEL_MAX`
-          - `originCommentLabel`
-          - `parseSqlOrigin`
-          - `tagSqlWithOrigin`
       - Test helpers:
         - Server: `@plugins/database/plugins/connection/server/testing`
+          - `IdleTransactionEndedError` — What a call on a connection whose session the server ended for idling in its transaction gets — the stalled transaction's own next statement, typically: its work was rolled back.
           - `QueryDeadlineExceededError` — A database call got no reply within its deadline.
           - `startBlackHoleProxy` — Start a black-hole proxy on 127.0.0.1 forwarding to `upstream` (e.g. the cluster's Unix socket).
           - Types: `BlackHoleProxy`
@@ -21026,6 +21033,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `applyClusterSettings`
           - `CLIENT_CONNECTION_CHECK_INTERVAL_MS`
           - `CLUSTER_SESSION_SETTINGS`
+          - `IDLE_IN_TRANSACTION_TIMEOUT_MS`
           - `MAX_CONNECTIONS`
           - `PG_BASE_DATABASE`
           - `PG_DATA_DIR`
@@ -21079,15 +21087,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Exports (values): `FORKED_AT_SETTING`
     - **`lane-isolation`** — The end-to-end proof that the app's connection lanes are isolated all the way down to PgBouncer: with every background server slot of a throwaway database held idle in a transaction (the 2026-11-03 shape), interactive queries still answer. Test only — a child of database so it can use the throwaway-database fixture, which itself depends on database.
-    - **`lock-watch`** — Database lock watch: a per-worktree job that looks at pg_stat_activity + pg_blocking_pids once a minute (Postgres has no change signal for lock waits), on a held direct session that neither a saturated pgbouncer nor a stall of new connections can starve, and names every session holding others back or idle inside a transaction past 60 s by the origin its statement's comment carries — a db-lock-holder report (one row per origin) and the db-lock-watch push value behind the health report's Database row. Each look also probes a new connection; one still unanswered after 5 s gets a snapshot of every busy backend on the cluster, read on the held session, in db.jsonl. It never ends a session.
+    - **`lock-watch`** — Database lock watch: a per-worktree job that looks at pg_stat_activity + pg_blocking_pids once a minute (Postgres has no change signal for lock waits), on a held direct session that neither a saturated pgbouncer nor a stall of new connections can starve, and names every session holding others back or idle inside a transaction past 60 s by the origin its statement's comment carries — a db-lock-holder report (one row per origin) and the db-lock-watch push value behind the health report's Database row. Each look also probes a new connection; one still unanswered after 5 s gets a snapshot of every busy backend on the cluster, read on the held session, in db.jsonl. It never ends a session. Every session the cluster's idle-in-transaction timeout ends is reported (db-idle-transaction-ended, one row per origin): from the session's own client (database/connection's idleTransactionEndedSink, SQLSTATE 25P03) or, for a session no app client owns, from the watch seeing it gone between two looks with pg_stat_database.sessions_fatal up.
       - Server:
         - Contributes:
+          - `report-kind` "db-idle-transaction-ended"
           - `report-kind` "db-lock-holder"
           - `resource.declare` "db-lock-watch"
         - Uses:
           - `database.dbLog`
           - `database/admin.openHeldClient`
           - `database/admin.openShortLivedClient`
+          - `database/connection.formatIdleTransactionEndedLogLine`
+          - `database/connection.IdleTransactionEndedEvent`
+          - `database/connection.idleTransactionEndedSink`
           - `infra/jobs.defineJob`
           - `network/live.serveValue`
           - `reports.ReportKind`
@@ -21100,17 +21112,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/connection.parseSqlOrigin`
           - `network/live.liveValue`
         - Exports (types):
+          - `DbIdleTransactionEndedPayload`
           - `DbLockHolderPayload`
+          - `IdleSessionSeen`
           - `LockHolder`
           - `LockWatchObservation`
           - `LockWatchState`
           - `SessionRow`
         - Exports (values):
+          - `cutLockWatchSql`
+          - `DB_IDLE_TRANSACTION_ENDED_KIND`
           - `DB_LOCK_HOLDER_KIND`
+          - `DbIdleTransactionEndedPayloadSchema`
           - `DbLockHolderPayloadSchema`
           - `dbLockWatch`
           - `describeLockHolder`
           - `holderName`
+          - `idleEndedPayloadFromWatch`
+          - `idleSessionsEnded`
+          - `idleSessionsSeen`
           - `LOCK_WATCH_HOLDERS_MAX`
           - `LOCK_WATCH_SQL_MAX`
           - `LOCK_WATCH_THRESHOLD_MS`
@@ -27271,6 +27291,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/website/shell`
           - `conversations/workspace/scratch`
+          - `database/connection`
           - `database/derived-views`
           - `database/migrations/phases`
           - `framework/cli`

@@ -40,6 +40,38 @@ export const CLIENT_CONNECTION_CHECK_INTERVAL_MS = 10_000;
 export const LOG_CONNECTIONS = "receipt,setup_durations";
 
 /**
+ * How long a session may sit idle INSIDE a transaction — between two of its
+ * statements, nothing pending — before Postgres ends it (rolling the
+ * transaction back, releasing its locks and its PgBouncer slot).
+ *
+ * A BOUND around app code that stalls, not a fix for anything. The client-side
+ * deadline (`database/connection`) bounds a call in flight; nothing on the
+ * client bounds the time between two statements of a transaction whose code is
+ * alive but waiting on something else, or wedged. Such a transaction holds its
+ * row locks — every write to those rows fails its own deadline, every minute —
+ * and one lane slot (8 interactive / 10 background per database), and while
+ * it holds them (both measured 2026-11-04):
+ *   - a migration altering a table it touched, even only read, waits on it —
+ *     and queues every other statement on that table behind its own lock
+ *     request; 5 min stays well inside boot DDL's 15 min bound;
+ *   - if it wrote, its xid pins `pg_snapshot_xmin` — the live-update
+ *     watermark — for EVERY database of the cluster (xids are cluster-wide),
+ *     so watermark-confirmed optimistic ops wait and L2's changelog cannot be
+ *     pruned until it ends.
+ *
+ * Every session it ends is reported, naming the code: the session's own client
+ * sees the server end it (`database/connection`'s `idleTransactionEndedSink`)
+ * and the lock watch sees it vanish (`database/lock-watch`) — a reap is never
+ * silent. 5 min: far past any transaction the app means to hold (the lock
+ * watch names one idle past 60 s), well inside the boot DDL bound.
+ *
+ * History: first an interim backstop for connections ABANDONED on a missed
+ * deadline (2026-11-04, unreported), retired when lost connections began to
+ * be closed, restored the same day as this bound, reported.
+ */
+export const IDLE_IN_TRANSACTION_TIMEOUT_MS = 5 * 60_000;
+
+/**
  * The session settings every session on every database of the cluster starts
  * with. A CLUSTER setting, owned by the one act that brings the cluster up:
  * set per database it would need a writer per database — and the writer was
@@ -50,6 +82,7 @@ export const LOG_CONNECTIONS = "receipt,setup_durations";
  * what a fork copies (pg_dump without `--create`).
  */
 export const CLUSTER_SESSION_SETTINGS: Readonly<Record<string, string>> = {
+  idle_in_transaction_session_timeout: `${IDLE_IN_TRANSACTION_TIMEOUT_MS}ms`,
   client_connection_check_interval: `${CLIENT_CONNECTION_CHECK_INTERVAL_MS}ms`,
   log_connections: LOG_CONNECTIONS,
 };
@@ -57,18 +90,9 @@ export const CLUSTER_SESSION_SETTINGS: Readonly<Record<string, string>> = {
 /**
  * Settings this cluster once carried and must no longer: reset on every start,
  * in the cluster's file AND on every database still carrying its own copy.
- *
- * - `idle_in_transaction_session_timeout` (5 min) was the interim backstop for
- *   connections lost to a deadline being ABANDONED — never closed, their
- *   transactions left open with their locks. Lost connections are closed now,
- *   so nothing is left idle in a transaction to reap
- *   (research/2026-11-04-global-db-connection-failure-vision.md, task 2). Its
- *   first version was set per database at boot, so main and the worktree
- *   databases that booted that build carry a copy of their own.
+ * None today.
  */
-export const RETIRED_CLUSTER_SETTINGS: readonly string[] = [
-  "idle_in_transaction_session_timeout",
-];
+export const RETIRED_CLUSTER_SETTINGS: readonly string[] = [];
 
 /** What `applyClusterSettings` needs of a `pg` client. */
 export type ClusterSettingsClient = SqlQueryable;
@@ -80,9 +104,9 @@ export type ClusterSettingsClient = SqlQueryable;
  * Idempotent; run by the start script on every start, reattach included, so a
  * running cluster picks up a changed value on the next gateway start. ALTER
  * SYSTEM writes a file under its own lock, not a catalog row, so concurrent
- * callers cannot conflict on it; a retired setting's per-database reset IS a
- * catalog write, made only while a database still carries one — once, on the
- * first start after it was retired, by the one start script. Superuser (the
+ * callers cannot conflict on it; a per-database reset (of a cluster setting's
+ * or a retired setting's copy) IS a catalog write, made only while a database
+ * still carries one — once, by the one start script. Superuser (the
  * cluster's own user).
  */
 export async function applyClusterSettings(
@@ -90,6 +114,10 @@ export async function applyClusterSettings(
 ): Promise<void> {
   for (const [name, value] of Object.entries(CLUSTER_SESSION_SETTINGS)) {
     await client.query(`ALTER SYSTEM SET ${name} = '${value}'`);
+    // A per-database copy would override the cluster's value on that database:
+    // the cluster owns it. (The first idle-in-transaction timeout was set per
+    // database at boot; databases that booted that build still carry one.)
+    await resetOnEveryDatabase(client, name);
   }
   for (const name of RETIRED_CLUSTER_SETTINGS) {
     await client.query(`ALTER SYSTEM RESET ${name}`);

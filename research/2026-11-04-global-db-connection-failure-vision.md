@@ -4,7 +4,10 @@ Status: **done.** All five proposed tasks below have landed on main. A lost
 connection is now closed, not abandoned, and the interim idle-in-transaction
 backstop is retired (task 2). The stray-fd-close culprit had been found on
 2026-09-16 (commit 0d5b373dd6): Bun ≤ 1.3.14 double-closed a finished child's
-extra stdio fds at GC (oven-sh/bun#33828).
+extra stdio fds at GC (oven-sh/bun#33828). **Follow-up (2026-11-04, later):**
+the idle-in-transaction timeout is back — as a bound around app code that
+stalls between two statements, which no deadline covers, and with every
+session it ends reported (see "The bound is back").
 
 ## The incident (2026-11-03 → 04, main)
 
@@ -102,7 +105,8 @@ is reported. Nothing is set aside silently.** In order of cost:
   abandoned connection left open. This is a
   bound around our own design flaw, not a fix: it reaps each dead link of a chain
   after 5 min (a 16-link chain still costs ~80 min), and the reap is not reported.
-  **Removed with task 2 (2026-11-04).**
+  **Removed with task 2 (2026-11-04); restored, reported, the same day — "The
+  bound is back".**
 
 ## Proposed tasks
 
@@ -323,6 +327,71 @@ enforced rule:
   (`short-title-store.test.ts`).
 - Left as is: `dead-job-gc.ts` (the purge's `RETURNING` feeds an app-side
   filter before the log delete), and the "Maybe" and "No" lists above.
+
+## The bound is back (2026-11-04, follow-up of task 2)
+
+Task 2 retired the timeout because a LOST call no longer leaves anything open.
+But a transaction whose app code is ALIVE and stalls between two statements —
+awaiting something other than the database, or wedged — is covered by no
+deadline: the 60 s bound is per call in flight. It holds its row locks and one
+lane slot for as long as it stalls; only the lock watch reported it, nothing
+ended it.
+
+So `idle_in_transaction_session_timeout` = 5 min is a cluster setting again
+(`database/embedded`'s `CLUSTER_SESSION_SETTINGS`, `ALTER SYSTEM` by the start
+script — never per-process `ALTER DATABASE`, the 2026-11-04 race), as a
+**bound around code that stalls, not a fix**: and unlike the interim backstop,
+**every session it ends files a `db-idle-transaction-ended` report** naming the
+origin and the last statement of the transaction it ended, one row per origin
+(`database/lock-watch`):
+
+- **the session's own client** sees it exactly: Postgres sends `FATAL 25P03`
+  when it ends the session, and pg delivers it as an `error` event, directly
+  and through PgBouncer (measured). `DbClient` catches it, names the
+  transaction's last statement and origin, announces it on
+  `idleTransactionEndedSink`, and fails the stalled code's next call with
+  `IdleTransactionEndedError`. (The next call itself does NOT carry 25P03 —
+  pg only says "not queryable" — so the code is caught on the event.)
+- **the lock watch** covers what the client cannot see (a session it did not
+  open, a process whose event loop never runs again): a session it saw idle in
+  a transaction, gone on the next look, after reaching the bound, with
+  `pg_stat_database.sessions_fatal` up in between (a reap is a FATAL end,
+  measured). Every connection now logs in as `application_name` `equin:<pool>`
+  (it survives PgBouncer), so the watch leaves an app session's end to its
+  client: one reap, one report.
+- **Postgres's own log** records every reap (`FATAL: terminating connection
+  due to idle-in-transaction timeout`) with only a pid and a time; nothing
+  reads it, but the `[lock-watch]` lines carry the pid to match it against.
+
+Done-test: `lock-watch/server/internal/idle-ended.test.ts` holds a transaction
+idle past a 1 s bound on a throwaway database and sees the session ended, its
+write rolled back, the report filed with its origin, and the watch's two looks
+agree.
+
+**Risks verified (2026-11-04, on the embedded cluster):**
+
+- **(a) Watermark — real, and wider than one database.** A transaction that
+  WROTE (has an xid) and sits idle pins `pg_snapshot_xmin(pg_current_snapshot())`
+  at its xid, and since xids are cluster-wide, a write transaction idle in ANY
+  worktree's database pins the watermark every database reads (measured: an
+  idle write in a throwaway database pinned the `postgres` database's
+  watermark). A read-only idle transaction does not. What stalls (code read):
+  no user action hangs. Optimistic ops confirmed by their exact ack (`ackTx`)
+  or by content are unaffected; ops that only the watermark can confirm or deny
+  stay pending/overlaid until unpin (then confirm or are dropped as superseded
+  at once); `awaitResourceWrite` (the saved-theme flows) waits for the unpin if
+  its ack frame was missed — it has no bound; L2's changelog cannot be pruned
+  past the pin and the next boot's catch-up replays more. **5 min is an
+  acceptable bound for all of these** — they are delays, not losses, and none
+  wedges — but the coupling of every database's watermark to any other
+  database's stalled writer is a design question, filed separately, not
+  changed here.
+- **(b) Migrations — real.** `ALTER TABLE` waits on an idle transaction that
+  touched the table, even one that only READ it (AccessShareLock), and while it
+  waits its AccessExclusive request queues every later statement on the table
+  (measured with `lock_timeout`). Unbounded, a stalled transaction could hold
+  main's next boot past the 15-min boot-DDL bound and fail the deploy; with the
+  timeout the wait is at most 5 min.
 
 ## Runbook: a database wedged by a lock chain
 

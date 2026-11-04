@@ -55,6 +55,7 @@ A leaf with no imports, so a browser bundle, a server or a script can import it.
   - Imported by:
     - `apps/website/shell`
     - `conversations/workspace/scratch`
+    - `database/connection`
     - `database/derived-views`
     - `database/migrations/phases`
     - `framework/cli`

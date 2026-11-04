@@ -148,6 +148,54 @@ holding an app-pool connection, until the pool was gone and `/home` sat on
 "Waiting for the server…". Both halves are fixed: the clock counts awake time,
 and a lost connection is closed, so its transaction is rolled back at once.
 
+## When the server ends an idle transaction
+
+The deadline bounds a call in flight. Nothing on the client bounds the time
+BETWEEN two statements of a transaction: app code that is alive but stalled
+(awaiting something other than the database, or wedged) with the transaction
+open keeps its row locks and its lane slot. The cluster's
+`idle_in_transaction_session_timeout` (5 min, `database/embedded`) is that
+bound — a bound around app code that stalls, not a fix: Postgres ends the
+session and rolls the transaction back.
+
+The client sees it at once: Postgres sends `FATAL 25P03` the moment it ends
+the session, and pg delivers it as an `error` event — directly, and through
+PgBouncer, which forwards it before its own `server conn crashed?` (both
+measured, PG 18 / PgBouncer, 2026-11-04). The NEXT call does not carry the
+code; pg only says "not queryable". So `DbClient`:
+
+- **remembers, per connection, the transaction it is in** as of each reply
+  (ReadyForQuery `T`/`E`): its first statement's origin and its latest
+  statement's origin and label — two field writes per statement;
+- **catches the 25P03 in `emit`**, not in a listener, so whether the holder
+  listens (and whether an unheard `error` kills the process) is unchanged —
+  and on a call's error reply too: code wedged past the bound sends its next
+  statement before reading the FATAL already in its socket, and pg settles
+  that call (and every queued one, before it emits `error`) with it;
+- **announces it on `idleTransactionEndedSink`**: pool, `origin` and `sql` of
+  the last statement before the stall, `openedBy`, transaction age and idle
+  time (awake clock). `database/lock-watch` logs it to `db.jsonl` (`[idle-tx]`
+  line, `formatIdleTransactionEndedLogLine`) and files a
+  `db-idle-transaction-ended` report; in a CLI process the line goes to stderr;
+- **fails every later call with `IdleTransactionEndedError`** (no `.code`,
+  never retried), naming the stalled origin and that the work was rolled back;
+- the pool's connection-error listener files nothing for it, nor for the
+  errors that follow on the same connection: the sink names the code.
+
+It cannot see a session it did not open (a psql shell, a raw client) or one
+whose process never runs its event loop again; the lock watch covers those
+(`database/lock-watch`, "Sessions the idle-in-transaction timeout ends").
+
+**Every connection logs in as `application_name` `equin:<pool>`**
+(`dbApplicationName`, core) — `equin-cli:<pool>` from a process with no
+runtime namespace (a CLI run), which drains no sink and only writes stderr,
+so the watch reports those itself. A client's STARTUP `application_name` survives
+PgBouncer's transaction pooling (PgBouncer re-applies it to whichever server
+session the client is linked to; a `SET` would not), so `pg_stat_activity`
+tells the app's sessions from anyone else's — which the lock watch uses to
+leave a session's end to the client that owns it (`isDbApplicationName`). It
+names the connection, never the caller: that stays the origin comment.
+
 ## When a connection breaks
 
 A connection that *breaks* is a different event from one that goes silent: its
@@ -161,7 +209,8 @@ Neither listener recovers anything, because nothing needs it: pg-pool has alread
 dropped the idle client, and a checked-out client is no longer queryable. Its
 holder's next statement rejects, and pg-pool drops it on release. The listeners
 report the error, once per connection, as
-`[db] pool=<name>: connection error: …`. In a backend that goes to
+`[db] pool=<name>: connection error: …` — except the server's idle-in-transaction
+end and what follows it, which `idleTransactionEndedSink` reports. In a backend that goes to
 `reportServerError` (`errorType` `DbConnectionError`); in a CLI process it goes to
 stderr. A lost client is never reported: the deadline closed it, and already
 reported that.
@@ -233,8 +282,9 @@ the enqueue pool's wiring.
 `database/server` (the app pool), `database/admin`, `network/live/change-feed` and
 `infra/jobs` all build connections, and `jobs` sits below plenty of things that
 import `database`. So this plugin imports nothing of theirs: only `pg`,
-`primitives/report-sink`, `infra/runtime-profiler/core` and
-`infra/runtime-identity/core`.
+`primitives/report-sink`, `infra/runtime-profiler/core`,
+`infra/runtime-identity/core` and `framework/product-name/core` (the
+`application_name` prefix).
 
 **Never import `primitives/log-channels/server` here.** That barrel carries HTTP
 and WS routes, which reach `endpoints` and its DOM-typed codec. Admin connections
@@ -263,7 +313,28 @@ deadline sees it go silent. That needs a heartbeat.
 
 ## Plugin reference
 
-- Description: Every backend database connection, built one way: createDbPool / createDbClient give each pool or standalone client a name from the closed pool-name set and a pg.Client subclass that bounds connect() and every query() with a deadline (60 s, widened per scope by withQueryDeadline). A call with no reply rejects with QueryDeadlineExceededError (pool, phase, sql, origin), and its connection is closed — handed back to its pool as broken and its socket destroyed, so Postgres rolls back its transaction and PgBouncer frees its slot — and announced on queryDeadlineSink. Every pool also carries its own connection-error listeners (pool and per client), which report a broken connection once instead of letting it crash the process — so a library handed the pool (graphile-worker) installs none of its own.
+- Description: Every backend database connection, built one way: createDbPool / createDbClient give each pool or standalone client a name from the closed pool-name set and a pg.Client subclass that bounds connect() and every query() with a deadline (60 s, widened per scope by withQueryDeadline). A call with no reply rejects with QueryDeadlineExceededError (pool, phase, sql, origin), and its connection is closed — handed back to its pool as broken and its socket destroyed, so Postgres rolls back its transaction and PgBouncer frees its slot — and announced on queryDeadlineSink. A session the server ends for idling inside its transaction (25P03) is announced on idleTransactionEndedSink with the origin and statement of the transaction's last statement, and every later call on that connection fails with IdleTransactionEndedError. Every connection logs in as application_name equin:<pool> (equin-cli:<pool> from a process with no runtime namespace, which reports nothing). Every pool also carries its own connection-error listeners (pool and per client), which report a broken connection once instead of letting it crash the process — so a library handed the pool (graphile-worker) installs none of its own.
+- Core:
+  - Uses: `framework/product-name.PRODUCT_NAME`
+  - Exports (types):
+    - `DbCallPhase`
+    - `DbPoolName`
+    - `DbTxState`
+    - `SqlOrigin`
+  - Exports (values):
+    - `DB_CALL_PHASES`
+    - `DB_POOL_NAMES`
+    - `DB_POOLS_THROUGH_PGBOUNCER`
+    - `DB_TX_STATES`
+    - `dbApplicationName`
+    - `IN_FLIGHT_REPORT_MAX`
+    - `isConnectionCapacityRefusal`
+    - `isDbApplicationName`
+    - `isInTransaction`
+    - `ORIGIN_LABEL_MAX`
+    - `originCommentLabel`
+    - `parseSqlOrigin`
+    - `tagSqlWithOrigin`
 - Cross-plugin:
   - Imported by:
     - `database/admin`
@@ -275,6 +346,7 @@ deadline sees it go silent. That needs a heartbeat.
   - Exports (types):
     - `CreateDbClientOptions`
     - `CreateDbPoolOptions`
+    - `IdleTransactionEndedEvent`
     - `ListenSessionHandlers`
     - `OpenListenSessionOptions`
     - `QueryDeadlineEvent`
@@ -287,6 +359,8 @@ deadline sees it go silent. That needs a heartbeat.
     - `createSchemaGenerationLocks`
     - `currentQueryDeadline`
     - `formatDeadlineLogLine`
+    - `formatIdleTransactionEndedLogLine`
+    - `idleTransactionEndedSink`
     - `onClientLost`
     - `openListenSession`
     - `QUERY_DEADLINE_MS`
@@ -298,26 +372,9 @@ deadline sees it go silent. That needs a heartbeat.
     - `db-connection/no-raw-pg-connection` — `.` (sanctioned)
     - `boundaries/no-platform-api` — `server/internal/client.ts`, `server/internal/deadline.ts` (debt)
   - Exempted by: `database/connection` (0 debt)
-- Core:
-  - Exports (types):
-    - `DbCallPhase`
-    - `DbPoolName`
-    - `DbTxState`
-    - `SqlOrigin`
-  - Exports (values):
-    - `DB_CALL_PHASES`
-    - `DB_POOL_NAMES`
-    - `DB_POOLS_THROUGH_PGBOUNCER`
-    - `DB_TX_STATES`
-    - `IN_FLIGHT_REPORT_MAX`
-    - `isConnectionCapacityRefusal`
-    - `isInTransaction`
-    - `ORIGIN_LABEL_MAX`
-    - `originCommentLabel`
-    - `parseSqlOrigin`
-    - `tagSqlWithOrigin`
 - Test helpers:
   - Server: `@plugins/database/plugins/connection/server/testing`
+    - `IdleTransactionEndedError` — What a call on a connection whose session the server ended for idling in its transaction gets — the stalled transaction's own next statement, typically: its work was rolled back.
     - `QueryDeadlineExceededError` — A database call got no reply within its deadline.
     - `startBlackHoleProxy` — Start a black-hole proxy on 127.0.0.1 forwarding to `upstream` (e.g. the cluster's Unix socket).
     - Types: `BlackHoleProxy`

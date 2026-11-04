@@ -8,6 +8,7 @@ import { hasRuntimeNamespace } from "@plugins/infra/plugins/runtime-identity/cor
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import {
   IN_FLIGHT_REPORT_MAX,
+  dbApplicationName,
   parseSqlOrigin,
   type DbCallPhase,
   type DbPoolName,
@@ -25,6 +26,13 @@ import {
   type QueryDeadlineEvent,
 } from "./deadline";
 import { armAwakeDeadline } from "./awake-timer";
+import {
+  IDLE_IN_TRANSACTION_TIMEOUT_SQLSTATE,
+  IdleTransactionEndedError,
+  formatIdleTransactionEndedLogLine,
+  idleTransactionEndedSink,
+  type IdleTransactionEndedEvent,
+} from "./idle-transaction";
 
 // ---------------------------------------------------------------------------
 // The deadline lives on the CONNECTION: one `pg.Client` subclass bounds the two
@@ -131,6 +139,17 @@ function inFlightAt(
   };
 }
 
+/**
+ * The transaction a connection is in, as of its last reply: who sent its first
+ * statement, and its latest one — what the server's idle-in-transaction
+ * timeout names when it ends the session.
+ */
+interface OpenTransaction {
+  openedBy: string | null;
+  startedAt: number;
+  last: { origin: string | null; sql: string; repliedAt: number };
+}
+
 /** What a missed deadline knows beyond the call itself, read at expiry. */
 interface ExpiryContext {
   transaction: DbTxState | null;
@@ -198,6 +217,8 @@ export class DbClient extends Client {
   #checkout: Checkout | null = null;
   #holderRelease: PgRelease | undefined;
   #poolAssigning = false;
+  #tx: OpenTransaction | null = null;
+  #endedIdle: IdleTransactionEndedError | null = null;
 
   constructor(
     config: string | ClientConfig | undefined,
@@ -207,6 +228,11 @@ export class DbClient extends Client {
     this.poolName = binding.name;
     this.#pooled = binding.pooled;
     this.#defaultDeadlineMs = binding.deadlineMs ?? QUERY_DEADLINE_MS;
+  }
+
+  /** Set once the server ended this session for idling inside its transaction. */
+  get endedIdleError(): IdleTransactionEndedError | null {
+    return this.#endedIdle;
   }
 
   /** The error that lost this client, or null while it is healthy. */
@@ -269,6 +295,67 @@ export class DbClient extends Client {
     return () => {
       this.#lostListeners.delete(listener);
     };
+  }
+
+  // The server ending this session for idling inside its transaction arrives
+  // as an `error` event (pg delivers an ErrorResponse that answers no query
+  // that way), with SQLSTATE 25P03 — directly, and through PgBouncer, which
+  // forwards it before its own `server conn crashed?`. Seen here rather than
+  // by a listener, so whether the holder listens (and whether an unheard
+  // `error` crashes the process) is exactly as before.
+  override emit(event: string | symbol, ...args: unknown[]): boolean {
+    if (event === "error") this.#noticeIdleTimeout(args[0]);
+    return super.emit(event, ...args);
+  }
+
+  #noticeIdleTimeout(err: unknown): void {
+    if (this.#endedIdle || this.#lost) return;
+    if (
+      (err as { code?: unknown } | null)?.code !==
+      IDLE_IN_TRANSACTION_TIMEOUT_SQLSTATE
+    ) {
+      return;
+    }
+    const now = performance.now();
+    // Null when the transaction's statements bypassed the bounded path (a
+    // Submittable, a config with its own callback): not known, never zero.
+    const tx = this.#tx;
+    const event: IdleTransactionEndedEvent = {
+      at: Date.now(),
+      pool: this.poolName,
+      origin: tx?.last.origin ?? null,
+      sql: tx?.last.sql ?? null,
+      openedBy: tx?.openedBy ?? null,
+      transactionMs: tx ? Math.round(now - tx.startedAt) : null,
+      idleMs: tx ? Math.round(now - tx.last.repliedAt) : null,
+      serverMessage: err instanceof Error ? err.message : String(err),
+    };
+    this.#tx = null;
+    this.#endedIdle = new IdleTransactionEndedError(event);
+    // Like a missed deadline: no runtime namespace (a CLI process) means no
+    // handler and no logs dir, so its own stderr is where it is read.
+    if (!hasRuntimeNamespace()) {
+      process.stderr.write(`${formatIdleTransactionEndedLogLine(event)}\n`);
+    }
+    idleTransactionEndedSink.emit(event);
+  }
+
+  // After every reply (or error reply): where the connection stands in a
+  // transaction. Two field writes per statement; read only if the server
+  // ends the session.
+  #noteReply(call: DeadlineCall): void {
+    const status = this.getTransactionStatus();
+    if (status !== "T" && status !== "E") {
+      this.#tx = null;
+      return;
+    }
+    const last = {
+      origin: call.origin,
+      sql: call.sql,
+      repliedAt: performance.now(),
+    };
+    if (this.#tx) this.#tx.last = last;
+    else this.#tx = { openedBy: call.origin, startedAt: call.startedAt, last };
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: pg's overloaded query signature.
@@ -415,13 +502,18 @@ export class DbClient extends Client {
   #bounded<T>(call: DeadlineCall, work: () => Promise<T>): Promise<T> {
     const lost = this.#lost;
     if (lost) return Promise.reject(lost);
+    // The server ended this session for idling in its transaction: pg would
+    // say only "not queryable"; the caller — usually the stalled transaction's
+    // own next statement — learns why, and that its work was rolled back.
+    const endedIdle = this.#endedIdle;
+    if (endedIdle) return Promise.reject(endedIdle);
     // Started synchronously, so pg's own synchronous throws (a null config)
     // still reach the caller as throws.
     const result = work();
     const pending: PendingCall = { client: this, call };
     return new Promise<T>((resolve, reject) => {
       let settled = false;
-      const fail: LostListener = (err) => {
+      const fail = (err: unknown): void => {
         if (settled) return;
         settled = true;
         cancel();
@@ -443,14 +535,33 @@ export class DbClient extends Client {
       pendingCalls.add(pending);
       // A late outcome (after the deadline, or after another call lost the
       // client) is dropped here — handled, never an unhandled rejection.
-      result.then((value) => {
-        if (settled) return;
-        settled = true;
-        cancel();
-        this.#inFlight.delete(fail);
-        pendingCalls.delete(pending);
-        resolve(value);
-      }, fail);
+      result.then(
+        (value) => {
+          if (settled) return;
+          settled = true;
+          cancel();
+          this.#inFlight.delete(fail);
+          pendingCalls.delete(pending);
+          this.#noteReply(call);
+          resolve(value);
+        },
+        (err: unknown) => {
+          if (settled) return;
+          // The server's 25P03 can also arrive as the ANSWER to a call: code
+          // wedged past the bound sends its next statement before reading
+          // the FATAL already in its socket, and pg settles that call (and
+          // every queued one, before emitting `error`) with it. Same end,
+          // same report, same error.
+          this.#noticeIdleTimeout(err);
+          const endedIdle = this.#endedIdle;
+          if (endedIdle) {
+            fail(endedIdle);
+            return;
+          }
+          this.#noteReply(call);
+          fail(err);
+        },
+      );
     });
   }
 
@@ -586,6 +697,7 @@ export function createDbPool(options: CreateDbPoolOptions): Pool {
   }
   const pool = new Pool({
     connectionString: options.connectionString,
+    application_name: dbApplicationName(options.name, hasRuntimeNamespace()),
     max: options.max,
     ...(options.idleTimeoutMillis !== undefined
       ? { idleTimeoutMillis: options.idleTimeoutMillis }
@@ -646,6 +758,12 @@ function installConnectionErrorHandlers(pool: Pool, name: DbPoolName): void {
   const reported = new WeakSet<ClientBase>();
   const onClientError = (client: ClientBase, err: Error): void => {
     if (client instanceof DbClient && client.lostError) return;
+    // The server ended the session for idling in its transaction: `DbClient`
+    // announced it on `idleTransactionEndedSink`, naming the stalled code, and
+    // it is reported there. The errors that follow it on the same connection
+    // (PgBouncer's `server conn crashed?`, pg's `Connection terminated
+    // unexpectedly`) are that same end.
+    if (client instanceof DbClient && client.endedIdleError) return;
     // pg-pool's idle listener answers any later error on a dropped client
     // itself; one report per connection is the event.
     if (reported.has(client)) return;
@@ -680,7 +798,10 @@ export interface CreateDbClientOptions {
 /** Build a standalone `DbClient` (not connected yet): every connect and query on it carries the deadline. */
 export function createDbClient(options: CreateDbClientOptions): DbClient {
   return new DbClient(
-    { connectionString: options.connectionString },
+    {
+      connectionString: options.connectionString,
+      application_name: dbApplicationName(options.name, hasRuntimeNamespace()),
+    },
     { name: options.name, pooled: false, deadlineMs: options.deadlineMs },
   );
 }
