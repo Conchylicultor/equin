@@ -75,6 +75,20 @@ Per hour: cold lstat / readdir per tier, slowest op, stall count, vnode
 churn, disk ops and device ms/op, and the cache lifetime. The exit criterion
 "no file-metadata stall over 1 s across a day" is `stalls 0` over 24 h.
 
+## Who is churning, without root
+
+```sh
+/usr/bin/python3 -I sidequests/monitors/fs-latency/census.py --seconds 300 [--out /tmp/census.json]
+```
+
+On demand, not a launchd job. Once a second it reads every process's
+unix-syscall count and disk bytes read (both readable for the user's own
+processes with no privilege) beside `vfs.vnstats.num_newvnode_calls`, then
+ranks process kinds by syscalls / disk MB with their correlation to new
+vnodes/s, and names the heaviest readers in the worst seconds. A proxy (neither
+counter is a vnode count; processes under ~1 s and root daemons are missed);
+`fs_usage` in the root mode above is the exact answer.
+
 ## Uninstall
 
 ```sh

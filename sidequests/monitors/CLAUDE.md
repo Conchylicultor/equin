@@ -9,7 +9,7 @@ exactly the ones that kill it, restart it, or happen while it is down.
 | monitor | question | shape |
 |---|---|---|
 | [`fd/`](fd/CLAUDE.md) | which process is leaking file descriptors before a "too many files open" crash? | LaunchAgent, polls every 5s |
-| [`fs-latency/`](fs-latency/CLAUDE.md) | how slow is a cold file-metadata op (foreground vs darwinbg), how long does the file cache keep a file, and how fast are vnodes churning? | LaunchAgent (or root daemon for `fs_usage` attribution), every 30s |
+| [`fs-latency/`](fs-latency/CLAUDE.md) | how slow is a cold file-metadata op (foreground vs darwinbg), how long does the file cache keep a file, how fast are vnodes churning, and which processes drive it? | LaunchAgent (or root daemon for `fs_usage` attribution), every 30s; `census.py` on demand |
 
 ## Conventions
 
