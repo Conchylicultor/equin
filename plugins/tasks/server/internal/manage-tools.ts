@@ -9,7 +9,11 @@ import {
 } from "@plugins/conversations/plugins/model-provider/core";
 import { getModelCatalog } from "@plugins/conversations/plugins/model-provider/plugins/catalog/server";
 import { setTaskAutoStart } from "@plugins/tasks/plugins/auto-start/server";
-import { getTaskTrack } from "@plugins/tasks/plugins/task-track/server";
+import {
+  getTaskTrack,
+  setTaskTrack,
+} from "@plugins/tasks/plugins/task-track/server";
+import { TASK_TRACKS } from "@plugins/tasks/plugins/task-track/core";
 import {
   addTaskDependency,
   DependencyCycleError,
@@ -63,11 +67,11 @@ const ports: ManageTasksPorts = {
       return `${taskId} already has an open attempt — message its agent with \`message_agent\` instead.`;
     return null;
   },
-  async defaultModel(conversationId, taskId) {
-    // The model the caller's filing grant gives the task's track, as add_task
-    // arms with — else the default.
+  trackOf: getTaskTrack,
+  async defaultModel(conversationId, track) {
+    // The model the caller's filing grant gives the track, as add_task arms
+    // with — else the default.
     const grant = await grantOf(tasksFile, conversationId);
-    const track = await getTaskTrack(taskId);
     return grant?.[track]?.model ?? DEFAULT_MODEL_CHOICE;
   },
   modelCatalog: getModelCatalog,
@@ -90,6 +94,8 @@ const ports: ManageTasksPorts = {
             await removeTaskDependency(edit.taskId, id, tx);
           for (const id of edit.addAfter)
             await addTaskDependency(edit.taskId, id, tx);
+          if (edit.track !== undefined)
+            await setTaskTrack(edit.taskId, edit.track, tx);
         }),
       );
     } catch (err) {
@@ -127,9 +133,11 @@ export const editTaskTool = Mcp.tool({
   name: "edit_task",
   // Only an agent whose mandate lets it manage its tree sees the tool.
   when: granted(tasksManage),
-  description: `Edit a task of your tree: its title, its description (the problem it states — the prompt its agent launches with), the tasks it runs after, and how it starts.
+  description: `Edit a task of your tree: its title, its description (the problem it states — the prompt its agent launches with), the tasks it runs after, its track, and how it starts.
 
 \`start: "armed"\` queues it to launch on its own once every task it runs after is done (at once when none is pending) — on any track: a sidequest is never armed when filed, but you may start it here. \`start: "manual"\` disarms it: a person starts it. Arming a dropped task, or one whose agent already launched and is still open, is refused.
+
+Arming does not change the track: when you turn a sidequest into work on the critical path, also pass \`track: "main"\` (and \`track: "sidequest"\` for the reverse).
 
 ${SCOPE} Every id named (the task and each \`add_after\` / \`remove_after\` id) must be in your tree; a refused edit (or one closing a dependency cycle) changes nothing.
 
@@ -159,8 +167,14 @@ Editing a task whose agent already launched does not reach that agent — messag
         '"armed": launch on its own once nothing it runs after is pending. "manual": disarm — a person starts it.',
       ),
     model: ModelChoiceSchema.optional().describe(
-      'The model an armed task launches with (only with start "armed"); absent = your filing default for its track.',
+      'The model an armed task launches with (only with start "armed"); absent = your filing default for its track (the new one, with `track`).',
     ),
+    track: z
+      .enum(TASK_TRACKS)
+      .optional()
+      .describe(
+        '"main": on the critical path. "sidequest": off it. Absent = unchanged.',
+      ),
   },
   async handler(input, { conversationId }) {
     const out = await editTask(input, conversationId, ports);
@@ -187,5 +201,5 @@ ${SCOPE}`,
 export const tasksManageCapability = Mandate.Capability({
   cap: tasksManage,
   describe: () =>
-    "You may edit (title, description, dependencies, how it starts — arm or disarm it, sidequests included) and drop the tasks of this tree with `edit_task` and `drop_task` — only the tasks below its root, never a task outside it.",
+    "You may edit (title, description, dependencies, track, how it starts — arm or disarm it, sidequests included) and drop the tasks of this tree with `edit_task` and `drop_task` — only the tasks below its root, never a task outside it.",
 });

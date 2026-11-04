@@ -20,13 +20,13 @@
     - `trigger` "watch.ingest"
     - `trigger` "watch.ingest"
     - `trigger` "watch.ingest"
-  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×20
     - `tasks/orchestration/mandate` ×3
+    - `tasks/task-track` ×3
     - `infra/endpoints` ×2
     - `primitives/rank` ×2
     - `tasks/auto-start` ×2
-    - `tasks/task-track` ×2
     - `conversations/model-provider/catalog.getModelCatalog`
     - `database.db`
     - `infra/attachments.getAttachment`

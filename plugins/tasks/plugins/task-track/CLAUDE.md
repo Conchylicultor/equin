@@ -12,7 +12,9 @@ Per-task **track** — `main` or `sidequest`. Design:
   the task it was filed from, is never spliced into that task's chain, and is
   never auto-started by an agent. A human may still arm one from the task
   detail's auto-start picker, and may switch a task's track from the detail
-  header's Track row.
+  header's Track row. A supervising agent switches it with `edit_task`'s
+  `track` — arming never does, so a sidequest repurposed into critical-path
+  work stays a sidequest until an edit says `track: "main"`.
 
 ## Storage
 

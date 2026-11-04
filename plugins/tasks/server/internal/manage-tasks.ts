@@ -15,6 +15,11 @@
  * (it launches once nothing it runs after is unresolved), whatever its track
  * — a sidequest is never armed when filed, but its supervisor may start it
  * here; `manual` disarms it, leaving the launch to a person.
+ *
+ * `track` moves the task between the main track and the sidequests. Arming
+ * never changes it: a sidequest repurposed into critical-path work stays a
+ * sidequest until an edit says `track: "main"`. When both are given, the
+ * default model of an arm is the NEW track's.
  */
 
 import {
@@ -22,6 +27,7 @@ import {
   type ModelCatalog,
   type ModelChoice,
 } from "@plugins/conversations/plugins/model-provider/core";
+import type { TaskTrack } from "@plugins/tasks/plugins/task-track/core";
 
 export const EDIT_STARTS = ["armed", "manual"] as const;
 export type EditStart = (typeof EDIT_STARTS)[number];
@@ -36,6 +42,8 @@ export interface EditTaskInput {
   /** The model an armed task launches with; absent = the default for the
    * task. Only with `start: "armed"`. */
   model?: ModelChoice;
+  /** Move the task to this track; absent = its track is unchanged. */
+  track?: TaskTrack;
 }
 
 export interface DropTaskInput {
@@ -51,6 +59,8 @@ export interface TaskEdit {
   removeAfter: string[];
   /** Arm with this model, or disarm; absent = how it starts is unchanged. */
   start?: { kind: "armed"; model: ModelChoice } | { kind: "manual" };
+  /** The track to set; absent = unchanged. */
+  track?: TaskTrack;
 }
 
 export type ManageRefusal =
@@ -83,10 +93,13 @@ export interface ManageTasksPorts {
   /** Why `taskId` cannot be armed (dropped, or an open attempt already IS
    * its launch), or `null` when it can. */
   unarmable: (taskId: string) => Promise<string | null>;
-  /** The model an armed task launches with when the caller names none. */
+  /** The task's current track. */
+  trackOf: (taskId: string) => Promise<TaskTrack>;
+  /** The model an armed task on `track` launches with when the caller names
+   * none. */
   defaultModel: (
     conversationId: string,
-    taskId: string,
+    track: TaskTrack,
   ) => Promise<ModelChoice>;
   /** The live model catalog a `model` is checked against. */
   modelCatalog: () => ModelCatalog;
@@ -144,6 +157,7 @@ export async function editTask(
     ...(input.description !== undefined ? ["description"] : []),
     ...(addAfter.length > 0 ? ["add_after"] : []),
     ...(removeAfter.length > 0 ? ["remove_after"] : []),
+    ...(input.track !== undefined ? [`track ${input.track}`] : []),
     ...(input.start !== undefined ? [`start ${input.start}`] : []),
   ];
   if (input.model !== undefined && input.start !== "armed")
@@ -154,7 +168,7 @@ export async function editTask(
   if (changed.length === 0)
     return refused(
       "empty",
-      "Nothing to change: pass title, description, add_after, remove_after or start.",
+      "Nothing to change: pass title, description, add_after, remove_after, track or start.",
     );
   const both = addAfter.filter((id) => removeAfter.includes(id));
   if (both.length > 0)
@@ -177,7 +191,11 @@ export async function editTask(
     const why = await ports.unarmable(taskId);
     if (why !== null) return refused("not-armable", why);
     const model =
-      input.model ?? (await ports.defaultModel(conversationId, taskId));
+      input.model ??
+      (await ports.defaultModel(
+        conversationId,
+        input.track ?? (await ports.trackOf(taskId)),
+      ));
     // The schema checks only the id grammar: whether this machine can run the
     // version is the live catalog's answer, listed in the refusal.
     assertChoiceLaunchable(model, ports.modelCatalog());
@@ -195,6 +213,7 @@ export async function editTask(
     addAfter,
     removeAfter,
     ...(start ? { start } : {}),
+    ...(input.track !== undefined ? { track: input.track } : {}),
   });
   if (!out.ok) return refused("conflict", out.message);
   return { kind: "edited", taskId, changed };

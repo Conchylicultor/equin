@@ -28,6 +28,10 @@ const roots: Record<string, string> = {
 };
 
 const DEFAULT = ModelChoiceSchema.parse("opus");
+// The caller's filing default for a sidequest (a grant per track).
+const SIDEQUEST_DEFAULT = ModelChoiceSchema.parse("sonnet");
+// A is a sidequest; every other task is main.
+const tracks: Record<string, "main" | "sidequest"> = { A: "sidequest" };
 
 function store(callerRoot: string | null = "R") {
   const applied: TaskEdit[] = [];
@@ -44,7 +48,9 @@ function store(callerRoot: string | null = "R") {
         ? { kind: "found", rootTaskId: roots[id]! }
         : { kind: "not-found" },
     unarmable: async (id) => unarmable[id] ?? null,
-    defaultModel: async () => DEFAULT,
+    trackOf: async (id) => tracks[id] ?? "main",
+    defaultModel: async (_conv, track) =>
+      track === "sidequest" ? SIDEQUEST_DEFAULT : DEFAULT,
     modelCatalog: () => BASELINE_MODELS,
     apply: async (edit) => {
       if (cycle)
@@ -160,10 +166,35 @@ describe("edit_task start", () => {
       s.ports,
     );
     expect(s.applied.map((e) => e.start)).toEqual([
-      { kind: "armed", model: DEFAULT },
+      { kind: "armed", model: SIDEQUEST_DEFAULT },
       { kind: "armed", model: sonnet },
     ]);
     expect(s.applied[1]!.addAfter).toEqual(["B"]);
+  });
+
+  test("arming keeps the track; `track` moves it, and the arm defaults to the new track's model", async () => {
+    const s = store();
+    await editTask({ task_id: "A", start: "armed" }, SUP, s.ports);
+    expect(s.applied[0]!.track).toBeUndefined();
+    expect(
+      await editTask(
+        { task_id: "A", start: "armed", track: "main" },
+        SUP,
+        s.ports,
+      ),
+    ).toEqual({
+      kind: "edited",
+      taskId: "A",
+      changed: ["track main", "start armed"],
+    });
+    expect(s.applied[1]).toMatchObject({
+      track: "main",
+      start: { kind: "armed", model: DEFAULT },
+    });
+    expect(
+      await editTask({ task_id: "B", track: "sidequest" }, SUP, s.ports),
+    ).toEqual({ kind: "edited", taskId: "B", changed: ["track sidequest"] });
+    expect(s.applied[2]!.start).toBeUndefined();
   });
 
   test("manual disarms", async () => {
