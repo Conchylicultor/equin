@@ -24,6 +24,12 @@ import { PaneScroll } from "./pane-scroll";
  * the waterline has passed under the bar). The bar then masks with that
  * theme's own background, not the page's. `glass` frosts the mask instead of
  * painting it opaque.
+ *
+ * The body is sealed in its own stacking context (`isolate`), so the header
+ * paints over it whatever z-index the page gives its own pieces: a page's
+ * layers (the vision zoom's copy over its pinned stage) order among themselves
+ * and never against the bar — a tie with the bar's layer would otherwise put a
+ * later-in-DOM page layer on top of it, its text showing through the mask.
  */
 export function FloatingHeaderScroll({
   header,
@@ -69,7 +75,7 @@ export function FloatingHeaderScroll({
           {bar}
         </Theme>
       )}
-      {children}
+      <div className="isolate h-full">{children}</div>
     </PaneScroll>
   );
 }
