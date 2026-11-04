@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
+import { setErrorReporter } from "@plugins/framework/plugins/server-core/core";
 import type { QueryDeadlineEvent } from "@plugins/database/plugins/connection/server";
 import type { recordReport } from "@plugins/reports/plugins/engine/server";
+import type { TraceTrigger } from "@plugins/debug/plugins/trace/plugins/engine/core";
 import {
   DbAbandonCapPayloadSchema,
   DbQueryDeadlinePayloadSchema,
@@ -13,12 +15,19 @@ import { abandonCapFingerprint, queryDeadlineFingerprint } from "./render";
 
 type ReportInput = Parameters<typeof recordReport>[0];
 
-function harness() {
+function harness(opts: { traceAdmits?: () => boolean } = {}) {
   const calls: string[] = [];
   const recorded: ReportInput[] = [];
   const logged: string[] = [];
+  const triggers: TraceTrigger[] = [];
   const ring = createHitRing(QUERY_DEADLINE_RING_CAPACITY);
+  const admits = opts.traceAdmits ?? (() => true);
   const handle = createQueryDeadlineHandler({
+    captureTrace: (trigger) => {
+      calls.push("trace");
+      triggers.push(trigger);
+      return admits() ? { id: `trace-${triggers.length}` } : null;
+    },
     recordReport: (input) => {
       calls.push("record");
       recorded.push(input);
@@ -38,7 +47,7 @@ function harness() {
       logged.push(line);
     },
   });
-  return { calls, recorded, logged, ring, handle };
+  return { calls, recorded, logged, triggers, ring, handle };
 }
 
 const deadline: QueryDeadlineEvent = {
@@ -51,7 +60,23 @@ const deadline: QueryDeadlineEvent = {
   pool: "app",
   phase: "query",
   reason: null,
+  transaction: "open",
+  inFlight: [
+    {
+      pool: "app",
+      phase: "query",
+      sql: "insert into conversations_ext_usage values ($1)",
+      origin: "conversations.usage:sync",
+      ageMs: 45_000,
+      transaction: "open",
+    },
+  ],
+  inFlightCount: 1,
+  abandoned: { total: 2, held: 2, inTransaction: 1 },
 };
+
+const fingerprintOf = (input: ReportInput): string =>
+  queryDeadlineFingerprint(DbQueryDeadlinePayloadSchema.parse(input.data));
 
 describe("deadline event", () => {
   test("files one db-query-deadline report whose payload the kind accepts", () => {
@@ -75,41 +100,100 @@ describe("deadline event", () => {
       pool: "app",
       phase: "query",
       reason: null,
+      transaction: "open",
+      inFlight: deadline.kind === "deadline" ? deadline.inFlight : [],
+      inFlightCount: 1,
+      abandoned: { total: 2, held: 2, inTransaction: 1 },
+      traceId: "trace-1",
     });
   });
 
-  test("fingerprints on pool, phase and query label", () => {
+  test("captures one critical trace of the instant, labelled by connection, and links it", () => {
     const h = harness();
     h.handle(deadline);
-    // Same pool, phase and label: the same row, whatever else differs.
+    expect(h.triggers).toEqual([
+      {
+        kind: "db-query-deadline",
+        label: "app:query",
+        durationMs: 60_004,
+        thresholdMs: 60_000,
+        critical: true,
+        detail: expect.objectContaining({
+          sql: deadline.sql,
+          transaction: "open",
+          inFlightCount: 1,
+        }),
+      },
+    ]);
+  });
+
+  test("a miss inside the trace cooldown keeps the label's latest trace link", () => {
+    let admit = true;
+    const h = harness({ traceAdmits: () => admit });
+    h.handle(deadline);
+    admit = false;
+    h.handle({ ...deadline, at: deadline.at + 1, origin: "other caller" });
+    // Another connection has no trace of its own to link.
+    h.handle({ ...deadline, pool: "jobs-runner" });
+    // A miss long after the traced instant (tracing off, say) links nothing:
+    // that trace says nothing about this call's wait.
+    h.handle({ ...deadline, at: deadline.at + 10 * 60_000 });
+    expect(
+      h.recorded.map((r) => DbQueryDeadlinePayloadSchema.parse(r.data).traceId),
+    ).toEqual(["trace-1", "trace-1", null, null]);
+  });
+
+  test("a trace capture that throws is reported, and the report still files", () => {
+    const errors: string[] = [];
+    setErrorReporter((e) => errors.push(e.message));
+    try {
+      const h = harness({
+        traceAdmits: () => {
+          throw new Error("trace class blew up");
+        },
+      });
+      h.handle(deadline);
+      expect(h.recorded).toHaveLength(1);
+      expect(
+        DbQueryDeadlinePayloadSchema.parse(h.recorded[0]!.data).traceId,
+      ).toBeNull();
+      expect(errors).toEqual([
+        "[db] query-deadline: capturing the trace of a lost call failed: trace class blew up",
+      ]);
+    } finally {
+      setErrorReporter(() => {});
+    }
+  });
+
+  test("fingerprints on pool, phase and caller — the label only without one", () => {
+    const h = harness();
+    h.handle(deadline);
+    // Same caller, another statement (an `in (…)` list of another arity, the
+    // next statement of its transaction): the same row.
     h.handle({
       ...deadline,
       at: deadline.at + 1,
       elapsedMs: 61_000,
-      origin: "other",
+      sql: "select 1",
     });
-    // Same label on another pool: its own row.
+    // Same caller on another pool: its own row.
     h.handle({ ...deadline, pool: "jobs-enqueue" });
-    h.handle({ ...deadline, sql: "select 1" });
-    // Connects share the `[connect]` label, so the pool is what tells them apart.
-    const connect = {
-      ...deadline,
-      phase: "connect" as const,
-      sql: "[connect]",
-    };
-    h.handle(connect);
-    h.handle({ ...connect, pool: "jobs-runner" });
+    // Another caller: its own row.
+    h.handle({ ...deadline, origin: "other" });
+    // No caller (boot, migrations): keyed by the statement instead.
+    h.handle({ ...deadline, origin: null });
+    h.handle({ ...deadline, origin: null, sql: "select 1" });
+    // A connect from the same caller is a different fact from its query.
+    h.handle({ ...deadline, phase: "connect", sql: "[connect]" });
 
-    const prints = h.recorded.map((r) =>
-      queryDeadlineFingerprint(DbQueryDeadlinePayloadSchema.parse(r.data)),
-    );
-    expect(prints).toEqual([
-      "db-query-deadline:app:query:select count(*) from conversations_v",
-      "db-query-deadline:app:query:select count(*) from conversations_v",
-      "db-query-deadline:jobs-enqueue:query:select count(*) from conversations_v",
-      "db-query-deadline:app:query:select 1",
-      "db-query-deadline:app:connect:[connect]",
-      "db-query-deadline:jobs-runner:connect:[connect]",
+    expect(h.recorded.map(fingerprintOf)).toEqual([
+      "db-query-deadline:app:query:origin=push conversations-gone-stats",
+      "db-query-deadline:app:query:origin=push conversations-gone-stats",
+      "db-query-deadline:jobs-enqueue:query:origin=push conversations-gone-stats",
+      "db-query-deadline:app:query:origin=other",
+      "db-query-deadline:app:query:sql=select count(*) from conversations_v",
+      "db-query-deadline:app:query:sql=select 1",
+      "db-query-deadline:app:connect:origin=push conversations-gone-stats",
     ]);
   });
 
@@ -144,9 +228,15 @@ describe("deadline event", () => {
       pool: "app",
       phase: "query",
       reason: null,
+      // Not recorded then — never a value claiming "nothing was waiting".
+      transaction: null,
+      inFlight: [],
+      inFlightCount: null,
+      abandoned: null,
+      traceId: null,
     });
     expect(queryDeadlineFingerprint(parsed)).toBe(
-      "db-query-deadline:app:query:select 1",
+      "db-query-deadline:app:query:sql=select 1",
     );
     expect(
       DbAbandonCapPayloadSchema.parse({ abandoned: 33, cap: 32 }).pool,
@@ -172,7 +262,7 @@ describe("deadline event", () => {
     });
     // The log line and the row must land even when the report write is what
     // cannot reach the DB.
-    expect(h.calls).toEqual(["log", "notify", "record"]);
+    expect(h.calls).toEqual(["log", "notify", "trace", "record"]);
   });
 
   test("writes the durable [deadline] line naming pool, phase, caller and bound", () => {

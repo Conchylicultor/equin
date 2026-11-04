@@ -2,7 +2,20 @@ import { z } from "zod";
 import {
   DB_CALL_PHASES,
   DB_POOL_NAMES,
+  DB_TX_STATES,
 } from "@plugins/database/plugins/connection/core";
+
+/** One other database call still waiting for its reply when the deadline fired. */
+export const InFlightDbCallSchema = z.object({
+  pool: z.enum(DB_POOL_NAMES),
+  phase: z.enum(DB_CALL_PHASES),
+  sql: z.string(),
+  origin: z.string().nullable(),
+  ageMs: z.number(),
+  /** Its connection's transaction state as of its last reply; null while connecting. */
+  transaction: z.enum(DB_TX_STATES).nullable(),
+});
+export type InFlightDbCall = z.infer<typeof InFlightDbCallSchema>;
 
 /**
  * The jsonb payload behind a `db-query-deadline` report: one database call — on
@@ -13,9 +26,11 @@ import {
  * (and may carry a since-removed `leased` flag, which parsing strips): they were
  * all queries on the app pool, which is what the defaults say.
  *
- * Mirrors the database seam's `deadline` event field for field, minus `at`: the
+ * Mirrors the database seam's `deadline` event field for field, minus `at` (the
  * report row carries its own first/last-seen instants, and a per-occurrence
- * timestamp would only make the deduped row's `data` churn.
+ * timestamp would only make the deduped row's `data` churn), plus `traceId`.
+ * The row is one per (pool, phase, origin), and the upsert refreshes `data` on
+ * every occurrence, so the payload is always the LATEST lost call's.
  *
  * `deadlineMs` is CARRIED, not looked up at render time. The default and every
  * `withQueryDeadline` scope are code, and a report records what was claimed when
@@ -39,6 +54,43 @@ export const DbQueryDeadlinePayloadSchema = z.object({
   phase: z.enum(DB_CALL_PHASES).default("query"),
   /** The `withQueryDeadline` reason, when a scope granted a longer bound; null for the default. */
   reason: z.string().nullable(),
+  // --- Why it was lost: the evidence a reader needs to find the cause. Rows
+  // filed before these were carried parse with "not recorded" defaults. ---
+  /**
+   * The lost connection's transaction state as of its last reply: `open` (or
+   * `failed`) means the call was sent inside a transaction, so if the server
+   * has it, that transaction and its row locks stay open. Null for a connect,
+   * and for older rows.
+   */
+  transaction: z.enum(DB_TX_STATES).nullable().default(null),
+  /** Every other call pending at the expiry instant, oldest first, capped. */
+  // Capped by the emitter (`IN_FLIGHT_REPORT_MAX`), not here: a reader must
+  // never refuse a row filed under an older, larger cap.
+  inFlight: z.array(InFlightDbCallSchema).default([]),
+  /**
+   * How many other calls were pending in all (`inFlight` keeps the oldest).
+   * Null for older rows, which did not record it — not "none were".
+   */
+  inFlightCount: z.number().int().nullable().default(null),
+  /**
+   * The abandoned-connection hold right after this abandon: how many lost
+   * connections the process keeps open, and how many were left inside a
+   * transaction — each a server session that may still hold locks. Null for
+   * older rows.
+   */
+  abandoned: z
+    .object({
+      /** Every abandon since the backend started. */
+      total: z.number().int(),
+      /** How many of them the hold keeps (at most its cap). */
+      held: z.number().int(),
+      /** How many of the held were left inside a transaction. */
+      inTransaction: z.number().int(),
+    })
+    .nullable()
+    .default(null),
+  /** The trace of everything in flight at the expiry (Debug → Slow Events), when one was captured. */
+  traceId: z.string().nullable().default(null),
 });
 export type DbQueryDeadlinePayload = z.infer<
   typeof DbQueryDeadlinePayloadSchema

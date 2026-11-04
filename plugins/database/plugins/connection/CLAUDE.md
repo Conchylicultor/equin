@@ -285,10 +285,14 @@ deadline sees it go silent. That needs a heartbeat.
   - Exports (types):
     - `DbCallPhase`
     - `DbPoolName`
+    - `DbTxState`
   - Exports (values):
     - `DB_CALL_PHASES`
     - `DB_POOL_NAMES`
+    - `DB_TX_STATES`
+    - `IN_FLIGHT_REPORT_MAX`
     - `isConnectionCapacityRefusal`
+    - `isInTransaction`
 - Test helpers:
   - Server: `@plugins/database/plugins/connection/server/testing`
     - `QueryDeadlineExceededError` — A database call got no reply within its deadline.

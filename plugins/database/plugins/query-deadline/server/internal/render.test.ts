@@ -42,9 +42,75 @@ const payload: DbQueryDeadlinePayload = {
   pool: "jobs-enqueue",
   phase: "query",
   reason: null,
+  transaction: null,
+  inFlight: [],
+  inFlightCount: null,
+  abandoned: null,
+  traceId: null,
 };
 
 describe("renderQueryDeadlineTask", () => {
+  test("leads with what the call was part of: transaction, waiters, abandoned, trace", () => {
+    const d: DbQueryDeadlinePayload = {
+      ...payload,
+      pool: "app",
+      transaction: "open",
+      inFlight: [
+        {
+          pool: "app",
+          phase: "query",
+          sql: 'select "a`b" from t',
+          origin: "conversations.usage:sync",
+          ageMs: 45_000,
+          transaction: "open",
+        },
+        {
+          pool: "jobs-runner",
+          phase: "connect",
+          sql: "[connect]",
+          origin: null,
+          ageMs: 2_000,
+          transaction: null,
+        },
+      ],
+      inFlightCount: 14,
+      abandoned: { total: 40, held: 32, inTransaction: 2 },
+      traceId: "trace-1",
+    };
+    const { description } = renderQueryDeadlineTask(row(d), d);
+    expect(description).toContain("It was sent inside an open transaction.");
+    expect(description).toContain("row lock");
+    expect(description).toContain(
+      "Connections this process has abandoned since it started: 40. Of the 32 it holds, 2 were left inside a transaction (the rest are past the hold's cap, their state unknown).",
+    );
+    expect(description).toContain(
+      "14 other database calls were waiting (the 2 oldest):",
+    );
+    expect(description).toContain(
+      '  - 45s · pool `app` · `conversations.usage:sync` · in a transaction · `` select "a`b" from t ``',
+    );
+    expect(description).toContain(
+      "  - 2s · pool `jobs-runner` · unknown caller · opening a connection",
+    );
+    expect(description).toContain("trace-1");
+    expect(description).toContain(
+      "2026-11-04-global-db-connection-failure-vision.md",
+    );
+    // The evidence comes before the stray-close hunt.
+    expect(description.indexOf("What it was part of")).toBeLessThan(
+      description.indexOf("**What to do:**"),
+    );
+  });
+
+  test("an older row says the evidence was not recorded, never that none existed", () => {
+    const { description } = renderQueryDeadlineTask(row(payload), payload);
+    expect(description).toContain("transaction state: not recorded");
+    expect(description).toContain(
+      "Other database calls waiting: not recorded.",
+    );
+    expect(description).not.toContain("No other database call was waiting");
+  });
+
   test("states the problem and points at the incident doc", () => {
     const { title, description } = renderQueryDeadlineTask(
       row(payload),

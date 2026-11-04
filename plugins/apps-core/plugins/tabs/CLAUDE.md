@@ -235,7 +235,7 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `useSurfaceMode`
     - `useTabs`
 - Cross-plugin:
-  - Imported by: 43 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 44 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×13
     - `apps-core` ×9
     - `debug` ×7
@@ -247,6 +247,7 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `build`
     - `config_v2/config-link`
     - `conversations/runtime-sdk`
+    - `database/query-deadline`
     - `menu-bar/app-grid`
     - `ui/theme-engine/quick-theme`
 

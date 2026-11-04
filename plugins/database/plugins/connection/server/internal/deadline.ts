@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import type { ClientBase } from "pg";
 import { defineReportSink } from "@plugins/primitives/plugins/report-sink/core";
-import type { DbCallPhase, DbPoolName } from "../../core";
+import type { DbCallPhase, DbPoolName, DbTxState } from "../../core";
 
 // A client-side deadline on every database call — opening a connection and
 // every statement on one — on every backend connection, and what the outside
@@ -49,6 +50,43 @@ export const IDLE_IN_TRANSACTION_TIMEOUT_MS = 5 * 60_000;
 export const CONNECT_CALL_LABEL = "[connect]";
 
 /**
+ * One database call still waiting for its reply when another call's deadline
+ * fired: its connection, what it was, who issued it, how long it had waited and
+ * where its connection stood in a transaction (`null` while connecting).
+ */
+export interface InFlightDbCall {
+  pool: DbPoolName;
+  phase: DbCallPhase;
+  sql: string;
+  origin: string | null;
+  ageMs: number;
+  transaction: DbTxState | null;
+}
+
+/**
+ * pg's ReadyForQuery status byte, read off a client, as a `DbTxState`: the
+ * state as of its last reply. `null` for a connect — a connection being opened
+ * has had no reply yet, so it has no state to read.
+ */
+export function txStateOf(
+  client: Pick<ClientBase, "getTransactionStatus">,
+  phase: DbCallPhase = "query",
+): DbTxState | null {
+  if (phase === "connect") return null;
+  switch (client.getTransactionStatus()) {
+    case "I":
+      return "idle";
+    case "T":
+      return "open";
+    case "E":
+      return "failed";
+    // No ReadyForQuery yet: a client that never finished connecting.
+    case null:
+      return null;
+  }
+}
+
+/**
  * What the deadline tells the outside world, through `queryDeadlineSink`.
  *
  * - `deadline` — one call missed its deadline and its connection was abandoned.
@@ -59,6 +97,16 @@ export const CONNECT_CALL_LABEL = "[connect]";
  *   runtime-profiler entry that issued the call (a resource, route or job
  *   label), `null` when context-less (boot, migrations); `reason` is the
  *   enclosing `withQueryDeadline` scope's reason, `null` under the default bound.
+ *   What the call was part of, so a report can say WHY it was lost, not only
+ *   that it was: `transaction` is the lost connection's state as of its last
+ *   reply (`null` for a connect, which has none) — `open` means the server may
+ *   still hold that transaction's locks; `inFlight` is every call pending on
+ *   this process's OTHER connections at the expiry instant (those queued on the
+ *   lost one never reached the server), oldest first, at most
+ *   `IN_FLIGHT_REPORT_MAX` (`core`) of them (`inFlightCount` counts them all);
+ *   and `abandoned` is the hold right after this abandon — every abandon since
+ *   boot (`total`), how many the hold keeps (`held`, at most its cap), and how
+ *   many of the held were left inside a transaction.
  * - `abandon-cap` — an abandon (on `pool`) landed after `cap` connections were
  *   already being held; this one is detached but no longer retained (see
  *   `abandonClient`). `abandoned` counts every abandon since boot.
@@ -76,6 +124,10 @@ export type QueryDeadlineEvent =
       deadlineMs: number;
       origin: string | null;
       reason: string | null;
+      transaction: DbTxState | null;
+      inFlight: InFlightDbCall[];
+      inFlightCount: number;
+      abandoned: { total: number; held: number; inTransaction: number };
     }
   | {
       kind: "abandon-cap";

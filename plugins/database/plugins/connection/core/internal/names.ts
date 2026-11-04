@@ -50,3 +50,26 @@ export type DbPoolName = (typeof DB_POOL_NAMES)[number];
 export const DB_CALL_PHASES = ["connect", "query"] as const;
 
 export type DbCallPhase = (typeof DB_CALL_PHASES)[number];
+
+/**
+ * Where a connection stood in a transaction as of its last reply from the
+ * server (the ReadyForQuery status byte: `I` idle, `T` open, `E` failed). A
+ * call lost on a connection whose state is `open` or `failed` was sent inside
+ * a transaction: if the server has it, that transaction — and every row lock
+ * it took — stays open until the session ends.
+ */
+export const DB_TX_STATES = ["idle", "open", "failed"] as const;
+
+export type DbTxState = (typeof DB_TX_STATES)[number];
+
+/** Whether a connection in `state` was inside a transaction (open or failed). */
+export function isInTransaction(state: DbTxState | null): boolean {
+  return state === "open" || state === "failed";
+}
+
+/**
+ * How many other in-flight calls a missed deadline names, beside the total. The
+ * oldest are kept: in a lock chain the head is the oldest waiter, and a report
+ * is read for the head.
+ */
+export const IN_FLIGHT_REPORT_MAX = 10;

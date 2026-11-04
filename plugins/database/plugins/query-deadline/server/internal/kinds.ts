@@ -12,8 +12,8 @@ import {
   renderQueryDeadlineTask,
 } from "./render";
 
-// Re-alert the bell at most once per 10 minutes per fingerprint. A query label
-// that keeps getting lost is one ongoing problem, and 10 minutes is also the
+// Re-alert the bell at most once per 10 minutes per fingerprint. A caller
+// that keeps losing calls is one ongoing problem, and 10 minutes is also the
 // window the Database health row counts over, so the bell and the dot agree on
 // what "recent" means.
 const NOTIF_COOLDOWN_MS = 600_000;

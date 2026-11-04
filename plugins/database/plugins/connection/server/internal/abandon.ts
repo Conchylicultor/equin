@@ -1,6 +1,6 @@
 import type { ClientBase, Pool } from "pg";
-import type { DbPoolName } from "../../core";
-import { queryDeadlineSink } from "./deadline";
+import { isInTransaction, type DbPoolName } from "../../core";
+import { queryDeadlineSink, txStateOf } from "./deadline";
 
 // ---------------------------------------------------------------------------
 // Abandoning a connection.
@@ -44,6 +44,18 @@ export class AbandonedClientHold {
   /** How many abandoned clients are strongly held right now (≤ cap). */
   get size(): number {
     return this.held.size;
+  }
+
+  /**
+   * How many held clients were left inside a transaction (open or failed) as of
+   * their last reply. Each is a server session that may still hold row locks.
+   */
+  get inTransaction(): number {
+    let n = 0;
+    for (const client of this.held) {
+      if (isInTransaction(txStateOf(client))) n++;
+    }
+    return n;
   }
 
   has(client: ClientBase): boolean {

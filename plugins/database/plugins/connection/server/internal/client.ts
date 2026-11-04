@@ -6,7 +6,12 @@ import {
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import { hasRuntimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
-import type { DbCallPhase, DbPoolName } from "../../core";
+import {
+  IN_FLIGHT_REPORT_MAX,
+  type DbCallPhase,
+  type DbPoolName,
+  type DbTxState,
+} from "../../core";
 import {
   CONNECT_CALL_LABEL,
   QUERY_DEADLINE_MS,
@@ -14,9 +19,15 @@ import {
   currentQueryDeadline,
   formatDeadlineLogLine,
   queryDeadlineSink,
+  txStateOf,
+  type InFlightDbCall,
   type QueryDeadlineEvent,
 } from "./deadline";
-import { abandonClient, assertPgPoolInternals } from "./abandon";
+import {
+  abandonClient,
+  abandonedClients,
+  assertPgPoolInternals,
+} from "./abandon";
 import { armAwakeDeadline } from "./awake-timer";
 
 // ---------------------------------------------------------------------------
@@ -78,6 +89,52 @@ interface DeadlineCall {
   reason: string | null;
   origin: string | null;
   startedAt: number;
+}
+
+// Every call waiting for its reply, on every connection this process built: what
+// a missed deadline reports as "in flight" next to the call it lost. A Set of
+// small records, added and deleted once per call — no walk on the hot path; the
+// walk is the expiry's.
+interface PendingCall {
+  client: DbClient;
+  call: DeadlineCall;
+}
+const pendingCalls = new Set<PendingCall>();
+
+/**
+ * Every call pending at `now` on the process's OTHER connections, oldest first
+ * and capped, with the total. Calls queued on the lost connection itself are
+ * left out: pg sends one statement at a time, so they never reached the server
+ * — they are not waiters on anything there, and they fail with the lost call.
+ */
+function inFlightAt(
+  lostClient: DbClient,
+  now: number,
+): { inFlight: InFlightDbCall[]; inFlightCount: number } {
+  const others: InFlightDbCall[] = [];
+  for (const { client, call } of pendingCalls) {
+    if (client === lostClient) continue;
+    others.push({
+      pool: client.poolName,
+      phase: call.phase,
+      sql: call.sql,
+      origin: call.origin,
+      ageMs: Math.round(now - call.startedAt),
+      transaction: txStateOf(client, call.phase),
+    });
+  }
+  others.sort((a, b) => b.ageMs - a.ageMs);
+  return {
+    inFlight: others.slice(0, IN_FLIGHT_REPORT_MAX),
+    inFlightCount: others.length,
+  };
+}
+
+/** What a missed deadline knows beyond the call itself, read at expiry. */
+interface ExpiryContext {
+  transaction: DbTxState | null;
+  inFlight: InFlightDbCall[];
+  inFlightCount: number;
 }
 
 type PgRelease = (err?: Error | boolean) => void;
@@ -205,10 +262,13 @@ export class DbClient extends Client {
       return undefined;
     }
     const call = this.#capture("connect", CONNECT_CALL_LABEL);
+    const pending: PendingCall = { client: this, call };
     let settled = false;
     const cancel = armAwakeDeadline(call.startedAt, call.deadlineMs, () => {
       if (settled) return;
       settled = true;
+      const expiry = this.#expiry(call);
+      pendingCalls.delete(pending);
       const err = this.#lose(call, (err) => {
         // Hand the error over BEFORE abandoning. Inside a pool the callback is
         // pg-pool's `newClient` handler: it drops the client from `_clients`,
@@ -227,18 +287,21 @@ export class DbClient extends Client {
           }
         }
       });
-      this.#report(call, err);
+      this.#report(call, err, expiry);
     });
+    pendingCalls.add(pending);
     try {
       pgConnect.call(this, (...result: unknown[]) => {
         if (settled) return; // late completion of a connect already failed
         settled = true;
         cancel();
+        pendingCalls.delete(pending);
         callback(...result);
       });
     } catch (err) {
       settled = true;
       cancel();
+      pendingCalls.delete(pending);
       throw err;
     }
     return undefined;
@@ -273,7 +336,8 @@ export class DbClient extends Client {
     if (lost) return Promise.reject(lost);
     // Started synchronously, so pg's own synchronous throws (a null config)
     // still reach the caller as throws.
-    const pending = work();
+    const result = work();
+    const pending: PendingCall = { client: this, call };
     return new Promise<T>((resolve, reject) => {
       let settled = false;
       const fail: LostListener = (err) => {
@@ -281,27 +345,41 @@ export class DbClient extends Client {
         settled = true;
         cancel();
         this.#inFlight.delete(fail);
+        pendingCalls.delete(pending);
         reject(err);
       };
       const cancel = armAwakeDeadline(call.startedAt, call.deadlineMs, () => {
         if (settled) return;
         settled = true;
+        const expiry = this.#expiry(call);
         this.#inFlight.delete(fail);
+        pendingCalls.delete(pending);
         const err = this.#lose(call);
         reject(err);
-        this.#report(call, err);
+        this.#report(call, err, expiry);
       });
       this.#inFlight.add(fail);
+      pendingCalls.add(pending);
       // A late outcome (after the deadline, or after another call lost the
       // client) is dropped here — handled, never an unhandled rejection.
-      pending.then((value) => {
+      result.then((value) => {
         if (settled) return;
         settled = true;
         cancel();
         this.#inFlight.delete(fail);
+        pendingCalls.delete(pending);
         resolve(value);
       }, fail);
     });
+  }
+
+  // Expiry, part 0, before anything changes: what the call was part of — its
+  // connection's transaction state and every other call still waiting.
+  #expiry(call: DeadlineCall): ExpiryContext {
+    return {
+      transaction: txStateOf(this, call.phase),
+      ...inFlightAt(this, performance.now()),
+    };
   }
 
   // Expiry, part 1: the connection is lost. Everything that must hold before
@@ -335,7 +413,11 @@ export class DbClient extends Client {
   }
 
   // Expiry, part 2, after the caller has its error: tell the outside world.
-  #report(call: DeadlineCall, err: QueryDeadlineExceededError): void {
+  #report(
+    call: DeadlineCall,
+    err: QueryDeadlineExceededError,
+    expiry: ExpiryContext,
+  ): void {
     recordSpan(
       "db",
       `${call.sql.slice(0, SQL_LABEL_MAX - DEADLINE_SPAN_SUFFIX.length)}${DEADLINE_SPAN_SUFFIX}`,
@@ -351,6 +433,12 @@ export class DbClient extends Client {
       deadlineMs: call.deadlineMs,
       origin: call.origin,
       reason: call.reason,
+      ...expiry,
+      abandoned: {
+        total: abandonedClients.abandoned,
+        held: abandonedClients.size,
+        inTransaction: abandonedClients.inTransaction,
+      },
     };
     // The durable `[deadline]` line in `db.jsonl` is the sink handler's
     // (`database/query-deadline`, in the backend): this plugin stays below

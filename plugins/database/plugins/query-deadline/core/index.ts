@@ -1,8 +1,10 @@
 export {
   DbQueryDeadlinePayloadSchema,
   DbAbandonCapPayloadSchema,
+  InFlightDbCallSchema,
 } from "./internal/payloads";
 export type {
+  InFlightDbCall,
   DbQueryDeadlinePayload,
   DbAbandonCapPayload,
 } from "./internal/payloads";

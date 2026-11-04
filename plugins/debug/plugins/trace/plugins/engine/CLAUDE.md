@@ -301,6 +301,7 @@ expandable JSON.
     - `TraceTriggerSchema`
 - Cross-plugin:
   - Imported by:
+    - `database/query-deadline`
     - `debug/boot-monitor`
     - `debug/op-rate`
     - `debug/sentinel`

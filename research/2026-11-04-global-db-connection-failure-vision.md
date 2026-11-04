@@ -21,10 +21,14 @@ Freeing it: `pg_terminate_backend(87346)` only passed the lock to the next dead
 session (it finished its INSERT and sat idle in transaction); terminating all 16
 restored main at once.
 
-Nothing alerted. Each deadline wrote one `db.jsonl` line and lit the health
-dot's Database row for 10 minutes; nothing tracked what the abandoned
-connections went on holding, and `application_name` was empty, so the blocker
-could not be attributed from the database side.
+Nothing alerted usefully. Each deadline wrote one `db.jsonl` line and lit the
+health dot's Database row for 10 minutes. (Correction, found by task 1: a
+`db-query-deadline` report and a bell notification WERE filed at 20:18:21 for
+the head — but the report said only "a query got no answer and was abandoned",
+pointing at a stray-close hunt, and the chain behind it spread over dozens of
+rows keyed by SQL text, one per `in (…)` arity.) Nothing tracked what the
+abandoned connections went on holding, and `application_name` was empty, so
+the blocker could not be attributed from the database side.
 
 ## Why connections are abandoned
 
@@ -114,7 +118,11 @@ review.
 
 Today `queryDeadlineSink` (`connection/server/internal/deadline.ts`) is drained by
 `database/query-deadline`, which writes the `[deadline]` line to `db.jsonl` and
-lights the health report's Database row for 10 minutes. The connection plugin
+lights the health report's Database row for 10 minutes. (**Landed:** it already
+filed a report per SQL label; it is now keyed by caller and carries the lost
+connection's transaction state, every other call in flight, the abandoned
+connections left in a transaction, and a linked trace — see
+`plugins/database/plugins/query-deadline/CLAUDE.md`.) The connection plugin
 cannot file a report itself (`reports` depends on `database`), so the report is
 filed in `database/query-deadline`'s handler: a report kind (under
 `plugins/reports`) deduped by `origin`, carrying pool, phase, SQL, elapsed vs

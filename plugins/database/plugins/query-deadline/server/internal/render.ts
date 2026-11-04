@@ -7,7 +7,10 @@ import {
   type DbAbandonCapPayload,
   type DbQueryDeadlinePayload,
 } from "../../core";
+import { isInTransaction } from "@plugins/database/plugins/connection/core";
 import { formatDurationMs } from "../../shared/format-duration";
+import { traceDetailRoute } from "@plugins/debug/plugins/trace/plugins/engine/core";
+import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 
 // Everything kind-specific that can be said without the reports engine: the
 // fingerprints, the one-line messages, and the investigation task bodies. Kept
@@ -22,6 +25,10 @@ import { formatDurationMs } from "../../shared/format-duration";
 export const INCIDENT_DOC =
   "research/2026-09-11-global-live-updates-frozen-by-stray-fd-close.md";
 
+/** The runbook for a database wedged by a transaction an abandon left open. */
+export const LOCK_CHAIN_DOC =
+  "research/2026-11-04-global-db-connection-failure-vision.md";
+
 /** The longest stretch of a query label a task title carries. */
 const TITLE_SQL_MAX = 80;
 
@@ -33,19 +40,32 @@ function clampOneLine(value: string, max: number): string {
 // --- db-query-deadline ------------------------------------------------------
 
 /**
- * One row per (pool, phase, query label) per worktree. The label is the unit
- * anyone acts on: the same statement lost again is the same question ("why does
- * this one hang?"), and a lost query under many different labels is many rows,
- * which is exactly the spread a stray-close hunt wants to see.
+ * What one `db-query-deadline` row stands for: (pool, phase, origin) — or, for
+ * a call with no origin (boot, migrations), (pool, phase, query label). NOT the trace trigger's
+ * label, which is the coarser (pool, phase) — see the handler.
  *
- * The pool and phase are part of it because they change the question. The same
- * label on the app pool (through pgbouncer) and on a direct jobs pool is two
- * different sockets, two different logs to read. And every connect has the one
- * label `[connect]`, so without the pool, a jobs pool failing to connect and the
- * app pool failing to connect would merge into one row naming only the latest.
+ * By ORIGIN, not by statement: the question a lost call raises is "what was
+ * this caller doing that the database never answered?", and one caller loses
+ * calls under many labels — a query whose `in ($1, $2, …)` list varies is a new
+ * label per arity, and a transaction's statements are several labels. Keyed by
+ * label, the 2026-11-03 incident spread one cause over dozens of rows; keyed by
+ * origin, each caller is one row whose count rises, and the latest lost
+ * statement rides its payload.
+ *
+ * The pool and phase stay in it because they change the question. The same
+ * caller on the app pool (through pgbouncer) and on a direct jobs pool is two
+ * different sockets, two different logs to read; a caller failing to connect
+ * is a different fact from one whose query went unanswered.
  */
+export function queryDeadlineKey(
+  d: Pick<DbQueryDeadlinePayload, "pool" | "phase" | "origin" | "sql">,
+): string {
+  const who = d.origin !== null ? `origin=${d.origin}` : `sql=${d.sql}`;
+  return `${d.pool}:${d.phase}:${who}`;
+}
+
 export function queryDeadlineFingerprint(d: DbQueryDeadlinePayload): string {
-  return `${DB_QUERY_DEADLINE_KIND}:${d.pool}:${d.phase}:${d.sql}`;
+  return `${DB_QUERY_DEADLINE_KIND}:${queryDeadlineKey(d)}`;
 }
 
 export function queryDeadlineMessage(d: DbQueryDeadlinePayload): string {
@@ -114,16 +134,20 @@ export function renderQueryDeadlineTask(
       `resource. The cost of abandoning is ${log.leak} until the backend restarts.`,
   );
   lines.push("");
+  lines.push(...evidenceLines(d));
   lines.push("**What to do:**");
   lines.push(
     d.phase === "connect"
       ? "1. Tell a lost connect from a refused or overloaded one. Check that " +
           "the database is up and not at its connection limit around the times " +
           "below; a database that answered nobody is an outage, not a stray close."
-      : "1. Tell a lost query from a slow one. If Postgres had the query " +
-          "(`pg_stat_activity` shows it running long), it is slow, not lost: find " +
-          "why, or — for boot DDL that legitimately waits on locks — give it a " +
-          "longer bound with `withQueryDeadline`.",
+      : "1. Tell a lost query from a slow or blocked one. If Postgres had the " +
+          "query (`pg_stat_activity` shows it running or waiting on a lock — " +
+          "`pg_blocking_pids(pid)` names the blocker), it is not lost: find why " +
+          "it waits. A transaction left open by an earlier abandon, with calls " +
+          "queued behind it (above), is a lock chain — see the runbook in " +
+          `\`${LOCK_CHAIN_DOC}\`. Boot DDL that legitimately waits on locks ` +
+          "gets a longer bound with `withQueryDeadline`.",
   );
   lines.push(
     `2. Otherwise, look in \`${log.file}\` around the ` +
@@ -161,6 +185,101 @@ export function renderQueryDeadlineTask(
       ? `[db] Opening a connection got no answer and was abandoned: pool ${d.pool}`
       : `[db] Query got no answer and was abandoned (${d.pool}): ${clampOneLine(d.sql, TITLE_SQL_MAX)}`;
   return { title, description: lines.join("\n") };
+}
+
+/**
+ * `value` as an inline code span. A label can hold backticks (a comment, a
+ * quoted identifier in a hand-written statement): the fence is one longer than
+ * the longest run inside, padded so an edge backtick does not merge into it.
+ */
+function code(value: string): string {
+  const longest = Math.max(
+    0,
+    ...(value.match(/`+/g) ?? []).map((r) => r.length),
+  );
+  const fence = "`".repeat(longest + 1);
+  return longest === 0
+    ? `${fence}${value}${fence}`
+    : `${fence} ${value} ${fence}`;
+}
+
+/** A short label for a transaction state, as the task body prints it. */
+function txLabel(state: DbQueryDeadlinePayload["transaction"]): string {
+  switch (state) {
+    case "open":
+      return "inside an open transaction";
+    case "failed":
+      return "inside a failed transaction";
+    case "idle":
+      return "outside any transaction";
+    case null:
+      return "not connected yet";
+  }
+}
+
+/**
+ * What the call was part of — read FIRST, because it usually says why the call
+ * was lost before any stray-close hunt starts: a lost call inside a
+ * transaction, others waiting behind it, abandoned connections still holding
+ * transactions open — that is a lock chain, not a vanished socket.
+ */
+function evidenceLines(d: DbQueryDeadlinePayload): string[] {
+  const lines: string[] = [
+    "**What it was part of** (at the instant it was given up on):",
+  ];
+  if (d.phase === "query") {
+    lines.push(
+      d.transaction === null
+        ? "- Its connection's transaction state: not recorded."
+        : `- It was sent ${txLabel(d.transaction)}.` +
+            (isInTransaction(d.transaction)
+              ? " Abandoned, that connection is never rolled back: if Postgres " +
+                "has the statement, the transaction and every row lock it took stay " +
+                "open, and later writers to those rows queue behind it."
+              : ""),
+    );
+  }
+  if (d.abandoned !== null) {
+    lines.push(
+      `- Connections this process has abandoned since it started: ${d.abandoned.total}. ` +
+        `Of the ${d.abandoned.held} it holds, ${d.abandoned.inTransaction} ` +
+        "were left inside a transaction" +
+        (d.abandoned.total > d.abandoned.held
+          ? " (the rest are past the hold's cap, their state unknown)."
+          : "."),
+    );
+  }
+  if (d.inFlightCount === null) {
+    lines.push("- Other database calls waiting: not recorded.");
+  } else if (d.inFlightCount === 0) {
+    lines.push("- No other database call was waiting.");
+  } else {
+    const shown =
+      d.inFlight.length < d.inFlightCount
+        ? ` (the ${d.inFlight.length} oldest)`
+        : "";
+    lines.push(
+      `- ${d.inFlightCount} other database call${d.inFlightCount === 1 ? " was" : "s were"} waiting${shown}:`,
+    );
+    for (const c of d.inFlight) {
+      lines.push(
+        `  - ${formatDurationMs(c.ageMs)} · pool \`${c.pool}\` · ` +
+          `${c.origin !== null ? code(c.origin) : "unknown caller"} · ` +
+          (c.phase === "connect"
+            ? "opening a connection"
+            : `${isInTransaction(c.transaction) ? "in a transaction · " : ""}` +
+              code(clampOneLine(c.sql, TITLE_SQL_MAX))),
+      );
+    }
+  }
+  if (d.traceId !== null) {
+    lines.push(
+      `- Everything in flight then (spans, gates, Postgres contention): ` +
+        `\`${traceDetailRoute.link(debugApp, { id: d.traceId })}\` (Debug → Slow Events).`,
+    );
+  }
+  lines.push("");
+  return lines;
 }
 
 // --- db-abandon-cap ---------------------------------------------------------

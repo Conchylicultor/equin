@@ -12197,7 +12197,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceMode`
           - `useTabs`
       - Cross-plugin:
-        - Imported by: 43 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+        - Imported by: 44 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
           - `apps` ×13
           - `apps-core` ×9
           - `debug` ×7
@@ -12209,6 +12209,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build`
           - `config_v2/config-link`
           - `conversations/runtime-sdk`
+          - `database/query-deadline`
           - `menu-bar/app-grid`
           - `ui/theme-engine/quick-theme`
     - **`theme-scope`** — Theme-scope helpers: the single definition of the focused full-surface app's theme scope, which decides the :root token layer and the document's light/dark (useRootThemeScopeState: a state that keeps the not-registered-yet window apart from 'no app owns the surface'), and useAppSettingsScope — the app:<id> config scope per-app theme settings (variants) are read in: the nearest app theme boundary's (a pane's home app), else the focused app's.
@@ -20803,10 +20804,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `DbCallPhase`
           - `DbPoolName`
+          - `DbTxState`
         - Exports (values):
           - `DB_CALL_PHASES`
           - `DB_POOL_NAMES`
+          - `DB_TX_STATES`
+          - `IN_FLIGHT_REPORT_MAX`
           - `isConnectionCapacityRefusal`
+          - `isInTransaction`
       - Test helpers:
         - Server: `@plugins/database/plugins/connection/server/testing`
           - `QueryDeadlineExceededError` — A database call got no reply within its deadline.
@@ -21245,18 +21250,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register: `mcpTool('query_db')`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/mcp-tools.ts` (debt)
-    - **`query-deadline`** — Query-deadline presence: the health report's Database row (attention while a database call on any pool got no reply in the last 10 minutes, naming the latest's pool and caller, read from the db-query-deadlines push resource) and the one-line Debug → Reports summaries (pool, phase, query, caller) for the db-query-deadline and db-abandon-cap kinds. Query-deadline audit: registers a handler on the database plugin's query-deadline seam and turns each announcement into a report — db-query-deadline (error, one row per pool, phase and query label) when a call on any backend connection — opening it or a query on it — got no answer before its deadline and its connection was abandoned, db-abandon-cap (error, one rolling row) when the abandoned connections exceed the cap — and keeps the last 20 hits in memory as the db-query-deadlines push resource behind the health report's Database row.
+    - **`query-deadline`** — Query-deadline presence: the health report's Database row (attention while a database call on any pool got no reply in the last 10 minutes, naming the latest's pool and caller, read from the db-query-deadlines push resource) and the one-line Debug → Reports summaries (pool, phase, query, caller) for the db-query-deadline and db-abandon-cap kinds. Query-deadline audit: registers a handler on the database plugin's query-deadline seam and turns each announcement into a report — db-query-deadline (error, one row per pool, phase and caller — the query label when there is no caller) when a call on any backend connection — opening it or a query on it — got no answer before its deadline and its connection was abandoned, carrying the connection's transaction state, every other call then in flight, the abandoned connections left in a transaction, and a link to a trace of that instant; db-abandon-cap (error, one rolling row) when the abandoned connections exceed the cap — and keeps the last 20 hits in memory as the db-query-deadlines push resource behind the health report's Database row.
       - Web:
         - Contributes:
           - `Reports.KindView` → `QueryDeadlineSummary`
           - `Reports.KindView` → `AbandonCapSummary`
           - `HealthReport.Row` "Database"
         - Uses:
+          - `apps-core/tabs.useAppLink`
           - `network/live.useLive`
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
+          - `primitives/css/link-chip.LinkChip`
           - `reports.Reports`
           - `shell/health-report.HealthReport`
+          - `ui/icons.Icon`
       - Server:
         - Contributes:
           - `report-kind` "db-abandon-cap"
@@ -21269,6 +21277,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/connection.queryDeadlineSink`
           - `database/embedded.PG_LOG_FILE`
           - `database/pgbouncer.PGBOUNCER_LOG_FILE`
+          - `debug/trace/engine.captureTrace`
           - `network/live.serveValue`
           - `reports.ReportKind`
           - `reports.ReportRow`
@@ -21281,10 +21290,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `database/connection.DB_CALL_PHASES`
           - `database/connection.DB_POOL_NAMES`
+          - `database/connection.DB_TX_STATES`
           - `network/live.liveValue`
         - Exports (types):
           - `DbAbandonCapPayload`
           - `DbQueryDeadlinePayload`
+          - `InFlightDbCall`
           - `QueryDeadlineHit`
           - `QueryDeadlines`
         - Exports (values):
@@ -21293,6 +21304,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DbAbandonCapPayloadSchema`
           - `DbQueryDeadlinePayloadSchema`
           - `dbQueryDeadlines`
+          - `InFlightDbCallSchema`
           - `QUERY_DEADLINE_RING_CAPACITY`
           - `QueryDeadlineHitSchema`
       - Cross-plugin:
@@ -24203,6 +24215,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `TraceTriggerSchema`
           - Cross-plugin:
             - Imported by:
+              - `database/query-deadline`
               - `debug/boot-monitor`
               - `debug/op-rate`
               - `debug/sentinel`
@@ -41464,7 +41477,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-medium`
               - `ui/tokens/type-scale --line-height-caption`
               - `ui/tokens/type-scale --line-height-label`
-            - Imported by: 32 plugins — full list in [`plugins/primitives/plugins/css/plugins/link-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/link-chip/REFERENCE.md)
+            - Imported by: 33 plugins — full list in [`plugins/primitives/plugins/css/plugins/link-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/link-chip/REFERENCE.md)
               - `active-data` ×10
               - `conversations` ×5
               - `debug` ×5
@@ -41473,6 +41486,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page` ×2
               - `plugin-meta` ×2
               - `build/serve-composition`
+              - `database/query-deadline`
         - **`meter`** — Linear meter / progress-bar primitive: <Meter value label tone size marker role> draws a fully-rounded track filling its container's width, filled to a 0..1 fraction (clamped) in a tone (default accent text colour, warning, destructive, muted) with a smooth width transition, plus an optional target/pace tick overhanging the bar. role meter (a measurement) or progressbar (a task's progress), with the aria value attributes.
           - Web:
             - Uses:
@@ -54070,7 +54084,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 365 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 366 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×96
           - `conversations` ×57
           - `primitives` ×42
@@ -54094,6 +54108,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework` ×2
           - `reports` ×2
           - `auth`
+          - `database/query-deadline`
           - `fullscreen`
           - `layouts/miller`
           - `map`

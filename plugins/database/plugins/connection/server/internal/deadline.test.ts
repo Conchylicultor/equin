@@ -340,6 +340,15 @@ describe("query deadline on a pooled client", () => {
         deadlineMs: DEADLINE_MS,
         origin: "tasks.maybe-launch",
         reason: null,
+        // A warmed connection, outside any transaction, alone in flight.
+        transaction: "idle",
+        inFlight: [],
+        inFlightCount: 0,
+        abandoned: {
+          total: expect.any(Number),
+          held: expect.any(Number),
+          inTransaction: expect.any(Number),
+        },
       },
     ]);
 
@@ -543,6 +552,15 @@ describe("connect deadline", () => {
         deadlineMs: DEADLINE_MS,
         origin: "change-feed.listen",
         reason: null,
+        // A connection being opened has had no reply: no state to read.
+        transaction: null,
+        inFlight: [],
+        inFlightCount: 0,
+        abandoned: {
+          total: expect.any(Number),
+          held: expect.any(Number),
+          inTransaction: expect.any(Number),
+        },
       },
     ]);
   });
@@ -784,5 +802,78 @@ describe("in a process with no runtime namespace (a CLI)", () => {
     }
     expect(written.filter((line) => line.startsWith("[deadline]"))).toEqual([]);
     expect(events).toMatchObject([{ kind: "deadline", pool: "change-feed" }]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// What a missed deadline knows beyond the call itself
+// ---------------------------------------------------------------------------
+
+describe("what a missed deadline reports it was part of", () => {
+  it("names the lost connection's transaction state and every other call in flight", async () => {
+    const connect = async () => {
+      const client = createDbClient({
+        name: "events-test",
+        connectionString: proxiedConnectionString(),
+        deadlineMs: DEADLINE_MS,
+      });
+      await client.connect();
+      return client;
+    };
+    const head = await connect();
+    const waiter = await connect();
+    // The head is inside an open transaction when its next statement is lost —
+    // the 2026-11-03 shape: an abandoned connection holding row locks.
+    await head.query("begin");
+    await head.query("select 1");
+
+    proxy.setForwarding(false);
+    const waiterLost = rejectionOf(
+      recordEntrySpan("job", "usage:sync waiter", () =>
+        waiter.query("select 2 as waiter"),
+      ),
+    );
+    await sleep(50);
+    const headLost = rejectionOf(
+      recordEntrySpan("job", "usage:sync head", () =>
+        head.query("select 3 as head"),
+      ),
+    );
+    asDeadlineError(await waiterLost);
+    asDeadlineError(await headLost);
+
+    const deadlines = events.filter(
+      (e): e is Extract<QueryDeadlineEvent, { kind: "deadline" }> =>
+        e.kind === "deadline",
+    );
+    expect(deadlines.map((e) => e.origin)).toEqual([
+      "usage:sync waiter",
+      "usage:sync head",
+    ]);
+    const [first, second] = deadlines;
+
+    // The waiter was lost first, outside any transaction; the head's statement
+    // was then in flight, inside its open transaction.
+    expect(first!.transaction).toBe("idle");
+    expect(first!.inFlightCount).toBe(1);
+    expect(first!.inFlight).toEqual([
+      {
+        pool: "events-test",
+        phase: "query",
+        sql: "select 3 as head",
+        origin: "usage:sync head",
+        ageMs: expect.any(Number),
+        transaction: "open",
+      },
+    ]);
+    expect(first!.inFlight[0]!.ageMs).toBeGreaterThanOrEqual(DEADLINE_MS - 100);
+
+    // The head: sent inside an open transaction, nothing left in flight (the
+    // waiter's call settled at its own deadline), and the hold now counts it
+    // among the abandoned connections left in a transaction.
+    expect(second!.transaction).toBe("open");
+    expect(second!.inFlight).toEqual([]);
+    expect(second!.inFlightCount).toBe(0);
+    expect(second!.abandoned.inTransaction).toBeGreaterThanOrEqual(1);
   });
 });
