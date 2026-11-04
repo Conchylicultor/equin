@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useSongDocument } from "@plugins/apps/plugins/sonata/plugins/document/web";
-import { useSonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { useSourceEdit } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import {
   beatToSeconds,
   scoreEndBeat,
@@ -14,63 +13,62 @@ const SAVE_DEBOUNCE_MS = 500;
 
 /**
  * Headless, always-mounted persistence observer for the Ultimate Guitar source,
- * contributed to `Sonata.Effect`. Treats the context (`rawById`) as the source of
+ * contributed to `Sonata.Effect`. Treats the loaded document as the source of
  * truth and debounce-persists a full `UgTab` snapshot (plus derived duration / end
- * beat) to the server whenever the raw's `tab` changes — never on the fresh load
- * of a song (which bumps `songLoadEpoch`), and never when only
- * `raw.alignment` changes (an alignment landing is not an edit), only on edits.
+ * beat) to the server whenever an edit changes the raw's `tab` — never the raw a
+ * load handed it, and never when only `raw.alignment` changes (an alignment
+ * landing is not an edit). It reads the edit WITH the song it belongs to
+ * (`useSourceEdit`), so one song's tab cannot be saved under another's id.
  *
  * This lives OUTSIDE the editor section deliberately: a section body is unmounted
  * while its card is collapsed, so an in-body debounced save would silently drop a
  * pending edit (the effect cleanup clears the timer) and stop observing the moment
  * the card is collapsed mid-debounce — data loss. A `Sonata.Effect` is mounted for
- * the whole open song regardless of card state, so no edit is ever lost. Its
- * internal `rawValue === undefined` guard (and the `UgSourceRawSchema` parse) make it a
- * no-op for songs of any other source.
+ * the whole open song regardless of card state, so no edit is ever lost. A song
+ * of any other source never edits the `UG_SOURCE_ID` raw, so it stays `unedited`
+ * and nothing is saved.
  *
  * The `PUT` persists `title: songName` (the one place a UG song's title is
  * written); the toolbar title re-renders off the library's live `songs` value,
  * not an in-memory mirror.
  */
 export function UltimateGuitarPersistObserver() {
-  const { sourceRaw } = useSongDocument();
-  const { currentSongId, songLoadEpoch } = useSonataApp();
+  const edit = useSourceEdit(UG_SOURCE_ID);
   const saveTab = useSaveUltimateGuitar();
 
-  const rawValue = sourceRaw(UG_SOURCE_ID);
-
-  const seededEpoch = useRef(songLoadEpoch);
-  // The tab as last persisted (or as opened), serialized. Only a change of the
+  // The tab as last persisted in this load, serialized. Only a change of the
   // TAB is an edit: the alignment child rewrites `raw.alignment` when a job
-  // lands, and that must never read as a sheet edit (nor re-save it).
-  const savedTab = useRef<string | null>(null);
+  // lands, and that must never read as a sheet edit (nor re-save it). Keyed on
+  // the load, so a new load's baseline is its own tab as loaded.
+  const saved = useRef<{ load: number; tab: string } | null>(null);
   useEffect(() => {
-    if (!currentSongId || rawValue === undefined) return;
-    const parsed = UgSourceRawSchema.safeParse(rawValue);
+    if (edit.kind !== "edited") return;
+    // The song and its tab come as one value: the save can only ever pair this
+    // song's tab with this song's id.
+    const { songId, load } = edit;
+    const parsed = UgSourceRawSchema.safeParse(edit.raw);
     if (!parsed.success) return;
     const raw = parsed.data;
     const tabJson = JSON.stringify(raw.tab);
-    // Skip the echo right after a song loads (hydrate set raw and bumped the epoch in one write),
-    // and the first raw this observer sees when it mounts on an open song.
-    if (seededEpoch.current !== songLoadEpoch || savedTab.current === null) {
-      seededEpoch.current = songLoadEpoch;
-      savedTab.current = tabJson;
-      return;
-    }
-    if (tabJson === savedTab.current) return;
-    const id = currentSongId;
+    const baseline =
+      saved.current?.load === load
+        ? saved.current.tab
+        : edit.asLoaded === undefined
+          ? null
+          : JSON.stringify(UgSourceRawSchema.parse(edit.asLoaded).tab);
+    if (tabJson === baseline) return;
     const timer = setTimeout(() => {
-      savedTab.current = tabJson;
+      saved.current = { load, tab: tabJson };
       const score = compile(raw);
       const endBeat = scoreEndBeat(score);
-      saveTab(id, {
+      saveTab(songId, {
         ...raw.tab,
         durationSec: beatToSeconds(score, endBeat),
         endBeat,
       });
     }, SAVE_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [rawValue, currentSongId, songLoadEpoch, saveTab]);
+  }, [edit, saveTab]);
 
   return null;
 }

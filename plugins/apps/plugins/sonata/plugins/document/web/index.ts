@@ -18,11 +18,14 @@ export {
 export {
   useLoadDocument,
   useLibrarySong,
-  useLoadCount,
+  useLibrarySongLoad,
+  useSourceEdit,
   useSongSetting,
   useWriteSongSetting,
   useFailSongSetting,
   type LibrarySong,
+  type LibrarySongLoad,
+  type SourceEdit,
 } from "./loaded-song";
 export { SongSettingsMount, useMountedSongId } from "./song-setting-mount";
 export {

@@ -7701,12 +7701,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types):
               - `DocumentContent`
               - `LibrarySong`
+              - `LibrarySongLoad`
               - `RhythmGroove`
               - `SongDocumentValue`
               - `SongIdentity`
               - `SongSetting`
               - `SongSettingFailure`
               - `SongSettingKey`
+              - `SourceEdit`
             - Exports (values):
               - `chordModeSetting`
               - `defaultGroove`
@@ -7724,15 +7726,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useHasOwnNotes`
               - `useHasVoicedChords`
               - `useLibrarySong`
-              - `useLoadCount`
+              - `useLibrarySongLoad`
               - `useLoadDocument`
               - `useMountedSongId`
               - `useSongDocument`
               - `useSongSetting`
+              - `useSourceEdit`
               - `useWriteSongSetting`
           - Cross-plugin:
-            - Imported by: 26 plugins — full list in [`plugins/apps/plugins/sonata/plugins/document/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/document/REFERENCE.md)
-              - `apps` ×26
+            - Imported by: 27 plugins — full list in [`plugins/apps/plugins/sonata/plugins/document/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/document/REFERENCE.md)
+              - `apps` ×27
         - **`fixtures`** — Sonata fixtures, server half: writeSongFixtures writes SongFixtures through each source's real write path (a chord grid through the chord-grid source's create write), measuring a grid as the editor does. Derives nothing else.
           - Server:
             - Uses: `apps/sonata/sources/chord-grid.createChordGridSongRow`
@@ -8287,9 +8290,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Sonata.Effect` "record-play" → `RecordPlayObserver`
               - `FieldPresentation.Register` "exposure:sonata_songs_ext_playback"
             - Uses:
+              - `apps/sonata/document.useLibrarySongLoad`
               - `apps/sonata/session.useSession`
               - `apps/sonata/shell.Sonata`
-              - `apps/sonata/shell.useSonataApp`
               - `infra/endpoints.useFetchEndpoint`
               - `network/live.FieldPresentation`
               - `primitives/css/inline.Inline`
@@ -9395,7 +9398,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `apps-core.Apps`
               - `apps/sonata/document.useLibrarySong`
-              - `apps/sonata/document.useLoadCount`
               - `apps/sonata/player.SonataPlayerScope`
               - `layouts/full-pane.FullPane`
               - `primitives/app-shell.AppShellLayout`
@@ -9476,14 +9478,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `FieldPresentation.Register` "exposure:sonata_songs_ext_chord_grid"
                   - `Library.Cover` "chord-grid"
                 - Uses: 27 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/REFERENCE.md)
+                  - `apps/sonata/document` ×3
                   - `apps/sonata/library` ×3
                   - `network/live` ×3
                   - `primitives/persistent-draft` ×3
-                  - `apps/sonata/document` ×2
-                  - `apps/sonata/shell` ×2
                   - `music/chord-box` ×2
                   - `primitives/collapsible` ×2
                   - `primitives/css/ui-kit` ×2
+                  - `apps/sonata/shell.Sonata`
                   - `infra/endpoints.useEndpointMutation`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/cluster.Cluster`
@@ -9812,12 +9814,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/ui-kit` ×6
                   - `network/live/live-state` ×5
                   - `network/live` ×4
-                  - `apps/sonata/document` ×2
+                  - `apps/sonata/document` ×3
                   - `apps/sonata/library` ×2
-                  - `apps/sonata/shell` ×2
                   - `infra/endpoints` ×2
                   - `primitives/css/layer` ×2
                   - `apps/sonata/primitives/source-line.SourceLine`
+                  - `apps/sonata/shell.Sonata`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/center.Center`
                   - `primitives/css/fill.Fill`

@@ -29,9 +29,9 @@ tuples that read the join.
     - `Sonata.Effect` "record-play" → `RecordPlayObserver`
     - `FieldPresentation.Register` "exposure:sonata_songs_ext_playback"
   - Uses:
+    - `apps/sonata/document.useLibrarySongLoad`
     - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.useSonataApp`
     - `infra/endpoints.useFetchEndpoint`
     - `network/live.FieldPresentation`
     - `primitives/css/inline.Inline`

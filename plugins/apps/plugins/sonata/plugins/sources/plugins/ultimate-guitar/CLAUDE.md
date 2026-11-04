@@ -259,12 +259,12 @@ reported) — the kind worth surfacing as crash tasks, not just toasts.
     - `primitives/css/ui-kit` ×6
     - `network/live/live-state` ×5
     - `network/live` ×4
-    - `apps/sonata/document` ×2
+    - `apps/sonata/document` ×3
     - `apps/sonata/library` ×2
-    - `apps/sonata/shell` ×2
     - `infra/endpoints` ×2
     - `primitives/css/layer` ×2
     - `apps/sonata/primitives/source-line.SourceLine`
+    - `apps/sonata/shell.Sonata`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`

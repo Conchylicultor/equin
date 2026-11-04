@@ -28,13 +28,18 @@ interface LoadedSong {
   generation: number;
   /**
    * Bumped by EVERY load — a reload of the same document included (its sources
-   * re-hydrated), unlike `generation`. What a once-per-load effect keys on: a
-   * play is counted once per load, a source's persist observer skips the raw a
-   * load handed it rather than an edit.
+   * re-hydrated), unlike `generation`. What a once-per-load effect keys on (a
+   * play is counted once per load — {@link useLibrarySongLoad}).
    */
   loads: number;
   /** Each source's raw input, by source id. */
   rawById: Readonly<Record<string, unknown>>;
+  /**
+   * Each source's raw input as the last load handed it — what `rawById` holds
+   * until an edit. A source whose raw is not this one has been edited since
+   * the load (see {@link useSourceEdit}).
+   */
+  loadedRawById: Readonly<Record<string, unknown>>;
   /**
    * The song's settled settings — a setting not in here is pending (or
    * failed). Always empty for a file document, whose settings all read their
@@ -94,12 +99,18 @@ export function useLoadDocument(): (
       (identity: SongIdentity, rawById: Readonly<Record<string, unknown>>) =>
         api.setState((prev) =>
           prev !== null && sameIdentity(prev.identity, identity)
-            ? { ...prev, loads: prev.loads + 1, rawById }
+            ? {
+                ...prev,
+                loads: prev.loads + 1,
+                rawById,
+                loadedRawById: rawById,
+              }
             : {
                 identity,
                 generation: (prev?.generation ?? 0) + 1,
                 loads: (prev?.loads ?? 0) + 1,
                 rawById,
+                loadedRawById: rawById,
                 settings: NO_SETTINGS,
                 failures: NO_FAILURES,
               },
@@ -135,12 +146,58 @@ export function useLoadedRaw(): Readonly<Record<string, unknown>> {
 }
 
 /**
- * How many times a document has been loaded on this surface — 0 before any
- * load, then bumped by every load, a reload of the same song included. A
- * once-per-load effect keys on it (see `LoadedSong.loads`).
+ * One source's edit of the loaded library song: its raw input WITH the song
+ * and the load it belongs to, read as one value — so a persist can only ever
+ * save a song's content under that song's id. `unedited` while the source's
+ * raw is the one the load handed (a load is not an edit, so there is no echo
+ * to skip), and for a file document (nothing of it is persisted).
+ *
+ *  - `load`: which load of the song (`LoadedSong.loads`) — bumped by a reload
+ *    of the same song too, whose raw is the server's again.
+ *  - `asLoaded`: the source's raw as that load handed it — the baseline a
+ *    source compares against when only part of its raw is user content.
  */
-export function useLoadCount(): number {
-  return loadedSongStore.useSelector((s) => s?.loads ?? 0, []);
+export type SourceEdit =
+  | { kind: "unedited" }
+  | {
+      kind: "edited";
+      songId: string;
+      load: number;
+      raw: unknown;
+      asLoaded: unknown;
+    };
+
+const UNEDITED: SourceEdit = { kind: "unedited" };
+
+/**
+ * The loaded library song's edit of source `sourceId` (see {@link SourceEdit})
+ * — what a source's persist observer saves. Changes with every edit of that
+ * source, never with another source's.
+ */
+export function useSourceEdit(sourceId: string): SourceEdit {
+  return loadedSongStore.useSelector<SourceEdit>(
+    (s) => {
+      if (s === null || s.identity.kind !== "library") return UNEDITED;
+      const raw = s.rawById[sourceId];
+      const asLoaded = s.loadedRawById[sourceId];
+      if (raw === asLoaded) return UNEDITED;
+      return {
+        kind: "edited",
+        songId: s.identity.songId,
+        load: s.loads,
+        raw,
+        asLoaded,
+      };
+    },
+    [sourceId],
+    (a, b) =>
+      a.kind === "unedited"
+        ? b.kind === "unedited"
+        : b.kind === "edited" &&
+          a.songId === b.songId &&
+          a.load === b.load &&
+          a.raw === b.raw,
+  );
 }
 
 /** Which document is loaded, and which load of it (see `LoadedSong.generation`). */
@@ -186,6 +243,31 @@ export function useLibrarySong(): LibrarySong {
     (a, b) =>
       a.kind === "library"
         ? b.kind === "library" && a.songId === b.songId
+        : b.kind === "none",
+  );
+}
+
+/**
+ * The library song loaded, WITH which load of it this is (`LoadedSong.loads`,
+ * bumped by a reload of the same song too) — `none` before any load and for a
+ * file document. What a once-per-load effect keys on (a play counted once per
+ * load), the song and its load read as one value.
+ */
+export type LibrarySongLoad =
+  { kind: "library"; songId: string; load: number } | { kind: "none" };
+
+const NO_LIBRARY_SONG_LOAD: LibrarySongLoad = { kind: "none" };
+
+export function useLibrarySongLoad(): LibrarySongLoad {
+  return loadedSongStore.useSelector<LibrarySongLoad>(
+    (s) =>
+      s !== null && s.identity.kind === "library"
+        ? { kind: "library", songId: s.identity.songId, load: s.loads }
+        : NO_LIBRARY_SONG_LOAD,
+    [],
+    (a, b) =>
+      a.kind === "library"
+        ? b.kind === "library" && a.songId === b.songId && a.load === b.load
         : b.kind === "none",
   );
 }

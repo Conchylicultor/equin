@@ -12,8 +12,11 @@ paints the active pane full-surface. The panes themselves (library index at `/so
 `useSonataApp()` is the APP's view of its song, **derived** from the loaded
 document — it keeps no state of its own: `currentSongId` (the library song
 loaded in the player, whether a player pane shows it or it plays in the
-background from the library) and `songLoadEpoch` (bumped by every load, for
-once-per-load effects). Leaving the player does not unload the song: it keeps
+background from the library). It carries no content and no load count: an
+effect that pairs the song with its content or its load reads them as ONE value
+from the document (`useSourceEdit` — a source's edit with its song id, what a
+persist observer saves; `useLibrarySongLoad` — the song with its load, what a
+once-per-load effect keys on), never this id beside a separate read. Leaving the player does not unload the song: it keeps
 playing, and the library's now-playing bar, card Pause and ring follow it.
 Deliberately **not** the title, which has a single owner in the library's
 `songs` value (`useCurrentSong`). The transport lives in the session (`useSession()`), content and settings in the document
@@ -66,7 +69,6 @@ persistence); an effect that must run wherever a song plays is a
   - Uses:
     - `apps-core.Apps`
     - `apps/sonata/document.useLibrarySong`
-    - `apps/sonata/document.useLoadCount`
     - `apps/sonata/player.SonataPlayerScope`
     - `layouts/full-pane.FullPane`
     - `primitives/app-shell.AppShellLayout`
