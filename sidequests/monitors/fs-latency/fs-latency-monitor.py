@@ -180,8 +180,14 @@ def rewarm(group):
             fh.read()
 
 
+def run_out(argv, check=False):
+    """A command's stdout as text, decoded tolerantly: ps truncates process names to a byte
+    count, which can split a multi-byte character (the middle dot in `equin · …`)."""
+    return subprocess.run(argv, capture_output=True, check=check).stdout.decode("utf-8", "replace")
+
+
 def sysctl_ints(names):
-    out = subprocess.run(["/usr/sbin/sysctl"] + names, capture_output=True, text=True, check=True).stdout
+    out = run_out(["/usr/sbin/sysctl"] + names, check=True)
     vals = {}
     for line in out.splitlines():
         k, _, v = line.partition(":")
@@ -190,8 +196,7 @@ def sysctl_ints(names):
 
 
 def disk_stats():
-    out = subprocess.run(["/usr/sbin/ioreg", "-c", "IOBlockStorageDriver", "-r", "-w0", "-k", "Statistics"],
-                         capture_output=True, text=True, check=True).stdout
+    out = run_out(["/usr/sbin/ioreg", "-c", "IOBlockStorageDriver", "-r", "-w0", "-k", "Statistics"], check=True)
     best = None
     for blob in re.findall(r'"Statistics" = \{([^}]*)\}', out):
         kv = dict((k, int(v)) for k, v in re.findall(r'"([^"]+)"=(\d+)', blob))
@@ -201,7 +206,7 @@ def disk_stats():
 
 
 def daemon_cpu():
-    out = subprocess.run(["/bin/ps", "-Ao", "pcpu=,comm="], capture_output=True, text=True, check=True).stdout
+    out = run_out(["/bin/ps", "-Ao", "pcpu=,comm="], check=True)
     want = {"fseventsd": 0.0, "syspolicyd": 0.0, "XprotectService": 0.0, "mds": 0.0, "mds_stores": 0.0}
     for line in out.splitlines():
         parts = line.strip().split(None, 1)
@@ -229,7 +234,7 @@ class RusageV2(ctypes.Structure):
 
 def disk_readers(now, state):
     """Root only: top disk readers since the last tick, by process name (MB/s)."""
-    out = subprocess.run(["/bin/ps", "-Ao", "pid=,comm="], capture_output=True).stdout.decode("utf-8", "replace")
+    out = run_out(["/bin/ps", "-Ao", "pid=,comm="])
     prev, prev_t = state.get("readers_prev", {}), state.get("readers_t")
     cur, by_name = {}, {}
     for line in out.splitlines():
@@ -252,10 +257,10 @@ def disk_readers(now, state):
 
 def fseventsd_logs():
     """Root only: the .fseventsd log files fseventsd holds open (hex event ids)."""
-    pid = subprocess.run(["/usr/bin/pgrep", "-x", "fseventsd"], capture_output=True, text=True).stdout.split()
+    pid = run_out(["/usr/bin/pgrep", "-x", "fseventsd"]).split()
     if not pid:
         return None
-    out = subprocess.run(["/usr/sbin/lsof", "-nP", "-p", pid[0], "-Fn"], capture_output=True, text=True).stdout
+    out = run_out(["/usr/sbin/lsof", "-nP", "-p", pid[0], "-Fn"])
     return sorted({ln.rsplit("/", 1)[1] for ln in out.splitlines() if ln.startswith("n") and "/.fseventsd/" in ln})
 
 
