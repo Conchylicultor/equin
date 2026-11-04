@@ -15,6 +15,7 @@ import {
   SortableItem,
   SortableList,
 } from "@plugins/primitives/plugins/sortable-list/web";
+import { useMaximizedId } from "../hooks/use-column-maximize";
 import { Column } from "./column";
 import { COLUMN_ATTR, ColumnMotion } from "./column-motion";
 
@@ -23,6 +24,7 @@ export function MillerColumns() {
   const basePath = useContext(PaneBasePathContext);
   const store = usePaneStore();
   const match = usePaneMatch();
+  const maximizedId = useMaximizedId();
 
   const ref = useRef<HTMLDivElement>(null);
   const lastLength = useRef(0);
@@ -92,6 +94,11 @@ export function MillerColumns() {
           >
             {match.panes.map((entry, i) => {
               const isLast = i === match.panes.length - 1;
+              // The column that fills the row: the maximized one while a
+              // maximize is on (every other column is then a collapsed bar,
+              // the leaf included), else the leaf.
+              const fills =
+                maximizedId === null ? isLast : entry.uuid === maximizedId;
               return (
                 <SortableItem
                   key={entry.instanceId}
@@ -99,12 +106,12 @@ export function MillerColumns() {
                   handle
                   disabled={!canReorder}
                   wrapperProps={{ [COLUMN_ATTR]: entry.uuid }}
-                  // The leaf column flex-grows to fill remaining width; fixed-width
-                  // columns stay rigid. The grow/shrink choice is per-column state,
+                  // The filling column flex-grows to take the remaining width;
+                  // the others stay rigid. The grow/shrink choice is per-column state,
                   // so it stays raw.
                   // eslint-disable-next-line layout/no-adhoc-layout -- per-column flex-grow/shrink role in miller's row
                   className={(state) =>
-                    `flex h-full${isLast ? " min-w-[200px] flex-1" : " shrink-0"}${state.isDragging ? " opacity-50" : ""}`
+                    `flex h-full${fills ? " min-w-[200px] flex-1" : " shrink-0"}${state.isDragging ? " opacity-50" : ""}`
                   }
                 >
                   {(state) => (
