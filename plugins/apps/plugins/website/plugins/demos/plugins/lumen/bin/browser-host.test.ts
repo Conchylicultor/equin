@@ -43,6 +43,7 @@
 import { defineMandate } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import { beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
+import { declareMemoryHostStorage } from "@plugins/framework/plugins/browser-server/plugins/host-storage/core/testing";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, sep } from "node:path";
 import {
@@ -288,6 +289,8 @@ async function until<T>(
 describe.if(IN_CHILD)("the demo's browser host", () => {
   let host: BrowserHost;
   beforeAll(async () => {
+    // A browser host keeps its state where its entry point declares; here, in memory.
+    declareMemoryHostStorage();
     const swapped = new Set(
       Object.keys(SWAPS).map((service) => hostProviders[service]),
     );

@@ -8,6 +8,12 @@
 declare module "@browser-host/*" {
   /** Start the host's Web Worker (one boot of its graph per call). */
   export function start(): Worker;
+  /**
+   * The host as a SharedWorker named `name`: every tab of this build that
+   * asks for the same name connects to ONE worker (one boot, one database).
+   * Only where `SharedWorker` exists — the caller checks.
+   */
+  export function startShared(name: string): SharedWorker;
   /** The absolute URL of the host's frame-serving Service Worker script. */
   export const serviceWorkerUrl: string;
 }

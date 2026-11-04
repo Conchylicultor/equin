@@ -1,0 +1,1 @@
+export { declareMemoryHostStorage } from "./memory";

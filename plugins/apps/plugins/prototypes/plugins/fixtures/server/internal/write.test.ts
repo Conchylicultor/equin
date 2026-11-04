@@ -20,6 +20,7 @@
  */
 
 import { beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
+import { declareMemoryHostStorage } from "@plugins/framework/plugins/browser-server/plugins/host-storage/core/testing";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { sql } from "drizzle-orm";
@@ -258,6 +259,8 @@ describe.if(IN_CHILD)("writePrototypeFixture, after the host is up", () => {
   const fixture = IN_CHILD ? testFixture() : null;
 
   beforeAll(async () => {
+    // A browser host keeps its state where its entry point declares; here, in memory.
+    declareMemoryHostStorage();
     // `exec` mode: the app registry's edges are the desktop's, which reach a
     // few non-portable server barrels a worker's own graph does not.
     const ordered = await bootPluginGraph({

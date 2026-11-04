@@ -129,6 +129,7 @@ export function hostWorkerSpecifier(pluginPath: string): string {
 export function hostModuleSource(pluginPath: string): string {
   return (
     `export function start() {\n  return new Worker(import.meta.resolve(${JSON.stringify(hostWorkerSpecifier(pluginPath))}), { type: "module" });\n}\n` +
+    `export function startShared(name) {\n  return new SharedWorker(import.meta.resolve(${JSON.stringify(hostWorkerSpecifier(pluginPath))}), { type: "module", name });\n}\n` +
     `export const serviceWorkerUrl = import.meta.url.replace(/[^/]*$/, ${JSON.stringify(FRAMES_SW_FILE)});\n`
   );
 }

@@ -11,11 +11,14 @@
     - `apps-core.Apps`
     - `apps-core/app-embed.AppEmbed`
     - `framework/browser-server/demo/scope.DemoScope`
+    - `framework/browser-server/demo/scope.useDemoHostControl`
     - `layouts/miller.PaneOverlayHost`
     - `primitives/bar.Bar`
     - `primitives/css/center.Center`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
 - Core:
   - Uses:
     - `primitives/pane.defineApp`

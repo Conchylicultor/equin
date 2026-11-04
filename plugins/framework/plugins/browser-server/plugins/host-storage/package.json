@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-framework-browser-server-host-storage",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Where a browser host keeps its state: in memory (lost with the worker) or persistent (IndexedDB, named), declared once by the worker's entry point before boot (declareHostStorage / hostStorage). Gives PGlite its data dir and each in-memory host store (config, transcripts, attachment bytes, data files) a write-through store loaded at open; owns the lifecycle (fresh → seeded, a dead seed wiped, data written by newer code refused), the one-owner Web Lock with the version handoff between builds, and the wipe behind Reset."
+}

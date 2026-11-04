@@ -1767,11 +1767,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core.Apps`
               - `apps-core/app-embed.AppEmbed`
               - `framework/browser-server/demo/scope.DemoScope`
+              - `framework/browser-server/demo/scope.useDemoHostControl`
               - `layouts/miller.PaneOverlayHost`
               - `primitives/bar.Bar`
               - `primitives/css/center.Center`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
           - Core:
             - Uses:
               - `primitives/pane.defineApp`
@@ -14098,7 +14101,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Core: `@plugins/config_v2/core/testing`
       - `LEGEND_MARKER` — The build-owned `// @legend` block of a committed config override: a descriptor's `overrideLegend` lines, stamped directly under the `// @hash` header so whoever opens the file to hand-edit it sees how to write its values — for a reorder slot, that a spacer node exists and what it does.
   - Plugins:
-    - **`browser-store`** (excluded) — The user config layer of a host without the computer (a browser worker host): held in memory (ConfigStore), each document propagated from the host's committed layer (ConfigGitLayer) on first touch, so it starts as a fresh user's. Never booted by the desktop, whose provider is config_v2#machine.
+    - **`browser-store`** (excluded) — The user config layer of a host without the computer (a browser worker host): held in memory (ConfigStore) and written through to the host's declared storage (kept across reloads when it is persistent), each document propagated from the host's committed layer (ConfigGitLayer) on first touch, so it starts as a fresh user's. Never booted by the desktop, whose provider is config_v2#machine.
       - Server:
         - Contributes: `host-service:config-v2.store` "config-v2.store"
         - Uses:
@@ -20250,7 +20253,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/transcript-source/memory`
           - `conversations/transcript-watcher`
       - Plugins:
-        - **`memory`** (excluded) — Transcripts in memory: provides the TranscriptSource host service for a host without Claude Code's session files (the browser composition), from JSONL text written to it. Never booted by the desktop.
+        - **`memory`** (excluded) — Transcripts in memory: provides the TranscriptSource host service for a host without Claude Code's session files (the browser composition), from JSONL text written to it — written through to the host's declared storage, so a persistent host keeps them. Never booted by the desktop.
           - Server:
             - Contributes: `host-service:conversations.transcript-source` "conversations.transcript-source"
             - Uses:
@@ -21245,6 +21248,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database/migrations.Migration`
               - `database/migrations.migrationsFrom`
               - `database/migrations.MigrationSource`
+            - Exports (values): `bundledMigrations`
         - **`phases`** — The phased-migration file grammar (expand / claimed data migrations / contract, snapshot lineage headers): parse and render, shared by the generator (cli/migrations), the runner (migrations/server) and the checks. A portable leaf, so the runner's portable server reaches it without migrations/core's Bun-only half.
           - Core:
             - Uses: `framework/product-name.LEGACY_IDS`
@@ -21304,7 +21308,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PGBOUNCER_SOCKET_DIR`
           - `PGBOUNCER_USERLIST_FILE`
           - `pgbouncerPidFileUnder`
-    - **`pglite`** (excluded) — The PGlite database driver: provides the DatabaseDriver host service with Postgres compiled to WASM, in memory, for a host without the computer's Postgres cluster (the browser composition, the portable boot test). Never booted by the desktop, which provides its own driver.
+    - **`pglite`** (excluded) — The PGlite database driver: provides the DatabaseDriver host service with Postgres compiled to WASM, for a host without the computer's Postgres cluster (the browser composition, the portable boot test) — in memory, or in IndexedDB when the host's declared storage is persistent (browser-server/host-storage). Never booted by the desktop, which provides its own driver.
       - Server:
         - Contributes: `host-service:database.driver` "database.driver"
         - Uses: `database.DatabaseDriver`
@@ -26649,7 +26653,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `attachFrameServing`
           - `browserServerTransport`
       - Cross-plugin:
-        - Imported by: `framework/browser-server/demo/scope`
+        - Imported by:
+          - `framework/browser-server/demo/scope`
+          - `framework/browser-server/host-storage`
       - Core:
         - Exports (types):
           - `BrowserServer`
@@ -26657,14 +26663,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BrowserServerSocket`
           - `HostBoot`
           - `HostBooted`
+          - `HostEndReason`
           - `PortEnd`
           - `PortServer`
+          - `ServedHost`
+          - `ServeHostOptions`
         - Exports (values):
           - `attachPort`
+          - `HostEndedError`
+          - `HostRefusedError`
           - `portBrowserServer`
           - `PortHostBootError`
+          - `PortHostRefusedError`
           - `portRequester`
           - `runtimeBrowserServer`
+          - `serveHost`
           - `serveOverPort`
       - Test helpers:
         - Core: `@plugins/framework/plugins/browser-server/core/testing`
@@ -26678,20 +26691,51 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DemoHost`
               - `DemoScenario`
           - Plugins:
-            - **`scope`** — <DemoScope scenario>: renders its subtree against the scenario's browser host — real server code in a worker, on the scenario's seed — and scoped to the host's composition (<PluginScope>), so the page shows exactly the plugins the worker serves. Everything inside reaches the host only (the scope's transport): the build's coverage guard holds the host to serving every read, endpoint and config the scope uses, or declaring it needsMachine (answered unavailable); a key or endpoint it still does not serve fails loudly. A host that fails to boot throws to the error boundary.
+            - **`scope`** — <DemoScope scenario>: renders its subtree against the scenario's browser host — real server code in a worker, on the scenario's seed — and scoped to the host's composition (<PluginScope>), so the page shows exactly the plugins the worker serves. Everything inside reaches the host only (the scope's transport): the build's coverage guard holds the host to serving every read, endpoint and config the scope uses, or declaring it needsMachine (answered unavailable); a key or endpoint it still does not serve fails loudly. A host that fails to boot throws to the error boundary. Connects to one SharedWorker per build (every tab of the demo shares its server and data), shows why when the host declines the page (data written by a newer version) or stops serving it (another tab took it over), and exposes Reset (useDemoHostControl) — the host wipes its data and every tab reconnects to a fresh one.
               - Web:
                 - Uses:
                   - `framework/browser-server.attachFrameServing`
                   - `framework/browser-server.browserServerTransport`
                   - `framework/browser-server.FrameServing`
                   - `network/live/live-state.NotificationsProvider`
+                  - `primitives/css/center.Center`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.Button`
                   - `primitives/loading.Loading`
                   - `primitives/log-channels.clientLog`
                   - `primitives/networking.TransportProvider`
                   - `primitives/networking.useTransport`
-                - Exports (values): `DemoScope`
+                - Exports (types): `DemoHostControl`
+                - Exports (values):
+                  - `DemoScope`
+                  - `useDemoHostControl`
               - Cross-plugin:
+                - Uses tokens: `ui/tokens/density --space-lg`
                 - Imported by: `apps/demo/shell`
+        - **`host-storage`** — Where a browser host keeps its state: in memory (lost with the worker) or persistent (IndexedDB, named), declared once by the worker's entry point before boot (declareHostStorage / hostStorage). Gives PGlite its data dir and each in-memory host store (config, transcripts, attachment bytes, data files) a write-through store loaded at open; owns the lifecycle (fresh → seeded, a dead seed wiped, data written by newer code refused), the one-owner Web Lock with the version handoff between builds, and the wipe behind Reset.
+          - Core:
+            - Uses:
+              - `framework/browser-server.HostBooted`
+              - `framework/browser-server.HostRefusedError`
+              - `framework/browser-server.PortEnd`
+              - `framework/browser-server.ServedHost`
+              - `framework/browser-server.serveHost`
+            - Exports (types):
+              - `BrowserHostStorage`
+              - `HostStorage`
+              - `HostStorageSpec`
+              - `HostStore`
+              - `OpenedHostStorage`
+              - `WorkerScope`
+            - Exports (values):
+              - `hostStorage`
+              - `openHostStorage`
+              - `serveBrowserHost`
+              - `StorageNewerThanCodeError`
+          - Test helpers:
+            - Core: `@plugins/framework/plugins/browser-server/plugins/host-storage/core/testing`
+              - `declareMemoryHostStorage` — Declare that this process's browser host keeps its state in memory — what a test that boots a browser graph (PGlite and the in-memory host stores) declares before `bootBrowserHost`, as a host's entry point declares its storage.
     - **`central-core`**
       - Core:
         - Uses:
@@ -29488,7 +29532,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `holdAttachments`
           - `uploadAttachment`
       - Plugins:
-        - **`memory-blobs`** (excluded) — Attachment bytes in memory: provides the AttachmentBlobs host service for a host without a filesystem (the browser composition, the portable boot test), the bytes lost with the process. Never booted by the desktop.
+        - **`memory-blobs`** (excluded) — Attachment bytes in memory: provides the AttachmentBlobs host service for a host without a filesystem (the browser composition, the portable boot test), written through to the host's declared storage (kept across reloads when it is persistent). Never booted by the desktop.
           - Server:
             - Contributes: `host-service:attachments.blobs` "attachments.blobs"
             - Uses: `infra/attachments.AttachmentBlobs`
@@ -32955,7 +32999,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `describeDataFilesConformance` — Register the conformance suite for one provider. `makeHarness` is called once per test.
               - Types: `ConformanceHarness`
           - Plugins:
-            - **`memory`** (excluded) — Data files in memory: provides the DataFiles host service for a host without the computer's disk (the browser composition), every root's tree kept in this process and lost with it — directories made as a write's parents, one monotonic clock, in-process locks, and a watch that hears every mutation as one change per microtask. Never booted by the desktop.
+            - **`memory`** (excluded) — Data files in memory: provides the DataFiles host service for a host without the computer's disk (the browser composition), every root's tree kept in this process and written through to the host's declared storage (read back after a reload when it is persistent) — directories made as a write's parents, one monotonic clock, in-process locks, and a watch that hears every mutation as one change per microtask. Never booted by the desktop.
               - Server:
                 - Contributes: `host-service:data-files.store` "data-files.store"
                 - Uses:
@@ -32968,7 +33012,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/paths/data-files.watchedPaths`
               - Test helpers:
                 - Server: `@plugins/infra/plugins/paths/plugins/data-files/plugins/memory/server/testing`
-                  - `createMemoryDataFiles` — Files in memory, lost with the process: a browser host's store (the demo resets on reload).
+                  - `createMemoryDataFiles` — Files in memory: a browser host's store.
         - **`display`** — The human-facing spelling of the data dirs (the `~/…` form a message, an empty state, or an agent prompt writes). Web-safe by construction: string literals only, no node:* and no homedir() — so the browser can name a directory the server resolves.
           - Exemptions:
             - Exempts itself from: `paths:no-hardcoded-paths` — `core/internal/display.ts` (sanctioned)
@@ -41546,7 +41590,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 131 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+            - Imported by: 132 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
               - `apps` ×42
               - `primitives` ×25
               - `page` ×18
@@ -41557,12 +41601,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta` ×3
               - `tasks` ×3
               - `fields` ×2
+              - `framework` ×2
               - `integrations` ×2
               - `map` ×2
               - `shell` ×2
               - `active-data/go`
               - `config_v2/settings`
-              - `framework/web-core`
               - `layouts/route-fallback`
               - `network/live/live-state`
               - `reorder/node-types/header`
@@ -42457,7 +42501,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 431 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 432 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×109
               - `conversations` ×70
               - `primitives` ×54
@@ -42480,10 +42524,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `backup` ×2
               - `code-explorer` ×2
               - `config_v2` ×2
+              - `framework` ×2
               - `layouts` ×2
               - `menu-bar` ×2
               - `screenshot` ×2
-              - `framework/web-core`
               - `hints/ask`
               - `history/dialog`
               - `map/google`
@@ -42701,7 +42745,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 413 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 414 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×111
               - `conversations` ×76
               - `primitives` ×47
@@ -42724,10 +42768,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `backup` ×2
               - `code-explorer` ×2
               - `config_v2` ×2
+              - `framework` ×2
               - `hints` ×2
               - `map` ×2
               - `screenshot` ×2
-              - `framework/web-core`
               - `history/dialog`
               - `layouts/route-fallback`
               - `menu-bar`
@@ -42999,9 +43043,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 451 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 453 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×111
-              - `apps` ×104
+              - `apps` ×105
               - `conversations` ×53
               - `page` ×26
               - `debug` ×24
@@ -43019,8 +43063,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2` ×4
               - `integrations` ×4
               - `active-data` ×3
+              - `framework` ×3
               - `backup` ×2
-              - `framework` ×2
               - `hints` ×2
               - `layouts` ×2
               - `menu-bar` ×2
@@ -46719,6 +46763,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `confirmDialog`
               - Cross-plugin:
                 - Imported by:
+                  - `apps/demo/shell`
                   - `apps/deploy/deploy-history/rollback`
                   - `apps/places/places-map`
                   - `apps/places/tag-manager`
@@ -55746,7 +55791,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 349 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 350 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `primitives` ×73
               - `apps` ×72
               - `conversations` ×50
@@ -55762,12 +55807,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `shell` ×4
               - `apps-core` ×3
               - `build` ×3
+              - `framework` ×3
               - `stats` ×3
               - `active-data` ×2
               - `backup` ×2
               - `code-explorer` ×2
               - `config_v2` ×2
-              - `framework` ×2
               - `map` ×2
               - `menu-bar` ×2
               - `screenshot` ×2

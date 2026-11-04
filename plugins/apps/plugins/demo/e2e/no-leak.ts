@@ -133,43 +133,60 @@ const PNG_BASE64 =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 
 /**
- * Records every message the demo's worker answers with (`t: "response"`),
- * installed before the page's scripts run: the page reaches the worker by
- * `postMessage`, so this is the only place its answers are visible.
+ * Records every request the page sends the demo's host and every answer
+ * (`t: "response"`), installed before the page's scripts run: the page reaches
+ * the host by `postMessage` — on a dedicated `Worker`, or on the `port` of the
+ * SharedWorker every tab of the demo shares — so this is the only place its
+ * traffic is visible.
  */
 async function tapWorkerResponses(page: Page): Promise<void> {
   await page.addInitScript(() => {
     const log: string[] = [];
     (window as unknown as { __demoWorkerLog: string[] }).__demoWorkerLog = log;
-    const Native = window.Worker;
-    class Tapped extends Native {
+    /** Tap one end the page talks to the host on. */
+    const tap = (end: Worker | MessagePort): void => {
+      end.addEventListener("message", (e: Event) => {
+        const d = (e as MessageEvent).data as {
+          t?: string;
+          id?: number;
+          response?: { status: number };
+        } | null;
+        if (d?.t === "response" && d.response)
+          log.push(`#${d.id} → ${d.response.status}`);
+      });
+      const send = end.postMessage.bind(end) as (
+        msg: unknown,
+        transfer?: Transferable[],
+      ) => void;
+      end.postMessage = ((msg: unknown, transfer?: Transferable[]) => {
+        const m = msg as {
+          t?: string;
+          id?: number;
+          request?: { method: string; url: string };
+        } | null;
+        if (m?.t === "request" && m.request)
+          log.push(
+            `#${m.id} ${m.request.method} ${new URL(m.request.url).pathname}`,
+          );
+        send(msg, transfer ?? []);
+      }) as Worker["postMessage"];
+    };
+    const NativeWorker = window.Worker;
+    class TappedWorker extends NativeWorker {
       constructor(url: string | URL, opts?: WorkerOptions) {
         super(url, opts);
-        this.addEventListener("message", (e: MessageEvent) => {
-          const d = e.data as {
-            t?: string;
-            id?: number;
-            response?: { status: number };
-          } | null;
-          if (d?.t === "response" && d.response)
-            log.push(`#${d.id} → ${d.response.status}`);
-        });
-        const send = this.postMessage.bind(this);
-        this.postMessage = ((msg: unknown, ...rest: [Transferable[]]) => {
-          const m = msg as {
-            t?: string;
-            id?: number;
-            request?: { method: string; url: string };
-          } | null;
-          if (m?.t === "request" && m.request)
-            log.push(
-              `#${m.id} ${m.request.method} ${new URL(m.request.url).pathname}`,
-            );
-          send(msg, ...rest);
-        }) as Worker["postMessage"];
+        tap(this);
       }
     }
-    window.Worker = Tapped;
+    window.Worker = TappedWorker;
+    const NativeShared = window.SharedWorker;
+    class TappedShared extends NativeShared {
+      constructor(url: string | URL, opts?: string | WorkerOptions) {
+        super(url, opts);
+        tap(this.port);
+      }
+    }
+    window.SharedWorker = TappedShared;
   });
 }
 

@@ -18,6 +18,13 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
 (`agent-manager/demo`). Original design:
 `research/2026-10-15-global-app-embed-and-agent-manager-demo.md` §5.
 
+- **The demo's data is kept in the browser** (`browser-server/host-storage`,
+  storage `demo-lumen`): `bin/browser-host.ts` is `serveBrowserHost` with a
+  persistent storage, and seeds only when it is fresh — after that the data is
+  the visitor's, across reloads and every tab (one SharedWorker per build), and
+  a new build migrates it. "Reset demo" wipes it and the next boot seeds again.
+  A change to the seed reaches a visitor who already has data only after a
+  Reset.
 - **The demo owns its data; the apps own how it is written.** Everything the
   demo shows is here — the stories and agents (`core/internal/stories.ts`),
   the Lumen workspace (`core/internal/pages.ts`, a Pages fixture), what the

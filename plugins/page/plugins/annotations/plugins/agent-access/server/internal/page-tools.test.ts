@@ -21,6 +21,7 @@
  */
 
 import { beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
+import { declareMemoryHostStorage } from "@plugins/framework/plugins/browser-server/plugins/host-storage/core/testing";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { sql } from "drizzle-orm";
@@ -182,6 +183,8 @@ const caller = { conversationId: CONVERSATION };
 
 describe.if(IN_CHILD)("pageTools on a portable host", () => {
   beforeAll(async () => {
+    // A browser host keeps its state where its entry point declares; here, in memory.
+    declareMemoryHostStorage();
     await bootPluginGraph({
       mode: "exec",
       entries: [

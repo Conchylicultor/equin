@@ -15,6 +15,10 @@ import {
   type FileRootSpec,
   type FileRootStore,
 } from "@plugins/infra/plugins/paths/plugins/data-files/server";
+import {
+  hostStorage,
+  type HostStore,
+} from "@plugins/framework/plugins/browser-server/plugins/host-storage/core";
 import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 
@@ -25,14 +29,51 @@ type Node =
 /** One root's tree: every path to its node, the root itself at `""` once it exists. */
 type Tree = Map<RelPath, Node>;
 
+/** A stored node's key: its root, then its path (`""` is the root itself). */
+const storedKey = (rootId: string, path: RelPath): string =>
+  `${rootId}\0${path}`;
+
+/**
+ * A tree whose every set and delete is also written to `store` (when there is
+ * one), so a persistent host reads the same tree back after a reload. A node
+ * changed in place (a touched mtime) is set again to be written.
+ */
+class StoredTree extends Map<RelPath, Node> {
+  constructor(
+    private readonly rootId: string,
+    private readonly store: HostStore<Node> | null,
+  ) {
+    super();
+    if (store === null) return;
+    const prefix = storedKey(rootId, "" as RelPath);
+    for (const [key, node] of store.loaded) {
+      if (key.startsWith(prefix)) {
+        super.set(key.slice(prefix.length) as RelPath, node);
+      }
+    }
+  }
+  override set(path: RelPath, node: Node): this {
+    super.set(path, node);
+    this.store?.put(storedKey(this.rootId, path), node);
+    return this;
+  }
+  override delete(path: RelPath): boolean {
+    const had = super.delete(path);
+    if (had) this.store?.delete(storedKey(this.rootId, path));
+    return had;
+  }
+}
+
 function toBlob(data: FileData): Blob {
   if (data instanceof Blob) return data;
   return new Blob([data as BlobPart]);
 }
 
 /**
- * Files in memory, lost with the process: a browser host's store (the demo
- * resets on reload). Directories come into being as a write's parents and stay
+ * Files in memory: a browser host's store. With `persist`, every change is
+ * also written to that host store and each root's tree is read back from it on
+ * first use, so a persistent host keeps its files across reloads; without it
+ * (a test), they are lost with the process. Directories come into being as a write's parents and stay
  * until removed — exactly as on disk, so an emptied directory still lists as
  * empty rather than missing.
  *
@@ -42,7 +83,10 @@ function toBlob(data: FileData): Blob {
  * mutations reach a subscriber as ONE `changed`, through a coalescer, and never
  * a `rescan` — a store with no out-of-band writer drops no event.
  */
-export function createMemoryDataFiles(): DataFilesImpl {
+export function createMemoryDataFiles(opts?: {
+  /** Where the trees are kept: read lazily, on a root's first use. */
+  persist?: () => HostStore<Node>;
+}): DataFilesImpl {
   const trees = new Map<string, Tree>();
   const subscribers = new Map<string, Set<(paths: RelPath[]) => void>>();
   const pending = new Map<string, Set<RelPath>>();
@@ -54,7 +98,7 @@ export function createMemoryDataFiles(): DataFilesImpl {
   function treeOf(spec: FileRootSpec): Tree {
     let tree = trees.get(spec.id);
     if (tree === undefined) {
-      tree = new Map();
+      tree = new StoredTree(spec.id, opts?.persist?.() ?? null);
       trees.set(spec.id, tree);
     }
     return tree;
@@ -82,7 +126,7 @@ export function createMemoryDataFiles(): DataFilesImpl {
   /** Touch a directory's mtime: an entry inside it was added or removed. */
   function touch(tree: Tree, dir: RelPath): void {
     const node = tree.get(dir);
-    if (node !== undefined) node.mtimeMs = now();
+    if (node !== undefined) tree.set(dir, { ...node, mtimeMs: now() });
   }
 
   /** Create `dir` and its missing ancestors; a file in the way throws. */
@@ -251,5 +295,7 @@ export function createMemoryDataFiles(): DataFilesImpl {
   };
 }
 
-/** The store this host boots — one per process. */
-export const memoryDataFiles = createMemoryDataFiles();
+/** The store this host boots — one per process, kept in the host's declared storage. */
+export const memoryDataFiles = createMemoryDataFiles({
+  persist: () => hostStorage().store<Node>("data-files"),
+});

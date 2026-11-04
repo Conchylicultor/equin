@@ -65,11 +65,37 @@ export function channelHost(
   {
     serviceWorkerUrl = "http://localhost/artifacts/test-host/frames-sw.js",
   }: { serviceWorkerUrl?: string } = {},
-): () => Promise<{ start(): Worker; serviceWorkerUrl: string }> {
+): () => Promise<{
+  start(): Worker;
+  startShared(name: string): SharedWorker;
+  serviceWorkerUrl: string;
+}> {
   return () =>
     Promise.resolve({
       serviceWorkerUrl,
-      start: () => {
+      // The same in-realm "worker", as a SharedWorker's connection: its
+      // `port` is the page end, `close()` ends it.
+      startShared: () => {
+        const worker = startChannel();
+        const port = {
+          postMessage: worker.postMessage,
+          addEventListener: worker.addEventListener,
+          start: () => {},
+          close: worker.terminate,
+        };
+        return { port } as unknown as SharedWorker;
+      },
+      start: () => startChannel() as unknown as Worker,
+    });
+
+  function startChannel(): {
+    postMessage(message: unknown, transfer?: Transferable[]): void;
+    addEventListener(
+      type: "message",
+      listener: (event: MessageEvent) => void,
+    ): void;
+    terminate(): void;
+  } {
         const channel = new MessageChannel();
         // `addEventListener` does not start a port; both ends must be.
         channel.port1.start();
@@ -101,7 +127,6 @@ export function channelHost(
           },
         };
         // Only what `portBrowserServer` and the scope's teardown touch.
-        return worker as unknown as Worker;
-      },
-    });
+    return worker;
+  }
 }

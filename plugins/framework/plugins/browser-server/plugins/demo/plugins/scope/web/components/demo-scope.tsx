@@ -10,10 +10,20 @@
 // frame documents (a prototype's `<iframe>`) load by URL from the same host,
 // through the host's frame-serving Service Worker (`attachFrameServing`).
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import {
+  PortHostRefusedError,
   portBrowserServer,
   type BrowserServer,
+  type HostEndReason,
+  type PortEnd,
   type PortServer,
 } from "@plugins/framework/plugins/browser-server/core";
 import {
@@ -25,6 +35,10 @@ import type { DemoScenario } from "@plugins/framework/plugins/browser-server/plu
 import { NotificationsProvider } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   TransportProvider,
   useTransport,
@@ -59,37 +73,78 @@ function bootLine(
   );
 }
 
-/** A booted scope host: its server, and where its frame documents load (`Transport.frameBase`). */
+/** A booted scope host: its server, where its frame documents load (`Transport.frameBase`), and its Reset. */
 interface ScopeHost {
   server: BrowserServer;
   frameBase: string | null;
+  reset(): void;
+}
+
+/** What one start of the scope's host comes to. */
+interface ScopeStart {
+  onReady(host: ScopeHost): void;
+  /** The host declined to boot (`PortHostRefusedError`): show `message`. */
+  onRefused(message: string): void;
+  /** It stopped serving after it was ready. */
+  onEnded(why: HostEndReason): void;
+  onFailed(err: unknown): void;
 }
 
 /**
- * Boot the scenario's host — its frame serving attached alongside the boot —
- * and call `onReady` with it, or `onFailed` with a host that could not boot;
- * returns the teardown (frame serving detached, the server disposed, the
- * worker ended).
+ * The page's end of the scenario's host: ONE SharedWorker per build for every
+ * tab of the demo (one server, one database — what keeps a persistent host's
+ * data whole across tabs), or, where the browser has none, a dedicated worker
+ * of this page's own (the host's storage lock keeps a single owner).
+ */
+function connectHost(
+  mod: Awaited<ReturnType<DemoScenario["host"]["start"]>>,
+  scenarioId: string,
+): { end: PortEnd; stop(): void } {
+  if (typeof SharedWorker === "function") {
+    const shared = mod.startShared(scenarioId);
+    // `addEventListener` alone does not start a MessagePort.
+    shared.port.start();
+    return { end: shared.port, stop: () => shared.port.close() };
+  }
+  const worker = mod.start();
+  return { end: worker, stop: () => worker.terminate() };
+}
+
+/**
+ * Connect to the scenario's host — its frame serving attached alongside the
+ * boot — and report how it goes (`ScopeStart`); returns the teardown (frame
+ * serving detached, the server disposed, this page's end of the worker
+ * closed).
  */
 function startScopeServer(
   scenario: DemoScenario,
-  onReady: (host: ScopeHost) => void,
-  onFailed: (err: unknown) => void,
+  report: ScopeStart,
 ): () => void {
   let ended = false;
-  let worker: Worker | null = null;
+  let stopEnd: (() => void) | null = null;
   let served: BrowserServer | null = null;
   let detachFrames: (() => void) | null = null;
   void (async () => {
     const asked = performance.now();
-    const { start, serviceWorkerUrl } = await scenario.host.start();
+    const mod = await scenario.host.start();
     if (ended) return;
-    const started = start();
-    worker = started;
-    const [hosted, frames] = await Promise.all([
-      portBrowserServer(started),
-      attachFrameServing(started, serviceWorkerUrl),
-    ]);
+    const { end, stop } = connectHost(mod, scenario.id);
+    stopEnd = stop;
+    const framing = attachFrameServing(end, mod.serviceWorkerUrl);
+    let hosted: PortServer;
+    try {
+      hosted = await portBrowserServer(end);
+    } catch (err) {
+      if (err instanceof PortHostRefusedError) {
+        // Nothing will be served: the frames attached alongside go too.
+        const frames = await framing;
+        if (frames.kind === "serving") frames.detach();
+        if (!ended) report.onRefused(err.message);
+        return;
+      }
+      throw err;
+    }
+    const frames: FrameServing = await framing;
     if (frames.kind === "serving") {
       if (ended) frames.detach();
       else detachFrames = frames.detach;
@@ -104,27 +159,62 @@ function startScopeServer(
     console.info(`[demo-scope] ${line}`);
     clientLog(BOOT_LOG_CHANNEL, line);
     served = hosted.server;
-    onReady({
+    void hosted.ended.then((why) => {
+      if (!ended) report.onEnded(why);
+    });
+    report.onReady({
       server: served,
       frameBase: frames.kind === "serving" ? frames.frameBase : null,
+      reset: hosted.reset,
     });
   })().catch((err: unknown) => {
-    if (!ended) onFailed(err);
+    if (!ended) report.onFailed(err);
   });
   return () => {
     ended = true;
     detachFrames?.();
     served?.dispose();
-    worker?.terminate();
+    stopEnd?.();
   };
 }
 
+/** The scope's host, as the subtree can act on it: `reset` wipes its data and boots it again from the seed. */
+export interface DemoHostControl {
+  reset(): void;
+}
+
+const DemoHostControlContext = createContext<DemoHostControl | null>(null);
+
+/**
+ * The enclosing `<DemoScope>`'s host control (Reset). Throws outside one: a
+ * control rendered where no demo is cannot do anything.
+ */
+export function useDemoHostControl(): DemoHostControl {
+  const control = useContext(DemoHostControlContext);
+  if (control === null) {
+    throw new Error("useDemoHostControl: rendered outside a <DemoScope>");
+  }
+  return control;
+}
+
+type ScopeState =
+  | { kind: "booting" }
+  | { kind: "ready"; host: ScopeHost }
+  /** The host will not serve this page: a message and a reload. */
+  | { kind: "stopped"; message: string }
+  | { kind: "failed"; error: unknown };
+
+const SUPERSEDED_MESSAGE =
+  "This demo was opened in another tab, or updated there. Reload this tab to continue here.";
+
 /**
  * Renders `children` against the scenario's browser host — real server code
- * in a worker, on the scenario's seed — and scoped to the host's composition
- * (`<PluginScope>`: only the plugins the worker boots contribute inside), so
- * the page shows exactly what the worker serves. The host booting renders
- * `<Loading/>`; a host that fails to boot throws to the error boundary.
+ * in a worker, on the scenario's data — and scoped to the host's composition
+ * (`<PluginScope>`), so the page shows exactly what the worker serves. The
+ * host booting renders `<Loading/>`; a host that fails to boot throws to the
+ * error boundary. A host that declines this page (its data written by a newer
+ * version) or stops serving it (another tab took it over) shows why, with a
+ * Reload; a Reset (`useDemoHostControl`, from any tab) boots it again.
  */
 export function DemoScope({
   scenario,
@@ -137,24 +227,34 @@ export function DemoScope({
   // enclosing page's setting (D3: a browser server has nowhere of its own to
   // keep it; `false` would drop it at every emission site).
   const { telemetry } = useTransport();
-  const [host, setHost] = useState<ScopeHost | null>(null);
-  const [failure, setFailure] = useState<{ error: unknown } | null>(null);
+  const [state, setState] = useState<ScopeState>({ kind: "booting" });
+  // Bumped when the host is reset, to start a fresh one.
+  const [generation, setGeneration] = useState(0);
   useEffect(() => {
     // Started here, not in a useState initialiser: the host is a disposable
     // resource owned by this mount, so StrictMode's mount → unmount → mount
     // ends the first and keeps the second (an initialiser would start one a
     // discarded render never ends).
-    const stop = startScopeServer(scenario, setHost, (error) =>
-      setFailure({ error }),
-    );
+    const stop = startScopeServer(scenario, {
+      onReady: (host) => setState({ kind: "ready", host }),
+      onRefused: (message) => setState({ kind: "stopped", message }),
+      onEnded: (why) => {
+        if (why === "reset") {
+          setState({ kind: "booting" });
+          setGeneration((g) => g + 1);
+        } else {
+          setState({ kind: "stopped", message: SUPERSEDED_MESSAGE });
+        }
+      },
+      onFailed: (error) => setState({ kind: "failed", error }),
+    });
     return () => {
       stop();
       // The next server (a host still booting) is not this one.
-      setHost(null);
+      setState({ kind: "booting" });
     };
-  }, [scenario]);
-  // A host that could not boot reaches the error boundary, never an empty app.
-  if (failure !== null) throw failure.error;
+  }, [scenario, generation]);
+  const host = state.kind === "ready" ? state.host : null;
   const transport = useMemo(
     () =>
       host === null
@@ -165,12 +265,35 @@ export function DemoScope({
           }),
     [host, telemetry],
   );
-  if (transport === null) return <Loading />;
+  const control = useMemo<DemoHostControl | null>(
+    () => (host === null ? null : { reset: host.reset }),
+    [host],
+  );
+  // A host that could not boot reaches the error boundary, never an empty app.
+  if (state.kind === "failed") throw state.error;
+  if (state.kind === "stopped") return <HostStopped message={state.message} />;
+  if (transport === null || control === null) return <Loading />;
   return (
-    <TransportProvider transport={transport}>
-      <NotificationsProvider>
-        <PluginScope composition={scenario.host}>{children}</PluginScope>
-      </NotificationsProvider>
-    </TransportProvider>
+    <DemoHostControlContext.Provider value={control}>
+      <TransportProvider transport={transport}>
+        <NotificationsProvider>
+          <PluginScope composition={scenario.host}>{children}</PluginScope>
+        </NotificationsProvider>
+      </TransportProvider>
+    </DemoHostControlContext.Provider>
+  );
+}
+
+/** Why the host does not serve this page, and the way out. */
+function HostStopped({ message }: { message: string }): ReactNode {
+  return (
+    <Center className="h-full p-lg">
+      <Stack gap="md" align="center">
+        <Text as="p" variant="body" tone="muted">
+          {message}
+        </Text>
+        <Button onClick={() => window.location.reload()}>Reload</Button>
+      </Stack>
+    </Center>
   );
 }

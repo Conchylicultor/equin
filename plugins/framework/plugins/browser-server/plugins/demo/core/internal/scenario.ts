@@ -10,7 +10,13 @@ import type { ScopedComposition } from "@plugins/framework/plugins/web-sdk/core"
  * shows exactly the plugins the worker serves.
  */
 export type DemoHost = ScopedComposition & {
-  start(): Promise<{ start(): Worker; serviceWorkerUrl: string }>;
+  start(): Promise<{
+    /** The host in a dedicated worker: this page's alone. */
+    start(): Worker;
+    /** The host in a SharedWorker named `name`: one per build, every tab connected to it. */
+    startShared(name: string): SharedWorker;
+    serviceWorkerUrl: string;
+  }>;
 };
 
 /**

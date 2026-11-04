@@ -8,8 +8,15 @@ host provider, which no composition bundles (`plugin-meta/closure`'s
 (`database#machine`) is the desktop's provider. A composition that runs without
 the computer names it to take it back.
 
-- **In memory by default** (`createPgliteDriver({ dataDir? })`): the database
-  lives and dies with the process. A browser host would pass an `idb://` dir.
+- **Where its data lives is the host's storage**
+  (`createPgliteDriver({ storage })`, the provider passing
+  `browser-server/host-storage`'s `hostStorage`): in memory, or — a
+  persistent storage — its `idb://` dir, opened with `relaxedDurability` and
+  adopted by the storage, which flushes it (`syncToFs`) before it records
+  anything durable and closes it before a wipe or a handoff. No `storage`: in
+  memory (a test). `server/internal/stored-data.test.ts` reopens an on-disk
+  database (`nodefs`) and applies the next version's migrations over it — a
+  phased group with claimed data — keeping its rows.
 - **Scripts go through `exec`.** node-postgres runs a parameterless query over
   the simple protocol, which accepts several statements (a migration file, a
   view rebuild); PGlite's `query` is extended-protocol, one statement only. The
@@ -35,7 +42,7 @@ whole server closure on this driver.
 
 ## Plugin reference
 
-- Description: The PGlite database driver: provides the DatabaseDriver host service with Postgres compiled to WASM, in memory, for a host without the computer's Postgres cluster (the browser composition, the portable boot test). Never booted by the desktop, which provides its own driver.
+- Description: The PGlite database driver: provides the DatabaseDriver host service with Postgres compiled to WASM, for a host without the computer's Postgres cluster (the browser composition, the portable boot test) — in memory, or in IndexedDB when the host's declared storage is persistent (browser-server/host-storage). Never booted by the desktop, which provides its own driver.
 - Excluded: yes
 - Server:
   - Contributes: `host-service:database.driver` "database.driver"

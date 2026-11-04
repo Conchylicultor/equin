@@ -10,7 +10,7 @@ process. A host provider, which no composition bundles (`plugin-meta/closure`'s 
 
 ## Plugin reference
 
-- Description: Attachment bytes in memory: provides the AttachmentBlobs host service for a host without a filesystem (the browser composition, the portable boot test), the bytes lost with the process. Never booted by the desktop.
+- Description: Attachment bytes in memory: provides the AttachmentBlobs host service for a host without a filesystem (the browser composition, the portable boot test), written through to the host's declared storage (kept across reloads when it is persistent). Never booted by the desktop.
 - Excluded: yes
 - Server:
   - Contributes: `host-service:attachments.blobs` "attachments.blobs"

@@ -12,7 +12,7 @@ provider, which no composition bundles (`plugin-meta/closure`'s `hostProviders`)
 
 ## Plugin reference
 
-- Description: Transcripts in memory: provides the TranscriptSource host service for a host without Claude Code's session files (the browser composition), from JSONL text written to it. Never booted by the desktop.
+- Description: Transcripts in memory: provides the TranscriptSource host service for a host without Claude Code's session files (the browser composition), from JSONL text written to it — written through to the host's declared storage, so a persistent host keeps them. Never booted by the desktop.
 - Excluded: yes
 - Server:
   - Contributes: `host-service:conversations.transcript-source` "conversations.transcript-source"

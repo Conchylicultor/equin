@@ -19,7 +19,7 @@ boot; `plugin-meta/closure`'s `hostProviders`).
 
 ## Plugin reference
 
-- Description: The user config layer of a host without the computer (a browser worker host): held in memory (ConfigStore), each document propagated from the host's committed layer (ConfigGitLayer) on first touch, so it starts as a fresh user's. Never booted by the desktop, whose provider is config_v2#machine.
+- Description: The user config layer of a host without the computer (a browser worker host): held in memory (ConfigStore) and written through to the host's declared storage (kept across reloads when it is persistent), each document propagated from the host's committed layer (ConfigGitLayer) on first touch, so it starts as a fresh user's. Never booted by the desktop, whose provider is config_v2#machine.
 - Excluded: yes
 - Server:
   - Contributes: `host-service:config-v2.store` "config-v2.store"

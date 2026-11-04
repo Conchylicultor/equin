@@ -6,14 +6,21 @@ import {
 } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import type { DatabaseDriverImpl, Db } from "@plugins/database/server";
+import type { HostStorage } from "@plugins/framework/plugins/browser-server/plugins/host-storage/core";
 
 // A channel is spliced into the LISTEN statement as an identifier.
 const CHANNEL_RE = /^[a-z_][a-z0-9_]*$/;
 
-/** Where PGlite keeps its data: `undefined` is in memory (lost with the
- *  process), else a PGlite `dataDir` (`idb://…` in a browser). */
+/** Where PGlite keeps its data. */
 export interface PgliteDriverOptions {
-  dataDir?: string;
+  /**
+   * The browser host's storage, read when the database first opens: its
+   * `databaseDir` (in memory, or `idb://…`), and the storage closes the
+   * database with it (flushed before the storage records it booted, closed
+   * before it is wiped or handed to another worker). Absent: in memory, owned
+   * by nobody (a test).
+   */
+  storage?: () => HostStorage;
 }
 
 /**
@@ -76,7 +83,34 @@ export function createPgliteDriver(
 ): DatabaseDriverImpl {
   let client: PGlite | null = null;
   let db: Db | null = null;
-  const pg = (): PGlite => (client ??= new PGlite(options.dataDir));
+  const open = (): PGlite => {
+    const storage = options.storage?.();
+    if (storage === undefined || storage.kind === "memory") return new PGlite();
+    // Writes reach IndexedDB after the query, not before it answers: the
+    // storage flushes before it records anything as durable.
+    const pglite = new PGlite(storage.databaseDir, { relaxedDurability: true });
+    // `PGlite.syncToFs()` returns at once under relaxed durability (its sync
+    // runs behind the query lock, unawaited), so a flush syncs the filesystem
+    // itself: Emscripten's syncfs, awaited, whatever the flag.
+    const flush = async (): Promise<void> => {
+      await pglite.waitReady;
+      if (pglite.fs === undefined) {
+        throw new Error(
+          "[pglite] a persistent database has no filesystem to flush",
+        );
+      }
+      await pglite.fs.syncToFs(false);
+    };
+    storage.adopt({
+      flush,
+      async close() {
+        await flush();
+        await pglite.close();
+      },
+    });
+    return pglite;
+  };
+  const pg = (): PGlite => (client ??= open());
   return {
     db() {
       db ??= drizzle({ client: scriptQueries(pg()) }) as unknown as Db;

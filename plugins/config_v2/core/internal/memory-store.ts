@@ -7,6 +7,14 @@ import {
 } from "./store";
 import type { ConfigProxy } from "./config-proxy";
 import type { JsonValue } from "./types";
+import type { HostStore } from "@plugins/framework/plugins/browser-server/plugins/host-storage/core";
+
+/** One stored document of the layer. */
+export interface MemoryConfigDoc {
+  content: JsonValue;
+  hash: string | null;
+  version: number;
+}
 
 /**
  * A user layer held in memory: what a host without the computer (a browser
@@ -21,17 +29,46 @@ import type { JsonValue } from "./types";
  * so its origins are what a fresh user's are. Lazy, so a document no registered
  * descriptor reads is never parsed. Without it, the store starts empty.
  *
+ * `persist` keeps the layer in a browser host's storage: read back whole on
+ * first use, every write and removal written through — so a persistent host
+ * keeps the user's config across reloads. Propagation still runs per storePath
+ * on first touch: over the stored origins, exactly as a desktop build
+ * propagates the checkout's `config/` into an existing user layer.
+ *
  * Every writer is in-process, so `watch` never calls back, `armed` resolves at
  * once, and `edit` keeps no ledger.
  */
 export function createMemoryConfigStore(opts?: {
   propagatedFrom?: (storePath: string) => GitLayerDocument | undefined;
+  persist?: () => HostStore<MemoryConfigDoc>;
 }): ConfigStoreImpl {
-  const docs = new Map<
-    string,
-    { content: JsonValue; hash: string | null; version: number }
-  >();
+  let loaded: Map<string, MemoryConfigDoc> | null = null;
   let writes = 0;
+  const persisted = (): HostStore<MemoryConfigDoc> | undefined =>
+    opts?.persist?.();
+  /** The layer, read back from `persist` on first use. */
+  const docsMap = (): Map<string, MemoryConfigDoc> => {
+    if (loaded === null) {
+      loaded = new Map(persisted()?.loaded);
+      for (const doc of loaded.values()) writes = Math.max(writes, doc.version);
+    }
+    return loaded;
+  };
+  const docs = {
+    get: (key: string) => docsMap().get(key),
+    has: (key: string) => docsMap().has(key),
+    keys: () => docsMap().keys(),
+    /** Store a new version of `key` (its version numbered after every stored one). */
+    write(key: string, content: JsonValue, hash: string | null): void {
+      const map = docsMap();
+      const doc = { content, hash, version: ++writes };
+      map.set(key, doc);
+      persisted()?.put(key, doc);
+    },
+    delete(key: string): void {
+      if (docsMap().delete(key)) persisted()?.delete(key);
+    },
+  };
   const seeded = new Set<string>();
   const scopeOf = (ref: ConfigDocRef) => ref.scopeId ?? "";
   const keyOf = (ref: ConfigFileRef) =>
@@ -44,7 +81,7 @@ export function createMemoryConfigStore(opts?: {
         return doc ? { content: doc.content, hash: doc.hash } : null;
       },
       write: (content, hash) => {
-        docs.set(key, { content, hash, version: ++writes });
+        docs.write(key, content, hash);
       },
       exists: () => docs.has(key),
     };

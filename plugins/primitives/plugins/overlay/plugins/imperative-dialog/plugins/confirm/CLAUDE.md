@@ -72,6 +72,7 @@ appears (YAGNI).
   - Exports (values): `confirmDialog`
 - Cross-plugin:
   - Imported by:
+    - `apps/demo/shell`
     - `apps/deploy/deploy-history/rollback`
     - `apps/places/places-map`
     - `apps/places/tag-manager`
