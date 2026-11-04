@@ -26,7 +26,6 @@ import {
 import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
 import { PGREP, PS } from "@plugins/infra/plugins/paths/server";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
-import { backgroundPrefix } from "@plugins/packages/plugins/spawn-priority/server";
 import { bundledClaudeBin } from "@plugins/infra/plugins/claude-cli/plugins/sdk/machine";
 import {
   AgentLaunchOptionsSchema,
@@ -201,9 +200,9 @@ export async function startAgentProcess(
   };
   writeFileSync(agentOptionsPath(id), JSON.stringify(options, null, 2));
   const account = chooseLaunchAccount();
-  const command =
-    backgroundPrefix() +
-    [
+  // Not demoted: the agent leaves darwinbg itself and demotes only what its
+  // CLI launches (bin/agent.ts, scheduling tier).
+  const command = [
       namedBun ?? process.execPath,
       AGENT_SCRIPT,
       "--dir",

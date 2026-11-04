@@ -28,7 +28,7 @@ const isDarwinBg = (lib: Lib): boolean =>
 
 /**
  * Read the calling process's own darwinbg state. darwinbg is INHERITED: an
- * agent session is spawned under `taskpolicy -b`, so everything it runs — the
+ * agent's commands are spawned under `taskpolicy -b`, so everything they run — the
  * push CLI, its check subprocess, a type-check worker — starts darwinbg even
  * when nothing asked for demotion.
  *

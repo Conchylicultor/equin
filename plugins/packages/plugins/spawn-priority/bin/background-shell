@@ -1,0 +1,9 @@
+#!/bin/sh
+# Claude Code's CLAUDE_CODE_SHELL_PREFIX for an SDK agent: the CLI hands every
+# command it spawns (Bash tool, hooks, stdio MCP servers) here as ONE string,
+# `$1`, which runs darwinbg in the CLI's shell — so the agent itself stays in
+# the foreground while all it launches yields to the interactive backends.
+# The demotion must match spawn-priority's DEMOTE_FLAGS (pinned by
+# core/internal/background.test.ts); backgroundShellPrefix() names this file
+# only where those flags apply.
+exec /usr/sbin/taskpolicy -b -- "${CLAUDE_CODE_SHELL:-${SHELL:-/bin/sh}}" -c "$1"

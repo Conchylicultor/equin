@@ -46,6 +46,8 @@ export const AgentCommandSchema = z.discriminatedUnion("type", [
    * A user turn. `turnId` is the backend's ledger id, echoed in the
    * `turn_started` event — the key the ledger confirms the turn by. The backend
    * always sends one; null is left on the wire for a backend from before.
+   * Idempotent by id: a turn this process already queued is not queued again
+   * (a backend whose `turn` timed out may retry it), unless the CLI cancelled it.
    */
   z.object({
     type: z.literal("turn"),

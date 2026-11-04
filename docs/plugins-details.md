@@ -36153,7 +36153,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `disclaimExec`
       - Structure:
         - Non-standard folders: `native/`
-    - **`spawn-priority`** — OS scheduling-priority isolation: backgroundArgv/backgroundPrefix wrap heavy background work (DB forks, agent sessions, builds, worktree checkouts) in darwinbg (taskpolicy -b) so it yields host CPU/IO to the interactive backends; spawnInForeground starts a scarce slot holder's child out of darwinbg; boostInteractiveQos raises the calling thread to user-interactive QoS (main backend's event loop only).
+    - **`spawn-priority`** — OS scheduling-priority isolation: backgroundArgv/backgroundPrefix wrap heavy background work (DB forks, builds, worktree checkouts) in darwinbg (taskpolicy -b) so it yields host CPU/IO to the interactive backends, and backgroundShellPrefix does it for every command an SDK agent's CLI launches; spawnInForeground starts a scarce slot holder's child out of darwinbg; boostInteractiveQos raises the calling thread to user-interactive QoS (main backend's event loop only).
       - Core:
         - Uses:
           - `infra/launcher/env-names.readEnv`
@@ -36164,6 +36164,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `backgroundArgv`
           - `backgroundPrefix`
+          - `backgroundShellPrefix`
           - `leaveDarwinBackground`
           - `readDarwinBackground`
           - `spawnAtTier`

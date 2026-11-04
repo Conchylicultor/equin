@@ -1,7 +1,8 @@
 import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import { join } from "node:path";
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 
-const TASKPOLICY = "/usr/sbin/taskpolicy";
+export const TASKPOLICY = "/usr/sbin/taskpolicy";
 
 // darwinbg (`-b`): pins the spawned subtree to the efficiency cores and applies
 // the background disk-IO throttle tier. THE single tunable flag point for how
@@ -17,7 +18,7 @@ const TASKPOLICY = "/usr/sbin/taskpolicy";
 // If an IO-heavy spawn (pg_dump/pg_restore, the 77 MB worktree checkout)
 // crawls under the background IO throttle, relax here to ["-b", "-t", "0"]
 // (keeps the E-core CPU demotion, lifts the disk throttle) and re-measure.
-const DEMOTE_FLAGS = ["-b"];
+export const DEMOTE_FLAGS = ["-b"];
 
 function prefixTokens(): string[] {
   // Escape hatch + A/B verification harness: disable all demotion host-wide.
@@ -45,4 +46,19 @@ export function backgroundArgv(argv: string[]): string[] {
 export function backgroundPrefix(): string {
   const tokens = prefixTokens();
   return tokens.length > 0 ? `${tokens.join(" ")} ` : "";
+}
+
+/** The `bin/background-shell` script, beside this code. */
+export const BACKGROUND_SHELL = join(
+  import.meta.dir,
+  "../../bin/background-shell",
+);
+
+// The same demotion as a Claude Code `CLAUDE_CODE_SHELL_PREFIX`: the CLI runs
+// each command it spawns as `'<prefix>' '<command string>'`, so the prefix is
+// one executable taking the whole string — the background-shell script, which
+// runs it darwinbg in the CLI's shell. Null where nothing demotes (the escape
+// hatch, or a host without taskpolicy): the script knows only taskpolicy.
+export function backgroundShellPrefix(): string | null {
+  return prefixTokens()[0] === TASKPOLICY ? BACKGROUND_SHELL : null;
 }

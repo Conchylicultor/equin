@@ -12,6 +12,13 @@ the bulk work below default, and raise main's event-loop thread above it.
 - `backgroundPrefix()` — the same prefix as a shell-command string, for command
   strings executed by a shell we don't spawn (e.g. tmux session commands, which
   the shared tmux server forks — wrapping the tmux *client* would be a no-op).
+- `backgroundShellPrefix()` — the same demotion as a Claude Code
+  `CLAUDE_CODE_SHELL_PREFIX`: the path of `bin/background-shell`, which runs
+  the one command string the CLI hands it darwinbg, in the CLI's shell (null
+  where nothing demotes). An SDK agent sets it on its CLI, so the agent and its
+  CLI run in the foreground while every command, hook and stdio MCP server the
+  CLI spawns runs darwinbg. The script's flags are pinned to `DEMOTE_FLAGS` by
+  `core/internal/background.test.ts`.
 - `boostInteractiveQos()` — the opposite direction: raise the CALLING thread to
   user-interactive QoS (`pthread_set_qos_class_self_np`), the scheduler tier
   GUI apps' UI threads run at. Called ONCE at boot by the main backend
@@ -62,8 +69,12 @@ the bulk work below default, and raise main's event-loop thread above it.
   option goes through it.
 
 Mechanism: darwinbg (`/usr/sbin/taskpolicy -b`), inherited by all children.
-Every agent session runs under it (`conversations/runtime-sdk`), so all an agent
-spawns starts darwinbg whether or not the spawn asks for `tier: "background"`.
+Every command an agent's CLI spawns runs under it (`backgroundShellPrefix`, set
+by `conversations/runtime-sdk`), so all an agent launches starts darwinbg
+whether or not the spawn asks for `tier: "background"` — while the agent
+process and its CLI stay in the foreground: they answer the backend's socket
+and the user's turns, and demoting them starved that for ~90 s under host load
+(2026-11-04, research/2026-11-04-conversations-sdk-agent-priority-split.md).
 On Apple Silicon this pins the subtree to the efficiency cores and applies the
 background disk-IO throttle tier (which only bites under IO contention).
 Measured: `-c utility` gives ZERO CPU protection and must not be used; `-b`
@@ -90,7 +101,7 @@ re-exports what server consumers use (same-plugin re-export), and
 
 ## Plugin reference
 
-- Description: OS scheduling-priority isolation: backgroundArgv/backgroundPrefix wrap heavy background work (DB forks, agent sessions, builds, worktree checkouts) in darwinbg (taskpolicy -b) so it yields host CPU/IO to the interactive backends; spawnInForeground starts a scarce slot holder's child out of darwinbg; boostInteractiveQos raises the calling thread to user-interactive QoS (main backend's event loop only).
+- Description: OS scheduling-priority isolation: backgroundArgv/backgroundPrefix wrap heavy background work (DB forks, builds, worktree checkouts) in darwinbg (taskpolicy -b) so it yields host CPU/IO to the interactive backends, and backgroundShellPrefix does it for every command an SDK agent's CLI launches; spawnInForeground starts a scarce slot holder's child out of darwinbg; boostInteractiveQos raises the calling thread to user-interactive QoS (main backend's event loop only).
 - Core:
   - Uses:
     - `infra/launcher/env-names.readEnv`
@@ -101,6 +112,7 @@ re-exports what server consumers use (same-plugin re-export), and
   - Exports (values):
     - `backgroundArgv`
     - `backgroundPrefix`
+    - `backgroundShellPrefix`
     - `leaveDarwinBackground`
     - `readDarwinBackground`
     - `spawnAtTier`

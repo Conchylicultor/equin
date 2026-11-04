@@ -5,7 +5,11 @@
 // and the spawn-scoped lift (`spawnInForeground`) alike. `boostInteractiveQos`
 // stays server-only. This plugin must NEVER be imported from `web/`.
 
-export { backgroundArgv, backgroundPrefix } from "./internal/background";
+export {
+  backgroundArgv,
+  backgroundPrefix,
+  backgroundShellPrefix,
+} from "./internal/background";
 export {
   leaveDarwinBackground,
   readDarwinBackground,

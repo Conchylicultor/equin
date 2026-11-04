@@ -50,6 +50,10 @@ import {
 } from "@plugins/infra/plugins/claude-cli/plugins/sdk/server";
 import { disclaimArgv } from "@plugins/packages/plugins/spawn-disclaim/core";
 import {
+  backgroundShellPrefix,
+  leaveDarwinBackground,
+} from "@plugins/packages/plugins/spawn-priority/core";
+import {
   AGENT_EVENTS_FILE,
   AGENT_OPTIONS_FILE,
   AgentCommandSchema,
@@ -88,6 +92,18 @@ if (
   throw new Error(
     "agent: --dir, --socket, --pid-file, --account and --usage-file are required",
   );
+
+// ── scheduling tier ─────────────────────────────────────────────────────────
+// This process and its CLI run in the foreground: they answer the backend's
+// socket and the user's turns, and starved in darwinbg under host load (no
+// reply to `hello` for ~90 s, 2026-11-04). Whatever tier the launcher had, the
+// agent leaves darwinbg itself (only a self write works — spawn-priority), and
+// the CLI, spawned after, inherits it. What the CLI launches — every command,
+// hook and stdio MCP server — still runs darwinbg, through its shell prefix
+// (`spawnClaudeCodeProcess` below).
+const tier = leaveDarwinBackground();
+const shellPrefix = backgroundShellPrefix();
+
 const dir = asAppPath(args.dir);
 mkdirSync(dir, { recursive: true });
 const eventsPath = joinAppPath(dir, AGENT_EVENTS_FILE);
@@ -251,6 +267,11 @@ let closed = false;
 // never sends one (older than the lifecycle; known once its first `init` came
 // with none seen) confirms at hand-off, as before.
 const inCliQueue = new Map<string, QueuedTurn>();
+// Every ledger turn id this process queued: a `turn` is idempotent by its id.
+// A backend whose `turn` timed out does not know whether it landed (an agent
+// starved of CPU answers late), so it may send the same id again (the user's
+// Retry); queueing it twice would type the message twice.
+const queuedTurnIds = new Set<string>();
 let cliReportsLifecycle: boolean | null = null;
 
 function turnStarted(turn: QueuedTurn): void {
@@ -287,6 +308,8 @@ function followCliQueue(msg: SDKMessage): void {
       // Nothing here cancels a queued turn; the backend fails it when the
       // agent exits without having taken it.
       inCliQueue.delete(uuid);
+      // Never taken: a retry of it must reach the CLI.
+      if (turn.turnId !== null) queuedTurnIds.delete(turn.turnId);
       log(`✕ the CLI cancelled a queued turn: ${clip(turn.text)}`);
     }
     return;
@@ -318,13 +341,21 @@ async function* inputStream(): AsyncGenerator<SDKUserMessage> {
 /**
  * Queues a user turn; its uuid is the transcript entry's (rewind targets it).
  * A turn with a ledger id is queued under the id's own uuid
- * (`transcriptUuidOfTurn`), so its line is findable from the id alone.
+ * (`transcriptUuidOfTurn`), so its line is findable from the id alone — and
+ * only once: an id already queued answers the same uuid, queueing nothing.
  */
 function pushInput(text: string, turnId: string | null): string {
   const uuid =
     turnId === null
       ? crypto.randomUUID()
       : transcriptUuidOfTurn(turnIdKind.parse(turnId));
+  if (turnId !== null) {
+    if (queuedTurnIds.has(turnId)) {
+      log(`› ${turnId} already queued, not typed again: ${clip(text)}`);
+      return uuid;
+    }
+    queuedTurnIds.add(turnId);
+  }
   pendingInput.push({
     message: {
       type: "user",
@@ -478,7 +509,10 @@ const session = claudeQuery({
       );
       cli = spawn(bin, argv, {
         cwd,
-        env,
+        env:
+          shellPrefix === null
+            ? env
+            : { ...env, CLAUDE_CODE_SHELL_PREFIX: shellPrefix },
         signal,
         stdio: ["pipe", "pipe", "inherit"],
       });
@@ -743,6 +777,9 @@ emit({
 mkdirSync(dirname(pidPath), { recursive: true });
 writeFileSync(pidPath, agentPidFileText(process.pid, args.account));
 log(`● agent ${process.pid} · ${dir}`);
+log(
+  `● scheduling tier: ${tier.kind}${tier.kind === "unsupported" ? ` (${tier.reason})` : ""} · commands ${shellPrefix === null ? "inherit it" : "run darwinbg"}`,
+);
 if (options.prompt !== null)
   pushInput(options.prompt.text, options.prompt.turnId);
 
