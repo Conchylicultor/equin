@@ -120,16 +120,15 @@ primary-key collision is never read as "in flight"), and retry the INSERT once
 when it returns `true`. The rule is the supervised reconciler's:
 
 ```
-terminal = build-logs-<id>.json ?? (isRunAlive(pid) ? still running : HARD_KILL_EXIT_CODE)
+terminal = runs/build-<id>.exit-code ?? (isRunAlive(pid) ? still running : HARD_KILL_EXIT_CODE)
 ```
 
-`build-logs-<buildId>.json` is the build's terminal record. `writeBuildLogs`
-(`op-runtime/cli/build-logs-writer.ts`) writes it synchronously on every graceful
-ending — ok verdict, failure verdict, and the exit-hook verdict guard's fallback —
-so the row gets the build's real `exitCode` and the file's mtime as its end time.
-**That dependency is load-bearing:** a graceful exit path that stops writing the
-file would be read as "still running" while its pid lives, and as a hard kill
-(`-1`) once it is gone. A file that exists but does not parse throws.
+The run's exit marker is the build's terminal record (`readBuildTerminal`, over
+supervised-job's `readRunTerminal`). Every build has one: the backend's shim
+writes it for a build the backend started, the attached relay (`runAttached`)
+for a hand-run one — on every ending but a hard kill. So the row gets the build
+process's real status and the marker's mtime as its end time. A marker that
+exists but does not parse throws.
 
 It is race-safe because the index still decides every race: the settle runs only
 after losing the insert, closes only a provably-ended build with the guarded
@@ -139,9 +138,8 @@ LIVE build holds the slot.
 
 This leaf's whole import graph is intentionally minimal: drizzle,
 `database/admin/server`, `namespace/core`, and — for the settle —
-`jobs/supervised-job/core` (`isRunAlive`, `HARD_KILL_EXIT_CODE`) and `paths/core`
-(`worktreeArtifacts.buildLogs`). Both of those are db-free and queue-free by
-their own barrels' rules. **Never add a `config_v2`,
+`jobs/supervised-job/core` (`isRunAlive`, `HARD_KILL_EXIT_CODE`,
+`readRunTerminal`), db-free and queue-free by its own barrel's rules. **Never add a `config_v2`,
 `shell/notifications`, env-bound `database/server`, `jobs`, or `events` import
 here** — that eval-safety is the entire reason the leaf exists.
 
@@ -192,8 +190,6 @@ from `build`, so both sides of an otherwise-cyclic edge can reach them.
     - `build`
     - `build/runs-arm`
     - `framework/cli/build`
-- Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `shared/stale-holder.ts` (debt)
 - Machine:
   - Exports (values): `settleDeadInflightRun`
 - Cli:

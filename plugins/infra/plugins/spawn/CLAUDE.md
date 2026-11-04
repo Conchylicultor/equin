@@ -96,6 +96,10 @@ functions on purpose: they are meant to outlive any one call.
   parent — the CLI's post-install re-exec). `onSpawn` exposes `{ pid, kill }`
   synchronously for signal forwarding. Returns
   `{ exitCode, signalCode, resourceUsage }`.
+- **`spawnToFile(argv, { outputPath, …spawnPassthrough's })`** — the same, with
+  stdout AND stderr appended to one file (`>> path 2>&1`, a raw fd) instead of
+  inherited: for a child whose output is a record a reader follows while it
+  grows (supervised-job's attached runs, `runAttached`).
 - **`getWorktreeRoot(cwd?)` / `getMainRepoRoot(cwd?)`** — THE canonical git
   root helpers (`git rev-parse --show-toplevel` /
   `dirname(resolve(git rev-parse --git-common-dir))`), collapsing the ~51-file
@@ -243,6 +247,7 @@ presence only — **no re-exports**; import from `core/`.
     - `SpawnPassthroughOptions`
     - `SpawnPassthroughResult`
     - `SpawnResult`
+    - `SpawnToFileOptions`
   - Exports (values):
     - `getMainRepoRoot`
     - `getWorktreeRoot`
@@ -250,6 +255,7 @@ presence only — **no re-exports**; import from `core/`.
     - `spawnExpectOk`
     - `SpawnFailedError`
     - `spawnPassthrough`
+    - `spawnToFile`
 - Cross-plugin:
   - Imported by:
     - `database/migrations`

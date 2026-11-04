@@ -430,18 +430,6 @@ export const worktreeArtifacts = {
       worktreeDataDir(name),
       buildId ? `build-profile-${buildId}.json` : "build-profile.json",
     ),
-  /** Structured build transcript. `build-logs.json` or `build-logs-<id>.json`. */
-  buildLogs: (name: Namespace, buildId?: string): AppPath =>
-    joinAppPath(
-      worktreeDataDir(name),
-      buildId ? `build-logs-${buildId}.json` : "build-logs.json",
-    ),
-  /** Human-readable build transcript. `build.log` or `build-<id>.log`. */
-  buildLogText: (name: Namespace, buildId?: string): AppPath =>
-    joinAppPath(
-      worktreeDataDir(name),
-      buildId ? `build-${buildId}.log` : "build.log",
-    ),
   /**
    * The deploy receipt: this worktree's LAST build, whatever became of it.
    *

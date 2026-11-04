@@ -170,8 +170,10 @@ the shared Playwright harness.
     - `BuildReceipt`
     - `BuildReceiptStatus`
     - `ResolvedReceipt`
+    - `TranscriptSegment`
   - Exports (values):
     - `interruptedPredecessorWarning`
+    - `parseStepBlocks`
     - `readBuildReceipt`
     - `reportInterruptedPredecessor`
     - `resolveBuildReceipt`
@@ -181,14 +183,12 @@ the shared Playwright harness.
     - `infra/jobs/supervised-job.cliExecContext`
     - `tasks/task-track.checkoutTrack`
   - Exports (types):
-    - `BuildLogs`
     - `BuildProfile`
     - `BuildProgressRecord`
     - `BuildReceipt`
     - `BuildReceiptStatus`
     - `BuildRunProgress`
     - `BuildSpan`
-    - `BuildStepLog`
     - `CheckSubprocessOptions`
     - `CheckSubprocessResult`
     - `DirectOpContext`
@@ -225,7 +225,6 @@ the shared Playwright harness.
     - `PROGRESS_FILE`
     - `publishLane`
     - `pushBuildSpan`
-    - `pushBuildStepLog`
     - `readBuildProgress`
     - `readBuildReceipt`
     - `readCliCrash`
@@ -237,7 +236,6 @@ the shared Playwright harness.
     - `signalOriginTap`
     - `valveGates`
     - `withDirectOp`
-    - `writeBuildLogs`
     - `writeBuildProfile`
     - `writeBuildReceipt`
 - Cross-plugin:

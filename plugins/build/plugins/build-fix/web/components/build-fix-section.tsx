@@ -176,7 +176,7 @@ function buildOutputOf(
     return unreadNote(tail);
   const steps = meta.data.steps;
   const failed = tail.data
-    .filter((l) => steps[l.step]?.success === false)
+    .filter((l) => steps[l.step]?.status === "failed")
     .reverse();
   if (failed.length === 0) return null;
   const blocks: string[] = [];

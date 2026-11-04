@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Logs section in the build detail pane: the run's persisted steps and lines (build.run-logs, newest first, paged by viewport), else the live log channel.
+- Description: Logs section in the build detail pane: the run's transcript as its steps and lines (build.run-logs, newest first, paged by viewport).
 - Web:
   - Contributes: `BuildDetailSlots.Section` "Logs" → `BuildLogSection`
   - Uses:
@@ -25,8 +25,6 @@
     - `primitives/data-view.FieldDef`
     - `primitives/data-view.useLivePagedValuePaging`
     - `primitives/loading.Loading`
-    - `primitives/log-channels.LiveLogChannel`
-    - `shell/notifications.useToast`
     - `ui/icons.Icon`
 - Server:
   - Contributes:

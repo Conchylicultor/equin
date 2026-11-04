@@ -13295,7 +13295,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-code`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-code`
-    - **`build-logs`** — Logs section in the build detail pane: the run's persisted steps and lines (build.run-logs, newest first, paged by viewport), else the live log channel.
+    - **`build-logs`** — Logs section in the build detail pane: the run's transcript as its steps and lines (build.run-logs, newest first, paged by viewport).
       - Web:
         - Contributes: `BuildDetailSlots.Section` "Logs" → `BuildLogSection`
         - Uses:
@@ -13316,8 +13316,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/data-view.FieldDef`
           - `primitives/data-view.useLivePagedValuePaging`
           - `primitives/loading.Loading`
-          - `primitives/log-channels.LiveLogChannel`
-          - `shell/notifications.useToast`
           - `ui/icons.Icon`
       - Server:
         - Contributes:
@@ -13552,8 +13550,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build`
           - `build/runs-arm`
           - `framework/cli/build`
-      - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `shared/stale-holder.ts` (debt)
       - Machine:
         - Exports (values): `settleDeadInflightRun`
       - Cli:
@@ -26747,14 +26743,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `takeReexecBudget`
         - **`build`** — `./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
           - Cli:
-            - Uses: 48 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
-              - `framework/cli/op-runtime` ×34
+            - Uses: 46 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
+              - `framework/cli/op-runtime` ×31
               - `framework/cli/bootstrap` ×4
               - `framework/cli/migrations` ×3
               - `framework/tooling/web-artifacts` ×3
               - `build/run-ledger.createBuildRunRecorder`
               - `framework/cli/doctor.assertPrerequisites`
               - `framework/cli/git-artifacts.registerMergeDrivers`
+              - `infra/jobs/supervised-job.runAttached`
               - `plugin-meta/plugin-records.openRecordStore`
           - Plugins:
             - **`experimental-marks`** — The Show experimental marks setting (view-options popover and Settings → Config, on an experimental build): useShowExperimentalMarks() is true when the build stamped this document experimental and the marks are on; the frame and the Wish banner both follow it. Registers the Show experimental marks config and, while it is off, serves a head script that hides the marks before the first frame.
@@ -26889,8 +26886,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `BuildReceipt`
               - `BuildReceiptStatus`
               - `ResolvedReceipt`
+              - `TranscriptSegment`
             - Exports (values):
               - `interruptedPredecessorWarning`
+              - `parseStepBlocks`
               - `readBuildReceipt`
               - `reportInterruptedPredecessor`
               - `resolveBuildReceipt`
@@ -26900,14 +26899,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/jobs/supervised-job.cliExecContext`
               - `tasks/task-track.checkoutTrack`
             - Exports (types):
-              - `BuildLogs`
               - `BuildProfile`
               - `BuildProgressRecord`
               - `BuildReceipt`
               - `BuildReceiptStatus`
               - `BuildRunProgress`
               - `BuildSpan`
-              - `BuildStepLog`
               - `CheckSubprocessOptions`
               - `CheckSubprocessResult`
               - `DirectOpContext`
@@ -26944,7 +26941,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PROGRESS_FILE`
               - `publishLane`
               - `pushBuildSpan`
-              - `pushBuildStepLog`
               - `readBuildProgress`
               - `readBuildReceipt`
               - `readCliCrash`
@@ -26956,7 +26952,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `signalOriginTap`
               - `valveGates`
               - `withDirectOp`
-              - `writeBuildLogs`
               - `writeBuildProfile`
               - `writeBuildReceipt`
           - Cross-plugin:
@@ -27493,7 +27488,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `backup/sources/transcripts` (1 debt)
               - `backup/targets/google-drive` (2 debt)
               - `backup/targets/local` (1 debt)
-              - `build/run-ledger` (1 debt)
               - `build/serve-composition` (1 debt)
               - `build/server-build-id` (2 debt)
               - `code-explorer` (5 debt)
@@ -31639,9 +31633,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/resize.ts`, `server/internal/sweep.ts` (debt)
         - **`user-path`** — Which host paths a synchronous fs call may touch: AppPath (a path the app owns — its data dirs, its checkout; the only kind a sync fs call in runtime code may take) and UserPath (one the user or their config chose), with the type-aware lint that refuses a sync fs call on any path not proven app-owned — so a macOS Files & Folders prompt can never freeze a backend's JS thread, whether or not anyone marked the user's path.
           - Cross-plugin:
-            - Imported by: 26 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
+            - Imported by: 27 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
               - `framework` ×8
-              - `infra` ×6
+              - `infra` ×7
               - `packages` ×3
               - `plugin-meta` ×3
               - `fields` ×2
@@ -32055,6 +32049,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `defineTimer('supervised-job.liveness')`
           - Core:
             - Uses:
+              - `infra/host-fs/user-path.AppPath`
+              - `infra/host-fs/user-path.asAppPath`
               - `infra/paths.worktreeArtifacts`
               - `infra/runtime-identity.runtimeNamespace`
               - `packages/timed-fs.readFileSync`
@@ -32077,30 +32073,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SUPERVISED_EXEC_COMMAND`
               - `SUPERVISED_EXIT_TEMPFAIL`
               - `supervisedArgv`
+              - `writeRunTerminal`
           - Cli:
-            - Uses: `framework/server-core.runExec`
-            - Exports (values): `cliExecContext`
+            - Uses:
+              - `framework/server-core.runExec`
+              - `infra/file-watcher.watchForCommand`
+            - Exports (types): `AttachedRun`
+            - Exports (values):
+              - `cliExecContext`
+              - `runAttached`
           - Cross-plugin:
-            - Imported by:
-              - `apps/chord/song-index`
-              - `apps/deploy/deployments`
-              - `apps/prototypes/thumbnails`
-              - `apps/sonata/sources/ultimate-guitar/alignment`
+            - Imported by: 21 plugins — full list in [`plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md`](../plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md)
+              - `framework` ×8
+              - `apps` ×4
+              - `infra` ×4
               - `backup`
               - `conversations/workspace/worktree`
               - `database/fork`
               - `debug/worktree-cleanup`
-              - `framework/cli/op-runtime`
-              - `framework/cli/release`
-              - `framework/cli/serve-app`
-              - `framework/cli/start`
-              - `framework/tooling/checks/cache-prune`
-              - `framework/tooling/checks/type-check/backstop`
-              - `framework/tooling/web-artifacts/prune`
-              - `infra/audio-analysis`
-              - `infra/deps`
-              - `infra/events-test`
-              - `infra/worktree/spare-pool`
               - `release`
           - Exemptions:
             - Exempts itself from:
@@ -33173,6 +33163,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SpawnPassthroughOptions`
           - `SpawnPassthroughResult`
           - `SpawnResult`
+          - `SpawnToFileOptions`
         - Exports (values):
           - `getMainRepoRoot`
           - `getWorktreeRoot`
@@ -33180,6 +33171,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `spawnExpectOk`
           - `SpawnFailedError`
           - `spawnPassthrough`
+          - `spawnToFile`
       - Cross-plugin:
         - Imported by:
           - `database/migrations`
@@ -45611,7 +45603,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 59 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 58 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `apps` ×12
           - `debug` ×9
           - `infra` ×8
@@ -45619,11 +45611,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework` ×4
           - `network` ×4
           - `conversations` ×3
-          - `build` ×2
           - `reports` ×2
           - `tasks` ×2
           - `active-data/show-me`
           - `backup`
+          - `build`
           - `integrations/youtube/audio-fetch`
           - `menu-bar`
           - `primitives/log-channels/memory-persistence`
@@ -50906,11 +50898,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×10
           - `ui/tokens/density` ×5
           - `ui/tokens/shape` ×2
-        - Imported by: 35 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
+        - Imported by: 34 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
           - `conversations` ×13
           - `tasks` ×6
-          - `build` ×3
           - `apps` ×2
+          - `build` ×2
           - `debug` ×2
           - `reports` ×2
           - `screenshot` ×2

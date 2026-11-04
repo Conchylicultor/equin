@@ -1,7 +1,7 @@
 /**
  * The claim-time settle of a dead `build_runs_inflight_uniq` holder, on a real
  * Postgres (db-test-fixture, seeded with the REAL migration chain) and real
- * build-logs files under a temp data root.
+ * exit markers under a temp data root.
  *
  * Drives `claimInflightRun` — the db-parametrized body of the CLI recorder's
  * `insertRun` — so each scenario asserts the whole path: the insert losing to
@@ -57,6 +57,7 @@ import {
 import { readBuildTerminal } from "../../shared/stale-holder";
 import { _buildRuns } from "./tables";
 import { buildRunIdKind } from "../../core/internal/id-kind";
+import { BUILD_RUN_KIND_ID } from "../../core/internal/supervised-kind";
 
 const NS = asNamespace("ledger-settle-test");
 
@@ -70,7 +71,7 @@ beforeAll(async () => {
   t = await createTestDb({ prefix: "build_runs_settle_test" });
   await runMigrations(t.db);
   dataRoot = mkdtempSync(join(tmpdir(), "sg-ledger-settle-"));
-  // `worktreesDir()` reads this on every call, so the build-logs paths resolve
+  // `worktreesDir()` reads this on every call, so the run-marker paths resolve
   // under the temp root for the rest of the suite.
   setEnv("DIR", dataRoot);
 });
@@ -102,8 +103,10 @@ function row(pid: number): InsertRunRow {
   };
 }
 
-function writeLogs(buildId: string, body: string, mtime?: Date): void {
-  const path = worktreeArtifacts.buildLogs(NS, buildId);
+/** The run's exit marker, as the shim (or the attached relay) writes it. */
+function writeMarker(buildId: string, body: string, mtime?: Date): void {
+  mkdirSync(worktreeArtifacts.runsDir(NS), { recursive: true });
+  const path = worktreeArtifacts.runTerminal(NS, BUILD_RUN_KIND_ID, buildId);
   writeFileSync(path, body);
   if (mtime) utimesSync(path, mtime, mtime);
 }
@@ -128,16 +131,12 @@ async function deadPid(): Promise<number> {
 }
 
 describe("claimInflightRun settles a dead holder", () => {
-  test("holder with a build-logs record ⇒ closed with its exitCode and mtime; claim succeeds", async () => {
+  test("holder with an exit marker ⇒ closed with its exitCode and mtime; claim succeeds", async () => {
     // A live pid on the holder: the record answers before the pid is consulted.
     const holder = row(process.pid);
     expect(await claimInflightRun(t.db, NS, holder)).toBe("claimed");
     const ended = new Date("2026-09-16T14:27:06.000Z");
-    writeLogs(
-      holder.id,
-      JSON.stringify({ steps: [], finishedAt: ended.getTime(), exitCode: 1 }),
-      ended,
-    );
+    writeMarker(holder.id, "1 -\n", ended);
 
     const next = row(process.pid);
     expect(await claimInflightRun(t.db, NS, next)).toBe("claimed");
@@ -180,10 +179,10 @@ describe("claimInflightRun settles a dead holder", () => {
   test("malformed record ⇒ throws, holder untouched", async () => {
     const holder = row(await deadPid());
     expect(await claimInflightRun(t.db, NS, holder)).toBe("claimed");
-    writeLogs(holder.id, "{ not json");
+    writeMarker(holder.id, "not a marker");
 
     expect(claimInflightRun(t.db, NS, row(process.pid))).rejects.toThrow(
-      /malformed build logs/,
+      /malformed exit marker/,
     );
     expect((await readRow(holder.id)).finishedAt).toBeNull();
   });
@@ -230,10 +229,19 @@ describe("readBuildTerminal", () => {
     expect(readBuildTerminal(NS, "no-such-build")).toBeNull();
   });
 
-  test("exitCode missing ⇒ throws", () => {
-    writeLogs("bad-shape", JSON.stringify({ steps: [] }));
+  test("the marker's code and mtime", () => {
+    const ended = new Date("2026-09-16T14:27:06.000Z");
+    writeMarker("ended", "143 TERM\n", ended);
+    expect(readBuildTerminal(NS, "ended")).toEqual({
+      exitCode: 143,
+      finishedAt: ended,
+    });
+  });
+
+  test("a malformed marker ⇒ throws", () => {
+    writeMarker("bad-shape", "{}");
     expect(() => readBuildTerminal(NS, "bad-shape")).toThrow(
-      /malformed build logs/,
+      /malformed exit marker/,
     );
   });
 });

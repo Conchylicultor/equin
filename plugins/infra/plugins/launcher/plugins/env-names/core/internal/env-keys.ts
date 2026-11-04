@@ -98,6 +98,8 @@ export const RUNTIME_WITHHELD_ENV = {
   LANE: "the admission lane of a CLI op, set by the op for the subprocesses it spawns (cli/op-runtime lane.ts)",
   BUILD_ID:
     "the build_runs row a UI-triggered build writes to, set by the backend for the build it spawns (build/server run-build.ts)",
+  BUILD_RELAYED:
+    "marks a hand-run build re-run under its own attached supervision (transcript + exit marker), so it mints its own build_runs row; set by that build for its child (cli/build run.ts)",
   BUILD_DETACHED:
     "marks a supervised build that must outlive its backend, set by the backend for the build it spawns (build/server run-build.ts)",
   FOREGROUND_DEADLINE:

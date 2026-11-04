@@ -9,6 +9,11 @@ import { SUPERVISED_EXEC_COMMAND } from "../core/internal/exec-command";
 // request handler has no way to spell it. Its host admission is a deferred
 // import, so the declaration stays light.
 export { cliExecContext } from "./internal/cli-exec-context";
+// A hand-run command recording itself as a supervised run (transcript + exit
+// marker), its caller attached. Behind the barrel, not the declaration below,
+// so a command that never relays pays nothing for it.
+export { runAttached } from "./internal/attached";
+export type { AttachedRun } from "./internal/attached";
 
 /**
  * The child half of a supervised task: boot the plugin graph in `exec` mode,

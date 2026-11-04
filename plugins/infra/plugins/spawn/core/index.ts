@@ -14,11 +14,12 @@ export type {
   SpawnedChild,
   SpawnPassthroughOptions,
   SpawnPassthroughResult,
+  SpawnToFileOptions,
 } from "./internal/types";
 export {
   spawnCaptured,
   spawnExpectOk,
   SpawnFailedError,
 } from "./internal/spawn-captured";
-export { spawnPassthrough } from "./internal/spawn-passthrough";
+export { spawnPassthrough, spawnToFile } from "./internal/spawn-passthrough";
 export { getWorktreeRoot, getMainRepoRoot } from "./internal/git-roots";

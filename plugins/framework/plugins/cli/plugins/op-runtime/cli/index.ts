@@ -114,7 +114,4 @@ export {
 } from "./build-output";
 export type { Verdict } from "./build-output";
 
-export { pushBuildStepLog, writeBuildLogs } from "./build-logs-writer";
-export type { BuildLogs, BuildStepLog } from "./build-logs-writer";
-
 export { readCliCrash, recordCliCrash } from "./cli-crash";

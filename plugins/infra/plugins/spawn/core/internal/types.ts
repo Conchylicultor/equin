@@ -1,3 +1,4 @@
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { SpawnTier } from "@plugins/packages/plugins/spawn-priority/core";
 
 // The shared shapes of the wedge-proof spawn primitive.
@@ -222,6 +223,12 @@ export interface SpawnPassthroughOptions {
   stdin?: "ignore" | "inherit";
   /** Called synchronously after spawn with `{ pid, kill }` (signal forwarding). */
   onSpawn?: (child: SpawnedChild) => void;
+}
+
+/** Options for `spawnToFile`: `spawnPassthrough`'s, plus the file its output goes to. */
+export interface SpawnToFileOptions extends SpawnPassthroughOptions {
+  /** Appended to (created when missing) with the child's stdout and stderr, merged. */
+  outputPath: AppPath;
 }
 
 export interface SpawnPassthroughResult {

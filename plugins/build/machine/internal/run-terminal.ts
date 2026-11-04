@@ -14,21 +14,19 @@ import {
 } from "@plugins/build/plugins/run-ledger/core";
 
 // "A build run has ended, and everything it will ever write is on disk" — the
-// change signal for live values over a run's artifacts (its step logs, its
-// profile, its termination record).
+// change signal for live values over a run's artifacts (its profile, its
+// termination record).
 //
 // **Why the exit marker and never the ledger row.** `./equin build`
 // (`framework/cli/plugins/build/cli/run.ts`) closes its own `build_runs` row
 // BEFORE it writes its artifacts: the success path runs `recorder.closeRun`,
-// then `writeBuildProfile`, then `writeBuildLogs`, and the failure funnel writes
-// the logs and then closes the row — with ~100 s of compose-serve tail after the
-// close either way. A value recomputed on the row's close would read "no logs /
-// no profile" and keep it. The exit marker cannot be early: the supervised-run
-// shim writes it (tmp + rename) after `wait` on the CLI returned, and every
-// artifact the CLI writes is written synchronously by that process before it
-// exits — the step logs and profile by `writeFileSync` + `renameSync`, the
-// termination line by the signal handler / exit hook, where nothing may be
-// awaited. So marker on disk ⇒ every artifact on disk.
+// then `writeBuildProfile` — with ~100 s of compose-serve tail after the close.
+// A value recomputed on the row's close would read "no profile" and keep it.
+// The exit marker cannot be early: it is written (tmp + rename) after `wait` on
+// the CLI returned, and every artifact the CLI writes is written synchronously
+// by that process before it exits — the profile by `writeFileSync` +
+// `renameSync`, the termination line by the signal handler / exit hook, where
+// nothing may be awaited. So marker on disk ⇒ every artifact on disk.
 //
 // A run hard-killed with its shim (SIGKILL to the group) leaves no marker at
 // all; the supervised-run close rule decides it ended once its process group is

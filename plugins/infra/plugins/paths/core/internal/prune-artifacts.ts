@@ -23,8 +23,9 @@ import {
 
 /**
  * How many recent per-build artifact *sets* to retain per worktree. A "set" is all
- * files sharing one build id: `build-profile-<id>.json`, `build-logs-<id>.json`,
- * and `build-<id>.log`.
+ * files sharing one build id: `build-profile-<id>.json` — and, from before a
+ * build's transcript became its supervised run's (`runs/`), the retired
+ * `build-logs-<id>.json` / `build-<id>.log`, kept in the family so they age out.
  *
  * Aligned with the build-history UI window (the `build.history` collection's
  * default window holds the latest 50 runs) so every build still listed there
@@ -70,7 +71,9 @@ interface ArtifactFamily {
   readonly tmpPrefixes: ReadonlyArray<string>;
 }
 
-// Build artifacts (mirror of worktreeArtifacts): the un-suffixed aliases
+// Build artifacts: the profile, plus the two retired step-log families (no
+// writer any more — listed so the files already on disk are reaped as newer
+// profiles push them out of the window). The un-suffixed aliases
 // (`build-profile.json` / `build-logs.json` / `build.log`) have tails
 // `profile.json` / `logs.json` / `build.log`, matching none of the patterns, so
 // they are never pruned. The families are internally disjoint: the `.log` family
@@ -194,8 +197,8 @@ function unlinkQuiet(dir: AppPath, entry: string): void {
  * Cap one artifact family in a directory to the newest `keep` run ids, deleting the
  * older sets, and sweep any crashed-write `.tmp.<pid>` leftovers for that family.
  *
- * Called by every artifact writer immediately AFTER it writes (see the build CLI's
- * writeBuildLogs/writeBuildProfile and run-build's orphan fallback), so writing a
+ * Called by every artifact writer immediately AFTER it writes (the build CLI's
+ * writeBuildProfile, the check runner's transcript), so writing a
  * new set is what trims the old ones — no scheduler, no polling. Writes are serialized per namespace (the DB in-flight
  * lock), so at prune time the just-written files carry the newest mtime and are
  * always inside the keep window, never at risk.

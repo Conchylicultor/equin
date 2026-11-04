@@ -64,8 +64,7 @@ export type ResolvedReceipt =
   | { kind: "superseded"; receipt: BuildReceipt };
 
 /**
- * Atomic so a reader never sees a torn file — same tmp+rename shape as
- * `build-logs-writer.ts`.
+ * Atomic so a reader never sees a torn file (tmp + rename).
  */
 export function writeBuildReceipt(
   name: Namespace,

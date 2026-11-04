@@ -590,6 +590,31 @@ is already restarted by the time it is called.
 - **Residual**: one run's transcript file is bounded only by that run. It is a
   kernel fd the child owns; capping it mid-run would race the writer.
 
+### Attached runs: the same record for a hand-run command (`cli/`'s `runAttached`)
+
+A command a person (or agent) types — `./equin build` — has no backend to spawn
+it, yet its run must leave the same two files a backend-started run does, so
+every reader (the build pane, the ledger's claim-time settle) reads ONE record.
+`runAttached({ namespace, kindId, runId, argv, env })` runs the command as its
+child, attached:
+
+- **Not detached**: the child is in the caller's group (a Ctrl-C reaches it), and
+  infra/spawn SIGTERMs it if the caller exits first — so an abandoned op cannot
+  hold its locks, and its orphan guard still reaps it if the caller is SIGKILLed.
+- **The child writes the transcript** through `spawnToFile` (a raw fd, merged
+  like `2>&1`); the caller **echoes it** to its own stdout from the file, heard
+  through a `writesWhileOpen` watch of the runs dir — the terminal shows the
+  record, never a second copy.
+- **The caller writes the marker** (`writeRunTerminal`, `core/`, checked
+  against the parser's own regex): it waits on the child, so it observes what
+  the shim would — the status, and the first catchable signal that reached it
+  (relayed to the child, recorded by name). A SIGKILLed caller writes none,
+  which reads as the hard kill it is.
+
+The child is handed `SUPERVISED_RUN_TERMINAL` as under the shim. Its heavy
+imports load lazily: the `cli` barrel is also the `supervised-exec`
+declaration every invocation loads.
+
 ## `run` bodies: out-of-process work that is not a command line
 
 _Folded in from the former `supervised-task` plugin; now `server/internal/task/`
@@ -744,6 +769,8 @@ construction, and the job and the body it spawns cannot drift apart.
     - `defineTimer('supervised-job.liveness')`
 - Core:
   - Uses:
+    - `infra/host-fs/user-path.AppPath`
+    - `infra/host-fs/user-path.asAppPath`
     - `infra/paths.worktreeArtifacts`
     - `infra/runtime-identity.runtimeNamespace`
     - `packages/timed-fs.readFileSync`
@@ -766,30 +793,24 @@ construction, and the job and the body it spawns cannot drift apart.
     - `SUPERVISED_EXEC_COMMAND`
     - `SUPERVISED_EXIT_TEMPFAIL`
     - `supervisedArgv`
+    - `writeRunTerminal`
 - Cli:
-  - Uses: `framework/server-core.runExec`
-  - Exports (values): `cliExecContext`
+  - Uses:
+    - `framework/server-core.runExec`
+    - `infra/file-watcher.watchForCommand`
+  - Exports (types): `AttachedRun`
+  - Exports (values):
+    - `cliExecContext`
+    - `runAttached`
 - Cross-plugin:
-  - Imported by:
-    - `apps/chord/song-index`
-    - `apps/deploy/deployments`
-    - `apps/prototypes/thumbnails`
-    - `apps/sonata/sources/ultimate-guitar/alignment`
+  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `framework` ×8
+    - `apps` ×4
+    - `infra` ×4
     - `backup`
     - `conversations/workspace/worktree`
     - `database/fork`
     - `debug/worktree-cleanup`
-    - `framework/cli/op-runtime`
-    - `framework/cli/release`
-    - `framework/cli/serve-app`
-    - `framework/cli/start`
-    - `framework/tooling/checks/cache-prune`
-    - `framework/tooling/checks/type-check/backstop`
-    - `framework/tooling/web-artifacts/prune`
-    - `infra/audio-analysis`
-    - `infra/deps`
-    - `infra/events-test`
-    - `infra/worktree/spare-pool`
     - `release`
 - Exemptions:
   - Exempts itself from:

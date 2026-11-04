@@ -3,7 +3,13 @@ import {
   statSync,
   readFileSync,
 } from "@plugins/packages/plugins/timed-fs/core";
+import { renameSync, writeFileSync } from "node:fs";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
+import type { Namespace } from "@plugins/infra/plugins/namespace/core";
+import {
+  asAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { assertRunId, assertRunKindId } from "./ids";
 
 /**
@@ -196,10 +202,11 @@ function signalProbe(target: number): boolean {
 export function readRunTerminal(
   kindId: string,
   runId: string,
+  namespace: Namespace = runtimeNamespace(),
 ): RunTerminal | null {
   assertRunKindId(kindId);
   assertRunId(kindId, runId);
-  const path = worktreeArtifacts.runTerminal(runtimeNamespace(), kindId, runId);
+  const path = worktreeArtifacts.runTerminal(namespace, kindId, runId);
   let raw: string;
   let mtime: Date;
   try {
@@ -223,6 +230,25 @@ export function readRunTerminal(
     signalCode: signal === NO_SIGNAL ? null : (signal ?? null),
     finishedAt: mtime,
   };
+}
+
+/**
+ * Write one run's exit marker from TypeScript, in the shim's exact format —
+ * for an ATTACHED run (`runAttached`, `cli/`), whose parent waits on the child
+ * itself and so observes what the shim would: the child's status and the
+ * signal that reached the parent while it waited. Atomic (tmp + rename) and
+ * once, like the shim's `printf … && mv`; the body is checked against
+ * {@link MARKER_BODY} so this writer cannot drift from the parser.
+ */
+export function writeRunTerminal(
+  path: AppPath,
+  terminal: { exitCode: number; signalCode: string | null },
+): void {
+  const body = `${terminal.exitCode} ${terminal.signalCode ?? NO_SIGNAL}`;
+  if (!MARKER_BODY.test(body)) throw new RunMarkerError(path, body);
+  const tmp = asAppPath(`${path}.tmp.${process.pid}`);
+  writeFileSync(tmp, `${body}\n`);
+  renameSync(tmp, path);
 }
 
 /**

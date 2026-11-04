@@ -2,12 +2,12 @@ import { describe, expect, test } from "bun:test";
 import {
   fallbackVerdict,
   orderStepsForDisplay,
-  renderStepBlock,
   renderVerdict,
   runVerdictGuard,
   type Verdict,
 } from "./build-output";
 import type { SignalTermination } from "./fatal-signals";
+import { renderStepBlock } from "../core/internal/step-blocks";
 
 const URL = "http://att-x.localhost:9000";
 
@@ -225,67 +225,15 @@ describe("fallbackVerdict", () => {
   });
 });
 
-// The pointer above is only true if something wrote the file it names. That is
-// the guard's other half, so it is asserted against the SAME set of arms: a
-// pointer and a write, bound in one test.
-describe("runVerdictGuard — the pointer and the file it names", () => {
+describe("runVerdictGuard", () => {
   const ctx = {
     urls: [URL],
-    buildLogPath: "/home/x/.equin/worktrees/att-x/build.log",
+    buildLogPath: "/home/x/.equin/worktrees/att-x/runs/build-x.log",
   };
 
-  test("every fallback carrying the pointer has a write behind it", () => {
-    const cases: Array<{
-      emitted: { ok: boolean } | null;
-      code: number;
-      termination?: SignalTermination;
-    }> = [
-      { emitted: null, code: 1 },
-      { emitted: null, code: 0 },
-      { emitted: { ok: false }, code: 0 },
-      { emitted: { ok: true }, code: 3 },
-      { emitted: null, code: 143, termination: sigterm },
-    ];
-    for (const { emitted, code, termination } of cases) {
-      const wrote: Array<{ verdict: Verdict; code: number }> = [];
-      const v = runVerdictGuard(emitted, code, {
-        ...ctx,
-        termination: () => termination ?? null,
-        onFallback: (verdict, c) => wrote.push({ verdict, code: c }),
-      });
-      if (v === null) throw new Error("expected a non-null fallback verdict");
-      expect(renderVerdict(v).split("\n").at(-1)).toBe(
-        `  Full output: ${ctx.buildLogPath}`,
-      );
-      // Nothing emitted ⇒ the build reached neither of build.ts's own
-      // writeBuildLogs calls ⇒ the guard is the only thing that can write the
-      // file, and must. Something emitted ⇒ that path already wrote it, and a
-      // second write would only churn the trailer.
-      expect(wrote).toEqual(emitted === null ? [{ verdict: v, code }] : []);
-    }
-  });
-
-  test("an agreeing verdict neither prints nor writes", () => {
-    const wrote: Verdict[] = [];
-    const onFallback = (v: Verdict): number => wrote.push(v);
-    expect(runVerdictGuard({ ok: true }, 0, { ...ctx, onFallback })).toBeNull();
-    expect(
-      runVerdictGuard({ ok: false }, 1, { ...ctx, onFallback }),
-    ).toBeNull();
-    expect(wrote).toEqual([]);
-  });
-
-  test("the killed build writes its SIGNAL code, not a guessed failure code", () => {
-    // The whole reason the artifact carries an exit code: the steps a killed
-    // build closed are all green, so anything deriving the outcome from them
-    // would file this 143 as a successful deploy.
-    const codes: number[] = [];
-    runVerdictGuard(null, 143, {
-      ...ctx,
-      termination: () => sigterm,
-      onFallback: (_v, code) => void codes.push(code),
-    });
-    expect(codes).toEqual([143]);
+  test("an agreeing verdict prints nothing", () => {
+    expect(runVerdictGuard({ ok: true }, 0, ctx)).toBeNull();
+    expect(runVerdictGuard({ ok: false }, 1, ctx)).toBeNull();
   });
 });
 

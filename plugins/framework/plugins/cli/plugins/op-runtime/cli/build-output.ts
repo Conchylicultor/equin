@@ -1,8 +1,9 @@
 import { writeSync } from "node:fs";
-import type { BuildStepLog } from "./build-logs-writer";
+import {
+  renderStepBlock,
+  type BuildStepLog,
+} from "../core/internal/step-blocks";
 import type { SignalTermination } from "./fatal-signals";
-
-type Stream = "stdout" | "stderr";
 
 export interface StepStatus {
   label: string;
@@ -25,30 +26,8 @@ export type Verdict =
       steps: StepStatus[];
     };
 
-// The single renderer for one step's transcript, shared by the console
-// (build.ts:printStepResults) and by build.log (build-logs-writer.ts). Every
-// replayed line is prefixed with `│ ` so a borrowed `✓ built` reads as a quoted
-// `│ ✓ built`, never mistakable for the build's own verdict. Each line keeps its
-// own stream tag so stderr still routes to stderr on the console.
-export function renderStepBlock(
-  step: BuildStepLog,
-): Array<{ text: string; stream: Stream }> {
-  const icon = step.success ? "✓" : "✗";
-  const duration = (step.durationMs / 1000).toFixed(1);
-  const header = `── ${step.label} ${icon} (${duration}s) `;
-  const pad = Math.max(0, 60 - header.length);
-  const out: Array<{ text: string; stream: Stream }> = [
-    { text: header + "─".repeat(pad), stream: "stdout" },
-  ];
-  for (const line of step.lines) {
-    out.push({ text: `│ ${line.text}`, stream: line.stream });
-  }
-  return out;
-}
-
 // Successes first, failures last, stable within each group so the failing step
-// is the last quoted block a reader sees. Display-only — never applied to the
-// JSON `steps` array, which stays in push order for its downstream consumers.
+// is the last quoted block a reader sees.
 export function orderStepsForDisplay<T extends { success: boolean }>(
   steps: readonly T[],
 ): T[] {
@@ -218,6 +197,7 @@ export interface VerdictGuardCtx {
    * multi-target build that dies leaves every one of them on its previous dist.
    */
   urls: string[];
+  /** The run's transcript — the file the verdict's last line points at. */
   buildLogPath: string;
   /**
    * Read LAZILY, at exit time — a signal can arrive at any point after this
@@ -233,29 +213,16 @@ export interface VerdictGuardCtx {
    * `runCli` writes on its way out.
    */
   crash?: () => string | null;
-  /**
-   * Materialize `buildLogPath` — the file every fallback verdict points at on
-   * its last line. Called only when the build never emitted a verdict of its
-   * own, which is exactly when nothing wrote that file: a killed build reaches
-   * neither of build.ts's own `writeBuildLogs` calls, so without this the guard
-   * would print a pointer to a file that cannot exist. The two contradiction
-   * arms DID emit, so their transcript is already on disk; re-writing it would
-   * only churn the trailer.
-   *
-   * Must be synchronous — it runs from a `process.on("exit")` handler.
-   */
-  onFallback?: (verdict: Verdict, code: number) => void;
 }
 
 /**
- * The guard's exit-time action: print the fallback verdict, and — on the arms
- * where no transcript was ever written — materialize the file its pointer names.
- * Printing the pointer and writing the file are one action, deliberately: they
- * are what makes the pointer honest on every path the CLI can take.
+ * The guard's exit-time action: print the fallback verdict. Its pointer names
+ * the run's transcript, which the build's supervisor writes as the build prints
+ * — so the pointer resolves on every path, this banner included.
  *
- * Extracted from `installVerdictGuard` (as `fallbackVerdict` already was) so the
- * pairing is unit-testable without a live exit handler. Returns the verdict it
- * acted on, or null when the emitted verdict already agreed with the exit code.
+ * Extracted from `installVerdictGuard` (as `fallbackVerdict` already was) so it
+ * is unit-testable without a live exit handler. Returns the verdict it acted
+ * on, or null when the emitted verdict already agreed with the exit code.
  */
 export function runVerdictGuard(
   emitted: { ok: boolean } | null,
@@ -270,8 +237,6 @@ export function runVerdictGuard(
     ctx.crash?.() ?? null,
   );
   if (v === null) return null;
-  // Before the print, so the pointer is already resolvable when it is read.
-  if (emitted === null) ctx.onFallback?.(v, code);
   writeSync(1, `\n${renderVerdict(v)}\n`);
   return v;
 }

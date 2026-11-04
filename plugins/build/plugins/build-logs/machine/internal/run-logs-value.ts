@@ -4,10 +4,7 @@ import { basename } from "node:path";
 import { serveValue } from "@plugins/network/plugins/live/machine";
 import { sliceRange } from "@plugins/network/plugins/live/server";
 import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
-import {
-  worktreeArtifacts,
-  worktreeDataDir,
-} from "@plugins/infra/plugins/paths/server";
+import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
 import { isRunId } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
 import { onSupervisedRunChange } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import { BUILD_RUN_KIND_ID } from "@plugins/build/plugins/run-ledger/core";
@@ -19,42 +16,43 @@ import {
 } from "./run-log";
 
 /**
- * Watch every file one run's log is read from, for as long as it is read.
+ * Watch both files one run's log is read from, for as long as it is read.
  *
- * - **The transcript and the exit marker** (the supervised-runs directory) are
- *   heard through the supervisor itself (`onSupervisedRunChange`): it already
- *   follows that directory with its one `writesWhileOpen` subscription while a
- *   run is live — which is what makes a RUNNING build's log move, since the
- *   detached child writes its transcript through a descriptor it holds open for
- *   the whole run and macOS FSEvents (the dir hub) reports that file only when
- *   it closes — and it calls back on every tail pump and on the run's settle. A
- *   second kqueue subscription per reader would cost one descriptor per runs
- *   entry and a recursive listing per open pane, unheld by the artifact prune.
- *   A run this process is not tailing is over: its two files never change again.
- * - **The CLI's step log** (the data directory) through the shared dir hub: it
- *   is written once, atomically, at the end — the terminal record of a hand-run
- *   build too, which has no transcript or marker.
+ * - **Through the supervisor** (`onSupervisedRunChange`) for a run this backend
+ *   tails — one the backend started, or adopted at a reconcile: it follows the
+ *   runs directory with its one `writesWhileOpen` subscription, which is what
+ *   makes a RUNNING build's log move (the child writes its transcript through a
+ *   descriptor it holds open for the whole run, and macOS FSEvents reports that
+ *   file only when it closes), and calls back on every tail pump and on the
+ *   run's settle.
+ * - **Through the shared dir hub** on the runs directory, filtered to this
+ *   run's two files, for a run nobody here tails — a hand-run build: its
+ *   transcript is heard when it closes and its marker when it lands, so the
+ *   pane shows the finished log once the run ends.
  */
 async function watchRunLog(
   buildId: string,
   notify: () => void,
 ): Promise<() => void> {
   const ns = runtimeNamespace();
-  const stepLog = basename(worktreeArtifacts.buildLogs(ns, buildId));
-  const dataDir = worktreeDataDir(ns);
+  const runsDir = worktreeArtifacts.runsDir(ns);
+  const files = new Set([
+    basename(worktreeArtifacts.runTranscript(ns, BUILD_RUN_KIND_ID, buildId)),
+    basename(worktreeArtifacts.runTerminal(ns, BUILD_RUN_KIND_ID, buildId)),
+  ]);
   const stopRun = onSupervisedRunChange(BUILD_RUN_KIND_ID, buildId, notify);
   try {
-    await mkdir(dataDir, { recursive: true });
-    const releaseData = await acquireDirWatch({
-      dir: dataDir,
+    await mkdir(runsDir, { recursive: true });
+    const releaseRuns = await acquireDirWatch({
+      dir: runsDir,
       scope: "children",
       onChange: (events) => {
-        if (events.some((e) => basename(e.path) === stepLog)) notify();
+        if (events.some((e) => files.has(basename(e.path)))) notify();
       },
     });
     return () => {
       stopRun();
-      releaseData();
+      releaseRuns();
     };
   } catch (err) {
     stopRun();
@@ -86,7 +84,7 @@ async function runLogOf(id: string): Promise<BuildRunLog> {
  * so the pages and the meta of one change read the files once.
  *
  * `notified`, by the watches of the files it is read from: a running build's
- * transcript grows, its exit marker and step log land when it ends — and after
+ * transcript grows, its exit marker lands when it ends — and after
  * that nothing writes them again, so the watch is silent exactly when the
  * answer is immutable. That is the honest single form: "notified while live,
  * immutable once terminal" cannot be one value's arms (freshness is declared

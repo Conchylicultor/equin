@@ -1,17 +1,14 @@
-import {
-  readFileSync,
-  statSync,
-} from "@plugins/packages/plugins/timed-fs/core";
 import { sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { z } from "zod";
 import {
   HARD_KILL_EXIT_CODE,
   isRunAlive,
+  readRunTerminal,
 } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
-import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
+import { BUILD_RUN_KIND_ID } from "../core";
 
 // Settling a DEAD holder of `build_runs_inflight_uniq`, at the moment the lock
 // is actually blocking someone.
@@ -52,60 +49,33 @@ const HolderRowSchema = z.object({
   pid: z.number().int().nullable(),
 });
 
-/** The one field of `build-logs-<id>.json` the ledger reads — see `BuildLogs`. */
-const BuildLogsTerminalSchema = z.object({ exitCode: z.number().int() });
-
-/** How a build ended, as recorded by the build itself. */
+/** How a build ended, as its run's exit marker records it. */
 export interface BuildTerminal {
   exitCode: number;
-  /** The log file's mtime — when the build wrote its verdict, not when we looked. */
+  /** The marker's mtime — when the build ended, not when we looked. */
   finishedAt: Date;
 }
 
 /**
- * Read a build's own terminal record: `build-logs-<buildId>.json`, which
- * `writeBuildLogs` writes synchronously on EVERY graceful ending (ok verdict,
- * failure verdict, and the exit-hook verdict guard's fallback — which covers an
- * early `process.exit`, a throw and a catchable signal). It plays the role a
- * supervised run's exit marker plays: its `exitCode` is the real code, and its
- * mtime is the real end time.
+ * Read a build's terminal record: its supervised run's exit marker
+ * (`runs/build-<id>.exit-code`), which every build has — the backend's shim
+ * writes it for a build the backend started, the attached relay for a hand-run
+ * one — on every ending but a hard kill. Its exit code is the build process's
+ * real status, and its mtime the real end time.
  *
  * `null` means no record: the build is still running, or it was SIGKILLed (no
- * handler ran). The caller tells them apart with the pid. A file that exists but
- * does not parse THROWS — it is written atomically (tmp + rename), so malformed
- * bytes are a writer defect, and answering `null` would file it under
- * "hard-killed" behind a plausible-looking `-1`. Any other read error rethrows.
+ * handler ran). The caller tells them apart with the pid. A marker that exists
+ * but does not parse THROWS (`RunMarkerError`): it is published by rename, so
+ * malformed bytes are a writer defect, never a hard kill.
  */
 export function readBuildTerminal(
   namespace: Namespace,
   buildId: string,
 ): BuildTerminal | null {
-  const path = worktreeArtifacts.buildLogs(namespace, buildId);
-  let raw: string;
-  let mtime: Date;
-  try {
-    // stat BEFORE read, so the mtime is never newer than the bytes it dates.
-    mtime = statSync(path).mtime;
-    raw = readFileSync(path, "utf-8");
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-    return null;
-  }
-  let json: unknown;
-  try {
-    json = JSON.parse(raw);
-  } catch (err) {
-    throw new Error(
-      `[build-runs] malformed build logs at ${path}: not JSON (${(err as Error).message})`,
-    );
-  }
-  const parsed = BuildLogsTerminalSchema.safeParse(json);
-  if (!parsed.success) {
-    throw new Error(
-      `[build-runs] malformed build logs at ${path}: ${parsed.error.message}`,
-    );
-  }
-  return { exitCode: parsed.data.exitCode, finishedAt: mtime };
+  const terminal = readRunTerminal(BUILD_RUN_KIND_ID, buildId, namespace);
+  return terminal === null
+    ? null
+    : { exitCode: terminal.exitCode, finishedAt: terminal.finishedAt };
 }
 
 /**

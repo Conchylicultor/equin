@@ -21,26 +21,35 @@ export function buildLogLineKey(line: number): string {
 }
 
 /**
- * One step of a build run's log, without its lines (they are the pages): its
- * id and label as the CLI reported them, how long it took, whether it passed,
- * and how many lines it holds. Step ids are not unique (the CLI can open its
- * implicit `output` step twice), so a line names its step by position.
+ * Where a step of a build run's log stands: it `ok`'d or `failed` (its own
+ * printed verdict), or the run is still inside it (`running` — the last
+ * segment of a run with no exit marker yet).
+ */
+export const BuildLogStepStatusSchema = z.enum(["ok", "failed", "running"]);
+export type BuildLogStepStatus = z.infer<typeof BuildLogStepStatusSchema>;
+
+/**
+ * One step of a build run's log, without its lines (they are the pages): a
+ * step block the CLI printed (its label, verdict and measured duration), or
+ * the `output` between blocks — every line printed outside a step, so none is
+ * dropped. Labels are not unique (there are several `output` stretches), so a
+ * line names its step by position. `durationMs` is null where nothing measured
+ * it (an `output` stretch).
  */
 export const BuildLogStepSchema = z.object({
-  id: z.string(),
   label: z.string(),
-  durationMs: z.number(),
-  success: z.boolean(),
+  status: BuildLogStepStatusSchema,
+  durationMs: z.number().nullable(),
   lines: z.number().int().nonnegative(),
 });
 export type BuildLogStep = z.infer<typeof BuildLogStepSchema>;
 
 /**
  * The most steps one run's log holds. The CLI's pipeline is a fixed set of
- * phases (a handful today), and a log the CLI never structured is one step;
- * a log past this is a writer defect, refused loudly by the parse.
+ * phases (a handful of blocks per target, each with an `output` stretch beside
+ * it); a log past this is a writer defect, refused loudly by the parse.
  */
-const BUILD_LOG_STEPS_MAX = 100;
+const BUILD_LOG_STEPS_MAX = 200;
 
 /** The per-run facts beside the pages: the run's steps, in the order they ran. */
 export const BuildRunLogsMetaSchema = z.object({
@@ -58,9 +67,9 @@ const RUN_LOG_LINES_MAX = 2000;
 const RUN_LOGS_REFUSALS = ["invalid-id", "missing"] as const;
 /**
  * Why a run-logs read was refused: an id that cannot name a run's files
- * (`invalid-id` — not one filename-safe segment), or a run with no log on disk (`missing`) — one still running
- * before its first line (a hand-run build writes no transcript at all until
- * its step log lands at the end), or one whose artifacts the prune reaped.
+ * (`invalid-id` — not one filename-safe segment), or a run with no transcript
+ * on disk (`missing`) — one the prune reaped, or a hand-run build from before
+ * every build recorded one.
  */
 export type BuildRunLogsRefusal = (typeof RUN_LOGS_REFUSALS)[number];
 
@@ -70,10 +79,11 @@ export type BuildRunLogsRefusal = (typeof RUN_LOGS_REFUSALS)[number];
  * detail pane reads a page at a time as the reader scrolls back, and the Fix
  * action reads the newest page (the failing tail), never the whole log at once.
  *
- * The lines are the CLI's own step log (`build-logs-<id>.json`) when it wrote
- * one with any step, else the run's raw supervised-run transcript as one step
- * whose verdict is the exit marker's. Newest first because both readers want
- * the end: a failed build's failing step, a running one's live tail.
+ * The lines are the run's transcript (`runs/build-<id>.log`) — every line the
+ * build printed, whoever started it — cut into its printed step blocks and the
+ * output between them, the run's exit marker deciding where a failed run with
+ * no failed block failed. Newest first because both readers want the end: a
+ * failed build's failing step, a running one's live tail.
  */
 export const buildRunLogs = liveValue("build.run-logs", {
   query: BuildRunLogsQuerySchema,

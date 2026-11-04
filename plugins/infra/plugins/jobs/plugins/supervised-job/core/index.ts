@@ -17,6 +17,7 @@ export {
   observeRun,
   readRunTerminal,
   RunMarkerError,
+  writeRunTerminal,
 } from "./internal/terminal";
 export type { RunObservation, RunTerminal } from "./internal/terminal";
 export { supervisedArgv, RUN_TERMINAL_ENV } from "./internal/shim";

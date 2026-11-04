@@ -1,6 +1,6 @@
 import {
+  envEntries,
   readEnv,
-  setEnv,
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
@@ -34,6 +34,7 @@ import {
 import {
   WEB_CORE_RELATIVE,
   actAsCheckoutNamespace,
+  checkoutNamespace,
   checkoutRef,
   worktreeArtifacts,
   worktreeDataDir,
@@ -62,14 +63,11 @@ import {
   printStepBlocks,
   publishLane,
   pushBuildSpan,
-  pushBuildStepLog,
   readCliCrash,
-  renderVerdict,
   reportInterruptedPredecessor,
   runCheckSubprocess,
   signalOriginTap,
   valveGates,
-  writeBuildLogs,
   writeBuildProfile,
   writeBuildReceipt,
   type BuildReceipt,
@@ -110,7 +108,11 @@ import {
   writeWorktreeSpec,
 } from "@plugins/infra/plugins/worktree/server";
 import { createBuildRunRecorder } from "@plugins/build/plugins/run-ledger/cli";
-import { buildRunIdKind } from "@plugins/build/plugins/run-ledger/core";
+import {
+  BUILD_RUN_KIND_ID,
+  buildRunIdKind,
+} from "@plugins/build/plugins/run-ledger/core";
+import { runAttached } from "@plugins/infra/plugins/jobs/plugins/supervised-job/cli";
 import { BUILD_EXIT_SUPERSEDED } from "@plugins/build/plugins/build-status/core";
 
 // Wedge-breaker for the local `git` metadata reads in this file — orders of
@@ -510,6 +512,33 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
     });
   }
 
+  // Every deploy build is a supervised run: its transcript (`runs/build-<id>.log`)
+  // and exit marker are THE record of it — what the build pane, the Fix brief
+  // and the run ledger read. A build the backend starts already runs under the
+  // shim, with the id its row was claimed under (`BUILD_ID`); a hand-run one
+  // has no id yet, and re-runs itself here under `runAttached`, which writes
+  // the same two files with this terminal attached. Before anything is armed,
+  // so the work below runs once, in the child.
+  if (readEnv("BUILD_ID") === undefined) {
+    const buildId = buildRunIdKind.mint();
+    process.exit(
+      await runAttached({
+        namespace: await checkoutNamespace(await getWorktreeRoot()),
+        kindId: BUILD_RUN_KIND_ID,
+        runId: buildId,
+        argv: [
+          process.execPath,
+          resolve(process.argv[1] ?? ""),
+          ...process.argv.slice(2),
+        ],
+        env: {
+          ...process.env,
+          ...envEntries({ BUILD_ID: buildId, BUILD_RELAYED: "1" }),
+        },
+      }),
+    );
+  }
+
   // The releases mise.lock records, installed if a lock arrived without them
   // (a clone, a pull, an upstream merge) — before the doctor, which would
   // otherwise only report them missing.
@@ -612,25 +641,18 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   // is a fact about the namespace this build is about to overwrite.
   for (const target of targets) reportInterruptedPredecessor(target.namespace);
 
-  // Every build needs ONE stable id, shared by its build-log record, its
-  // build-profile-<id>.json, its build-logs, and the bundle's .build-id —
-  // so the profiling Gantt can open ANY build's detail by id, not just
-  // UI-triggered ones. UI builds already set EQUIN_BUILD_ID
-  // (run-build.ts); manual CLI builds (`./equin build`) get a
-  // generated one here. Write it back into the env so the profiler and
-  // build-logs writers (which read the env var at write time) agree by
-  // construction instead of falling back to id-less default filenames and
-  // a null build-log buildId (which left manual builds un-clickable).
-  // A UI/auto build's backend minted the build_runs row before spawning this
-  // CLI (EQUIN_BUILD_ID is that row's id); a manual `./equin
-  // build` has no such id yet. Captured BEFORE the env is overwritten below,
-  // so the CLI knows whether it must mint main's row itself (decision 3).
-  const uiTriggered = readEnv("BUILD_ID") != null;
-  // Minted through the run ledger's id kind, like the backend's claim: one
-  // shape (`build-<s>-<6>`) whoever started the build, so a manual build's id
-  // is recognised (chips, the run pane) exactly like a UI build's.
-  const buildId: string = readEnv("BUILD_ID") ?? buildRunIdKind.mint();
-  setEnv("BUILD_ID", buildId);
+  // Every build has ONE stable id — its run transcript and exit marker, its
+  // build-profile-<id>.json, its build_runs row and the bundle's .build-id —
+  // handed down on every path: by the backend that claimed its row (a UI/auto
+  // build), or by the attached relay above (a hand-run one, which mints the
+  // id and leaves the row to this process: `BUILD_RELAYED`).
+  const buildId = readEnv("BUILD_ID");
+  if (buildId === undefined) {
+    throw new Error(
+      "[build] no BUILD_ID past the attached relay — the relay hands one to every hand-run build",
+    );
+  }
+  const uiTriggered = readEnv("BUILD_RELAYED") === undefined;
 
   // A main build is human-blocking (interactive lane); an agent build is
   // background. Derived ONCE, here, because two consumers need the same
@@ -837,25 +859,27 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   // namespace it named is still on its previous dist and the banner has to
   // say so about all of them.
   const targetUrls = targets.map((t) => namespaceUrl(t.namespace));
+  // This run's transcript — every line it prints, the verdict included, written
+  // as it goes by whoever supervises it (the backend's shim, or the attached
+  // relay above). The one log every pointer names.
+  const transcriptPath = worktreeArtifacts.runTranscript(
+    name,
+    BUILD_RUN_KIND_ID,
+    buildId,
+  );
 
   installVerdictGuard({
     urls: targetUrls,
-    buildLogPath: worktreeArtifacts.buildLogText(name, buildId),
+    buildLogPath: transcriptPath,
     // Pulled at exit time, not passed by value: the signal can arrive at any
     // point after this call. With it the guard prints BUILD ABORTED rather
     // than BUILD FAILED for a build that was killed rather than broken.
     termination: () => termination,
     // Same lazy pull, for the other way a build can end without reaching its
     // own funnel: an unhandled throw. `runCli` records it as it unwinds, so
-    // the banner (and build.log, via onFallback) names the exception instead
-    // of reporting a failure with no cause at all.
+    // the banner names the exception instead of reporting a failure with no
+    // cause at all.
     crash: () => readCliCrash(),
-    // A build killed here reaches none of the writeBuildLogs calls below, so
-    // the guard writes the transcript its own pointer names. Whatever steps
-    // had closed by then are all green (the one it died inside never closed),
-    // which is why the artifact carries the exit code rather than letting a
-    // reader infer it — see BuildLogs.exitCode.
-    onFallback: (v, code) => writeBuildLogs(name, renderVerdict(v), code),
   });
 
   // Catchable fatal signals → graceful exit so the exit handlers above
@@ -1059,7 +1083,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
           finishedAt: null,
           exitCode: null,
           url: namespaceUrl(ns),
-          logPath: worktreeArtifacts.buildLogText(name, buildId),
+          logPath: transcriptPath,
         };
         receipts.set(ns, receipt);
         writeBuildReceipt(ns, receipt);
@@ -1098,15 +1122,11 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
 
       // The non-heavy phases — `bun install`, drizzle generate, and the build
       // orchestrator process itself — spend no unit of the grant (they run
-      // in the orchestrator's own share of it) and, unlike the heavy steps,
-      // produce no StepResult, so their maxRSS lines have no
-      // step block to ride into build.log. Rather than invent a second log
-      // mechanism, they are collected here and flushed as ONE synthetic step
-      // through the same `pushBuildStepLog` seam the heavy steps use — so
-      // `grep maxRSS <build.log>` finds every measured phase of a build in one
+      // in the orchestrator's own share of it) and produce no StepResult; their
+      // maxRSS lines are printed like every other line, so
+      // `grep maxRSS <transcript>` finds every measured phase of a build in one
       // place, which is exactly what the calibration pass needs. See
       // research/2026-07-12-global-host-admission-memory-dimension.md (gap 0).
-      const footprintLines: StepResult["lines"] = [];
       const recordFootprint = (
         label: string,
         maxRssBytes: number | undefined,
@@ -1114,10 +1134,8 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
         const line = maxRssLine(label, maxRssBytes);
         if (line === null) return;
         console.log(line);
-        footprintLines.push({ text: line, stream: "stdout" });
       };
-      // Flushed on every path that persists the build's artifacts (both writers
-      // read a module-level array, so this must run before them). Samples the
+      // Flushed on every terminal path, before the verdict. Samples the
       // orchestrator's own footprint here: `process.resourceUsage().maxRSS` is a
       // TRUE peak (getrusage RUSAGE_SELF; Bun reports it in bytes), not an
       // instantaneous sample, so it covers every in-process phase — registry /
@@ -1141,15 +1159,6 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
         )({
           maxRssBytes: orchestratorRss,
         });
-        if (footprintLines.length > 0) {
-          pushBuildStepLog({
-            id: "resourceUsage",
-            label: "resource usage",
-            lines: footprintLines,
-            durationMs: 0,
-            success: true,
-          });
-        }
       };
 
       // build's observability seam into the shared app-artifact pipeline. These
@@ -1240,7 +1249,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
         });
         if (claim === "lost") {
           // "lost" now means a LIVE build holds the slot: a holder whose build
-          // already ended was settled from its own build-logs record and the claim
+          // already ended was settled from its run's exit marker and the claim
           // retried inside `insertRun`.
           softNotes.push(
             `build-runs: a live build of ${name} holds the slot — no ledger row minted`,
@@ -1388,7 +1397,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
           // path this build's failure funnel points at, because both sides
           // compute it from `basename(root)`. Full, untruncated check output
           // lands there beside the build's other per-run artifacts; the
-          // captured `lines` (console + build.log) stay summarized.
+          // captured `lines` (console + transcript) stay summarized.
           runId: buildId,
           output: "capture",
         });
@@ -1436,13 +1445,12 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
       // The transcript, the step roster and the profile are ONE per invocation,
       // so `stepResults` is refreshed by whichever target is currently in stage
       // 3 and the verdict's roster names that target's steps — the failing one
-      // on a failure, the last one on success. Every target's steps are pushed
-      // into the shared step log, so the transcript carries all of them in
-      // order.
+      // on a failure, the last one on success. Every target's step blocks are
+      // printed, so the transcript carries all of them in order — and the
+      // build pane reads its steps back from those blocks.
       let stepResults: StepResult[] = [];
       const onSteps = (steps: StepResult[]): void => {
         stepResults = steps;
-        for (const result of steps) pushBuildStepLog(result);
         printStepBlocks(steps);
       };
 
@@ -1471,16 +1479,13 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
       // The single fatal funnel. Every post-steps failure routes through here so
       // the build's own verdict — with the failing step last, the full step
       // roster, the NOT DEPLOYED consequence, and the log pointers as the literal
-      // last lines — is the terminal output on both console and build.log. The
-      // verdict's pointers name build.log's own path, so that path is computed
-      // (pure helper) and the verdict rendered BEFORE build.log is written.
+      // last lines — is the terminal output, and so the transcript's last lines.
       const failBuild = async (
         reason: string[],
         failedLabels: string[],
       ): Promise<never> => {
         flushFootprint();
-        const buildLogPath = worktreeArtifacts.buildLogText(name, buildId);
-        const pointers = [`Full output: ${buildLogPath}`];
+        const pointers = [`Full output: ${transcriptPath}`];
         // One receipt pointer per namespace this invocation opened — the file
         // that answers "did MY app land?" for each of them.
         for (const ns of receipts.keys()) {
@@ -1535,10 +1540,10 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
                 steps: stepRoster(),
               };
         // The one code this failure ends on. Resolved here rather than beside
-        // closeRun below so the artifact, the ledger row and the receipts are
-        // all stamped from the same value and cannot disagree.
+        // closeRun below so the ledger row, the receipts and the process's own
+        // status (the run's exit marker) are all stamped from the same value
+        // and cannot disagree.
         const exitCode = newHead !== null ? BUILD_EXIT_SUPERSEDED : 1;
-        writeBuildLogs(name, renderVerdict(v), exitCode);
         // Close this invocation's build_runs row, BEFORE finalizeBuild releases
         // the recorder pool. One row, one exit code — honest, because the
         // invocation is the unit of work even when several namespaces published.
@@ -1691,7 +1696,6 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
       flushFootprint();
       writeBuildProfile(name);
       const okV = buildOkVerdict();
-      writeBuildLogs(name, renderVerdict(okV), 0);
       await finalizeBuild(true);
       emitVerdict(okV);
     },

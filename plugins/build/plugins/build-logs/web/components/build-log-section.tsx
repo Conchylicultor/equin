@@ -3,8 +3,6 @@ import {
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, type ReactElement } from "react";
-import { useToast } from "@plugins/shell/plugins/notifications/web";
-import { LiveLogChannel } from "@plugins/primitives/plugins/log-channels/web";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -21,7 +19,6 @@ import {
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import { BUILD_LOG_CHANNEL } from "@plugins/build/core";
 import {
   buildRunLogs,
   type BuildLogLine,
@@ -36,6 +33,7 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const checkIcon = symbol("check");
 const closeIcon = symbol("close");
+const runningIcon = symbol("hourglass-empty");
 
 // Markers scraped by codegen (data-views.generated.ts). Must live in web/**.
 const BUILD_RUN_LOG_STEPS = defineDataView("build.run-log-steps");
@@ -49,14 +47,22 @@ interface IndexedStep extends BuildLogStep {
 }
 
 function durationText(step: BuildLogStep): string {
-  return `${(step.durationMs / 1000).toFixed(1)}s`;
+  return step.durationMs === null
+    ? "—"
+    : `${(step.durationMs / 1000).toFixed(1)}s`;
 }
 
+const STATUS_ICON = {
+  ok: { icon: checkIcon, tone: "text-success" },
+  failed: { icon: closeIcon, tone: "text-destructive" },
+  running: { icon: runningIcon, tone: "text-muted-foreground" },
+} as const;
+
 /**
- * One build run's log: its persisted steps and lines when the run has any on
- * disk, else the live log channel — a run refused `missing` has not written a
- * line yet (or never will here: a hand-run build's log lands at its end), which
- * is what a still-running build wants.
+ * One build run's log: its transcript's steps and lines — every build writes
+ * one from its first line, so a running build's log moves as it runs. A run
+ * refused `missing` has none on disk any more (reaped by the prune, or a
+ * hand-run build from before every build recorded one).
  */
 export function BuildLogSection({ runId }: { runId: string }): ReactElement {
   const query = useMemo((): BuildRunLogsQuery => ({ id: runId }), [runId]);
@@ -66,7 +72,11 @@ export function BuildLogSection({ runId }: { runId: string }): ReactElement {
       return <Loading variant="rows" count={3} />;
     case "error":
       if (meta.error.kind === "refused" && meta.error.code === "missing") {
-        return <LiveLogs />;
+        return (
+          <Placeholder tone="muted">
+            This run's log is no longer on disk.
+          </Placeholder>
+        );
       }
       return (
         <ResourceErrorInline
@@ -129,20 +139,16 @@ function PersistedLogs({
   const stepFields = useMemo<FieldDef<IndexedStep>[]>(
     () => [
       {
-        id: "success",
-        label: "Passed",
-        type: "bool",
+        id: "status",
+        label: "Status",
+        type: "text",
         header: false,
         width: "1.5rem",
-        value: (s) => s.success,
+        value: (s) => s.status,
         cell: (s) => (
           <Icon
-            icon={s.success ? checkIcon : closeIcon}
-            className={cn(
-              "size-3.5",
-              s.success ? "text-success" : "text-destructive",
-              rigidClass(),
-            )}
+            icon={STATUS_ICON[s.status].icon}
+            className={cn("size-3.5", STATUS_ICON[s.status].tone, rigidClass())}
           />
         ),
       },
@@ -166,7 +172,7 @@ function PersistedLogs({
         label: "Duration",
         type: "number",
         width: "5rem",
-        value: (s) => s.durationMs,
+        value: (s) => s.durationMs ?? 0,
         cell: (s) => (
           <Text variant="caption" tone="muted" className="tabular-nums">
             {durationText(s)}
@@ -201,7 +207,7 @@ function PersistedLogs({
           return (
             <Text
               variant="caption"
-              tone={step?.success === false ? "destructive" : "muted"}
+              tone={step?.status === "failed" ? "destructive" : "muted"}
               className="truncate"
             >
               {step?.label}
@@ -272,30 +278,5 @@ function PersistedLogs({
         emptyState="No build logs"
       />
     </Stack>
-  );
-}
-
-/**
- * The live tail, for a run with no log on disk yet (a build still in flight
- * before its first line, or one whose artifacts never landed). Body, socket,
- * de-dup and copy button all belong to the shared `LiveLogChannel` primitive.
- */
-function LiveLogs(): ReactElement {
-  const toast = useToast();
-  return (
-    <LiveLogChannel
-      channel={BUILD_LOG_CHANNEL}
-      label="Logs"
-      emptyState="No build logs yet"
-      onError={(error) =>
-        toast({
-          type: "build",
-          category: "updates",
-          title: "Build log error",
-          description: error,
-          variant: "error",
-        })
-      }
-    />
   );
 }

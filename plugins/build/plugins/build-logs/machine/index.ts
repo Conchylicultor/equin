@@ -3,6 +3,6 @@ import { buildRunLogsServed } from "./internal/run-logs-value";
 
 export default {
   description:
-    "Serves build.run-logs: one build run's persisted log, newest line first, paged, with its steps as the meta — read from the run's files on disk, notified by the supervisor's own tail of its transcript and a watch of its step log.",
+    "Serves build.run-logs: one build run's persisted log, newest line first, paged, with its steps as the meta — read from the run's transcript and exit marker (its steps cut from the step blocks the build prints), notified by the supervisor's own tail of its transcript and a watch of the runs directory.",
   contributions: [...buildRunLogsServed.declare],
 } satisfies MachinePluginDefinition;

@@ -29,3 +29,8 @@ export type {
   BuildReceiptStatus,
   ResolvedReceipt,
 } from "./internal/build-receipt";
+
+// The build's step-block format, printed into a run's transcript by the CLI and
+// read back by the build pane — one module so the two cannot drift.
+export { parseStepBlocks } from "./internal/step-blocks";
+export type { TranscriptSegment } from "./internal/step-blocks";

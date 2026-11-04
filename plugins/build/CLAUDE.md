@@ -167,19 +167,19 @@ What that buys, and what moved:
   `hasLiveInflightBuild`: the claiming INSERT against `build_runs_inflight_uniq`
   is the lock, and a pre-flight pid probe in front of it was a TOCTOU window plus
   a second copy of the liveness question.
-- **`build-logs-<id>.json` did two jobs and only one moved.** Its
-  `exitCode` + `finishedAt` were the terminal record — that is the exit marker's
-  job now, written by the shim for any command rather than by a CLI that
-  remembers to. (One reader remains: the claim-time settle of a dead holder of
-  the in-flight index reads its `exitCode` and mtime, because a hand-run build
-  has no shim and no exit marker — see `run-ledger/CLAUDE.md`.) Its `steps` are
-  structure only the build itself can know, so the CLI still writes them and
-  nothing changed there. `recoverBuildArtifacts`, which
-  reconstructed a one-step stand-in from the parent's pipe for a hard-killed
-  build, is gone: the recovery moved to the READ path, where `build-logs`
-  synthesises the same single block from the child's own transcript — which
-  exists even when the parent died too, the case the old backstop could not
-  cover.
+- **A build's record is its run's transcript + exit marker, for every build.**
+  `runs/build-<id>.log` holds every line the build printed (the verdict
+  included) and `runs/build-<id>.exit-code` its status. A build the backend
+  starts gets both from the shim; a hand-run `./equin build` re-runs itself
+  under `runAttached` (supervised-job's `cli`), which writes the same two files
+  with the terminal attached and echoes the transcript to it. The build pane
+  (`build-logs`) cuts the transcript into the step blocks the build prints
+  (`op-runtime/core`'s `parseStepBlocks`, beside the renderer) and the output
+  between them; the ledger's claim-time settle reads the marker. The old step
+  log (`build-logs-<id>.json` + `build-<id>.log`) is gone: it held only the
+  blocks, so the pane missed every serial line — the backend restart, the health
+  probe, the verdict — and showed a failed restart as three green steps.
+  (`research/2026-11-04-build-unified-run-record.md`.)
 
 ### Why the convergence loop still terminates
 
@@ -416,12 +416,12 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
   - **`build-commits`** — Commits included since the previous build, shown in the build detail pane.
   - **`build-fix`** — Launch-agent button in the build detail pane for failed builds, and the same launch as a Build failed notification's Fix (the fix-build notification action).
   - **`build-info`** — Status, trigger, commit hash, and timing section in the build detail pane.
-  - **`build-logs`** — Logs section in the build detail pane: the run's persisted steps and lines (build.run-logs, newest first, paged by viewport), else the live log channel.
+  - **`build-logs`** — Logs section in the build detail pane: the run's transcript as its steps and lines (build.run-logs, newest first, paged by viewport).
   - **`build-profiling`** — Per-run build profiling Gantt section in the build detail pane.
   - **`build-status`** — Single source of truth for build-run status display metadata — label, badge variant, and dot color per BuildStatus.
   - **`build-termination`** — Per-run termination record, desktop-only: the build.run-termination live value — what the host-global signal-origin sink recorded about the death of one build run (which signal, and who sent it)…
   - **`deployment`** — The client half of the deployment description: `useDeployment()` composes THIS tab's own baked pin in beside the server's two deployable carriers, and `<DeploymentChain/>` renders the four arms…
-  - **`run-ledger`** [exempt] — Build-runs ledger leaf: the build_runs entity, and (cli/) the hand-SQL build-run recorder the `./equin build` CLI imports without the table or the heavy build barrel.
+  - **`run-ledger`** — Build-runs ledger leaf: the build_runs entity, and (cli/) the hand-SQL build-run recorder the `./equin build` CLI imports without the table or the heavy build barrel.
   - **`runs-arm`** — The build arm's presence on the merged run surface: its rows' link into the existing build run-detail pane, and the status / targets / commit / exit-code columns only a build row has. The build arm…
   - **`serve-composition`** [exempt] — Serve capability for a composition: the live-serve toggle panel, the enable→build hook (a `build --composition <id>` of THIS checkout), the served-liveness read (the server-resolved namespace plus…
   - **`server-build-id`** [exempt] — Served-bundle pin leaf: reads the .build-commit (the tree the bundle was built from) and .build-graph (content identity of the served web graph) trailers out of the served dist, fresh on every call…
