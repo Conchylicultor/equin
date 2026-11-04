@@ -9,7 +9,7 @@ import { useLibrarySong } from "@plugins/apps/plugins/sonata/plugins/document/we
  *
  * It carries no content and no load count: an effect that pairs the song with
  * its content or its load reads them as one value from the document
- * (`useSourceEdit`, `useLibrarySongLoad`), never this id beside another read.
+ * (`usePersistSourceEdit`, `useLibrarySongLoad`), never this id beside another read.
  */
 export interface SonataAppValue {
   /** Id of the library song loaded in the app (null before any load). Lets

@@ -7699,10 +7699,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SonataDocument.SongSetting` ← `apps.sonata.track-mixer`
               - `SonataDocument.SongSetting` ← `apps.sonata.transpose`
             - Uses:
+              - `primitives/latest-ref.useLatestRef`
               - `primitives/scope/scoped-store.defineScopedStore`
               - `primitives/slot-render.defineMountSlot`
             - Exports (types):
               - `DocumentContent`
+              - `EditedSource`
               - `LibrarySong`
               - `LibrarySongLoad`
               - `RhythmGroove`
@@ -7711,7 +7713,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SongSetting`
               - `SongSettingFailure`
               - `SongSettingKey`
-              - `SourceEdit`
             - Exports (values):
               - `chordModeSetting`
               - `defaultGroove`
@@ -7732,9 +7733,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useLibrarySongLoad`
               - `useLoadDocument`
               - `useMountedSongId`
+              - `usePersistSourceEdit`
               - `useSongDocument`
               - `useSongSetting`
-              - `useSourceEdit`
               - `useWriteSongSetting`
           - Cross-plugin:
             - Imported by: 27 plugins — full list in [`plugins/apps/plugins/sonata/plugins/document/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/document/REFERENCE.md)
@@ -45494,9 +45495,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `seekPredicate`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 78 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+        - Imported by: 79 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
           - `primitives` ×33
-          - `apps` ×23
+          - `apps` ×24
           - `page` ×4
           - `conversations` ×3
           - `map` ×2

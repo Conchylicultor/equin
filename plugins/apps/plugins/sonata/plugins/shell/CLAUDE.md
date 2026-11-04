@@ -14,7 +14,7 @@ document — it keeps no state of its own: `currentSongId` (the library song
 loaded in the player, whether a player pane shows it or it plays in the
 background from the library). It carries no content and no load count: an
 effect that pairs the song with its content or its load reads them as ONE value
-from the document (`useSourceEdit` — a source's edit with its song id, what a
+from the document (`usePersistSourceEdit` — a source's edit with its song id, what a
 persist observer saves; `useLibrarySongLoad` — the song with its load, what a
 once-per-load effect keys on), never this id beside a separate read. Leaving the player does not unload the song: it keeps
 playing, and the library's now-playing bar, card Pause and ring follow it.

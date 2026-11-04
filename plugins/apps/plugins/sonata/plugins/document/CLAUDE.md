@@ -32,6 +32,13 @@ the song id beside a separate read:
   (`loadedRawById`), else `unedited` (a load is not an edit; a file document is
   never persisted). A source's persist observer saves exactly this, so one
   song's content cannot be saved under another song's id.
+- `usePersistSourceEdit(sourceId, save)` — the only way a source persists
+  them (`useSourceEdit` itself is internal): `save(edit)` runs debounced
+  (500 ms), and a pending edit leaves ONLY as a save — a newer edit of the
+  same song and load supersedes it; another song or load, the document no
+  longer edited, or the caller unmounting saves it at once, under its own
+  song. So a switch or leaving within the debounce cannot drop the last edit
+  (there is no cancel to spell). `save` may skip what is not user content.
 - `useLibrarySongLoad()` — `{ kind: "library", songId, load } | { kind: "none" }`,
   `load` bumped by every load (a reload of the same song included): what a
   once-per-load effect keys on (a play counted once per load).
@@ -99,10 +106,12 @@ availability gates over the composed score.
     - `SonataDocument.SongSetting` ← `apps.sonata.track-mixer`
     - `SonataDocument.SongSetting` ← `apps.sonata.transpose`
   - Uses:
+    - `primitives/latest-ref.useLatestRef`
     - `primitives/scope/scoped-store.defineScopedStore`
     - `primitives/slot-render.defineMountSlot`
   - Exports (types):
     - `DocumentContent`
+    - `EditedSource`
     - `LibrarySong`
     - `LibrarySongLoad`
     - `RhythmGroove`
@@ -111,7 +120,6 @@ availability gates over the composed score.
     - `SongSetting`
     - `SongSettingFailure`
     - `SongSettingKey`
-    - `SourceEdit`
   - Exports (values):
     - `chordModeSetting`
     - `defaultGroove`
@@ -132,9 +140,9 @@ availability gates over the composed score.
     - `useLibrarySongLoad`
     - `useLoadDocument`
     - `useMountedSongId`
+    - `usePersistSourceEdit`
     - `useSongDocument`
     - `useSongSetting`
-    - `useSourceEdit`
     - `useWriteSongSetting`
 - Cross-plugin:
   - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)

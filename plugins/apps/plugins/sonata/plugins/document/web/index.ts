@@ -19,14 +19,13 @@ export {
   useLoadDocument,
   useLibrarySong,
   useLibrarySongLoad,
-  useSourceEdit,
   useSongSetting,
   useWriteSongSetting,
   useFailSongSetting,
   type LibrarySong,
   type LibrarySongLoad,
-  type SourceEdit,
 } from "./loaded-song";
+export { usePersistSourceEdit, type EditedSource } from "./persist-source-edit";
 export { SongSettingsMount, useMountedSongId } from "./song-setting-mount";
 export {
   transposeSetting,

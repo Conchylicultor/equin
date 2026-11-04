@@ -218,7 +218,9 @@ reported) — the kind worth surfacing as crash tasks, not just toasts.
   in-player editor, gated to UG songs, writing the loader's raw into the
   context.
 - `web/components/ug-persist-observer.tsx` — `UltimateGuitarPersistObserver`
-  (`Sonata.Effect`): debounce-persists edits via the `PUT` endpoint (whose
+  (`Sonata.Effect`): persists edits via the `PUT` endpoint through the
+  document's `usePersistSourceEdit` (debounced; a pending edit is saved at once
+  under its own song on a song switch or unmount) (whose
   `title: songName` is the one place a UG song's title is written — the toolbar
   title re-renders off the library's `songs` value, not a mirror). It saves
   only when `raw.tab` changes from the tab as opened or last saved, never on
