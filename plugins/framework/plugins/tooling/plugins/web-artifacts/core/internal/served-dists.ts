@@ -21,12 +21,7 @@
 // scans unlocked and re-reads only the dists that changed under the store lock
 // (`refreshServedDists`).
 
-import {
-  mkdirSync,
-  renameSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import {
   readdirSync,
   readFileSync,
