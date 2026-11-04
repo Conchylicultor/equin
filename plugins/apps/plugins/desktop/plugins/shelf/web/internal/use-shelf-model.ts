@@ -3,11 +3,9 @@ import { Apps, isTabApp, type ActiveApp } from "@plugins/apps-core/web";
 import { useTabs } from "@plugins/apps-core/plugins/tabs/web";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import {
-  bringWindowToFront,
-  restoreWindow,
+  useDesktop,
   useDesktops,
   useFloatingWindows,
-  windowForTab,
   type FloatingWindow,
   type WindowId,
 } from "@plugins/apps/plugins/desktop/plugins/windows/web";
@@ -47,6 +45,7 @@ export interface ShelfModel {
 export function useShelfModel(tabIds: string[]): ShelfModel {
   const { tabs, titles, focusedTabId } = useTabs();
   const windows = useFloatingWindows();
+  const desk = useDesktop();
   const { activeDesktopId } = useDesktops();
   const contributions = Apps.App.useContributions();
   const { pinnedApps } = useConfig(shelfConfig);
@@ -66,7 +65,7 @@ export function useShelfModel(tabIds: string[]): ShelfModel {
     const seen = new Set<WindowId>();
     const onDesktop: ShelfWindow[] = [];
     for (const tabId of tabIds) {
-      const id = windowForTab(tabId);
+      const id = desk.windows.windowForTab(tabId);
       if (id === undefined || seen.has(id)) continue;
       seen.add(id);
       const w = windows.get(id);
@@ -77,7 +76,9 @@ export function useShelfModel(tabIds: string[]): ShelfModel {
     }
 
     const focusedId =
-      focusedTabId === undefined ? undefined : windowForTab(focusedTabId);
+      focusedTabId === undefined
+        ? undefined
+        : desk.windows.windowForTab(focusedTabId);
     const focused =
       focusedId === undefined ? undefined : windows.get(focusedId);
     const focusedWindowId =
@@ -105,6 +106,7 @@ export function useShelfModel(tabIds: string[]): ShelfModel {
     activeDesktopId,
     pinnedApps,
     tabIds,
+    desk,
   ]);
 }
 
@@ -129,6 +131,7 @@ export interface ShelfActions {
 export function useShelfActions(): ShelfActions {
   const { openTab, focusTab, closeTab } = useTabs();
   const windows = useFloatingWindows();
+  const desk = useDesktop();
   const { pinnedApps } = useConfig(shelfConfig);
   const setConfig = useSetConfig(shelfConfig);
 
@@ -140,11 +143,11 @@ export function useShelfActions(): ShelfActions {
       const w = windows.get(action.windowId);
       if (!w) return;
       if (action.kind === "minimize") {
-        restoreWindow(w.id, /* minimize */ true);
+        desk.windows.restoreWindow(w.id, /* minimize */ true);
         return;
       }
-      restoreWindow(w.id);
-      bringWindowToFront(w.id);
+      desk.windows.restoreWindow(w.id);
+      desk.windows.bringWindowToFront(w.id);
       focusTab(w.activeTabId);
     },
     closeWindow: (windowId) => {

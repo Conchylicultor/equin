@@ -1,6 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { isDesktopActive } from "@plugins/apps/plugins/desktop/plugins/shell/web";
-import { Desktop } from "@plugins/apps/plugins/desktop/plugins/windows/web";
+import { peekDesktopActive } from "@plugins/apps/plugins/desktop/plugins/shell/web";
+import {
+  Desktop,
+  onFocusedDesktop,
+} from "@plugins/apps/plugins/desktop/plugins/windows/web";
 import { defineShortcut } from "@plugins/primitives/plugins/shortcuts/web";
 import { SwitcherOverlay } from "./components/switcher-overlay";
 import { stepSwitcher } from "./internal/switcher-controls";
@@ -17,16 +20,16 @@ export default {
       // Not "Window" / "Desktop": the launcher lists those groups as commands,
       // and this one only means something with the modifier held.
       group: "Switching",
-      when: isDesktopActive,
-      handler: () => stepSwitcher(1),
+      when: peekDesktopActive,
+      handler: () => onFocusedDesktop((desk) => stepSwitcher(desk, 1)),
     }),
     defineShortcut({
       id: "desktop.switcher-prev",
       keys: "mod+shift+`",
       label: "Switch windows (reverse)",
       group: "Switching",
-      when: isDesktopActive,
-      handler: () => stepSwitcher(-1),
+      when: peekDesktopActive,
+      handler: () => onFocusedDesktop((desk) => stepSwitcher(desk, -1)),
     }),
     // The registry matches on `KeyboardEvent.key`, which for Shift+Backquote is
     // the shifted "~" on a real US keyboard but the base "`" in some synthetic
@@ -36,8 +39,8 @@ export default {
       keys: "mod+shift+~",
       label: "Switch windows (reverse)",
       group: "Switching",
-      when: isDesktopActive,
-      handler: () => stepSwitcher(-1),
+      when: peekDesktopActive,
+      handler: () => onFocusedDesktop((desk) => stepSwitcher(desk, -1)),
     }),
   ],
 } satisfies PluginDefinition;

@@ -14,8 +14,8 @@
   - Contributes:
     - `Apps.Surface` "Surface" → `SurfaceBody`
     - `ActionBar.ViewOption` → `ActionBarPlacementControl`
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps-core/tabs` ×5
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps-core/tabs` ×6
     - `network/live/live-state` ×3
     - `primitives/css/toggle-chip` ×2
     - `primitives/slot-render` ×2
@@ -28,6 +28,7 @@
     - `primitives/css/ui-kit.cn`
     - `primitives/css/viewport-overlay.useViewportEscape`
     - `primitives/loading.Loading`
+    - `primitives/shortcuts.setFocusedSurfaceId`
     - `shell/action-bar.ActionBar`
     - `ui/icons.Icon`
   - Exports (types):

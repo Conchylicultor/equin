@@ -1,24 +1,5 @@
-import { defineInstallSink } from "@plugins/primitives/plugins/scope/plugins/install-sink/web";
 import { getFocusedSurfaceId } from "@plugins/primitives/plugins/shortcuts/web";
-import {
-  bringWindowToFront,
-  createDesktop,
-  getDesktopsState,
-  getFloatingWindow,
-  getFloatingWindows,
-  minimizeWindows,
-  moveWindowToDesktop,
-  placeWindows,
-  restoreWindow,
-  setActiveDesktop,
-  snapWindowDirection,
-  toggleWindowPin,
-  topmostWindowOnDesktop,
-  unminimizeWindows,
-  windowForTab,
-  type FloatingWindow,
-  type WindowId,
-} from "./hooks/use-floating-windows";
+import type { FloatingWindow, WindowId } from "./hooks/use-floating-windows";
 import {
   SNAP_GAP,
   snapRect,
@@ -26,80 +7,65 @@ import {
   type Rect,
   type SnapDirection,
 } from "./hooks/use-snap";
-import { peekDeskBounds } from "./internal/desk-bounds";
-import { getWorkAreaReserve } from "./internal/work-area";
 import { layoutOverview, layoutTiles } from "./internal/overview-layout";
 import {
-  hideOverview,
-  isOverviewOpen,
-  showOverview,
-} from "./internal/overview";
+  peekFocusedDesktop,
+  type DesktopRuntime,
+} from "./internal/desktop-runtime";
 
 /**
- * Imperative window-management commands driven by the static keyboard shortcuts
- * (registered in this plugin's barrel). The focused window is resolved from the
- * focused *surface* — `getFocusedSurfaceId()` returns the focused tabId (the apps
- * tab model feeds it into the shortcut system on every focus change), which
- * {@link windowForTab} maps to the window currently holding it — so snap /
- * minimize / pin need no window handle and read it directly.
+ * Imperative window-management commands, each acting on ONE desktop (`desk` —
+ * the desktop of a tab set, see `internal/desktop-runtime`). The keyboard
+ * shortcuts (registered in this plugin's barrel) run them on the desktop the
+ * user is in ({@link onFocusedDesktop}); the shelf runs them on its own. The
+ * focused window is resolved from the focused *surface* — `getFocusedSurfaceId()`
+ * returns the focused tabId (the tab sets feed it into the shortcut system on
+ * every focus change), which the desktop's store maps to the window holding it
+ * (none when the focused tab is another tab set's).
  *
  * Cross-window commands (close, new window, focus) additionally need the live
- * floating tab order + focus/close/open callbacks. The load-bearing `apps` plugin exposes those
- * only through the `useTabs()` hook, so a tiny in-tree publisher (the
- * {@link floatingTabsBridgeSink} install sink, filled from the floating
- * Foreground) bridges them to module scope. There is never more than one
- * floating surface in focus, so a single page-global slot is the right shape.
- * Every read below runs from a keyboard-shortcut handler — after installation,
- * and re-sampled on every keypress — so `peek()` is the correct read.
+ * floating tab order + focus/close/open callbacks, which the floating
+ * Foreground's tabs bridge installs on the desktop (`desk.tabs()`). Every read
+ * runs from a handler — after installation, re-sampled on every keypress.
  */
-export interface FloatingTabsBridge {
-  /** Open floating tabIds, in tab-strip order. */
-  tabIds: string[];
-  focusTab: (tabId: string) => void;
-  closeTab: (tabId: string) => void;
-  /** Open a new tab of `appId` — on the desktop, a new window. */
-  openTab: (appId: string) => string;
-  /** The app a live tab shows (undefined for an unknown tab). */
-  appIdOf: (tabId: string) => string | undefined;
+
+/** Run a command on the desktop the user is in (a shortcut's handler). */
+export function onFocusedDesktop(run: (desk: DesktopRuntime) => void): void {
+  const desk = peekFocusedDesktop();
+  if (desk) run(desk);
 }
 
-/** The live tabs bridge, installed by `FloatingTabsBridge` while a floating window exists. */
-export const floatingTabsBridgeSink = defineInstallSink<FloatingTabsBridge>({
-  name: "floating.tabs-bridge",
-  what: "the floating tab order + focus/close/open callbacks (installed by the floating Foreground's FloatingTabsBridge)",
-});
-
 /** The window currently holding the focused surface (the active member's tab). */
-function focusedWindowId(): string | undefined {
+function focusedWindowId(desk: DesktopRuntime): string | undefined {
   const tabId = getFocusedSurfaceId();
-  return tabId ? windowForTab(tabId) : undefined;
+  return tabId ? desk.windows.windowForTab(tabId) : undefined;
 }
 
 /** Tile the focused window in a direction (maximize/quarter/restore/minimize). */
-export function snapFocusedWindow(dir: SnapDirection) {
-  const wid = focusedWindowId();
-  if (wid) snapWindowDirection(wid, dir);
+export function snapFocusedWindow(desk: DesktopRuntime, dir: SnapDirection) {
+  const wid = focusedWindowId(desk);
+  if (wid) desk.windows.snapWindowDirection(wid, dir);
 }
 
 /** Minimize the focused window to the dock. */
-export function minimizeFocusedWindow() {
-  const wid = focusedWindowId();
-  if (wid) restoreWindow(wid, /* minimize */ true);
+export function minimizeFocusedWindow(desk: DesktopRuntime) {
+  const wid = focusedWindowId(desk);
+  if (wid) desk.windows.restoreWindow(wid, /* minimize */ true);
 }
 
 /** Toggle the focused window's always-on-top flag. */
-export function togglePinFocusedWindow() {
-  const wid = focusedWindowId();
-  if (wid) toggleWindowPin(wid);
+export function togglePinFocusedWindow(desk: DesktopRuntime) {
+  const wid = focusedWindowId(desk);
+  if (wid) desk.windows.toggleWindowPin(wid);
 }
 
 /**
  * Close the focused tab (the active member). Browser-like: `mod+w` closes the
  * shown tab, not the whole window — the right-side titlebar X closes the window.
  */
-export function closeFocusedWindow() {
+export function closeFocusedWindow(desk: DesktopRuntime) {
   const tabId = getFocusedSurfaceId();
-  const bridge = floatingTabsBridgeSink.peek();
+  const bridge = desk.tabs();
   if (tabId && bridge) bridge.closeTab(tabId);
 }
 
@@ -107,27 +73,27 @@ export function closeFocusedWindow() {
  * A new window of the focused window's app (mockup `⌥N`): a new tab of the app
  * its shown tab belongs to, which the desktop opens as a window of its own.
  */
-export function openNewWindowOfFocusedApp() {
+export function openNewWindowOfFocusedApp(desk: DesktopRuntime) {
   const tabId = getFocusedSurfaceId();
-  const bridge = floatingTabsBridgeSink.peek();
+  const bridge = desk.tabs();
   const appId = tabId && bridge ? bridge.appIdOf(tabId) : undefined;
   if (bridge && appId) bridge.openTab(appId);
 }
 
 /** Bring a window forward: un-minimise it, raise it, focus its shown tab. */
-export function focusWindow(windowId: WindowId) {
-  const win = getFloatingWindow(windowId);
+export function focusWindow(desk: DesktopRuntime, windowId: WindowId) {
+  const win = desk.windows.getFloatingWindow(windowId);
   if (!win) return;
-  restoreWindow(windowId);
-  bringWindowToFront(windowId);
-  floatingTabsBridgeSink.peek()?.focusTab(win.activeTabId);
+  desk.windows.restoreWindow(windowId);
+  desk.windows.bringWindowToFront(windowId);
+  desk.tabs()?.focusTab(win.activeTabId);
 }
 
 /** The windows a desktop shows right now — on the active desktop, not minimised. */
-function visibleWindows(): FloatingWindow[] {
-  const { activeDesktopId } = getDesktopsState();
-  const live = new Set(floatingTabsBridgeSink.peek()?.tabIds ?? []);
-  return [...getFloatingWindows().values()].filter(
+function visibleWindows(desk: DesktopRuntime): FloatingWindow[] {
+  const { activeDesktopId } = desk.windows.getDesktopsState();
+  const live = new Set(desk.tabs()?.tabIds ?? []);
+  return [...desk.windows.getFloatingWindows().values()].filter(
     (w) =>
       w.desktopId === activeDesktopId &&
       !w.geo.minimized &&
@@ -137,11 +103,17 @@ function visibleWindows(): FloatingWindow[] {
 
 /** A window's current box in desktop pixels (a snapped one resolved to its tile). */
 function windowBox(
+  desk: DesktopRuntime,
   w: FloatingWindow,
   bounds: { width: number; height: number },
 ): Rect {
   return w.geo.snap
-    ? snapRect(w.geo.snap, bounds.width, bounds.height, getWorkAreaReserve())
+    ? snapRect(
+        w.geo.snap,
+        bounds.width,
+        bounds.height,
+        desk.getWorkAreaReserve(),
+      )
     : { x: w.geo.x, y: w.geo.y, w: w.geo.w, h: w.geo.h };
 }
 
@@ -150,16 +122,19 @@ function windowBox(
  * glide into a grid, each labelled; a click picks one. Nothing to show → it
  * stays closed.
  */
-export function toggleOverview() {
-  if (isOverviewOpen()) {
-    hideOverview();
+export function toggleOverview(desk: DesktopRuntime) {
+  if (desk.isOverviewOpen()) {
+    desk.hideOverview();
     return;
   }
-  const bounds = peekDeskBounds();
+  const bounds = desk.deskBounds();
   if (!bounds) return;
-  showOverview(
+  desk.showOverview(
     layoutOverview(
-      visibleWindows().map((w) => ({ id: w.id, box: windowBox(w, bounds) })),
+      visibleWindows(desk).map((w) => ({
+        id: w.id,
+        box: windowBox(desk, w, bounds),
+      })),
       bounds.width,
       bounds.height,
     ),
@@ -167,37 +142,44 @@ export function toggleOverview() {
 }
 
 /** Close the overview, bringing `pick` forward when the user clicked a window. */
-export function exitOverview(pick?: WindowId) {
-  hideOverview();
-  if (pick) focusWindow(pick);
+export function exitOverview(desk: DesktopRuntime, pick?: WindowId) {
+  desk.hideOverview();
+  if (pick) focusWindow(desk, pick);
 }
 
 /** Tile every visible window of the active desktop into a grid (mockup `tileAll`). */
-export function tileAllWindows() {
-  hideOverview();
-  const bounds = peekDeskBounds();
+export function tileAllWindows(desk: DesktopRuntime) {
+  desk.hideOverview();
+  const bounds = desk.deskBounds();
   if (!bounds) return;
-  placeWindows(
+  desk.windows.placeWindows(
     layoutTiles(
-      visibleWindows().map((w) => ({ id: w.id, box: windowBox(w, bounds) })),
+      visibleWindows(desk).map((w) => ({
+        id: w.id,
+        box: windowBox(desk, w, bounds),
+      })),
       bounds.width,
-      workAreaHeight(bounds.height, getWorkAreaReserve()),
+      workAreaHeight(bounds.height, desk.getWorkAreaReserve()),
       SNAP_GAP,
     ),
   );
 }
 
 /** Minimise every window of the active desktop. */
-export function minimizeAllWindows() {
-  hideOverview();
-  minimizeWindows(visibleWindows().map((w) => w.id));
+export function minimizeAllWindows(desk: DesktopRuntime) {
+  desk.hideOverview();
+  desk.windows.minimizeWindows(visibleWindows(desk).map((w) => w.id));
 }
 
 /**
- * The windows the last "show desktop" hid, and on which desktop — what toggling
- * it again brings back. Superseded by the next hide; ignored on another desktop.
+ * Per desktop: the windows the last "show desktop" hid, and on which virtual
+ * desktop — what toggling it again brings back. Superseded by the next hide;
+ * ignored on another virtual desktop.
  */
-let shownDesktop: { desktopId: string; windowIds: WindowId[] } | null = null;
+const shownDesktops = new WeakMap<
+  DesktopRuntime,
+  { desktopId: string; windowIds: WindowId[] }
+>();
 
 /**
  * Show the desktop, or bring its windows back (Windows' "Show desktop"): while
@@ -206,29 +188,30 @@ let shownDesktop: { desktopId: string; windowIds: WindowId[] } | null = null;
  * minimised there — a window restored or moved meanwhile is left alone) and
  * focus the front one.
  */
-export function toggleShowDesktop() {
-  hideOverview();
-  const visible = visibleWindows();
-  const { activeDesktopId } = getDesktopsState();
+export function toggleShowDesktop(desk: DesktopRuntime) {
+  desk.hideOverview();
+  const visible = visibleWindows(desk);
+  const { activeDesktopId } = desk.windows.getDesktopsState();
   if (visible.length > 0) {
-    shownDesktop = {
+    const shown = {
       desktopId: activeDesktopId,
       windowIds: visible.map((w) => w.id),
     };
-    minimizeWindows(shownDesktop.windowIds);
+    shownDesktops.set(desk, shown);
+    desk.windows.minimizeWindows(shown.windowIds);
     return;
   }
-  const hidden = shownDesktop;
-  shownDesktop = null;
+  const hidden = shownDesktops.get(desk);
+  shownDesktops.delete(desk);
   if (hidden?.desktopId !== activeDesktopId) return;
-  unminimizeWindows(
+  desk.windows.unminimizeWindows(
     hidden.windowIds.filter((id) => {
-      const w = getFloatingWindow(id);
+      const w = desk.windows.getFloatingWindow(id);
       return w?.desktopId === activeDesktopId && w.geo.minimized;
     }),
   );
-  const top = topmostWindowOnDesktop(activeDesktopId);
-  if (top) floatingTabsBridgeSink.peek()?.focusTab(top.activeTabId);
+  const top = desk.windows.topmostWindowOnDesktop(activeDesktopId);
+  if (top) desk.tabs()?.focusTab(top.activeTabId);
 }
 
 /**
@@ -236,8 +219,8 @@ export function toggleShowDesktop() {
  * WRAPPING, then focus that desktop's topmost (highest-z, non-minimized) window
  * via the tabs bridge. An empty desktop simply gets no focus on switch.
  */
-export function switchDesktopByDelta(step: 1 | -1) {
-  const { desktops, activeDesktopId } = getDesktopsState();
+export function switchDesktopByDelta(desk: DesktopRuntime, step: 1 | -1) {
+  const { desktops, activeDesktopId } = desk.windows.getDesktopsState();
   const n = desktops.length;
   if (n === 0) return;
   const from = Math.max(
@@ -246,9 +229,9 @@ export function switchDesktopByDelta(step: 1 | -1) {
   );
   const target = desktops[(((from + step) % n) + n) % n]!;
   if (target.id === activeDesktopId) return;
-  setActiveDesktop(target.id);
-  const top = topmostWindowOnDesktop(target.id);
-  if (top) floatingTabsBridgeSink.peek()?.focusTab(top.activeTabId);
+  desk.windows.setActiveDesktop(target.id);
+  const top = desk.windows.topmostWindowOnDesktop(target.id);
+  if (top) desk.tabs()?.focusTab(top.activeTabId);
 }
 
 /**
@@ -258,13 +241,13 @@ export function switchDesktopByDelta(step: 1 | -1) {
  * the target desktop becomes active, the moved window is raised, and its active
  * member is re-focused.
  */
-export function moveFocusedWindowByDelta(step: 1 | -1) {
+export function moveFocusedWindowByDelta(desk: DesktopRuntime, step: 1 | -1) {
   const tabId = getFocusedSurfaceId();
-  const windowId = tabId ? windowForTab(tabId) : undefined;
+  const windowId = tabId ? desk.windows.windowForTab(tabId) : undefined;
   if (!windowId) return;
-  const win = getFloatingWindow(windowId);
+  const win = desk.windows.getFloatingWindow(windowId);
   if (!win) return;
-  const { desktops } = getDesktopsState();
+  const { desktops } = desk.windows.getDesktopsState();
   const currentIndex = desktops.findIndex((d) => d.id === win.desktopId);
   if (currentIndex === -1) return;
   const targetIndex = currentIndex + step;
@@ -272,14 +255,14 @@ export function moveFocusedWindowByDelta(step: 1 | -1) {
   if (step === 1 && targetIndex === desktops.length) {
     // Past the last desktop → spill into a freshly-created one (don't activate
     // here; setActiveDesktop below follows the window).
-    targetId = createDesktop();
+    targetId = desk.windows.createDesktop();
   } else if (step === -1 && targetIndex < 0) {
     return; // Clamp: nothing before the first desktop.
   } else {
     targetId = desktops[targetIndex]!.id;
   }
-  moveWindowToDesktop(windowId, targetId);
-  setActiveDesktop(targetId);
-  bringWindowToFront(windowId);
-  floatingTabsBridgeSink.peek()?.focusTab(win.activeTabId);
+  desk.windows.moveWindowToDesktop(windowId, targetId);
+  desk.windows.setActiveDesktop(targetId);
+  desk.windows.bringWindowToFront(windowId);
+  desk.tabs()?.focusTab(win.activeTabId);
 }

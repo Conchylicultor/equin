@@ -9,7 +9,7 @@ import { TabDragOverlay } from "./tab-drag-overlay";
 import { FloatingTabsBridge } from "./floating-tabs-bridge";
 import { OverviewLayer } from "./overview-layer";
 import { DeskFrame } from "./desk-frame";
-import { pruneWindows } from "../hooks/use-floating-windows";
+import { useDesktop } from "../internal/desktop-runtime";
 
 /**
  * The floating placement's `Foreground`: the always-on overlay layer above every
@@ -50,10 +50,11 @@ export function FloatingForeground({
   // exiting (live shrinks, prune reveals a sibling / keeps the window) and when
   // its retention ends (retained shrinks, prune deletes the empty window).
   const retainedKey = retainedTabIds.join(",");
+  const { windows } = useDesktop();
   useEffect(() => {
-    pruneWindows(new Set(tabIds), new Set(retainedTabIds));
+    windows.pruneWindows(new Set(tabIds), new Set(retainedTabIds));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the id set, not the array identity (mirrors the tabs-bridge effect)
-  }, [retainedKey]);
+  }, [retainedKey, windows]);
 
   return (
     <>

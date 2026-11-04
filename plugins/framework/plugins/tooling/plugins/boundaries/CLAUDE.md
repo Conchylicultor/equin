@@ -227,7 +227,6 @@ takes a `debt` exemption on the check's id.
     - `apps/deploy/analytics/ip-country` (2 debt)
     - `apps/deploy/deployments` (1 debt)
     - `apps/deploy/servers` (2 debt)
-    - `apps/desktop/wallpaper` (2 debt)
     - `apps/events/refresh` (2 debt)
     - `apps/events/sources/coworkmeet` (1 debt)
     - `apps/events/sources/dmda` (1 debt)

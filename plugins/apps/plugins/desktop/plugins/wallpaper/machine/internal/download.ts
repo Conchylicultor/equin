@@ -1,12 +1,10 @@
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { MAX_WALLPAPER_BYTES } from "../../core";
 import {
   parsePublicUrl,
   safeFetch,
   SsrfError,
 } from "@plugins/infra/plugins/safe-fetch/server";
-
-/** Cap downloaded wallpaper images so a giant file can't exhaust memory/disk. */
-export const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 
 /**
  * Fetch a remote image URL SSRF-guarded and return its bytes + mime. Error
@@ -61,7 +59,7 @@ export async function downloadImage(
   if (buf.byteLength === 0) {
     throw new HttpError(400, "Empty image");
   }
-  if (buf.byteLength > MAX_IMAGE_BYTES) {
+  if (buf.byteLength > MAX_WALLPAPER_BYTES) {
     throw new HttpError(413, "Image is too large");
   }
 

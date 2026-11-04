@@ -17,17 +17,9 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { toggleLauncher } from "@plugins/apps/plugins/desktop/plugins/launcher/web";
 import {
-  createDesktop,
-  getDesktopsState,
-  getFloatingWindow,
-  removeDesktop,
-  setActiveDesktop,
-  setMinimizeTargetResolver,
-  setPeekedWindow,
-  setWorkAreaReserve,
   toggleOverview,
   toggleShowDesktop,
-  topmostWindowOnDesktop,
+  useDesktop,
   useDesktops,
   useOverviewActive,
   type FloatingWindow,
@@ -93,6 +85,7 @@ export function Shelf({ tabIds }: { tabIds: string[] }) {
   const model = useShelfModel(tabIds);
   const actions = useShelfActions();
   const { tabs, focusTab } = useTabs();
+  const desk = useDesktop();
   const { desktops, activeDesktopId } = useDesktops();
   const overview = useOverviewActive();
 
@@ -102,8 +95,10 @@ export function Shelf({ tabIds }: { tabIds: string[] }) {
   // The work area: the dock's height plus the gap stays free at the bottom.
   useEffect(
     () =>
-      setWorkAreaReserve(dockH > 0 ? Math.ceil(dockH) + DOCK_RESERVE_GAP : 0),
-    [dockH],
+      desk.setWorkAreaReserve(
+        dockH > 0 ? Math.ceil(dockH) + DOCK_RESERVE_GAP : 0,
+      ),
+    [dockH, desk],
   );
 
   // Each app entry's element, so a minimising window aims at its app's entry.
@@ -111,8 +106,8 @@ export function Shelf({ tabIds }: { tabIds: string[] }) {
   const latestTabs = useLatestRef(tabs);
   useEffect(
     () =>
-      setMinimizeTargetResolver((windowId) => {
-        const w = getFloatingWindow(windowId);
+      desk.setMinimizeTargetResolver((windowId) => {
+        const w = desk.windows.getFloatingWindow(windowId);
         const appId = w
           ? latestTabs.current.find((t) => t.tabId === w.activeTabId)?.appId
           : undefined;
@@ -120,7 +115,7 @@ export function Shelf({ tabIds }: { tabIds: string[] }) {
           appId === undefined ? undefined : entryEls.current.get(appId);
         return el?.getBoundingClientRect() ?? null;
       }),
-    [latestTabs],
+    [latestTabs, desk],
   );
 
   // ── Drag ──
@@ -141,7 +136,7 @@ export function Shelf({ tabIds }: { tabIds: string[] }) {
     cancelHide();
     const go = () => {
       setPeek(null);
-      setPeekedWindow(null);
+      desk.setPeekedWindow(null);
     };
     if (delayed) hideTimer.current = setTimeout(go, PEEK_HIDE_MS);
     else go();
@@ -150,39 +145,41 @@ export function Shelf({ tabIds }: { tabIds: string[] }) {
     cancelHide();
     if (menu || overview || dragging) return;
     if (peek && hoverKey(peek) === hoverKey(next)) return;
-    setPeekedWindow(null);
+    desk.setPeekedWindow(null);
     setPeek(next);
   };
   // Leaving the desktop drops the timer and any window still highlighted.
   useEffect(
     () => () => {
       clearTimeout(hideTimer.current);
-      setPeekedWindow(null);
+      desk.setPeekedWindow(null);
     },
-    [],
+    [desk],
   );
 
   // ── Desktops ──
   const switchDesktop = (id: string) => {
     hidePeek(false);
-    setActiveDesktop(id);
-    const top = topmostWindowOnDesktop(id);
+    desk.windows.setActiveDesktop(id);
+    const top = desk.windows.topmostWindowOnDesktop(id);
     if (top) focusTab(top.activeTabId);
   };
   // The current desktop's mini toggles show desktop; another one switches to it.
   const pickDesktop = (id: string) => {
     if (id !== activeDesktopId) return switchDesktop(id);
     hidePeek(false);
-    toggleShowDesktop();
+    toggleShowDesktop(desk);
   };
-  const newDesktop = () => switchDesktop(createDesktop());
+  const newDesktop = () => switchDesktop(desk.windows.createDesktop());
   const closeDesktop = (id: string) => {
     hidePeek(false);
     const wasActive = id === activeDesktopId;
-    removeDesktop(id);
+    desk.windows.removeDesktop(id);
     if (!wasActive) return;
     // The store moved us to a neighbour: focus what is in front there.
-    const top = topmostWindowOnDesktop(getDesktopsState().activeDesktopId);
+    const top = desk.windows.topmostWindowOnDesktop(
+      desk.windows.getDesktopsState().activeDesktopId,
+    );
     if (top) focusTab(top.activeTabId);
   };
   const desktopLabel = (id: string) =>
@@ -249,7 +246,7 @@ export function Shelf({ tabIds }: { tabIds: string[] }) {
             aria-label="Apps"
             onClick={() => {
               hidePeek(false);
-              toggleLauncher();
+              toggleLauncher(desk);
             }}
             className={cn(
               rigidClass(),
@@ -353,7 +350,7 @@ export function Shelf({ tabIds }: { tabIds: string[] }) {
                 onRemove={closeDesktop}
                 onOverview={() => {
                   hidePeek(false);
-                  toggleOverview();
+                  toggleOverview(desk);
                 }}
                 onPeekDesktop={(desktopId, anchor) =>
                   showPeek({ kind: "desktop", desktopId, anchor })

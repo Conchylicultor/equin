@@ -79,7 +79,14 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   (`apps.home.**`, the app gallery, minus its onboarding tour) and Sonata
   (`apps.sonata.**`, minus transcription and the MIDI file preview, exactly as
   Sonata's own app composition ships it;
-  `research/2026-11-04-global-sonata-in-browser-demo.md`). Its samples load
+  `research/2026-11-04-global-sonata-in-browser-demo.md`), and the Desktop
+  (`apps.desktop.**`, minus its Openverse wallpaper source, which searches an
+  external API: picked from the launcher inside the embed, as on main, it
+  turns the embed's own tab set into floating windows — its layout lives in
+  the embed, never in the page's storage, and its pinned apps and wallpaper
+  are the worker's config; importing a wallpaper from a link says "not
+  available"; `research/2026-11-04-global-desktop-mode-in-browser-demo.md`).
+  Its samples load
   through the worker's asset mirror (`infra/asset-mirror`, portable), fetched
   from the instruments' public CDNs once per session; reading Ultimate Guitar,
   aligning a sheet to a recording and watching MIDI folders need the computer

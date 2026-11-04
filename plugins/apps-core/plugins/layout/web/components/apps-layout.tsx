@@ -37,7 +37,7 @@ import {
   usePlacementCapabilities,
   useSurfaceMode,
   useAppLinkProps,
-  registerPlacementCapabilities,
+  usePlacementRegistry,
   type PlacementCapabilities,
 } from "@plugins/apps-core/plugins/tabs/web";
 import { AppTabsBody } from "@plugins/apps-core/plugins/tab-surface/web";
@@ -240,7 +240,8 @@ const NO_PLACEMENTS: PlacementCapabilities = {
  * outgoing branch's cleanup before the incoming one's effect).
  */
 function useNoAppOwnsSurface(): void {
-  useEffect(() => registerPlacementCapabilities(NO_PLACEMENTS), []);
+  const registry = usePlacementRegistry();
+  useEffect(() => registry.install(NO_PLACEMENTS), [registry]);
 }
 
 /**

@@ -335,6 +335,10 @@ export const compositionsConfig = defineConfig({
         // start the first time a visitor opens Home, and walks a new user
         // through filing their first real request — not a demo's story.
         //
+        // The Desktop joins it (`apps.desktop.**`): an `AppEmbed` is a tab set
+        // of its own, so the desktop's windows are the embed's tabs and its
+        // layout the embed's (research/2026-11-04-global-desktop-mode-in-browser-demo.md).
+        //
         // Prototypes joins it (`apps.prototypes.**`): its tree is a
         // `data-files` root, memory in the worker, seeded with the demo's
         // prototypes (research/2026-10-24-global-data-files-host-service.md).
@@ -375,6 +379,15 @@ export const compositionsConfig = defineConfig({
             "apps.sonata.**",
             "!apps.sonata.sources.midi.file-preview.**",
             "!apps.sonata.transcription.**",
+            // The Desktop (floating windows over a wallpaper, the shelf,
+            // virtual desktops), switched to from the launcher inside the
+            // embed as on main; its windows are the embed's own tab set. Its
+            // Openverse wallpaper source stays out: it searches an external
+            // API from the computer's server (SSRF-guarded), and a request
+            // must not leave the browser. Importing a wallpaper from a link
+            // says "not available".
+            "apps.desktop.**",
+            "!apps.desktop.wallpaper.openverse.**",
             // The OS menu-bar panel and its sections: a page the native
             // helper opens on the computer, meaningless in a demo.
             "!menu-bar.**",

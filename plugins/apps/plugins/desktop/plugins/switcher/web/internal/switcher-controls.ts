@@ -1,21 +1,20 @@
-import { defineInstallSink } from "@plugins/primitives/plugins/scope/plugins/install-sink/web";
+import {
+  defineDesktopSink,
+  type DesktopRuntime,
+} from "@plugins/apps/plugins/desktop/plugins/windows/web";
 
-/** What the mounted switcher overlay lets the keyboard shortcuts do to it. */
 interface SwitcherControls {
   /** Open on the first press, then step the selection (+1 forward, −1 back). */
   step(delta: number): void;
 }
 
-/**
- * The switcher's session (open, which window is selected) is the overlay's own
- * React state; the shortcuts reach it through this sink, which the overlay fills
- * while it is mounted (exactly while the desktop is active).
- */
-export const switcherControlsSink = defineInstallSink<SwitcherControls>({
+/** Each desktop's switcher step control (installed by its switcher overlay). */
+export const switcherControls = defineDesktopSink<SwitcherControls>({
   name: "desktop.switcher",
   what: "the window switcher's step control (installed by the switcher overlay while the desktop is active)",
 });
 
-export function stepSwitcher(delta: number): void {
-  switcherControlsSink.peekOrThrow().step(delta);
+/** Step `desk`'s switcher (open it on the first press). */
+export function stepSwitcher(desk: DesktopRuntime, delta: number): void {
+  switcherControls.peekOrThrow(desk).step(delta);
 }

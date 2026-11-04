@@ -121,8 +121,6 @@ would empty a slot somebody had just filled.
 - Cross-plugin:
   - Imported by:
     - `apps-core/tabs`
-    - `apps/desktop/launcher`
-    - `apps/desktop/switcher`
     - `apps/desktop/windows`
     - `primitives/overlay/overlay-boundary`
     - `primitives/pane`

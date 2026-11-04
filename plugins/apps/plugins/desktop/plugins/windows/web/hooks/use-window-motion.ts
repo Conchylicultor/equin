@@ -6,16 +6,16 @@ import {
   useSyncExternalStore,
   type CSSProperties,
 } from "react";
-import {
-  consumeWindowIntro,
-  type FloatingWindow,
-  type WindowId,
-} from "./use-floating-windows";
+import type { FloatingWindow, WindowId } from "./use-floating-windows";
 import { snapBox } from "./use-snap";
-import { peekMinimizeTarget } from "../internal/minimize-target";
-import { useWorkAreaReserve } from "../internal/work-area";
-import { usePeekedWindow } from "../internal/peek";
-import { useOverviewSlots } from "../internal/overview";
+import {
+  useDesktop,
+  useOverviewSlots,
+  usePeekedWindow,
+  useWindowInteracting,
+  useWorkAreaReserve,
+  type DesktopRuntime,
+} from "../internal/desktop-runtime";
 
 /**
  * Window motion — the presentational animation layer for floating windows.
@@ -107,8 +107,12 @@ interface Aim {
  * (`offsetLeft/Top` ignore transforms), so it is right mid-tween too; falls
  * back to {@link FALLBACK_AIM} without a target. An event-time read.
  */
-function minimizeAim(tabId: string, windowId: WindowId): Aim {
-  const target = peekMinimizeTarget(windowId);
+function minimizeAim(
+  desk: DesktopRuntime,
+  tabId: string,
+  windowId: WindowId,
+): Aim {
+  const target = desk.minimizeTargetOf(windowId);
   const el = document.querySelector<HTMLElement>(
     `[data-tab-id="${CSS.escape(tabId)}"]`,
   );
@@ -123,46 +127,6 @@ function minimizeAim(tabId: string, windowId: WindowId): Aim {
     transform: `translate(${tx - cx}px, ${ty - cy}px) scale(0.06)`,
     origin: "50% 50%",
   };
-}
-
-// ---------------------------------------------------------------------------
-// Interaction channel — windows currently being pointer-dragged or resized.
-// Module-global by design, mirroring this plugin's other transient channels
-// (geometry, snap preview): the writer (chrome drag handlers) and reader
-// (the style hook) live in the same single focused floating surface.
-// ---------------------------------------------------------------------------
-
-// page-global by design: a transient set of windows under active pointer drag/resize, shared between the chrome's drag handlers and the per-window style hook (mirrors this plugin's module-global geometry + snap-preview channels).
-const interacting = new Set<WindowId>();
-const interactionSubs = new Set<() => void>();
-
-function notifyInteraction() {
-  for (const fn of interactionSubs) fn();
-}
-
-/** Mark a window as under active pointer manipulation (drag / resize start). */
-export function beginWindowInteraction(id: WindowId) {
-  if (interacting.has(id)) return;
-  interacting.add(id);
-  notifyInteraction();
-}
-
-/** Clear a window's active-manipulation flag (drag / resize end). */
-export function endWindowInteraction(id: WindowId) {
-  if (!interacting.delete(id)) return;
-  notifyInteraction();
-}
-
-/** Reactive read: is this window being pointer-dragged/resized right now? */
-function useWindowInteracting(id: WindowId): boolean {
-  return useSyncExternalStore(
-    (cb) => {
-      interactionSubs.add(cb);
-      return () => interactionSubs.delete(cb);
-    },
-    () => interacting.has(id),
-    () => false,
-  );
 }
 
 // ---------------------------------------------------------------------------
@@ -234,6 +198,7 @@ export function useFloatingWindowStyle(
   onActiveDesktop: boolean,
 ): WindowStyle {
   const reduced = usePrefersReducedMotion();
+  const desk = useDesktop();
   const dragging = useWindowInteracting(win.id);
   const reserve = useWorkAreaReserve();
   const peeked = usePeekedWindow();
@@ -243,7 +208,9 @@ export function useFloatingWindowStyle(
   // Open pop only for a genuinely fresh window (minted, not hydrated/merged) that
   // is the shown member — consumed once so a placement round-trip never re-plays.
   const [phase, setPhase] = useState<Phase>(() =>
-    !reduced && isActive && consumeWindowIntro(win.id) ? "intro" : "normal",
+    !reduced && isActive && desk.windows.consumeWindowIntro(win.id)
+      ? "intro"
+      : "normal",
   );
   // Two-step arm for the enter tweens (intro / restoring): render the "from"
   // frame first, then flip `play` after it painted so the browser tweens to the
@@ -288,8 +255,8 @@ export function useFloatingWindowStyle(
     if ((phase !== "minimizing" && phase !== "restoring") || aim !== null)
       return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- a layout measurement (the window's box against the shelf entry's) that the tween's far end is derived from; it can only be read once the window is laid out.
-    setAim(minimizeAim(tabId, win.id));
-  }, [phase, aim, tabId, win.id]);
+    setAim(minimizeAim(desk, tabId, win.id));
+  }, [phase, aim, tabId, win.id, desk]);
 
   // Enter the close exit tween when the host flags this (whole-)window closing.
   // Reduced-motion / inactive members get no tween: the host unmounts the chrome

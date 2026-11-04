@@ -14,8 +14,7 @@
     - `apps-core.Apps`
     - `apps-core/app-icon.AppIconTile`
     - `apps-core/app-icon.DEFAULT_APP_ICON`
-    - `apps-core/tabs.getSurfaceMode`
-    - `apps-core/tabs.useSurfaceMode`
+    - `apps-core/tabs.peekFocusedTabSet`
     - `config_v2.ConfigV2`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/ui-kit.cn`
@@ -24,8 +23,7 @@
   - Exports (values):
     - `DesktopAppTile`
     - `desktopThemeScope`
-    - `isDesktopActive`
-    - `useDesktopActive`
+    - `peekDesktopActive`
 - Server:
   - Contributes: `ConfigV2.Register` "shelf"
   - Uses: `config_v2.ConfigV2`

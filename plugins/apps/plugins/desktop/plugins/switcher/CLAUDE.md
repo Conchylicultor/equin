@@ -43,8 +43,8 @@ character on a US keyboard.
     - `Shortcuts.Shortcut` "desktop.switcher-next (mod+`)"
     - `Shortcuts.Shortcut` "desktop.switcher-prev (mod+shift+`)"
     - `Shortcuts.Shortcut` "desktop.switcher-prev-tilde (mod+shift+~)"
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps/desktop/windows` ×8
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/desktop/windows` ×10
     - `apps/desktop/shell` ×2
     - `apps-core/tabs.useTabs`
     - `apps-core.Apps`
@@ -58,7 +58,6 @@ character on a US keyboard.
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/scope/install-sink.defineInstallSink`
     - `primitives/shortcuts.defineShortcut`
 - Cross-plugin:
   - Uses tokens:

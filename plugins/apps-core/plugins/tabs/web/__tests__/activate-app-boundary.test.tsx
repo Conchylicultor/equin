@@ -16,15 +16,15 @@ import { defaultStore } from "@plugins/primitives/plugins/pane/web/testing";
 import { runActivation } from "@plugins/primitives/plugins/link-gesture/core";
 import { TabsProvider, getSurfaceMode, useTabs } from "../internal/use-tabs";
 import { useActivateApp } from "../internal/use-activate-app";
-import { registerPlacementCapabilities } from "../internal/placement-registry";
+import { pagePlacementRegistry } from "../internal/placement-registry";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 // AN APP PICK INSIDE AN EMBED IS THE EMBED'S.
 //
 // The launcher drawn inside an `<AppEmbed>` activates apps through
-// `useActivateApp`. Every pick — a surface-mode app (the desktop) included —
-// goes to the embed's `AppNavBoundary`, never to the host's tabs or surface
-// mode.
+// `useActivateApp`. A tab app's pick goes to the embed's `AppNavBoundary`; a
+// surface-mode app (the desktop) switches the mode of the tab set the
+// launcher is in — the embed's own — never the host's tabs or surface mode.
 
 /** Minimal in-memory Storage — jsdom's sessionStorage under vitest is inert. */
 class MemoryStorage implements Storage {
@@ -84,6 +84,23 @@ function useHarness() {
   return { tabs: useTabs(), activate: useActivateApp() };
 }
 
+/** The harness inside an embedded tab set, itself inside the page's. */
+async function mountEmbedded(onLeave: (url: string) => void) {
+  const rendered = renderHook(() => useHarness(), {
+    wrapper: ({ children }: { children: ReactNode }) => (
+      <PluginProvider plugins={[plugin]} composition={composition}>
+        <TabsProvider>
+          <TabsProvider embedded={{ app: "pages", route: "/", onLeave }}>
+            {children}
+          </TabsProvider>
+        </TabsProvider>
+      </PluginProvider>
+    ),
+  });
+  await act(async () => {});
+  return rendered.result;
+}
+
 async function mount(boundary: ((url: string) => void) | null) {
   const rendered = renderHook(() => useHarness(), {
     wrapper: ({ children }: { children: ReactNode }) => (
@@ -116,7 +133,7 @@ beforeEach(() => {
   });
   setFocusedApp(undefined);
   window.history.replaceState(null, "", "/pages");
-  uninstallPlacements = registerPlacementCapabilities({
+  uninstallPlacements = pagePlacementRegistry.install({
     defaultId: "docked",
     ids: new Set(["docked", "desktop"]),
     newTabFollows: new Set(["desktop"]),
@@ -140,11 +157,11 @@ function shape(hook: { current: ReturnType<typeof useHarness> }) {
 }
 
 describe("useActivateApp inside an AppNavBoundary", () => {
-  it("a surface-mode app goes to the boundary; the host's surface mode and tabs stay", async () => {
-    const bounded: string[] = [];
-    const hook = await mount((url) => bounded.push(url));
+  it("a surface-mode app switches the embed's own mode; the host's surface mode and URL stay", async () => {
+    const left: string[] = [];
+    const hook = await mountEmbedded((url) => left.push(url));
     const modeBefore = getSurfaceMode();
-    const tabsBefore = shape(hook);
+    expect(hook.current.tabs.contained).toBe(true);
 
     await act(async () => {
       runActivation(
@@ -156,9 +173,27 @@ describe("useActivateApp inside an AppNavBoundary", () => {
       );
     });
 
-    expect(bounded).toEqual(["/desk"]);
+    expect(hook.current.tabs.mode).toBe("desktop");
+    expect(left).toEqual([]);
     expect(getSurfaceMode()).toBe(modeBefore);
-    expect(shape(hook)).toEqual(tabsBefore);
+    expect(window.location.pathname).toBe("/pages");
+  });
+
+  it("a tab app moves the embedded tab set; the host's URL stays", async () => {
+    const hook = await mountEmbedded(() => {});
+    expect(shape(hook)).toEqual(["pages"]);
+
+    await act(async () => {
+      runActivation(
+        hook.current.activate({
+          id: "story",
+          app: storyApp,
+          surfaceMode: undefined,
+        }),
+      );
+    });
+
+    expect(shape(hook)).toEqual(["story"]);
     expect(window.location.pathname).toBe("/pages");
   });
 

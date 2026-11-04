@@ -1,5 +1,6 @@
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { useState } from "react";
+import { showToast } from "@plugins/shell/plugins/toast/web";
 import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import { useSetConfig } from "@plugins/config_v2/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
@@ -49,7 +50,15 @@ function WallpaperPickerDialog({ onClose }: { onClose: () => void }) {
     }
     setSaving(true);
     try {
-      const saved = await saveCandidate(fetchEndpoint, candidate);
+      const outcome = await saveCandidate(fetchEndpoint, candidate);
+      if (outcome.kind === "unavailable") {
+        showToast({
+          title: "Not available here",
+          description: outcome.message,
+        });
+        return;
+      }
+      const { saved } = outcome;
       // The picker is the single owner of the config write — providers/endpoints
       // never touch config. Global write (no scopeId).
       setConfig("state", {

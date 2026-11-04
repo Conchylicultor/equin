@@ -2,7 +2,7 @@ import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/co
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { useEffect } from "react";
 import {
-  registerPlacementCapabilities,
+  usePlacementRegistry,
   useTabs,
   type PlacementCapabilities,
 } from "@plugins/apps-core/plugins/tabs/web";
@@ -39,7 +39,8 @@ const DOCKED_ONLY: PlacementCapabilities = {
  */
 export function AppTabsBody() {
   const { tabs, focusedTabId } = useTabs();
-  useEffect(() => registerPlacementCapabilities(DOCKED_ONLY), []);
+  const registry = usePlacementRegistry();
+  useEffect(() => registry.install(DOCKED_ONLY), [registry]);
   return (
     // `transform-gpu` makes this a containing block for `position: fixed`
     // descendants, so an app shell's viewport-pinned sidebar (shadcn

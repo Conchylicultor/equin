@@ -71,7 +71,8 @@ interface WindowSystemMenuProps {
   onMinimize: () => void;
   /** Maximise, or unmaximise a maximised window. */
   onMaximize: () => void;
-  onFullscreen: () => void;
+  /** Absent where the tab set has no solo mode: no item then. */
+  onFullscreen: (() => void) | undefined;
   onTogglePin: () => void;
   onCloseWindow: () => void;
   /** Other windows of this desktop this window's active tab can be merged into. */
@@ -159,10 +160,12 @@ export function WindowSystemMenu({
             {formatShortcutLabel(MAXIMIZE_SHORTCUT)}
           </DropdownMenuShortcut>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={onFullscreen}>
-          <Icon icon={fullscreenIcon} />
-          Full screen
-        </DropdownMenuItem>
+        {onFullscreen && (
+          <DropdownMenuItem onClick={onFullscreen}>
+            <Icon icon={fullscreenIcon} />
+            Full screen
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         {/* A plain item whose icon turns into the check when on (the mockup's
             menu): a checkbox item draws its own indicator and has no room

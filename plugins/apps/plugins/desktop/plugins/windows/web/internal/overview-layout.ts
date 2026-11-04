@@ -1,4 +1,4 @@
-import type { WindowId } from "../hooks/use-floating-windows";
+import type { WindowId } from "./window-store";
 import type { Rect } from "../hooks/use-snap";
 
 /** Inset (px) of the overview grid from the desktop's sides and bottom. */

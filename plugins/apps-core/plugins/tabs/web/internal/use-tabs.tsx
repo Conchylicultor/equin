@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -19,6 +20,8 @@ import {
   setLiveStore,
   setHistoryAdapter,
   appNavSink,
+  AppNavBoundary,
+  type AppNavigator,
   type ParsedRoute,
   type PaneSlot,
   type PaneStore,
@@ -47,11 +50,15 @@ import {
 } from "./shell-history-adapter";
 import { setFocusedTabTitle } from "./focused-tab-title-store";
 import {
+  createPlacementRegistry,
+  exitPlacementOf,
   peekDefaultPlacement,
-  peekExitPlacement,
-  peekPlacementAllowsEmpty,
-  usePlacementCapabilities,
+  placementAllowsEmpty,
+  PlacementRegistryProvider,
+  usePlacementRegistry,
+  type PlacementRegistry,
 } from "./placement-registry";
+import { claimTabSet, PAGE_TAB_SET_ID, registerTabSet } from "./tab-sets";
 import {
   appPathFor,
   loadPersistedTabs,
@@ -64,6 +71,18 @@ import {
 import { isDeadUnresolvedLink, loadScopePrefixFor } from "./load-scope";
 
 export interface TabsApi {
+  /**
+   * Which tab set this is: `"page"` for the app's own surface, `embed:<id>`
+   * for an `AppEmbed`'s. Stable for the provider's lifetime — what state kept
+   * per tab set (the desktop's windows) is keyed by.
+   */
+  id: string;
+  /**
+   * The tab set renders inside a box on the page (an embedded set, an
+   * `AppEmbed`'s), not the window: a placement that escapes to the viewport
+   * (solo) is not one of its modes.
+   */
+  contained: boolean;
   tabs: Tab[];
   /**
    * The focused tab — `undefined` exactly when `tabs` is empty, which only a
@@ -511,13 +530,79 @@ export function bootTabs(
 }
 
 /**
+ * An EMBEDDED tab set (`AppEmbed`): a second, self-contained tab set rendered
+ * inside the page, beside the page's own. It boots one tab of `app` at `route`
+ * and touches nothing of the page: no store is ever live (the URL and history
+ * are the page's), nothing is persisted (sessionStorage is the page's), no
+ * route prefix, no history adapter, and none of the page-global signals (the
+ * surface mode, the navigator sink, the focused app and title, the live-store
+ * pointer). Every cross-app hop read through the boundary comes to its own
+ * navigator: a URL of an app in scope moves this tab set, one carrying a
+ * surface-mode app's base path (`/desktop`, `/desktop/agents/…`) switches its
+ * mode first, and anything else is `onLeave(url)`.
+ */
+export interface EmbeddedTabSet {
+  /** The app the first tab shows. */
+  app: string;
+  /** Its app-relative route (`/c/<id>`; `/` or `""` for the app's index). */
+  route: string;
+  /** An app-rooted URL no app in scope owns. */
+  onLeave: (url: string) => void;
+}
+
+/** The embedded boot: one tab of the seed app, its route pending until resolved. */
+function bootEmbedded(apps: AppList, seed: EmbeddedTabSet): BootState {
+  const tab: Tab = {
+    tabId: crypto.randomUUID(),
+    appId: seed.app,
+    store: makeBackgroundStore(seed.app, apps),
+  };
+  const rawPath = normalizeRawPath(seed.route);
+  if (rawPath !== "") tab.store.seedPending(rawPath);
+  return { tabs: [tab], focusedTabId: tab.tabId, mode: "" };
+}
+
+/**
+ * A surface-mode app whose base path prefixes `path` (`/desktop`,
+ * `/desktop/agents/c/x`): its mode and the path after the prefix (`/` when
+ * bare). Undefined when no surface-mode app in `apps` owns the prefix.
+ */
+function splitSurfacePrefix(
+  path: string,
+  apps: AppList,
+): { mode: Placement; rest: string } | undefined {
+  for (const entry of apps) {
+    const mode = entry.surfaceMode;
+    const base = entry.app.basePath;
+    if (mode === undefined) continue;
+    if (path === base) return { mode, rest: "/" };
+    if (path.startsWith(`${base}/`))
+      return { mode, rest: path.slice(base.length) };
+  }
+  return undefined;
+}
+
+/**
  * Owns the open-tab set and the focus model. Each tab has its own pane store;
  * exactly one store is `live` (the focused tab's). On focus switch we flip
  * liveness, repoint the imperative live store, set the new store's base path,
  * and assert its route into the URL so `useActiveApp` (URL-driven) resolves to
  * the focused tab. Persists to sessionStorage on every structural/route change.
  */
-export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
+export function TabsProvider({
+  children,
+  embedded,
+}: {
+  children: ReactNode;
+  /** Omitted: the page's own tab set. Given: an embedded one (see {@link EmbeddedTabSet}). */
+  embedded?: EmbeddedTabSet;
+}): ReactNode {
+  // Fixed for the provider's lifetime: a tab set is the page's or embedded
+  // from its first render on (the seed is read once, like `app`/`route` of
+  // `AppEmbed`).
+  const [page] = useState(() => embedded === undefined);
+  const reactId = useId();
+  const id = page ? PAGE_TAB_SET_ID : `embed:${reactId}`;
   const apps = Apps.App.useContributions();
   const initialApp = useActiveApp();
   // The composition's declared home app id — fixed for the page's lifetime
@@ -529,7 +614,12 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
 
   const [{ tabs: initialTabs, focusedTabId: initialFocus, mode: initialMode }] =
     useState(() =>
-      bootTabs(apps, initialApp?.id ?? registeredHome(apps, homeId)?.id ?? ""),
+      embedded !== undefined
+        ? bootEmbedded(apps, embedded)
+        : bootTabs(
+            apps,
+            initialApp?.id ?? registeredHome(apps, homeId)?.id ?? "",
+          ),
     );
   const [tabs, setTabs] = useState<Tab[]>(initialTabs);
   const [focusedTabId, setFocusedTabId] = useState<string | undefined>(
@@ -548,7 +638,14 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   // persisted payload) agreeing with what the surface actually paints; before
   // this, a cold boot published `""` forever and the rail/tab bar dropped the
   // focused app's theme while the docked tab kept it.
-  const capabilities = usePlacementCapabilities();
+  // This tab set's placement registry: the page's is the page-global one its
+  // chrome reads; an embedded set mints its own, which only its own surface
+  // body writes and only it reads.
+  const outerRegistry = usePlacementRegistry();
+  const [registry] = useState<PlacementRegistry>(() =>
+    page ? outerRegistry : createPlacementRegistry(id),
+  );
+  const capabilities = registry.useValue();
   const mode =
     capabilities !== null && !capabilities.ids.has(rawMode)
       ? capabilities.defaultId
@@ -595,15 +692,17 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   // placement registers, and the boot stamp must not drop the prefix the URL
   // was opened with meanwhile. Written in render (idempotent) so it is in place
   // before the first commit; `applyMode` writes it imperatively too.
-  setActiveRoutePrefix(routePrefixForMode(rawMode, apps));
+  if (page) setActiveRoutePrefix(routePrefixForMode(rawMode, apps));
 
   // The installed shell history adapter — the one writer for the empty
   // surface's URL, which no pane store can write (none is live).
   const adapterRef = useRef<ShellHistoryAdapter | null>(null);
 
+  // An embedded tab set persists nothing: sessionStorage is the page's.
   const persist = useCallback(() => {
+    if (!page) return;
     savePersistedTabs(tabsRef.current, focusedRef.current, modeRef.current);
-  }, []);
+  }, [page]);
 
   // The empty-surface store: what the live-store pointer holds while the
   // surface holds no tab. Every open from outside a surface (`useOpenPane` in
@@ -624,9 +723,10 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   const enterEmptySurface = useCallback(() => {
     const store = makeEmptySurfaceStore(appsRef.current, homeId);
     emptyStoreRef.current = store;
+    if (!page) return;
     setLiveStore(store);
     surfaceEmpty = true;
-  }, [appsRef, homeId]);
+  }, [appsRef, homeId, page]);
 
   // One-time: point the imperative live store at the initially-focused tab's
   // store. (bootTabs already created it `live`; this wires the module pointer.)
@@ -634,9 +734,10 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   // eslint-disable-next-line react-hooks/refs -- intentional run-once guard read+written during render: wires the module-level live-store pointer to the initially-focused tab exactly once on mount (a one-shot init, not a latest-value sync).
   if (!wiredRef.current) {
     wiredRef.current = true;
+    // An embedded set's stores are never live: the live store is the page's.
     const focused = initialTabs.find((t) => t.tabId === initialFocus);
-    if (focused) setLiveStore(focused.store);
-    else if (bootEmptyStore) setLiveStore(bootEmptyStore);
+    if (page && focused) setLiveStore(focused.store);
+    else if (page && bootEmptyStore) setLiveStore(bootEmptyStore);
   }
 
   // Subscribe to each store's route changes to persist on navigation. Re-wired
@@ -667,7 +768,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
    */
   const activate = useCallback(
     (next: Tab, target?: ActivateTarget, mode: "push" | "replace" = "push") => {
-      surfaceEmpty = false;
+      if (page) surfaceEmpty = false;
       emptyStoreRef.current = null;
       const current = tabsRef.current.find(
         (t) => t.tabId === focusedRef.current,
@@ -679,8 +780,12 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
         next.store.setRoute(target.route, false, target.index);
       } else if (target?.kind === "pending")
         next.store.seedPending(target.rawPath);
-      next.store.live = true;
-      setLiveStore(next.store);
+      // An embedded set's stores stay background: its routes live in memory,
+      // and the "mirror" below is an in-memory update, never the page URL.
+      if (page) {
+        next.store.live = true;
+        setLiveStore(next.store);
+      }
       // Point the focused-tab ref at `next` BEFORE mirroring: the shell adapter's
       // commit stamps the FOCUSED tab's `{ tabId, appId }` into the new history
       // entry, so the ref must already name `next`, not the outgoing tab. This is
@@ -701,7 +806,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
         next.store.setRoute(state.slots, replace, next.store.getIndexParams());
       }
     },
-    [],
+    [page],
   );
 
   // Focus-flip WITHOUT mirroring to history — the back/forward restore path,
@@ -715,6 +820,8 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
     const current = tabsRef.current.find((t) => t.tabId === focusedRef.current);
     if (current && current.tabId !== next.tabId) current.store.live = false;
     next.store.setBasePath(appPathFor(next.appId, appsRef.current));
+    // Only the page's history adapter restores (it calls this), so this is
+    // always the page's tab set.
     next.store.live = true;
     setLiveStore(next.store);
     // Point the focused-tab ref at `next` so the adapter's subsequent
@@ -800,10 +907,10 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       else activateWithoutMirror(tab);
       focusedRef.current = tabId;
       setFocusedTabId(tabId);
-      setFocusedApp(appId);
+      if (page) setFocusedApp(appId);
       persist();
     },
-    [activate, activateWithoutMirror, persist],
+    [activate, activateWithoutMirror, persist, page],
   );
 
   // The launcher (Home) tab and the rail navigate INTO the picked app instead of
@@ -952,9 +1059,20 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   // Push focus changes into the shortcuts focused-surface signal (push-based, no
   // polling) so surface-scoped shortcuts read the focused surface from the
   // window keydown handler outside any React subtree.
+  //
+  // An embedded set publishes too — keyboard scope follows the user into it —
+  // but not at mount: mounting an embed is not the user moving into it. The
+  // surface body also claims focus on pointer-down, for a tab that was
+  // already its set's focused one.
+  const lastPublishedRef = useRef<string | undefined | null>(
+    page ? null : focusedTabId,
+  );
   useEffect(() => {
+    if (lastPublishedRef.current === focusedTabId) return;
+    lastPublishedRef.current = focusedTabId;
     setFocusedSurfaceId(focusedTabId);
-  }, [focusedTabId]);
+    claimTabSet(id);
+  }, [focusedTabId, id]);
 
   // Publish the focused tab's app to the chrome-identity module store on every
   // focus/app change (and on boot). Chrome rendered OUTSIDE a surface (rail, tab
@@ -965,16 +1083,16 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   // steady-state effect covers every other focus/app transition.
   const focusedAppId = tabs.find((t) => t.tabId === focusedTabId)?.appId;
   useEffect(() => {
-    setFocusedApp(focusedAppId);
-  }, [focusedAppId]);
+    if (page) setFocusedApp(focusedAppId);
+  }, [focusedAppId, page]);
 
   // The focused tab's content title, for the same out-of-provider readers
   // (`useFocusedTabTitle`): a Core.Root host cannot call `useTabs()`.
   const focusedTabTitle =
     focusedTabId === undefined ? undefined : titles[focusedTabId];
   useEffect(() => {
-    setFocusedTabTitle(focusedTabTitle);
-  }, [focusedTabTitle]);
+    if (page) setFocusedTabTitle(focusedTabTitle);
+  }, [focusedTabTitle, page]);
 
   // Publish the cross-app navigator at module scope so out-of-provider callers
   // (the floating bar, a sibling Core.Root) can reach it via the free
@@ -985,6 +1103,8 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   // layer sits BELOW this one (tabs imports pane), so it cannot call in
   // directly. Same seam shape as `setHistoryAdapter` above.
   useEffect(() => {
+    // An embedded set's navigator is its boundary (below), never the page's.
+    if (!page) return;
     setTabsNavigator(navigate);
     // The sink's disposer restores the PREVIOUS occupant rather than clearing,
     // and is inert once superseded — so a StrictMode double-mount (install,
@@ -994,7 +1114,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       setTabsNavigator(null);
       uninstallAppNav();
     };
-  }, [navigate]);
+  }, [navigate, page]);
 
   // A tab never shows another app's route (see `routeHomeApp`). The opener
   // already hands such a route to its app; this catches every way that skips
@@ -1066,7 +1186,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       setTabTitle(tabId, undefined);
 
       if (remaining.length === 0) {
-        if (!peekPlacementAllowsEmpty(modeRef.current)) {
+        if (!placementAllowsEmpty(registry.peek(), modeRef.current)) {
           seedHome();
           return;
         }
@@ -1105,7 +1225,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       }
       persist();
     },
-    [activate, persist, setTabTitle, seedHome, enterEmptySurface],
+    [activate, persist, setTabTitle, seedHome, enterEmptySurface, registry],
   );
 
   // Reorder the open-tab set: move `activeId` to `overId`'s position. Pure array
@@ -1145,16 +1265,19 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       previousModeRef.current = modeRef.current;
       modeRef.current = next;
       setModeState(next);
-      setActiveRoutePrefix(routePrefixForMode(next, appsRef.current));
+      if (page) setActiveRoutePrefix(routePrefixForMode(next, appsRef.current));
       persist();
       // Leaving the desktop with no window open: the next mode needs a tab.
-      if (tabsRef.current.length === 0 && !peekPlacementAllowsEmpty(next)) {
+      if (
+        tabsRef.current.length === 0 &&
+        !placementAllowsEmpty(registry.peek(), next)
+      ) {
         seedHome();
       } else if (project) {
         adapterRef.current?.reproject();
       }
     },
-    [persist, seedHome, appsRef],
+    [persist, seedHome, appsRef, page, registry],
   );
   const setMode = useCallback(
     (next: Placement) => applyMode(next, true),
@@ -1177,8 +1300,8 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   }, [capabilities, tabs.length, rawMode, mode, deferredComplete, seedHome]);
 
   useEffect(() => {
-    surfaceEmpty = tabs.length === 0;
-  }, [tabs.length]);
+    if (page) surfaceEmpty = tabs.length === 0;
+  }, [tabs.length, page]);
 
   // Adopt the empty-surface store as a new focused tab the moment it receives
   // a route — a pane opened from outside every surface while none is open
@@ -1225,9 +1348,9 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
     setMode(
       prev && prev !== modeRef.current
         ? prev
-        : peekExitPlacement(modeRef.current),
+        : exitPlacementOf(registry.peek(), modeRef.current),
     );
-  }, [setMode]);
+  }, [setMode, registry]);
 
   // Install the shell (app-aware) history adapter so the pane store's push/
   // replace intents stamp `{ tabId, appId }` and browser back/forward restores
@@ -1244,6 +1367,8 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   // disposer, which puts the previous occupant — the standalone default
   // adapter — back. The dep callbacks are stable, so this runs once.
   useEffect(() => {
+    // The page's history is the page tab set's: an embedded one installs none.
+    if (!page) return;
     const adapter = makeShellHistoryAdapter({
       focused: () => {
         const t = tabsRef.current.find((x) => x.tabId === focusedRef.current);
@@ -1310,10 +1435,13 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
     persist,
     applyModeRef,
     appsRef,
+    page,
   ]);
 
   const api = useMemo<TabsApi>(
     () => ({
+      id,
+      contained: !page,
       tabs,
       focusedTabId,
       titles,
@@ -1329,6 +1457,8 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       moveTab,
     }),
     [
+      id,
+      page,
       tabs,
       focusedTabId,
       titles,
@@ -1349,9 +1479,64 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   // callers (floating-bar mode control, Esc shortcut, pin guard) can read and
   // drive it. Mirrors the `setTabsNavigator` handle above.
   useEffect(() => {
+    if (!page) return;
     publishSurfaceMode(mode, setMode, exitToPreviousMode);
     return () => publishSurfaceMode(peekDefaultPlacement(), null, null);
-  }, [mode, setMode, exitToPreviousMode]);
+  }, [mode, setMode, exitToPreviousMode, page]);
 
-  return <TabsContext.Provider value={api}>{children}</TabsContext.Provider>;
+  // Register this tab set for out-of-tree callers (`peekFocusedTabSet()`: a
+  // shortcut acting on the tab set the user is in).
+  const modeForHandle = useLatestRef(mode);
+  useEffect(
+    () =>
+      registerTabSet({
+        id,
+        contained: !page,
+        mode: () => modeForHandle.current,
+        hasTab: (tabId) => tabsRef.current.some((t) => t.tabId === tabId),
+        focusedTabId: () => focusedRef.current,
+      }),
+    [id, page, modeForHandle],
+  );
+
+  // An embedded set's navigation boundary: every cross-app hop read through it
+  // (`useNavigate`, `useAppLink`, `usePromote`, `useBack`, `useOpenPane`,
+  // `useActivateApp`) lands in this tab set, never the page's.
+  const leaveRef = useLatestRef(embedded?.onLeave);
+  const boundary = useCallback<AppNavigator>(
+    (url) => {
+      let path = new URL(url, "http://embed.invalid").pathname;
+      const prefixed = splitSurfacePrefix(path, appsRef.current);
+      if (prefixed !== undefined) {
+        setMode(prefixed.mode);
+        if (prefixed.rest === "/") return;
+        path = prefixed.rest;
+      }
+      const resolved = resolveAppForPath(path, appsRef.current);
+      // An app outside the scope, or a dead link into one in it (a pane its
+      // composition does not carry, once loading settled): not this embed's
+      // to hold — `navigate` would throw for the latter.
+      if (
+        resolved === undefined ||
+        (parseUrl(resolved.routePath).status === "unresolved" &&
+          isDeadUnresolvedLink(loadScopePrefixFor(resolved.app._pluginId)))
+      ) {
+        leaveRef.current?.(url);
+        return;
+      }
+      navigate(path);
+    },
+    [appsRef, leaveRef, navigate, setMode],
+  );
+
+  const provided = (
+    <PlacementRegistryProvider value={registry}>
+      <TabsContext.Provider value={api}>{children}</TabsContext.Provider>
+    </PlacementRegistryProvider>
+  );
+  return page ? (
+    provided
+  ) : (
+    <AppNavBoundary navigator={boundary}>{provided}</AppNavBoundary>
+  );
 }

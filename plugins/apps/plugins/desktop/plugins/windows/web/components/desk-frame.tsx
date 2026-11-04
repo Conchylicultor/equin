@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { setDeskBoundsReader } from "../internal/desk-bounds";
+import { useDesktop } from "../internal/desktop-runtime";
 
 /**
  * A headless full-bleed box over the desktop that lends its size to the
@@ -8,15 +8,16 @@ import { setDeskBoundsReader } from "../internal/desk-bounds";
  */
 export function DeskFrame() {
   const ref = useRef<HTMLDivElement>(null);
+  const desk = useDesktop();
   useEffect(
     () =>
-      setDeskBoundsReader(() => {
+      desk.setDeskBoundsReader(() => {
         const r = ref.current?.getBoundingClientRect();
         return r && r.width > 0 && r.height > 0
           ? { width: r.width, height: r.height }
           : null;
       }),
-    [],
+    [desk],
   );
   return (
     <div

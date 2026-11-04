@@ -89,6 +89,31 @@ hook is an error; module-level helpers, stores and commands stay legal.
 pane that declares a home app can be promoted into it. Pane sits below tabs and
 cannot import it, hence the sink.
 
+## A tab set is an instance: the page's, or an embedded one
+
+`TabsProvider` with no props is **the page's tab set** — everything above. With
+`embedded={{ app, route, onLeave }}` it is an **embedded tab set** (an
+`AppEmbed`'s, a box on the page beside the app's own): it boots one tab of
+`app` at `route` from that seed, never from the URL; its stores are never live;
+it persists nothing, installs no history adapter, writes no route prefix and
+publishes none of the page-global signals (surface mode, navigator sink,
+focused app, focused-tab title, live-store pointer, `surfaceEmpty`). It wraps
+its children in its own `AppNavBoundary`: an app in scope → its `navigate`, a
+surface-mode app's base path (`/desktop/…`) → its own `setMode`, anything
+else → `onLeave`. `TabsApi.id` (`"page"` / `embed:<id>`) keys state kept per
+tab set (the desktop's windows); `TabsApi.contained` says it is a box, where
+a `viewport`-framed placement (solo) is not a mode.
+
+Each tab set has its **own placement registry** (`usePlacementRegistry()` —
+the surface body registers into the one of the set it is in); the page's is
+the one the page-global readers (`usePlacementCapabilities`, the tab bar, the
+theme scope) read. Code outside React that must act on the tab set the user is
+in — a shortcut's `when` / handler — reads `peekFocusedTabSet()`: the set last
+claimed (`claimTabSet`, by the surface body on pointer-down and by the
+provider on a focus change), else the page's. A surface-mode app's activation
+(`useActivateApp`) switches the mode of the set it is drawn in, the context's.
+Design: `research/2026-11-04-global-desktop-mode-in-browser-demo.md`.
+
 ## A tab never shows another app's route
 
 A route belongs to its root pane's app (`routeHomeApp`, see the pane
@@ -188,40 +213,44 @@ same browser tab from finding the blob. Both call sites are marked for removal.
 
 ## Plugin reference
 
-- Description: Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, the focused tab's title as a module signal (useFocusedTabTitle, readable outside TabsProvider), and the surface-written placement-capabilities registry.
+- Description: Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, the focused tab's title as a module signal (useFocusedTabTitle, readable outside TabsProvider), and the surface-written placement-capabilities registry — one per tab set: the page's own, or an embedded one (TabsProvider embedded={{ app, route, onLeave }}, an AppEmbed's: seeded, never live, persisting nothing, publishing no page-global signal, behind its own navigation boundary), found from outside React by peekFocusedTabSet().
 - Web:
-  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/pane` ×18
+  - Uses: 48 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×20
     - `apps-core` ×9
     - `primitives/scope/app-instance` ×5
     - `primitives/embed` ×3
     - `primitives/link-gesture` ×2
     - `primitives/pane/route-prefix` ×2
+    - `primitives/scope/install-sink` ×2
+    - `primitives/shortcuts` ×2
     - `primitives/dom/web-storage.defineStore`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/scope/install-sink.defineInstallSink`
     - `primitives/scope/surface-id.useSurfaceTabId`
-    - `primitives/shortcuts.setFocusedSurfaceId`
   - Exports (types):
+    - `EmbeddedTabSet`
     - `NavigateOptions`
     - `PlacementCapabilities`
+    - `PlacementRegistry`
     - `Tab`
     - `TabsApi`
+    - `TabSetHandle`
   - Exports (values):
     - `appContributionFor`
     - `appLink`
     - `appLinkProps`
     - `appPathFor`
+    - `claimTabSet`
     - `exitToPreviousMode`
     - `getSurfaceMode`
     - `loadScopePrefixFor`
     - `navigate`
     - `peekDefaultPlacement`
+    - `peekFocusedTabSet`
     - `peekSurfaceEmpty`
     - `placementHasAppThemeScope`
     - `placementIsNewTabFollows`
     - `placementOwnsChrome`
-    - `registerPlacementCapabilities`
     - `setSurfaceMode`
     - `TabsProvider`
     - `useActivateApp`
@@ -231,6 +260,7 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `useFocusedTabTitle`
     - `useNavigate`
     - `usePlacementCapabilities`
+    - `usePlacementRegistry`
     - `useSurfaceFocused`
     - `useSurfaceMode`
     - `useTabs`

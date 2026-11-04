@@ -1,4 +1,8 @@
-import { defineInstallSink } from "@plugins/primitives/plugins/scope/plugins/install-sink/web";
+import { createContext, useContext } from "react";
+import {
+  defineInstallSink,
+  type InstallSink,
+} from "@plugins/primitives/plugins/scope/plugins/install-sink/web";
 
 /**
  * The placement *capabilities* `apps`-side chrome needs to make routing
@@ -39,32 +43,48 @@ export interface PlacementCapabilities {
 }
 
 /**
- * The one slot holding the installed placement set. Page-global by design: it
- * is which placement plugins EXIST (the default, which ones the `+` follows,
- * which wear the app theme), identical across every surface and window — not
- * per-surface state — so it is a sink, not a scoped store.
- *
- * Empty until the surface body registers, which happens in an EFFECT. Chrome
- * mounted in that same commit (the tab bar, the chrome theme scope) therefore
- * asks before the answer exists, which is why the render-path read is the
- * subscribed {@link usePlacementCapabilities} and the predicates below take the
- * value rather than fetching it.
+ * Where a tab set's placement capabilities live: one per tab set (see
+ * `TabsProvider`). The surface body filling a tab set writes it; the tab set
+ * and its chrome read it back.
  */
-const placementSink = defineInstallSink<PlacementCapabilities>({
-  name: "tabs.placement-capabilities",
-  what: "the placement capabilities (registered by whichever body fills the surface: apps-core/surface's from its Surface.Placement contributions, tab-surface's docked-only AppTabsBody, or apps-core/layout's error surfaces as an empty set)",
-});
+export type PlacementRegistry = InstallSink<PlacementCapabilities>;
 
 /**
- * Publish the latest placement capabilities. Called by the `surface` body from
- * an effect keyed on its contributions; subscribers re-render when the registry
- * first populates (or the default changes). The returned disposer restores the
- * previous capabilities, so the effect's cleanup is the disposer itself.
+ * Mint the registry of one tab set. Empty until the surface body registers,
+ * which happens in an EFFECT — chrome mounted in that same commit asks before
+ * the answer exists, which is why the render-path read is the subscribed
+ * `useValue` and the predicates below take the value rather than fetching it.
  */
-export function registerPlacementCapabilities(
-  caps: PlacementCapabilities,
-): () => void {
-  return placementSink.install(caps);
+export function createPlacementRegistry(name: string): PlacementRegistry {
+  return defineInstallSink<PlacementCapabilities>({
+    name: `tabs.placement-capabilities:${name}`,
+    what: "the placement capabilities of a tab set (registered by whichever body fills its surface: apps-core/surface's from its Surface.Placement contributions, tab-surface's docked-only AppTabsBody, or apps-core/layout's error surfaces as an empty set)",
+  });
+}
+
+/**
+ * The PAGE tab set's registry — the app's own surface. Page-global chrome
+ * outside every tab set (the tab bar, the root theme scope, the global action
+ * bar) reads this one through the functions below; an embedded tab set (an
+ * `AppEmbed`) has its own, which nothing outside it reads.
+ */
+export const pagePlacementRegistry = createPlacementRegistry("page");
+
+const PlacementRegistryContext = createContext<PlacementRegistry>(
+  pagePlacementRegistry,
+);
+
+/** Provided by `TabsProvider`: the registry of the tab set a subtree is in. */
+export const PlacementRegistryProvider = PlacementRegistryContext.Provider;
+
+/**
+ * The registry of the tab set this subtree belongs to — what a surface body
+ * registers its capabilities into (`useEffect(() => registry.install(caps))`;
+ * the disposer restores the previous occupant). Outside every `TabsProvider`
+ * (the layout's error surfaces) it is the page's.
+ */
+export function usePlacementRegistry(): PlacementRegistry {
+  return useContext(PlacementRegistryContext);
 }
 
 /**
@@ -75,18 +95,21 @@ export function registerPlacementCapabilities(
  * there, or the pre-registration `""` is cached for the component's life.
  */
 export function peekDefaultPlacement(): string {
-  return placementSink.peek()?.defaultId ?? "";
+  return pagePlacementRegistry.peek()?.defaultId ?? "";
 }
 
 /**
- * One-shot read of where to land when LEAVING `current` with nowhere recorded
- * to go back to (solo's exit on a fresh boot): the default placement, unless
- * that IS `current` — then the first other registered placement in control
- * order. Without the second arm a surface that boots into its default solo
- * mode could never be exited. Returns `""` until `surface` registers.
+ * Where to land when LEAVING `current` with nowhere recorded to go back to
+ * (solo's exit on a fresh boot): the default placement, unless that IS
+ * `current` — then the first other registered placement in control order.
+ * Without the second arm a surface that boots into its default solo mode could
+ * never be exited. `""` when nothing is registered yet. Value-in, like the
+ * predicates below: the tab set passes its own registry's `peek()`.
  */
-export function peekExitPlacement(current: string): string {
-  const caps = placementSink.peek();
+export function exitPlacementOf(
+  caps: PlacementCapabilities | null,
+  current: string,
+): string {
   if (caps === null) return "";
   if (caps.defaultId !== current) return caps.defaultId;
   for (const id of caps.ids) if (id !== current) return id;
@@ -98,7 +121,7 @@ export function peekExitPlacement(current: string): string {
  * registers, then re-renders consumers once the registry populates.
  */
 export function useDefaultPlacement(): string {
-  return placementSink.useValue()?.defaultId ?? "";
+  return pagePlacementRegistry.useValue()?.defaultId ?? "";
 }
 
 /**
@@ -110,7 +133,7 @@ export function useDefaultPlacement(): string {
  * the value the two predicates below need.
  */
 export function usePlacementCapabilities(): PlacementCapabilities | null {
-  return placementSink.useValue();
+  return pagePlacementRegistry.useValue();
 }
 
 /**
@@ -159,11 +182,15 @@ export function placementOwnsChrome(
 }
 
 /**
- * Whether the surface may hold no tab at all in mode `id` (the desktop). One-shot
- * read for the tab manager's actions (closing the last tab, switching mode),
- * which run after the surface registered. Not registered yet is `false`: the
- * surface then keeps a tab, the safe direction.
+ * Whether the surface may hold no tab at all in mode `id` (the desktop). For
+ * the tab manager's actions (closing the last tab, switching mode), which run
+ * after the surface registered and pass their registry's `peek()`. Not
+ * registered yet (`null`) is `false`: the surface then keeps a tab, the safe
+ * direction.
  */
-export function peekPlacementAllowsEmpty(id: string): boolean {
-  return placementSink.peek()?.allowsEmpty.has(id) ?? false;
+export function placementAllowsEmpty(
+  caps: PlacementCapabilities | null,
+  id: string,
+): boolean {
+  return caps?.allowsEmpty.has(id) ?? false;
 }

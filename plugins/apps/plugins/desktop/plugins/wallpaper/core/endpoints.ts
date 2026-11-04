@@ -27,8 +27,16 @@ export type WallpaperCandidate =
  * `image/*` content-type under a byte cap, and writes the bytes. Returns the new
  * version + mime; the web picker writes config afterwards.
  */
+/** Cap a saved wallpaper image so a giant file can't exhaust memory or disk. */
+export const MAX_WALLPAPER_BYTES = 25 * 1024 * 1024;
+
+/**
+ * Import a remote image as the wallpaper. Fetched by the computer's server
+ * (SSRF-guarded, `safeFetch`), so a browser host has none: the app says so.
+ */
 export const importWallpaperUrl = defineEndpoint({
   route: "POST /api/wallpaper/import-url",
+  needsMachine: { feature: "Importing a wallpaper from a link" },
   body: z.object({
     url: z.string().url(),
     attribution: WallpaperAttributionSchema.optional(),

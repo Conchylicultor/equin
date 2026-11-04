@@ -11,15 +11,19 @@ const registry = vi.hoisted(() => ({
   disposed: 0,
 }));
 
-vi.mock("@plugins/apps-core/plugins/tabs/web", async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  useTabs: () => ({ tabs: [], focusedTabId: undefined }),
-  registerPlacementCapabilities: (caps: unknown) => {
+const fakeRegistry = vi.hoisted(() => ({
+  install: (caps: unknown) => {
     registry.installed.push(caps);
     return () => {
       registry.disposed++;
     };
   },
+}));
+
+vi.mock("@plugins/apps-core/plugins/tabs/web", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  useTabs: () => ({ tabs: [], focusedTabId: undefined }),
+  usePlacementRegistry: () => fakeRegistry,
 }));
 
 vi.mock("../components/tab-surface", () => ({

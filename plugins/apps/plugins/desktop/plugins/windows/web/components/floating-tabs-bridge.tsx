@@ -1,10 +1,10 @@
 import { useEffect, useMemo } from "react";
 import { useTabs } from "@plugins/apps-core/plugins/tabs/web";
-import { floatingTabsBridgeSink } from "../window-commands";
+import { useDesktop } from "../internal/desktop-runtime";
 
 /**
  * Headless publisher: mirrors the live floating tab order + focus/close/open
- * callbacks into the {@link floatingTabsBridgeSink} install sink so the
+ * callbacks into the {@link the desktop's tabs bridge (`desk.installTabs`)} install sink so the
  * statically-registered window-management shortcuts (close, new window, the
  * overview's pick) can act on windows without the load-bearing `apps` plugin
  * exposing imperative tab handles. Mounted inside the floating Foreground, so
@@ -22,9 +22,10 @@ export function FloatingTabsBridge({ tabIds }: { tabIds: string[] }) {
     [tabs],
   );
   const tabKey = tabIds.join(",");
+  const desk = useDesktop();
   useEffect(
     () =>
-      floatingTabsBridgeSink.install({
+      desk.installTabs({
         tabIds,
         focusTab,
         closeTab,
@@ -32,7 +33,7 @@ export function FloatingTabsBridge({ tabIds }: { tabIds: string[] }) {
         appIdOf: (tabId) => appOf.get(tabId),
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the id set, not the array identity (mirrors FloatingChrome's prune effect)
-    [tabKey, focusTab, closeTab, openTab, appOf],
+    [tabKey, focusTab, closeTab, openTab, appOf, desk],
   );
   return null;
 }

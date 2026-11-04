@@ -18,6 +18,7 @@ export type {
   SavedWallpaper,
 } from "./config";
 export {
+  MAX_WALLPAPER_BYTES,
   importWallpaperUrl,
   uploadWallpaper,
   wallpaperImage,

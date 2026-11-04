@@ -10,7 +10,7 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { DesktopAppTile } from "@plugins/apps/plugins/desktop/plugins/shell/web";
 import {
-  setPeekedWindow,
+  useDesktop,
   WindowSnapshot,
   type FloatingWindow,
 } from "@plugins/apps/plugins/desktop/plugins/windows/web";
@@ -104,6 +104,7 @@ function Thumb({
   onClose: () => void;
 }) {
   const minimized = w.geo.minimized;
+  const desk = useDesktop();
   /* eslint-disable layout/no-adhoc-layout -- the snapshot clips to the thumbnail's rounded corner */
   const snapshotClip = cn(
     "overflow-hidden rounded-md",
@@ -119,8 +120,8 @@ function Thumb({
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") onPick();
       }}
-      onPointerEnter={() => setPeekedWindow(minimized ? null : w.id)}
-      onPointerLeave={() => setPeekedWindow(null)}
+      onPointerEnter={() => desk.setPeekedWindow(minimized ? null : w.id)}
+      onPointerLeave={() => desk.setPeekedWindow(null)}
       // eslint-disable-next-line layout/no-adhoc-layout -- the mockup's `.thumb`: a column whose header is held to the snapshot's width, 6px padding
       className="group/thumb flex flex-col rounded-xl p-xsm hover:bg-foreground/5"
     >

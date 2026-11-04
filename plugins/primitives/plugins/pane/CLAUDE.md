@@ -938,13 +938,13 @@ with an empty route.
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-md`
     - `ui/tokens/shape --spacing`
-  - Imported by: 193 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 192 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×72
     - `conversations` ×31
     - `debug` ×27
     - `active-data` ×10
     - `tasks` ×10
-    - `apps-core` ×7
+    - `apps-core` ×6
     - `plugin-meta` ×6
     - `layouts` ×4
     - `primitives` ×4

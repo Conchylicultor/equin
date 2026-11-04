@@ -32,8 +32,8 @@ desktop's own theme (`app:desktop`).
   wherever it lands (macOS's gesture), so a drop always persists and never
   leaves a reorder the config cannot express. The release's click is swallowed,
   and the peek stays shut while a drag is on.
-- **The shelf tells the windows where it is**, through two windows-plugin
-  channels, so the windows plugin never names the shelf:
+- **The shelf tells the windows where it is**, through two channels of its
+  desktop (`useDesktop()`), so the windows plugin never names the shelf:
   `setWorkAreaReserve(dock height + 16)` keeps maximised and snapped windows off
   the dock, and `setMinimizeTargetResolver` aims a minimising window at its app's
   entry.
@@ -60,8 +60,8 @@ desktop's own theme (`app:desktop`).
 - Description: The desktop's bottom shelf: a centred dock with the launcher button, the pinned apps and the running ones (grouped per app, with window pips, hover thumbnails and a right-click app menu), and the tray — the pager's mini-desktops with their desktop previews, the overview button and the clock. Reserves the desktop's bottom work area and is where windows minimise to.
 - Web:
   - Contributes: `Desktop.Overlay` "Desktop overlay" → `Shelf`
-  - Uses: 55 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps/desktop/windows` ×25
+  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/desktop/windows` ×14
     - `primitives/css/ui-kit` ×4
     - `apps-core` ×3
     - `config_v2` ×2

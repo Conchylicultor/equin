@@ -1,48 +1,27 @@
-import { writeFile } from "node:fs/promises";
-import { readFile } from "@plugins/packages/plugins/timed-fs/core";
-import { desktopDir } from "@plugins/apps/plugins/desktop/data-dirs";
+import { relPath } from "@plugins/infra/plugins/paths/plugins/data-files/core";
+import { desktopFiles } from "./roots";
 
-// Machine-global wallpaper store, at `apps/desktop/wallpaper/` — this plugin's
-// area inside the desktop app's one data dir (`apps/desktop/data-dirs`). The
-// wallpaper is the desktop's content, not an app of its own, so it takes a
-// subdir there rather than declaring an `apps/*` dir. A SINGLETON: there is
-// exactly one current desktop wallpaper, so the image always lands at the same
-// path (a fixed name) and is overwritten on each save. The mime is sidecar
-// metadata so the image route can serve the right content-type after a restart.
-//
-// Until main has moved them, the bytes still sit at the old `apps/wallpaper/`.
-// That is the desktop dir's business, not this file's: its `movedFrom` entry
-// resolves this area to the old location in every process that is not the host
-// singleton, so the store reads and writes the same bytes before and after.
-//
-// Functions, not consts — the subdir handle included: `DataDir.path` is
-// resolved per read, because the data root is env-overridable (and the pending
-// move settles at runtime), so a value frozen at module eval would capture
-// whatever was true when this module was first imported.
-const wallpaperArea = () => desktopDir.subdir("wallpaper");
-const imagePath = (): string => wallpaperArea().file("current");
-const metaPath = (): string => wallpaperArea().file("current.json");
+// The wallpaper store, at `wallpaper/` in the desktop app's one data dir
+// (`desktopFiles`). A SINGLETON: there is exactly one current desktop
+// wallpaper, so the image always lands at the same path (a fixed name) and is
+// overwritten on each save. The mime is sidecar metadata so the image route
+// can serve the right content-type after a restart.
+const imagePath = relPath("wallpaper", "current");
+const metaPath = relPath("wallpaper", "current.json");
 
 interface WallpaperMeta {
   mime: string;
   version: number;
 }
 
-/** Absolute path of the stored current image, for streaming via `Bun.file`. */
-export function wallpaperImagePath(): string {
-  return imagePath();
-}
+const WRITER = { kind: "system", reason: "a wallpaper save" } as const;
 
 async function readMeta(): Promise<WallpaperMeta | null> {
-  try {
-    const raw = await readFile(metaPath(), "utf8");
-    const meta = JSON.parse(raw) as Partial<WallpaperMeta>;
-    if (typeof meta.mime !== "string" || !meta.mime) return null;
-    return { mime: meta.mime, version: meta.version ?? 0 };
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
-    throw err;
-  }
+  const read = await desktopFiles.read(metaPath);
+  if (read.kind === "missing") return null;
+  const meta = JSON.parse(await read.blob.text()) as Partial<WallpaperMeta>;
+  if (typeof meta.mime !== "string" || !meta.mime) return null;
+  return { mime: meta.mime, version: meta.version ?? 0 };
 }
 
 /**
@@ -55,19 +34,30 @@ export async function writeWallpaper(
   bytes: Uint8Array,
   mime: string,
 ): Promise<{ version: number; mime: string }> {
-  wallpaperArea().ensure();
   const prev = await readMeta();
   const version = (prev?.version ?? 0) + 1;
-  await writeFile(imagePath(), bytes);
+  await desktopFiles.write(imagePath, bytes, { writer: WRITER });
   const meta: WallpaperMeta = { mime, version };
-  await writeFile(metaPath(), JSON.stringify(meta));
+  await desktopFiles.write(
+    metaPath,
+    new TextEncoder().encode(JSON.stringify(meta)),
+    { writer: WRITER },
+  );
   return { version, mime };
 }
 
 /**
- * The stored mime for the current image, or `null` if no wallpaper has been
- * saved (no sidecar on disk). Used by the image route to set the content-type.
+ * The current image and its mime, or why there is none: `unset` (no sidecar —
+ * no wallpaper was ever saved) or `missing` (a sidecar without its image).
  */
-export async function readWallpaperMime(): Promise<string | null> {
-  return (await readMeta())?.mime ?? null;
+export async function readWallpaper(): Promise<
+  | { kind: "image"; blob: Blob; mime: string }
+  | { kind: "unset" }
+  | { kind: "missing" }
+> {
+  const meta = await readMeta();
+  if (!meta) return { kind: "unset" };
+  const read = await desktopFiles.read(imagePath);
+  if (read.kind === "missing") return { kind: "missing" };
+  return { kind: "image", blob: read.blob, mime: meta.mime };
 }

@@ -3191,17 +3191,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `Desktop.Overlay` "Desktop overlay" → `LauncherOverlay`
               - `Shortcuts.Shortcut` "desktop.launcher (mod+k)"
-            - Uses: 52 symbols — full list in [`plugins/apps/plugins/desktop/plugins/launcher/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/launcher/REFERENCE.md)
+            - Uses: 50 symbols — full list in [`plugins/apps/plugins/desktop/plugins/launcher/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/launcher/REFERENCE.md)
               - `apps/desktop/windows` ×11
               - `network/live/live-state` ×4
               - `apps-core` ×3
               - `primitives/css/ui-kit` ×3
               - `primitives/shortcuts` ×3
-              - `apps-core/tabs` ×2
               - `apps/desktop/shell` ×2
               - `config_v2` ×2
               - `primitives/css/fill` ×2
               - `reorder` ×2
+              - `apps-core/tabs.useTabs`
               - `primitives/css/clip.Clip`
               - `primitives/css/cluster.Cluster`
               - `primitives/css/grid.Grid`
@@ -3218,7 +3218,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/loading.Loading`
               - `primitives/overlay/cursor-menu.CursorAnchoredMenu`
               - `primitives/overlay/tooltip.Kbd`
-              - `primitives/scope/install-sink.defineInstallSink`
               - `ui/icons.Icon`
             - Exports (values):
               - `closeLauncher`
@@ -3248,8 +3247,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`shelf`** — The desktop's bottom shelf: a centred dock with the launcher button, the pinned apps and the running ones (grouped per app, with window pips, hover thumbnails and a right-click app menu), and the tray — the pager's mini-desktops with their desktop previews, the overview button and the clock. Reserves the desktop's bottom work area and is where windows minimise to.
           - Web:
             - Contributes: `Desktop.Overlay` "Desktop overlay" → `Shelf`
-            - Uses: 55 symbols — full list in [`plugins/apps/plugins/desktop/plugins/shelf/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/shelf/REFERENCE.md)
-              - `apps/desktop/windows` ×25
+            - Uses: 44 symbols — full list in [`plugins/apps/plugins/desktop/plugins/shelf/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/shelf/REFERENCE.md)
+              - `apps/desktop/windows` ×14
               - `primitives/css/ui-kit` ×4
               - `apps-core` ×3
               - `config_v2` ×2
@@ -3287,8 +3286,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core.Apps`
               - `apps-core/app-icon.AppIconTile`
               - `apps-core/app-icon.DEFAULT_APP_ICON`
-              - `apps-core/tabs.getSurfaceMode`
-              - `apps-core/tabs.useSurfaceMode`
+              - `apps-core/tabs.peekFocusedTabSet`
               - `config_v2.ConfigV2`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/ui-kit.cn`
@@ -3297,8 +3295,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `DesktopAppTile`
               - `desktopThemeScope`
-              - `isDesktopActive`
-              - `useDesktopActive`
+              - `peekDesktopActive`
           - Server:
             - Contributes: `ConfigV2.Register` "shelf"
             - Uses: `config_v2.ConfigV2`
@@ -3330,8 +3327,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Shortcuts.Shortcut` "desktop.switcher-next (mod+`)"
               - `Shortcuts.Shortcut` "desktop.switcher-prev (mod+shift+`)"
               - `Shortcuts.Shortcut` "desktop.switcher-prev-tilde (mod+shift+~)"
-            - Uses: 24 symbols — full list in [`plugins/apps/plugins/desktop/plugins/switcher/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/switcher/REFERENCE.md)
-              - `apps/desktop/windows` ×8
+            - Uses: 25 symbols — full list in [`plugins/apps/plugins/desktop/plugins/switcher/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/switcher/REFERENCE.md)
+              - `apps/desktop/windows` ×10
               - `apps/desktop/shell` ×2
               - `apps-core/tabs.useTabs`
               - `apps-core.Apps`
@@ -3345,7 +3342,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
               - `primitives/latest-ref.useLatestRef`
-              - `primitives/scope/install-sink.defineInstallSink`
               - `primitives/shortcuts.defineShortcut`
           - Cross-plugin:
             - Uses tokens:
@@ -3360,7 +3356,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-weight-semibold`
-        - **`wallpaper`** — Floating desktop wallpaper: the Wallpaper.Provider source registry, the picker dialog + shared search panel, the desktop right-click context menu, the corner attribution credit, and the global wallpaper config web registration. Floating desktop wallpaper: provider registry, the live wallpaper.search value, import/upload endpoints, the machine-global wallpaper store, and the global wallpaper config registration.
+        - **`wallpaper`** — Floating desktop wallpaper: the Wallpaper.Provider source registry, the picker dialog + shared search panel, the desktop right-click context menu, the corner attribution credit, and the global wallpaper config web registration. Floating desktop wallpaper, on every host: provider registry, the live wallpaper.search value, the upload endpoint and image route over the wallpaper store (a data-files root, desktopFiles: the computer's disk on the desktop, memory in a browser host), and the global wallpaper config registration. Importing from a link is the machine half's.
           - Web:
             - Slots: `Wallpaper.Provider`
             - Slot contributors:
@@ -3369,7 +3365,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Wallpaper.Provider` ← `apps.desktop.wallpaper.openverse`
               - `Wallpaper.Provider` ← `apps.desktop.wallpaper.upload`
             - Contributes: `ConfigV2.WebRegister` "wallpaper"
-            - Uses: 21 symbols — full list in [`plugins/apps/plugins/desktop/plugins/wallpaper/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/wallpaper/REFERENCE.md)
+            - Uses: 22 symbols — full list in [`plugins/apps/plugins/desktop/plugins/wallpaper/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/wallpaper/REFERENCE.md)
               - `config_v2` ×3
               - `primitives/css/ui-kit` ×3
               - `primitives/overlay/cursor-menu` ×2
@@ -3385,6 +3381,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog.openDialog`
               - `primitives/search.SearchInput`
+              - `shell/toast.showToast`
               - `ui/icons.Icon`
             - Exports (types): `WallpaperCandidate`
             - Exports (values):
@@ -3398,23 +3395,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `ConfigV2.Register` "wallpaper"
               - `resource.declare` "wallpaper.search"
+              - `data-files.root-location` "apps.desktop.wallpaper"
             - Uses:
               - `config_v2.ConfigV2`
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
-              - `infra/safe-fetch.parsePublicUrl`
-              - `infra/safe-fetch.safeFetch`
-              - `infra/safe-fetch.SsrfError`
+              - `infra/paths/data-files.defineFileRoot`
               - `network/live.serveValue`
             - Exports (types): `WallpaperSearchProvider`
             - Exports (values):
               - `defineWallpaperProvider`
+              - `desktopFiles`
               - `getWallpaperProvider`
+              - `writeWallpaper`
             - Resources: `wallpaper.search` (invalidate, fixed, capped: WALLPAPER_SEARCH_MAX_RESULTS)
             - Routes:
-              - `POST /api/wallpaper/import-url`
               - `POST /api/wallpaper/upload`
               - `GET /api/wallpaper/image`
+          - Machine:
+            - Uses:
+              - `infra/endpoints.implementMachine`
+              - `infra/paths/data-files.FileRootLocation`
+            - Routes: `POST /api/wallpaper/import-url`
           - Core:
             - Uses:
               - `config_v2.defineConfig`
@@ -3440,6 +3442,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `GRADIENT_WALLPAPER_ID`
               - `importWallpaperUrl`
               - `isDefaultWallpaper`
+              - `MAX_WALLPAPER_BYTES`
               - `SavedWallpaperSchema`
               - `uploadWallpaper`
               - `WALLPAPER_QUERY_MAX`
@@ -3460,8 +3463,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/desktop/wallpaper/openverse`
               - `apps/desktop/wallpaper/upload`
               - `apps/desktop/windows`
-          - Exemptions:
-            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/handle-image.ts`, `server/internal/store.ts` (debt)
           - Plugins:
             - **`builtin`** — Built-in wallpaper source: contributes the Built-in tab to the desktop wallpaper picker, a grid of the bundled wallpapers (and the theme-following gradient); picking one writes its id to the wallpaper config with no server upload.
               - Web:
@@ -3535,16 +3536,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Shortcuts.Shortcut` "floating.toggle-pin (ctrl+alt+p)"
               - `Shortcuts.Shortcut` "floating.window-to-next-desktop (ctrl+alt+shift+pagedown)"
               - `Shortcuts.Shortcut` "floating.window-to-prev-desktop (ctrl+alt+shift+pageup)"
-            - Uses: 44 symbols — full list in [`plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md)
+            - Uses: 47 symbols — full list in [`plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md)
               - `primitives/css/ui-kit` ×8
               - `apps-core/surface` ×4
               - `apps/desktop/shell` ×4
+              - `apps-core/tabs` ×3
               - `apps/desktop/wallpaper` ×3
               - `primitives/shortcuts` ×3
               - `primitives/css/layer` ×2
               - `primitives/css/theme-boundary` ×2
               - `primitives/overlay/cursor-menu` ×2
-              - `apps-core/tabs.useTabs`
+              - `primitives/scope/install-sink` ×2
               - `apps-core.Apps`
               - `config_v2.useConfig`
               - `infra/endpoints.useAssetSrc`
@@ -3557,41 +3559,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/text.Text`
               - `primitives/dom/web-storage.defineStore`
               - `primitives/scope/app-instance.appInstanceId`
-              - `primitives/scope/install-sink.defineInstallSink`
               - `primitives/slot-render.renderIsolated`
               - `ui/icons.Icon`
             - Exports (types):
               - `DesktopOverlayContribution`
+              - `DesktopRuntime`
               - `FloatingWindow`
               - `RectFraction`
               - `VirtualDesktop`
               - `WindowId`
             - Exports (values):
-              - `bringWindowToFront`
-              - `createDesktop`
+              - `defineDesktopSink`
               - `Desktop`
               - `DesktopWallpaper`
-              - `getDesktopsState`
-              - `getFloatingWindow`
-              - `getWorkAreaReserve`
               - `minimizeAllWindows`
-              - `moveWindowToDesktop`
-              - `removeDesktop`
-              - `restoreWindow`
-              - `setActiveDesktop`
-              - `setMinimizeTargetResolver`
-              - `setPeekedWindow`
-              - `setWorkAreaReserve`
+              - `onFocusedDesktop`
               - `tileAllWindows`
               - `toggleOverview`
               - `toggleShowDesktop`
-              - `toggleWindowPin`
-              - `topmostWindowOnDesktop`
+              - `useDesktop`
               - `useDesktops`
               - `useFloatingWindows`
               - `useOverviewActive`
               - `useWorkAreaReserve`
-              - `windowForTab`
               - `windowRectFraction`
               - `WindowSnapshot`
           - Cross-plugin:
@@ -11706,21 +11696,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Web: `@plugins/apps-core/web/testing`
       - `getFocusedAppId`
   - Plugins:
-    - **`app-embed`** — <AppEmbed app route onLeave? />: one app surface rendered in-process — the SurfaceCore a tab mounts — with its own non-live pane store (seeded with route, never touching the page URL), its app theme scope (transform-gpu, so a fixed sidebar stays in the embed) and an AppNavBoundary resolving URLs against the tab apps in scope: the shown app's URLs move the embed's route, another scope app's swap the embed to that app (a fresh non-live store, its theme scope), anything else is onLeave (default: a toast). Knows nothing about demos or where data comes from.
+    - **`app-embed`** — <AppEmbed app route onLeave? />: the app rendered in-process inside its own box — an embedded tab set (TabsProvider embedded: seeded with app + route, non-live stores never touching the page URL, history or storage, none of the page's signals) and the same surface body the app's layout renders, so pane opens, app switches and the Desktop (its windows the embed's own tabs) work as in the app. Its navigation boundary resolves URLs against the apps in scope: an app's URL moves the embed, a surface-mode app's base path switches its mode, anything else is onLeave (default: a toast). Its theme scope is the focused tab's app's (transform-gpu, so fixed chrome stays in the embed); solo is not one of its modes. Knows nothing about demos or where data comes from.
       - Web:
         - Uses:
-          - `apps-core.ActiveApp`
           - `apps-core.Apps`
-          - `apps-core.resolveAppForPath`
-          - `apps-core/tab-surface.SurfaceCore`
-          - `apps-core/tabs.appPathFor`
+          - `apps-core/tab-surface.AppTabsBody`
+          - `apps-core/tabs.EmbeddedTabSet`
+          - `apps-core/tabs.TabsProvider`
+          - `apps-core/tabs.useTabs`
           - `primitives/css/theme-boundary.Theme`
           - `primitives/css/ui-kit.cn`
           - `primitives/error-boundary.PluginErrorBoundary`
-          - `primitives/pane.AppNavBoundary`
-          - `primitives/pane.AppNavigator`
-          - `primitives/pane.createPaneStore`
-          - `primitives/pane.PaneStore`
+          - `primitives/slot-render.renderIsolated`
           - `shell/toast.showToast`
         - Exports (types): `AppEmbedLeave`
         - Exports (values): `AppEmbed`
@@ -12037,8 +12024,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `Apps.Surface` "Surface" → `SurfaceBody`
           - `ActionBar.ViewOption` → `ActionBarPlacementControl`
-        - Uses: 23 symbols — full list in [`plugins/apps-core/plugins/surface/REFERENCE.md`](../plugins/apps-core/plugins/surface/REFERENCE.md)
-          - `apps-core/tabs` ×5
+        - Uses: 25 symbols — full list in [`plugins/apps-core/plugins/surface/REFERENCE.md`](../plugins/apps-core/plugins/surface/REFERENCE.md)
+          - `apps-core/tabs` ×6
           - `network/live/live-state` ×3
           - `primitives/css/toggle-chip` ×2
           - `primitives/slot-render` ×2
@@ -12051,6 +12038,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.cn`
           - `primitives/css/viewport-overlay.useViewportEscape`
           - `primitives/loading.Loading`
+          - `primitives/shortcuts.setFocusedSurfaceId`
           - `shell/action-bar.ActionBar`
           - `ui/icons.Icon`
         - Exports (types):
@@ -12151,40 +12139,44 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/app-embed`
           - `apps-core/layout`
           - `apps-core/surface`
-    - **`tabs`** — Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, the focused tab's title as a module signal (useFocusedTabTitle, readable outside TabsProvider), and the surface-written placement-capabilities registry.
+    - **`tabs`** — Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, the focused tab's title as a module signal (useFocusedTabTitle, readable outside TabsProvider), and the surface-written placement-capabilities registry — one per tab set: the page's own, or an embedded one (TabsProvider embedded={{ app, route, onLeave }}, an AppEmbed's: seeded, never live, persisting nothing, publishing no page-global signal, behind its own navigation boundary), found from outside React by peekFocusedTabSet().
       - Web:
-        - Uses: 44 symbols — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
-          - `primitives/pane` ×18
+        - Uses: 48 symbols — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+          - `primitives/pane` ×20
           - `apps-core` ×9
           - `primitives/scope/app-instance` ×5
           - `primitives/embed` ×3
           - `primitives/link-gesture` ×2
           - `primitives/pane/route-prefix` ×2
+          - `primitives/scope/install-sink` ×2
+          - `primitives/shortcuts` ×2
           - `primitives/dom/web-storage.defineStore`
           - `primitives/latest-ref.useLatestRef`
-          - `primitives/scope/install-sink.defineInstallSink`
           - `primitives/scope/surface-id.useSurfaceTabId`
-          - `primitives/shortcuts.setFocusedSurfaceId`
         - Exports (types):
+          - `EmbeddedTabSet`
           - `NavigateOptions`
           - `PlacementCapabilities`
+          - `PlacementRegistry`
           - `Tab`
           - `TabsApi`
+          - `TabSetHandle`
         - Exports (values):
           - `appContributionFor`
           - `appLink`
           - `appLinkProps`
           - `appPathFor`
+          - `claimTabSet`
           - `exitToPreviousMode`
           - `getSurfaceMode`
           - `loadScopePrefixFor`
           - `navigate`
           - `peekDefaultPlacement`
+          - `peekFocusedTabSet`
           - `peekSurfaceEmpty`
           - `placementHasAppThemeScope`
           - `placementIsNewTabFollows`
           - `placementOwnsChrome`
-          - `registerPlacementCapabilities`
           - `setSurfaceMode`
           - `TabsProvider`
           - `useActivateApp`
@@ -12194,6 +12186,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useFocusedTabTitle`
           - `useNavigate`
           - `usePlacementCapabilities`
+          - `usePlacementRegistry`
           - `useSurfaceFocused`
           - `useSurfaceMode`
           - `useTabs`
@@ -27573,7 +27566,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/analytics/ip-country` (2 debt)
               - `apps/deploy/deployments` (1 debt)
               - `apps/deploy/servers` (2 debt)
-              - `apps/desktop/wallpaper` (2 debt)
               - `apps/events/refresh` (2 debt)
               - `apps/events/sources/coworkmeet` (1 debt)
               - `apps/events/sources/dmda` (1 debt)
@@ -33019,6 +33011,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `stageThenRename`
           - Cross-plugin:
             - Imported by:
+              - `apps/desktop/wallpaper`
               - `apps/prototypes`
               - `apps/prototypes/files`
               - `apps/prototypes/thumbnails`
@@ -33243,7 +33236,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`safe-fetch`** — SSRF-guarded fetch primitive: parsePublicUrl + DNS-resolution checks (isPrivateIp/assertResolvesPublic) and safeFetch, which dials the validated IP directly (closing the DNS-rebinding TOCTOU) while preserving Host/SNI/cert via Bun fetch tls.serverName, following redirects with per-hop revalidation so a target can never reach loopback/private/link-local/metadata addresses.
       - Cross-plugin:
         - Imported by:
-          - `apps/desktop/wallpaper`
           - `apps/desktop/wallpaper/openverse`
           - `apps/events/sources/coworkmeet`
           - `apps/events/sources/dmda`
@@ -47131,13 +47123,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-md`
           - `ui/tokens/shape --spacing`
-        - Imported by: 193 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Imported by: 192 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `apps` ×72
           - `conversations` ×31
           - `debug` ×27
           - `active-data` ×10
           - `tasks` ×10
-          - `apps-core` ×7
+          - `apps-core` ×6
           - `plugin-meta` ×6
           - `layouts` ×4
           - `primitives` ×4
@@ -47604,8 +47596,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps-core/tabs`
-              - `apps/desktop/launcher`
-              - `apps/desktop/switcher`
               - `apps/desktop/windows`
               - `primitives/overlay/overlay-boundary`
               - `primitives/pane`
@@ -47841,10 +47831,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `usePlayPauseShortcut`
           - `useSurfaceShortcuts`
       - Cross-plugin:
-        - Imported by: 30 plugins — full list in [`plugins/primitives/plugins/shortcuts/REFERENCE.md`](../plugins/primitives/plugins/shortcuts/REFERENCE.md)
+        - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/shortcuts/REFERENCE.md`](../plugins/primitives/plugins/shortcuts/REFERENCE.md)
           - `apps` ×15
           - `primitives` ×11
-          - `apps-core` ×2
+          - `apps-core` ×3
           - `hints`
           - `tasks/task-draft-form`
       - Exemptions:
@@ -47911,12 +47901,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useDispatchOutcome`
           - `useSlotOrder`
       - Cross-plugin:
-        - Imported by: 93 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
+        - Imported by: 94 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
           - `apps` ×31
           - `primitives` ×15
           - `conversations` ×13
+          - `apps-core` ×5
           - `ui` ×5
-          - `apps-core` ×4
           - `shell` ×4
           - `page` ×3
           - `tasks` ×3
@@ -51181,8 +51171,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --popover`
           - `ui/tokens/color-palette --popover-foreground`
           - `ui/tokens/shape --radius`
-        - Imported by: 33 plugins — full list in [`plugins/shell/plugins/toast/REFERENCE.md`](../plugins/shell/plugins/toast/REFERENCE.md)
-          - `apps` ×10
+        - Imported by: 34 plugins — full list in [`plugins/shell/plugins/toast/REFERENCE.md`](../plugins/shell/plugins/toast/REFERENCE.md)
+          - `apps` ×11
           - `config_v2` ×3
           - `conversations` ×3
           - `primitives` ×3

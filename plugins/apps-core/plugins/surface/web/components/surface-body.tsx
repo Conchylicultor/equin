@@ -11,9 +11,11 @@ import {
   type PointerEvent,
 } from "react";
 import { TabSurface } from "@plugins/apps-core/plugins/tab-surface/web";
+import { setFocusedSurfaceId } from "@plugins/primitives/plugins/shortcuts/web";
 import {
+  claimTabSet,
   useTabs,
-  registerPlacementCapabilities,
+  usePlacementRegistry,
   type Tab,
 } from "@plugins/apps-core/plugins/tabs/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -114,14 +116,32 @@ export function SurfaceBody() {
   }
 }
 
+/**
+ * The placements this tab set can show. A contained tab set (an `AppEmbed`'s,
+ * a box on the page) has no viewport to escape to, so a `viewport`-framed
+ * placement (solo) is not one of its modes: switching to it resolves to the
+ * default, and the capabilities it publishes do not list it.
+ */
+function useAvailablePlacements(
+  sorted: readonly PlacementDef[],
+): readonly PlacementDef[] {
+  const { contained } = useTabs();
+  return useMemo(
+    () => (contained ? sorted.filter((d) => d.frame !== "viewport") : sorted),
+    [contained, sorted],
+  );
+}
+
 /** The surface once its placement order is known — see {@link SurfaceBody}. */
 function SurfaceBodyReady({
-  sorted,
+  sorted: allSorted,
 }: {
   /** The `Surface.Placement` contributions, in the slot's layout order. */
   sorted: readonly PlacementDef[];
 }) {
+  const sorted = useAvailablePlacements(allSorted);
   const {
+    id: tabSetId,
     tabs,
     focusedTabId,
     focusTab,
@@ -147,9 +167,10 @@ function SurfaceBodyReady({
   // surface → apps (apps never imports surface). The registration hands back a
   // disposer that restores the previous capabilities, so this body un-publishes
   // itself when it unmounts instead of leaving a dead set installed.
+  const registry = usePlacementRegistry();
   useEffect(
     () =>
-      registerPlacementCapabilities({
+      registry.install({
         defaultId,
         ids: new Set(sorted.map((d) => d.id)),
         newTabFollows: new Set(
@@ -165,7 +186,7 @@ function SurfaceBodyReady({
           sorted.filter((d) => d.allowsEmpty).map((d) => d.id),
         ),
       }),
-    [sorted, defaultId],
+    [sorted, defaultId, registry],
   );
 
   // The ONE active mode descriptor: the surface renders EVERY tab under it.
@@ -233,6 +254,10 @@ function SurfaceBodyReady({
     // `app:<id>`, which is what picks it up.
     <Clip
       ref={backdropRef}
+      // Pointing anywhere on this surface — a window, or the bare desktop of
+      // an empty one — puts the user in this tab set: out-of-tree callers (a
+      // shortcut) act on it (`peekFocusedTabSet()`).
+      onPointerDownCapture={() => claimTabSet(tabSetId)}
       className={cn(
         "relative h-full w-full bg-background",
         !escapesSurface && "transform-gpu",
@@ -362,7 +387,11 @@ function TabContainer({
   // The host ALWAYS owns focus-on-pointerdown (harmless for every mode); the
   // active mode may ADD behavior (windows' raise-to-front) via the registered
   // `pointerDownCapture`, composed after the base focus.
+  // It also claims the page's focused surface: with several tab sets on the
+  // page (an `AppEmbed` beside the app's own), the tab pointed at is the one
+  // keyboard shortcuts act on, even when it already was its set's focused tab.
   const onContainerPointerDownCapture = (e: PointerEvent) => {
+    setFocusedSurfaceId(tab.tabId);
     onFocus();
     pointerDownCapture?.(e);
   };

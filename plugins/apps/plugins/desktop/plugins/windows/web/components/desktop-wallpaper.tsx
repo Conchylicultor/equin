@@ -7,7 +7,7 @@ import {
 import { assetPath } from "@plugins/infra/plugins/endpoints/core";
 import { useAssetSrc } from "@plugins/infra/plugins/endpoints/web";
 import { builtinWallpaperUrl } from "@plugins/apps/plugins/desktop/plugins/wallpaper/web";
-import { useOverviewActive } from "../internal/overview";
+import { useOverviewActive } from "../internal/desktop-runtime";
 import { layerClasses } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 

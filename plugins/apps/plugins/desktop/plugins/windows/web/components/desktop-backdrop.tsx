@@ -5,7 +5,7 @@ import {
 import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import { PopupTheme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { desktopThemeScope } from "@plugins/apps/plugins/desktop/plugins/shell/web";
-import { useOverviewActive } from "../internal/overview";
+import { useOverviewActive } from "../internal/desktop-runtime";
 import { DesktopWallpaper } from "./desktop-wallpaper";
 
 /**

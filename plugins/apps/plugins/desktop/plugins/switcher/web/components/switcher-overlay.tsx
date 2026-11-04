@@ -9,13 +9,12 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import {
-  bringWindowToFront,
-  restoreWindow,
+  useDesktop,
   useDesktops,
   useFloatingWindows,
   type WindowId,
 } from "@plugins/apps/plugins/desktop/plugins/windows/web";
-import { switcherControlsSink } from "../internal/switcher-controls";
+import { switcherControls } from "../internal/switcher-controls";
 import {
   MIN_SWITCHER_WINDOWS,
   stepIndex,
@@ -38,6 +37,7 @@ interface Session {
  * focus, cancels; clicking a snapshot commits that one.
  */
 export function SwitcherOverlay() {
+  const desk = useDesktop();
   const windows = useFloatingWindows();
   const { activeDesktopId } = useDesktops();
   const { tabs, titles, focusTab } = useTabs();
@@ -46,7 +46,7 @@ export function SwitcherOverlay() {
 
   useEffect(
     () =>
-      switcherControlsSink.install({
+      switcherControls.install(desk, {
         step(delta) {
           setSession((prev) => {
             if (prev) {
@@ -64,7 +64,7 @@ export function SwitcherOverlay() {
           });
         },
       }),
-    [latest],
+    [latest, desk],
   );
 
   // Commit `id` (default: the selected window): close, then restore it if
@@ -77,11 +77,11 @@ export function SwitcherOverlay() {
       if (!session) return;
       const w = windows.get(id ?? session.ids[session.index]!);
       if (!w) return;
-      if (w.geo.minimized) restoreWindow(w.id);
-      bringWindowToFront(w.id);
+      if (w.geo.minimized) desk.windows.restoreWindow(w.id);
+      desk.windows.bringWindowToFront(w.id);
       focusTab(w.activeTabId);
     },
-    [latest],
+    [latest, desk],
   );
 
   const open = session !== null;

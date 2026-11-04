@@ -1,6 +1,5 @@
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { uploadWallpaper } from "../../core";
-import { MAX_IMAGE_BYTES } from "./download";
+import { MAX_WALLPAPER_BYTES, uploadWallpaper } from "../../core";
 import { writeWallpaper } from "./store";
 
 /**
@@ -21,7 +20,7 @@ export const handleUpload = implement(uploadWallpaper, async ({ body }) => {
   if (file.size === 0) {
     throw new HttpError(400, "Empty file");
   }
-  if (file.size > MAX_IMAGE_BYTES) {
+  if (file.size > MAX_WALLPAPER_BYTES) {
     throw new HttpError(413, "Image is too large");
   }
   const bytes = new Uint8Array(await file.arrayBuffer());

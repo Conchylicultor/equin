@@ -48,17 +48,17 @@ defaults.
   - Contributes:
     - `Desktop.Overlay` "Desktop overlay" → `LauncherOverlay`
     - `Shortcuts.Shortcut` "desktop.launcher (mod+k)"
-  - Uses: 52 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 50 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/desktop/windows` ×11
     - `network/live/live-state` ×4
     - `apps-core` ×3
     - `primitives/css/ui-kit` ×3
     - `primitives/shortcuts` ×3
-    - `apps-core/tabs` ×2
     - `apps/desktop/shell` ×2
     - `config_v2` ×2
     - `primitives/css/fill` ×2
     - `reorder` ×2
+    - `apps-core/tabs.useTabs`
     - `primitives/css/clip.Clip`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/grid.Grid`
@@ -75,7 +75,6 @@ defaults.
     - `primitives/loading.Loading`
     - `primitives/overlay/cursor-menu.CursorAnchoredMenu`
     - `primitives/overlay/tooltip.Kbd`
-    - `primitives/scope/install-sink.defineInstallSink`
     - `ui/icons.Icon`
   - Exports (values):
     - `closeLauncher`

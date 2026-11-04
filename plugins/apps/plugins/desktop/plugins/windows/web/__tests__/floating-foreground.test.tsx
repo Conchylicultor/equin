@@ -19,17 +19,29 @@ vi.mock("../slots", () => ({
   Desktop: { Overlay: { useContributions: () => [] } },
 }));
 
+// No tab set here: the Foreground draws one fixed desktop.
+const desk = vi.hoisted(() => ({ current: null as unknown }));
+vi.mock("../internal/desktop-runtime", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../internal/desktop-runtime")>();
+  const runtime = actual.createDesktopRuntime("test", false);
+  desk.current = runtime;
+  return { ...actual, useDesktop: () => runtime };
+});
+
 import { FloatingForeground } from "../components/floating-foreground";
-import {
+import type { DesktopRuntime } from "../internal/desktop-runtime";
+import type { Geometry } from "../hooks/use-floating-windows";
+
+const {
   bringWindowToFront,
   getFloatingWindow,
   snapWindowDirection,
   splitTabToNewWindow,
   windowForTab,
-  type Geometry,
-} from "../hooks/use-floating-windows";
+} = (desk.current as DesktopRuntime).windows;
 
-// The window store is module-global and accumulates across tests in this file
+// The window store is the file's one desktop and accumulates across tests in this file
 // (mirroring `use-floating-windows.desktops.test.ts`), so each test uses its OWN
 // tab id and asserts on that window by id rather than assuming a clean slate.
 // `splitTabToNewWindow(tabId, point)` on an unknown tab mints a fresh singleton

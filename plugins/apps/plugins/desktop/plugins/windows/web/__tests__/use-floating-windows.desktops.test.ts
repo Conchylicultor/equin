@@ -8,8 +8,11 @@ import { describe, expect, it } from "vitest";
 // `typeof window === "undefined"` guard while having no `history`, so the key read
 // crashed. jsdom gives the real objects, so nothing here is stubbed and no
 // half-window can exist. Its sibling `floating-foreground.test.tsx` imports the
-// same store from the same folder.
-import {
+// same store factory from the same folder.
+import { createWindowStore } from "../internal/window-store";
+
+// One desktop's store (the page's: persisted) for the whole file.
+const {
   createDesktop,
   getDesktopsState,
   getFloatingWindow,
@@ -19,10 +22,10 @@ import {
   splitTabToNewWindow,
   topmostWindowOnDesktop,
   windowForTab,
-} from "../hooks/use-floating-windows";
+} = createWindowStore({ persisted: true });
 
 /**
- * The store is module-global, so state accumulates across tests in this file —
+ * The store is shared by the file, so state accumulates across tests here —
  * each test creates its OWN desktops/windows and asserts on them by id rather
  * than assuming a clean slate. `splitTabToNewWindow(tabId)` on an unknown tab
  * mints a fresh singleton window on the active desktop (the only imperative
@@ -118,5 +121,26 @@ describe("virtual desktops", () => {
     // An empty desktop has no topmost window.
     const empty = createDesktop();
     expect(topmostWindowOnDesktop(empty)).toBeUndefined();
+  });
+});
+
+describe("two desktops on one page", () => {
+  it("never share a window, a virtual desktop or a stored layout", () => {
+    const page = createWindowStore({ persisted: true });
+    const embedded = createWindowStore({ persisted: false });
+    page.splitTabToNewWindow("page-tab");
+    embedded.splitTabToNewWindow("embed-tab");
+    expect(page.windowForTab("embed-tab")).toBeUndefined();
+    expect(embedded.windowForTab("page-tab")).toBeUndefined();
+
+    const pageDesktops = page.getDesktopsState();
+    const extra = embedded.createDesktop({ activate: true });
+    expect(embedded.getDesktopsState().activeDesktopId).toBe(extra);
+    expect(page.getDesktopsState()).toEqual(pageDesktops);
+
+    // The embedded store hydrates nothing from, and writes nothing to, the
+    // page's sessionStorage: a fresh embedded store starts empty.
+    const again = createWindowStore({ persisted: false });
+    expect(again.getFloatingWindows().size).toBe(0);
   });
 });

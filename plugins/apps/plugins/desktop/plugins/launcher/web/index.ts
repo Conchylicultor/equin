@@ -1,6 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { isDesktopActive } from "@plugins/apps/plugins/desktop/plugins/shell/web";
-import { Desktop } from "@plugins/apps/plugins/desktop/plugins/windows/web";
+import { peekDesktopActive } from "@plugins/apps/plugins/desktop/plugins/shell/web";
+import {
+  Desktop,
+  onFocusedDesktop,
+} from "@plugins/apps/plugins/desktop/plugins/windows/web";
 import { defineShortcut } from "@plugins/primitives/plugins/shortcuts/web";
 import { LauncherOverlay } from "./components/launcher-overlay";
 import { toggleLauncher } from "./internal/launcher-controls";
@@ -23,8 +26,8 @@ export default {
       // Not "Window" / "Desktop": those groups are what the launcher lists as
       // commands, and the launcher is not a command of itself.
       group: "Launcher",
-      when: isDesktopActive,
-      handler: toggleLauncher,
+      when: peekDesktopActive,
+      handler: () => onFocusedDesktop(toggleLauncher),
     }),
   ],
 } satisfies PluginDefinition;

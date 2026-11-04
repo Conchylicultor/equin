@@ -10,8 +10,7 @@ import { useTabs } from "@plugins/apps-core/plugins/tabs/web";
 import type { AppIcon } from "@plugins/apps-core/plugins/app-icon/core";
 import { isNodeData, useReorderedEntries } from "@plugins/reorder/web";
 import {
-  bringWindowToFront,
-  restoreWindow,
+  useDesktop,
   useDesktops,
   useFloatingWindows,
   type FloatingWindow,
@@ -93,6 +92,7 @@ export function useAppActions(): {
   newWindow(appId: string): void;
 } {
   const { openTab, focusTab } = useTabs();
+  const desk = useDesktop();
   const byApp = useWindowsOfApp();
   return {
     activate(appId) {
@@ -101,8 +101,8 @@ export function useAppActions(): {
         openTab(appId);
         return;
       }
-      if (front.geo.minimized) restoreWindow(front.id);
-      bringWindowToFront(front.id);
+      if (front.geo.minimized) desk.windows.restoreWindow(front.id);
+      desk.windows.bringWindowToFront(front.id);
       focusTab(front.activeTabId);
     },
     newWindow(appId) {

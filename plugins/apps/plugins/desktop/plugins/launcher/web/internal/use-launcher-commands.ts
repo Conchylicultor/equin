@@ -1,11 +1,10 @@
 import { useMemo } from "react";
-import { exitToPreviousMode } from "@plugins/apps-core/plugins/tabs/web";
+import { useTabs } from "@plugins/apps-core/plugins/tabs/web";
 import {
-  createDesktop,
   minimizeAllWindows,
-  removeDesktop,
   tileAllWindows,
   toggleOverview,
+  useDesktop,
   useDesktops,
 } from "@plugins/apps/plugins/desktop/plugins/windows/web";
 import {
@@ -47,37 +46,39 @@ const GROUP_ICON: Record<string, SymbolRef> = {
 export function useLauncherCommands(): LauncherCommand[] {
   const shortcuts = Shortcuts.Shortcut.useContributions();
   const { activeDesktopId } = useDesktops();
+  const desk = useDesktop();
+  const { exitToPreviousMode } = useTabs();
   return useMemo(() => {
     const keyless: LauncherCommand[] = [
       {
         id: "show-overview",
         label: "Show overview",
         icon: symbol("grid-view"),
-        run: toggleOverview,
+        run: () => toggleOverview(desk),
       },
       {
         id: "tile-all",
         label: "Tile all windows",
         icon: symbol("view-quilt"),
-        run: tileAllWindows,
+        run: () => tileAllWindows(desk),
       },
       {
         id: "minimise-all",
         label: "Minimise all windows",
         icon: symbol("remove"),
-        run: minimizeAllWindows,
+        run: () => minimizeAllWindows(desk),
       },
       {
         id: "new-desktop",
         label: "New desktop",
         icon: symbol("add"),
-        run: () => createDesktop({ activate: true }),
+        run: () => desk.windows.createDesktop({ activate: true }),
       },
       {
         id: "close-desktop",
         label: "Close this desktop",
         icon: symbol("close"),
-        run: () => removeDesktop(activeDesktopId),
+        run: () => desk.windows.removeDesktop(activeDesktopId),
       },
       {
         id: "leave-desktop",
@@ -106,5 +107,5 @@ export function useLauncherCommands(): LauncherCommand[] {
       ...registered,
       keyless[keyless.length - 1]!,
     ];
-  }, [shortcuts, activeDesktopId]);
+  }, [shortcuts, activeDesktopId, desk, exitToPreviousMode]);
 }

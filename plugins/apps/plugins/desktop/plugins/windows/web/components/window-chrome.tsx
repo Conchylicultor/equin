@@ -25,11 +25,7 @@ import {
   workAreaHeight,
   type SnapZone,
 } from "../hooks/use-snap";
-import {
-  beginWindowInteraction,
-  endWindowInteraction,
-} from "../hooks/use-window-motion";
-import { getWorkAreaReserve } from "../internal/work-area";
+import { useDesktop } from "../internal/desktop-runtime";
 import { WindowResizeHandles } from "./window-resize-handles";
 import {
   WindowTabStrip,
@@ -104,9 +100,10 @@ interface WindowChromeProps {
   /**
    * Take the active tab full-screen: switch it to the solo placement — a single
    * tab full-app over everything — distinct from maximize, which only fills the
-   * work area within the desktop.
+   * work area within the desktop. Absent where the tab set has no solo mode
+   * (a desktop inside an `AppEmbed`, a box on the page): no control then.
    */
-  onFullscreen: () => void;
+  onFullscreen: (() => void) | undefined;
   /** Other windows of this desktop the active tab can be merged into. */
   mergeTargets: MergeTarget[];
   /** Merge the active tab into a target window. */
@@ -214,6 +211,7 @@ export function WindowChrome({
   // the same fraction of its width; while dragging, the pointer's edge/corner
   // arms a snap preview; releasing over one snaps the window there, otherwise
   // the free box is clamped into the work area.
+  const desktop = useDesktop();
   const onTitlePointerDown = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
       if (e.button !== 0 || onControl(e)) return;
@@ -225,7 +223,7 @@ export function WindowChrome({
       if (!container || !backdrop) return;
       const desk = backdrop.getBoundingClientRect();
       const box = container.getBoundingClientRect();
-      const workH = workAreaHeight(desk.height, getWorkAreaReserve());
+      const workH = workAreaHeight(desk.height, desktop.getWorkAreaReserve());
       const startX = e.clientX;
       const startY = e.clientY;
       let grabX = startX - box.left;
@@ -242,7 +240,7 @@ export function WindowChrome({
             return;
           moved = true;
           // Track the cursor 1:1: no box transition while dragging.
-          beginWindowInteraction(win.id);
+          desktop.beginInteraction(win.id);
           if (geo.snap) {
             const free = geo.restore ?? {
               x: geo.x,
@@ -275,7 +273,7 @@ export function WindowChrome({
         if (!moved) return;
         // End interaction first, so the final commit (below) animates: this and
         // the `setGeo` batch into one render with the transition re-enabled.
-        endWindowInteraction(win.id);
+        desktop.endInteraction(win.id);
         const target = zone;
         setGeo((g) =>
           target
@@ -292,7 +290,7 @@ export function WindowChrome({
       window.addEventListener("pointerup", onUp);
       window.addEventListener("pointercancel", onUp);
     },
-    [geo, setGeo, win.id],
+    [geo, setGeo, win.id, desktop],
   );
 
   // Snap to a zone, or back to the free box with `null` (mockup `setSnap`):
@@ -363,12 +361,14 @@ export function WindowChrome({
         onClick={toggleMaximize}
         className={focused ? undefined : "opacity-45"}
       />
-      <TitlebarControl
-        icon={fullscreenIcon}
-        label="Full screen"
-        onClick={onFullscreen}
-        className={focused ? undefined : "opacity-45"}
-      />
+      {onFullscreen && (
+        <TitlebarControl
+          icon={fullscreenIcon}
+          label="Full screen"
+          onClick={onFullscreen}
+          className={focused ? undefined : "opacity-45"}
+        />
+      )}
       <TitlebarControl
         icon={closeIcon}
         label="Close window"
@@ -409,7 +409,7 @@ export function WindowChrome({
           ...TITLEBAR_STYLE,
           // Under the action-bar dot, its published safe area is the right
           // inset — gliding as the bar is dragged off its slot and back, as
-          // the `pr-floating-bar*` headers do.
+          // the floating-bar-aware pane headers do.
           ...(underActionBar
             ? {
                 paddingRight: "var(--floating-bar-safe-area, 6px)",

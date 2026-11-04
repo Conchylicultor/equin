@@ -1,41 +1,44 @@
 # app-embed
 
-`<AppEmbed app route onLeave? className? />` renders one app surface in-process:
-the same `SurfaceCore` (`apps-core/tab-surface`) a tab mounts, inside its own box.
-It knows nothing about demos or data sources: around a `<DemoScope>` it renders a
-demo, around nothing the real instance. Design:
-`research/2026-10-15-global-app-embed-and-agent-manager-demo.md` §2–§3.
+`<AppEmbed app route onLeave? className? />` renders the app in-process, inside
+its own box: an **embedded tab set** (`apps-core/tabs`'s `TabsProvider
+embedded={{ app, route, onLeave }}`) and the same surface body the app's own
+layout renders (`Apps.Surface`, else the docked-only `AppTabsBody`). It knows
+nothing about demos or data sources: around a `<DemoScope>` it renders a demo,
+around nothing the real instance. Designs:
+`research/2026-10-15-global-app-embed-and-agent-manager-demo.md` §2–§3,
+`research/2026-11-04-global-desktop-mode-in-browser-demo.md`.
 
-- **Its own route.** A `createPaneStore({ live: false })`, seeded with `route`
-  (app-relative, `/c/<id>`). A non-live store never reads or writes the page URL
-  or history, so a row click, a pane open and Expand move the embed only.
-- **Its own theme scope.** `<Theme name={appThemeScope(appId)} surface="canvas">`
-  — the app on screen — with `transform-gpu`: the app shell's `position: fixed`
-  sidebar resolves against the embed, not the viewport.
-- **Its own navigation boundary.** An `AppNavBoundary` (`primitives/pane`).
+- **Its own tab set.** One tab of `app` at `route` (app-relative, `/c/<id>`),
+  in non-live pane stores: nothing inside reads or writes the page URL,
+  history or sessionStorage, or publishes the page's signals (its surface
+  mode, focused app and title, the live-store pointer, the navigator sink).
+  The page's own tabs are untouched.
+- **Its own navigation boundary** (the tab set's `AppNavBoundary`).
   Everything that reads it — `usePromote` (Expand), `useBack`, `useOpenPane`'s
   stranded routes, tabs' `useNavigate` / `useAppLink(Props)` / `useActivateApp`
-  (the app brand, the launcher) — comes here, and the URL is resolved with
-  `resolveAppForPath` over `Apps.App` (tab apps only):
-  - the app on screen → its route moves (`navigatePending`);
-  - another tab app in scope → the embed **switches app**: a new session
-    `{ appId, store, seq }` with a fresh non-live store at that app's base path
-    holding the route pending (a background tab's recipe), the surface keyed by
-    `seq` and the theme scope following. The previous app is not kept alive,
-    as with an in-tab app swap; Back across the hop is not offered;
-  - anything else (no app, an app outside the scope, a surface-mode app) →
-    `onLeave(url)`, by default a toast, and the embed stays.
+  (the app brand, the launcher) — comes here, resolved over the `Apps.App` in
+  scope:
+  - an app in scope → the tab set's `navigate` (the tab's route, an in-tab app
+    swap — the previous app is not kept alive — or, on the desktop, a window);
+  - a surface-mode app's base path (`/desktop`, `/desktop/<route>`) → the
+    embed's own mode switches (the Desktop: its windows are the embed's tabs,
+    its layout the embed's — `apps/desktop/windows`' runtime per tab set);
+  - anything else → `onLeave(url)`, by default a toast, and the embed stays.
 
   The policy is the scope: inside a `<DemoScope>`, `<PluginScope>` filters
-  `Apps.App` to the composition, so the embed switches between exactly the
-  apps the demo serves. Nothing names the demo. A component that can render
-  inside an embed reads navigation through those hooks, never the free
+  `Apps.App` to the composition. Nothing names the demo. A component that can
+  render inside an embed reads navigation through those hooks, never the free
   `navigate` / `appLink` / `appLinkProps` (`tabs/no-free-app-nav-in-react`).
-- **Not a tab.** No title reporter, no `mod+z` bindings (a second same-id
-  registration would race the host's in the page-global `ShortcutManager`).
-- **Accepted leaks.** Modifier-click hrefs open on the host origin; page-global
-  shortcuts (Cmd+B) act on whichever surface the shortcut manager picks;
-  DataView view state in `localStorage` is shared with the real app.
+- **Its own theme scope**, the focused tab's app's, with `transform-gpu` so
+  `position: fixed` app chrome resolves against the embed. A placement that
+  escapes to the viewport (solo) is not one of its modes (the tab set is
+  `contained`).
+- **Keyboard.** Its tabs register their surface shortcuts (`mod+z`) like any
+  tab; pointing at the embed claims the page's focused surface and tab set
+  (`claimTabSet`), so shortcuts — the desktop's included — act on it.
+- **Accepted leaks.** Modifier-click hrefs open on the host origin; DataView
+  view state in `localStorage` is shared with the real app.
 
 Tests: `web/__tests__/app-embed.test.tsx`.
 
@@ -43,21 +46,18 @@ Tests: `web/__tests__/app-embed.test.tsx`.
 
 ## Plugin reference
 
-- Description: <AppEmbed app route onLeave? />: one app surface rendered in-process — the SurfaceCore a tab mounts — with its own non-live pane store (seeded with route, never touching the page URL), its app theme scope (transform-gpu, so a fixed sidebar stays in the embed) and an AppNavBoundary resolving URLs against the tab apps in scope: the shown app's URLs move the embed's route, another scope app's swap the embed to that app (a fresh non-live store, its theme scope), anything else is onLeave (default: a toast). Knows nothing about demos or where data comes from.
+- Description: <AppEmbed app route onLeave? />: the app rendered in-process inside its own box — an embedded tab set (TabsProvider embedded: seeded with app + route, non-live stores never touching the page URL, history or storage, none of the page's signals) and the same surface body the app's layout renders, so pane opens, app switches and the Desktop (its windows the embed's own tabs) work as in the app. Its navigation boundary resolves URLs against the apps in scope: an app's URL moves the embed, a surface-mode app's base path switches its mode, anything else is onLeave (default: a toast). Its theme scope is the focused tab's app's (transform-gpu, so fixed chrome stays in the embed); solo is not one of its modes. Knows nothing about demos or where data comes from.
 - Web:
   - Uses:
-    - `apps-core.ActiveApp`
     - `apps-core.Apps`
-    - `apps-core.resolveAppForPath`
-    - `apps-core/tab-surface.SurfaceCore`
-    - `apps-core/tabs.appPathFor`
+    - `apps-core/tab-surface.AppTabsBody`
+    - `apps-core/tabs.EmbeddedTabSet`
+    - `apps-core/tabs.TabsProvider`
+    - `apps-core/tabs.useTabs`
     - `primitives/css/theme-boundary.Theme`
     - `primitives/css/ui-kit.cn`
     - `primitives/error-boundary.PluginErrorBoundary`
-    - `primitives/pane.AppNavBoundary`
-    - `primitives/pane.AppNavigator`
-    - `primitives/pane.createPaneStore`
-    - `primitives/pane.PaneStore`
+    - `primitives/slot-render.renderIsolated`
     - `shell/toast.showToast`
   - Exports (types): `AppEmbedLeave`
   - Exports (values): `AppEmbed`

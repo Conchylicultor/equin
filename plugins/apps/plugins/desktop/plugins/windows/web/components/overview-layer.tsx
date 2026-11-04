@@ -3,7 +3,7 @@ import { Apps } from "@plugins/apps-core/web";
 import { useTabs } from "@plugins/apps-core/plugins/tabs/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useFloatingWindows } from "../hooks/use-floating-windows";
-import { useOverviewSlots } from "../internal/overview";
+import { useDesktop, useOverviewSlots } from "../internal/desktop-runtime";
 import { exitOverview } from "../window-commands";
 
 /** The window corner (mockup `--r-win`), scaled with each window. */
@@ -33,6 +33,7 @@ const LABEL_STYLE = {
  */
 export function OverviewLayer() {
   const slots = useOverviewSlots();
+  const desk = useDesktop();
   const windows = useFloatingWindows();
   const { tabs, titles } = useTabs();
   const apps = Apps.App.useContributions();
@@ -41,7 +42,7 @@ export function OverviewLayer() {
 
   return (
     <div
-      onClick={() => exitOverview()}
+      onClick={() => exitOverview(desk)}
       // eslint-disable-next-line layout/no-adhoc-layout -- full-bleed click catcher over the desktop while the overview is open; its children are placed from the overview layout, so no positioning primitive applies
       className="absolute inset-0 z-float cursor-default"
     >
@@ -58,7 +59,7 @@ export function OverviewLayer() {
               aria-label={label}
               onClick={(e) => {
                 e.stopPropagation();
-                exitOverview(slot.id);
+                exitOverview(desk, slot.id);
               }}
               // eslint-disable-next-line layout/no-adhoc-layout -- the click target over a window's place in the overview grid, positioned from the layout
               className="absolute transition-shadow duration-150 hover:shadow-[inset_0_0_0_var(--ov-ring)_var(--primary)]"

@@ -44,19 +44,44 @@ sidebar needs no change here. There is no setting and no per-app flag.
   open, for the shortcuts and commands) and the desk frame (the backdrop's size,
   for the commands that lay windows out).
 
-Cross-plugin channels the overlays use, all exported from the web barrel:
-`setWorkAreaReserve` (below), `setMinimizeTargetResolver` (where a window
-minimises to — the shelf entry; the motion falls back to a straight drop),
-`setPeekedWindow` (raise one window over all and fade the rest — the shelf's
-thumbnails), `toggleOverview` / `useOverviewActive`, `tileAllWindows`,
-`minimizeAllWindows`, `toggleShowDesktop` (minimise the active desktop's
-windows, or restore the ones it last hid — the shelf's current-desktop mini), and `WindowSnapshot` (a hover snapshot of a window's DOM).
+## One desktop per tab set (`internal/desktop-runtime.ts`)
+
+A desktop is drawn by a tab set (`apps-core/tabs`): the page's own, or an
+`AppEmbed`'s (the `/demo` embed switched to Desktop). Two can be on one page,
+so nothing about a desktop is page-global: its state is a `DesktopRuntime`,
+one per tab-set id (`useTabs().id`), holding
+
+- the window store (`internal/window-store.ts`'s `createWindowStore`): windows,
+  virtual desktops, z-order — persisted per app instance in sessionStorage for
+  the page's desktop only; an embedded desktop keeps its layout in memory,
+  never in the page's storage;
+- the channels its subtrees share: the work-area reserve, the backdrop's size,
+  where a window minimises to, the peeked window, the open overview, and the
+  tab set's bridge (live tab order + focus / close / open, for commands).
+
+Read it with `useDesktop()` inside the desktop (the hooks — `useFloatingWindows`,
+`useDesktops`, `useTabWindow`, `useWorkAreaReserve`, `useOverviewActive` — do);
+outside React (a shortcut) `onFocusedDesktop(run)` resolves the desktop of the
+tab set the user is in (`peekFocusedTabSet()`: the last one pointed at or
+focused). The commands (`window-commands.ts`) take the desktop they act on.
+An overlay plugin with controls of its own (the launcher, the switcher)
+declares them with `defineDesktopSink`, so each desktop's overlay answers only
+its own desktop. Transient pointer state (a tab drag, the snap preview) stays page-global:
+there is one pointer. (The windows under a drag, whose box transition is
+suppressed, are the runtime's — window ids restart at `w1` per desktop.)
+
+Exported for the overlays: `useDesktop` (its `setWorkAreaReserve`,
+`setMinimizeTargetResolver`, `setPeekedWindow`, `windows.*`), `toggleOverview` /
+`useOverviewActive`, `tileAllWindows`, `minimizeAllWindows`, `toggleShowDesktop`
+(minimise the active desktop's windows, or restore the ones it last hid — the
+shelf's current-desktop mini), `onFocusedDesktop`, `defineDesktopSink`, and
+`WindowSnapshot` (a hover snapshot of a window's DOM).
 
 ## The work area
 
 Maximise, the snap tiles, the snap ghost, clamping and "tile all" lay out inside
 the **work area**: the backdrop minus the strip the shelf keeps at the bottom
-(`setWorkAreaReserve(px)` from the shelf, read reactively with
+(`desk.setWorkAreaReserve(px)` from the shelf, read reactively with
 `useWorkAreaReserve`). `snapBox(zone, reserve)` is the CSS form (percent + calc,
 so the box reflows on resize and transitions between free and snapped),
 `snapRect(zone, w, h, reserve)` the pixel twin. Values are the mockup's: edge
@@ -85,7 +110,7 @@ a window grouping.
 **Model.** Each {@link FloatingWindow} carries a top-level `desktopId` (a
 window-organization property, NOT part of `Geometry`'s box/chrome). The store
 ({@link use-floating-windows}) owns an ordered `desktops: Desktop[]` +
-`activeDesktopId`, both persisted in the same sessionStorage blob as the windows
+`activeDesktopId`, both persisted (the page's desktop) in the same sessionStorage blob as the windows
 map (`{ windows, desktops, activeDesktopId }`; legacy shapes without a `windows`
 key migrate every window onto one freshly-minted default desktop). Ids mint
 monotonically (`d1, d2, …`); a default `d1` is guaranteed to exist after
@@ -137,16 +162,17 @@ new window of the focused window's app; F3 toggles the overview.
     - `Shortcuts.Shortcut` "floating.toggle-pin (ctrl+alt+p)"
     - `Shortcuts.Shortcut` "floating.window-to-next-desktop (ctrl+alt+shift+pagedown)"
     - `Shortcuts.Shortcut` "floating.window-to-prev-desktop (ctrl+alt+shift+pageup)"
-  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 47 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×8
     - `apps-core/surface` ×4
     - `apps/desktop/shell` ×4
+    - `apps-core/tabs` ×3
     - `apps/desktop/wallpaper` ×3
     - `primitives/shortcuts` ×3
     - `primitives/css/layer` ×2
     - `primitives/css/theme-boundary` ×2
     - `primitives/overlay/cursor-menu` ×2
-    - `apps-core/tabs.useTabs`
+    - `primitives/scope/install-sink` ×2
     - `apps-core.Apps`
     - `config_v2.useConfig`
     - `infra/endpoints.useAssetSrc`
@@ -159,41 +185,29 @@ new window of the focused window's app; F3 toggles the overview.
     - `primitives/css/text.Text`
     - `primitives/dom/web-storage.defineStore`
     - `primitives/scope/app-instance.appInstanceId`
-    - `primitives/scope/install-sink.defineInstallSink`
     - `primitives/slot-render.renderIsolated`
     - `ui/icons.Icon`
   - Exports (types):
     - `DesktopOverlayContribution`
+    - `DesktopRuntime`
     - `FloatingWindow`
     - `RectFraction`
     - `VirtualDesktop`
     - `WindowId`
   - Exports (values):
-    - `bringWindowToFront`
-    - `createDesktop`
+    - `defineDesktopSink`
     - `Desktop`
     - `DesktopWallpaper`
-    - `getDesktopsState`
-    - `getFloatingWindow`
-    - `getWorkAreaReserve`
     - `minimizeAllWindows`
-    - `moveWindowToDesktop`
-    - `removeDesktop`
-    - `restoreWindow`
-    - `setActiveDesktop`
-    - `setMinimizeTargetResolver`
-    - `setPeekedWindow`
-    - `setWorkAreaReserve`
+    - `onFocusedDesktop`
     - `tileAllWindows`
     - `toggleOverview`
     - `toggleShowDesktop`
-    - `toggleWindowPin`
-    - `topmostWindowOnDesktop`
+    - `useDesktop`
     - `useDesktops`
     - `useFloatingWindows`
     - `useOverviewActive`
     - `useWorkAreaReserve`
-    - `windowForTab`
     - `windowRectFraction`
     - `WindowSnapshot`
 - Cross-plugin:

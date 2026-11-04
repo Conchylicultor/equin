@@ -57,10 +57,10 @@ but not to a button merely left focused (the link that opened the player).
     - `usePlayPauseShortcut`
     - `useSurfaceShortcuts`
 - Cross-plugin:
-  - Imported by: 30 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 31 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×15
     - `primitives` ×11
-    - `apps-core` ×2
+    - `apps-core` ×3
     - `hints`
     - `tasks/task-draft-form`
 - Exemptions:

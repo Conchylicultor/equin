@@ -368,12 +368,12 @@ the outcome too, with no separate code path.
     - `useDispatchOutcome`
     - `useSlotOrder`
 - Cross-plugin:
-  - Imported by: 93 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 94 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×31
     - `primitives` ×15
     - `conversations` ×13
+    - `apps-core` ×5
     - `ui` ×5
-    - `apps-core` ×4
     - `shell` ×4
     - `page` ×3
     - `tasks` ×3

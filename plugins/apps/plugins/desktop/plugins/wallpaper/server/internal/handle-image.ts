@@ -1,28 +1,20 @@
-import { stat } from "@plugins/packages/plugins/timed-fs/core";
-import { wallpaperImagePath, readWallpaperMime } from "./store";
+import { readWallpaper } from "./store";
 
 /**
- * Stream the current wallpaper image with its stored mime. A raw handler (not
- * `implement`) because it serves binary with a custom content-type + cache
- * headers. The client cache-busts via the `?v=<version>` query (written into
- * config on save), so we mark the body immutable for a year — a new version is a
- * new URL. Returns 404 when no wallpaper has been set.
+ * `GET /api/wallpaper/image` — the current uploaded / imported wallpaper. 404
+ * when none was ever saved, 410 when its sidecar outlived the image. The `?v=`
+ * the client appends is a cache-bust only (a new save is a new version), so the
+ * answer is immutable.
  */
 export async function handleImage(): Promise<Response> {
-  const mime = await readWallpaperMime();
-  if (!mime) return new Response("no wallpaper set", { status: 404 });
-
-  const path = wallpaperImagePath();
-  try {
-    await stat(path);
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-    return new Response("wallpaper file missing on disk", { status: 410 });
-  }
-
-  return new Response(Bun.file(path), {
+  const current = await readWallpaper();
+  if (current.kind === "unset")
+    return new Response("no wallpaper set", { status: 404 });
+  if (current.kind === "missing")
+    return new Response("wallpaper file missing", { status: 410 });
+  return new Response(current.blob, {
     headers: {
-      "content-type": mime,
+      "content-type": current.mime,
       "cache-control": "private, max-age=31536000, immutable",
     },
   });

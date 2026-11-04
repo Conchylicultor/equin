@@ -1,5 +1,5 @@
 import { snapBox, useSnapPreview } from "../hooks/use-snap";
-import { useWorkAreaReserve } from "../internal/work-area";
+import { useWorkAreaReserve } from "../internal/desktop-runtime";
 
 /**
  * The mockup's `#snap-ghost` look: an accent-tinted frosted pane with an accent

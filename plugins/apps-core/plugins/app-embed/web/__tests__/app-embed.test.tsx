@@ -15,10 +15,11 @@ import { AppEmbed } from "../components/app-embed";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 
-// An embed is its own surface: its route lives in its own pane store (never the
-// page URL), and a hop read through the navigation boundary is the embed's — a
-// same-app URL moves its route, another tab app in scope swaps the embed to
-// it, anything else is `onLeave`.
+// An embed is its own tab set: its routes live in its own pane stores (never
+// the page URL), and a hop read through the navigation boundary is the
+// embed's — a same-app URL moves its route, another tab app in scope swaps the
+// embed's tab to it, a surface-mode app's base path switches the embed's mode,
+// anything else is `onLeave`.
 
 /** Where the probe's button navigates — set by the test before clicking. */
 const target = { url: "" };
@@ -112,7 +113,10 @@ function mount({ scoped = false }: { scoped?: boolean } = {}) {
       children
     );
   render(
-    <PluginProvider plugins={[slotsPlugin, appsPlugin, otherPlugin]}>
+    <PluginProvider
+      plugins={[slotsPlugin, appsPlugin, otherPlugin]}
+      composition={{ id: "app-embed-test", home: "emb" }}
+    >
       {inScope(embed)}
     </PluginProvider>,
   );
@@ -189,10 +193,10 @@ describe("<AppEmbed>", () => {
     expect(screen.getByTestId("route").textContent).toBe("pending:c/one");
   });
 
-  it("a surface-mode app is onLeave", () => {
+  it("a surface-mode app switches the embed's own mode, never leaves", () => {
     const onLeave = mount();
     goTo("/desk");
-    expect(onLeave.mock.calls).toEqual([["/desk"]]);
+    expect(onLeave).not.toHaveBeenCalled();
     expect(screen.getByTestId("app").textContent).toBe("emb");
     expect(window.location.pathname).toBe("/host/page");
   });

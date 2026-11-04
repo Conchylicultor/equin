@@ -5,10 +5,7 @@ import {
   MIN_W,
   MIN_H,
 } from "../hooks/use-floating-windows";
-import {
-  beginWindowInteraction,
-  endWindowInteraction,
-} from "../hooks/use-window-motion";
+import { useDesktop } from "../internal/desktop-runtime";
 
 /** Which edges a handle drags; corners set two. */
 interface Edge {
@@ -57,12 +54,13 @@ function Handle({
   setGeo: (next: (g: Geometry) => Geometry) => void;
   windowId: WindowId;
 }) {
+  const desktop = useDesktop();
   const onPointerDown = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
       e.preventDefault();
       e.stopPropagation();
       // Suppress the box transition while resizing, so the edge tracks the cursor.
-      beginWindowInteraction(windowId);
+      desktop.beginInteraction(windowId);
       let lastX = e.clientX;
       let lastY = e.clientY;
       const onMove = (ev: PointerEvent) => {
@@ -76,13 +74,13 @@ function Handle({
         window.removeEventListener("pointermove", onMove);
         window.removeEventListener("pointerup", onUp);
         window.removeEventListener("pointercancel", onUp);
-        endWindowInteraction(windowId);
+        desktop.endInteraction(windowId);
       };
       window.addEventListener("pointermove", onMove);
       window.addEventListener("pointerup", onUp);
       window.addEventListener("pointercancel", onUp);
     },
-    [edge, setGeo, windowId],
+    [edge, setGeo, windowId, desktop],
   );
 
   return (

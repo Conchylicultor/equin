@@ -26,6 +26,7 @@ const tabsState = vi.hoisted(() => ({ mode: "docked-ish" }));
 
 /** Every capability set the body publishes (and the disposer it gets back). */
 const registerSpy = vi.hoisted(() => vi.fn((_caps: unknown) => () => {}));
+const fakeRegistry = vi.hoisted(() => ({ install: registerSpy }));
 
 // `TabSurface` stands in for a whole app: it counts its own mounts/unmounts and
 // mints a `useState` instance id, which is only re-minted by a real remount.
@@ -58,6 +59,8 @@ vi.mock(
 vi.mock("@plugins/apps-core/plugins/tabs/web", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   useTabs: () => ({
+    id: "page",
+    contained: false,
     tabs: [{ tabId: "t1", appId: "a1", store: null }],
     focusedTabId: "t1",
     titles: {},
@@ -66,7 +69,7 @@ vi.mock("@plugins/apps-core/plugins/tabs/web", async (importOriginal) => ({
     closeTab: () => {},
     exitToPreviousMode: () => {},
   }),
-  registerPlacementCapabilities: registerSpy,
+  usePlacementRegistry: () => fakeRegistry,
 }));
 
 import {

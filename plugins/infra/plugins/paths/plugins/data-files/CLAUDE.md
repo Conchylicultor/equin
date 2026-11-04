@@ -219,6 +219,7 @@ against both providers; a new provider runs it too.
     - `stageThenRename`
 - Cross-plugin:
   - Imported by:
+    - `apps/desktop/wallpaper`
     - `apps/prototypes`
     - `apps/prototypes/files`
     - `apps/prototypes/thumbnails`

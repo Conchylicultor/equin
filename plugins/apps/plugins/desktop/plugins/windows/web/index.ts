@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { isDesktopActive } from "@plugins/apps/plugins/desktop/plugins/shell/web";
+import { peekDesktopActive } from "@plugins/apps/plugins/desktop/plugins/shell/web";
 import { Surface } from "@plugins/apps-core/plugins/surface/web";
 import { defineShortcut } from "@plugins/primitives/plugins/shortcuts/web";
 import { floatingDef } from "./floating-placement";
@@ -13,38 +13,28 @@ import {
   snapFocusedWindow,
   switchDesktopByDelta,
   togglePinFocusedWindow,
+  onFocusedDesktop,
 } from "./window-commands";
 import { Desktop } from "./slots";
-import { isOverviewOpen } from "./internal/overview";
+import { peekFocusedDesktop } from "./internal/desktop-runtime";
 
 export { Desktop, type DesktopOverlayContribution } from "./slots";
 export {
   useFloatingWindows,
   useDesktops,
-  getFloatingWindow,
-  getDesktopsState,
-  windowForTab,
-  bringWindowToFront,
-  restoreWindow,
-  toggleWindowPin,
-  createDesktop,
-  removeDesktop,
-  setActiveDesktop,
-  moveWindowToDesktop,
-  topmostWindowOnDesktop,
   type FloatingWindow,
   type Desktop as VirtualDesktop,
   type WindowId,
 } from "./hooks/use-floating-windows";
 export {
-  setWorkAreaReserve,
-  getWorkAreaReserve,
+  defineDesktopSink,
+  useDesktop,
   useWorkAreaReserve,
-} from "./internal/work-area";
-export { setMinimizeTargetResolver } from "./internal/minimize-target";
-export { setPeekedWindow } from "./internal/peek";
-export { useOverviewActive } from "./internal/overview";
+  useOverviewActive,
+  type DesktopRuntime,
+} from "./internal/desktop-runtime";
 export {
+  onFocusedDesktop,
   toggleOverview,
   tileAllWindows,
   minimizeAllWindows,
@@ -72,40 +62,43 @@ export default {
       keys: "ctrl+alt+arrowleft",
       label: "Tile window left",
       group: "Window",
-      when: isDesktopActive,
-      handler: () => snapFocusedWindow("left"),
+      when: peekDesktopActive,
+      handler: () =>
+        onFocusedDesktop((desk) => snapFocusedWindow(desk, "left")),
     }),
     defineShortcut({
       id: "floating.snap-right",
       keys: "ctrl+alt+arrowright",
       label: "Tile window right",
       group: "Window",
-      when: isDesktopActive,
-      handler: () => snapFocusedWindow("right"),
+      when: peekDesktopActive,
+      handler: () =>
+        onFocusedDesktop((desk) => snapFocusedWindow(desk, "right")),
     }),
     defineShortcut({
       id: "floating.snap-up",
       keys: "ctrl+alt+arrowup",
       label: "Maximize / tile window up",
       group: "Window",
-      when: isDesktopActive,
-      handler: () => snapFocusedWindow("up"),
+      when: peekDesktopActive,
+      handler: () => onFocusedDesktop((desk) => snapFocusedWindow(desk, "up")),
     }),
     defineShortcut({
       id: "floating.snap-down",
       keys: "ctrl+alt+arrowdown",
       label: "Restore / minimize window",
       group: "Window",
-      when: isDesktopActive,
-      handler: () => snapFocusedWindow("down"),
+      when: peekDesktopActive,
+      handler: () =>
+        onFocusedDesktop((desk) => snapFocusedWindow(desk, "down")),
     }),
     defineShortcut({
       id: "floating.minimize",
       keys: "mod+m",
       label: "Minimize window",
       group: "Window",
-      when: isDesktopActive,
-      handler: () => minimizeFocusedWindow(),
+      when: peekDesktopActive,
+      handler: () => onFocusedDesktop(minimizeFocusedWindow),
     }),
     // Always-on-top toggle: uses the Ctrl+Alt window-manager modifier family (like
     // the tiling shortcuts), keeping the platform `mod` free for app shortcuts.
@@ -114,16 +107,16 @@ export default {
       keys: "ctrl+alt+p",
       label: "Toggle always on top",
       group: "Window",
-      when: isDesktopActive,
-      handler: () => togglePinFocusedWindow(),
+      when: peekDesktopActive,
+      handler: () => onFocusedDesktop(togglePinFocusedWindow),
     }),
     defineShortcut({
       id: "floating.close",
       keys: "mod+w",
       label: "Close window",
       group: "Window",
-      when: isDesktopActive,
-      handler: () => closeFocusedWindow(),
+      when: peekDesktopActive,
+      handler: () => onFocusedDesktop(closeFocusedWindow),
     }),
     // A new window of the focused window's app (mockup ⌥N).
     defineShortcut({
@@ -131,16 +124,16 @@ export default {
       keys: "alt+n",
       label: "New window",
       group: "Window",
-      when: isDesktopActive,
-      handler: () => openNewWindowOfFocusedApp(),
+      when: peekDesktopActive,
+      handler: () => onFocusedDesktop(openNewWindowOfFocusedApp),
     }),
     defineShortcut({
       id: "desktop.overview",
       keys: "f3",
       label: "Show overview",
       group: "Desktop",
-      when: isDesktopActive,
-      handler: () => toggleOverview(),
+      when: peekDesktopActive,
+      handler: () => onFocusedDesktop(toggleOverview),
     }),
     // Esc leaves the overview — eligible only while it is open.
     defineShortcut({
@@ -148,8 +141,9 @@ export default {
       keys: "escape",
       label: "Leave overview",
       group: "Desktop",
-      when: () => isDesktopActive() && isOverviewOpen(),
-      handler: () => exitOverview(),
+      when: () =>
+        peekDesktopActive() && !!peekFocusedDesktop()?.isOverviewOpen(),
+      handler: () => onFocusedDesktop((desk) => exitOverview(desk)),
     }),
     // Virtual-desktop (workspace) navigation. Page keys keep the Ctrl+Alt
     // window-manager modifier family but stay collision-free with the
@@ -159,32 +153,34 @@ export default {
       keys: "ctrl+alt+pagedown",
       label: "Next desktop",
       group: "Window",
-      when: isDesktopActive,
-      handler: () => switchDesktopByDelta(1),
+      when: peekDesktopActive,
+      handler: () => onFocusedDesktop((desk) => switchDesktopByDelta(desk, 1)),
     }),
     defineShortcut({
       id: "floating.desktop-prev",
       keys: "ctrl+alt+pageup",
       label: "Previous desktop",
       group: "Window",
-      when: isDesktopActive,
-      handler: () => switchDesktopByDelta(-1),
+      when: peekDesktopActive,
+      handler: () => onFocusedDesktop((desk) => switchDesktopByDelta(desk, -1)),
     }),
     defineShortcut({
       id: "floating.window-to-next-desktop",
       keys: "ctrl+alt+shift+pagedown",
       label: "Move window to next desktop",
       group: "Window",
-      when: isDesktopActive,
-      handler: () => moveFocusedWindowByDelta(1),
+      when: peekDesktopActive,
+      handler: () =>
+        onFocusedDesktop((desk) => moveFocusedWindowByDelta(desk, 1)),
     }),
     defineShortcut({
       id: "floating.window-to-prev-desktop",
       keys: "ctrl+alt+shift+pageup",
       label: "Move window to previous desktop",
       group: "Window",
-      when: isDesktopActive,
-      handler: () => moveFocusedWindowByDelta(-1),
+      when: peekDesktopActive,
+      handler: () =>
+        onFocusedDesktop((desk) => moveFocusedWindowByDelta(desk, -1)),
     }),
   ],
 } satisfies PluginDefinition;

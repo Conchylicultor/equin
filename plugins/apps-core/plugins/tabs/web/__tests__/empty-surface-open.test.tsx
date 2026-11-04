@@ -16,7 +16,7 @@ import {
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { defaultStore } from "@plugins/primitives/plugins/pane/web/testing";
 import { TabsProvider, useTabs } from "../internal/use-tabs";
-import { registerPlacementCapabilities } from "../internal/placement-registry";
+import { pagePlacementRegistry } from "../internal/placement-registry";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 // OPENING A PANE ON AN EMPTY SURFACE OPENS A TAB.
@@ -145,7 +145,7 @@ beforeEach(() => {
   });
   setFocusedApp(undefined);
   window.history.replaceState(null, "", "/pages");
-  uninstallPlacements = registerPlacementCapabilities({
+  uninstallPlacements = pagePlacementRegistry.install({
     defaultId: "desktop",
     ids: new Set(["desktop"]),
     newTabFollows: new Set(["desktop"]),

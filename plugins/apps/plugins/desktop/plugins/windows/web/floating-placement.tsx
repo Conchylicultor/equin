@@ -2,7 +2,10 @@ import { DESKTOP_PLACEMENT_ID } from "@plugins/apps/plugins/desktop/plugins/shel
 import { useCallback, useEffect, useLayoutEffect, useMemo } from "react";
 import { Apps } from "@plugins/apps-core/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useTabs } from "@plugins/apps-core/plugins/tabs/web";
+import {
+  usePlacementRegistry,
+  useTabs,
+} from "@plugins/apps-core/plugins/tabs/web";
 import {
   usePlacementStyle,
   type PlacementChromeProps,
@@ -11,22 +14,13 @@ import {
 import { useSidebarDrawnOn } from "@plugins/primitives/plugins/app-shell/web";
 import {
   clampToBounds,
-  createDesktop,
-  mergeTabIntoWindow,
-  moveWindowToDesktop,
-  placeWindows,
-  reorderMember,
-  setActiveMember,
-  splitTabToNewWindow,
-  toggleWindowPin,
   useDesktops,
   useFloatingWindows,
   useTabWindow,
   type Geometry,
 } from "./hooks/use-floating-windows";
 import { workAreaHeight } from "./hooks/use-snap";
-import { peekDeskBounds } from "./internal/desk-bounds";
-import { getWorkAreaReserve } from "./internal/work-area";
+import { useDesktop, type DesktopRuntime } from "./internal/desktop-runtime";
 import {
   WindowChrome,
   WINDOW_TITLEBAR_INSET,
@@ -105,6 +99,7 @@ function FloatingChrome({
   exiting,
 }: PlacementChromeProps) {
   const { window: win, isActive, setGeo, bringToFront } = useTabWindow(tabId);
+  const desk = useDesktop();
   const windows = useFloatingWindows();
   const { desktops, activeDesktopId } = useDesktops();
   const { tabs, titles, focusTab, closeTab, openTab, setMode } = useTabs();
@@ -124,8 +119,8 @@ function FloatingChrome({
   // (focus arrived from cycle / dock / a fresh tab), make it the shown member so
   // the window's model stays consistent with the host focus.
   useEffect(() => {
-    if (focused && !isActive) setActiveMember(win.id, tabId);
-  }, [focused, isActive, win.id, tabId]);
+    if (focused && !isActive) desk.windows.setActiveMember(win.id, tabId);
+  }, [focused, isActive, win.id, tabId, desk]);
 
   // The animated window box → the stable container. The motion layer derives the
   // box (snap / maximize / free) plus the open / minimize / restore tweens and a
@@ -174,16 +169,24 @@ function FloatingChrome({
     return () => setContainerPointerDownCapture(null);
   }, [setContainerPointerDownCapture, bringToFront]);
 
-  const togglePin = useCallback(() => toggleWindowPin(win.id), [win.id]);
+  const togglePin = useCallback(
+    () => desk.windows.toggleWindowPin(win.id),
+    [win.id, desk],
+  );
 
   // Take this window's active tab full-screen: focus it (so it's the tab solo
   // mode shows) and switch the whole surface into solo mode — the windows vanish
   // (windows mode is no longer active), so nothing can overlap. The solo overlay's
   // exit button / Esc returns to windows mode (the mode we came from).
-  const onFullscreen = useCallback(() => {
+  // Only where the tab set has a solo mode: a contained one (an `AppEmbed`'s)
+  // has no viewport to go full screen in.
+  const placements = usePlacementRegistry().useValue();
+  const canGoSolo = placements?.ids.has("solo") ?? false;
+  const goSolo = useCallback(() => {
     focusTab(win.activeTabId);
     setMode("solo");
   }, [focusTab, setMode, win.activeTabId]);
+  const onFullscreen = canGoSolo ? goSolo : undefined;
 
   // Inactive members render no chrome (one titlebar per window). Their container
   // is display:none anyway, so they paint nothing.
@@ -238,10 +241,10 @@ function FloatingChrome({
 
   const onSelectMember = useCallback(
     (memberId: string) => {
-      setActiveMember(win.id, memberId);
+      desk.windows.setActiveMember(win.id, memberId);
       focusTab(memberId);
     },
-    [win.id, focusTab],
+    [win.id, focusTab, desk],
   );
 
   // The tab-strip `+`: open a fresh Home tab (matching the docked tab bar's `+`)
@@ -251,8 +254,8 @@ function FloatingChrome({
   // `readWindowForTab` resolves to this window instead of auto-creating one.
   const onNewTab = useCallback(() => {
     const newTabId = openTab("home");
-    mergeTabIntoWindow(newTabId, win.id);
-  }, [openTab, win.id]);
+    desk.windows.mergeTabIntoWindow(newTabId, win.id);
+  }, [openTab, win.id, desk]);
 
   const onCloseWindow = useCallback(() => {
     // Close every member; pruneWindows then deletes the now-empty window.
@@ -261,13 +264,13 @@ function FloatingChrome({
 
   const onMergeInto = useCallback(
     (targetWindowId: string) =>
-      mergeTabIntoWindow(win.activeTabId, targetWindowId),
-    [win.activeTabId],
+      desk.windows.mergeTabIntoWindow(win.activeTabId, targetWindowId),
+    [win.activeTabId, desk],
   );
 
   const onSplit = useCallback(
-    () => splitTabToNewWindow(win.activeTabId),
-    [win.activeTabId],
+    () => desk.windows.splitTabToNewWindow(win.activeTabId),
+    [win.activeTabId, desk],
   );
 
   // Move-to-desktop (system-menu submenu). Moving via the menu deliberately does
@@ -275,14 +278,14 @@ function FloatingChrome({
   // simply leaves the current desktop and disappears; the user stays put. "New
   // desktop" mints one and moves the window there, again without following.
   const onMoveToDesktop = useCallback(
-    (desktopId: string) => moveWindowToDesktop(win.id, desktopId),
-    [win.id],
+    (desktopId: string) => desk.windows.moveWindowToDesktop(win.id, desktopId),
+    [win.id, desk],
   );
 
   const onMoveToNewDesktop = useCallback(() => {
-    const id = createDesktop();
-    moveWindowToDesktop(win.id, id);
-  }, [win.id]);
+    const id = desk.windows.createDesktop();
+    desk.windows.moveWindowToDesktop(win.id, id);
+  }, [win.id, desk]);
 
   // Commit ops for a finished tab-chip drag. reorder/merge mutate the strip;
   // split tears off at the drop point. Each ends by focusing the moved tab so it
@@ -291,21 +294,22 @@ function FloatingChrome({
   const dragCommit = useMemo<TabDragCommit>(
     () => ({
       reorder: (tabId, index) => {
-        reorderMember(win.id, tabId, index);
+        desk.windows.reorderMember(win.id, tabId, index);
       },
       merge: (tabId, targetWindowId, index) => {
-        mergeTabIntoWindow(tabId, targetWindowId, index);
+        desk.windows.mergeTabIntoWindow(tabId, targetWindowId, index);
         focusTab(tabId);
       },
       split: (tabId, box) => {
-        const placed = clampToWorkArea(box);
+        const placed = clampToWorkArea(desk, box);
         // A lone tab dragged out just moves its window (mockup).
-        if (win.members.length === 1) placeWindows(new Map([[win.id, placed]]));
-        else splitTabToNewWindow(tabId, placed);
+        if (win.members.length === 1)
+          desk.windows.placeWindows(new Map([[win.id, placed]]));
+        else desk.windows.splitTabToNewWindow(tabId, placed);
         focusTab(tabId);
       },
     }),
-    [win.id, win.members.length, focusTab],
+    [win.id, win.members.length, focusTab, desk],
   );
 
   if (!isActive) return null;
@@ -341,18 +345,21 @@ function FloatingChrome({
  * A tear-off box pulled into the work area (mockup `clamp`), so a tab dropped
  * at the desktop's edge opens a window that can still be grabbed.
  */
-function clampToWorkArea(box: { x: number; y: number; w: number; h: number }): {
+function clampToWorkArea(
+  desk: DesktopRuntime,
+  box: { x: number; y: number; w: number; h: number },
+): {
   x: number;
   y: number;
   w: number;
   h: number;
 } {
-  const bounds = peekDeskBounds();
+  const bounds = desk.deskBounds();
   if (!bounds) return box;
   const probe = { ...box, z: 0, pinned: false, minimized: false, snap: null };
   const clamped: Geometry = clampToBounds(probe, {
     width: bounds.width,
-    height: workAreaHeight(bounds.height, getWorkAreaReserve()),
+    height: workAreaHeight(bounds.height, desk.getWorkAreaReserve()),
   });
   return { x: clamped.x, y: clamped.y, w: clamped.w, h: clamped.h };
 }
