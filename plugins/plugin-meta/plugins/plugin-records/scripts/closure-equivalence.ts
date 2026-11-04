@@ -7,7 +7,12 @@
  *
  *   ./equin run plugins/plugin-meta/plugins/plugin-records/scripts/closure-equivalence.ts
  */
-import { existsSync, readFileSync, realpathSync, statSync } from "@plugins/packages/plugins/timed-fs/core";
+import {
+  existsSync,
+  readFileSync,
+  realpathSync,
+  statSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 import { importClosures } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";

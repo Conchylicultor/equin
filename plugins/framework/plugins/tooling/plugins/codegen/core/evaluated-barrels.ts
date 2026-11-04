@@ -1,4 +1,9 @@
-import { existsSync, readFileSync, realpathSync, statSync } from "@plugins/packages/plugins/timed-fs/core";
+import {
+  existsSync,
+  readFileSync,
+  realpathSync,
+  statSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { relative } from "path";
 import {
   joinAppPath,
